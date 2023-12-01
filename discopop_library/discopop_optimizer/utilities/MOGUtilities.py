@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion, NodeID
+from discopop_library.discopop_optimizer.classes.edges.DataFlowEdge import DataFlowEdge
 from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
 from discopop_library.discopop_optimizer.classes.edges.GenericEdge import GenericEdge
@@ -187,7 +188,7 @@ def show(graph):
         graph,
         pos,
         ax=ax,
-        edge_color="green",
+        edge_color="blue",
         edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], TemporaryEdge)],
     )
 
@@ -213,6 +214,14 @@ def show(graph):
         ax=ax,
         edge_color="orange",
         edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], MutuallyExclusiveEdge)],
+    )
+
+    nx.draw_networkx_edges(
+        graph,
+        pos,
+        ax=ax,
+        edge_color="green",
+        edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], DataFlowEdge)],
     )
 
     # define tool tip style when hovering
@@ -260,6 +269,7 @@ def show(graph):
                     pass
 
     fig.canvas.mpl_connect("motion_notify_event", hover)
+
     plt.show()
 
 
@@ -275,6 +285,11 @@ def add_child_edge(graph: nx.DiGraph, source_id: int, target_id: int):
 
 def add_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
     edge_data = TemporaryEdge()
+    graph.add_edge(source_id, target_id, data=edge_data)
+
+
+def add_dataflow_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+    edge_data = DataFlowEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
 
 

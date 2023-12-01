@@ -34,6 +34,7 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
+    add_dataflow_edge,
     data_at,
     get_successors,
     get_children,
@@ -429,4 +430,4 @@ class PETParser(object):
         for key in self.out_data_flow:
             for entry in self.out_data_flow[key]:
                 if not self.graph.has_edge(key, entry):
-                    add_temporary_edge(self.graph, key, entry)
+                    add_dataflow_edge(self.graph, key, entry)

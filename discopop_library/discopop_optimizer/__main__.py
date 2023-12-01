@@ -34,8 +34,14 @@ def parse_args() -> OptimizerArguments:
         help="Reduction microbenchmark results"
     )
     # EXPERIMENTAL FLAGS:
+    experimental_parser.add_argument("--allow-nested-parallelism", action="store_true",
+        help="Allow the creation of nested parallelism suggestions. "
+        + "WARNING: Cost estimations may not be accurrate due to potentially"
+        + "high overhead introduced by entering nested parallelism!")
     experimental_parser.add_argument("-i", "--interactive", action="store_true",
         help="Enable interactive execution.")
+    experimental_parser.add_argument("--plot", action="store_true",
+        help="Plot the internal graph.")
     # fmt: on
 
     arguments = parser.parse_args()
@@ -46,6 +52,8 @@ def parse_args() -> OptimizerArguments:
         exhaustive=arguments.exhaustive,
         doall_microbench_file=arguments.doall_microbench_file,
         reduction_microbench_file=arguments.reduction_microbench_file,
+        allow_nested_parallelism=arguments.allow_nested_parallelism,
+        plot=arguments.plot,
     )
 
 

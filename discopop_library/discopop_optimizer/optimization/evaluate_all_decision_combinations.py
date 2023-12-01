@@ -19,6 +19,7 @@ from discopop_library.discopop_optimizer.classes.context.ContextObject import Co
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
 from itertools import product
+from discopop_library.discopop_optimizer.optimization.validation import check_configuration_validity
 
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 
@@ -64,7 +65,9 @@ def evaluate_all_decision_combinations(
         for decision_list in tpl:
             for decision in decision_list:
                 tmp.append(decision)
-        combinations.append(tmp)
+        # check configuration validity
+        if check_configuration_validity(experiment, arguments, tmp):
+            combinations.append(tmp)
 
     # evaluate each combination in parallel
     print("# Parallel calculatiion of costs of all decision combinations...")
