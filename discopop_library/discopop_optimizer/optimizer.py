@@ -75,11 +75,13 @@ def run(arguments: OptimizerArguments):
 
     # create a new session, load data from previous steps)
     if arguments.verbose:
-        print("Loading file mapping...")
+        print("Loading file mapping...", end="")
     file_mapping = load_file_mapping(file_mapping_path)
+    if arguments.verbose:
+        print("Done.")
 
     if arguments.verbose:
-        print("Loading patterns...")
+        print("Loading patterns...", end="")
     patterns_by_type = read_patterns_from_json_to_json(pattern_file_path, [])
     if arguments.verbose:
         print("Done.")
@@ -121,7 +123,11 @@ def run(arguments: OptimizerArguments):
     experiment = Experiment(file_mapping, system, detection_result, profiler_dir)
 
     # build optimization graph
+    if arguments.verbose:
+        print("Creating optimization graph...")
     create_optimization_graph(experiment, arguments)
+    if arguments.verbose:
+        print("Done.")
 
     # import parallelization suggestions
     experiment.optimization_graph = import_suggestions(experiment)
@@ -145,24 +151,27 @@ def run(arguments: OptimizerArguments):
         print()
 
     # calculate function performance models
+    if arguments.verbose:
+        print("Calculating performance models...", end="")
     function_performance_models_without_context = get_performance_models_for_functions(
         experiment, experiment.optimization_graph
     )
+    if arguments.verbose:
+        print("Done.")
     function_performance_models = calculate_data_transfers(
-        experiment.optimization_graph, function_performance_models_without_context
+       experiment.optimization_graph, function_performance_models_without_context
     )
     function_performance_models = add_data_transfer_costs(
-        experiment.optimization_graph,
-        function_performance_models,
-        experiment,
+       experiment.optimization_graph,
+       function_performance_models,
+       experiment,
     )
 
     if arguments.verbose:
         print("# Identified paths per function:")
-        for function in function_performance_models:
+        for function in function_performance_models_without_context:
             print("#", function.name)
-            for tuple in function_performance_models[function]:
-                cost, ctx = tuple
+            for cost in function_performance_models_without_context[function]:
                 print("#..", cost.path_decisions)
         print()
 
