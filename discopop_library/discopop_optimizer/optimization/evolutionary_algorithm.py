@@ -107,7 +107,7 @@ def __calculate_fitness(
         # remove invalid elements
         if local_result[1] == -1:
             continue
-        
+
         population.append(local_result[0])
         fitness.append(local_result[1])
     return population, fitness

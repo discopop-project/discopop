@@ -118,6 +118,13 @@ class System(object):
             return self.__devices[0]
         return self.__devices[device_id]
 
+    def get_device_ids_by_type(self, device_type: type) -> List[int]:
+        result_device_ids = []
+        for device_id in self.__devices:
+            if type(self.__devices[device_id]) == device_type:
+                result_device_ids.append(device_id)
+        return result_device_ids
+
     def get_network(self) -> Network:
         return self.__network
 
