@@ -23,11 +23,17 @@ def parse_args() -> PatchGeneratorArguments:
         "EXPERIMENTAL",
         "Arguments marked as experimental features. These flags may or may not be removed or changed in the future.",
     )
+    deprecated_parser = parser.add_argument_group(
+        "DEPRECATED",
+        "Arguments marked as deprecated features. These flags may or may not be removed or changed in the future.",
+    )
 
     # fmt: off
     parser.add_argument("--verbose", action="store_true",
         help="Enable verbose output.")
     # EXPERIMENTAL FLAGS:
+    # DEPRECATED FLAGS:
+    deprecated_parser.add_argument("--dp-build-path", help="IGNORED. DEPRECATED. Kept for compatibility reasons.")
     # fmt: on
 
     arguments = parser.parse_args()
