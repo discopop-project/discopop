@@ -53,6 +53,7 @@ def perform_evolutionary_search(
     generation_counter = 0
 
     while generation_counter < generations:
+        print("\nGeneration", generation_counter, "/", generations)
         population, fitness = __calculate_fitness(experiment, population, arguments)
         __print_population(experiment, population, fitness, arguments)
         population = __select(
@@ -268,7 +269,7 @@ def __crossover(
     global_experiment = experiment
     global_arguments = arguments
     global_population = population
-    
+
     print("Calculating crossovers...")
     param_list = [(None) for element in range(0, crossovers)]
     with Pool(
