@@ -73,6 +73,7 @@ def perform_evolutionary_search(
 
 global_experiment = None
 global_arguments = None
+global_available_decisions = None
 
 
 def __calculate_fitness(
@@ -168,11 +169,27 @@ def __initialize(
     available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
 ) -> List[List[int]]:
-    # select random candidates
-    population: List[List[int]] = []
-    while len(population) < population_size:
-        population.append(__get_random_configuration(experiment, available_decisions, arguments))
-    return population
+    return __fill_population(experiment, available_decisions, arguments, [], population_size)
+
+
+def __initialize_fill_worker(
+    experiment: Experiment,
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
+    arguments: OptimizerArguments,
+):
+    global global_experiment
+    global global_arguments
+    global global_available_decisions
+    global_experiment = experiment
+    global_arguments = arguments
+    global_available_decisions = available_decisions
+
+
+def __parallel_get_random_configuration(param_tuple):
+    global global_experiment
+    global global_arguments
+    global global_available_decisions
+    return __get_random_configuration(global_experiment, global_available_decisions, global_arguments)
 
 
 def __fill_population(
@@ -182,8 +199,23 @@ def __fill_population(
     population: List[List[int]],
     population_size: int,
 ):
-    while len(population) < population_size:
-        population.append(__get_random_configuration(experiment, available_decisions, arguments))
+    # select random candidates
+    print("Filling the population...")
+    population: List[List[int]] = []
+    param_list = [(None) for element in range(len(population), population_size)]
+    with Pool(
+        initializer=__initialize_fill_worker,
+        initargs=(
+            experiment,
+            available_decisions,
+            arguments,
+        ),
+    ) as pool:
+        tmp_result = list(
+            tqdm.tqdm(pool.imap_unordered(__parallel_get_random_configuration, param_list), total=len(param_list))
+        )
+    for local_result in tmp_result:
+        population.append(local_result)
     return population
 
 
