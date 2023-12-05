@@ -31,7 +31,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
 
 
 def get_performance_models_for_functions(
-    experiment: Experiment, graph: nx.DiGraph
+    experiment: Experiment, graph: nx.DiGraph, restrict_to_decisions: Optional[Set[int]] = None
 ) -> Dict[FunctionRoot, List[CostModel]]:
     performance_models: Dict[FunctionRoot, List[CostModel]] = dict()
     # get called FunctionRoots from cu ids
@@ -48,8 +48,21 @@ def get_performance_models_for_functions(
             # start the collection at the first child of the function
             for child_id in get_children(graph, node_id):
                 performance_models[node_data] = get_node_performance_models(
-                    experiment, graph, child_id, set(), all_function_nodes
+                    experiment, graph, child_id, set(), all_function_nodes, restrict_to_decisions=restrict_to_decisions
                 )
+
+            # At this point, decisions are restricted to the specified parallelization or the sequential version.
+            # Restrict them to the exact case specified in restrict_to_decisions
+            if restrict_to_decisions is not None:
+                to_be_removed: List[int] = []
+                for idx, cost_model in enumerate(performance_models[node_data]):
+                    for decision in cost_model.path_decisions:
+                        if decision not in restrict_to_decisions:
+                            to_be_removed.append(idx)
+                            break
+                for idx in sorted(to_be_removed, reverse=True):
+                    print("REMOVING: ", performance_models[node_data][idx].path_decisions)
+                    del performance_models[node_data][idx]
 
             # filter out NaN - Models
             performance_models[node_data] = [

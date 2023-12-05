@@ -8,11 +8,17 @@
 
 import copy
 from typing import Dict, List, Optional, Tuple, cast
+import warnings
 
 from sympy import Expr, Integer, Symbol
 import sympy
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
-from discopop_library.discopop_optimizer.CostModels.utilities import get_node_performance_models
+from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
+from discopop_library.discopop_optimizer.CostModels.utilities import (
+    get_node_performance_models,
+    get_performance_models_for_functions,
+)
+from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
@@ -23,7 +29,6 @@ from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArgu
 
 def evaluate_configuration(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     decisions: List[int],
     arguments: OptimizerArguments,
 ) -> Tuple[Tuple[int, ...], Expr]:
@@ -42,24 +47,52 @@ def evaluate_configuration(
     if main_function is None:
         raise ValueError("No main function found!")
 
-    # identify function models which correspond to the given decisions
+    #    # identify function models which correspond to the given decisions
+    #    selected_function_models: Dict[FunctionRoot, Tuple[CostModel, ContextObject]] = dict()
+    #    for function in function_performance_models:
+    #        # get the correct model according to the selected decisions
+    #        selected_function_model: Optional[Tuple[CostModel, ContextObject]] = None
+    #        for tpl in function_performance_models[function]:
+    #            cost, ctx = tpl
+    #            # check if all decisions are specified
+    #            if set(cost.path_decisions).issubset(set(decisions)):
+    #                selected_function_model = tpl
+    #                selected_function_models[function] = selected_function_model
+    #        if selected_function_model is None:
+    #            raise ValueError(
+    #                "No valid configuration found for function: "
+    #                + function.name
+    #                + " and specified decisions: "
+    #                + str(decisions)
+    #            )
+
+    function_performance_models_without_context = get_performance_models_for_functions(
+        experiment, experiment.optimization_graph, restrict_to_decisions=set(decisions)
+    )
+
+    if arguments.verbose:
+        print("# Identified paths per function (RESTRICTED):")
+        print("# DECISION: ", decisions)
+        for function in function_performance_models_without_context:
+            print("#", function.name)
+            for cost in function_performance_models_without_context[function]:
+                print("#..", cost.path_decisions)
+        print()
+
+    function_performance_models = calculate_data_transfers(
+        experiment.optimization_graph, function_performance_models_without_context
+    )
+    function_performance_models = add_data_transfer_costs(
+        experiment.optimization_graph,
+        function_performance_models,
+        experiment,
+    )
+
     selected_function_models: Dict[FunctionRoot, Tuple[CostModel, ContextObject]] = dict()
     for function in function_performance_models:
-        # get the correct model according to the selected decisions
-        selected_function_model: Optional[Tuple[CostModel, ContextObject]] = None
-        for tpl in function_performance_models[function]:
-            cost, ctx = tpl
-            # check if all decisions are specified
-            if set(cost.path_decisions).issubset(set(decisions)):
-                selected_function_model = tpl
-                selected_function_models[function] = selected_function_model
-        if selected_function_model is None:
-            raise ValueError(
-                "No valid configuration found for function: "
-                + function.name
-                + " and specified decisions: "
-                + str(decisions)
-            )
+        if len(function_performance_models[function]) != 1:
+            warnings.warn("Selection for fucntion:" + function.name + " not unambiguous!")
+        selected_function_models[function] = function_performance_models[function][0]
 
     # apply selected substitutions
     # collect substitutions
