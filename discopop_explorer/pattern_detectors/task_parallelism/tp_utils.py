@@ -11,7 +11,7 @@ from typing import Union, cast, Dict, List, Tuple, Optional, Any
 
 from lxml import objectify  # type: ignore
 
-from discopop_explorer.PETGraphX import (
+from discopop_explorer.PEGraphX import (
     DummyNode,
     FunctionNode,
     CUNode,
@@ -20,7 +20,7 @@ from discopop_explorer.PETGraphX import (
     EdgeType,
     MWType,
     DepType,
-    PETGraphX,
+    PEGraphX,
     LineID,
 )
 from discopop_explorer.pattern_detectors.task_parallelism.classes import Task, TaskParallelismInfo
@@ -85,7 +85,7 @@ def line_contained_in_region(test_line: str, start_line: str, end_line: str) -> 
 
 
 def get_parent_of_type(
-    pet: PETGraphX, node: Node, parent_type: NodeType, edge_type: EdgeType, only_first: bool
+    pet: PEGraphX, node: Node, parent_type: NodeType, edge_type: EdgeType, only_first: bool
 ) -> List[Tuple[Node, Optional[Node]]]:
     """return parent cu nodes and the last node of the path to them as a tuple
     for the given node with type parent_type
@@ -121,7 +121,7 @@ def get_parent_of_type(
     return res
 
 
-def get_cus_inside_function(pet: PETGraphX, function_cu: Node) -> List[Node]:
+def get_cus_inside_function(pet: PEGraphX, function_cu: Node) -> List[Node]:
     """Returns cus contained in function-body as a list.
     :param pet: PET Graph
     :param function_cu: target function node
@@ -138,7 +138,7 @@ def get_cus_inside_function(pet: PETGraphX, function_cu: Node) -> List[Node]:
     return result_list
 
 
-def check_reachability(pet: PETGraphX, target: Node, source: Node, edge_types: List[EdgeType]) -> bool:
+def check_reachability(pet: PEGraphX, target: Node, source: Node, edge_types: List[EdgeType]) -> bool:
     """check if target is reachable from source via edges of types edge_type.
     :param pet: PET graph
     :param source: CUNode
@@ -162,7 +162,7 @@ def check_reachability(pet: PETGraphX, target: Node, source: Node, edge_types: L
     return False
 
 
-def get_predecessor_nodes(pet: PETGraphX, root: Node, visited_nodes: List[Node]) -> Tuple[List[Node], List[Node]]:
+def get_predecessor_nodes(pet: PEGraphX, root: Node, visited_nodes: List[Node]) -> Tuple[List[Node], List[Node]]:
     """return a list of reachable predecessor nodes.
     generate list recursively.
     stop recursion if a node of type "function" is found or root is a barrier
@@ -241,7 +241,7 @@ def check_neighbours(first: Task, second: Task):
 #            pass
 
 
-def create_task_tree(pet: PETGraphX, root: Node):
+def create_task_tree(pet: PEGraphX, root: Node):
     """generates task tree data from root node
 
     :param pet: PET graph
@@ -252,7 +252,7 @@ def create_task_tree(pet: PETGraphX, root: Node):
     create_task_tree_helper(pet, root, root_task, [])
 
 
-def create_task_tree_helper(pet: PETGraphX, current: Node, root: Task, visited_func: List[Node]):
+def create_task_tree_helper(pet: PEGraphX, current: Node, root: Task, visited_func: List[Node]):
     """generates task tree data recursively
 
     :param pet: PET graph
@@ -339,7 +339,7 @@ def recursive_function_call_contained_in_worker_cu(function_call_string: str, wo
 
 
 def task_contained_in_reduction_loop(
-    pet: PETGraphX, task: TaskParallelismInfo
+    pet: PEGraphX, task: TaskParallelismInfo
 ) -> Tuple[Optional[Dict[str, str]], Optional[Node]]:
     """detect if task is contained in loop body of a reduction loop.
     return None, if task is not contained in reduction loop.
@@ -529,7 +529,7 @@ def set_global_llvm_cxxfilt_path(value: str):
 
 
 def get_called_functions_recursively(
-    pet: PETGraphX, root: Node, visited: List[Node], cache: Dict[Any, Any]
+    pet: PEGraphX, root: Node, visited: List[Node], cache: Dict[Any, Any]
 ) -> List[Union[FunctionNode, DummyNode]]:
     """returns a recursively generated list of called functions, started at root."""
     visited.append(root)
@@ -555,7 +555,7 @@ def get_called_functions_recursively(
     return called_functions
 
 
-def contains_reduction(pet: PETGraphX, node: Node) -> bool:
+def contains_reduction(pet: PEGraphX, node: Node) -> bool:
     """Checks if node contains a reduction operation.
     :param pet: PET Graph
     :param node: CUNode
@@ -566,7 +566,7 @@ def contains_reduction(pet: PETGraphX, node: Node) -> bool:
     return False
 
 
-def detect_mw_types(pet: PETGraphX, main_node: Node):
+def detect_mw_types(pet: PEGraphX, main_node: Node):
     """The mainNode we want to compute the Task Parallelism Pattern for it
     use Breadth First Search (BFS) to detect all barriers and workers.
     1.) all child nodes become first worker if they are not marked as worker before

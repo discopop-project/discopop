@@ -9,7 +9,7 @@ from typing import List
 
 import jsonpickle  # type: ignore
 
-from discopop_explorer.PETGraphX import PETGraphX
+from discopop_explorer.PEGraphX import PEGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.geometric_decomposition_detector import GDInfo
@@ -18,7 +18,7 @@ from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 
 
 class DetectionResult(object):
-    pet: PETGraphX
+    pet: PEGraphX
     reduction: List[ReductionInfo]
     do_all: List[DoAllInfo]
     pipeline: List[PipelineInfo]
@@ -27,14 +27,14 @@ class DetectionResult(object):
     simple_gpu: List[PatternInfo]
     combined_gpu: List[PatternInfo]
 
-    def __init__(self, pet: PETGraphX):
+    def __init__(self, pet: PEGraphX):
         self.pet = pet
         pass
 
     def __str__(self):
         result_str = ""
         for v in self.__dict__.values():
-            if type(v) == PETGraphX:
+            if type(v) == PEGraphX:
                 continue
             value_str = "\n\n\n"
             for entry in v:

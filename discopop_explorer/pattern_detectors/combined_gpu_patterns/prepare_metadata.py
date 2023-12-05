@@ -8,13 +8,13 @@
 
 from typing import Set, List, Tuple
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeID
+from discopop_explorer.PEGraphX import PEGraphX, NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 
 
 def get_dependencies_as_metadata(
-    pet: PETGraphX, all_dependencies: Set[Dependency]
+    pet: PEGraphX, all_dependencies: Set[Dependency]
 ) -> Tuple[List[Tuple[VarName, NodeID, str]], List[Tuple[VarName, NodeID, str]],]:
     in_deps_metadata: Set[Tuple[VarName, NodeID, str]] = set()
     out_deps_metadata: Set[Tuple[VarName, NodeID, str]] = set()

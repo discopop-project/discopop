@@ -8,14 +8,14 @@
 
 from typing import List, cast
 
-from discopop_explorer.PETGraphX import PETGraphX
+from discopop_explorer.PEGraphX import PEGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import (
     find_combined_gpu_regions,
 )
 
 
-def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[PatternInfo]:
+def run_detection(pet: PEGraphX, res, project_folder_path: str) -> List[PatternInfo]:
     """Search for combined gpu patterns
 
     :param pet: PET graph

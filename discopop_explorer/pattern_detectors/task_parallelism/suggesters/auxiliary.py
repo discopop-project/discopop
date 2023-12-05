@@ -9,7 +9,7 @@
 import copy
 from typing import List, Tuple, Optional, cast, Dict
 
-from discopop_explorer.PETGraphX import Node, NodeType, EdgeType, PETGraphX
+from discopop_explorer.PEGraphX import Node, NodeType, EdgeType, PEGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -23,7 +23,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
 )
 
 
-def suggest_parallel_regions(pet: PETGraphX, suggestions: List[TaskParallelismInfo]) -> List[ParallelRegionInfo]:
+def suggest_parallel_regions(pet: PEGraphX, suggestions: List[TaskParallelismInfo]) -> List[ParallelRegionInfo]:
     """create suggestions for parallel regions based on suggested tasks.
     Parallel regions are suggested aroung each outer-most function call
     possibly leading to the creation of tasks.
@@ -111,7 +111,7 @@ def set_task_contained_lines(suggestions: List[TaskParallelismInfo]) -> List[Tas
     return output
 
 
-def detect_taskloop_reduction(pet: PETGraphX, suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
+def detect_taskloop_reduction(pet: PEGraphX, suggestions: List[TaskParallelismInfo]) -> List[TaskParallelismInfo]:
     """detect suggested tasks which can and should be replaced by
     taskloop reduction.
     return the modified list of suggestions.
@@ -154,7 +154,7 @@ def detect_taskloop_reduction(pet: PETGraphX, suggestions: List[TaskParallelismI
     return output
 
 
-def combine_omittable_cus(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
+def combine_omittable_cus(pet: PEGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """execute combination of tasks suggestions with omittable cus.
     Adds modified version of the respective Parent suggestions to the list.
     Returns the modified list of suggestions.

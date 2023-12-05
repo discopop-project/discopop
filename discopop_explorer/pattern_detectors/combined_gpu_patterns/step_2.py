@@ -11,8 +11,8 @@ from typing import Dict, List, Set, Tuple, cast
 
 import networkx as nx  # type: ignore
 
-from discopop_explorer.PETGraphX import (
-    PETGraphX,
+from discopop_explorer.PEGraphX import (
+    PEGraphX,
     NodeType,
     EdgeType,
     CUNode,
@@ -30,7 +30,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import 
 )
 
 
-def populate_live_data(comb_gpu_reg, pet: PETGraphX, ignore_update_instructions=False) -> Dict[VarName, List[NodeID]]:
+def populate_live_data(comb_gpu_reg, pet: PEGraphX, ignore_update_instructions=False) -> Dict[VarName, List[NodeID]]:
     """calculate List of cu-id's in the combined region for each variable in which the respective data is live.
     The gathered information is used for the optimization / creation of data mapping instructions afterwards.
     """
@@ -123,7 +123,7 @@ def convert_liveness(
 
 
 def extend_data_lifespan(
-    pet: PETGraphX, live_data: Dict[MemoryRegion, List[NodeID]]
+    pet: PEGraphX, live_data: Dict[MemoryRegion, List[NodeID]]
 ) -> Dict[MemoryRegion, List[NodeID]]:
     """Extends the lifespan of the data on the device to allow as little data movement as possible."""
     print("Extending data lifespan...", file=sys.stderr)
@@ -267,7 +267,7 @@ def extend_data_lifespan(
 
 def calculate_host_liveness(
     comb_gpu_reg,
-    pet: PETGraphX,
+    pet: PEGraphX,
 ) -> Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]:
     """
     Variable is live on host, if a dependency between the host cu or any of its children and

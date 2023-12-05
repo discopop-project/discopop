@@ -8,7 +8,7 @@
 
 from typing import Set
 
-from discopop_explorer.PETGraphX import NodeID, MemoryRegion
+from discopop_explorer.PEGraphX import NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )

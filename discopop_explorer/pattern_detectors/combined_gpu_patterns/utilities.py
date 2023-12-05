@@ -8,8 +8,8 @@
 
 from typing import List, Set, Dict, Tuple, Optional
 
-from discopop_explorer.PETGraphX import (
-    PETGraphX,
+from discopop_explorer.PEGraphX import (
+    PEGraphX,
     EdgeType,
     NodeID,
     FunctionNode,
@@ -27,7 +27,7 @@ def get_contained_lines(start_line: str, end_line: str) -> List[str]:
     return result
 
 
-def get_function_body_cus_without_called_functions(pet: PETGraphX, function_node: FunctionNode) -> List[NodeID]:
+def get_function_body_cus_without_called_functions(pet: PEGraphX, function_node: FunctionNode) -> List[NodeID]:
     queue = [t for s, t, d in pet.out_edges(function_node.id, EdgeType.CHILD)]
     visited: Set[NodeID] = set()
     while queue:
@@ -43,7 +43,7 @@ def get_function_body_cus_without_called_functions(pet: PETGraphX, function_node
 
 
 def prepare_liveness_metadata(
-    pet: PETGraphX,
+    pet: PEGraphX,
     liveness: Dict[MemoryRegion, List[NodeID]],
     writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]],
     meta_liveness: Dict[MemoryRegion, List[str]],

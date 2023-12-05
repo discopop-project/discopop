@@ -10,7 +10,7 @@ from typing import List, cast
 
 from alive_progress import alive_bar  # type: ignore
 
-from discopop_explorer.PETGraphX import PETGraphX, LoopNode
+from discopop_explorer.PEGraphX import PEGraphX, LoopNode
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
@@ -20,7 +20,7 @@ from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
 from discopop_explorer.variable import Variable
 
 
-def run_detection(pet: PETGraphX, res, project_folder_path: str) -> List[PatternInfo]:
+def run_detection(pet: PEGraphX, res, project_folder_path: str) -> List[PatternInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph

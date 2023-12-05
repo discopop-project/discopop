@@ -9,7 +9,7 @@ from typing import Optional, List, Set
 
 from sympy import Symbol, Function, Integer  # type: ignore
 
-from discopop_explorer.PETGraphX import NodeID
+from discopop_explorer.PEGraphX import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (

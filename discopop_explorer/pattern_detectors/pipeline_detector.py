@@ -12,12 +12,12 @@ from typing import List, Tuple, Dict, Set
 from alive_progress import alive_bar  # type: ignore
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import (
+from ..PEGraphX import (
     CUNode,
     LineID,
     LoopNode,
     NodeID,
-    PETGraphX,
+    PEGraphX,
     Node,
     EdgeType,
     DepType,
@@ -29,7 +29,7 @@ __pipeline_threshold = 0.9
 
 
 class PipelineStage(object):
-    def __init__(self, pet: PETGraphX, node: Node, in_dep, out_dep):
+    def __init__(self, pet: PEGraphX, node: Node, in_dep, out_dep):
         self.node = node.id
         self.startsAtLine = node.start_position()
         self.endsAtLine = node.end_position()
@@ -65,7 +65,7 @@ class PipelineInfo(PatternInfo):
 
     coefficient: float
 
-    def __init__(self, pet: PETGraphX, node: Node):
+    def __init__(self, pet: PEGraphX, node: Node):
         """
         :param pet: PET graph
         :param node: node, where pipeline was detected
@@ -148,7 +148,7 @@ def is_pipeline_subnode(root: Node, current: Node, children_start_lines: List[Li
 global_pet = None
 
 
-def run_detection(pet: PETGraphX) -> List[PipelineInfo]:
+def run_detection(pet: PEGraphX) -> List[PipelineInfo]:
     """Search for pipeline pattern on all the loops in the graph
     except for doall loops
 
@@ -197,7 +197,7 @@ def __check_node(param_tuple):
     return local_result
 
 
-def __detect_pipeline(pet: PETGraphX, root: Node, children_cache=None, dep_cache=None) -> float:
+def __detect_pipeline(pet: PEGraphX, root: Node, children_cache=None, dep_cache=None) -> float:
     """Calculate pipeline value for node
 
     :param pet: PET graph

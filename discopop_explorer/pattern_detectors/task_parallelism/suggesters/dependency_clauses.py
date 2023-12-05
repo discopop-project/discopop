@@ -9,12 +9,12 @@
 import os
 from typing import List, Dict, Tuple, Optional, cast, Any
 
-from discopop_explorer.PETGraphX import (
+from discopop_explorer.PEGraphX import (
     CUNode,
     EdgeType,
     FunctionNode,
     Node,
-    PETGraphX,
+    PEGraphX,
     NodeID,
     LineID,
 )
@@ -36,7 +36,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
 
 
 def detect_dependency_clauses_alias_based(
-    pet: PETGraphX,
+    pet: PEGraphX,
     suggestions: List[PatternInfo],
     file_mapping_path: str,
     cu_xml: str,
@@ -162,7 +162,7 @@ def get_dict_from_cu_inst_result_file(
     return res_dict
 
 
-def get_alias_information(pet: PETGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]):
+def get_alias_information(pet: PEGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]):
     """Generate and return alias information dictionary.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
@@ -293,7 +293,7 @@ def get_function_internal_parameter_aliases(
 
 
 def identify_dependencies_for_different_functions(
-    pet: PETGraphX,
+    pet: PEGraphX,
     suggestions: List[PatternInfo],
     aliases: Dict[TaskParallelismInfo, List[List[Tuple[str, str, LineID, LineID]]]],
     source_code_files: Dict[str, str],
@@ -412,7 +412,7 @@ def identify_dependencies_for_different_functions(
     return result_suggestions
 
 
-def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -> List[Node]:
+def __get_potential_parent_functions(pet: PEGraphX, sug: TaskParallelismInfo) -> List[Node]:
     """Helper function for identify_dependencies_for_same_functions.
     Creates a list of potential parents (Function CU Nodes) for a given suggestion.
     :param pet: PET Graph
@@ -438,7 +438,7 @@ def __get_potential_parent_functions(pet: PETGraphX, sug: TaskParallelismInfo) -
     return potential_parent_functions
 
 
-def __get_potential_children_of_function(pet: PETGraphX, parent_function: Node) -> List[Node]:
+def __get_potential_children_of_function(pet: PEGraphX, parent_function: Node) -> List[Node]:
     """Helper function for identify_dependencies_for_same_functions.
     Creates a list of CUNodes corresponding to the body of the given function.
     :param pet: PET Graph
@@ -491,7 +491,7 @@ def __get_recursive_calls_from_function(potential_children: List[Node], parent_f
 
 
 def identify_dependencies_for_same_functions(
-    pet: PETGraphX,
+    pet: PEGraphX,
     suggestions: List[PatternInfo],
     source_code_files: Dict[str, str],
     cu_inst_result_dict: Dict[str, List[Dict[str, Optional[str]]]],
@@ -692,7 +692,7 @@ def __perform_dependency_updates(
 
 
 def get_alias_for_parameter_at_position(
-    pet: PETGraphX,
+    pet: PEGraphX,
     function: FunctionNode,
     parameter_position: int,
     source_code_files: Dict[str, str],
@@ -830,7 +830,7 @@ def check_dependence_of_task_pair(
 
 
 def get_function_call_parameter_rw_information(
-    pet: PETGraphX,
+    pet: PEGraphX,
     call_position: str,
     parent_cu_node: Node,
     lower_line_num: int,
@@ -1028,7 +1028,7 @@ def get_function_call_parameter_rw_information(
 
 
 def get_function_call_parameter_rw_information_recursion_step(
-    pet: PETGraphX,
+    pet: PEGraphX,
     called_function_cu: FunctionNode,
     recursively_visited: List[Node],
     function_raw_information_cache: Dict[str, List[Tuple[bool, bool]]],

@@ -9,7 +9,7 @@
 from enum import Enum
 from typing import List, Optional
 
-from discopop_explorer.PETGraphX import Node, MWType, PETGraphX
+from discopop_explorer.PEGraphX import Node, MWType, PEGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 
 
@@ -25,7 +25,7 @@ class Task(object):
     start_line: str
     end_line: str
 
-    def __init__(self, pet: PETGraphX, node: Node):
+    def __init__(self, pet: PEGraphX, node: Node):
         self.node_id = node.id
         self.nodes = [node]
         self.start_line = node.start_position()

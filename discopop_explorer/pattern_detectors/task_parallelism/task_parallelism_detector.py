@@ -9,7 +9,7 @@
 
 from typing import List, Optional, cast
 
-from discopop_explorer.PETGraphX import DummyNode, PETGraphX, MWType
+from discopop_explorer.PEGraphX import DummyNode, PEGraphX, MWType
 from discopop_explorer.parser import parse_inputs
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
@@ -96,7 +96,7 @@ def build_preprocessed_graph_and_run_detection(
         raise ValueError("Path to DiscoPoP build directory not specified!")
     set_global_llvm_cxxfilt_path(__global_llvm_cxxfilt_path)
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
-    preprocessed_graph = PETGraphX.from_parsed_input(
+    preprocessed_graph = PEGraphX.from_parsed_input(
         *parse_inputs(preprocessed_cu_xml, dep_file, reduction_file, file_mapping)
     )
 
@@ -117,7 +117,7 @@ def build_preprocessed_graph_and_run_detection(
 
 
 def run_detection(
-    pet: PETGraphX,
+    pet: PEGraphX,
     cu_xml: str,
     file_mapping: str,
     dep_file: str,
