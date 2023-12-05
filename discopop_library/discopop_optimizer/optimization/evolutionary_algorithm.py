@@ -36,7 +36,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
 
 def perform_evolutionary_search(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
 ):
@@ -48,47 +48,42 @@ def perform_evolutionary_search(
     mutations = int(population_size / 10)
     ### END SETTINGS
 
-    population: List[List[int]] = __initialize(experiment, population_size, function_performance_models, arguments)
-    population, fitness = __calculate_fitness(experiment, function_performance_models, population, arguments)
+    population: List[List[int]] = __initialize(experiment, population_size, available_decisions, arguments)
+    population, fitness = __calculate_fitness(experiment, population, arguments)
     generation_counter = 0
 
     while generation_counter < generations:
-        population, fitness = __calculate_fitness(experiment, function_performance_models, population, arguments)
-        __print_population(experiment, function_performance_models, population, fitness, arguments)
+        population, fitness = __calculate_fitness(experiment, population, arguments)
+        __print_population(experiment, population, fitness, arguments)
         population = __select(
             experiment,
-            function_performance_models,
             arguments,
             population,
             fitness,
             int(len(population) * selection_strength),
         )
-        population = __fill_population(experiment, function_performance_models, arguments, population, population_size)
-        population = __crossover(experiment, function_performance_models, arguments, population, crossovers)
-        population = __mutate(experiment, function_performance_models, arguments, population, crossovers)
+        population = __fill_population(experiment, available_decisions, arguments, population, population_size)
+        population = __crossover(experiment, arguments, population, crossovers)
+        population = __mutate(experiment, arguments, population, crossovers)
         generation_counter += 1
-    population, fitness = __calculate_fitness(experiment, function_performance_models, population, arguments)
-    __print_population(experiment, function_performance_models, population, fitness, arguments)
+    population, fitness = __calculate_fitness(experiment, population, arguments)
+    __print_population(experiment, population, fitness, arguments)
     __dump_result(experiment, population, fitness, optimizer_dir, population_size, generations)
 
 
 global_experiment = None
-global_function_performance_models = None
 global_arguments = None
 
 
 def __calculate_fitness(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     population: List[List[int]],
     arguments: OptimizerArguments,
 ) -> Tuple[List[List[int]], List[int]]:
     """returning the population is necessary since the order of the population can change due to multiprocessing"""
     global global_experiment
-    global global_function_performance_models
     global global_arguments
     global_experiment = experiment
-    global_function_performance_models = function_performance_models
     global_arguments = arguments
 
     param_list = [(element) for element in population]
@@ -97,7 +92,6 @@ def __calculate_fitness(
         initializer=__initialize_worker,
         initargs=(
             experiment,
-            function_performance_models,
             arguments,
         ),
     ) as pool:
@@ -116,20 +110,16 @@ def __calculate_fitness(
 
 def __initialize_worker(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     arguments: OptimizerArguments,
 ):
     global global_experiment
-    global global_function_performance_models
     global global_arguments
     global_experiment = experiment
-    global_function_performance_models = function_performance_models
     global_arguments = arguments
 
 
 def __get_score(param_tuple) -> Tuple[List[int], int]:
     global global_experiment
-    global global_function_performance_models
     global global_arguments
     configuration = param_tuple
     try:
@@ -152,7 +142,6 @@ def __get_score(param_tuple) -> Tuple[List[int], int]:
 
 def __print_population(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     population: List[List[int]],
     fitness: List[int],
     arguments: OptimizerArguments,
@@ -176,31 +165,30 @@ def __print_population(
 def __initialize(
     experiment: Experiment,
     population_size: int,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
 ) -> List[List[int]]:
     # select random candidates
     population: List[List[int]] = []
     while len(population) < population_size:
-        population.append(__get_random_configuration(experiment, function_performance_models, arguments))
+        population.append(__get_random_configuration(experiment, available_decisions, arguments))
     return population
 
 
 def __fill_population(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     population: List[List[int]],
     population_size: int,
 ):
     while len(population) < population_size:
-        population.append(__get_random_configuration(experiment, function_performance_models, arguments))
+        population.append(__get_random_configuration(experiment, available_decisions, arguments))
     return population
 
 
 def __select(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     arguments: OptimizerArguments,
     population: List[List[int]],
     fitness: List[int],
@@ -233,7 +221,6 @@ def __select(
 
 def __crossover(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     arguments: OptimizerArguments,
     population: List[List[int]],
     crossovers: int,
@@ -271,7 +258,6 @@ def __crossover(
 
 def __mutate(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     arguments: OptimizerArguments,
     population: List[List[int]],
     mutations: int,
@@ -348,15 +334,14 @@ def __dump_result(
 
 def __get_random_configuration(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
 ):
     while True:
         random_configuration: List[int] = []
         # fill configuration
-        for function in function_performance_models:
-            options = [tpl[0].path_decisions for tpl in function_performance_models[function]]
-            random_configuration += random.choice(options)
+        for function in available_decisions:
+            random_configuration += random.choice(available_decisions[function])
 
         # validate configuration
         if check_configuration_validity(experiment, arguments, random_configuration):
