@@ -169,6 +169,15 @@ def run(arguments: OptimizerArguments):
         function_performance_models,
         experiment,
     )
+
+    # get available decisions per function
+    # preapare available decisions
+    available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
+    for function in function_performance_models:
+        available_decisions[function] = []
+        for entry in function_performance_models[function]:
+            available_decisions[function].append(entry[0].path_decisions)
+
     warnings.warn("TODO END REPLACE WITH CALCULATION OF DECISIONS ONLY")
 
     #    if arguments.verbose:
@@ -179,24 +188,17 @@ def run(arguments: OptimizerArguments):
     #                print("#..", cost.path_decisions)
     #        print()
 
-    # get available decisions per function
-    # preapare available decisions
-    available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
-    for function in function_performance_models:
-        available_decisions[function] = []
-        for entry in function_performance_models[function]:
-            available_decisions[function].append(entry[0].path_decisions)
-
     # calculate costs for all combinations of decisions
     if arguments.exhaustive:
         evaluate_all_decision_combinations(experiment, available_decisions, arguments, optimizer_dir)
-    #    else:
-    #        # perform evolutionary search
-    #        perform_evolutionary_search(
-    #            experiment,
-    #            arguments,
-    #            optimizer_dir,
-    #        )
+    else:
+        # perform evolutionary search
+        perform_evolutionary_search(
+            experiment,
+            available_decisions,
+            arguments,
+            optimizer_dir,
+        )
 
     # save experiment to disk
     export_to_json(experiment, optimizer_dir)
