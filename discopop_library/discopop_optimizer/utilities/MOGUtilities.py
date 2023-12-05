@@ -6,11 +6,13 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+from multiprocessing import Pool
 from typing import Dict, List, cast, Set, Tuple
 
 import matplotlib  # type: ignore
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
+import tqdm  # type: ignore
 
 from discopop_explorer.PEGraphX import MemoryRegion, NodeID
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
@@ -406,18 +408,64 @@ def get_all_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
     return list(all_parents)
 
 
+global_graph = None
+global_arguments = None
+
+
 def get_available_decisions_for_functions(
     graph: nx.DiGraph, arguments: OptimizerArguments
 ) -> Dict[FunctionRoot, List[List[int]]]:
     """Returns a list of all available paths through the subgraph of the individual Functions."""
+    global global_graph
+    global global_arguments
+    global_graph = graph
+    global_arguments = arguments
+
+    if arguments.verbose:
+        print("Calculating available decisions per function...")
+    available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
+    param_list = [(function_node) for function_node in get_all_function_nodes(graph)]
+    with Pool(
+        initializer=__initialize_availability_worker,
+        initargs=(graph, arguments),
+    ) as pool:
+        tmp_result = list(
+            tqdm.tqdm(pool.imap_unordered(__parallel_get_decisions_from_node, param_list), total=len(param_list))
+        )
+
+    for local_result in tmp_result:
+        available_decisions[cast(FunctionRoot, data_at(graph, local_result[0]))] = local_result[1]
+
+    if arguments.verbose:
+        print("\tDone.")
+        print("# Identified paths per function:")
+        for function in available_decisions:
+            print("#", function.name)
+            for elem in available_decisions[function]:
+                print("#..", elem)
+        print()
+
+    return available_decisions
+
+
+def __initialize_availability_worker(graph: nx.DiGraph, arguments: OptimizerArguments):
+    global global_graph
+    global global_arguments
+    global_graph = graph
+    global_arguments = arguments
+
+
+def __parallel_get_decisions_from_node(function_node):
+    global global_graph
+    global global_arguments
 
     def get_decisions_from_node(node_id, prev_decisions: List[int]) -> List[List[int]]:
         children_paths: List[List[int]] = []
         # get decisions from children
-        for child in get_children(graph, node_id):
+        for child in get_children(global_graph, node_id):
             children_paths += get_decisions_from_node(child, copy.deepcopy(prev_decisions))
         # get decisions from current node
-        successors = get_successors(graph, node_id)
+        successors = get_successors(global_graph, node_id)
         successor_paths: List[List[int]] = []
         if len(successors) == 1:
             if len(children_paths) > 0:
@@ -446,22 +494,4 @@ def get_available_decisions_for_functions(
                 tmp_result += successor_paths
             return tmp_result
 
-    if arguments.verbose:
-        print("Calculating available decisions per function...")
-    available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
-    function_nodes = get_all_function_nodes(graph)
-    for function_node in function_nodes:
-        available_decisions[cast(FunctionRoot, data_at(graph, function_node))] = get_decisions_from_node(
-            function_node, []
-        )
-
-    if arguments.verbose:
-        print("\tDone.")
-        print("# Identified paths per function:")
-        for function in available_decisions:
-            print("#", function.name)
-            for elem in available_decisions[function]:
-                print("#..", elem)
-        print()
-
-    return available_decisions
+    return function_node, get_decisions_from_node(function_node, [])
