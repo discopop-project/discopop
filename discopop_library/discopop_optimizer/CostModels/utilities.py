@@ -61,7 +61,6 @@ def get_performance_models_for_functions(
                             to_be_removed.append(idx)
                             break
                 for idx in sorted(to_be_removed, reverse=True):
-                    print("REMOVING: ", performance_models[node_data][idx].path_decisions)
                     del performance_models[node_data][idx]
 
             # filter out NaN - Models
