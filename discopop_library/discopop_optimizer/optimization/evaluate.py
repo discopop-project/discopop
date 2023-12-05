@@ -70,15 +70,6 @@ def evaluate_configuration(
         experiment, experiment.optimization_graph, restrict_to_decisions=set(decisions)
     )
 
-    if arguments.verbose:
-        print("# Identified paths per function (RESTRICTED):")
-        print("# DECISION: ", decisions)
-        for function in function_performance_models_without_context:
-            print("#", function.name)
-            for cost in function_performance_models_without_context[function]:
-                print("#..", cost.path_decisions)
-        print()
-
     function_performance_models = calculate_data_transfers(
         experiment.optimization_graph, function_performance_models_without_context
     )
