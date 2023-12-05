@@ -138,10 +138,6 @@ def __get_score(param_tuple) -> Tuple[List[int], int]:
                 str(
                     evaluate_configuration(
                         cast(Experiment, global_experiment),
-                        cast(
-                            Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
-                            global_function_performance_models,
-                        ),
                         configuration,
                         cast(OptimizerArguments, global_arguments),
                     )[1].evalf()

@@ -8,7 +8,8 @@
 import json
 import os.path
 import shutil
-from typing import Dict, Tuple, cast
+from typing import Dict, List, Tuple, cast
+import warnings
 
 import jsonpickle  # type: ignore
 from sympy import Float, Symbol  # type: ignore
@@ -30,6 +31,7 @@ from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
     initialize_free_symbol_ranges_and_distributions,
 )
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import query_user_for_symbol_values
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
 from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_combinations import (
@@ -151,6 +153,7 @@ def run(arguments: OptimizerArguments):
         print()
 
     # calculate function performance models
+    warnings.warn("TODO BEGIN REPLACE WITH CALCULATION OF DECISIONS ONLY")
     if arguments.verbose:
         print("Calculating performance models...", end="")
     function_performance_models_without_context = get_performance_models_for_functions(
@@ -159,33 +162,41 @@ def run(arguments: OptimizerArguments):
     if arguments.verbose:
         print("Done.")
     function_performance_models = calculate_data_transfers(
-       experiment.optimization_graph, function_performance_models_without_context
+        experiment.optimization_graph, function_performance_models_without_context
     )
     function_performance_models = add_data_transfer_costs(
-       experiment.optimization_graph,
-       function_performance_models,
-       experiment,
+        experiment.optimization_graph,
+        function_performance_models,
+        experiment,
     )
+    warnings.warn("TODO END REPLACE WITH CALCULATION OF DECISIONS ONLY")
 
-    if arguments.verbose:
-        print("# Identified paths per function:")
-        for function in function_performance_models_without_context:
-            print("#", function.name)
-            for cost in function_performance_models_without_context[function]:
-                print("#..", cost.path_decisions)
-        print()
+    #    if arguments.verbose:
+    #        print("# Identified paths per function:")
+    #        for function in function_performance_models_without_context:
+    #            print("#", function.name)
+    #            for cost in function_performance_models_without_context[function]:
+    #                print("#..", cost.path_decisions)
+    #        print()
+
+    # get available decisions per function
+    # preapare available decisions
+    available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
+    for function in function_performance_models:
+        available_decisions[function] = []
+        for entry in function_performance_models[function]:
+            available_decisions[function].append(entry[0].path_decisions)
 
     # calculate costs for all combinations of decisions
     if arguments.exhaustive:
-        evaluate_all_decision_combinations(experiment, function_performance_models, arguments, optimizer_dir)
-    else:
-        # perform evolutionary search
-        perform_evolutionary_search(
-            experiment,
-            function_performance_models,
-            arguments,
-            optimizer_dir,
-        )
+        evaluate_all_decision_combinations(experiment, available_decisions, arguments, optimizer_dir)
+    #    else:
+    #        # perform evolutionary search
+    #        perform_evolutionary_search(
+    #            experiment,
+    #            arguments,
+    #            optimizer_dir,
+    #        )
 
     # save experiment to disk
     export_to_json(experiment, optimizer_dir)

@@ -25,32 +25,22 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
 
 
 global_experiment = None
-global_function_performance_models = None
 global_arguments = None
 
 
 def evaluate_all_decision_combinations(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
 ) -> Dict[Tuple[int, ...], Expr]:
     """Create and evaluate every possible combination of decisions."""
     global global_experiment
-    global global_function_performance_models
     global global_arguments
     global_experiment = experiment
-    global_function_performance_models = function_performance_models
     global_arguments = arguments
 
     costs_dict: Dict[Tuple[int, ...], Expr] = dict()
-
-    # preapare available decisions
-    available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
-    for function in function_performance_models:
-        available_decisions[function] = []
-        for entry in function_performance_models[function]:
-            available_decisions[function].append(entry[0].path_decisions)
 
     packed_decisions: List[List[List[int]]] = []
     for function in available_decisions:
@@ -76,7 +66,6 @@ def evaluate_all_decision_combinations(
         initializer=__initialize_worker,
         initargs=(
             experiment,
-            function_performance_models,
             arguments,
         ),
     ) as pool:
@@ -132,23 +121,19 @@ def evaluate_all_decision_combinations(
 
 def __initialize_worker(
     experiment: Experiment,
-    function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     arguments: OptimizerArguments,
 ):
     global global_experiment
-    global global_function_performance_models
     global global_arguments
     global_experiment = experiment
-    global_function_performance_models = function_performance_models
     global_arguments = arguments
 
 
 def __evaluate_configuration(param_tuple):
     global global_experiment
-    global global_function_performance_models
     global global_arguments
     decisions = param_tuple
-    return evaluate_configuration(global_experiment, global_function_performance_models, decisions, global_arguments)
+    return evaluate_configuration(global_experiment, decisions, global_arguments)
 
 
 def __dump_result_to_file_using_pattern_ids(
