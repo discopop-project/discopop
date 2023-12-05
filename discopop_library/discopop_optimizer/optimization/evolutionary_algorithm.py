@@ -74,6 +74,7 @@ def perform_evolutionary_search(
 global_experiment = None
 global_arguments = None
 global_available_decisions = None
+global_population = None
 
 
 def __calculate_fitness(
@@ -87,10 +88,10 @@ def __calculate_fitness(
     global_experiment = experiment
     global_arguments = arguments
 
-    param_list = [(element) for element in population]
     print("Calculating fitness...")
+    param_list = [(element) for element in population]
     with Pool(
-        initializer=__initialize_worker,
+        initializer=__initialize_fitness_worker,
         initargs=(
             experiment,
             arguments,
@@ -109,7 +110,7 @@ def __calculate_fitness(
     return population, fitness
 
 
-def __initialize_worker(
+def __initialize_fitness_worker(
     experiment: Experiment,
     arguments: OptimizerArguments,
 ):
@@ -198,10 +199,15 @@ def __fill_population(
     arguments: OptimizerArguments,
     population: List[List[int]],
     population_size: int,
-):
+) -> List[List[int]]:
+    global global_experiment
+    global global_arguments
+    global global_available_decisions
+    global_experiment = experiment
+    global_arguments = arguments
+    global_available_decisions = available_decisions
     # select random candidates
     print("Filling the population...")
-    population: List[List[int]] = []
     param_list = [(None) for element in range(len(population), population_size)]
     with Pool(
         initializer=__initialize_fill_worker,
@@ -246,7 +252,6 @@ def __select(
     # always preserve the current best element
     for idx, fitness_value in sorted(enumerate(fitness), key=lambda x: x[1]):
         new_population.append(population[idx])
-        print("PRESERVED BEST OPTION: ", population[idx], "->", fitness_value)
         break
     return new_population
 
@@ -257,11 +262,52 @@ def __crossover(
     population: List[List[int]],
     crossovers: int,
 ):
-    counter = 0
-    while counter < crossovers:
+    global global_experiment
+    global global_arguments
+    global global_population
+    global_experiment = experiment
+    global_arguments = arguments
+    global_population = population
+    
+    print("Calculating crossovers...")
+    param_list = [(None) for element in range(0, crossovers)]
+    with Pool(
+        initializer=__initialize_crossover_worker,
+        initargs=(experiment, arguments, population),
+    ) as pool:
+        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__parallel_crossover, param_list), total=len(param_list)))
+    for local_result in tmp_result:
+        if local_result is None:
+            continue
+        if local_result[1] is not None:
+            (old_element_1, old_element_2), (new_element_1, new_element_2) = local_result
+            old_element_1, old_element_2 = local_result[1]
+            if old_element_1 in population and old_element_2 in population and old_element_1 != old_element_2:
+                population.remove(old_element_1)
+                population.remove(old_element_2)
+                population.append(new_element_1)
+                population.append(new_element_2)
+    return population
+
+
+def __initialize_crossover_worker(experiment: Experiment, arguments: OptimizerArguments, population: List[List[int]]):
+    global global_experiment
+    global global_arguments
+    global global_population
+    global_experiment = experiment
+    global_arguments = arguments
+    global_population = population
+
+
+def __parallel_crossover(param_tuple):
+    global global_experiment
+    global global_arguments
+    global global_population
+
+    for i in range(0, 1000):
         # select two random elements
-        element_1 = random.choice(population)
-        element_2 = random.choice(population)
+        element_1 = random.choice(global_population)
+        element_2 = random.choice(global_population)
         # select crossover point
         max_crossover_idx = min(len(element_1), len(element_2))
         crossover_idx = random.choice(range(0, max_crossover_idx))
@@ -270,22 +316,12 @@ def __crossover(
         new_element_2 = element_2[:crossover_idx] + element_1[crossover_idx:]
 
         # validate elements
-        if not check_configuration_validity(experiment, arguments, new_element_1):
+        if not check_configuration_validity(global_experiment, global_arguments, new_element_1):
             continue
-        if not check_configuration_validity(experiment, arguments, new_element_2):
+        if not check_configuration_validity(global_experiment, global_arguments, new_element_2):
             continue
-
-        # update population
-        try:
-            population.remove(element_1)
-            population.remove(element_2)
-        except ValueError:
-            pass
-        population.append(new_element_1)
-        population.append(new_element_2)
-
-        counter += 1
-    return population
+        return (element_1, element_2), (new_element_1, new_element_2)
+    return None
 
 
 def __mutate(
@@ -294,33 +330,62 @@ def __mutate(
     population: List[List[int]],
     mutations: int,
 ) -> List[List[int]]:
-    counter = 0
-    while counter < mutations:
+    global global_experiment
+    global global_arguments
+    global global_population
+    global_experiment = experiment
+    global_arguments = arguments
+    global_population = population
+
+    print("Calculating mutations...")
+    param_list = [(None) for element in range(0, mutations)]
+    with Pool(
+        initializer=__initialize_mutate_worker,
+        initargs=(experiment, arguments, population),
+    ) as pool:
+        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__parallel_mutate, param_list), total=len(param_list)))
+    for local_result in tmp_result:
+        if local_result is None:
+            continue
+        if local_result[0] in population and local_result[1] is not None:
+            population.remove(local_result[0])
+            population.append(local_result[1])
+    return population
+
+
+def __initialize_mutate_worker(experiment: Experiment, arguments: OptimizerArguments, population: List[List[int]]):
+    global global_experiment
+    global global_arguments
+    global global_population
+    global_experiment = experiment
+    global_arguments = arguments
+    global_population = population
+
+
+def __parallel_mutate(param_tuple):
+    global global_experiment
+    global global_arguments
+    global global_population
+
+    for i in range(0, 1000):
         # select random mutation target from population
-        mutation_target = random.choice(population)
+        mutation_target = random.choice(global_population)
 
         # select random mutation within the target
         mutation_index = random.choice(range(0, len(mutation_target)))
 
         # perform mutation if possible
-        options = get_out_options(experiment.optimization_graph, mutation_target[mutation_index])
+        options = get_out_options(global_experiment.optimization_graph, mutation_target[mutation_index])
         if len(options) > 0:
             index_mutant = random.choice(options)
             mutant = copy.deepcopy(mutation_target)
             mutant[mutation_index] = index_mutant
 
             # validate
-            if not check_configuration_validity(experiment, arguments, mutant):
+            if not check_configuration_validity(global_experiment, global_arguments, mutant):
                 continue
-
-            # update population
-            try:
-                population.remove(mutation_target)
-            except ValueError:
-                pass
-            population.append(mutant)
-        counter += 1
-    return population
+            return mutation_target, mutant
+    return None
 
 
 def __dump_result(
