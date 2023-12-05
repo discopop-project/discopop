@@ -5,13 +5,15 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import List, cast, Set, Tuple
+import copy
+from typing import Dict, List, cast, Set, Tuple
 
 import matplotlib  # type: ignore
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
 
 from discopop_explorer.PETGraphX import MemoryRegion, NodeID
+from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.classes.edges.DataFlowEdge import DataFlowEdge
 from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
@@ -402,3 +404,64 @@ def get_all_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
         ]
         queue.update(new_parents)
     return list(all_parents)
+
+
+def get_available_decisions_for_functions(
+    graph: nx.DiGraph, arguments: OptimizerArguments
+) -> Dict[FunctionRoot, List[List[int]]]:
+    """Returns a list of all available paths through the subgraph of the individual Functions."""
+
+    def get_decisions_from_node(node_id, prev_decisions: List[int]) -> List[List[int]]:
+        children_paths: List[List[int]] = []
+        # get decisions from children
+        for child in get_children(graph, node_id):
+            children_paths += get_decisions_from_node(child, copy.deepcopy(prev_decisions))
+        # get decisions from current node
+        successors = get_successors(graph, node_id)
+        successor_paths: List[List[int]] = []
+        if len(successors) == 1:
+            if len(children_paths) > 0:
+                for cp in children_paths:
+                    successor_paths += get_decisions_from_node(successors[0], copy.deepcopy(cp))
+            else:
+                successor_paths += get_decisions_from_node(successors[0], copy.deepcopy(prev_decisions))
+            return successor_paths
+        elif len(successors) == 0:
+            if len(children_paths) > 0:
+                return children_paths
+            else:
+                return [prev_decisions]
+        else:
+            tmp_result = []
+            if len(children_paths) > 0:
+                for cp in children_paths:
+                    successor_paths = []
+                    for succ in successors:
+                        successor_paths += get_decisions_from_node(succ, copy.deepcopy(cp + [succ]))
+                    tmp_result += successor_paths
+            else:
+                successor_paths = []
+                for succ in successors:
+                    successor_paths += get_decisions_from_node(succ, copy.deepcopy(prev_decisions + [succ]))
+                tmp_result += successor_paths
+            return tmp_result
+
+    if arguments.verbose:
+        print("Calculating available decisions per function...")
+    available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
+    function_nodes = get_all_function_nodes(graph)
+    for function_node in function_nodes:
+        available_decisions[cast(FunctionRoot, data_at(graph, function_node))] = get_decisions_from_node(
+            function_node, []
+        )
+
+    if arguments.verbose:
+        print("\tDone.")
+        print("# Identified paths per function:")
+        for function in available_decisions:
+            print("#", function.name)
+            for elem in available_decisions[function]:
+                print("#..", elem)
+        print()
+
+    return available_decisions

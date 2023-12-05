@@ -45,7 +45,11 @@ from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench
 )
 from discopop_library.discopop_optimizer.Microbench.Microbench import MicrobenchType
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
+    data_at,
+    get_available_decisions_for_functions,
+    show,
+)
 from discopop_library.discopop_optimizer.suggestions.importers.base import import_suggestions
 
 
@@ -130,7 +134,6 @@ def run(arguments: OptimizerArguments):
     create_optimization_graph(experiment, arguments)
     if arguments.verbose:
         print("Done.")
-
     # import parallelization suggestions
     experiment.optimization_graph = import_suggestions(experiment)
 
@@ -143,6 +146,12 @@ def run(arguments: OptimizerArguments):
             print("#", suggestion_id, "->", experiment.suggestion_to_node_ids_dict[suggestion_id])
         print()
 
+    # safety precaution: make sure the correct node ids are used everywhere
+    for node_id in experiment.optimization_graph.nodes:
+        node_data = data_at(experiment.optimization_graph, node_id)
+        if node_id != node_data.node_id:
+            node_data.node_id = node_id
+
     # get values for free symbols
     initialize_free_symbol_ranges_and_distributions(experiment, arguments, system)
 
@@ -152,41 +161,8 @@ def run(arguments: OptimizerArguments):
             print("#", key, " ->", experiment.substitutions[key])
         print()
 
-    # calculate function performance models
-    warnings.warn("TODO BEGIN REPLACE WITH CALCULATION OF DECISIONS ONLY")
-    if arguments.verbose:
-        print("Calculating performance models...", end="")
-    function_performance_models_without_context = get_performance_models_for_functions(
-        experiment, experiment.optimization_graph
-    )
-    if arguments.verbose:
-        print("Done.")
-    function_performance_models = calculate_data_transfers(
-        experiment.optimization_graph, function_performance_models_without_context
-    )
-    function_performance_models = add_data_transfer_costs(
-        experiment.optimization_graph,
-        function_performance_models,
-        experiment,
-    )
-
-    # get available decisions per function
-    # preapare available decisions
-    available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
-    for function in function_performance_models:
-        available_decisions[function] = []
-        for entry in function_performance_models[function]:
-            available_decisions[function].append(entry[0].path_decisions)
-
-    warnings.warn("TODO END REPLACE WITH CALCULATION OF DECISIONS ONLY")
-
-    #    if arguments.verbose:
-    #        print("# Identified paths per function:")
-    #        for function in function_performance_models_without_context:
-    #            print("#", function.name)
-    #            for cost in function_performance_models_without_context[function]:
-    #                print("#..", cost.path_decisions)
-    #        print()
+    # calculate options for easy access
+    available_decisions = get_available_decisions_for_functions(experiment.optimization_graph, arguments)
 
     # calculate costs for all combinations of decisions
     if arguments.exhaustive:

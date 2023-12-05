@@ -2,6 +2,7 @@ from typing import List, cast
 from discopop_explorer.PETGraphX import EdgeType, NodeID, PETGraphX
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     data_at,
     get_all_function_nodes,
@@ -18,6 +19,7 @@ def check_configuration_validity(
     experiment: Experiment, arguments: OptimizerArguments, configuration: List[int]
 ) -> bool:
     """Returns True if the given configuration is valid. Returns False otherwise."""
+
     # check requirements edges
     for node_id in configuration:
         requirements = get_requirements(experiment.optimization_graph, node_id)
@@ -74,6 +76,7 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int])
                 if sid not in visited_nodes and sid not in children_queue
             ],
         )
+
         children_queue += __filter_for_relevant_options(
             experiment,
             configuration,
@@ -92,6 +95,7 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int])
         ]
         # filter for called FunctionRoots
         called_function_nodes = [fr for fr in all_function_nodes if str(fr.original_cu_id) in called_cu_ids]
+
         # remove duplicates
         called_function_nodes = list(set(called_function_nodes))
         # add to children_queue
