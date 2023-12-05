@@ -47,25 +47,6 @@ def evaluate_configuration(
     if main_function is None:
         raise ValueError("No main function found!")
 
-    #    # identify function models which correspond to the given decisions
-    #    selected_function_models: Dict[FunctionRoot, Tuple[CostModel, ContextObject]] = dict()
-    #    for function in function_performance_models:
-    #        # get the correct model according to the selected decisions
-    #        selected_function_model: Optional[Tuple[CostModel, ContextObject]] = None
-    #        for tpl in function_performance_models[function]:
-    #            cost, ctx = tpl
-    #            # check if all decisions are specified
-    #            if set(cost.path_decisions).issubset(set(decisions)):
-    #                selected_function_model = tpl
-    #                selected_function_models[function] = selected_function_model
-    #        if selected_function_model is None:
-    #            raise ValueError(
-    #                "No valid configuration found for function: "
-    #                + function.name
-    #                + " and specified decisions: "
-    #                + str(decisions)
-    #            )
-
     function_performance_models_without_context = get_performance_models_for_functions(
         experiment, experiment.optimization_graph, restrict_to_decisions=set(decisions)
     )
