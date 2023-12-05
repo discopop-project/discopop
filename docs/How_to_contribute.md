@@ -49,7 +49,7 @@ Execute the following steps in order to create a new DiscoPoP release:
     - Creating the tag triggers the automatic creation of a release draft
 - Update the newly created release draft
   - Release tag: `v1.2.3`
-  - Release title: `Version 1.2.3`
+  - Release title: `DiscoPoP Version 1.2.3`
   - Description should contain a summary of the most relevant changes
 - If everything is fine, publish the new release
 
