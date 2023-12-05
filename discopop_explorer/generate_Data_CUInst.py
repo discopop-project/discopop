@@ -8,13 +8,13 @@
 
 from typing import List, cast, TextIO
 
-from .PETGraphX import (
+from .PEGraphX import (
     CUNode,
     FunctionNode,
     LineID,
     LoopNode,
     NodeID,
-    PETGraphX,
+    PEGraphX,
     Node,
     DepType,
     EdgeType,
@@ -22,7 +22,7 @@ from .PETGraphX import (
 from .parser import parse_inputs
 
 
-def __collect_children_ids(pet: PETGraphX, parent_id: NodeID, children_ids: List[NodeID]):
+def __collect_children_ids(pet: PEGraphX, parent_id: NodeID, children_ids: List[NodeID]):
     if parent_id in children_ids:
         # this id has already been processed. No need to go through it again
         return children_ids
@@ -35,7 +35,7 @@ def __collect_children_ids(pet: PETGraphX, parent_id: NodeID, children_ids: List
     return children_ids
 
 
-def __recursive_call_inside_loop(pet: PETGraphX, recursive_function_call: str) -> bool:
+def __recursive_call_inside_loop(pet: PEGraphX, recursive_function_call: str) -> bool:
     """checks if the given recursive function call occurs in any loop body.
     :param pet: PET Graph
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
@@ -50,7 +50,7 @@ def __recursive_call_inside_loop(pet: PETGraphX, recursive_function_call: str) -
     return False
 
 
-def __recursive_function_called_multiple_times_inside_function(pet: PETGraphX, recursive_function_call: str) -> bool:
+def __recursive_function_called_multiple_times_inside_function(pet: PEGraphX, recursive_function_call: str) -> bool:
     """checks if the given recursive function is called multiple times from within a functions body
     :param pet: PET Graph
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
@@ -98,7 +98,7 @@ def __recursive_function_called_multiple_times_inside_function(pet: PETGraphX, r
 
 
 def __output_dependencies_of_type(
-    pet: PETGraphX,
+    pet: PEGraphX,
     child_id: NodeID,
     children_ids: List[NodeID],
     output_file: TextIO,
@@ -131,7 +131,7 @@ def __output_dependencies_of_type(
             )
 
 
-def __search_recursive_calls(pet: PETGraphX, output_file, node: Node):
+def __search_recursive_calls(pet: PEGraphX, output_file, node: Node):
     if not isinstance(node, CUNode):
         return
     for recursive_function_call in node.recursive_function_calls:
@@ -165,7 +165,7 @@ def __search_recursive_calls(pet: PETGraphX, output_file, node: Node):
         output_file.write("\n")
 
 
-def cu_instantiation_input_cpp(pet: PETGraphX, output_file: str):
+def cu_instantiation_input_cpp(pet: PEGraphX, output_file: str):
     """translation of CUInstantiationInput.cpp, previously contained in discopop-analyzer/analyzer/src.
     Wrapper to gather information on recursive function calls for CU Instantiation.
     :param pet: PET Graph
@@ -178,7 +178,7 @@ def cu_instantiation_input_cpp(pet: PETGraphX, output_file: str):
 def wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, output_file):
     """Wrapper to generate the Data_CUInst.txt file, required for the generation of CUInstResult.txt"""
     # 1. generate PET Graph
-    pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file))
+    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file))
     # 2. Generate Data_CUInst.txt
     cu_instantiation_input_cpp(pet, output_file)
 

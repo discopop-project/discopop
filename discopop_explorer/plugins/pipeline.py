@@ -9,7 +9,7 @@
 from copy import deepcopy
 from typing import List
 
-from ..PETGraphX import LineID, LoopNode, PETGraphX, Node, EdgeType
+from ..PEGraphX import LineID, LoopNode, PEGraphX, Node, EdgeType
 from ..utils import correlation_coefficient
 
 total = 0
@@ -17,11 +17,11 @@ before: List[float] = []
 after: List[float] = []
 
 
-def run_before(pet: PETGraphX):
+def run_before(pet: PEGraphX):
     return pet
 
 
-def run_after(pet: PETGraphX):
+def run_after(pet: PEGraphX):
     for node in pet.all_nodes(LoopNode):
         check_pipeline(pet, node)
 
@@ -31,7 +31,7 @@ def run_after(pet: PETGraphX):
     return pet
 
 
-def check_pipeline(pet: PETGraphX, root: Node):
+def check_pipeline(pet: PEGraphX, root: Node):
     """Tries to optimize dependencies for pipeline detection
     1. Deletes independent lines, that do not contribute to the pipeline
     2. Deletes similar CU (that have same dependencies), as those can be one step in the pipeline
@@ -128,7 +128,7 @@ def get_mergeable_nodes(matrix):
     return res
 
 
-def get_matrix(pet: PETGraphX, root: Node, loop_subnodes: List[Node]) -> List[List[int]]:
+def get_matrix(pet: PEGraphX, root: Node, loop_subnodes: List[Node]) -> List[List[int]]:
     res: List[List[int]] = []
     for i in range(0, len(loop_subnodes)):
         res.append([])

@@ -8,14 +8,14 @@
 
 from typing import List, Dict, cast
 
-from discopop_explorer.PETGraphX import (
+from discopop_explorer.PEGraphX import (
     CUNode,
     FunctionNode,
     LoopNode,
     MWType,
     EdgeType,
     Node,
-    PETGraphX,
+    PEGraphX,
     LineID,
 )
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -31,7 +31,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
 from discopop_explorer.utils import classify_task_vars
 
 
-def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
+def detect_task_suggestions(pet: PEGraphX) -> List[PatternInfo]:
     """creates task parallelism suggestions and returns them as a list of
     TaskParallelismInfo objects.
     Currently relies on previous processing steps and suggests WORKER CUs
@@ -141,7 +141,7 @@ def detect_task_suggestions(pet: PETGraphX) -> List[PatternInfo]:
     return result
 
 
-def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
+def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """Separate treatment of task suggestions at loop increment CUs.
     If regular loop: move taskwait suggested at loop increment line to end of loop body.
     If do-all loop: move taskwait suggested at loop increment line outside of loop body.
@@ -316,7 +316,7 @@ def correct_task_suggestions_in_loop_body(pet: PETGraphX, suggestions: List[Patt
 
 
 def __identify_atomic_or_critical_sections(
-    pet: PETGraphX, ts: TaskParallelismInfo, found_cus: List[Node], selector: bool
+    pet: PEGraphX, ts: TaskParallelismInfo, found_cus: List[Node], selector: bool
 ):
     """Identifies and marks atomic or critical sections.
     :param pet: PET Graph

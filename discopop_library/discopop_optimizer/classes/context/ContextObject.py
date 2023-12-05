@@ -9,7 +9,7 @@ from typing import Dict, Set, List, Optional
 
 from sympy import Expr, Integer, Symbol  # type: ignore
 
-from discopop_explorer.PETGraphX import MemoryRegion
+from discopop_explorer.PEGraphX import MemoryRegion
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (

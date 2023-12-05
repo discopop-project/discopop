@@ -8,7 +8,7 @@
 import os
 from typing import Set, Dict, cast, Optional, List, Tuple
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeID, MemoryRegion
+from discopop_explorer.PEGraphX import PEGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -153,7 +153,7 @@ class Update(object):
         self.memory_regions.update(other.memory_regions)
         self.dependencies.update(other.dependencies)
 
-    def get_as_metadata_using_memory_regions(self, pet: PETGraphX):
+    def get_as_metadata_using_memory_regions(self, pet: PEGraphX):
         return [
             self.synchronous_source_cu_id,
             self.sink_cu_id,
@@ -162,7 +162,7 @@ class Update(object):
             pet.node_at(self.synchronous_source_cu_id).end_position(),
         ]
 
-    def get_as_metadata_using_variable_names(self, pet: PETGraphX, project_folder_path: str):
+    def get_as_metadata_using_variable_names(self, pet: PEGraphX, project_folder_path: str):
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.variable_names:
@@ -220,7 +220,7 @@ class Update(object):
             update_position,
         ]
 
-    def get_as_metadata_using_variable_names_and_memory_regions(self, pet: PETGraphX, project_folder_path: str):
+    def get_as_metadata_using_variable_names_and_memory_regions(self, pet: PEGraphX, project_folder_path: str):
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.variable_names:
@@ -263,7 +263,7 @@ class Update(object):
 
     def convert_memory_regions_to_variable_names(
         self,
-        pet: PETGraphX,
+        pet: PEGraphX,
         memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
     ):
         self.variable_names = set()

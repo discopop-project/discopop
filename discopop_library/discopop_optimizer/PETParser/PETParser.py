@@ -11,8 +11,8 @@ from typing import Dict, List, Tuple, Set
 import networkx as nx  # type: ignore
 import warnings
 
-from discopop_explorer.PETGraphX import (
-    PETGraphX,
+from discopop_explorer.PEGraphX import (
+    PEGraphX,
     FunctionNode,
     EdgeType,
     LoopNode,
@@ -48,7 +48,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
 
 
 class PETParser(object):
-    pet: PETGraphX
+    pet: PEGraphX
     graph: nx.DiGraph
     next_free_node_id: int
     cu_id_to_graph_node_id: Dict[NodeID, int]

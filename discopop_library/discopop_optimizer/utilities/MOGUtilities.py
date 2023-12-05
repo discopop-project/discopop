@@ -11,7 +11,7 @@ import matplotlib  # type: ignore
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
 
-from discopop_explorer.PETGraphX import MemoryRegion, NodeID
+from discopop_explorer.PEGraphX import MemoryRegion, NodeID
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
 from discopop_library.discopop_optimizer.classes.edges.GenericEdge import GenericEdge
 from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge

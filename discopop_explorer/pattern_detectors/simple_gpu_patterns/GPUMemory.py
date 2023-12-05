@@ -9,8 +9,8 @@
 from enum import Enum
 from typing import List, Set, cast, Tuple
 
-from discopop_explorer.PETGraphX import (
-    PETGraphX,
+from discopop_explorer.PEGraphX import (
+    PEGraphX,
     CUNode,
     DepType,
     NodeID,
@@ -24,7 +24,7 @@ from discopop_explorer.utils import is_func_arg, is_global, __get_dep_of_type as
 from discopop_explorer.variable import Variable
 
 
-def map_node(pet: PETGraphX, nodeID: NodeID) -> Node:
+def map_node(pet: PEGraphX, nodeID: NodeID) -> Node:
     return pet.node_at(nodeID)
 
 
@@ -64,7 +64,7 @@ def set_end(s: Set[str]) -> str:
 
 
 def getCalledFunctions(
-    pet: PETGraphX, node: Node, calledFunctions: Set[NodeID], dummyFunctions: Set[NodeID]
+    pet: PEGraphX, node: Node, calledFunctions: Set[NodeID], dummyFunctions: Set[NodeID]
 ) -> Set[NodeID]:
     """This function traverses all children nodes of 'node' and adds every
         encountered function (non-dummy) to the 'calledFunctions' set.
@@ -91,7 +91,7 @@ def getCalledFunctions(
 
 def getDeps(
     cuIDs: List[CUNode],
-    pet: PETGraphX,
+    pet: PEGraphX,
     RAWDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
     WARDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
     WAWDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
@@ -127,7 +127,7 @@ def assignMapType(
     loopCUs: List[NodeID],
     var: Variable,
     isScalar: bool,
-    pet: PETGraphX,
+    pet: PEGraphX,
     RAWDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
     reverseRAWDepsOn: Set[Tuple[NodeID, NodeID, Dependency]],
 ) -> map_type_t:

@@ -8,7 +8,7 @@
 import os
 from typing import Set, List, Tuple
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeID, MemoryRegion
+from discopop_explorer.PEGraphX import PEGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -32,7 +32,7 @@ class ExitPoint(object):
 
     def __init__(
         self,
-        pet: PETGraphX,
+        pet: PEGraphX,
         var_names: Set[VarName],
         memory_regions: Set[MemoryRegion],
         source_cu_id: NodeID,
@@ -116,7 +116,7 @@ class ExitPoint(object):
         self.memory_regions.update(other.memory_regions)
         self.dependencies.update(other.dependencies)
 
-    def get_as_metadata(self, pet: PETGraphX, project_folder_path: str):
+    def get_as_metadata(self, pet: PEGraphX, project_folder_path: str):
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.var_names:

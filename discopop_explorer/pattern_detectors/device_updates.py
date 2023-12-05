@@ -8,8 +8,8 @@
 from typing import Optional
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import (
-    PETGraphX,
+from ..PEGraphX import (
+    PEGraphX,
     Node,
     LineID,
     MemoryRegion,
@@ -21,7 +21,7 @@ class DeviceUpdateInfo(PatternInfo):
 
     def __init__(
         self,
-        pet: PETGraphX,
+        pet: PEGraphX,
         source_node: Node,
         target_node: Node,
         mem_reg: MemoryRegion,

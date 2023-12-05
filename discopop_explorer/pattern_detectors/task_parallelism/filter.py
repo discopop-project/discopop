@@ -8,7 +8,7 @@
 
 from typing import List, Dict, cast, Optional, Union
 
-from discopop_explorer.PETGraphX import CUNode, NodeType, EdgeType, Node, PETGraphX
+from discopop_explorer.PEGraphX import CUNode, NodeType, EdgeType, Node, PEGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -25,7 +25,7 @@ from discopop_explorer.utils import is_loop_index2
 
 
 def filter_data_sharing_clauses(
-    pet: PETGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
+    pet: PEGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
 ) -> List[PatternInfo]:
     """Wrapper to filter data sharing clauses according to the included steps.
     :param pet: PET graph
@@ -38,7 +38,7 @@ def filter_data_sharing_clauses(
     return suggestions
 
 
-def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, suggestions: List[PatternInfo]):
+def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PEGraphX, suggestions: List[PatternInfo]):
     """Removes clauses for shared loop indices.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
@@ -69,7 +69,7 @@ def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PETGraphX, sug
 
 
 def __filter_data_sharing_clauses_by_function(
-    pet: PETGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
+    pet: PEGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
 ) -> List[PatternInfo]:
     """Removes superfluous variables (not known in parent function of suggestion) from the data sharing clauses
     of task suggestions.
@@ -221,7 +221,7 @@ def __filter_firstprivate_clauses(
     suggestion.first_private = [v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed]
 
 
-def __reverse_reachable_w_o_breaker(pet: PETGraphX, root: Node, target: Node, breaker_cu: Node, visited: List[Node]):
+def __reverse_reachable_w_o_breaker(pet: PEGraphX, root: Node, target: Node, breaker_cu: Node, visited: List[Node]):
     """Helper function for filter_data_sharing_clauses_by_scope.
     Checks if target is reachable by traversing the successor graph in reverse, starting from root,
     without visiting breaker_cu.
@@ -248,7 +248,7 @@ def __reverse_reachable_w_o_breaker(pet: PETGraphX, root: Node, target: Node, br
 
 
 def __filter_data_sharing_clauses_by_scope(
-    pet: PETGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
+    pet: PEGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
 ) -> List[PatternInfo]:
     """Filters out such data sharing clauses which belong to unknown variables at the source location of a given
     suggestion.
@@ -286,7 +286,7 @@ def __filter_data_sharing_clauses_by_scope(
 
 
 def __filter_sharing_clause(
-    pet: PETGraphX,
+    pet: PEGraphX,
     suggestion: TaskParallelismInfo,
     var_def_line_dict: Dict[str, List[str]],
     parent_function_cu,
@@ -344,7 +344,7 @@ def __filter_sharing_clause(
 
 
 def remove_useless_barrier_suggestions(
-    pet: PETGraphX, suggestions: List[TaskParallelismInfo]
+    pet: PEGraphX, suggestions: List[TaskParallelismInfo]
 ) -> List[TaskParallelismInfo]:
     """remove suggested barriers which are not contained in the same
     function body with at least one suggested task.
@@ -409,7 +409,7 @@ def remove_duplicate_data_sharing_clauses(suggestions: List[PatternInfo]) -> Lis
 
 
 def __filter_in_dependencies(
-    pet: PETGraphX,
+    pet: PEGraphX,
     suggestion: TaskParallelismInfo,
     var_def_line_dict: Dict[str, List[str]],
     parent_function: Node,
@@ -474,7 +474,7 @@ def __filter_in_dependencies(
 
 
 def __filter_out_dependencies(
-    pet: PETGraphX,
+    pet: PEGraphX,
     suggestion: TaskParallelismInfo,
     var_def_line_dict: Dict[str, List[str]],
     parent_function: Node,
@@ -539,7 +539,7 @@ def __filter_out_dependencies(
 
 
 def __filter_in_out_dependencies(
-    pet: PETGraphX,
+    pet: PEGraphX,
     suggestion: TaskParallelismInfo,
     var_def_line_dict: Dict[str, List[str]],
     parent_function: Node,
@@ -646,7 +646,7 @@ def __filter_in_out_dependencies(
 
 
 def filter_data_depend_clauses(
-    pet: PETGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
+    pet: PEGraphX, suggestions: List[PatternInfo], var_def_line_dict: Dict[str, List[str]]
 ) -> List[PatternInfo]:
     """Removes superfluous variables from the data depend clauses
     of task suggestions.

@@ -13,8 +13,8 @@ from typing import Dict, Set, Tuple, Optional, List, cast
 import networkx as nx  # type: ignore
 from networkx import NetworkXNoCycle, MultiDiGraph
 
-from discopop_explorer.PETGraphX import (
-    PETGraphX,
+from discopop_explorer.PEGraphX import (
+    PEGraphX,
     EdgeType,
     NodeType,
     NodeID,
@@ -98,7 +98,7 @@ class Context(object):
                     self.seen_writes_by_device[device_id_to_update][mem_reg].add((ident, origin_cu_id))
         return updated_memory_regions
 
-    def find_required_updates(self, pet: PETGraphX, new_device_id: int) -> Set[Tuple[MemoryRegion, int, int, NodeID]]:
+    def find_required_updates(self, pet: PEGraphX, new_device_id: int) -> Set[Tuple[MemoryRegion, int, int, NodeID]]:
         # update required, if seen writes of new device is not a superset of old device id
         required_updates: Set[Tuple[MemoryRegion, int, int, NodeID]] = set()
 
@@ -196,7 +196,7 @@ class Context(object):
 
     def update_to(
         self,
-        pet: PETGraphX,
+        pet: PEGraphX,
         next_cu_id: NodeID,
         comb_gpu_reg,
         writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
@@ -367,7 +367,7 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
 
 def identify_updates(
     comb_gpu_reg,
-    pet: PETGraphX,
+    pet: PEGraphX,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
     unrolled_function_graph: MultiDiGraph,
 ) -> Set[Update]:
@@ -434,7 +434,7 @@ def get_update_type(from_device_id: int, to_device_id: int) -> UpdateType:
 
 
 def __calculate_updates(
-    pet: PETGraphX,
+    pet: PEGraphX,
     comb_gpu_reg,
     context: Context,
     cur_node_id: NodeID,
@@ -518,7 +518,7 @@ def __calculate_updates(
     return identified_updates
 
 
-def create_circle_free_function_graphs(pet: PETGraphX, add_dummy_node=True):
+def create_circle_free_function_graphs(pet: PEGraphX, add_dummy_node=True):
     """Remove loops from the CUGraph by unrolling loops in the successor graphs of each function."""
     import networkx as nx
 
@@ -680,7 +680,7 @@ def create_circle_free_function_graphs(pet: PETGraphX, add_dummy_node=True):
 
 
 def add_accesses_from_called_functions(
-    pet: PETGraphX,
+    pet: PEGraphX,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
     force_called_functions_to_host: bool = False,
 ) -> Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]]:
@@ -729,7 +729,7 @@ def add_accesses_from_called_functions(
 
 def identify_updates_in_unrolled_function_graphs(
     comb_gpu_reg,
-    pet: PETGraphX,
+    pet: PEGraphX,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
     unrolled_function_graphs: Dict[FunctionNode, MultiDiGraph],
 ) -> Set[Update]:

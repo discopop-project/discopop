@@ -13,10 +13,10 @@ from typing import List, cast
 from alive_progress import alive_bar  # type: ignore
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import (
+from ..PEGraphX import (
     CUNode,
     LoopNode,
-    PETGraphX,
+    PEGraphX,
     NodeType,
     Node,
     LineID,
@@ -30,7 +30,7 @@ from ..variable import Variable
 class ReductionInfo(PatternInfo):
     """Class, that contains reduction detection result"""
 
-    def __init__(self, pet: PETGraphX, node: Node):
+    def __init__(self, pet: PEGraphX, node: Node):
         """
         :param pet: PET graph
         :param node: node, where reduction was detected
@@ -62,7 +62,7 @@ class ReductionInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PETGraphX) -> List[ReductionInfo]:
+def run_detection(pet: PEGraphX) -> List[ReductionInfo]:
     """Search for reduction pattern
 
     :param pet: PET graph
@@ -106,7 +106,7 @@ def __check_node(param_tuple):
     return local_result
 
 
-def __detect_reduction(pet: PETGraphX, root: LoopNode) -> bool:
+def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
     """Detects reduction pattern in loop
 
     :param pet: PET graph
@@ -156,7 +156,7 @@ def __detect_reduction(pet: PETGraphX, root: LoopNode) -> bool:
 
 
 def __check_loop_dependencies(
-    pet: PETGraphX,
+    pet: PEGraphX,
     root_loop: LoopNode,
     root_children_cus: List[CUNode],
     root_children_loops: List[LoopNode],

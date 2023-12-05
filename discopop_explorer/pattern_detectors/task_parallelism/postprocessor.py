@@ -8,7 +8,7 @@
 
 from typing import List, cast, Dict, Optional, Tuple
 
-from discopop_explorer.PETGraphX import Node, EdgeType, PETGraphX
+from discopop_explorer.PEGraphX import Node, EdgeType, PEGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -17,7 +17,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.classes import (
 )
 
 
-def group_task_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
+def group_task_suggestions(pet: PEGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """Group task and taskwait suggestions by traversing the successor graph and marking.
     Starting from each taskwait suggestion, the successor graph is traversed in reverse order.
     Visited task suggestions are marked using it's id. The traversal stops if either another taskwait suggestion or the

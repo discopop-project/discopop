@@ -12,7 +12,7 @@ from typing import List, Tuple, Dict, Optional, cast
 import networkx as nx  # type: ignore
 from sympy import Symbol
 
-from discopop_explorer.PETGraphX import PETGraphX
+from discopop_explorer.PEGraphX import PEGraphX
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
@@ -34,7 +34,7 @@ from discopop_library.discopop_optimizer.utilities.optimization.GlobalOptimizati
 
 
 def show_options(
-    pet: PETGraphX,
+    pet: PEGraphX,
     graph: nx.DiGraph,
     experiment: Experiment,
     options: List[Tuple[CostModel, ContextObject, str]],
@@ -249,7 +249,7 @@ def __save_models(
 
 def add_random_models(
     root: Optional[tkinter.Toplevel],
-    pet: PETGraphX,
+    pet: PEGraphX,
     graph: nx.DiGraph,
     experiment: Experiment,
     conserve_options: List[Tuple[CostModel, ContextObject, str]],

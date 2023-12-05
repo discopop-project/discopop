@@ -12,7 +12,7 @@ from typing import List
 
 from lxml import objectify, etree  # type: ignore
 
-from discopop_explorer.PETGraphX import LoopNode, PETGraphX
+from discopop_explorer.PEGraphX import LoopNode, PEGraphX
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
 
 
@@ -383,7 +383,7 @@ def __preprocessor_cu_contains_at_least_two_recursive_calls(node) -> bool:
     return False
 
 
-def check_loop_scopes(pet: PETGraphX):
+def check_loop_scopes(pet: PEGraphX):
     """Checks if the scope of loop CUs matches these of their children. Corrects the scope of the loop CU
     (expand only) if necessary
     :param pet: PET graph"""

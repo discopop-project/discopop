@@ -9,8 +9,8 @@ import os
 from enum import IntEnum
 from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 
-from discopop_explorer.PETGraphX import (
-    PETGraphX,
+from discopop_explorer.PEGraphX import (
+    PEGraphX,
     CUNode,
     parse_id,
     DepType,
@@ -178,7 +178,7 @@ class GPULoopPattern(PatternInfo):
 
     def __init__(
         self,
-        pet: PETGraphX,
+        pet: PEGraphX,
         nodeID: NodeID,
         startLine,
         endLine,
@@ -220,7 +220,7 @@ class GPULoopPattern(PatternInfo):
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
-    def to_string(self, pet: PETGraphX) -> str:
+    def to_string(self, pet: PEGraphX) -> str:
         constructs = self.__get_constructs(pet, self.project_folder_path)
         construct_str = "\n" if len(constructs) > 0 else ""
         for entry in constructs:
@@ -240,12 +240,12 @@ class GPULoopPattern(PatternInfo):
             f"OpenMP constructs: {construct_str}\n"
         )
 
-    def save_omp_constructs(self, pet: PETGraphX, project_folder_path: str):
+    def save_omp_constructs(self, pet: PEGraphX, project_folder_path: str):
         """Save OpenMP constructs such that they are included in the exported JSON file."""
         constructs = self.__get_constructs(pet, project_folder_path)
         self.constructs = constructs
 
-    def toJson(self, pet: PETGraphX, project_folder_path: str) -> str:
+    def toJson(self, pet: PEGraphX, project_folder_path: str) -> str:
         """Generates a json-string which contains the information about how to
             implement this pattern using OpenMP constructs
 
@@ -275,7 +275,7 @@ class GPULoopPattern(PatternInfo):
         return json_output
 
     def __get_constructs(
-        self, pet: PETGraphX, project_folder_path: str
+        self, pet: PEGraphX, project_folder_path: str
     ) -> List[Dict[str, Union[str, LineID, List[str], OmpConstructPositioning]]]:
         constructs: List[Dict[str, Union[str, LineID, List[str], OmpConstructPositioning]]] = []
 
@@ -442,7 +442,7 @@ class GPULoopPattern(PatternInfo):
 
         return constructs
 
-    def getDataStr(self, pet: PETGraphX) -> str:
+    def getDataStr(self, pet: PEGraphX) -> str:
         """Generates a string which contains data that is used to rank this loop, e.g.
             the number of iterations and which variables have to be transferred etc.
 
@@ -482,7 +482,7 @@ class GPULoopPattern(PatternInfo):
                 ss += self.__add_sub_loops_rec(pet, cn_id.id, total_i)
         return ss
 
-    def classifyLoopVars(self, pet: PETGraphX, loop: LoopNode) -> None:
+    def classifyLoopVars(self, pet: PEGraphX, loop: LoopNode) -> None:
         """Classify the variables that are accessed in this loop, e.g. assign them
             to a map-type vector and find reduction variables
 
@@ -605,7 +605,7 @@ class GPULoopPattern(PatternInfo):
         """
         self.parentLoop = pl
 
-    def getNestedLoops(self, pet: PETGraphX, node_id: NodeID) -> None:
+    def getNestedLoops(self, pet: PEGraphX, node_id: NodeID) -> None:
         """
 
         :param node_id:
@@ -621,7 +621,7 @@ class GPULoopPattern(PatternInfo):
                 self.nestedLoops.add(cn_id.id)
                 self.getNestedLoops(pet, cn_id.id)
 
-    def getNextLoop(self, pet: PETGraphX, node_id: NodeID) -> None:
+    def getNextLoop(self, pet: PEGraphX, node_id: NodeID) -> None:
         """
 
         :param node_id:
@@ -633,7 +633,7 @@ class GPULoopPattern(PatternInfo):
             if children.end_line > endLine:
                 endLine = children.end_line
 
-    def setCollapseClause(self, pet: PETGraphX, node_id: NodeID, res):
+    def setCollapseClause(self, pet: PEGraphX, node_id: NodeID, res):
         """
 
         :param node_id:
@@ -716,7 +716,7 @@ class GPULoopPattern(PatternInfo):
         for k in [v.name for v in self.map_type_tofrom]:
             print("    " + k)
 
-    def __add_sub_loops_rec(self, pet: PETGraphX, node_id: NodeID, top_loop_iterations: int) -> str:
+    def __add_sub_loops_rec(self, pet: PEGraphX, node_id: NodeID, top_loop_iterations: int) -> str:
         """This function adds information about the loop's child loops to the string
             stream 'ss'. This information contains the child loop's line number and
             its number of iterations divided by the number of iterations of the top loop.

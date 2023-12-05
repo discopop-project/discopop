@@ -24,7 +24,7 @@ from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench
     ExtrapInterpolatedMicrobench,
 )
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from .PETGraphX import PETGraphX
+from .PEGraphX import PEGraphX
 from .json_serializer import PatternInfoSerializer
 from .parser import parse_inputs
 from .pattern_detection import PatternDetectorX
@@ -104,7 +104,7 @@ def __run(
     enable_task_pattern: bool = False,
     enable_detection_of_scheduling_clauses: bool = False,
 ) -> DetectionResult:
-    pet = PETGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
+    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
     print("PET CREATION FINISHED.")
     # pet.show()
     # TODO add visualization

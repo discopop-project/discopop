@@ -225,7 +225,7 @@ class Node:
     def __hash__(self):
         return hash(self.id)
 
-    def get_parent_id(self, pet: PETGraphX) -> Optional[NodeID]:
+    def get_parent_id(self, pet: PEGraphX) -> Optional[NodeID]:
         parents = [s for s, t, d in pet.in_edges(self.id, EdgeType.CHILD)]
         if len(parents) == 0:
             return None
@@ -267,7 +267,7 @@ class LoopNode(Node):
         super().__init__(node_id)
         self.type = NodeType.LOOP
 
-    def get_nesting_level(self, pet: PETGraphX, return_invert_result: bool = True) -> int:
+    def get_nesting_level(self, pet: PEGraphX, return_invert_result: bool = True) -> int:
         """Returns the loop nesting level for the given loop node.
         Currently, due to the profiling output, only 3 nesting levels of loops can be mapped correctly.
         Innermost level is 0.
@@ -306,7 +306,7 @@ class LoopNode(Node):
         else:
             return max(parent_nesting_levels)
 
-    def get_entry_node(self, pet: PETGraphX) -> Optional[Node]:
+    def get_entry_node(self, pet: PEGraphX) -> Optional[Node]:
         """returns the first CU Node contained in the loop (i.e. one without predecessor inside the loop)"""
         for node in pet.direct_children(self):
             predecessors_outside_loop_body = [
@@ -345,13 +345,13 @@ class FunctionNode(Node):
         self.immediate_post_dominators_present = False
         self.memory_accesses_present = False
 
-    def get_entry_cu_id(self, pet: PETGraphX) -> NodeID:
+    def get_entry_cu_id(self, pet: PEGraphX) -> NodeID:
         for child_cu_id in [t for s, t, d in pet.out_edges(self.id, EdgeType.CHILD)]:
             if len(pet.in_edges(child_cu_id, EdgeType.SUCCESSOR)) == 0:
                 return child_cu_id
         raise ValueError("Mal-formatted function: ", self.id, " - No entry CU found!")
 
-    def get_exit_cu_ids(self, pet: PETGraphX) -> Set[NodeID]:
+    def get_exit_cu_ids(self, pet: PEGraphX) -> Set[NodeID]:
         exit_cu_ids: Set[NodeID] = set()
         if self.children_cu_ids is not None:
             for child_cu_id in self.children_cu_ids:
@@ -362,7 +362,7 @@ class FunctionNode(Node):
                     exit_cu_ids.add(child_cu_id)
         return exit_cu_ids
 
-    def calculate_reachability_pairs(self, pet: PETGraphX):
+    def calculate_reachability_pairs(self, pet: PEGraphX):
         reachability_pairs: Dict[NodeID, Set[NodeID]] = dict()
         # create graph copy and remove all but successor edges
         copied_graph = pet.g.copy()
@@ -383,7 +383,7 @@ class FunctionNode(Node):
             reachability_pairs[node_id].update(successors)
         return reachability_pairs
 
-    def get_immediate_post_dominators(self, pet: PETGraphX) -> Dict[NodeID, NodeID]:
+    def get_immediate_post_dominators(self, pet: PEGraphX) -> Dict[NodeID, NodeID]:
         if self.immediate_post_dominators_present:
             import sys
 
@@ -566,7 +566,7 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
     return d
 
 
-class PETGraphX(object):
+class PEGraphX(object):
     g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
     main: Node
