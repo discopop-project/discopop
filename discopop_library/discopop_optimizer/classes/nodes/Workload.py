@@ -9,7 +9,7 @@ from typing import Optional, Set, List, cast
 
 from sympy import Integer, Expr  # type: ignore
 
-from discopop_explorer.PETGraphX import NodeID, PETGraphX, EdgeType
+from discopop_explorer.PEGraphX import NodeID, PEGraphX, EdgeType
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
@@ -109,7 +109,7 @@ class Workload(GenericNode):
         if self.original_cu_id is not None:
             called_cu_ids: List[str] = [
                 str(t)
-                for s, t, d in cast(PETGraphX, experiment.detection_result.pet).out_edges(
+                for s, t, d in cast(PEGraphX, experiment.detection_result.pet).out_edges(
                     self.original_cu_id, EdgeType.CALLSNODE
                 )
             ]

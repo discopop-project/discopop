@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Tuple, Set, cast
 
-from discopop_explorer.PETGraphX import NodeID, PETGraphX, MemoryRegion, CUNode, EdgeType, DepType
+from discopop_explorer.PEGraphX import NodeID, PEGraphX, MemoryRegion, CUNode, EdgeType, DepType
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     WriteDataAccess,
     ReadDataAccess,
@@ -23,7 +23,7 @@ def get_next_free_unique_write_id() -> int:
     return buffer
 
 
-def get_data_accesses_for_cu(pet: PETGraphX, cu_id: NodeID) -> Tuple[Set[WriteDataAccess], Set[ReadDataAccess]]:
+def get_data_accesses_for_cu(pet: PEGraphX, cu_id: NodeID) -> Tuple[Set[WriteDataAccess], Set[ReadDataAccess]]:
     """Calculates and returns the sets of accessed memory regions for the given cu node.
     The first element contains write accesses, the second element contains read accesses."""
     parent_function = pet.get_parent_function(pet.node_at(cu_id))

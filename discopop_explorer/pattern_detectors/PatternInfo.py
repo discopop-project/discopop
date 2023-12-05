@@ -9,7 +9,7 @@ import json
 import os
 from typing import Optional
 
-from ..PETGraphX import LoopNode, Node, NodeID, LineID, PETGraphX
+from ..PEGraphX import LoopNode, Node, NodeID, LineID, PEGraphX
 from ..utils import calculate_workload, calculate_per_iteration_workload_of_loop
 
 
@@ -74,7 +74,7 @@ class PatternInfo(object):
 
         return json.dumps(dic, indent=2, default=lambda o: o.toJSON())  # , default=lambda o: "<not serializable>")
 
-    def get_workload(self, pet: PETGraphX) -> int:
+    def get_workload(self, pet: PEGraphX) -> int:
         """returns the workload of self._node"""
         if self.workload is not None:
             return self.workload
@@ -88,7 +88,7 @@ class PatternInfo(object):
 
         return self.workload
 
-    def get_per_iteration_workload(self, pet: PETGraphX) -> int:
+    def get_per_iteration_workload(self, pet: PEGraphX) -> int:
         """returns the per iteration workload of self"""
         if self.per_iteration_workload is not None:
             return self.per_iteration_workload

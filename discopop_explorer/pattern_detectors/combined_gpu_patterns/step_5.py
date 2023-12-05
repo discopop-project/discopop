@@ -8,14 +8,14 @@
 
 from typing import Dict, Set
 
-from discopop_explorer.PETGraphX import PETGraphX, NodeID, MemoryRegion
+from discopop_explorer.PEGraphX import PEGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
 
 
 def propagate_variable_name_associations(
-    pet: PETGraphX,
+    pet: PEGraphX,
     memory_regions_to_cus_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
 ) -> Dict[MemoryRegion, Dict[NodeID, Set[VarName]]]:
     """Replaces individual cu ids with id's of their parent functions."""

@@ -20,7 +20,7 @@ from discopop_library.discopop_optimizer.scheduling.workload_delta import (
 )
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_nodes_from_cu_id
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from .PETGraphX import DummyNode, LoopNode, PETGraphX, EdgeType
+from .PEGraphX import DummyNode, LoopNode, PEGraphX, EdgeType
 from .pattern_detectors.do_all_detector import run_detection as detect_do_all
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
 from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline
@@ -29,9 +29,9 @@ from .pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_dete
 
 
 class PatternDetectorX(object):
-    pet: PETGraphX
+    pet: PEGraphX
 
-    def __init__(self, pet_graph: PETGraphX) -> None:
+    def __init__(self, pet_graph: PEGraphX) -> None:
         """This class runs detection algorithms on CU graph
 
         :param pet_graph: CU graph

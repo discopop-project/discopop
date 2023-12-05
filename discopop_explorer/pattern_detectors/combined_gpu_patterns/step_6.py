@@ -11,8 +11,8 @@ from typing import Set, Tuple, Dict, List, cast, Optional, Union
 
 from networkx import MultiDiGraph  # type: ignore
 
-from discopop_explorer.PETGraphX import (
-    PETGraphX,
+from discopop_explorer.PEGraphX import (
+    PEGraphX,
     EdgeType,
     NodeID,
     MemoryRegion,
@@ -34,7 +34,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update im
 
 
 def convert_updates_to_entry_and_exit_points(
-    pet: PETGraphX,
+    pet: PEGraphX,
     issued_updates: Set[Update],
     memory_region_liveness_by_device: Dict[int, Dict[MemoryRegion, List[NodeID]]],
 ) -> Tuple[Set[EntryPoint], Set[ExitPoint], Set[Update]]:
@@ -141,7 +141,7 @@ def convert_updates_to_entry_and_exit_points(
 
 
 def add_aliases(
-    pet: PETGraphX,
+    pet: PEGraphX,
     issued_updates: Set[Update],
     memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
 ) -> Set[Update]:
@@ -185,7 +185,7 @@ def add_aliases(
 
 
 def identify_end_of_life_points(
-    pet: PETGraphX,
+    pet: PEGraphX,
     entry_points: Set[EntryPoint],
     exit_points: Set[ExitPoint],
     memory_region_liveness_by_device: Dict[int, Dict[MemoryRegion, List[NodeID]]],
@@ -294,7 +294,7 @@ def identify_end_of_life_points(
 
 
 def extend_region_liveness_using_unrolled_functions(
-    pet: PETGraphX,
+    pet: PEGraphX,
     liveness: Dict[MemoryRegion, List[NodeID]],
     unrolled_function_graphs: Dict[FunctionNode, MultiDiGraph],
 ) -> Dict[MemoryRegion, List[NodeID]]:

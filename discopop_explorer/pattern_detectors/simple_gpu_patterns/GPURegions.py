@@ -10,8 +10,8 @@ from typing import List, Set, Optional, cast, Dict, Tuple
 
 from alive_progress import alive_bar  # type: ignore
 
-from discopop_explorer.PETGraphX import (
-    PETGraphX,
+from discopop_explorer.PEGraphX import (
+    PEGraphX,
     CUNode,
     NodeType,
     EdgeType,
@@ -42,7 +42,7 @@ class GPURegionInfo(PatternInfo):
 
     def __init__(
         self,
-        pet: PETGraphX,
+        pet: PEGraphX,
         contained_loops: List[GPULoopPattern],
         contained_cu_ids: List[NodeID],
         map_to_vars: List[str],
@@ -72,7 +72,7 @@ class GPURegionInfo(PatternInfo):
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
-    def to_string(self, pet: PETGraphX):
+    def to_string(self, pet: PEGraphX):
         contained_loops_str = "\n" if len(self.contained_loops) > 0 else ""
         for loop in self.contained_loops:
             loop_str = loop.to_string(pet)
@@ -92,7 +92,7 @@ class GPURegionInfo(PatternInfo):
             f"Contained patterns: {contained_loops_str}\n"
         )
 
-    def get_entry_cus(self, pet: PETGraphX) -> List[str]:
+    def get_entry_cus(self, pet: PEGraphX) -> List[str]:
         """returns a list of contained cus with predecessors outside the GPU Region,
         i.e. entry points into the region"""
         entry_cus: List[str] = []
@@ -106,7 +106,7 @@ class GPURegionInfo(PatternInfo):
         entry_cus = list(set(entry_cus))
         return entry_cus
 
-    def get_exit_cus(self, pet: PETGraphX) -> Tuple[List[str], List[str]]:
+    def get_exit_cus(self, pet: PEGraphX) -> Tuple[List[str], List[str]]:
         """returns a list of contained cus with successors outside the GPU Region,
         i.e. exit points of the region. as well as a list of their successors, i.e. the nodes after the region
         """
@@ -129,7 +129,7 @@ class GPURegions:
     cascadingLoopsInRegions: List[List[NodeID]]
     gpu_loop_patterns: List[GPULoopPattern]
     loopsInRegion: List[str]
-    pet: PETGraphX
+    pet: PEGraphX
     numRegions: int
     cu_ids_by_region: Dict[Tuple[NodeID, ...], List[NodeID]]
     map_type_from_by_region: Dict[Tuple[str, ...], List[str]]
@@ -467,7 +467,7 @@ class GPURegions:
                 return True
         return False
 
-    def get_gpu_region_info(self, pet: PETGraphX, project_folder_path: str) -> List[GPURegionInfo]:
+    def get_gpu_region_info(self, pet: PEGraphX, project_folder_path: str) -> List[GPURegionInfo]:
         """Construct GPURegionInfo representations of all identified GPU Regions and return them in a list"""
         gpu_region_info: List[GPURegionInfo] = []
         print("\tget gpu region info...")

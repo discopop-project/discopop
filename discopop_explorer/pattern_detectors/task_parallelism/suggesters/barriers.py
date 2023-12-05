@@ -8,7 +8,7 @@
 
 from typing import List, cast, Tuple, Any
 
-from discopop_explorer.PETGraphX import Node, CUNode, EdgeType, NodeType, PETGraphX, LineID
+from discopop_explorer.PEGraphX import Node, CUNode, EdgeType, NodeType, PEGraphX, LineID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     ParallelRegionInfo,
@@ -23,7 +23,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
 )
 
 
-def detect_barrier_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
+def detect_barrier_suggestions(pet: PEGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """detect barriers which have not been detected by __detect_mw_types,
     especially marks WORKER as BARRIER_WORKER if it has depencies to two or
     more CUs which are contained in a path to a CU containing at least one
@@ -172,7 +172,7 @@ def detect_barrier_suggestions(pet: PETGraphX, suggestions: List[PatternInfo]) -
 
 
 def __count_adjacent_nodes(
-    pet: PETGraphX,
+    pet: PEGraphX,
     suggestions: List[PatternInfo],
     out_dep_edges: List[Tuple[Any, Any, Any]],
     task_nodes: List[Node],
@@ -227,7 +227,7 @@ def __count_adjacent_nodes(
 
 
 def __check_dependences_and_predecessors(
-    pet: PETGraphX, out_dep_edges: List[Tuple[Any, Any, Any]], parent_task: Node, cur_cu: Node
+    pet: PEGraphX, out_dep_edges: List[Tuple[Any, Any, Any]], parent_task: Node, cur_cu: Node
 ):
     """Checks if only dependences to self, parent omittable node or path to target task exists.
     Checks if node is a direct successor of an omittable node or a task node.
@@ -287,7 +287,7 @@ def __split_suggestions(
 
 
 def suggest_barriers_for_uncovered_tasks_before_return(
-    pet: PETGraphX, suggestions: List[PatternInfo]
+    pet: PEGraphX, suggestions: List[PatternInfo]
 ) -> List[PatternInfo]:
     """enforces taskwait or similar pragmas before return statements to ensure, that no unfinished tasks exist
     when the parent function returns.
@@ -343,7 +343,7 @@ def suggest_barriers_for_uncovered_tasks_before_return(
     return suggestions
 
 
-def validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
+def validate_barriers(pet: PEGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """Checks if >= 2 dependencies exist from same successor path or
     node that contains the barrier is of type loop.
     Eliminate those barrier suggestions that violate this requirement.
@@ -419,7 +419,7 @@ def validate_barriers(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[Pa
     return result
 
 
-def suggest_missing_barriers_for_global_vars(pet: PETGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
+def suggest_missing_barriers_for_global_vars(pet: PEGraphX, suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """Suggests a barrier if a node is a successor of a task CU
     which is not covered by an existing barrier and the set of global variables
     of the CU and the task are overlapping

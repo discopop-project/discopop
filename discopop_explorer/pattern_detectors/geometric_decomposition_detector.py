@@ -13,7 +13,7 @@ from typing import Dict, List, Tuple, Optional
 from alive_progress import alive_bar  # type: ignore
 
 from .PatternInfo import PatternInfo
-from ..PETGraphX import FunctionNode, LoopNode, NodeID, PETGraphX, Node, EdgeType
+from ..PEGraphX import FunctionNode, LoopNode, NodeID, PEGraphX, Node, EdgeType
 from ..utils import classify_task_vars, get_child_loops
 from ..variable import Variable
 
@@ -23,7 +23,7 @@ __loop_iterations: Dict[NodeID, int] = {}
 class GDInfo(PatternInfo):
     """Class, that contains geometric decomposition detection result"""
 
-    def __init__(self, pet: PETGraphX, node: Node, min_iter: int):
+    def __init__(self, pet: PEGraphX, node: Node, min_iter: int):
         """
         :param pet: PET graph
         :param node: node, where geometric decomposition was detected
@@ -78,7 +78,7 @@ class GDInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PETGraphX) -> List[GDInfo]:
+def run_detection(pet: PEGraphX) -> List[GDInfo]:
     """Detects geometric decomposition
 
     :param pet: PET graph
@@ -127,7 +127,7 @@ def __check_node(param_tuple):
     return local_result
 
 
-def __test_chunk_limit(pet: PETGraphX, node: Node) -> Tuple[bool, Optional[int]]:
+def __test_chunk_limit(pet: PEGraphX, node: Node) -> Tuple[bool, Optional[int]]:
     """Tests, whether or not the node has inner loops with and none of them have 0 iterations
 
     :param pet: PET graph
@@ -154,7 +154,7 @@ def __test_chunk_limit(pet: PETGraphX, node: Node) -> Tuple[bool, Optional[int]]
     )
 
 
-def __iterations_count(pet: PETGraphX, node: LoopNode) -> int:
+def __iterations_count(pet: PEGraphX, node: LoopNode) -> int:
     """Counts the iterations in the specified node
 
     :param pet: PET graph
@@ -175,7 +175,7 @@ def __iterations_count(pet: PETGraphX, node: LoopNode) -> int:
     return __loop_iterations[node.id]
 
 
-def __get_parent_iterations(pet: PETGraphX, node: Node) -> int:
+def __get_parent_iterations(pet: PEGraphX, node: Node) -> int:
     """Calculates the number of iterations in parent of loop
 
     :param pet: PET graph
@@ -200,7 +200,7 @@ def __get_parent_iterations(pet: PETGraphX, node: Node) -> int:
     return max_iter
 
 
-def __detect_geometric_decomposition(pet: PETGraphX, root: Node) -> bool:
+def __detect_geometric_decomposition(pet: PEGraphX, root: Node) -> bool:
     """Detects geometric decomposition pattern
 
     :param pet: PET graph

@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from .PETGraphX import Node, NodeID
+from .PEGraphX import Node, NodeID
 from typing import List, Set
 
 global_pet = None

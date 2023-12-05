@@ -8,7 +8,7 @@
 
 from typing import List
 
-from discopop_explorer.PETGraphX import EdgeType, FunctionNode, PETGraphX
+from discopop_explorer.PEGraphX import EdgeType, FunctionNode, PEGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
@@ -18,7 +18,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_c
 
 
 def suggest_shared_clauses_for_all_tasks_in_function_body(
-    pet: PETGraphX, suggestions: List[PatternInfo]
+    pet: PEGraphX, suggestions: List[PatternInfo]
 ) -> List[PatternInfo]:
     """Marks unmentioned variables as shared, if they occur as shared in a different task suggestions
     inside the parent functions body.

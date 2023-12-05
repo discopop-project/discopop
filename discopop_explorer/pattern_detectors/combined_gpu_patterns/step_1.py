@@ -8,14 +8,14 @@
 
 from typing import Tuple, Dict, Set, cast
 
-from discopop_explorer.PETGraphX import EdgeType, DepType, PETGraphX, NodeID, CUNode, MemoryRegion
+from discopop_explorer.PEGraphX import EdgeType, DepType, PEGraphX, NodeID, CUNode, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
 
 
 def get_written_and_read_memory_regions_by_cu(
-    contained_regions, pet: PETGraphX
+    contained_regions, pet: PEGraphX
 ) -> Tuple[Dict[NodeID, Set[MemoryRegion]], Dict[NodeID, Set[MemoryRegion]]]:
     all_function_cu_ids: Set[NodeID] = set()
     for region in contained_regions:
@@ -67,7 +67,7 @@ def get_written_and_read_memory_regions_by_cu(
 
 
 def get_cu_and_varname_to_memory_regions(
-    contained_regions, pet: PETGraphX, written_memory_regions_by_cu: Dict[NodeID, Set[MemoryRegion]]
+    contained_regions, pet: PEGraphX, written_memory_regions_by_cu: Dict[NodeID, Set[MemoryRegion]]
 ) -> Dict[NodeID, Dict[VarName, Set[MemoryRegion]]]:
     # dict -> {Cu_ID: {var_name: [memory regions]}}
     result_dict: Dict[NodeID, Dict[VarName, Set[MemoryRegion]]] = dict()

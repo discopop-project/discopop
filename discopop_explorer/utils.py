@@ -11,13 +11,13 @@ from typing import List, Sequence, Set, Dict, Tuple, cast
 import numpy as np
 import warnings
 
-from .PETGraphX import (
+from .PEGraphX import (
     CUNode,
     FunctionNode,
     LineID,
     LoopNode,
     NodeID,
-    PETGraphX,
+    PEGraphX,
     NodeType,
     Node,
     DepType,
@@ -49,7 +49,7 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product  # type:ignore
 
 
-def find_subnodes(pet: PETGraphX, node: Node, criteria: EdgeType) -> List[Node]:
+def find_subnodes(pet: PEGraphX, node: Node, criteria: EdgeType) -> List[Node]:
     """Returns direct children of a given node
 
     :param pet: PET graph
@@ -60,7 +60,7 @@ def find_subnodes(pet: PETGraphX, node: Node, criteria: EdgeType) -> List[Node]:
     return [pet.node_at(t) for s, t, d in pet.out_edges(node.id) if d.etype == criteria]
 
 
-def depends(pet: PETGraphX, source: Node, target: Node) -> bool:
+def depends(pet: PEGraphX, source: Node, target: Node) -> bool:
     """Detects if source node or one of it's children has a RAW dependency to target node or one of it's children
 
     :param pet: PET graph
@@ -83,7 +83,7 @@ def depends(pet: PETGraphX, source: Node, target: Node) -> bool:
     return False
 
 
-def is_loop_index2(pet: PETGraphX, root_loop: Node, var_name: str) -> bool:
+def is_loop_index2(pet: PEGraphX, root_loop: Node, var_name: str) -> bool:
     """Checks, whether the variable is a loop index.
 
     :param pet: CU graph
@@ -97,7 +97,7 @@ def is_loop_index2(pet: PETGraphX, root_loop: Node, var_name: str) -> bool:
 
 # NOTE: left old code as it may become relevant again in the near future
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-def calculate_workload(pet: PETGraphX, node: Node, ignore_function_calls_and_cached_values: bool = False) -> int:
+def calculate_workload(pet: PEGraphX, node: Node, ignore_function_calls_and_cached_values: bool = False) -> int:
     """Calculates and stores the workload for a given node
     The workload is the number of instructions multiplied by respective number of iterations
 
@@ -193,7 +193,7 @@ def calculate_workload(pet: PETGraphX, node: Node, ignore_function_calls_and_cac
     return res
 
 
-def calculate_per_iteration_workload_of_loop(pet: PETGraphX, node: Node) -> int:
+def calculate_per_iteration_workload_of_loop(pet: PEGraphX, node: Node) -> int:
     """Calculates and returns the per iteration workload for a given node
     The workload is the number of instructions that happens within the loops body.
     The amount of iterations of the outer loop does not influence the result.
@@ -227,7 +227,7 @@ def calculate_per_iteration_workload_of_loop(pet: PETGraphX, node: Node) -> int:
 
 
 def __get_dep_of_type(
-    pet: PETGraphX, node: Node, dep_type: DepType, reversed: bool
+    pet: PEGraphX, node: Node, dep_type: DepType, reversed: bool
 ) -> List[Tuple[NodeID, NodeID, Dependency]]:
     """Searches all dependencies of specified type
 
@@ -307,7 +307,7 @@ def is_written_in_subtree(
     return False
 
 
-def is_func_arg(pet: PETGraphX, var: str, node: Node) -> bool:
+def is_func_arg(pet: PEGraphX, var: str, node: Node) -> bool:
     """Checks if variable is a function argument
 
     :param pet: CU graph
@@ -578,7 +578,7 @@ def is_read_in(
     return False
 
 
-def get_child_loops(pet: PETGraphX, node: Node) -> Tuple[List[Node], List[Node]]:
+def get_child_loops(pet: PEGraphX, node: Node) -> Tuple[List[Node], List[Node]]:
     """Gets all do-all and reduction subloops
 
     :param pet: CU graph
@@ -604,7 +604,7 @@ def get_child_loops(pet: PETGraphX, node: Node) -> Tuple[List[Node], List[Node]]
     return do_all, reduction
 
 
-def get_initialized_memory_regions_in(pet: PETGraphX, cu_nodes: List[CUNode]) -> Dict[Variable, Set[MemoryRegion]]:
+def get_initialized_memory_regions_in(pet: PEGraphX, cu_nodes: List[CUNode]) -> Dict[Variable, Set[MemoryRegion]]:
     initialized_memory_regions: Dict[Variable, Set[MemoryRegion]] = dict()
     for cu in cu_nodes:
         for s, t, d in pet.out_edges(cu.id, EdgeType.DATA):
@@ -621,7 +621,7 @@ def get_initialized_memory_regions_in(pet: PETGraphX, cu_nodes: List[CUNode]) ->
 
 
 def classify_loop_variables(
-    pet: PETGraphX, loop: Node
+    pet: PEGraphX, loop: Node
 ) -> Tuple[List[Variable], List[Variable], List[Variable], List[Variable], List[Variable]]:
     """Classifies variables inside the loop
 
@@ -722,7 +722,7 @@ def classify_loop_variables(
 
 
 def classify_task_vars(
-    pet: PETGraphX,
+    pet: PEGraphX,
     task: Node,
     type: str,
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
@@ -888,7 +888,7 @@ def __apply_dealiasing(
     return cleaned
 
 
-def __is_written_prior_to_task(pet: PETGraphX, var: Variable, task: Node) -> bool:
+def __is_written_prior_to_task(pet: PEGraphX, var: Variable, task: Node) -> bool:
     """Check if var has been written in predecessor of task.
 
     :param pet: CU graph

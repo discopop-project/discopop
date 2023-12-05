@@ -8,7 +8,7 @@
 import sys
 from typing import List, Tuple, Dict, Set
 
-from discopop_explorer.PETGraphX import EdgeType, CUNode, PETGraphX, NodeID, MemoryRegion
+from discopop_explorer.PEGraphX import EdgeType, CUNode, PEGraphX, NodeID, MemoryRegion
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
@@ -83,7 +83,7 @@ class CombinedGPURegion(PatternInfo):
     meta_host_liveness: Dict[MemoryRegion, List[str]]
     project_folder_path: str
 
-    def __init__(self, pet: PETGraphX, contained_regions: List[GPURegionInfo], project_folder_path: str):
+    def __init__(self, pet: PEGraphX, contained_regions: List[GPURegionInfo], project_folder_path: str):
         self.project_folder_path = project_folder_path
         node_id = sorted([region.node_id for region in contained_regions])[0]
         device_cu_ids: List[NodeID] = []
@@ -354,7 +354,7 @@ class CombinedGPURegion(PatternInfo):
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
-    def to_string(self, pet: PETGraphX):
+    def to_string(self, pet: PEGraphX):
         contained_regions_str = "\n" if len(self.contained_regions) > 0 else ""
         for region in self.contained_regions:
             region_str = region.to_string(pet)
@@ -374,7 +374,7 @@ class CombinedGPURegion(PatternInfo):
 
 
 def find_combined_gpu_regions(
-    pet: PETGraphX, gpu_regions: List[GPURegionInfo], project_folder_path: str
+    pet: PEGraphX, gpu_regions: List[GPURegionInfo], project_folder_path: str
 ) -> List[CombinedGPURegion]:
     # create combined gpu regions from original gpu regions
     combined_gpu_regions = []
@@ -415,7 +415,7 @@ def find_combined_gpu_regions(
 
 
 def find_all_pairwise_gpu_region_combinations(
-    gpu_regions: List[CombinedGPURegion], pet: PETGraphX
+    gpu_regions: List[CombinedGPURegion], pet: PEGraphX
 ) -> List[Tuple[CombinedGPURegion, CombinedGPURegion]]:
     combinable_pairs: List[Tuple[CombinedGPURegion, CombinedGPURegion]] = []  # [(region1, region2)
     # get all pairwise combinations of gpu regions
@@ -428,7 +428,7 @@ def find_all_pairwise_gpu_region_combinations(
 
 
 def find_combinations_within_function_body(
-    pet: PETGraphX, combinable_pairs: List[Tuple[CombinedGPURegion, CombinedGPURegion]]
+    pet: PEGraphX, combinable_pairs: List[Tuple[CombinedGPURegion, CombinedGPURegion]]
 ) -> List[Tuple[CombinedGPURegion, CombinedGPURegion]]:
     """Check regions pairwise for reachability via successor edges.
     Only combinations within a function's body are possible in this way since successor edges only exist
@@ -486,7 +486,7 @@ def find_true_successor_combinations(
 
 
 def combine_regions(
-    pet: PETGraphX,
+    pet: PEGraphX,
     region_1: CombinedGPURegion,
     region_2: CombinedGPURegion,
     project_folder_path: str,
