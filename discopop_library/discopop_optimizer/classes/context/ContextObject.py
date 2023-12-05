@@ -81,7 +81,7 @@ class ContextObject(object):
                 for data_write in unknown_writes:
                     # if device <-> device update is required, split it into two distinct updates
                     if device_id != 0 and reading_device_id != 0:
-                        print("Device <-> Device update required!")
+                        #                         print("Device <-> Device update required!")
 
                         # check if data is known to the host
                         if data_write.memory_region not in self.seen_writes_by_device[0]:
@@ -98,20 +98,20 @@ class ContextObject(object):
                                     is_first_data_occurrence=is_first_data_occurrence,
                                 )
                             )
-                        else:
-                            print(
-                                "SKIPPED KNOWN WRITE: ",
-                                str(
-                                    Update(
-                                        source_node_id=self.last_visited_node_id,
-                                        target_node_id=reading_node_id,
-                                        source_device_id=device_id,
-                                        target_device_id=0,  # reading_device_id,
-                                        write_data_access=data_write,
-                                        is_first_data_occurrence=is_first_data_occurrence,
-                                    )
-                                ),
-                            )
+                        #                        else:
+                        #                            print(
+                        #                                "SKIPPED KNOWN WRITE: ",
+                        #                                str(
+                        #                                    Update(
+                        #                                        source_node_id=self.last_visited_node_id,
+                        #                                        target_node_id=reading_node_id,
+                        #                                        source_device_id=device_id,
+                        #                                        target_device_id=0,  # reading_device_id,
+                        #                                        write_data_access=data_write,
+                        #                                        is_first_data_occurrence=is_first_data_occurrence,
+                        #                                    )
+                        #                                ),
+                        #                            )
 
                         # register host -> target device update
                         required_updates.add(
