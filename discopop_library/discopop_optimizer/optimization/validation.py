@@ -7,7 +7,7 @@
 # directory for details.
 
 from typing import List, cast
-from discopop_explorer.PETGraphX import EdgeType, NodeID, PETGraphX
+from discopop_explorer.PEGraphX import EdgeType, NodeID
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
