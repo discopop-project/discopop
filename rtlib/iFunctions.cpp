@@ -349,8 +349,19 @@ namespace __dp {
 #ifdef DP_RTLIB_VERBOSE
         cout << "enter outputAllocations\n";
 #endif
+        // prepare environment variables
+        char const * tmp = getenv("DOT_DISCOPOP");
+        if(tmp == NULL){
+            // DOT_DISCOPOP needs to be initialized
+            setenv("DOT_DISCOPOP", ".discopop", 1);
+        }
+        std::string tmp_str(getenv("DOT_DISCOPOP"));
+        setenv("DOT_DISCOPOP_PROFILER", (tmp_str + "/profiler").data(), 1);
+        std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
+        tmp2 += "/memory_regions.txt";
+
         auto allocationsFileStream = new ofstream();
-        allocationsFileStream->open(".discopop/profiler/memory_regions.txt", ios::out);
+        allocationsFileStream->open(tmp2.data(), ios::out);
         for(auto memoryRegion : *allocatedMemoryRegions){
             string position = decodeLID(get<0>(memoryRegion));
             string id = get<1>(memoryRegion);
@@ -1269,7 +1280,18 @@ namespace __dp {
                       out->open("Output.txt", ios::out);
                  }
                  //out->open(string(selfPath) + "_dep.txt", ios::out);  # results in the old <prog>_dep.txt
-                 out->open(".discopop/profiler/dynamic_dependencies.txt", ios::out);
+                 // prepare environment variables
+                char const * tmp = getenv("DOT_DISCOPOP");
+                if(tmp == NULL){
+                    // DOT_DISCOPOP needs to be initialized
+                    setenv("DOT_DISCOPOP", ".discopop", 1);
+                }
+                std::string tmp_str(getenv("DOT_DISCOPOP"));
+                setenv("DOT_DISCOPOP_PROFILER", (tmp_str + "/profiler").data(), 1);
+                std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
+                tmp2 += "/dynamic_dependencies.txt";
+
+                out->open(tmp2.data(), ios::out);
             }
 #else
             out->open("Output.txt", ios::out);

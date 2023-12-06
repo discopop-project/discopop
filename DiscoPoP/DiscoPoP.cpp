@@ -117,14 +117,9 @@ bool DiscoPoP::doInitialization(Module &M) {
     if(tmp == NULL){
         // DOT_DISCOPOP needs to be initialized
         setenv("DOT_DISCOPOP", ".discopop", 1);
-        errs() << "OVERWRITTEN DOT_DISCOPOP\n";
     }
     std::string tmp_str(getenv("DOT_DISCOPOP"));
     setenv("DOT_DISCOPOP_PROFILER", (tmp_str + "/profiler").data(), 1);
-    
-    errs() << "DOT_DISCOPOP: " << std::getenv("DOT_DISCOPOP") << "\n";
-    errs() << "DOT_DISCOPOP_PROFILER: " << std::getenv("DOT_DISCOPOP_PROFILER") << "\n";
-
 
     // prepare .discopop directory if not present
       struct stat st1 = {0};

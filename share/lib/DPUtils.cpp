@@ -16,7 +16,7 @@ using namespace std;
 
 //cl::opt <string> FileMappingPath("fm-path", cl::init(""),
 //                                 cl::desc("Specify file mapping location"), cl::Hidden);
-string FileMappingPath = ".discopop/FileMapping.txt";
+string FileMappingPath = "";
 
 
 cl::opt <bool> DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS("memory-profiling-skip-function-arguments", cl::init(false),
@@ -25,10 +25,22 @@ cl::opt <bool> DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS("memory-profiling-ski
 namespace dputil {
 
     int32_t getFileID(string fileMapping, string fullPathName) {
+        // prepare environment variables
+        if(FileMappingPath.length() == 0){
+            char const * tmp = getenv("DOT_DISCOPOP");
+            if(tmp == NULL){
+                // DOT_DISCOPOP needs to be initialized
+                setenv("DOT_DISCOPOP", ".discopop", 1);
+            }
+            FileMappingPath = getenv("DOT_DISCOPOP");
+            FileMappingPath += "/FileMapping.txt";
+        }
+        
+
         int tempfid = 1;
         fstream fileMappingFile;
 
-        fileMappingFile.open(".discopop/FileMapping.txt", ios::in);
+        fileMappingFile.open(FileMappingPath.data(), ios::in);
         if (fileMappingFile)
         {
             string tp;
@@ -43,7 +55,7 @@ namespace dputil {
             }
             fileMappingFile.close();
 
-            fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
+            fileMappingFile.open(FileMappingPath.data(), std::ios_base::app);
             fileMappingFile << tempfid << "\t" << fullPathName << "\n";
             fileMappingFile.close();
             errs() << "added fmap entry: " << tempfid << "\t" << fullPathName << "\n";
@@ -51,7 +63,7 @@ namespace dputil {
         }
         else
         {
-            fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
+            fileMappingFile.open(FileMappingPath.data(), std::ios_base::app);
             fileMappingFile << tempfid << "\t" << fullPathName << "\n";
             fileMappingFile.close();
             errs() << "added fmap entry: " << tempfid << "\t" << fullPathName << "\n";
@@ -86,6 +98,17 @@ namespace dputil {
 // Encode metadata regarding the instruction in the first LIDMETADATASIZE bits
 // This is needed to support multiple files in a project.
     int64_t getLID(Instruction *BI, int32_t &fileID) {
+        // prepare environment variables
+        if(FileMappingPath.length() == 0){
+            char const * tmp = getenv("DOT_DISCOPOP");
+            if(tmp == NULL){
+                // DOT_DISCOPOP needs to be initialized
+                setenv("DOT_DISCOPOP", ".discopop", 1);
+            }
+            FileMappingPath = getenv("DOT_DISCOPOP");
+            FileMappingPath += "/FileMapping.txt";
+        }
+
         int64_t lid = 0;
         int32_t lno = 0;
 
@@ -140,6 +163,16 @@ namespace dputil {
 
 // determine the file index according to the given FileMapping
     void determineFileID(Function &F, int32_t &fileID) {
+        // prepare environment variables
+        if(FileMappingPath.length() == 0){
+            char const * tmp = getenv("DOT_DISCOPOP");
+            if(tmp == NULL){
+                // DOT_DISCOPOP needs to be initialized
+                setenv("DOT_DISCOPOP", ".discopop", 1);
+            }
+            FileMappingPath = getenv("DOT_DISCOPOP");
+            FileMappingPath += "/FileMapping.txt";
+        }
         fileID = 0;
 
         for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
