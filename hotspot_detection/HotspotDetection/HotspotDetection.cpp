@@ -192,7 +192,9 @@ int FileID = 1;
 
 void addFileName(string name)
 {
-  fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
+  string tmp(getenv("DOT_DISCOPOP"));
+  tmp += "/FileMapping.txt";
+  fileMappingFile.open(tmp.data(), std::ios_base::app);
   fileMappingFile << name << "\n";
   fileMappingFile.close();
   return;
@@ -201,10 +203,11 @@ void addFileName(string name)
 
 int getFileID(string name)
 {
-  
   int tempfid = 1;
 
-  fileMappingFile.open(".discopop/FileMapping.txt", ios::in);
+  string fileMappingPath(getenv("DOT_DISCOPOP"));
+  fileMappingPath += "/FileMapping.txt";
+  fileMappingFile.open(fileMappingPath.data(), ios::in);
   if (fileMappingFile)
   {
     string tp;
@@ -219,14 +222,14 @@ int getFileID(string name)
     }
     fileMappingFile.close();
 
-    fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
+    fileMappingFile.open(fileMappingPath.data(), std::ios_base::app);
     fileMappingFile << tempfid << "\t" << name << "\n";
     fileMappingFile.close();
     return 0;
   }
   else
   {
-    fileMappingFile.open(".discopop/FileMapping.txt", std::ios_base::app);
+    fileMappingFile.open(fileMappingPath.data(), std::ios_base::app);
     fileMappingFile << tempfid << "\t" << name << "\n";
     fileMappingFile.close();
     return 0;
@@ -251,23 +254,36 @@ namespace
 
     virtual bool doInitialization(Module &M)
     {
+      // prepare environment variables
+      char const * tmp = getenv("DOT_DISCOPOP");
+      if(tmp == NULL){
+          // DOT_DISCOPOP needs to be initialized
+          setenv("DOT_DISCOPOP", ".discopop", 1);
+      }
+
       // prepare .discopop directory if not present
       struct stat st1 = {0};
-      if (stat(".discopop", &st1) == -1){
-          mkdir(".discopop", 0777);
+      if (stat(getenv("DOT_DISCOPOP"), &st1) == -1){
+          mkdir(getenv("DOT_DISCOPOP"), 0777);
       }
       // prepare hotspot_detection directory if not present
       struct stat st3 = {0};
-      if (stat(".discopop/hotspot_detection", &st3) == -1){
-          mkdir(".discopop/hotspot_detection", 0777);
+      string tmp2(getenv("DOT_DISCOPOP"));
+      tmp2 += "/hotspot_detection";
+      if (stat(tmp2.data(), &st3) == -1){
+          mkdir(tmp2.data(), 0777);
       }
       // prepare hotspot_detection/private directory if not present
       struct stat st4 = {0};
-      if (stat(".discopop/hotspot_detection/private", &st4) == -1){
-          mkdir(".discopop/hotspot_detection/private", 0777);
+      string tmp3(getenv("DOT_DISCOPOP"));
+      tmp3 += "/hotspot_detection/private";
+      if (stat(tmp3.data(), &st4) == -1){
+          mkdir(tmp3.data(), 0777);
       }
 
-      tempfile.open(".discopop/hotspot_detection/private/temp.txt", ios::in);
+      
+      string tmp4 = tmp3 + "/temp.txt";
+      tempfile.open(tmp4.data(), ios::in);
       if (tempfile.is_open())
       {
         errs() << "Temp file openned!\n";
@@ -382,7 +398,9 @@ namespace
             BB++;
             UID++;
 
-            ofile.open(".discopop/hotspot_detection/private/cs_id.txt", std::ios_base::app);
+            string tmp(getenv("DOT_DISCOPOP"));
+            tmp += "/hotspot_detection/private/cs_id.txt";
+            ofile.open(tmp.data(), std::ios_base::app);
             ofile << UID << " "
                   << "loop"
                   << " " << lnid << " " << file_ID << "\n";
@@ -588,7 +606,9 @@ namespace
       {
         fid++;
         UID++;
-        ofile.open(".discopop/hotspot_detection/private/cs_id.txt", std::ios_base::app);
+        string tmp(getenv("DOT_DISCOPOP"));
+        tmp += "/hotspot_detection/private/cs_id.txt";
+        ofile.open(tmp.data(), std::ios_base::app);
         string funn = string(F.getName());
         ofile << UID << " "
               << "func"
@@ -647,8 +667,9 @@ namespace
     virtual bool doFinalization(Module &M)
     {
       errs() << "number of instrumented loops: " << instrumentedLoops << "\n";
-
-      tempfile.open(".discopop/hotspot_detection/private/temp.txt", std::ios_base::app);
+      string tmp(getenv("DOT_DISCOPOP"));
+      tmp += "/hotspot_detection/private/temp.txt";
+      tempfile.open(tmp.data(), std::ios_base::app);
       tempfile << UID << "\n";
       tempfile.close();
       return false;

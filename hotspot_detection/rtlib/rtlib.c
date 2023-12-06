@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 // temporary rtlib
 #include <stdio.h>
 #include "time.h"
@@ -5,6 +7,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 // temporary data structures
@@ -15,11 +18,23 @@ long double* time_b = NULL;
 struct timeval start1, end1;
 
 extern inline void __hotspot_detection_init(){
+    // prepare environment variables
+    char const * tmp = getenv("DOT_DISCOPOP");
+    if(tmp == NULL){
+        // DOT_DISCOPOP needs to be initialized
+        setenv("DOT_DISCOPOP", ".discopop", 1);
+    }
+
     FILE *filePointer;
     int bufferLength = 255;
     char buffer[bufferLength]; /* not ISO 90 compatible */
     char cntChar[bufferLength];
-    filePointer = fopen(".discopop/hotspot_detection/private/cs_id.txt", "r");
+
+    char envbuffer[255] = "";
+    strcpy(envbuffer, getenv("DOT_DISCOPOP"));
+    char buffer1[255] = "";
+    strcat(buffer1, strcat(envbuffer, "/hotspot_detection/private/cs_id.txt"));
+    filePointer = fopen(buffer1, "r");
     int cs_num = 1;  // offset by one to account for cs_ids starting with 1
     while (fgets(buffer, bufferLength, filePointer))
     {
@@ -39,7 +54,6 @@ extern inline void __hotspot_detection_init(){
         time_a[i] = 0;
         time_b[i] = 0;
     }
-
 
 }
 
@@ -115,7 +129,11 @@ void __hotspot_detection_printOut()
     int bufferLength = 255;
     char buffer[bufferLength]; /* not ISO 90 compatible */
     char cntChar[bufferLength];
-    filePointer = fopen(".discopop/hotspot_detection/private/cs_id.txt", "r");
+    char buffer1[255] = "";
+    char envbuffer[255] = "";
+    strcpy(envbuffer, getenv("DOT_DISCOPOP"));
+    strcat(buffer1, strcat(envbuffer, "/hotspot_detection/private/cs_id.txt"));
+    filePointer = fopen(buffer1, "r");
     int num = 0;
     while (fgets(buffer, bufferLength, filePointer))
     {
@@ -128,9 +146,14 @@ void __hotspot_detection_printOut()
     FILE *fptr;
 
     // determine filename for result storage
-    const char* result_base_name = ".discopop/hotspot_detection/private/hotspot_result_";
+    char buffer2[255] = "";
+    char envbuffer2[255] = "";
+    strcpy(envbuffer2, getenv("DOT_DISCOPOP"));
+    strcat(buffer2, strcat(envbuffer2, "/hotspot_detection/private/hotspot_result_"));
+
+    const char* result_base_name = &buffer2;
     const char* result_file_ending = ".txt";
-    char unused_file_name[80];
+    char unused_file_name[255] = "";
     int counter = 0;
     char* s_counter;
 
