@@ -112,15 +112,29 @@ bool DiscoPoP::doInitialization(Module &M) {
         errs() << "DiscoPoP | 190: init pass DiscoPoP \n";
     }
 
+    // prepare environment variables
+    char const * tmp = getenv("DOT_DISCOPOP");
+    if(tmp == NULL){
+        // DOT_DISCOPOP needs to be initialized
+        setenv("DOT_DISCOPOP", ".discopop", 1);
+        errs() << "OVERWRITTEN DOT_DISCOPOP\n";
+    }
+    std::string tmp_str(getenv("DOT_DISCOPOP"));
+    setenv("DOT_DISCOPOP_PROFILER", (tmp_str + "/profiler").data(), 1);
+    
+    errs() << "DOT_DISCOPOP: " << std::getenv("DOT_DISCOPOP") << "\n";
+    errs() << "DOT_DISCOPOP_PROFILER: " << std::getenv("DOT_DISCOPOP_PROFILER") << "\n";
+
+
     // prepare .discopop directory if not present
       struct stat st1 = {0};
-      if (stat(".discopop", &st1) == -1){
-          mkdir(".discopop", 0777);
+      if (stat(getenv("DOT_DISCOPOP"), &st1) == -1){
+          mkdir(getenv("DOT_DISCOPOP"), 0777);
       }
       // prepare profiler directory if not present
       struct stat st2 = {0};
-      if (stat(".discopop/profiler", &st2) == -1){
-          mkdir(".discopop/profiler", 0777);
+      if (stat(getenv("DOT_DISCOPOP_PROFILER"), &st2) == -1){
+          mkdir(getenv("DOT_DISCOPOP_PROFILER"), 0777);
       }
 
 
@@ -204,7 +218,9 @@ bool DiscoPoP::doFinalization(Module &M) {
 
     // write the current count of CUs to a file to avoid duplicate CUs.
     outCUIDCounter = new std::ofstream();
-    outCUIDCounter->open(".discopop/profiler/DP_CUIDCounter.txt", std::ios_base::out);
+    std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+    tmp += "/DP_CUIDCounter.txt";
+    outCUIDCounter->open(tmp.data(), std::ios_base::out);
     if (outCUIDCounter && outCUIDCounter->is_open()) {
         *outCUIDCounter << CUIDCounter;
         outCUIDCounter->flush();
@@ -237,7 +253,9 @@ bool DiscoPoP::doFinalization(Module &M) {
     }
     // write the current count of BBs to a file to avoid duplicate BBids
     outBBDepCounter = new std::ofstream();
-    outBBDepCounter->open(".discopop/profiler/DP_BBDepCounter.txt", std::ios_base::out);
+    std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
+    tmp2 += "/DP_BBDepCounter.txt";
+    outBBDepCounter->open(tmp2.data(), std::ios_base::out);
     if (outBBDepCounter && outBBDepCounter->is_open()) {
         *outBBDepCounter << bbDepCount;
         outBBDepCounter->flush();
@@ -896,7 +914,8 @@ void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI) {
 }
 
 void DiscoPoP::initializeCUIDCounter() {
-    std::string CUCounterFile = ".discopop/profiler/DP_CUIDCounter.txt";
+    std::string CUCounterFile(getenv("DOT_DISCOPOP_PROFILER"));
+    CUCounterFile += "/DP_CUIDCounter.txt";
     if (dputil::fexists(CUCounterFile)) {
         std::fstream inCUIDCounter(CUCounterFile, std::ios_base::in);;
         inCUIDCounter >> CUIDCounter;
@@ -905,7 +924,9 @@ void DiscoPoP::initializeCUIDCounter() {
 }
 
 void DiscoPoP::initializeBBDepCounter(){
-    std::string BBDepCounterFile = ".discopop/profiler/DP_BBDepCounter.txt";
+
+    std::string BBDepCounterFile(getenv("DOT_DISCOPOP_PROFILER"));
+    BBDepCounterFile += "/DP_BBDepCounter.txt";
     if (dputil::fexists(BBDepCounterFile)) {
         std::fstream inBBDepCounter(BBDepCounterFile, std::ios_base::in);;
         inBBDepCounter >> bbDepCount;
@@ -1846,7 +1867,9 @@ void DiscoPoP::dp_reduction_insert_functions() {
 
     // insert function calls to monitor loop iterations
     std::ofstream loop_metadata_file;
-    loop_metadata_file.open(".discopop/profiler/loop_meta.txt");
+    std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+    tmp += "/loop_meta.txt";
+    loop_metadata_file.open(tmp.data());
     int loop_id = 1;
     llvm::Type* loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ctx_);
     llvm::ArrayRef<llvm::Type*> loop_incr_fn_args(loop_incr_fn_arg_type);
@@ -2034,10 +2057,14 @@ bool DiscoPoP::runOnModule(Module &M) {
     ctx_ = &module_->getContext();
 
     reduction_file = new std::ofstream();
-    reduction_file->open(".discopop/profiler/reduction.txt", std::ios_base::app);
+    std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+    tmp += "/reduction.txt";
+    reduction_file->open(tmp.data(), std::ios_base::app);
 
     loop_counter_file = new std::ofstream();
-    loop_counter_file->open(".discopop/profiler/loop_counter_output.txt", std::ios_base::app);
+    std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
+    tmp2 += "/loop_counter_output.txt";
+    loop_counter_file->open(tmp2.data(), std::ios_base::app);
 
     /*
     bool success = dp_reduction_init_util(FileMappingPath);
@@ -2472,7 +2499,9 @@ bool DiscoPoP::runOnFunction(Function &F) {
         // Report statically identified dependencies
 
         staticDependencyFile = new std::ofstream();
-        staticDependencyFile->open(".discopop/profiler/static_dependencies.txt", std::ios_base::app);
+        std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+        tmp += "/static_dependencies.txt";
+        staticDependencyFile->open(tmp.data(), std::ios_base::app);
 
         for (auto pair: conditionalBBDepMap) {
                 for (auto s: pair.second) {
@@ -2882,10 +2911,14 @@ string DiscoPoP::xmlEscape(string data) {
 
 void DiscoPoP::secureStream() {
     outOriginalVariables = new std::ofstream();
-    outOriginalVariables->open(".discopop/profiler/OriginalVariables.txt", std::ios_base::app);
+    std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+    tmp += "/OriginalVariables.txt";
+    outOriginalVariables->open(tmp.data(), std::ios_base::app);
 
     outCUs = new std::ofstream();
-    outCUs->open(".discopop/profiler/Data.xml", std::ios_base::app);
+    std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
+    tmp2 += "/Data.xml";
+    outCUs->open(tmp2.data(), std::ios_base::app);
 }
 
 string DiscoPoP::getLineNumbersString(set<int> LineNumbers) {
