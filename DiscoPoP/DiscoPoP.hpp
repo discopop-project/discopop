@@ -60,6 +60,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include <stdlib.h>
+
 #define DP_DEBUG false
 
 using namespace llvm;
