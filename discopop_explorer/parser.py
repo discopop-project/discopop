@@ -215,6 +215,8 @@ def is_reduction(reduction_line, fmap_lines, file_mapping):
     file_line = int(res.group(2))
 
     filepath = get_filepath(file_id, fmap_lines, file_mapping)
+    if not os.path.exists(filepath):
+        return False
     src_file = open(filepath)
     src_lines = src_file.read().splitlines()
     src_file.close()

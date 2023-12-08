@@ -23,7 +23,8 @@ def load_file_mapping(fmap_path: str) -> Dict[int, Path]:
             split_line = line.split("\t")
             file_id = int(split_line[0])
             file_path = split_line[1]
-            file_mapping[file_id] = Path(file_path)
+            if os.path.exists(file_path):
+                file_mapping[file_id] = Path(file_path)
     return file_mapping
 
 
