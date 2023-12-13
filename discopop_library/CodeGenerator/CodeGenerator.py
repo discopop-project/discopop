@@ -119,7 +119,8 @@ def from_json_strings(
     return result_dict
 
 
-def from_json_strings_with_mapping(file_mapping: Dict[int, Path],
+def from_json_strings_with_mapping(
+    file_mapping: Dict[int, Path],
     pattern_json_strings_with_mapping_by_type: Dict[str, List[Tuple[str, DeviceID, DeviceTypeEnum]]],
     skip_compilation_check: bool = False,
     compile_check_command: Optional[str] = None,
@@ -148,7 +149,9 @@ def from_json_strings_with_mapping(file_mapping: Dict[int, Path],
         if type_str not in pattern_json_strings_with_mapping_by_type:
             continue
         for json_str, device_id, device_type in pattern_json_strings_with_mapping_by_type[type_str]:
-            unpacked_suggestions.append(UnpackedSuggestion(type_str, jsons.loads(json_str), device_id = device_id, device_type= device_type))
+            unpacked_suggestions.append(
+                UnpackedSuggestion(type_str, jsons.loads(json_str), device_id=device_id, device_type=device_type)
+            )
 
     # create a dictionary mapping fileIds to ContentBuffer elements
     file_id_to_content_buffer: Dict[int, ContentBuffer] = dict()

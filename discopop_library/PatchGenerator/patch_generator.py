@@ -67,7 +67,6 @@ def run(arguments: PatchGeneratorArguments):
     if arguments.verbose:
         print("Patterns: ", patterns_by_type)
 
-    
     # generate code modifications from configuration file if requested
     if arguments.from_configuration_file != "None":
         if arguments.verbose:
