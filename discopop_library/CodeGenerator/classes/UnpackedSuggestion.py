@@ -33,7 +33,7 @@ class UnpackedSuggestion(object):
     device_id: Optional[DeviceID]
     device_type: Optional[DeviceTypeEnum]
 
-    def __init__(self, type_str: str, values: Dict[str, Any], device_id = None, device_type = None):
+    def __init__(self, type_str: str, values: Dict[str, Any], device_id=None, device_type=None):
         self.type = type_str
         self.values = values
         self.device_id = device_id

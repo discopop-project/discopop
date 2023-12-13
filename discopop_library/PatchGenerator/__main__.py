@@ -62,7 +62,11 @@ def parse_args() -> PatchGeneratorArguments:
         raise ValueError("Could not determine CXX from LLVM_BIN_DIR: ", llvm_bin_dir)
 
     return PatchGeneratorArguments(
-        verbose=arguments.verbose, discopop_build_path=arguments.dp_build_path, CC=arguments.cc, CXX=arguments.cxx, from_configuration_file=arguments.from_configuration_file
+        verbose=arguments.verbose,
+        discopop_build_path=arguments.dp_build_path,
+        CC=arguments.cc,
+        CXX=arguments.cxx,
+        from_configuration_file=arguments.from_configuration_file,
     )
 
 

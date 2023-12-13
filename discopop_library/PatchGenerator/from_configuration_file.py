@@ -19,14 +19,17 @@ from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum i
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 
 
-def from_configuration_file(file_mapping: Dict[int, Path], patterns_by_type: Dict[str, List[str]], arguments: PatchGeneratorArguments, patch_generator_dir: Path):
-
+def from_configuration_file(
+    file_mapping: Dict[int, Path],
+    patterns_by_type: Dict[str, List[str]],
+    arguments: PatchGeneratorArguments,
+    patch_generator_dir: str,
+):
     suggestion_strings_with_mapping: Dict[str, List[Tuple[str, DeviceID, DeviceTypeEnum]]] = dict()
     if arguments.verbose:
         print("Loading configuration file: ", arguments.from_configuration_file)
     config = ParallelConfiguration()
     config.reconstruct_from_file(arguments.from_configuration_file)
-
 
     # build suggestion_strings_with_mapping
     for pattern_values in config.applied_patterns:
@@ -44,7 +47,7 @@ def from_configuration_file(file_mapping: Dict[int, Path], patterns_by_type: Dic
                     if pattern_type not in suggestion_strings_with_mapping:
                         suggestion_strings_with_mapping[pattern_type] = []
                     suggestion_strings_with_mapping[pattern_type].append((pattern_string, device_id, device_type))
-    
+
     # generate the modified code
     file_id_to_modified_code: Dict[int, str] = from_json_strings_with_mapping(
         file_mapping,
@@ -55,11 +58,9 @@ def from_configuration_file(file_mapping: Dict[int, Path], patterns_by_type: Dic
     )
     print("MODIFIED CODE: ")
     print(file_id_to_modified_code)
-    
+
     # create patches from the modified codes
-    file_id_to_patches: Dict[int, str] = get_diffs_from_modified_code(
-        file_mapping, file_id_to_modified_code, arguments
-    )
+    file_id_to_patches: Dict[int, str] = get_diffs_from_modified_code(file_mapping, file_id_to_modified_code, arguments)
     if arguments.verbose:
         print("Patches: ", file_id_to_patches)
     # save patches
@@ -75,39 +76,3 @@ def from_configuration_file(file_mapping: Dict[int, Path], patterns_by_type: Dic
         patch_path = os.path.join(suggestion_folder_path, str(file_id) + ".patch")
         with open(patch_path, "w") as f:
             f.write(file_id_to_patches[file_id])
-
-
-
-
-#    # collect suggestions to be applied
-#    for suggestion_type in patterns_by_type:
-#        for suggestion in patterns_by_type[suggestion_type]:
-#            if arguments.verbose:
-#                print("Suggestion: ", suggestion)
-#            file_id_to_modified_code: Dict[int, str] = from_json_strings(
-#                file_mapping,
-#                {suggestion_type: [suggestion]},
-#                CC=arguments.CC,
-#                CXX=arguments.CXX,
-#                skip_compilation_check=True,
-#            )
-#            # create patches from the modified codes
-#            file_id_to_patches: Dict[int, str] = get_diffs_from_modified_code(
-#                file_mapping, file_id_to_modified_code, arguments
-#            )
-#            if arguments.verbose:
-#                print("Patches: ", file_id_to_patches)
-#            # clear old results and save patches
-#            suggestion_dict = json.loads(suggestion)
-#            suggestion_id = suggestion_dict["pattern_id"]
-#            suggestion_folder_path = os.path.join(patch_generator_dir, str(suggestion_id))
-#            if arguments.verbose:
-#                print("Saving patches for suggestion: ", suggestion_id)
-#            if os.path.exists(suggestion_folder_path):
-#                shutil.rmtree(suggestion_folder_path)
-#            os.mkdir(suggestion_folder_path)
-#            for file_id in file_id_to_patches:
-#                patch_path = os.path.join(suggestion_folder_path, str(file_id) + ".patch")
-#                with open(patch_path, "w") as f:
-#                    f.write(file_id_to_patches[file_id])
-#    pass
