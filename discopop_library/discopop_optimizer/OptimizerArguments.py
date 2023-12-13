@@ -20,6 +20,7 @@ class OptimizerArguments(object):
     reduction_microbench_file: str
     allow_nested_parallelism: bool
     plot: bool
+    system_configuration_path: str
 
     def __post_init__(self):
         self.__validate()
