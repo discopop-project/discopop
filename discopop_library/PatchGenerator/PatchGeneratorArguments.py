@@ -17,6 +17,7 @@ class PatchGeneratorArguments(object):
     discopop_build_path: str
     CC: str
     CXX: str
+    from_configuration_file: str
 
     def __post_init__(self):
         self.__validate()

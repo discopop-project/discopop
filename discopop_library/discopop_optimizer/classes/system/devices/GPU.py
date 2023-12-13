@@ -9,6 +9,7 @@ from typing import Tuple
 
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
+from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 
 
 class GPU(Device):
@@ -19,3 +20,6 @@ class GPU(Device):
         self, suggestion: PatternInfo, suggestion_type: str
     ) -> Tuple[PatternInfo, str]:
         return suggestion, "gpu_" + suggestion_type
+
+    def get_device_type(self) -> DeviceTypeEnum:
+        return DeviceTypeEnum.GPU
