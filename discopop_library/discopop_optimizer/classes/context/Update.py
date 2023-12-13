@@ -5,8 +5,12 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from typing import Any, Dict, Optional
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
-from discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess
+from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
+    WriteDataAccess,
+    write_data_access_from_dict,
+)
 
 
 class Update(object):
@@ -52,3 +56,25 @@ class Update(object):
             + str(self.write_data_access.var_name)
             + ")"
         )
+
+    def toDict(self) -> Dict[str, Any]:
+        result_dict: Dict[str, Any] = {}
+        result_dict["source_node_id"] = self.source_node_id
+        result_dict["target_node_id"] = self.target_node_id
+        result_dict["source_device_id"] = self.source_device_id
+        result_dict["target_device_id"] = self.target_device_id
+        result_dict["is_first_data_occurrence"] = self.is_first_data_occurrence
+        result_dict["write_data_access"] = self.write_data_access.toDict()
+        return result_dict
+
+
+def construct_update_from_dict(values: Dict[str, Any]) -> Update:
+    update = Update(
+        values["source_node_id"],
+        values["target_node_id"],
+        values["source_device_id"],
+        values["target_device_id"],
+        write_data_access_from_dict(values["write_data_access"]),
+        values["is_first_data_occurrence"],
+    )
+    return update

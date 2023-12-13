@@ -31,7 +31,7 @@ def evaluate_configuration(
     experiment: Experiment,
     decisions: List[int],
     arguments: OptimizerArguments,
-) -> Tuple[Tuple[int, ...], Expr]:
+) -> Tuple[Tuple[int, ...], Expr, ContextObject]:
     """Evaluate the configuration specified by the decisions for the current set of substitutions.
     Returns the used decisions and the calculated costs as a tuple.
     Note: To compare values across ranges of system specifications, use the ranges obtainable via System.get_symbol_values_and_distributions
@@ -79,6 +79,7 @@ def evaluate_configuration(
         ].parallelizable_costs
 
     result_model = copy.deepcopy(selected_function_models[main_function][0])
+    result_context = copy.deepcopy(selected_function_models[main_function][1])
 
     # perform iterative substitutions
     modification_found = True
@@ -115,4 +116,4 @@ def evaluate_configuration(
     result = sympy.re(result_model.parallelizable_costs + result_model.sequential_costs) + sympy.im(
         result_model.parallelizable_costs + result_model.sequential_costs
     )
-    return (tuple(decisions), result)
+    return (tuple(decisions), result, result_context)

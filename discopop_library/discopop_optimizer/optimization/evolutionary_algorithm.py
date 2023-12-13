@@ -424,7 +424,7 @@ def __dump_result(
                     new_key_2.append(
                         str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
                     )
-        best_option_path: str = os.path.join(optimizer_dir, "evolutionary_optimum.txt")
+        best_option_path: str = os.path.join(optimizer_dir, "evolutionary_configuration.json")
         with open(best_option_path, "w") as fp:
             fp.write(" ".join(new_key_2))
         break

@@ -12,6 +12,7 @@ from typing import Dict, List, Tuple, cast
 
 from sympy import Expr
 import tqdm  # type: ignore
+from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
@@ -41,6 +42,7 @@ def evaluate_all_decision_combinations(
     global_arguments = arguments
 
     costs_dict: Dict[Tuple[int, ...], Expr] = dict()
+    contexts_dict: Dict[Tuple[int, ...], ContextObject] = dict()
 
     packed_decisions: List[List[List[int]]] = []
     for function in available_decisions:
@@ -75,6 +77,7 @@ def evaluate_all_decision_combinations(
         if arguments.verbose:
             print("# raw:", local_result[0], "=", str(local_result[1]))
         costs_dict[local_result[0]] = local_result[1]
+        contexts_dict[local_result[0]] = local_result[2]
     if arguments.verbose:
         print()
 
@@ -114,7 +117,7 @@ def evaluate_all_decision_combinations(
     print("# Sorted and simplified costs of all combinations using PARALLEL PATTERN IDS")
     print()
 
-    __dump_result_to_file_using_pattern_ids(experiment, optimizer_dir, costs_dict, arguments)
+    __dump_result_to_file_using_pattern_ids(experiment, optimizer_dir, costs_dict, contexts_dict, arguments)
 
     return costs_dict
 
@@ -137,7 +140,11 @@ def __evaluate_configuration(param_tuple):
 
 
 def __dump_result_to_file_using_pattern_ids(
-    experiment: Experiment, optimizer_dir: str, costs_dict: Dict[Tuple[int, ...], Expr], arguments: OptimizerArguments
+    experiment: Experiment,
+    optimizer_dir: str,
+    costs_dict: Dict[Tuple[int, ...], Expr],
+    contexts_dict: Dict[Tuple[int, ...], ContextObject],
+    arguments: OptimizerArguments,
 ):
     # replace keys to allow dumping
     dumpable_dict = dict()
@@ -157,6 +164,8 @@ def __dump_result_to_file_using_pattern_ids(
     # dump the best option
     for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x]):
         new_key_2 = []
+        best_configuration = ParallelConfiguration()
+        # collect applied suggestions
         for node_id in combination_tuple:
             # find pattern id
             for pattern_id in experiment.suggestion_to_node_ids_dict:
@@ -164,7 +173,17 @@ def __dump_result_to_file_using_pattern_ids(
                     new_key_2.append(
                         str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
                     )
-        best_option_path: str = os.path.join(optimizer_dir, "exhaustive_optimum.txt")
-        with open(best_option_path, "w") as fp:
-            fp.write(" ".join(new_key_2))
+                    best_configuration.add_pattern(
+                        pattern_id, data_at(experiment.optimization_graph, node_id).device_id
+                    )
+        # collect data movement information
+        print("# Required updates..")
+        for update in contexts_dict[combination_tuple].necessary_updates:
+            best_configuration.add_data_movement(update)
+            print("  #", update)
+        print()
+        # export results to file
+        best_option_path: str = os.path.join(optimizer_dir, "exhaustive_configuration.json")
+        best_configuration.dump_to_file(best_option_path)
+
         break
