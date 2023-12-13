@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from discopop_explorer.PEGraphX import MemoryRegion
 
@@ -37,3 +37,14 @@ class WriteDataAccess(object):
 
     def __hash__(self):
         return self.unique_id
+
+    def toDict(self):
+        result_dict = {}
+        result_dict["memory_region"] = self.memory_region
+        result_dict["unique_id"] = self.unique_id
+        result_dict["var_name"] = self.var_name
+        return result_dict
+
+
+def write_data_access_from_dict(values: Dict[str, Any]) -> WriteDataAccess:
+    return WriteDataAccess(values["memory_region"], values["unique_id"], values["var_name"])
