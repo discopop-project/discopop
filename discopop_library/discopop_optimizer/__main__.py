@@ -33,6 +33,10 @@ def parse_args() -> OptimizerArguments:
         "--reduction-microbench-file", type=str, default="None",
         help="Reduction microbenchmark results"
     )
+    parser.add_argument(
+        "--system-configuration", type=str, default="optimizer/system_configuration.json",
+        help="System configuration file"
+    )
     # EXPERIMENTAL FLAGS:
     experimental_parser.add_argument("--allow-nested-parallelism", action="store_true",
         help="Allow the creation of nested parallelism suggestions. "
@@ -54,6 +58,7 @@ def parse_args() -> OptimizerArguments:
         reduction_microbench_file=arguments.reduction_microbench_file,
         allow_nested_parallelism=arguments.allow_nested_parallelism,
         plot=arguments.plot,
+        system_configuration_path=arguments.system_configuration,
     )
 
 

@@ -32,6 +32,7 @@ from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
 )
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.classes.system.system_utils import generate_default_system_configuration
 from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import query_user_for_symbol_values
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
 from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_combinations import (
@@ -78,6 +79,8 @@ def run(arguments: OptimizerArguments):
             + "\nExpected file: "
             + file_mapping_path
         )
+    if not os.path.exists(arguments.system_configuration_path):
+        generate_default_system_configuration(arguments.system_configuration_path)
 
     # create a new session, load data from previous steps)
     if arguments.verbose:
