@@ -173,8 +173,9 @@ def __dump_result_to_file_using_pattern_ids(
                     new_key_2.append(
                         str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
                     )
+                    device_id = data_at(experiment.optimization_graph, node_id).device_id
                     best_configuration.add_pattern(
-                        pattern_id, data_at(experiment.optimization_graph, node_id).device_id
+                        pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
                     )
         # collect data movement information
         print("# Required updates..")

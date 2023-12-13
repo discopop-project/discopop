@@ -25,8 +25,12 @@ def parse_args() -> PatchGeneratorArguments:
     )
 
     # fmt: off
-    parser.add_argument("--verbose", action="store_true",
+    parser.add_argument("-v", "--verbose", action="store_true",
         help="Enable verbose output.")
+    parser.add_argument(
+        "-fcf", "--from-configuration-file", type=str, default="None",
+        help="Generate patch from the given configuration file."
+    )
     # EXPERIMENTAL FLAGS:
     # fmt: on
 
@@ -58,7 +62,7 @@ def parse_args() -> PatchGeneratorArguments:
         raise ValueError("Could not determine CXX from LLVM_BIN_DIR: ", llvm_bin_dir)
 
     return PatchGeneratorArguments(
-        verbose=arguments.verbose, discopop_build_path=arguments.dp_build_path, CC=arguments.cc, CXX=arguments.cxx
+        verbose=arguments.verbose, discopop_build_path=arguments.dp_build_path, CC=arguments.cc, CXX=arguments.cxx, from_configuration_file=arguments.from_configuration_file
     )
 
 

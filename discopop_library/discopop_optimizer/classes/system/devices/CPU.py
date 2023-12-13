@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
+from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 
 
 class CPU(Device):
@@ -17,3 +18,6 @@ class CPU(Device):
         device_specific_compiler_flags: str,
     ):
         super().__init__(frequency, thread_count, openmp_device_id, device_specific_compiler_flags)
+
+    def get_device_type(self) -> DeviceTypeEnum:
+        return DeviceTypeEnum.CPU
