@@ -11,6 +11,7 @@ from sympy import Expr, Symbol
 from sympy import Integer
 
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 
 
 class Device(object):
@@ -79,3 +80,6 @@ class Device(object):
         execution_time_in_seconds = workload_in_instructions / instructions_per_second
         execution_time_in_micro_seconds = execution_time_in_seconds * 1000000
         return execution_time_in_micro_seconds
+
+    def get_device_type(self) -> DeviceTypeEnum:
+        raise ValueError("This method need to be overwritten by subclasses!")

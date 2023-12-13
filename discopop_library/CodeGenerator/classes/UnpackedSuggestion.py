@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     EntryPointType,
@@ -20,6 +20,8 @@ from discopop_library.CodeGenerator.classes.Enums import (
     PragmaPosition,
 )
 from discopop_library.CodeGenerator.classes.Pragma import Pragma
+from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
+from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 
 
 class UnpackedSuggestion(object):
@@ -28,10 +30,14 @@ class UnpackedSuggestion(object):
     file_id: int
     start_line: int
     end_line: int
+    device_id: Optional[DeviceID]
+    device_type: Optional[DeviceTypeEnum]
 
-    def __init__(self, type_str: str, values: Dict[str, Any]):
+    def __init__(self, type_str: str, values: Dict[str, Any], device_id = None, device_type = None):
         self.type = type_str
         self.values = values
+        self.device_id = device_id
+        self.device_type = device_type
 
         # get start and end line of target section
         self.file_id = int(self.values["start_line"].split(":")[0])
@@ -132,8 +138,14 @@ class UnpackedSuggestion(object):
         pragmas = []
         pragma = Pragma()
         if is_gpu_pragma:
+            # get device id for execution (else branch for compatibility with "legacy" gpu suggestions)
+            if self.device_id is not None:
+                device_id = self.device_id
+            else:
+                device_id = self.values["dp_optimizer_device_id"]
+
             pragma.pragma_str = "#pragma omp target teams distribute parallel for "
-            pragma.pragma_str += "device(" + str(self.values["dp_optimizer_device_id"]) + ") "
+            pragma.pragma_str += "device(" + str(device_id) + ") "
         else:
             pragma.pragma_str = "#pragma omp parallel for "
         if len(self.values["first_private"]) > 0:
@@ -431,8 +443,10 @@ class UnpackedSuggestion(object):
     def get_pragmas(self) -> List[Pragma]:
         """returns a list of source code lines and pragmas to be inserted into the code preview"""
         pragmas = []
+        print("GETPRAGMA: @", self.device_id, " type: ", self.device_type)
         if self.type in ["do_all", "reduction", "gpu_do_all", "gpu_reduction"]:
-            pragmas += self.__get_do_all_and_reduction_pragmas("gpu_" in self.type)
+            execute_on_gpu = "gpu_" in self.type or self.device_type == DeviceTypeEnum.GPU
+            pragmas += self.__get_do_all_and_reduction_pragmas(execute_on_gpu)
             return pragmas
         elif self.type == "pipeline":
             pragmas += self.__get_pipeline_pragmas()
