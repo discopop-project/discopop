@@ -15,6 +15,7 @@ import warnings
 
 from sympy import Expr
 import tqdm  # type: ignore
+from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 
@@ -49,12 +50,12 @@ def perform_evolutionary_search(
     ### END SETTINGS
 
     population: List[List[int]] = __initialize(experiment, population_size, available_decisions, arguments)
-    population, fitness = __calculate_fitness(experiment, population, arguments)
+    population, fitness, _ = __calculate_fitness(experiment, population, arguments)
     generation_counter = 0
 
     while generation_counter < generations:
         print("\nGeneration", generation_counter, "/", generations)
-        population, fitness = __calculate_fitness(experiment, population, arguments)
+        population, fitness, _ = __calculate_fitness(experiment, population, arguments)
         __print_population(experiment, population, fitness, arguments)
         population = __select(
             experiment,
@@ -67,9 +68,9 @@ def perform_evolutionary_search(
         population = __crossover(experiment, arguments, population, crossovers)
         population = __mutate(experiment, arguments, population, crossovers)
         generation_counter += 1
-    population, fitness = __calculate_fitness(experiment, population, arguments)
+    population, fitness, contexts = __calculate_fitness(experiment, population, arguments)
     __print_population(experiment, population, fitness, arguments)
-    __dump_result(experiment, population, fitness, optimizer_dir, population_size, generations)
+    __dump_result(experiment, population, fitness, optimizer_dir, population_size, generations, contexts)
 
 
 global_experiment = None
@@ -82,7 +83,7 @@ def __calculate_fitness(
     experiment: Experiment,
     population: List[List[int]],
     arguments: OptimizerArguments,
-) -> Tuple[List[List[int]], List[int]]:
+) -> Tuple[List[List[int]], List[int], List[ContextObject]]:
     """returning the population is necessary since the order of the population can change due to multiprocessing"""
     global global_experiment
     global global_arguments
@@ -101,6 +102,7 @@ def __calculate_fitness(
         tmp_result = list(tqdm.tqdm(pool.imap_unordered(__get_score, param_list), total=len(param_list)))
     population = []
     fitness = []
+    contexts = []
     for local_result in tmp_result:
         # remove invalid elements
         if local_result[1] == -1:
@@ -108,7 +110,8 @@ def __calculate_fitness(
 
         population.append(local_result[0])
         fitness.append(local_result[1])
-    return population, fitness
+        contexts.append(local_result[2])
+    return population, fitness, contexts
 
 
 def __initialize_fitness_worker(
@@ -121,26 +124,21 @@ def __initialize_fitness_worker(
     global_arguments = arguments
 
 
-def __get_score(param_tuple) -> Tuple[List[int], int]:
+def __get_score(param_tuple) -> Tuple[List[int], int, ContextObject]:
     global global_experiment
     global global_arguments
     configuration = param_tuple
     try:
-        result = int(
-            float(
-                str(
-                    evaluate_configuration(
-                        cast(Experiment, global_experiment),
-                        configuration,
-                        cast(OptimizerArguments, global_arguments),
-                    )[1].evalf()
-                )
-            )
+        _, score_expr, context = evaluate_configuration(
+            cast(Experiment, global_experiment),
+            configuration,
+            cast(OptimizerArguments, global_arguments),
         )
+        result = int(float(str(score_expr.evalf())))
     except ValueError:
         result = -1
 
-    return configuration, result
+    return configuration, result, context
 
 
 def __print_population(
@@ -396,6 +394,7 @@ def __dump_result(
     optimizer_dir: str,
     population_size: int,
     generations: int,
+    contexts: List[ContextObject],
 ):
     # replace keys to allow dumping
     dumpable_dict = dict()
@@ -417,6 +416,7 @@ def __dump_result(
     # dump the best option
     for idx, fitness_value in sorted(enumerate(fitness), key=lambda x: x[1]):
         new_key_2 = []
+        best_configuration = ParallelConfiguration()
         for node_id in population[idx]:
             # find pattern id
             for pattern_id in experiment.suggestion_to_node_ids_dict:
@@ -424,9 +424,20 @@ def __dump_result(
                     new_key_2.append(
                         str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
                     )
+                    device_id = data_at(experiment.optimization_graph, node_id).device_id
+                    best_configuration.add_pattern(
+                        pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
+                    )
+        # collect data movement information
+        print("# Required updates..")
+        for update in contexts[idx].necessary_updates:
+            best_configuration.add_data_movement(update)
+            print("  #", update)
+        print()
+        # export results to file
         best_option_path: str = os.path.join(optimizer_dir, "evolutionary_configuration.json")
-        with open(best_option_path, "w") as fp:
-            fp.write(" ".join(new_key_2))
+        best_configuration.dump_to_file(best_option_path)
+
         break
 
 
