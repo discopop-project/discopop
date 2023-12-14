@@ -27,12 +27,12 @@ import random
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
 from discopop_library.discopop_optimizer.optimization.validation import check_configuration_validity
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
-    data_at,
     get_in_options,
     get_out_mutex_edges,
     get_out_options,
     get_requirements,
 )
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 def perform_evolutionary_search(

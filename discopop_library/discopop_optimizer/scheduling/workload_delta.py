@@ -18,10 +18,10 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshotPop import
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
-    data_at,
     get_children,
     get_successors,
 )
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 # define aliases for type checking purposes

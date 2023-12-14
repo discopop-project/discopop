@@ -23,8 +23,9 @@ from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calc
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at, get_all_function_nodes
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_all_function_nodes
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 def evaluate_configuration(

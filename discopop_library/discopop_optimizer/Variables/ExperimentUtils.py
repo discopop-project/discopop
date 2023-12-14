@@ -32,7 +32,7 @@ from discopop_library.discopop_optimizer.gui.presentation.OptionTable import (
 )
 from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import query_user_for_symbol_values
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.result_classes.DetectionResult import DetectionResult
 
 

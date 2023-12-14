@@ -17,7 +17,7 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextNode import Contex
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 def show(graph):

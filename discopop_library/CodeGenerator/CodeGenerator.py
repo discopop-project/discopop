@@ -121,7 +121,7 @@ def from_json_strings(
 
 def from_json_strings_with_mapping(
     file_mapping: Dict[int, Path],
-    pattern_json_strings_with_mapping_by_type: Dict[str, List[Tuple[str, DeviceID, DeviceTypeEnum]]],
+    pattern_json_strings_with_mapping_by_type: Dict[str, List[Tuple[str, DeviceID, Optional[DeviceTypeEnum]]]],
     skip_compilation_check: bool = False,
     compile_check_command: Optional[str] = None,
     CC="clang",

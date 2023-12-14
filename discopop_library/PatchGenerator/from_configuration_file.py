@@ -10,13 +10,16 @@ import json
 import os.path
 from pathlib import Path
 import shutil
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings, from_json_strings_with_mapping
 from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
+from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
+from discopop_library.result_classes.DetectionResult import DetectionResult
+import jsonpickle  # type: ignore
 
 
 def from_configuration_file(
@@ -25,11 +28,21 @@ def from_configuration_file(
     arguments: PatchGeneratorArguments,
     patch_generator_dir: str,
 ):
-    suggestion_strings_with_mapping: Dict[str, List[Tuple[str, DeviceID, DeviceTypeEnum]]] = dict()
+    suggestion_strings_with_mapping: Dict[str, List[Tuple[str, DeviceID, Optional[DeviceTypeEnum]]]] = dict()
     if arguments.verbose:
         print("Loading configuration file: ", arguments.from_configuration_file)
     config = ParallelConfiguration()
     config.reconstruct_from_file(arguments.from_configuration_file)
+
+    # load detectionresult and pet
+    if arguments.verbose:
+        print("Loading detection result and PET...", end="")
+    detection_result_dump_str = ""
+    with open(os.path.join("explorer", "detection_result_dump.json")) as f:
+        detection_result_dump_str = f.read()
+    detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str)
+    if arguments.verbose:
+        print("Done")
 
     # build suggestion_strings_with_mapping
     for pattern_values in config.applied_patterns:
@@ -47,6 +60,14 @@ def from_configuration_file(
                     if pattern_type not in suggestion_strings_with_mapping:
                         suggestion_strings_with_mapping[pattern_type] = []
                     suggestion_strings_with_mapping[pattern_type].append((pattern_string, device_id, device_type))
+
+    # collect data movement information
+    if "device_update" not in suggestion_strings_with_mapping:
+        suggestion_strings_with_mapping["device_update"] = []
+    for data_movement in config.data_movement:
+        suggestion_strings_with_mapping["device_update"].append(
+            (data_movement.get_pattern_string(detection_result.pet), None, None)
+        )
 
     # generate the modified code
     file_id_to_modified_code: Dict[int, str] = from_json_strings_with_mapping(
