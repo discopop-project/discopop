@@ -22,7 +22,7 @@ from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 suggestion_device_types = [CPU, GPU]
 

@@ -15,9 +15,9 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextNode import Contex
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_successors,
-    data_at,
     get_children,
 )
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 def calculate_data_transfers(
@@ -105,9 +105,7 @@ def __check_current_node(node_id: int, graph: nx.DiGraph, model: CostModel, cont
         return updated_context
 
     context = context.calculate_and_perform_necessary_updates(
-        node_data.read_memory_regions,
-        cast(int, context.last_seen_device_ids[-1]),
-        node_data.node_id,
+        node_data.read_memory_regions, cast(int, context.last_seen_device_ids[-1]), node_data.node_id, graph
     )
 
     # add the writes performed by the given node to the context

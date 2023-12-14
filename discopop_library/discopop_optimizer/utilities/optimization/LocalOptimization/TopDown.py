@@ -25,8 +25,8 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_function_nodes,
     get_successors,
     get_children,
-    data_at,
 )
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 def get_locally_optimized_models(

@@ -443,7 +443,7 @@ class UnpackedSuggestion(object):
     def get_pragmas(self) -> List[Pragma]:
         """returns a list of source code lines and pragmas to be inserted into the code preview"""
         pragmas = []
-        
+
         if self.type in ["do_all", "reduction", "gpu_do_all", "gpu_reduction"]:
             execute_on_gpu = "gpu_" in self.type or self.device_type == DeviceTypeEnum.GPU
             pragmas += self.__get_do_all_and_reduction_pragmas(execute_on_gpu)

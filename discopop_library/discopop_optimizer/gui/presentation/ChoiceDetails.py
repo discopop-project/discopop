@@ -12,7 +12,7 @@ import networkx as nx  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget
 
 
