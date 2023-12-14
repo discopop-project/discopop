@@ -20,7 +20,6 @@ from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_successors,
     get_children,
-    data_at,
     get_edge_data,
     get_requirements,
     get_out_options,
@@ -28,6 +27,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_parents,
     get_all_function_nodes,
 )
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 def get_performance_models_for_functions(

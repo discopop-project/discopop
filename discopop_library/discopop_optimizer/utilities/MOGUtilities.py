@@ -29,6 +29,7 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 def get_nodes_from_cu_id(graph: nx.DiGraph, cu_node_id: NodeID) -> List[int]:
@@ -37,11 +38,6 @@ def get_nodes_from_cu_id(graph: nx.DiGraph, cu_node_id: NodeID) -> List[int]:
         if cast(GenericNode, graph.nodes[node_id]["data"]).original_cu_id == cu_node_id:
             result_list.append(node_id)
     return result_list
-
-
-def data_at(graph: nx.DiGraph, node_id: int) -> GenericNode:
-    """Return the data object stored at the networkx node with id node_id."""
-    return cast(GenericNode, graph.nodes[node_id]["data"])
 
 
 def get_edge_data(graph: nx.DiGraph, source: int, target: int) -> GenericEdge:

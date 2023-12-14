@@ -22,7 +22,7 @@ from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_c
 from itertools import product
 from discopop_library.discopop_optimizer.optimization.validation import check_configuration_validity
 
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import data_at
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 global_experiment = None

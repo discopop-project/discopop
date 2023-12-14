@@ -39,6 +39,7 @@ from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_comb
     evaluate_all_decision_combinations,
 )
 from discopop_library.discopop_optimizer.optimization.evolutionary_algorithm import perform_evolutionary_search
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
@@ -47,7 +48,6 @@ from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench
 from discopop_library.discopop_optimizer.Microbench.Microbench import MicrobenchType
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
-    data_at,
     get_available_decisions_for_functions,
     show,
 )

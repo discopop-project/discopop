@@ -12,7 +12,6 @@ from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArgu
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
-    data_at,
     get_all_function_nodes,
     get_children,
     get_in_options,
@@ -21,6 +20,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_requirements,
     get_successors,
 )
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 def check_configuration_validity(

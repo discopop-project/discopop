@@ -35,7 +35,6 @@ from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     add_dataflow_edge,
-    data_at,
     get_successors,
     get_children,
     add_successor_edge,
@@ -46,6 +45,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_function_nodes,
     get_read_and_written_data_from_subgraph,
 )
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 class PETParser(object):
