@@ -64,7 +64,6 @@ class Update(object):
             + str(self.write_data_access.var_name)
             + ")"
         )
-    
 
     def get_pattern_string(self, pet: PEGraphX) -> str:
         result_dict: Dict[str, Any] = dict()
