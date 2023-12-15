@@ -34,7 +34,7 @@ def evaluate_all_decision_combinations(
     available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
-) -> Dict[Tuple[int, ...], Expr]:
+) -> ParallelConfiguration:
     """Create and evaluate every possible combination of decisions."""
     global global_experiment
     global global_arguments
@@ -117,9 +117,7 @@ def evaluate_all_decision_combinations(
     print("# Sorted and simplified costs of all combinations using PARALLEL PATTERN IDS")
     print()
 
-    __dump_result_to_file_using_pattern_ids(experiment, optimizer_dir, costs_dict, contexts_dict, arguments)
-
-    return costs_dict
+    return __dump_result_to_file_using_pattern_ids(experiment, optimizer_dir, costs_dict, contexts_dict, arguments)
 
 
 def __initialize_worker(
@@ -145,7 +143,7 @@ def __dump_result_to_file_using_pattern_ids(
     costs_dict: Dict[Tuple[int, ...], Expr],
     contexts_dict: Dict[Tuple[int, ...], ContextObject],
     arguments: OptimizerArguments,
-):
+) -> ParallelConfiguration:
     # replace keys to allow dumping
     dumpable_dict = dict()
     for key in costs_dict:
@@ -164,7 +162,7 @@ def __dump_result_to_file_using_pattern_ids(
     # dump the best option
     for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x]):
         new_key_2 = []
-        best_configuration = ParallelConfiguration()
+        best_configuration = ParallelConfiguration(list(combination_tuple))
         # collect applied suggestions
         for node_id in combination_tuple:
             # find pattern id
@@ -187,4 +185,5 @@ def __dump_result_to_file_using_pattern_ids(
         best_option_path: str = os.path.join(optimizer_dir, "exhaustive_configuration.json")
         best_configuration.dump_to_file(best_option_path)
 
-        break
+        return best_configuration
+    raise ValueError("No configuration found!")

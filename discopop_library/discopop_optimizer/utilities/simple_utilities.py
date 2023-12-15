@@ -1,7 +1,7 @@
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 
 
-import networkx as nx
+import networkx as nx  # type: ignore
 
 
 from typing import cast

@@ -54,7 +54,7 @@ class Workload(GenericNode):
     def get_plot_label(self) -> str:
         if self.sequential_workload is not None:
             # return str(self.workload)
-            return str(self.node_id)
+            return str(self.node_id) + "\n" + str(self.original_cu_id)
         else:
             return "WL"
 

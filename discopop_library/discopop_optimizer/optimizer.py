@@ -24,6 +24,7 @@ from discopop_library.discopop_optimizer.CostModels.utilities import get_perform
 from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
+from discopop_library.discopop_optimizer.UpdateOptimization.main import optimize_updates
 from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
     create_optimization_graph,
     export_to_json,
@@ -40,6 +41,7 @@ from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_comb
 )
 from discopop_library.discopop_optimizer.optimization.evolutionary_algorithm import perform_evolutionary_search
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
+from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
@@ -169,15 +171,19 @@ def run(arguments: OptimizerArguments):
 
     # calculate costs for all combinations of decisions
     if arguments.exhaustive:
-        evaluate_all_decision_combinations(experiment, available_decisions, arguments, optimizer_dir)
+        best_configuration = evaluate_all_decision_combinations(
+            experiment, available_decisions, arguments, optimizer_dir
+        )
     else:
         # perform evolutionary search
-        perform_evolutionary_search(
+        best_configuration = perform_evolutionary_search(
             experiment,
             available_decisions,
             arguments,
             optimizer_dir,
         )
+
+    optimize_updates(experiment, best_configuration)
 
     # save experiment to disk
     export_to_json(experiment, optimizer_dir)
