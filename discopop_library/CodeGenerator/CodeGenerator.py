@@ -136,9 +136,9 @@ def from_json_strings_with_mapping(
     # convert pattern_json_strings to UnpackedSuggestion object
     unpacked_suggestions: List[UnpackedSuggestion] = []
     pattern_precedence = [
+        "device_update",
         "do_all",
         "reduction",
-        "device_update",
         "gpu_do_all",
         "gpu_reduction",
         "pipeline",

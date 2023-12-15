@@ -40,7 +40,7 @@ def perform_evolutionary_search(
     available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
-):
+) -> ParallelConfiguration:
     ### SETTINGS
     population_size = 50
     generations = 10
@@ -70,7 +70,7 @@ def perform_evolutionary_search(
         generation_counter += 1
     population, fitness, contexts = __calculate_fitness(experiment, population, arguments)
     __print_population(experiment, population, fitness, arguments)
-    __dump_result(experiment, population, fitness, optimizer_dir, population_size, generations, contexts)
+    return __dump_result(experiment, population, fitness, optimizer_dir, population_size, generations, contexts)
 
 
 global_experiment = None
@@ -395,7 +395,7 @@ def __dump_result(
     population_size: int,
     generations: int,
     contexts: List[ContextObject],
-):
+) -> ParallelConfiguration:
     # replace keys to allow dumping
     dumpable_dict = dict()
     for idx, key in enumerate(population):
@@ -416,7 +416,7 @@ def __dump_result(
     # dump the best option
     for idx, fitness_value in sorted(enumerate(fitness), key=lambda x: x[1]):
         new_key_2 = []
-        best_configuration = ParallelConfiguration()
+        best_configuration = ParallelConfiguration(population[idx])
         for node_id in population[idx]:
             # find pattern id
             for pattern_id in experiment.suggestion_to_node_ids_dict:
@@ -438,7 +438,8 @@ def __dump_result(
         best_option_path: str = os.path.join(optimizer_dir, "evolutionary_configuration.json")
         best_configuration.dump_to_file(best_option_path)
 
-        break
+        return best_configuration
+    raise ValueError("No configuration found!")
 
 
 def __get_random_configuration(
