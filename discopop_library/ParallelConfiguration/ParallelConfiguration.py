@@ -23,11 +23,13 @@ class ParallelConfiguration(object):
     applied_patterns: List[Dict[str, Any]]
     data_movement: List[Update]
     pattern_id: Optional[int]  # used for the representation via the patch generator
+    decisions: List[int]
 
-    def __init__(self):
+    def __init__(self, decisions: List[int]):
         self.applied_patterns = []
         self.data_movement = []
         self.pattern_id = None
+        self.decisions = decisions
 
     def reconstruct_from_file(self, file_path: str):
         with open(file_path, "r") as f:
@@ -46,9 +48,6 @@ class ParallelConfiguration(object):
 
         with open(file_path, "w") as f:
             json.dump(dumpable_dict, f)
-
-        test = ParallelConfiguration()
-        test.reconstruct_from_file(file_path)
 
     def add_pattern(self, pattern_id: SuggestionId, target_device_id: DeviceID, device_type: DeviceTypeEnum):
         if self.pattern_id is None:

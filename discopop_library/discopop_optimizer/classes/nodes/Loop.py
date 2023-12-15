@@ -80,7 +80,8 @@ class Loop(Workload):
         return (
             "WL: " + str(self.sequential_workload) + "\n" + "IT: " + str(self.iterations) + "\n"
             "Read: " + str([str(e) for e in self.read_memory_regions]) + "\n"
-            "Write: " + str([str(e) for e in self.written_memory_regions])
+            "Write: " + str([str(e) for e in self.written_memory_regions]) + "\n"
+            "Suggestion: " + str(self.suggestion)
         )
 
     def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:

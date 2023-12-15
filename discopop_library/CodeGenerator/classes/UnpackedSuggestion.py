@@ -129,6 +129,7 @@ class UnpackedSuggestion(object):
         pragma.file_id = self.file_id
         pragma.start_line = self.start_line
         pragma.end_line = self.end_line
+        pragma.pragma_position = PragmaPosition.BEFORE_END
 
         if len(pragma.pragma_str) != 0:
             pragmas.append(pragma)
