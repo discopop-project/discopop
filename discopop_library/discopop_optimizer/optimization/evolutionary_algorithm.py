@@ -429,11 +429,8 @@ def __dump_result(
                         pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
                     )
         # collect data movement information
-        print("# Required updates..")
         for update in contexts[idx].necessary_updates:
             best_configuration.add_data_movement(update)
-            print("  #", update)
-        print()
         # export results to file
         best_option_path: str = os.path.join(optimizer_dir, "evolutionary_configuration.json")
         best_configuration.dump_to_file(best_option_path)
