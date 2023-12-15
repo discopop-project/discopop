@@ -36,7 +36,7 @@ def remove_duplicated_updates(configuration: ParallelConfiguration, arguments: O
             + ")"
         )
 
-    # remove general duplicates 
+    # remove general duplicates
     for update in configuration.data_movement:
         if get_buffer_str(update) not in buffer:
             cleaned_updates.append(update)
