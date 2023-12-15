@@ -183,7 +183,7 @@ def run(arguments: OptimizerArguments):
             optimizer_dir,
         )
 
-    optimize_updates(experiment, best_configuration)
+    optimize_updates(experiment, best_configuration, arguments)
 
     # save experiment to disk
     export_to_json(experiment, optimizer_dir)

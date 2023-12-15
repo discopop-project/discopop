@@ -1,4 +1,5 @@
 from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration
+from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_parents
@@ -6,7 +7,7 @@ from discopop_library.discopop_optimizer.utilities.simple_utilities import data_
 
 
 def fix_loop_initialization_updates(
-    experiment: Experiment, best_configuration: ParallelConfiguration
+    experiment: Experiment, best_configuration: ParallelConfiguration, arguments: OptimizerArguments
 ) -> ParallelConfiguration:
     """Move updates to initialize device loops before the loop"""
     for update in best_configuration.data_movement:
@@ -44,9 +45,10 @@ def fix_loop_initialization_updates(
                 update.target_node_id = update.source_node_id
                 update.target_cu_id = data_at(experiment.optimization_graph, update.source_node_id).original_cu_id
 
-    print("Updated Updates")
-    for update in best_configuration.data_movement:
-        print("# ", update)
-    print()
+    if arguments.verbose:
+        print("Fixed loop initialization updates")
+        for update in best_configuration.data_movement:
+            print("# ", update)
+        print()
 
     return best_configuration
