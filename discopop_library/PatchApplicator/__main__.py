@@ -32,6 +32,10 @@ def parse_args() -> PatchApplicatorArguments:
     parser.add_argument('-C', '--clear', action="store_true", help="Reset the code to it's original state. Preserves "
                                                                    "the list of applied suggestion for loading."
                                                                    "Old saves will be overwritten!")
+    parser.add_argument(
+        "-fcf", "--from-configuration-file", type=str, default="None",
+        help="Apply patch described by the given configuration file."
+    )
     # todo: in the long run, saving configurations to different locations could be easily implemented.
 
     parser.add_argument('-L', '--load', action="store_true", help="Load a previous state after clearing.")
@@ -49,6 +53,7 @@ def parse_args() -> PatchApplicatorArguments:
         clear=arguments.clear,
         load=arguments.load,
         list=arguments.list,
+        from_configuration_file=arguments.from_configuration_file,
     )
 
 
