@@ -40,7 +40,7 @@ class System(object):
 
     def __init__(self, arguments: OptimizerArguments):
         self.__devices = dict()
-        self.__host_device_id = 0
+        self.__host_device_id = -1
         self.__network = Network()
         self.__device_do_all_overhead_models = dict()
         self.__device_reduction_overhead_models = dict()
@@ -128,7 +128,7 @@ class System(object):
 
     def get_device(self, device_id: Optional[int]) -> Device:
         if device_id is None:
-            return self.__devices[0]
+            return self.__devices[self.get_host_device_id()]
         return self.__devices[device_id]
 
     def get_device_ids_by_type(self, device_type: type) -> List[int]:

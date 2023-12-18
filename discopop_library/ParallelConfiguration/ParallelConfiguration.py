@@ -24,18 +24,21 @@ class ParallelConfiguration(object):
     data_movement: List[Update]
     pattern_id: Optional[int]  # used for the representation via the patch generator
     decisions: List[int]
+    host_device_id: int
 
-    def __init__(self, decisions: List[int]):
+    def __init__(self, decisions: List[int], host_device_id: int):
         self.applied_patterns = []
         self.data_movement = []
         self.pattern_id = None
         self.decisions = decisions
+        self.host_device_id = host_device_id
 
     def reconstruct_from_file(self, file_path: str):
         with open(file_path, "r") as f:
             loaded_data = json.load(f)
         self.applied_patterns = loaded_data["applied_patterns"]
         self.pattern_id = loaded_data["pattern_id"]
+        self.host_device_id = loaded_data["host_device_id"]
 
         for values in loaded_data["data_movement"]:
             self.data_movement.append(construct_update_from_dict(values))
@@ -45,6 +48,7 @@ class ParallelConfiguration(object):
         dumpable_dict["applied_patterns"] = self.applied_patterns
         dumpable_dict["data_movement"] = [update.toDict() for update in self.data_movement]
         dumpable_dict["pattern_id"] = self.pattern_id
+        dumpable_dict["host_device_id"] = self.host_device_id
 
         with open(file_path, "w") as f:
             json.dump(dumpable_dict, f)

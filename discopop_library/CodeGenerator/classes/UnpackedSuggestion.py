@@ -32,12 +32,14 @@ class UnpackedSuggestion(object):
     end_line: int
     device_id: Optional[DeviceID]
     device_type: Optional[DeviceTypeEnum]
+    host_device_id: int
 
-    def __init__(self, type_str: str, values: Dict[str, Any], device_id=None, device_type=None):
+    def __init__(self, type_str: str, values: Dict[str, Any], device_id=None, device_type=None, host_device_id=0):
         self.type = type_str
         self.values = values
         self.device_id = device_id
         self.device_type = device_type
+        self.host_device_id = host_device_id
 
         # get start and end line of target section
         self.file_id = int(self.values["start_line"].split(":")[0])
@@ -56,10 +58,10 @@ class UnpackedSuggestion(object):
         openmp_target_device_id = self.values["openmp_target_device_id"]
         print("IS FIRST DATA OCCURRENCE?: ", is_first_data_occurrence)
 
-        if source_device_id == 0 and target_device_id == 0:
+        if source_device_id == self.host_device_id and target_device_id == self.host_device_id:
             # no update required
             pass
-        elif source_device_id == 0 and target_device_id != 0:
+        elif source_device_id == self.host_device_id and target_device_id != self.host_device_id:
             # update type to
             if is_first_data_occurrence:
                 pragma.pragma_str = "#pragma omp target enter data map(to:"
@@ -74,7 +76,7 @@ class UnpackedSuggestion(object):
                 + ")"
             )
 
-        elif source_device_id != 0 and target_device_id == 0:
+        elif source_device_id != self.host_device_id and target_device_id == self.host_device_id:
             # update type from
             if is_first_data_occurrence:
                 pragma.pragma_str = "#pragma omp target exit data map(from:"

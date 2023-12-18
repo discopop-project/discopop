@@ -65,8 +65,7 @@ def get_locally_optimized_models(
                     )
                     # calculate and append necessary data transfers to the models
                     performance_models_with_transfers = calculate_data_transfers(
-                        graph,
-                        {cast(FunctionRoot, data_at(graph, function_node)): performance_models},
+                        graph, {cast(FunctionRoot, data_at(graph, function_node)): performance_models}, experiment
                     )
 
                     # calculate and append costs of data transfers to the performance models
@@ -146,7 +145,7 @@ def get_locally_optimized_models(
         )
         # calculate and append necessary data transfers to the models
         performance_models_with_transfers = calculate_data_transfers(
-            graph, {cast(FunctionRoot, data_at(graph, function_node)): performance_models}
+            graph, {cast(FunctionRoot, data_at(graph, function_node)): performance_models}, experiment
         )
 
         # calculate and append costs of data transfers to the performance models

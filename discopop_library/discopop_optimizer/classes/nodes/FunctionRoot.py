@@ -29,7 +29,7 @@ class FunctionRoot(Workload):
             parallelizable_workload=Integer(0),
         )
         self.name = name
-        self.device_id = 0
+        self.device_id = experiment.get_system().get_host_device_id()
         function_name = "function" + "_" + str(self.node_id) + "_" + self.name
         self.parallelizable_costs = Symbol(function_name + "-parallelizable")
         self.sequential_costs = Symbol(function_name + "-sequential")
