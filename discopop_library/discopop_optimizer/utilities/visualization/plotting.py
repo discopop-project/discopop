@@ -19,6 +19,8 @@ from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
+from networkx.drawing.nx_pydot import graphviz_layout  # type: ignore
+
 
 def show(graph):
     """Plots the graph
@@ -27,7 +29,8 @@ def show(graph):
     """
     fig, ax = plt.subplots()
     try:
-        pos = nx.planar_layout(graph)  # good
+        # pos = nx.planar_layout(graph)  # good
+        pos = graphviz_layout(graph, prog="dot")
     except nx.exception.NetworkXException:
         try:
             # fallback layouts

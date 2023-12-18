@@ -31,6 +31,8 @@ from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
+from networkx.drawing.nx_pydot import graphviz_layout  # type: ignore
+
 
 def get_nodes_from_cu_id(graph: nx.DiGraph, cu_node_id: NodeID) -> List[int]:
     result_list: List[int] = []
@@ -97,7 +99,8 @@ def show(graph):
     matplotlib.use("TkAgg")
     fig, ax = plt.subplots()
     try:
-        pos = nx.planar_layout(graph)  # good
+        # pos = nx.planar_layout(graph)  # good
+        pos = graphviz_layout(graph, prog="dot")
     except nx.exception.NetworkXException:
         try:
             # fallback layouts
