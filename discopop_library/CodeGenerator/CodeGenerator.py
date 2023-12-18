@@ -126,6 +126,7 @@ def from_json_strings_with_mapping(
     compile_check_command: Optional[str] = None,
     CC="clang",
     CXX="clang++",
+    host_device_id=0,
 ) -> Dict[int, str]:
     """Insert the parallel patterns described by the given json strings into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -150,7 +151,13 @@ def from_json_strings_with_mapping(
             continue
         for json_str, device_id, device_type in pattern_json_strings_with_mapping_by_type[type_str]:
             unpacked_suggestions.append(
-                UnpackedSuggestion(type_str, jsons.loads(json_str), device_id=device_id, device_type=device_type)
+                UnpackedSuggestion(
+                    type_str,
+                    jsons.loads(json_str),
+                    device_id=device_id,
+                    device_type=device_type,
+                    host_device_id=host_device_id,
+                )
             )
 
     # create a dictionary mapping fileIds to ContentBuffer elements
