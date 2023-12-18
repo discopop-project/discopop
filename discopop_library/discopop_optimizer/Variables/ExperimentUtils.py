@@ -179,7 +179,7 @@ def get_sequential_cost_model(experiment: Experiment) -> Dict[FunctionRoot, List
         experiment, experiment.optimization_graph
     )
     sequential_function_performance_models_with_transfers = calculate_data_transfers(
-        experiment.optimization_graph, sequential_function_performance_models
+        experiment.optimization_graph, sequential_function_performance_models, experiment
     )
     sequential_complete_performance_models = add_data_transfer_costs(
         experiment.optimization_graph,

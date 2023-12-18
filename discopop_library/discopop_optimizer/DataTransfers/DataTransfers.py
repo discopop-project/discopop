@@ -21,7 +21,7 @@ from discopop_library.discopop_optimizer.utilities.simple_utilities import data_
 
 
 def calculate_data_transfers(
-    graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]]
+    graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]], experiment
 ) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     """Calculate data transfers for each performance model and append the respective ContextObject to the result."""
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
@@ -30,12 +30,14 @@ def calculate_data_transfers(
         for model in function_performance_models[function]:
             # create a ContextObject for the current path
             context = ContextObject(function.node_id, [function.device_id])
-            context = get_path_context(function.node_id, graph, model, context)
+            context = get_path_context(function.node_id, graph, model, context, experiment)
             result_dict[function].append((model, context))
     return result_dict
 
 
-def get_path_context(node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject) -> ContextObject:
+def get_path_context(
+    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment
+) -> ContextObject:
     """passes the context Object along the path and returns the context once the end has been reached"""
     # push device id to stack if necessary
     node_data = data_at(graph, node_id)
@@ -43,10 +45,10 @@ def get_path_context(node_id: int, graph: nx.DiGraph, model: CostModel, context:
         context.last_seen_device_ids.append(node_data.device_id)
 
     # calculate context modifications for the current node
-    context = __check_current_node(node_id, graph, model, context)
+    context = __check_current_node(node_id, graph, model, context, experiment)
 
     # calculate context modifications for the children of the current node
-    context = __check_children(node_id, graph, model, context)
+    context = __check_children(node_id, graph, model, context, experiment)
 
     # pop device id from stack if necessary
     if node_data.device_id is not None:
@@ -61,7 +63,7 @@ def get_path_context(node_id: int, graph: nx.DiGraph, model: CostModel, context:
     successors = get_successors(graph, node_id)
     if len(successors) == 1:
         # pass context to the single successor
-        return get_path_context(successors[0], graph, model, context)
+        return get_path_context(successors[0], graph, model, context, experiment)
 
     elif len(successors) == 0:
         # no successor exists, return the current context
@@ -84,10 +86,12 @@ def get_path_context(node_id: int, graph: nx.DiGraph, model: CostModel, context:
             )
         # suitable successor identified.
         # pass the current context to the successor
-        return get_path_context(suitable_successors[0], graph, model, context)
+        return get_path_context(suitable_successors[0], graph, model, context, experiment)
 
 
-def __check_current_node(node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject) -> ContextObject:
+def __check_current_node(
+    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment
+) -> ContextObject:
     """Check if the given node results in modifications to the given context.
     Return a modified version of the context which contains the required updates."""
     # due to the Read-Compute-Write paradigm used to create the Computational Units,
@@ -105,7 +109,7 @@ def __check_current_node(node_id: int, graph: nx.DiGraph, model: CostModel, cont
         return updated_context
 
     context = context.calculate_and_perform_necessary_updates(
-        node_data.read_memory_regions, cast(int, context.last_seen_device_ids[-1]), node_data.node_id, graph
+        node_data.read_memory_regions, cast(int, context.last_seen_device_ids[-1]), node_data.node_id, graph, experiment
     )
 
     # add the writes performed by the given node to the context
@@ -114,10 +118,12 @@ def __check_current_node(node_id: int, graph: nx.DiGraph, model: CostModel, cont
     return context
 
 
-def __check_children(node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject) -> ContextObject:
+def __check_children(
+    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment
+) -> ContextObject:
     # pass context to all children
     for child in get_children(graph, node_id):
         # reset last_visited_node_id inbetween visiting children
         context.last_visited_node_id = node_id
-        context = get_path_context(child, graph, model, context)
+        context = get_path_context(child, graph, model, context, experiment)
     return context

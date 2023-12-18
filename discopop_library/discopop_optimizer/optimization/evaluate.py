@@ -53,7 +53,7 @@ def evaluate_configuration(
     )
 
     function_performance_models = calculate_data_transfers(
-        experiment.optimization_graph, function_performance_models_without_context
+        experiment.optimization_graph, function_performance_models_without_context, experiment
     )
     function_performance_models = add_data_transfer_costs(
         experiment.optimization_graph,

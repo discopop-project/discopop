@@ -60,7 +60,7 @@ class OptimizationGraph(object):
             experiment, experiment.optimization_graph
         )
         sequential_function_performance_models_with_transfers = calculate_data_transfers(
-            experiment.optimization_graph, sequential_function_performance_models
+            experiment.optimization_graph, sequential_function_performance_models, experiment
         )
         sequential_complete_performance_models = add_data_transfer_costs(
             experiment.optimization_graph,
@@ -80,7 +80,7 @@ class OptimizationGraph(object):
 
             # calculate and append necessary data transfers to the models
             function_performance_models_with_transfers = calculate_data_transfers(
-                experiment.optimization_graph, function_performance_models
+                experiment.optimization_graph, function_performance_models, experiment
             )
 
             # calculate and append costs of data transfers to the performance models

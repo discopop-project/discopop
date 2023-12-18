@@ -31,7 +31,7 @@ def from_configuration_file(
     suggestion_strings_with_mapping: Dict[str, List[Tuple[str, DeviceID, Optional[DeviceTypeEnum]]]] = dict()
     if arguments.verbose:
         print("Loading configuration file: ", arguments.from_configuration_file)
-    config = ParallelConfiguration([])
+    config = ParallelConfiguration([], -1)
     config.reconstruct_from_file(arguments.from_configuration_file)
 
     # load detectionresult and pet
@@ -76,6 +76,7 @@ def from_configuration_file(
         CC=arguments.CC,
         CXX=arguments.CXX,
         skip_compilation_check=True,
+        host_device_id=config.host_device_id,
     )
     print("MODIFIED CODE: ")
     print(file_id_to_modified_code)

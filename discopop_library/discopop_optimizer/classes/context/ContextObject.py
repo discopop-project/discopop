@@ -38,7 +38,12 @@ class ContextObject(object):
         return str(self.necessary_updates)
 
     def calculate_and_perform_necessary_updates(
-        self, node_reads: Set[ReadDataAccess], reading_device_id: int, reading_node_id: int, graph: nx.DiGraph
+        self,
+        node_reads: Set[ReadDataAccess],
+        reading_device_id: int,
+        reading_node_id: int,
+        graph: nx.DiGraph,
+        experiment,
     ):
         """checks if the specified list of ReadDataAccesses performed by the specified device id makes updates
         necessary. If so, the updates will get append to the list of updates of the current ContextObject.
@@ -86,16 +91,26 @@ class ContextObject(object):
                         #                         print("Device <-> Device update required!")
 
                         # check if data is known to the host
-                        if data_write.memory_region not in self.seen_writes_by_device[0]:
-                            self.seen_writes_by_device[0][data_write.memory_region] = set()
-                        if data_write not in self.seen_writes_by_device[0][data_write.memory_region]:
+                        if (
+                            data_write.memory_region
+                            not in self.seen_writes_by_device[experiment.get_system().get_host_device_id()]
+                        ):
+                            self.seen_writes_by_device[experiment.get_system().get_host_device_id()][
+                                data_write.memory_region
+                            ] = set()
+                        if (
+                            data_write
+                            not in self.seen_writes_by_device[experiment.get_system().get_host_device_id()][
+                                data_write.memory_region
+                            ]
+                        ):
                             # register source device -> host update
                             required_updates.add(
                                 Update(
                                     source_node_id=self.last_visited_node_id,
                                     target_node_id=reading_node_id,
                                     source_device_id=device_id,
-                                    target_device_id=0,  # reading_device_id,
+                                    target_device_id=experiment.get_system().get_host_device_id(),  # reading_device_id,
                                     write_data_access=data_write,
                                     is_first_data_occurrence=is_first_data_occurrence,
                                     source_cu_id=data_at(graph, self.last_visited_node_id).original_cu_id,
