@@ -18,6 +18,7 @@ class PatchGeneratorArguments(object):
     CC: str
     CXX: str
     from_configuration_file: str
+    add_from_json : str
 
     def __post_init__(self):
         self.__validate()

@@ -15,6 +15,7 @@ from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.from_configuration_file import from_configuration_file
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
+from discopop_library.PatchGenerator.from_json_patterns import from_json_patterns
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 
 
@@ -42,7 +43,11 @@ def run(arguments: PatchGeneratorArguments):
         with open(applied_suggestions_file, "w+") as f:
             f.write(json.dumps({"applied": []}))
 
-    pattern_file_path = os.path.join(os.getcwd(), "explorer", "patterns.json")
+    # get pattern file to load
+    if arguments.add_from_json != "None":
+        pattern_file_path = arguments.add_from_json
+    else:
+        pattern_file_path = os.path.join(os.getcwd(), "explorer", "patterns.json")
     if not os.path.exists(pattern_file_path):
         raise FileNotFoundError(
             "No pattern file found. Please execute the discopop_explorer in advance."
@@ -75,40 +80,8 @@ def run(arguments: PatchGeneratorArguments):
         if arguments.verbose:
             print("Done.")
         return
+    
+    from_json_patterns(arguments, patterns_by_type, file_mapping, patch_generator_dir)
 
-    # generate code modifications from each suggestion, create a patch and store the patch
-    # using the suggestions unique id
-    if arguments.verbose:
-        print("Generating modified code...")
-    for suggestion_type in patterns_by_type:
-        for suggestion in patterns_by_type[suggestion_type]:
-            if arguments.verbose:
-                print("Suggestion: ", suggestion)
-            file_id_to_modified_code: Dict[int, str] = from_json_strings(
-                file_mapping,
-                {suggestion_type: [suggestion]},
-                CC=arguments.CC,
-                CXX=arguments.CXX,
-                skip_compilation_check=True,
-            )
-            # create patches from the modified codes
-            file_id_to_patches: Dict[int, str] = get_diffs_from_modified_code(
-                file_mapping, file_id_to_modified_code, arguments
-            )
-            if arguments.verbose:
-                print("Patches: ", file_id_to_patches)
-            # clear old results and save patches
-            suggestion_dict = json.loads(suggestion)
-            suggestion_id = suggestion_dict["pattern_id"]
-            suggestion_folder_path = os.path.join(patch_generator_dir, str(suggestion_id))
-            if arguments.verbose:
-                print("Saving patches for suggestion: ", suggestion_id)
-            if os.path.exists(suggestion_folder_path):
-                shutil.rmtree(suggestion_folder_path)
-            os.mkdir(suggestion_folder_path)
-            for file_id in file_id_to_patches:
-                patch_path = os.path.join(suggestion_folder_path, str(file_id) + ".patch")
-                with open(patch_path, "w") as f:
-                    f.write(file_id_to_patches[file_id])
     if arguments.verbose:
         print("Done.")

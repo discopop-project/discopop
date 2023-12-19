@@ -31,6 +31,10 @@ def parse_args() -> PatchGeneratorArguments:
         "-fcf", "--from-configuration-file", type=str, default="None",
         help="Generate patch from the given configuration file."
     )
+    parser.add_argument(
+        "-a", "--add-from-json", type=str, default="None",
+        help="Add additional patches specified in the given patterns.json file."
+    )
     # EXPERIMENTAL FLAGS:
     # fmt: on
 
@@ -67,6 +71,7 @@ def parse_args() -> PatchGeneratorArguments:
         CC=arguments.cc,
         CXX=arguments.cxx,
         from_configuration_file=arguments.from_configuration_file,
+        add_from_json=arguments.add_from_json,
     )
 
 
