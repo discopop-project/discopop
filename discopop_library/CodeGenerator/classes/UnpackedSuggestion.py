@@ -160,6 +160,9 @@ class UnpackedSuggestion(object):
             pragma.pragma_str += "device(" + str(device_id) + ") "
         else:
             pragma.pragma_str = "#pragma omp parallel for "
+        if "collapse_level" in self.values:
+            if self.values["collapse_level"] > 1:
+                pragma.pragma_str += "collapse(" + str(self.values["collapse_level"]) + ") "
         if len(self.values["first_private"]) > 0:
             pragma.pragma_str += "firstprivate(" + ",".join(self.values["first_private"]) + ") "
         if len(self.values["private"]) > 0:
