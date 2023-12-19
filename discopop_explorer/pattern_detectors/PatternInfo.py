@@ -9,6 +9,8 @@ import json
 import os
 from typing import Optional
 
+from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
+
 from ..PEGraphX import LoopNode, Node, NodeID, LineID, PEGraphX
 from ..utils import calculate_workload, calculate_per_iteration_workload_of_loop
 
@@ -28,6 +30,8 @@ class PatternInfo(object):
     workload: Optional[int]
     per_iteration_workload: Optional[int]
     dp_optimizer_device_id: Optional[int] = None  # used by discopop_optimizer. unused by discopop_explorer.
+    device_id: Optional[int]
+    device_type: Optional[DeviceTypeEnum]
 
     def __init__(self, node: Node):
         """
@@ -64,6 +68,9 @@ class PatternInfo(object):
         self.workload = None
         self.per_iteration_workload: Optional[int] = None
         # TODO self.workload = calculate_workload(pet, node)
+
+        self.device_id = None
+        self.device_type = None
 
     def to_json(self):
         dic = self.__dict__
