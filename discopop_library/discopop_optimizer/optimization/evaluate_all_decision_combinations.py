@@ -46,14 +46,7 @@ def evaluate_all_decision_combinations(
 
     packed_decisions: List[List[List[int]]] = []
     for function in available_decisions:
-        print("Function: ", function.name)
-        print("\tDECISIONS:")
-        for dec in available_decisions[function]:
-            if len([e for e in dec if e in [109, 110, 111, 112, 113, 114]]) > 0:
-                print("\t\t- ", dec)
         packed_decisions.append(available_decisions[function])
-    print("PACKED")
-    print(packed_decisions)
 
     # create combinations of decisions
     raw_combinations: List[Tuple[List[int], ...]] = cast(List[Tuple[List[int], ...]], product(*packed_decisions))
@@ -68,25 +61,10 @@ def evaluate_all_decision_combinations(
         # check configuration validity
         if check_configuration_validity(experiment, arguments, tmp):
             combinations.append(tmp)
-            if len([e for e in tmp if e in [109, 110, 111, 112, 113, 114]]) > 0:
-                print("\tVALID")
-#                raise ValueError("DEBUG VALID")
 
     # evaluate each combination in parallel
-    print("# Parallel calculatiion of costs of all decision combinations...")
+    print("# Parallel calculation of costs of all decision combinations...")
     param_list = [(combination_list) for combination_list in combinations]
-    print("param_list: ")
-    debug_found_param = False
-    for e in param_list:
-        if len([x for x in e if x in [109, 110, 111, 112, 113, 114]]) > 0:
-            print(" -> ", e)
-            debug_found_param = True
-    if not debug_found_param:
-        # raise ValueError("NO PARAMS")
-        pass
-        
-    print()
-
     with Pool(
         initializer=__initialize_worker,
         initargs=(
@@ -98,9 +76,6 @@ def evaluate_all_decision_combinations(
     for local_result in tmp_result:
         # result += local_result
         if local_result is not None:
-            if arguments.verbose:
-                if len([e for e in tmp if e in [109, 110, 111, 112, 113, 114]]) > 0:
-                    print("# raw:", local_result[0], "=", str(local_result[1]))
             costs_dict[local_result[0]] = local_result[1]
             contexts_dict[local_result[0]] = local_result[2]
 
@@ -134,7 +109,6 @@ def evaluate_all_decision_combinations(
             print("EMPTY: ", combination_tuple)
             print(experiment.suggestion_to_node_ids_dict)
 
-        
         print(
             "#",
             new_key,

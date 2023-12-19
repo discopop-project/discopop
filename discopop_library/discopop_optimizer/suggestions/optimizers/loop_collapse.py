@@ -13,7 +13,7 @@ from sympy import Integer, Symbol
 
 import networkx as nx  # type: ignore
 
-import tqdm
+import tqdm  # type: ignore
 from discopop_library.PatternIdManagement.unique_pattern_id import get_unique_pattern_id
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
@@ -43,13 +43,14 @@ def collapse_loops(experiment: Experiment) -> nx.DiGraph:
 
     param_list = [(function_node) for function_node in get_all_function_nodes(experiment.optimization_graph)]
 
-    #with Pool(
-    #    initializer=__initialize_worker,
-    #    initargs=(experiment.optimization_graph, experiment),
-    #) as pool:
-    #    tmp_result = list(
-    #        tqdm.tqdm(pool.imap_unordered(__collapse_loops_in_function, param_list), total=len(param_list))
-    #    )
+#   NOTE: Multiprocessing disabled due to inconsistencies when modifying the graph
+#    with Pool(
+#    initializer=__initialize_worker,
+#    initargs=(experiment.optimization_graph, experiment),
+#    ) as pool:
+#        tmp_result = list(
+#            tqdm.tqdm(pool.imap_unordered(__collapse_loops_in_function, param_list), total=len(param_list))
+#        )
     for function in param_list:
         __collapse_loops_in_function(function)
 
@@ -108,21 +109,18 @@ def __collapse_loops_in_function(function_node_id):
                         continue
                 # parent is regular node -> end search on this path (no perfect nesting)
                 continue
-        
+
             # apply collapses
             for csrc in collapse_sources:
                 modifiation_found = True
                 # create new collapse node
                 new_node_id = global_experiment.get_next_free_node_id()
-                print("COLLAPSE SOURCE: ", csrc, "-->", data_at(global_graph, csrc).node_id)
                 node_data_copy = copy.deepcopy(data_at(global_graph, csrc))
                 node_data_copy.node_id = new_node_id
                 # increase and set collapse level
                 # register a new pattern
                 pattern_id = get_unique_pattern_id()
                 global_experiment.suggestion_to_node_ids_dict[pattern_id] = [new_node_id]
-                print("REGISTERED COLLAPSABLE PATTERN ID: ", pattern_id, "@", new_node_id)
-                
 
                 cast(Loop, node_data_copy).collapse_level = loop_data.collapse_level + 1
                 # create a new node
@@ -137,7 +135,9 @@ def __collapse_loops_in_function(function_node_id):
                     global_graph.add_edge(new_node_id, edge[1], data=edge_data)
                 # identify the sequential version of the inner loop
                 seq_loop_option = -1
-                for option in [e[0] for e in global_graph.in_edges(loop, data="data") if isinstance(e[2], MutuallyExclusiveEdge)]:
+                for option in [
+                    e[0] for e in global_graph.in_edges(loop, data="data") if isinstance(e[2], MutuallyExclusiveEdge)
+                ]:
                     if cast(Loop, data_at(global_graph, option)).suggestion == None:
                         seq_loop_option = option
                         break
@@ -145,10 +145,19 @@ def __collapse_loops_in_function(function_node_id):
                 copy_seq_loop_option_id = global_experiment.get_next_free_node_id()
                 copy_seq_loop_option_data = copy.deepcopy(data_at(global_graph, seq_loop_option))
                 copy_seq_loop_option_data.node_id = copy_seq_loop_option_id
-                print("COLLAPSE SEQ LOOP: ", copy_seq_loop_option_id, "-->", copy_seq_loop_option_data.node_id)
+
                 cast(Loop, copy_seq_loop_option_data).iterations = 1
-                cast(Loop, copy_seq_loop_option_data).iterations_symbol = Symbol("loop_" + str(copy_seq_loop_option_id) + "_pos_" + str(cast(Loop, copy_seq_loop_option_data).position) + "_iterations")
-                global_experiment.register_free_symbol(cast(Loop, copy_seq_loop_option_data).iterations_symbol, value_suggestion=Integer(cast(Loop, copy_seq_loop_option_data).iterations))
+                cast(Loop, copy_seq_loop_option_data).iterations_symbol = Symbol(
+                    "loop_"
+                    + str(copy_seq_loop_option_id)
+                    + "_pos_"
+                    + str(cast(Loop, copy_seq_loop_option_data).position)
+                    + "_iterations"
+                )
+                global_experiment.register_free_symbol(
+                    cast(Loop, copy_seq_loop_option_data).iterations_symbol,
+                    value_suggestion=Integer(cast(Loop, copy_seq_loop_option_data).iterations),
+                )
                 global_graph.add_node(copy_seq_loop_option_id, data=copy_seq_loop_option_data)
 
                 # copy edges
@@ -158,16 +167,22 @@ def __collapse_loops_in_function(function_node_id):
                 for edge in global_graph.out_edges(seq_loop_option):
                     edge_data = copy.deepcopy(global_graph.edges[edge]["data"])
                     global_graph.add_edge(copy_seq_loop_option_id, edge[1], data=edge_data)
-                
+
                 # update the iteration count for the collapse root
-                cast(Loop, data_at(global_graph, new_node_id)).iterations *= cast(Loop, data_at(global_graph, seq_loop_option)).iterations
-                cast(Loop, data_at(global_graph, new_node_id)).iterations_symbol = Symbol("loop_" + str(new_node_id) + "_pos_" + str(cast(Loop, node_data_copy).position) + "_iterations")
-                global_experiment.register_free_symbol(cast(Loop, node_data_copy).iterations_symbol, value_suggestion=Integer(cast(Loop, node_data_copy).iterations))
-                
+                cast(Loop, data_at(global_graph, new_node_id)).iterations *= cast(
+                    Loop, data_at(global_graph, seq_loop_option)
+                ).iterations
+                cast(Loop, data_at(global_graph, new_node_id)).iterations_symbol = Symbol(
+                    "loop_" + str(new_node_id) + "_pos_" + str(cast(Loop, node_data_copy).position) + "_iterations"
+                )
+                global_experiment.register_free_symbol(
+                    cast(Loop, node_data_copy).iterations_symbol,
+                    value_suggestion=Integer(cast(Loop, node_data_copy).iterations),
+                )
+
                 # create a new requirements edge to the single-iteration sequential version of the inner loop
                 global_graph.add_edge(copy_seq_loop_option_id, new_node_id, data=RequirementEdge())
                 global_graph.add_edge(new_node_id, copy_seq_loop_option_id, data=RequirementEdge())
-                print("\t", copy_seq_loop_option_id, "requires", new_node_id)
 
         return_value = return_value or modifiation_found
     return return_value

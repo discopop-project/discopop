@@ -38,8 +38,6 @@ def evaluate_configuration(
     Note: To compare values across ranges of system specifications, use the ranges obtainable via System.get_symbol_values_and_distributions
     to update the substitutions and execute evaluate_configuration for each set of values."""
     result = Expr(-42)
-    #if len([e for e in decisions if e in [109, 110, 111, 112, 113, 114]]) > 0:
-    print("EVALUATE CONFIG: ", decisions)
     # get main function
     main_function: Optional[FunctionRoot] = None
     funciton_node_ids = get_all_function_nodes(experiment.optimization_graph)
@@ -53,11 +51,6 @@ def evaluate_configuration(
     function_performance_models_without_context = get_performance_models_for_functions(
         experiment, experiment.optimization_graph, restrict_to_decisions=set(decisions)
     )
-    # debug
-    for function in function_performance_models_without_context:
-        if len(function_performance_models_without_context[function]) < 1:
-            print("RAISE 1: ", decisions)
-
 
     function_performance_models = calculate_data_transfers(
         experiment.optimization_graph, function_performance_models_without_context, experiment

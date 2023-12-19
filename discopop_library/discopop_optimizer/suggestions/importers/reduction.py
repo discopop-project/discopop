@@ -32,7 +32,6 @@ def import_suggestion(
 ) -> nx.DiGraph:
     # find a node which belongs to the suggestion
     buffer = [n for n in graph.nodes]
-    introduced_options = []
     # get all devices which can be used to execute the suggestion
     suggestion_device_ids = []
     for device_type in suggestion_device_types:
@@ -81,7 +80,7 @@ def import_suggestion(
                 # create a new node for the option
                 graph.add_node(new_node_id, data=node_data_copy)
                 # mark the newly created option
-                #graph.add_edge(node, new_node_id, data=OptionEdge())
+                # graph.add_edge(node, new_node_id, data=OptionEdge())
 
                 # save the id of the introduced parallelization option to connect them afterwards
                 introduced_options.add(new_node_id)

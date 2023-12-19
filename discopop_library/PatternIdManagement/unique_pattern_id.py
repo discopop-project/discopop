@@ -6,7 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-def get_unique_pattern_id()-> int:
+
+def get_unique_pattern_id() -> int:
     with open("next_free_pattern_id.txt", "r") as f:
         pattern_id = int(f.read())
     with open("next_free_pattern_id.txt", "w") as f:

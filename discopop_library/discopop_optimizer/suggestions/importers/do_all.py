@@ -83,8 +83,8 @@ def import_suggestion(
                 # create a new node for the option
                 graph.add_node(new_node_id, data=node_data_copy)
                 # mark the newly created option
-                #graph.add_edge(node, new_node_id, data=OptionEdge())
-                #print("ADDED OPTION EDGE: ", node, new_node_id)
+                # graph.add_edge(node, new_node_id, data=OptionEdge())
+                # print("ADDED OPTION EDGE: ", node, new_node_id)
 
                 # save the id of the introduced parallelization option to connect them afterwards
                 introduced_options.add(new_node_id)
