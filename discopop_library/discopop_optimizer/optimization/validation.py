@@ -14,6 +14,7 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_function_nodes,
     get_children,
+    get_in_mutex_edges,
     get_in_options,
     get_out_mutex_edges,
     get_out_options,
@@ -33,7 +34,7 @@ def check_configuration_validity(
         requirements = get_requirements(experiment.optimization_graph, node_id)
         for r in requirements:
             if r not in configuration:
-                # requirement not satisfied
+                # requirement not satisfied   
                 return False
     # check option edges (for mutual exclusivity)
     for node_id in configuration:
@@ -44,6 +45,8 @@ def check_configuration_validity(
     # check for nested parallelism
     if not arguments.allow_nested_parallelism:
         if __nested_parallelism_found(experiment, configuration):
+            if len([e for e in configuration if e in [109, 110, 111, 112, 113, 114]]) > 0:
+                print("\t\tnested parallelism.")
             return False
     return True
 
@@ -72,7 +75,13 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int])
         current_node = data_at(experiment.optimization_graph, current_node_id)
         # check for nested parallelism
         if not current_node.represents_sequential_version():
+            if len([e for e in configuration if e in [109, 110, 111, 112, 113, 114]]) > 0:
+                print("NESTED PARALLELISM in : ", configuration, "due to node: ", current_node_id)
             return True
+        
+        if len([e for e in configuration if e in [109, 110, 111, 112, 113, 114]]) > 0:
+                print("NO NESTED PARALLELISM in : ", configuration,)
+        
         # add successors and children
         visited_nodes.append(current_node_id)
         children_queue += __filter_for_relevant_options(
@@ -112,7 +121,7 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int])
             for fid in called_function_nodes
             if fid.node_id not in visited_nodes and fid.node_id not in children_queue
         ]
-
+    
     return False
 
 
@@ -125,7 +134,7 @@ def __filter_for_relevant_options(
         if node_id in configuration:
             cleaned_list.append(node_id)
             continue
-        options = get_out_options(experiment.optimization_graph, node_id) + get_in_options(
+        options = get_out_mutex_edges(experiment.optimization_graph, node_id) + get_in_mutex_edges(
             experiment.optimization_graph, node_id
         )
         if len(options) == 0:

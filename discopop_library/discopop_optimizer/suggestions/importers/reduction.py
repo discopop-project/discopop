@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
-from typing import cast, Tuple, List, Dict
+from typing import Set, cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
 from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
@@ -39,9 +39,10 @@ def import_suggestion(
         suggestion_device_ids += environment.get_system().get_device_ids_by_type(device_type)
 
     for node in buffer:
+        introduced_options: Set[int] = set()
         if suggestion.node_id == data_at(graph, node).cu_id:
             # save node in introduced_options to mark as mutually exclusive
-            introduced_options.append(node)
+            introduced_options.add(node)
             for device_id in suggestion_device_ids:
                 # reserve a node id for the new parallelization option
                 new_node_id = get_next_free_node_id_function()
@@ -80,10 +81,10 @@ def import_suggestion(
                 # create a new node for the option
                 graph.add_node(new_node_id, data=node_data_copy)
                 # mark the newly created option
-                graph.add_edge(node, new_node_id, data=OptionEdge())
+                #graph.add_edge(node, new_node_id, data=OptionEdge())
 
                 # save the id of the introduced parallelization option to connect them afterwards
-                introduced_options.append(new_node_id)
+                introduced_options.add(new_node_id)
 
                 # connect the newly created node to the parent and successor of node
                 for edge in graph.in_edges(node):
@@ -100,12 +101,12 @@ def import_suggestion(
                     # if data_at(graph, edge[1]).device_id is None:
                     #     data_at(graph, edge[1]).device_id = 0
 
-    # connect introduced parallelization options to support path restraining
-    for node_id_1 in introduced_options:
-        for node_id_2 in introduced_options:
-            if node_id_1 == node_id_2:
-                continue
-            graph.add_edge(node_id_1, node_id_2, data=MutuallyExclusiveEdge())
+        # connect introduced parallelization options to support path restraining
+        for node_id_1 in introduced_options:
+            for node_id_2 in introduced_options:
+                if node_id_1 == node_id_2:
+                    continue
+                graph.add_edge(node_id_1, node_id_2, data=MutuallyExclusiveEdge())
     return graph
 
 
