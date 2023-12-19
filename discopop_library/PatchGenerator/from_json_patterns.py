@@ -8,7 +8,12 @@ from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGenerat
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 
 
-def from_json_patterns(arguments: PatchGeneratorArguments, patterns_by_type: Dict[str, List[str]], file_mapping: List[Dict[int, Path]], patch_generator_dir: str):    
+def from_json_patterns(
+    arguments: PatchGeneratorArguments,
+    patterns_by_type: Dict[str, List[str]],
+    file_mapping: List[Dict[int, Path]],
+    patch_generator_dir: str,
+):
     # generate code modifications from each suggestion, create a patch and store the patch
     # using the suggestions unique id
     if arguments.verbose:

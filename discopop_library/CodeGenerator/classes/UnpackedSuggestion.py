@@ -54,7 +54,6 @@ class UnpackedSuggestion(object):
             if self.values["device_type"] is not None:
                 self.device_type = self.values["device_type"]
 
-
     def __get_device_update_pragmas(self):
         pragmas = []
         pragma = Pragma()

@@ -53,7 +53,7 @@ class DoAllInfo(PatternInfo):
             # f"instructions: {self.instructions_count}\n"
             # f"workload: {self.workload}\n"
             f'pragma: "#pragma omp parallel for"\n'
-            f'collapse: {self.collapse_level}\n'
+            f"collapse: {self.collapse_level}\n"
             f"private: {[v.name for v in self.private]}\n"
             f"shared: {[v.name for v in self.shared]}\n"
             f"first private: {[v.name for v in self.first_private]}\n"
