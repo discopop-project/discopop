@@ -147,6 +147,7 @@ def export_to_json(experiment: Experiment, export_path):
         os.makedirs(export_path)
     pickle.dump(experiment, open(experiment_dump_path, "wb"))
 
+
 def export_patterns_to_json(experiment: Experiment, export_path):
     detection_result_copy = copy.deepcopy(experiment.detection_result)
     # pet is not serializable and needs to be deleted

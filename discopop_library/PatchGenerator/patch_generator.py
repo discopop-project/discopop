@@ -80,7 +80,7 @@ def run(arguments: PatchGeneratorArguments):
         if arguments.verbose:
             print("Done.")
         return
-    
+
     from_json_patterns(arguments, patterns_by_type, file_mapping, patch_generator_dir)
 
     if arguments.verbose:
