@@ -374,7 +374,7 @@ def __parallel_mutate(param_tuple):
         mutation_index = random.choice(range(0, len(mutation_target)))
 
         # perform mutation if possible
-        options = get_out_options(global_experiment.optimization_graph, mutation_target[mutation_index])
+        options = get_out_mutex_edges(global_experiment.optimization_graph, mutation_target[mutation_index])
         if len(options) > 0:
             index_mutant = random.choice(options)
             mutant = copy.deepcopy(mutation_target)

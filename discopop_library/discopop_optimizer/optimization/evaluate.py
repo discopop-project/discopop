@@ -38,6 +38,8 @@ def evaluate_configuration(
     Note: To compare values across ranges of system specifications, use the ranges obtainable via System.get_symbol_values_and_distributions
     to update the substitutions and execute evaluate_configuration for each set of values."""
     result = Expr(-42)
+    #if len([e for e in decisions if e in [109, 110, 111, 112, 113, 114]]) > 0:
+    print("EVALUATE CONFIG: ", decisions)
     # get main function
     main_function: Optional[FunctionRoot] = None
     funciton_node_ids = get_all_function_nodes(experiment.optimization_graph)
@@ -51,6 +53,11 @@ def evaluate_configuration(
     function_performance_models_without_context = get_performance_models_for_functions(
         experiment, experiment.optimization_graph, restrict_to_decisions=set(decisions)
     )
+    # debug
+    for function in function_performance_models_without_context:
+        if len(function_performance_models_without_context[function]) < 1:
+            print("RAISE 1: ", decisions)
+
 
     function_performance_models = calculate_data_transfers(
         experiment.optimization_graph, function_performance_models_without_context, experiment
@@ -63,8 +70,12 @@ def evaluate_configuration(
 
     selected_function_models: Dict[FunctionRoot, Tuple[CostModel, ContextObject]] = dict()
     for function in function_performance_models:
-        if len(function_performance_models[function]) != 1:
-            warnings.warn("Selection for fucntion:" + function.name + " not unambiguous!")
+        if len(function_performance_models[function]) > 1:
+            warnings.warn("Selection for function:" + function.name + " not unambiguous!")
+            for m, c in function_performance_models[function]:
+                print("--> ", m.path_decisions)
+        elif len(function_performance_models[function]) < 1:
+            raise ValueError("No generated models!")
         selected_function_models[function] = function_performance_models[function][0]
 
     # apply selected substitutions
@@ -117,4 +128,5 @@ def evaluate_configuration(
     result = sympy.re(result_model.parallelizable_costs + result_model.sequential_costs) + sympy.im(
         result_model.parallelizable_costs + result_model.sequential_costs
     )
+
     return (tuple(decisions), result, result_context)

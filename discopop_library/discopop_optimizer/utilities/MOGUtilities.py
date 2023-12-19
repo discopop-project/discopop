@@ -73,8 +73,11 @@ def get_out_options(graph: nx.DiGraph, node_id: int) -> List[int]:
 
 def get_in_options(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the parallelization options of the given node"""
-    return [edge[1] for edge in graph.in_edges(node_id, data="data") if isinstance(edge[2], OptionEdge)]
+    return [edge[0] for edge in graph.in_edges(node_id, data="data") if isinstance(edge[2], OptionEdge)]
 
+def get_in_mutex_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns a list of node ids which are mutually exclusive to the current node_id"""
+    return [edge[0] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], MutuallyExclusiveEdge)]
 
 def get_out_mutex_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids which are mutually exclusive to the current node_id"""
@@ -91,7 +94,7 @@ def has_temporary_successor(graph: nx.DiGraph, node_id: int) -> bool:
     return len([edge for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], TemporaryEdge)]) > 0
 
 
-def show(graph):
+def show(graph, show_dataflow: bool = True, show_mutex_edges: bool = True):
     """Plots the graph
 
     :return:
@@ -211,21 +214,23 @@ def show(graph):
         edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], RequirementEdge)],
     )
 
-    nx.draw_networkx_edges(
-        graph,
-        pos,
-        ax=ax,
-        edge_color="orange",
-        edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], MutuallyExclusiveEdge)],
-    )
+    if show_mutex_edges:
+        nx.draw_networkx_edges(
+            graph,
+            pos,
+            ax=ax,
+            edge_color="orange",
+            edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], MutuallyExclusiveEdge)],
+        )
 
-    nx.draw_networkx_edges(
-        graph,
-        pos,
-        ax=ax,
-        edge_color="green",
-        edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], DataFlowEdge)],
-    )
+    if show_dataflow:
+        nx.draw_networkx_edges(
+            graph,
+            pos,
+            ax=ax,
+            edge_color="green",
+            edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], DataFlowEdge)],
+        )
 
     # define tool tip style when hovering
     # based on https://stackoverflow.com/questions/61604636/adding-tooltip-for-nodes-in-python-networkx-graph

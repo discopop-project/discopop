@@ -16,6 +16,7 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_successors,
     get_children,
+    show,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
@@ -74,6 +75,16 @@ def get_path_context(
         # find the successor which represents the path decision included in the model
         suitable_successors = [succ for succ in successors if succ in model.path_decisions]
         if len(suitable_successors) != 1:
+            print("Invalid amount of potential successors (",
+                len(suitable_successors),
+                ") for path split at node:",
+                node_id,
+                "using decisions: ",
+                model.path_decisions,
+                "successors:",
+                successors,
+            )
+            show(graph, show_dataflow=False)
             raise ValueError(
                 "Invalid amount of potential successors (",
                 len(suitable_successors),
