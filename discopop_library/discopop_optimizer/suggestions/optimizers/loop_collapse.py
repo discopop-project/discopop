@@ -119,11 +119,14 @@ def __collapse_loops_in_function(function_node_id):
                 node_data_copy = copy.deepcopy(data_at(global_graph, csrc))
                 node_data_copy.node_id = new_node_id
                 # increase and set collapse level
+                cast(Loop, node_data_copy).collapse_level = loop_data.collapse_level + 1
+
                 # register a new pattern
-                pattern_id = get_unique_pattern_id()
+                pattern_info = DoAllInfo(global_experiment.detection_result.pet, global_experiment.detection_result.pet.node_at(node_data_copy.original_cu_id))
+                pattern_id = pattern_info.pattern_id
+                pattern_info.collapse_level = node_data_copy.collapse_level
                 global_experiment.suggestion_to_node_ids_dict[pattern_id] = [new_node_id]
 
-                cast(Loop, node_data_copy).collapse_level = loop_data.collapse_level + 1
                 # create a new node
                 global_graph.add_node(new_node_id, data=node_data_copy)
 
@@ -185,11 +188,10 @@ def __collapse_loops_in_function(function_node_id):
                 global_graph.add_edge(copy_seq_loop_option_id, new_node_id, data=RequirementEdge())
                 global_graph.add_edge(new_node_id, copy_seq_loop_option_id, data=RequirementEdge())
 
-                # register pattern for output
-                pattern_info = DoAllInfo(global_experiment.detection_result.pet, global_experiment.detection_result.pet.node_at(node_data_copy.original_cu_id))
-                pattern_info.collapse_level = node_data_copy.collapse_level
+                # register pattern for output 
+                # todo: find a nicer solution to duplicating the patterns for each device mapping
                 global_experiment.detection_result.do_all.append(pattern_info)
-                print("REGISTERED PATTERN INFO:")
+                print("REGISTERED PATTERN INFO: ", pattern_id, " for Device: ", data_at(global_graph, csrc).device_id)
                 print(pattern_info)
                 print()
 
