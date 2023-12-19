@@ -13,7 +13,7 @@ from sympy import Integer, Symbol
 
 import networkx as nx  # type: ignore
 
-import tqdm
+import tqdm  # type: ignore
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo  # type: ignore
 from discopop_library.PatternIdManagement.unique_pattern_id import get_unique_pattern_id
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
