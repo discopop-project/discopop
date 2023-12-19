@@ -13,7 +13,8 @@ from sympy import Integer, Symbol
 
 import networkx as nx  # type: ignore
 
-import tqdm  # type: ignore
+import tqdm
+from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo  # type: ignore
 from discopop_library.PatternIdManagement.unique_pattern_id import get_unique_pattern_id
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
@@ -183,6 +184,14 @@ def __collapse_loops_in_function(function_node_id):
                 # create a new requirements edge to the single-iteration sequential version of the inner loop
                 global_graph.add_edge(copy_seq_loop_option_id, new_node_id, data=RequirementEdge())
                 global_graph.add_edge(new_node_id, copy_seq_loop_option_id, data=RequirementEdge())
+
+                # register pattern for output
+                pattern_info = DoAllInfo(global_experiment.detection_result.pet, global_experiment.detection_result.pet.node_at(node_data_copy.original_cu_id))
+                pattern_info.collapse_level = node_data_copy.collapse_level
+                global_experiment.detection_result.do_all.append(pattern_info)
+                print("REGISTERED PATTERN INFO:")
+                print(pattern_info)
+                print()
 
         return_value = return_value or modifiation_found
     return return_value

@@ -27,6 +27,7 @@ from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
 from discopop_library.discopop_optimizer.UpdateOptimization.main import optimize_updates
 from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
     create_optimization_graph,
+    export_patterns_to_json,
     export_to_json,
     get_sequential_cost_model,
     initialize_free_symbol_ranges_and_distributions,
@@ -188,5 +189,9 @@ def run(arguments: OptimizerArguments):
 
     optimize_updates(experiment, best_configuration, arguments)
 
-    # save experiment to disk
+
+    # save full experiment to disk
     export_to_json(experiment, optimizer_dir)
+    # save updated patterns.json to disk
+    export_patterns_to_json(experiment, os.path.join(optimizer_dir, "patterns.json"))
+    
