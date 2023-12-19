@@ -125,6 +125,8 @@ def __collapse_loops_in_function(function_node_id):
                 pattern_info = DoAllInfo(global_experiment.detection_result.pet, global_experiment.detection_result.pet.node_at(node_data_copy.original_cu_id))
                 pattern_id = pattern_info.pattern_id
                 pattern_info.collapse_level = node_data_copy.collapse_level
+                pattern_info.device_id = node_data_copy.device_id
+                pattern_info.device_type = global_experiment.get_system().get_device(node_data_copy.device_id).get_device_type()
                 global_experiment.suggestion_to_node_ids_dict[pattern_id] = [new_node_id]
 
                 # create a new node

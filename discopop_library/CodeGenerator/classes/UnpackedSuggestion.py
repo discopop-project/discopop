@@ -46,6 +46,15 @@ class UnpackedSuggestion(object):
         self.start_line = int(self.values["start_line"].split(":")[1])
         self.end_line = int(self.values["end_line"].split(":")[1])
 
+        # read device id and type if present
+        if self.device_id is None and "device_id" in self.values:
+            if self.values["device_id"] is not None:
+                self.device_id = int(self.values["device_id"])
+        if self.device_type is None and "device_type" in self.values:
+            if self.values["device_type"] is not None:
+                self.device_type = self.values["device_type"]
+
+
     def __get_device_update_pragmas(self):
         pragmas = []
         pragma = Pragma()
