@@ -5,6 +5,8 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import copy
+import json
 import os
 import pickle
 import tkinter as tk
@@ -13,7 +15,8 @@ from typing import Dict, List, Optional, Tuple, cast
 
 import jsonpickle  # type: ignore
 import jsons  # type: ignore
-from sympy import Float, Symbol  # type: ignore
+from sympy import Float, Symbol
+from discopop_explorer.json_serializer import PatternInfoSerializer  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
 from discopop_library.discopop_optimizer.CostModels.utilities import get_performance_models_for_functions
@@ -143,6 +146,13 @@ def export_to_json(experiment: Experiment, export_path):
     if not os.path.exists(export_path):
         os.makedirs(export_path)
     pickle.dump(experiment, open(experiment_dump_path, "wb"))
+
+def export_patterns_to_json(experiment: Experiment, export_path):
+    detection_result_copy = copy.deepcopy(experiment.detection_result)
+    # pet is not serializable and needs to be deleted
+    del detection_result_copy.pet
+    with open(export_path, "w+") as f:
+        json.dump(detection_result_copy, f, indent=2, cls=PatternInfoSerializer)
 
 
 def restore_session(json_file: str) -> Experiment:
