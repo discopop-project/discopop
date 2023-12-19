@@ -44,14 +44,14 @@ def collapse_loops(experiment: Experiment) -> nx.DiGraph:
 
     param_list = [(function_node) for function_node in get_all_function_nodes(experiment.optimization_graph)]
 
-#   NOTE: Multiprocessing disabled due to inconsistencies when modifying the graph
-#    with Pool(
-#    initializer=__initialize_worker,
-#    initargs=(experiment.optimization_graph, experiment),
-#    ) as pool:
-#        tmp_result = list(
-#            tqdm.tqdm(pool.imap_unordered(__collapse_loops_in_function, param_list), total=len(param_list))
-#        )
+    #   NOTE: Multiprocessing disabled due to inconsistencies when modifying the graph
+    #    with Pool(
+    #    initializer=__initialize_worker,
+    #    initargs=(experiment.optimization_graph, experiment),
+    #    ) as pool:
+    #        tmp_result = list(
+    #            tqdm.tqdm(pool.imap_unordered(__collapse_loops_in_function, param_list), total=len(param_list))
+    #        )
     for function in param_list:
         __collapse_loops_in_function(function)
 
@@ -122,11 +122,16 @@ def __collapse_loops_in_function(function_node_id):
                 cast(Loop, node_data_copy).collapse_level = loop_data.collapse_level + 1
 
                 # register a new pattern
-                pattern_info = DoAllInfo(global_experiment.detection_result.pet, global_experiment.detection_result.pet.node_at(node_data_copy.original_cu_id))
+                pattern_info = DoAllInfo(
+                    global_experiment.detection_result.pet,
+                    global_experiment.detection_result.pet.node_at(node_data_copy.original_cu_id),
+                )
                 pattern_id = pattern_info.pattern_id
                 pattern_info.collapse_level = node_data_copy.collapse_level
                 pattern_info.device_id = node_data_copy.device_id
-                pattern_info.device_type = global_experiment.get_system().get_device(node_data_copy.device_id).get_device_type()
+                pattern_info.device_type = (
+                    global_experiment.get_system().get_device(node_data_copy.device_id).get_device_type()
+                )
                 global_experiment.suggestion_to_node_ids_dict[pattern_id] = [new_node_id]
 
                 # create a new node
@@ -190,7 +195,7 @@ def __collapse_loops_in_function(function_node_id):
                 global_graph.add_edge(copy_seq_loop_option_id, new_node_id, data=RequirementEdge())
                 global_graph.add_edge(new_node_id, copy_seq_loop_option_id, data=RequirementEdge())
 
-                # register pattern for output 
+                # register pattern for output
                 # todo: find a nicer solution to duplicating the patterns for each device mapping
                 global_experiment.detection_result.do_all.append(pattern_info)
                 print("REGISTERED PATTERN INFO: ", pattern_id, " for Device: ", data_at(global_graph, csrc).device_id)

@@ -189,9 +189,7 @@ def run(arguments: OptimizerArguments):
 
     optimize_updates(experiment, best_configuration, arguments)
 
-
     # save full experiment to disk
     export_to_json(experiment, optimizer_dir)
     # save updated patterns.json to disk
     export_patterns_to_json(experiment, os.path.join(optimizer_dir, "patterns.json"))
-    
