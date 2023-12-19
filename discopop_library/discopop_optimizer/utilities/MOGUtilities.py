@@ -7,7 +7,7 @@
 # directory for details.
 import copy
 from multiprocessing import Pool
-from typing import Dict, List, cast, Set, Tuple
+from typing import Any, ClassVar, Dict, List, cast, Set, Tuple
 
 import matplotlib  # type: ignore
 import matplotlib.pyplot as plt  # type:ignore
@@ -75,9 +75,11 @@ def get_in_options(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the parallelization options of the given node"""
     return [edge[0] for edge in graph.in_edges(node_id, data="data") if isinstance(edge[2], OptionEdge)]
 
+
 def get_in_mutex_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids which are mutually exclusive to the current node_id"""
     return [edge[0] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], MutuallyExclusiveEdge)]
+
 
 def get_out_mutex_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids which are mutually exclusive to the current node_id"""
@@ -112,9 +114,9 @@ def show(graph, show_dataflow: bool = True, show_mutex_edges: bool = True):
             pos = nx.random_layout(graph)
 
     drawn_nodes = set()
-    nodes_lists = dict()
-    node_ids = dict()
-    node_insertion_sequence = []
+    nodes_lists: Dict[Any, Any] = dict()
+    node_ids: Dict[Any, Any] = dict()
+    node_insertion_sequence: List[Any] = []
     # draw nodes
     node_insertion_sequence.append(FunctionRoot)
     nodes_lists[FunctionRoot] = nx.draw_networkx_nodes(
@@ -234,7 +236,7 @@ def show(graph, show_dataflow: bool = True, show_mutex_edges: bool = True):
 
     # define tool tip style when hovering
     # based on https://stackoverflow.com/questions/61604636/adding-tooltip-for-nodes-in-python-networkx-graph
-    annot = ax.annotate(
+    annot = ax.annotate(  # type: ignore
         "",
         xy=(0, 0),
         xytext=(20, 20),
@@ -276,7 +278,7 @@ def show(graph, show_dataflow: bool = True, show_mutex_edges: bool = True):
                 except TypeError:
                     pass
 
-    fig.canvas.mpl_connect("motion_notify_event", hover)
+    fig.canvas.mpl_connect("motion_notify_event", hover)  # type: ignore
 
     plt.show()
 

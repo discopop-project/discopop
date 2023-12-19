@@ -11,6 +11,7 @@ from discopop_library.discopop_optimizer.suggestions.optimizers.loop_collapse im
 
 import networkx as nx  # type: ignore
 
+
 def optimize_suggestions(experiment: Experiment) -> nx.DiGraph:
     experiment.optimization_graph = collapse_loops(experiment)
     return experiment.optimization_graph

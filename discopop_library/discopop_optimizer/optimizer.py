@@ -141,19 +141,12 @@ def run(arguments: OptimizerArguments):
     if arguments.verbose:
         print("Done.")
     # import parallelization suggestions
-    if arguments.plot:
-        show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
     experiment.optimization_graph = import_suggestions(experiment)
-    if arguments.plot:
-        show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
     # optimize parallelization suggestions
     experiment.optimization_graph = optimize_suggestions(experiment)
 
     if arguments.plot:
         show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
-        import sys
-
-        sys.exit(0)
 
     if arguments.verbose:
         print("# SUGGESTION ID -> NODE ID MAPPING")

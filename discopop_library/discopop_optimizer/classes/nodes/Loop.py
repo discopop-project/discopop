@@ -31,7 +31,7 @@ class Loop(Workload):
         iterations: int,
         position: str,
         iterations_symbol: Optional[Symbol] = None,
-        collapse_level: int = 1
+        collapse_level: int = 1,
     ):
         self.position = position
         self.iterations = max(iterations, 1)  # to prevent dividing by 0 in case the loop has not been executed

@@ -75,7 +75,8 @@ def get_path_context(
         # find the successor which represents the path decision included in the model
         suitable_successors = [succ for succ in successors if succ in model.path_decisions]
         if len(suitable_successors) != 1:
-            print("Invalid amount of potential successors (",
+            print(
+                "Invalid amount of potential successors (",
                 len(suitable_successors),
                 ") for path split at node:",
                 node_id,
