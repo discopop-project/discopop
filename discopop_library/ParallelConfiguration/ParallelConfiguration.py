@@ -9,6 +9,7 @@
 import json
 from typing import List, Tuple, Any, Dict, Optional
 import warnings
+from discopop_library.PatternIdManagement.unique_pattern_id import get_unique_pattern_id
 
 from discopop_library.discopop_optimizer.classes.context.Update import Update, construct_update_from_dict
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
@@ -56,10 +57,7 @@ class ParallelConfiguration(object):
     def add_pattern(self, pattern_id: SuggestionId, target_device_id: DeviceID, device_type: DeviceTypeEnum):
         if self.pattern_id is None:
             # get a unique pattern_id
-            with open("next_free_pattern_id.txt", "r") as f:
-                self.pattern_id = int(f.read())
-            with open("next_free_pattern_id.txt", "w") as f:
-                f.write(str(self.pattern_id + 1))
+            self.pattern_id = get_unique_pattern_id()
         tmp_dict = {"pattern_id": pattern_id, "device_id": target_device_id, "device_type": device_type}
         self.applied_patterns.append(tmp_dict)
 

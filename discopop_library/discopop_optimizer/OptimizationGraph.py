@@ -35,7 +35,7 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import (
     query_user_for_symbol_values,
 )
-from discopop_library.discopop_optimizer.suggestions.importers.base import import_suggestions
+from discopop_library.discopop_optimizer.suggestions.importers.main import import_suggestions
 from discopop_library.discopop_optimizer.utilities.optimization.LocalOptimization.TopDown import (
     get_locally_optimized_models,
 )

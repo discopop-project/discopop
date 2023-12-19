@@ -20,6 +20,7 @@ class Loop(Workload):
     position: str
     iterations_symbol: Symbol
     registered_child: Optional[CostModel]
+    collapse_level: int
 
     def __init__(
         self,
@@ -30,9 +31,11 @@ class Loop(Workload):
         iterations: int,
         position: str,
         iterations_symbol: Optional[Symbol] = None,
+        collapse_level: int = 1
     ):
         self.position = position
         self.iterations = max(iterations, 1)  # to prevent dividing by 0 in case the loop has not been executed
+        self.collapse_level = collapse_level
 
         if iterations_symbol is None:
             self.iterations_symbol = Symbol("loop_" + str(node_id) + "_pos_" + str(self.position) + "_iterations")
@@ -81,7 +84,8 @@ class Loop(Workload):
             "WL: " + str(self.sequential_workload) + "\n" + "IT: " + str(self.iterations) + "\n"
             "Read: " + str([str(e) for e in self.read_memory_regions]) + "\n"
             "Write: " + str([str(e) for e in self.written_memory_regions]) + "\n"
-            "Suggestion: " + str(self.suggestion)
+            "Suggestion: " + str(self.suggestion) + "\n"
+            "Collapse: " + str(self.collapse_level)
         )
 
     def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:

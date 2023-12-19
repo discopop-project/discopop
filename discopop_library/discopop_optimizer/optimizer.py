@@ -40,6 +40,7 @@ from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_comb
     evaluate_all_decision_combinations,
 )
 from discopop_library.discopop_optimizer.optimization.evolutionary_algorithm import perform_evolutionary_search
+from discopop_library.discopop_optimizer.suggestions.optimizers.main import optimize_suggestions
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
 from discopop_library.result_classes.DetectionResult import DetectionResult
@@ -53,7 +54,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_available_decisions_for_functions,
     show,
 )
-from discopop_library.discopop_optimizer.suggestions.importers.base import import_suggestions
+from discopop_library.discopop_optimizer.suggestions.importers.main import import_suggestions
 
 
 def run(arguments: OptimizerArguments):
@@ -140,10 +141,19 @@ def run(arguments: OptimizerArguments):
     if arguments.verbose:
         print("Done.")
     # import parallelization suggestions
+    if arguments.plot:
+        show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
     experiment.optimization_graph = import_suggestions(experiment)
+    if arguments.plot:
+        show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
+    # optimize parallelization suggestions
+    experiment.optimization_graph = optimize_suggestions(experiment)
 
     if arguments.plot:
-        show(experiment.optimization_graph)
+        show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
+        import sys
+
+        sys.exit(0)
 
     if arguments.verbose:
         print("# SUGGESTION ID -> NODE ID MAPPING")
