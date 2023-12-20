@@ -163,9 +163,7 @@ def __dump_result_to_file_using_pattern_ids(
     # dump the best option
     for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x]):
         new_key_2 = []
-        best_configuration = ParallelConfiguration(
-            list(combination_tuple), experiment.get_system().get_host_device_id()
-        )
+        best_configuration = ParallelConfiguration([], experiment.get_system().get_host_device_id())
         # collect applied suggestions
         for node_id in combination_tuple:
             # find pattern id
