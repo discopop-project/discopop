@@ -14,6 +14,7 @@ from typing import Dict, List
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
+from discopop_library.PatchGenerator.from_optimizer_output import from_optimizer_output
 
 
 def from_json_patterns(
@@ -28,6 +29,9 @@ def from_json_patterns(
         print("Generating modified code...")
     for suggestion_type in patterns_by_type:
         for suggestion in patterns_by_type[suggestion_type]:
+            if suggestion_type == "optimizer_output":
+                from_optimizer_output(file_mapping, patterns_by_type, suggestion, arguments, patch_generator_dir)
+                continue
             if arguments.verbose:
                 print("Suggestion: ", suggestion)
             file_id_to_modified_code: Dict[int, str] = from_json_strings(
