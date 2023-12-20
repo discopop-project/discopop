@@ -21,7 +21,6 @@ class PatchApplicatorArguments(object):
     clear: bool
     load: bool
     list: bool
-    from_configuration_file: str
 
     def __post_init__(self):
         if self.from_configuration_file != "None":
