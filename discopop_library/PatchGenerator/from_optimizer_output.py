@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Tuple
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings, from_json_strings_with_mapping
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
-from discopop_library.discopop_optimizer.classes.context.Update import Update
+from discopop_library.discopop_optimizer.classes.context.Update import Update, construct_update_from_dict
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.result_classes.DetectionResult import DetectionResult
@@ -23,17 +23,18 @@ import jsonpickle  # type: ignore
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
 
 
-def from_configuration_file(
+def from_optimizer_output(
     file_mapping: Dict[int, Path],
     patterns_by_type: Dict[str, List[str]],
+    optimizer_output_json_str: str,
     arguments: PatchGeneratorArguments,
     patch_generator_dir: str,
 ):
     suggestion_strings_with_mapping: Dict[str, List[Tuple[str, DeviceID, Optional[DeviceTypeEnum]]]] = dict()
     if arguments.verbose:
-        print("Loading configuration file: ", arguments.from_configuration_file)
-    config = OptimizerOutputPattern([], -1)  # type: ignore
-    config.reconstruct_from_file(arguments.from_configuration_file)
+        print("Loading optimizer output: ")
+
+    optimizer_output = json.loads(optimizer_output_json_str)
 
     # load detectionresult and pet
     if arguments.verbose:
@@ -46,7 +47,7 @@ def from_configuration_file(
         print("Done")
 
     # build suggestion_strings_with_mapping
-    for pattern_values in config.applied_patterns:
+    for pattern_values in optimizer_output["applied_patterns"]:
         pattern_id = pattern_values["pattern_id"]
         device_id = pattern_values["device_id"]
         device_type = pattern_values["device_type"]
@@ -54,10 +55,6 @@ def from_configuration_file(
             for pattern_string in patterns_by_type[pattern_type]:
                 loaded_pattern = json.loads(pattern_string)
                 if loaded_pattern["pattern_id"] == pattern_id:
-                    print("loaded pattern:")
-                    print(loaded_pattern)
-                    print("MAP TO DEVICE: ", device_id)
-                    print()
                     if pattern_type not in suggestion_strings_with_mapping:
                         suggestion_strings_with_mapping[pattern_type] = []
                     suggestion_strings_with_mapping[pattern_type].append((pattern_string, device_id, device_type))
@@ -65,9 +62,10 @@ def from_configuration_file(
     # collect data movement information
     if "device_update" not in suggestion_strings_with_mapping:
         suggestion_strings_with_mapping["device_update"] = []
-    for data_movement in config.data_movement:
+    for data_movement in optimizer_output["data_movement"]:
+        update_obj = construct_update_from_dict(data_movement)
         suggestion_strings_with_mapping["device_update"].append(
-            (data_movement.get_pattern_string(detection_result.pet), None, None)
+            (update_obj.get_pattern_string(detection_result.pet), None, None)
         )
 
     # generate the modified code
@@ -77,7 +75,7 @@ def from_configuration_file(
         CC=arguments.CC,
         CXX=arguments.CXX,
         skip_compilation_check=True,
-        host_device_id=config.host_device_id,
+        host_device_id=optimizer_output["host_device_id"],
     )
     print("MODIFIED CODE: ")
     print(file_id_to_modified_code)
@@ -87,7 +85,7 @@ def from_configuration_file(
     if arguments.verbose:
         print("Patches: ", file_id_to_patches)
     # save patches
-    suggestion_id = config.pattern_id
+    suggestion_id = optimizer_output["pattern_id"]
 
     suggestion_folder_path = os.path.join(patch_generator_dir, str(suggestion_id))
     if arguments.verbose:
