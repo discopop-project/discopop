@@ -13,7 +13,7 @@ from typing import Dict
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
-from discopop_library.PatchGenerator.from_configuration_file import from_configuration_file
+from discopop_library.PatchGenerator.from_optimizer_output import from_optimizer_output
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.PatchGenerator.from_json_patterns import from_json_patterns
 from discopop_library.PathManagement.PathManagement import load_file_mapping
@@ -71,15 +71,6 @@ def run(arguments: PatchGeneratorArguments):
     patterns_by_type = read_patterns_from_json_to_json(pattern_file_path, [])
     if arguments.verbose:
         print("Patterns: ", patterns_by_type)
-
-    # generate code modifications from configuration file if requested
-    if arguments.from_configuration_file != "None":
-        if arguments.verbose:
-            print("Generating patches from configuration file...")
-        from_configuration_file(file_mapping, patterns_by_type, arguments, patch_generator_dir)
-        if arguments.verbose:
-            print("Done.")
-        return
 
     from_json_patterns(arguments, patterns_by_type, file_mapping, patch_generator_dir)
 

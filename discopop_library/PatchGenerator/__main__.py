@@ -28,10 +28,6 @@ def parse_args() -> PatchGeneratorArguments:
     parser.add_argument("-v", "--verbose", action="store_true",
         help="Enable verbose output.")
     parser.add_argument(
-        "-fcf", "--from-configuration-file", type=str, default="None",
-        help="Generate patch from the given configuration file."
-    )
-    parser.add_argument(
         "-a", "--add-from-json", type=str, default="None",
         help="Add additional patches specified in the given patterns.json file."
     )
@@ -70,7 +66,6 @@ def parse_args() -> PatchGeneratorArguments:
         discopop_build_path=arguments.dp_build_path,
         CC=arguments.cc,
         CXX=arguments.cxx,
-        from_configuration_file=arguments.from_configuration_file,
         add_from_json=arguments.add_from_json,
     )
 
