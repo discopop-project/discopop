@@ -8,6 +8,9 @@
 
 from json import JSONEncoder
 from typing import Dict, Any
+from discopop_explorer.pattern_detectors.PatternBase import PatternBase
+from discopop_library.discopop_optimizer.classes.context.Update import Update
+from discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from .PEGraphX import Node
@@ -30,7 +33,7 @@ def filter_members(d: Dict[Any, Any]) -> Dict[Any, Any]:
     return d
 
 
-class PatternInfoSerializer(JSONEncoder):
+class PatternBaseSerializer(JSONEncoder):
     """Json Encoder for Pattern Info"""
 
     def default(self, o):
@@ -45,11 +48,15 @@ class PatternInfoSerializer(JSONEncoder):
             if o.operation is not None and o.operation != "":
                 return f"{o.operation}:{o.name}"
             return o.name
-        if isinstance(o, PatternInfo):
+        if isinstance(o, PatternBase):
             return filter_members(o.__dict__)
         if isinstance(o, DetectionResult):
             return filter_members(o.__dict__)
         if isinstance(o, PipelineStage):
+            return filter_members(o.__dict__)
+        if isinstance(o, Update):
+            return filter_members(o.__dict__)
+        if isinstance(o, WriteDataAccess):
             return filter_members(o.__dict__)
         if isinstance(o, Node):
             return o.id

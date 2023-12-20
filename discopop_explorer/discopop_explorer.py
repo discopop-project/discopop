@@ -25,7 +25,7 @@ from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench
 )
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from .PEGraphX import PEGraphX
-from .json_serializer import PatternInfoSerializer
+from .json_serializer import PatternBaseSerializer
 from .parser import parse_inputs
 from .pattern_detection import PatternDetectorX
 
@@ -210,7 +210,7 @@ def run(arguments: ExplorerArguments):
         # since PETGraphX is not JSON Serializable, delete the field prior to executing the serialization
         del res.pet
         with open(arguments.enable_json_file, "w+") as f:
-            json.dump(res, f, indent=2, cls=PatternInfoSerializer)
+            json.dump(res, f, indent=2, cls=PatternBaseSerializer)
 
     if arguments.enable_profiling_dump_file is not None:
         profile.disable()
