@@ -102,4 +102,3 @@ def construct_update_from_dict(values: Dict[str, Any]) -> Update:
         values["target_cu_id"],
     )
     return update
-
