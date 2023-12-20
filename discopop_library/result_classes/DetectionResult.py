@@ -10,6 +10,7 @@ from typing import List
 import jsonpickle  # type: ignore
 
 from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.pattern_detectors.PatternBase import PatternBase
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.geometric_decomposition_detector import GDInfo
@@ -26,9 +27,11 @@ class DetectionResult(object):
     task: List[PatternInfo]
     simple_gpu: List[PatternInfo]
     combined_gpu: List[PatternInfo]
+    optimizer_output: List[PatternBase]
 
     def __init__(self, pet: PEGraphX):
         self.pet = pet
+        self.optimizer_output = []
         pass
 
     def __str__(self):
