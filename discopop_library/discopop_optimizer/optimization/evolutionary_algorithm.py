@@ -416,7 +416,7 @@ def __dump_result(
     # dump the best option
     for idx, fitness_value in sorted(enumerate(fitness), key=lambda x: x[1]):
         new_key_2 = []
-        best_configuration = ParallelConfiguration(population[idx], experiment.get_system().get_host_device_id())
+        best_configuration = ParallelConfiguration([], experiment.get_system().get_host_device_id())
         for node_id in population[idx]:
             # find pattern id
             for pattern_id in experiment.suggestion_to_node_ids_dict:
