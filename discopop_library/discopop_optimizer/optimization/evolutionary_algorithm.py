@@ -15,7 +15,7 @@ import warnings
 
 from sympy import Expr
 import tqdm  # type: ignore
-from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration  # type: ignore
+from discopop_explorer.PEGraphX import NodeID  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 
@@ -33,6 +33,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_requirements,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 
 def perform_evolutionary_search(
@@ -40,7 +41,7 @@ def perform_evolutionary_search(
     available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
-) -> ParallelConfiguration:
+) -> OptimizerOutputPattern:
     ### SETTINGS
     population_size = 50
     generations = 10
@@ -395,7 +396,7 @@ def __dump_result(
     population_size: int,
     generations: int,
     contexts: List[ContextObject],
-) -> ParallelConfiguration:
+) -> OptimizerOutputPattern:
     # replace keys to allow dumping
     dumpable_dict = dict()
     for idx, key in enumerate(population):
@@ -416,7 +417,7 @@ def __dump_result(
     # dump the best option
     for idx, fitness_value in sorted(enumerate(fitness), key=lambda x: x[1]):
         new_key_2 = []
-        best_configuration = ParallelConfiguration([], experiment.get_system().get_host_device_id())
+        best_configuration = None
         for node_id in population[idx]:
             # find pattern id
             for pattern_id in experiment.suggestion_to_node_ids_dict:
@@ -425,9 +426,19 @@ def __dump_result(
                         str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
                     )
                     device_id = data_at(experiment.optimization_graph, node_id).device_id
+                    if best_configuration is None:
+                        best_configuration = OptimizerOutputPattern(
+                            experiment.detection_result.pet.node_at(
+                                cast(NodeID, data_at(experiment.optimization_graph, node_id).original_cu_id)
+                            ),
+                            [],
+                            experiment.get_system().get_host_device_id(),
+                        )
                     best_configuration.add_pattern(
                         pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
                     )
+        if best_configuration is None:
+            raise ValueError("No Configuration created!")
         # collect data movement information
         for update in contexts[idx].necessary_updates:
             best_configuration.add_data_movement(update)

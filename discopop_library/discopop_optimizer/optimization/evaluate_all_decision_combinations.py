@@ -12,7 +12,8 @@ from typing import Dict, List, Tuple, cast
 
 from sympy import Expr
 import tqdm  # type: ignore
-from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration  # type: ignore
+from discopop_explorer.PEGraphX import NodeID  # type: ignore
+
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
@@ -23,6 +24,7 @@ from itertools import product
 from discopop_library.discopop_optimizer.optimization.validation import check_configuration_validity
 
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 
 global_experiment = None
@@ -34,7 +36,7 @@ def evaluate_all_decision_combinations(
     available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
-) -> ParallelConfiguration:
+) -> OptimizerOutputPattern:
     """Create and evaluate every possible combination of decisions."""
     global global_experiment
     global global_arguments
@@ -144,7 +146,7 @@ def __dump_result_to_file_using_pattern_ids(
     costs_dict: Dict[Tuple[int, ...], Expr],
     contexts_dict: Dict[Tuple[int, ...], ContextObject],
     arguments: OptimizerArguments,
-) -> ParallelConfiguration:
+) -> OptimizerOutputPattern:
     # replace keys to allow dumping
     dumpable_dict = dict()
     for key in costs_dict:
@@ -163,7 +165,7 @@ def __dump_result_to_file_using_pattern_ids(
     # dump the best option
     for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x]):
         new_key_2 = []
-        best_configuration = ParallelConfiguration([], experiment.get_system().get_host_device_id())
+        best_configuration = None
         # collect applied suggestions
         for node_id in combination_tuple:
             # find pattern id
@@ -173,9 +175,19 @@ def __dump_result_to_file_using_pattern_ids(
                         str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
                     )
                     device_id = data_at(experiment.optimization_graph, node_id).device_id
+                    if best_configuration is None:
+                        best_configuration = OptimizerOutputPattern(
+                            experiment.detection_result.pet.node_at(
+                                cast(NodeID, data_at(experiment.optimization_graph, node_id).original_cu_id)
+                            ),
+                            [],
+                            experiment.get_system().get_host_device_id(),
+                        )
                     best_configuration.add_pattern(
                         pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
                     )
+        if best_configuration is None:
+            raise ValueError("No configuration created!")
         # collect data movement information
         for update in contexts_dict[combination_tuple].necessary_updates:
             best_configuration.add_data_movement(update)
