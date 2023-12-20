@@ -8,6 +8,7 @@
 import json
 import os
 from typing import Optional
+from discopop_explorer.pattern_detectors.PatternBase import PatternBase
 
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 
@@ -15,14 +16,9 @@ from ..PEGraphX import LoopNode, Node, NodeID, LineID, PEGraphX
 from ..utils import calculate_workload, calculate_per_iteration_workload_of_loop
 
 
-class PatternInfo(object):
+class PatternInfo(PatternBase):
     """Base class for pattern detection info"""
 
-    pattern_id: int
-    _node: Node
-    node_id: NodeID
-    start_line: LineID
-    end_line: LineID
     iterations_count: int
     average_iteration_count: int
     entries: int
@@ -37,23 +33,8 @@ class PatternInfo(object):
         """
         :param node: node, where pipeline was detected
         """
-        # use blocking file i/o to synchronize threads
-        with open(os.path.join(os.getcwd(), "next_free_pattern_id.txt"), "r+") as f:
-            lines = f.readlines()
-            f.truncate(0)
-            f.seek(0)
-            if len(lines) == 0:
-                self.pattern_id = 0
-                f.write(str(0))
-            else:
-                for line in lines:
-                    line = line.replace("\n", "").replace("\x00", "")
-                    self.pattern_id = int(line)
-                    f.write(str(self.pattern_id + 1))
-        self._node = node
-        self.node_id = node.id
-        self.start_line = node.start_position()
-        self.end_line = node.end_position()
+        PatternBase.__init__(self, node)
+
         self.average_iteration_count = (
             node.loop_data.average_iteration_count
             if (isinstance(node, LoopNode) and node.loop_data is not None)
@@ -71,15 +52,6 @@ class PatternInfo(object):
 
         self.device_id = None
         self.device_type = None
-
-    def to_json(self):
-        dic = self.__dict__
-        keys = [k for k in dic.keys()]
-        for key in keys:
-            if key.startswith("_"):
-                del dic[key]
-
-        return json.dumps(dic, indent=2, default=lambda o: o.toJSON())  # , default=lambda o: "<not serializable>")
 
     def get_workload(self, pet: PEGraphX) -> int:
         """returns the workload of self._node"""
