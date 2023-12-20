@@ -7,12 +7,12 @@
 # directory for details.
 
 from typing import List
-from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.classes.context.Update import Update
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 
-def remove_duplicated_updates(configuration: ParallelConfiguration, arguments: OptimizerArguments):
+def remove_duplicated_updates(configuration: OptimizerOutputPattern, arguments: OptimizerArguments):
     cleaned_updates: List[Update] = []
     buffer: List[str] = []
 
