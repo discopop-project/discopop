@@ -454,7 +454,6 @@ class UnpackedSuggestion(object):
 
         return pragmas
 
-
     def get_pragmas(self) -> List[Pragma]:
         """returns a list of source code lines and pragmas to be inserted into the code preview"""
         pragmas = []
