@@ -414,7 +414,7 @@ def __dump_result(
     with open(dump_path, "w") as fp:
         json.dump(dumpable_dict, fp)
 
-    # dump the best option
+    # prepare dumping the best option
     for idx, fitness_value in sorted(enumerate(fitness), key=lambda x: x[1]):
         new_key_2 = []
         best_configuration = None
@@ -443,8 +443,9 @@ def __dump_result(
         for update in contexts[idx].necessary_updates:
             best_configuration.add_data_movement(update)
         # export results to file
-        best_option_path: str = os.path.join(optimizer_dir, "evolutionary_configuration.json")
-        best_configuration.dump_to_file(best_option_path)
+        best_option_id_path: str = os.path.join(optimizer_dir, "evolutionary_pattern_id.txt")
+        with open(best_option_id_path, "w+") as f:
+            f.write(str(best_configuration.pattern_id))
 
         return best_configuration
     raise ValueError("No configuration found!")

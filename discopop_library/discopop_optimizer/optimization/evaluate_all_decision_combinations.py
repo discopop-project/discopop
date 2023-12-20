@@ -192,8 +192,9 @@ def __dump_result_to_file_using_pattern_ids(
         for update in contexts_dict[combination_tuple].necessary_updates:
             best_configuration.add_data_movement(update)
         # export results to file
-        best_option_path: str = os.path.join(optimizer_dir, "exhaustive_configuration.json")
-        best_configuration.dump_to_file(best_option_path)
+        best_option_id_path: str = os.path.join(optimizer_dir, "exhaustive_pattern_id.txt")
+        with open(best_option_id_path, "w+") as f:
+            f.write(str(best_configuration.pattern_id))
 
         return best_configuration
     raise ValueError("No configuration found!")
