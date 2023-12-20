@@ -7,7 +7,7 @@
 # directory for details.
 
 import os
-from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration
+
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.UpdateOptimization.LoopInitializationUpdates import (
     fix_loop_initialization_updates,
@@ -15,9 +15,10 @@ from discopop_library.discopop_optimizer.UpdateOptimization.LoopInitializationUp
 from discopop_library.discopop_optimizer.UpdateOptimization.RemoveDuplicatedUpdates import remove_duplicated_updates
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 
-def optimize_updates(experiment: Experiment, best_configuration: ParallelConfiguration, arguments: OptimizerArguments):
+def optimize_updates(experiment: Experiment, best_configuration: OptimizerOutputPattern, arguments: OptimizerArguments):
     # plot raw update graph
     # show_update_graph(experiment.optimization_graph, best_configuration, experiment)
 

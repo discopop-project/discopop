@@ -6,17 +6,18 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration
+
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_parents
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 
 def fix_loop_initialization_updates(
-    experiment: Experiment, best_configuration: ParallelConfiguration, arguments: OptimizerArguments
-) -> ParallelConfiguration:
+    experiment: Experiment, best_configuration: OptimizerOutputPattern, arguments: OptimizerArguments
+) -> OptimizerOutputPattern:
     """Move updates to initialize device loops before the loop"""
     for update in best_configuration.data_movement:
         if update.source_node_id == update.target_node_id:

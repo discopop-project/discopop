@@ -10,7 +10,7 @@ import matplotlib
 import matplotlib.pyplot as plt  # type: ignore
 
 import networkx as nx  # type: ignore
-from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration
+
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment  # type: ignore
 
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
@@ -26,8 +26,10 @@ from discopop_library.discopop_optimizer.utilities.simple_utilities import data_
 
 from networkx.drawing.nx_pydot import graphviz_layout  # type: ignore
 
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
 
-def show_update_graph(graph, configuration: ParallelConfiguration, experiment: Experiment):
+
+def show_update_graph(graph, configuration: OptimizerOutputPattern, experiment: Experiment):
     matplotlib.use("TkAgg")
     fig, ax = plt.subplots()
     try:

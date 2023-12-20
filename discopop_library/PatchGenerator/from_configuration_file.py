@@ -12,7 +12,6 @@ from pathlib import Path
 import shutil
 from typing import Dict, List, Optional, Tuple
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings, from_json_strings_with_mapping
-from discopop_library.ParallelConfiguration.ParallelConfiguration import ParallelConfiguration
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.discopop_optimizer.classes.context.Update import Update
@@ -20,6 +19,8 @@ from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum i
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.result_classes.DetectionResult import DetectionResult
 import jsonpickle  # type: ignore
+
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
 
 
 def from_configuration_file(
@@ -31,7 +32,7 @@ def from_configuration_file(
     suggestion_strings_with_mapping: Dict[str, List[Tuple[str, DeviceID, Optional[DeviceTypeEnum]]]] = dict()
     if arguments.verbose:
         print("Loading configuration file: ", arguments.from_configuration_file)
-    config = ParallelConfiguration([], -1)
+    config = OptimizerOutputPattern([], -1)  # type: ignore
     config.reconstruct_from_file(arguments.from_configuration_file)
 
     # load detectionresult and pet
