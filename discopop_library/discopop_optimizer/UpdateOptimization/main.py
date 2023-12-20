@@ -18,7 +18,9 @@ from discopop_library.discopop_optimizer.utilities.visualization.update_graph im
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 
-def optimize_updates(experiment: Experiment, best_configuration: OptimizerOutputPattern, arguments: OptimizerArguments):
+def optimize_updates(
+    experiment: Experiment, best_configuration: OptimizerOutputPattern, arguments: OptimizerArguments
+) -> OptimizerOutputPattern:
     # plot raw update graph
     # show_update_graph(experiment.optimization_graph, best_configuration, experiment)
 
@@ -45,6 +47,9 @@ def optimize_updates(experiment: Experiment, best_configuration: OptimizerOutput
             print("# ", update)
         print()
 
-    # export the updated configuration to the disk
-    updated_configuration_path = os.path.join("optimizer", "updated_configuration.json")
-    best_configuration.dump_to_file(updated_configuration_path)
+    return best_configuration
+
+
+#    # export the updated configuration to the disk
+#    updated_configuration_path = os.path.join("optimizer", "updated_configuration.json")
+#    best_configuration.dump_to_file(updated_configuration_path)
