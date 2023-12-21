@@ -10,7 +10,7 @@ import copy
 import json
 from multiprocessing import Pool
 import os
-from typing import Dict, List, Tuple, cast
+from typing import Dict, List, Set, Tuple, cast
 import warnings
 
 from sympy import Expr
@@ -460,7 +460,8 @@ def __get_random_configuration(
         random_configuration: List[int] = []
         # fill configuration
         for function in available_decisions:
-            random_configuration += random.choice(available_decisions[function])
+            for decision_set in available_decisions[function]:
+                random_configuration.append(random.choice(decision_set))
 
         # validate configuration
         if check_configuration_validity(experiment, arguments, random_configuration):

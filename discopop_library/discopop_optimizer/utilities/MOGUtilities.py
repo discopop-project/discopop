@@ -441,7 +441,7 @@ global_arguments = None
 def get_available_decisions_for_functions(
     graph: nx.DiGraph, arguments: OptimizerArguments
 ) -> Dict[FunctionRoot, List[List[int]]]:
-    """Returns a list of all available paths through the subgraph of the individual Functions."""
+    """Returns a list of Lists describing all available decisions through the subgraph of the individual Functions."""
     global global_graph
     global global_arguments
     global_graph = graph
@@ -560,13 +560,17 @@ def __parallel_get_decisions_from_node(function_node):
     print()
     
     # create combinations from decision sets
-    combinations = list(itertools.product(*decision_sets))
-    print("COMB:")
-    for c in combinations: 
-        print("->", c)
+#    combinations = list(itertools.product(*decision_sets))
+#    print("COMB:")
+#    for c in combinations: 
+#        print("->", c)
+    
+    decisions_list: List[List[int]] = []
+    for dcs in decision_sets:
+        decisions_list.append(list(dcs))
 
 
-    return function_node, combinations
+    return function_node, decisions_list
 
 
 #    def get_decisions_from_node(node_id, prev_decisions: List[int]) -> List[List[int]]:
