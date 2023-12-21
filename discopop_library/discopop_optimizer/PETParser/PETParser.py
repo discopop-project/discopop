@@ -65,16 +65,26 @@ class PETParser(object):
         self.experiment = experiment
 
     def parse(self) -> Tuple[nx.DiGraph, int]:
+        print("PARSING PET")
         self.__add_cu_nodes()
+        print("added cu nodes")
         self.__add_functions()
+        print("added functions")
         self.__add_pet_successor_edges()
+        print("added successor edges")
         self.__add_loop_nodes()
+        print("added loop nodes")
+
 
         self.__parse_branched_sections()
+        print("parsed branched sections")
         convert_temporary_edges(self.graph)
+        print("converted temporary edges")
 
         self.__mark_branch_affiliation()
+        print("marked branch affiliations")
         self.__calculate_data_flow()
+        print("calculated data flow")
 
         return self.graph, self.next_free_node_id
 
