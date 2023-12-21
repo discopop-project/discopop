@@ -535,11 +535,15 @@ def __parallel_get_decisions_from_node(function_node):
     decision_sets: List[Set[int]] = []
 
     queue: List[int] = [function_node]
+    visited: Set[int] = set()
 
     while len(queue) > 0:
+        print("queue len: ", len(queue))
+        print("queue: ", queue)
         current = queue.pop(0)
-        queue += get_children(global_graph, current)
-        queue += get_successors(global_graph, current)
+        visited.add(current)
+        queue += [c for c in get_children(global_graph, current) if c not in queue and c not in visited]
+        queue += [s for s in get_successors(global_graph, current) if s not in queue and s not in visited]
 
         alternatives = set(get_out_mutex_edges(global_graph, current)).union(set(get_in_mutex_edges(global_graph, current)))
         if len(alternatives) == 0:
