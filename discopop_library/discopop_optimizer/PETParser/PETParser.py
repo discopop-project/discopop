@@ -370,22 +370,24 @@ class PETParser(object):
         """calculates and returns the post dominators for all nodes in the function"""
         post_dominators: Dict[int, Set[int]] = dict()
         # initialize
+        modified: Set[int] = set()
         for node in node_list:
             post_dominators[node] = {node}
+            modified.add(node)
         
         # iterate
-        modification_found = True
-        while modification_found:
-            print("POST DOMINATOR CALCULATION ITERATION")
-            modification_found = False
+        while len(modified) > 0:
+            print("modified: ", len(modified))
 
-            for node in node_list:
+            new_modified: Set[int] = set()
+            for node in modified:
                 predecessors = get_predecessors(self.graph, node)
                 for pred in predecessors:
                     len_pre = len(post_dominators[pred])
                     post_dominators[pred] = post_dominators[pred].union(post_dominators[node])
                     if len_pre != len(post_dominators[pred]):
-                        modification_found = True
+                        new_modified.add(pred)
+            modified = new_modified
         return post_dominators
 
 
