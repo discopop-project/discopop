@@ -35,6 +35,7 @@ from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     add_dataflow_edge,
+    get_all_nodes_in_function,
     get_all_parents,
     get_predecessors,
     get_successors,
@@ -137,39 +138,40 @@ class PETParser(object):
         To make this possible, Context Snapshot, Restore and Merge points are added to allow a synchronization
         'between' the different branches"""
         
-        post_dominators = self.__get_post_dominators()
-        print("POST DOMINATORS: ")
-        for node_id in post_dominators:
-            print("->", node_id, post_dominators[node_id])
+        for idx, function in enumerate(get_all_function_nodes(self.graph)):
+            print("####")
+            print("FUNCTION: ", function, idx, "/", len(get_all_function_nodes(self.graph)))
+            nodes_in_function = get_all_nodes_in_function(self.graph, function)            
 
-        path_splits = self.__get_path_splits()
-        merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
-        
+            post_dominators = self.__get_post_dominators(nodes_in_function)
+            print("POST DOMINATORS: ")
+            for node_id in post_dominators:
+                print("->", node_id, post_dominators[node_id])
 
-        print("PATH SPLITS AND MERGE NODES")
-        for node in path_splits:
-            print("->", node)
-            print("\t-> merge: ", merge_nodes[node])
+            path_splits = self.__get_path_splits(nodes_in_function)
+            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
+            
 
-        self.__fix_empty_branches(merge_nodes, post_dominators)
-        
-        # re-calculate post_dominators and merge nodes
-        post_dominators = self.__get_post_dominators()
-        path_splits = self.__get_path_splits()
-        merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
+            print("PATH SPLITS AND MERGE NODES")
+            for node in path_splits:
+                print("->", node)
+                print("\t-> merge: ", merge_nodes[node])
 
-        # merge_nodes, post_dominators = self.__fix_missing_merge_nodes(merge_nodes, post_dominators)
+            added_node_ids = self.__fix_empty_branches(merge_nodes, post_dominators)
+            nodes_in_function = list(set(nodes_in_function).union(set(added_node_ids)))
+            
+            # re-calculate post_dominators and merge nodes
+#            post_dominators = self.__get_post_dominators(nodes_in_function)
+#            path_splits = self.__get_path_splits(nodes_in_function)
+#            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
-        # show(self.graph)
+            self.__insert_context_nodes(nodes_in_function)
+            show(self.graph)
 
-        # todo reactivate
-        self.__insert_context_nodes()
-        show(self.graph)
+            #import sys
+            #sys.exit(0)
 
-        #import sys
-        #sys.exit(0)
-
-    def __fix_empty_branches(self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]) -> Tuple[Dict[int, int], Dict[int, Set[int]]]:
+    def __fix_empty_branches(self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]) -> List[int]:
         """do not allow empty branches. Adds an empty dummy node if necessary"""
         empty_branches: Set[Tuple[int,int]] = set()
         for split_node in merge_nodes:
@@ -181,23 +183,25 @@ class PETParser(object):
                         empty_branches.add((branch_exit, branch_entry))
                 
         print("EMPTY BRANCHES: ", empty_branches)
+        added_node_ids: List[int] = []
         for entry, exit in empty_branches:
             dummy_node_id = self.get_new_node_id()
             self.graph.add_node(dummy_node_id, data=Workload(dummy_node_id, self.experiment, None, None, None))
             print("Added dummy node: ", entry, "->", dummy_node_id, "->", exit)
             redirect_edge(self.graph, entry, entry, exit, dummy_node_id)
             add_successor_edge(self.graph, dummy_node_id, exit)
-        return
+            added_node_ids.append(dummy_node_id)
+        return added_node_ids
         
     
 
-    def __insert_context_nodes(self):
+    def __insert_context_nodes(self, node_list: List[int]):
         """flattens the graph via inserting context nodes"""
         modification_found = True
         while modification_found:
             modification_found = False
-            post_dominators = self.__get_post_dominators()
-            path_splits = self.__get_path_splits()
+            post_dominators = self.__get_post_dominators(node_list)
+            path_splits = self.__get_path_splits(node_list)
             merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
             print("INSERT CONTEXT NODES ITERATION")
@@ -237,6 +241,7 @@ class PETParser(object):
                 # create context snapshot
                 context_snapshot_id = self.get_new_node_id()
                 self.graph.add_node(context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.experiment))
+                node_list.append(context_snapshot_id)
                 add_temporary_edge(self.graph, split_node, context_snapshot_id)
 
 
@@ -248,6 +253,7 @@ class PETParser(object):
                         branch_context_restore_id,
                         data=ContextRestore(branch_context_restore_id, self.experiment),
                     )
+                    node_list.append(branch_context_restore_id)
                     add_temporary_edge(self.graph, context_snapshot_id, branch_context_restore_id)
 
                     # redirect branch to restore node
@@ -262,12 +268,15 @@ class PETParser(object):
                 self.graph.add_node(context_snapshot_pop_node_id, data=ContextSnapshotPop(context_snapshot_pop_node_id, self.experiment))
                 add_temporary_edge(self.graph, context_merge_node_id, context_snapshot_pop_node_id)
                 add_temporary_edge(self.graph, context_snapshot_pop_node_id, merge_nodes[split_node])
+                node_list.append(context_merge_node_id)
+                node_list.append(context_snapshot_pop_node_id)
 
                 # create branch exits
                 for predecessor in get_predecessors(self.graph, merge_nodes[split_node]):
                     # create context save node
                     context_save_node_id = self.get_new_node_id()
                     self.graph.add_node(context_save_node_id, data=ContextSave(context_save_node_id, self.experiment))
+                    node_list.append(context_save_node_id)
                     # connect context save node
                     add_temporary_edge(self.graph, context_save_node_id, context_merge_node_id)
                     redirect_edge(self.graph, predecessor, predecessor, merge_nodes[split_node], context_save_node_id)
@@ -348,20 +357,20 @@ class PETParser(object):
         
 
 
-    def __get_path_splits(self) -> Set[int]:
+    def __get_path_splits(self, node_list: List[int]) -> Set[int]:
         """Returns nodes which result in path splits"""
         path_splits: Set[int] = set()
-        for node in self.graph.nodes:
+        for node in node_list:
             if len(get_successors(self.graph, node)) > 1:
                 path_splits.add(node)
         return path_splits
                 
 
-    def __get_post_dominators(self) -> Dict[int, Set[int]]:
+    def __get_post_dominators(self, node_list: List[int]) -> Dict[int, Set[int]]:
         """calculates and returns the post dominators for all nodes in the function"""
         post_dominators: Dict[int, Set[int]] = dict()
         # initialize
-        for node in self.graph.nodes:
+        for node in node_list:
             post_dominators[node] = {node}
         
         # iterate
@@ -370,7 +379,7 @@ class PETParser(object):
             print("POST DOMINATOR CALCULATION ITERATION")
             modification_found = False
 
-            for node in self.graph.nodes:
+            for node in node_list:
                 predecessors = get_predecessors(self.graph, node)
                 for pred in predecessors:
                     len_pre = len(post_dominators[pred])

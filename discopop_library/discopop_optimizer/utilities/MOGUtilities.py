@@ -351,6 +351,13 @@ def get_all_function_nodes(graph: nx.DiGraph) -> List[int]:
             result_set.add(node_id)
     return list(result_set)
 
+def get_all_nodes_in_function(graph:nx.DiGraph, function_id: int) -> List[int]:
+    result_list: List[int] = []
+    for node_id in graph.nodes:
+        if function_id in get_all_parents(graph, node_id):
+            result_list.append(node_id)
+    return result_list
+
 
 def get_all_loop_nodes(graph: nx.DiGraph) -> List[int]:
     result_set: Set[int] = set()
