@@ -151,9 +151,16 @@ class PETParser(object):
             print("->", node)
             print("\t-> merge: ", merge_nodes[node])
 
+        self.__fix_empty_branches(merge_nodes, post_dominators)
+        
+        # re-calculate post_dominators and merge nodes
+        post_dominators = self.__get_post_dominators()
+        path_splits = self.__get_path_splits()
+        merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
+
         # merge_nodes, post_dominators = self.__fix_missing_merge_nodes(merge_nodes, post_dominators)
 
-        # show(self.graph)
+        show(self.graph)
 
         # todo reactivate
         self.__insert_context_nodes(merge_nodes, post_dominators)
@@ -162,23 +169,26 @@ class PETParser(object):
         #import sys
         #sys.exit(0)
 
-    def __fix_missing_merge_nodes(self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]) -> Tuple[Dict[int, int], Dict[int, Set[int]]]:
-        updated_merge_nodes: Dict[int, Optional[int]] = dict()
-        updated_post_dominators: Dict[int, Set[int]] = dict()
-
-        modification_found = True
-        while modification_found:
-            modification_found = False
-
-            for split_node in merge_nodes:
-                if merge_nodes[split_node] is None:
-                    print("missing merge node for: ", split_node)
-                    dummy_merge_node_id = self.get_new_node_id()
-                    
-
-
-
-        return updated_merge_nodes, updated_post_dominators
+    def __fix_empty_branches(self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]) -> Tuple[Dict[int, int], Dict[int, Set[int]]]:
+        """do not allow empty branches. Adds an empty dummy node if necessary"""
+        empty_branches: Set[Tuple[int,int]] = set()
+        for split_node in merge_nodes:
+            if merge_nodes[split_node] is None:
+                raise ValueError("No branching without merge allowed!")
+            for branch_entry in get_successors(self.graph, split_node):
+                for branch_exit in get_predecessors(self.graph, merge_nodes[split_node]):
+                    if branch_exit == split_node and branch_entry == merge_nodes[split_node]:
+                        empty_branches.add((branch_exit, branch_entry))
+                
+        print("EMPTY BRANCHES: ", empty_branches)
+        for entry, exit in empty_branches:
+            dummy_node_id = self.get_new_node_id()
+            self.graph.add_node(dummy_node_id, data=Workload(dummy_node_id, self.experiment, None, None, None))
+            print("Added dummy node: ", entry, "->", dummy_node_id, "->", exit)
+            redirect_edge(self.graph, entry, entry, exit, dummy_node_id)
+            add_successor_edge(self.graph, dummy_node_id, exit)
+        return
+        
     
     def __insert_context_nodes(self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]):
         """flattens the graph via inserting context nodes"""
@@ -206,18 +216,13 @@ class PETParser(object):
                         continue
                     if branch_exit in post_dominators[branch_entry]:
                         branch_entry_to_exit[branch_entry] = branch_exit
+            if len(empty_branches) != 0:
+                raise ValueError("No empty branches allowed!")
             # initialize dicts
             for branch_entry in get_successors(self.graph, split_node):
                 branch_entry_to_updated_entry[branch_entry] = branch_entry
             for branch_exit in get_predecessors(self.graph, merge_nodes[split_node]):
                 branch_exit_to_updated_exit[branch_exit] = branch_exit
-            # todo: fix missing empty path
-
-            print("INIT")
-            print(branch_entry_to_exit)
-            print(branch_entry_to_updated_entry)
-            print(branch_exit_to_updated_exit)
-            print(empty_branches)
 
             # create context snapshot
             context_snapshot_id = self.get_new_node_id()
