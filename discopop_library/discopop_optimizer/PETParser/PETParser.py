@@ -37,6 +37,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     add_dataflow_edge,
     get_all_nodes_in_function,
     get_all_parents,
+    get_nodes_by_functions,
     get_predecessors,
     get_successors,
     get_children,
@@ -139,10 +140,10 @@ class PETParser(object):
         'between' the different branches"""
         
         all_functions = get_all_function_nodes(self.graph)
+        nodes_by_functions = get_nodes_by_functions(self.graph)
         for idx, function in enumerate(all_functions):
-            print("####")
             print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
-            nodes_in_function = get_all_nodes_in_function(self.graph, function)            
+            nodes_in_function = nodes_by_functions[function]
 
             post_dominators = self.__get_post_dominators(nodes_in_function)
 

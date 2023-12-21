@@ -358,6 +358,18 @@ def get_all_nodes_in_function(graph:nx.DiGraph, function_id: int) -> List[int]:
             result_list.append(node_id)
     return result_list
 
+def get_nodes_by_functions(graph: nx.DiGraph) -> Dict[int, List[int]]:
+    result_dict: Dict[int, List[int]] = dict()
+    function_nodes = set(get_all_function_nodes(graph))
+    for node in graph.nodes:
+        parents = get_all_parents(graph, node)
+        parent_functions = set(parents).intersection(function_nodes)
+        for pf in parent_functions:
+            if pf not in result_dict:
+                result_dict[pf] = []
+            result_dict[pf].append(node)
+    return result_dict
+
 
 def get_all_loop_nodes(graph: nx.DiGraph) -> List[int]:
     result_set: Set[int] = set()
