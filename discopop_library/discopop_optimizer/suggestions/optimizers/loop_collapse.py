@@ -8,7 +8,7 @@
 
 import copy
 from multiprocessing import Pool
-from typing import List, Set, Tuple, cast
+from typing import Dict, List, Set, Tuple, cast
 from sympy import Integer, Symbol
 
 import networkx as nx  # type: ignore
@@ -52,7 +52,8 @@ def collapse_loops(experiment: Experiment) -> nx.DiGraph:
     #        tmp_result = list(
     #            tqdm.tqdm(pool.imap_unordered(__collapse_loops_in_function, param_list), total=len(param_list))
     #        )
-    for function in param_list:
+    for idx, function in enumerate(param_list):
+        print("COLLAPSE LOOPS IN FUNCTION: ", idx,"/", len(param_list))
         __collapse_loops_in_function(function)
 
     return global_graph
@@ -73,16 +74,23 @@ def __collapse_loops_in_function(function_node_id):
     modifiation_found = True
     return_value = False
     visited_inner_loop: Set[int] = set()
+
+    relevant_loops: Set[int] = set()
+    for loop in get_all_loop_nodes(global_graph):
+        if function_node_id in get_all_parents(global_graph, loop):
+            relevant_loops.add(loop)
+
+    
+
     while modifiation_found:
         modifiation_found = False
 
-        # set of loops could change when modifications are applied
-        loops = get_all_loop_nodes(global_graph)
-
-        for loop in loops:
+#        # set of loops could change when modifications are applied, hence the copy
+#        loops = get_all_loop_nodes(global_graph)
+        for loop in copy.deepcopy(relevant_loops):  
             loop_data = data_at(global_graph, loop)
-            if function_node_id not in get_all_parents(global_graph, loop):
-                continue
+#            if function_node_id not in get_all_parents(global_graph, loop):
+#                continue
             # loop contained in function
             # check for loop nesting
             queue: List[int] = get_parents(global_graph, loop)
@@ -116,6 +124,7 @@ def __collapse_loops_in_function(function_node_id):
                 modifiation_found = True
                 # create new collapse node
                 new_node_id = global_experiment.get_next_free_node_id()
+                relevant_loops.add(new_node_id)
                 node_data_copy = copy.deepcopy(data_at(global_graph, csrc))
                 node_data_copy.node_id = new_node_id
                 # increase and set collapse level
@@ -154,6 +163,7 @@ def __collapse_loops_in_function(function_node_id):
                         break
                 # create a copy of the sequential version of the inner loop with only a single iteration
                 copy_seq_loop_option_id = global_experiment.get_next_free_node_id()
+                relevant_loops.add(copy_seq_loop_option_id)
                 copy_seq_loop_option_data = copy.deepcopy(data_at(global_graph, seq_loop_option))
                 copy_seq_loop_option_data.node_id = copy_seq_loop_option_id
 

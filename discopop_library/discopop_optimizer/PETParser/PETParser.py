@@ -94,8 +94,8 @@ class PETParser(object):
         convert_temporary_edges(self.graph)
         print("converted temporary edges")
 
-        self.__mark_branch_affiliation()
-        print("marked branch affiliations")
+#        self.__mark_branch_affiliation()
+#        print("marked branch affiliations")
         self.__calculate_data_flow()
         print("calculated data flow")
 
