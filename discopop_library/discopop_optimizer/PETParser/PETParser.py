@@ -160,10 +160,10 @@ class PETParser(object):
 
         # merge_nodes, post_dominators = self.__fix_missing_merge_nodes(merge_nodes, post_dominators)
 
-        show(self.graph)
+        # show(self.graph)
 
         # todo reactivate
-        self.__insert_context_nodes(merge_nodes, post_dominators)
+        self.__insert_context_nodes()
         show(self.graph)
 
         #import sys
@@ -190,112 +190,125 @@ class PETParser(object):
         return
         
     
-    def __insert_context_nodes(self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]):
+
+    def __insert_context_nodes(self):
         """flattens the graph via inserting context nodes"""
-        for split_node in merge_nodes:
-            print("PATH SPLIT @", split_node)
-            print("\tmerge: ", merge_nodes[split_node])
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            post_dominators = self.__get_post_dominators()
+            path_splits = self.__get_path_splits()
+            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
-            if merge_nodes[split_node] is None:
-                # no merge exists -> no merge necessary since a return is encountered
-                continue
+            print("INSERT CONTEXT NODES ITERATION")
 
-            # save information for later linearization step
-            branch_entry_to_exit: Dict[int, int] = dict()
-            branch_entry_to_updated_entry: Dict[int, int] = dict()
-            branch_exit_to_updated_exit: Dict[int , int] = dict()
-            empty_branches: Set[Tuple[int,int]] = set()
+            for split_node in merge_nodes:
+                print("PATH SPLIT @", split_node)
+                print("\tmerge: ", merge_nodes[split_node])
 
-            for branch_entry in get_successors(self.graph, split_node):
+                if merge_nodes[split_node] is None:
+                    # no merge exists -> no merge necessary since a return is encountered
+                    continue
+
+                # save information for later linearization step
+                branch_entry_to_exit: Dict[int, int] = dict()
+                branch_entry_to_updated_entry: Dict[int, int] = dict()
+                branch_exit_to_updated_exit: Dict[int , int] = dict()
+                empty_branches: Set[Tuple[int,int]] = set()
+
+                for branch_entry in get_successors(self.graph, split_node):
+                    for branch_exit in get_predecessors(self.graph, merge_nodes[split_node]):
+                        if branch_exit == split_node and branch_entry == merge_nodes[split_node]:
+                            empty_branches.add((branch_entry, branch_exit))
+                        
+                        if branch_entry not in post_dominators:
+                            print("NOT IN: ", branch_entry)
+                            continue
+                        if branch_exit in post_dominators[branch_entry]:
+                            branch_entry_to_exit[branch_entry] = branch_exit
+                if len(empty_branches) != 0:
+                    raise ValueError("No empty branches allowed!")
+                # initialize dicts
+                for branch_entry in get_successors(self.graph, split_node):
+                    branch_entry_to_updated_entry[branch_entry] = branch_entry
                 for branch_exit in get_predecessors(self.graph, merge_nodes[split_node]):
-                    if branch_exit == split_node and branch_entry == merge_nodes[split_node]:
-                        empty_branches.add((branch_entry, branch_exit))
-                    
-                    if branch_entry not in post_dominators:
-                        print("NOT IN: ", branch_entry)
-                        continue
-                    if branch_exit in post_dominators[branch_entry]:
-                        branch_entry_to_exit[branch_entry] = branch_exit
-            if len(empty_branches) != 0:
-                raise ValueError("No empty branches allowed!")
-            # initialize dicts
-            for branch_entry in get_successors(self.graph, split_node):
-                branch_entry_to_updated_entry[branch_entry] = branch_entry
-            for branch_exit in get_predecessors(self.graph, merge_nodes[split_node]):
-                branch_exit_to_updated_exit[branch_exit] = branch_exit
+                    branch_exit_to_updated_exit[branch_exit] = branch_exit
 
-            # create context snapshot
-            context_snapshot_id = self.get_new_node_id()
-            self.graph.add_node(context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.experiment))
-            add_temporary_edge(self.graph, split_node, context_snapshot_id)
+                # create context snapshot
+                context_snapshot_id = self.get_new_node_id()
+                self.graph.add_node(context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.experiment))
+                add_temporary_edge(self.graph, split_node, context_snapshot_id)
 
 
-            # create branch entries
-            for successor in get_successors(self.graph, split_node):
-                # create and connect context restore node
-                branch_context_restore_id = self.get_new_node_id()
-                self.graph.add_node(
-                    branch_context_restore_id,
-                    data=ContextRestore(branch_context_restore_id, self.experiment),
-                )
-                add_temporary_edge(self.graph, context_snapshot_id, branch_context_restore_id)
+                # create branch entries
+                for successor in get_successors(self.graph, split_node):
+                    # create and connect context restore node
+                    branch_context_restore_id = self.get_new_node_id()
+                    self.graph.add_node(
+                        branch_context_restore_id,
+                        data=ContextRestore(branch_context_restore_id, self.experiment),
+                    )
+                    add_temporary_edge(self.graph, context_snapshot_id, branch_context_restore_id)
 
-                # redirect branch to restore node
-                redirect_edge(self.graph, split_node, branch_context_restore_id, successor, successor)
-                branch_entry_to_updated_entry[successor] = branch_context_restore_id
-            
-            # create and connect create merge node and snapshot pop node
-            context_merge_node_id = self.get_new_node_id()
-            self.graph.add_node(context_merge_node_id, data=ContextMerge(context_merge_node_id, self.experiment))
-            context_snapshot_pop_node_id = self.get_new_node_id()
-            self.graph.add_node(context_snapshot_pop_node_id, data=ContextSnapshotPop(context_snapshot_pop_node_id, self.experiment))
-            add_temporary_edge(self.graph, context_merge_node_id, context_snapshot_pop_node_id)
-            add_temporary_edge(self.graph, context_snapshot_pop_node_id, merge_nodes[split_node])
+                    # redirect branch to restore node
+                    redirect_edge(self.graph, split_node, branch_context_restore_id, successor, successor)
+                    branch_entry_to_updated_entry[successor] = branch_context_restore_id
+                    modification_found = True
+                
+                # create and connect create merge node and snapshot pop node
+                context_merge_node_id = self.get_new_node_id()
+                self.graph.add_node(context_merge_node_id, data=ContextMerge(context_merge_node_id, self.experiment))
+                context_snapshot_pop_node_id = self.get_new_node_id()
+                self.graph.add_node(context_snapshot_pop_node_id, data=ContextSnapshotPop(context_snapshot_pop_node_id, self.experiment))
+                add_temporary_edge(self.graph, context_merge_node_id, context_snapshot_pop_node_id)
+                add_temporary_edge(self.graph, context_snapshot_pop_node_id, merge_nodes[split_node])
 
-            # create branch exits
-            for predecessor in get_predecessors(self.graph, merge_nodes[split_node]):
-                # create context save node
-                context_save_node_id = self.get_new_node_id()
-                self.graph.add_node(context_save_node_id, data=ContextSave(context_save_node_id, self.experiment))
-                # connect context save node
-                #add_temporary_edge(self.graph, context_save_node_id, context_merge_node_id)
-                redirect_edge(self.graph, predecessor, predecessor, merge_nodes[split_node], context_save_node_id)
-                branch_exit_to_updated_exit[predecessor] = context_save_node_id
+                # create branch exits
+                for predecessor in get_predecessors(self.graph, merge_nodes[split_node]):
+                    # create context save node
+                    context_save_node_id = self.get_new_node_id()
+                    self.graph.add_node(context_save_node_id, data=ContextSave(context_save_node_id, self.experiment))
+                    # connect context save node
+                    add_temporary_edge(self.graph, context_save_node_id, context_merge_node_id)
+                    redirect_edge(self.graph, predecessor, predecessor, merge_nodes[split_node], context_save_node_id)
+                    branch_exit_to_updated_exit[predecessor] = context_save_node_id
 
-            # linearize the branched section by concatenating all branches
-            print(branch_entry_to_exit)
-            print(branch_entry_to_updated_entry)
-            print(branch_exit_to_updated_exit)
-            last_node_id = context_snapshot_id
-            for entry in branch_entry_to_exit:
-                exit = branch_entry_to_exit[entry]
-                updated_entry = branch_entry_to_updated_entry[entry]
-                updated_exit = branch_exit_to_updated_exit[exit]
-                # redirect entry
-                redirect_edge(self.graph, context_snapshot_id, last_node_id, updated_entry, updated_entry)
+                # linearize the branched section by concatenating all branches
+                print(branch_entry_to_exit)
+                print(branch_entry_to_updated_entry)
+                print(branch_exit_to_updated_exit)
+                last_node_id = context_snapshot_id
+                for entry in branch_entry_to_exit:
+                    if last_node_id != context_snapshot_id:
+                        self.graph.remove_edge(last_node_id, context_merge_node_id)                
+                    exit = branch_entry_to_exit[entry]
+                    updated_entry = branch_entry_to_updated_entry[entry]
+                    updated_exit = branch_exit_to_updated_exit[exit]
+                    print("entry: ", updated_entry)
+                    print("exit: ", updated_exit)
+                    # redirect entry
+                    redirect_edge(self.graph, context_snapshot_id, last_node_id, updated_entry, updated_entry)
+    #
+    #
+                    last_node_id = updated_exit
 
-                # redirect exit
-                #redirect_edge(self.graph, updated_exit, updated_exit, )
+    #            # linearize empty branches
+    #            for entry,  exit in empty_branches:
+    #                updated_entry = branch_entry_to_updated_entry[entry]
+    #                updated_exit = branch_exit_to_updated_exit[updated_entry]
+    #                print("EMPTY: ", entry, exit)
+    #                # redirect entry
+    #                redirect_edge(self.graph, context_snapshot_id, last_node_id, updated_entry, updated_entry)
+    #                last_node_id = updated_exit
 
-                last_node_id = updated_exit
+                # connect exit of linearized section
+                # add_temporary_edge(self.graph, last_node_id, context_merge_node_id)
 
-            # linearize empty branches
-            for entry, exit in empty_branches:
-                updated_entry = branch_entry_to_updated_entry[entry]
-                updated_exit = branch_exit_to_updated_exit[updated_entry]
-                print("EMPTY: ", entry, exit)
-                # redirect entry
-                redirect_edge(self.graph, context_snapshot_id, last_node_id, updated_entry, updated_entry)
-                last_node_id = updated_exit
-
-            # connect exit of linearized section
-            add_temporary_edge(self.graph, last_node_id, context_merge_node_id)
-            
-            
-
-
-            
-            
+                # DEBUG
+                if modification_found:
+                    break
+            convert_temporary_edges(self.graph)
+                
 
 
 
