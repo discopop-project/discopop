@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import itertools
 from multiprocessing import Pool
 from typing import Any, ClassVar, Dict, List, cast, Set, Tuple
 
@@ -480,24 +481,24 @@ def __initialize_availability_worker(graph: nx.DiGraph, arguments: OptimizerArgu
     global_arguments = arguments
 
 
-def __parallel_get_decisions_from_node(function_node):
+def __parallel_get_decisions_from_node_recursive(function_node):
     global global_graph
     global global_arguments
 
-    def get_decisions_from_node(node_id, prev_decisions: List[int]) -> List[List[int]]:
+    def get_decisions_from_node_recursive(node_id, prev_decisions: List[int]) -> List[List[int]]:
         children_paths: List[List[int]] = []
         # get decisions from children
         for child in get_children(global_graph, node_id):
-            children_paths += get_decisions_from_node(child, copy.deepcopy(prev_decisions))
+            children_paths += get_decisions_from_node_recursive(child, copy.deepcopy(prev_decisions))
         # get decisions from current node
         successors = get_successors(global_graph, node_id)
         successor_paths: List[List[int]] = []
         if len(successors) == 1:
             if len(children_paths) > 0:
                 for cp in children_paths:
-                    successor_paths += get_decisions_from_node(successors[0], copy.deepcopy(cp))
+                    successor_paths += get_decisions_from_node_recursive(successors[0], copy.deepcopy(cp))
             else:
-                successor_paths += get_decisions_from_node(successors[0], copy.deepcopy(prev_decisions))
+                successor_paths += get_decisions_from_node_recursive(successors[0], copy.deepcopy(prev_decisions))
             return successor_paths
         elif len(successors) == 0:
             if len(children_paths) > 0:
@@ -510,13 +511,89 @@ def __parallel_get_decisions_from_node(function_node):
                 for cp in children_paths:
                     successor_paths = []
                     for succ in successors:
-                        successor_paths += get_decisions_from_node(succ, copy.deepcopy(cp + [succ]))
+                        successor_paths += get_decisions_from_node_recursive(succ, copy.deepcopy(cp + [succ]))
                     tmp_result += successor_paths
             else:
                 successor_paths = []
                 for succ in successors:
-                    successor_paths += get_decisions_from_node(succ, copy.deepcopy(prev_decisions + [succ]))
+                    successor_paths += get_decisions_from_node_recursive(succ, copy.deepcopy(prev_decisions + [succ]))
                 tmp_result += successor_paths
             return tmp_result
 
-    return function_node, get_decisions_from_node(function_node, [])
+    return function_node, get_decisions_from_node_recursive(function_node, [])
+
+
+def __parallel_get_decisions_from_node(function_node):
+    global global_graph
+    global global_arguments
+
+    # connected decisions in sets
+    decision_sets: List[Set[int]] = []
+
+    queue: List[int] = [function_node]
+
+    while len(queue) > 0:
+        current = queue.pop(0)
+        queue += get_children(global_graph, current)
+        queue += get_successors(global_graph, current)
+
+        alternatives = set(get_out_mutex_edges(global_graph, current)).union(set(get_in_mutex_edges(global_graph, current)))
+        if len(alternatives) == 0:
+            continue
+        # check if an existing decision set needs to be extended
+        found_existing = False
+        for idx, dcs in enumerate(decision_sets):
+            if len(dcs.intersection(alternatives)) > 0:
+                found_existing = True
+                decision_sets[idx] = decision_sets[idx].union(alternatives)
+        if not found_existing:
+            decision_sets.append(alternatives)
+    print(decision_sets)
+    print()
+    
+    # create combinations from decision sets
+    combinations = list(itertools.product(*decision_sets))
+    print("COMB:")
+    for c in combinations: 
+        print("->", c)
+
+
+    return function_node, combinations
+
+
+#    def get_decisions_from_node(node_id, prev_decisions: List[int]) -> List[List[int]]:
+#        children_paths: List[List[int]] = []
+#        # get decisions from children
+#        for child in get_children(global_graph, node_id):
+#            children_paths += get_decisions_from_node(child, copy.deepcopy(prev_decisions))
+#        # get decisions from current node
+#        successors = get_successors(global_graph, node_id)
+#        successor_paths: List[List[int]] = []
+#        if len(successors) == 1:
+#            if len(children_paths) > 0:
+#                for cp in children_paths:
+#                    successor_paths += get_decisions_from_node(successors[0], copy.deepcopy(cp))
+#            else:
+#                successor_paths += get_decisions_from_node(successors[0], copy.deepcopy(prev_decisions))
+#            return successor_paths
+#        elif len(successors) == 0:
+#            if len(children_paths) > 0:
+#                return children_paths
+#            else:
+#                return [prev_decisions]
+#        else:
+#            tmp_result = []
+#            if len(children_paths) > 0:
+#                for cp in children_paths:
+#                    successor_paths = []
+#                    for succ in successors:
+#                        successor_paths += get_decisions_from_node(succ, copy.deepcopy(cp + [succ]))
+#                    tmp_result += successor_paths
+#            else:
+#                successor_paths = []
+#                for succ in successors:
+#                    successor_paths += get_decisions_from_node(succ, copy.deepcopy(prev_decisions + [succ]))
+#                tmp_result += successor_paths
+#            return tmp_result
+
+    #return function_node, get_decisions_from_node(function_node, [])
