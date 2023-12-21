@@ -44,6 +44,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     convert_temporary_edges,
     get_all_function_nodes,
     get_read_and_written_data_from_subgraph,
+    show,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
@@ -75,6 +76,8 @@ class PETParser(object):
         self.__add_loop_nodes()
         print("added loop nodes")
 
+        show(self.graph)
+
 
         self.__parse_branched_sections()
         print("parsed branched sections")
@@ -99,7 +102,8 @@ class PETParser(object):
         To make this possible, Context Snapshot, Restore and Merge points are added to allow a synchronization
         'between' the different branches"""
         visited_nodes: Set[int] = set()
-        for function_node in self.pet.all_nodes(FunctionNode):
+        for idx, function_node in enumerate(self.pet.all_nodes(FunctionNode)):
+            print("parsing ", function_node.name, idx, "/", len(self.pet.all_nodes(FunctionNode)))
             _, _ = self.__parse_raw_node(self.cu_id_to_graph_node_id[function_node.id], visited_nodes)
 
         # remove visited nodes, since duplicates exist now
