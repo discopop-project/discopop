@@ -451,13 +451,17 @@ def get_available_decisions_for_functions(
         print("Calculating available decisions per function...")
     available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
     param_list = [(function_node) for function_node in get_all_function_nodes(graph)]
-    with Pool(
-        initializer=__initialize_availability_worker,
-        initargs=(graph, arguments),
-    ) as pool:
-        tmp_result = list(
-            tqdm.tqdm(pool.imap_unordered(__parallel_get_decisions_from_node, param_list), total=len(param_list))
-        )
+#    with Pool(
+#        initializer=__initialize_availability_worker,
+#        initargs=(graph, arguments),
+#    ) as pool:
+#        tmp_result = list(
+#            tqdm.tqdm(pool.imap_unordered(__parallel_get_decisions_from_node, param_list), total=len(param_list))
+#        )
+
+    tmp_result: List[Any] = []
+    for p in param_list:
+        tmp_result.append(__parallel_get_decisions_from_node(p))
 
     for local_result in tmp_result:
         available_decisions[cast(FunctionRoot, data_at(graph, local_result[0]))] = local_result[1]
