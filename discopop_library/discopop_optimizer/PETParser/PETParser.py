@@ -138,25 +138,17 @@ class PETParser(object):
         To make this possible, Context Snapshot, Restore and Merge points are added to allow a synchronization
         'between' the different branches"""
         
-        for idx, function in enumerate(get_all_function_nodes(self.graph)):
+        all_functions = get_all_function_nodes(self.graph)
+        for idx, function in enumerate(all_functions):
             print("####")
-            print("FUNCTION: ", function, idx, "/", len(get_all_function_nodes(self.graph)))
+            print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
             nodes_in_function = get_all_nodes_in_function(self.graph, function)            
 
             post_dominators = self.__get_post_dominators(nodes_in_function)
-            print("POST DOMINATORS: ")
-            for node_id in post_dominators:
-                print("->", node_id, post_dominators[node_id])
 
             path_splits = self.__get_path_splits(nodes_in_function)
             merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
-            
-
-            print("PATH SPLITS AND MERGE NODES")
-            for node in path_splits:
-                print("->", node)
-                print("\t-> merge: ", merge_nodes[node])
-
+        
             added_node_ids = self.__fix_empty_branches(merge_nodes, post_dominators)
             nodes_in_function = list(set(nodes_in_function).union(set(added_node_ids)))
             
@@ -166,7 +158,7 @@ class PETParser(object):
 #            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
             self.__insert_context_nodes(nodes_in_function)
-            show(self.graph)
+            # show(self.graph)
 
             #import sys
             #sys.exit(0)
@@ -182,7 +174,6 @@ class PETParser(object):
                     if branch_exit == split_node and branch_entry == merge_nodes[split_node]:
                         empty_branches.add((branch_exit, branch_entry))
                 
-        print("EMPTY BRANCHES: ", empty_branches)
         added_node_ids: List[int] = []
         for entry, exit in empty_branches:
             dummy_node_id = self.get_new_node_id()
@@ -204,12 +195,7 @@ class PETParser(object):
             path_splits = self.__get_path_splits(node_list)
             merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
-            print("INSERT CONTEXT NODES ITERATION")
-
             for split_node in merge_nodes:
-                print("PATH SPLIT @", split_node)
-                print("\tmerge: ", merge_nodes[split_node])
-
                 if merge_nodes[split_node] is None:
                     # no merge exists -> no merge necessary since a return is encountered
                     continue
@@ -226,7 +212,6 @@ class PETParser(object):
                             empty_branches.add((branch_entry, branch_exit))
                         
                         if branch_entry not in post_dominators:
-                            print("NOT IN: ", branch_entry)
                             continue
                         if branch_exit in post_dominators[branch_entry]:
                             branch_entry_to_exit[branch_entry] = branch_exit
@@ -283,9 +268,6 @@ class PETParser(object):
                     branch_exit_to_updated_exit[predecessor] = context_save_node_id
 
                 # linearize the branched section by concatenating all branches
-                print(branch_entry_to_exit)
-                print(branch_entry_to_updated_entry)
-                print(branch_exit_to_updated_exit)
                 last_node_id = context_snapshot_id
                 for entry in branch_entry_to_exit:
                     if last_node_id != context_snapshot_id:
@@ -293,12 +275,8 @@ class PETParser(object):
                     exit = branch_entry_to_exit[entry]
                     updated_entry = branch_entry_to_updated_entry[entry]
                     updated_exit = branch_exit_to_updated_exit[exit]
-                    print("entry: ", updated_entry)
-                    print("exit: ", updated_exit)
                     # redirect entry
                     redirect_edge(self.graph, context_snapshot_id, last_node_id, updated_entry, updated_entry)
-    #
-    #
                     last_node_id = updated_exit
 
     #            # linearize empty branches
@@ -377,8 +355,6 @@ class PETParser(object):
         
         # iterate
         while len(modified) > 0:
-            print("modified: ", len(modified))
-
             new_modified: Set[int] = set()
             for node in modified:
                 predecessors = get_predecessors(self.graph, node)
