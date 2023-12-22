@@ -46,7 +46,6 @@ def get_path_context_iterative(
 
     while next_node_id is not None:
         node_id = next_node_id
-        print("CONTEXT CALCULATION FOR: ", node_id)
 
         # push device id to stack if necessary
         node_data = data_at(graph, node_id)
@@ -81,26 +80,13 @@ def get_path_context_iterative(
             # find the successor which represents the path decision included in the model
             suitable_successors = [succ for succ in successors if succ in model.path_decisions]
             if len(suitable_successors) != 1:
-
-                print("Invalid amount of potential successors (",
-                    len(suitable_successors),
-                    ") for path split at node:",
-                    node_id,
-                    "using decisions: ",
-                    model.path_decisions,
-                    "successors:",
-                    successors,
-                )
-                print("Try to fix the decision...")
                 requirements: List[int] = []
                 for dec in model.path_decisions:
                     requirements += [r for r in get_requirements(graph, dec) if r not in requirements]
-                print("REQUIREMENTS: ", requirements)
                 if len(requirements) == 0:
                     # select the sequential version
                     for succ in successors:
                         if data_at(graph, succ).represents_sequential_version() and data_at(graph, succ).device_id in [None, experiment.get_system().get_host_device_id()]:
-                            print("FOUND SEQUENTIAL: ", succ)                        
                             suitable_successors = [succ]
                             model.path_decisions.append(succ)
                             break
@@ -108,7 +94,6 @@ def get_path_context_iterative(
                     # select the correct successor
                     for succ in successors:
                         if succ in requirements:
-                            print("FOUND REQUIREMENT: ", succ)
                             suitable_successors = [succ]
                             model.path_decisions.append(succ)
                             break
@@ -171,26 +156,13 @@ def get_path_context(
         # find the successor which represents the path decision included in the model
         suitable_successors = [succ for succ in successors if succ in model.path_decisions]
         if len(suitable_successors) != 1:
-
-            print("Invalid amount of potential successors (",
-                len(suitable_successors),
-                ") for path split at node:",
-                node_id,
-                "using decisions: ",
-                model.path_decisions,
-                "successors:",
-                successors,
-            )
-            print("Try to fix the decision...")
             requirements: List[int] = []
             for dec in model.path_decisions:
                 requirements += [r for r in get_requirements(graph, dec) if r not in requirements]
-            print("REQUIREMENTS: ", requirements)
             if len(requirements) == 0:
                 # select the sequential version
                 for succ in successors:
                     if data_at(graph, succ).represents_sequential_version() and data_at(graph, succ).device_id in [None, experiment.get_system().get_host_device_id()]:
-                        print("FOUND SEQUENTIAL: ", succ)                        
                         suitable_successors = [succ]
                         model.path_decisions.append(succ)
                         break
@@ -198,7 +170,6 @@ def get_path_context(
                 # select the correct successor
                 for succ in successors:
                     if succ in requirements:
-                        print("FOUND REQUIREMENT: ", succ)
                         suitable_successors = [succ]
                         model.path_decisions.append(succ)
                         break
@@ -253,11 +224,9 @@ def __check_current_node(
 def __check_children(
     node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment
 ) -> ContextObject:
-    print("ENTER CHECK_CHILDREN")
     # pass context to all children
     for child in get_children(graph, node_id):
         # reset last_visited_node_id inbetween visiting children
         context.last_visited_node_id = node_id
         context = get_path_context_iterative(child, graph, model, context, experiment)
-    print("EXIT CHECK_CHILDREN")
     return context
