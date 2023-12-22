@@ -68,18 +68,18 @@ def evaluate_all_decision_combinations(
     # evaluate each combination in parallel
     print("# Parallel calculation of costs of all decision combinations...")
     param_list = [(combination_list) for combination_list in combinations]
-    with Pool(
-        initializer=__initialize_worker,
-        initargs=(
-            experiment,
-            arguments,
-        ),
-    ) as pool:
-        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__evaluate_configuration, param_list), total=len(param_list)))
+#    with Pool(
+#        initializer=__initialize_worker,
+#        initargs=(
+#            experiment,
+#            arguments,
+#        ),
+#    ) as pool:
+#        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__evaluate_configuration, param_list), total=len(param_list)))
     
-#    tmp_result = []
-#    for p in param_list:
-#        tmp_result.append(__evaluate_configuration(p))
+    tmp_result = []
+    for p in param_list:
+        tmp_result.append(__evaluate_configuration(p))
 
     for local_result in tmp_result:
         # result += local_result
