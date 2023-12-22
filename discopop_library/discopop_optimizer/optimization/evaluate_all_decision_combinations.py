@@ -60,10 +60,10 @@ def evaluate_all_decision_combinations(
         for function_decisions in c:
             for entry in function_decisions:
                 combination_list.append(entry)
-        combinations.append(combination_list)
-    # remove invalid combinations
-    if check_configuration_validity(experiment, arguments, combination_list):
-        combinations.append(combination_list)
+        # remove invalid combinations
+        if check_configuration_validity(experiment, arguments, combination_list):
+            combinations.append(combination_list)
+    
 
     # evaluate each combination in parallel
     print("# Parallel calculation of costs of all decision combinations...")
