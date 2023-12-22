@@ -42,6 +42,8 @@ def parse_args() -> OptimizerArguments:
         help="Allow the creation of nested parallelism suggestions. "
         + "WARNING: Cost estimations may not be accurrate due to potentially"
         + "high overhead introduced by entering nested parallelism!")
+    experimental_parser.add_argument("--check-called-function-for-nested-parallelism", action="store_true", help="Extend the check for nested parallelism to called functions."
+        + "WARNING: Execution time may increase significantly!")
     experimental_parser.add_argument("-i", "--interactive", action="store_true",
         help="Enable interactive execution.")
     experimental_parser.add_argument("--plot", action="store_true",
@@ -59,6 +61,7 @@ def parse_args() -> OptimizerArguments:
         allow_nested_parallelism=arguments.allow_nested_parallelism,
         plot=arguments.plot,
         system_configuration_path=arguments.system_configuration,
+        check_called_function_for_nested_parallelism=arguments.check_called_function_for_nested_parallelism,
     )
 
 
