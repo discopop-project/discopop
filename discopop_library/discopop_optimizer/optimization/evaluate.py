@@ -122,6 +122,4 @@ def evaluate_configuration(
         result_model.parallelizable_costs + result_model.sequential_costs
     )
 
-    print("RESULT: ", result)
-
     return (tuple(decisions), result, result_context)

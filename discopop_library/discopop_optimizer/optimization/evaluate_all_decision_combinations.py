@@ -63,7 +63,6 @@ def evaluate_all_decision_combinations(
         # remove invalid combinations
         if check_configuration_validity(experiment, arguments, combination_list):
             combinations.append(combination_list)
-            print("VALID CONFIG :", combination_list)
     
 
     # evaluate each combination in parallel
