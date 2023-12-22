@@ -465,4 +465,5 @@ def __get_random_configuration(
 
         # validate configuration
         if check_configuration_validity(experiment, arguments, random_configuration):
+            print("FOUND VALID CONFIG: ", random_configuration)
             return random_configuration
