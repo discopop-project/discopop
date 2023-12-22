@@ -23,8 +23,6 @@ class PatchApplicatorArguments(object):
     list: bool
 
     def __post_init__(self):
-        if self.from_configuration_file != "None":
-            self.__translate_from_configuration_file()
         self.__validate()
 
     def __validate(self):
@@ -51,9 +49,3 @@ class PatchApplicatorArguments(object):
         if exit_required:
             print("Exiting.")
             sys.exit(0)
-
-    def __translate_from_configuration_file(self):
-        with open(self.from_configuration_file, "r") as f:
-            config = json.load(f)
-        self.apply = [str(config["pattern_id"])]
-        self.from_configuration_file = "None"
