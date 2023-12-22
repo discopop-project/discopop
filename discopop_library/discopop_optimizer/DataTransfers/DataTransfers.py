@@ -14,6 +14,7 @@ from discopop_library.discopop_optimizer.classes.context.ContextObject import Co
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
+    get_requirements,
     get_successors,
     get_children,
     show,
@@ -75,8 +76,8 @@ def get_path_context(
         # find the successor which represents the path decision included in the model
         suitable_successors = [succ for succ in successors if succ in model.path_decisions]
         if len(suitable_successors) != 1:
-            raise ValueError(
-                "Invalid amount of potential successors (",
+
+            print("Invalid amount of potential successors (",
                 len(suitable_successors),
                 ") for path split at node:",
                 node_id,
@@ -85,6 +86,41 @@ def get_path_context(
                 "successors:",
                 successors,
             )
+            print("Try to fix the decision...")
+            requirements: List[int] = []
+            for dec in model.path_decisions:
+                requirements += [r for r in get_requirements(graph, dec) if r not in requirements]
+            print("REQUIREMENTS: ", requirements)
+            if len(requirements) == 0:
+                # select the sequential version
+                for succ in successors:
+                    if data_at(graph, succ).represents_sequential_version() and data_at(graph, succ).device_id in [None, experiment.get_system().get_host_device_id()]:
+                        print("FOUND SEQUENTIAL: ", succ)                        
+                        suitable_successors = [succ]
+                        model.path_decisions.append(succ)
+                        break
+            else:
+                # select the correct successor
+                for succ in successors:
+                    if succ in requirements:
+                        print("FOUND REQUIREMENT: ", succ)
+                        suitable_successors = [succ]
+                        model.path_decisions.append(succ)
+                        break
+            if len(suitable_successors) != 1:
+                print("No correction possible")
+                show(graph)
+
+                raise ValueError(
+                    "Invalid amount of potential successors (",
+                    len(suitable_successors),
+                    ") for path split at node:",
+                    node_id,
+                    "using decisions: ",
+                    model.path_decisions,
+                    "successors:",
+                    successors,
+                )
         # suitable successor identified.
         # pass the current context to the successor
         return get_path_context(suitable_successors[0], graph, model, context, experiment)

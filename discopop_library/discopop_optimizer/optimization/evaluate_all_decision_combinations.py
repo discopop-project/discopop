@@ -142,12 +142,8 @@ def __initialize_worker(
 def __evaluate_configuration(param_tuple):
     global global_experiment
     global global_arguments
-    decisions = param_tuple
-    try: 
-        return evaluate_configuration(global_experiment, decisions, global_arguments)
-    except ValueError as ve:
-        print(ve, "for :", param_tuple)
-        return None
+    decisions = param_tuple    
+    return evaluate_configuration(global_experiment, decisions, global_arguments)
 
 
 def __dump_result_to_file_using_pattern_ids(
