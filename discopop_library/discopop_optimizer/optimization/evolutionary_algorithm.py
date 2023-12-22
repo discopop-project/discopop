@@ -465,8 +465,21 @@ def __get_random_configuration(
         random_configuration: List[int] = []
         # fill configuration
         for function in available_decisions:
+            excluded: Set[int] = set()
+            requirements: Set[int] = set()
+
             for decision_set in available_decisions[function]:
-                random_configuration.append(random.choice(list(decision_set)))
+                decision_set = decision_set - (decision_set & excluded)
+                reduced_decision_set = decision_set.intersection(requirements)
+                if len(reduced_decision_set) != 0:
+                    print("Drawing from reduced set: ", reduced_decision_set)
+                    random_decision = random.choice(list(reduced_decision_set))
+                else:
+                    random_decision = random.choice(list(decision_set))
+                random_configuration.append(random_decision)
+                requirements.update(get_requirements(experiment.optimization_graph, random_decision))
+                excluded.update(get_out_mutex_edges(experiment.optimization_graph, random_decision))
+
 
         # validate configuration
         if check_configuration_validity(experiment, arguments, random_configuration):
