@@ -451,7 +451,7 @@ def get_available_decisions_for_functions(
 
     if arguments.verbose:
         print("Calculating available decisions per function...")
-    available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
+    available_decisions: Dict[FunctionRoot, List[Set[int]]] = dict()
     param_list = [(function_node) for function_node in get_all_function_nodes(graph)]
     #    with Pool(
     #        initializer=__initialize_availability_worker,
@@ -540,8 +540,6 @@ def __parallel_get_decisions_from_node(function_node):
     visited: Set[int] = set()
 
     while len(queue) > 0:
-        print("queue len: ", len(queue))
-        print("queue: ", queue)
         current = queue.pop(0)
         visited.add(current)
         queue += [c for c in get_children(global_graph, current) if c not in queue and c not in visited]
@@ -569,11 +567,7 @@ def __parallel_get_decisions_from_node(function_node):
     #    for c in combinations:
     #        print("->", c)
 
-    decisions_list: List[List[int]] = []
-    for dcs in decision_sets:
-        decisions_list.append(list(dcs))
-
-    return function_node, decisions_list
+    return function_node, decision_sets
 
 
 #    def get_decisions_from_node(node_id, prev_decisions: List[int]) -> List[List[int]]:

@@ -8,7 +8,7 @@
 import json
 from multiprocessing import Pool
 import os
-from typing import Dict, List, Tuple, cast
+from typing import Dict, List, Set, Tuple, cast
 
 from sympy import Expr
 import tqdm  # type: ignore
@@ -33,7 +33,7 @@ global_arguments = None
 
 def evaluate_all_decision_combinations(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[List[int]]],
+    available_decisions: Dict[FunctionRoot, List[Set[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
 ) -> OptimizerOutputPattern:
@@ -46,30 +46,56 @@ def evaluate_all_decision_combinations(
     costs_dict: Dict[Tuple[int, ...], Expr] = dict()
     contexts_dict: Dict[Tuple[int, ...], ContextObject] = dict()
 
-    packed_decisions: List[List[List[int]]] = []
-    for function in available_decisions:
-        function_combination_list: List[List[int]] = []
-        combinations_per_function = product(*available_decisions[function])
-        for c in combinations_per_function:
-            function_combination_list.append(list(c))
-        packed_decisions.append(function_combination_list)
-
-    # create combinations of decisions
-    raw_combinations: List[Tuple[List[int], ...]] = cast(List[Tuple[List[int], ...]], product(*packed_decisions))
-    rc_copy: List[Tuple[List[int], ...]] = []
-    for x in raw_combinations:
-        rc_copy.append(x)
-    # clean the combinations into List[int]
     combinations: List[List[int]] = []
-    for tpl in rc_copy:
-        tmp: List[int] = []
-        for decision_list in tpl:
-            for decision in decision_list:
-                tmp.append(decision)
 
-        # check configuration validity
-        if check_configuration_validity(experiment, arguments, tmp):
-            combinations.append(tmp)
+    # DEBUG
+    print("# Available decisions:")
+    for f in available_decisions:
+        print("#", f.name)
+        for dec in available_decisions[f]:
+            print("# -> ", dec)
+
+    combinations_by_function: Dict[FunctionRoot, List[Set[int]]] = dict()
+    for function in available_decisions:
+        combinations_by_function[function] = []
+        for cmb in product(*available_decisions[function]):
+            combinations_by_function[function].append(cmb)
+
+    # DEBUG
+    print("# Combinations by functions:")
+    for f in available_decisions:
+        print("#", f.name)
+        for c in combinations_by_function[f]:
+            print("# -> ", c)
+
+    # DEBUG
+    import sys
+    sys.exit(0)
+
+#    packed_decisions: List[List[List[int]]] = []
+#    for function in available_decisions:
+#        function_combination_list: List[List[int]] = []
+#        combinations_per_function = product(*available_decisions[function])
+#        for c in combinations_per_function:
+#            function_combination_list.append(list(c))
+#        packed_decisions.append(function_combination_list)
+#
+#    # create combinations of decisions
+#    raw_combinations: List[Tuple[List[int], ...]] = cast(List[Tuple[List[int], ...]], product(*packed_decisions))
+#    rc_copy: List[Tuple[List[int], ...]] = []
+#    for x in raw_combinations:
+#        rc_copy.append(x)
+#    # clean the combinations into List[int]
+#    combinations: List[List[int]] = []
+#    for tpl in rc_copy:
+#        tmp: List[int] = []
+#        for decision_list in tpl:
+#            for decision in decision_list:
+#                tmp.append(decision)
+#
+#        # check configuration validity
+#        if check_configuration_validity(experiment, arguments, tmp):
+#            combinations.append(tmp)
 
     # evaluate each combination in parallel
     print("# Parallel calculation of costs of all decision combinations...")
