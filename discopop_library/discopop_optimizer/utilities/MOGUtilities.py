@@ -489,6 +489,10 @@ def get_available_decisions_for_functions(
                 print("#..", elem)
         print()
 
+    #show(graph, show_dataflow=False)
+    #import sys
+    #sys.exit(0)
+
     return available_decisions
 
 

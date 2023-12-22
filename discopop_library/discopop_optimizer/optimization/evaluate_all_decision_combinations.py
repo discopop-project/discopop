@@ -8,7 +8,7 @@
 import json
 from multiprocessing import Pool
 import os
-from typing import Dict, List, Set, Tuple, cast
+from typing import Dict, List, Optional, Set, Tuple, cast
 
 from sympy import Expr
 import tqdm  # type: ignore
@@ -36,7 +36,7 @@ def evaluate_all_decision_combinations(
     available_decisions: Dict[FunctionRoot, List[Set[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
-) -> OptimizerOutputPattern:
+) -> Optional[OptimizerOutputPattern]:
     """Create and evaluate every possible combination of decisions."""
     global global_experiment
     global global_arguments
@@ -63,6 +63,7 @@ def evaluate_all_decision_combinations(
         # remove invalid combinations
         if check_configuration_validity(experiment, arguments, combination_list):
             combinations.append(combination_list)
+            print("VALID CONFIG :", combination_list)
     
 
     # evaluate each combination in parallel
@@ -152,7 +153,7 @@ def __dump_result_to_file_using_pattern_ids(
     costs_dict: Dict[Tuple[int, ...], Expr],
     contexts_dict: Dict[Tuple[int, ...], ContextObject],
     arguments: OptimizerArguments,
-) -> OptimizerOutputPattern:
+) -> Optional[OptimizerOutputPattern]:
     # replace keys to allow dumping
     dumpable_dict = dict()
     for key in costs_dict:
@@ -193,7 +194,7 @@ def __dump_result_to_file_using_pattern_ids(
                         pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
                     )
         if best_configuration is None:
-            raise ValueError("No configuration created!")
+            return None
         # collect data movement information
         for update in contexts_dict[combination_tuple].necessary_updates:
             best_configuration.add_data_movement(update)
