@@ -10,7 +10,7 @@ import copy
 import json
 from multiprocessing import Pool
 import os
-from typing import Dict, List, Set, Tuple, cast
+from typing import Dict, List, Optional, Set, Tuple, cast
 import warnings
 
 from sympy import Expr
@@ -38,10 +38,10 @@ from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutp
 
 def perform_evolutionary_search(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[List[int]]],
+    available_decisions: Dict[FunctionRoot, List[Set[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
-) -> OptimizerOutputPattern:
+) -> Optional[OptimizerOutputPattern]:
     ### SETTINGS
     population_size = 50
     generations = 10
@@ -167,7 +167,7 @@ def __print_population(
 def __initialize(
     experiment: Experiment,
     population_size: int,
-    available_decisions: Dict[FunctionRoot, List[List[int]]],
+    available_decisions: Dict[FunctionRoot, List[Set[int]]],
     arguments: OptimizerArguments,
 ) -> List[List[int]]:
     return __fill_population(experiment, available_decisions, arguments, [], population_size)
@@ -195,7 +195,7 @@ def __parallel_get_random_configuration(param_tuple):
 
 def __fill_population(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[List[int]]],
+    available_decisions: Dict[FunctionRoot, List[Set[int]]],
     arguments: OptimizerArguments,
     population: List[List[int]],
     population_size: int,
@@ -209,21 +209,21 @@ def __fill_population(
     # select random candidates
     print("Filling the population...")
     param_list = [(None) for element in range(len(population), population_size)]
-    #    with Pool(
-    #        initializer=__initialize_fill_worker,
-    #        initargs=(
-    #            experiment,
-    #            available_decisions,
-    #            arguments,
-    #        ),
-    #    ) as pool:
-    #        tmp_result = list(
-    #            tqdm.tqdm(pool.imap_unordered(__parallel_get_random_configuration, param_list), total=len(param_list))
-    #        )
+    with Pool(
+        initializer=__initialize_fill_worker,
+        initargs=(
+            experiment,
+            available_decisions,
+            arguments,
+        ),
+    ) as pool:
+        tmp_result = list(
+            tqdm.tqdm(pool.imap_unordered(__parallel_get_random_configuration, param_list), total=len(param_list))
+        )
 
-    tmp_result = []
-    for p in param_list:
-        tmp_result.append(__parallel_get_random_configuration(p))
+#    tmp_result = []
+#    for p in param_list:
+#        tmp_result.append(__parallel_get_random_configuration(p))
 
     for local_result in tmp_result:
         population.append(local_result)
@@ -401,7 +401,7 @@ def __dump_result(
     population_size: int,
     generations: int,
     contexts: List[ContextObject],
-) -> OptimizerOutputPattern:
+) -> Optional[OptimizerOutputPattern]:
     # replace keys to allow dumping
     dumpable_dict = dict()
     for idx, key in enumerate(population):
@@ -443,7 +443,7 @@ def __dump_result(
                         pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
                     )
         if best_configuration is None:
-            raise ValueError("No Configuration created!")
+            return None
         # collect data movement information
         for update in contexts[idx].necessary_updates:
             best_configuration.add_data_movement(update)
@@ -458,7 +458,7 @@ def __dump_result(
 
 def __get_random_configuration(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[List[int]]],
+    available_decisions: Dict[FunctionRoot, List[Set[int]]],
     arguments: OptimizerArguments,
 ):
     while True:
@@ -466,7 +466,7 @@ def __get_random_configuration(
         # fill configuration
         for function in available_decisions:
             for decision_set in available_decisions[function]:
-                random_configuration.append(random.choice(decision_set))
+                random_configuration.append(random.choice(list(decision_set)))
 
         # validate configuration
         if check_configuration_validity(experiment, arguments, random_configuration):

@@ -188,10 +188,10 @@ def run(arguments: OptimizerArguments):
             optimizer_dir,
         )
 
-    best_configuration = optimize_updates(experiment, best_configuration, arguments)
-
-    # append the configuration to the list of patterns
-    experiment.detection_result.optimizer_output.append(best_configuration)
+    if best_configuration is not None:
+        best_configuration = optimize_updates(experiment, best_configuration, arguments)
+        # append the configuration to the list of patterns
+        experiment.detection_result.optimizer_output.append(best_configuration)
 
     # save full experiment to disk
     export_to_json(experiment, optimizer_dir)
