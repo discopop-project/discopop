@@ -145,7 +145,7 @@ def run(arguments: OptimizerArguments):
     # import parallelization suggestions
     experiment.optimization_graph = import_suggestions(experiment)
     # optimize parallelization suggestions
-    experiment.optimization_graph = optimize_suggestions(experiment)
+    # experiment.optimization_graph = optimize_suggestions(experiment)
 
     if arguments.plot:
         show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
