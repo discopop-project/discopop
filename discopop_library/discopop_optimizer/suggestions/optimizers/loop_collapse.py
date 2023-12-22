@@ -53,7 +53,7 @@ def collapse_loops(experiment: Experiment) -> nx.DiGraph:
     #            tqdm.tqdm(pool.imap_unordered(__collapse_loops_in_function, param_list), total=len(param_list))
     #        )
     for idx, function in enumerate(param_list):
-        print("COLLAPSE LOOPS IN FUNCTION: ", idx,"/", len(param_list))
+        print("COLLAPSE LOOPS IN FUNCTION: ", idx, "/", len(param_list))
         __collapse_loops_in_function(function)
 
     return global_graph
@@ -80,17 +80,15 @@ def __collapse_loops_in_function(function_node_id):
         if function_node_id in get_all_parents(global_graph, loop):
             relevant_loops.add(loop)
 
-    
-
     while modifiation_found:
         modifiation_found = False
 
-#        # set of loops could change when modifications are applied, hence the copy
-#        loops = get_all_loop_nodes(global_graph)
-        for loop in copy.deepcopy(relevant_loops):  
+        #        # set of loops could change when modifications are applied, hence the copy
+        #        loops = get_all_loop_nodes(global_graph)
+        for loop in copy.deepcopy(relevant_loops):
             loop_data = data_at(global_graph, loop)
-#            if function_node_id not in get_all_parents(global_graph, loop):
-#                continue
+            #            if function_node_id not in get_all_parents(global_graph, loop):
+            #                continue
             # loop contained in function
             # check for loop nesting
             queue: List[int] = get_parents(global_graph, loop)

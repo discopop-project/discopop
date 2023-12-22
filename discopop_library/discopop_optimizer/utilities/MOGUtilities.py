@@ -352,12 +352,14 @@ def get_all_function_nodes(graph: nx.DiGraph) -> List[int]:
             result_set.add(node_id)
     return list(result_set)
 
-def get_all_nodes_in_function(graph:nx.DiGraph, function_id: int) -> List[int]:
+
+def get_all_nodes_in_function(graph: nx.DiGraph, function_id: int) -> List[int]:
     result_list: List[int] = []
     for node_id in graph.nodes:
         if function_id in get_all_parents(graph, node_id):
             result_list.append(node_id)
     return result_list
+
 
 def get_nodes_by_functions(graph: nx.DiGraph) -> Dict[int, List[int]]:
     result_dict: Dict[int, List[int]] = dict()
@@ -451,13 +453,13 @@ def get_available_decisions_for_functions(
         print("Calculating available decisions per function...")
     available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
     param_list = [(function_node) for function_node in get_all_function_nodes(graph)]
-#    with Pool(
-#        initializer=__initialize_availability_worker,
-#        initargs=(graph, arguments),
-#    ) as pool:
-#        tmp_result = list(
-#            tqdm.tqdm(pool.imap_unordered(__parallel_get_decisions_from_node, param_list), total=len(param_list))
-#        )
+    #    with Pool(
+    #        initializer=__initialize_availability_worker,
+    #        initargs=(graph, arguments),
+    #    ) as pool:
+    #        tmp_result = list(
+    #            tqdm.tqdm(pool.imap_unordered(__parallel_get_decisions_from_node, param_list), total=len(param_list))
+    #        )
 
     tmp_result: List[Any] = []
     for p in param_list:
@@ -545,7 +547,9 @@ def __parallel_get_decisions_from_node(function_node):
         queue += [c for c in get_children(global_graph, current) if c not in queue and c not in visited]
         queue += [s for s in get_successors(global_graph, current) if s not in queue and s not in visited]
 
-        alternatives = set(get_out_mutex_edges(global_graph, current)).union(set(get_in_mutex_edges(global_graph, current)))
+        alternatives = set(get_out_mutex_edges(global_graph, current)).union(
+            set(get_in_mutex_edges(global_graph, current))
+        )
         if len(alternatives) == 0:
             continue
         # check if an existing decision set needs to be extended
@@ -558,17 +562,16 @@ def __parallel_get_decisions_from_node(function_node):
             decision_sets.append(alternatives)
     print(decision_sets)
     print()
-    
+
     # create combinations from decision sets
-#    combinations = list(itertools.product(*decision_sets))
-#    print("COMB:")
-#    for c in combinations: 
-#        print("->", c)
-    
+    #    combinations = list(itertools.product(*decision_sets))
+    #    print("COMB:")
+    #    for c in combinations:
+    #        print("->", c)
+
     decisions_list: List[List[int]] = []
     for dcs in decision_sets:
         decisions_list.append(list(dcs))
-
 
     return function_node, decisions_list
 
@@ -608,4 +611,4 @@ def __parallel_get_decisions_from_node(function_node):
 #                tmp_result += successor_paths
 #            return tmp_result
 
-    #return function_node, get_decisions_from_node(function_node, [])
+# return function_node, get_decisions_from_node(function_node, [])
