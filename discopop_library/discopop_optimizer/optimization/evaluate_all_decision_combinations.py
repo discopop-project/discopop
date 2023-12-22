@@ -48,54 +48,20 @@ def evaluate_all_decision_combinations(
 
     combinations: List[List[int]] = []
 
-    # DEBUG
-    print("# Available decisions:")
-    for f in available_decisions:
-        print("#", f.name)
-        for dec in available_decisions[f]:
-            print("# -> ", dec)
-
     combinations_by_function: Dict[FunctionRoot, List[Set[int]]] = dict()
     for function in available_decisions:
         combinations_by_function[function] = []
         for cmb in product(*available_decisions[function]):
             combinations_by_function[function].append(cmb)
-
-    # DEBUG
-    print("# Combinations by functions:")
-    for f in available_decisions:
-        print("#", f.name)
-        for c in combinations_by_function[f]:
-            print("# -> ", c)
-
-    # DEBUG
-    import sys
-    sys.exit(0)
-
-#    packed_decisions: List[List[List[int]]] = []
-#    for function in available_decisions:
-#        function_combination_list: List[List[int]] = []
-#        combinations_per_function = product(*available_decisions[function])
-#        for c in combinations_per_function:
-#            function_combination_list.append(list(c))
-#        packed_decisions.append(function_combination_list)
-#
-#    # create combinations of decisions
-#    raw_combinations: List[Tuple[List[int], ...]] = cast(List[Tuple[List[int], ...]], product(*packed_decisions))
-#    rc_copy: List[Tuple[List[int], ...]] = []
-#    for x in raw_combinations:
-#        rc_copy.append(x)
-#    # clean the combinations into List[int]
-#    combinations: List[List[int]] = []
-#    for tpl in rc_copy:
-#        tmp: List[int] = []
-#        for decision_list in tpl:
-#            for decision in decision_list:
-#                tmp.append(decision)
-#
-#        # check configuration validity
-#        if check_configuration_validity(experiment, arguments, tmp):
-#            combinations.append(tmp)
+    # get list of all valid combinations
+    combinations: List[List[int]] = []
+    for c in product(*combinations_by_function.values()):
+        combination_list: List[int] = []
+        for function_decisions in c:
+            for entry in function_decisions:
+                combination_list.append(entry)
+        if check_configuration_validity(experiment, arguments, combination_list):
+            combinations.append(combination_list)
 
     # evaluate each combination in parallel
     print("# Parallel calculation of costs of all decision combinations...")
