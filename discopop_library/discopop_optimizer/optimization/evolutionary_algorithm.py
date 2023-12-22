@@ -209,17 +209,22 @@ def __fill_population(
     # select random candidates
     print("Filling the population...")
     param_list = [(None) for element in range(len(population), population_size)]
-    with Pool(
-        initializer=__initialize_fill_worker,
-        initargs=(
-            experiment,
-            available_decisions,
-            arguments,
-        ),
-    ) as pool:
-        tmp_result = list(
-            tqdm.tqdm(pool.imap_unordered(__parallel_get_random_configuration, param_list), total=len(param_list))
-        )
+#    with Pool(
+#        initializer=__initialize_fill_worker,
+#        initargs=(
+#            experiment,
+#            available_decisions,
+#            arguments,
+#        ),
+#    ) as pool:
+#        tmp_result = list(
+#            tqdm.tqdm(pool.imap_unordered(__parallel_get_random_configuration, param_list), total=len(param_list))
+#        )
+    
+    tmp_result = []
+    for p in param_list:
+        tmp_result.append(__parallel_get_random_configuration(p))
+
     for local_result in tmp_result:
         population.append(local_result)
     return population
