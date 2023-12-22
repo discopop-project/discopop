@@ -79,8 +79,8 @@ def evaluate_all_decision_combinations(
     
     tmp_result = []
     for p in param_list:
-        tmp_result += __evaluate_configuration(p)
-        
+        tmp_result.append(__evaluate_configuration(p))
+
     for local_result in tmp_result:
         # result += local_result
         if local_result is not None:
@@ -143,7 +143,11 @@ def __evaluate_configuration(param_tuple):
     global global_experiment
     global global_arguments
     decisions = param_tuple
-    return evaluate_configuration(global_experiment, decisions, global_arguments)
+    try: 
+        return evaluate_configuration(global_experiment, decisions, global_arguments)
+    except ValueError as ve:
+        print(ve, "for :", param_tuple)
+        return None
 
 
 def __dump_result_to_file_using_pattern_ids(

@@ -23,7 +23,7 @@ from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calc
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_all_function_nodes
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_all_function_nodes, show
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
@@ -68,7 +68,7 @@ def evaluate_configuration(
             for m, c in function_performance_models[function]:
                 print("--> ", m.path_decisions)
         elif len(function_performance_models[function]) < 1:
-            raise ValueError("No generated models!")
+            raise ValueError("No generated models for function:", function.name, " for decisions: ", decisions)
         selected_function_models[function] = function_performance_models[function][0]
 
     # apply selected substitutions
@@ -121,5 +121,7 @@ def evaluate_configuration(
     result = sympy.re(result_model.parallelizable_costs + result_model.sequential_costs) + sympy.im(
         result_model.parallelizable_costs + result_model.sequential_costs
     )
+
+    print("RESULT: ", result)
 
     return (tuple(decisions), result, result_context)

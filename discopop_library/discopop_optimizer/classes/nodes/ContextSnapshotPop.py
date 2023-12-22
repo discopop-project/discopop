@@ -22,11 +22,6 @@ class ContextSnapshotPop(ContextNode):
     def get_modified_context(
         self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
     ) -> ContextObject:
-        print("SNAPSHOT STACK LENGTH PRE: ", len(context.snapshot_stack))
-        print("SAVE STACK LENGTH PRE: ", len(context.save_stack))
         context.snapshot_stack.pop()
         context.save_stack.pop()
-        print("SNAPSHOT STACK LENGTH POST: ", len(context.snapshot_stack))
-        print("SAVE STACK LENGTH POST: ", len(context.save_stack))
-        print()
         return context

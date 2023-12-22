@@ -25,13 +25,5 @@ class ContextSave(ContextNode):
     def get_modified_context(
         self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
     ) -> ContextObject:
-        print("SNAPSHOT STACK LENGTH POST: ", len(context.snapshot_stack))
-        print("SAVE STACK LENGTH POST: ", len(context.save_stack))
-        print()
-        if len(context.save_stack) == 0:
-            print("NODE_ID:", node_id)
-            show(graph)
-            import sys
-            sys.exit(0)
         context.save_stack[-1].append(copy.deepcopy(context))
         return context
