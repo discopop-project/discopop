@@ -8,7 +8,7 @@
 import copy
 import itertools
 from multiprocessing import Pool
-from typing import Any, ClassVar, Dict, List, cast, Set, Tuple
+from typing import Any, ClassVar, Dict, List, Optional, cast, Set, Tuple
 
 import matplotlib  # type: ignore
 import matplotlib.pyplot as plt  # type:ignore
@@ -65,6 +65,10 @@ def get_predecessors(graph: nx.DiGraph, node_id: int) -> List[int]:
 def get_children(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the children of the given node"""
     return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], ChildEdge)]
+
+def get_in_child_edges_sources(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns a list of node ids for the children of the given node"""
+    return [edge[0] for edge in graph.in_edges(node_id, data="data") if isinstance(edge[2], ChildEdge)]
 
 
 def get_out_options(graph: nx.DiGraph, node_id: int) -> List[int]:
@@ -403,6 +407,14 @@ def get_read_and_written_data_from_subgraph(
 
     return read_memory_regions, written_memory_regions
 
+def get_path_entry(graph: nx.DiGraph, node_id: int ) -> List[int]:
+    """Returns the first node in the successor path node_id belongs to."""
+    current_node = node_id
+    preds = get_predecessors(graph, current_node)
+    while len(preds) != 0:
+        current_node = preds[0]
+        preds = get_predecessors(graph, current_node)
+    return current_node
 
 def get_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns the first parent of node_id.

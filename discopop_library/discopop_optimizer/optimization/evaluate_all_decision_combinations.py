@@ -53,27 +53,34 @@ def evaluate_all_decision_combinations(
         combinations_by_function[function] = []
         for cmb in product(*available_decisions[function]):
             combinations_by_function[function].append(cmb)
-    # get list of all valid combinations
+    # get list of all combinations
     combinations: List[List[int]] = []
     for c in product(*combinations_by_function.values()):
         combination_list: List[int] = []
         for function_decisions in c:
             for entry in function_decisions:
                 combination_list.append(entry)
-        if check_configuration_validity(experiment, arguments, combination_list):
-            combinations.append(combination_list)
+        combinations.append(combination_list)
+    # remove invalid combinations
+    if check_configuration_validity(experiment, arguments, combination_list):
+        combinations.append(combination_list)
 
     # evaluate each combination in parallel
     print("# Parallel calculation of costs of all decision combinations...")
     param_list = [(combination_list) for combination_list in combinations]
-    with Pool(
-        initializer=__initialize_worker,
-        initargs=(
-            experiment,
-            arguments,
-        ),
-    ) as pool:
-        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__evaluate_configuration, param_list), total=len(param_list)))
+#    with Pool(
+#        initializer=__initialize_worker,
+#        initargs=(
+#            experiment,
+#            arguments,
+#        ),
+#    ) as pool:
+#        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__evaluate_configuration, param_list), total=len(param_list)))
+    
+    tmp_result = []
+    for p in param_list:
+        tmp_result += __evaluate_configuration(p)
+        
     for local_result in tmp_result:
         # result += local_result
         if local_result is not None:
