@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import warnings
 
 import networkx as nx  # type: ignore
 
@@ -25,5 +26,8 @@ class ContextSave(ContextNode):
     def get_modified_context(
         self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
     ) -> ContextObject:
+        if len(context.save_stack) < 1:
+            warnings.warn("Context can not be saved to an empty stack!")
+            return context
         context.save_stack[-1].append(copy.deepcopy(context))
         return context

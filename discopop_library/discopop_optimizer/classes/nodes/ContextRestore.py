@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import warnings
 
 import networkx as nx  # type: ignore
 
@@ -30,7 +31,8 @@ class ContextRestore(ContextNode):
         buffer_snapshot_stack = copy.deepcopy(context.snapshot_stack)
         # restore the latest entry in snapshot_stack
         if len(context.snapshot_stack) < 1:
-            raise ValueError("Context can not be restored before creating a snapshot!")
+            warnings.warn("Context can not be restored before creating a snapshot!")
+            return context
         restored_context: ContextObject = copy.deepcopy(context.snapshot_stack[-1])
 
         # add buffer to save_stack

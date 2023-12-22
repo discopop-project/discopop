@@ -81,7 +81,8 @@ class PETParser(object):
         print("added successor edges")
         self.__add_loop_nodes()
         print("added loop nodes")
-        self.__add_branch_return_node()
+        #self.__add_branch_return_node()
+        self.__add_function_return_node()
 
         # show(self.graph)
 
@@ -108,11 +109,35 @@ class PETParser(object):
         self.next_free_node_id += 1
         return buffer
 
+ 
+    def __add_function_return_node(self):
+        function_node_ids = get_all_function_nodes(self.graph)
+        dummy_return_nodes: Set[int] = set()
+        function_return_nodes: Dict[int, int] = dict()
+        for function in function_node_ids:
+            return_dummy_id = self.get_new_node_id()
+            self.graph.add_node(return_dummy_id, data=Workload(return_dummy_id, None, None, None, None))
+            function_return_nodes[function] = return_dummy_id
+            dummy_return_nodes.add(return_dummy_id)
+        
+        
+        for node in self.graph.nodes():
+            if node in dummy_return_nodes:
+                continue
+            if len(get_successors(self.graph, node)) == 0:
+                # node is end of path
+                # check if node is contained in function
+                parent_functions = [e for e in get_all_parents(self.graph, node) if e in function_node_ids]
+                if len(parent_functions) > 0:
+                    for parent_func in parent_functions:
+                        # connect end of path to the dummy return node
+                        add_successor_edge(self.graph, node, function_return_nodes[parent_func])
+                        print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
+
+    
     def __add_branch_return_node(self):
         """makes sure every branching section has a merge node"""
         path_return_nodes: Dict[int, int] = dict()
-#        function_node_ids = get_all_function_nodes(self.graph)
-        dummy_return_nodes: Set[int] = set()
 
         for node in copy.deepcopy(self.graph.nodes()):
             if len(get_successors(self.graph, node)) == 0:
@@ -126,27 +151,7 @@ class PETParser(object):
                 add_successor_edge(self.graph, node, path_return_nodes[path_entry])
                 print("ADDED EDGE: ", node, "->", path_return_nodes[path_entry])
 
-        
-#        for function in function_node_ids:
-#            return_dummy_id = self.get_new_node_id()
-#            self.graph.add_node(return_dummy_id, data=Workload(return_dummy_id, None, None, None, None))
-#            function_return_nodes[function] = return_dummy_id
-#            dummy_return_nodes.add(return_dummy_id)
-        
-        
-#        for node in self.graph.nodes():
-#            if node in dummy_return_nodes:
-#                continue
-#            if len(get_successors(self.graph, node)) == 0:
-#                # node is end of path
-#                # check if node is contained in function
-#                parent_functions = [e for e in get_all_parents(self.graph, node) if e in function_node_ids]
-#                if len(parent_functions) > 0:
-#                    for parent_func in parent_functions:
-#                        # connect end of path to the dummy return node
-#                        add_successor_edge(self.graph, node, function_return_nodes[parent_func])
-#                        print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
-
+    
     def __new_parse_branched_sections(self):
         """Branched sections in the CU Graph are represented by a serialized version in the MOG.
         To make this possible, Context Snapshot, Restore and Merge points are added to allow a synchronization
@@ -343,6 +348,8 @@ class PETParser(object):
             elif len(candidates) == 1:
                 merge_nodes[node] = list(candidates)[0]
             else:
+                print("More than one merge node identified for path split: " + str(node) + " : " + str(candidates))
+                show(self.graph)
                 raise ValueError(
                     "More than one merge node identified for path split: " + str(node) + " : " + str(candidates)
                 )

@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from typing import cast
+import warnings
 
 import networkx as nx  # type: ignore
 
@@ -25,7 +26,8 @@ class ContextMerge(ContextNode):
         self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
     ) -> ContextObject:
         if len(context.snapshot_stack) < 1 or len(context.save_stack) < 1:
-            raise ValueError("Context can not be merged before creating a snapshot!")
+            warnings.warn("Context can not be merged before creating a snapshot!")
+            return context
 
         context.last_seen_device_ids = cast(ContextObject, context.snapshot_stack[-1]).last_seen_device_ids
         for saved_contex in context.save_stack[-1]:
