@@ -30,15 +30,20 @@ class ContextMerge(ContextNode):
             return context
 
         context.last_seen_device_ids = context.snapshot_stack[-1][2]
+
         for saved_contex in context.save_stack[-1]:
             context.necessary_updates.update(saved_contex[1])
             for device_id in saved_contex[0]:
                 if device_id not in context.seen_writes_by_device:
                     context.seen_writes_by_device[device_id] = dict()
                 for mem_reg_id in saved_contex[0][device_id]:
-                    if mem_reg_id not in context.__get_seen_writes_by_device(device_id):
-                        context.__initialize_seen_writes_by_device(device_id, mem_reg_id)
-                    context.seen_writes_by_device[device_id][mem_reg_id].update(
-                        saved_contex[0][device_id][mem_reg_id]
-                    )
+                    if mem_reg_id not in context.get_seen_writes_by_device(device_id):
+                        context.initialize_seen_writes_by_device(device_id, mem_reg_id)
+                    if device_id not in context.seen_writes_by_device:
+                        context.seen_writes_by_device[device_id] = dict()
+                    if mem_reg_id not in context.seen_writes_by_device[device_id]:
+                        context.seen_writes_by_device[device_id][mem_reg_id] = set()
+                    context.seen_writes_by_device[device_id][mem_reg_id].update(saved_contex[0][device_id][mem_reg_id])
+
+            context.last_seen_device_ids.append(saved_contex[2])
         return context

@@ -33,7 +33,7 @@ class ContextSnapshot(ContextNode):
             )
         )
         context.seen_writes_by_device = dict()
-        context.last_seen_device_ids = []
+        context.last_seen_device_ids = [context.last_seen_device_ids[-1]]
         context.necessary_updates = set()
 
         context.save_stack.append([])
