@@ -81,7 +81,7 @@ class PETParser(object):
         print("added successor edges")
         self.__add_loop_nodes()
         print("added loop nodes")
-        #self.__add_branch_return_node()
+        # self.__add_branch_return_node()
         self.__add_function_return_node()
 
         # show(self.graph)
@@ -109,7 +109,6 @@ class PETParser(object):
         self.next_free_node_id += 1
         return buffer
 
- 
     def __add_function_return_node(self):
         function_node_ids = get_all_function_nodes(self.graph)
         dummy_return_nodes: Set[int] = set()
@@ -119,8 +118,7 @@ class PETParser(object):
             self.graph.add_node(return_dummy_id, data=Workload(return_dummy_id, None, None, None, None))
             function_return_nodes[function] = return_dummy_id
             dummy_return_nodes.add(return_dummy_id)
-        
-        
+
         for node in self.graph.nodes():
             if node in dummy_return_nodes:
                 continue
@@ -134,7 +132,6 @@ class PETParser(object):
                         add_successor_edge(self.graph, node, function_return_nodes[parent_func])
                         print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
 
-    
     def __add_branch_return_node(self):
         """makes sure every branching section has a merge node"""
         path_return_nodes: Dict[int, int] = dict()
@@ -145,13 +142,14 @@ class PETParser(object):
                 if path_entry not in path_return_nodes:
                     # create new dummy return node
                     dummy_return_node_id = self.get_new_node_id()
-                    self.graph.add_node(dummy_return_node_id, data=Workload(dummy_return_node_id, self.experiment, None, None, None))
+                    self.graph.add_node(
+                        dummy_return_node_id, data=Workload(dummy_return_node_id, self.experiment, None, None, None)
+                    )
                     path_return_nodes[path_entry] = dummy_return_node_id
                 # connect to existing return node
                 add_successor_edge(self.graph, node, path_return_nodes[path_entry])
                 print("ADDED EDGE: ", node, "->", path_return_nodes[path_entry])
 
-    
     def __new_parse_branched_sections(self):
         """Branched sections in the CU Graph are represented by a serialized version in the MOG.
         To make this possible, Context Snapshot, Restore and Merge points are added to allow a synchronization

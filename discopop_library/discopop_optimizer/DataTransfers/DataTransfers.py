@@ -51,7 +51,7 @@ def get_path_context_iterative(
         node_data = data_at(graph, node_id)
         if node_data.device_id is not None:
             context.last_seen_device_ids.append(node_data.device_id)
-        
+
         # calculate context modifications for the current node
         context = __check_current_node(node_id, graph, model, context, experiment)
 
@@ -86,7 +86,10 @@ def get_path_context_iterative(
                 if len(requirements) == 0:
                     # select the sequential version
                     for succ in successors:
-                        if data_at(graph, succ).represents_sequential_version() and data_at(graph, succ).device_id in [None, experiment.get_system().get_host_device_id()]:
+                        if data_at(graph, succ).represents_sequential_version() and data_at(graph, succ).device_id in [
+                            None,
+                            experiment.get_system().get_host_device_id(),
+                        ]:
                             suitable_successors = [succ]
                             model.path_decisions.append(succ)
                             break
@@ -162,7 +165,10 @@ def get_path_context(
             if len(requirements) == 0:
                 # select the sequential version
                 for succ in successors:
-                    if data_at(graph, succ).represents_sequential_version() and data_at(graph, succ).device_id in [None, experiment.get_system().get_host_device_id()]:
+                    if data_at(graph, succ).represents_sequential_version() and data_at(graph, succ).device_id in [
+                        None,
+                        experiment.get_system().get_host_device_id(),
+                    ]:
                         suitable_successors = [succ]
                         model.path_decisions.append(succ)
                         break

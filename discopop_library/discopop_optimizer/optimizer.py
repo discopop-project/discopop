@@ -139,7 +139,7 @@ def run(arguments: OptimizerArguments):
     if arguments.verbose:
         print("Creating optimization graph...")
     create_optimization_graph(experiment, arguments)
-    
+
     if arguments.verbose:
         print("Done.")
     # import parallelization suggestions

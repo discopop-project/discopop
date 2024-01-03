@@ -63,7 +63,6 @@ def evaluate_all_decision_combinations(
         # remove invalid combinations
         if check_configuration_validity(experiment, arguments, combination_list):
             combinations.append(combination_list)
-    
 
     # evaluate each combination in parallel
     print("# Parallel calculation of costs of all decision combinations...")
@@ -76,10 +75,10 @@ def evaluate_all_decision_combinations(
         ),
     ) as pool:
         tmp_result = list(tqdm.tqdm(pool.imap_unordered(__evaluate_configuration, param_list), total=len(param_list)))
-    
-#    tmp_result = []
-#    for p in param_list:
-#        tmp_result.append(__evaluate_configuration(p))
+
+    #    tmp_result = []
+    #    for p in param_list:
+    #        tmp_result.append(__evaluate_configuration(p))
 
     for local_result in tmp_result:
         # result += local_result
@@ -142,7 +141,7 @@ def __initialize_worker(
 def __evaluate_configuration(param_tuple):
     global global_experiment
     global global_arguments
-    decisions = param_tuple    
+    decisions = param_tuple
     return evaluate_configuration(global_experiment, decisions, global_arguments)
 
 

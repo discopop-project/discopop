@@ -221,9 +221,9 @@ def __fill_population(
             tqdm.tqdm(pool.imap_unordered(__parallel_get_random_configuration, param_list), total=len(param_list))
         )
 
-#    tmp_result = []
-#    for p in param_list:
-#        tmp_result.append(__parallel_get_random_configuration(p))
+    #    tmp_result = []
+    #    for p in param_list:
+    #        tmp_result.append(__parallel_get_random_configuration(p))
 
     for local_result in tmp_result:
         population.append(local_result)
@@ -479,7 +479,6 @@ def __get_random_configuration(
                 random_configuration.append(random_decision)
                 requirements.update(get_requirements(experiment.optimization_graph, random_decision))
                 excluded.update(get_out_mutex_edges(experiment.optimization_graph, random_decision))
-
 
         # validate configuration
         if check_configuration_validity(experiment, arguments, random_configuration):
