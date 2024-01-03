@@ -458,7 +458,7 @@ def __dump_result(
 
 def __get_random_configuration(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[Set[int]]],
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
 ):
     while True:
@@ -468,7 +468,8 @@ def __get_random_configuration(
             excluded: Set[int] = set()
             requirements: Set[int] = set()
 
-            for decision_set in available_decisions[function]:
+            for decision_list in available_decisions[function]:
+                decision_set = set(decision_list)
                 decision_set = decision_set - (decision_set & excluded)
                 reduced_decision_set = decision_set.intersection(requirements)
                 if len(reduced_decision_set) != 0:
