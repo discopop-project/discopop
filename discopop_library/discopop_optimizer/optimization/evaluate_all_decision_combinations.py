@@ -33,7 +33,7 @@ global_arguments = None
 
 def evaluate_all_decision_combinations(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[Set[int]]],
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
 ) -> Optional[OptimizerOutputPattern]:
@@ -46,9 +46,7 @@ def evaluate_all_decision_combinations(
     costs_dict: Dict[Tuple[int, ...], Expr] = dict()
     contexts_dict: Dict[Tuple[int, ...], ContextObject] = dict()
 
-    combinations: List[List[int]] = []
-
-    combinations_by_function: Dict[FunctionRoot, List[Set[int]]] = dict()
+    combinations_by_function: Dict[FunctionRoot, List[Tuple[int, ...]]] = dict()
     for function in available_decisions:
         combinations_by_function[function] = []
         for cmb in product(*available_decisions[function]):

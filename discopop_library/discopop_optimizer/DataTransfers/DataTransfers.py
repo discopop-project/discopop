@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Dict, List, Tuple, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 import networkx as nx  # type: ignore
 
@@ -42,7 +42,7 @@ def get_path_context_iterative(
 ) -> ContextObject:
     """passes the context Object along the path and returns the context once the end has been reached"""
     node_id = None
-    next_node_id = root_node_id
+    next_node_id: Optional[int] = root_node_id
 
     while next_node_id is not None:
         node_id = next_node_id
@@ -59,8 +59,8 @@ def get_path_context_iterative(
         context = __check_children(node_id, graph, model, context, experiment)
 
         # pop device id from stack if necessary
-#        if node_data.device_id is not None:
-#            context.last_seen_device_ids.pop()
+        #        if node_data.device_id is not None:
+        #            context.last_seen_device_ids.pop()
 
         # set last_visited_node_id to the original node_id,
         # since the calculation continues from node_id after the children have been visited

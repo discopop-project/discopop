@@ -416,7 +416,7 @@ def get_path_entry(graph: nx.DiGraph, node_id: int) -> List[int]:
     while len(preds) != 0:
         current_node = preds[0]
         preds = get_predecessors(graph, current_node)
-    return current_node
+    return [current_node]
 
 
 def get_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
@@ -466,7 +466,7 @@ def get_available_decisions_for_functions(
 
     if arguments.verbose:
         print("Calculating available decisions per function...")
-    available_decisions: Dict[FunctionRoot, List[Set[int]]] = dict()
+    available_decisions: Dict[FunctionRoot, List[List[int]]] = dict()
     param_list = [(function_node) for function_node in get_all_function_nodes(graph)]
     #    with Pool(
     #        initializer=__initialize_availability_worker,
@@ -586,7 +586,12 @@ def __parallel_get_decisions_from_node(function_node):
     #    for c in combinations:
     #        print("->", c)
 
-    return function_node, decision_sets
+    # convert sets to lists
+    decision_lists: List[List[int]] = []
+    for ds in decision_sets:
+        decision_lists.append(list(ds))
+
+    return function_node, decision_lists
 
 
 #    def get_decisions_from_node(node_id, prev_decisions: List[int]) -> List[List[int]]:

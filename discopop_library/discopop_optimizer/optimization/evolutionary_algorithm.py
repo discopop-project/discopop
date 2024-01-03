@@ -38,7 +38,7 @@ from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutp
 
 def perform_evolutionary_search(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[Set[int]]],
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
 ) -> Optional[OptimizerOutputPattern]:
@@ -167,7 +167,7 @@ def __print_population(
 def __initialize(
     experiment: Experiment,
     population_size: int,
-    available_decisions: Dict[FunctionRoot, List[Set[int]]],
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
 ) -> List[List[int]]:
     return __fill_population(experiment, available_decisions, arguments, [], population_size)
@@ -195,7 +195,7 @@ def __parallel_get_random_configuration(param_tuple):
 
 def __fill_population(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[Set[int]]],
+    available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     population: List[List[int]],
     population_size: int,
@@ -205,7 +205,7 @@ def __fill_population(
     global global_available_decisions
     global_experiment = experiment
     global_arguments = arguments
-    global_available_decisions = available_decisions
+    global_available_decisions = available_decisions  # type: ignore
     # select random candidates
     print("Filling the population...")
     param_list = [(None) for element in range(len(population), population_size)]

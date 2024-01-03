@@ -29,7 +29,9 @@ class ContextSave(ContextNode):
         if len(context.save_stack) < 1:
             warnings.warn("Context can not be saved to an empty stack!")
             return context
-        context.save_stack[-1].append((context.seen_writes_by_device, context.necessary_updates, context.last_seen_device_ids[-1]))
+        context.save_stack[-1].append(
+            (context.seen_writes_by_device, context.necessary_updates, context.last_seen_device_ids[-1])
+        )
         context.seen_writes_by_device = dict()
         context.necessary_updates = set()
         return context

@@ -198,7 +198,7 @@ class ContextObject(object):
     def get_seen_writes_by_device(self, device_id: DeviceID) -> Dict[MemoryRegion, Set[WriteDataAccess]]:
         seen_dict: Dict[MemoryRegion, Set[WriteDataAccess]] = dict()
 
-        # collect seen writes from stack 
+        # collect seen writes from stack
         for stack_entry in self.snapshot_stack:
             if device_id in stack_entry[0]:
                 for memory_region in stack_entry[0][device_id]:
@@ -212,9 +212,8 @@ class ContextObject(object):
                 if memory_region not in seen_dict:
                     seen_dict[memory_region] = set()
                 seen_dict[memory_region].update(self.seen_writes_by_device[device_id][memory_region])
-        
-        return seen_dict
 
+        return seen_dict
 
     def initialize_seen_writes_by_device(self, device_id: DeviceID, memory_region: MemoryRegion):
         if device_id not in self.seen_writes_by_device:
@@ -233,8 +232,8 @@ class ContextObject(object):
         for stack_entry in self.snapshot_stack:
             for device_id in stack_entry[0]:
                 seen_devices.add(device_id)
-        
+
         for device_id in self.seen_writes_by_device:
             seen_devices.add(device_id)
-        
+
         return seen_devices

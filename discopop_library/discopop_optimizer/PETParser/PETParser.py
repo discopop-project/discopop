@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
-from typing import Dict, List, Optional, Tuple, Set
+from typing import Dict, List, Optional, Tuple, Set, cast
 
 import networkx as nx  # type: ignore
 import warnings
@@ -189,7 +189,7 @@ class PETParser(object):
             if merge_nodes[split_node] is None:
                 raise ValueError("No branching without merge allowed!")
             for branch_entry in get_successors(self.graph, split_node):
-                for branch_exit in get_predecessors(self.graph, merge_nodes[split_node]):
+                for branch_exit in get_predecessors(self.graph, cast(int, merge_nodes[split_node])):
                     if branch_exit == split_node and branch_entry == merge_nodes[split_node]:
                         empty_branches.add((branch_exit, branch_entry))
 
@@ -224,7 +224,7 @@ class PETParser(object):
                 empty_branches: Set[Tuple[int, int]] = set()
 
                 for branch_entry in get_successors(self.graph, split_node):
-                    for branch_exit in get_predecessors(self.graph, merge_nodes[split_node]):
+                    for branch_exit in get_predecessors(self.graph, cast(int, merge_nodes[split_node])):
                         if branch_exit == split_node and branch_entry == merge_nodes[split_node]:
                             empty_branches.add((branch_entry, branch_exit))
 
@@ -237,7 +237,7 @@ class PETParser(object):
                 # initialize dicts
                 for branch_entry in get_successors(self.graph, split_node):
                     branch_entry_to_updated_entry[branch_entry] = branch_entry
-                for branch_exit in get_predecessors(self.graph, merge_nodes[split_node]):
+                for branch_exit in get_predecessors(self.graph, cast(int, merge_nodes[split_node])):
                     branch_exit_to_updated_exit[branch_exit] = branch_exit
 
                 # create context snapshot
@@ -270,19 +270,21 @@ class PETParser(object):
                     context_snapshot_pop_node_id, data=ContextSnapshotPop(context_snapshot_pop_node_id, self.experiment)
                 )
                 add_temporary_edge(self.graph, context_merge_node_id, context_snapshot_pop_node_id)
-                add_temporary_edge(self.graph, context_snapshot_pop_node_id, merge_nodes[split_node])
+                add_temporary_edge(self.graph, context_snapshot_pop_node_id, cast(int, merge_nodes[split_node]))
                 node_list.append(context_merge_node_id)
                 node_list.append(context_snapshot_pop_node_id)
 
                 # create branch exits
-                for predecessor in get_predecessors(self.graph, merge_nodes[split_node]):
+                for predecessor in get_predecessors(self.graph, cast(int, merge_nodes[split_node])):
                     # create context save node
                     context_save_node_id = self.get_new_node_id()
                     self.graph.add_node(context_save_node_id, data=ContextSave(context_save_node_id, self.experiment))
                     node_list.append(context_save_node_id)
                     # connect context save node
                     add_temporary_edge(self.graph, context_save_node_id, context_merge_node_id)
-                    redirect_edge(self.graph, predecessor, predecessor, merge_nodes[split_node], context_save_node_id)
+                    redirect_edge(
+                        self.graph, predecessor, predecessor, cast(int, merge_nodes[split_node]), context_save_node_id
+                    )
                     branch_exit_to_updated_exit[predecessor] = context_save_node_id
 
                 # linearize the branched section by concatenating all branches
