@@ -21,6 +21,7 @@ class OptimizerArguments(object):
     allow_nested_parallelism: bool
     plot: bool
     system_configuration_path: str
+    check_called_function_for_nested_parallelism: bool
 
     def __post_init__(self):
         self.__validate()

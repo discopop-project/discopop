@@ -10,7 +10,7 @@ import copy
 import json
 from multiprocessing import Pool
 import os
-from typing import Dict, List, Tuple, cast
+from typing import Dict, List, Optional, Set, Tuple, cast
 import warnings
 
 from sympy import Expr
@@ -38,13 +38,13 @@ from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutp
 
 def perform_evolutionary_search(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[List[int]]],
+    available_decisions: Dict[FunctionRoot, List[Set[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
-) -> OptimizerOutputPattern:
+) -> Optional[OptimizerOutputPattern]:
     ### SETTINGS
-    population_size = 50
-    generations = 10
+    population_size = 4
+    generations = 2
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
     crossovers = int(population_size / 10)
     mutations = int(population_size / 10)
@@ -167,7 +167,7 @@ def __print_population(
 def __initialize(
     experiment: Experiment,
     population_size: int,
-    available_decisions: Dict[FunctionRoot, List[List[int]]],
+    available_decisions: Dict[FunctionRoot, List[Set[int]]],
     arguments: OptimizerArguments,
 ) -> List[List[int]]:
     return __fill_population(experiment, available_decisions, arguments, [], population_size)
@@ -195,7 +195,7 @@ def __parallel_get_random_configuration(param_tuple):
 
 def __fill_population(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[List[int]]],
+    available_decisions: Dict[FunctionRoot, List[Set[int]]],
     arguments: OptimizerArguments,
     population: List[List[int]],
     population_size: int,
@@ -220,6 +220,11 @@ def __fill_population(
         tmp_result = list(
             tqdm.tqdm(pool.imap_unordered(__parallel_get_random_configuration, param_list), total=len(param_list))
         )
+
+    #    tmp_result = []
+    #    for p in param_list:
+    #        tmp_result.append(__parallel_get_random_configuration(p))
+
     for local_result in tmp_result:
         population.append(local_result)
     return population
@@ -396,7 +401,7 @@ def __dump_result(
     population_size: int,
     generations: int,
     contexts: List[ContextObject],
-) -> OptimizerOutputPattern:
+) -> Optional[OptimizerOutputPattern]:
     # replace keys to allow dumping
     dumpable_dict = dict()
     for idx, key in enumerate(population):
@@ -438,7 +443,7 @@ def __dump_result(
                         pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
                     )
         if best_configuration is None:
-            raise ValueError("No Configuration created!")
+            return None
         # collect data movement information
         for update in contexts[idx].necessary_updates:
             best_configuration.add_data_movement(update)
@@ -453,15 +458,29 @@ def __dump_result(
 
 def __get_random_configuration(
     experiment: Experiment,
-    available_decisions: Dict[FunctionRoot, List[List[int]]],
+    available_decisions: Dict[FunctionRoot, List[Set[int]]],
     arguments: OptimizerArguments,
 ):
     while True:
         random_configuration: List[int] = []
         # fill configuration
         for function in available_decisions:
-            random_configuration += random.choice(available_decisions[function])
+            excluded: Set[int] = set()
+            requirements: Set[int] = set()
+
+            for decision_set in available_decisions[function]:
+                decision_set = decision_set - (decision_set & excluded)
+                reduced_decision_set = decision_set.intersection(requirements)
+                if len(reduced_decision_set) != 0:
+                    print("Drawing from reduced set: ", reduced_decision_set)
+                    random_decision = random.choice(list(reduced_decision_set))
+                else:
+                    random_decision = random.choice(list(decision_set))
+                random_configuration.append(random_decision)
+                requirements.update(get_requirements(experiment.optimization_graph, random_decision))
+                excluded.update(get_out_mutex_edges(experiment.optimization_graph, random_decision))
 
         # validate configuration
         if check_configuration_validity(experiment, arguments, random_configuration):
+            print("FOUND VALID CONFIG: ", random_configuration)
             return random_configuration

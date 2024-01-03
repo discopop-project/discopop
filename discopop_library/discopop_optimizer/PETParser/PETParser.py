@@ -35,7 +35,11 @@ from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     add_dataflow_edge,
+    get_all_nodes_in_function,
     get_all_parents,
+    get_nodes_by_functions,
+    get_parents,
+    get_path_entry,
     get_predecessors,
     get_successors,
     get_children,
@@ -77,23 +81,23 @@ class PETParser(object):
         print("added successor edges")
         self.__add_loop_nodes()
         print("added loop nodes")
+        # self.__add_branch_return_node()
         self.__add_function_return_node()
 
-        #show(self.graph)
-
+        # show(self.graph)
 
         self.__new_parse_branched_sections()
         print("NEW parsed branched sections")
-        #show(self.graph)
+        # show(self.graph)
 
-#        self.__parse_branched_sections()
-#        print("parsed branched sections")
-        
+        #        self.__parse_branched_sections()
+        #        print("parsed branched sections")
+
         convert_temporary_edges(self.graph)
         print("converted temporary edges")
 
-        self.__mark_branch_affiliation()
-        print("marked branch affiliations")
+        #        self.__mark_branch_affiliation()
+        #        print("marked branch affiliations")
         self.__calculate_data_flow()
         print("calculated data flow")
 
@@ -105,17 +109,16 @@ class PETParser(object):
         self.next_free_node_id += 1
         return buffer
 
-
     def __add_function_return_node(self):
-        """makes sure every branching section has a merge node"""
-        function_return_nodes: Dict[int, int] = dict()
         function_node_ids = get_all_function_nodes(self.graph)
         dummy_return_nodes: Set[int] = set()
+        function_return_nodes: Dict[int, int] = dict()
         for function in function_node_ids:
             return_dummy_id = self.get_new_node_id()
             self.graph.add_node(return_dummy_id, data=Workload(return_dummy_id, None, None, None, None))
             function_return_nodes[function] = return_dummy_id
             dummy_return_nodes.add(return_dummy_id)
+
         for node in self.graph.nodes():
             if node in dummy_return_nodes:
                 continue
@@ -129,49 +132,59 @@ class PETParser(object):
                         add_successor_edge(self.graph, node, function_return_nodes[parent_func])
                         print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
 
+    def __add_branch_return_node(self):
+        """makes sure every branching section has a merge node"""
+        path_return_nodes: Dict[int, int] = dict()
 
+        for node in copy.deepcopy(self.graph.nodes()):
+            if len(get_successors(self.graph, node)) == 0:
+                path_entry = get_path_entry(self.graph, node)
+                if path_entry not in path_return_nodes:
+                    # create new dummy return node
+                    dummy_return_node_id = self.get_new_node_id()
+                    self.graph.add_node(
+                        dummy_return_node_id, data=Workload(dummy_return_node_id, self.experiment, None, None, None)
+                    )
+                    path_return_nodes[path_entry] = dummy_return_node_id
+                # connect to existing return node
+                add_successor_edge(self.graph, node, path_return_nodes[path_entry])
+                print("ADDED EDGE: ", node, "->", path_return_nodes[path_entry])
 
-    
     def __new_parse_branched_sections(self):
         """Branched sections in the CU Graph are represented by a serialized version in the MOG.
         To make this possible, Context Snapshot, Restore and Merge points are added to allow a synchronization
         'between' the different branches"""
-        
-        post_dominators = self.__get_post_dominators()
-        print("POST DOMINATORS: ")
-        for node_id in post_dominators:
-            print("->", node_id, post_dominators[node_id])
 
-        path_splits = self.__get_path_splits()
-        merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
-        
+        all_functions = get_all_function_nodes(self.graph)
+        nodes_by_functions = get_nodes_by_functions(self.graph)
+        for idx, function in enumerate(all_functions):
+            print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
+            nodes_in_function = nodes_by_functions[function]
 
-        print("PATH SPLITS AND MERGE NODES")
-        for node in path_splits:
-            print("->", node)
-            print("\t-> merge: ", merge_nodes[node])
+            post_dominators = self.__get_post_dominators(nodes_in_function)
 
-        self.__fix_empty_branches(merge_nodes, post_dominators)
-        
-        # re-calculate post_dominators and merge nodes
-        post_dominators = self.__get_post_dominators()
-        path_splits = self.__get_path_splits()
-        merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
+            path_splits = self.__get_path_splits(nodes_in_function)
+            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
-        # merge_nodes, post_dominators = self.__fix_missing_merge_nodes(merge_nodes, post_dominators)
+            added_node_ids = self.__fix_empty_branches(merge_nodes, post_dominators)
+            nodes_in_function = list(set(nodes_in_function).union(set(added_node_ids)))
 
-        # show(self.graph)
+            # re-calculate post_dominators and merge nodes
+            #            post_dominators = self.__get_post_dominators(nodes_in_function)
+            #            path_splits = self.__get_path_splits(nodes_in_function)
+            #            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
-        # todo reactivate
-        self.__insert_context_nodes()
-        show(self.graph)
+            self.__insert_context_nodes(nodes_in_function)
+            # show(self.graph)
 
-        #import sys
-        #sys.exit(0)
+            # import sys
+            # sys.exit(0)
 
-    def __fix_empty_branches(self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]) -> Tuple[Dict[int, int], Dict[int, Set[int]]]:
+    def __fix_empty_branches(
+        self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]
+    ) -> List[int]:
         """do not allow empty branches. Adds an empty dummy node if necessary"""
-        empty_branches: Set[Tuple[int,int]] = set()
+        empty_branches: Set[Tuple[int, int]] = set()
         for split_node in merge_nodes:
             if merge_nodes[split_node] is None:
                 raise ValueError("No branching without merge allowed!")
@@ -179,33 +192,27 @@ class PETParser(object):
                 for branch_exit in get_predecessors(self.graph, merge_nodes[split_node]):
                     if branch_exit == split_node and branch_entry == merge_nodes[split_node]:
                         empty_branches.add((branch_exit, branch_entry))
-                
-        print("EMPTY BRANCHES: ", empty_branches)
+
+        added_node_ids: List[int] = []
         for entry, exit in empty_branches:
             dummy_node_id = self.get_new_node_id()
             self.graph.add_node(dummy_node_id, data=Workload(dummy_node_id, self.experiment, None, None, None))
             print("Added dummy node: ", entry, "->", dummy_node_id, "->", exit)
             redirect_edge(self.graph, entry, entry, exit, dummy_node_id)
             add_successor_edge(self.graph, dummy_node_id, exit)
-        return
-        
-    
+            added_node_ids.append(dummy_node_id)
+        return added_node_ids
 
-    def __insert_context_nodes(self):
+    def __insert_context_nodes(self, node_list: List[int]):
         """flattens the graph via inserting context nodes"""
         modification_found = True
         while modification_found:
             modification_found = False
-            post_dominators = self.__get_post_dominators()
-            path_splits = self.__get_path_splits()
+            post_dominators = self.__get_post_dominators(node_list)
+            path_splits = self.__get_path_splits(node_list)
             merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
-            print("INSERT CONTEXT NODES ITERATION")
-
             for split_node in merge_nodes:
-                print("PATH SPLIT @", split_node)
-                print("\tmerge: ", merge_nodes[split_node])
-
                 if merge_nodes[split_node] is None:
                     # no merge exists -> no merge necessary since a return is encountered
                     continue
@@ -213,16 +220,15 @@ class PETParser(object):
                 # save information for later linearization step
                 branch_entry_to_exit: Dict[int, int] = dict()
                 branch_entry_to_updated_entry: Dict[int, int] = dict()
-                branch_exit_to_updated_exit: Dict[int , int] = dict()
-                empty_branches: Set[Tuple[int,int]] = set()
+                branch_exit_to_updated_exit: Dict[int, int] = dict()
+                empty_branches: Set[Tuple[int, int]] = set()
 
                 for branch_entry in get_successors(self.graph, split_node):
                     for branch_exit in get_predecessors(self.graph, merge_nodes[split_node]):
                         if branch_exit == split_node and branch_entry == merge_nodes[split_node]:
                             empty_branches.add((branch_entry, branch_exit))
-                        
+
                         if branch_entry not in post_dominators:
-                            print("NOT IN: ", branch_entry)
                             continue
                         if branch_exit in post_dominators[branch_entry]:
                             branch_entry_to_exit[branch_entry] = branch_exit
@@ -237,8 +243,8 @@ class PETParser(object):
                 # create context snapshot
                 context_snapshot_id = self.get_new_node_id()
                 self.graph.add_node(context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.experiment))
+                node_list.append(context_snapshot_id)
                 add_temporary_edge(self.graph, split_node, context_snapshot_id)
-
 
                 # create branch entries
                 for successor in get_successors(self.graph, split_node):
@@ -248,58 +254,57 @@ class PETParser(object):
                         branch_context_restore_id,
                         data=ContextRestore(branch_context_restore_id, self.experiment),
                     )
+                    node_list.append(branch_context_restore_id)
                     add_temporary_edge(self.graph, context_snapshot_id, branch_context_restore_id)
 
                     # redirect branch to restore node
                     redirect_edge(self.graph, split_node, branch_context_restore_id, successor, successor)
                     branch_entry_to_updated_entry[successor] = branch_context_restore_id
                     modification_found = True
-                
+
                 # create and connect create merge node and snapshot pop node
                 context_merge_node_id = self.get_new_node_id()
                 self.graph.add_node(context_merge_node_id, data=ContextMerge(context_merge_node_id, self.experiment))
                 context_snapshot_pop_node_id = self.get_new_node_id()
-                self.graph.add_node(context_snapshot_pop_node_id, data=ContextSnapshotPop(context_snapshot_pop_node_id, self.experiment))
+                self.graph.add_node(
+                    context_snapshot_pop_node_id, data=ContextSnapshotPop(context_snapshot_pop_node_id, self.experiment)
+                )
                 add_temporary_edge(self.graph, context_merge_node_id, context_snapshot_pop_node_id)
                 add_temporary_edge(self.graph, context_snapshot_pop_node_id, merge_nodes[split_node])
+                node_list.append(context_merge_node_id)
+                node_list.append(context_snapshot_pop_node_id)
 
                 # create branch exits
                 for predecessor in get_predecessors(self.graph, merge_nodes[split_node]):
                     # create context save node
                     context_save_node_id = self.get_new_node_id()
                     self.graph.add_node(context_save_node_id, data=ContextSave(context_save_node_id, self.experiment))
+                    node_list.append(context_save_node_id)
                     # connect context save node
                     add_temporary_edge(self.graph, context_save_node_id, context_merge_node_id)
                     redirect_edge(self.graph, predecessor, predecessor, merge_nodes[split_node], context_save_node_id)
                     branch_exit_to_updated_exit[predecessor] = context_save_node_id
 
                 # linearize the branched section by concatenating all branches
-                print(branch_entry_to_exit)
-                print(branch_entry_to_updated_entry)
-                print(branch_exit_to_updated_exit)
                 last_node_id = context_snapshot_id
                 for entry in branch_entry_to_exit:
                     if last_node_id != context_snapshot_id:
-                        self.graph.remove_edge(last_node_id, context_merge_node_id)                
+                        self.graph.remove_edge(last_node_id, context_merge_node_id)
                     exit = branch_entry_to_exit[entry]
                     updated_entry = branch_entry_to_updated_entry[entry]
                     updated_exit = branch_exit_to_updated_exit[exit]
-                    print("entry: ", updated_entry)
-                    print("exit: ", updated_exit)
                     # redirect entry
                     redirect_edge(self.graph, context_snapshot_id, last_node_id, updated_entry, updated_entry)
-    #
-    #
                     last_node_id = updated_exit
 
-    #            # linearize empty branches
-    #            for entry,  exit in empty_branches:
-    #                updated_entry = branch_entry_to_updated_entry[entry]
-    #                updated_exit = branch_exit_to_updated_exit[updated_entry]
-    #                print("EMPTY: ", entry, exit)
-    #                # redirect entry
-    #                redirect_edge(self.graph, context_snapshot_id, last_node_id, updated_entry, updated_entry)
-    #                last_node_id = updated_exit
+                #            # linearize empty branches
+                #            for entry,  exit in empty_branches:
+                #                updated_entry = branch_entry_to_updated_entry[entry]
+                #                updated_exit = branch_exit_to_updated_exit[updated_entry]
+                #                print("EMPTY: ", entry, exit)
+                #                # redirect entry
+                #                redirect_edge(self.graph, context_snapshot_id, last_node_id, updated_entry, updated_entry)
+                #                last_node_id = updated_exit
 
                 # connect exit of linearized section
                 # add_temporary_edge(self.graph, last_node_id, context_merge_node_id)
@@ -308,12 +313,10 @@ class PETParser(object):
                 if modification_found:
                     break
             convert_temporary_edges(self.graph)
-                
 
-
-
-
-    def __get_merge_nodes(self, path_splits: Set[int], post_dominators: Dict[int, Set[int]]) -> Dict[int, Optional[int]]:
+    def __get_merge_nodes(
+        self, path_splits: Set[int], post_dominators: Dict[int, Set[int]]
+    ) -> Dict[int, Optional[int]]:
         """Calculates and returns the merge nodes for paths starting a the given node"""
         merge_nodes: Dict[int, Optional[int]] = dict()
         for node in path_splits:
@@ -321,7 +324,7 @@ class PETParser(object):
             candidates = post_dominators[node]
             for succ in successors:
                 candidates = candidates.intersection(post_dominators[succ])
-        
+
             # cleanup candidates to get the earliest merge
             modification_found = True
             while modification_found:
@@ -336,54 +339,49 @@ class PETParser(object):
                             break
                     if modification_found:
                         break
-            
+
             # prepare return value
             if len(candidates) == 0:
                 merge_nodes[node] = None
             elif len(candidates) == 1:
                 merge_nodes[node] = list(candidates)[0]
             else:
-                raise ValueError("More than one merge node identified for path split: " + str(node) + " : " + str(candidates))
+                print("More than one merge node identified for path split: " + str(node) + " : " + str(candidates))
+                show(self.graph)
+                raise ValueError(
+                    "More than one merge node identified for path split: " + str(node) + " : " + str(candidates)
+                )
         return merge_nodes
-        
 
-
-    def __get_path_splits(self) -> Set[int]:
+    def __get_path_splits(self, node_list: List[int]) -> Set[int]:
         """Returns nodes which result in path splits"""
         path_splits: Set[int] = set()
-        for node in self.graph.nodes:
+        for node in node_list:
             if len(get_successors(self.graph, node)) > 1:
                 path_splits.add(node)
         return path_splits
-                
 
-    def __get_post_dominators(self) -> Dict[int, Set[int]]:
+    def __get_post_dominators(self, node_list: List[int]) -> Dict[int, Set[int]]:
         """calculates and returns the post dominators for all nodes in the function"""
         post_dominators: Dict[int, Set[int]] = dict()
         # initialize
-        for node in self.graph.nodes:
+        modified: Set[int] = set()
+        for node in node_list:
             post_dominators[node] = {node}
-        
-        # iterate
-        modification_found = True
-        while modification_found:
-            print("POST DOMINATOR CALCULATION ITERATION")
-            modification_found = False
+            modified.add(node)
 
-            for node in self.graph.nodes:
+        # iterate
+        while len(modified) > 0:
+            new_modified: Set[int] = set()
+            for node in modified:
                 predecessors = get_predecessors(self.graph, node)
                 for pred in predecessors:
                     len_pre = len(post_dominators[pred])
                     post_dominators[pred] = post_dominators[pred].union(post_dominators[node])
                     if len_pre != len(post_dominators[pred]):
-                        modification_found = True
+                        new_modified.add(pred)
+            modified = new_modified
         return post_dominators
-
-
-    
-
-
-
 
     def __parse_branched_sections(self):
         """Branched sections in the CU Graph are represented by a serialized version in the MOG.
@@ -717,7 +715,7 @@ class PETParser(object):
                 successors = get_successors(self.graph, current_node)
                 if len(successors) > 1:
                     raise ValueError("only a single successor should exist at this stage in the process!")
-                    
+
                 elif len(successors) == 1:
                     current_node = successors[0]
                 else:

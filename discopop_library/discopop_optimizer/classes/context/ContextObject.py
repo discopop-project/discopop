@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from typing import Dict, Set, List, Optional
+import warnings
 
 from sympy import Expr, Integer, Symbol  # type: ignore
 import networkx as nx  # type: ignore
@@ -52,24 +53,24 @@ class ContextObject(object):
         required_updates: Set[Update] = set()
         for read in node_reads:
             # check if the reading device has the latest view of the memory
-            for device_id in self.seen_writes_by_device:
+            for device_id in self.__get_known_device_ids():
                 # todo test
                 required_updates = set()
 
                 if device_id == reading_device_id:
                     continue
-                if read.memory_region not in self.seen_writes_by_device[device_id]:
+                if read.memory_region not in self.get_seen_writes_by_device(device_id):
                     # read memory region is currently "unknown" to the device, thus is can be skipped
                     continue
-                other_devices_known_writes = self.seen_writes_by_device[device_id][read.memory_region]
+                other_devices_known_writes = self.get_seen_writes_by_device(device_id)[read.memory_region]
 
                 is_first_data_occurrence = False
-                if read.memory_region not in self.seen_writes_by_device[reading_device_id]:
+                if read.memory_region not in self.get_seen_writes_by_device(reading_device_id):
                     # reading device does not currently "know" about the read memory region. create a new entry.
-                    self.seen_writes_by_device[reading_device_id][read.memory_region] = set()
+                    self.initialize_seen_writes_by_device(reading_device_id, read.memory_region)
                     is_first_data_occurrence = True
 
-                known_writes = self.seen_writes_by_device[reading_device_id][read.memory_region]
+                known_writes = self.get_seen_writes_by_device(reading_device_id)[read.memory_region]
                 unknown_writes = other_devices_known_writes.difference(known_writes)
 
                 # todo debug: test: only consider the "latest" write
@@ -91,16 +92,15 @@ class ContextObject(object):
                         #                         print("Device <-> Device update required!")
 
                         # check if data is known to the host
-                        if (
-                            data_write.memory_region
-                            not in self.seen_writes_by_device[experiment.get_system().get_host_device_id()]
+                        if data_write.memory_region not in self.get_seen_writes_by_device(
+                            experiment.get_system().get_host_device_id()
                         ):
-                            self.seen_writes_by_device[experiment.get_system().get_host_device_id()][
-                                data_write.memory_region
-                            ] = set()
+                            self.initialize_seen_writes_by_device(
+                                experiment.get_system().get_host_device_id(), data_write.memory_region
+                            )
                         if (
                             data_write
-                            not in self.seen_writes_by_device[experiment.get_system().get_host_device_id()][
+                            not in self.get_seen_writes_by_device(experiment.get_system().get_host_device_id())[
                                 data_write.memory_region
                             ]
                         ):
@@ -163,15 +163,14 @@ class ContextObject(object):
 
                 # todo: check if this is sufficient
                 for update in required_updates:
-                    if (
-                        update.write_data_access.memory_region
-                        not in self.seen_writes_by_device[update.target_device_id]
+                    if update.write_data_access.memory_region not in self.get_seen_writes_by_device(
+                        update.target_device_id
                     ):
-                        self.seen_writes_by_device[update.target_device_id][
-                            update.write_data_access.memory_region
-                        ] = set()
-                    self.seen_writes_by_device[update.target_device_id][update.write_data_access.memory_region].add(
-                        update.write_data_access
+                        self.initialize_seen_writes_by_device(
+                            update.target_device_id, update.write_data_access.memory_region
+                        )
+                    self.__add_seen_write(
+                        update.target_device_id, update.write_data_access.memory_region, update.write_data_access
                     )
 
                 self.necessary_updates.update(required_updates)
@@ -187,11 +186,55 @@ class ContextObject(object):
 
         for write in node_writes:
             # check if memory region is already present in self.seen_writes_by_device before adding the write access
-            if write.memory_region not in self.seen_writes_by_device[writing_device_id]:
-                self.seen_writes_by_device[writing_device_id][write.memory_region] = set()
+            if write.memory_region not in self.get_seen_writes_by_device(writing_device_id):
+                self.initialize_seen_writes_by_device(writing_device_id, write.memory_region)
             # add write to the list of seen writes
-            self.seen_writes_by_device[writing_device_id][write.memory_region].add(write)
+            self.__add_seen_write(writing_device_id, write.memory_region, write)
         return self
 
     def set_last_visited_node_id(self, node_id: int):
         self.last_visited_node_id = node_id
+
+    def get_seen_writes_by_device(self, device_id: DeviceID) -> Dict[MemoryRegion, Set[WriteDataAccess]]:
+        seen_dict: Dict[MemoryRegion, Set[WriteDataAccess]] = dict()
+
+        # collect seen writes from stack 
+        for stack_entry in self.snapshot_stack:
+            if device_id in stack_entry[0]:
+                for memory_region in stack_entry[0][device_id]:
+                    if memory_region not in seen_dict:
+                        seen_dict[memory_region] = set()
+                    seen_dict[memory_region].update(stack_entry[0][device_id][memory_region])
+
+        # collect seen writes from self
+        if device_id in self.seen_writes_by_device:
+            for memory_region in self.seen_writes_by_device[device_id]:
+                if memory_region not in seen_dict:
+                    seen_dict[memory_region] = set()
+                seen_dict[memory_region].update(self.seen_writes_by_device[device_id][memory_region])
+        
+        return seen_dict
+
+
+    def initialize_seen_writes_by_device(self, device_id: DeviceID, memory_region: MemoryRegion):
+        if device_id not in self.seen_writes_by_device:
+            self.seen_writes_by_device[device_id] = dict()
+        self.seen_writes_by_device[device_id][memory_region] = set()
+
+    def __add_seen_write(self, device_id, memory_region: MemoryRegion, write: WriteDataAccess):
+        if device_id not in self.seen_writes_by_device:
+            self.seen_writes_by_device[device_id] = dict()
+        if memory_region not in self.seen_writes_by_device[device_id]:
+            self.seen_writes_by_device[device_id][memory_region] = set()
+        self.seen_writes_by_device[device_id][memory_region].add(write)
+
+    def __get_known_device_ids(self):
+        seen_devices: Set[DeviceID] = set()
+        for stack_entry in self.snapshot_stack:
+            for device_id in stack_entry[0]:
+                seen_devices.add(device_id)
+        
+        for device_id in self.seen_writes_by_device:
+            seen_devices.add(device_id)
+        
+        return seen_devices
