@@ -29,16 +29,16 @@ class ContextMerge(ContextNode):
             warnings.warn("Context can not be merged before creating a snapshot!")
             return context
 
-        context.last_seen_device_ids = cast(ContextObject, context.snapshot_stack[-1]).last_seen_device_ids
+        context.last_seen_device_ids = context.snapshot_stack[-1][2]
         for saved_contex in context.save_stack[-1]:
-            context.necessary_updates.update(cast(ContextObject, saved_contex).necessary_updates)
-            for device_id in cast(ContextObject, saved_contex).seen_writes_by_device:
+            context.necessary_updates.update(saved_contex[1])
+            for device_id in saved_contex[0]:
                 if device_id not in context.seen_writes_by_device:
                     context.seen_writes_by_device[device_id] = dict()
-                for mem_reg_id in cast(ContextObject, saved_contex).seen_writes_by_device[device_id]:
-                    if mem_reg_id not in context.seen_writes_by_device[device_id]:
-                        context.seen_writes_by_device[device_id][mem_reg_id] = set()
+                for mem_reg_id in saved_contex[0][device_id]:
+                    if mem_reg_id not in context.__get_seen_writes_by_device(device_id):
+                        context.__initialize_seen_writes_by_device(device_id, mem_reg_id)
                     context.seen_writes_by_device[device_id][mem_reg_id].update(
-                        cast(ContextObject, saved_contex).seen_writes_by_device[device_id][mem_reg_id]
+                        saved_contex[0][device_id][mem_reg_id]
                     )
         return context
