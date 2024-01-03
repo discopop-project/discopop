@@ -29,5 +29,6 @@ class ContextSave(ContextNode):
         if len(context.save_stack) < 1:
             warnings.warn("Context can not be saved to an empty stack!")
             return context
-        context.save_stack[-1].append(copy.deepcopy(context))
+        context.save_stack[-1].append((context.seen_writes_by_device)) 
+        context.seen_writes_by_device = dict()
         return context

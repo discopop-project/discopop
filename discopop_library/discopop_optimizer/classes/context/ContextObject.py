@@ -193,6 +193,7 @@ class ContextObject(object):
         self.last_visited_node_id = node_id
 
     def __get_seen_writes_by_device(self, device_id: DeviceID) -> Dict[MemoryRegion, Set[WriteDataAccess]]:
+        print("len: ", len(self.seen_writes_by_device[device_id]))
         return self.seen_writes_by_device[device_id]
 
     def __initialize_seen_writes_by_device(self, device_id: DeviceID, memory_region: MemoryRegion):
