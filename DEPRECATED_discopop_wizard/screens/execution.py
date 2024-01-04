@@ -10,8 +10,8 @@ import subprocess
 import tkinter as tk
 from typing import Optional, cast
 
-from discopop_wizard.classes.ProfilingContainer import ProfilingContainer
-from discopop_wizard.screens.suggestions.overview import show_suggestions_overview_screen
+from DEPRECATED_discopop_wizard.classes.ProfilingContainer import ProfilingContainer
+from DEPRECATED_discopop_wizard.screens.suggestions.overview import show_suggestions_overview_screen
 
 
 class ExecutionView(object):

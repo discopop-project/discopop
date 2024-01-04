@@ -17,13 +17,13 @@ from typing import TextIO, List, Dict, Tuple, Any
 
 import jsons  # type:ignore
 
-from discopop_wizard.screens.execution import ExecutionView
-from discopop_wizard.screens.optimizer.binding import create_optimizer_screen
-from discopop_wizard.screens.suggestions.overview import (
+from DEPRECATED_discopop_wizard.screens.execution import ExecutionView
+from DEPRECATED_discopop_wizard.screens.optimizer.binding import create_optimizer_screen
+from DEPRECATED_discopop_wizard.screens.suggestions.overview import (
     show_suggestions_overview_screen,
     get_suggestion_objects,
 )
-from discopop_wizard.screens.utils import create_tool_tip
+from DEPRECATED_discopop_wizard.screens.utils import create_tool_tip
 
 
 class ExecutionConfiguration(object):

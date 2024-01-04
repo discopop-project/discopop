@@ -13,7 +13,7 @@ import networkx as nx  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
-from discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget
+from DEPRECATED_discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget
 
 
 def display_choices_for_model(graph: nx.DiGraph, model: CostModel, window_title: Optional[str] = None):

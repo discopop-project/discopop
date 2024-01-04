@@ -11,10 +11,10 @@ import tkinter as tk
 from tkinter import ttk
 from typing import List
 
-from discopop_wizard.classes.Suggestion import Suggestion
-from discopop_wizard.screens.utils import create_tool_tip
-from discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget
-from discopop_wizard.utils import support_scrolling
+from DEPRECATED_discopop_wizard.classes.Suggestion import Suggestion
+from DEPRECATED_discopop_wizard.screens.utils import create_tool_tip
+from DEPRECATED_discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget
+from DEPRECATED_discopop_wizard.utils import support_scrolling
 
 
 def show_suggestions_overview_screen(wizard, details_frame: tk.Frame, execution_configuration_obj):
