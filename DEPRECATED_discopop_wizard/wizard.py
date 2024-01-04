@@ -17,17 +17,17 @@ from tkinter import messagebox, filedialog
 from tkinter import ttk
 from typing import Optional
 
-from discopop_wizard.classes.Arguments import Arguments
-from discopop_wizard.classes.Console import Console
-from discopop_wizard.classes.ProfilingContainer import ProfilingContainer
-from discopop_wizard.classes.Settings import Settings, load_from_config_file
-from discopop_wizard.classes.TKVarStorage import TKVarStorage
-from discopop_wizard.screens.main import MainScreen
+from DEPRECATED_discopop_wizard.classes.Arguments import Arguments
+from DEPRECATED_discopop_wizard.classes.Console import Console
+from DEPRECATED_discopop_wizard.classes.ProfilingContainer import ProfilingContainer
+from DEPRECATED_discopop_wizard.classes.Settings import Settings, load_from_config_file
+from DEPRECATED_discopop_wizard.classes.TKVarStorage import TKVarStorage
+from DEPRECATED_discopop_wizard.screens.main import MainScreen
 
 # todo add command line option to list available run configurations
 # todo add command line option to execute run configuration (by name)
-from discopop_wizard.screens.settings import show_settings_screen
-from discopop_wizard.utils import get_platform, Platform
+from DEPRECATED_discopop_wizard.screens.settings import show_settings_screen
+from DEPRECATED_discopop_wizard.utils import get_platform, Platform
 
 
 def main(arguments: Arguments):

@@ -14,7 +14,7 @@ from tkinter import ttk
 from typing import Any, Dict, List, Tuple
 
 from discopop_library.CodeGenerator.classes.UnpackedSuggestion import UnpackedSuggestion
-from discopop_wizard.classes.CodePreview import CodePreviewContentBuffer
+from DEPRECATED_discopop_wizard.classes.CodePreview import CodePreviewContentBuffer
 
 
 class PragmaType(IntEnum):

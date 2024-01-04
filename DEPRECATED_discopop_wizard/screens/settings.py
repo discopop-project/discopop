@@ -10,7 +10,7 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
 
-from discopop_wizard.screens.utils import create_tool_tip
+from DEPRECATED_discopop_wizard.screens.utils import create_tool_tip
 
 
 def show_settings_screen(wizard):
