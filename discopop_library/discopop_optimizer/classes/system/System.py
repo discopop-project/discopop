@@ -103,23 +103,27 @@ class System(object):
         )
         self.add_device(gpu, device_configuration["device_id"])
 
-    def set_device_doall_overhead_model(self, device: Device, model: Expr):
-        print("System: Set DOALL overhead model: ", model)
+    def set_device_doall_overhead_model(self, device: Device, model: Expr, arguments: OptimizerArguments):
+        if arguments.verbose:
+            print("System: Set DOALL overhead model: ", model)
         self.__device_do_all_overhead_models[device] = model
 
-    def set_reduction_overhead_model(self, device: Device, model: Expr):
-        print("System: Set REDUCTION overhead model: ", model)
+    def set_reduction_overhead_model(self, device: Device, model: Expr, arguments: OptimizerArguments):
+        if arguments.verbose:
+            print("System: Set REDUCTION overhead model: ", model)
         self.__device_reduction_overhead_models[device] = model
 
-    def get_device_doall_overhead_model(self, device: Device) -> Expr:
+    def get_device_doall_overhead_model(self, device: Device, arguments: OptimizerArguments) -> Expr:
         if device not in self.__device_do_all_overhead_models:
-            warnings.warn("No DOALL overhead model, assuming 0 for device: " + str(device))
+            if arguments.verbose:
+                warnings.warn("No DOALL overhead model, assuming 0 for device: " + str(device))
             return Expr(Integer(0))
         return self.__device_do_all_overhead_models[device]
 
-    def get_device_reduction_overhead_model(self, device: Device) -> Expr:
+    def get_device_reduction_overhead_model(self, device: Device, arguments: OptimizerArguments) -> Expr:
         if device not in self.__device_reduction_overhead_models:
-            warnings.warn("No REDUCTION overhead model, assuming 0 for device: " + str(device))
+            if arguments.verbose:
+                warnings.warn("No REDUCTION overhead model, assuming 0 for device: " + str(device))
             return Expr(Integer(0))
         return self.__device_reduction_overhead_models[device]
 
