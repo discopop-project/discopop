@@ -6,64 +6,65 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-"""Discopop Code Generator
-
-Usage:
-    discopop_code_generator --fmap <path> --json <path> --outputdir <path> [--patterns <str>] [--compile-check-command <str>] [--skip-compilation-check]
-
-OPTIONAL ARGUMENTS:
-    --fmap=<file>               File mapping
-    --json=<file>               Json output of the DiscoPoP Explorer
-    --outputdir=<path>          Directory for the modified source files
-    --patterns=<str>            Comma-separated list of pattern types to be applied
-                                Possible values: reduction, do_all, simple_gpu, combined_gpu
-    --skip-compilation-check    Do not validate the inserted patterns by compiling the resulting source code.
-    --compile-check-command=<str>     Specify a command to be executed for performing the compile check (e.g. "cd .. && make")
-    -h --help                   Show this screen
-"""
+from argparse import ArgumentParser
 import os
 import sys
 from typing import Dict, List
 
-from docopt import docopt  # type:ignore
-from schema import Schema, Use, SchemaError  # type:ignore
-
 from discopop_library.CodeGenerator.CodeGenerator import (
     from_json_strings as generate_code_from_json_strings,
 )
+from discopop_library.CodeGenerator.CodeGeneratorArguments import CodeGeneratorArguments
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.PathManagement.PathManagement import load_file_mapping, get_path
 
-docopt_schema = Schema(
-    {
-        "--fmap": Use(str),
-        "--json": Use(str),
-        "--patterns": Use(str),
-        "--outputdir": Use(str),
-        "--skip-compilation-check": Use(str),
-        "--compile-check-command": Use(str),
-    }
-)
+
+def parse_args() -> CodeGeneratorArguments:
+    """Parse the arguments passed to the discopop_code_generator"""
+    parser = ArgumentParser(description="DiscoPoP Code Generator")
+    # all flags that are not considered stable should be added to the experimental_parser
+    # experimental_parser = parser.add_argument_group(
+    #    "EXPERIMENTAL",
+    #    "Arguments for experimental features. Experimental arguments may or may not be removed or changed in the future.",
+    # )
+
+    # fmt: off
+    parser.add_argument("--fmap", type=str, help="File mapping")
+    parser.add_argument("--json", type=str, help="Json output of the DiscoPoP Explorer")
+    parser.add_argument("--outputdir", type=str, help="Directory for the modified source files")
+    parser.add_argument("--patterns", type=str, help="Comma-separated list of pattern types to be applied. Possible values: reduction, do_all, simple_gpu, combined_gpu", default="None")
+    parser.add_argument("--compile-check-command", type=str, help="Specify a command to be executed for performing the compile check (e.g. \"cd .. && make\")", default="None")
+
+    parser.add_argument("--skip-compilation-check", action="store_true", help="Do not validate the inserted patterns by compiling the resulting source code.")
+
+    # EXPERIMENTAL FLAGS:
+    # fmt: on
+
+    arguments = parser.parse_args()
+
+    return CodeGeneratorArguments(
+        fmap=arguments.fmap,
+        json=arguments.json,
+        patterns=arguments.patterns,
+        outputdir=arguments.outputdir,
+        skip_compilation_check=arguments.skip_compilation_check,
+        compile_check_command=arguments.compile_check_command,
+    )
 
 
 def main():
     """Applies the code modifications specified by the given JSON file and writes
     the modified source code structure into outputdir.
     Note that only modified source code files will be written to outputdir."""
-    arguments = docopt(__doc__)
+    arguments = parse_args()
 
-    try:
-        arguments = docopt_schema.validate(arguments)
-    except SchemaError as e:
-        exit(e)
-
-    file_mapping_file = get_path(os.getcwd(), arguments["--fmap"])
-    json_file = get_path(os.getcwd(), arguments["--json"])
-    outputdir = arguments["--outputdir"]
+    file_mapping_file = get_path(os.getcwd(), arguments.fmap)
+    json_file = get_path(os.getcwd(), arguments.json)
+    outputdir = arguments.outputdir
     relevant_patterns: List[str] = (
         []
-        if arguments["--patterns"] == "None"
-        else (arguments["--patterns"].split(",") if "," in arguments["--patterns"] else [arguments["--patterns"]])
+        if arguments.patterns == "None"
+        else (arguments.patterns.split(",") if "," in arguments.patterns else [arguments.patterns])
     )
     # validate patterns
     for pattern in relevant_patterns:
@@ -80,10 +81,10 @@ def main():
 
     identified_patterns = read_patterns_from_json_to_json(json_file, relevant_patterns)
 
-    print("SKIP COMPILATION CHECK? ", arguments["--skip-compilation-check"], file=sys.stderr)
-    print("\ttype: ", type(arguments["--skip-compilation-check"]), file=sys.stderr)
-    print("COMPILE CHECK COMMAND? ", arguments["--compile-check-command"], file=sys.stderr)
-    print("\ttype: ", type(arguments["--compile-check-command"]), file=sys.stderr)
+    print("SKIP COMPILATION CHECK? ", arguments.skip_compilation_check, file=sys.stderr)
+    print("\ttype: ", type(arguments.skip_compilation_check), file=sys.stderr)
+    print("COMPILE CHECK COMMAND? ", arguments.compile_check_command, file=sys.stderr)
+    print("\ttype: ", type(arguments.compile_check_command), file=sys.stderr)
 
     print("FILE MAPPING: ", file_mapping_dict)
     print("patterns:", identified_patterns)
@@ -91,10 +92,8 @@ def main():
     modified_code = generate_code_from_json_strings(
         file_mapping_dict,
         identified_patterns,
-        skip_compilation_check=True if arguments["--skip-compilation-check"] != "False" else False,
-        compile_check_command=arguments["--compile-check-command"]
-        if arguments["--compile-check-command"] != "None"
-        else None,
+        skip_compilation_check=arguments.skip_compilation_check,
+        compile_check_command=arguments.compile_check_command if arguments.compile_check_command != "None" else None,
     )
 
     modified_code_by_new_location: Dict[str, str] = dict()
