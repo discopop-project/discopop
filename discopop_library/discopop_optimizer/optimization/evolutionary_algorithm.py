@@ -57,7 +57,8 @@ def perform_evolutionary_search(
     while generation_counter < generations:
         print("\nGeneration", generation_counter, "/", generations)
         population, fitness, _ = __calculate_fitness(experiment, population, arguments)
-        __print_population(experiment, population, fitness, arguments)
+        if arguments.verbose:
+            __print_population(experiment, population, fitness, arguments)
         population = __select(
             experiment,
             arguments,
@@ -70,7 +71,8 @@ def perform_evolutionary_search(
         population = __mutate(experiment, arguments, population, crossovers)
         generation_counter += 1
     population, fitness, contexts = __calculate_fitness(experiment, population, arguments)
-    __print_population(experiment, population, fitness, arguments)
+    if arguments.verbose:
+        __print_population(experiment, population, fitness, arguments)
     return __dump_result(experiment, population, fitness, optimizer_dir, population_size, generations, contexts)
 
 
@@ -473,7 +475,8 @@ def __get_random_configuration(
                 decision_set = decision_set - (decision_set & excluded)
                 reduced_decision_set = decision_set.intersection(requirements)
                 if len(reduced_decision_set) != 0:
-                    print("Drawing from reduced set: ", reduced_decision_set)
+                    if arguments.verbose:
+                        print("Drawing from reduced set: ", reduced_decision_set)
                     random_decision = random.choice(list(reduced_decision_set))
                 else:
                     random_decision = random.choice(list(decision_set))
@@ -483,5 +486,4 @@ def __get_random_configuration(
 
         # validate configuration
         if check_configuration_validity(experiment, arguments, random_configuration):
-            print("FOUND VALID CONFIG: ", random_configuration)
             return random_configuration

@@ -577,14 +577,6 @@ def __parallel_get_decisions_from_node(function_node):
                 decision_sets[idx] = decision_sets[idx].union(alternatives)
         if not found_existing:
             decision_sets.append(alternatives)
-    print(decision_sets)
-    print()
-
-    # create combinations from decision sets
-    #    combinations = list(itertools.product(*decision_sets))
-    #    print("COMB:")
-    #    for c in combinations:
-    #        print("->", c)
 
     # convert sets to lists
     decision_lists: List[List[int]] = []

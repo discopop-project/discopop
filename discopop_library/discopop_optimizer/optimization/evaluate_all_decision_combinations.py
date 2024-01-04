@@ -87,41 +87,41 @@ def evaluate_all_decision_combinations(
     if arguments.verbose:
         print()
 
-    # print the sorted result for improved readability
-    print("# Sorted and simplified costs of all combinations using PATH NODE IDS")
-    for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x], reverse=True):
-        print(
-            "#",
-            combination_tuple,
-            " = ",
-            str(costs_dict[combination_tuple].evalf()),
-        )
-    print("# Sorted and simplified costs of all combinations using PATH NODE IDS")
-    print()
+        # print the sorted result for improved readability
+        print("# Sorted and simplified costs of all combinations using PATH NODE IDS")
+        for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x], reverse=True):
+            print(
+                "#",
+                combination_tuple,
+                " = ",
+                str(costs_dict[combination_tuple].evalf()),
+            )
+        print("# Sorted and simplified costs of all combinations using PATH NODE IDS")
+        print()
 
-    # print the sorted result list using parallel pattern ids for improved interpretability
-    print("# Sorted and simplified costs of all combinations using PARALLEL PATTERN IDS")
-    for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x], reverse=True):
-        new_key = []
-        for node_id in combination_tuple:
-            # find pattern id
-            for pattern_id in experiment.suggestion_to_node_ids_dict:
-                if node_id in experiment.suggestion_to_node_ids_dict[pattern_id]:
-                    new_key.append(
-                        str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
-                    )
-        if len(new_key) == 0:
-            print("EMPTY: ", combination_tuple)
-            print(experiment.suggestion_to_node_ids_dict)
+        # print the sorted result list using parallel pattern ids for improved interpretability
+        print("# Sorted and simplified costs of all combinations using PARALLEL PATTERN IDS")
+        for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x], reverse=True):
+            new_key = []
+            for node_id in combination_tuple:
+                # find pattern id
+                for pattern_id in experiment.suggestion_to_node_ids_dict:
+                    if node_id in experiment.suggestion_to_node_ids_dict[pattern_id]:
+                        new_key.append(
+                            str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, node_id).device_id)
+                        )
+            if len(new_key) == 0:
+                print("EMPTY: ", combination_tuple)
+                print(experiment.suggestion_to_node_ids_dict)
 
-        print(
-            "#",
-            new_key,
-            " = ",
-            str(costs_dict[combination_tuple].evalf()),
-        )
-    print("# Sorted and simplified costs of all combinations using PARALLEL PATTERN IDS")
-    print()
+            print(
+                "#",
+                new_key,
+                " = ",
+                str(costs_dict[combination_tuple].evalf()),
+            )
+        print("# Sorted and simplified costs of all combinations using PARALLEL PATTERN IDS")
+        print()
 
     return __dump_result_to_file_using_pattern_ids(experiment, optimizer_dir, costs_dict, contexts_dict, arguments)
 
