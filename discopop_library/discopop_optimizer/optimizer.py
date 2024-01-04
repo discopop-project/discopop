@@ -44,6 +44,7 @@ from discopop_library.discopop_optimizer.optimization.evolutionary_algorithm imp
 from discopop_library.discopop_optimizer.suggestions.optimizers.main import optimize_suggestions
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
+from discopop_library.global_data.version.utils import get_version
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
@@ -105,6 +106,13 @@ def run(arguments: OptimizerArguments):
     with open(os.path.join(explorer_dir, "detection_result_dump.json")) as f:
         detection_result_dump_str = f.read()
     detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str)
+    if detection_result.version != get_version():
+        warnings.warn(
+            "Restored DetectionResult was created using different DiscoPoP version: "
+            + detection_result.version
+            + "; current: "
+            + get_version()
+        )
     if arguments.verbose:
         print("Done")
 

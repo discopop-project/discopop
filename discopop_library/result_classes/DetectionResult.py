@@ -18,6 +18,7 @@ from discopop_explorer.pattern_detectors.pipeline_detector import PipelineInfo
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 from discopop_library.global_data.version.utils import get_version
 
+
 class DetectionResult(object):
     version: str
     pet: PEGraphX
