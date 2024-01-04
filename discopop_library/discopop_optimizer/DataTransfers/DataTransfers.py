@@ -59,8 +59,10 @@ def get_path_context_iterative(
         context = __check_children(node_id, graph, model, context, experiment)
 
         # pop device id from stack if necessary
-        #        if node_data.device_id is not None:
-        #            context.last_seen_device_ids.pop()
+        if node_data.device_id is not None:
+            # condition to prevent issues due to added dummy nodes
+            if len(context.last_seen_device_ids) > 1:
+                context.last_seen_device_ids.pop()
 
         # set last_visited_node_id to the original node_id,
         # since the calculation continues from node_id after the children have been visited
