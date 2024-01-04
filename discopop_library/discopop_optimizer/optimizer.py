@@ -139,12 +139,13 @@ def run(arguments: OptimizerArguments):
     if arguments.verbose:
         print("Creating optimization graph...")
     create_optimization_graph(experiment, arguments)
+
     if arguments.verbose:
         print("Done.")
     # import parallelization suggestions
     experiment.optimization_graph = import_suggestions(experiment)
     # optimize parallelization suggestions
-    experiment.optimization_graph = optimize_suggestions(experiment)
+    # experiment.optimization_graph = optimize_suggestions(experiment)
 
     if arguments.plot:
         show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
@@ -187,10 +188,10 @@ def run(arguments: OptimizerArguments):
             optimizer_dir,
         )
 
-    best_configuration = optimize_updates(experiment, best_configuration, arguments)
-
-    # append the configuration to the list of patterns
-    experiment.detection_result.optimizer_output.append(best_configuration)
+    if best_configuration is not None:
+        best_configuration = optimize_updates(experiment, best_configuration, arguments)
+        # append the configuration to the list of patterns
+        experiment.detection_result.optimizer_output.append(best_configuration)
 
     # save full experiment to disk
     export_to_json(experiment, optimizer_dir)

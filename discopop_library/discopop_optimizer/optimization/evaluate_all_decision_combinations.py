@@ -8,7 +8,7 @@
 import json
 from multiprocessing import Pool
 import os
-from typing import Dict, List, Tuple, cast
+from typing import Dict, List, Optional, Set, Tuple, cast
 
 from sympy import Expr
 import tqdm  # type: ignore
@@ -36,7 +36,7 @@ def evaluate_all_decision_combinations(
     available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
     optimizer_dir: str,
-) -> OptimizerOutputPattern:
+) -> Optional[OptimizerOutputPattern]:
     """Create and evaluate every possible combination of decisions."""
     global global_experiment
     global global_arguments
@@ -46,23 +46,21 @@ def evaluate_all_decision_combinations(
     costs_dict: Dict[Tuple[int, ...], Expr] = dict()
     contexts_dict: Dict[Tuple[int, ...], ContextObject] = dict()
 
-    packed_decisions: List[List[List[int]]] = []
+    combinations_by_function: Dict[FunctionRoot, List[Tuple[int, ...]]] = dict()
     for function in available_decisions:
-        packed_decisions.append(available_decisions[function])
-
-    # create combinations of decisions
-    raw_combinations: List[Tuple[List[int], ...]] = cast(List[Tuple[List[int], ...]], product(*packed_decisions))
-    # clean the combinations into List[int]
+        combinations_by_function[function] = []
+        for cmb in product(*available_decisions[function]):
+            combinations_by_function[function].append(cmb)
+    # get list of all combinations
     combinations: List[List[int]] = []
-    for tpl in raw_combinations:
-        tmp: List[int] = []
-        for decision_list in tpl:
-            for decision in decision_list:
-                tmp.append(decision)
-
-        # check configuration validity
-        if check_configuration_validity(experiment, arguments, tmp):
-            combinations.append(tmp)
+    for c in product(*combinations_by_function.values()):
+        combination_list: List[int] = []
+        for function_decisions in c:
+            for entry in function_decisions:
+                combination_list.append(entry)
+        # remove invalid combinations
+        if check_configuration_validity(experiment, arguments, combination_list):
+            combinations.append(combination_list)
 
     # evaluate each combination in parallel
     print("# Parallel calculation of costs of all decision combinations...")
@@ -75,6 +73,11 @@ def evaluate_all_decision_combinations(
         ),
     ) as pool:
         tmp_result = list(tqdm.tqdm(pool.imap_unordered(__evaluate_configuration, param_list), total=len(param_list)))
+
+    #    tmp_result = []
+    #    for p in param_list:
+    #        tmp_result.append(__evaluate_configuration(p))
+
     for local_result in tmp_result:
         # result += local_result
         if local_result is not None:
@@ -146,7 +149,7 @@ def __dump_result_to_file_using_pattern_ids(
     costs_dict: Dict[Tuple[int, ...], Expr],
     contexts_dict: Dict[Tuple[int, ...], ContextObject],
     arguments: OptimizerArguments,
-) -> OptimizerOutputPattern:
+) -> Optional[OptimizerOutputPattern]:
     # replace keys to allow dumping
     dumpable_dict = dict()
     for key in costs_dict:
@@ -187,7 +190,7 @@ def __dump_result_to_file_using_pattern_ids(
                         pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
                     )
         if best_configuration is None:
-            raise ValueError("No configuration created!")
+            return None
         # collect data movement information
         for update in contexts_dict[combination_tuple].necessary_updates:
             best_configuration.add_data_movement(update)

@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import warnings
 
 import networkx as nx  # type: ignore
 
@@ -24,17 +25,20 @@ class ContextRestore(ContextNode):
     def get_modified_context(
         self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
     ) -> ContextObject:
-        # save save_stack in buffer
-        buffer_save_stack = copy.deepcopy(context.save_stack)
-        # save snapshot_stack in buffer
-        buffer_snapshot_stack = copy.deepcopy(context.snapshot_stack)
-        # restore the latest entry in snapshot_stack
-        if len(context.snapshot_stack) < 1:
-            raise ValueError("Context can not be restored before creating a snapshot!")
-        restored_context: ContextObject = copy.deepcopy(context.snapshot_stack[-1])
+        #        # save save_stack in buffer
+        #        buffer_save_stack = copy.deepcopy(context.save_stack)
+        #        # save snapshot_stack in buffer
+        #        buffer_snapshot_stack = copy.deepcopy(context.snapshot_stack)
+        #        # restore the latest entry in snapshot_stack
+        #        if len(context.snapshot_stack) < 1:
+        #            warnings.warn("Context can not be restored before creating a snapshot!")
+        #            return context
+        #        restored_context: ContextObject = copy.deepcopy(context.snapshot_stack[-1])
+        ##
+        #        # add buffer to save_stack
+        #        restored_context.save_stack += buffer_save_stack
+        #        # set snapshot_stack to the buffered contents
+        #        restored_context.snapshot_stack = buffer_snapshot_stack
+        #        return restored_context
 
-        # add buffer to save_stack
-        restored_context.save_stack += buffer_save_stack
-        # set snapshot_stack to the buffered contents
-        restored_context.snapshot_stack = buffer_snapshot_stack
-        return restored_context
+        return context

@@ -6,12 +6,14 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import warnings
 
 import networkx as nx  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
 
 
 class ContextSave(ContextNode):
@@ -24,5 +26,12 @@ class ContextSave(ContextNode):
     def get_modified_context(
         self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
     ) -> ContextObject:
-        context.save_stack[-1].append(copy.deepcopy(context))
+        if len(context.save_stack) < 1:
+            warnings.warn("Context can not be saved to an empty stack!")
+            return context
+        context.save_stack[-1].append(
+            (context.seen_writes_by_device, context.necessary_updates, context.last_seen_device_ids[-1])
+        )
+        context.seen_writes_by_device = dict()
+        context.necessary_updates = set()
         return context

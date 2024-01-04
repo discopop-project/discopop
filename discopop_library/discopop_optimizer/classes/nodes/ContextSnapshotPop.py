@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import warnings
 import networkx as nx  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
@@ -22,6 +23,12 @@ class ContextSnapshotPop(ContextNode):
     def get_modified_context(
         self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
     ) -> ContextObject:
-        context.snapshot_stack.pop()
-        context.save_stack.pop()
+        if len(context.snapshot_stack) < 1:
+            warnings.warn("Cannot pop from empty snapshot stack!")
+        else:
+            context.snapshot_stack.pop()
+        if len(context.save_stack) < 1:
+            warnings.warn("Cannot pop from emptry save stack!")
+        else:
+            context.save_stack.pop()
         return context

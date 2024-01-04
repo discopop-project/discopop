@@ -24,6 +24,17 @@ class ContextSnapshot(ContextNode):
     def get_modified_context(
         self, node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject
     ) -> ContextObject:
-        context.snapshot_stack.append(copy.deepcopy(context))
+        context.snapshot_stack.append(
+            (
+                context.seen_writes_by_device,
+                context.last_visited_node_id,
+                context.last_seen_device_ids,
+                context.necessary_updates,
+            )
+        )
+        context.seen_writes_by_device = dict()
+        context.last_seen_device_ids = [context.last_seen_device_ids[-1]]
+        context.necessary_updates = set()
+
         context.save_stack.append([])
         return context
