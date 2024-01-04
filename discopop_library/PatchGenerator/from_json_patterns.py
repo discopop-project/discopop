@@ -28,6 +28,8 @@ def from_json_patterns(
     if arguments.verbose:
         print("Generating modified code...")
     for suggestion_type in patterns_by_type:
+        if suggestion_type == "version":
+            continue
         for suggestion in patterns_by_type[suggestion_type]:
             if suggestion_type == "optimizer_output":
                 from_optimizer_output(file_mapping, patterns_by_type, suggestion, arguments, patch_generator_dir)
