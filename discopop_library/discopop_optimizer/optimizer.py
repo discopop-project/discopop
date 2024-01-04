@@ -122,6 +122,7 @@ def run(arguments: OptimizerArguments):
         system.set_device_doall_overhead_model(
             system.get_device(system.get_host_device_id()),
             ExtrapInterpolatedMicrobench(arguments.doall_microbench_file).getFunctionSympy(),
+            arguments,
         )
     if arguments.reduction_microbench_file != "None":
         # construct and set overhead model for reduction suggestions
@@ -130,10 +131,11 @@ def run(arguments: OptimizerArguments):
             ExtrapInterpolatedMicrobench(arguments.reduction_microbench_file).getFunctionSympy(
                 benchType=MicrobenchType.FOR
             ),
+            arguments,
         )
 
     # define Experiment
-    experiment = Experiment(file_mapping, system, detection_result, profiler_dir)
+    experiment = Experiment(file_mapping, system, detection_result, profiler_dir, arguments)
 
     # build optimization graph
     if arguments.verbose:
