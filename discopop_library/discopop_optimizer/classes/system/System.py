@@ -73,13 +73,13 @@ class System(object):
                     source=self.get_device(self.__host_device_id),
                     target=self.get_device(device_dict["device_id"]),
                     transfer_speed=Float(device_dict["transfer_speeds"]["H2D_MB/s"]),
-                    initialization_delay=Float(device_dict["transfer_init_delays"]["average"]),
+                    initialization_delay=Float(device_dict["transfer_init_delays[us]"]["average"]),
                 )  # H2D
                 self.__network.add_connection(
                     source=self.get_device(device_dict["device_id"]),
                     target=self.get_device(self.__host_device_id),
                     transfer_speed=Float(device_dict["transfer_speeds"]["D2H_MB/s"]),
-                    initialization_delay=Float(device_dict["transfer_init_delays"]["average"]),
+                    initialization_delay=Float(device_dict["transfer_init_delays[us]"]["average"]),
                 )  # D2H
             else:
                 # no transfer speed information exists

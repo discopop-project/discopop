@@ -37,15 +37,15 @@ def generate_default_system_configuration(file_path: str):
         "compute_init_delays": {"target_teams_distribute_parallel_for": 0.01},
         "device_id": 1,
         "device_type": DeviceTypeEnum.GPU,
-        "frequency": 512000000,
+        "frequency": 128000000,
         "processors": 128,
         "teams": 3200,
         "threads": 3200,
-        "transfer_init_delays": {
-            "target_data_update": 3.6e-05,
-            "target_enter_data": 6.5e-05,
-            "target_exit_data": 2e-06,
-            "average": 4e-05,
+        "transfer_init_delays[us]": {
+            "target_data_update": 35,
+            "target_enter_data": 90,
+            "target_exit_data": 4,
+            "average": 73,
         },
         "transfer_speeds": {"D2H_MB/s": 1800, "H2D_MB/s": 3600},  # MB/s
     }
@@ -54,15 +54,15 @@ def generate_default_system_configuration(file_path: str):
         "compute_init_delays": {"target_teams_distribute_parallel_for": 0.005},
         "device_id": 2,
         "device_type": DeviceTypeEnum.GPU,
-        "frequency": 512000000,
+        "frequency": 128000000,
         "processors": 128,
         "teams": 3200,
         "threads": 3200,
-        "transfer_init_delays": {
-            "target_data_update": 7.1e-05,
-            "target_enter_data": 0.0002,
-            "target_exit_data": 5e-06,
-            "average": 6e-05,
+        "transfer_init_delays[us]": {
+            "target_data_update": 71,
+            "target_enter_data": 90,
+            "target_exit_data": 5,
+            "average": 81,
         },
         "transfer_speeds": {"D2H_MB/s": 1900, "H2D_MB/s": 4200},  # MB/s
     }
