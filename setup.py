@@ -33,7 +33,7 @@ setup(
     long_description_content_type="text/markdown",
     install_requires=[
         "contextlib2>=0.5.5",
-        "docopt>=0.6.2",
+        "argparse",
         "extrap",
         "jsonpickle",
         "jsons",
