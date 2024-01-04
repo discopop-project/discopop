@@ -16,6 +16,7 @@ from discopop_explorer.PEGraphX import MemoryRegion
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
@@ -60,6 +61,8 @@ class Experiment(object):
 
     file_mapping: Dict[int, Path]  # file-mapping
 
+    arguments: OptimizerArguments
+
     detection_result: DetectionResult
 
     function_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject, str]]]
@@ -70,10 +73,16 @@ class Experiment(object):
     suggestion_to_node_ids_dict: Dict[int, List[int]]
 
     def __init__(
-        self, file_mapping: Dict[int, Path], system: System, detection_result: DetectionResult, profiler_dir: str
+        self,
+        file_mapping: Dict[int, Path],
+        system: System,
+        detection_result: DetectionResult,
+        profiler_dir: str,
+        arguments: OptimizerArguments,
     ):
         self.__system = system
         self.detection_result = detection_result
+        self.arguments = arguments
 
         self.__memory_region_sizes = get_sizes_of_memory_regions(
             set(),

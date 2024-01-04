@@ -140,7 +140,7 @@ def get_overhead_term(node_data: Loop, environment: Experiment, device_id: int) 
     unit of the overhead term are micro seconds."""
     # retrieve DoAll overhead model
     overhead_model = environment.get_system().get_device_doall_overhead_model(
-        environment.get_system().get_device(device_id)
+        environment.get_system().get_device(device_id), environment.arguments
     )
     # substitute workload, iterations and threads
     thread_count = environment.get_system().get_device(device_id).get_thread_count()
