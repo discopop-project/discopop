@@ -52,6 +52,8 @@ def from_optimizer_output(
         device_id = pattern_values["device_id"]
         device_type = pattern_values["device_type"]
         for pattern_type in patterns_by_type:
+            if pattern_type == "version":
+                continue
             for pattern_string in patterns_by_type[pattern_type]:
                 loaded_pattern = json.loads(pattern_string)
                 if loaded_pattern["pattern_id"] == pattern_id:
