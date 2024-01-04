@@ -72,34 +72,34 @@ class PETParser(object):
         self.experiment = experiment
 
     def parse(self) -> Tuple[nx.DiGraph, int]:
-        print("PARSING PET")
+        if self.experiment.arguments.verbose:
+            print("PARSING PET")
         self.__add_cu_nodes()
-        print("added cu nodes")
+        if self.experiment.arguments.verbose:
+            print("added cu nodes")
         self.__add_functions()
-        print("added functions")
+        if self.experiment.arguments.verbose:
+            print("added functions")
         self.__add_pet_successor_edges()
-        print("added successor edges")
+        if self.experiment.arguments.verbose:
+            print("added successor edges")
         self.__add_loop_nodes()
-        print("added loop nodes")
+        if self.experiment.arguments.verbose:
+            print("added loop nodes")
         # self.__add_branch_return_node()
         self.__add_function_return_node()
 
-        # show(self.graph)
-
         self.__new_parse_branched_sections()
-        print("NEW parsed branched sections")
-        # show(self.graph)
-
-        #        self.__parse_branched_sections()
-        #        print("parsed branched sections")
 
         convert_temporary_edges(self.graph)
-        print("converted temporary edges")
+        if self.experiment.arguments.verbose:
+            print("converted temporary edges")
 
         #        self.__mark_branch_affiliation()
         #        print("marked branch affiliations")
         self.__calculate_data_flow()
-        print("calculated data flow")
+        if self.experiment.arguments.verbose:
+            print("calculated data flow")
 
         return self.graph, self.next_free_node_id
 
@@ -130,7 +130,8 @@ class PETParser(object):
                     for parent_func in parent_functions:
                         # connect end of path to the dummy return node
                         add_successor_edge(self.graph, node, function_return_nodes[parent_func])
-                        print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
+                        if self.experiment.arguments.verbose:
+                            print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
 
     def __add_branch_return_node(self):
         """makes sure every branching section has a merge node"""
@@ -158,7 +159,8 @@ class PETParser(object):
         all_functions = get_all_function_nodes(self.graph)
         nodes_by_functions = get_nodes_by_functions(self.graph)
         for idx, function in enumerate(all_functions):
-            print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
+            if self.experiment.arguments.verbose:
+                print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
             nodes_in_function = nodes_by_functions[function]
 
             post_dominators = self.__get_post_dominators(nodes_in_function)
@@ -175,10 +177,6 @@ class PETParser(object):
             #            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
             self.__insert_context_nodes(nodes_in_function)
-            # show(self.graph)
-
-            # import sys
-            # sys.exit(0)
 
     def __fix_empty_branches(
         self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]
@@ -197,7 +195,8 @@ class PETParser(object):
         for entry, exit in empty_branches:
             dummy_node_id = self.get_new_node_id()
             self.graph.add_node(dummy_node_id, data=Workload(dummy_node_id, self.experiment, None, None, None))
-            print("Added dummy node: ", entry, "->", dummy_node_id, "->", exit)
+            if self.experiment.arguments.verbose:
+                print("Added dummy node: ", entry, "->", dummy_node_id, "->", exit)
             redirect_edge(self.graph, entry, entry, exit, dummy_node_id)
             add_successor_edge(self.graph, dummy_node_id, exit)
             added_node_ids.append(dummy_node_id)
