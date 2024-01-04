@@ -16,9 +16,10 @@ from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.geometric_decomposition_detector import GDInfo
 from discopop_explorer.pattern_detectors.pipeline_detector import PipelineInfo
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
-
+from discopop_library.global_data.version.utils import get_version
 
 class DetectionResult(object):
+    version: str
     pet: PEGraphX
     reduction: List[ReductionInfo]
     do_all: List[DoAllInfo]
@@ -30,6 +31,7 @@ class DetectionResult(object):
     optimizer_output: List[PatternBase]
 
     def __init__(self, pet: PEGraphX):
+        self.version = get_version()  # discopop version
         self.pet = pet
         self.optimizer_output = []
         pass
