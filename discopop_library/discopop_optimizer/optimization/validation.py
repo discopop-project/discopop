@@ -44,12 +44,12 @@ def check_configuration_validity(
             return False
     # check for nested parallelism
     if not arguments.allow_nested_parallelism:
-        if __nested_parallelism_found(experiment, configuration):
+        if __nested_parallelism_found(experiment, configuration, arguments):
             return False
     return True
 
 
-def __nested_parallelism_found(experiment: Experiment, configuration: List[int]) -> bool:
+def __nested_parallelism_found(experiment: Experiment, configuration: List[int], arguments: OptimizerArguments) -> bool:
     """checks for nested parallelism in the given configuration.
     Returns True if the configuration leads to nested parallelism.
     Returns False otherwise."""
@@ -96,24 +96,25 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int])
                 if cid not in visited_nodes and cid not in children_queue
             ],
         )
-        # add called functions
-        called_cu_ids: List[str] = [
-            str(t)
-            for s, t, d in experiment.detection_result.pet.out_edges(
-                cast(NodeID, current_node.original_cu_id), EdgeType.CALLSNODE
-            )
-        ]
-        # filter for called FunctionRoots
-        called_function_nodes = [fr for fr in all_function_nodes if str(fr.original_cu_id) in called_cu_ids]
+        if arguments.check_called_function_for_nested_parallelism:
+            # add called functions
+            called_cu_ids: List[str] = [
+                str(t)
+                for s, t, d in experiment.detection_result.pet.out_edges(
+                    cast(NodeID, current_node.original_cu_id), EdgeType.CALLSNODE
+                )
+            ]
+            # filter for called FunctionRoots
+            called_function_nodes = [fr for fr in all_function_nodes if str(fr.original_cu_id) in called_cu_ids]
 
-        # remove duplicates
-        called_function_nodes = list(set(called_function_nodes))
-        # add to children_queue
-        children_queue += [
-            fid.node_id
-            for fid in called_function_nodes
-            if fid.node_id not in visited_nodes and fid.node_id not in children_queue
-        ]
+            # remove duplicates
+            called_function_nodes = list(set(called_function_nodes))
+            # add to children_queue
+            children_queue += [
+                fid.node_id
+                for fid in called_function_nodes
+                if fid.node_id not in visited_nodes and fid.node_id not in children_queue
+            ]
 
     return False
 
