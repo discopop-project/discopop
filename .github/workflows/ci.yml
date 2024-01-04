@@ -47,11 +47,11 @@ jobs:
       - name: "Run MyPy Type Checker - DiscoPoP Library"
         run: python -m mypy --config-file=mypy.ini -p discopop_library
 
-      - name: "Run MyPy Type Checker - DiscoPoP Profiler"
-        run: python -m mypy --config-file=mypy.ini -p discopop_profiler
+      - name: "Run MyPy Type Checker - DiscoPoP Profiler - DEPRECATED"
+        run: python -m mypy --config-file=mypy.ini -p DEPRECATED_discopop_profiler
 
-      - name: "Run MyPy Type Checker - DiscoPoP Wizard"
-        run: python -m mypy --config-file=mypy.ini -p discopop_wizard
+      - name: "Run MyPy Type Checker - DiscoPoP Wizard - DEPRECATED"
+        run: python -m mypy --config-file=mypy.ini -p DEPRECATED_discopop_wizard
 
       - name: "Check formatting of DiscoPoP Explorer"
         run: python -m black -l 120 --check discopop_explorer
@@ -59,11 +59,11 @@ jobs:
       - name: "Check formatting of DiscoPoP Library"
         run: python -m black -l 120 --check discopop_library
 
-      - name: "Check formatting of DiscoPoP Profiler"
-        run: python -m black -l 120 --check discopop_profiler
+      - name: "Check formatting of DiscoPoP Profiler - DEPRECATED"
+        run: python -m black -l 120 --check DEPRECATED_discopop_profiler
 
-      - name: "Check formatting of DiscoPoP Wizard"
-        run: python -m black -l 120 --check discopop_wizard
+      - name: "Check formatting of DiscoPoP Wizard - DEPRECATED"
+        run: python -m black -l 120 --check DEPRECATED_discopop_wizard
 
       - name: Test DiscoPop Explorer - DISABLED
         run: |
