@@ -10,9 +10,9 @@ import tkinter as tk
 from tkinter import ttk
 from typing import List
 
-from discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguration
-from discopop_wizard.screens.settings import show_settings_screen
-from discopop_wizard.utils import support_scrolling
+from DEPRECATED_discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguration
+from DEPRECATED_discopop_wizard.screens.settings import show_settings_screen
+from DEPRECATED_discopop_wizard.utils import support_scrolling
 
 
 class MainScreen(object):

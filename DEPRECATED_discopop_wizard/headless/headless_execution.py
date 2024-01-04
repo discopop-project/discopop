@@ -9,11 +9,11 @@
 import os
 from typing import List, Tuple
 
-from discopop_wizard.classes.Arguments import Arguments
-from discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguration
-from discopop_wizard.classes.Settings import load_from_config_file, Settings
-from discopop_wizard.screens.execution import ExecutionView
-from discopop_wizard.wizard import DiscoPoPConfigurationWizard
+from DEPRECATED_discopop_wizard.classes.Arguments import Arguments
+from DEPRECATED_discopop_wizard.classes.ExecutionConfiguration import ExecutionConfiguration
+from DEPRECATED_discopop_wizard.classes.Settings import load_from_config_file, Settings
+from DEPRECATED_discopop_wizard.screens.execution import ExecutionView
+from DEPRECATED_discopop_wizard.wizard import DiscoPoPConfigurationWizard
 
 
 def execute_all_stored_configurations(args: Arguments, source_dir: str):

@@ -10,12 +10,12 @@ import argparse
 import os
 from os.path import dirname
 
-from discopop_wizard.classes.Arguments import Arguments
-from discopop_wizard.headless.headless_execution import (
+from DEPRECATED_discopop_wizard.classes.Arguments import Arguments
+from DEPRECATED_discopop_wizard.headless.headless_execution import (
     execute_all_stored_configurations,
     execute_tag_filtered_configurations,
 )
-from discopop_wizard.wizard import main as wizard_main
+from DEPRECATED_discopop_wizard.wizard import main as wizard_main
 
 
 def convert_args(namespace_args: argparse.Namespace) -> Arguments:
