@@ -26,7 +26,10 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_function_nodes,
     get_all_loop_nodes,
     get_all_parents,
+    get_children,
+    get_out_mutex_edges,
     get_parents,
+    get_successors,
     show,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
@@ -118,6 +121,30 @@ def __collapse_loops_in_function(function_node_id):
                 # parent is regular node -> end search on this path (no perfect nesting)
                 continue
 
+            # validate collapse sources (check perfect nesting)
+            # todo: improve check for perfect nesting using AST analysis or similar approach
+            invalid: Set[int] = set()
+            for csrc in collapse_sources:
+                # check that only a single loop exists as a direct child
+                queue: List[int] = get_children(global_graph, csrc)
+                ignore_list: List[int] = []
+                found_loop: bool = False
+                while queue: 
+                    current = queue.pop()
+                    if type(data_at(global_graph, current)) == Loop and current not in ignore_list:
+                        # more than one loop contained!
+                        if found_loop:
+                            invalid.add(csrc)
+                            break
+                        found_loop = True
+                        ignore_list.append(current)
+                        ignore_list += get_out_mutex_edges(global_graph, current)
+                    queue += get_successors(global_graph, current)
+                print()
+            
+            for inv in invalid:
+                collapse_sources.remove(inv)
+
             # apply collapses
             for csrc in collapse_sources:
                 modifiation_found = True
@@ -165,6 +192,7 @@ def __collapse_loops_in_function(function_node_id):
                 relevant_loops.add(copy_seq_loop_option_id)
                 copy_seq_loop_option_data = copy.deepcopy(data_at(global_graph, seq_loop_option))
                 copy_seq_loop_option_data.node_id = copy_seq_loop_option_id
+                print("CREATED COPY LOOP: ", copy_seq_loop_option_id, "from ", seq_loop_option)
 
                 cast(Loop, copy_seq_loop_option_data).iterations = 1
                 cast(Loop, copy_seq_loop_option_data).iterations_symbol = Symbol(
@@ -179,6 +207,10 @@ def __collapse_loops_in_function(function_node_id):
                     value_suggestion=Integer(cast(Loop, copy_seq_loop_option_data).iterations),
                 )
                 global_graph.add_node(copy_seq_loop_option_id, data=copy_seq_loop_option_data)
+
+                # create a mutex edge between the original seq loop and the copied version
+                global_graph.add_edge(copy_seq_loop_option_id, seq_loop_option, data=MutuallyExclusiveEdge())
+                global_graph.add_edge(seq_loop_option, copy_seq_loop_option_id, data=MutuallyExclusiveEdge())
 
                 # copy edges
                 for edge in global_graph.in_edges(seq_loop_option):
