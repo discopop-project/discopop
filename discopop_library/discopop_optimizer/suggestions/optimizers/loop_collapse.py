@@ -129,7 +129,7 @@ def __collapse_loops_in_function(function_node_id):
                 queue: List[int] = get_children(global_graph, csrc)
                 ignore_list: List[int] = []
                 found_loop: bool = False
-                while queue: 
+                while queue:
                     current = queue.pop()
                     if type(data_at(global_graph, current)) == Loop and current not in ignore_list:
                         # more than one loop contained!
@@ -141,7 +141,7 @@ def __collapse_loops_in_function(function_node_id):
                         ignore_list += get_out_mutex_edges(global_graph, current)
                     queue += get_successors(global_graph, current)
                 print()
-            
+
             for inv in invalid:
                 collapse_sources.remove(inv)
 
@@ -168,6 +168,7 @@ def __collapse_loops_in_function(function_node_id):
                     global_experiment.get_system().get_device(node_data_copy.device_id).get_device_type()
                 )
                 global_experiment.suggestion_to_node_ids_dict[pattern_id] = [new_node_id]
+                global_experiment.node_id_to_suggestion_dict[new_node_id] = pattern_id
 
                 # create a new node
                 global_graph.add_node(new_node_id, data=node_data_copy)
