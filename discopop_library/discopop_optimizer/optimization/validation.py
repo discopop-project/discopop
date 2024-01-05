@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import List, cast
+from typing import List, cast, Set
 from discopop_explorer.PEGraphX import EdgeType, NodeID
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
@@ -46,6 +46,15 @@ def check_configuration_validity(
     if not arguments.allow_nested_parallelism:
         if __nested_parallelism_found(experiment, configuration, arguments):
             return False
+    # check for duplicated suggestion ids
+    # note: this check should not be necessary and might be removed in the future
+    applied_suggestion_ids: Set[int] = set()
+    for node_id in configuration:
+        if node_id in experiment.node_id_to_suggestion_dict:
+            if experiment.node_id_to_suggestion_dict[node_id] in applied_suggestion_ids:
+                return False
+            applied_suggestion_ids.add(experiment.node_id_to_suggestion_dict[node_id])
+
     return True
 
 

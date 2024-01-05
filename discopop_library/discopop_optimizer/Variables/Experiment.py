@@ -71,6 +71,7 @@ class Experiment(object):
     optimization_graph: nx.DiGraph
     next_free_node_id: int
     suggestion_to_node_ids_dict: Dict[int, List[int]]
+    node_id_to_suggestion_dict: Dict[int, int]
 
     def __init__(
         self,
@@ -94,6 +95,7 @@ class Experiment(object):
         self.function_models = dict()
         self.selected_paths_per_function = dict()
         self.suggestion_to_node_ids_dict = dict()
+        self.node_id_to_suggestion_dict = dict()
 
         # collect free symbols from system
         for free_symbol, value_suggestion in system.get_free_symbols():

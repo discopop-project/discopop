@@ -52,6 +52,7 @@ def import_suggestion(
                 if suggestion.pattern_id not in environment.suggestion_to_node_ids_dict:
                     environment.suggestion_to_node_ids_dict[suggestion.pattern_id] = []
                 environment.suggestion_to_node_ids_dict[suggestion.pattern_id].append(new_node_id)
+                environment.node_id_to_suggestion_dict[new_node_id] = suggestion.pattern_id
 
                 # set the device id for the suggestion
                 node_data_copy.device_id = device_id
