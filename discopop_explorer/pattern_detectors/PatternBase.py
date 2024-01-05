@@ -8,6 +8,8 @@
 
 import json
 import os
+
+from filelock import FileLock
 from discopop_explorer.PEGraphX import LineID, Node, NodeID
 
 
@@ -21,19 +23,20 @@ class PatternBase(object):
     end_line: LineID
 
     def __init__(self, node: Node):
-        # use blocking file i/o to synchronize threads
-        with open(os.path.join(os.getcwd(), "next_free_pattern_id.txt"), "r+") as f:
-            lines = f.readlines()
-            f.truncate(0)
-            f.seek(0)
-            if len(lines) == 0:
-                self.pattern_id = 0
-                f.write(str(0))
-            else:
-                for line in lines:
-                    line = line.replace("\n", "").replace("\x00", "")
-                    self.pattern_id = int(line)
-                    f.write(str(self.pattern_id + 1))
+        # create a file lock to synchronize processes
+        with FileLock(os.path.join(os.getcwd(), "next_free_pattern_id.txt.lock")):
+            with open(os.path.join(os.getcwd(), "next_free_pattern_id.txt"), "r+") as f:
+                lines = f.readlines()
+                f.truncate(0)
+                f.seek(0)
+                if len(lines) == 0:
+                    self.pattern_id = 0
+                    f.write(str(0))
+                else:
+                    for line in lines:
+                        line = line.replace("\n", "").replace("\x00", "")
+                        self.pattern_id = int(line)
+                        f.write(str(self.pattern_id + 1))
         self._node = node
         self.node_id = node.id
         self.start_line = node.start_position()

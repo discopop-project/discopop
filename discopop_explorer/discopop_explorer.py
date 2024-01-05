@@ -152,6 +152,9 @@ def run(arguments: ExplorerArguments):
     if not os.path.exists("next_free_pattern_id.txt"):
         with open("next_free_pattern_id.txt", "w") as f:
             f.write(str(0))
+    # reset file lock in case of prior crashes
+    if os.path.exists("next_free_pattern_id.txt.lock"):
+        os.remove("next_free_pattern_id.txt.lock")
 
     if arguments.enable_profiling_dump_file is not None:
         profile = cProfile.Profile()
