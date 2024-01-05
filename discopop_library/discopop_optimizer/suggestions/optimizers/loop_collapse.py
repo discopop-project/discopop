@@ -37,6 +37,7 @@ global_experiment = None
 
 def collapse_loops(experiment: Experiment) -> nx.DiGraph:
     """identifies collapse loops and depicts them in the optimization graph"""
+
     global global_graph
     global global_experiment
     global_graph = experiment.optimization_graph
