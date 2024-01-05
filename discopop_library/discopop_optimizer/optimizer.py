@@ -106,13 +106,18 @@ def run(arguments: OptimizerArguments):
     with open(os.path.join(explorer_dir, "detection_result_dump.json")) as f:
         detection_result_dump_str = f.read()
     detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str)
-    if detection_result.version != get_version():
-        warnings.warn(
-            "Restored DetectionResult was created using different DiscoPoP version: "
-            + detection_result.version
-            + "; current: "
-            + get_version()
-        )
+
+    if "version" in detection_result.__dict__:  # for backwards compatibility
+        if detection_result.version != get_version():
+            warnings.warn(
+                "Restored DetectionResult was created using different DiscoPoP version: "
+                + detection_result.version
+                + "; current: "
+                + get_version()
+            )
+    else:
+        warnings.warn("Restored DetectionResult does not contain version information and might be outdated!")
+    
     if arguments.verbose:
         print("Done")
 
@@ -155,7 +160,7 @@ def run(arguments: OptimizerArguments):
     # import parallelization suggestions
     experiment.optimization_graph = import_suggestions(experiment)
     # optimize parallelization suggestions
-    # experiment.optimization_graph = optimize_suggestions(experiment)
+    experiment.optimization_graph = optimize_suggestions(experiment)
 
     if arguments.plot:
         show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
