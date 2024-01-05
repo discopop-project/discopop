@@ -9,6 +9,7 @@
 import os.path
 from pathlib import Path
 from typing import Dict, Optional
+import warnings
 
 
 def load_file_mapping(fmap_path: str) -> Dict[int, Path]:
@@ -25,6 +26,8 @@ def load_file_mapping(fmap_path: str) -> Dict[int, Path]:
             file_path = split_line[1]
             if os.path.exists(file_path):
                 file_mapping[file_id] = Path(file_path)
+            else:
+                warnings.warn("Loading filemapping: File does not exist! " + str(file_path))
     return file_mapping
 
 
