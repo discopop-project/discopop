@@ -43,6 +43,10 @@ def get_transfer_costs(context: ContextObject, environment: Experiment) -> CostM
         if symbolic_memory_region_sizes:
             symbol_value_suggestions[cast(Symbol, transfer_size)] = value_suggestion
 
+        # transfer_costs [us] = [1000000 * s]
+        # transfer_size [B]
+        # transfer_speed [MB/s] = [1000000 * B/s]
+        # * 1000000 gets removed due to mathematics
         transfer_costs = transfer_size / transfer_speed
 
         total_transfer_costs += transfer_costs
