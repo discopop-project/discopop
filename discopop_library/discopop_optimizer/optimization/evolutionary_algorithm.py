@@ -475,8 +475,6 @@ def __get_random_configuration(
                 decision_set = decision_set - (decision_set & excluded)
                 reduced_decision_set = decision_set.intersection(requirements)
                 if len(reduced_decision_set) != 0:
-                    if arguments.verbose:
-                        print("Drawing from reduced set: ", reduced_decision_set)
                     random_decision = random.choice(list(reduced_decision_set))
                 else:
                     random_decision = random.choice(list(decision_set))
