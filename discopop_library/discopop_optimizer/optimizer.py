@@ -27,6 +27,7 @@ from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
 from discopop_library.discopop_optimizer.UpdateOptimization.main import optimize_updates
 from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
     create_optimization_graph,
+    export_detection_result_to_json,
     export_patterns_to_json,
     export_to_json,
     get_sequential_cost_model,
@@ -117,7 +118,7 @@ def run(arguments: OptimizerArguments):
             )
     else:
         warnings.warn("Restored DetectionResult does not contain version information and might be outdated!")
-    
+
     if arguments.verbose:
         print("Done")
 
@@ -212,3 +213,5 @@ def run(arguments: OptimizerArguments):
     export_to_json(experiment, optimizer_dir)
     # save updated patterns.json to disk
     export_patterns_to_json(experiment, os.path.join(optimizer_dir, "patterns.json"))
+    # save updated detection_result to disk
+    export_detection_result_to_json(experiment, os.path.join(optimizer_dir, "detection_result_dump.json"))

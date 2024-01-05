@@ -156,6 +156,13 @@ def export_patterns_to_json(experiment: Experiment, export_path):
         json.dump(detection_result_copy, f, indent=2, cls=PatternBaseSerializer)
 
 
+def export_detection_result_to_json(experiment: Experiment, export_path):
+    with open(export_path, "w+") as f:
+        f.write(experiment.detection_result.dump_to_pickled_json())
+        f.flush()
+        f.close()
+
+
 def restore_session(json_file: str) -> Experiment:
     experiment: Experiment = pickle.load(open(json_file, "rb"))
 
