@@ -9,7 +9,7 @@
 import json
 import os
 
-from filelock import FileLock
+from filelock import FileLock  # type: ignore
 from discopop_explorer.PEGraphX import LineID, Node, NodeID
 
 
