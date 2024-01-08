@@ -18,6 +18,14 @@ DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-ment
 A more comprehensive overview of DiscoPoP can be found on our [project website](https://www.discopop.tu-darmstadt.de/).
 
 ## Getting started
+Follow the steps in [setup](setup/discopop.md) to install DiscoPoP.
+To setup the Visual Studio Code Extension (recommended for general use of the framework), please follow [these steps](setup/vscx.md).
+
+For a brief introduction into the VSCode Extension, please follow the [walk-through example](examples/walk_through_gui.md).
+For a brief introduction into the command line tools, please refer to the [tools overview](tools/tools.md) and follow the [command-line walk-through example](examples/walk_through.md).
+
+For detailed information on the gathered and stored data as well as the tools themselves, please refer to [data](data/data.md) and the pages of the individual tools in the [tools overview](tools/tools.md).
+
 The simplest option to install and use DiscoPoP is provided by the [graphical user interface](Tutorials/Configuration_Wizard.md).
 For convenience, it provides the option to use a docker container to execute the profiling.
 As a result, no setup of the environment apart from installing `docker` is required.
