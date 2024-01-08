@@ -47,6 +47,7 @@ setup(
         "sympy",
         "sympy_plot_backends",
         "alive_progress",
+        "filelock",
     ],
     extras_require={
         "dev": ["mypy", "black", "data-science-types", "pre-commit"],
