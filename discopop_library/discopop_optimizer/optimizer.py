@@ -195,7 +195,7 @@ def run(arguments: OptimizerArguments):
         best_configuration = evaluate_all_decision_combinations(
             experiment, available_decisions, arguments, optimizer_dir
         )
-    else:
+    elif arguments.evolutionary != None:
         # perform evolutionary search
         best_configuration = perform_evolutionary_search(
             experiment,
@@ -203,6 +203,8 @@ def run(arguments: OptimizerArguments):
             arguments,
             optimizer_dir,
         )
+    else:
+        raise ValueError("No optimization method specified!")
 
     if best_configuration is not None:
         best_configuration = optimize_updates(experiment, best_configuration, arguments)

@@ -7,6 +7,7 @@
 # directory for details.
 import os.path
 from dataclasses import dataclass
+from typing import List, Optional
 
 
 @dataclass
@@ -16,6 +17,7 @@ class OptimizerArguments(object):
     verbose: bool
     interactive: bool
     exhaustive: bool
+    evolutionary: Optional[List[str]]
     doall_microbench_file: str
     reduction_microbench_file: str
     allow_nested_parallelism: bool
@@ -24,6 +26,13 @@ class OptimizerArguments(object):
     check_called_function_for_nested_parallelism: bool
 
     def __post_init__(self):
+        # fix correct optimization method
+        if not self.exhaustive:
+            if self.evolutionary == None:
+                self.evolutionary = [str(50), str(5)]
+        elif self.evolutionary != None:
+            self.evolutionary = None
+
         self.__validate()
 
     def __validate(self):
