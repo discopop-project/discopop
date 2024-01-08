@@ -42,6 +42,8 @@ def perform_evolutionary_search(
     arguments: OptimizerArguments,
     optimizer_dir: str,
 ) -> Optional[OptimizerOutputPattern]:
+    if arguments.evolutionary is None:
+        raise ValueError("Invalid arguments for evolutionary search: " + str(arguments.evolutionary))
     ### SETTINGS
     population_size = int(arguments.evolutionary[0])
     generations = int(arguments.evolutionary[1])
