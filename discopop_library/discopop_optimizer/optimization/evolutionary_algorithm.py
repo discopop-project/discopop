@@ -43,8 +43,8 @@ def perform_evolutionary_search(
     optimizer_dir: str,
 ) -> Optional[OptimizerOutputPattern]:
     ### SETTINGS
-    population_size = 50
-    generations = 5
+    population_size = int(arguments.evolutionary[0])
+    generations = int(arguments.evolutionary[1])
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
     crossovers = int(population_size / 10)
     mutations = int(population_size / 10)
