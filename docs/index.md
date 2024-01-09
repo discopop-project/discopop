@@ -36,7 +36,7 @@ cd discopop
 mkdir build && cd build
 DP_BUILD=$(pwd)
 cmake .. && make 
-# instrument example code
+# instrument and build the example code
 cd ../example
 mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER=${DP_BUILD}/scripts/CXX_wrapper.sh .. && make
 # execute instrumented code
@@ -56,7 +56,7 @@ done
 
 
 ## Exemplary output
-The following is an automatically generatred, exemplary output patch file generated as show in the provided [examples](examples/examples.md).
+The following is an automatically generatred, exemplary output patch file generated and applicable as show in the provided [examples](examples/examples.md).
 ```
  --- /home/lukas/temp/discopop_tmp/discopop/example/example.cpp	2024-01-09 10:11:50.369555235 +0100
 +++ /home/lukas/temp/discopop_tmp/discopop/example/example.cpp.discopop_patch_generator.temp	2024-01-09 11:14:20.904823624 +0100
