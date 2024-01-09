@@ -19,9 +19,9 @@ A more comprehensive overview of DiscoPoP can be found on our [project website](
 
 ## Getting started
 Follow the steps in [setup](setup/discopop.md) to install DiscoPoP.
-To setup the Visual Studio Code Extension (recommended for general use of the framework), please follow [these steps](setup/vscx.md).
+To setup the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) (recommended for general use of the framework), please follow [these steps](setup/vscx.md).
 
-For a brief introduction into the VSCode Extension, please follow the [walk-through example](examples/walk_through_gui.md).
+For a brief introduction into the [VSCode Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop), please follow the [walk-through example](examples/walk_through_gui.md).
 For a brief introduction into the command line tools, please refer to the [tools overview](tools/tools.md) and follow the [command-line walk-through example](examples/walk_through.md).
 
 For detailed information on the gathered and stored data as well as the tools themselves, please refer to [data](data/data.md) and the pages of the individual tools in the [tools overview](tools/tools.md).
