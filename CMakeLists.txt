@@ -32,7 +32,12 @@ else()
     if(NOT LLVM_FOUND)
         find_package(LLVM 11.1 CONFIG QUIET)
         if(NOT LLVM_FOUND)
-            message(FATAL_ERROR "No supported LLVM Version found. Version 11.0 or 11.1 required!")
+            message(FATAL_ERROR "\
+No supported LLVM Version found. \
+Version 11.0 or 11.1 required! \
+If a supported LLVM Version is installed, consider specifying the -DLLVM_DIST_PATH flag. \
+For more information, please refer to https://discopop-project.github.io/discopop/setup/discopop. \
+")
         endif()
     endif()
 endif()
