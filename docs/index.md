@@ -28,7 +28,7 @@ For detailed information on the gathered and stored data as well as the tools th
 
 ## TL;DR
 This example installs DiscoPoP, instruments and builds the provided example, analyzes the results and prints the identified parallelization suggestions to the console.
-In case any issues arise during the process, please refer to the detailed [setup instructions](setup/setup.md), or contact us via GitHub messages or by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
+In case any issues arise during the process, please refer to the detailed [setup instructions](setup/setup.md), contact us via GitHub messages, or get in contact by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
 ```
 # setup DiscoPoP
 git clone git@github.com:discopop-project/discopop.git
