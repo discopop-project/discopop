@@ -54,9 +54,10 @@ for f in $(find patch_generator -maxdepth 1 -type d); do
 done
 ```
 
- ## Exemplary output
- The following is an automatically generatred, exemplary output patch file generated as show in the provided [examples](examples/examples.md).
- ```
+
+## Exemplary output
+The following is an automatically generatred, exemplary output patch file generated as show in the provided [examples](examples/examples.md).
+```
  --- /home/lukas/temp/discopop_tmp/discopop/example/example.cpp	2024-01-09 10:11:50.369555235 +0100
 +++ /home/lukas/temp/discopop_tmp/discopop/example/example.cpp.discopop_patch_generator.temp	2024-01-09 11:14:20.904823624 +0100
 @@ -20,6 +20,7 @@
@@ -67,4 +68,4 @@ done
      for(int i = 0; i < N; i++){
          sum += Arr[i];
      }
- ```
+```
