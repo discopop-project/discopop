@@ -69,3 +69,6 @@ The following is an automatically generatred, exemplary output patch file genera
          sum += Arr[i];
      }
 ```
+
+## License
+© DiscoPoP is available under the terms of the BSD-3-Clause license, as specified in the LICENSE file.
