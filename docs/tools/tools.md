@@ -6,4 +6,5 @@ permalink: /Tools
 nav_order: 3
 ---
 
-TODO tools overview and organigram
+# Organization chart
+![DiscoPoP framework: organization chart](organization_chart.svg)
