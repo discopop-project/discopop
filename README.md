@@ -25,17 +25,17 @@ DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-ment
 A more comprehensive overview of DiscoPoP can be found on our [project website](https://www.discopop.tu-darmstadt.de/).
 
 ## Getting started
-Follow the steps in [setup](setup/discopop.md) to install DiscoPoP.
-To setup the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) (recommended for general use of the framework), please follow [these steps](setup/vscx.md).
+Follow the steps in [setup](https://discopop-project.github.io/discopop/setup/discopop/) to install DiscoPoP.
+To setup the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) (recommended for general use of the framework), please follow [these steps](https://discopop-project.github.io/discopop/setup/vscx/).
 
-For a brief introduction into the [VSCode Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop), please follow the [walk-through example](examples/walk_through_gui.md).
-For a brief introduction into the command line tools, please refer to the [tools overview](tools/tools.md) and follow the [command-line walk-through example](examples/walk_through.md).
+For a brief introduction into the [VSCode Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop), please follow the [walk-through example](https://discopop-project.github.io/discopop/examples/walk_through_gui/).
+For a brief introduction into the command line tools, please refer to the [tools overview](https://discopop-project.github.io/discopop/Tools) and follow the [command-line walk-through example](https://discopop-project.github.io/discopop/examples/walk_through/).
 
-For detailed information on the gathered and stored data as well as the tools themselves, please refer to [data](data/data.md) and the pages of the individual tools in the [tools overview](tools/tools.md).
+For detailed information on the gathered and stored data as well as the tools themselves, please refer to [data](https://discopop-project.github.io/discopop/Data) and the pages of the individual tools in the [tools overview](https://discopop-project.github.io/discopop/Tools).
 
 ## TL;DR
 This example installs DiscoPoP, instruments and builds the provided example, analyzes the results and prints the identified parallelization suggestions to the console.
-In case any issues arise during the process, please refer to the detailed [setup instructions](setup/setup.md), contact us via GitHub messages, or get in contact by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
+In case any issues arise during the process, please refer to the detailed [setup instructions](https://discopop-project.github.io/discopop/Setup), contact us via GitHub messages, or get in contact by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
 ```
 # setup DiscoPoP
 git clone git@github.com:discopop-project/discopop.git
@@ -63,7 +63,7 @@ done
 
 
 ## Exemplary output
-The following is an automatically generatred, exemplary output patch file generated and applicable as show in the provided [examples](examples/examples.md).
+The following is an automatically generatred, exemplary output patch file generated and applicable as show in the provided [examples](https://discopop-project.github.io/discopop/Examples).
 ```
  --- /home/lukas/temp/discopop_tmp/discopop/example/example.cpp	2024-01-09 10:11:50.369555235 +0100
 +++ /home/lukas/temp/discopop_tmp/discopop/example/example.cpp.discopop_patch_generator.temp	2024-01-09 11:14:20.904823624 +0100
