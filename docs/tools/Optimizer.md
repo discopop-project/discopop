@@ -5,7 +5,7 @@ parent: Tools
 nav_order: 5
 ---
 
-# DiscoPoP Optimizer
+# DiscoPoP optimizer
 ## Executable
 `discopop_optimizer`
 
