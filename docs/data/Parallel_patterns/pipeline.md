@@ -1,9 +1,12 @@
 ---
 layout: default
 title: Pipeline
-parent: Patterns
-grand_parent: Pattern Detection
+has_children: true
+parent: Parallel patterns
+grand_parent: Data
+nav_order: 3
 ---
+
 
 # Pipeline
 
@@ -137,3 +140,4 @@ After interpreting and implementing the suggestion, the resulting, now parallel,
         c = delta(b, d);
     }
     a = b;
+
