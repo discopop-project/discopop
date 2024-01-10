@@ -20,13 +20,13 @@ def import_suggestions(experiment: Experiment) -> nx.DiGraph:
     """Imports the suggestions specified in res into the graph stored in the given experiment and returns the modified graph"""
 
     # import do-all
-    for do_all_suggestion in experiment.detection_result.do_all:
+    for do_all_suggestion in experiment.detection_result.patterns.do_all:
         experiment.optimization_graph = import_doall(
             experiment.optimization_graph, do_all_suggestion, experiment.get_next_free_node_id, experiment
         )
 
     # import reduction
-    for reduction_suggestion in experiment.detection_result.reduction:
+    for reduction_suggestion in experiment.detection_result.patterns.reduction:
         experiment.optimization_graph = import_reduction(
             experiment.optimization_graph, reduction_suggestion, experiment.get_next_free_node_id, experiment
         )

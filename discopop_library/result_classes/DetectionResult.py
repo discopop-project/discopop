@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from ast import Dict
 from typing import List
 
 import jsonpickle  # type: ignore
@@ -17,24 +18,18 @@ from discopop_explorer.pattern_detectors.geometric_decomposition_detector import
 from discopop_explorer.pattern_detectors.pipeline_detector import PipelineInfo
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 from discopop_library.global_data.version.utils import get_version
+from discopop_library.result_classes.PatternStorage import PatternStorage
 
 
 class DetectionResult(object):
     version: str
     pet: PEGraphX
-    reduction: List[ReductionInfo]
-    do_all: List[DoAllInfo]
-    pipeline: List[PipelineInfo]
-    geometric_decomposition: List[GDInfo]
-    task: List[PatternInfo]
-    simple_gpu: List[PatternInfo]
-    combined_gpu: List[PatternInfo]
-    optimizer_output: List[PatternBase]
+    patterns: PatternStorage
 
     def __init__(self, pet: PEGraphX):
         self.version = get_version()  # discopop version
         self.pet = pet
-        self.optimizer_output = []
+        self.patterns = PatternStorage()
         pass
 
     def __str__(self):
