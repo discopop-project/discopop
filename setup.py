@@ -59,7 +59,6 @@ setup(
             "discopop_explorer=discopop_explorer.__main__:main",
             "DEPRECATED_discopop_profiler=DEPRECATED_discopop_profiler.__main__:main",
             "DEPRECATED_discopop_wizard=DEPRECATED_discopop_wizard.__main__:main",
-            "discopop_code_generator=discopop_library.CodeGenerator.__main__:main",
             "discopop_optimizer=discopop_library.discopop_optimizer.__main__:main",
             "discopop_patch_generator=discopop_library.PatchGenerator.__main__:main",
             "discopop_patch_applicator=discopop_library.PatchApplicator.__main__:main",
