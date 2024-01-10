@@ -25,3 +25,8 @@ For a more detailed description of the available run-time arguments, please refe
 ```
 discopop_explorer --help
 ```
+
+## Background
+Please note that like many scientific applications which work on arrays or matrices, the suggestions do not change if we change the input size. Thus, it is possible to analyze the program with small inputs, obtain the parallelization suggestions and execute the parallelized version with larger inputs. However, this is a recommendation merely and it being applicable or not depends highly on the code.
+
+Furthermore, we need to mention that DiscoPoP has an optimistic approach towards parallelization and thus programmers require to validate the final suggestions.
