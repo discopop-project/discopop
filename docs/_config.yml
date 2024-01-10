@@ -36,5 +36,7 @@ mermaid:
 aux_links:
   "DiscoPoP on GitHub":
     - "//github.com/discopop-project/discopop"
+  "VS Code Extension":
+    - "https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop"
 
 footer_content: "Copyright &copy; 2022, Technical University of Darmstadt."
