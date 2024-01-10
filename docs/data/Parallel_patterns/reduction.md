@@ -7,7 +7,7 @@ grand_parent: Data
 nav_order: 4
 ---
 
-# Reduction Loop
+# Reduction
 
 ## Reporting
 Reduction Loops are reported in the following format:
