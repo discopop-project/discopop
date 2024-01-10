@@ -47,17 +47,36 @@ discopop_explorer
 
 The execution will result in the creation of the folder `.discopop/explorer`, and most imporantly the creation of the pattern file `.discopop/explorer/patterns.json`, which describes the identified parallel patterns for use in later steps.
 
-## create applicable patches from patterns
+## Step 4: Create applicable patches from patterns
 To create applicable patch files, execute the [Patch generator](../tools/Patch_generator.md) from `.discopop` as well.
 ```
 discopop_patch_generator
 ```
 This will result in the creation of a folder named `.discopop/patch_generator`, which contains patch files for individual `file-ids`, grouped by the `suggestion-id` of the parallel pattern suggestion the patch belongs to.
 
-## print patches to the console
-for f in $(find patch_generator -maxdepth 1 -type d); do
-    echo "SUGGESTION: $f"
-    cat $f/1.patch 
+## Step 4.1: Print patches to the console
+To print the created patches, the following snippet might be used.
+```
+for patchid in $(find patch_generator -maxdepth 1 -type d); do
+    echo "SUGGESTION: ${patchid}"
+    for patchfile in $(find ${patchid} -type f); do
+        echo "PATCH FILE: ${patchfile}"
+        cat ${patchfile} 
+    done
     echo ""
 done
+```
+
+## Step 5: 
+To apply one or multiple suggestions to the sequential code in order to create a parallel program, the [Patch applicator](../tools/Patch_applicator.md) can be used to apply, manage, and roll back patches.
+For a detailed description, please refer to the respective wiki page.
+
+In the following, we will apply the identified patch with the ids `1` and `2` and reset the code afterwards.
+```
+discopop_patch_applicator -a 1 2
+# Suggestions with id 1 and 2 are now applied
+discopop_patch_applicator -r 2
+# Only suggestion 1 is now applied
+discopop_patch_applicator -C
+# Code is restored to the original (sequential) version
 ```
