@@ -5,7 +5,7 @@ parent: Tools
 nav_order: 6
 ---
 
-# Config provied
+# DiscoPoP config provider
 ## Executable
 `discopop_config_provider`
 

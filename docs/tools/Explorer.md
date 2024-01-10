@@ -5,7 +5,7 @@ parent: Tools
 nav_order: 2
 ---
 
-# DiscoPoP Explorer
+# DiscoPoP explorer
 ## Executable
 `discopop_explorer`
 
