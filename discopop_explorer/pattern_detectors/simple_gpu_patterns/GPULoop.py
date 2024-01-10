@@ -642,7 +642,7 @@ class GPULoopPattern(PatternInfo):
         # calculate the number of iterations of this loop relative to the top loop
         n: LoopNode = cast(LoopNode, map_node(pet, node_id))
 
-        do_all_loops = [node.node_id for node in res.do_all]
+        do_all_loops = [node.node_id for node in res.patterns.do_all]
 
         loop_entry_node = cast(LoopNode, pet.node_at(node_id)).get_entry_node(pet)
         if loop_entry_node is None:

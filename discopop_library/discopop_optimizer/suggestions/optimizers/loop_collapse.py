@@ -239,7 +239,7 @@ def __collapse_loops_in_function(function_node_id):
 
                 # register pattern for output
                 # todo: find a nicer solution to duplicating the patterns for each device mapping
-                global_experiment.detection_result.do_all.append(pattern_info)
+                global_experiment.detection_result.patterns.do_all.append(pattern_info)
                 print("REGISTERED PATTERN INFO: ", pattern_id, " for Device: ", data_at(global_graph, csrc).device_id)
                 print(pattern_info)
                 print()
