@@ -2,7 +2,7 @@
 layout: default
 title: Do-All
 has_children: true
-parent: Parallel Patterns
+parent: Parallel patterns
 grand_parent: Data
 nav_order: 1
 ---
