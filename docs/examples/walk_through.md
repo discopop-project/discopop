@@ -67,9 +67,10 @@ for patchid in $(find patch_generator -maxdepth 1 -type d); do
 done
 ```
 
-## Step 5: 
+## Step 5: Apply and manage patches
 To apply one or multiple suggestions to the sequential code in order to create a parallel program, the [Patch applicator](../tools/Patch_applicator.md) can be used to apply, manage, and roll back patches.
 For a detailed description, please refer to the respective wiki page.
+Alternatively, known mechanisms to handle patch files can be used instead.
 
 In the following, we will apply the identified patch with the ids `1` and `2` and reset the code afterwards.
 ```
