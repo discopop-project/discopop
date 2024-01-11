@@ -13,6 +13,7 @@ from discopop_library.discopop_optimizer.UpdateOptimization.LoopInitializationUp
     fix_loop_initialization_updates,
 )
 from discopop_library.discopop_optimizer.UpdateOptimization.RemoveDuplicatedUpdates import remove_duplicated_updates
+from discopop_library.discopop_optimizer.UpdateOptimization.RemoveLoopIndexUpdates import remove_loop_index_updates
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
@@ -36,6 +37,9 @@ def optimize_updates(
 
     # remove duplicated updates
     best_configuration = remove_duplicated_updates(best_configuration, arguments)
+
+    # remove loop index updates
+    best_configuration = remove_loop_index_updates(experiment, best_configuration, arguments)
 
     # plt optimized update graph
     # show_update_graph(experiment.optimization_graph, best_configuration, experiment)
