@@ -63,7 +63,8 @@ class Workload(GenericNode):
             "WL: " + str(self.sequential_workload) + "\n"
             "Read: " + str([str(e) for e in self.read_memory_regions]) + "\n"
             "Write: " + str([str(e) for e in self.written_memory_regions]) + "\n"
-            "Branch: " + str(self.branch_affiliation)
+            "Branch: " + str(self.branch_affiliation) + "\n"
+            "Device ID: " + str(self.device_id)
         )
 
     def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:
