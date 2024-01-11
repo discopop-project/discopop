@@ -75,6 +75,7 @@ class PatternDetectorX(object):
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()
         self.pet.calculateFunctionMetadata()
+        self.pet.calculateLoopMetadata()
         res = DetectionResult(self.pet)
 
         # reduction before doall!
