@@ -262,10 +262,12 @@ class LoopNode(Node):
     loop_iterations: int = -1
     contains_array_reduction: bool = False
     loop_data: Optional[LoopData]
+    loop_indices: List[str]
 
     def __init__(self, node_id: NodeID):
         super().__init__(node_id)
         self.type = NodeType.LOOP
+        self.loop_indices = []
 
     def get_nesting_level(self, pet: PEGraphX, return_invert_result: bool = True) -> int:
         """Returns the loop nesting level for the given loop node.
@@ -815,6 +817,28 @@ class PEGraphX(object):
         for edge in set(to_be_removed_with_keys):
             self.g.remove_edge(edge[0], edge[1], edge[2])
         print("Cleaning dependencies II done.")
+
+    def calculateLoopMetadata(self):
+        print("Calculating loop metadata")
+
+        # calculate loop indices
+        print("Calculating loop indices")
+        loop_nodes = self.all_nodes(LoopNode)
+        for loop in loop_nodes:
+            subtree = self.subtree_of_type(loop, CUNode)
+            # get variables used in loop
+            candidates: Set[Variable] = set()
+            for node in subtree:
+                candidates.update(node.global_vars + node.local_vars)
+            # identify loop indices
+            loop_indices: Set[Variable] = set()
+            for v in candidates:
+                if self.is_loop_index(v.name, loop.start_position(), subtree):
+                    loop_indices.add(v)
+            loop.loop_indices = [v.name for v in loop_indices]
+        print("\tDone.")
+
+        print("Calculating loop metadata done.")
 
     def show(self):
         """Plots the graph
