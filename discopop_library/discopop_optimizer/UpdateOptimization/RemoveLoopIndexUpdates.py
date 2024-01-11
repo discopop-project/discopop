@@ -6,7 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import List
+from typing import List, cast
+from discopop_explorer.PEGraphX import LoopNode
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.Update import Update
@@ -15,7 +16,8 @@ from discopop_library.discopop_optimizer.utilities.simple_utilities import data_
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 
-def remove_loop_index_updates(experiment: Experiment, best_configuration: OptimizerOutputPattern, arguments: OptimizerArguments
+def remove_loop_index_updates(
+    experiment: Experiment, best_configuration: OptimizerOutputPattern, arguments: OptimizerArguments
 ) -> OptimizerOutputPattern:
     to_be_removed: List[Update] = []
     for update in best_configuration.data_movement:
@@ -25,7 +27,7 @@ def remove_loop_index_updates(experiment: Experiment, best_configuration: Optimi
             loop_cu_id = data_at(experiment.optimization_graph, update.target_node_id).original_cu_id
             if loop_cu_id is None:
                 continue
-            loop_indices = experiment.detection_result.pet.node_at(loop_cu_id).loop_indices
+            loop_indices = cast(LoopNode, experiment.detection_result.pet.node_at(loop_cu_id)).loop_indices
             # check for loop indices as targeted varbiables
             if update.write_data_access.var_name in loop_indices:
                 # found update to loop index
@@ -41,8 +43,6 @@ def remove_loop_index_updates(experiment: Experiment, best_configuration: Optimi
     if arguments.verbose:
         if len(to_be_removed) > 0:
             print()
-
-
 
     if arguments.verbose:
         print("Removed loop index updates")
