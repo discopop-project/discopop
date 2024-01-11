@@ -101,6 +101,10 @@ class PETParser(object):
         if self.experiment.arguments.verbose:
             print("calculated data flow")
 
+        self.__propagate_reads_and_writes()
+        if self.experiment.arguments.verbose:
+            print("Propagated read/write information")
+
         return self.graph, self.next_free_node_id
 
     def get_new_node_id(self) -> int:
@@ -733,3 +737,16 @@ class PETParser(object):
             for entry in self.out_data_flow[key]:
                 if not self.graph.has_edge(key, entry):
                     add_dataflow_edge(self.graph, key, entry)
+
+    def __propagate_reads_and_writes(self):
+        # initialize queue
+        queue = [n for n in self.graph.nodes]
+
+        while queue:
+            current = queue.pop()
+            current_data = data_at(self.graph, current)
+            parents = get_all_parents(self.graph, current)
+            queue += [p for p in parents if p not in queue]
+            for p in parents:
+                data_at(self.graph, p).written_memory_regions.update(current_data.written_memory_regions)
+                data_at(self.graph, p).read_memory_regions.update(current_data.read_memory_regions)
