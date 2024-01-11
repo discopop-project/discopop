@@ -85,7 +85,8 @@ class Loop(Workload):
             "Read: " + str([str(e) for e in self.read_memory_regions]) + "\n"
             "Write: " + str([str(e) for e in self.written_memory_regions]) + "\n"
             "Suggestion: " + str(self.suggestion) + "\n"
-            "Collapse: " + str(self.collapse_level)
+            "Collapse: " + str(self.collapse_level) + "\n"
+            "Device ID: " + str(self.device_id)
         )
 
     def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:

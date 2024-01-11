@@ -55,6 +55,12 @@ def get_path_context_iterative(
         # calculate context modifications for the current node
         context = __check_current_node(node_id, graph, model, context, experiment)
 
+        # set last_visited_device id
+        if node_data.device_id is not None:
+            context.last_visited_device_id = node_data.device_id
+        else:
+            context.last_visited_device_id = context.last_seen_device_ids[-1]
+
         # calculate context modifications for the children of the current node
         context = __check_children(node_id, graph, model, context, experiment)
 
@@ -219,9 +225,22 @@ def __check_current_node(
         )
         return updated_context
 
-    context = context.calculate_and_perform_necessary_updates(
-        node_data.read_memory_regions, cast(int, context.last_seen_device_ids[-1]), node_data.node_id, graph, experiment
-    )
+    # only allow updates on device switches
+    device_switch = False
+    if data_at(graph, node_id).device_id is None:
+        if context.last_seen_device_ids[-1] != context.last_visited_device_id:
+            device_switch = True
+    elif context.last_visited_device_id != data_at(graph, node_id).device_id:
+        device_switch = True
+
+    if device_switch:
+        context = context.calculate_and_perform_necessary_updates(
+            node_data.read_memory_regions,
+            cast(int, context.last_seen_device_ids[-1]),
+            node_data.node_id,
+            graph,
+            experiment,
+        )
 
     # add the writes performed by the given node to the context
     context = context.add_writes(node_data.written_memory_regions, cast(int, context.last_seen_device_ids[-1]))

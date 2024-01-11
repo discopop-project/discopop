@@ -23,6 +23,7 @@ from discopop_library.discopop_optimizer.utilities.simple_utilities import data_
 
 class ContextObject(object):
     last_visited_node_id: int
+    last_visited_device_id: DeviceID
     last_seen_device_ids: List[DeviceID]
     seen_writes_by_device: Dict[DeviceID, Dict[MemoryRegion, Set[WriteDataAccess]]]
     necessary_updates: Set[Update]
@@ -31,6 +32,7 @@ class ContextObject(object):
         self.seen_writes_by_device = dict()
         self.necessary_updates = set()
         self.last_visited_node_id = initializing_node_id
+        self.last_visited_device_id = None
         self.last_seen_device_ids = last_seen_device_ids if last_seen_device_ids is not None else []
         self.snapshot_stack = []  # type: ignore
         self.save_stack = []  # type: ignore  # list of lists of ContextObjects, one list per branching depth
@@ -59,6 +61,7 @@ class ContextObject(object):
 
                 if device_id == reading_device_id:
                     continue
+
                 if read.memory_region not in self.get_seen_writes_by_device(device_id):
                     # read memory region is currently "unknown" to the device, thus is can be skipped
                     continue
@@ -88,7 +91,10 @@ class ContextObject(object):
 
                 for data_write in unknown_writes:
                     # if device <-> device update is required, split it into two distinct updates
-                    if device_id != 0 and reading_device_id != 0:
+                    if (
+                        device_id != experiment.get_system().get_host_device_id()
+                        and reading_device_id != experiment.get_system().get_host_device_id()
+                    ):
                         #                         print("Device <-> Device update required!")
 
                         # check if data is known to the host
