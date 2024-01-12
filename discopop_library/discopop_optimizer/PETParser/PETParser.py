@@ -51,6 +51,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     convert_temporary_edges,
     get_all_function_nodes,
     get_read_and_written_data_from_subgraph,
+    remove_edge,
     show,
     show_function,
 )
@@ -65,6 +66,7 @@ class PETParser(object):
     experiment: Experiment
     in_data_flow: Dict[int, Set[int]]
     out_data_flow: Dict[int, Set[int]]
+    invalid_functions: Set[int]
 
     def __init__(self, experiment: Experiment):
         self.pet = experiment.detection_result.pet
@@ -72,6 +74,7 @@ class PETParser(object):
         self.next_free_node_id = 0
         self.cu_id_to_graph_node_id = dict()
         self.experiment = experiment
+        self.invalid_functions = set()
 
     def parse(self) -> Tuple[nx.DiGraph, int]:
         if self.experiment.arguments.verbose:
@@ -107,6 +110,9 @@ class PETParser(object):
         if self.experiment.arguments.verbose:
             print("Propagated read/write information")
 
+        # remove invalid functions
+        self.__remove_invalid_functions()
+
         return self.graph, self.next_free_node_id
 
     def get_new_node_id(self) -> int:
@@ -114,6 +120,15 @@ class PETParser(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
+    
+    def __remove_invalid_functions(self):
+        for function in self.invalid_functions:
+            if self.experiment.arguments.verbose:
+                print("Removing body of invalid function: ", data_at(self.graph, function).name)
+            # delete all nodes in function body
+            for node in get_all_nodes_in_function(self.graph, function):
+                self.graph.remove_node(node)
+            # leave the function node for compatibility reasons
 
     def __add_function_return_node(self):
         function_node_ids = get_all_function_nodes(self.graph)
@@ -165,24 +180,42 @@ class PETParser(object):
         all_functions = get_all_function_nodes(self.graph)
         nodes_by_functions = get_nodes_by_functions(self.graph)
         for idx, function in enumerate(all_functions):
-            if self.experiment.arguments.verbose:
-                print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
-            nodes_in_function = nodes_by_functions[function]
+            try:
+                if self.experiment.arguments.verbose:
+                    print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
+                nodes_in_function = nodes_by_functions[function]
 
-            post_dominators = self.__get_post_dominators(nodes_in_function)
+                post_dominators = self.__get_post_dominators(nodes_in_function)
 
-            path_splits = self.__get_path_splits(nodes_in_function)
-            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
+                path_splits = self.__get_path_splits(nodes_in_function)
+                merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
-            added_node_ids = self.__fix_empty_branches(merge_nodes, post_dominators)
-            nodes_in_function = list(set(nodes_in_function).union(set(added_node_ids)))
+                added_node_ids = self.__fix_empty_branches(merge_nodes, post_dominators)
+                nodes_in_function = list(set(nodes_in_function).union(set(added_node_ids)))
 
-            # re-calculate post_dominators and merge nodes
-            #            post_dominators = self.__get_post_dominators(nodes_in_function)
-            #            path_splits = self.__get_path_splits(nodes_in_function)
-            #            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
+                # re-calculate post_dominators and merge nodes
+                #            post_dominators = self.__get_post_dominators(nodes_in_function)
+                #            path_splits = self.__get_path_splits(nodes_in_function)
+                #            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
-            self.__insert_context_nodes(nodes_in_function)
+                self.__insert_context_nodes(nodes_in_function)
+
+                # sanity check
+                fix_applied = True
+                while fix_applied:
+                    fix_applied = False
+                    for node in get_all_nodes_in_function(self.graph, function):
+                        if len(get_predecessors(self.graph, node)) > 1:
+                            warnings.warn("SANITY CHECK FAILED FOR NODE " +  str(node) + " . Removing random edge to try an fix the problem.")
+                            remove_edge(self.graph, get_predecessors(self.graph, node)[0], node)
+                            fix_applied = True
+                            break
+            except ValueError:
+                if self.experiment.arguments.verbose:
+                    print("Function invalid due to graph construction issues. Skipping.")
+                self.invalid_functions.add(function)
+
+            
 
     def __fix_empty_branches(
         self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]
@@ -326,7 +359,6 @@ class PETParser(object):
     ) -> Dict[int, Optional[int]]:
         """Calculates and returns the merge nodes for paths starting a the given node"""
         def get_merge_nodes(node_list, initial_post_dominators=None):
-            print("NODE LIST: ", node_list)
             candidates = initial_post_dominators
             for node in node_list:
                 
@@ -347,7 +379,6 @@ class PETParser(object):
                             break
                     if modification_found:
                         break
-            print("Candidates: ", candidates)
             return candidates
 
 
@@ -356,12 +387,7 @@ class PETParser(object):
             # cleanup candidates to get the earliest merge
             candidates = get_merge_nodes([node], post_dominators[node])
 
-            ct = 0
             while len(candidates) > 1:
-                print("MERGE NODE ITERATION: ", ct)
-                ct += 1
-                print("More than one merge node identified for path split: " + str(node) + " : " + str(candidates))
-                print("Identifying a common successor..")
                 candidates = get_merge_nodes(candidates)
 
             # prepare return value
@@ -373,7 +399,6 @@ class PETParser(object):
                 raise ValueError(
                     "More than one merge node identified for path split: " + str(node) + " : " + str(candidates)
                 )
-        print("MERGE NODES: ", merge_nodes)
         return merge_nodes
 
     def __get_path_splits(self, node_list: List[int]) -> Set[int]:
@@ -759,8 +784,13 @@ class PETParser(object):
 
         # Note: at this point in time, the graph MUST NOT have branched sections
         for function_node in get_all_function_nodes(self.graph):
-            last_writes: Dict[MemoryRegion, int] = dict()
-            inlined_data_flow_calculation(get_children(self.graph, function_node)[0], last_writes)
+            try:
+                last_writes: Dict[MemoryRegion, int] = dict()
+                inlined_data_flow_calculation(get_children(self.graph, function_node)[0], last_writes)
+            except ValueError:
+                if self.experiment.arguments.verbose:
+                    print("Function invalid due to graph construction errors. Skipping.")
+                self.invalid_functions.add(function)
 
         for key in self.out_data_flow:
             for entry in self.out_data_flow[key]:
