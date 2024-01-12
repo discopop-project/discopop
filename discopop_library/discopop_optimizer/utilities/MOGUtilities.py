@@ -102,7 +102,21 @@ def has_temporary_successor(graph: nx.DiGraph, node_id: int) -> bool:
     return len([edge for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], TemporaryEdge)]) > 0
 
 
-def show(graph, show_dataflow: bool = True, show_mutex_edges: bool = True):
+def show_function(graph: nx.DiGraph, function: FunctionRoot, show_dataflow: bool = True, show_mutex_edges: bool = True):
+    # get nodes in subtree of function
+    contained_nodes: Set[int] = set()
+    queue: List[int] = [function.node_id]
+    while len(queue) > 0:
+        current = queue.pop()
+        contained_nodes.add(current)
+        queue += get_children(graph, current)
+        queue += get_successors(graph, current)
+
+    # show the subgraph
+    show(graph.subgraph(contained_nodes), show_dataflow=show_dataflow, show_mutex_edges=show_mutex_edges)
+
+
+def show(graph: nx.DiGraph, show_dataflow: bool = True, show_mutex_edges: bool = True):
     """Plots the graph
 
     :return:
@@ -449,6 +463,13 @@ def get_all_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
         ]
         queue.update(new_parents)
     return list(all_parents)
+
+def get_parent_function(graph: nx.DiGraph, node_id: int) -> int:
+    """Returns the parent function of node_id"""
+    all_parents = get_all_parents(graph, node_id)
+    for p in all_parents:
+        if type(data_at(graph, p)) == FunctionRoot:
+            return p
 
 
 global_graph = None
