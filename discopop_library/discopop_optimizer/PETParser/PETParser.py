@@ -325,14 +325,15 @@ class PETParser(object):
         self, path_splits: Set[int], post_dominators: Dict[int, Set[int]]
     ) -> Dict[int, Optional[int]]:
         """Calculates and returns the merge nodes for paths starting a the given node"""
-        merge_nodes: Dict[int, Optional[int]] = dict()
-        for node in path_splits:
-            successors = get_successors(self.graph, node)
-            candidates = post_dominators[node]
-            for succ in successors:
-                candidates = candidates.intersection(post_dominators[succ])
-
-            # cleanup candidates to get the earliest merge
+        def get_merge_nodes(node_list, initial_post_dominators=None):
+            print("NODE LIST: ", node_list)
+            candidates = initial_post_dominators
+            for node in node_list:
+                
+                for succ in get_successors(self.graph, node):
+                    if candidates is None: 
+                        candidates = post_dominators[succ]
+                    candidates = candidates.intersection(post_dominators[succ])
             modification_found = True
             while modification_found:
                 modification_found = False
@@ -346,6 +347,22 @@ class PETParser(object):
                             break
                     if modification_found:
                         break
+            print("Candidates: ", candidates)
+            return candidates
+
+
+        merge_nodes: Dict[int, Optional[int]] = dict()
+        for node in path_splits:
+            # cleanup candidates to get the earliest merge
+            candidates = get_merge_nodes([node], post_dominators[node])
+
+            ct = 0
+            while len(candidates) > 1:
+                print("MERGE NODE ITERATION: ", ct)
+                ct += 1
+                print("More than one merge node identified for path split: " + str(node) + " : " + str(candidates))
+                print("Identifying a common successor..")
+                candidates = get_merge_nodes(candidates)
 
             # prepare return value
             if len(candidates) == 0:
@@ -353,12 +370,10 @@ class PETParser(object):
             elif len(candidates) == 1:
                 merge_nodes[node] = list(candidates)[0]
             else:
-                print("More than one merge node identified for path split: " + str(node) + " : " + str(candidates))
-                
-                show_function(self.graph, cast(FunctionRoot, data_at(self.graph, get_parent_function(self.graph, node))))
                 raise ValueError(
                     "More than one merge node identified for path split: " + str(node) + " : " + str(candidates)
                 )
+        print("MERGE NODES: ", merge_nodes)
         return merge_nodes
 
     def __get_path_splits(self, node_list: List[int]) -> Set[int]:

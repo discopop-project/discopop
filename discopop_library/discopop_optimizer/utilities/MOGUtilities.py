@@ -109,8 +109,8 @@ def show_function(graph: nx.DiGraph, function: FunctionRoot, show_dataflow: bool
     while len(queue) > 0:
         current = queue.pop()
         contained_nodes.add(current)
-        queue += get_children(graph, current)
-        queue += get_successors(graph, current)
+        queue += [c for c in get_children(graph, current) if c not in queue and c not in contained_nodes]
+        queue += [s for s in get_successors(graph, current) if s not in queue and s not in contained_nodes]
 
     # show the subgraph
     show(graph.subgraph(contained_nodes), show_dataflow=show_dataflow, show_mutex_edges=show_mutex_edges)
