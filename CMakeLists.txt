@@ -15,6 +15,9 @@ if (POLICY CMP0077)
 	cmake_policy(SET CMP0077 NEW)
 endif()
 
+# Print DiscoPoP version to be installed
+file(READ ${CMAKE_CURRENT_LIST_DIR}/discopop_library/global_data/version/VERSION DiscoPoP_VERSION)
+message(STATUS "DiscoPoP version: ${DiscoPoP_VERSION}")
 
 if(NOT ${LLVM_DIST_PATH} STREQUAL "")
     # manually specify path to LLVM installation, used for builds from source
