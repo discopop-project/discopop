@@ -38,6 +38,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_nodes_in_function,
     get_all_parents,
     get_nodes_by_functions,
+    get_parent_function,
     get_parents,
     get_path_entry,
     get_predecessors,
@@ -51,6 +52,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_function_nodes,
     get_read_and_written_data_from_subgraph,
     show,
+    show_function,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
@@ -352,7 +354,8 @@ class PETParser(object):
                 merge_nodes[node] = list(candidates)[0]
             else:
                 print("More than one merge node identified for path split: " + str(node) + " : " + str(candidates))
-                show(self.graph)
+                
+                show_function(self.graph, cast(FunctionRoot, data_at(self.graph, get_parent_function(self.graph, node))))
                 raise ValueError(
                     "More than one merge node identified for path split: " + str(node) + " : " + str(candidates)
                 )
@@ -585,15 +588,26 @@ class PETParser(object):
             add_child_edge(self.graph, new_node_id, self.cu_id_to_graph_node_id[entry_node_cu_id])
 
             # redirect edges from outside the loop to the entry node to the Loop node
+            print()
             for s, t, d in self.pet.in_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(s) not in loop_subtree:
-                    redirect_edge(
-                        self.graph,
-                        old_source_id=self.cu_id_to_graph_node_id[s],
-                        new_source_id=self.cu_id_to_graph_node_id[s],
-                        old_target_id=self.cu_id_to_graph_node_id[entry_node_cu_id],
-                        new_target_id=new_node_id,
-                    )
+                    print("s: ", s)
+                    print("t: ", t)
+                    print("entry: ", entry_node_cu_id)
+                    print("source:", self.cu_id_to_graph_node_id[s])
+                    print("old target: ", self.cu_id_to_graph_node_id[entry_node_cu_id])
+                    print("new target: ", new_node_id)
+                    try: 
+                        redirect_edge(
+                            self.graph,
+                            old_source_id=self.cu_id_to_graph_node_id[s],
+                            new_source_id=self.cu_id_to_graph_node_id[s],
+                            old_target_id=self.cu_id_to_graph_node_id[entry_node_cu_id],
+                            new_target_id=new_node_id,
+                        )
+                    except KeyError as ke:
+                        if self.experiment.arguments.verbose:
+                            print("ignoring redirect of edge due to KeyError: ", ke)
 
             # redirect edges to the outside of the loop
             for s, t, d in self.pet.out_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
