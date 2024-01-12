@@ -18,7 +18,7 @@ contourpy==1.1.0
 cycler==0.11.0
 data-science-types==0.2.23
 extrap==4.0.3
-fonttools==4.42.1
+fonttools==4.43.0
 grapheme==0.6.0
 importlib-resources==6.0.1
 jsonpickle==3.0.2
