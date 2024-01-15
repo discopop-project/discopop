@@ -99,8 +99,6 @@ class PETParser(object):
             print("remove non-hotspot function bodys")
         self.__remove_non_hotspot_function_bodys()
 
-        show(self.graph, show_dataflow=False, show_mutex_edges=False)
-
         # self.__add_branch_return_node()
         self.__add_function_return_node()
 
@@ -134,6 +132,8 @@ class PETParser(object):
         return buffer
 
     def __remove_non_hotspot_function_bodys(self):
+        if len(self.experiment.hotspot_functions) == 0:
+            return
         all_hotspot_functions_raw : List[Tuple[int, str]] = []
         for key in self.experiment.hotspot_functions:
             for file_id, line_num, hs_node_type, name in self.experiment.hotspot_functions[key]:
