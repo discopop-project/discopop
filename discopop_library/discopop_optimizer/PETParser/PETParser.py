@@ -120,7 +120,7 @@ class PETParser(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
-    
+
     def __remove_invalid_functions(self):
         for function in self.invalid_functions:
             if self.experiment.arguments.verbose:
@@ -151,8 +151,9 @@ class PETParser(object):
                     for parent_func in parent_functions:
                         # connect end of path to the dummy return node
                         add_successor_edge(self.graph, node, function_return_nodes[parent_func])
-#                        if self.experiment.arguments.verbose:
-#                            print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
+
+    #                        if self.experiment.arguments.verbose:
+    #                            print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
 
     def __add_branch_return_node(self):
         """makes sure every branching section has a merge node"""
@@ -201,21 +202,19 @@ class PETParser(object):
                 self.__insert_context_nodes(nodes_in_function)
 
                 # sanity check
-#                fix_applied = True
-#                while fix_applied:
-#                    fix_applied = False
-#                    for node in get_all_nodes_in_function(self.graph, function):
-#                        if len(get_predecessors(self.graph, node)) > 1:
-#                            warnings.warn("SANITY CHECK FAILED FOR NODE " +  str(node) + " . Removing random edge to try an fix the problem.")
-#                            remove_edge(self.graph, get_predecessors(self.graph, node)[0], node)
-#                            fix_applied = True
-#                            break
+            #                fix_applied = True
+            #                while fix_applied:
+            #                    fix_applied = False
+            #                    for node in get_all_nodes_in_function(self.graph, function):
+            #                        if len(get_predecessors(self.graph, node)) > 1:
+            #                            warnings.warn("SANITY CHECK FAILED FOR NODE " +  str(node) + " . Removing random edge to try an fix the problem.")
+            #                            remove_edge(self.graph, get_predecessors(self.graph, node)[0], node)
+            #                            fix_applied = True
+            #                            break
             except ValueError:
                 if self.experiment.arguments.verbose:
                     print("Function invalid due to graph construction issues. Skipping.")
                 self.invalid_functions.add(function)
-
-            
 
     def __fix_empty_branches(
         self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]
@@ -234,8 +233,8 @@ class PETParser(object):
         for entry, exit in empty_branches:
             dummy_node_id = self.get_new_node_id()
             self.graph.add_node(dummy_node_id, data=Workload(dummy_node_id, self.experiment, None, None, None))
-#            if self.experiment.arguments.verbose:
-#                print("Added dummy node: ", entry, "->", dummy_node_id, "->", exit)
+            #            if self.experiment.arguments.verbose:
+            #                print("Added dummy node: ", entry, "->", dummy_node_id, "->", exit)
             redirect_edge(self.graph, entry, entry, exit, dummy_node_id)
             add_successor_edge(self.graph, dummy_node_id, exit)
             added_node_ids.append(dummy_node_id)
@@ -358,12 +357,12 @@ class PETParser(object):
         self, path_splits: Set[int], post_dominators: Dict[int, Set[int]]
     ) -> Dict[int, Optional[int]]:
         """Calculates and returns the merge nodes for paths starting a the given node"""
+
         def get_merge_nodes(node_list, initial_post_dominators=None):
             candidates = initial_post_dominators
             for node in node_list:
-                
                 for succ in get_successors(self.graph, node):
-                    if candidates is None: 
+                    if candidates is None:
                         candidates = post_dominators[succ]
                     candidates = candidates.intersection(post_dominators[succ])
             modification_found = True
@@ -380,7 +379,6 @@ class PETParser(object):
                     if modification_found:
                         break
             return candidates
-
 
         merge_nodes: Dict[int, Optional[int]] = dict()
         for node in path_splits:
@@ -637,7 +635,7 @@ class PETParser(object):
                     print("source:", self.cu_id_to_graph_node_id[s])
                     print("old target: ", self.cu_id_to_graph_node_id[entry_node_cu_id])
                     print("new target: ", new_node_id)
-                    try: 
+                    try:
                         redirect_edge(
                             self.graph,
                             old_source_id=self.cu_id_to_graph_node_id[s],

@@ -464,12 +464,14 @@ def get_all_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
         queue.update(new_parents)
     return list(all_parents)
 
+
 def get_parent_function(graph: nx.DiGraph, node_id: int) -> int:
     """Returns the parent function of node_id"""
     all_parents = get_all_parents(graph, node_id)
     for p in all_parents:
         if type(data_at(graph, p)) == FunctionRoot:
             return p
+    raise ValueError("No parent exists for node " + str(node_id) + ", type: " + str(type(data_at(graph, node_id))))
 
 
 global_graph = None
