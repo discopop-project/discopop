@@ -81,7 +81,7 @@ def get_performance_models_for_functions(
                 ]
             except KeyError as ke:
                 performance_models[node_data] = [CostModel(Integer(0), Integer(1))]
-                warnings.warn("No performance model for " + node_data.name + "found due to the following error: " + ke + ". Model set to Fallback (0,1)")
+                warnings.warn("No performance model for " + node_data.name + "found due to the following error: " + str(ke) + ". Model set to Fallback (0,1)")
 
     return performance_models
 
