@@ -832,7 +832,7 @@ class PETParser(object):
             except ValueError:
                 if self.experiment.arguments.verbose:
                     print("Function invalid due to graph construction errors. Skipping.")
-                self.invalid_functions.add(function)
+                self.invalid_functions.add(function_node)
 
         for key in self.out_data_flow:
             for entry in self.out_data_flow[key]:
