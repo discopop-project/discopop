@@ -180,7 +180,6 @@ string getFName(Instruction *BI)
       // determine file path
       llvm::SmallString<128> FileNameVec = StringRef(tmpI->getModule()->getSourceFileName());
       llvm::sys::fs::make_absolute(FileNameVec);
-      errs() << "Hotspot file name: " << FileNameVec.str() << "\n";
 
       // try to determine more reliable file path ,code based on DiscoPoP.cpp
       int32_t lno;
