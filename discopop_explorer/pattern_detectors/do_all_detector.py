@@ -22,7 +22,7 @@ from ..PEGraphX import (
     MemoryRegion,
     DepType,
 )
-from ..utils import classify_loop_variables
+from ..utils import classify_loop_variables, filter_for_hotspots
 from ..variable import Variable
 
 
@@ -66,7 +66,7 @@ class DoAllInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX) -> List[DoAllInfo]:
+def run_detection(pet: PEGraphX, hotspots) -> List[DoAllInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph
@@ -78,6 +78,8 @@ def run_detection(pet: PEGraphX) -> List[DoAllInfo]:
     global_pet = pet
     result: List[DoAllInfo] = []
     nodes = pet.all_nodes(LoopNode)
+
+    nodes = filter_for_hotspots(pet, nodes, hotspots)
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
