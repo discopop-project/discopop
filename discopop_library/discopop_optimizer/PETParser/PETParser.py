@@ -283,13 +283,23 @@ class PETParser(object):
     def __insert_context_nodes(self, node_list: List[int]):
         """flattens the graph via inserting context nodes"""
         modification_found = True
+        from time import time
+        timeout = 120
+        start_time = int(time())
         while modification_found:
+            
+            
             modification_found = False
             post_dominators = self.__get_post_dominators(node_list)
             path_splits = self.__get_path_splits(node_list)
             merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
             for split_node in merge_nodes:
+                iteration_time = int(time())
+                print("Iteration: ", "time:", iteration_time - start_time)
+                if iteration_time - start_time > timeout:
+                    raise ValueError("Timeout expired.")
+                
                 if merge_nodes[split_node] is None:
                     # no merge exists -> no merge necessary since a return is encountered
                     continue
