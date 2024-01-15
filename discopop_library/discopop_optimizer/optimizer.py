@@ -99,12 +99,10 @@ def run(arguments: OptimizerArguments):
 
     if arguments.verbose:
         print("Loading Hotspots...")
-    hotspots = load_hotspots(HotspotLoaderArguments(verbose=arguments.verbose, get_loops=False, get_functions=True, get_YES=True, get_MAYBE=True, get_NO=False))
+    hotspot_functions = load_hotspots(HotspotLoaderArguments(verbose=arguments.verbose, get_loops=False, get_functions=True, get_YES=True, get_MAYBE=False, get_NO=False))
 
     if arguments.verbose:
         print("Done.")
-    import sys
-    sys.exit(0)
 
     if arguments.verbose:
         print("Loading patterns...", end="")
@@ -160,7 +158,7 @@ def run(arguments: OptimizerArguments):
         )
 
     # define Experiment
-    experiment = Experiment(file_mapping, system, detection_result, profiler_dir, arguments)
+    experiment = Experiment(file_mapping, system, detection_result, profiler_dir, arguments, hotspot_functions)
 
     # build optimization graph
     if arguments.verbose:

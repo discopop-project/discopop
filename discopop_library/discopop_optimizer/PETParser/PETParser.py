@@ -21,6 +21,7 @@ from discopop_explorer.PEGraphX import (
     MemoryRegion,
 )
 from discopop_explorer.utils import calculate_workload
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.discopop_optimizer.PETParser.DataAccesses.FromCUs import (
     get_data_accesses_for_cu,
 )
@@ -75,6 +76,8 @@ class PETParser(object):
         self.cu_id_to_graph_node_id = dict()
         self.experiment = experiment
         self.invalid_functions = set()
+        self.hotspot_functions = set()
+
 
     def parse(self) -> Tuple[nx.DiGraph, int]:
         if self.experiment.arguments.verbose:
@@ -91,6 +94,13 @@ class PETParser(object):
         self.__add_loop_nodes()
         if self.experiment.arguments.verbose:
             print("added loop nodes")
+
+        if self.experiment.arguments.verbose:
+            print("remove non-hotspot function bodys")
+        self.__remove_non_hotspot_function_bodys()
+
+        show(self.graph, show_dataflow=False, show_mutex_edges=False)
+
         # self.__add_branch_return_node()
         self.__add_function_return_node()
 
@@ -113,6 +123,8 @@ class PETParser(object):
         # remove invalid functions
         self.__remove_invalid_functions()
 
+        
+
         return self.graph, self.next_free_node_id
 
     def get_new_node_id(self) -> int:
@@ -120,6 +132,36 @@ class PETParser(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
+
+    def __remove_non_hotspot_function_bodys(self):
+        all_hotspot_functions_raw : List[Tuple[int, str]] = []
+        for key in self.experiment.hotspot_functions:
+            for file_id, line_num, hs_node_type, name in self.experiment.hotspot_functions[key]:
+                if hs_node_type == HotspotNodeType.FUNCTION:
+                    all_hotspot_functions_raw.append((file_id, name))
+
+        # convert raw information to node ids
+        for file_id, name in all_hotspot_functions_raw:
+            for function in get_all_function_nodes(self.graph):
+                function_node = data_at(self.graph, function)
+                if int(function_node.original_cu_id.split(":")[0]) == file_id:
+                    print("FID EQUAL")
+                    print("CHECK NAME: ", function_node.name, name)
+                    if function_node.name == name:
+                        print("NAME EQQUAL")
+                        self.experiment.hotspot_function_node_ids.append(function)
+
+        print("HOTPSOT FUNCTIONS: ")
+        print(self.experiment.hotspot_function_node_ids)
+
+        for function in get_all_function_nodes(self.graph):
+            if function not in self.experiment.hotspot_function_node_ids:
+                print("DELETING FUNCTION BODY: ", data_at(self.graph, function).name)
+                # remove function body
+                for node in get_all_nodes_in_function(self.graph, function):
+                    self.graph.remove_node(node)
+                # leave the function node
+
 
     def __remove_invalid_functions(self):
         for function in self.invalid_functions:
@@ -181,6 +223,9 @@ class PETParser(object):
         all_functions = get_all_function_nodes(self.graph)
         nodes_by_functions = get_nodes_by_functions(self.graph)
         for idx, function in enumerate(all_functions):
+            if function not in self.experiment.hotspot_function_node_ids:
+                print("SKIPPING NON HOTSPOT FUNCTION: ", data_at(self.graph, function).name)
+                continue
             try:
                 if self.experiment.arguments.verbose:
                     print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
@@ -782,6 +827,10 @@ class PETParser(object):
 
         # Note: at this point in time, the graph MUST NOT have branched sections
         for function_node in get_all_function_nodes(self.graph):
+            if function_node not in self.experiment.hotspot_function_node_ids:
+                print("SKIPPING NON-HOTSPOT FUNCTION: ", data_at(self.graph, function_node).name)
+                continue
+
             try:
                 last_writes: Dict[MemoryRegion, int] = dict()
                 inlined_data_flow_calculation(get_children(self.graph, function_node)[0], last_writes)
