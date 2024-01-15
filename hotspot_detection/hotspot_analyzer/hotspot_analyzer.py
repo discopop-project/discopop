@@ -24,11 +24,10 @@ class HotspotAnalyzerArguments(object):
             print("Exiting...")
             sys.exit()
 
-
 class cs:
     def __init__(self, csid):
         self.csid = csid  # note: csid is a unique identifier
-        self.typ = False  # function is false, loop is true
+        self.typ = "FUNCTION"  # options: FUNCTION, LOOP
         self.fid = 0  # file id
         self.lineNum = 0  # line number
         self.name = ""  # only for functions: name of function
@@ -200,9 +199,9 @@ def run(arguments: HotspotAnalyzerArguments):
         tempCs = findCs(int(temp[0]))
         if tempCs:
             if temp[1] == "func":
-                tempCs.addInfo(False, int(temp[2]), int(temp[3]), "func")
+                tempCs.addInfo("FUNCTION", int(temp[2]), int(temp[3]), temp[4])
             if temp[1] == "loop":
-                tempCs.addInfo(True, int(temp[2]), int(temp[3]), "loop")
+                tempCs.addInfo("LOOP", int(temp[2]), int(temp[3]), "")
     csfile.close()
     print("Done.")
 
