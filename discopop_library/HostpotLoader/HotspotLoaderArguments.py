@@ -20,7 +20,6 @@ class HotspotLoaderArguments(object):
     get_NO: bool
     get_MAYBE: bool
 
-
     def __post_init__(self):
         self.__validate()
 
@@ -39,7 +38,7 @@ class HotspotLoaderArguments(object):
         if self.get_MAYBE:
             result_list.append("MAYBE")
         return result_list
-    
+
     def get_considered_types(self) -> List[str]:
         result_list: List[str] = []
         if self.get_loops:

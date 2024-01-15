@@ -12,11 +12,12 @@ from enum import IntEnum
 class HotspotNodeType(IntEnum):
     FUNCTION = 0
     LOOP = 1
-    
+
+
 def get_HotspotNodeType_from_string(input: str) -> HotspotNodeType:
     if input == "LOOP":
         return HotspotNodeType.LOOP
-    if input == "FUNCTION": 
+    if input == "FUNCTION":
         return HotspotNodeType.FUNCTION
-    
+
     raise ValueError("Unknown Hotspot Node type: " + input)

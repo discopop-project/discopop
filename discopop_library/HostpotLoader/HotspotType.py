@@ -13,12 +13,12 @@ class HotspotType(IntEnum):
     NO = 0
     YES = 1
     MAYBE = 2
-    
-    
+
+
 def get_HotspotType_from_string(input: str) -> HotspotType:
     if input == "NO":
         return HotspotType.NO
-    if input == "YES": 
+    if input == "YES":
         return HotspotType.YES
     if input == "MAYBE":
         return HotspotType.MAYBE

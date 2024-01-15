@@ -78,7 +78,6 @@ class PETParser(object):
         self.invalid_functions = set()
         self.hotspot_functions = set()
 
-
     def parse(self) -> Tuple[nx.DiGraph, int]:
         if self.experiment.arguments.verbose:
             print("PARSING PET")
@@ -98,8 +97,6 @@ class PETParser(object):
         if self.experiment.arguments.verbose:
             print("remove non-hotspot function bodys")
         self.__remove_non_hotspot_function_bodys()
-
-        show(self.graph, show_dataflow=False, show_mutex_edges=False)
 
         # self.__add_branch_return_node()
         self.__add_function_return_node()
@@ -123,8 +120,6 @@ class PETParser(object):
         # remove invalid functions
         self.__remove_invalid_functions()
 
-        
-
         return self.graph, self.next_free_node_id
 
     def get_new_node_id(self) -> int:
@@ -134,7 +129,9 @@ class PETParser(object):
         return buffer
 
     def __remove_non_hotspot_function_bodys(self):
-        all_hotspot_functions_raw : List[Tuple[int, str]] = []
+        if len(self.experiment.hotspot_functions) == 0:
+            return
+        all_hotspot_functions_raw: List[Tuple[int, str]] = []
         for key in self.experiment.hotspot_functions:
             for file_id, line_num, hs_node_type, name in self.experiment.hotspot_functions[key]:
                 if hs_node_type == HotspotNodeType.FUNCTION:
@@ -161,7 +158,6 @@ class PETParser(object):
                 for node in get_all_nodes_in_function(self.graph, function):
                     self.graph.remove_node(node)
                 # leave the function node
-
 
     def __remove_invalid_functions(self):
         for function in self.invalid_functions:
