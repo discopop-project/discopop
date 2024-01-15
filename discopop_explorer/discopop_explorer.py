@@ -184,7 +184,7 @@ def run(arguments: ExplorerArguments):
 
     hotspots = load_hotspots(
         HotspotLoaderArguments(
-            verbose=True, get_loops=True, get_functions=True, get_YES=True, get_MAYBE=False, get_NO=False
+            verbose=True, get_loops=True, get_functions=True, get_YES=True, get_MAYBE=True, get_NO=False
         )
     )
 

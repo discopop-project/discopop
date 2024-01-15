@@ -28,7 +28,6 @@ def pet_function_metadata_parse_func(func_node):
         children = global_pet.direct_children(child)
         func_node.children_cu_ids.extend([node.id for node in children])
         stack.extend(children)
-        print("STACK", stack)
 
     local_reachability_dict = func_node.calculate_reachability_pairs(global_pet)
     local_result = func_node.id, local_reachability_dict, local_children
