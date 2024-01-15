@@ -177,8 +177,42 @@ string getFName(Instruction *BI)
   
   if (tmpI->getModule())
   {
+      // determine file path
       llvm::SmallString<128> FileNameVec = StringRef(tmpI->getModule()->getSourceFileName());
       llvm::sys::fs::make_absolute(FileNameVec);
+      errs() << "Hotspot file name: " << FileNameVec.str() << "\n";
+
+      // try to determine more reliable file path ,code based on DiscoPoP.cpp
+      int32_t lno;
+      const DebugLoc &location = BI->getDebugLoc();
+      if(location){
+        lno = BI->getDebugLoc().getLine();
+      }
+      else{
+        lno = 0;
+      }
+      char *absolutePathFileName;
+      if (lno){
+        MDNode *N = BI->getMetadata("dbg");
+        // N == NULL means BI is only a helper instruction.
+        // No metadata is attached to BI.
+        if(N){
+          StringRef File = "", Dir = "";
+          const DILocation *Loc = location.get();
+          File = Loc->getFilename();
+          Dir = Loc->getDirectory();
+
+          absolutePathFileName = realpath((Dir.str() + "/" + File.str()).c_str(), NULL);
+          if (absolutePathFileName == NULL) {
+              absolutePathFileName = realpath(File.data(), NULL);
+          }
+          string s = absolutePathFileName;
+          // use the more reliable file path
+          return s;
+        }
+      }
+
+      // use original hotspot detection file path
       return FileNameVec.str().str();
   }
   else
