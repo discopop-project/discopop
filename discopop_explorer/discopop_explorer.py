@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import pstats2  # type:ignore
-from pluginbase import PluginBase
+from pluginbase import PluginBase  # type: ignore
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
@@ -33,6 +33,7 @@ from .parser import parse_inputs
 from .pattern_detection import PatternDetectorX
 
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
+
 
 @dataclass
 class ExplorerArguments(object):
@@ -107,7 +108,7 @@ def __run(
     enable_patterns: str = "*",
     enable_task_pattern: bool = False,
     enable_detection_of_scheduling_clauses: bool = False,
-    hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None
+    hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None,
 ) -> DetectionResult:
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
     print("PET CREATION FINISHED.")
@@ -138,7 +139,7 @@ def __run(
         enable_patterns,
         enable_task_pattern,
         enable_detection_of_scheduling_clauses,
-        hotspot_functions
+        hotspot_functions,
     )
 
     for plugin_name in plugins:
@@ -179,10 +180,13 @@ def run(arguments: ExplorerArguments):
         )
         sys.exit(0)
 
-    
     print("Loading Hotspots...")
-    
-    hotspots = load_hotspots(HotspotLoaderArguments(verbose=True, get_loops=True, get_functions=True, get_YES=True, get_MAYBE=False, get_NO=False))
+
+    hotspots = load_hotspots(
+        HotspotLoaderArguments(
+            verbose=True, get_loops=True, get_functions=True, get_YES=True, get_MAYBE=False, get_NO=False
+        )
+    )
 
     print("Done.")
 
@@ -202,7 +206,7 @@ def run(arguments: ExplorerArguments):
         enable_patterns=arguments.enable_patterns,
         enable_task_pattern=arguments.enable_task_pattern,
         enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
-        hotspot_functions=hotspots
+        hotspot_functions=hotspots,
     )
 
     end = time.time()

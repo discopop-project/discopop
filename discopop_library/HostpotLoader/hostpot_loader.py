@@ -25,7 +25,7 @@ def run(arguments: HotspotLoaderArguments) -> Dict[HotspotType, List[Tuple[FILEI
         print("HotspotLoader - Configuration:")
         print(arguments)
 
-    result_dict: Dict[HotspotType, List[Tuple[FILEID, STARTLINE, NAME]]] = dict()
+    result_dict: Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME]]] = dict()
 
     if not os.path.exists(os.path.join(os.getcwd(), "hotspot_detection")):
         return result_dict

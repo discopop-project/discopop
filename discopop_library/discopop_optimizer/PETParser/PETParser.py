@@ -76,7 +76,6 @@ class PETParser(object):
         self.cu_id_to_graph_node_id = dict()
         self.experiment = experiment
         self.invalid_functions = set()
-        self.hotspot_functions = set()
 
     def parse(self) -> Tuple[nx.DiGraph, int]:
         if self.experiment.arguments.verbose:

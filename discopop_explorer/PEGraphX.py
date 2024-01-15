@@ -17,7 +17,7 @@ import jsonpickle  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
 from alive_progress import alive_bar  # type: ignore
-from lxml.objectify import ObjectifiedElement
+from lxml.objectify import ObjectifiedElement  # type: ignore
 
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType  # type:ignore
 
@@ -665,7 +665,7 @@ class PEGraphX(object):
 
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):
-                    sink_node = g.nodes[sink_cu_id]["data"]                
+                    sink_node = g.nodes[sink_cu_id]["data"]
                     source_node = g.nodes[source_cu_id]["data"]
                     vars_in_sink_node = set()
                     vars_in_source_node = set()
@@ -694,7 +694,7 @@ class PEGraphX(object):
             # for outgoing dependencies, the scope must be equal
             # as a result, comparing variable names to match memory regions is valid
             for _, _, d1 in out_deps:
-                for _, _, d2 in out_deps:                
+                for _, _, d2 in out_deps:
                     if d1.var_name == d2.var_name:
                         if d1.memory_region != d2.memory_region:
                             if d1.memory_region not in mem_reg_mappings:
@@ -736,8 +736,12 @@ class PEGraphX(object):
                     for entry in hotspot_information[key]:
                         if entry[2] == HotspotNodeType.FUNCTION:
                             all_hotspot_functions.add((entry[0], entry[3]))
-                        
-                filtered_func_nodes = [func_node for func_node in func_nodes if (func_node.file_id, func_node.name) in all_hotspot_functions]
+
+                filtered_func_nodes = [
+                    func_node
+                    for func_node in func_nodes
+                    if (func_node.file_id, func_node.name) in all_hotspot_functions
+                ]
                 print("FUNC NODES: ", [f.id for f in func_nodes])
                 print("FILTERED FUNC NODES:", [f.id for f in filtered_func_nodes])
                 func_nodes = filtered_func_nodes
@@ -1419,7 +1423,7 @@ class PEGraphX(object):
         if node.parent_function_id is None:
             # no precalculated information found.
             current_node = node
-            parent_node = node
+            parent_node: Optional[Node] = node
             while parent_node is not None:
                 current_node = parent_node
                 if type(self.node_at(current_node.id)) == FunctionNode:

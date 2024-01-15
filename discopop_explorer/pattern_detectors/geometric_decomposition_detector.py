@@ -8,7 +8,7 @@
 
 
 import math
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, cast
 
 from alive_progress import alive_bar  # type: ignore
 
@@ -95,7 +95,7 @@ def run_detection(pet: PEGraphX, hotspots) -> List[GDInfo]:
     __loop_iterations = {}
     nodes = pet.all_nodes(FunctionNode)
 
-    nodes = filter_for_hotspots(pet, nodes, hotspots)
+    nodes = cast(List[FunctionNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:

@@ -924,16 +924,20 @@ def __is_written_prior_to_task(pet: PEGraphX, var: Variable, task: Node) -> bool
     return False
 
 
-def filter_for_hotspots(pet: PEGraphX, nodes:  List[Node], hotspot_information: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]]) -> List[Node]:
+def filter_for_hotspots(
+    pet: PEGraphX,
+    nodes: List[Node],
+    hotspot_information: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+) -> List[Node]:
     """Removes such nodes from the list which are not identified as hotspots"""
-    if hotspot_information is None: 
+    if hotspot_information is None:
         return nodes
     print("Filtering for hotspots...")
     print("\tRaw: ", [n.id for n in nodes])
     # collect hotspot information
     all_hotspot_descriptions: List[Tuple[int, int, HotspotNodeType, str]] = []
     for key in hotspot_information:
-        for entry in hotspot_information[key]: 
+        for entry in hotspot_information[key]:
             all_hotspot_descriptions.append(entry)
 
     result_set: Set[Node] = set()
@@ -949,7 +953,7 @@ def filter_for_hotspots(pet: PEGraphX, nodes:  List[Node], hotspot_information: 
                         result_set.add(node)
                     if node.type == NodeType.FUNC and hotspot[2] == HotspotNodeType.FUNCTION:
                         result_set.add(node)
-    
+
     # check for matches from hotspot functions
     for node in nodes:
         for hotspot in all_hotspot_descriptions:
@@ -960,9 +964,7 @@ def filter_for_hotspots(pet: PEGraphX, nodes:  List[Node], hotspot_information: 
                             print("HOTSPOT FUNCTION MATCH FROM NODE: ", node.id)
                     except AssertionError:
                         continue
-    
-        
+
     print("\tFiltered: ", [n.id for n in result_set])
 
     return list(result_set)
-    

@@ -108,6 +108,7 @@ class PatternDetectorX(object):
                 cu_inst_result_file,
                 llvm_cxxfilt_path,
                 discopop_build_path,
+                hotspots,
             )
 
         # detect GPU patterns based on previously identified patterns

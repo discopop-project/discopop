@@ -7,7 +7,7 @@
 # directory for details.
 
 
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict, Set, cast
 
 from alive_progress import alive_bar  # type: ignore
 
@@ -166,7 +166,7 @@ def run_detection(pet: PEGraphX, hotspots) -> List[PipelineInfo]:
     dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
     nodes = pet.all_nodes(LoopNode)
 
-    nodes = filter_for_hotspots(pet, nodes, hotspots)
+    nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
