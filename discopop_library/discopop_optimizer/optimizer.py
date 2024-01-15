@@ -15,6 +15,7 @@ import jsonpickle  # type: ignore
 from sympy import Float, Symbol  # type: ignore
 
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
+from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
@@ -59,6 +60,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
 )
 from discopop_library.discopop_optimizer.suggestions.importers.main import import_suggestions
 
+from ..HostpotLoader.hostpot_loader import run as load_hotspots
 
 def run(arguments: OptimizerArguments):
     # check prerequisites and setup folder structure
@@ -94,6 +96,15 @@ def run(arguments: OptimizerArguments):
     file_mapping = load_file_mapping(file_mapping_path)
     if arguments.verbose:
         print("Done.")
+
+    if arguments.verbose:
+        print("Loading Hotspots...")
+    hotspots = load_hotspots(HotspotLoaderArguments(verbose=arguments.verbose, get_loops=False, get_functions=True, get_YES=True, get_MAYBE=True, get_NO=False))
+
+    if arguments.verbose:
+        print("Done.")
+    import sys
+    sys.exit(0)
 
     if arguments.verbose:
         print("Loading patterns...", end="")
