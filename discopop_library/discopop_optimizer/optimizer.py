@@ -62,6 +62,7 @@ from discopop_library.discopop_optimizer.suggestions.importers.main import impor
 
 from ..HostpotLoader.hostpot_loader import run as load_hotspots
 
+
 def run(arguments: OptimizerArguments):
     # check prerequisites and setup folder structure
     if arguments.verbose:
@@ -99,7 +100,11 @@ def run(arguments: OptimizerArguments):
 
     if arguments.verbose:
         print("Loading Hotspots...")
-    hotspot_functions = load_hotspots(HotspotLoaderArguments(verbose=arguments.verbose, get_loops=False, get_functions=True, get_YES=True, get_MAYBE=False, get_NO=False))
+    hotspot_functions = load_hotspots(
+        HotspotLoaderArguments(
+            verbose=arguments.verbose, get_loops=False, get_functions=True, get_YES=True, get_MAYBE=False, get_NO=False
+        )
+    )
 
     if arguments.verbose:
         print("Done.")

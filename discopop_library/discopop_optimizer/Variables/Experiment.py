@@ -25,6 +25,7 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.result_classes.DetectionResult import DetectionResult
 
+
 class Experiment(object):
     ## SETTINGS
     # todo: convert Costs into estimated runtime, removes need for high overhead weight
@@ -84,7 +85,7 @@ class Experiment(object):
         detection_result: DetectionResult,
         profiler_dir: str,
         arguments: OptimizerArguments,
-        hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]
+        hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]],
     ):
         self.__system = system
         self.detection_result = detection_result

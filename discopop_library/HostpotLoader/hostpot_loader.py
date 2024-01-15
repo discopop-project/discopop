@@ -7,7 +7,6 @@
 # directory for details.
 
 
-
 import json
 import os
 from typing import Dict, List, Tuple
@@ -18,6 +17,7 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType, get_HotspotT
 FILEID = int
 STARTLINE = int
 NAME = str
+
 
 def run(arguments: HotspotLoaderArguments) -> Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME]]]:
     """Loads Hotspots for processing in other tools of the framework"""
@@ -36,7 +36,7 @@ def run(arguments: HotspotLoaderArguments) -> Dict[HotspotType, List[Tuple[FILEI
         for key in hotspots:
             print("->", key)
             for entry in hotspots[key]:
-                print("\t->", entry)   
+                print("\t->", entry)
                 # check if hotness is considered
                 if entry["hotness"] in arguments.get_considered_hotness():
                     # check if type is considered
@@ -44,15 +44,15 @@ def run(arguments: HotspotLoaderArguments) -> Dict[HotspotType, List[Tuple[FILEI
                         print("\tCONSIDER")
                         if get_HotspotType_from_string(entry["hotness"]) not in result_dict:
                             result_dict[get_HotspotType_from_string(entry["hotness"])] = []
-                        
-                        result_dict[get_HotspotType_from_string(entry["hotness"])].append((int(entry["fid"]), int(entry["lineNum"]), get_HotspotNodeType_from_string(entry["typ"]), entry["name"] ))
+
+                        result_dict[get_HotspotType_from_string(entry["hotness"])].append(
+                            (
+                                int(entry["fid"]),
+                                int(entry["lineNum"]),
+                                get_HotspotNodeType_from_string(entry["typ"]),
+                                entry["name"],
+                            )
+                        )
     print("LOADED: ")
     print(result_dict)
     return result_dict
-                        
-
-                
-        
-
-
-    
