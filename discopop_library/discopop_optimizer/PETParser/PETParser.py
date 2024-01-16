@@ -26,6 +26,7 @@ from discopop_library.discopop_optimizer.PETParser.DataAccesses.FromCUs import (
     get_data_accesses_for_cu,
 )
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.classes.edges.SuccessorEdge import SuccessorEdge
 from discopop_library.discopop_optimizer.classes.nodes.ContextMerge import ContextMerge
 from discopop_library.discopop_optimizer.classes.nodes.ContextRestore import ContextRestore
 from discopop_library.discopop_optimizer.classes.nodes.ContextSave import ContextSave
@@ -98,9 +99,11 @@ class PETParser(object):
         self.__remove_non_hotspot_function_bodys()
 
         # self.__add_branch_return_node()
-        self.__add_function_return_node()
+        #self.__add_function_return_node()
 
-        self.__new_parse_branched_sections()
+        #self.__new_parse_branched_sections()
+
+        self.__flatten_function_graphs()
 
         convert_temporary_edges(self.graph)
         if self.experiment.arguments.verbose:
@@ -128,6 +131,82 @@ class PETParser(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
+    
+    def __flatten_function_graphs(self):
+        for function in get_all_function_nodes(self.graph):
+            function_node = cast(FunctionRoot, data_at(self.graph, function))
+            print("Flattening function:", function_node.name)
+            show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+            # prepare individual branches by replacing nodes with more than one predecessor
+            # effectively, this leads to a full duplication of all possible branches
+            modification_found = True
+            while modification_found:
+                modification_found = False
+                for node in get_all_nodes_in_function(self.graph, function):
+                    print("Node: ", node, type(node))
+                    if len(get_predecessors(self.graph, node)) > 1:
+                        print("Too many predecessors: ", node)
+                        modification_found = self.__fix_too_many_predecessors(node)
+                        if modification_found:
+                            break  
+                if modification_found:
+                    show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+            # combine branches by adding context nodes
+            # effectively, this step creates a single, long branch from the functions body
+            modification_found = True
+            while modification_found:
+                modification_found = False
+                for node in get_all_nodes_in_function(self.graph, function):
+                    print("Node: ", node, type(node))
+                    if len(get_successors(self.graph, node)) > 1:
+                        print("Too many successors: ", node)
+                        modification_found = self.__fix_too_many_successors(node)
+                        if modification_found:
+                            break  
+
+    def __fix_too_many_successors(self, node) -> bool:
+        """Return True if a graph modification has been applied. False otherwise."""
+        retval = False
+
+        # check if a node with more than one successor is located on any of the branches starting at node
+        # if so, this node is not suited for the application of a fix.
+        # Effectively, this leads to a bottom-up branch combination.
+
+
+
+        retval = True
+        return retval
+
+    def __fix_too_many_predecessors(self, node) -> bool:
+        """Return True if a graph modification has been applied. False otherwise."""
+        retval = False
+        for pred in get_predecessors(self.graph, node):
+            new_node_id = self.get_new_node_id()
+            node_copy_data = copy.deepcopy(data_at(self.graph, node))
+            node_copy_data.node_id = new_node_id
+            node_copy = self.graph.add_node(new_node_id, data=node_copy_data)
+            # copy non-successors type incoming edges
+            for in_edge in self.graph.in_edges(node, data="data"):
+                if type(in_edge[2]) == SuccessorEdge:
+                    continue
+                self.graph.add_edge(in_edge[0], new_node_id, data=copy.deepcopy(in_edge[2]))
+                print("Added edge: ", in_edge[0], new_node_id, "type: ", type(copy.deepcopy(in_edge[2])))
+            # connect copied node to pred
+            self.graph.add_edge(pred, new_node_id, data=SuccessorEdge())
+
+            # copy outgoing edges
+            for out_edge in self.graph.out_edges(node, data="data"):
+                self.graph.add_edge(new_node_id, out_edge[1], data=copy.deepcopy(out_edge[2]))
+                print("Added edge: ", new_node_id, out_edge[1], "type: ", type(copy.deepcopy(out_edge[2])))
+
+        # delete node
+        self.graph.remove_node(node)
+            
+        retval = True
+        return retval
+
+
+
 
     def __remove_non_hotspot_function_bodys(self):
         if len(self.experiment.hotspot_functions) == 0:
