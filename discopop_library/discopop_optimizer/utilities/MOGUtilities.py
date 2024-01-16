@@ -374,9 +374,18 @@ def get_all_function_nodes(graph: nx.DiGraph) -> List[int]:
 
 def get_all_nodes_in_function(graph: nx.DiGraph, function_id: int) -> List[int]:
     result_list: List[int] = []
-    for node_id in graph.nodes:
-        if function_id in get_all_parents(graph, node_id):
-            result_list.append(node_id)
+    queue: List[int] = [function_id]
+    while len(queue) > 0:
+        current = queue.pop()
+        if current != function_id:
+            result_list.append(current)
+        queue += [c for c in get_children(graph, current) if c not in result_list and c not in queue]
+        queue += [s for s in get_successors(graph, current) if s not in result_list and s not in queue]
+
+
+#    for node_id in graph.nodes:
+#        if function_id in get_all_parents(graph, node_id):
+#            result_list.append(node_id)
     return result_list
 
 

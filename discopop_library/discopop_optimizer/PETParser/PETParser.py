@@ -118,6 +118,8 @@ class PETParser(object):
 
         # remove invalid functions
         self.__remove_invalid_functions()
+        
+        show(self.graph, show_dataflow=False, show_mutex_edges=False)
 
         return self.graph, self.next_free_node_id
 
@@ -151,7 +153,7 @@ class PETParser(object):
         print(self.experiment.hotspot_function_node_ids)
 
         for function in get_all_function_nodes(self.graph):
-            if function not in self.experiment.hotspot_function_node_ids:
+            if function not in self.experiment.hotspot_function_node_ids and len(self.experiment.hotspot_function_node_ids) > 0:
                 print("DELETING FUNCTION BODY: ", data_at(self.graph, function).name)
                 # remove function body
                 for node in get_all_nodes_in_function(self.graph, function):
@@ -218,28 +220,42 @@ class PETParser(object):
         all_functions = get_all_function_nodes(self.graph)
         nodes_by_functions = get_nodes_by_functions(self.graph)
         for idx, function in enumerate(all_functions):
-            if function not in self.experiment.hotspot_function_node_ids:
-                print("SKIPPING NON HOTSPOT FUNCTION: ", data_at(self.graph, function).name)
+            if function not in self.experiment.hotspot_function_node_ids and len(self.experiment.hotspot_function_node_ids) > 0:
+                if data_at(self.graph, function).name == "main":
+                    print("SKIPPING NON HOTSPOT FUNCTION: ", data_at(self.graph, function).name)
                 continue
-            try:
-                if self.experiment.arguments.verbose:
+            #try:
+            if self.experiment.arguments.verbose:
+                if data_at(self.graph, function).name == "main":
                     print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
-                nodes_in_function = nodes_by_functions[function]
+            nodes_in_function = nodes_by_functions[function]
 
-                post_dominators = self.__get_post_dominators(nodes_in_function)
+            post_dominators = self.__get_post_dominators(nodes_in_function)
 
-                path_splits = self.__get_path_splits(nodes_in_function)
-                merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
+            path_splits = self.__get_path_splits(nodes_in_function)
+            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
-                added_node_ids = self.__fix_empty_branches(merge_nodes, post_dominators)
-                nodes_in_function = list(set(nodes_in_function).union(set(added_node_ids)))
+            if data_at(self.graph, function).name == "main":
+                print("showing..")
+                show_function(self.graph, data_at(self.graph, function), show_dataflow=False, show_mutex_edges=False)
 
-                # re-calculate post_dominators and merge nodes
-                #            post_dominators = self.__get_post_dominators(nodes_in_function)
-                #            path_splits = self.__get_path_splits(nodes_in_function)
-                #            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
+            
+            added_node_ids = self.__fix_empty_branches(merge_nodes, post_dominators)
 
-                self.__insert_context_nodes(nodes_in_function)
+            if data_at(self.graph, function).name == "main":
+                print("showing..")
+                show_function(self.graph, data_at(self.graph, function), show_dataflow=False, show_mutex_edges=False)
+            nodes_in_function = list(set(nodes_in_function).union(set(added_node_ids)))
+
+            # re-calculate post_dominators and merge nodes
+            #            post_dominators = self.__get_post_dominators(nodes_in_function)
+            #            path_splits = self.__get_path_splits(nodes_in_function)
+            #            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
+
+            self.__insert_context_nodes(nodes_in_function)
+            if data_at(self.graph, function).name == "main":
+                print("showing..")
+                show_function(self.graph, data_at(self.graph, function), show_dataflow=False, show_mutex_edges=False)
 
                 # sanity check
             #                fix_applied = True
@@ -251,10 +267,10 @@ class PETParser(object):
             #                            remove_edge(self.graph, get_predecessors(self.graph, node)[0], node)
             #                            fix_applied = True
             #                            break
-            except ValueError:
-                if self.experiment.arguments.verbose:
-                    print("Function invalid due to graph construction issues. Skipping.")
-                self.invalid_functions.add(function)
+            #except ValueError:
+            #    if self.experiment.arguments.verbose:
+            #        print("NPBS: Function",  data_at(self.graph, function).name ,"invalid due to graph construction issues. Skipping.")
+            #    self.invalid_functions.add(function)
 
     def __fix_empty_branches(
         self, merge_nodes: Dict[int, Optional[int]], post_dominators: Dict[int, Set[int]]
@@ -284,7 +300,7 @@ class PETParser(object):
         """flattens the graph via inserting context nodes"""
         modification_found = True
         from time import time
-        timeout = 120
+        timeout = 30
         start_time = int(time())
         while modification_found:
             
@@ -832,7 +848,7 @@ class PETParser(object):
 
         # Note: at this point in time, the graph MUST NOT have branched sections
         for function_node in get_all_function_nodes(self.graph):
-            if function_node not in self.experiment.hotspot_function_node_ids:
+            if function_node not in self.experiment.hotspot_function_node_ids and len(self.experiment.hotspot_function_node_ids) > 0:
                 print("SKIPPING NON-HOTSPOT FUNCTION: ", data_at(self.graph, function_node).name)
                 continue
 
@@ -841,7 +857,8 @@ class PETParser(object):
                 inlined_data_flow_calculation(get_children(self.graph, function_node)[0], last_writes)
             except ValueError:
                 if self.experiment.arguments.verbose:
-                    print("Function invalid due to graph construction errors. Skipping.")
+                    print("CDF: Function:", data_at(self.graph, function_node).name, "invalid due to graph construction errors. Skipping.")
+                    show_function(self.graph, data_at(self.graph, function_node), show_dataflow=False, show_mutex_edges=False)
                 self.invalid_functions.add(function_node)
 
         for key in self.out_data_flow:

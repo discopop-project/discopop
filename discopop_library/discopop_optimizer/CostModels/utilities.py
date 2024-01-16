@@ -52,7 +52,7 @@ def get_performance_models_for_functions(
             try:
 
                 # ignore non-hotspot functions in the calculateion to save analysis time
-                if node_id not in experiment.hotspot_function_node_ids:
+                if node_id not in experiment.hotspot_function_node_ids and len(experiment.hotspot_function_node_ids) > 0:
                     print("SKIPPING NON-HOTPSOT FUNCTION: ", node_data.name, "ID: ", node_id, " SET COSTS TO 1")
                     performance_models[node_data] = [CostModel(Integer(0), Integer(1))]
                     continue
