@@ -138,15 +138,31 @@ class PETParser(object):
             # effectively, this leads to a full duplication of all possible branches
             modification_found = True
             dbg_show = False
+            queue = get_all_nodes_in_function(self.graph, function)
+            iteration = 0
             while modification_found:
+                if self.experiment.arguments.verbose:
+                    # print progress
+                    if iteration % 1000 == 0:
+                        # count remaining fixes
+                        remaining_fixes = 0
+                        for node in get_all_nodes_in_function(self.graph, function):
+                            if len(get_predecessors(self.graph, node)) > 1:
+                                remaining_fixes += 1
+                        print("Remaining fixes (too many predecessors): ", remaining_fixes)
+                        print("queue len: ", len(queue))
+                    
                 modification_found = False
-                for node in get_all_nodes_in_function(self.graph, function):
+                while len(queue) > 0:
+                    node = queue.pop()
                     if len(get_predecessors(self.graph, node)) > 1:
-                        print("Too many predecessors: ", node)
-                        modification_found = self.__fix_too_many_predecessors(node)
+                        modification_found, modified_nodes = self.__fix_too_many_predecessors(node)
+                        queue += [n for n in modified_nodes if n not in queue]
                         if modification_found:
                             dbg_show = True
-                            break  
+                            break 
+                        else:
+                            queue.append(node)
             if dbg_show:
                 show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
             # combine branches by adding context nodes
@@ -154,12 +170,20 @@ class PETParser(object):
             modification_found = True
             dbg_show = False
             while modification_found:
+                if self.experiment.arguments.verbose:
+                    # print progress
+                    if iteration % 10000 == 0:
+                        # count remaining fixes
+                        remaining_fixes = 0
+                        for node in get_all_nodes_in_function(self.graph, function):
+                            if len(get_successors(self.graph, node)) > 1:
+                                remaining_fixes += 1
+                        print("Remaining fixes (too many successors): ", remaining_fixes)
+                
                 modification_found = False
                 for node in get_all_nodes_in_function(self.graph, function):
                     if len(get_successors(self.graph, node)) > 1:
-                        print("Too many successors: ", node)
                         modification_found = self.__fix_too_many_successors(node, dbg_function_node=function_node)
-                        print("\tfix applied: ", modification_found)
                         if modification_found:
                             dbg_show = True
                             break  
@@ -256,28 +280,33 @@ class PETParser(object):
     def __fix_too_many_predecessors(self, node) -> bool:
         """Return True if a graph modification has been applied. False otherwise."""
         retval = False
+        modified_nodes: List[int] = []
         for pred in get_predecessors(self.graph, node):
             new_node_id = self.get_new_node_id()
             node_copy_data = copy.deepcopy(data_at(self.graph, node))
             node_copy_data.node_id = new_node_id
             node_copy = self.graph.add_node(new_node_id, data=node_copy_data)
+            modified_nodes.append(new_node_id)
             # copy non-successors type incoming edges
             for in_edge in self.graph.in_edges(node, data="data"):
                 if type(in_edge[2]) == SuccessorEdge:
                     continue
                 self.graph.add_edge(in_edge[0], new_node_id, data=copy.deepcopy(in_edge[2]))
+                modified_nodes.append(in_edge[0])
             # connect copied node to pred
             self.graph.add_edge(pred, new_node_id, data=SuccessorEdge())
+            modified_nodes.append(pred)
 
             # copy outgoing edges
             for out_edge in self.graph.out_edges(node, data="data"):
                 self.graph.add_edge(new_node_id, out_edge[1], data=copy.deepcopy(out_edge[2]))
+                modified_nodes.append(out_edge[1])
 
         # delete node
         self.graph.remove_node(node)
             
         retval = True
-        return retval
+        return retval, list(set(modified_nodes))
 
 
 
