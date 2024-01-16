@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import copy
 import json
 from multiprocessing import Pool
 import os
@@ -44,6 +45,28 @@ def greedy_search(
     global_arguments = arguments
 
     made_decisions: List[int] = []
+
+    # identify sequential suggestions
+    sequential_suggestions = copy.deepcopy(available_decisions)
+    for function in sequential_suggestions:
+        for decision_set in sequential_suggestions[function]:
+            to_be_removed = []
+            for decision in decision_set:
+                if not data_at(experiment.optimization_graph, decision).represents_sequential_version():
+                    to_be_removed.append(decision)
+            for entry in to_be_removed:
+                decision_set.remove(entry)
+            
+            # remove all but the original version
+            while len(decision_set) > 1:
+                tbr = sorted(decision_set, reverse=True)[0]
+                decision_set.remove(tbr)
+
+    print("SEQUENTIAL:")
+    for function in sequential_suggestions:
+        print(function.name)
+        for decision_set in sequential_suggestions[function]:
+            print(decision_set)
     
     print("AVAILABLE:")
     for function in available_decisions:
@@ -53,7 +76,12 @@ def greedy_search(
             for decision in decision_set:
                 local_decision_set = made_decisions + [decision]
                 print("\t\tlocal: ", local_decision_set)
-                
+                _, score_expr, context = evaluate_configuration(
+                    cast(Experiment, global_experiment),
+                    local_decision_set,
+                    cast(OptimizerArguments, global_arguments),
+                )
+                print("\t\t\t", score_expr)
 
 
     import sys

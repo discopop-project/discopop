@@ -60,9 +60,13 @@ def get_performance_models_for_functions(
                 # start the collection at the first child of the function
                 for child_id in get_children(graph, node_id):
                     performance_models[node_data] = get_node_performance_models(
-                        experiment, graph, child_id, set(), all_function_nodes, restrict_to_decisions=restrict_to_decisions
+                        experiment, graph, child_id, set(), all_function_nodes, restrict_to_decisions=restrict_to_decisions, allow_sequential=True
                     )
-
+                print("BFRS")
+                for key in performance_models:
+                    print(key)
+                    print("\t", performance_models[key])
+                
                 # At this point, decisions are restricted to the specified parallelization or the sequential version.
                 # Restrict them to the exact case specified in restrict_to_decisions
                 if restrict_to_decisions is not None:
@@ -74,6 +78,8 @@ def get_performance_models_for_functions(
                                 break
                     for idx in sorted(to_be_removed, reverse=True):
                         del performance_models[node_data][idx]
+                print("ADRS")
+                print(performance_models)
 
                 # filter out NaN - Models
                 performance_models[node_data] = [
@@ -97,6 +103,7 @@ def get_node_performance_models(
     get_single_random_model: bool = False,
     ignore_node_costs: Optional[List[int]] = None,
     current_device_id=None,
+    allow_sequential:bool = False
 ) -> List[CostModel]:
     """Returns the performance models for the given node.
     If a set of decision is specified for restrict_to_decisions, only those non-sequential decisions will be allowed.
