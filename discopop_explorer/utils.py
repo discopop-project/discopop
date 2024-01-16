@@ -932,7 +932,10 @@ def filter_for_hotspots(
     """Removes such nodes from the list which are not identified as hotspots"""
     if hotspot_information is None:
         return nodes
+    if len(hotspot_information) == 0:
+        return nodes
     print("Filtering for hotspots...")
+    
     print("\tRaw: ", [n.id for n in nodes])
     # collect hotspot information
     all_hotspot_descriptions: List[Tuple[int, int, HotspotNodeType, str]] = []
