@@ -172,16 +172,25 @@ class PETParser(object):
         # check if a node with more than one successor is located on any of the branches starting at node
         # if so, this node is not suited for the application of a fix.
         # Effectively, this leads to a bottom-up branch combination.
+        BRANCH_ENTRY = str
+        BRANCH_EXIT = str
+        succeeding_branches: List[Tuple[BRANCH_ENTRY, BRANCH_EXIT]] = []
         for succ in get_successors(self.graph, node):
             # traverse succeeding branches to check for contained path splits
             queue = [succ]
+            branch_end = None
             while len(queue) > 0:
                 current = queue.pop()
-                if len(get_successors(self.graph, current)) > 1:
+                successors = get_successors(self.graph, current)
+                if len(successors) > 1:
                     # node not suited for fix application
                     return False
-                queue += [s for s in get_successors(self.graph, current) if s not in queue]
+                if len(successors) == 0:
+                    branch_end = current
+                queue += [s for s in successors if s not in queue]
             # end of branch reached without encountering a path split.
+            assert(branch_end)  # != None
+            succeeding_branches.append((succ, branch_end))
         
         # none of the succeeding paths contained a path split.
         # --> node qualifies for the application of a fix
