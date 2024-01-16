@@ -140,30 +140,34 @@ class PETParser(object):
             # prepare individual branches by replacing nodes with more than one predecessor
             # effectively, this leads to a full duplication of all possible branches
             modification_found = True
+            dbg_show = False
             while modification_found:
                 modification_found = False
                 for node in get_all_nodes_in_function(self.graph, function):
-                    print("Node: ", node, type(node))
                     if len(get_predecessors(self.graph, node)) > 1:
                         print("Too many predecessors: ", node)
                         modification_found = self.__fix_too_many_predecessors(node)
                         if modification_found:
+                            dbg_show = True
                             break  
-                if modification_found:
-                    show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+            if dbg_show:
+                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
             # combine branches by adding context nodes
             # effectively, this step creates a single, long branch from the functions body
             modification_found = True
+            dbg_show = False
             while modification_found:
                 modification_found = False
                 for node in get_all_nodes_in_function(self.graph, function):
-                    print("Node: ", node, type(node))
                     if len(get_successors(self.graph, node)) > 1:
                         print("Too many successors: ", node)
                         modification_found = self.__fix_too_many_successors(node)
                         print("\tfix applied: ", modification_found)
                         if modification_found:
+                            dbg_show = True
                             break  
+            if dbg_show:
+                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
 
     def __fix_too_many_successors(self, node) -> bool:
         """Return True if a graph modification has been applied. False otherwise."""
@@ -194,7 +198,10 @@ class PETParser(object):
         
         # none of the succeeding paths contained a path split.
         # --> node qualifies for the application of a fix
-        
+        print("succeeding branches: ", succeeding_branches)
+
+        import sys
+        sys.exit(0)
 
 
 
@@ -214,14 +221,12 @@ class PETParser(object):
                 if type(in_edge[2]) == SuccessorEdge:
                     continue
                 self.graph.add_edge(in_edge[0], new_node_id, data=copy.deepcopy(in_edge[2]))
-                print("Added edge: ", in_edge[0], new_node_id, "type: ", type(copy.deepcopy(in_edge[2])))
             # connect copied node to pred
             self.graph.add_edge(pred, new_node_id, data=SuccessorEdge())
 
             # copy outgoing edges
             for out_edge in self.graph.out_edges(node, data="data"):
                 self.graph.add_edge(new_node_id, out_edge[1], data=copy.deepcopy(out_edge[2]))
-                print("Added edge: ", new_node_id, out_edge[1], "type: ", type(copy.deepcopy(out_edge[2])))
 
         # delete node
         self.graph.remove_node(node)
