@@ -133,17 +133,22 @@ class PETParser(object):
     def __flatten_function_graphs(self):
         for function in get_all_function_nodes(self.graph):
             function_node = cast(FunctionRoot, data_at(self.graph, function))
-            print("Flattening function:", function_node.name)
+            print("Flattening function:", function_node.original_cu_id, function_node.name)
             # prepare individual branches by replacing nodes with more than one predecessor
             # effectively, this leads to a full duplication of all possible branches
             modification_found = True
             dbg_show = False
-            queue = get_all_nodes_in_function(self.graph, function)
-
+            
+            from time import time
+            timeout = 60
+            start_time = int(time())
+            print("\tfixing predecessors")
             while modification_found:
                 modification_found = False
-
-                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+                iteration_time = int(time())
+                if iteration_time - start_time > timeout:
+                    show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+                    raise ValueError("Timeout expired.")
 
                 for node in get_all_nodes_in_function(self.graph, function):
                     if len(get_predecessors(self.graph, node)) > 1:
@@ -151,13 +156,14 @@ class PETParser(object):
                         if modification_found:
                             dbg_show = True
                             break 
-            if dbg_show:
-                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
-            
+#            if dbg_show:
+#                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+
             # combine branches by adding context nodes
             # effectively, this step creates a single, long branch from the functions body
             modification_found = True
             dbg_show = False
+            print("\tfixing successors")
             while modification_found:
                 modification_found = False
                 for node in get_all_nodes_in_function(self.graph, function):
@@ -166,8 +172,8 @@ class PETParser(object):
                         if modification_found:
                             dbg_show = True
                             break  
-            if dbg_show:
-                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+#            if dbg_show:
+#                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
 
     def __fix_too_many_successors(self, node, dbg_function_node=None) -> bool:
         """Return True if a graph modification has been applied. False otherwise."""
@@ -265,18 +271,12 @@ class PETParser(object):
 
         queue = get_successors(self.graph, node)  
         while len(queue) > 0:
-            print("queue", queue)
             current = queue.pop()
-            print("current: ", current)
             if len(get_predecessors(self.graph, current)) > 1:
                 # at least one successor branch of node contains a path merge. hence, node is not a good candidate.
-                print("ret")
                 return False, []
             queue += [s for s in get_successors(self.graph, current) if s not in queue]
-            print("queue`:", queue)
 
-        
-        print("Candidate: ", node, end="\r")
         # node is a good candidate. Apply the transformation.
         for pred in get_predecessors(self.graph, node):
             new_node_id = self.get_new_node_id()
