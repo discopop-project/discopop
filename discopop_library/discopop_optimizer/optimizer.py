@@ -45,6 +45,7 @@ from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_comb
     evaluate_all_decision_combinations,
 )
 from discopop_library.discopop_optimizer.optimization.evolutionary_algorithm import perform_evolutionary_search
+from discopop_library.discopop_optimizer.optimization.greedy import greedy_search
 from discopop_library.discopop_optimizer.suggestions.optimizers.main import optimize_suggestions
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
@@ -215,6 +216,8 @@ def run(arguments: OptimizerArguments):
         best_configuration = evaluate_all_decision_combinations(
             experiment, available_decisions, arguments, optimizer_dir
         )
+    elif arguments.greedy:
+        best_configuration = greedy_search(experiment, available_decisions, arguments, optimizer_dir)
     elif arguments.evolutionary != None:
         # perform evolutionary search
         best_configuration = perform_evolutionary_search(
@@ -231,13 +234,6 @@ def run(arguments: OptimizerArguments):
         # append the configuration to the list of patterns
         experiment.detection_result.optimizer_output.append(best_configuration)
 
-    # save full experiment to disk
-    export_to_json(experiment, optimizer_dir)
-    # save updated patterns.json to disk
-    export_patterns_to_json(experiment, os.path.join(optimizer_dir, "patterns.json"))
-    # save updated detection_result to disk
-    export_detection_result_to_json(experiment, os.path.join(optimizer_dir, "detection_result_dump.json"))
-
     if arguments.profiling:
         experiment.profile.disable()
         if os.path.exists("optimizer_profile.txt"):
@@ -245,3 +241,11 @@ def run(arguments: OptimizerArguments):
         with open("optimizer_profile.txt", "w+") as f:
             stats = pstats.Stats(experiment.profile, stream=f).sort_stats("time").reverse_order()
             stats.print_stats()
+        del experiment.profile
+
+    # save full experiment to disk
+    export_to_json(experiment, optimizer_dir)
+    # save updated patterns.json to disk
+    export_patterns_to_json(experiment, os.path.join(optimizer_dir, "patterns.json"))
+    # save updated detection_result to disk
+    export_detection_result_to_json(experiment, os.path.join(optimizer_dir, "detection_result_dump.json"))

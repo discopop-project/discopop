@@ -27,6 +27,8 @@ def parse_args() -> OptimizerArguments:
         help="Enable exhaustive search. By default, an evolutionary search with a population size of 50 and 5 generations is performed.")
     parser.add_argument("-e", "--evolutionary", type=str, default=None, nargs=2, metavar=("population_size", "generations"),
         help="Enable evolutionary search. By default, an evolutionary search with a population size of 50 and 5 generations is performed.")
+    parser.add_argument("-g", "--greedy", action="store_true",
+        help="Enable greedy search. By default, an evolutionary search with a population size of 50 and 5 generations is performed.")
     parser.add_argument(
         "--doall-microbench-file", type=str, default="None",
         help="Do-All microbenchmark results"
@@ -67,7 +69,8 @@ def parse_args() -> OptimizerArguments:
         plot=arguments.plot,
         system_configuration_path=arguments.system_configuration,
         check_called_function_for_nested_parallelism=arguments.check_called_function_for_nested_parallelism,
-        profiling=arguments.profiling
+        profiling=arguments.profiling,
+        greedy=arguments.greedy
     )
 
 
