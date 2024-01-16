@@ -161,7 +161,7 @@ class PETParser(object):
                 for node in get_all_nodes_in_function(self.graph, function):
                     if len(get_successors(self.graph, node)) > 1:
                         print("Too many successors: ", node)
-                        modification_found = self.__fix_too_many_successors(node)
+                        modification_found = self.__fix_too_many_successors(node, dbg_function_node=function_node)
                         print("\tfix applied: ", modification_found)
                         if modification_found:
                             dbg_show = True
@@ -169,7 +169,7 @@ class PETParser(object):
             if dbg_show:
                 show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
 
-    def __fix_too_many_successors(self, node) -> bool:
+    def __fix_too_many_successors(self, node, dbg_function_node=None) -> bool:
         """Return True if a graph modification has been applied. False otherwise."""
         retval = False
 
@@ -200,10 +200,60 @@ class PETParser(object):
         # --> node qualifies for the application of a fix
         print("succeeding branches: ", succeeding_branches)
 
-        import sys
-        sys.exit(0)
+        
+        # create context snapshot
+        context_snapshot_id = self.get_new_node_id()
+        self.graph.add_node(context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.experiment))
+        add_successor_edge(self.graph, node, context_snapshot_id)
 
+        # create and connect create merge node and snapshot pop node
+        context_merge_node_id = self.get_new_node_id()
+        self.graph.add_node(context_merge_node_id, data=ContextMerge(context_merge_node_id, self.experiment))
+        context_snapshot_pop_node_id = self.get_new_node_id()
+        self.graph.add_node(
+            context_snapshot_pop_node_id, data=ContextSnapshotPop(context_snapshot_pop_node_id, self.experiment)
+        )
+        add_successor_edge(self.graph, context_merge_node_id, context_snapshot_pop_node_id)
 
+        # separate branches from node
+        for branch_entry, branch_exit in succeeding_branches:
+            remove_edge(self.graph, node, branch_entry)
+        
+        # linearize branches
+        combined_branch_entry = None
+        combined_branch_exit = None
+        for branch_entry, branch_exit in succeeding_branches:
+            # create and prepend context restore node to branch
+            context_restore_id = self.get_new_node_id()
+            self.graph.add_node(
+                context_restore_id,
+                data=ContextRestore(context_restore_id, self.experiment),
+            )
+            add_successor_edge(self.graph, context_restore_id, branch_entry)
+
+            # append context save node to the branch
+            context_save_id = self.get_new_node_id()
+            self.graph.add_node(context_save_id, data=ContextSave(context_save_id, self.experiment))
+            add_successor_edge(self.graph, branch_exit, context_save_id)
+
+            # concatenate the branch to the prior branch
+            if combined_branch_entry is None:
+                combined_branch_entry = context_restore_id
+                if combined_branch_exit is None:
+                    combined_branch_exit = context_save_id
+                    # initialization with first branch completed
+                    continue
+            add_successor_edge(self.graph, combined_branch_exit, context_restore_id)
+
+            # update combined_branch_exit
+            combined_branch_exit = context_save_id
+        
+        # connect linearized branch with merge and snapshot pop
+        add_successor_edge(self.graph, combined_branch_exit, context_merge_node_id)
+        combined_branch_exit = context_snapshot_pop_node_id
+
+        # connect context snapshot with combined_branch_entry
+        add_successor_edge(self.graph, context_snapshot_id, combined_branch_entry)
 
         retval = True
         return retval
