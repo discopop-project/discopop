@@ -61,7 +61,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     show_function,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
-
+from time import time
 
 class PETParser(object):
     pet: PEGraphX
@@ -141,60 +141,79 @@ class PETParser(object):
             print("Flattening function:", function_node.original_cu_id, function_node.name)
             # prepare individual branches by replacing nodes with more than one predecessor
             # effectively, this leads to a full duplication of all possible branches
+
             modification_found = True
             dbg_show = False
+            timeout = 30
+            try:
+                
+                start_time = int(time())
+                print("\tfixing predecessors")
+                queue = get_all_nodes_in_function(self.graph, function)
+                while modification_found:
+                    modification_found = False
+                    iteration_time = int(time())
+                    if iteration_time - start_time > timeout:
+                        # show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+
+                        ## dbg show profiling data
+                        if self.experiment.arguments.profiling:
+                            self.experiment.profile.disable()
+                            if os.path.exists("optimizer_profile.txt"):
+                                os.remove("optimizer_profile.txt")
+                            with open("optimizer_profile.txt", "w+") as f:
+                                stats = pstats.Stats(self.experiment.profile, stream=f).sort_stats("time").reverse_order()
+                                stats.print_stats()
+                        raise TimeoutError("Timeout expired.")
+
+                    #for node in get_all_nodes_in_function(self.graph, function):
+                    while len(queue) > 0:
+                        node = queue.pop(0)
+                        if node not in self.graph.nodes:
+                            continue
+                        if len(get_predecessors(self.graph, node)) > 1:
+                            modification_found, modified_nodes = self.__fix_too_many_predecessors(node)
+                            #queue += [n for n in modified_nodes if n not in queue]
+                            queue += modified_nodes
+                            if modification_found:
+                                dbg_show = True
+                                break 
+    #            if dbg_show:
+    #                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+
+                # combine branches by adding context nodes
+                # effectively, this step creates a single, long branch from the functions body
+                modification_found = True
+                dbg_show = False
+                print("\tfixing successors")
+                start_time = int(time())
+                while modification_found:
+                    modification_found = False
+                    iteration_time = int(time())
+                    if iteration_time - start_time > timeout:
+                        ## dbg show profiling data
+                        if self.experiment.arguments.profiling:
+                            self.experiment.profile.disable()
+                            if os.path.exists("optimizer_profile.txt"):
+                                os.remove("optimizer_profile.txt")
+                            with open("optimizer_profile.txt", "w+") as f:
+                                stats = pstats.Stats(self.experiment.profile, stream=f).sort_stats("time").reverse_order()
+                                stats.print_stats()
+                        raise TimeoutError("Timeout expired.")
+                    
+                    for node in get_all_nodes_in_function(self.graph, function):
+                        if len(get_successors(self.graph, node)) > 1:
+                            modification_found = self.__fix_too_many_successors(node, dbg_function_node=function_node)
+                            if modification_found:
+                                dbg_show = True
+                                break  
+    #            if dbg_show:
+    #                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
             
-            from time import time
-            timeout = 60
-            start_time = int(time())
-            print("\tfixing predecessors")
-            queue = get_all_nodes_in_function(self.graph, function)
-            while modification_found:
-                modification_found = False
-                iteration_time = int(time())
-                if iteration_time - start_time > timeout:
-                    # show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+            except TimeoutError:
+                print("Timeout after: ", timeout, "s")
+                self.invalid_functions.add(function)
 
-                    ## dbg show profiling data
-                    if self.experiment.arguments.profiling:
-                        self.experiment.profile.disable()
-                        if os.path.exists("optimizer_profile.txt"):
-                            os.remove("optimizer_profile.txt")
-                        with open("optimizer_profile.txt", "w+") as f:
-                            stats = pstats.Stats(self.experiment.profile, stream=f).sort_stats("time").reverse_order()
-                            stats.print_stats()
-                    raise ValueError("Timeout expired.")
-
-                #for node in get_all_nodes_in_function(self.graph, function):
-                while len(queue) > 0:
-                    node = queue.pop(0)
-                    if node not in self.graph.nodes:
-                        continue
-                    if len(get_predecessors(self.graph, node)) > 1:
-                        modification_found, modified_nodes = self.__fix_too_many_predecessors(node)
-                        #queue += [n for n in modified_nodes if n not in queue]
-                        queue += modified_nodes
-                        if modification_found:
-                            dbg_show = True
-                            break 
-#            if dbg_show:
-#                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
-
-            # combine branches by adding context nodes
-            # effectively, this step creates a single, long branch from the functions body
-            modification_found = True
-            dbg_show = False
-            print("\tfixing successors")
-            while modification_found:
-                modification_found = False
-                for node in get_all_nodes_in_function(self.graph, function):
-                    if len(get_successors(self.graph, node)) > 1:
-                        modification_found = self.__fix_too_many_successors(node, dbg_function_node=function_node)
-                        if modification_found:
-                            dbg_show = True
-                            break  
-#            if dbg_show:
-#                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
 
     def __fix_too_many_successors(self, node, dbg_function_node=None) -> bool:
         """Return True if a graph modification has been applied. False otherwise."""
