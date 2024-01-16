@@ -6,6 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import os
+import pstats
 from typing import Dict, List, Optional, Tuple, Set, cast
 
 import networkx as nx  # type: ignore
@@ -33,6 +35,7 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextSave import Contex
 from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshot import ContextSnapshot
 from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshotPop import ContextSnapshotPop
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
@@ -150,15 +153,27 @@ class PETParser(object):
                 modification_found = False
                 iteration_time = int(time())
                 if iteration_time - start_time > timeout:
-                    show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+                    # show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+
+                    ## dbg show profiling data
+                    if self.experiment.arguments.profiling:
+                        self.experiment.profile.disable()
+                        if os.path.exists("optimizer_profile.txt"):
+                            os.remove("optimizer_profile.txt")
+                        with open("optimizer_profile.txt", "w+") as f:
+                            stats = pstats.Stats(self.experiment.profile, stream=f).sort_stats("time").reverse_order()
+                            stats.print_stats()
                     raise ValueError("Timeout expired.")
 
                 #for node in get_all_nodes_in_function(self.graph, function):
                 while len(queue) > 0:
                     node = queue.pop(0)
+                    if node not in self.graph.nodes:
+                        continue
                     if len(get_predecessors(self.graph, node)) > 1:
                         modification_found, modified_nodes = self.__fix_too_many_predecessors(node)
-                        queue += [n for n in modified_nodes if n not in queue]
+                        #queue += [n for n in modified_nodes if n not in queue]
+                        queue += modified_nodes
                         if modification_found:
                             dbg_show = True
                             break 
@@ -286,7 +301,8 @@ class PETParser(object):
         # node is a good candidate. Apply the transformation.
         for pred in get_predecessors(self.graph, node):
             new_node_id = self.get_new_node_id()
-            node_copy_data = copy.deepcopy(data_at(self.graph, node))
+            #node_copy_data = copy.deepcopy(data_at(self.graph, node))
+            node_copy_data = GenericNode(new_node_id, self.experiment)
             node_copy_data.node_id = new_node_id
             node_copy = self.graph.add_node(new_node_id, data=node_copy_data)
             modified_nodes.append(new_node_id)

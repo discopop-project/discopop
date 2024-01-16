@@ -24,6 +24,7 @@ class OptimizerArguments(object):
     plot: bool
     system_configuration_path: str
     check_called_function_for_nested_parallelism: bool
+    profiling: bool
 
     def __post_init__(self):
         # fix correct optimization method

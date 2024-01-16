@@ -39,6 +39,8 @@ def parse_args() -> OptimizerArguments:
         "--system-configuration", type=str, default="optimizer/system_configuration.json",
         help="System configuration file"
     )
+    parser.add_argument("-p", "--profiling", action="store_true",
+        help="Enable profiling.")
     # EXPERIMENTAL FLAGS:
     experimental_parser.add_argument("--allow-nested-parallelism", action="store_true",
         help="Allow the creation of nested parallelism suggestions. "
@@ -65,6 +67,7 @@ def parse_args() -> OptimizerArguments:
         plot=arguments.plot,
         system_configuration_path=arguments.system_configuration,
         check_called_function_for_nested_parallelism=arguments.check_called_function_for_nested_parallelism,
+        profiling=arguments.profiling
     )
 
 

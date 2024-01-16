@@ -5,8 +5,10 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import cProfile
 import json
 import os.path
+import pstats
 import shutil
 from typing import Dict, List, Tuple, cast
 import warnings
@@ -165,6 +167,10 @@ def run(arguments: OptimizerArguments):
     # define Experiment
     experiment = Experiment(file_mapping, system, detection_result, profiler_dir, arguments, hotspot_functions)
 
+    if arguments.profiling:
+        experiment.profile = cProfile.Profile()
+        experiment.profile.enable()
+
     # build optimization graph
     if arguments.verbose:
         print("Creating optimization graph...")
@@ -231,3 +237,11 @@ def run(arguments: OptimizerArguments):
     export_patterns_to_json(experiment, os.path.join(optimizer_dir, "patterns.json"))
     # save updated detection_result to disk
     export_detection_result_to_json(experiment, os.path.join(optimizer_dir, "detection_result_dump.json"))
+
+    if arguments.profiling:
+        experiment.profile.disable()
+        if os.path.exists("optimizer_profile.txt"):
+            os.remove("optimizer_profile.txt")
+        with open("optimizer_profile.txt", "w+") as f:
+            stats = pstats.Stats(experiment.profile, stream=f).sort_stats("time").reverse_order()
+            stats.print_stats()
