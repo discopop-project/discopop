@@ -161,6 +161,7 @@ class PETParser(object):
                     if len(get_successors(self.graph, node)) > 1:
                         print("Too many successors: ", node)
                         modification_found = self.__fix_too_many_successors(node)
+                        print("\tfix applied: ", modification_found)
                         if modification_found:
                             break  
 
@@ -171,6 +172,20 @@ class PETParser(object):
         # check if a node with more than one successor is located on any of the branches starting at node
         # if so, this node is not suited for the application of a fix.
         # Effectively, this leads to a bottom-up branch combination.
+        for succ in get_successors(self.graph, node):
+            # traverse succeeding branches to check for contained path splits
+            queue = [succ]
+            while len(queue) > 0:
+                current = queue.pop()
+                if len(get_successors(self.graph, current)) > 1:
+                    # node not suited for fix application
+                    return False
+                queue += [s for s in get_successors(self.graph, current) if s not in queue]
+            # end of branch reached without encountering a path split.
+        
+        # none of the succeeding paths contained a path split.
+        # --> node qualifies for the application of a fix
+        
 
 
 
