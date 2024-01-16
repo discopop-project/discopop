@@ -121,8 +121,6 @@ class PETParser(object):
 
         # remove invalid functions
         self.__remove_invalid_functions()
-        
-        show(self.graph, show_dataflow=False, show_mutex_edges=False)
 
         return self.graph, self.next_free_node_id
 
@@ -136,7 +134,6 @@ class PETParser(object):
         for function in get_all_function_nodes(self.graph):
             function_node = cast(FunctionRoot, data_at(self.graph, function))
             print("Flattening function:", function_node.name)
-            show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
             # prepare individual branches by replacing nodes with more than one predecessor
             # effectively, this leads to a full duplication of all possible branches
             modification_found = True
@@ -198,8 +195,6 @@ class PETParser(object):
         
         # none of the succeeding paths contained a path split.
         # --> node qualifies for the application of a fix
-        print("succeeding branches: ", succeeding_branches)
-
         
         # create context snapshot
         context_snapshot_id = self.get_new_node_id()
