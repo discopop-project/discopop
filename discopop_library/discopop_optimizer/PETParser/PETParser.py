@@ -131,6 +131,8 @@ class PETParser(object):
         return buffer
     
     def __flatten_function_graphs(self):
+        # TODO: remove deepcopies by storing data independently from the nodes
+
         for function in get_all_function_nodes(self.graph):
             function_node = cast(FunctionRoot, data_at(self.graph, function))
             print("Flattening function:", function_node.original_cu_id, function_node.name)
@@ -160,8 +162,8 @@ class PETParser(object):
                         if modification_found:
                             dbg_show = True
                             break 
-            if dbg_show:
-                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+#            if dbg_show:
+#                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
 
             # combine branches by adding context nodes
             # effectively, this step creates a single, long branch from the functions body
@@ -278,11 +280,8 @@ class PETParser(object):
             current = queue.pop()
             if len(get_predecessors(self.graph, current)) > 1:
                 # at least one successor branch of node contains a path merge. hence, node is not a good candidate.
-                print("Not good candidate: ", node, "due to ", current)
                 return False, [node]
             queue += [s for s in get_successors(self.graph, current) if s not in queue]
-
-        print("good candidate: ", node)
 
         # node is a good candidate. Apply the transformation.
         for pred in get_predecessors(self.graph, node):
