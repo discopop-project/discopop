@@ -200,7 +200,7 @@ class PETParser(object):
                                 stats = pstats.Stats(self.experiment.profile, stream=f).sort_stats("time").reverse_order()
                                 stats.print_stats()
                         raise TimeoutError("Timeout expired.")
-                    
+
                     for node in get_all_nodes_in_function(self.graph, function):
                         if len(get_successors(self.graph, node)) > 1:
                             modification_found = self.__fix_too_many_successors(node, dbg_function_node=function_node)
@@ -211,7 +211,7 @@ class PETParser(object):
     #                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
             
             except TimeoutError:
-                print("Timeout after: ", timeout, "s")
+                print("\tTimeout after: ", timeout, "s")
                 self.invalid_functions.add(function)
 
 
@@ -320,8 +320,7 @@ class PETParser(object):
         # node is a good candidate. Apply the transformation.
         for pred in get_predecessors(self.graph, node):
             new_node_id = self.get_new_node_id()
-            #node_copy_data = copy.deepcopy(data_at(self.graph, node))
-            node_copy_data = GenericNode(new_node_id, self.experiment)
+            node_copy_data = copy.deepcopy(data_at(self.graph, node))
             node_copy_data.node_id = new_node_id
             node_copy = self.graph.add_node(new_node_id, data=node_copy_data)
             modified_nodes.append(new_node_id)
@@ -1080,7 +1079,7 @@ class PETParser(object):
             except ValueError:
                 if self.experiment.arguments.verbose:
                     print("CDF: Function:", data_at(self.graph, function_node).name, "invalid due to graph construction errors. Skipping.")
-                    show_function(self.graph, data_at(self.graph, function_node), show_dataflow=False, show_mutex_edges=False)
+                    #show_function(self.graph, data_at(self.graph, function_node), show_dataflow=False, show_mutex_edges=False)
                 self.invalid_functions.add(function_node)
 
         for key in self.out_data_flow:
