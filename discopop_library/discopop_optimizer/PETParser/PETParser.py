@@ -143,6 +143,7 @@ class PETParser(object):
             timeout = 60
             start_time = int(time())
             print("\tfixing predecessors")
+            queue = get_all_nodes_in_function(self.graph, function)
             while modification_found:
                 modification_found = False
                 iteration_time = int(time())
@@ -150,14 +151,17 @@ class PETParser(object):
                     show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
                     raise ValueError("Timeout expired.")
 
-                for node in get_all_nodes_in_function(self.graph, function):
+                #for node in get_all_nodes_in_function(self.graph, function):
+                while len(queue) > 0:
+                    node = queue.pop(0)
                     if len(get_predecessors(self.graph, node)) > 1:
                         modification_found, modified_nodes = self.__fix_too_many_predecessors(node)
+                        queue += [n for n in modified_nodes if n not in queue]
                         if modification_found:
                             dbg_show = True
                             break 
-#            if dbg_show:
-#                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+            if dbg_show:
+                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
 
             # combine branches by adding context nodes
             # effectively, this step creates a single, long branch from the functions body
@@ -274,8 +278,11 @@ class PETParser(object):
             current = queue.pop()
             if len(get_predecessors(self.graph, current)) > 1:
                 # at least one successor branch of node contains a path merge. hence, node is not a good candidate.
-                return False, []
+                print("Not good candidate: ", node, "due to ", current)
+                return False, [node]
             queue += [s for s in get_successors(self.graph, current) if s not in queue]
+
+        print("good candidate: ", node)
 
         # node is a good candidate. Apply the transformation.
         for pred in get_predecessors(self.graph, node):
