@@ -44,13 +44,24 @@ def greedy_search(
     global_experiment = experiment
     global_arguments = arguments
 
-    made_decisions: List[int] = []
+    print("AVAIL:")
+    print(available_decisions)
 
     # identify sequential suggestions
-    sequential_suggestions = copy.deepcopy(available_decisions)
+    # copy available decisions
+    sequential_suggestions = dict()
+    for key in available_decisions:
+        sequential_suggestions[key] = []
+        for entry in available_decisions[key]:
+            sequential_suggestions[key].append(copy.deepcopy(entry))
+
+    print("SEQ")
+    print(sequential_suggestions)
+
     for function in sequential_suggestions:
         for decision_set in sequential_suggestions[function]:
             to_be_removed = []
+            print("DECSET", decision_set)
             for decision in decision_set:
                 if not data_at(experiment.optimization_graph, decision).represents_sequential_version():
                     to_be_removed.append(decision)
@@ -69,19 +80,46 @@ def greedy_search(
             print(decision_set)
     
     print("AVAILABLE:")
+    # copy sequential decisions
+    made_decisions = dict()
+    for key in sequential_suggestions:
+        made_decisions[key] = []
+        for entry in sequential_suggestions[key]:
+            made_decisions[key].append(copy.deepcopy(entry))
+    
+    def get_dicision_list(decisions_dict):
+        res_list = []
+        for function in decisions_dict:
+            for decision_set in decisions_dict[function]:
+                res_list.append(decision_set[0])
+        return res_list
+
     for function in available_decisions:
         print(function.name)
-        for decision_set in available_decisions[function]:
+        for dcsi, decision_set in enumerate(available_decisions[function]):
             print("\t", decision_set)
             for decision in decision_set:
-                local_decision_set = made_decisions + [decision]
-                print("\t\tlocal: ", local_decision_set)
-                _, score_expr, context = evaluate_configuration(
-                    cast(Experiment, global_experiment),
-                    local_decision_set,
-                    cast(OptimizerArguments, global_arguments),
-                )
-                print("\t\t\t", score_expr)
+                # copy made decisions
+                local_decision_set = dict()
+                for key in made_decisions:
+                    local_decision_set[key] = []
+                    for entry in made_decisions[key]:
+                        local_decision_set[key].append(copy.deepcopy(entry))
+
+
+                local_decision_set = copy.deepcopy(made_decisions)
+                print("LocalKeys: ")
+                for key in local_decision_set:
+                    print(key)
+                local_decision_set[function][dcsi] = decision
+
+                print("\t\tlocal: ", get_dicision_list(local_decision_set))
+                #_, score_expr, context = evaluate_configuration(
+                #    cast(Experiment, global_experiment),
+                #    local_decision_set,
+                #    cast(OptimizerArguments, global_arguments),
+                #)
+                #print("\t\t\t", score_expr)
 
 
     import sys
