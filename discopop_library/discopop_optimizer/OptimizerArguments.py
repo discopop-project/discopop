@@ -26,6 +26,7 @@ class OptimizerArguments(object):
     check_called_function_for_nested_parallelism: bool
     profiling: bool
     greedy: bool
+    optimization: bool
 
     def __post_init__(self):
         # fix correct optimization method

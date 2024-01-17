@@ -29,6 +29,8 @@ def parse_args() -> OptimizerArguments:
         help="Enable evolutionary search. By default, a greedy search is performed.")
     parser.add_argument("-g", "--greedy", action="store_true",
         help="Enable greedy search. (Default)")
+    parser.add_argument("-o", "--optimize", action="store_true",
+        help="Enable optimization.")
     parser.add_argument(
         "--doall-microbench-file", type=str, default="None",
         help="Do-All microbenchmark results"
@@ -71,6 +73,7 @@ def parse_args() -> OptimizerArguments:
         check_called_function_for_nested_parallelism=arguments.check_called_function_for_nested_parallelism,
         profiling=arguments.profiling,
         greedy=arguments.greedy,
+        optimization=arguments.optimize
     )
 
 

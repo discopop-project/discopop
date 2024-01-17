@@ -199,40 +199,41 @@ def run(arguments: OptimizerArguments):
         if node_id != node_data.node_id:
             node_data.node_id = node_id
 
-    # get values for free symbols
-    initialize_free_symbol_ranges_and_distributions(experiment, arguments, system)
+    if arguments.optimization:
+        # get values for free symbols
+        initialize_free_symbol_ranges_and_distributions(experiment, arguments, system)
 
-    if arguments.verbose:
-        print("# SUBSTITUTIONS:")
-        for key in experiment.substitutions:
-            print("#", key, " ->", experiment.substitutions[key])
-        print()
+        if arguments.verbose:
+            print("# SUBSTITUTIONS:")
+            for key in experiment.substitutions:
+                print("#", key, " ->", experiment.substitutions[key])
+            print()
 
-    # calculate options for easy access
-    available_decisions = get_available_decisions_for_functions(experiment.optimization_graph, arguments)
+        # calculate options for easy access
+        available_decisions = get_available_decisions_for_functions(experiment.optimization_graph, arguments)
 
-    # calculate costs for all combinations of decisions
-    if arguments.exhaustive:
-        best_configuration = evaluate_all_decision_combinations(
-            experiment, available_decisions, arguments, optimizer_dir
-        )
-    elif arguments.greedy:
-        best_configuration = greedy_search(experiment, available_decisions, arguments, optimizer_dir)
-    elif arguments.evolutionary != None:
-        # perform evolutionary search
-        best_configuration = perform_evolutionary_search(
-            experiment,
-            available_decisions,
-            arguments,
-            optimizer_dir,
-        )
-    else:
-        raise ValueError("No optimization method specified!")
+        # calculate costs for all combinations of decisions
+        if arguments.exhaustive:
+            best_configuration = evaluate_all_decision_combinations(
+                experiment, available_decisions, arguments, optimizer_dir
+            )
+        elif arguments.greedy:
+            best_configuration = greedy_search(experiment, available_decisions, arguments, optimizer_dir)
+        elif arguments.evolutionary != None:
+            # perform evolutionary search
+            best_configuration = perform_evolutionary_search(
+                experiment,
+                available_decisions,
+                arguments,
+                optimizer_dir,
+            )
+        else:
+            raise ValueError("No optimization method specified!")
 
-    if best_configuration is not None:
-        best_configuration = optimize_updates(experiment, best_configuration, arguments)
-        # append the configuration to the list of patterns
-        experiment.detection_result.patterns.optimizer_output.append(best_configuration)
+        if best_configuration is not None:
+            best_configuration = optimize_updates(experiment, best_configuration, arguments)
+            # append the configuration to the list of patterns
+            experiment.detection_result.patterns.optimizer_output.append(best_configuration)
 
     if arguments.profiling:
         experiment.profile.disable()  # type: ignore
