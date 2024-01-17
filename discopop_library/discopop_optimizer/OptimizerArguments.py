@@ -31,9 +31,7 @@ class OptimizerArguments(object):
         # fix correct optimization method
         if not self.exhaustive:
             if self.evolutionary == None:
-                self.evolutionary = [str(50), str(5)]
-        elif self.evolutionary != None:
-            self.evolutionary = None
+                self.greedy = True
 
         self.__validate()
 
