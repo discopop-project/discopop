@@ -83,19 +83,19 @@ class PatternDetectorX(object):
 
         if "*" in enable_patterns or "reduction" in enable_patterns:
             print("REDUCTIONS...")
-            res.reduction = detect_reduction(self.pet, hotspots)
+            res.patterns.reduction = detect_reduction(self.pet, hotspots)
             print("\tDONE.")
         if "*" in enable_patterns or "doall" in enable_patterns:
             print("DOALL...")
-            res.do_all = detect_do_all(self.pet, hotspots)
+            res.patterns.do_all = detect_do_all(self.pet, hotspots)
             print("\tDONE.")
         if "*" in enable_patterns or "pipeline" in enable_patterns:
             print("PIPELINE...")
-            res.pipeline = detect_pipeline(self.pet, hotspots)
+            res.patterns.pipeline = detect_pipeline(self.pet, hotspots)
             print("\tDONE.")
         if "*" in enable_patterns or "geodec" in enable_patterns:
             print("GEO. DEC...")
-            res.geometric_decomposition = detect_gd(self.pet, hotspots)
+            res.patterns.geometric_decomposition = detect_gd(self.pet, hotspots)
             print("\tDONE.")
 
         # check if task pattern should be enabled
