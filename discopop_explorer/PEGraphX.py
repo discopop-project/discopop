@@ -17,7 +17,9 @@ import jsonpickle  # type:ignore
 import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type:ignore
 from alive_progress import alive_bar  # type: ignore
-from lxml.objectify import ObjectifiedElement  # type:ignore
+from lxml.objectify import ObjectifiedElement  # type: ignore
+
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType  # type:ignore
 
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
@@ -693,8 +695,6 @@ class PEGraphX(object):
             # as a result, comparing variable names to match memory regions is valid
             for _, _, d1 in out_deps:
                 for _, _, d2 in out_deps:
-                    if d1 == d2:
-                        continue
                     if d1.var_name == d2.var_name:
                         if d1.memory_region != d2.memory_region:
                             if d1.memory_region not in mem_reg_mappings:
@@ -724,10 +724,30 @@ class PEGraphX(object):
 
         print("Done.")
 
-    def calculateFunctionMetadata(self) -> None:
+    def calculateFunctionMetadata(self, hotspot_information=None, func_nodes=None) -> None:
         # store id of parent function in each node
         # and store in each function node a list of all children ids
-        func_nodes = self.all_nodes(FunctionNode)
+        if func_nodes is None:
+            func_nodes = self.all_nodes(FunctionNode)
+
+            if hotspot_information is not None:
+                all_hotspot_functions: Set[Tuple[int, str]] = set()
+                for key in hotspot_information:
+                    for entry in hotspot_information[key]:
+                        if entry[2] == HotspotNodeType.FUNCTION:
+                            all_hotspot_functions.add((entry[0], entry[3]))
+
+                filtered_func_nodes = [
+                    func_node
+                    for func_node in func_nodes
+                    if (func_node.file_id, func_node.name) in all_hotspot_functions
+                ]
+                print("FUNC NODES: ", [f.id for f in func_nodes])
+                print("FILTERED FUNC NODES:", [f.id for f in filtered_func_nodes])
+                func_nodes = filtered_func_nodes
+        else:
+            print("Calculating missing func nodes:", [f.id for f in func_nodes])
+
         print("Calculating local metadata results for functions...")
         import tqdm  # type: ignore
         from multiprocessing import Pool
@@ -1400,6 +1420,22 @@ class PEGraphX(object):
         """
         if isinstance(node, FunctionNode):
             return node
+        if node.parent_function_id is None:
+            # no precalculated information found.
+            current_node = node
+            parent_node: Optional[Node] = node
+            while parent_node is not None:
+                current_node = parent_node
+                if type(self.node_at(current_node.id)) == FunctionNode:
+                    node.parent_function_id = current_node.id
+                    print("FOUND FIX PARENT: ", node.parent_function_id, "for ", node.id)
+                    break
+                parents = [e[0] for e in self.in_edges(current_node.id, etype=EdgeType.CHILD)]
+                if len(parents) == 0:
+                    parent_node = None
+                else:
+                    parent_node = self.node_at(parents[0])
+
         assert node.parent_function_id
         return cast(FunctionNode, self.node_at(node.parent_function_id))
 

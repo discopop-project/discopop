@@ -319,6 +319,9 @@ def __parallel_crossover(param_tuple):
         element_2 = random.choice(global_population)
         # select crossover point
         max_crossover_idx = min(len(element_1), len(element_2))
+        if max_crossover_idx == 0:
+            # prevent index errors
+            continue
         crossover_idx = random.choice(range(0, max_crossover_idx))
 
         new_element_1 = element_1[:crossover_idx] + element_2[crossover_idx:]
@@ -381,6 +384,9 @@ def __parallel_mutate(param_tuple):
         mutation_target = random.choice(global_population)
 
         # select random mutation within the target
+        if len(mutation_target) == 0:
+            # prevent index errors
+            continue
         mutation_index = random.choice(range(0, len(mutation_target)))
 
         # perform mutation if possible

@@ -31,7 +31,10 @@ class Variable(object):
         return isinstance(other, Variable) and self.name == other.name
 
     def __lt__(self, other):
-        return self.name < other.name
+        try:
+            return self.name < other.name
+        except:
+            return True
 
     def __str__(self):
         return self.name

@@ -13,6 +13,8 @@ import networkx as nx  # type: ignore
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
 from discopop_explorer.PEGraphX import MemoryRegion
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
@@ -73,6 +75,9 @@ class Experiment(object):
     suggestion_to_node_ids_dict: Dict[int, List[int]]
     node_id_to_suggestion_dict: Dict[int, int]
 
+    hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]
+    hotspot_function_node_ids: List[int]
+
     def __init__(
         self,
         file_mapping: Dict[int, Path],
@@ -80,6 +85,7 @@ class Experiment(object):
         detection_result: DetectionResult,
         profiler_dir: str,
         arguments: OptimizerArguments,
+        hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]],
     ):
         self.__system = system
         self.detection_result = detection_result
@@ -96,6 +102,8 @@ class Experiment(object):
         self.selected_paths_per_function = dict()
         self.suggestion_to_node_ids_dict = dict()
         self.node_id_to_suggestion_dict = dict()
+        self.hotspot_functions = hotspot_functions
+        self.hotspot_function_node_ids = []
 
         # collect free symbols from system
         for free_symbol, value_suggestion in system.get_free_symbols():

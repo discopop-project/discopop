@@ -8,13 +8,13 @@
 
 
 import math
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, cast
 
 from alive_progress import alive_bar  # type: ignore
 
 from .PatternInfo import PatternInfo
 from ..PEGraphX import FunctionNode, LoopNode, NodeID, PEGraphX, Node, EdgeType
-from ..utils import classify_task_vars, get_child_loops
+from ..utils import classify_task_vars, filter_for_hotspots, get_child_loops
 from ..variable import Variable
 
 __loop_iterations: Dict[NodeID, int] = {}
@@ -78,7 +78,7 @@ class GDInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX) -> List[GDInfo]:
+def run_detection(pet: PEGraphX, hotspots) -> List[GDInfo]:
     """Detects geometric decomposition
 
     :param pet: PET graph
@@ -94,6 +94,8 @@ def run_detection(pet: PEGraphX) -> List[GDInfo]:
     global __loop_iterations
     __loop_iterations = {}
     nodes = pet.all_nodes(FunctionNode)
+
+    nodes = cast(List[FunctionNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:

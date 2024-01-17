@@ -5,8 +5,10 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import cProfile
 import json
 import os.path
+import pstats
 import shutil
 from typing import Dict, List, Tuple, cast
 import warnings
@@ -15,6 +17,7 @@ import jsonpickle  # type: ignore
 from sympy import Float, Symbol  # type: ignore
 
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
+from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
@@ -42,6 +45,7 @@ from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_comb
     evaluate_all_decision_combinations,
 )
 from discopop_library.discopop_optimizer.optimization.evolutionary_algorithm import perform_evolutionary_search
+from discopop_library.discopop_optimizer.optimization.greedy import greedy_search
 from discopop_library.discopop_optimizer.suggestions.optimizers.main import optimize_suggestions
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
@@ -58,6 +62,8 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     show,
 )
 from discopop_library.discopop_optimizer.suggestions.importers.main import import_suggestions
+
+from ..HostpotLoader.hostpot_loader import run as load_hotspots
 
 
 def run(arguments: OptimizerArguments):
@@ -92,6 +98,17 @@ def run(arguments: OptimizerArguments):
     if arguments.verbose:
         print("Loading file mapping...", end="")
     file_mapping = load_file_mapping(file_mapping_path)
+    if arguments.verbose:
+        print("Done.")
+
+    if arguments.verbose:
+        print("Loading Hotspots...")
+    hotspot_functions = load_hotspots(
+        HotspotLoaderArguments(
+            verbose=arguments.verbose, get_loops=False, get_functions=True, get_YES=True, get_MAYBE=False, get_NO=False
+        )
+    )
+
     if arguments.verbose:
         print("Done.")
 
@@ -149,7 +166,11 @@ def run(arguments: OptimizerArguments):
         )
 
     # define Experiment
-    experiment = Experiment(file_mapping, system, detection_result, profiler_dir, arguments)
+    experiment = Experiment(file_mapping, system, detection_result, profiler_dir, arguments, hotspot_functions)
+
+    if arguments.profiling:
+        experiment.profile = cProfile.Profile()  # type: ignore
+        experiment.profile.enable()  # type: ignore
 
     # build optimization graph
     if arguments.verbose:
@@ -195,6 +216,8 @@ def run(arguments: OptimizerArguments):
         best_configuration = evaluate_all_decision_combinations(
             experiment, available_decisions, arguments, optimizer_dir
         )
+    elif arguments.greedy:
+        best_configuration = greedy_search(experiment, available_decisions, arguments, optimizer_dir)
     elif arguments.evolutionary != None:
         # perform evolutionary search
         best_configuration = perform_evolutionary_search(
@@ -210,6 +233,15 @@ def run(arguments: OptimizerArguments):
         best_configuration = optimize_updates(experiment, best_configuration, arguments)
         # append the configuration to the list of patterns
         experiment.detection_result.optimizer_output.append(best_configuration)
+
+    if arguments.profiling:
+        experiment.profile.disable()  # type: ignore
+        if os.path.exists("optimizer_profile.txt"):
+            os.remove("optimizer_profile.txt")
+        with open("optimizer_profile.txt", "w+") as f:
+            stats = pstats.Stats(experiment.profile, stream=f).sort_stats("time").reverse_order()  # type: ignore
+            stats.print_stats()
+        del experiment.profile  # type: ignore
 
     # save full experiment to disk
     export_to_json(experiment, optimizer_dir)

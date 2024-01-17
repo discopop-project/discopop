@@ -24,14 +24,14 @@ class OptimizerArguments(object):
     plot: bool
     system_configuration_path: str
     check_called_function_for_nested_parallelism: bool
+    profiling: bool
+    greedy: bool
 
     def __post_init__(self):
         # fix correct optimization method
         if not self.exhaustive:
             if self.evolutionary == None:
-                self.evolutionary = [str(50), str(5)]
-        elif self.evolutionary != None:
-            self.evolutionary = None
+                self.greedy = True
 
         self.__validate()
 

@@ -7,7 +7,7 @@
 # directory for details.
 
 
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict, Set, cast
 
 from alive_progress import alive_bar  # type: ignore
 
@@ -23,7 +23,7 @@ from ..PEGraphX import (
     DepType,
     Dependency,
 )
-from ..utils import correlation_coefficient, classify_task_vars
+from ..utils import correlation_coefficient, classify_task_vars, filter_for_hotspots
 
 __pipeline_threshold = 0.9
 
@@ -148,7 +148,7 @@ def is_pipeline_subnode(root: Node, current: Node, children_start_lines: List[Li
 global_pet = None
 
 
-def run_detection(pet: PEGraphX) -> List[PipelineInfo]:
+def run_detection(pet: PEGraphX, hotspots) -> List[PipelineInfo]:
     """Search for pipeline pattern on all the loops in the graph
     except for doall loops
 
@@ -165,6 +165,8 @@ def run_detection(pet: PEGraphX) -> List[PipelineInfo]:
     children_cache: Dict[Node, List[Node]] = dict()
     dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
     nodes = pet.all_nodes(LoopNode)
+
+    nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:

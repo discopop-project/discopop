@@ -70,11 +70,12 @@ class PatternDetectorX(object):
         enable_patterns,
         enable_task_pattern,
         enable_detection_of_scheduling_clauses,
+        hotspots,
     ):
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()
-        self.pet.calculateFunctionMetadata()
+        self.pet.calculateFunctionMetadata(hotspots)
         self.pet.calculateLoopMetadata()
         res = DetectionResult(self.pet)
 
@@ -82,19 +83,19 @@ class PatternDetectorX(object):
 
         if "*" in enable_patterns or "reduction" in enable_patterns:
             print("REDUCTIONS...")
-            res.reduction = detect_reduction(self.pet)
+            res.reduction = detect_reduction(self.pet, hotspots)
             print("\tDONE.")
         if "*" in enable_patterns or "doall" in enable_patterns:
             print("DOALL...")
-            res.do_all = detect_do_all(self.pet)
+            res.do_all = detect_do_all(self.pet, hotspots)
             print("\tDONE.")
         if "*" in enable_patterns or "pipeline" in enable_patterns:
             print("PIPELINE...")
-            res.pipeline = detect_pipeline(self.pet)
+            res.pipeline = detect_pipeline(self.pet, hotspots)
             print("\tDONE.")
         if "*" in enable_patterns or "geodec" in enable_patterns:
             print("GEO. DEC...")
-            res.geometric_decomposition = detect_gd(self.pet)
+            res.geometric_decomposition = detect_gd(self.pet, hotspots)
             print("\tDONE.")
 
         # check if task pattern should be enabled
@@ -107,6 +108,7 @@ class PatternDetectorX(object):
                 cu_inst_result_file,
                 llvm_cxxfilt_path,
                 discopop_build_path,
+                hotspots,
             )
 
         # detect GPU patterns based on previously identified patterns

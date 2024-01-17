@@ -6,10 +6,13 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import itertools
-from typing import List, Sequence, Set, Dict, Tuple, cast
+from typing import List, Optional, Sequence, Set, Dict, Tuple, cast
 
 import numpy as np
 import warnings
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 from .PEGraphX import (
     CUNode,
@@ -919,3 +922,52 @@ def __is_written_prior_to_task(pet: PEGraphX, var: Variable, task: Node) -> bool
         if pet.node_at(out_dep[0]) in predecessors:
             return True
     return False
+
+
+def filter_for_hotspots(
+    pet: PEGraphX,
+    nodes: List[Node],
+    hotspot_information: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+) -> List[Node]:
+    """Removes such nodes from the list which are not identified as hotspots"""
+    if hotspot_information is None:
+        return nodes
+    if len(hotspot_information) == 0:
+        return nodes
+    print("Filtering for hotspots...")
+
+    print("\tRaw: ", [n.id for n in nodes])
+    # collect hotspot information
+    all_hotspot_descriptions: List[Tuple[int, int, HotspotNodeType, str]] = []
+    for key in hotspot_information:
+        for entry in hotspot_information[key]:
+            all_hotspot_descriptions.append(entry)
+
+    result_set: Set[Node] = set()
+    # check for direct matches
+    for node in nodes:
+        for hotspot in all_hotspot_descriptions:
+            # check if file matches
+            if hotspot[0] == node.file_id:
+                # check if location matches
+                if hotspot[1] == node.start_line:
+                    # check if type matches
+                    if node.type == NodeType.LOOP and hotspot[2] == HotspotNodeType.LOOP:
+                        result_set.add(node)
+                    if node.type == NodeType.FUNC and hotspot[2] == HotspotNodeType.FUNCTION:
+                        result_set.add(node)
+
+    # check for matches from hotspot functions
+    for node in nodes:
+        for hotspot in all_hotspot_descriptions:
+            if hotspot[2] == HotspotNodeType.FUNCTION:
+                if hotspot[0] == node.file_id:
+                    try:
+                        if pet.get_parent_function(node).name == hotspot[3]:
+                            print("HOTSPOT FUNCTION MATCH FROM NODE: ", node.id)
+                    except AssertionError:
+                        continue
+
+    print("\tFiltered: ", [n.id for n in result_set])
+
+    return list(result_set)

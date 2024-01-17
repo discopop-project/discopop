@@ -13,10 +13,13 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import pstats2  # type:ignore
-from pluginbase import PluginBase  # type:ignore
+from pluginbase import PluginBase  # type: ignore
+from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
 
 from discopop_library.LineMapping.initialize import initialize_line_mapping
 from discopop_library.PathManagement.PathManagement import get_path, load_file_mapping
@@ -28,6 +31,8 @@ from .PEGraphX import PEGraphX
 from .json_serializer import PatternBaseSerializer
 from .parser import parse_inputs
 from .pattern_detection import PatternDetectorX
+
+from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 
 
 @dataclass
@@ -103,6 +108,7 @@ def __run(
     enable_patterns: str = "*",
     enable_task_pattern: bool = False,
     enable_detection_of_scheduling_clauses: bool = False,
+    hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None,
 ) -> DetectionResult:
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
     print("PET CREATION FINISHED.")
@@ -133,6 +139,7 @@ def __run(
         enable_patterns,
         enable_task_pattern,
         enable_detection_of_scheduling_clauses,
+        hotspot_functions,
     )
 
     for plugin_name in plugins:
@@ -173,6 +180,16 @@ def run(arguments: ExplorerArguments):
         )
         sys.exit(0)
 
+    print("Loading Hotspots...")
+
+    hotspots = load_hotspots(
+        HotspotLoaderArguments(
+            verbose=True, get_loops=True, get_functions=True, get_YES=True, get_MAYBE=True, get_NO=False
+        )
+    )
+
+    print("Done.")
+
     start = time.time()
 
     res = __run(
@@ -189,6 +206,7 @@ def run(arguments: ExplorerArguments):
         enable_patterns=arguments.enable_patterns,
         enable_task_pattern=arguments.enable_task_pattern,
         enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
+        hotspot_functions=hotspots,
     )
 
     end = time.time()
