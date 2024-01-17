@@ -61,6 +61,8 @@ def get_performance_models_for_functions(
 
                 # start the collection at the first child of the function
                 for child_id in get_children(graph, node_id):
+                    import sys
+                    sys.setrecursionlimit(100000)
                     performance_models[node_data] = get_node_performance_models(
                         experiment,
                         graph,
@@ -70,6 +72,7 @@ def get_performance_models_for_functions(
                         restrict_to_decisions=restrict_to_decisions,
                         allow_sequential=True,
                     )
+                    sys.setrecursionlimit(1000)
 
                 # At this point, decisions are restricted to the specified parallelization or the sequential version.
                 # Restrict them to the exact case specified in restrict_to_decisions
