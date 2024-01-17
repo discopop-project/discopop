@@ -70,7 +70,7 @@ def parse_args() -> OptimizerArguments:
         system_configuration_path=arguments.system_configuration,
         check_called_function_for_nested_parallelism=arguments.check_called_function_for_nested_parallelism,
         profiling=arguments.profiling,
-        greedy=arguments.greedy
+        greedy=arguments.greedy,
     )
 
 

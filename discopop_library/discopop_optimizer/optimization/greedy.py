@@ -60,12 +60,12 @@ def greedy_search(
                     to_be_removed.append(decision)
             for entry in to_be_removed:
                 decision_set.remove(entry)
-            
+
             # remove all but the original version
             while len(decision_set) > 1:
                 tbr = sorted(decision_set, reverse=True)[0]
                 decision_set.remove(tbr)
-    
+
     # copy sequential decisions
     made_decisions = dict()
     made_decisions_context = None
@@ -73,13 +73,12 @@ def greedy_search(
         made_decisions[key] = []
         for entry in sequential_suggestions[key]:
             made_decisions[key].append(copy.deepcopy(entry))
-    
 
     for idx, function in enumerate(available_decisions):
         print("Greedy searching function: ", function.name, idx, "/", len(available_decisions))
         for dcsi, decision_set in enumerate(available_decisions[function]):
             local_results: List[Tuple[Dict[Any, Any], int]] = []
-            
+
             # prepare arguments for parallel cost calculation
             param_list = []
             for decision in decision_set:
@@ -89,20 +88,21 @@ def greedy_search(
                     local_decision_set[key] = []
                     for entry in made_decisions[key]:
                         local_decision_set[key].append(copy.deepcopy(entry))
-                
+
                 local_decision_set[function.node_id][dcsi] = [decision]
                 param_list.append(local_decision_set)
 
             # calculate costs in parallel
             with Pool(initializer=__initialize_cost_caluclation_worker, initargs=(experiment, arguments)) as pool:
-                tmp_result = list(tqdm.tqdm(pool.imap_unordered(__get_score, param_list), total=len(param_list), disable=True))
+                tmp_result = list(
+                    tqdm.tqdm(pool.imap_unordered(__get_score, param_list), total=len(param_list), disable=True)
+                )
             for local_result in tmp_result:
                 # remove invalid elements
                 if local_result[1] == -1:
-                    continue                
+                    continue
                 local_results.append(local_result)
 
-            
             # identify best option and update made_decisions
             best_option: Tuple[Dict[Any, Any], int, ContextObject] = None
             for k, e, c in local_results:
@@ -111,15 +111,17 @@ def greedy_search(
                     continue
                 if e < best_option[1]:
                     best_option = (k, e, c)
-            
+
             made_decisions = best_option[0]
             made_decisions_context = best_option[2]
-            
-#            made_decisions = sorted(local_results, key=lambda x: x[1])[0][0]
+
+            #            made_decisions = sorted(local_results, key=lambda x: x[1])[0][0]
             print("Selection: ", __get_dicision_list(made_decisions), "costs:", best_option[1])
-            
+
     # return the selected configuration
-    return __get_optimizer_output_pattern(__get_dicision_list(made_decisions), made_decisions_context, optimizer_dir, experiment)
+    return __get_optimizer_output_pattern(
+        __get_dicision_list(made_decisions), made_decisions_context, optimizer_dir, experiment
+    )
 
 
 def __get_dicision_list(decisions_dict):
@@ -157,7 +159,10 @@ def __get_score(param_tuple) -> Tuple[List[int], int, ContextObject]:
 
     return configuration, result, context
 
-def __get_optimizer_output_pattern(selection: List[int], context: ContextObject, optimizer_dir: str, experiment: Experiment):
+
+def __get_optimizer_output_pattern(
+    selection: List[int], context: ContextObject, optimizer_dir: str, experiment: Experiment
+):
     best_configuration = None
     for node_id in selection:
         # find pattern id

@@ -63,6 +63,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from time import time
 
+
 class PETParser(object):
     pet: PEGraphX
     graph: nx.DiGraph
@@ -102,9 +103,9 @@ class PETParser(object):
         self.__remove_non_hotspot_function_bodys()
 
         # self.__add_branch_return_node()
-        #self.__add_function_return_node()
+        # self.__add_function_return_node()
 
-        #self.__new_parse_branched_sections()
+        # self.__new_parse_branched_sections()
 
         self.__flatten_function_graphs()
 
@@ -132,7 +133,7 @@ class PETParser(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
-    
+
     def __flatten_function_graphs(self):
         # TODO: remove deepcopies by storing data independently from the nodes
 
@@ -146,7 +147,6 @@ class PETParser(object):
             dbg_show = False
             timeout = 30
             try:
-                
                 start_time = int(time())
                 print("\tfixing predecessors")
                 queue = get_all_nodes_in_function(self.graph, function)
@@ -162,24 +162,26 @@ class PETParser(object):
                             if os.path.exists("optimizer_profile.txt"):
                                 os.remove("optimizer_profile.txt")
                             with open("optimizer_profile.txt", "w+") as f:
-                                stats = pstats.Stats(self.experiment.profile, stream=f).sort_stats("time").reverse_order()
+                                stats = (
+                                    pstats.Stats(self.experiment.profile, stream=f).sort_stats("time").reverse_order()
+                                )
                                 stats.print_stats()
                         raise TimeoutError("Timeout expired.")
 
-                    #for node in get_all_nodes_in_function(self.graph, function):
+                    # for node in get_all_nodes_in_function(self.graph, function):
                     while len(queue) > 0:
                         node = queue.pop(0)
                         if node not in self.graph.nodes:
                             continue
                         if len(get_predecessors(self.graph, node)) > 1:
                             modification_found, modified_nodes = self.__fix_too_many_predecessors(node)
-                            #queue += [n for n in modified_nodes if n not in queue]
+                            # queue += [n for n in modified_nodes if n not in queue]
                             queue += modified_nodes
                             if modification_found:
                                 dbg_show = True
-                                break 
-    #            if dbg_show:
-    #                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+                                break
+                #            if dbg_show:
+                #                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
 
                 # combine branches by adding context nodes
                 # effectively, this step creates a single, long branch from the functions body
@@ -197,7 +199,9 @@ class PETParser(object):
                             if os.path.exists("optimizer_profile.txt"):
                                 os.remove("optimizer_profile.txt")
                             with open("optimizer_profile.txt", "w+") as f:
-                                stats = pstats.Stats(self.experiment.profile, stream=f).sort_stats("time").reverse_order()
+                                stats = (
+                                    pstats.Stats(self.experiment.profile, stream=f).sort_stats("time").reverse_order()
+                                )
                                 stats.print_stats()
                         raise TimeoutError("Timeout expired.")
 
@@ -206,14 +210,13 @@ class PETParser(object):
                             modification_found = self.__fix_too_many_successors(node, dbg_function_node=function_node)
                             if modification_found:
                                 dbg_show = True
-                                break  
-    #            if dbg_show:
-    #                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
-            
+                                break
+            #            if dbg_show:
+            #                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
+
             except TimeoutError:
                 print("\tTimeout after: ", timeout, "s")
                 self.invalid_functions.add(function)
-
 
     def __fix_too_many_successors(self, node, dbg_function_node=None) -> bool:
         """Return True if a graph modification has been applied. False otherwise."""
@@ -239,12 +242,12 @@ class PETParser(object):
                     branch_end = current
                 queue += [s for s in successors if s not in queue]
             # end of branch reached without encountering a path split.
-            assert(branch_end)  # != None
+            assert branch_end  # != None
             succeeding_branches.append((succ, branch_end))
-        
+
         # none of the succeeding paths contained a path split.
         # --> node qualifies for the application of a fix
-        
+
         # create context snapshot
         context_snapshot_id = self.get_new_node_id()
         self.graph.add_node(context_snapshot_id, data=ContextSnapshot(context_snapshot_id, self.experiment))
@@ -262,7 +265,7 @@ class PETParser(object):
         # separate branches from node
         for branch_entry, branch_exit in succeeding_branches:
             remove_edge(self.graph, node, branch_entry)
-        
+
         # linearize branches
         combined_branch_entry = None
         combined_branch_exit = None
@@ -291,7 +294,7 @@ class PETParser(object):
 
             # update combined_branch_exit
             combined_branch_exit = context_save_id
-        
+
         # connect linearized branch with merge and snapshot pop
         add_successor_edge(self.graph, combined_branch_exit, context_merge_node_id)
         combined_branch_exit = context_snapshot_pop_node_id
@@ -309,7 +312,7 @@ class PETParser(object):
 
         # check if node is a good candidate (i.e. one that is not succeeded by a path merge)
 
-        queue = get_successors(self.graph, node)  
+        queue = get_successors(self.graph, node)
         while len(queue) > 0:
             current = queue.pop()
             if len(get_predecessors(self.graph, current)) > 1:
@@ -343,12 +346,9 @@ class PETParser(object):
 
         # delete node
         self.graph.remove_node(node)
-            
+
         retval = True
         return retval, list(set(modified_nodes))
-
-
-
 
     def __remove_non_hotspot_function_bodys(self):
         if len(self.experiment.hotspot_functions) == 0:
@@ -374,7 +374,10 @@ class PETParser(object):
         print(self.experiment.hotspot_function_node_ids)
 
         for function in get_all_function_nodes(self.graph):
-            if function not in self.experiment.hotspot_function_node_ids and len(self.experiment.hotspot_function_node_ids) > 0:
+            if (
+                function not in self.experiment.hotspot_function_node_ids
+                and len(self.experiment.hotspot_function_node_ids) > 0
+            ):
                 print("DELETING FUNCTION BODY: ", data_at(self.graph, function).name)
                 # remove function body
                 for node in get_all_nodes_in_function(self.graph, function):
@@ -441,11 +444,14 @@ class PETParser(object):
         all_functions = get_all_function_nodes(self.graph)
         nodes_by_functions = get_nodes_by_functions(self.graph)
         for idx, function in enumerate(all_functions):
-            if function not in self.experiment.hotspot_function_node_ids and len(self.experiment.hotspot_function_node_ids) > 0:
+            if (
+                function not in self.experiment.hotspot_function_node_ids
+                and len(self.experiment.hotspot_function_node_ids) > 0
+            ):
                 if data_at(self.graph, function).name == "main":
                     print("SKIPPING NON HOTSPOT FUNCTION: ", data_at(self.graph, function).name)
                 continue
-            #try:
+            # try:
             if self.experiment.arguments.verbose:
                 if data_at(self.graph, function).name == "main":
                     print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
@@ -460,7 +466,6 @@ class PETParser(object):
                 print("showing..")
                 show_function(self.graph, data_at(self.graph, function), show_dataflow=False, show_mutex_edges=False)
 
-            
             added_node_ids = self.__fix_empty_branches(merge_nodes, post_dominators)
 
             if data_at(self.graph, function).name == "main":
@@ -488,7 +493,7 @@ class PETParser(object):
             #                            remove_edge(self.graph, get_predecessors(self.graph, node)[0], node)
             #                            fix_applied = True
             #                            break
-            #except ValueError:
+            # except ValueError:
             #    if self.experiment.arguments.verbose:
             #        print("NPBS: Function",  data_at(self.graph, function).name ,"invalid due to graph construction issues. Skipping.")
             #    self.invalid_functions.add(function)
@@ -521,11 +526,10 @@ class PETParser(object):
         """flattens the graph via inserting context nodes"""
         modification_found = True
         from time import time
+
         timeout = 30
         start_time = int(time())
         while modification_found:
-            
-            
             modification_found = False
             post_dominators = self.__get_post_dominators(node_list)
             path_splits = self.__get_path_splits(node_list)
@@ -536,7 +540,7 @@ class PETParser(object):
                 print("Iteration: ", "time:", iteration_time - start_time)
                 if iteration_time - start_time > timeout:
                     raise ValueError("Timeout expired.")
-                
+
                 if merge_nodes[split_node] is None:
                     # no merge exists -> no merge necessary since a return is encountered
                     continue
@@ -1069,7 +1073,10 @@ class PETParser(object):
 
         # Note: at this point in time, the graph MUST NOT have branched sections
         for function_node in get_all_function_nodes(self.graph):
-            if function_node not in self.experiment.hotspot_function_node_ids and len(self.experiment.hotspot_function_node_ids) > 0:
+            if (
+                function_node not in self.experiment.hotspot_function_node_ids
+                and len(self.experiment.hotspot_function_node_ids) > 0
+            ):
                 print("SKIPPING NON-HOTSPOT FUNCTION: ", data_at(self.graph, function_node).name)
                 continue
 
@@ -1078,8 +1085,12 @@ class PETParser(object):
                 inlined_data_flow_calculation(get_children(self.graph, function_node)[0], last_writes)
             except ValueError:
                 if self.experiment.arguments.verbose:
-                    print("CDF: Function:", data_at(self.graph, function_node).name, "invalid due to graph construction errors. Skipping.")
-                    #show_function(self.graph, data_at(self.graph, function_node), show_dataflow=False, show_mutex_edges=False)
+                    print(
+                        "CDF: Function:",
+                        data_at(self.graph, function_node).name,
+                        "invalid due to graph construction errors. Skipping.",
+                    )
+                    # show_function(self.graph, data_at(self.graph, function_node), show_dataflow=False, show_mutex_edges=False)
                 self.invalid_functions.add(function_node)
 
         for key in self.out_data_flow:

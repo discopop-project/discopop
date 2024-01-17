@@ -382,10 +382,9 @@ def get_all_nodes_in_function(graph: nx.DiGraph, function_id: int) -> List[int]:
         queue += [c for c in get_children(graph, current) if c not in result_list and c not in queue]
         queue += [s for s in get_successors(graph, current) if s not in result_list and s not in queue]
 
-
-#    for node_id in graph.nodes:
-#        if function_id in get_all_parents(graph, node_id):
-#            result_list.append(node_id)
+    #    for node_id in graph.nodes:
+    #        if function_id in get_all_parents(graph, node_id):
+    #            result_list.append(node_id)
     return result_list
 
 

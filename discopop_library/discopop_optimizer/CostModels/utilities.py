@@ -50,9 +50,11 @@ def get_performance_models_for_functions(
 
         if isinstance(node_data, FunctionRoot):
             try:
-
                 # ignore non-hotspot functions in the calculateion to save analysis time
-                if node_id not in experiment.hotspot_function_node_ids and len(experiment.hotspot_function_node_ids) > 0:
+                if (
+                    node_id not in experiment.hotspot_function_node_ids
+                    and len(experiment.hotspot_function_node_ids) > 0
+                ):
                     print("SKIPPING NON-HOTPSOT FUNCTION: ", node_data.name, "ID: ", node_id, " SET COSTS TO 1")
                     performance_models[node_data] = [CostModel(Integer(0), Integer(1))]
                     continue
@@ -60,9 +62,15 @@ def get_performance_models_for_functions(
                 # start the collection at the first child of the function
                 for child_id in get_children(graph, node_id):
                     performance_models[node_data] = get_node_performance_models(
-                        experiment, graph, child_id, set(), all_function_nodes, restrict_to_decisions=restrict_to_decisions, allow_sequential=True
+                        experiment,
+                        graph,
+                        child_id,
+                        set(),
+                        all_function_nodes,
+                        restrict_to_decisions=restrict_to_decisions,
+                        allow_sequential=True,
                     )
-                
+
                 # At this point, decisions are restricted to the specified parallelization or the sequential version.
                 # Restrict them to the exact case specified in restrict_to_decisions
                 if restrict_to_decisions is not None:
@@ -81,7 +89,13 @@ def get_performance_models_for_functions(
                 ]
             except KeyError as ke:
                 performance_models[node_data] = [CostModel(Integer(0), Integer(1))]
-                warnings.warn("No performance model for " + node_data.name + "found due to the following error: " + str(ke) + ". Model set to Fallback (0,1)")
+                warnings.warn(
+                    "No performance model for "
+                    + node_data.name
+                    + "found due to the following error: "
+                    + str(ke)
+                    + ". Model set to Fallback (0,1)"
+                )
 
     return performance_models
 
@@ -97,7 +111,7 @@ def get_node_performance_models(
     get_single_random_model: bool = False,
     ignore_node_costs: Optional[List[int]] = None,
     current_device_id=None,
-    allow_sequential:bool = False
+    allow_sequential: bool = False,
 ) -> List[CostModel]:
     """Returns the performance models for the given node.
     If a set of decision is specified for restrict_to_decisions, only those non-sequential decisions will be allowed.

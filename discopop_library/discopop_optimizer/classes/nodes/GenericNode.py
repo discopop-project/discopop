@@ -91,4 +91,3 @@ class GenericNode(object):
         """Returns True if the given node represents a sequential execution.
         Returns False, if the node characterizes a parallel option instead."""
         return self.suggestion is None
-    
