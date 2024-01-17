@@ -46,11 +46,11 @@ def greedy_search(
 
     # identify sequential suggestions
     # copy available decisions and convert function nodes to node ids
-    sequential_suggestions = dict()
-    for key in available_decisions:
-        sequential_suggestions[key.node_id] = []
-        for entry in available_decisions[key]:
-            sequential_suggestions[key.node_id].append(copy.deepcopy(entry))
+    sequential_suggestions: Dict[int, List[List[int]]] = dict()
+    for key_1 in available_decisions:
+        sequential_suggestions[key_1.node_id] = []
+        for entry in available_decisions[key_1]:
+            sequential_suggestions[key_1.node_id].append(copy.deepcopy(entry))
 
     for function in sequential_suggestions:
         for decision_set in sequential_suggestions[function]:
@@ -58,8 +58,8 @@ def greedy_search(
             for decision in decision_set:
                 if not data_at(experiment.optimization_graph, decision).represents_sequential_version():
                     to_be_removed.append(decision)
-            for entry in to_be_removed:
-                decision_set.remove(entry)
+            for entry_tbr in to_be_removed:
+                decision_set.remove(entry_tbr)
 
             # remove all but the original version
             while len(decision_set) > 1:
@@ -67,29 +67,29 @@ def greedy_search(
                 decision_set.remove(tbr)
 
     # copy sequential decisions
-    made_decisions = dict()
+    made_decisions: Dict[int, List[List[int]]] = dict()
     made_decisions_context = None
-    for key in sequential_suggestions:
-        made_decisions[key] = []
-        for entry in sequential_suggestions[key]:
-            made_decisions[key].append(copy.deepcopy(entry))
+    for key_2 in sequential_suggestions:
+        made_decisions[key_2] = []
+        for entry in sequential_suggestions[key_2]:
+            made_decisions[key_2].append(copy.deepcopy(entry))
 
-    for idx, function in enumerate(available_decisions):
-        print("Greedy searching function: ", function.name, idx, "/", len(available_decisions))
-        for dcsi, decision_set in enumerate(available_decisions[function]):
-            local_results: List[Tuple[Dict[Any, Any], int]] = []
+    for idx, function_node in enumerate(available_decisions):
+        print("Greedy searching function: ", function_node.name, idx, "/", len(available_decisions))
+        for dcsi, decision_set in enumerate(available_decisions[function_node]):
+            local_results: List[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = []
 
             # prepare arguments for parallel cost calculation
             param_list = []
             for decision in decision_set:
                 # copy made decisions
-                local_decision_set = dict()
-                for key in made_decisions:
-                    local_decision_set[key] = []
-                    for entry in made_decisions[key]:
-                        local_decision_set[key].append(copy.deepcopy(entry))
+                local_decision_set: Dict[int, List[List[int]]] = dict()
+                for key_3 in made_decisions:
+                    local_decision_set[key_3] = []
+                    for entry in made_decisions[key_3]:
+                        local_decision_set[key_3].append(copy.deepcopy(entry))
 
-                local_decision_set[function.node_id][dcsi] = [decision]
+                local_decision_set[function_node.node_id][dcsi] = [decision]
                 param_list.append(local_decision_set)
 
             # calculate costs in parallel
@@ -104,7 +104,7 @@ def greedy_search(
                 local_results.append(local_result)
 
             # identify best option and update made_decisions
-            best_option: Tuple[Dict[Any, Any], int, ContextObject] = None
+            best_option: Optional[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = None
             for k, e, c in local_results:
                 if best_option is None:
                     best_option = (k, e, c)
@@ -112,11 +112,14 @@ def greedy_search(
                 if e < best_option[1]:
                     best_option = (k, e, c)
 
+            assert best_option  # != None
             made_decisions = best_option[0]
             made_decisions_context = best_option[2]
 
             #            made_decisions = sorted(local_results, key=lambda x: x[1])[0][0]
             print("Selection: ", __get_dicision_list(made_decisions), "costs:", best_option[1])
+
+    assert made_decisions_context  # != None
 
     # return the selected configuration
     return __get_optimizer_output_pattern(
@@ -162,7 +165,7 @@ def __get_score(param_tuple) -> Tuple[List[int], int, ContextObject]:
 
 def __get_optimizer_output_pattern(
     selection: List[int], context: ContextObject, optimizer_dir: str, experiment: Experiment
-):
+) -> Optional[OptimizerOutputPattern]:
     best_configuration = None
     for node_id in selection:
         # find pattern id

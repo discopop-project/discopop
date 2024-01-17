@@ -225,9 +225,7 @@ class PETParser(object):
         # check if a node with more than one successor is located on any of the branches starting at node
         # if so, this node is not suited for the application of a fix.
         # Effectively, this leads to a bottom-up branch combination.
-        BRANCH_ENTRY = str
-        BRANCH_EXIT = str
-        succeeding_branches: List[Tuple[BRANCH_ENTRY, BRANCH_EXIT]] = []
+        succeeding_branches: List[Tuple[int, int]] = []  # (branch_entry, branch_exit)
         for succ in get_successors(self.graph, node):
             # traverse succeeding branches to check for contained path splits
             queue = [succ]
@@ -296,16 +294,16 @@ class PETParser(object):
             combined_branch_exit = context_save_id
 
         # connect linearized branch with merge and snapshot pop
-        add_successor_edge(self.graph, combined_branch_exit, context_merge_node_id)
+        add_successor_edge(self.graph, cast(int, combined_branch_exit), context_merge_node_id)
         combined_branch_exit = context_snapshot_pop_node_id
 
         # connect context snapshot with combined_branch_entry
-        add_successor_edge(self.graph, context_snapshot_id, combined_branch_entry)
+        add_successor_edge(self.graph, context_snapshot_id, cast(int, combined_branch_entry))
 
         retval = True
         return retval
 
-    def __fix_too_many_predecessors(self, node) -> bool:
+    def __fix_too_many_predecessors(self, node) -> Tuple[bool, List[int]]:
         """Return True if a graph modification has been applied. False otherwise."""
         retval = False
         modified_nodes: List[int] = []

@@ -169,8 +169,8 @@ def run(arguments: OptimizerArguments):
     experiment = Experiment(file_mapping, system, detection_result, profiler_dir, arguments, hotspot_functions)
 
     if arguments.profiling:
-        experiment.profile = cProfile.Profile()
-        experiment.profile.enable()
+        experiment.profile = cProfile.Profile()  # type: ignore
+        experiment.profile.enable()  # type: ignore
 
     # build optimization graph
     if arguments.verbose:
@@ -235,13 +235,13 @@ def run(arguments: OptimizerArguments):
         experiment.detection_result.optimizer_output.append(best_configuration)
 
     if arguments.profiling:
-        experiment.profile.disable()
+        experiment.profile.disable()  # type: ignore
         if os.path.exists("optimizer_profile.txt"):
             os.remove("optimizer_profile.txt")
         with open("optimizer_profile.txt", "w+") as f:
-            stats = pstats.Stats(experiment.profile, stream=f).sort_stats("time").reverse_order()
+            stats = pstats.Stats(experiment.profile, stream=f).sort_stats("time").reverse_order()  # type: ignore
             stats.print_stats()
-        del experiment.profile
+        del experiment.profile  # type: ignore
 
     # save full experiment to disk
     export_to_json(experiment, optimizer_dir)
