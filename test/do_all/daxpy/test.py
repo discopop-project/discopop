@@ -54,7 +54,7 @@ class TestMethods(unittest.TestCase):
 
         # convert DoAllInfo objects to DoAllInfoForValidation objects to make use of custom __eq__
         converted_gold_standard = [DoAllInfoForValidation(elem) for elem in gold_standard.do_all]
-        converted_test_output = [DoAllInfoForValidation(elem) for elem in test_output.do_all]
+        converted_test_output = [DoAllInfoForValidation(elem) for elem in test_output.patterns.do_all]
 
         # sort the lists
         converted_gold_standard = sorted(

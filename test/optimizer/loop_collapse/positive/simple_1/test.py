@@ -51,7 +51,7 @@ class TestMethods(unittest.TestCase):
 
         # check identified DoAllInfo objects for collapse clauses > 1
         two_level_collapse_found = False
-        for do_all_info in test_output.do_all:
+        for do_all_info in test_output.patterns.do_all:
             if do_all_info.collapse_level == 2:
                 two_level_collapse_found = True
             

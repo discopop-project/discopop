@@ -232,7 +232,7 @@ def run(arguments: OptimizerArguments):
     if best_configuration is not None:
         best_configuration = optimize_updates(experiment, best_configuration, arguments)
         # append the configuration to the list of patterns
-        experiment.detection_result.optimizer_output.append(best_configuration)
+        experiment.detection_result.patterns.optimizer_output.append(best_configuration)
 
     if arguments.profiling:
         experiment.profile.disable()  # type: ignore

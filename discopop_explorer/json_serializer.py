@@ -13,6 +13,7 @@ from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
+from discopop_library.result_classes.PatternStorage import PatternStorage
 from .PEGraphX import Node
 from .pattern_detectors.PatternInfo import PatternInfo
 from .pattern_detectors.pipeline_detector import PipelineStage
@@ -51,6 +52,8 @@ class PatternBaseSerializer(JSONEncoder):
         if isinstance(o, PatternBase):
             return filter_members(o.__dict__)
         if isinstance(o, DetectionResult):
+            return filter_members(o.__dict__)
+        if isinstance(o, PatternStorage):
             return filter_members(o.__dict__)
         if isinstance(o, PipelineStage):
             return filter_members(o.__dict__)

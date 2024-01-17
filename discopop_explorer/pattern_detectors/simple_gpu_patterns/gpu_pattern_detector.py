@@ -36,12 +36,12 @@ def run_detection(pet: PEGraphX, res, project_folder_path: str) -> List[PatternI
             # check for lastprivates, since they are not supported by the suggested pragma:
             #  pragma omp target teams distribute
             # todo: instead of omitting, suggest #pragma omp target parallel for instead
-            if any(node.id == d.node_id for d in res.do_all if len(d.last_private) == 0) or any(
-                node.id == r.node_id for r in res.reduction if len(r.last_private) == 0
+            if any(node.id == d.node_id for d in res.patterns.do_all if len(d.last_private) == 0) or any(
+                node.id == r.node_id for r in res.patterns.reduction if len(r.last_private) == 0
             ):
                 reduction_vars: List[Variable] = []
-                if node.id in [r.node_id for r in res.reduction]:
-                    parent_reduction = [r for r in res.reduction if r.node_id == node.id][0]
+                if node.id in [r.node_id for r in res.patterns.reduction]:
+                    parent_reduction = [r for r in res.patterns.reduction if r.node_id == node.id][0]
                     reduction_vars = parent_reduction.reduction
                 gpulp = GPULoopPattern(
                     pet,

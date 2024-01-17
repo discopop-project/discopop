@@ -50,7 +50,7 @@ class TestMethods(unittest.TestCase):
         test_output: DetectionResult = jsonpickle.decode(tmp_str)
 
         # check identified DoAllInfo objects for collapse clauses > 1
-        for do_all_info in test_output.do_all:
+        for do_all_info in test_output.patterns.do_all:
             self.assertTrue(do_all_info.collapse_level <= 1)
 
 

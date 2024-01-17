@@ -100,7 +100,7 @@ class PatternDetectorX(object):
 
         # check if task pattern should be enabled
         if enable_task_pattern:
-            res.task = detect_tp(
+            res.patterns.task = detect_tp(
                 cu_dict,
                 dependencies,
                 reduction_vars,
@@ -114,7 +114,7 @@ class PatternDetectorX(object):
         # detect GPU patterns based on previously identified patterns
         if "*" in enable_patterns or "simplegpu" in enable_patterns:
             print("SIMPLE GPU...")
-            res.simple_gpu = detect_gpu(self.pet, res, project_path)
+            res.patterns.simple_gpu = detect_gpu(self.pet, res, project_path)
             print("\tDONE.")
 
         # detect combined GPU patterns
