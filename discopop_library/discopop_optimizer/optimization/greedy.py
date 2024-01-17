@@ -44,9 +44,6 @@ def greedy_search(
     global_experiment = experiment
     global_arguments = arguments
 
-    print("AVAIL:")
-    print(available_decisions)
-
     # identify sequential suggestions
     # copy available decisions
     sequential_suggestions = dict()
@@ -55,13 +52,9 @@ def greedy_search(
         for entry in available_decisions[key]:
             sequential_suggestions[key].append(copy.deepcopy(entry))
 
-    print("SEQ")
-    print(sequential_suggestions)
-
     for function in sequential_suggestions:
         for decision_set in sequential_suggestions[function]:
             to_be_removed = []
-            print("DECSET", decision_set)
             for decision in decision_set:
                 if not data_at(experiment.optimization_graph, decision).represents_sequential_version():
                     to_be_removed.append(decision)
@@ -72,20 +65,14 @@ def greedy_search(
             while len(decision_set) > 1:
                 tbr = sorted(decision_set, reverse=True)[0]
                 decision_set.remove(tbr)
-
-    print("SEQUENTIAL:")
-    for function in sequential_suggestions:
-        print(function.name)
-        for decision_set in sequential_suggestions[function]:
-            print(decision_set)
     
-    print("AVAILABLE:")
     # copy sequential decisions
     made_decisions = dict()
     for key in sequential_suggestions:
         made_decisions[key] = []
         for entry in sequential_suggestions[key]:
             made_decisions[key].append(copy.deepcopy(entry))
+    
     
     def get_dicision_list(decisions_dict):
         res_list = []
@@ -94,10 +81,10 @@ def greedy_search(
                 res_list.append(decision_set[0])
         return res_list
 
-    for function in available_decisions:
-        print(function.name)
+    for idx, function in enumerate(available_decisions):
+        print("Greedy searching function: ", function.name, idx, "/", len(available_decisions))
         for dcsi, decision_set in enumerate(available_decisions[function]):
-            print("\t", decision_set)
+            local_results: List[Tuple[Dict[Any, Any], Expr]] = []
             for decision in decision_set:
                 # copy made decisions
                 local_decision_set = dict()
@@ -105,21 +92,20 @@ def greedy_search(
                     local_decision_set[key] = []
                     for entry in made_decisions[key]:
                         local_decision_set[key].append(copy.deepcopy(entry))
+                
+                local_decision_set[function][dcsi] = [decision]
 
-
-                local_decision_set = copy.deepcopy(made_decisions)
-                print("LocalKeys: ")
-                for key in local_decision_set:
-                    print(key)
-                local_decision_set[function][dcsi] = decision
-
-                print("\t\tlocal: ", get_dicision_list(local_decision_set))
-                #_, score_expr, context = evaluate_configuration(
-                #    cast(Experiment, global_experiment),
-                #    local_decision_set,
-                #    cast(OptimizerArguments, global_arguments),
-                #)
-                #print("\t\t\t", score_expr)
+                _, score_expr, context = evaluate_configuration(
+                    cast(Experiment, global_experiment),
+                    get_dicision_list(local_decision_set),
+                    cast(OptimizerArguments, global_arguments),
+                )
+                local_results.append((local_decision_set, score_expr))
+            
+            # identify best option and update made_decisions
+            made_decisions = sorted(local_results, key=lambda x: x[1])[0][0]
+            print("Selection: ", get_dicision_list(made_decisions))
+            
 
 
     import sys

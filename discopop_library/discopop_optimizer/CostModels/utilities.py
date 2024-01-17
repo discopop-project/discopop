@@ -62,10 +62,6 @@ def get_performance_models_for_functions(
                     performance_models[node_data] = get_node_performance_models(
                         experiment, graph, child_id, set(), all_function_nodes, restrict_to_decisions=restrict_to_decisions, allow_sequential=True
                     )
-                print("BFRS")
-                for key in performance_models:
-                    print(key)
-                    print("\t", performance_models[key])
                 
                 # At this point, decisions are restricted to the specified parallelization or the sequential version.
                 # Restrict them to the exact case specified in restrict_to_decisions
@@ -78,8 +74,6 @@ def get_performance_models_for_functions(
                                 break
                     for idx in sorted(to_be_removed, reverse=True):
                         del performance_models[node_data][idx]
-                print("ADRS")
-                print(performance_models)
 
                 # filter out NaN - Models
                 performance_models[node_data] = [
