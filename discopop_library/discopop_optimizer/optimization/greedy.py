@@ -68,6 +68,7 @@ def greedy_search(
     
     # copy sequential decisions
     made_decisions = dict()
+    made_decisions_context = None
     for key in sequential_suggestions:
         made_decisions[key] = []
         for entry in sequential_suggestions[key]:
@@ -103,22 +104,23 @@ def greedy_search(
 
             
             # identify best option and update made_decisions
-            best_option: Tuple[Dict[Any, Any], int] = None
-            for k, e in local_results:
+            best_option: Tuple[Dict[Any, Any], int, ContextObject] = None
+            for k, e, c in local_results:
                 if best_option is None:
-                    best_option = (k, e)
+                    best_option = (k, e, c)
                     continue
                 if e < best_option[1]:
-                    best_option = (k, e)
+                    best_option = (k, e, c)
             
             made_decisions = best_option[0]
+            made_decisions_context = best_option[2]
             
 #            made_decisions = sorted(local_results, key=lambda x: x[1])[0][0]
             print("Selection: ", __get_dicision_list(made_decisions), "costs:", best_option[1])
             
+    # return the selected configuration
+    return __get_optimizer_output_pattern(__get_dicision_list(made_decisions), made_decisions_context, optimizer_dir, experiment)
 
-    import sys
-    sys.exit(0)
 
 def __get_dicision_list(decisions_dict):
     """Converts a dictionary based description of a configuration into a list of integers"""
@@ -144,7 +146,7 @@ def __get_score(param_tuple) -> Tuple[List[int], int, ContextObject]:
     global global_arguments
     configuration = param_tuple
     try:
-        _, score_expr, _ = evaluate_configuration(
+        _, score_expr, context = evaluate_configuration(
             cast(Experiment, global_experiment),
             __get_dicision_list(configuration),
             cast(OptimizerArguments, global_arguments),
@@ -153,4 +155,34 @@ def __get_score(param_tuple) -> Tuple[List[int], int, ContextObject]:
     except ValueError:
         result = -1
 
-    return configuration, result
+    return configuration, result, context
+
+def __get_optimizer_output_pattern(selection: List[int], context: ContextObject, optimizer_dir: str, experiment: Experiment):
+    best_configuration = None
+    for node_id in selection:
+        # find pattern id
+        for pattern_id in experiment.suggestion_to_node_ids_dict:
+            if node_id in experiment.suggestion_to_node_ids_dict[pattern_id]:
+                device_id = data_at(experiment.optimization_graph, node_id).device_id
+                if best_configuration is None:
+                    best_configuration = OptimizerOutputPattern(
+                        experiment.detection_result.pet.node_at(
+                            cast(NodeID, data_at(experiment.optimization_graph, node_id).original_cu_id)
+                        ),
+                        [],
+                        experiment.get_system().get_host_device_id(),
+                    )
+                best_configuration.add_pattern(
+                    pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
+                )
+    if best_configuration is None:
+        return None
+    # collect data movement information
+    for update in context.necessary_updates:
+        best_configuration.add_data_movement(update)
+    # export results to file
+    best_option_id_path: str = os.path.join(optimizer_dir, "evolutionary_pattern_id.txt")
+    with open(best_option_id_path, "w+") as f:
+        f.write(str(best_configuration.pattern_id))
+
+    return best_configuration
