@@ -742,11 +742,7 @@ class PEGraphX(object):
                     for func_node in func_nodes
                     if (func_node.file_id, func_node.name) in all_hotspot_functions
                 ]
-                print("FUNC NODES: ", [f.id for f in func_nodes])
-                print("FILTERED FUNC NODES:", [f.id for f in filtered_func_nodes])
                 func_nodes = filtered_func_nodes
-        else:
-            print("Calculating missing func nodes:", [f.id for f in func_nodes])
 
         print("Calculating local metadata results for functions...")
         import tqdm  # type: ignore
@@ -1428,7 +1424,6 @@ class PEGraphX(object):
                 current_node = parent_node
                 if type(self.node_at(current_node.id)) == FunctionNode:
                     node.parent_function_id = current_node.id
-                    print("FOUND FIX PARENT: ", node.parent_function_id, "for ", node.id)
                     break
                 parents = [e[0] for e in self.in_edges(current_node.id, etype=EdgeType.CHILD)]
                 if len(parents) == 0:
