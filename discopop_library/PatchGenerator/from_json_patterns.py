@@ -34,6 +34,9 @@ def from_json_patterns(
             if suggestion_type == "optimizer_output":
                 from_optimizer_output(file_mapping, patterns_by_type, suggestion, arguments, patch_generator_dir)
                 continue
+            suggestion_dict = json.loads(suggestion)
+            if not suggestion_dict["applicable_pattern"]:
+                continue
             if arguments.verbose:
                 print("Suggestion: ", suggestion)
             file_id_to_modified_code: Dict[int, str] = from_json_strings(
