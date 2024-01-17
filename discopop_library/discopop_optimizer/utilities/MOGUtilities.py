@@ -9,6 +9,7 @@ import copy
 import itertools
 from multiprocessing import Pool
 from typing import Any, ClassVar, Dict, List, Optional, cast, Set, Tuple
+import warnings
 
 import matplotlib  # type: ignore
 import matplotlib.pyplot as plt  # type:ignore
@@ -416,13 +417,16 @@ def get_read_and_written_data_from_subgraph(
     read_memory_regions: Set[MemoryRegion] = set()
     written_memory_regions: Set[MemoryRegion] = set()
     # collect reads and writes from successors and children
-    subgraph = get_children(graph, node_id)
-    if not ignore_successors:
-        subgraph += get_successors(graph, node_id)
-    for successor in subgraph:
-        reads, writes = get_read_and_written_data_from_subgraph(graph, successor)
-        read_memory_regions.update(reads)
-        written_memory_regions.update(writes)
+    try:
+        subgraph = get_children(graph, node_id)
+        if not ignore_successors:
+            subgraph += get_successors(graph, node_id)
+        for successor in subgraph:
+            reads, writes = get_read_and_written_data_from_subgraph(graph, successor)
+            read_memory_regions.update(reads)
+            written_memory_regions.update(writes)
+    except RecursionError:
+        warnings.warn("Recursion limit exceeeded. Read and write in subtrees might be inaccurate.")
     # add reads and writes of the node itself
     node_data = data_at(graph, node_id)
     read_memory_regions.update([read_access.memory_region for read_access in node_data.read_memory_regions])

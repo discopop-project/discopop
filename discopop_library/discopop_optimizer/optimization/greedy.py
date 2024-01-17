@@ -80,7 +80,7 @@ def greedy_search(
             local_results: List[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = []
 
             # prepare arguments for parallel cost calculation
-            param_list = []
+            param_list: List[Dict[int, List[List[int]]]] = []
             for decision in decision_set:
                 # copy made decisions
                 local_decision_set: Dict[int, List[List[int]]] = dict()
@@ -92,11 +92,16 @@ def greedy_search(
                 local_decision_set[function_node.node_id][dcsi] = [decision]
                 param_list.append(local_decision_set)
 
-            # calculate costs in parallel
-            with Pool(initializer=__initialize_cost_caluclation_worker, initargs=(experiment, arguments)) as pool:
-                tmp_result = list(
-                    tqdm.tqdm(pool.imap_unordered(__get_score, param_list), total=len(param_list), disable=True)
-                )
+            #            # calculate costs in parallel
+            #            with Pool(initializer=__initialize_cost_caluclation_worker, initargs=(experiment, arguments)) as pool:
+            #                tmp_result = list(
+            #                    tqdm.tqdm(pool.imap_unordered(__get_score, param_list), total=len(param_list), disable=True)
+            #                )
+            # calculate costs
+            tmp_result: List[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = []
+            for param in param_list:
+                tmp_result.append(__get_score(param))
+
             for local_result in tmp_result:
                 # remove invalid elements
                 if local_result[1] == -1:
@@ -146,7 +151,7 @@ def __initialize_cost_caluclation_worker(
     global_arguments = arguments
 
 
-def __get_score(param_tuple) -> Tuple[List[int], int, ContextObject]:
+def __get_score(param_tuple) -> Tuple[Dict[int, List[List[int]]], int, ContextObject]:
     global global_experiment
     global global_arguments
     configuration = param_tuple

@@ -954,15 +954,15 @@ def filter_for_hotspots(
                     if node.type == NodeType.FUNC and hotspot[2] == HotspotNodeType.FUNCTION:
                         result_set.add(node)
 
-#    # check for matches from hotspot functions
-#    for node in nodes:
-#        for hotspot in all_hotspot_descriptions:
-#            if hotspot[2] == HotspotNodeType.FUNCTION:
-#                if hotspot[0] == node.file_id:
-#                    try:
-#                        if pet.get_parent_function(node).name == hotspot[3]:
-#                            print("HOTSPOT FUNCTION MATCH FROM NODE: ", node.id)
-#                    except AssertionError:
-#                        continue
+    #    # check for matches from hotspot functions
+    #    for node in nodes:
+    #        for hotspot in all_hotspot_descriptions:
+    #            if hotspot[2] == HotspotNodeType.FUNCTION:
+    #                if hotspot[0] == node.file_id:
+    #                    try:
+    #                        if pet.get_parent_function(node).name == hotspot[3]:
+    #                            print("HOTSPOT FUNCTION MATCH FROM NODE: ", node.id)
+    #                    except AssertionError:
+    #                        continue
 
     return list(result_set)

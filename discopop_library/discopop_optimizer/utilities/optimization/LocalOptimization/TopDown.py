@@ -52,7 +52,6 @@ def get_locally_optimized_models(
             for decision in decision_options:
                 try:
                     # create a performance model for the specific decision
-                    sys.setrecursionlimit(100000)
                     performance_models = get_node_performance_models(
                         experiment,
                         graph,
@@ -65,7 +64,6 @@ def get_locally_optimized_models(
                             cast(FunctionRoot, data_at(graph, function_node)).node_id
                         ],  # ignore first node to prevent duplication of function costs
                     )
-                    sys.setrecursionlimit(1000)
                     # calculate and append necessary data transfers to the models
                     performance_models_with_transfers = calculate_data_transfers(
                         graph, {cast(FunctionRoot, data_at(graph, function_node)): performance_models}, experiment

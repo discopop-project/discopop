@@ -1078,7 +1078,13 @@ class PETParser(object):
         all_function_nodes = get_all_function_nodes(self.graph)
         for idx, function_node in enumerate(all_function_nodes):
             if self.experiment.arguments.verbose:
-                print("Calculating dataflow for function: ", data_at(self.graph, function_node).name, idx,"/",len(all_function_nodes))
+                print(
+                    "Calculating dataflow for function: ",
+                    data_at(self.graph, function_node).name,
+                    idx,
+                    "/",
+                    len(all_function_nodes),
+                )
             if (
                 function_node not in self.experiment.hotspot_function_node_ids
                 and len(self.experiment.hotspot_function_node_ids) > 0
