@@ -109,6 +109,9 @@ class PETParser(object):
 
         self.__flatten_function_graphs()
 
+        # remove invalid functions
+        self.__remove_invalid_functions()
+
         convert_temporary_edges(self.graph)
         if self.experiment.arguments.verbose:
             print("converted temporary edges")
@@ -119,6 +122,8 @@ class PETParser(object):
         if self.experiment.arguments.verbose:
             print("calculated data flow")
 
+        if self.experiment.arguments.verbose:
+            print("Propagating read/write information...")
         self.__propagate_reads_and_writes()
         if self.experiment.arguments.verbose:
             print("Propagated read/write information")
@@ -1070,12 +1075,18 @@ class PETParser(object):
             return current_last_writes
 
         # Note: at this point in time, the graph MUST NOT have branched sections
-        for function_node in get_all_function_nodes(self.graph):
+        all_function_nodes = get_all_function_nodes(self.graph)
+        for idx, function_node in enumerate(all_function_nodes):
+            if self.experiment.arguments.verbose:
+                print("Calculating dataflow for function: ", data_at(self.graph, function_node).name, idx,"/",len(all_function_nodes))
             if (
                 function_node not in self.experiment.hotspot_function_node_ids
                 and len(self.experiment.hotspot_function_node_ids) > 0
             ):
                 print("SKIPPING NON-HOTSPOT FUNCTION: ", data_at(self.graph, function_node).name)
+                continue
+            if function_node in self.invalid_functions:
+                print("SKIPPING INVALID FUNCTION: ", data_at(self.graph, function_node).name)
                 continue
 
             try:
