@@ -21,12 +21,12 @@ def read_patterns_from_json_to_json(json_path: str, relevant_patterns: List[str]
 
     with open(json_path, "r") as f:
         data = json.load(f)
-        for key in data:
+        for key in data["patterns"]:
             if len(relevant_patterns) > 0 and key not in relevant_patterns:
                 continue
             if key not in pattern_json_strings_by_type:
                 pattern_json_strings_by_type[key] = []
-            for entry in data[key]:
+            for entry in data["patterns"][key]:
                 pattern_json_strings_by_type[key].append(json.dumps(entry))
 
     return pattern_json_strings_by_type

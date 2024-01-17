@@ -82,24 +82,24 @@ class PatternDetectorX(object):
 
         if "*" in enable_patterns or "reduction" in enable_patterns:
             print("REDUCTIONS...")
-            res.reduction = detect_reduction(self.pet)
+            res.patterns.reduction = detect_reduction(self.pet)
             print("\tDONE.")
         if "*" in enable_patterns or "doall" in enable_patterns:
             print("DOALL...")
-            res.do_all = detect_do_all(self.pet)
+            res.patterns.do_all = detect_do_all(self.pet)
             print("\tDONE.")
         if "*" in enable_patterns or "pipeline" in enable_patterns:
             print("PIPELINE...")
-            res.pipeline = detect_pipeline(self.pet)
+            res.patterns.pipeline = detect_pipeline(self.pet)
             print("\tDONE.")
         if "*" in enable_patterns or "geodec" in enable_patterns:
             print("GEO. DEC...")
-            res.geometric_decomposition = detect_gd(self.pet)
+            res.patterns.geometric_decomposition = detect_gd(self.pet)
             print("\tDONE.")
 
         # check if task pattern should be enabled
         if enable_task_pattern:
-            res.task = detect_tp(
+            res.patterns.task = detect_tp(
                 cu_dict,
                 dependencies,
                 reduction_vars,
@@ -112,7 +112,7 @@ class PatternDetectorX(object):
         # detect GPU patterns based on previously identified patterns
         if "*" in enable_patterns or "simplegpu" in enable_patterns:
             print("SIMPLE GPU...")
-            res.simple_gpu = detect_gpu(self.pet, res, project_path)
+            res.patterns.simple_gpu = detect_gpu(self.pet, res, project_path)
             print("\tDONE.")
 
         # detect combined GPU patterns
