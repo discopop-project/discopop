@@ -111,9 +111,6 @@ class PETParser(object):
             print("pruning graphs based on taken branches")
         self.__prune_branches()
         print("\tDone.")
-
-        import sys
-        sys.exit(0)
         
         self.__flatten_function_graphs()
 
@@ -189,7 +186,7 @@ class PETParser(object):
             for node in get_all_nodes_in_function(self.graph, function):
                 if len(get_predecessors(self.graph, node)) == 0:
                     node_likelihood_dict[node] = 1
-                    queue += get_successors(self.graph, node)
+                queue.append(node)
             # calculate node likelihoods by traversing the graph
             while len(queue) > 0:
                 current_node = queue.pop(0)  # BFS
@@ -202,7 +199,8 @@ class PETParser(object):
                     if pred not in node_likelihood_dict:
                         valid_target = False
                         # add the missing predecessor to the queue
-                        queue.append(pred)
+                        if pred not in queue:
+                            queue.append(pred)
                         break
                 if valid_target:
                     current_node_cu_id = data_at(self.graph, current_node).original_cu_id
@@ -223,7 +221,7 @@ class PETParser(object):
                     node_likelihood_dict[current_node] = likelihood
 
                     # add successors to queue
-                    queue += get_successors(self.graph, current_node)                        
+                    queue += [s for s in get_successors(self.graph, current_node) if s not in queue]
                             
                 else:
                     # add current_node to the queue for another try
