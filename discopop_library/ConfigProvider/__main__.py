@@ -21,11 +21,12 @@ def parse_args() -> ConfigProviderArguments:
     )
 
     # fmt: off
-    parser.add_argument("-b", "--dp-build-dir", action="store_true",
+    mutually_exclusive = parser.add_mutually_exclusive_group()
+    mutually_exclusive.add_argument("-b", "--dp-build-dir", action="store_true",
                         help="Return the path to the DiscoPoP build directory")
-    parser.add_argument("-s", "--dp-source-dir", action="store_true",
+    mutually_exclusive.add_argument("-s", "--dp-source-dir", action="store_true",
                         help="Return the path to the DiscoPoP source directory")
-    parser.add_argument("--llvm-bin-dir", action="store_true",
+    mutually_exclusive.add_argument("--llvm-bin-dir", action="store_true",
                         help="Return the path to the LLVM bin directory")
     # EXPERIMENTAL FLAGS:
     # fmt: on
@@ -39,10 +40,10 @@ def parse_args() -> ConfigProviderArguments:
     )
 
 
-def main() -> str:
+def main() -> None:
     arguments = parse_args()
     retval = run(arguments)
-    return retval
+    print(retval)
 
 
 if __name__ == "__main__":
