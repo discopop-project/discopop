@@ -107,6 +107,14 @@ class PETParser(object):
 
         # self.__new_parse_branched_sections()
 
+        if self.experiment.arguments.verbose:
+            print("pruning graphs based on taken branches")
+        self.__prune_branches()
+        print("\tDone.")
+
+        import sys
+        sys.exit(0)
+        
         self.__flatten_function_graphs()
 
         # remove invalid functions
@@ -138,6 +146,45 @@ class PETParser(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
+
+    def __prune_branches(self):
+        """Prune branches based on the measured likelihood of execution"""
+        # load observed branching information
+        branch_counter_dict: Dict[str, Dict[str, int]] = dict()
+        with open("profiler/cu_taken_branch_counter_output.txt", "r") as f:
+            for line in f.readlines():
+                line = line.replace("\n", "")
+                split_line = line.split(";")
+                source_cu_id = split_line[0]
+                target_cu_id = split_line[1]
+                counter = int(split_line[2])
+                if source_cu_id not in branch_counter_dict:
+                    branch_counter_dict[source_cu_id] = dict()
+                branch_counter_dict[source_cu_id][target_cu_id] = counter
+        print("Branch counter dict: ")
+        print(branch_counter_dict)
+
+        # convert counters to likelihood
+        branch_likelihood_dict: Dict[str, Dict[str, float]] = dict()
+        for source_cu_id in branch_counter_dict:
+            total_counter = 0
+            for target_cu_id in branch_counter_dict[source_cu_id]:
+                total_counter += branch_counter_dict[source_cu_id][target_cu_id]
+            branch_likelihood_dict[source_cu_id] = dict()
+            for target_cu_id in branch_counter_dict[source_cu_id]:
+                branch_likelihood_dict[source_cu_id][target_cu_id] = branch_counter_dict[source_cu_id][target_cu_id] / total_counter
+
+        print("Branch likelihood dict:")
+        print(branch_likelihood_dict)
+
+        # calculate total branch likelihood
+        
+
+        for function in get_all_function_nodes(self.graph):
+            print("pruning function: ", cast(FunctionRoot, data_at(self.graph, function)).name)
+
+
+
 
     def __flatten_function_graphs(self):
         # TODO: remove deepcopies by storing data independently from the nodes
