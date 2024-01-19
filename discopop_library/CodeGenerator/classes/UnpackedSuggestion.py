@@ -163,13 +163,13 @@ class UnpackedSuggestion(object):
             if self.values["collapse_level"] > 1:
                 pragma.pragma_str += "collapse(" + str(self.values["collapse_level"]) + ") "
         if len(self.values["first_private"]) > 0:
-            pragma.pragma_str += "firstprivate(" + ",".join(self.values["first_private"]) + ") "
+            pragma.pragma_str += "firstprivate(" + ",".join([str(s) for s in self.values["first_private"]]) + ") "
         if len(self.values["private"]) > 0:
-            pragma.pragma_str += "private(" + ",".join(self.values["private"]) + ") "
+            pragma.pragma_str += "private(" + ",".join([str(s) for s in self.values["private"]]) + ") "
         if len(self.values["last_private"]) > 0:
-            pragma.pragma_str += "lastprivate(" + ",".join(self.values["last_private"]) + ") "
+            pragma.pragma_str += "lastprivate(" + ",".join([str(s) for s in self.values["last_private"]]) + ") "
         if len(self.values["shared"]) > 0:
-            pragma.pragma_str += "shared(" + ",".join(self.values["shared"]) + ") "
+            pragma.pragma_str += "shared(" + ",".join([str(s) for s in self.values["shared"]]) + ") "
         if len(self.values["reduction"]) > 0:
             reductions_dict: Dict[str, List[str]] = dict()
             for entry in self.values["reduction"]:
