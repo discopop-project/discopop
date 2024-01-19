@@ -455,39 +455,25 @@ void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion,
 
 void DiscoPoP::createTakenBranchInstrumentation(Region* TopRegion, map <string, vector<CU *>> &BBIDToCUIDsMap){
     /* Create calls to count taken branches inbetween CUs during execution */
-
-
     for (Region::block_iterator bb = TopRegion->block_begin();
          bb != TopRegion->block_end(); ++bb) {
         for (BasicBlock::iterator instruction = (*bb)->begin();
             instruction != (*bb)->end(); ++instruction) {
             if(isa<BranchInst>(instruction)){
                 BranchInst* branchInst = cast<BranchInst>(instruction);
-                branchInst->print(errs());
-                errs() << "\n";
-
                 // check for conditional branches, as unconditional ones can be ignored for counting
                 if(! branchInst->isUnconditional()){
                     // branchInst is conditional
-                    errs() << "\tCONDITIONAL\n";
-
                     // prepare IRBuilder to insert instrumentation
                     IRBuilder<> IRB(branchInst);
-
                     // get BBId and CU IDS of the source 
                     string source_BBID = bb->getName().str();
-                    errs() << "\tsourceBB: " << source_BBID << "\n";
-                    errs() << "\tnumSuccessors: " << branchInst->getNumSuccessors() << "\n";
                     for(auto source_cu : BBIDToCUIDsMap[source_BBID]){
-                        errs() << "\t\tsourceCU: " << source_cu->ID << "\n";
-                    
                         // get BBIds of all targets
                         for(int i = 0; i < branchInst->getNumSuccessors(); i++){
                             string successor_BBID = branchInst->getSuccessor(i)->getName().str();
-                            errs() << "\t\tsuccessorBB: " << successor_BBID << "\n";
                             // get CUs of all targets
                             for(auto target_cu : BBIDToCUIDsMap[successor_BBID]){
-                                errs() << "\t\t\tsuccessorCU: " << target_cu->ID << "\n";
                                 // add instrumentation prior to the branch instruction
                                 vector<Value*> args;
                                 string source_and_target = source_cu->ID + ";" + target_cu->ID;
@@ -2146,7 +2132,7 @@ bool DiscoPoP::runOnModule(Module &M) {
 
 bool DiscoPoP::runOnFunction(Function &F) {
     if (DP_DEBUG) {
-        errs() << "pass DiscoPoP: run pass on function " << funcName.str() << "\n";
+        errs() << "pass DiscoPoP: run pass on function " << F.getName().str() << "\n";
     }
 
     StringRef funcName = F.getName();
