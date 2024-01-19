@@ -111,7 +111,7 @@ class PETParser(object):
             print("pruning graphs based on taken branches")
         self.__prune_branches()
         print("\tDone.")
-        
+
         self.__flatten_function_graphs()
 
         # remove invalid functions
@@ -169,13 +169,14 @@ class PETParser(object):
                 total_counter += branch_counter_dict[source_cu_id][target_cu_id]
             branch_likelihood_dict[source_cu_id] = dict()
             for target_cu_id in branch_counter_dict[source_cu_id]:
-                branch_likelihood_dict[source_cu_id][target_cu_id] = branch_counter_dict[source_cu_id][target_cu_id] / total_counter
+                branch_likelihood_dict[source_cu_id][target_cu_id] = (
+                    branch_counter_dict[source_cu_id][target_cu_id] / total_counter
+                )
 
         print("Branch likelihood dict:")
         print(branch_likelihood_dict)
 
         # fix branch likelihood, necessary due to different structure of BB vs. Optimization graph
-
 
         for function in get_all_function_nodes(self.graph):
             print("pruning function: ", cast(FunctionRoot, data_at(self.graph, function)).name)
@@ -222,11 +223,10 @@ class PETParser(object):
 
                     # add successors to queue
                     queue += [s for s in get_successors(self.graph, current_node) if s not in queue]
-                            
+
                 else:
                     # add current_node to the queue for another try
                     queue.append(current_node)
-
 
             print("node likelihood:")
             for key in sorted(node_likelihood_dict.keys()):
@@ -237,10 +237,11 @@ class PETParser(object):
             keep_nodes: List[int] = self.__identify_most_likely_path(node_likelihood_dict, function)
 
             # prune the graph
-            to_be_removed: List[int] = [n for n in get_all_nodes_in_function(self.graph, function) if n not in keep_nodes]
+            to_be_removed: List[int] = [
+                n for n in get_all_nodes_in_function(self.graph, function) if n not in keep_nodes
+            ]
             for n in to_be_removed:
                 self.graph.remove_node(n)
-
 
     def __identify_most_likely_path(self, node_likelihood_dict: Dict[int, float], function: int) -> List[int]:
         """Traverse graph upwards and return a list of the most likely nodes which constitute the most likely execution path."""
@@ -250,7 +251,7 @@ class PETParser(object):
         for node in get_all_nodes_in_function(self.graph, function):
             if len(get_successors(self.graph, node)) == 0:
                 queue.append(node)
-        
+
         while len(queue) > 0:
             current = queue.pop()
             keep_nodes.append(current)
@@ -266,10 +267,6 @@ class PETParser(object):
             queue.append(most_likely_predecessor)
 
         return keep_nodes
-
-        
-        
-
 
     def __flatten_function_graphs(self):
         # TODO: remove deepcopies by storing data independently from the nodes

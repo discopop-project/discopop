@@ -13,8 +13,8 @@ from sympy import Integer, Symbol
 
 import networkx as nx  # type: ignore
 
-import tqdm
-from build.lib.discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
+import tqdm  # type: ignore
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo  # type: ignore
 from discopop_library.PatternIdManagement.unique_pattern_id import get_unique_pattern_id
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
@@ -243,8 +243,12 @@ def __collapse_loops_in_function(function_node_id):
                 # todo: find a nicer solution to duplicating the patterns for each device mapping
                 global_experiment.detection_result.patterns.do_all.append(pattern_info)
                 # construct optimizer output pattern to represent the non-standalone pattern_info
-                optimizer_output_pattern = OptimizerOutputPattern(pattern_info._node, [new_node_id], global_experiment.get_system().get_host_device_id())
-                optimizer_output_pattern.add_pattern(pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type)
+                optimizer_output_pattern = OptimizerOutputPattern(
+                    pattern_info._node, [new_node_id], global_experiment.get_system().get_host_device_id()
+                )
+                optimizer_output_pattern.add_pattern(
+                    pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type
+                )
                 global_experiment.detection_result.patterns.optimizer_output.append(optimizer_output_pattern)
                 print("REGISTERED PATTERN INFO: ", pattern_id, " for Device: ", data_at(global_graph, csrc).device_id)
                 print(pattern_info)

@@ -93,6 +93,7 @@ def greedy_search(
                 local_decision_set[function_node.node_id][dcsi] = [decision]
                 param_list.append(local_decision_set)
 
+            tmp_result: List[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = []
             if True:
                 # calculate costs in parallel
                 with Pool(initializer=__initialize_cost_caluclation_worker, initargs=(experiment, arguments)) as pool:
@@ -101,7 +102,7 @@ def greedy_search(
                     )
             else:
                 # calculate costs sequentially
-                tmp_result: List[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = []
+                tmp_result = []
                 for param in param_list:
                     tmp_result.append(__get_score(param))
 

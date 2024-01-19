@@ -73,7 +73,7 @@ def parse_args() -> OptimizerArguments:
         check_called_function_for_nested_parallelism=arguments.check_called_function_for_nested_parallelism,
         profiling=arguments.profiling,
         greedy=arguments.greedy,
-        optimization=arguments.optimize
+        optimization=arguments.optimize,
     )
 
 
