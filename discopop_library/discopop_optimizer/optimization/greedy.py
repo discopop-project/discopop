@@ -77,6 +77,7 @@ def greedy_search(
     for idx, function_node in enumerate(available_decisions):
         print("Greedy searching function: ", function_node.name, idx, "/", len(available_decisions))
         for dcsi, decision_set in enumerate(available_decisions[function_node]):
+            print("\tDecision:", dcsi, "/", len(available_decisions[function_node]))
             local_results: List[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = []
 
             # prepare arguments for parallel cost calculation
@@ -92,15 +93,17 @@ def greedy_search(
                 local_decision_set[function_node.node_id][dcsi] = [decision]
                 param_list.append(local_decision_set)
 
-            #            # calculate costs in parallel
-            #            with Pool(initializer=__initialize_cost_caluclation_worker, initargs=(experiment, arguments)) as pool:
-            #                tmp_result = list(
-            #                    tqdm.tqdm(pool.imap_unordered(__get_score, param_list), total=len(param_list), disable=True)
-            #                )
-            # calculate costs
-            tmp_result: List[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = []
-            for param in param_list:
-                tmp_result.append(__get_score(param))
+            if True:
+                # calculate costs in parallel
+                with Pool(initializer=__initialize_cost_caluclation_worker, initargs=(experiment, arguments)) as pool:
+                    tmp_result = list(
+                        tqdm.tqdm(pool.imap_unordered(__get_score, param_list), total=len(param_list), disable=True)
+                    )
+            else:
+                # calculate costs sequentially
+                tmp_result: List[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = []
+                for param in param_list:
+                    tmp_result.append(__get_score(param))
 
             for local_result in tmp_result:
                 # remove invalid elements
