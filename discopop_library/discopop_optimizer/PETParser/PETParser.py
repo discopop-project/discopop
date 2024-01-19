@@ -215,15 +215,12 @@ class PETParser(object):
                             if pred_cu_id in branch_likelihood_dict:
                                 if current_node_cu_id in branch_likelihood_dict[pred_cu_id]:
                                     edge_likelihood = branch_likelihood_dict[pred_cu_id][current_node_cu_id]
-                                    print("Set edge likelihood: ", pred_cu_id, current_node_cu_id, edge_likelihood)
                                 else:
                                     # branch was not executed
                                     edge_likelihood = 0
-                                    print("Set edge likelihood: ", pred_cu_id, current_node_cu_id, edge_likelihood)
 
                         likelihood += node_likelihood_dict[pred] * edge_likelihood
                     node_likelihood_dict[current_node] = likelihood
-                    print("Set likelihood: ", current_node, likelihood)
 
                     # add successors to queue
                     queue += get_successors(self.graph, current_node)                        
@@ -235,11 +232,45 @@ class PETParser(object):
 
             print("node likelihood:")
             for key in sorted(node_likelihood_dict.keys()):
-
                 print(key, "->", node_likelihood_dict[key])
-            show_function(self.graph, data_at(self.graph, function))
+            print("DONE")
 
             # calculate best branches using upwards search using branch and node likelihoods
+            keep_nodes: List[int] = self.__identify_most_likely_path(node_likelihood_dict, function)
+
+            # prune the graph
+            to_be_removed: List[int] = [n for n in get_all_nodes_in_function(self.graph, function) if n not in keep_nodes]
+            for n in to_be_removed:
+                self.graph.remove_node(n)
+
+
+    def __identify_most_likely_path(self, node_likelihood_dict: Dict[int, float], function: int) -> List[int]:
+        """Traverse graph upwards and return a list of the most likely nodes which constitute the most likely execution path."""
+        keep_nodes: List[int] = []
+        queue: List[int] = []
+        # get path end points
+        for node in get_all_nodes_in_function(self.graph, function):
+            if len(get_successors(self.graph, node)) == 0:
+                queue.append(node)
+        
+        while len(queue) > 0:
+            current = queue.pop()
+            keep_nodes.append(current)
+            # identify most likely predecessor
+            predecessor_likelihoods: List[Tuple[int, float]] = []
+            for pred in get_predecessors(self.graph, current):
+                predecessor_likelihoods.append((pred, node_likelihood_dict[pred]))
+            if len(predecessor_likelihoods) == 0:
+                # path entry reached
+                continue
+            most_likely_predecessor = sorted(predecessor_likelihoods, reverse=True, key=lambda x: x[1])[0][0]
+            # add most likely predecessor to the queue and thus keep_nodes
+            queue.append(most_likely_predecessor)
+
+        return keep_nodes
+
+        
+        
 
 
     def __flatten_function_graphs(self):
