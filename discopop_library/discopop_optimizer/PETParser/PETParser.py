@@ -177,13 +177,69 @@ class PETParser(object):
         print("Branch likelihood dict:")
         print(branch_likelihood_dict)
 
-        # calculate total branch likelihood
-        
+        # fix branch likelihood, necessary due to different structure of BB vs. Optimization graph
+
 
         for function in get_all_function_nodes(self.graph):
             print("pruning function: ", cast(FunctionRoot, data_at(self.graph, function)).name)
+            # calculate node likelihoods
+            node_likelihood_dict: Dict[int, float] = dict()
+            # initialize
+            queue: List[int] = []
+            for node in get_all_nodes_in_function(self.graph, function):
+                if len(get_predecessors(self.graph, node)) == 0:
+                    node_likelihood_dict[node] = 1
+                    queue += get_successors(self.graph, node)
+            # calculate node likelihoods by traversing the graph
+            while len(queue) > 0:
+                current_node = queue.pop(0)  # BFS
+                if current_node in node_likelihood_dict:
+                    continue
+                predecessors = get_predecessors(self.graph, current_node)
+                # if node likelihoods for all predecessors exist, calculate the likelihood for current_node
+                valid_target = True
+                for pred in predecessors:
+                    if pred not in node_likelihood_dict:
+                        valid_target = False
+                        # add the missing predecessor to the queue
+                        queue.append(pred)
+                        break
+                if valid_target:
+                    current_node_cu_id = data_at(self.graph, current_node).original_cu_id
+                    # calculate likelihood for current_node
+                    likelihood = 0
+                    for pred in predecessors:
+                        pred_cu_id = data_at(self.graph, pred).original_cu_id
+                        edge_likelihood = 1  # fallback if no data exists or not a branching point
+                        if len(get_successors(self.graph, pred)) > 1:
+                            if pred_cu_id in branch_likelihood_dict:
+                                if current_node_cu_id in branch_likelihood_dict[pred_cu_id]:
+                                    edge_likelihood = branch_likelihood_dict[pred_cu_id][current_node_cu_id]
+                                    print("Set edge likelihood: ", pred_cu_id, current_node_cu_id, edge_likelihood)
+                                else:
+                                    # branch was not executed
+                                    edge_likelihood = 0
+                                    print("Set edge likelihood: ", pred_cu_id, current_node_cu_id, edge_likelihood)
+
+                        likelihood += node_likelihood_dict[pred] * edge_likelihood
+                    node_likelihood_dict[current_node] = likelihood
+                    print("Set likelihood: ", current_node, likelihood)
+
+                    # add successors to queue
+                    queue += get_successors(self.graph, current_node)                        
+                            
+                else:
+                    # add current_node to the queue for another try
+                    queue.append(current_node)
 
 
+            print("node likelihood:")
+            for key in sorted(node_likelihood_dict.keys()):
+
+                print(key, "->", node_likelihood_dict[key])
+            show_function(self.graph, data_at(self.graph, function))
+
+            # calculate best branches using upwards search using branch and node likelihoods
 
 
     def __flatten_function_graphs(self):
