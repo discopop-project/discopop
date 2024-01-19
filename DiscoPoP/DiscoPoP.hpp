@@ -301,6 +301,7 @@ namespace {
         FunctionCallee DpCallOrInvoke;
         FunctionCallee DpFuncEntry, DpFuncExit;
         FunctionCallee DpLoopEntry, DpLoopExit;
+        FunctionCallee DpTakenBranchCounterIncr;
 
         // Basic types
         Type *Void;
@@ -377,6 +378,8 @@ namespace {
                        vector<CU *> &CUVector,
                        map <string, vector<CU *>> &BBIDToCUIDsMap, Node *root,
                        LoopInfo &LI);
+
+        void createTakenBranchInstrumentation(Region* TopRegion, map <string, vector<CU *>> &BBIDToCUIDsMap);
 
         void fillCUVariables(Region *TopRegion, set <string> &globalVariablesSet,
                              vector<CU *> &CUVector,
