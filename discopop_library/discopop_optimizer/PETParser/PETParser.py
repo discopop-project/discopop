@@ -190,6 +190,15 @@ class PETParser(object):
 
         for function in get_all_function_nodes(self.graph):
             print("pruning function: ", cast(FunctionRoot, data_at(self.graph, function)).name)
+            verbose_print_pruning_statistics = False
+            if self.experiment.arguments.verbose:
+                ct = 0
+                for node in get_all_nodes_in_function(self.graph, function):
+                    if len(get_successors(self.graph, node)) > 1:
+                        ct += 1
+                if ct > 0:
+                    verbose_print_pruning_statistics = True
+                    print("\tpath splits before pruning: ", ct)
             # calculate node likelihoods
             node_likelihood_dict: Dict[int, float] = dict()
             # initialize
@@ -238,11 +247,6 @@ class PETParser(object):
                     # add current_node to the queue for another try
                     queue.append(current_node)
 
-            print("node likelihood:")
-            for key in sorted(node_likelihood_dict.keys()):
-                print(key, "->", node_likelihood_dict[key])
-            print("DONE")
-
             keep_nodes: List[int] = []
             if self.experiment.arguments.pruning_level == 1:
                 # calculate best branches using upwards search using branch and node likelihoods
@@ -254,11 +258,20 @@ class PETParser(object):
                 raise ValueError("Unknown pruning level: ", self.experiment.arguments.pruning_level)
 
             # prune the graph
+            function_nodes = get_all_nodes_in_function(self.graph, function)
             to_be_removed: List[int] = [
-                n for n in get_all_nodes_in_function(self.graph, function) if n not in keep_nodes
+                n for n in function_nodes if n not in keep_nodes
             ]
             for n in to_be_removed:
                 self.graph.remove_node(n)
+            
+            if self.experiment.arguments.verbose and verbose_print_pruning_statistics:
+                ct = 0
+                for node in get_all_nodes_in_function(self.graph, function):
+                    if len(get_successors(self.graph, node)) > 1:
+                        ct += 1
+                print("\tpath splits after pruning: ", ct)
+
 
     def __identify_most_likely_paths_80_percent_cutoff(self, branch_likelihood_dict: Dict[str, Dict[str, float]], function: int) -> List[int]:
         """Traverse graph downwards and return a list of the nodes visited if all branches were taken that constitute a sum of at least 80% of the observed cases."""
