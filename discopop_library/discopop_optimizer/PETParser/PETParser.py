@@ -260,8 +260,6 @@ class PETParser(object):
             for n in to_be_removed:
                 self.graph.remove_node(n)
 
-            show_function(self.graph, data_at(self.graph, function), show_dataflow=False, show_mutex_edges=False)
-
     def __identify_most_likely_paths_80_percent_cutoff(self, branch_likelihood_dict: Dict[str, Dict[str, float]], function: int) -> List[int]:
         """Traverse graph downwards and return a list of the nodes visited if all branches were taken that constitute a sum of at least 80% of the observed cases."""
         keep_nodes: List[int] = []
