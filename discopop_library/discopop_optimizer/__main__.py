@@ -32,7 +32,7 @@ def parse_args() -> OptimizerArguments:
     parser.add_argument("-o", "--optimize", action="store_true",
         help="Enable optimization.")
     parser.add_argument("-p", "--pruning-level", type=int, default=0,
-        help="Program path pruning aggressiveness. 0: no pruning. 1: prune to most likely path.")
+        help="Program path pruning aggressiveness. 0: no pruning. 1: prune to most likely path. 2: prune to paths that cover 80%% of observed executions.")
     parser.add_argument(
         "--doall-microbench-file", type=str, default="None",
         help="Do-All microbenchmark results"

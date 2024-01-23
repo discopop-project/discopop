@@ -47,6 +47,6 @@ class OptimizerArguments(object):
                 raise FileNotFoundError(f"Microbenchmark file not found: {self.reduction_microbench_file}")
 
         # check pruning level values
-        if self.pruning_level not in [0, 1]:
+        if self.pruning_level not in [0, 1, 2]:
             raise ValueError("Unsupported pruning level: ", self.pruning_level)
         pass
