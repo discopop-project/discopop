@@ -247,6 +247,9 @@ class PETParser(object):
             if self.experiment.arguments.pruning_level == 1:
                 # calculate best branches using upwards search using branch and node likelihoods
                 keep_nodes = self.__identify_most_likely_path(node_likelihood_dict, function)
+            elif self.experiment.arguments.pruning_level == 2:
+                # calculate branches which are executed in 80% of the observed cases
+                keep_nodes = self.__identify_most_likely_paths_80_percent_cutoff(branch_likelihood_dict, function)
             else:
                 raise ValueError("Unknown pruning level: ", self.experiment.arguments.pruning_level)
 
@@ -256,6 +259,55 @@ class PETParser(object):
             ]
             for n in to_be_removed:
                 self.graph.remove_node(n)
+
+            show_function(self.graph, data_at(self.graph, function), show_dataflow=False, show_mutex_edges=False)
+
+    def __identify_most_likely_paths_80_percent_cutoff(self, branch_likelihood_dict: Dict[str, Dict[str, float]], function: int) -> List[int]:
+        """Traverse graph downwards and return a list of the nodes visited if all branches were taken that constitute a sum of at least 80% of the observed cases."""
+        keep_nodes: List[int] = []
+        queue: List[int] = []
+        # get path entries points
+        for node in get_all_nodes_in_function(self.graph, function):
+            if len(get_predecessors(self.graph, node)) == 0:
+                queue.append(node)
+
+        while len(queue) > 0:
+            current = queue.pop()
+            current_cu_id = data_at(self.graph, current).original_cu_id
+            keep_nodes.append(current)
+
+            # get successors and their cu ids
+            successors = get_successors(self.graph, current)
+            if len(successors) < 2:
+                queue += [s for s in successors if s not in queue and s not in keep_nodes]
+                continue
+            successor_cus = [(s, data_at(self.graph, s).original_cu_id) for s in successors]
+
+            # get likelihoods for transitions to successors
+            if current_cu_id not in branch_likelihood_dict:
+                warnings.warn("No branch counters available for path split at CU Node: " + current_cu_id + ". Fallback: Preserving all successors.")
+                # fallback: preserve all successors
+                queue += [s for s in successors if s not in queue and s not in keep_nodes]
+                continue
+            else:
+                successor_likelihood = []
+                for succ, succ_cu_id in successor_cus:
+                    if succ_cu_id not in branch_likelihood_dict[current_cu_id]:
+                        successor_likelihood.append((succ, succ_cu_id, 0.0))
+                    else:
+                        successor_likelihood.append((succ, succ_cu_id, branch_likelihood_dict[current_cu_id][succ_cu_id]))
+
+                # select successors until total probability is > THRESHOLD
+                threshold = 0.8
+                total_probability = 0
+                for succ, succ_cu_id, succ_prob in sorted(successor_likelihood, reverse=True, key=lambda x: x[2]):
+                    if total_probability < threshold:
+                        queue.append(succ)
+                        total_probability += succ_prob
+                    else:
+                        break
+
+        return keep_nodes
 
     def __identify_most_likely_path(self, node_likelihood_dict: Dict[int, float], function: int) -> List[int]:
         """Traverse graph upwards and return a list of the most likely nodes which constitute the most likely execution path."""
