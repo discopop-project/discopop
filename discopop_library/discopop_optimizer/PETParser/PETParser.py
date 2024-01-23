@@ -110,7 +110,8 @@ class PETParser(object):
         if self.experiment.arguments.verbose:
             print("pruning graphs based on taken branches")
         self.__prune_branches()
-        print("\tDone.")
+        if self.experiment.arguments.verbose:
+            print("\tDone.")
 
         self.__flatten_function_graphs()
 
@@ -146,6 +147,11 @@ class PETParser(object):
 
     def __prune_branches(self):
         """Prune branches based on the measured likelihood of execution"""
+        # check if branch information exists. If not, skip this step.
+        if not os.path.exists("profiler/cu_taken_branch_counter_output.txt"):
+            if self.experiment.arguments.verbose:
+                print("\tNo information on taken branches found. Skipping.")
+            return
         # load observed branching information
         branch_counter_dict: Dict[str, Dict[str, int]] = dict()
         with open("profiler/cu_taken_branch_counter_output.txt", "r") as f:

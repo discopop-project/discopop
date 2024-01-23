@@ -19,7 +19,8 @@
 #define DP_VERBOSE false  // prints warning messages
 #define DP_hybrid_DEBUG false
 #define DP_hybrid_SKIP false  //todo add parameter to disable hybrid dependence analysis on demand.
-
+#define DP_BRANCH_TRACKING false  // toggles the creation of instrumentation calls for tracking taken branches.
+                                 // Required by the graph pruning step of the DiscoPoP optimizer.
 
 using namespace llvm;
 using namespace std;
@@ -1940,7 +1941,9 @@ void DiscoPoP::dp_reduction_insert_functions() {
             if (llvm::isa<llvm::ReturnInst>(&(*it))) {
                 llvm::IRBuilder<> ir_builder(&(*it));
                 ir_builder.CreateCall(loop_counter_output_callee);
-                ir_builder.CreateCall(cu_taken_branch_counter_output_callee);
+                if(DP_BRANCH_TRACKING){
+                    ir_builder.CreateCall(cu_taken_branch_counter_output_callee);
+                }
                 break;
             }
         }
@@ -2218,7 +2221,9 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
         createCUs(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, root, LI);
 
-        createTakenBranchInstrumentation(TopRegion, BBIDToCUIDsMap);
+        if(DP_BRANCH_TRACKING){
+            createTakenBranchInstrumentation(TopRegion, BBIDToCUIDsMap);
+        }
 
         fillCUVariables(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap);
 
