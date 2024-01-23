@@ -31,6 +31,8 @@ def parse_args() -> OptimizerArguments:
         help="Enable greedy search. (Default)")
     parser.add_argument("-o", "--optimize", action="store_true",
         help="Enable optimization.")
+    parser.add_argument("-p", "--pruning-level", type=int, default=0,
+        help="Program path pruning aggressiveness. 0: no pruning. 1: prune to most likely path.")
     parser.add_argument(
         "--doall-microbench-file", type=str, default="None",
         help="Do-All microbenchmark results"
@@ -43,7 +45,7 @@ def parse_args() -> OptimizerArguments:
         "--system-configuration", type=str, default="optimizer/system_configuration.json",
         help="System configuration file"
     )
-    parser.add_argument("-p", "--profiling", action="store_true",
+    parser.add_argument("--profiling", action="store_true",
         help="Enable profiling.")
     # EXPERIMENTAL FLAGS:
     experimental_parser.add_argument("--allow-nested-parallelism", action="store_true",
@@ -74,6 +76,7 @@ def parse_args() -> OptimizerArguments:
         profiling=arguments.profiling,
         greedy=arguments.greedy,
         optimization=arguments.optimize,
+        pruning_level=arguments.pruning_level,
     )
 
 

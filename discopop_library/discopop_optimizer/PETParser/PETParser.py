@@ -148,6 +148,10 @@ class PETParser(object):
     def __prune_branches(self):
         """Prune branches based on the measured likelihood of execution"""
         # check if branch information exists. If not, skip this step.
+        if self.experiment.arguments.pruning_level == 0:
+            if self.experiment.arguments.verbose:
+                print("\tPruning level 0. Skipping.")
+            return
         if not os.path.exists("profiler/cu_taken_branch_counter_output.txt"):
             if self.experiment.arguments.verbose:
                 print("\tNo information on taken branches found. Skipping.")
@@ -239,8 +243,12 @@ class PETParser(object):
                 print(key, "->", node_likelihood_dict[key])
             print("DONE")
 
-            # calculate best branches using upwards search using branch and node likelihoods
-            keep_nodes: List[int] = self.__identify_most_likely_path(node_likelihood_dict, function)
+            keep_nodes: List[int] = []
+            if self.experiment.arguments.pruning_level == 1:
+                # calculate best branches using upwards search using branch and node likelihoods
+                keep_nodes = self.__identify_most_likely_path(node_likelihood_dict, function)
+            else:
+                raise ValueError("Unknown pruning level: ", self.experiment.arguments.pruning_level)
 
             # prune the graph
             to_be_removed: List[int] = [

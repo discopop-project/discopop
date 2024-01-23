@@ -27,6 +27,7 @@ class OptimizerArguments(object):
     profiling: bool
     greedy: bool
     optimization: bool
+    pruning_level: int
 
     def __post_init__(self):
         # fix correct optimization method
@@ -44,4 +45,8 @@ class OptimizerArguments(object):
         if self.reduction_microbench_file is not "None":
             if not os.path.isfile(self.reduction_microbench_file):
                 raise FileNotFoundError(f"Microbenchmark file not found: {self.reduction_microbench_file}")
+
+        # check pruning level values
+        if self.pruning_level not in [0, 1]:
+            raise ValueError("Unsupported pruning level: ", self.pruning_level)
         pass
