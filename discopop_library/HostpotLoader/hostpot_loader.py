@@ -29,6 +29,8 @@ def run(arguments: HotspotLoaderArguments) -> Dict[HotspotType, List[Tuple[FILEI
 
     if not os.path.exists(os.path.join(os.getcwd(), "hotspot_detection")):
         return result_dict
+    if not os.path.exists(os.path.join(os.getcwd(), "hotspot_detection", "Hotspots.json")):
+        return result_dict
     with open(os.path.join(os.getcwd(), "hotspot_detection", "Hotspots.json"), "r") as f:
         hotspots = json.load(f)
 
