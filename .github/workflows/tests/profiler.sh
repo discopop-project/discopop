@@ -20,11 +20,14 @@ TARGET_NAME=$1
 PASS_NAME=$2
 
 function test_discopopPass {
-  cp ${DISCOPOP_SRC}/scripts/dp-fmap .
-  ./dp-fmap
-  clang++ -g -c -O0 -S -emit-llvm -fno-discard-value-names "$1" -o out.ll || return 1
-  opt-11 -S -load=${DISCOPOP_INSTALL}/libi/LLVMDiscoPoP.so --DiscoPoP out.ll -o out_dp.ll || return 1
-  clang++ out_dp.ll -o out_prof -L${DISCOPOP_INSTALL}/rtlib -lDiscoPoP_RT -lpthread || return 1
+   ${DISCOPOP_INSTALL}/scripts/CXX_wrapper.sh "$1" -o out_prof
+
+
+#  cp ${DISCOPOP_SRC}/scripts/dp-fmap .
+#  ./dp-fmap
+#  clang++ -g -c -O0 -S -emit-llvm -fno-discard-value-names "$1" -o out.ll || return 1
+#  opt-11 -S -load=${DISCOPOP_INSTALL}/libi/LLVMDiscoPoP.so --DiscoPoP out.ll -o out_dp.ll || return 1
+#  clang++ out_dp.ll -o out_prof -L${DISCOPOP_INSTALL}/rtlib -lDiscoPoP_RT -lpthread || return 1
   ./out_prof || return 1
 }
 
