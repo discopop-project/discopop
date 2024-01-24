@@ -9,7 +9,8 @@ import copy
 from typing import Set, cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
-from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
+from sympy import Expr, Integer, Symbol, log, Float, init_printing
+from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Microbench.utils import (
@@ -24,6 +25,7 @@ from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 suggestion_device_types = [CPU, GPU]
 
@@ -107,6 +109,23 @@ def import_suggestion(
                     #    and data_at(graph, edge[1]).device_id is None
                     # ):
                     #   data_at(graph, edge[1]).device_id = 0
+
+                # register the device-mapped suggestion
+                if device_id != environment.get_system().get_host_device_id():
+                    pattern_info = DoAllInfo(
+                        environment.detection_result.pet,
+                        environment.detection_result.pet.node_at(node_data_copy.original_cu_id)
+                    )
+                    pattern_info.collapse_level = suggestion.collapse_level
+                    pattern_info.device_id = device_id
+                    pattern_info.device_type = environment.get_system().get_device(device_id).get_device_type()
+                    pattern_info.applicable_pattern = False
+
+                    environment.detection_result.patterns.do_all.append(pattern_info)
+
+                    optimizer_output_pattern = OptimizerOutputPattern(suggestion._node, [new_node_id], environment.get_system().get_host_device_id())
+                    optimizer_output_pattern.add_pattern(pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type)
+                    environment.detection_result.patterns.optimizer_output.append(optimizer_output_pattern)
 
         # connect introduced parallelization options to support path restraining
         for node_id_1 in introduced_options:
