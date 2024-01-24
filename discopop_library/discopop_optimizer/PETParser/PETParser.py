@@ -259,12 +259,10 @@ class PETParser(object):
 
             # prune the graph
             function_nodes = get_all_nodes_in_function(self.graph, function)
-            to_be_removed: List[int] = [
-                n for n in function_nodes if n not in keep_nodes
-            ]
+            to_be_removed: List[int] = [n for n in function_nodes if n not in keep_nodes]
             for n in to_be_removed:
                 self.graph.remove_node(n)
-            
+
             if self.experiment.arguments.verbose and verbose_print_pruning_statistics:
                 ct = 0
                 for node in get_all_nodes_in_function(self.graph, function):
@@ -272,8 +270,9 @@ class PETParser(object):
                         ct += 1
                 print("\tpath splits after pruning: ", ct)
 
-
-    def __identify_most_likely_paths_80_percent_cutoff(self, branch_likelihood_dict: Dict[str, Dict[str, float]], function: int) -> List[int]:
+    def __identify_most_likely_paths_80_percent_cutoff(
+        self, branch_likelihood_dict: Dict[str, Dict[str, float]], function: int
+    ) -> List[int]:
         """Traverse graph downwards and return a list of the nodes visited if all branches were taken that constitute a sum of at least 80% of the observed cases."""
         keep_nodes: List[int] = []
         queue: List[int] = []
@@ -296,7 +295,11 @@ class PETParser(object):
 
             # get likelihoods for transitions to successors
             if current_cu_id not in branch_likelihood_dict:
-                warnings.warn("No branch counters available for path split at CU Node: " + current_cu_id + ". Fallback: Preserving all successors.")
+                warnings.warn(
+                    "No branch counters available for path split at CU Node: "
+                    + str(current_cu_id)
+                    + ". Fallback: Preserving all successors."
+                )
                 # fallback: preserve all successors
                 queue += [s for s in successors if s not in queue and s not in keep_nodes]
                 continue
@@ -306,11 +309,13 @@ class PETParser(object):
                     if succ_cu_id not in branch_likelihood_dict[current_cu_id]:
                         successor_likelihood.append((succ, succ_cu_id, 0.0))
                     else:
-                        successor_likelihood.append((succ, succ_cu_id, branch_likelihood_dict[current_cu_id][succ_cu_id]))
+                        successor_likelihood.append(
+                            (succ, succ_cu_id, branch_likelihood_dict[current_cu_id][succ_cu_id])
+                        )
 
                 # select successors until total probability is > THRESHOLD
                 threshold = 0.8
-                total_probability = 0
+                total_probability = 0.0
                 for succ, succ_cu_id, succ_prob in sorted(successor_likelihood, reverse=True, key=lambda x: x[2]):
                     if total_probability < threshold:
                         queue.append(succ)
