@@ -33,7 +33,7 @@ class TestMethods(unittest.TestCase):
         # execute DiscoPoP analysis
         os.chdir(".discopop")
         os.system("discopop_explorer")
-        os.system("discopop_optimizer -x")
+        os.system("discopop_optimizer -o3")
         os.chdir("..")
         # validate results
         self.validate_results(current_dir, src_dir)

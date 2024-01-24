@@ -23,16 +23,12 @@ def parse_args() -> OptimizerArguments:
     # fmt: off
     parser.add_argument("-v", "--verbose", action="store_true",
         help="Enable verbose output.")
-    parser.add_argument("-x", "--exhaustive", action="store_true",
-        help="Enable exhaustive search. By default, a greedy search is performed.")
-    parser.add_argument("-e", "--evolutionary", type=str, default=None, nargs=2, metavar=("population_size", "generations"),
-        help="Enable evolutionary search. By default, a greedy search is performed.")
-    parser.add_argument("-g", "--greedy", action="store_true",
-        help="Enable greedy search. (Default)")
-    parser.add_argument("-o", "--optimize", action="store_true",
-        help="Enable optimization.")
     parser.add_argument("-p", "--pruning-level", type=int, default=0,
         help="Program path pruning aggressiveness. 0: no pruning. 1: prune to most likely path. 2: prune to paths that cover 80%% of observed decisions per path split.")
+    parser.add_argument("-o", type=int, default=0, help="Optimization level: 0 -> no optimization. 1 -> greedy. 2 -> evolutionary. 3 -> exhaustive")
+
+    parser.add_argument("-opt-2-params", type=str, default=None, nargs=2, metavar=("population_size", "generations"), help="Configure parameters of the evolutionary optimization (-o2). Default: 50 5")
+
     parser.add_argument(
         "--doall-microbench-file", type=str, default="None",
         help="Do-All microbenchmark results"
@@ -65,18 +61,16 @@ def parse_args() -> OptimizerArguments:
     return OptimizerArguments(
         verbose=arguments.verbose,
         interactive=arguments.interactive,
-        exhaustive=arguments.exhaustive,
-        evolutionary=arguments.evolutionary,
         doall_microbench_file=arguments.doall_microbench_file,
         reduction_microbench_file=arguments.reduction_microbench_file,
         allow_nested_parallelism=arguments.allow_nested_parallelism,
         plot=arguments.plot,
         system_configuration_path=arguments.system_configuration,
         check_called_function_for_nested_parallelism=arguments.check_called_function_for_nested_parallelism,
-        profiling=arguments.profiling,
-        greedy=arguments.greedy,
-        optimization=arguments.optimize,
+        profiling=arguments.profiling,        
         pruning_level=arguments.pruning_level,
+        optimization_level=arguments.o,
+        optimization_level_2_parameters=arguments.opt_2_params,
     )
 
 

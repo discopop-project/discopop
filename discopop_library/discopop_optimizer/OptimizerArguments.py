@@ -16,8 +16,6 @@ class OptimizerArguments(object):
 
     verbose: bool
     interactive: bool
-    exhaustive: bool
-    evolutionary: Optional[List[str]]
     doall_microbench_file: str
     reduction_microbench_file: str
     allow_nested_parallelism: bool
@@ -25,16 +23,11 @@ class OptimizerArguments(object):
     system_configuration_path: str
     check_called_function_for_nested_parallelism: bool
     profiling: bool
-    greedy: bool
-    optimization: bool
     pruning_level: int
+    optimization_level: int
+    optimization_level_2_parameters: str
 
     def __post_init__(self):
-        # fix correct optimization method
-        if not self.exhaustive:
-            if self.evolutionary == None:
-                self.greedy = True
-
         self.__validate()
 
     def __validate(self):
@@ -49,4 +42,9 @@ class OptimizerArguments(object):
         # check pruning level values
         if self.pruning_level not in [0, 1, 2]:
             raise ValueError("Unsupported pruning level: ", self.pruning_level)
+            
+        # check optimization level
+        if self.optimization_level not in [0, 1, 2, 3]:
+            raise ValueError("Unknown optimization level requested: ", self.optimization_level)
+
         pass

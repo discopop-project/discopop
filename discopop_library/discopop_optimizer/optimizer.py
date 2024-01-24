@@ -199,27 +199,24 @@ def run(arguments: OptimizerArguments):
         if node_id != node_data.node_id:
             node_data.node_id = node_id
 
-    if arguments.optimization:
-        # get values for free symbols
-        initialize_free_symbol_ranges_and_distributions(experiment, arguments, system)
+    # get values for free symbols
+    initialize_free_symbol_ranges_and_distributions(experiment, arguments, system)
 
-        if arguments.verbose:
-            print("# SUBSTITUTIONS:")
-            for key in experiment.substitutions:
-                print("#", key, " ->", experiment.substitutions[key])
-            print()
+    if arguments.verbose:
+        print("# SUBSTITUTIONS:")
+        for key in experiment.substitutions:
+            print("#", key, " ->", experiment.substitutions[key])
+        print()
 
+    # apply optimization steps if requested
+    best_configuration = None
+    if arguments.optimization_level != 0:
         # calculate options for easy access
         available_decisions = get_available_decisions_for_functions(experiment.optimization_graph, arguments)
 
-        # calculate costs for all combinations of decisions
-        if arguments.exhaustive:
-            best_configuration = evaluate_all_decision_combinations(
-                experiment, available_decisions, arguments, optimizer_dir
-            )
-        elif arguments.greedy:
+        if arguments.optimization_level == 1:
             best_configuration = greedy_search(experiment, available_decisions, arguments, optimizer_dir)
-        elif arguments.evolutionary != None:
+        elif arguments.optimization_level == 2:
             # perform evolutionary search
             best_configuration = perform_evolutionary_search(
                 experiment,
@@ -227,13 +224,18 @@ def run(arguments: OptimizerArguments):
                 arguments,
                 optimizer_dir,
             )
+        # calculate costs for all combinations of decisions
+        elif arguments.optimization_level == 3:
+            best_configuration = evaluate_all_decision_combinations(
+                experiment, available_decisions, arguments, optimizer_dir
+            )
         else:
-            raise ValueError("No optimization method specified!")
+            raise ValueError("No valid optimization method specified: " + str(arguments.optimization_level))
 
-        if best_configuration is not None:
-            best_configuration = optimize_updates(experiment, best_configuration, arguments)
-            # append the configuration to the list of patterns
-            experiment.detection_result.patterns.optimizer_output.append(best_configuration)
+    if best_configuration is not None:
+        best_configuration = optimize_updates(experiment, best_configuration, arguments)
+        # append the configuration to the list of patterns
+        experiment.detection_result.patterns.optimizer_output.append(best_configuration)
 
     if arguments.profiling:
         experiment.profile.disable()  # type: ignore

@@ -14,18 +14,14 @@ from discopop_library.ConfigProvider.config_provider import run
 def parse_args() -> ConfigProviderArguments:
     """Parse the arguments passed to the discopop_config_provider"""
     parser = ArgumentParser(description="DiscoPoP Config Provider")
-    # all flags that are not considered stable should be added to the experimental_parser
-    experimental_parser = parser.add_argument_group(
-        "EXPERIMENTAL",
-        "Arguments for experimental features. Experimental arguments may or may not be removed or changed in the future.",
-    )
 
     # fmt: off
-    parser.add_argument("-b", "--dp-build-dir", action="store_true",
+    mutually_exclusive = parser.add_mutually_exclusive_group()
+    mutually_exclusive.add_argument("-b", "--dp-build-dir", action="store_true",
                         help="Return the path to the DiscoPoP build directory")
-    parser.add_argument("-s", "--dp-source-dir", action="store_true",
+    mutually_exclusive.add_argument("-s", "--dp-source-dir", action="store_true",
                         help="Return the path to the DiscoPoP source directory")
-    parser.add_argument("--llvm-bin-dir", action="store_true",
+    mutually_exclusive.add_argument("--llvm-bin-dir", action="store_true",
                         help="Return the path to the LLVM bin directory")
     # EXPERIMENTAL FLAGS:
     # fmt: on
@@ -39,10 +35,10 @@ def parse_args() -> ConfigProviderArguments:
     )
 
 
-def main() -> str:
+def main() -> None:
     arguments = parse_args()
     retval = run(arguments)
-    return retval
+    print(retval)
 
 
 if __name__ == "__main__":
