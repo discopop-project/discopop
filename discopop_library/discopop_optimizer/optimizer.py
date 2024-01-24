@@ -208,26 +208,29 @@ def run(arguments: OptimizerArguments):
             print("#", key, " ->", experiment.substitutions[key])
         print()
 
-    # calculate options for easy access
-    available_decisions = get_available_decisions_for_functions(experiment.optimization_graph, arguments)
+    # apply optimization steps if requested
+    best_configuration = None
+    if arguments.optimization_level != 0:
+        # calculate options for easy access
+        available_decisions = get_available_decisions_for_functions(experiment.optimization_graph, arguments)
 
-    # calculate costs for all combinations of decisions
-    if arguments.exhaustive:
-        best_configuration = evaluate_all_decision_combinations(
-            experiment, available_decisions, arguments, optimizer_dir
-        )
-    elif arguments.greedy:
-        best_configuration = greedy_search(experiment, available_decisions, arguments, optimizer_dir)
-    elif arguments.evolutionary != None:
-        # perform evolutionary search
-        best_configuration = perform_evolutionary_search(
-            experiment,
-            available_decisions,
-            arguments,
-            optimizer_dir,
-        )
-    else:
-        raise ValueError("No optimization method specified!")
+        if arguments.optimization_level == 1:
+            best_configuration = greedy_search(experiment, available_decisions, arguments, optimizer_dir)
+        elif arguments.optimization_level == 2:
+            # perform evolutionary search
+            best_configuration = perform_evolutionary_search(
+                experiment,
+                available_decisions,
+                arguments,
+                optimizer_dir,
+            )
+        # calculate costs for all combinations of decisions
+        elif arguments.optimization_level == 3:
+            best_configuration = evaluate_all_decision_combinations(
+                experiment, available_decisions, arguments, optimizer_dir
+            )
+        else:
+            raise ValueError("No valid optimization method specified: " + str(arguments.optimization_level))
 
     if best_configuration is not None:
         best_configuration = optimize_updates(experiment, best_configuration, arguments)
