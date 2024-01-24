@@ -8,6 +8,7 @@
 
 from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProviderArguments
 from discopop_library.ConfigProvider.assets.build_config import DP_BUILD, DP_SOURCE, LLVM_BIN_DIR  # type: ignore
+from discopop_library.global_data.version.utils import get_version
 
 
 def run(arguments: ConfigProviderArguments) -> str:
@@ -19,5 +20,7 @@ def run(arguments: ConfigProviderArguments) -> str:
         return DP_SOURCE  # type: ignore
     elif arguments.return_llvm_bin_dir:
         return LLVM_BIN_DIR  # type: ignore
+    elif arguments.return_version_string:
+        return get_version()
     else:
         raise ValueError("No valid operation for execution configuration: \n" + str(arguments))

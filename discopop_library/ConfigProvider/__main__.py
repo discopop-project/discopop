@@ -23,6 +23,8 @@ def parse_args() -> ConfigProviderArguments:
                         help="Return the path to the DiscoPoP source directory")
     mutually_exclusive.add_argument("--llvm-bin-dir", action="store_true",
                         help="Return the path to the LLVM bin directory")
+    mutually_exclusive.add_argument("-v", "--version", action="store_true",
+                        help="Return the version string of the DiscoPoP library")
     # EXPERIMENTAL FLAGS:
     # fmt: on
 
@@ -32,6 +34,7 @@ def parse_args() -> ConfigProviderArguments:
         return_dp_build_dir=arguments.dp_build_dir,
         return_dp_source_dir=arguments.dp_source_dir,
         return_llvm_bin_dir=arguments.llvm_bin_dir,
+        return_version_string=arguments.version,
     )
 
 
