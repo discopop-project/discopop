@@ -15,6 +15,7 @@ set(DiscoPoP_SOURCES
         iFunctions.cpp
         signature.cpp
         loop_counter.cpp
+        cu_taken_branch_counter.cpp
         #../share/lib/DPUtils.cpp
         MemoryRegionTree.cpp
         )

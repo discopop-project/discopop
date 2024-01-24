@@ -107,7 +107,16 @@ class PETParser(object):
 
         # self.__new_parse_branched_sections()
 
+        if self.experiment.arguments.verbose:
+            print("pruning graphs based on taken branches. Pruning level: ", self.experiment.arguments.pruning_level)
+        self.__prune_branches()
+        if self.experiment.arguments.verbose:
+            print("\tDone.")
+
         self.__flatten_function_graphs()
+
+        # remove invalid functions
+        self.__remove_invalid_functions()
 
         convert_temporary_edges(self.graph)
         if self.experiment.arguments.verbose:
@@ -119,6 +128,8 @@ class PETParser(object):
         if self.experiment.arguments.verbose:
             print("calculated data flow")
 
+        if self.experiment.arguments.verbose:
+            print("Propagating read/write information...")
         self.__propagate_reads_and_writes()
         if self.experiment.arguments.verbose:
             print("Propagated read/write information")
@@ -133,6 +144,211 @@ class PETParser(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
+
+    def __prune_branches(self):
+        """Prune branches based on the measured likelihood of execution"""
+        # check if branch information exists. If not, skip this step.
+        if self.experiment.arguments.pruning_level == 0:
+            if self.experiment.arguments.verbose:
+                print("\tPruning level 0. Skipping.")
+            return
+        if not os.path.exists("profiler/cu_taken_branch_counter_output.txt"):
+            if self.experiment.arguments.verbose:
+                print("\tNo information on taken branches found. Skipping.")
+            return
+        # load observed branching information
+        branch_counter_dict: Dict[str, Dict[str, int]] = dict()
+        with open("profiler/cu_taken_branch_counter_output.txt", "r") as f:
+            for line in f.readlines():
+                line = line.replace("\n", "")
+                split_line = line.split(";")
+                source_cu_id = split_line[0]
+                target_cu_id = split_line[1]
+                counter = int(split_line[2])
+                if source_cu_id not in branch_counter_dict:
+                    branch_counter_dict[source_cu_id] = dict()
+                branch_counter_dict[source_cu_id][target_cu_id] = counter
+        print("Branch counter dict: ")
+        print(branch_counter_dict)
+
+        # convert counters to likelihood
+        branch_likelihood_dict: Dict[str, Dict[str, float]] = dict()
+        for source_cu_id in branch_counter_dict:
+            total_counter = 0
+            for target_cu_id in branch_counter_dict[source_cu_id]:
+                total_counter += branch_counter_dict[source_cu_id][target_cu_id]
+            branch_likelihood_dict[source_cu_id] = dict()
+            for target_cu_id in branch_counter_dict[source_cu_id]:
+                branch_likelihood_dict[source_cu_id][target_cu_id] = (
+                    branch_counter_dict[source_cu_id][target_cu_id] / total_counter
+                )
+
+        print("Branch likelihood dict:")
+        print(branch_likelihood_dict)
+
+        # fix branch likelihood, necessary due to different structure of BB vs. Optimization graph
+
+        for function in get_all_function_nodes(self.graph):
+            print("pruning function: ", cast(FunctionRoot, data_at(self.graph, function)).name)
+            verbose_print_pruning_statistics = False
+            if self.experiment.arguments.verbose:
+                ct = 0
+                for node in get_all_nodes_in_function(self.graph, function):
+                    if len(get_successors(self.graph, node)) > 1:
+                        ct += 1
+                if ct > 0:
+                    verbose_print_pruning_statistics = True
+                    print("\tpath splits before pruning: ", ct)
+            # calculate node likelihoods
+            node_likelihood_dict: Dict[int, float] = dict()
+            # initialize
+            queue: List[int] = []
+            for node in get_all_nodes_in_function(self.graph, function):
+                if len(get_predecessors(self.graph, node)) == 0:
+                    node_likelihood_dict[node] = 1
+                queue.append(node)
+            # calculate node likelihoods by traversing the graph
+            while len(queue) > 0:
+                current_node = queue.pop(0)  # BFS
+                if current_node in node_likelihood_dict:
+                    continue
+                predecessors = get_predecessors(self.graph, current_node)
+                # if node likelihoods for all predecessors exist, calculate the likelihood for current_node
+                valid_target = True
+                for pred in predecessors:
+                    if pred not in node_likelihood_dict:
+                        valid_target = False
+                        # add the missing predecessor to the queue
+                        if pred not in queue:
+                            queue.append(pred)
+                        break
+                if valid_target:
+                    current_node_cu_id = data_at(self.graph, current_node).original_cu_id
+                    # calculate likelihood for current_node
+                    likelihood = 0
+                    for pred in predecessors:
+                        pred_cu_id = data_at(self.graph, pred).original_cu_id
+                        edge_likelihood = 1  # fallback if no data exists or not a branching point
+                        if len(get_successors(self.graph, pred)) > 1:
+                            if pred_cu_id in branch_likelihood_dict:
+                                if current_node_cu_id in branch_likelihood_dict[pred_cu_id]:
+                                    edge_likelihood = branch_likelihood_dict[pred_cu_id][current_node_cu_id]
+                                else:
+                                    # branch was not executed
+                                    edge_likelihood = 0
+
+                        likelihood += node_likelihood_dict[pred] * edge_likelihood
+                    node_likelihood_dict[current_node] = likelihood
+
+                    # add successors to queue
+                    queue += [s for s in get_successors(self.graph, current_node) if s not in queue]
+
+                else:
+                    # add current_node to the queue for another try
+                    queue.append(current_node)
+
+            keep_nodes: List[int] = []
+            if self.experiment.arguments.pruning_level == 1:
+                # calculate branches which are executed in 80% of the observed cases
+                keep_nodes = self.__identify_most_likely_paths_80_percent_cutoff(branch_likelihood_dict, function)
+            elif self.experiment.arguments.pruning_level == 2:
+                # calculate best branches using upwards search using branch and node likelihoods
+                keep_nodes = self.__identify_most_likely_path(node_likelihood_dict, function)
+            else:
+                raise ValueError("Unknown pruning level: ", self.experiment.arguments.pruning_level)
+
+            # prune the graph
+            function_nodes = get_all_nodes_in_function(self.graph, function)
+            to_be_removed: List[int] = [n for n in function_nodes if n not in keep_nodes]
+            for n in to_be_removed:
+                self.graph.remove_node(n)
+
+            if self.experiment.arguments.verbose and verbose_print_pruning_statistics:
+                ct = 0
+                for node in get_all_nodes_in_function(self.graph, function):
+                    if len(get_successors(self.graph, node)) > 1:
+                        ct += 1
+                print("\tpath splits after pruning: ", ct)
+
+    def __identify_most_likely_paths_80_percent_cutoff(
+        self, branch_likelihood_dict: Dict[str, Dict[str, float]], function: int
+    ) -> List[int]:
+        """Traverse graph downwards and return a list of the nodes visited if all branches were taken that constitute a sum of at least 80% of the observed cases."""
+        keep_nodes: List[int] = []
+        queue: List[int] = []
+        # get path entries points
+        for node in get_all_nodes_in_function(self.graph, function):
+            if len(get_predecessors(self.graph, node)) == 0:
+                queue.append(node)
+
+        while len(queue) > 0:
+            current = queue.pop()
+            current_cu_id = data_at(self.graph, current).original_cu_id
+            keep_nodes.append(current)
+
+            # get successors and their cu ids
+            successors = get_successors(self.graph, current)
+            if len(successors) < 2:
+                queue += [s for s in successors if s not in queue and s not in keep_nodes]
+                continue
+            successor_cus = [(s, data_at(self.graph, s).original_cu_id) for s in successors]
+
+            # get likelihoods for transitions to successors
+            if current_cu_id not in branch_likelihood_dict:
+                warnings.warn(
+                    "No branch counters available for path split at CU Node: "
+                    + str(current_cu_id)
+                    + ". Fallback: Preserving all successors."
+                )
+                # fallback: preserve all successors
+                queue += [s for s in successors if s not in queue and s not in keep_nodes]
+                continue
+            else:
+                successor_likelihood = []
+                for succ, succ_cu_id in successor_cus:
+                    if succ_cu_id not in branch_likelihood_dict[current_cu_id]:
+                        successor_likelihood.append((succ, succ_cu_id, 0.0))
+                    else:
+                        successor_likelihood.append(
+                            (succ, succ_cu_id, branch_likelihood_dict[current_cu_id][succ_cu_id])
+                        )
+
+                # select successors until total probability is > THRESHOLD
+                threshold = 0.8
+                total_probability = 0.0
+                for succ, succ_cu_id, succ_prob in sorted(successor_likelihood, reverse=True, key=lambda x: x[2]):
+                    if total_probability < threshold:
+                        queue.append(succ)
+                        total_probability += succ_prob
+                    else:
+                        break
+
+        return keep_nodes
+
+    def __identify_most_likely_path(self, node_likelihood_dict: Dict[int, float], function: int) -> List[int]:
+        """Traverse graph upwards and return a list of the most likely nodes which constitute the most likely execution path."""
+        keep_nodes: List[int] = []
+        queue: List[int] = []
+        # get path end points
+        for node in get_all_nodes_in_function(self.graph, function):
+            if len(get_successors(self.graph, node)) == 0:
+                queue.append(node)
+
+        while len(queue) > 0:
+            current = queue.pop()
+            keep_nodes.append(current)
+            # identify most likely predecessor
+            predecessor_likelihoods: List[Tuple[int, float]] = []
+            for pred in get_predecessors(self.graph, current):
+                predecessor_likelihoods.append((pred, node_likelihood_dict[pred]))
+            if len(predecessor_likelihoods) == 0:
+                # path entry reached
+                continue
+            most_likely_predecessor = sorted(predecessor_likelihoods, reverse=True, key=lambda x: x[1])[0][0]
+            # add most likely predecessor to the queue and thus keep_nodes
+            queue.append(most_likely_predecessor)
+
+        return keep_nodes
 
     def __flatten_function_graphs(self):
         # TODO: remove deepcopies by storing data independently from the nodes
@@ -1070,12 +1286,24 @@ class PETParser(object):
             return current_last_writes
 
         # Note: at this point in time, the graph MUST NOT have branched sections
-        for function_node in get_all_function_nodes(self.graph):
+        all_function_nodes = get_all_function_nodes(self.graph)
+        for idx, function_node in enumerate(all_function_nodes):
+            if self.experiment.arguments.verbose:
+                print(
+                    "Calculating dataflow for function: ",
+                    data_at(self.graph, function_node).name,
+                    idx,
+                    "/",
+                    len(all_function_nodes),
+                )
             if (
                 function_node not in self.experiment.hotspot_function_node_ids
                 and len(self.experiment.hotspot_function_node_ids) > 0
             ):
                 print("SKIPPING NON-HOTSPOT FUNCTION: ", data_at(self.graph, function_node).name)
+                continue
+            if function_node in self.invalid_functions:
+                print("SKIPPING INVALID FUNCTION: ", data_at(self.graph, function_node).name)
                 continue
 
             try:

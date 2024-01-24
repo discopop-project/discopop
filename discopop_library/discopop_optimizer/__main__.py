@@ -23,6 +23,8 @@ def parse_args() -> OptimizerArguments:
     # fmt: off
     parser.add_argument("-v", "--verbose", action="store_true",
         help="Enable verbose output.")
+    parser.add_argument("-p", type=int, default=0,
+        help="Program path pruning aggressiveness. 0: no pruning. 1: prune to paths that cover 80%% of observed decisions per path split. 2: prune to most likely path.")
     parser.add_argument("-o", type=int, default=0, help="Optimization level: 0 -> no optimization. 1 -> greedy. 2 -> evolutionary. 3 -> exhaustive")
 
     parser.add_argument("-opt-2-params", type=str, default=None, nargs=2, metavar=("population_size", "generations"), help="Configure parameters of the evolutionary optimization (-o2). Default: 50 5")
@@ -39,7 +41,7 @@ def parse_args() -> OptimizerArguments:
         "--system-configuration", type=str, default="optimizer/system_configuration.json",
         help="System configuration file"
     )
-    parser.add_argument("-p", "--profiling", action="store_true",
+    parser.add_argument("--profiling", action="store_true",
         help="Enable profiling.")
     # EXPERIMENTAL FLAGS:
     experimental_parser.add_argument("--allow-nested-parallelism", action="store_true",
@@ -66,6 +68,7 @@ def parse_args() -> OptimizerArguments:
         system_configuration_path=arguments.system_configuration,
         check_called_function_for_nested_parallelism=arguments.check_called_function_for_nested_parallelism,
         profiling=arguments.profiling,
+        pruning_level=arguments.p,
         optimization_level=arguments.o,
         optimization_level_2_parameters=arguments.opt_2_params,
     )
