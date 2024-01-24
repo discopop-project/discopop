@@ -67,7 +67,7 @@ def parse_args() -> OptimizerArguments:
         plot=arguments.plot,
         system_configuration_path=arguments.system_configuration,
         check_called_function_for_nested_parallelism=arguments.check_called_function_for_nested_parallelism,
-        profiling=arguments.profiling,        
+        profiling=arguments.profiling,
         pruning_level=arguments.pruning_level,
         optimization_level=arguments.o,
         optimization_level_2_parameters=arguments.opt_2_params,

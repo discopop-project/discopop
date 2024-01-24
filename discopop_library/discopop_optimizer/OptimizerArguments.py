@@ -42,7 +42,7 @@ class OptimizerArguments(object):
         # check pruning level values
         if self.pruning_level not in [0, 1, 2]:
             raise ValueError("Unsupported pruning level: ", self.pruning_level)
-            
+
         # check optimization level
         if self.optimization_level not in [0, 1, 2, 3]:
             raise ValueError("Unknown optimization level requested: ", self.optimization_level)
