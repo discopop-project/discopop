@@ -23,8 +23,8 @@ def parse_args() -> OptimizerArguments:
     # fmt: off
     parser.add_argument("-v", "--verbose", action="store_true",
         help="Enable verbose output.")
-    parser.add_argument("-p", "--pruning-level", type=int, default=0,
-        help="Program path pruning aggressiveness. 0: no pruning. 1: prune to most likely path. 2: prune to paths that cover 80%% of observed decisions per path split.")
+    parser.add_argument("-p", type=int, default=0,
+        help="Program path pruning aggressiveness. 0: no pruning. 1: prune to paths that cover 80%% of observed decisions per path split. 2: prune to most likely path.")
     parser.add_argument("-o", type=int, default=0, help="Optimization level: 0 -> no optimization. 1 -> greedy. 2 -> evolutionary. 3 -> exhaustive")
 
     parser.add_argument("-opt-2-params", type=str, default=None, nargs=2, metavar=("population_size", "generations"), help="Configure parameters of the evolutionary optimization (-o2). Default: 50 5")

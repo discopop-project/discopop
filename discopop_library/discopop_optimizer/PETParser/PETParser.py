@@ -108,7 +108,7 @@ class PETParser(object):
         # self.__new_parse_branched_sections()
 
         if self.experiment.arguments.verbose:
-            print("pruning graphs based on taken branches")
+            print("pruning graphs based on taken branches. Pruning level: ", self.experiment.arguments.pruning_level)
         self.__prune_branches()
         if self.experiment.arguments.verbose:
             print("\tDone.")
@@ -249,11 +249,11 @@ class PETParser(object):
 
             keep_nodes: List[int] = []
             if self.experiment.arguments.pruning_level == 1:
-                # calculate best branches using upwards search using branch and node likelihoods
-                keep_nodes = self.__identify_most_likely_path(node_likelihood_dict, function)
-            elif self.experiment.arguments.pruning_level == 2:
                 # calculate branches which are executed in 80% of the observed cases
                 keep_nodes = self.__identify_most_likely_paths_80_percent_cutoff(branch_likelihood_dict, function)
+            elif self.experiment.arguments.pruning_level == 2:
+                # calculate best branches using upwards search using branch and node likelihoods
+                keep_nodes = self.__identify_most_likely_path(node_likelihood_dict, function)
             else:
                 raise ValueError("Unknown pruning level: ", self.experiment.arguments.pruning_level)
 
