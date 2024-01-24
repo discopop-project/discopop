@@ -24,7 +24,7 @@ from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
 from discopop_library.discopop_optimizer.CostModels.utilities import get_performance_models_for_functions
-from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
+from discopop_library.discopop_optimizer.DataTransfers.calculate_configuration_data_movement import calculate_data_movement
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
 from discopop_library.discopop_optimizer.UpdateOptimization.main import optimize_updates
@@ -207,6 +207,10 @@ def run(arguments: OptimizerArguments):
         for key in experiment.substitutions:
             print("#", key, " ->", experiment.substitutions[key])
         print()
+
+    # calculate necessary updates for all created (i.e. mapped or collapsed) suggestions
+    calculate_data_movement(experiment)
+    
 
     # apply optimization steps if requested
     best_configuration = None
