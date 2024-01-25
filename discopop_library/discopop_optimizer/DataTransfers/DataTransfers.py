@@ -14,17 +14,11 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
-from discopop_library.discopop_optimizer.classes.nodes.ContextRestore import ContextRestore
-from discopop_library.discopop_optimizer.classes.nodes.ContextSave import ContextSave
-from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshot import ContextSnapshot
-from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshotPop import ContextSnapshotPop
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_nodes_in_function,
     get_function_return_node,
-    get_parent_function,
-    get_predecessors,
     get_requirements,
     get_successors,
     get_children,
@@ -43,7 +37,7 @@ def calculate_data_transfers(
         for model in function_performance_models[function]:
             # create a ContextObject for the current path
             context = ContextObject(function.node_id, [function.device_id])
-            context = get_path_context_iterative(function.node_id, graph, model, context, experiment, top_level_call=False)
+            context = get_path_context_iterative(function.node_id, graph, model, context, experiment, top_level_call=True)
             result_dict[function].append((model, context))
     return result_dict
 
@@ -288,55 +282,6 @@ def __check_current_node(
         updated_context = cast(ContextNode, data_at(graph, node_id)).get_modified_context(
             node_id, graph, model, context
         )
-
-        # if a ContextSave is encountered, gather the written memory regions in the current branch
-        # and calculate updates to the host device of the current function to leave branches cleanly
-        # result: data copied back to original device at the end of each branch, if it was not done before.
-        if isinstance(node_data, ContextSave):
-            # collect all write data accesses which might need synchronization
-            print("CONTEXTSAVE: ", node_id)
-            seen_writes: Set[WriteDataAccess] = set()
-
-            queue = [node_id]
-            branching_depth = 0
-            while len(queue) > 0:
-                current = queue.pop(0)
-                current_data = data_at(graph, current)
-                seen_writes.update(current_data.written_memory_regions)
-
-                if branching_depth == 0 and type(current_data) == ContextRestore:
-                    # found entry to the exited branch
-                    print("CONTEXTRESTORE: ", current)
-                    break
-                if type(current_data) == ContextSnapshotPop:
-                    branching_depth += 1
-                if type(current_data) == ContextSnapshot:
-                    branching_depth -= 1
-                queue += [p for p in get_predecessors(graph, current) if p not in queue]
-            
-            # trigger calculation of updates to the host device of the function
-            # (not system host device, to allow offloading functions to devices)
-                
-            print("TRIGGER @ ", node_id, " @ ", node_data.original_cu_id)
-            print("DEVICE ID: ", data_at(graph, get_parent_function(graph, node_id)).device_id)
-            print("RDA: ", [str(w) for w in seen_writes])
-
-            print("Updates PRE: ", [str(u) for u in updated_context.necessary_updates])
-
-            
-            updated_context = updated_context.calculate_and_perform_necessary_updates(
-                cast(Set[ReadDataAccess], seen_writes),
-                experiment.get_system().get_host_device_id(),
-                #updated_context.last_seen_device_ids[-1],
-                #data_at(graph, get_parent_function(graph, node_id)).device_id,
-                node_id,
-                graph,
-                experiment
-            )
-
-            print("Updates POST: ", [str(u) for u in updated_context.necessary_updates])
-            print(updated_context.seen_writes_by_device)
-
         return updated_context
 
     # only allow updates on device switches
