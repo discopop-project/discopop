@@ -94,6 +94,9 @@ def get_out_mutex_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids which are mutually exclusive to the current node_id"""
     return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], MutuallyExclusiveEdge)]
 
+def get_out_call_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns a list of node ids which are called by current node_id"""
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], CallEdge)]
 
 def get_requirements(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the requirements of the parallelization option in the given node"""

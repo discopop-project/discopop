@@ -38,4 +38,4 @@ class SynchronizationTrigger(Workload):
         )
     
     def get_plot_label(self) -> str:
-        return "SYNC"
+        return "SYNC\n"+str(self.original_cu_id)

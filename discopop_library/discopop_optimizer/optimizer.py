@@ -28,6 +28,7 @@ from discopop_library.discopop_optimizer.DataTransfers.calculate_configuration_d
     calculate_data_movement,
 )
 from discopop_library.discopop_optimizer.DataTransfers.prepare_force_branch_end_data_movement import prepare_force_branch_end_data_movement
+from discopop_library.discopop_optimizer.DataTransfers.prepare_forced_data_movement import prepare_forced_data_movement
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
 from discopop_library.discopop_optimizer.UpdateOptimization.main import optimize_updates
@@ -181,7 +182,7 @@ def run(arguments: OptimizerArguments):
     create_optimization_graph(experiment, arguments)
 
     # prepare forcing of data movement at branch end
-    experiment.optimization_graph = prepare_force_branch_end_data_movement(experiment)
+    experiment.optimization_graph = prepare_forced_data_movement(experiment)
 
     if arguments.verbose:
         print("Done.")
