@@ -10,6 +10,7 @@ from typing import Set, cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
 from sympy import Expr, Integer, Symbol, log, Float, init_printing
+from discopop_explorer.PEGraphX import NodeID
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
@@ -114,7 +115,7 @@ def import_suggestion(
                 if device_id != environment.get_system().get_host_device_id():
                     pattern_info = DoAllInfo(
                         environment.detection_result.pet,
-                        environment.detection_result.pet.node_at(node_data_copy.original_cu_id)
+                        environment.detection_result.pet.node_at(cast(NodeID, node_data_copy.original_cu_id)),
                     )
                     pattern_info.collapse_level = suggestion.collapse_level
                     pattern_info.device_id = device_id
@@ -123,8 +124,12 @@ def import_suggestion(
 
                     environment.detection_result.patterns.do_all.append(pattern_info)
 
-                    optimizer_output_pattern = OptimizerOutputPattern(suggestion._node, [new_node_id], environment.get_system().get_host_device_id())
-                    optimizer_output_pattern.add_pattern(pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type)
+                    optimizer_output_pattern = OptimizerOutputPattern(
+                        suggestion._node, [new_node_id], environment.get_system().get_host_device_id()
+                    )
+                    optimizer_output_pattern.add_pattern(
+                        pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type
+                    )
                     environment.detection_result.patterns.optimizer_output.append(optimizer_output_pattern)
 
         # connect introduced parallelization options to support path restraining
