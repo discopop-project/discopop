@@ -1131,15 +1131,8 @@ class PETParser(object):
             add_child_edge(self.graph, new_node_id, self.cu_id_to_graph_node_id[entry_node_cu_id])
 
             # redirect edges from outside the loop to the entry node to the Loop node
-            print()
             for s, t, d in self.pet.in_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(s) not in loop_subtree:
-                    print("s: ", s)
-                    print("t: ", t)
-                    print("entry: ", entry_node_cu_id)
-                    print("source:", self.cu_id_to_graph_node_id[s])
-                    print("old target: ", self.cu_id_to_graph_node_id[entry_node_cu_id])
-                    print("new target: ", new_node_id)
                     try:
                         redirect_edge(
                             self.graph,
