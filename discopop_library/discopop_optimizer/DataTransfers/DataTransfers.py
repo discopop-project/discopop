@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Dict, List, Optional, Set, Tuple, cast
 
 import networkx as nx  # type: ignore
 
@@ -13,6 +13,7 @@ from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_requirements,
     get_successors,
@@ -32,13 +33,13 @@ def calculate_data_transfers(
         for model in function_performance_models[function]:
             # create a ContextObject for the current path
             context = ContextObject(function.node_id, [function.device_id])
-            context = get_path_context_iterative(function.node_id, graph, model, context, experiment)
+            context = get_path_context_iterative(function.node_id, graph, model, context, experiment, top_level_call=True)
             result_dict[function].append((model, context))
     return result_dict
 
 
 def get_path_context_iterative(
-    root_node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment
+    root_node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment, top_level_call:bool=False
 ) -> ContextObject:
     """passes the context Object along the path and returns the context once the end has been reached"""
     node_id = None
@@ -125,6 +126,32 @@ def get_path_context_iterative(
             # suitable successor identified.
             # pass the current context to the successor
             next_node_id = suitable_successors[0]
+
+    # force update to host device of the function (not system host device, to allow offloading functions to devices)
+    if top_level_call:
+        print("RETURNING FROM TOP LEVEL")
+        # force synchronization with executing device
+        seen_writes: Set[WriteDataAccess] = set()
+        for device_id in context.seen_writes_by_device:
+            for mem_reg in context.seen_writes_by_device[device_id]:
+                for wda in context.seen_writes_by_device[device_id][mem_reg]:
+                    seen_writes.add(wda)
+
+        print("FUNCTION DEVICE ID: ", data_at(graph, root_node_id).device_id)
+
+#        forced_sync_context = context.calculate_and_perform_necessary_updates(
+#            cast(Set[ReadDataAccess], seen_writes),
+#            data_at(graph, root_node_id).device_id
+#            cast(int, context.last_seen_device_ids[-1]),
+#            node_data.node_id,
+#            graph,
+#            experiment,
+#        )
+
+        # add the writes performed by the given node to the context
+        forced_sync_context = forced_sync_context.add_writes(node_data.written_memory_regions, cast(int, context.last_seen_device_ids[-1]))
+
+    
     return context
 
 

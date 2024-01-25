@@ -34,6 +34,7 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextRestore import Con
 from discopop_library.discopop_optimizer.classes.nodes.ContextSave import ContextSave
 from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshot import ContextSnapshot
 from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshotPop import ContextSnapshotPop
+from discopop_library.discopop_optimizer.classes.nodes.FunctionReturn import FunctionReturn
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
@@ -104,7 +105,6 @@ class PETParser(object):
         self.__remove_non_hotspot_function_bodys()
 
         # self.__add_branch_return_node()
-        # self.__add_function_return_node()
 
         # self.__new_parse_branched_sections()
 
@@ -137,6 +137,9 @@ class PETParser(object):
 
         # remove invalid functions
         self.__remove_invalid_functions()
+
+        # add function return node
+        self.__add_function_return_node()
 
         # add calling edges
         self.__add_calling_edges()
@@ -631,30 +634,48 @@ class PETParser(object):
                 self.graph.remove_node(node)
             # leave the function node for compatibility reasons
 
+#    def __add_function_return_node(self):
+#        function_node_ids = get_all_function_nodes(self.graph)
+#        dummy_return_nodes: Set[int] = set()
+#        function_return_nodes: Dict[int, int] = dict()
+#        for function in function_node_ids:
+#            return_dummy_id = self.get_new_node_id()
+#            self.graph.add_node(return_dummy_id, data=Workload(return_dummy_id, None, None, None, None))
+#            function_return_nodes[function] = return_dummy_id
+#            dummy_return_nodes.add(return_dummy_id)
+#
+#        for node in self.graph.nodes():
+#            if node in dummy_return_nodes:
+#                continue
+#            if len(get_successors(self.graph, node)) == 0:
+#                # node is end of path
+#                # check if node is contained in function
+#                parent_functions = [e for e in get_all_parents(self.graph, node) if e in function_node_ids]
+#                if len(parent_functions) > 0:
+#                    for parent_func in parent_functions:
+#                        # connect end of path to the dummy return node
+#                        add_successor_edge(self.graph, node, function_return_nodes[parent_func])
+#
+#    #                        if self.experiment.arguments.verbose:
+#    #                            print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
+
+
     def __add_function_return_node(self):
-        function_node_ids = get_all_function_nodes(self.graph)
-        dummy_return_nodes: Set[int] = set()
-        function_return_nodes: Dict[int, int] = dict()
-        for function in function_node_ids:
-            return_dummy_id = self.get_new_node_id()
-            self.graph.add_node(return_dummy_id, data=Workload(return_dummy_id, None, None, None, None))
-            function_return_nodes[function] = return_dummy_id
-            dummy_return_nodes.add(return_dummy_id)
+        """Add a return node to each function as a location to force data updates"""
+        for function in get_all_function_nodes(self.graph):
+            queue = get_children(self.graph, function)
+            while len(queue) > 0:
+                current = queue.pop()
+                successors = get_successors(self.graph, current)
+                if len(successors) == 0:
+                    # create a functionReturn node
+                    new_node_id = self.get_new_node_id()
+                    new_node_data = FunctionReturn(new_node_id, self.experiment)
+                    self.graph.add_node(new_node_id, data=new_node_data)
+                    add_successor_edge(self.graph, current, new_node_id)
+                else:
+                    queue += [s for s in successors if s not in queue]
 
-        for node in self.graph.nodes():
-            if node in dummy_return_nodes:
-                continue
-            if len(get_successors(self.graph, node)) == 0:
-                # node is end of path
-                # check if node is contained in function
-                parent_functions = [e for e in get_all_parents(self.graph, node) if e in function_node_ids]
-                if len(parent_functions) > 0:
-                    for parent_func in parent_functions:
-                        # connect end of path to the dummy return node
-                        add_successor_edge(self.graph, node, function_return_nodes[parent_func])
-
-    #                        if self.experiment.arguments.verbose:
-    #                            print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
 
     def __add_branch_return_node(self):
         """makes sure every branching section has a merge node"""
