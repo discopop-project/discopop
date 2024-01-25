@@ -15,6 +15,7 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextNode import Contex
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
+    get_function_return_node,
     get_requirements,
     get_successors,
     get_children,
@@ -129,6 +130,7 @@ def get_path_context_iterative(
 
     # force update to host device of the function (not system host device, to allow offloading functions to devices)
     if top_level_call:
+        print("CURRENT NODE_ID: ", node_id, type(data_at(graph, node_id)))
         print("RETURNING FROM TOP LEVEL")
         # force synchronization with executing device
         seen_writes: Set[WriteDataAccess] = set()
@@ -138,15 +140,15 @@ def get_path_context_iterative(
                     seen_writes.add(wda)
 
         print("FUNCTION DEVICE ID: ", data_at(graph, root_node_id).device_id)
+        print("Function return node: ", get_function_return_node(graph, root_node_id), " cu: ",  data_at(graph, get_function_return_node(graph, root_node_id)).original_cu_id)
 
-#        forced_sync_context = context.calculate_and_perform_necessary_updates(
-#            cast(Set[ReadDataAccess], seen_writes),
-#            data_at(graph, root_node_id).device_id
-#            cast(int, context.last_seen_device_ids[-1]),
-#            node_data.node_id,
-#            graph,
-#            experiment,
-#        )
+        forced_sync_context = context.calculate_and_perform_necessary_updates(
+            cast(Set[ReadDataAccess], seen_writes),
+            data_at(graph, root_node_id).device_id,
+            get_function_return_node(graph, root_node_id),
+            graph,
+            experiment
+        )
 
         # add the writes performed by the given node to the context
         forced_sync_context = forced_sync_context.add_writes(node_data.written_memory_regions, cast(int, context.last_seen_device_ids[-1]))

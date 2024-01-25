@@ -28,6 +28,7 @@ from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import Re
 from discopop_library.discopop_optimizer.classes.edges.SuccessorEdge import SuccessorEdge
 from discopop_library.discopop_optimizer.classes.edges.TemporaryEdge import TemporaryEdge
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
+from discopop_library.discopop_optimizer.classes.nodes.FunctionReturn import FunctionReturn
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
@@ -102,6 +103,17 @@ def get_requirements(graph: nx.DiGraph, node_id: int) -> List[int]:
 def has_temporary_successor(graph: nx.DiGraph, node_id: int) -> bool:
     """Checks whether the given node has outgoing temporary successor edges"""
     return len([edge for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], TemporaryEdge)]) > 0
+
+def get_function_return_node(graph: nx.DiGraph, function: int) -> int:
+    """Identify and return the FunctionReturn node belonging to function."""
+    queue = get_children(graph, function)
+    while len(queue) > 0:
+        current = queue.pop()
+        successors = get_successors(graph, current)
+        if len(successors) == 0 and type(data_at(graph, current)) == FunctionReturn:
+            return current
+        queue += [s for s in successors if s not in queue]
+    raise ValueError("No FunctionReturn found for function: ", function, " ", data_at(graph, function).name)
 
 
 def show_function(graph: nx.DiGraph, function: FunctionRoot, show_dataflow: bool = True, show_mutex_edges: bool = True):

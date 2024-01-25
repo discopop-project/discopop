@@ -663,14 +663,36 @@ class PETParser(object):
     def __add_function_return_node(self):
         """Add a return node to each function as a location to force data updates"""
         for function in get_all_function_nodes(self.graph):
+
             queue = get_children(self.graph, function)
             while len(queue) > 0:
                 current = queue.pop()
                 successors = get_successors(self.graph, current)
                 if len(successors) == 0:
+                    # get last original_cu_id
+                    inner_queue = [current]
+                    last_original_cu_id = None
+                    while len(inner_queue) > 0:
+                        inner_current = inner_queue.pop()
+                        inner_current_data = data_at(self.graph, inner_current)
+                        if inner_current_data.original_cu_id != None:
+                            last_original_cu_id = inner_current_data.original_cu_id
+                            break
+                        else:
+                            inner_queue += [p for p in get_predecessors(self.graph, inner_current) if p not in inner_queue]
+                    if last_original_cu_id is None:
+                        # fallback
+                        last_original_cu_id = data_at(self.graph, function).original_cu_id
+
                     # create a functionReturn node
                     new_node_id = self.get_new_node_id()
                     new_node_data = FunctionReturn(new_node_id, self.experiment)
+                    # copy original_cu_id from current for update positiong during code generation
+                    new_node_data.original_cu_id = last_original_cu_id
+                    print("ADD FUNCTION RETURN NODE: ", data_at(self.graph, function).name, " --> ", data_at(self.graph, function).original_cu_id)
+                    print("\t--> return cu id: ", new_node_data.original_cu_id)
+                    print("\ttype: current: ", type(data_at(self.graph, current)))
+                    print("\tlastOriginalCuId: ", last_original_cu_id)
                     self.graph.add_node(new_node_id, data=new_node_data)
                     add_successor_edge(self.graph, current, new_node_id)
                 else:
