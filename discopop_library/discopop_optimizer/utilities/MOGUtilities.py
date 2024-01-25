@@ -433,7 +433,6 @@ def get_all_loop_nodes(graph: nx.DiGraph) -> List[int]:
             result_set.add(node_id)
     return list(result_set)
 
-
 def get_read_and_written_data_from_subgraph(
     graph: nx.DiGraph, node_id: int, ignore_successors: bool = False
 ) -> Tuple[Set[MemoryRegion], Set[MemoryRegion]]:
