@@ -37,7 +37,7 @@ def calculate_data_transfers(
         for model in function_performance_models[function]:
             # create a ContextObject for the current path
             context = ContextObject(function.node_id, [function.device_id])
-            context = get_path_context_iterative(function.node_id, graph, model, context, experiment, top_level_call=True)
+            context = get_path_context_iterative(function.node_id, graph, model, context, experiment, top_level_call=False)
             result_dict[function].append((model, context))
     return result_dict
 
