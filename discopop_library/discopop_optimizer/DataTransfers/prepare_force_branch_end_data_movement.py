@@ -16,6 +16,7 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextRestore import Con
 from discopop_library.discopop_optimizer.classes.nodes.ContextSave import ContextSave
 from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshot import ContextSnapshot
 from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshotPop import ContextSnapshotPop
+from discopop_library.discopop_optimizer.classes.nodes.SynchronizationTrigger import SynchronizationTrigger
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import add_successor_edge, get_parent_function, redirect_edge
@@ -50,28 +51,29 @@ def prepare_force_branch_end_data_movement(experiment: Experiment) -> nx.DiGraph
             if type(current_data) == ContextSnapshot:
                 branching_depth -= 1
             queue += [p for p in get_predecessors(experiment.optimization_graph, current) if p not in queue]
-        print()
-        print("node: ", node)
-        print("seen writes: ", [str(w) for w in seen_writes])
 
-        # get the last cu_id prior to node
+        # get the n last cu_ids prior to node
+        # multiples to allow "skipping" the branch merge node, inherited from the PE Graph, to fix the update positioning inside the branch
         queue = [node]
-        last_original_cu_id = None
+        last_original_cu_ids = None
+        n = 2
         while len(queue) > 0:
             current = queue.pop()
             current_data = data_at(experiment.optimization_graph, current)
             if current_data.original_cu_id is not None:
-                last_original_cu_id = current_data.original_cu_id
-                break
+                if last_original_cu_ids is None:
+                    last_original_cu_ids = []
+                last_original_cu_ids.append(current_data.original_cu_id)
+                if len(last_original_cu_ids) == n:
+                    break
             queue += [p for p in get_predecessors(experiment.optimization_graph, current) if p not in queue]
-        if last_original_cu_id is None:
+        if last_original_cu_ids is None:
             # fallback
-            last_original_cu_id = data_at(experiment.optimization_graph, get_parent_function(experiment.optimization_graph, current)).original_cu_id
+            last_original_cu_ids = [data_at(experiment.optimization_graph, get_parent_function(experiment.optimization_graph, current)).original_cu_id]
         
         # add a dummy node reading all written memory regions
         new_node_id = experiment.get_next_free_node_id()
-        # TEST: write / read vertauscht
-        new_node_data = Workload(new_node_id, experiment, last_original_cu_id, Integer(0), Integer(0), cast(Set[ReadDataAccess], seen_writes), None)
+        new_node_data = SynchronizationTrigger(new_node_id, experiment, last_original_cu_ids[-1], Integer(0), Integer(0), None, cast(Set[ReadDataAccess], seen_writes))
         new_node_data.device_id = experiment.get_system().get_host_device_id()
         experiment.optimization_graph.add_node(new_node_id, data=new_node_data)
 

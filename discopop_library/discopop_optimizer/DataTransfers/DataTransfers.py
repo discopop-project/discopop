@@ -15,6 +15,7 @@ from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+from discopop_library.discopop_optimizer.classes.nodes.SynchronizationTrigger import SynchronizationTrigger
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_nodes_in_function,
@@ -277,12 +278,18 @@ def __check_current_node(
     # if so, the context will be supplemented with the identified updates
     node_data = data_at(graph, node_id)
 
+    if node_id == 49:
+        print("ENCOUNTERED NODE 49")
+
     if isinstance(node_data, ContextNode):
         # apply modifications according to encountered context node
         updated_context = cast(ContextNode, data_at(graph, node_id)).get_modified_context(
             node_id, graph, model, context
         )
         return updated_context
+    
+    if node_id == 49:
+        print("1 NODE 49")
 
     # only allow updates on device switches
     device_switch = False
@@ -292,7 +299,10 @@ def __check_current_node(
     elif context.last_visited_device_id != data_at(graph, node_id).device_id:
         device_switch = True
 
-    if device_switch:
+    if device_switch or type(node_data) == SynchronizationTrigger:
+        if node_id == 49:
+            print("2 NODE 49")
+
         context = context.calculate_and_perform_necessary_updates(
             node_data.read_memory_regions,
             cast(int, context.last_seen_device_ids[-1]),
@@ -300,6 +310,8 @@ def __check_current_node(
             graph,
             experiment,
         )
+    if node_id == 49:
+        print("3 NODE 49")
 
     # add the writes performed by the given node to the context
     context = context.add_writes(node_data.written_memory_regions, cast(int, context.last_seen_device_ids[-1]))
