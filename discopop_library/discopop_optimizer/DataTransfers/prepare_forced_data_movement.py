@@ -9,6 +9,6 @@ def prepare_forced_data_movement(experiment: Experiment) -> nx.DiGraph:
 
     experiment.optimization_graph = prepare_force_branch_end_data_movement(experiment)
 
-    experiment.optimization_graph = prepare_forced_data_movement_prior_to_call(experiment)
+    # experiment.optimization_graph = prepare_forced_data_movement_prior_to_call(experiment)
 
     return experiment.optimization_graph
