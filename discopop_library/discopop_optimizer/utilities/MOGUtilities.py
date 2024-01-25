@@ -18,6 +18,7 @@ import tqdm  # type: ignore
 
 from discopop_explorer.PEGraphX import MemoryRegion, NodeID
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
+from discopop_library.discopop_optimizer.classes.edges.CallEdge import CallEdge
 from discopop_library.discopop_optimizer.classes.edges.DataFlowEdge import DataFlowEdge
 from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
@@ -237,6 +238,14 @@ def show(graph: nx.DiGraph, show_dataflow: bool = True, show_mutex_edges: bool =
         edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], RequirementEdge)],
     )
 
+    nx.draw_networkx_edges(
+        graph,
+        pos,
+        ax=ax,
+        edge_color="blue",
+        edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], CallEdge)],
+    )
+
     if show_mutex_edges:
         nx.draw_networkx_edges(
             graph,
@@ -313,6 +322,9 @@ def add_child_edge(graph: nx.DiGraph, source_id: int, target_id: int):
     edge_data = ChildEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
 
+def add_call_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+    edge_data = CallEdge()
+    graph.add_edge(source_id, target_id, data=edge_data)
 
 def add_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
     edge_data = TemporaryEdge()

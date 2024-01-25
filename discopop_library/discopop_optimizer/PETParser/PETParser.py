@@ -39,6 +39,7 @@ from discopop_library.discopop_optimizer.classes.nodes.GenericNode import Generi
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
+    add_call_edge,
     add_dataflow_edge,
     get_all_nodes_in_function,
     get_all_parents,
@@ -137,6 +138,9 @@ class PETParser(object):
         # remove invalid functions
         self.__remove_invalid_functions()
 
+        # add calling edges
+        self.__add_calling_edges()
+
         return self.graph, self.next_free_node_id
 
     def get_new_node_id(self) -> int:
@@ -144,6 +148,26 @@ class PETParser(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
+
+    def __add_calling_edges(self):
+        all_function_nodes = get_all_function_nodes(self.graph)
+
+        for node in self.graph.nodes:
+            node_data = data_at(self.graph, node)
+            if type(node_data) != Workload:
+                continue
+            # get functions called by the node
+            print(node, " : ", node_data.original_cu_id, " calls: ")
+            for out_call_edge in self.experiment.detection_result.pet.out_edges(node_data.original_cu_id, etype=EdgeType.CALLSNODE):
+                print("\t", out_call_edge[1], self.experiment.detection_result.pet.node_at(out_call_edge[1]).name)
+                # create a call edge to the function
+                for function in all_function_nodes:
+                    if data_at(self.graph, function).original_cu_id == out_call_edge[1]:
+                        print("Construct call: ", node, "->", function)
+                        add_call_edge(self.graph, node, function)
+
+            
+
 
     def __prune_branches(self):
         """Prune branches based on the measured likelihood of execution"""
