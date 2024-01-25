@@ -7,7 +7,9 @@
 # directory for details.
 from typing import Dict, List, Optional, Set, Tuple, cast
 
-import networkx as nx  # type: ignore
+import networkx as nx
+from discopop_explorer.PEGraphX import EdgeType
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import MemoryRegion  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
@@ -15,6 +17,7 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextNode import Contex
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
+    get_all_nodes_in_function,
     get_function_return_node,
     get_requirements,
     get_successors,
@@ -133,12 +136,39 @@ def get_path_context_iterative(
         print("CURRENT NODE_ID: ", node_id, type(data_at(graph, node_id)))
         print("RETURNING FROM TOP LEVEL")
         # force synchronization with executing device
+
+        
+        # create a filter for the data accesses to be synchronized
+        # only consider such memory regions which are used outside the function
+        filter: Set[MemoryRegion] = set()
+        nodes_in_function = get_all_nodes_in_function(graph, root_node_id)
+        cu_nodes_in_function = set([data_at(graph, n).original_cu_id for n in nodes_in_function])
+        for node in nodes_in_function:
+            node_data = data_at(graph, node)
+            if node_data.original_cu_id is None:
+                continue
+            print("NODE: ", node, node_data.original_cu_id)
+            for out_dep_edge in experiment.detection_result.pet.out_edges(node_data.original_cu_id, etype=EdgeType.DATA):
+                target = out_dep_edge[1]
+                if target in cu_nodes_in_function:
+                    continue
+                # target outside the function. MemoryRegions qualifies for synchronization at the end of the function
+                filter.add(out_dep_edge[2].memory_region)
+                print(out_dep_edge[0], out_dep_edge[1], out_dep_edge[2])
+        print("FILTER", filter)
+
+
+
+        # collect all write data accesses which might need synchronization
         seen_writes: Set[WriteDataAccess] = set()
         for device_id in context.seen_writes_by_device:
             for mem_reg in context.seen_writes_by_device[device_id]:
                 for wda in context.seen_writes_by_device[device_id][mem_reg]:
-                    seen_writes.add(wda)
+                    # check wda against filter
+                    if wda.memory_region in filter:
+                        seen_writes.add(wda)
 
+        print("Seen writes: ", seen_writes)
         print("FUNCTION DEVICE ID: ", data_at(graph, root_node_id).device_id)
         print("Function return node: ", get_function_return_node(graph, root_node_id), " cu: ",  data_at(graph, get_function_return_node(graph, root_node_id)).original_cu_id)
 
