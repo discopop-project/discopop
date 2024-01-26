@@ -94,9 +94,11 @@ def get_out_mutex_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids which are mutually exclusive to the current node_id"""
     return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], MutuallyExclusiveEdge)]
 
+
 def get_out_call_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids which are called by current node_id"""
     return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], CallEdge)]
+
 
 def get_requirements(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the requirements of the parallelization option in the given node"""
@@ -106,6 +108,7 @@ def get_requirements(graph: nx.DiGraph, node_id: int) -> List[int]:
 def has_temporary_successor(graph: nx.DiGraph, node_id: int) -> bool:
     """Checks whether the given node has outgoing temporary successor edges"""
     return len([edge for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], TemporaryEdge)]) > 0
+
 
 def get_function_return_node(graph: nx.DiGraph, function: int) -> int:
     """Identify and return the FunctionReturn node belonging to function."""
@@ -337,9 +340,11 @@ def add_child_edge(graph: nx.DiGraph, source_id: int, target_id: int):
     edge_data = ChildEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
 
+
 def add_call_edge(graph: nx.DiGraph, source_id: int, target_id: int):
     edge_data = CallEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
+
 
 def add_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
     edge_data = TemporaryEdge()
@@ -435,6 +440,7 @@ def get_all_loop_nodes(graph: nx.DiGraph) -> List[int]:
         if type(graph.nodes[node_id]["data"]) == Loop:
             result_set.add(node_id)
     return list(result_set)
+
 
 def get_read_and_written_data_from_subgraph(
     graph: nx.DiGraph, node_id: int, ignore_successors: bool = False

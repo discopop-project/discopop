@@ -53,6 +53,11 @@ class ContextObject(object):
         The list of seen writes by device of the ContextObject will be updated to reflect the identified data transfers.
         A reference to the object is returned."""
 
+        if data_at(graph, reading_node_id).original_cu_id == "1:27":
+            print("### READING: 1:27 @ ", reading_device_id)
+        else:
+            print("Reading: ", data_at(graph, reading_node_id).original_cu_id, "@", reading_device_id)
+
         required_updates: Set[Update] = set()
         for read in node_reads:
             # check if the reading device has the latest view of the memory
@@ -63,9 +68,14 @@ class ContextObject(object):
                 if device_id == reading_device_id:
                     continue
 
+                if data_at(graph, reading_node_id).original_cu_id == "1:27":
+                    print("Checking updates between device: ", device_id, "and", reading_device_id)
+
                 if read.memory_region not in self.get_seen_writes_by_device(device_id):
                     # read memory region is currently "unknown" to the device, thus is can be skipped
                     continue
+                if data_at(graph, reading_node_id).original_cu_id == "1:27":
+                    print("still here")
                 other_devices_known_writes = self.get_seen_writes_by_device(device_id)[read.memory_region]
 
                 is_first_data_occurrence = False

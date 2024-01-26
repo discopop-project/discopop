@@ -72,7 +72,7 @@ def parse_args() -> OptimizerArguments:
         pruning_level=arguments.p,
         optimization_level=arguments.o,
         optimization_level_2_parameters=arguments.opt_2_params,
-        single_suggestions=arguments.single_suggestions
+        single_suggestions=arguments.single_suggestions,
     )
 
 

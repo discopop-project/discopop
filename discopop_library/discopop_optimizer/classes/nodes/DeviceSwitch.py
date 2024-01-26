@@ -8,7 +8,7 @@
 from typing import Optional, Set
 
 from sympy import Function, Symbol, Integer, Expr
-from build.lib.discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess  # type: ignore
+from lib.discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess  # type: ignore
 
 from discopop_explorer.PEGraphX import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
@@ -16,7 +16,7 @@ from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess
 
 
-class SynchronizationTrigger(Workload):
+class DeviceSwitch(Workload):
     def __init__(
         self,
         node_id: int,
@@ -38,4 +38,4 @@ class SynchronizationTrigger(Workload):
         )
 
     def get_plot_label(self) -> str:
-        return "SYNC\n" + str(self.original_cu_id)
+        return "DEVICE\nSWITCH"

@@ -19,10 +19,15 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshotPop import
 from discopop_library.discopop_optimizer.classes.nodes.SynchronizationTrigger import SynchronizationTrigger
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import add_successor_edge, get_parent_function, redirect_edge
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
+    add_successor_edge,
+    get_parent_function,
+    redirect_edge,
+)
 
 
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at  # type: ignore
+
 
 def prepare_force_branch_end_data_movement(experiment: Experiment) -> nx.DiGraph:
     """Insert dummy reads at the end of a branch to all memory regions written within the branch.
@@ -69,11 +74,23 @@ def prepare_force_branch_end_data_movement(experiment: Experiment) -> nx.DiGraph
             queue += [p for p in get_predecessors(experiment.optimization_graph, current) if p not in queue]
         if last_original_cu_ids is None:
             # fallback
-            last_original_cu_ids = [data_at(experiment.optimization_graph, get_parent_function(experiment.optimization_graph, current)).original_cu_id]
-        
+            last_original_cu_ids = [
+                data_at(
+                    experiment.optimization_graph, get_parent_function(experiment.optimization_graph, current)
+                ).original_cu_id
+            ]
+
         # add a dummy node reading all written memory regions
         new_node_id = experiment.get_next_free_node_id()
-        new_node_data = SynchronizationTrigger(new_node_id, experiment, last_original_cu_ids[-1], Integer(0), Integer(0), None, cast(Set[ReadDataAccess], seen_writes))
+        new_node_data = SynchronizationTrigger(
+            new_node_id,
+            experiment,
+            last_original_cu_ids[-1],
+            Integer(0),
+            Integer(0),
+            None,
+            cast(Set[ReadDataAccess], seen_writes),
+        )
         new_node_data.device_id = experiment.get_system().get_host_device_id()
         experiment.optimization_graph.add_node(new_node_id, data=new_node_data)
 
@@ -84,9 +101,4 @@ def prepare_force_branch_end_data_movement(experiment: Experiment) -> nx.DiGraph
         # create edge dummy->node
         add_successor_edge(experiment.optimization_graph, new_node_id, node)
 
-
-
-        
-
     return experiment.optimization_graph
-

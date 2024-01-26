@@ -14,12 +14,14 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
+from discopop_library.discopop_optimizer.classes.nodes.DeviceSwitch import DeviceSwitch
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.SynchronizationTrigger import SynchronizationTrigger
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_nodes_in_function,
     get_function_return_node,
+    get_predecessors,
     get_requirements,
     get_successors,
     get_children,
@@ -38,13 +40,20 @@ def calculate_data_transfers(
         for model in function_performance_models[function]:
             # create a ContextObject for the current path
             context = ContextObject(function.node_id, [function.device_id])
-            context = get_path_context_iterative(function.node_id, graph, model, context, experiment, top_level_call=False)
+            context = get_path_context_iterative(
+                function.node_id, graph, model, context, experiment, top_level_call=False
+            )
             result_dict[function].append((model, context))
     return result_dict
 
 
 def get_path_context_iterative(
-    root_node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment, top_level_call:bool=False
+    root_node_id: int,
+    graph: nx.DiGraph,
+    model: CostModel,
+    context: ContextObject,
+    experiment,
+    top_level_call: bool = False,
 ) -> ContextObject:
     """passes the context Object along the path and returns the context once the end has been reached"""
     node_id = None
@@ -138,7 +147,6 @@ def get_path_context_iterative(
         print("RETURNING FROM TOP LEVEL")
         # force synchronization with executing device
 
-        
         # create a filter for the data accesses to be synchronized
         # only consider such memory regions which are used outside the function
         filter: Set[MemoryRegion] = set()
@@ -149,7 +157,9 @@ def get_path_context_iterative(
             if node_data.original_cu_id is None:
                 continue
             print("NODE: ", node, node_data.original_cu_id)
-            for out_dep_edge in experiment.detection_result.pet.out_edges(node_data.original_cu_id, etype=EdgeType.DATA):
+            for out_dep_edge in experiment.detection_result.pet.out_edges(
+                node_data.original_cu_id, etype=EdgeType.DATA
+            ):
                 target = out_dep_edge[1]
                 if target in cu_nodes_in_function:
                     continue
@@ -157,8 +167,6 @@ def get_path_context_iterative(
                 filter.add(out_dep_edge[2].memory_region)
                 print(out_dep_edge[0], out_dep_edge[1], out_dep_edge[2])
         print("FILTER", filter)
-
-
 
         # collect all write data accesses which might need synchronization
         seen_writes: Set[WriteDataAccess] = set()
@@ -171,20 +179,26 @@ def get_path_context_iterative(
 
         print("Seen writes: ", seen_writes)
         print("FUNCTION DEVICE ID: ", data_at(graph, root_node_id).device_id)
-        print("Function return node: ", get_function_return_node(graph, root_node_id), " cu: ",  data_at(graph, get_function_return_node(graph, root_node_id)).original_cu_id)
+        print(
+            "Function return node: ",
+            get_function_return_node(graph, root_node_id),
+            " cu: ",
+            data_at(graph, get_function_return_node(graph, root_node_id)).original_cu_id,
+        )
 
         forced_sync_context = context.calculate_and_perform_necessary_updates(
             cast(Set[ReadDataAccess], seen_writes),
             data_at(graph, root_node_id).device_id,
             get_function_return_node(graph, root_node_id),
             graph,
-            experiment
+            experiment,
         )
 
         # add the writes performed by the given node to the context
-        forced_sync_context = forced_sync_context.add_writes(node_data.written_memory_regions, cast(int, context.last_seen_device_ids[-1]))
+        forced_sync_context = forced_sync_context.add_writes(
+            node_data.written_memory_regions, cast(int, context.last_seen_device_ids[-1])
+        )
 
-    
     return context
 
 
@@ -278,6 +292,11 @@ def __check_current_node(
     # if so, the context will be supplemented with the identified updates
     node_data = data_at(graph, node_id)
 
+    if node_id == 39:
+        print("NODE ID 39: CHECKING")
+    if node_id == 20:
+        print("NODE ID 20: CHECKING")
+
     if isinstance(node_data, ContextNode):
         # apply modifications according to encountered context node
         updated_context = cast(ContextNode, data_at(graph, node_id)).get_modified_context(
@@ -286,15 +305,20 @@ def __check_current_node(
         return updated_context
 
     # only allow updates on device switches
-    device_switch = False
+
+    device_switch_occured = False
     if data_at(graph, node_id).device_id is None:
         if context.last_seen_device_ids[-1] != context.last_visited_device_id:
-            device_switch = True
+            device_switch_occured = True
     elif context.last_visited_device_id != data_at(graph, node_id).device_id:
-        device_switch = True
+        device_switch_occured = True
 
-    if device_switch or type(node_data) == SynchronizationTrigger:
+# TODO: if a device switch is encountered, collect read / written data unitl next device switch
 
+#    if device_switch or type(node_data) == SynchronizationTrigger or True:
+
+    if type(node_data) == SynchronizationTrigger or type(node_data) == DeviceSwitch:
+        # identify updates at a designated synchronization point
         context = context.calculate_and_perform_necessary_updates(
             node_data.read_memory_regions,
             cast(int, context.last_seen_device_ids[-1]),
@@ -302,6 +326,34 @@ def __check_current_node(
             graph,
             experiment,
         )
+    elif device_switch_occured:
+        # identify updates due to suggestion entries
+        # attribute the updates to the last visited DeviceSwitch if necessary
+        last_seen_device_switch_node = None
+        queue = [node_id]
+        while len(queue) > 0:
+            current = queue.pop()
+            print("Current: ", current, data_at(graph, current).original_cu_id)
+            current_data = data_at(graph, current)
+            if type(current_data) == DeviceSwitch:
+                last_seen_device_switch_node = current
+                break
+            queue += [p for p in get_predecessors(graph, current) if p not in queue]
+        print("last: ", last_seen_device_switch_node)
+        
+        if last_seen_device_switch_node is not None:
+            context = context.calculate_and_perform_necessary_updates(
+                node_data.read_memory_regions,
+                cast(int, context.last_seen_device_ids[-1]),
+                last_seen_device_switch_node,
+                graph,
+                experiment,
+            )
+        else:
+            # this can be the case for function nodes and similar
+            pass
+
+
 
     # add the writes performed by the given node to the context
     context = context.add_writes(node_data.written_memory_regions, cast(int, context.last_seen_device_ids[-1]))
