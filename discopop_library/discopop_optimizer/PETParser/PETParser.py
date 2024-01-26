@@ -160,15 +160,12 @@ class PETParser(object):
             if type(node_data) != Workload:
                 continue
             # get functions called by the node
-            print(node, " : ", node_data.original_cu_id, " calls: ")
             for out_call_edge in self.experiment.detection_result.pet.out_edges(
                 node_data.original_cu_id, etype=EdgeType.CALLSNODE
             ):
-                print("\t", out_call_edge[1], self.experiment.detection_result.pet.node_at(out_call_edge[1]).name)
                 # create a call edge to the function
                 for function in all_function_nodes:
                     if data_at(self.graph, function).original_cu_id == out_call_edge[1]:
-                        print("Construct call: ", node, "->", function)
                         add_call_edge(self.graph, node, function)
 
     def __prune_branches(self):
@@ -688,15 +685,6 @@ class PETParser(object):
                     new_node_data = FunctionReturn(new_node_id, self.experiment)
                     # copy original_cu_id from current for update positiong during code generation
                     new_node_data.original_cu_id = last_original_cu_id
-                    print(
-                        "ADD FUNCTION RETURN NODE: ",
-                        data_at(self.graph, function).name,
-                        " --> ",
-                        data_at(self.graph, function).original_cu_id,
-                    )
-                    print("\t--> return cu id: ", new_node_data.original_cu_id)
-                    print("\ttype: current: ", type(data_at(self.graph, current)))
-                    print("\tlastOriginalCuId: ", last_original_cu_id)
                     self.graph.add_node(new_node_id, data=new_node_data)
                     add_successor_edge(self.graph, current, new_node_id)
                 else:

@@ -34,20 +34,9 @@ def calculate_data_movement(experiment: Experiment):
         function_performance_models_without_context = get_performance_models_for_functions(
             experiment, experiment.optimization_graph, restrict_to_decisions=set(oo_suggestion.decisions)
         )
-        #        print("# FUNCTIONS: ", [f.name for f in function_performance_models_without_context])
-        #        for f in function_performance_models_without_context:
-        #            print("# \tFPMWC: ", f.name)
-        #            for m in function_performance_models_without_context[f]:
-        #                print("# \t\t-> ", m.path_decisions)
+        
         function_performance_models = calculate_data_transfers(
             experiment.optimization_graph, function_performance_models_without_context, experiment
-        )
-
-        # maybe this can be removed. TODO: Check
-        function_performance_models = add_data_transfer_costs(
-            experiment.optimization_graph,
-            function_performance_models,
-            experiment,
         )
 
         # collect necessary updates

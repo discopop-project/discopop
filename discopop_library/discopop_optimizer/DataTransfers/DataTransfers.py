@@ -141,6 +141,7 @@ def get_path_context_iterative(
             next_node_id = suitable_successors[0]
 
     # force update to host device of the function (not system host device, to allow offloading functions to devices)
+    # TODO CURRENTLY UNUSED, REACTIVATE?
     if top_level_call:
         # force synchronization with executing device
 
@@ -161,7 +162,6 @@ def get_path_context_iterative(
                     continue
                 # target outside the function. MemoryRegions qualifies for synchronization at the end of the function
                 filter.add(out_dep_edge[2].memory_region)
-                print(out_dep_edge[0], out_dep_edge[1], out_dep_edge[2])
 
         # collect all write data accesses which might need synchronization
         seen_writes: Set[WriteDataAccess] = set()
@@ -282,11 +282,6 @@ def __check_current_node(
     # if so, the context will be supplemented with the identified updates
     node_data = data_at(graph, node_id)
 
-    if node_id == 39:
-        print("NODE ID 39: CHECKING")
-    if node_id == 20:
-        print("NODE ID 20: CHECKING")
-
     if isinstance(node_data, ContextNode):
         # apply modifications according to encountered context node
         updated_context = cast(ContextNode, data_at(graph, node_id)).get_modified_context(
@@ -323,13 +318,11 @@ def __check_current_node(
         queue = [node_id]
         while len(queue) > 0:
             current = queue.pop()
-            print("Current: ", current, data_at(graph, current).original_cu_id)
             current_data = data_at(graph, current)
             if type(current_data) == DeviceSwitch:
                 last_seen_device_switch_node = current
                 break
             queue += [p for p in get_predecessors(graph, current) if p not in queue]
-        print("last: ", last_seen_device_switch_node)
 
         if last_seen_device_switch_node is not None:
             context = context.calculate_and_perform_necessary_updates(

@@ -49,7 +49,6 @@ def prepare_force_branch_end_data_movement(experiment: Experiment) -> nx.DiGraph
 
             if branching_depth == 0 and type(current_data) == ContextRestore:
                 # found entry to the exited branch
-                print("CONTEXTRESTORE: ", current)
                 break
             if type(current_data) == ContextSnapshotPop:
                 branching_depth += 1
