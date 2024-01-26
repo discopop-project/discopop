@@ -27,6 +27,10 @@ from discopop_library.discopop_optimizer.CostModels.utilities import get_perform
 from discopop_library.discopop_optimizer.DataTransfers.calculate_configuration_data_movement import (
     calculate_data_movement,
 )
+from discopop_library.discopop_optimizer.DataTransfers.prepare_force_branch_end_data_movement import (
+    prepare_force_branch_end_data_movement,
+)
+from discopop_library.discopop_optimizer.DataTransfers.prepare_forced_data_movement import prepare_forced_data_movement
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
 from discopop_library.discopop_optimizer.UpdateOptimization.main import optimize_updates
@@ -49,6 +53,7 @@ from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_comb
 from discopop_library.discopop_optimizer.optimization.evolutionary_algorithm import perform_evolutionary_search
 from discopop_library.discopop_optimizer.optimization.greedy import greedy_search
 from discopop_library.discopop_optimizer.suggestions.optimizers.main import optimize_suggestions
+from discopop_library.discopop_optimizer.utilities.insert_device_switch_nodes import insert_device_switch_nodes
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
 from discopop_library.global_data.version.utils import get_version
@@ -179,12 +184,18 @@ def run(arguments: OptimizerArguments):
         print("Creating optimization graph...")
     create_optimization_graph(experiment, arguments)
 
+    # prepare forcing of data movement at branch end
+    experiment.optimization_graph = prepare_forced_data_movement(experiment)
+
     if arguments.verbose:
         print("Done.")
     # import parallelization suggestions
     experiment.optimization_graph = import_suggestions(experiment)
     # optimize parallelization suggestions
     experiment.optimization_graph = optimize_suggestions(experiment)
+
+    # insert device switch nodes
+    experiment.optimization_graph = insert_device_switch_nodes(experiment)
 
     if arguments.plot:
         show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
@@ -211,7 +222,9 @@ def run(arguments: OptimizerArguments):
         print()
 
     # calculate necessary updates for all created (i.e. mapped or collapsed) suggestions
-    calculate_data_movement(experiment)
+    # this can get quite expensive for large software, so it should only be calculated upon request
+    if arguments.single_suggestions:
+        calculate_data_movement(experiment)
 
     # apply optimization steps if requested
     best_configuration = None

@@ -78,6 +78,10 @@ def get_performance_models_for_functions(
                     for idx, cost_model in enumerate(performance_models[node_data]):
                         for decision in cost_model.path_decisions:
                             if decision not in restrict_to_decisions:
+                                # check if the decision to be removed is a sequential execution. If so, ignore it
+                                if data_at(graph, decision).represents_sequential_version():
+                                    continue
+                                # decision represents a not-allowes, parallel execution. Remove it.
                                 to_be_removed.append(idx)
                                 break
                     for idx in sorted(to_be_removed, reverse=True):

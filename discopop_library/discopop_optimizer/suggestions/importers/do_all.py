@@ -43,7 +43,7 @@ def import_suggestion(
 
     for node in buffer:
         introduced_options: Set[int] = set()
-        if suggestion.node_id == data_at(graph, node).cu_id:
+        if suggestion.node_id == data_at(graph, node).cu_id and type(data_at(graph, node)) == Loop:
             # save node in introduced_options to mark as mutually exclusive
             introduced_options.add(node)
             # todo: This implementation for the device id is temporary and MUST be replaced
@@ -124,13 +124,15 @@ def import_suggestion(
 
                     environment.detection_result.patterns.do_all.append(pattern_info)
 
-                    optimizer_output_pattern = OptimizerOutputPattern(
-                        suggestion._node, [new_node_id], environment.get_system().get_host_device_id()
-                    )
-                    optimizer_output_pattern.add_pattern(
-                        pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type
-                    )
-                    environment.detection_result.patterns.optimizer_output.append(optimizer_output_pattern)
+                    if environment.arguments.single_suggestions:
+                        # register the individual Pattern as a OutputPattern to reflect the device mapping of a regular suggestion
+                        optimizer_output_pattern = OptimizerOutputPattern(
+                            suggestion._node, [new_node_id], environment.get_system().get_host_device_id()
+                        )
+                        optimizer_output_pattern.add_pattern(
+                            pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type
+                        )
+                        environment.detection_result.patterns.optimizer_output.append(optimizer_output_pattern)
 
         # connect introduced parallelization options to support path restraining
         for node_id_1 in introduced_options:

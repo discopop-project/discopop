@@ -28,6 +28,7 @@ def parse_args() -> OptimizerArguments:
     parser.add_argument("-o", type=int, default=0, help="Optimization level: 0 -> no optimization. 1 -> greedy. 2 -> evolutionary. 3 -> exhaustive")
 
     parser.add_argument("-opt-2-params", type=str, default=None, nargs=2, metavar=("population_size", "generations"), help="Configure parameters of the evolutionary optimization (-o2). Default: 50 5")
+    parser.add_argument("-s", "--single-suggestions", action="store_true", help="Enable the generation of individual suggestions for device mappings.")
 
     parser.add_argument(
         "--doall-microbench-file", type=str, default="None",
@@ -71,6 +72,7 @@ def parse_args() -> OptimizerArguments:
         pruning_level=arguments.p,
         optimization_level=arguments.o,
         optimization_level_2_parameters=arguments.opt_2_params,
+        single_suggestions=arguments.single_suggestions,
     )
 
 

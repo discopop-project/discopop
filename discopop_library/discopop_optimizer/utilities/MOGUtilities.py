@@ -18,6 +18,7 @@ import tqdm  # type: ignore
 
 from discopop_explorer.PEGraphX import MemoryRegion, NodeID
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
+from discopop_library.discopop_optimizer.classes.edges.CallEdge import CallEdge
 from discopop_library.discopop_optimizer.classes.edges.DataFlowEdge import DataFlowEdge
 from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
@@ -27,6 +28,7 @@ from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import Re
 from discopop_library.discopop_optimizer.classes.edges.SuccessorEdge import SuccessorEdge
 from discopop_library.discopop_optimizer.classes.edges.TemporaryEdge import TemporaryEdge
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
+from discopop_library.discopop_optimizer.classes.nodes.FunctionReturn import FunctionReturn
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
@@ -93,6 +95,11 @@ def get_out_mutex_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
     return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], MutuallyExclusiveEdge)]
 
 
+def get_out_call_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns a list of node ids which are called by current node_id"""
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], CallEdge)]
+
+
 def get_requirements(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the requirements of the parallelization option in the given node"""
     return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], RequirementEdge)]
@@ -101,6 +108,23 @@ def get_requirements(graph: nx.DiGraph, node_id: int) -> List[int]:
 def has_temporary_successor(graph: nx.DiGraph, node_id: int) -> bool:
     """Checks whether the given node has outgoing temporary successor edges"""
     return len([edge for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], TemporaryEdge)]) > 0
+
+
+def get_function_return_node(graph: nx.DiGraph, function: int) -> int:
+    """Identify and return the FunctionReturn node belonging to function."""
+    queue = get_children(graph, function)
+    while len(queue) > 0:
+        current = queue.pop()
+        successors = get_successors(graph, current)
+        if len(successors) == 0 and type(data_at(graph, current)) == FunctionReturn:
+            return current
+        queue += [s for s in successors if s not in queue]
+    raise ValueError(
+        "No FunctionReturn found for function: "
+        + str(function)
+        + " "
+        + cast(FunctionRoot, data_at(graph, function)).name
+    )
 
 
 def show_function(graph: nx.DiGraph, function: FunctionRoot, show_dataflow: bool = True, show_mutex_edges: bool = True):
@@ -237,6 +261,14 @@ def show(graph: nx.DiGraph, show_dataflow: bool = True, show_mutex_edges: bool =
         edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], RequirementEdge)],
     )
 
+    nx.draw_networkx_edges(
+        graph,
+        pos,
+        ax=ax,
+        edge_color="blue",
+        edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], CallEdge)],
+    )
+
     if show_mutex_edges:
         nx.draw_networkx_edges(
             graph,
@@ -311,6 +343,11 @@ def add_successor_edge(graph: nx.DiGraph, source_id: int, target_id: int):
 
 def add_child_edge(graph: nx.DiGraph, source_id: int, target_id: int):
     edge_data = ChildEdge()
+    graph.add_edge(source_id, target_id, data=edge_data)
+
+
+def add_call_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+    edge_data = CallEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
 
 

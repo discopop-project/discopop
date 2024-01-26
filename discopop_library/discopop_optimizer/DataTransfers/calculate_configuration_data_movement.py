@@ -24,6 +24,8 @@ def calculate_data_movement(experiment: Experiment):
             "Calculating data movement for pattern id:",
             oo_suggestion.pattern_id,
             "\t",
+            oo_suggestion.decisions,
+            "\t",
             idx + 1,
             "/",
             len(experiment.detection_result.patterns.optimizer_output),
@@ -32,13 +34,9 @@ def calculate_data_movement(experiment: Experiment):
         function_performance_models_without_context = get_performance_models_for_functions(
             experiment, experiment.optimization_graph, restrict_to_decisions=set(oo_suggestion.decisions)
         )
+
         function_performance_models = calculate_data_transfers(
             experiment.optimization_graph, function_performance_models_without_context, experiment
-        )
-        function_performance_models = add_data_transfer_costs(
-            experiment.optimization_graph,
-            function_performance_models,
-            experiment,
         )
 
         # collect necessary updates
