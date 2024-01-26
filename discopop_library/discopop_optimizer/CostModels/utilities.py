@@ -49,7 +49,6 @@ def get_performance_models_for_functions(
         node_data.node_id = node_id  # fix potential mismatches due to node copying
 
         if isinstance(node_data, FunctionRoot):
-            print("# here: ", node_data.name)
             try:
                 # ignore non-hotspot functions in the calculateion to save analysis time
                 if (
@@ -72,39 +71,21 @@ def get_performance_models_for_functions(
                         allow_sequential=True,
                     )
 
-                print("# Restrict to decisions: ", restrict_to_decisions)
-
-                print("# Intermediate:")
-                for f in performance_models:
-                    print("#  --> ", f.name)
-                    for m in performance_models[f]:
-                        print("#      --> ", m.path_decisions)
-
                 # At this point, decisions are restricted to the specified parallelization or the sequential version.
                 # Restrict them to the exact case specified in restrict_to_decisions
                 if restrict_to_decisions is not None:
                     to_be_removed: List[int] = []
                     for idx, cost_model in enumerate(performance_models[node_data]):
-                        print("## Decisions: ", cost_model.path_decisions )
                         for decision in cost_model.path_decisions:
-                            print("### decision: ", decision)
                             if decision not in restrict_to_decisions:
                                 # check if the decision to be removed is a sequential execution. If so, ignore it
                                 if data_at(graph, decision).represents_sequential_version():
-                                    print("#### SEQ. Ignore")
                                     continue
                                 # decision represents a not-allowes, parallel execution. Remove it.
                                 to_be_removed.append(idx)
-                                print("#### NOT VALID")
                                 break
                     for idx in sorted(to_be_removed, reverse=True):
                         del performance_models[node_data][idx]
-
-                print("# After filter:")
-                for f in performance_models:
-                    print("#  --> ", f.name)
-                    for m in performance_models[f]:
-                        print("#      --> ", m.path_decisions)
 
                 # filter out NaN - Models
                 performance_models[node_data] = [
