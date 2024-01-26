@@ -9,7 +9,7 @@
 from typing import List, Set, cast
 
 from sympy import Integer
-from build.lib.discopop_library.discopop_optimizer.utilities.MOGUtilities import get_predecessors
+from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_predecessors
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 import networkx as nx  # type: ignore
 from discopop_library.discopop_optimizer.classes.nodes.ContextRestore import ContextRestore
