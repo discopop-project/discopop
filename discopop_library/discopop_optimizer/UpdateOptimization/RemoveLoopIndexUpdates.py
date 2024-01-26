@@ -22,7 +22,11 @@ def remove_loop_index_updates(
     to_be_removed: List[Update] = []
     for update in best_configuration.data_movement:
         # check for loop nodes as update targets
-        if type(data_at(experiment.optimization_graph, update.target_node_id)) == Loop:
+        condition = type(data_at(experiment.optimization_graph, update.target_node_id)) == Loop
+        if (not condition) and (update.originated_from_node is not None):
+            condition = condition or type(data_at(experiment.optimization_graph, update.originated_from_node)) == Loop
+
+        if condition:
             # get loop indices from PEGraph
             loop_cu_id = data_at(experiment.optimization_graph, update.target_node_id).original_cu_id
             if loop_cu_id is None:

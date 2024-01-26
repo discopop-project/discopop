@@ -18,6 +18,7 @@ from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
 class Update(object):
     source_node_id: int
     target_node_id: int
+    originated_from_node: Optional[int]  # used in case the update is moved to the nearest DeviceSwitch node
     source_device_id: DeviceID
     target_device_id: DeviceID
     write_data_access: WriteDataAccess
@@ -35,6 +36,7 @@ class Update(object):
         is_first_data_occurrence: bool,
         source_cu_id: Optional[NodeID],
         target_cu_id: Optional[NodeID],
+        originated_from_node: Optional[int] = None,
     ):
         self.source_node_id = source_node_id
         self.target_node_id = target_node_id
@@ -44,6 +46,7 @@ class Update(object):
         self.is_first_data_occurrence = is_first_data_occurrence
         self.source_cu_id = source_cu_id
         self.target_cu_id = target_cu_id
+        self.originated_from_node = originated_from_node
 
     def __str__(self):
         result_str = "First" if self.is_first_data_occurrence else ""
