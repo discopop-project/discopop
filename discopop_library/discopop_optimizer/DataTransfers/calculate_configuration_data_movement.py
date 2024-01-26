@@ -34,7 +34,7 @@ def calculate_data_movement(experiment: Experiment):
         function_performance_models_without_context = get_performance_models_for_functions(
             experiment, experiment.optimization_graph, restrict_to_decisions=set(oo_suggestion.decisions)
         )
-        
+
         function_performance_models = calculate_data_transfers(
             experiment.optimization_graph, function_performance_models_without_context, experiment
         )

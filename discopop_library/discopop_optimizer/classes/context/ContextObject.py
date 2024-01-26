@@ -65,7 +65,7 @@ class ContextObject(object):
                 if read.memory_region not in self.get_seen_writes_by_device(device_id):
                     # read memory region is currently "unknown" to the device, thus is can be skipped
                     continue
-                
+
                 other_devices_known_writes = self.get_seen_writes_by_device(device_id)[read.memory_region]
 
                 is_first_data_occurrence = False
