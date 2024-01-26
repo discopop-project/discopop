@@ -119,7 +119,12 @@ def get_function_return_node(graph: nx.DiGraph, function: int) -> int:
         if len(successors) == 0 and type(data_at(graph, current)) == FunctionReturn:
             return current
         queue += [s for s in successors if s not in queue]
-    raise ValueError("No FunctionReturn found for function: ", function, " ", data_at(graph, function).name)
+    raise ValueError(
+        "No FunctionReturn found for function: "
+        + str(function)
+        + " "
+        + cast(FunctionRoot, data_at(graph, function)).name
+    )
 
 
 def show_function(graph: nx.DiGraph, function: FunctionRoot, show_dataflow: bool = True, show_mutex_edges: bool = True):

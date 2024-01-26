@@ -8,7 +8,7 @@
 from typing import Optional, Set
 
 from sympy import Function, Symbol, Integer, Expr
-from build.lib.discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess  # type: ignore
+from lib.discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess  # type: ignore
 
 from discopop_explorer.PEGraphX import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
