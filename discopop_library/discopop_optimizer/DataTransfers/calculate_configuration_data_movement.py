@@ -42,6 +42,8 @@ def calculate_data_movement(experiment: Experiment):
         function_performance_models = calculate_data_transfers(
             experiment.optimization_graph, function_performance_models_without_context, experiment
         )
+
+        # maybe this can be removed. TODO: Check
         function_performance_models = add_data_transfer_costs(
             experiment.optimization_graph,
             function_performance_models,
