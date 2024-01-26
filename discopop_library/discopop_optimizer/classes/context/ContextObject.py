@@ -53,9 +53,6 @@ class ContextObject(object):
         The list of seen writes by device of the ContextObject will be updated to reflect the identified data transfers.
         A reference to the object is returned."""
 
-        if reading_node_id == 49:
-            print("NODE 49 READS    ")
-
         required_updates: Set[Update] = set()
         for read in node_reads:
             # check if the reading device has the latest view of the memory
