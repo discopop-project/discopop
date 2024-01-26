@@ -216,7 +216,9 @@ def run(arguments: OptimizerArguments):
         print()
 
     # calculate necessary updates for all created (i.e. mapped or collapsed) suggestions
-    calculate_data_movement(experiment)
+    # this can get quite expensive for large software, so it should only be calculated upon request
+    if arguments.single_suggestions:
+        calculate_data_movement(experiment)
 
     # apply optimization steps if requested
     best_configuration = None

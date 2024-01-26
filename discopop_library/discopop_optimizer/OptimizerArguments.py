@@ -26,6 +26,7 @@ class OptimizerArguments(object):
     pruning_level: int
     optimization_level: int
     optimization_level_2_parameters: str
+    single_suggestions: bool
 
     def __post_init__(self):
         self.__validate()
