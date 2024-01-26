@@ -47,6 +47,7 @@ class ContextObject(object):
         reading_node_id: int,
         graph: nx.DiGraph,
         experiment,
+        updates_originated_from: Optional[int] = None,
     ):
         """checks if the specified list of ReadDataAccesses performed by the specified device id makes updates
         necessary. If so, the updates will get append to the list of updates of the current ContextObject.
@@ -122,6 +123,7 @@ class ContextObject(object):
                                     is_first_data_occurrence=is_first_data_occurrence,
                                     source_cu_id=data_at(graph, self.last_visited_node_id).original_cu_id,
                                     target_cu_id=data_at(graph, reading_node_id).original_cu_id,
+                                    originated_from_node=updates_originated_from,
                                 )
                             )
                         #                        else:
@@ -150,6 +152,7 @@ class ContextObject(object):
                                 is_first_data_occurrence=is_first_data_occurrence,
                                 source_cu_id=data_at(graph, self.last_visited_node_id).original_cu_id,
                                 target_cu_id=data_at(graph, reading_node_id).original_cu_id,
+                                originated_from_node=updates_originated_from,
                             )
                         )
 
@@ -165,6 +168,7 @@ class ContextObject(object):
                                 is_first_data_occurrence=is_first_data_occurrence,
                                 source_cu_id=data_at(graph, self.last_visited_node_id).original_cu_id,
                                 target_cu_id=data_at(graph, reading_node_id).original_cu_id,
+                                originated_from_node=updates_originated_from,
                             )
                         )
 

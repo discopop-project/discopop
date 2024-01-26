@@ -331,6 +331,7 @@ def __check_current_node(
                 last_seen_device_switch_node,
                 graph,
                 experiment,
+                updates_originated_from=node_id,
             )
         else:
             # this can be the case for function nodes and similar
