@@ -42,7 +42,7 @@ class TestMethods(unittest.TestCase):
 
     def validate_results(self, test_dir, src_dir):
         """Check that not collapse has been identified"""
-        
+
         # load test output
         test_output_file = os.path.join(src_dir, ".discopop", "optimizer", "detection_result_dump.json")
         with open(test_output_file, "r") as f:
@@ -52,5 +52,3 @@ class TestMethods(unittest.TestCase):
         # check identified DoAllInfo objects for collapse clauses > 1
         for do_all_info in test_output.patterns.do_all:
             self.assertTrue(do_all_info.collapse_level <= 1)
-
-

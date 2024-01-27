@@ -23,10 +23,10 @@ set(DP_LOCAL_BIN_DIR "$ENV{HOME}/.local/bin")
 if(EXISTS ${DP_LOCAL_BIN_DIR})
     message(STATUS "Creating symlink ${DP_LOCAL_BIN_DIR}/discopop_cc to ${CMAKE_CURRENT_BINARY_DIR}/CC_wrapper.sh")
     execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CC_wrapper.sh ${DP_LOCAL_BIN_DIR}/discopop_cc)
-    
+
     message(STATUS "Creating symlink ${DP_LOCAL_BIN_DIR}/discopop_cxx to ${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh")
     execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh ${DP_LOCAL_BIN_DIR}/discopop_cxx)
-    
+
     message(STATUS "Creating symlink ${DP_LOCAL_BIN_DIR}/discopop_cmake to ${CMAKE_CURRENT_BINARY_DIR}/CMAKE_wrapper.sh")
     execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CMAKE_wrapper.sh ${DP_LOCAL_BIN_DIR}/discopop_cmake)
 else()

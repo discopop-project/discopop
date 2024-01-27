@@ -18,6 +18,3 @@ Functions can be connected to computational units via `calling` edges to represe
 ## Use case
 Due to the amount of information encoded in this graph structure, it is possible to obtain a accurate depiction of the programs behavior on an abstract level. This abstraction allows the generation of general parallelization suggestions on the basis of small input data, as long as the input represents the behavior of a typical production run of the software.
 In order to identify parallel patterns from the program execution graph, analysis methods described in detail in the published papers are applied. Please refer to these publications for further detail, or contact us directly.
-
-
-
