@@ -467,7 +467,7 @@ void DiscoPoP::createTakenBranchInstrumentation(Region* TopRegion, map <string, 
                     // branchInst is conditional
                     // prepare IRBuilder to insert instrumentation
                     IRBuilder<> IRB(branchInst);
-                    // get BBId and CU IDS of the source 
+                    // get BBId and CU IDS of the source
                     string source_BBID = bb->getName().str();
                     for(auto source_cu : BBIDToCUIDsMap[source_BBID]){
                         // get BBIds of all targets

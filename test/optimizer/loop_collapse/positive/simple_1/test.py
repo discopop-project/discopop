@@ -42,7 +42,7 @@ class TestMethods(unittest.TestCase):
 
     def validate_results(self, test_dir, src_dir):
         """Check that a 2-level collapse has been identified"""
-        
+
         # load test output
         test_output_file = os.path.join(src_dir, ".discopop", "optimizer", "detection_result_dump.json")
         with open(test_output_file, "r") as f:
@@ -54,7 +54,5 @@ class TestMethods(unittest.TestCase):
         for do_all_info in test_output.patterns.do_all:
             if do_all_info.collapse_level == 2:
                 two_level_collapse_found = True
-            
+
         self.assertTrue(two_level_collapse_found)
-
-
