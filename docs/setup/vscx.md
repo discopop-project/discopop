@@ -20,8 +20,6 @@ Using the DiscoPoP VS Code extension is the recommended way to get started using
 
 Install the [DiscoPoP extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) from the VS Code marketplace.
 
-In the extension settings (File -> Preferences -> Settings -> Extensions -> DiscoPoP) provide the paths to the DiscoPoP and HotspotDetection installations.
-
 ## Next Steps
 
 You can get started to use the VS Code extension right away. Check out the [Example Walkthrough](../examples/walk_through_gui.md) for more information.
