@@ -13,8 +13,8 @@ from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum i
 
 
 class GPU(Device):
-    def __init__(self, frequency, thread_count, openmp_device_id, device_specific_compiler_flags):
-        super().__init__(frequency, thread_count, openmp_device_id, device_specific_compiler_flags)
+    def __init__(self, frequency, thread_count, openmp_device_id, device_specific_compiler_flags, speedup: float):
+        super().__init__(frequency, thread_count, openmp_device_id, device_specific_compiler_flags, speedup)
 
     def get_device_specific_pattern_info(
         self, suggestion: PatternInfo, suggestion_type: str
