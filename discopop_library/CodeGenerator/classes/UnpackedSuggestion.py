@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     EntryPointType,
@@ -64,7 +64,11 @@ class UnpackedSuggestion(object):
         is_first_data_occurrence: bool = self.values["is_first_data_occurrence"]
         openmp_source_device_id = self.values["openmp_source_device_id"]
         openmp_target_device_id = self.values["openmp_target_device_id"]
+        range: Optional[Tuple[int, int]] = self.values["range"]
         print("IS FIRST DATA OCCURRENCE?: ", is_first_data_occurrence)
+
+        def get_range_str(r):
+            return "" if r is None else "[" + str(r[0]) + ":" + str(r[1]) + "]"
 
         if source_device_id == self.host_device_id and target_device_id == self.host_device_id:
             # no update required
@@ -77,6 +81,7 @@ class UnpackedSuggestion(object):
                 pragma.pragma_str = "#pragma omp target update to("
             pragma.pragma_str += (
                 var_name
+                + get_range_str(range)
                 + ") device("
                 # + str(openmp_source_device_id)
                 # + " -> "
@@ -93,6 +98,7 @@ class UnpackedSuggestion(object):
 
             pragma.pragma_str += (
                 var_name
+                + get_range_str(range)
                 + ") device("
                 + str(openmp_source_device_id)
                 # + " -> "
@@ -115,6 +121,7 @@ class UnpackedSuggestion(object):
                 + str(openmp_target_device_id)
                 + ") Var("
                 + var_name
+                + get_range_str(range)
                 + ")"
             )
 
