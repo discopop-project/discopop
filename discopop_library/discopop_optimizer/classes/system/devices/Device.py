@@ -18,6 +18,7 @@ class Device(object):
     __frequency: Expr
     __thread_count: Expr
     openmp_device_id: int
+    speedup: float  # comapred to sequential execution
 
     def __init__(
         self,
@@ -25,11 +26,13 @@ class Device(object):
         thread_count: Expr,
         openmp_device_id: int,
         device_specific_compiler_flags: str,
+        speedup: float,
     ):
         self.__frequency = frequency
         self.__thread_count = thread_count
         self.openmp_device_id = openmp_device_id
         self.device_specific_compiler_flags: str = device_specific_compiler_flags
+        self.speedup = speedup
 
     def get_device_specific_pattern_info(
         self, suggestion: PatternInfo, suggestion_type: str

@@ -91,6 +91,7 @@ class System(object):
             thread_count=Integer(device_configuration["threads"]),
             openmp_device_id=device_configuration["device_id"],
             device_specific_compiler_flags="",
+            speedup=device_configuration["speedup"],
         )
         self.add_device(cpu, device_configuration["device_id"])
 
@@ -100,6 +101,7 @@ class System(object):
             thread_count=Integer(device_configuration["threads"]),
             openmp_device_id=device_configuration["device_id"],
             device_specific_compiler_flags="",
+            speedup=device_configuration["speedup"],
         )
         self.add_device(gpu, device_configuration["device_id"])
 

@@ -11,13 +11,9 @@ from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum i
 
 class CPU(Device):
     def __init__(
-        self,
-        frequency,
-        thread_count,
-        openmp_device_id: int,
-        device_specific_compiler_flags: str,
+        self, frequency, thread_count, openmp_device_id: int, device_specific_compiler_flags: str, speedup: float
     ):
-        super().__init__(frequency, thread_count, openmp_device_id, device_specific_compiler_flags)
+        super().__init__(frequency, thread_count, openmp_device_id, device_specific_compiler_flags, speedup)
 
     def get_device_type(self) -> DeviceTypeEnum:
         return DeviceTypeEnum.CPU
