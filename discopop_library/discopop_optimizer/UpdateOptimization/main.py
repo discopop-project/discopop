@@ -9,6 +9,7 @@
 import os
 
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
+from discopop_library.discopop_optimizer.UpdateOptimization.AddRangesToUpdates import add_ranges_to_updates
 from discopop_library.discopop_optimizer.UpdateOptimization.LoopInitializationUpdates import (
     fix_loop_initialization_updates,
 )
@@ -20,7 +21,7 @@ from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutp
 
 
 def optimize_updates(
-    experiment: Experiment, best_configuration: OptimizerOutputPattern, arguments: OptimizerArguments
+    experiment: Experiment, configuration: OptimizerOutputPattern, arguments: OptimizerArguments
 ) -> OptimizerOutputPattern:
     # plot raw update graph
     # show_update_graph(experiment.optimization_graph, best_configuration, experiment)
@@ -28,18 +29,21 @@ def optimize_updates(
     # print original updates
     if arguments.verbose:
         print("Original updates")
-        for update in best_configuration.data_movement:
+        for update in configuration.data_movement:
             print("# ", update)
         print()
 
     # optimize updates
-    best_configuration = fix_loop_initialization_updates(experiment, best_configuration, arguments)
+    configuration = fix_loop_initialization_updates(experiment, configuration, arguments)
 
     # remove duplicated updates
-    best_configuration = remove_duplicated_updates(best_configuration, arguments)
+    configuration = remove_duplicated_updates(configuration, arguments)
 
     # remove loop index updates
-    best_configuration = remove_loop_index_updates(experiment, best_configuration, arguments)
+    configuration = remove_loop_index_updates(experiment, configuration, arguments)
+
+    # add ranges to be transferred to the updates
+    configuration = add_ranges_to_updates(experiment, configuration, arguments)
 
     # plt optimized update graph
     # show_update_graph(experiment.optimization_graph, best_configuration, experiment)
@@ -47,11 +51,11 @@ def optimize_updates(
     # print optimized updates
     if arguments.verbose:
         print("Optimized updates")
-        for update in best_configuration.data_movement:
+        for update in configuration.data_movement:
             print("# ", update)
         print()
 
-    return best_configuration
+    return configuration
 
 
 #    # export the updated configuration to the disk
