@@ -117,9 +117,9 @@ def get_cost_multiplier(node_id: int, environment: Experiment, device_id: int) -
     Multiplier for Reduction:
         1 / Compute_capa"""
     # get device specifications
-    thread_count = environment.get_system().get_device(device_id).get_thread_count()
-
-    multiplier = Integer(1) / thread_count
+    # todo: add reduction speedup measurement to the OpenMP Microbenchmark suite
+    speedup = environment.get_system().get_device(device_id).get_measured_speedup()
+    multiplier = Integer(1) / speedup
     cm = CostModel(multiplier, Integer(1))
 
     # return cm, [thread_count]

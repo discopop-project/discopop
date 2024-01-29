@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Tuple, List, Optional, cast
 
-from sympy import Expr, Symbol
+from sympy import Expr, Float, Symbol
 from sympy import Integer
 
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -18,7 +18,7 @@ class Device(object):
     __frequency: Expr
     __thread_count: Expr
     openmp_device_id: int
-    speedup: float  # comapred to sequential execution
+    __speedup: float  # comapred to sequential execution
 
     def __init__(
         self,
@@ -32,7 +32,7 @@ class Device(object):
         self.__thread_count = thread_count
         self.openmp_device_id = openmp_device_id
         self.device_specific_compiler_flags: str = device_specific_compiler_flags
-        self.speedup = speedup
+        self.__speedup = speedup
 
     def get_device_specific_pattern_info(
         self, suggestion: PatternInfo, suggestion_type: str
@@ -50,6 +50,9 @@ class Device(object):
         result_list += [(cast(Symbol, s), None) for s in self.__frequency.free_symbols]
         result_list += [(cast(Symbol, s), None) for s in self.__thread_count.free_symbols]
         return result_list
+
+    def get_measured_speedup(self) -> Expr:
+        return Float(self.__speedup)
 
     def get_estimated_execution_time_in_micro_seconds(self, workload: Expr, is_sequential: bool):
         """execution time is estimated by:
