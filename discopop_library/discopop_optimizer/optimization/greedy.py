@@ -160,7 +160,11 @@ def __get_score(param_tuple) -> Tuple[Dict[int, List[List[int]]], int, ContextOb
     global global_arguments
     configuration = param_tuple
     try:
-        if check_configuration_validity(global_experiment, global_arguments, __get_dicision_list(configuration)):
+        if check_configuration_validity(
+            cast(Experiment, global_experiment),
+            cast(OptimizerArguments, global_arguments),
+            __get_dicision_list(configuration),
+        ):
             _, score_expr, context = evaluate_configuration(
                 cast(Experiment, global_experiment),
                 __get_dicision_list(configuration),
