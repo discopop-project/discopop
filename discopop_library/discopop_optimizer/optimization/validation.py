@@ -28,7 +28,6 @@ def check_configuration_validity(
     experiment: Experiment, arguments: OptimizerArguments, configuration: List[int]
 ) -> bool:
     """Returns True if the given configuration is valid. Returns False otherwise."""
-
     # check requirements edges
     for node_id in configuration:
         requirements = get_requirements(experiment.optimization_graph, node_id)
