@@ -26,6 +26,16 @@ def from_json_patterns(
     file_mapping: Dict[int, Path],
     patch_generator_dir: str,
 ):
+    # collect metadata
+    max_pattern_id = 0
+    for suggestion_type in patterns_by_type:
+        for suggestion in patterns_by_type[suggestion_type]:
+            suggestion_dict = json.loads(suggestion)
+            suggestion_id = suggestion_dict["pattern_id"]
+            if max_pattern_id < suggestion_id:
+                max_pattern_id = suggestion_id
+    logger.debug("max_pattern_id = " + str(max_pattern_id))
+
     # generate code modifications from each suggestion, create a patch and store the patch
     # using the suggestions unique id
     if arguments.verbose:
@@ -34,16 +44,26 @@ def from_json_patterns(
         if suggestion_type == "version":
             continue
         for suggestion in patterns_by_type[suggestion_type]:
-            if suggestion_type == "optimizer_output":
-                from_optimizer_output(file_mapping, patterns_by_type, suggestion, arguments, patch_generator_dir)
-                continue
+            # parse benchmarking flags
             if arguments.only_optimizer_output_patterns:
                 # ignore all other pattern types
                 logger.debug("Ignoring pattern of type: " + suggestion_type)
                 continue
+
             suggestion_dict = json.loads(suggestion)
             if not suggestion_dict["applicable_pattern"]:
                 continue
+
+            # parse benchmarking flags
+            if arguments.only_maximum_id_pattern:
+                if suggestion_dict["pattern_id"] != max_pattern_id:
+                    logger.debug("Skipping pattern: " + str(suggestion_dict["pattern_id"]))
+                    continue
+
+            if suggestion_type == "optimizer_output":
+                from_optimizer_output(file_mapping, patterns_by_type, suggestion, arguments, patch_generator_dir)
+                continue
+
             if arguments.verbose:
                 print("Suggestion: ", suggestion)
             file_id_to_modified_code: Dict[int, str] = from_json_strings(
