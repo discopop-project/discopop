@@ -20,6 +20,7 @@ class PatchGeneratorArguments(GeneralArguments):
     CC: str
     CXX: str
     add_from_json: str
+    only_optimizer_output_patterns: bool
 
     def __post_init__(self):
         self.__validate()
