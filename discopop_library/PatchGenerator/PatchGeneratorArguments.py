@@ -20,7 +20,9 @@ class PatchGeneratorArguments(GeneralArguments):
     CC: str
     CXX: str
     add_from_json: str
+    # Benchmarking flags
     only_optimizer_output_patterns: bool
+    only_maximum_id_pattern: bool
 
     def __post_init__(self):
         self.__validate()

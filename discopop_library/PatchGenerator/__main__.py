@@ -24,6 +24,10 @@ def parse_args() -> PatchGeneratorArguments:
         "EXPERIMENTAL",
         "Arguments marked as experimental features. These flags may or may not be removed or changed in the future.",
     )
+    benchmarking_parser = parser.add_argument_group(
+        "BENCHMARKING",
+        "Arguments marked as benchmarking features. These flags may or may not be removed or changed in the future.",
+    )
 
     # fmt: off
     parser.add_argument("-v", "--verbose", action="store_true",
@@ -32,10 +36,12 @@ def parse_args() -> PatchGeneratorArguments:
         "-a", "--add-from-json", type=str, default="None",
         help="Add additional patches specified in the given patterns.json file."
     )
-    parser.add_argument("--only-optimizer-output-patterns", action="store_true", help="Only generate code for optimizer_output patterns")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:
+    # BENCHMARKING FLAGS:
+    benchmarking_parser.add_argument("--only-optimizer-output-patterns", action="store_true", help="Only generate code for optimizer_output patterns.")
+    benchmarking_parser.add_argument("--only-maximum-id-pattern", action="store_true", help="Only generate code for the pattern with the highest id.")
     # fmt: on
 
     arguments = parser.parse_args()
@@ -78,6 +84,7 @@ def parse_args() -> PatchGeneratorArguments:
         only_optimizer_output_patterns=arguments.only_optimizer_output_patterns,
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
+        only_maximum_id_pattern=arguments.only_maximum_id_pattern,
     )
 
 
