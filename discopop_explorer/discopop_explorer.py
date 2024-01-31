@@ -8,6 +8,7 @@
 
 import cProfile
 import json
+import logging
 import os
 import sys
 import time
@@ -17,6 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 import pstats2  # type:ignore
 from pluginbase import PluginBase  # type: ignore
+from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments  # type: ignore
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
@@ -36,7 +38,7 @@ from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 
 
 @dataclass
-class ExplorerArguments(object):
+class ExplorerArguments(GeneralArguments):
     """Container Class for the arguments passed to the discopop_explorer"""
 
     # input files and configuration
@@ -152,6 +154,8 @@ def __run(
 
 def run(arguments: ExplorerArguments):
     """Run the discopop_explorer with the given arguments"""
+    logger = logging.getLogger("Explorer")
+
     # create explorer directory if not already present
     if not os.path.exists(os.path.join(arguments.project_path, "explorer")):
         os.mkdir(os.path.join(arguments.project_path, "explorer"))
@@ -184,7 +188,14 @@ def run(arguments: ExplorerArguments):
 
     hotspots = load_hotspots(
         HotspotLoaderArguments(
-            verbose=True, get_loops=True, get_functions=True, get_YES=True, get_MAYBE=True, get_NO=False
+            verbose=True,
+            get_loops=True,
+            get_functions=True,
+            get_YES=True,
+            get_MAYBE=True,
+            get_NO=False,
+            log_level=arguments.log_level,
+            write_log=arguments.write_log,
         )
     )
 

@@ -7,6 +7,7 @@
 # directory for details.
 import cProfile
 import json
+import logging
 import os.path
 import pstats
 import shutil
@@ -74,6 +75,8 @@ from ..HostpotLoader.hostpot_loader import run as load_hotspots
 
 
 def run(arguments: OptimizerArguments):
+    logger = logging.getLogger("Optimizer")
+
     # check prerequisites and setup folder structure
     if arguments.verbose:
         print("Started DiscoPoP Optimizer...")
@@ -112,7 +115,14 @@ def run(arguments: OptimizerArguments):
         print("Loading Hotspots...")
     hotspot_functions = load_hotspots(
         HotspotLoaderArguments(
-            verbose=arguments.verbose, get_loops=False, get_functions=True, get_YES=True, get_MAYBE=False, get_NO=False
+            verbose=arguments.verbose,
+            get_loops=False,
+            get_functions=True,
+            get_YES=True,
+            get_MAYBE=False,
+            get_NO=False,
+            log_level=arguments.log_level,
+            write_log=arguments.write_log,
         )
     )
 

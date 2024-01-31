@@ -6,6 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from argparse import ArgumentParser
+import logging
+from discopop_library.GlobalLogger.setup import setup_logger
 
 from discopop_library.discopop_optimizer.optimizer import run
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
@@ -44,6 +46,8 @@ def parse_args() -> OptimizerArguments:
     )
     parser.add_argument("--profiling", action="store_true",
         help="Enable profiling.")
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:
     experimental_parser.add_argument("--allow-nested-parallelism", action="store_true",
         help="Allow the creation of nested parallelism suggestions. "
@@ -73,11 +77,16 @@ def parse_args() -> OptimizerArguments:
         optimization_level=arguments.o,
         optimization_level_2_parameters=arguments.opt_2_params,
         single_suggestions=arguments.single_suggestions,
+        log_level=arguments.log.upper(),
+        write_log=arguments.write_log,
     )
 
 
 def main():
     arguments = parse_args()
+
+    setup_logger(arguments)
+
     run(arguments)
 
 

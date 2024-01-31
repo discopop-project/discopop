@@ -8,9 +8,11 @@
 import os.path
 from dataclasses import dataclass
 
+from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
+
 
 @dataclass
-class PatchGeneratorArguments(object):
+class PatchGeneratorArguments(GeneralArguments):
     """Container Class for the arguments passed to the discopop_patch_generator"""
 
     verbose: bool

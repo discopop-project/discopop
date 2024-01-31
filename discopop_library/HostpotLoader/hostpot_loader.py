@@ -8,6 +8,7 @@
 
 
 import json
+import logging
 import os
 from typing import Dict, List, Tuple
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
@@ -24,6 +25,9 @@ def run(arguments: HotspotLoaderArguments) -> Dict[HotspotType, List[Tuple[FILEI
     if arguments.verbose:
         print("HotspotLoader - Configuration:")
         print(arguments)
+
+    logger = logging.getLogger("HotspotLoader")
+    logger.info("LOADING HOTSPOTS")
 
     result_dict: Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME]]] = dict()
 

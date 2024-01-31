@@ -10,9 +10,11 @@ import sys
 from dataclasses import dataclass
 from typing import List
 
+from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
+
 
 @dataclass
-class PatchApplicatorArguments(object):
+class PatchApplicatorArguments(GeneralArguments):
     """Container Class for the arguments passed to the discopop_patch_applicator"""
 
     verbose: bool

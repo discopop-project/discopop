@@ -8,9 +8,11 @@
 from dataclasses import dataclass
 from typing import List
 
+from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
+
 
 @dataclass
-class HotspotLoaderArguments(object):
+class HotspotLoaderArguments(GeneralArguments):
     """Container Class for the arguments passed to the hotspot loader"""
 
     verbose: bool
