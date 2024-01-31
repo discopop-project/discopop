@@ -13,10 +13,9 @@ from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
 
 def setup_logger(arguments: GeneralArguments):
     if arguments.write_log:
-        logging.basicConfig(filename="log.txt", encoding="utf-8", level=arguments.log_level)
+        logging.basicConfig(filename="log.txt", level=arguments.log_level)
     else:
         logging.basicConfig(
-            encoding="utf-8",
             level=arguments.log_level,
             format="[DP][%(name)s] %(levelname)s: %(message)s",  # "[DiscoPoP][%(name)s] %(levelname)s: %(asctime)s: %(message)s"
         )
