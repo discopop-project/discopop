@@ -19,6 +19,7 @@ from discopop_library.PatchGenerator.from_optimizer_output import from_optimizer
 
 logger = logging.getLogger("PatchGenerator")
 
+
 def from_json_patterns(
     arguments: PatchGeneratorArguments,
     patterns_by_type: Dict[str, List[str]],
