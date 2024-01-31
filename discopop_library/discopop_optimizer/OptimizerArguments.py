@@ -9,9 +9,11 @@ import os.path
 from dataclasses import dataclass
 from typing import List, Optional
 
+from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
+
 
 @dataclass
-class OptimizerArguments(object):
+class OptimizerArguments(GeneralArguments):
     """Container Class for the arguments passed to the discopop_optimizer"""
 
     verbose: bool

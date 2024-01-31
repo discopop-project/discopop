@@ -8,6 +8,7 @@
 
 from argparse import ArgumentParser
 from pathlib import Path
+from discopop_library.GlobalLogger.setup import setup_logger
 
 from discopop_library.PathManagement.PathManagement import get_path, get_path_or_none
 from .discopop_explorer import ExplorerArguments, run
@@ -71,6 +72,8 @@ def parse_args() -> ExplorerArguments:
         "--enable-patterns", type=str, nargs="?", default="*",
         help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,pipeline,geodec,simplegpu. Default: *",
     )
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
 
     # EXPERIMENTAL FLAGS:
     # temporary flag for microbenchmark file
@@ -149,11 +152,14 @@ def parse_args() -> ExplorerArguments:
         cu_inst_result_file=arguments.cu_inst_res,
         llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
         enable_json_file=arguments.json,
+        log_level=arguments.log.upper(),
+        write_log=arguments.write_log,
     )
 
 
 def main():
     arguments = parse_args()
+    setup_logger(arguments)
     run(arguments)
 
 

@@ -71,6 +71,8 @@ def parse_args() -> PatchGeneratorArguments:
         CC=arguments.cc,
         CXX=arguments.cxx,
         add_from_json=arguments.add_from_json,
+        log_level=arguments.log.upper(),
+        write_log=arguments.write_log,
     )
 
 
