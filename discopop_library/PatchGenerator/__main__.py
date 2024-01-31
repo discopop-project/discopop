@@ -31,6 +31,8 @@ def parse_args() -> PatchGeneratorArguments:
         "-a", "--add-from-json", type=str, default="None",
         help="Add additional patches specified in the given patterns.json file."
     )
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:
     # fmt: on
 
@@ -78,6 +80,7 @@ def parse_args() -> PatchGeneratorArguments:
 
 def main():
     arguments = parse_args()
+
     run(arguments)
 
 
