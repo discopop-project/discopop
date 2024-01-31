@@ -45,7 +45,7 @@ def from_json_patterns(
             continue
         for suggestion in patterns_by_type[suggestion_type]:
             # parse benchmarking flags
-            if arguments.only_optimizer_output_patterns:
+            if arguments.only_optimizer_output_patterns and suggestion_type != "optimizer_output":
                 # ignore all other pattern types
                 logger.debug("Ignoring pattern of type: " + suggestion_type)
                 continue
