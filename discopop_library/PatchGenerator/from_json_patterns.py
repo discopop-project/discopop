@@ -7,6 +7,7 @@
 # directory for details.
 
 import json
+import logging
 import os.path
 from pathlib import Path
 import shutil
@@ -16,6 +17,7 @@ from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGenerat
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.PatchGenerator.from_optimizer_output import from_optimizer_output
 
+logger = logging.getLogger("PatchGenerator")
 
 def from_json_patterns(
     arguments: PatchGeneratorArguments,
@@ -33,6 +35,10 @@ def from_json_patterns(
         for suggestion in patterns_by_type[suggestion_type]:
             if suggestion_type == "optimizer_output":
                 from_optimizer_output(file_mapping, patterns_by_type, suggestion, arguments, patch_generator_dir)
+                continue
+            if arguments.only_optimizer_output_patterns:
+                # ignore all other pattern types
+                logger.debug("Ignoring pattern of type: " + suggestion_type)
                 continue
             suggestion_dict = json.loads(suggestion)
             if not suggestion_dict["applicable_pattern"]:

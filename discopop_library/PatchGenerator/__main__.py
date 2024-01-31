@@ -8,6 +8,7 @@
 import os.path
 from argparse import ArgumentParser
 from pathlib import Path
+from discopop_library.GlobalLogger.setup import setup_logger
 
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.patch_generator import run
@@ -31,6 +32,7 @@ def parse_args() -> PatchGeneratorArguments:
         "-a", "--add-from-json", type=str, default="None",
         help="Add additional patches specified in the given patterns.json file."
     )
+    parser.add_argument("--only-optimizer-output-patterns", action="store_true", help="Only generate code for optimizer_output patterns")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:
@@ -73,6 +75,7 @@ def parse_args() -> PatchGeneratorArguments:
         CC=arguments.cc,
         CXX=arguments.cxx,
         add_from_json=arguments.add_from_json,
+        only_optimizer_output_patterns=arguments.only_optimizer_output_patterns,
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
     )
@@ -80,7 +83,7 @@ def parse_args() -> PatchGeneratorArguments:
 
 def main():
     arguments = parse_args()
-
+    setup_logger(arguments)
     run(arguments)
 
 
