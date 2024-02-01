@@ -128,7 +128,8 @@ def greedy_search(
             #            made_decisions = sorted(local_results, key=lambda x: x[1])[0][0]
             print("Selection: ", __get_dicision_list(made_decisions), "costs:", best_option[1])
 
-    assert made_decisions_context  # != None
+    if made_decisions_context is None:
+        return None
 
     # return the selected configuration
     return __get_optimizer_output_pattern(
