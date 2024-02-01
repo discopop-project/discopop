@@ -1369,6 +1369,10 @@ class PETParser(object):
                     )
                     # show_function(self.graph, data_at(self.graph, function_node), show_dataflow=False, show_mutex_edges=False)
                 self.invalid_functions.add(function_node)
+            except IndexError:
+                # function has no child. ignore, but issue a warning
+                warnings.warn("Skipping function: " + data_at(self.graph, function_node).name + " as it has no children nodes!")
+                pass
 
         for key in self.out_data_flow:
             for entry in self.out_data_flow[key]:
