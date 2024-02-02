@@ -1371,7 +1371,9 @@ class PETParser(object):
                 self.invalid_functions.add(function_node)
             except IndexError:
                 # function has no child. ignore, but issue a warning
-                warnings.warn("Skipping function: " + data_at(self.graph, function_node).name + " as it has no children nodes!")
+                warnings.warn(
+                    "Skipping function: " + data_at(self.graph, function_node).name + " as it has no children nodes!"
+                )
                 pass
 
         for key in self.out_data_flow:
