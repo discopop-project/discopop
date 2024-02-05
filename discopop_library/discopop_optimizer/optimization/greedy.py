@@ -7,6 +7,7 @@
 # directory for details.
 import copy
 import json
+import logging
 from multiprocessing import Pool
 import os
 from typing import Dict, List, Optional, Set, Tuple, cast
@@ -27,6 +28,7 @@ from discopop_library.discopop_optimizer.optimization.validation import check_co
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
+logger=logging.getLogger("Optimizer")
 
 global_experiment = None
 global_arguments = None
@@ -115,6 +117,24 @@ def greedy_search(
             # identify best option and update made_decisions
             best_option: Optional[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = None
             for k, e, c in local_results:
+                dbg_decisions_string = ""
+                for key in k: 
+                    dbg_decisions_string += str(key) + "("
+                    for l in k[key]:
+                        dbg_decisions_string += "[ "
+                        for entry in l:
+                            dbg_decisions_string += str(entry)
+                            entry_data  = data_at(global_experiment.optimization_graph, entry)
+                            
+                            if entry_data.device_id != global_experiment.get_system().get_host_device_id():
+                                dbg_decisions_string += "@" + str(entry_data.device_id)
+                            if entry_data.represents_sequential_version():
+                                dbg_decisions_string += "(seq)"
+                            dbg_decisions_string += ", "
+                        dbg_decisions_string += "] "
+                    dbg_decisions_string += ") "
+
+                logger.info("LocalResult: " + dbg_decisions_string + " -> " + str(e))
                 if best_option is None:
                     best_option = (k, e, c)
                     continue
