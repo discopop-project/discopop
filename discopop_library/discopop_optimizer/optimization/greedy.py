@@ -110,7 +110,7 @@ def greedy_search(
 
             for local_result in tmp_result:
                 # remove invalid elements
-                if local_result[1] == -1:
+                if local_result[1] < 0:
                     continue
                 local_results.append(local_result)
 
