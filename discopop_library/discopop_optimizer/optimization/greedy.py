@@ -224,7 +224,12 @@ def __get_optimizer_output_pattern(
                     pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
                 )
     if best_configuration is None:
-        return None
+        # best configuration is sequential
+        return OptimizerOutputPattern(
+            experiment.detection_result.pet.node_at(cast(NodeID, data_at(experiment.optimization_graph, selection[0]).original_cu_id)),
+            [],
+            experiment.get_system().get_host_device_id(),
+        )
     # collect data movement information
     for update in context.necessary_updates:
         best_configuration.add_data_movement(update)

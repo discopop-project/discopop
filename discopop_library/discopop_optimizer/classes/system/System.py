@@ -94,6 +94,7 @@ class System(object):
             openmp_device_id=device_configuration["device_id"],
             device_specific_compiler_flags="",
             speedup=device_configuration["speedup"],
+            compute_init_delays=device_configuration["compute_init_delays[us]"]
         )
         self.add_device(cpu, device_configuration["device_id"])
 
@@ -104,6 +105,7 @@ class System(object):
             openmp_device_id=device_configuration["device_id"],
             device_specific_compiler_flags="",
             speedup=device_configuration["speedup"],
+            compute_init_delays=device_configuration["compute_init_delays[us]"]
         )
         self.add_device(gpu, device_configuration["device_id"])
 
