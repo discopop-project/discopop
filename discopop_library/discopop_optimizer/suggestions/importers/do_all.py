@@ -25,6 +25,7 @@ from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import Re
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
+from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
@@ -167,31 +168,38 @@ def get_overhead_term(node_data: Loop, environment: Experiment, device_id: int) 
     For testing purposes, the following function is used to represent the overhead incurred by a do-all loop.
     The function has been created using Extra-P.
     unit of the overhead term are micro seconds."""
+    ci_costs = environment.get_system().get_device(device_id).get_compute_init_delays()
 
     # get overhead model
-    if len(cast(DoAllInfo, node_data.suggestion).shared) == 0:
-        # retrieve DoAll overhead model
-        overhead_model = environment.get_system().get_device_doall_overhead_model(
-            environment.get_system().get_device(device_id), environment.arguments
-        )
-        logger.info("Loop: " + str(node_data.node_id) + " is DOALL")
+    if environment.get_system().get_device(node_data.device_id).get_device_type() == DeviceTypeEnum.CPU:
+        # device is CPU
+        if len(cast(DoAllInfo, node_data.suggestion).shared) == 0:
+            # retrieve DoAll overhead model
+            overhead_model = environment.get_system().get_device_doall_overhead_model(
+                environment.get_system().get_device(device_id), environment.arguments
+            )
+            logger.info("Loop: " + str(node_data.node_id) + " is DOALL")
+        else:
+            # retrieve DoAll shared overhead model
+            overhead_model = environment.get_system().get_device_doall_shared_overhead_model(
+                environment.get_system().get_device(device_id), environment.arguments
+            )
+            logger.info("Loop: " + str(node_data.node_id) + " is DOALL SHARED")
+        # add computation initialization costs (technically duplicated, but required for low workloads)
+        if "doall" in ci_costs:
+            overhead_model += Float(ci_costs["doall"])
+            logger.debug("Added doall compute init delay: " + str(ci_costs["doall"]) + " to node: " + str(node_data.node_id))
+        else:
+            logger.debug("Could not find compute init delays for node: " + str(node_data.node_id))
     else:
-        # retrieve DoAll shared overhead model
-        overhead_model = environment.get_system().get_device_doall_shared_overhead_model(
-            environment.get_system().get_device(device_id), environment.arguments
-        )
-        logger.info("Loop: " + str(node_data.node_id) + " is DOALL SHARED")
-
-    # add computation initialization costs (technically duplicated, but required for low workloads)
-    ci_costs = environment.get_system().get_device(device_id).get_compute_init_delays()
-    if "doall" in ci_costs:
-        overhead_model += Float(ci_costs["doall"])
-        logger.debug("Added doall compute init delay: " + str(ci_costs["doall"]) + " to node: " + str(node_data.node_id))
-    elif "target_teams_distribute_parallel_for" in ci_costs:
-        overhead_model += Float(ci_costs["target_teams_distribute_parallel_for"])
-        logger.debug("Added ttdpf compute init delay: " + str(ci_costs["target_teams_distribute_parallel_for"]) + " to node: " + str(node_data.node_id))
-    else:
-        logger.debug("Could not find compute init delays for node: " + str(node_data.node_id))
+        # device is GPU
+        overhead_model = Integer(0)
+        # add computation initialization costs (technically duplicated, but required for low workloads)
+        if "target_teams_distribute_parallel_for" in ci_costs:
+            overhead_model += Float(ci_costs["target_teams_distribute_parallel_for"])
+            logger.debug("Added ttdpf compute init delay: " + str(ci_costs["target_teams_distribute_parallel_for"]) + " to node: " + str(node_data.node_id))
+        else:
+            logger.debug("Could not find compute init delays for node: " + str(node_data.node_id))
     
 
     # substitute workload, iterations and threads
