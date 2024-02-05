@@ -169,9 +169,17 @@ def run(arguments: OptimizerArguments):
         # construct and set overhead model for doall suggestions
         system.set_device_doall_overhead_model(
             system.get_device(system.get_host_device_id()),
-            ExtrapInterpolatedMicrobench(arguments.doall_microbench_file).getFunctionSympy(),
+            ExtrapInterpolatedMicrobench(arguments.doall_microbench_file).getFunctionSympy(benchType=MicrobenchType.DOALL),
             arguments,
         )
+        # construct and set overhead model for doall suggestions with shaed clause
+        system.set_device_doall_shared_overhead_model(
+            system.get_device(system.get_host_device_id()),
+            ExtrapInterpolatedMicrobench(arguments.doall_microbench_file).getFunctionSympy(benchType=MicrobenchType.SHARED),
+            arguments,
+        )
+
+
     if arguments.reduction_microbench_file != "None":
         # construct and set overhead model for reduction suggestions
         system.set_reduction_overhead_model(

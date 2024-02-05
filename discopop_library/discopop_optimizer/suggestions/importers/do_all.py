@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import logging
 from typing import Set, cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
@@ -29,6 +30,7 @@ from discopop_library.discopop_optimizer.utilities.simple_utilities import data_
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 suggestion_device_types = [CPU, GPU]
+logger = logging.getLogger("Optimizer")
 
 
 def import_suggestion(
@@ -165,10 +167,21 @@ def get_overhead_term(node_data: Loop, environment: Experiment, device_id: int) 
     For testing purposes, the following function is used to represent the overhead incurred by a do-all loop.
     The function has been created using Extra-P.
     unit of the overhead term are micro seconds."""
-    # retrieve DoAll overhead model
-    overhead_model = environment.get_system().get_device_doall_overhead_model(
-        environment.get_system().get_device(device_id), environment.arguments
-    )
+
+    # get overhead model
+    if len(cast(DoAllInfo, node_data.suggestion).shared) == 0:
+        # retrieve DoAll overhead model
+        overhead_model = environment.get_system().get_device_doall_overhead_model(
+            environment.get_system().get_device(device_id), environment.arguments
+        )
+        logger.info("Loop: " + str(node_data.node_id) + " is DOALL")
+    else:
+        # retrieve DoAll shared overhead model
+        overhead_model = environment.get_system().get_device_doall_shared_overhead_model(
+            environment.get_system().get_device(device_id), environment.arguments
+        )
+        logger.info("Loop: " + str(node_data.node_id) + " is DOALL SHARED")
+
     # substitute workload, iterations and threads
     thread_count = environment.get_system().get_device(device_id).get_thread_count()
     iterations = node_data.iterations_symbol
