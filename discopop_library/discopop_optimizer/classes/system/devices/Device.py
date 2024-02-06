@@ -28,7 +28,7 @@ class Device(object):
         openmp_device_id: int,
         device_specific_compiler_flags: str,
         speedup: float,
-        compute_init_delays: Dict[str, float]
+        compute_init_delays: Dict[str, float],
     ):
         self.__frequency = frequency
         self.__thread_count = thread_count

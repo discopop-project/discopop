@@ -188,7 +188,9 @@ def get_overhead_term(node_data: Loop, environment: Experiment, device_id: int) 
         # add computation initialization costs (technically duplicated, but required for low workloads)
         if "doall" in ci_costs:
             overhead_model += Float(ci_costs["doall"])
-            logger.debug("Added doall compute init delay: " + str(ci_costs["doall"]) + " to node: " + str(node_data.node_id))
+            logger.debug(
+                "Added doall compute init delay: " + str(ci_costs["doall"]) + " to node: " + str(node_data.node_id)
+            )
         else:
             logger.debug("Could not find compute init delays for node: " + str(node_data.node_id))
     else:
@@ -197,10 +199,14 @@ def get_overhead_term(node_data: Loop, environment: Experiment, device_id: int) 
         # add computation initialization costs (technically duplicated, but required for low workloads)
         if "target_teams_distribute_parallel_for" in ci_costs:
             overhead_model += Float(ci_costs["target_teams_distribute_parallel_for"])
-            logger.debug("Added ttdpf compute init delay: " + str(ci_costs["target_teams_distribute_parallel_for"]) + " to node: " + str(node_data.node_id))
+            logger.debug(
+                "Added ttdpf compute init delay: "
+                + str(ci_costs["target_teams_distribute_parallel_for"])
+                + " to node: "
+                + str(node_data.node_id)
+            )
         else:
             logger.debug("Could not find compute init delays for node: " + str(node_data.node_id))
-    
 
     # substitute workload, iterations and threads
     thread_count = environment.get_system().get_device(device_id).get_thread_count()
