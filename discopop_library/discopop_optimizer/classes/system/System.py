@@ -94,7 +94,7 @@ class System(object):
             openmp_device_id=device_configuration["device_id"],
             device_specific_compiler_flags="",
             speedup=device_configuration["speedup"],
-            compute_init_delays=device_configuration["compute_init_delays[us]"]
+            compute_init_delays=device_configuration["compute_init_delays[us]"],
         )
         self.add_device(cpu, device_configuration["device_id"])
 
@@ -105,7 +105,7 @@ class System(object):
             openmp_device_id=device_configuration["device_id"],
             device_specific_compiler_flags="",
             speedup=device_configuration["speedup"],
-            compute_init_delays=device_configuration["compute_init_delays[us]"]
+            compute_init_delays=device_configuration["compute_init_delays[us]"],
         )
         self.add_device(gpu, device_configuration["device_id"])
 
@@ -130,7 +130,7 @@ class System(object):
                 warnings.warn("No DOALL overhead model, assuming 0 for device: " + str(device))
             return Expr(Integer(0))
         return self.__device_do_all_overhead_models[device]
-    
+
     def get_device_doall_shared_overhead_model(self, device: Device, arguments: OptimizerArguments) -> Expr:
         if device not in self.__device_do_all_shared_overhead_models:
             if arguments.verbose:

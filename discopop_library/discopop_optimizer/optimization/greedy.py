@@ -28,7 +28,7 @@ from discopop_library.discopop_optimizer.optimization.validation import check_co
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
-logger=logging.getLogger("Optimizer")
+logger = logging.getLogger("Optimizer")
 
 global_experiment = None
 global_arguments = None
@@ -118,14 +118,14 @@ def greedy_search(
             best_option: Optional[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = None
             for k, e, c in local_results:
                 dbg_decisions_string = ""
-                for key in k: 
+                for key in k:
                     dbg_decisions_string += str(key) + "("
                     for l in k[key]:
                         dbg_decisions_string += "[ "
-                        for entry in l:
-                            dbg_decisions_string += str(entry)
-                            entry_data  = data_at(global_experiment.optimization_graph, entry)
-                            
+                        for entry2 in l:
+                            dbg_decisions_string += str(entry2)
+                            entry_data = data_at(global_experiment.optimization_graph, entry2)
+
                             if entry_data.device_id != global_experiment.get_system().get_host_device_id():
                                 dbg_decisions_string += "@" + str(entry_data.device_id)
                             if entry_data.represents_sequential_version():
@@ -226,7 +226,9 @@ def __get_optimizer_output_pattern(
     if best_configuration is None:
         # best configuration is sequential
         return OptimizerOutputPattern(
-            experiment.detection_result.pet.node_at(cast(NodeID, data_at(experiment.optimization_graph, selection[0]).original_cu_id)),
+            experiment.detection_result.pet.node_at(
+                cast(NodeID, data_at(experiment.optimization_graph, selection[0]).original_cu_id)
+            ),
             [],
             experiment.get_system().get_host_device_id(),
         )
