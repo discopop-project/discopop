@@ -32,10 +32,11 @@ def generate_default_system_configuration(file_path: str):
         "processors": 16,
         "threads": 16,
         "speedup": 9.5,
+        "compute_init_delays[us]": {"doall": 300},
     }
     # configure gpu_1
     gpu_1: Dict[str, Union[float, int, Dict[str, float]]] = {
-        "compute_init_delays": {"target_teams_distribute_parallel_for": 0.01},
+        "compute_init_delays[us]": {"target_teams_distribute_parallel_for": 1000},
         "device_id": 1,
         "device_type": DeviceTypeEnum.GPU,
         "frequency": 256000000,
@@ -53,7 +54,7 @@ def generate_default_system_configuration(file_path: str):
     }
     # configure gpu_2
     gpu_2: Dict[str, Union[float, int, Dict[str, float]]] = {
-        "compute_init_delays": {"target_teams_distribute_parallel_for": 0.005},
+        "compute_init_delays[us]": {"target_teams_distribute_parallel_for": 5000},
         "device_id": 2,
         "device_type": DeviceTypeEnum.GPU,
         "frequency": 128000000,
