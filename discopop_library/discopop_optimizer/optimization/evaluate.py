@@ -19,6 +19,7 @@ from discopop_library.discopop_optimizer.CostModels.utilities import (
     get_performance_models_for_functions,
 )
 from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
+from discopop_library.discopop_optimizer.DataTransfers.NewDataTransfers import calculate_data_transfers_by_models
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
@@ -51,7 +52,7 @@ def evaluate_configuration(
     function_performance_models_without_context = get_performance_models_for_functions(
         experiment, experiment.optimization_graph, restrict_to_decisions=set(decisions)
     )
-    function_performance_models = calculate_data_transfers(
+    function_performance_models = calculate_data_transfers_by_models(
         experiment.optimization_graph, function_performance_models_without_context, experiment
     )
     function_performance_models = add_data_transfer_costs(

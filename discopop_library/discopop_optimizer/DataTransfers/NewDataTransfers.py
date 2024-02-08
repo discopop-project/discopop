@@ -202,11 +202,14 @@ class DataFrame(object):
                 logger.info("\t-> " + str(wda.memory_region) + " : " + wda.var_name)
         logger.info("")
 
-def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experiment) -> List[Update]:
+def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experiment, targeted_functions: Optional[List[int]] = None) -> List[Update]:
     updates: List[Update] = []
     logger.info("# Calculating updates for configuration: " + str(decisions))
 
-    for function in get_all_function_nodes(graph):
+    if targeted_functions is None:
+        targeted_functions = get_all_function_nodes(graph)
+
+    for function in targeted_functions:
         logger.info("# Function: " + cast(FunctionRoot, data_at(graph, function)).name)
         function_children = get_children(graph, function)
         if len(function_children) == 0:
@@ -349,3 +352,20 @@ def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experi
     logger.info("")
 
     return updates
+
+
+def calculate_data_transfers_by_models(
+    graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]], experiment
+) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
+    """Calculate data transfers for each performance model and append the respective ContextObject to the result."""
+    result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
+    for function in function_performance_models:
+        result_dict[function] = []
+        for model in function_performance_models[function]:
+            # create a ContextObject for the current path
+            context = ContextObject(function.node_id, [function.device_id])
+
+            context.necessary_updates = new_calculate_data_transfers(graph, model.path_decisions, experiment, [function.node_id])
+            
+            result_dict[function].append((model, context))
+    return result_dict
