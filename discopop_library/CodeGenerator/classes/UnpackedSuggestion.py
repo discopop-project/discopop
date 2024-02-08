@@ -65,7 +65,7 @@ class UnpackedSuggestion(object):
         openmp_source_device_id = self.values["openmp_source_device_id"]
         openmp_target_device_id = self.values["openmp_target_device_id"]
         range: Optional[Tuple[int, int]] = self.values["range"]
-        print("IS FIRST DATA OCCURRENCE?: ", is_first_data_occurrence)
+        delete_data: bool = self.values["delete_data"]
 
         def get_range_str(r):
             return "" if r is None else "[" + str(r[0]) + ":" + str(r[1]) + "]"
@@ -91,7 +91,7 @@ class UnpackedSuggestion(object):
 
         elif source_device_id != self.host_device_id and target_device_id == self.host_device_id:
             # update type from
-            if is_first_data_occurrence:
+            if delete_data:
                 pragma.pragma_str = "#pragma omp target exit data map(from:"
             else:
                 pragma.pragma_str = "#pragma omp target update from("
