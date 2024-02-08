@@ -169,10 +169,22 @@ class DataFrame(object):
     def cleanup_dataframe(self, node_id: int, memory: DeviceMemory, experiment: Experiment) -> List[Update]:
         """synchronize data to the host device and issue a delete update"""
         updates: List[Update] = []
+        # identify last cu_id for update positioning
+        queue = [node_id]
+        last_cu_id = None
+        while queue:
+            current = queue.pop(0)
+            current_data = data_at(experiment.optimization_graph, current)
+            if current_data.original_cu_id is not None:
+                last_cu_id = current_data.original_cu_id
+                break
+            queue += [p for p in get_predecessors(experiment.optimization_graph, current) if p not in queue]
+
+
         for device_id in self.entered_data_regions_by_device:
             for wda in self.entered_data_regions_by_device[device_id]:
                 # issue delete updates
-                updates.append(Update(node_id, node_id, device_id, experiment.get_system().get_host_device_id(), wda, False, data_at(experiment.optimization_graph, node_id).original_cu_id, data_at(experiment.optimization_graph, node_id).original_cu_id, delete_data=True))
+                updates.append(Update(node_id, node_id, device_id, experiment.get_system().get_host_device_id(), wda, False, last_cu_id, last_cu_id, delete_data=True))
                 # updates += memory.perform_read(node_id, experiment.get_system().get_host_device_id(), cast(ReadDataAccess, wda))
                 # cleanup memory
                 del memory.memory[device_id][wda.memory_region]
