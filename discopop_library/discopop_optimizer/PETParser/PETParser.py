@@ -46,6 +46,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_nodes_in_function,
     get_all_parents,
     get_nodes_by_functions,
+    get_out_call_edges,
     get_parent_function,
     get_parents,
     get_path_entry,
@@ -152,6 +153,9 @@ class PETParser(object):
         # add calling edges
         self.__add_calling_edges()
 
+        if self.experiment.arguments.pin_function_calls_to_host:
+            self.__pin_function_calls_to_host()
+
         return self.graph, self.next_free_node_id
 
     def get_new_node_id(self) -> int:
@@ -159,6 +163,22 @@ class PETParser(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
+    
+    def __pin_function_calls_to_host(self):
+        host_device_id = self.experiment.get_system().get_host_device_id()
+        logger.info("Pinning functions and function calls to host device: " + str(host_device_id))
+        for node in get_all_function_nodes(self.graph):
+            node_data = data_at(self.graph, node)
+            if node_data.device_id != host_device_id:
+                logger.info("\tPinning function node: " + str(node))
+                data_at(self.graph, node).device_id = host_device_id
+        for node in self.graph.nodes:
+            node_data = data_at(self.graph, node)
+            if node_data.device_id != host_device_id:
+                if len(get_out_call_edges(self.graph, node)) > 0:
+                    logger.info("\tPinning calling node: " + str(node))
+                    data_at(self.graph, node).device_id = host_device_id
+            
 
     def __add_calling_edges(self):
         all_function_nodes = get_all_function_nodes(self.graph)

@@ -46,6 +46,7 @@ def parse_args() -> OptimizerArguments:
     )
     parser.add_argument("--profiling", action="store_true",
         help="Enable profiling.")
+    parser.add_argument("--pin-function-calls-to-host", action="store_true", help="Force functions calls on the host system. Prevent offloading of entire functions.")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:
@@ -79,6 +80,7 @@ def parse_args() -> OptimizerArguments:
         single_suggestions=arguments.single_suggestions,
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
+        pin_function_calls_to_host=arguments.pin_function_calls_to_host,
     )
 
 
