@@ -223,6 +223,7 @@ def __get_optimizer_output_pattern(
                 best_configuration.add_pattern(
                     pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
                 )
+                best_configuration.decisions.append(node_id)
     if best_configuration is None:
         # best configuration is sequential
         return OptimizerOutputPattern(

@@ -25,6 +25,7 @@ from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
 from discopop_library.discopop_optimizer.CostModels.utilities import get_performance_models_for_functions
+from discopop_library.discopop_optimizer.DataTransfers.NewDataTransfers import new_calculate_data_transfers
 from discopop_library.discopop_optimizer.DataTransfers.calculate_configuration_data_movement import (
     calculate_data_movement,
 )
@@ -216,10 +217,10 @@ def run(arguments: OptimizerArguments):
     experiment.optimization_graph = optimize_suggestions(experiment)
 
     # insert device switch nodes
-    experiment.optimization_graph = insert_device_switch_nodes(experiment)
+    # experiment.optimization_graph = insert_device_switch_nodes(experiment)
 
     if arguments.plot:
-        show(experiment.optimization_graph, show_dataflow=False, show_mutex_edges=False)
+        show(experiment.optimization_graph, show_dataflow=True, show_mutex_edges=False)
 
     if arguments.verbose:
         print("# SUGGESTION ID -> NODE ID MAPPING")
@@ -271,7 +272,25 @@ def run(arguments: OptimizerArguments):
         else:
             raise ValueError("No valid optimization method specified: " + str(arguments.optimization_level))
 
+    print("BEST CONFIGURATION: ", best_configuration)
+
     if best_configuration is not None:
+        # calculate updates for best_configuration
+        updates = new_calculate_data_transfers(experiment.optimization_graph, best_configuration.decisions, experiment)
+        # register updates
+        logger.info("BC DATA MOVEMENT PRE: ")
+        for dm in best_configuration.data_movement:
+            logger.info("--> " + str(dm))
+        logger.info("")
+
+        best_configuration.data_movement = []
+        for u in updates:
+            best_configuration.add_data_movement(u)
+        logger.info("BC DATA MOVEMENT POST: ")
+        for dm in best_configuration.data_movement:
+            logger.info("--> " + str(dm))
+        logger.info("")
+
         best_configuration = optimize_updates(experiment, best_configuration, arguments)
         # append the configuration to the list of patterns
         experiment.detection_result.patterns.optimizer_output.append(best_configuration)

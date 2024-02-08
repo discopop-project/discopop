@@ -15,6 +15,7 @@ from discopop_library.discopop_optimizer.UpdateOptimization.LoopInitializationUp
 )
 from discopop_library.discopop_optimizer.UpdateOptimization.RemoveDuplicatedUpdates import remove_duplicated_updates
 from discopop_library.discopop_optimizer.UpdateOptimization.RemoveLoopIndexUpdates import remove_loop_index_updates
+from discopop_library.discopop_optimizer.UpdateOptimization.RemoveSameDeviceUpdates import remove_same_device_updates
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
@@ -33,6 +34,9 @@ def optimize_updates(
             print("# ", update)
         print()
 
+    # remove same-device updates
+    configuration = remove_same_device_updates(experiment, configuration, arguments)
+
     # optimize updates
     configuration = fix_loop_initialization_updates(experiment, configuration, arguments)
 
@@ -40,7 +44,7 @@ def optimize_updates(
     configuration = remove_duplicated_updates(configuration, arguments)
 
     # remove loop index updates
-    configuration = remove_loop_index_updates(experiment, configuration, arguments)
+    # configuration = remove_loop_index_updates(experiment, configuration, arguments)
 
     # add ranges to be transferred to the updates
     configuration = add_ranges_to_updates(experiment, configuration, arguments)
