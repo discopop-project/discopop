@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import logging
 import os
 import pstats
 from typing import Dict, List, Optional, Tuple, Set, cast
@@ -65,6 +66,8 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from time import time
 
+logger = logging.getLogger("Optimizer")
+
 
 class PETParser(object):
     pet: PEGraphX
@@ -123,17 +126,22 @@ class PETParser(object):
         if self.experiment.arguments.verbose:
             print("converted temporary edges")
 
-        #        self.__mark_branch_affiliation()
-        #        print("marked branch affiliations")
-        self.__calculate_data_flow()
-        if self.experiment.arguments.verbose:
-            print("calculated data flow")
-
         if self.experiment.arguments.verbose:
             print("Propagating read/write information...")
         self.__propagate_reads_and_writes()
         if self.experiment.arguments.verbose:
             print("Propagated read/write information")
+
+        #        self.__mark_branch_affiliation()
+        #        print("marked branch affiliations")
+        #        show(self.graph)
+        # self.__calculate_data_flow()
+        # self.__new_calculate_data_flow()
+        #        if self.experiment.arguments.verbose:
+        #            print("calculated data flow")
+        # show(self.graph)
+        # import sys
+        # sys.exit(0)
 
         # remove invalid functions
         self.__remove_invalid_functions()
@@ -1293,11 +1301,25 @@ class PETParser(object):
             current_node = get_children(self.graph, function_node)[0]
             mark_branched_section(current_node, [])
 
+    #    def __new_calculate_data_flow(self):
+    #        """calculate dataflow in such a way, that no data is left on any device but the host and every relevant change is synchronized."""
+    #        self.in_data_flow = dict()
+    #        self.out_data_flow = dict()
+    #
+    #        data_transactions= dict()  # stores created and removed data for unrolling when leaving a "frame"
+    #        # Dict[device_id, List[("enter/exit", memreg)]]
+    #
+    #        data_frame_stack: List[int] = [] # stores node ids which opened a data frame
+    #
+    #        for function in get_all_function_nodes(self.graph):
+    #            logger.info("calculate data flow for function: " + data_at(self.graph, function).name)
+
     def __calculate_data_flow(self):
         self.in_data_flow = dict()
         self.out_data_flow = dict()
 
         def inlined_data_flow_calculation(current_node, current_last_writes):
+            # TODO add entering and exiting data frames to support resetting at end of a child section
             while current_node is not None:
                 # check if current_node uses written data
                 reads, writes = get_read_and_written_data_from_subgraph(
@@ -1320,9 +1342,9 @@ class PETParser(object):
                 for mem_reg in writes:
                     current_last_writes[mem_reg] = current_node
 
-                # inline children
+                ## start data_flow calculation for children
                 for child in get_children(self.graph, current_node):
-                    current_last_writes = inlined_data_flow_calculation(child, current_last_writes)
+                    _current_last_writes = inlined_data_flow_calculation(child, current_last_writes)
 
                 # continue to successor
                 successors = get_successors(self.graph, current_node)

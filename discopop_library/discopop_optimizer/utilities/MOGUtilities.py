@@ -127,6 +127,46 @@ def get_function_return_node(graph: nx.DiGraph, function: int) -> int:
     )
 
 
+def show_decision_graph(
+    graph: nx.DiGraph, decisions: List[int], show_dataflow: bool = True, show_mutex_edges: bool = False
+):
+    print("Decisions: ", decisions)
+    contained_nodes: Set[int] = set()
+    for function in get_all_function_nodes(graph):
+        # get nodes in subtree of function, if they are reachable by the set of decisions
+        queue: List[int] = [data_at(graph, function).node_id]
+        while len(queue) > 0:
+            current = queue.pop()
+            contained_nodes.add(current)
+            queue += [c for c in get_children(graph, current) if c not in queue and c not in contained_nodes]
+            successors = get_successors(graph, current)
+
+            if len(successors) <= 1:
+                # no decision required
+                queue += [s for s in successors if s not in queue and s not in contained_nodes]
+            else:
+                # filter for successors in decisions
+                print("SUCCESSORS: ", successors)
+                valid_successors = [s for s in successors if s in decisions]
+                # check for requirements, if no valid successor was found
+                if len(valid_successors) == 0:
+                    requirements = []
+                    for dec in decisions:
+                        requirements += get_requirements(graph, dec)
+                    valid_successors = [s for s in successors if s in requirements]
+                    print("REQUIREMENT SUCCESSORS: ", valid_successors)
+                print("VALID SUCCESSORS: ", valid_successors)
+                # if no decision could be made, keep all sequential successors
+                if len(valid_successors) > 0:
+                    queue += [s for s in valid_successors if s not in queue and s not in contained_nodes]
+                else:
+                    # fallback
+                    queue += [s for s in successors if data_at(graph, s).represents_sequential_version()]
+
+    # show the subgraph
+    show(graph.subgraph(contained_nodes), show_dataflow=show_dataflow, show_mutex_edges=show_mutex_edges)
+
+
 def show_function(graph: nx.DiGraph, function: FunctionRoot, show_dataflow: bool = True, show_mutex_edges: bool = True):
     # get nodes in subtree of function
     contained_nodes: Set[int] = set()

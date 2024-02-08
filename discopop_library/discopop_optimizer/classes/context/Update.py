@@ -10,6 +10,7 @@ from typing import Any, Dict, Optional, Tuple, cast
 from discopop_explorer.PEGraphX import NodeID, PEGraphX
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
+    ReadDataAccess,
     WriteDataAccess,
     write_data_access_from_dict,
 )
