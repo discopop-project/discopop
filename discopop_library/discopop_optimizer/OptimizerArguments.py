@@ -29,6 +29,7 @@ class OptimizerArguments(GeneralArguments):
     optimization_level: int
     optimization_level_2_parameters: str
     single_suggestions: bool
+    pin_function_calls_to_host: bool
 
     def __post_init__(self):
         self.__validate()
