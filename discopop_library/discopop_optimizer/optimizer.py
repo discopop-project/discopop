@@ -278,18 +278,9 @@ def run(arguments: OptimizerArguments):
         # calculate updates for best_configuration
         updates = new_calculate_data_transfers(experiment.optimization_graph, best_configuration.decisions, experiment)
         # register updates
-        logger.info("BC DATA MOVEMENT PRE: ")
-        for dm in best_configuration.data_movement:
-            logger.info("--> " + str(dm))
-        logger.info("")
-
         best_configuration.data_movement = []
         for u in updates:
             best_configuration.add_data_movement(u)
-        logger.info("BC DATA MOVEMENT POST: ")
-        for dm in best_configuration.data_movement:
-            logger.info("--> " + str(dm))
-        logger.info("")
 
         best_configuration = optimize_updates(experiment, best_configuration, arguments)
         # append the configuration to the list of patterns

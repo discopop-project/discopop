@@ -28,6 +28,8 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     show_decision_graph,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
+from discopop_library.discopop_optimizer.classes.nodes.ContextRestore import ContextRestore
+from discopop_library.discopop_optimizer.classes.nodes.ContextSave import ContextSave
 
 logger = logging.getLogger("Optimizer")
 
@@ -145,14 +147,48 @@ class DeviceMemory(object):
         self.memory[device_id][wda.memory_region] = wda
 
     def log_state(self):
-        logger.info("Memory State:")
+        logger.info("Memory state:")
         for device_id in self.memory:
             logger.info("-> Device: " + str(device_id))
             for mem_reg in self.memory[device_id]:
                 logger.info("\t-> " + str(self.memory[device_id][mem_reg]))
-
         logger.info("")
 
+class DataFrame(object):
+    entered_data_regions_by_device: Dict[DeviceID, List[WriteDataAccess]]
+    
+    def __init__(self):
+        self.entered_data_regions_by_device = dict()
+
+    def parse_update(self, update: Update):
+        if update.is_first_data_occurrence:
+            if update.target_device_id not in self.entered_data_regions_by_device:
+                self.entered_data_regions_by_device[update.target_device_id] = []
+            self.entered_data_regions_by_device[update.target_device_id].append(update.write_data_access)
+
+    def cleanup_dataframe(self, node_id: int, memory: DeviceMemory, experiment: Experiment) -> List[Update]:
+        """synchronize data to the host device and issue a delete update"""
+        updates: List[Update] = []
+        for device_id in self.entered_data_regions_by_device:
+            for wda in self.entered_data_regions_by_device[device_id]:
+                # issue delete updates
+                updates.append(Update(node_id, node_id, device_id, experiment.get_system().get_host_device_id(), wda, False, data_at(experiment.optimization_graph, node_id).original_cu_id, data_at(experiment.optimization_graph, node_id).original_cu_id, delete_data=True))
+                # updates += memory.perform_read(node_id, experiment.get_system().get_host_device_id(), cast(ReadDataAccess, wda))
+                # cleanup memory
+                del memory.memory[device_id][wda.memory_region]
+        
+        print("CDF Updates: ")
+        for u in updates:
+            print("\t", u)
+        return updates
+    
+    def log_state(self):
+        logger.info("DataFrame:")
+        for device_id in self.entered_data_regions_by_device:
+            logger.info("-> Device: " + str(device_id))
+            for wda in self.entered_data_regions_by_device[device_id]:
+                logger.info("\t-> " + str(wda.memory_region) + " : " + wda.var_name)
+        logger.info("")
 
 def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experiment) -> List[Update]:
     updates: List[Update] = []
@@ -172,6 +208,9 @@ def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experi
         # initialize device memory
         memory = DeviceMemory(graph, experiment)
 
+        # initialize data frame stack, used to cleanup data from the devices when leaving a branch or function
+        dataframe_stack: List[DataFrame] = [DataFrame()]
+
         # traverse function graph and calculate necessary data updates
         while next_node is not None or len(return_node_stack) != 0:
             # 0: check if next_node exists
@@ -190,15 +229,34 @@ def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experi
             logger.info("Current node: " + str(current_node) + " @ device " + str(current_device_id))
 
             # identify necessary updates
+            tmp_updates: List[Update] = []
             for rda in current_node_data.read_memory_regions:
-                updates += memory.perform_read(current_node, current_device_id, rda)
+                tmp_updates += memory.perform_read(current_node, current_device_id, rda)
             # assumption (potential improvements for later): each written memory region is also read
             # todo: replace this assumption with allocations on the device, if no prior data is read
             for rda in cast(Set[ReadDataAccess], current_node_data.written_memory_regions):
-                updates += memory.perform_read(current_node, current_device_id, rda)
+                tmp_updates += memory.perform_read(current_node, current_device_id, rda)
             for wda in current_node_data.written_memory_regions:
                 memory.perform_write(current_node, current_device_id, wda)
             memory.log_state()
+
+            # register newly created data on a device in the current data frame
+            for update in tmp_updates:
+                dataframe_stack[-1].parse_update(update)
+            logger.info("Data Frame Stack:")
+            for df in dataframe_stack:
+                df.log_state()
+            logger.info("")
+
+            # add a new data frame, if a branch is entered
+            if type(current_node_data) == ContextRestore:
+                dataframe_stack.append(DataFrame())
+
+            # close the current data frame if a branch is exited
+            if type(current_node_data) == ContextSave:
+                tmp_updates += dataframe_stack[-1].cleanup_dataframe(current_node, memory, experiment)
+                dataframe_stack.pop()
+
 
             # 1: prepare graph traversal
             successors = get_successors(graph, current_node)
@@ -245,6 +303,8 @@ def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experi
                         # pop element from device_stack
                         logger.info("Path end reached!")
                         device_id_stack.pop()
+                        tmp_updates += dataframe_stack[-1].cleanup_dataframe(current_node, memory, experiment)
+                        dataframe_stack.pop()
 
             # 1.2: save successor to return_node_stack if required
             if len(children) == 0:
@@ -254,7 +314,9 @@ def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experi
                 return_node_stack += children
                 for c in children:
                     device_id_stack.append(current_device_id)
+                    dataframe_stack.append(DataFrame())
                 # add device id of the parent to the device_id_stack for each child, as the last element will be popped when the path end is reached
+                # add a new dataframe for each child to enforce cleaning up before leaving a loop body, if necessary
                 # children will be visited before the successor is visited
 
             # 1.3: log state
@@ -263,9 +325,13 @@ def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experi
             logger.info("device_id_stack: " + str(device_id_stack))
             logger.info("")
 
-    show_decision_graph(graph, decisions, show_dataflow=True, show_mutex_edges=False)
+            # todo remove
+            memory.log_state()
 
-    logger.info("Updates after new calculateion: ")
+            # register identified updates
+            updates += tmp_updates
+
+    logger.info("Updates after new calculation: ")
     for u in updates:
         logger.info("--> " + str(u))
     logger.info("")
