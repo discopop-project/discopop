@@ -32,23 +32,23 @@ def calculate_data_movement(experiment: Experiment):
             len(experiment.detection_result.patterns.optimizer_output),
         )
         # calculate necessary updates
-#        function_performance_models_without_context = get_performance_models_for_functions(
-#            experiment, experiment.optimization_graph, restrict_to_decisions=set(oo_suggestion.decisions)
-#        )
+        #        function_performance_models_without_context = get_performance_models_for_functions(
+        #            experiment, experiment.optimization_graph, restrict_to_decisions=set(oo_suggestion.decisions)
+        #        )
 
-#        function_performance_models = calculate_data_transfers(
-#            experiment.optimization_graph, function_performance_models_without_context, experiment
-#        )
+        #        function_performance_models = calculate_data_transfers(
+        #            experiment.optimization_graph, function_performance_models_without_context, experiment
+        #        )
 
         updates = new_calculate_data_transfers(experiment.optimization_graph, oo_suggestion.decisions, experiment)
         for update in updates:
             oo_suggestion.add_data_movement(update)
 
-#        # collect necessary updates
-#        for function in function_performance_models:
-#            for cost_model, context in function_performance_models[function]:
-#                for update in context.necessary_updates:
-#                    oo_suggestion.add_data_movement(update)
+        #        # collect necessary updates
+        #        for function in function_performance_models:
+        #            for cost_model, context in function_performance_models[function]:
+        #                for update in context.necessary_updates:
+        #                    oo_suggestion.add_data_movement(update)
 
         # optimize updates
         oo_suggestion = optimize_updates(experiment, oo_suggestion, experiment.arguments)

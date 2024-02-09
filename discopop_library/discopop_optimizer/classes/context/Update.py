@@ -41,7 +41,7 @@ class Update(object):
         target_cu_id: Optional[NodeID],
         originated_from_node: Optional[int] = None,
         range: Optional[Tuple[int, int]] = None,
-        delete_data: bool = False
+        delete_data: bool = False,
     ):
         self.source_node_id = source_node_id
         self.target_node_id = target_node_id
@@ -117,6 +117,6 @@ def construct_update_from_dict(values: Dict[str, Any]) -> Update:
         values["source_cu_id"],
         values["target_cu_id"],
         range=values["range"],
-        delete_data=values["delete_data"]
+        delete_data=values["delete_data"],
     )
     return update
