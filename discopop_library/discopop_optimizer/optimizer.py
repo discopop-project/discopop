@@ -48,6 +48,7 @@ from discopop_library.discopop_optimizer.classes.enums.Distributions import Free
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.system.system_utils import generate_default_system_configuration
 from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import query_user_for_symbol_values
+from discopop_library.discopop_optimizer.interactive.interactive_optimizer import run_interactive_optimizer
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
 from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_combinations import (
     evaluate_all_decision_combinations,
@@ -76,6 +77,13 @@ from ..HostpotLoader.hostpot_loader import run as load_hotspots
 
 
 def run(arguments: OptimizerArguments):
+    if arguments.interactive:
+        run_interactive_optimizer(arguments)
+    else:
+        run_passive_optimizer(arguments)
+
+
+def run_passive_optimizer(arguments: OptimizerArguments):
     logger = logging.getLogger("Optimizer")
 
     # check prerequisites and setup folder structure
