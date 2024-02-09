@@ -163,7 +163,7 @@ class PETParser(object):
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer
-    
+
     def __pin_function_calls_to_host(self):
         host_device_id = self.experiment.get_system().get_host_device_id()
         logger.info("Pinning functions and function calls to host device: " + str(host_device_id))
@@ -178,7 +178,6 @@ class PETParser(object):
                 if len(get_out_call_edges(self.graph, node)) > 0:
                     logger.info("\tPinning calling node: " + str(node))
                     data_at(self.graph, node).device_id = host_device_id
-            
 
     def __add_calling_edges(self):
         all_function_nodes = get_all_function_nodes(self.graph)

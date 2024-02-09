@@ -101,16 +101,21 @@ class DeviceMemory(object):
                     if rda.memory_region in self.memory[device_id]:
                         if self.memory[device_id][rda.memory_region].unique_id >= most_recent_write[1].unique_id:
                             already_synchronized = True
-                            logger.debug("Already synchronized: " + str(Update(
-                        predecessor,
-                        node_id,
-                        most_recent_write[0],
-                        device_id,
-                        most_recent_write[1],
-                        is_first_data_occurrence=is_first_data_occurrence,
-                        source_cu_id=data_at(self.graph, predecessor).original_cu_id,
-                        target_cu_id=data_at(self.graph, node_id).original_cu_id,
-                    )))
+                            logger.debug(
+                                "Already synchronized: "
+                                + str(
+                                    Update(
+                                        predecessor,
+                                        node_id,
+                                        most_recent_write[0],
+                                        device_id,
+                                        most_recent_write[1],
+                                        is_first_data_occurrence=is_first_data_occurrence,
+                                        source_cu_id=data_at(self.graph, predecessor).original_cu_id,
+                                        target_cu_id=data_at(self.graph, node_id).original_cu_id,
+                                    )
+                                )
+                            )
 
             if not already_synchronized:
                 updates.append(
@@ -150,9 +155,10 @@ class DeviceMemory(object):
                 logger.debug("\t-> " + str(self.memory[device_id][mem_reg]))
         logger.debug("")
 
+
 class DataFrame(object):
     entered_data_regions_by_device: Dict[DeviceID, List[WriteDataAccess]]
-    
+
     def __init__(self):
         self.entered_data_regions_by_device = dict()
 
@@ -176,20 +182,31 @@ class DataFrame(object):
                 break
             queue += [p for p in get_predecessors(experiment.optimization_graph, current) if p not in queue]
 
-
         for device_id in self.entered_data_regions_by_device:
             for wda in self.entered_data_regions_by_device[device_id]:
                 # issue delete updates
-                updates.append(Update(node_id, node_id, device_id, experiment.get_system().get_host_device_id(), wda, False, last_cu_id, last_cu_id, delete_data=True))
+                updates.append(
+                    Update(
+                        node_id,
+                        node_id,
+                        device_id,
+                        experiment.get_system().get_host_device_id(),
+                        wda,
+                        False,
+                        last_cu_id,
+                        last_cu_id,
+                        delete_data=True,
+                    )
+                )
                 # updates += memory.perform_read(node_id, experiment.get_system().get_host_device_id(), cast(ReadDataAccess, wda))
                 # cleanup memory
                 del memory.memory[device_id][wda.memory_region]
-        
+
         logger.debug("CDF Updates: ")
         for u in updates:
             logger.debug("\t" + str(u))
         return updates
-    
+
     def log_state(self):
         logger.debug("DataFrame:")
         for device_id in self.entered_data_regions_by_device:
@@ -198,7 +215,10 @@ class DataFrame(object):
                 logger.debug("\t-> " + str(wda.memory_region) + " : " + wda.var_name)
         logger.debug("")
 
-def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experiment, targeted_functions: Optional[List[int]] = None) -> List[Update]:
+
+def new_calculate_data_transfers(
+    graph: nx.DiGraph, decisions: List[int], experiment, targeted_functions: Optional[List[int]] = None
+) -> List[Update]:
     updates: List[Update] = []
     logger.debug("Calculating updates for configuration: " + str(decisions))
 
@@ -206,7 +226,14 @@ def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experi
         targeted_functions = get_all_function_nodes(graph)
 
     for idx, function in enumerate(targeted_functions):
-        logger.debug("\t-> Function: " + cast(FunctionRoot, data_at(graph, function)).name + " " + str(idx) + " / " + str(len(targeted_functions)))
+        logger.debug(
+            "\t-> Function: "
+            + cast(FunctionRoot, data_at(graph, function)).name
+            + " "
+            + str(idx)
+            + " / "
+            + str(len(targeted_functions))
+        )
         function_children = get_children(graph, function)
         if len(function_children) == 0:
             continue
@@ -268,7 +295,6 @@ def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experi
                 tmp_updates += dataframe_stack[-1].cleanup_dataframe(current_node, memory, experiment)
                 dataframe_stack.pop()
 
-
             # 1: prepare graph traversal
             successors = get_successors(graph, current_node)
             children = get_children(graph, current_node)
@@ -293,17 +319,20 @@ def new_calculate_data_transfers(graph: nx.DiGraph, decisions: List[int], experi
                             requirements += get_requirements(graph, dec)
                         valid_successors = [s for s in successors if s in requirements]
                     logger.debug("valid after requirements: " + str(valid_successors))
-                        
+
                     # if no successor is a requirement, select a successor which represents a sequential execution at device NONE
                     if len(valid_successors) == 0:
-                        valid_successors = [s for s in successors if data_at(graph, s).represents_sequential_version() and data_at(graph,s).device_id == None]    
-                    logger.debug("valid successors after strict sequential check: " +str( valid_successors))
+                        valid_successors = [
+                            s
+                            for s in successors
+                            if data_at(graph, s).represents_sequential_version() and data_at(graph, s).device_id == None
+                        ]
+                    logger.debug("valid successors after strict sequential check: " + str(valid_successors))
 
                     # if no valid successor with the strict sequential version check could be found, relax the condition and try again
                     if len(valid_successors) == 0:
-                        valid_successors = [s for s in successors if data_at(graph, s).represents_sequential_version()]    
-                    logger.debug("valid successors after loose sequential check: " +str( valid_successors))
-                    
+                        valid_successors = [s for s in successors if data_at(graph, s).represents_sequential_version()]
+                    logger.debug("valid successors after loose sequential check: " + str(valid_successors))
 
                     if len(valid_successors) > 0:
                         logger.debug("valid successors: " + str(valid_successors))
@@ -361,7 +390,9 @@ def calculate_data_transfers_by_models(
             # create a ContextObject for the current path
             context = ContextObject(function.node_id, [function.device_id])
 
-            context.necessary_updates = new_calculate_data_transfers(graph, model.path_decisions, experiment, [function.node_id])
-            
+            context.necessary_updates = set(
+                new_calculate_data_transfers(graph, model.path_decisions, experiment, [function.node_id])
+            )
+
             result_dict[function].append((model, context))
     return result_dict
