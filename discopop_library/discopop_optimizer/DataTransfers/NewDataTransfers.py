@@ -350,8 +350,15 @@ def new_calculate_data_transfers(
             if len(children) == 0:
                 next_node = successor
             else:
-                return_node_stack.append(cast(int, successor))
+                if successor is None:
+                    logger.warning("Got NONE successor")
+                if None in children:
+                    logger.warning("Got NONE child!")
+                if successor is not None:
+                    # successor might be none at path end
+                    return_node_stack.append(successor)
                 return_node_stack += children
+
                 for c in children:
                     device_id_stack.append(current_device_id)
                     dataframe_stack.append(DataFrame())
