@@ -40,6 +40,7 @@ from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import Funct
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
+from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     add_call_edge,
     add_dataflow_edge,
@@ -152,6 +153,12 @@ class PETParser(object):
 
         # add calling edges
         self.__add_calling_edges()
+
+        logger.info("Inlining read and write information from function calls..")
+        # note: inlining at this position is a cheap but less reliable alternative to propagating everythin on function calls.
+        # note: full propagation leads to issues with WriteDataAccess unique ids and potentially broken results
+        self.__inline_reads_and_writes_from_call()
+        logger.info("Inlining read and write information from function calls done.")
 
         if self.experiment.arguments.pin_function_calls_to_host:
             self.__pin_function_calls_to_host()
@@ -1434,3 +1441,32 @@ class PETParser(object):
             for p in parents:
                 data_at(self.graph, p).written_memory_regions.update(current_data.written_memory_regions)
                 data_at(self.graph, p).read_memory_regions.update(current_data.read_memory_regions)
+
+    def __inline_reads_and_writes_from_call(self):
+        for node in self.graph.nodes:
+            called = get_out_call_edges(self.graph, node)
+            if len(called) == 0:
+                continue
+            logger.info("Node: " + str(node) + " called: " + str(called))
+            # identify reads and writes in called function
+            node_data = data_at(self.graph, node)
+            for function_id in called:
+                called_function_data = data_at(self.graph, function_id)
+                logger.info("--> called function: " + cast(FunctionRoot, called_function_data).name)
+                function_read_memory_regions: Dict[MemoryRegion, ReadDataAccess] = dict()
+                function_written_memory_regions: Dict[MemoryRegion, WriteDataAccess] = dict()
+                for rda in called_function_data.read_memory_regions:
+                    if rda.memory_region not in function_read_memory_regions:
+                        function_read_memory_regions[rda.memory_region] = rda
+                for wda in called_function_data.written_memory_regions:
+                    if wda.memory_region not in function_written_memory_regions:
+                        function_written_memory_regions[wda.memory_region] = wda
+                # append the gathered reads and writes to the calling node
+                for read_mem_reg in function_read_memory_regions:
+                    call_rda = copy.deepcopy(function_read_memory_regions[read_mem_reg])
+                    call_rda.from_call = True
+                    node_data.read_memory_regions.add(call_rda)
+                for written_mem_reg in function_written_memory_regions:
+                    call_wda = copy.deepcopy(function_written_memory_regions[written_mem_reg])
+                    call_wda.from_call = True
+                    node_data.written_memory_regions.add(call_wda)
