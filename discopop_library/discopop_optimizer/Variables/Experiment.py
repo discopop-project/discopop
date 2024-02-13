@@ -74,6 +74,7 @@ class Experiment(object):
     next_free_node_id: int
     suggestion_to_node_ids_dict: Dict[int, List[int]]
     node_id_to_suggestion_dict: Dict[int, int]
+    pattern_id_to_decisions_dict: Dict[int, List[int]]
 
     hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]
     hotspot_function_node_ids: List[int]
@@ -102,6 +103,7 @@ class Experiment(object):
         self.selected_paths_per_function = dict()
         self.suggestion_to_node_ids_dict = dict()
         self.node_id_to_suggestion_dict = dict()
+        self.pattern_id_to_decisions_dict = dict()
         self.hotspot_functions = hotspot_functions
         self.hotspot_function_node_ids = []
 

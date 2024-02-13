@@ -215,10 +215,11 @@ def __get_optimizer_output_pattern(
                 if best_configuration is None:
                     best_configuration = OptimizerOutputPattern(
                         experiment.detection_result.pet.node_at(
-                            cast(NodeID, data_at(experiment.optimization_graph, node_id).original_cu_id)
+                            cast(NodeID, data_at(experiment.optimization_graph, node_id).original_cu_id),
                         ),
                         [],
                         experiment.get_system().get_host_device_id(),
+                        experiment,
                     )
                 best_configuration.add_pattern(
                     pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
@@ -232,6 +233,7 @@ def __get_optimizer_output_pattern(
             ),
             [],
             experiment.get_system().get_host_device_id(),
+            experiment,
         )
     # collect data movement information
     for update in context.necessary_updates:

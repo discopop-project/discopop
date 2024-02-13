@@ -448,6 +448,7 @@ def __dump_result(
                             ),
                             [],
                             experiment.get_system().get_host_device_id(),
+                            experiment,
                         )
                     best_configuration.add_pattern(
                         pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()

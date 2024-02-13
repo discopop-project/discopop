@@ -49,6 +49,7 @@ def import_suggestion(
         if suggestion.node_id == data_at(graph, node).cu_id and type(data_at(graph, node)) == Loop:
             # save node in introduced_options to mark as mutually exclusive
             introduced_options.add(node)
+            environment.pattern_id_to_decisions_dict[suggestion.pattern_id] = [node]
             # todo: This implementation for the device id is temporary and MUST be replaced
             for device_id in suggestion_device_ids:
                 # reserve a node id for the new parallelization option
@@ -130,8 +131,10 @@ def import_suggestion(
                     if environment.arguments.single_suggestions:
                         # register the individual Pattern as a OutputPattern to reflect the device mapping of a regular suggestion
                         optimizer_output_pattern = OptimizerOutputPattern(
-                            suggestion._node, [new_node_id], environment.get_system().get_host_device_id()
+                            suggestion._node, [new_node_id], environment.get_system().get_host_device_id(), environment
                         )
+                        logger.info("Created OptimizerOutputPattern: " + str(optimizer_output_pattern.pattern_id))
+
                         optimizer_output_pattern.add_pattern(
                             pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type
                         )
