@@ -143,17 +143,32 @@ def __create_optimizer_output_pattern(
                 experiment.get_system().get_host_device_id(),
                 experiment,
             )
-            logger.debug("Initialized OptimizerOutputPattern based on " + str(suggestion_id))
+            logger.info("Initialized OptimizerOutputPattern based on " + str(suggestion_id))
 
         pattern_obj = experiment.detection_result.patterns.get_pattern_from_id(suggestion_id)
         if "device_id" in pattern_obj.__dict__:
             device_id = pattern_obj.__dict__["device_id"]
         else:
             device_id = experiment.get_system().get_host_device_id()
-        output_pattern.add_pattern(
-            pattern_obj.pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
-        )
-        logger.debug("Added pattern : " + str(suggestion_id))
+
+        # unpack OptimizerOutputPattern if necessary
+        if type(pattern_obj) == OptimizerOutputPattern:
+            logger.info("OptimizerOutputPattern found!")
+            for contained_pattern in pattern_obj.applied_patterns:
+                logger.info("--> " + str(contained_pattern))
+                output_pattern.add_pattern(
+                    contained_pattern["pattern_id"], contained_pattern["device_id"], contained_pattern["device_type"]
+                )
+                logger.info("Added sub-pattern : " + str(contained_pattern["pattern_id"]))
+            logger.info("Inherited decisions from pattern_obj: " + str(pattern_obj.decisions))
+            output_pattern.decisions += pattern_obj.decisions
+
+        else:
+            # regular pattern type
+            output_pattern.add_pattern(
+                pattern_obj.pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()
+            )
+            logger.info("Added pattern : " + str(suggestion_id))
 
     if output_pattern is None:
         return None

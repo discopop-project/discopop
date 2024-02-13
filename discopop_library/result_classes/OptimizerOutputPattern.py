@@ -71,7 +71,8 @@ class OptimizerOutputPattern(PatternBase):
             if d not in decision_list:
                 decision_list.append(d)
         for tmp_dict in self.applied_patterns:
-            for d in experiment.pattern_id_to_decisions_dict[tmp_dict["pattern_id"]]:
-                if d not in decision_list:
-                    decision_list.append(d)
+            if tmp_dict["pattern_id"] in experiment.pattern_id_to_decisions_dict:
+                for d in experiment.pattern_id_to_decisions_dict[tmp_dict["pattern_id"]]:
+                    if d not in decision_list:
+                        decision_list.append(d)
         return decision_list
