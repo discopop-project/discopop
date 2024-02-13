@@ -52,7 +52,13 @@ class DeviceMemory(object):
                 if most_recent_write is None:
                     most_recent_write = (dvid, self.memory[dvid][rda.memory_region])
                 else:
-                    if self.memory[dvid][rda.memory_region].unique_id > most_recent_write[1].unique_id:
+                    if self.memory[dvid][rda.memory_region].from_call:
+                        most_recent_write = (dvid, self.memory[dvid][rda.memory_region])
+
+                    elif (
+                        self.memory[dvid][rda.memory_region].unique_id > most_recent_write[1].unique_id
+                        and not most_recent_write[1].from_call
+                    ):
                         most_recent_write = (dvid, self.memory[dvid][rda.memory_region])
 
         # check for update necessity
@@ -131,6 +137,35 @@ class DeviceMemory(object):
                     )
                 )
 
+        elif most_recent_write[1].from_call:
+            # force a synchronization
+            predecessors = get_predecessors(self.graph, node_id)
+            if len(predecessors) == 0:
+                predecessor = node_id
+            else:
+                predecessor = predecessors[0]
+
+            # check if the update creates the memory on the device
+            if device_id in self.memory:
+                if rda.memory_region in self.memory[device_id]:
+                    is_first_data_occurrence = False
+                else:
+                    is_first_data_occurrence = True
+            else:
+                is_first_data_occurrence = True
+
+            updates.append(
+                Update(
+                    predecessor,
+                    node_id,
+                    most_recent_write[0],
+                    device_id,
+                    most_recent_write[1],
+                    is_first_data_occurrence=is_first_data_occurrence,
+                    source_cu_id=data_at(self.graph, predecessor).original_cu_id,
+                    target_cu_id=data_at(self.graph, node_id).original_cu_id,
+                )
+            )
         else:
             # no update necessary, most recent data on the device
             pass
