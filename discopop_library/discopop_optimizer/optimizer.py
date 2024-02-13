@@ -309,18 +309,3 @@ def run_passive_optimizer(arguments: OptimizerArguments):
     export_patterns_to_json(experiment, os.path.join(optimizer_dir, "patterns.json"))
     # save updated detection_result to disk
     export_detection_result_to_json(experiment, os.path.join(optimizer_dir, "detection_result_dump.json"))
-
-    logger.info("")
-    logger.info("Pattern id to decisions: ")
-    for pattern_type in experiment.detection_result.patterns.__dict__:
-        for pattern in experiment.detection_result.patterns.__dict__[pattern_type]:
-            if not pattern.applicable_pattern:
-                continue
-            if pattern.pattern_id not in experiment.pattern_id_to_decisions_dict:
-                experiment.pattern_id_to_decisions_dict[pattern.pattern_id] = []
-            logger.info(
-                "-> "
-                + str(pattern.pattern_id)
-                + " \t --> "
-                + str(experiment.pattern_id_to_decisions_dict[pattern.pattern_id])
-            )

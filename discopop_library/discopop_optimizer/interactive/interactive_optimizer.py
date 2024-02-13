@@ -24,7 +24,7 @@ from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
-logger = logging.getLogger("InteractiveOptimizer")
+logger = logging.getLogger("Optimizer").getChild("Interactive")
 
 
 def run_interactive_optimizer(arguments: OptimizerArguments):
