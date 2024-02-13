@@ -19,7 +19,9 @@ def remove_same_device_updates(
     """Remove updates where source and device id are equal. These are artifacts from initializing device memory states during the data movement calculation."""
     cleaned_updates: List[Update] = []
     for update in configuration.data_movement:
-        if update.source_device_id == update.target_device_id:
+        if (
+            update.source_device_id == update.target_device_id and not update.delete_data
+        ):  # delete updates can be issued with the same source and target device and need to be kept
             # ignore this update
             continue
         else:

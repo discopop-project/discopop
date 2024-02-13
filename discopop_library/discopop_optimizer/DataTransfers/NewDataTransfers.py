@@ -181,7 +181,6 @@ class DataFrame(object):
                 last_cu_id = current_data.original_cu_id
                 break
             queue += [p for p in get_predecessors(experiment.optimization_graph, current) if p not in queue]
-
         for device_id in self.entered_data_regions_by_device:
             for wda in self.entered_data_regions_by_device[device_id]:
                 # issue delete updates
@@ -205,6 +204,47 @@ class DataFrame(object):
         logger.debug("CDF Updates: ")
         for u in updates:
             logger.debug("\t" + str(u))
+
+        # in case of multiple cleanup updates to the same memory from different devices, identify the most recent version for transfer and delete the others
+        # -> split updates by memory region
+        updates_by_mem_reg: Dict[MemoryRegion, List[Update]] = dict()
+        for u in updates:
+            if u.write_data_access.memory_region not in updates_by_mem_reg:
+                updates_by_mem_reg[u.write_data_access.memory_region] = []
+            updates_by_mem_reg[u.write_data_access.memory_region].append(u)
+        # -> identify the copies and deletions
+        refined_updates: List[Update] = []
+        for mem_reg in updates_by_mem_reg:
+            copy_exit_update: Optional[Update] = None
+            delete_exit_updates: List[Update] = []
+            for update in updates_by_mem_reg[mem_reg]:
+                if copy_exit_update is None:
+                    copy_exit_update = update
+                    continue
+                # check for the most recent memory state
+                if update.write_data_access.unique_id > copy_exit_update.write_data_access.unique_id:
+                    # found a more recent memory state
+                    delete_exit_updates.append(copy_exit_update)
+                    copy_exit_update = update
+                else:
+                    # update is older than copy_exit_update, add it to the list of deletions
+                    delete_exit_updates.append(update)
+            if copy_exit_update is None:
+                raise ValueError("copy_exit_update is NONE. Something went wrong here.")
+            # -> collect the updates and set the delete_data and copy_delete_data properties
+            copy_exit_update.copy_delete_data = True
+            copy_exit_update.delete_data = False
+            refined_updates.append(copy_exit_update)
+            for update in delete_exit_updates:
+                update.copy_delete_data = False
+                update.delete_data = True
+                refined_updates.append(update)
+
+        logger.debug("Refined CDF Updates: ")
+        for u in refined_updates:
+            logger.debug("\t" + str(u))
+        logger.debug("")
+
         return updates
 
     def log_state(self):

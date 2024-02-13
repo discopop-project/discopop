@@ -27,7 +27,8 @@ class Update(object):
     source_cu_id: Optional[NodeID]
     target_cu_id: Optional[NodeID]
     range: Optional[Tuple[int, int]]
-    delete_data: bool
+    delete_data: bool  # i.e. exit data map(delete: a)
+    copy_delete_data: bool  # i.e. exit data map(from: a)
 
     def __init__(
         self,
@@ -42,6 +43,7 @@ class Update(object):
         originated_from_node: Optional[int] = None,
         range: Optional[Tuple[int, int]] = None,
         delete_data: bool = False,
+        copy_delete_data: bool = False,
     ):
         self.source_node_id = source_node_id
         self.target_node_id = target_node_id
@@ -54,9 +56,11 @@ class Update(object):
         self.originated_from_node = originated_from_node
         self.range = range
         self.delete_data = delete_data
+        self.copy_delete_data = copy_delete_data
 
     def __str__(self):
         result_str = ""
+        result_str += "IssueCopyDelete " if self.copy_delete_data else ""
         result_str += "IssueDelete " if self.delete_data else ""
         result_str += "First" if self.is_first_data_occurrence else ""
         return (
@@ -89,6 +93,7 @@ class Update(object):
         result_dict["end_line"] = pet.node_at(cast(NodeID, self.target_cu_id)).start_position()
         result_dict["range"] = self.range
         result_dict["delete_data"] = self.delete_data
+        result_dict["copy_delete_data"] = self.copy_delete_data
         return json.dumps(result_dict)
 
     def toDict(self) -> Dict[str, Any]:
@@ -103,6 +108,7 @@ class Update(object):
         result_dict["target_cu_id"] = self.target_cu_id
         result_dict["range"] = self.range
         result_dict["delete_data"] = self.delete_data
+        result_dict["copy_delete_data"] = self.copy_delete_data
         return result_dict
 
 
@@ -118,5 +124,6 @@ def construct_update_from_dict(values: Dict[str, Any]) -> Update:
         values["target_cu_id"],
         range=values["range"],
         delete_data=values["delete_data"],
+        copy_delete_data=values["copy_delete_data"],
     )
     return update
