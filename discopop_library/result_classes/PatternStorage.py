@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import List
+from typing import List, cast
 
 from discopop_explorer.pattern_detectors.PatternBase import PatternBase
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -28,3 +28,12 @@ class PatternStorage(object):
 
     def __init__(self):
         self.optimizer_output = []
+
+    def get_pattern_from_id(self, pattern_id: int) -> PatternBase:
+        for type in self.__dict__:
+            print("type: ", type)
+            for suggestion in self.__dict__[type]:
+                if suggestion.pattern_id == pattern_id:
+                    print("FOUND")
+                    return cast(PatternBase, suggestion)
+        raise ValueError("Pattern not found: " + str(pattern_id))

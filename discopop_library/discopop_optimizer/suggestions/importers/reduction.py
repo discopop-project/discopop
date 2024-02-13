@@ -42,6 +42,7 @@ def import_suggestion(
         if suggestion.node_id == data_at(graph, node).cu_id and type(data_at(graph, node)) == Loop:
             # save node in introduced_options to mark as mutually exclusive
             introduced_options.add(node)
+            environment.pattern_id_to_decisions_dict[suggestion.pattern_id] = [node]
             for device_id in suggestion_device_ids:
                 # reserve a node id for the new parallelization option
                 new_node_id = get_next_free_node_id_function()
