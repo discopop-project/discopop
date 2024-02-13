@@ -183,7 +183,24 @@ class DataFrame(object):
             queue += [p for p in get_predecessors(experiment.optimization_graph, current) if p not in queue]
         for device_id in self.entered_data_regions_by_device:
             for wda in self.entered_data_regions_by_device[device_id]:
-                # issue delete updates
+                # check if a delete or copy delete should be issued
+                issue_copy_delete = False
+                issue_delete = False
+
+                if wda.memory_region not in memory.memory[experiment.get_system().get_host_device_id()]:
+                    issue_copy_delete = True
+                else:
+                    if (
+                        memory.memory[device_id][wda.memory_region].unique_id
+                        > memory.memory[experiment.get_system().get_host_device_id()][wda.memory_region].unique_id
+                    ):
+                        # device has a more recent memory state than the host
+                        issue_copy_delete = True
+                    else:
+                        # host has a more recent memory state than the device
+                        issue_delete = True
+
+                # issue delete update
                 updates.append(
                     Update(
                         node_id,
@@ -194,10 +211,11 @@ class DataFrame(object):
                         False,
                         last_cu_id,
                         last_cu_id,
-                        delete_data=True,
+                        delete_data=issue_delete,
+                        copy_delete_data=issue_copy_delete,
                     )
                 )
-                # updates += memory.perform_read(node_id, experiment.get_system().get_host_device_id(), cast(ReadDataAccess, wda))
+
                 # cleanup memory
                 del memory.memory[device_id][wda.memory_region]
 
@@ -218,10 +236,14 @@ class DataFrame(object):
             copy_exit_update: Optional[Update] = None
             delete_exit_updates: List[Update] = []
             for update in updates_by_mem_reg[mem_reg]:
+                if not update.copy_delete_data:
+                    # data should only be deleted.
+                    delete_exit_updates.append(update)
+                    continue
+                # check for the most recent memory state
                 if copy_exit_update is None:
                     copy_exit_update = update
                     continue
-                # check for the most recent memory state
                 if update.write_data_access.unique_id > copy_exit_update.write_data_access.unique_id:
                     # found a more recent memory state
                     delete_exit_updates.append(copy_exit_update)
@@ -229,12 +251,12 @@ class DataFrame(object):
                 else:
                     # update is older than copy_exit_update, add it to the list of deletions
                     delete_exit_updates.append(update)
-            if copy_exit_update is None:
-                raise ValueError("copy_exit_update is NONE. Something went wrong here.")
+
             # -> collect the updates and set the delete_data and copy_delete_data properties
-            copy_exit_update.copy_delete_data = True
-            copy_exit_update.delete_data = False
-            refined_updates.append(copy_exit_update)
+            if copy_exit_update is not None:
+                copy_exit_update.copy_delete_data = True
+                copy_exit_update.delete_data = False
+                refined_updates.append(copy_exit_update)
             for update in delete_exit_updates:
                 update.copy_delete_data = False
                 update.delete_data = True
