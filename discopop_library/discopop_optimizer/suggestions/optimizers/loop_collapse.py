@@ -244,7 +244,10 @@ def __collapse_loops_in_function(function_node_id):
                 global_experiment.detection_result.patterns.do_all.append(pattern_info)
                 # construct optimizer output pattern to represent the non-standalone pattern_info
                 optimizer_output_pattern = OptimizerOutputPattern(
-                    pattern_info._node, [new_node_id], global_experiment.get_system().get_host_device_id()
+                    pattern_info._node,
+                    [new_node_id],
+                    global_experiment.get_system().get_host_device_id(),
+                    global_experiment,
                 )
                 optimizer_output_pattern.add_pattern(
                     pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type
