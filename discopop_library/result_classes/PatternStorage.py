@@ -31,9 +31,7 @@ class PatternStorage(object):
 
     def get_pattern_from_id(self, pattern_id: int) -> PatternBase:
         for type in self.__dict__:
-            print("type: ", type)
             for suggestion in self.__dict__[type]:
                 if suggestion.pattern_id == pattern_id:
-                    print("FOUND")
                     return cast(PatternBase, suggestion)
         raise ValueError("Pattern not found: " + str(pattern_id))

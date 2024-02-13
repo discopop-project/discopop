@@ -64,3 +64,14 @@ class OptimizerOutputPattern(PatternBase):
 
     def add_data_movement(self, update: Update):
         self.data_movement.append(update)
+
+    def get_contained_decisions(self, experiment: Experiment) -> List[int]:
+        decision_list: List[int] = []
+        for d in self.decisions:
+            if d not in decision_list:
+                decision_list.append(d)
+        for tmp_dict in self.applied_patterns:
+            for d in experiment.pattern_id_to_decisions_dict[tmp_dict["pattern_id"]]:
+                if d not in decision_list:
+                    decision_list.append(d)
+        return decision_list
