@@ -22,6 +22,7 @@ from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
     restore_session,
 )
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
+from discopop_library.result_classes.MergedPattern import MergedPattern
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 logger = logging.getLogger("Optimizer").getChild("Interactive")
@@ -115,9 +116,9 @@ def export_configuration(experiment: Experiment, applied_suggestions: Set[int], 
     for update in data_transfer:
         configured_pattern.add_data_movement(update)
     logger.info("Calculating necessary data movement")
-    configured_pattern = optimize_updates(experiment, configured_pattern, arguments)
+    configured_pattern = cast(MergedPattern, optimize_updates(experiment, configured_pattern, arguments))
     # append the configuration to the list of patterns
-    experiment.detection_result.patterns.optimizer_output.append(configured_pattern)
+    experiment.detection_result.patterns.merged_pattern.append(configured_pattern)
     # save updated patterns.json to disk
     export_patterns_to_json(experiment, os.path.join("optimizer", "patterns.json"))
     logger.info("Saved patterns.")
@@ -126,18 +127,16 @@ def export_configuration(experiment: Experiment, applied_suggestions: Set[int], 
     logger.info("Saved experiment.")
 
 
-def __create_optimizer_output_pattern(
-    experiment: Experiment, applied_suggestions: Set[int]
-) -> Optional[OptimizerOutputPattern]:
+def __create_optimizer_output_pattern(experiment: Experiment, applied_suggestions: Set[int]) -> Optional[MergedPattern]:
     if len(applied_suggestions) == 0:
         return None
-    output_pattern: Optional[OptimizerOutputPattern] = None
+    output_pattern: Optional[MergedPattern] = None
 
     for suggestion_id in applied_suggestions:
         if output_pattern is None:
             # Initialize output_pattern
             first_suggestion = experiment.detection_result.patterns.get_pattern_from_id(suggestion_id)
-            output_pattern = OptimizerOutputPattern(
+            output_pattern = MergedPattern(
                 first_suggestion._node,
                 experiment.pattern_id_to_decisions_dict[first_suggestion.pattern_id],
                 experiment.get_system().get_host_device_id(),
@@ -152,7 +151,7 @@ def __create_optimizer_output_pattern(
             device_id = experiment.get_system().get_host_device_id()
 
         # unpack OptimizerOutputPattern if necessary
-        if type(pattern_obj) == OptimizerOutputPattern:
+        if isinstance(pattern_obj, OptimizerOutputPattern):
             logger.info("OptimizerOutputPattern found!")
             for contained_pattern in pattern_obj.applied_patterns:
                 logger.info("--> " + str(contained_pattern))
