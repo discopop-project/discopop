@@ -60,7 +60,7 @@ def from_json_patterns(
                     logger.debug("Skipping pattern: " + str(suggestion_dict["pattern_id"]))
                     continue
 
-            if suggestion_type == "optimizer_output":
+            if suggestion_type in ["optimizer_output", "merged_pattern"]:
                 from_optimizer_output(file_mapping, patterns_by_type, suggestion, arguments, patch_generator_dir)
                 continue
 

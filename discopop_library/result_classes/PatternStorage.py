@@ -25,9 +25,11 @@ class PatternStorage(object):
     simple_gpu: List[PatternInfo]
     combined_gpu: List[PatternInfo]
     optimizer_output: List[PatternBase]
+    merged_pattern: List[PatternBase]
 
     def __init__(self):
         self.optimizer_output = []
+        self.merged_pattern = []
 
     def get_pattern_from_id(self, pattern_id: int) -> PatternBase:
         for type in self.__dict__:
