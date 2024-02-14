@@ -18,6 +18,7 @@ class OptimizerArguments(GeneralArguments):
 
     verbose: bool
     interactive: bool
+    interactive_export: str
     doall_microbench_file: str
     reduction_microbench_file: str
     allow_nested_parallelism: bool

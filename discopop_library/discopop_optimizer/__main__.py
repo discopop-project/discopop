@@ -16,6 +16,10 @@ from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArgu
 def parse_args() -> OptimizerArguments:
     """Parse the arguments passed to the discopop_optimizer"""
     parser = ArgumentParser(description="DiscoPoP Optimizer")
+    # all flags that belong to the interactive optimizer for pattern merging
+    interactive_parser = parser.add_argument_group(
+        "Interactive (Pattern merging)", "Arguments related to pattern merging."
+    )
     # all flags that are not considered stable should be added to the experimental_parser
     experimental_parser = parser.add_argument_group(
         "EXPERIMENTAL",
@@ -49,6 +53,10 @@ def parse_args() -> OptimizerArguments:
     parser.add_argument("--pin-function-calls-to-host", action="store_true", help="Force functions calls on the host system. Prevent offloading of entire functions.")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
+    # INTERACTIVE (Merge) flags
+    interactive_parser.add_argument("-i", "--interactive", action="store_true",
+        help="Enable interactive pattern merge tool.")
+    interactive_parser.add_argument("--interactive-export", metavar="suggestion_ids", type=str, default="None", help="Merge and export the result for the comma-separated list of suggestion ids. Requires '-i' .")
     # EXPERIMENTAL FLAGS:
     experimental_parser.add_argument("--allow-nested-parallelism", action="store_true",
         help="Allow the creation of nested parallelism suggestions. "
@@ -56,8 +64,7 @@ def parse_args() -> OptimizerArguments:
         + "high overhead introduced by entering nested parallelism!")
     experimental_parser.add_argument("--check-called-function-for-nested-parallelism", action="store_true", help="Extend the check for nested parallelism to called functions."
         + "WARNING: Execution time may increase significantly!")
-    experimental_parser.add_argument("-i", "--interactive", action="store_true",
-        help="Enable interactive execution.")
+    
     experimental_parser.add_argument("--plot", action="store_true",
         help="Plot the internal graph.")
     # fmt: on
@@ -67,6 +74,7 @@ def parse_args() -> OptimizerArguments:
     return OptimizerArguments(
         verbose=arguments.verbose,
         interactive=arguments.interactive,
+        interactive_export=arguments.interactive_export,
         doall_microbench_file=arguments.doall_microbench_file,
         reduction_microbench_file=arguments.reduction_microbench_file,
         allow_nested_parallelism=arguments.allow_nested_parallelism,
