@@ -43,15 +43,32 @@ def run_interactive_optimizer(arguments: OptimizerArguments):
 
     applied_suggestions: Set[int] = set()
 
-    # mainloop
-    got_continue = True
-    while got_continue:
-        print()
-        print("Options: list, add [<int>]+, rm [<int>]+, exit, export, showdiff, clear")
-        input1 = input()
-        logger.debug("Got input: " + input1)
-        got_continue = parse_input(input1, experiment, applied_suggestions, arguments)
-    logger.info("Closing interactive optimizer..")
+    if arguments.interactive_export != "None":
+        logger.info(
+            "Not entering interactive mode due to specified --interactive-export: " + str(arguments.interactive_export)
+        )
+        parse_interactive_export(experiment, applied_suggestions, arguments)
+    else:
+        # enter interactive mode
+        # mainloop
+        got_continue = True
+        while got_continue:
+            print()
+            print("Options: list, add [<int>]+, rm [<int>]+, exit, export, showdiff, clear")
+            input1 = input()
+            logger.debug("Got input: " + input1)
+            got_continue = parse_input(input1, experiment, applied_suggestions, arguments)
+        logger.info("Closing interactive optimizer..")
+
+
+def parse_interactive_export(experiment: Experiment, applied_suggestions: Set[int], arguments: OptimizerArguments):
+    parse_input(
+        input="add " + arguments.interactive_export.replace(",", " "),
+        experiment=experiment,
+        applied_suggestions=applied_suggestions,
+        arguments=arguments,
+    )
+    parse_input(input="export", experiment=experiment, applied_suggestions=applied_suggestions, arguments=arguments)
 
 
 def parse_input(input: str, experiment: Experiment, applied_suggestions: Set[int], arguments: OptimizerArguments):
