@@ -473,7 +473,7 @@ namespace __dp {
 
     string getMemoryRegionIdFromAddr(string fallback, ADDR addr){
         // use tree
-        return allocatedMemRegTree->get_memory_region_id(fallback, addr);
+        return fallback + "-" + allocatedMemRegTree->get_memory_region_id(fallback, addr);
 
         /*// check if accessed addr in knwon range. If not, return fallback immediately
         if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){

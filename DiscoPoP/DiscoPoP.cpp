@@ -18,7 +18,7 @@
 #define DP_DEBUG false
 #define DP_VERBOSE false  // prints warning messages
 #define DP_hybrid_DEBUG false
-#define DP_hybrid_SKIP false  //todo add parameter to disable hybrid dependence analysis on demand.
+#define DP_hybrid_SKIP true  //todo add parameter to disable hybrid dependence analysis on demand.
 #define DP_BRANCH_TRACKING true  // toggles the creation of instrumentation calls for tracking taken branches.
                                  // Required by the graph pruning step of the DiscoPoP optimizer.
 
