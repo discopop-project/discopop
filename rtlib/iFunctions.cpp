@@ -124,7 +124,7 @@ namespace __dp {
         if(unpackLIDMetadata_getLoopID(curr) != (LID) 0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID) 0xFF){
             if(unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn)){
                 // check innermost loop first
-                if(unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)){
+                if((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) && unpackLIDMetadata_getLoopIteration_0(curr) != 0){
 
                     // modify depType if intraIterationDependency identified
                     switch(type) {
@@ -142,7 +142,9 @@ namespace __dp {
                     }
                 }
                 // check second loop
-                else if(unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)){
+                else if((unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) && unpackLIDMetadata_getLoopIteration_2(curr) != 0){
+
+
 
                     // modify depType if intraIterationDependency identified
                     switch(type) {
@@ -160,7 +162,7 @@ namespace __dp {
                     }
                 }
                 // check outer loop
-                else if(unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)){
+                else if((unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) && unpackLIDMetadata_getLoopIteration_2(curr) != 0){
                     // modify depType if intraIterationDependency identified
                     switch(type) {
                         case RAW:
