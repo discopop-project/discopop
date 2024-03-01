@@ -7,6 +7,7 @@
 # directory for details.
 from multiprocessing import Pool
 from typing import List, Dict, Set, Tuple, cast
+import warnings
 
 from alive_progress import alive_bar  # type: ignore
 
@@ -143,10 +144,13 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
             defined_inside_loop.append((var, tmp_loop_variables[var]))
 
     # check if all subnodes are parallelizable
+    file_io_warnings = []
     for node in pet.subtree_of_type(root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
-            return False
+            file_io_warnings.append(node)
+            # return False  # too pessimistic
+            # todo: issue critical around file_io
 
     for i in range(0, len(subnodes)):
         children_cache: Dict[Node, List[Node]] = dict()
@@ -167,6 +171,9 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
             ):
                 # if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
                 return False
+
+    for fio in file_io_warnings:
+        warnings.warn("FileIO performed inside DoAll @ " + str(node.start_position()))
 
     return True
 
