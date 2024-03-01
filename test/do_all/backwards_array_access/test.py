@@ -32,7 +32,7 @@ class TestMethods(unittest.TestCase):
         os.system("./prog")
         # execute DiscoPoP analysis
         os.chdir(".discopop")
-        os.system("discopop_explorer")
+        os.system("discopop_explorer --enable-patterns doall,reduction")
         os.chdir("..")
         # validate results
         self.validate_results(current_dir, src_dir)
