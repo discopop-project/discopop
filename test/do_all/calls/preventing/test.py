@@ -11,7 +11,7 @@ from test.utils.validator_classes.DoAllInfoForValidation import DoAllInfoForVali
 class TestMethods(unittest.TestCase):
     def test(self):
         current_dir = pathlib.Path(__file__).parent.resolve()
-        discopop_dir = os.path.join(current_dir, "..", "..", "..")
+        discopop_dir = os.path.join(current_dir, "..", "..", "..", "..")
         build_dir = os.path.join(discopop_dir, "build")
 
         src_dir = os.path.join(current_dir, "src")
