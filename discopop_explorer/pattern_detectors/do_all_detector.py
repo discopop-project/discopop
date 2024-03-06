@@ -246,7 +246,6 @@ def __check_loop_dependencies(
                 return True
 
         elif dep.dtype == DepType.WAR:
-            # check RAW Runs pattern discovery on the CU graph= DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
             if not dep.intra_iteration:
