@@ -236,6 +236,16 @@ def __check_loop_dependencies(
         if dep.dtype == DepType.INIT:
             continue
         elif dep.dtype == DepType.RAW:
+            # check RAW dependencies
+            # RAW problematic, if it is not an intra-iteration RAW
+            if not dep.intra_iteration:
+                return True
+            # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
+            elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
+                tmp = root_loop.get_nesting_level(pet)
+                return True
+
+        elif dep.dtype == DepType.WAR:
             # check RAW Runs pattern discovery on the CU graph= DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
