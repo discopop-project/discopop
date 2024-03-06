@@ -29,6 +29,7 @@ logger = logging.getLogger("Optimizer").getChild("Interactive")
 
 
 def run_interactive_optimizer(arguments: OptimizerArguments):
+    logger.setLevel(arguments.log_level)
     logger.info("Starting..")
     # check prerequisites
     if not os.path.exists(os.path.join("optimizer", "last_experiment.pickle")):
@@ -128,11 +129,11 @@ def export_configuration(experiment: Experiment, applied_suggestions: Set[int], 
     logger.info("Calculating necessary data movement")
     logger.debug("Decisions: " + str(configured_pattern.decisions))
     data_transfer = new_calculate_data_transfers(
-        experiment.optimization_graph, configured_pattern.decisions, experiment
+        experiment.optimization_graph, configured_pattern.decisions, experiment, arguments=arguments
     )
     for update in data_transfer:
         configured_pattern.add_data_movement(update)
-    logger.info("Calculating necessary data movement")
+    logger.info("Optimizing data movement")
     configured_pattern = cast(MergedPattern, optimize_updates(experiment, configured_pattern, arguments))
     # append the configuration to the list of patterns
     experiment.detection_result.patterns.merged_pattern.append(configured_pattern)

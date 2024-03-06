@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import logging
 import os
 
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
@@ -24,6 +25,8 @@ from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutp
 def optimize_updates(
     experiment: Experiment, configuration: OptimizerOutputPattern, arguments: OptimizerArguments
 ) -> OptimizerOutputPattern:
+    logger = logging.getLogger("Optimizer").getChild("UpdateOptimization")
+    logger.setLevel(arguments.log_level)
     # plot raw update graph
     # show_update_graph(experiment.optimization_graph, best_configuration, experiment)
 
@@ -53,11 +56,11 @@ def optimize_updates(
     # show_update_graph(experiment.optimization_graph, best_configuration, experiment)
 
     # print optimized updates
-    if arguments.verbose:
-        print("Optimized updates")
-        for update in configuration.data_movement:
-            print("# ", update)
-        print()
+
+    logger.debug("Optimized updates")
+    for update in configuration.data_movement:
+        logger.debug("# " + str(update))
+    logger.debug("")
 
     return configuration
 

@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import logging
 from typing import List
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.classes.context.Update import Update
@@ -13,6 +14,8 @@ from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutp
 
 
 def remove_duplicated_updates(configuration: OptimizerOutputPattern, arguments: OptimizerArguments):
+    logger = logging.getLogger("Optimizer").getChild("RemoveDuplicatedUpdates")
+    logger.setLevel(arguments.log_level)
     cleaned_updates: List[Update] = []
     buffer: List[str] = []
 
@@ -69,10 +72,9 @@ def remove_duplicated_updates(configuration: OptimizerOutputPattern, arguments: 
             pass
     configuration.data_movement = cleaned_updates
 
-    if arguments.verbose:
-        print("Removed duplicates from updates")
-        for update in configuration.data_movement:
-            print("# ", update)
-        print()
+    logger.debug("Removed duplicates from updates")
+    for update in configuration.data_movement:
+        logger.debug("# " + str(update))
+    logger.debug("")
 
     return configuration
