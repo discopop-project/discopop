@@ -93,9 +93,9 @@ class UnpackedSuggestion(object):
         elif source_device_id != self.host_device_id and target_device_id == self.host_device_id:
             # update type from
             if delete_data:
-                pragma.pragma_str = "#pragma omp target exit data map(from:"
-            elif copy_delete_data:
                 pragma.pragma_str = "#pragma omp target exit data map(delete:"
+            elif copy_delete_data:
+                pragma.pragma_str = "#pragma omp target exit data map(from:"
             else:
                 pragma.pragma_str = "#pragma omp target update from("
 
