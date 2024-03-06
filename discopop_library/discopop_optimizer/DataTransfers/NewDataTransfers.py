@@ -12,6 +12,7 @@ import networkx as nx  # type: ignore
 from discopop_explorer.PEGraphX import MemoryRegion
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
@@ -314,8 +315,14 @@ class DataFrame(object):
 
 
 def new_calculate_data_transfers(
-    graph: nx.DiGraph, decisions: List[int], experiment, targeted_functions: Optional[List[int]] = None
+    graph: nx.DiGraph,
+    decisions: List[int],
+    experiment,
+    targeted_functions: Optional[List[int]] = None,
+    arguments: Optional[OptimizerArguments] = None,
 ) -> List[Update]:
+    if arguments is not None:
+        logger.setLevel(arguments.log_level)
     updates: List[Update] = []
     logger.debug("Calculating updates for configuration: " + str(decisions))
 
