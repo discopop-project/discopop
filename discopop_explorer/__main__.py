@@ -72,6 +72,7 @@ def parse_args() -> ExplorerArguments:
         "--enable-patterns", type=str, nargs="?", default="*",
         help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,pipeline,geodec,simplegpu. Default: *",
     )
+    parser.add_argument("--load-existing-doall-and-reduction-patterns", action="store_true", help="Skip pattern detection and insert existing patterns.json contents into the created detection_result.json")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
 
@@ -154,6 +155,7 @@ def parse_args() -> ExplorerArguments:
         enable_json_file=arguments.json,
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
+        load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
     )
 
 
