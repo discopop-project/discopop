@@ -265,7 +265,7 @@ class PatternDetectorX(object):
             res.patterns.do_all.append(pt)
 
         # unpack reduction
-        for pattern_json_str in pattern_contents["do_all"]:
+        for pattern_json_str in pattern_contents["reduction"]:
             pattern_dict = json.loads(pattern_json_str)
             pt = DoAllInfo(self.pet, self.pet.node_at(pattern_dict["node_id"]))
             # patternBase
