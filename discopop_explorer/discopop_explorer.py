@@ -63,6 +63,7 @@ class ExplorerArguments(GeneralArguments):
     cu_inst_result_file: Optional[str]
     llvm_cxxfilt_path: Optional[str]
     microbench_file: Optional[str]
+    load_existing_doall_and_reduction_patterns: bool
 
     def __post_init__(self):
         self.__validate()
@@ -111,6 +112,7 @@ def __run(
     enable_task_pattern: bool = False,
     enable_detection_of_scheduling_clauses: bool = False,
     hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None,
+    load_existing_doall_and_reduction_patterns: bool = False,
 ) -> DetectionResult:
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
     print("PET CREATION FINISHED.")
@@ -128,21 +130,38 @@ def __run(
 
     pattern_detector = PatternDetectorX(pet)
 
-    res: DetectionResult = pattern_detector.detect_patterns(
-        project_path,
-        cu_xml,
-        dep_file,
-        loop_counter_file,
-        reduction_file,
-        file_mapping,
-        cu_inst_result_file,
-        llvm_cxxfilt_path,
-        discopop_build_path,
-        enable_patterns,
-        enable_task_pattern,
-        enable_detection_of_scheduling_clauses,
-        hotspot_functions,
-    )
+    if load_existing_doall_and_reduction_patterns:
+        res: DetectionResult = pattern_detector.load_existing_doall_and_reduction_patterns(
+            project_path,
+            cu_xml,
+            dep_file,
+            loop_counter_file,
+            reduction_file,
+            file_mapping,
+            cu_inst_result_file,
+            llvm_cxxfilt_path,
+            discopop_build_path,
+            enable_patterns,
+            enable_task_pattern,
+            enable_detection_of_scheduling_clauses,
+            hotspot_functions,
+        )
+    else:
+        res = pattern_detector.detect_patterns(
+            project_path,
+            cu_xml,
+            dep_file,
+            loop_counter_file,
+            reduction_file,
+            file_mapping,
+            cu_inst_result_file,
+            llvm_cxxfilt_path,
+            discopop_build_path,
+            enable_patterns,
+            enable_task_pattern,
+            enable_detection_of_scheduling_clauses,
+            hotspot_functions,
+        )
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
@@ -218,6 +237,7 @@ def run(arguments: ExplorerArguments):
         enable_task_pattern=arguments.enable_task_pattern,
         enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
         hotspot_functions=hotspots,
+        load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
     )
 
     end = time.time()
