@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import json
+import logging
 import os.path
 import shutil
 from typing import Dict
@@ -20,6 +21,8 @@ from discopop_library.PathManagement.PathManagement import load_file_mapping
 
 
 def run(arguments: PatchGeneratorArguments):
+    logger = logging.getLogger("PatchGenerator")
+
     if arguments.verbose:
         print("Started DiscoPoP Patch Generator...")
     if arguments.verbose:

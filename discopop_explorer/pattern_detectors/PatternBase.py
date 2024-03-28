@@ -21,6 +21,7 @@ class PatternBase(object):
     node_id: NodeID
     start_line: LineID
     end_line: LineID
+    applicable_pattern: bool
 
     def __init__(self, node: Node):
         # create a file lock to synchronize processes
@@ -41,6 +42,7 @@ class PatternBase(object):
         self.node_id = node.id
         self.start_line = node.start_position()
         self.end_line = node.end_position()
+        self.applicable_pattern = True
 
     def to_json(self):
         dic = self.__dict__

@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Tuple
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     EntryPointType,
@@ -64,7 +64,12 @@ class UnpackedSuggestion(object):
         is_first_data_occurrence: bool = self.values["is_first_data_occurrence"]
         openmp_source_device_id = self.values["openmp_source_device_id"]
         openmp_target_device_id = self.values["openmp_target_device_id"]
-        print("IS FIRST DATA OCCURRENCE?: ", is_first_data_occurrence)
+        range: Optional[Tuple[int, int]] = self.values["range"]
+        delete_data: bool = self.values["delete_data"]
+        copy_delete_data: bool = self.values["copy_delete_data"]
+
+        def get_range_str(r):
+            return "" if r is None else "[" + str(r[0]) + ":" + str(r[1]) + "]"
 
         if source_device_id == self.host_device_id and target_device_id == self.host_device_id:
             # no update required
@@ -77,6 +82,7 @@ class UnpackedSuggestion(object):
                 pragma.pragma_str = "#pragma omp target update to("
             pragma.pragma_str += (
                 var_name
+                + get_range_str(range)
                 + ") device("
                 # + str(openmp_source_device_id)
                 # + " -> "
@@ -86,13 +92,16 @@ class UnpackedSuggestion(object):
 
         elif source_device_id != self.host_device_id and target_device_id == self.host_device_id:
             # update type from
-            if is_first_data_occurrence:
+            if delete_data:
+                pragma.pragma_str = "#pragma omp target exit data map(delete:"
+            elif copy_delete_data:
                 pragma.pragma_str = "#pragma omp target exit data map(from:"
             else:
                 pragma.pragma_str = "#pragma omp target update from("
 
             pragma.pragma_str += (
                 var_name
+                + get_range_str(range)
                 + ") device("
                 + str(openmp_source_device_id)
                 # + " -> "
@@ -115,6 +124,7 @@ class UnpackedSuggestion(object):
                 + str(openmp_target_device_id)
                 + ") Var("
                 + var_name
+                + get_range_str(range)
                 + ")"
             )
 
@@ -163,13 +173,13 @@ class UnpackedSuggestion(object):
             if self.values["collapse_level"] > 1:
                 pragma.pragma_str += "collapse(" + str(self.values["collapse_level"]) + ") "
         if len(self.values["first_private"]) > 0:
-            pragma.pragma_str += "firstprivate(" + ",".join(self.values["first_private"]) + ") "
+            pragma.pragma_str += "firstprivate(" + ",".join([str(s) for s in self.values["first_private"]]) + ") "
         if len(self.values["private"]) > 0:
-            pragma.pragma_str += "private(" + ",".join(self.values["private"]) + ") "
+            pragma.pragma_str += "private(" + ",".join([str(s) for s in self.values["private"]]) + ") "
         if len(self.values["last_private"]) > 0:
-            pragma.pragma_str += "lastprivate(" + ",".join(self.values["last_private"]) + ") "
+            pragma.pragma_str += "lastprivate(" + ",".join([str(s) for s in self.values["last_private"]]) + ") "
         if len(self.values["shared"]) > 0:
-            pragma.pragma_str += "shared(" + ",".join(self.values["shared"]) + ") "
+            pragma.pragma_str += "shared(" + ",".join([str(s) for s in self.values["shared"]]) + ") "
         if len(self.values["reduction"]) > 0:
             reductions_dict: Dict[str, List[str]] = dict()
             for entry in self.values["reduction"]:

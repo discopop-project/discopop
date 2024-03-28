@@ -74,6 +74,7 @@ def build_preprocessed_graph_and_run_detection(
     cu_inst_result_file: str,
     llvm_cxxfilt_path: Optional[str],
     discopop_build_path: Optional[str],
+    hotspots,
 ) -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
@@ -101,8 +102,8 @@ def build_preprocessed_graph_and_run_detection(
     )
 
     # execute reduction detector to enable taskloop-reduction-detection
-    detect_reduction(preprocessed_graph)
-    detect_do_all(preprocessed_graph)
+    detect_reduction(preprocessed_graph, hotspots)
+    detect_do_all(preprocessed_graph, hotspots)
 
     suggestions = run_detection(
         preprocessed_graph,

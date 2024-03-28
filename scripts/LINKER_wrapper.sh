@@ -28,10 +28,10 @@ LLVM_CLANGPP=$DP_BUILD_LLVM_BIN_DIR/clang++
 
 
 # original arguments: "$@"
-echo "WRAPPED LINKING...."
-echo "ARGS: $@"
-
-echo "${LLVM_CLANGPP} ${@} -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v"
+#echo "WRAPPED LINKING...."
+#echo "ARGS: $@"
+#
+#echo "${LLVM_CLANGPP} ${@} -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v"
 
 #clang++ --language=ir "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v
 ${LLVM_CLANGPP} "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -fPIC -v

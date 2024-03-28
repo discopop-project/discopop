@@ -9,6 +9,7 @@ import copy
 import itertools
 from multiprocessing import Pool
 from typing import Any, ClassVar, Dict, List, Optional, cast, Set, Tuple
+import warnings
 
 import matplotlib  # type: ignore
 import matplotlib.pyplot as plt  # type:ignore
@@ -17,6 +18,7 @@ import tqdm  # type: ignore
 
 from discopop_explorer.PEGraphX import MemoryRegion, NodeID
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
+from discopop_library.discopop_optimizer.classes.edges.CallEdge import CallEdge
 from discopop_library.discopop_optimizer.classes.edges.DataFlowEdge import DataFlowEdge
 from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
@@ -26,6 +28,7 @@ from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import Re
 from discopop_library.discopop_optimizer.classes.edges.SuccessorEdge import SuccessorEdge
 from discopop_library.discopop_optimizer.classes.edges.TemporaryEdge import TemporaryEdge
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
+from discopop_library.discopop_optimizer.classes.nodes.FunctionReturn import FunctionReturn
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
@@ -92,6 +95,11 @@ def get_out_mutex_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
     return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], MutuallyExclusiveEdge)]
 
 
+def get_out_call_edges(graph: nx.DiGraph, node_id: int) -> List[int]:
+    """Returns a list of node ids which are called by current node_id"""
+    return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], CallEdge)]
+
+
 def get_requirements(graph: nx.DiGraph, node_id: int) -> List[int]:
     """Returns a list of node ids for the requirements of the parallelization option in the given node"""
     return [edge[1] for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], RequirementEdge)]
@@ -102,7 +110,78 @@ def has_temporary_successor(graph: nx.DiGraph, node_id: int) -> bool:
     return len([edge for edge in graph.out_edges(node_id, data="data") if isinstance(edge[2], TemporaryEdge)]) > 0
 
 
-def show(graph, show_dataflow: bool = True, show_mutex_edges: bool = True):
+def get_function_return_node(graph: nx.DiGraph, function: int) -> int:
+    """Identify and return the FunctionReturn node belonging to function."""
+    queue = get_children(graph, function)
+    while len(queue) > 0:
+        current = queue.pop()
+        successors = get_successors(graph, current)
+        if len(successors) == 0 and type(data_at(graph, current)) == FunctionReturn:
+            return current
+        queue += [s for s in successors if s not in queue]
+    raise ValueError(
+        "No FunctionReturn found for function: "
+        + str(function)
+        + " "
+        + cast(FunctionRoot, data_at(graph, function)).name
+    )
+
+
+def show_decision_graph(
+    graph: nx.DiGraph, decisions: List[int], show_dataflow: bool = True, show_mutex_edges: bool = False
+):
+    print("Decisions: ", decisions)
+    contained_nodes: Set[int] = set()
+    for function in get_all_function_nodes(graph):
+        # get nodes in subtree of function, if they are reachable by the set of decisions
+        queue: List[int] = [data_at(graph, function).node_id]
+        while len(queue) > 0:
+            current = queue.pop()
+            contained_nodes.add(current)
+            queue += [c for c in get_children(graph, current) if c not in queue and c not in contained_nodes]
+            successors = get_successors(graph, current)
+
+            if len(successors) <= 1:
+                # no decision required
+                queue += [s for s in successors if s not in queue and s not in contained_nodes]
+            else:
+                # filter for successors in decisions
+                print("SUCCESSORS: ", successors)
+                valid_successors = [s for s in successors if s in decisions]
+                # check for requirements, if no valid successor was found
+                if len(valid_successors) == 0:
+                    requirements = []
+                    for dec in decisions:
+                        requirements += get_requirements(graph, dec)
+                    valid_successors = [s for s in successors if s in requirements]
+                    print("REQUIREMENT SUCCESSORS: ", valid_successors)
+                print("VALID SUCCESSORS: ", valid_successors)
+                # if no decision could be made, keep all sequential successors
+                if len(valid_successors) > 0:
+                    queue += [s for s in valid_successors if s not in queue and s not in contained_nodes]
+                else:
+                    # fallback
+                    queue += [s for s in successors if data_at(graph, s).represents_sequential_version()]
+
+    # show the subgraph
+    show(graph.subgraph(contained_nodes), show_dataflow=show_dataflow, show_mutex_edges=show_mutex_edges)
+
+
+def show_function(graph: nx.DiGraph, function: FunctionRoot, show_dataflow: bool = True, show_mutex_edges: bool = True):
+    # get nodes in subtree of function
+    contained_nodes: Set[int] = set()
+    queue: List[int] = [function.node_id]
+    while len(queue) > 0:
+        current = queue.pop()
+        contained_nodes.add(current)
+        queue += [c for c in get_children(graph, current) if c not in queue and c not in contained_nodes]
+        queue += [s for s in get_successors(graph, current) if s not in queue and s not in contained_nodes]
+
+    # show the subgraph
+    show(graph.subgraph(contained_nodes), show_dataflow=show_dataflow, show_mutex_edges=show_mutex_edges)
+
+
+def show(graph: nx.DiGraph, show_dataflow: bool = True, show_mutex_edges: bool = True):
     """Plots the graph
 
     :return:
@@ -222,6 +301,14 @@ def show(graph, show_dataflow: bool = True, show_mutex_edges: bool = True):
         edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], RequirementEdge)],
     )
 
+    nx.draw_networkx_edges(
+        graph,
+        pos,
+        ax=ax,
+        edge_color="blue",
+        edgelist=[e for e in graph.edges(data="data") if isinstance(e[2], CallEdge)],
+    )
+
     if show_mutex_edges:
         nx.draw_networkx_edges(
             graph,
@@ -299,6 +386,11 @@ def add_child_edge(graph: nx.DiGraph, source_id: int, target_id: int):
     graph.add_edge(source_id, target_id, data=edge_data)
 
 
+def add_call_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+    edge_data = CallEdge()
+    graph.add_edge(source_id, target_id, data=edge_data)
+
+
 def add_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
     edge_data = TemporaryEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
@@ -360,9 +452,17 @@ def get_all_function_nodes(graph: nx.DiGraph) -> List[int]:
 
 def get_all_nodes_in_function(graph: nx.DiGraph, function_id: int) -> List[int]:
     result_list: List[int] = []
-    for node_id in graph.nodes:
-        if function_id in get_all_parents(graph, node_id):
-            result_list.append(node_id)
+    queue: List[int] = [function_id]
+    while len(queue) > 0:
+        current = queue.pop()
+        if current != function_id:
+            result_list.append(current)
+        queue += [c for c in get_children(graph, current) if c not in result_list and c not in queue]
+        queue += [s for s in get_successors(graph, current) if s not in result_list and s not in queue]
+
+    #    for node_id in graph.nodes:
+    #        if function_id in get_all_parents(graph, node_id):
+    #            result_list.append(node_id)
     return result_list
 
 
@@ -394,13 +494,16 @@ def get_read_and_written_data_from_subgraph(
     read_memory_regions: Set[MemoryRegion] = set()
     written_memory_regions: Set[MemoryRegion] = set()
     # collect reads and writes from successors and children
-    subgraph = get_children(graph, node_id)
-    if not ignore_successors:
-        subgraph += get_successors(graph, node_id)
-    for successor in subgraph:
-        reads, writes = get_read_and_written_data_from_subgraph(graph, successor)
-        read_memory_regions.update(reads)
-        written_memory_regions.update(writes)
+    try:
+        subgraph = get_children(graph, node_id)
+        if not ignore_successors:
+            subgraph += get_successors(graph, node_id)
+        for successor in subgraph:
+            reads, writes = get_read_and_written_data_from_subgraph(graph, successor)
+            read_memory_regions.update(reads)
+            written_memory_regions.update(writes)
+    except RecursionError:
+        warnings.warn("Recursion limit exceeeded. Read and write in subtrees might be inaccurate.")
     # add reads and writes of the node itself
     node_data = data_at(graph, node_id)
     read_memory_regions.update([read_access.memory_region for read_access in node_data.read_memory_regions])
@@ -449,6 +552,15 @@ def get_all_parents(graph: nx.DiGraph, node_id: int) -> List[int]:
         ]
         queue.update(new_parents)
     return list(all_parents)
+
+
+def get_parent_function(graph: nx.DiGraph, node_id: int) -> int:
+    """Returns the parent function of node_id"""
+    all_parents = get_all_parents(graph, node_id)
+    for p in all_parents:
+        if type(data_at(graph, p)) == FunctionRoot:
+            return p
+    raise ValueError("No parent exists for node " + str(node_id) + ", type: " + str(type(data_at(graph, node_id))))
 
 
 global_graph = None

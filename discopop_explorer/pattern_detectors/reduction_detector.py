@@ -23,7 +23,7 @@ from ..PEGraphX import (
     DepType,
     EdgeType,
 )
-from ..utils import is_reduction_var, classify_loop_variables
+from ..utils import filter_for_hotspots, is_reduction_var, classify_loop_variables
 from ..variable import Variable
 
 
@@ -62,7 +62,7 @@ class ReductionInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX) -> List[ReductionInfo]:
+def run_detection(pet: PEGraphX, hotspots) -> List[ReductionInfo]:
     """Search for reduction pattern
 
     :param pet: PET graph
@@ -74,6 +74,8 @@ def run_detection(pet: PEGraphX) -> List[ReductionInfo]:
     global_pet = pet
     result: List[ReductionInfo] = []
     nodes = pet.all_nodes(LoopNode)
+
+    nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:

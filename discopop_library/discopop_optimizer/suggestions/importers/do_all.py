@@ -6,10 +6,13 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import logging
 from typing import Set, cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
-from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
+from sympy import Expr, Integer, Symbol, log, Float, init_printing
+from discopop_explorer.PEGraphX import NodeID
+from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Microbench.utils import (
@@ -22,10 +25,13 @@ from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import Re
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
+from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 suggestion_device_types = [CPU, GPU]
+logger = logging.getLogger("Optimizer")
 
 
 def import_suggestion(
@@ -40,9 +46,10 @@ def import_suggestion(
 
     for node in buffer:
         introduced_options: Set[int] = set()
-        if suggestion.node_id == data_at(graph, node).cu_id:
+        if suggestion.node_id == data_at(graph, node).cu_id and type(data_at(graph, node)) == Loop:
             # save node in introduced_options to mark as mutually exclusive
             introduced_options.add(node)
+            environment.pattern_id_to_decisions_dict[suggestion.pattern_id] = [node]
             # todo: This implementation for the device id is temporary and MUST be replaced
             for device_id in suggestion_device_ids:
                 # reserve a node id for the new parallelization option
@@ -108,6 +115,31 @@ def import_suggestion(
                     # ):
                     #   data_at(graph, edge[1]).device_id = 0
 
+                # register the device-mapped suggestion
+                if device_id != environment.get_system().get_host_device_id():
+                    pattern_info = DoAllInfo(
+                        environment.detection_result.pet,
+                        environment.detection_result.pet.node_at(cast(NodeID, node_data_copy.original_cu_id)),
+                    )
+                    pattern_info.collapse_level = suggestion.collapse_level
+                    pattern_info.device_id = device_id
+                    pattern_info.device_type = environment.get_system().get_device(device_id).get_device_type()
+                    pattern_info.applicable_pattern = False
+
+                    environment.detection_result.patterns.do_all.append(pattern_info)
+
+                    if environment.arguments.single_suggestions:
+                        # register the individual Pattern as a OutputPattern to reflect the device mapping of a regular suggestion
+                        optimizer_output_pattern = OptimizerOutputPattern(
+                            suggestion._node, [new_node_id], environment.get_system().get_host_device_id(), environment
+                        )
+                        logger.info("Created OptimizerOutputPattern: " + str(optimizer_output_pattern.pattern_id))
+
+                        optimizer_output_pattern.add_pattern(
+                            pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type
+                        )
+                        environment.detection_result.patterns.optimizer_output.append(optimizer_output_pattern)
+
         # connect introduced parallelization options to support path restraining
         for node_id_1 in introduced_options:
             for node_id_2 in introduced_options:
@@ -124,10 +156,10 @@ def get_cost_multiplier(node_id: int, environment: Experiment, device_id: int) -
     Multiplier for Do-All:
         1 / Thread_count"""
     # get device specifications
+    # thread_count = environment.get_system().get_device(device_id).get_thread_count()
+    speedup = environment.get_system().get_device(device_id).get_measured_speedup()
+    multiplier = Integer(1) / speedup
 
-    thread_count = environment.get_system().get_device(device_id).get_thread_count()
-
-    multiplier = Integer(1) / thread_count
     cm = CostModel(multiplier, Integer(1))
 
     # return cm, [thread_count]
@@ -139,10 +171,46 @@ def get_overhead_term(node_data: Loop, environment: Experiment, device_id: int) 
     For testing purposes, the following function is used to represent the overhead incurred by a do-all loop.
     The function has been created using Extra-P.
     unit of the overhead term are micro seconds."""
-    # retrieve DoAll overhead model
-    overhead_model = environment.get_system().get_device_doall_overhead_model(
-        environment.get_system().get_device(device_id), environment.arguments
-    )
+    ci_costs = environment.get_system().get_device(device_id).get_compute_init_delays()
+
+    # get overhead model
+    if environment.get_system().get_device(node_data.device_id).get_device_type() == DeviceTypeEnum.CPU:
+        # device is CPU
+        if len(cast(DoAllInfo, node_data.suggestion).shared) == 0:
+            # retrieve DoAll overhead model
+            overhead_model = environment.get_system().get_device_doall_overhead_model(
+                environment.get_system().get_device(device_id), environment.arguments
+            )
+            logger.info("Loop: " + str(node_data.node_id) + " is DOALL")
+        else:
+            # retrieve DoAll shared overhead model
+            overhead_model = environment.get_system().get_device_doall_shared_overhead_model(
+                environment.get_system().get_device(device_id), environment.arguments
+            )
+            logger.info("Loop: " + str(node_data.node_id) + " is DOALL SHARED")
+        # add computation initialization costs (technically duplicated, but required for low workloads)
+        if "doall" in ci_costs:
+            overhead_model += Float(ci_costs["doall"])
+            logger.debug(
+                "Added doall compute init delay: " + str(ci_costs["doall"]) + " to node: " + str(node_data.node_id)
+            )
+        else:
+            logger.debug("Could not find compute init delays for node: " + str(node_data.node_id))
+    else:
+        # device is GPU
+        overhead_model = Integer(0)
+        # add computation initialization costs (technically duplicated, but required for low workloads)
+        if "target_teams_distribute_parallel_for" in ci_costs:
+            overhead_model += Float(ci_costs["target_teams_distribute_parallel_for"])
+            logger.debug(
+                "Added ttdpf compute init delay: "
+                + str(ci_costs["target_teams_distribute_parallel_for"])
+                + " to node: "
+                + str(node_data.node_id)
+            )
+        else:
+            logger.debug("Could not find compute init delays for node: " + str(node_data.node_id))
+
     # substitute workload, iterations and threads
     thread_count = environment.get_system().get_device(device_id).get_thread_count()
     iterations = node_data.iterations_symbol

@@ -35,7 +35,7 @@ git clone git@github.com:discopop-project/discopop.git
 cd discopop
 mkdir build && cd build
 DP_BUILD=$(pwd)
-cmake .. && make 
+cmake .. && make
 # instrument and build the example code
 cd ../example
 mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER=${DP_BUILD}/scripts/CXX_wrapper.sh .. && make
@@ -49,7 +49,7 @@ discopop_patch_generator
 # print patches to the console
 for f in $(find patch_generator -maxdepth 1 -type d); do
     echo "SUGGESTION: $f"
-    cat $f/1.patch 
+    cat $f/1.patch
     echo ""
 done
 # apply patch with id 1
@@ -67,8 +67,8 @@ The following is an automatically generated, exemplary output patch file generat
 @@ -20,6 +20,7 @@
          Arr[i] = i % 13;
      }
- 
-+    #pragma omp parallel for shared(Arr,N) reduction(+:sum) 
+
++    #pragma omp parallel for shared(Arr,N) reduction(+:sum)
      for(int i = 0; i < N; i++){
          sum += Arr[i];
      }

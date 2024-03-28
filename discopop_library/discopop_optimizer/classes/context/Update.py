@@ -6,10 +6,11 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import json
-from typing import Any, Dict, Optional, cast
+from typing import Any, Dict, Optional, Tuple, cast
 from discopop_explorer.PEGraphX import NodeID, PEGraphX
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
+    ReadDataAccess,
     WriteDataAccess,
     write_data_access_from_dict,
 )
@@ -18,12 +19,16 @@ from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
 class Update(object):
     source_node_id: int
     target_node_id: int
+    originated_from_node: Optional[int]  # used in case the update is moved to the nearest DeviceSwitch node
     source_device_id: DeviceID
     target_device_id: DeviceID
     write_data_access: WriteDataAccess
     is_first_data_occurrence: bool
     source_cu_id: Optional[NodeID]
     target_cu_id: Optional[NodeID]
+    range: Optional[Tuple[int, int]]
+    delete_data: bool  # i.e. exit data map(delete: a)
+    copy_delete_data: bool  # i.e. exit data map(from: a)
 
     def __init__(
         self,
@@ -35,6 +40,10 @@ class Update(object):
         is_first_data_occurrence: bool,
         source_cu_id: Optional[NodeID],
         target_cu_id: Optional[NodeID],
+        originated_from_node: Optional[int] = None,
+        range: Optional[Tuple[int, int]] = None,
+        delete_data: bool = False,
+        copy_delete_data: bool = False,
     ):
         self.source_node_id = source_node_id
         self.target_node_id = target_node_id
@@ -44,9 +53,16 @@ class Update(object):
         self.is_first_data_occurrence = is_first_data_occurrence
         self.source_cu_id = source_cu_id
         self.target_cu_id = target_cu_id
+        self.originated_from_node = originated_from_node
+        self.range = range
+        self.delete_data = delete_data
+        self.copy_delete_data = copy_delete_data
 
     def __str__(self):
-        result_str = "First" if self.is_first_data_occurrence else ""
+        result_str = ""
+        result_str += "IssueCopyDelete " if self.copy_delete_data else ""
+        result_str += "IssueDelete " if self.delete_data else ""
+        result_str += "First" if self.is_first_data_occurrence else ""
         return (
             result_str
             + "Update("
@@ -75,6 +91,9 @@ class Update(object):
         result_dict["var_name"] = self.write_data_access.var_name
         result_dict["start_line"] = pet.node_at(cast(NodeID, self.source_cu_id)).start_position()
         result_dict["end_line"] = pet.node_at(cast(NodeID, self.target_cu_id)).start_position()
+        result_dict["range"] = self.range
+        result_dict["delete_data"] = self.delete_data
+        result_dict["copy_delete_data"] = self.copy_delete_data
         return json.dumps(result_dict)
 
     def toDict(self) -> Dict[str, Any]:
@@ -87,6 +106,9 @@ class Update(object):
         result_dict["write_data_access"] = self.write_data_access.toDict()
         result_dict["source_cu_id"] = self.source_cu_id
         result_dict["target_cu_id"] = self.target_cu_id
+        result_dict["range"] = self.range
+        result_dict["delete_data"] = self.delete_data
+        result_dict["copy_delete_data"] = self.copy_delete_data
         return result_dict
 
 
@@ -100,5 +122,8 @@ def construct_update_from_dict(values: Dict[str, Any]) -> Update:
         values["is_first_data_occurrence"],
         values["source_cu_id"],
         values["target_cu_id"],
+        range=values["range"],
+        delete_data=values["delete_data"],
+        copy_delete_data=values["copy_delete_data"],
     )
     return update

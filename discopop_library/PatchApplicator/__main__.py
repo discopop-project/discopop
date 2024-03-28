@@ -7,6 +7,7 @@
 # directory for details.
 
 from argparse import ArgumentParser
+from discopop_library.GlobalLogger.setup import setup_logger
 
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
 from discopop_library.PatchApplicator.patch_applicator import run
@@ -37,6 +38,9 @@ def parse_args() -> PatchApplicatorArguments:
     parser.add_argument('-L', '--load', action="store_true", help="Load a previous state after clearing.")
     parser.add_argument('-l', '--list', action="store_true", help="Show the list of applied suggestions."
                                                                   "If set, nothing else will be done.")
+    
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:
     # fmt: on
 
@@ -49,6 +53,8 @@ def parse_args() -> PatchApplicatorArguments:
         clear=arguments.clear,
         load=arguments.load,
         list=arguments.list,
+        log_level=arguments.log.upper(),
+        write_log=arguments.write_log,
     )
 
 
@@ -60,6 +66,7 @@ def main() -> int:
     """
     retval = 0
     arguments = parse_args()
+    setup_logger(arguments)
     retval = run(arguments)
     return retval
 

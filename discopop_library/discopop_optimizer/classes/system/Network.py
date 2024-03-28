@@ -30,6 +30,8 @@ class Network(object):
         self.__transfer_initialization_costs[(source, target)] = initialization_delay
 
     def get_transfer_speed(self, source: Device, target: Device):
+        if source == target:
+            return Integer(1000000)  # 1000 GB/s
         if (source, target) not in self.__transfer_speeds:
             if self.__host_device is None:
                 raise ValueError("Host device of network unspecified!")
@@ -39,6 +41,8 @@ class Network(object):
         return self.__transfer_speeds[(source, target)]
 
     def get_transfer_initialization_costs(self, source: Device, target: Device):
+        if source == target:
+            return Integer(0)
         if (source, target) not in self.__transfer_speeds:
             if self.__host_device is None:
                 raise ValueError("Host device of network unspecified!")

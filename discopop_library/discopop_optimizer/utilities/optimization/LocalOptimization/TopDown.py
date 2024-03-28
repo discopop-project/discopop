@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
+import sys
 from typing import Dict, List, Tuple, Set, cast
 
 import networkx as nx  # type: ignore
@@ -132,6 +133,7 @@ def get_locally_optimized_models(
             continue
 
         # construct locally optimal model
+        sys.setrecursionlimit(100000)
         performance_models = get_node_performance_models(
             experiment,
             graph,
@@ -143,6 +145,7 @@ def get_locally_optimized_models(
                 cast(FunctionRoot, data_at(graph, function_node)).node_id
             ],  # ignore first node to prevent duplication of function costs
         )
+        sys.setrecursionlimit(1000)
         # calculate and append necessary data transfers to the models
         performance_models_with_transfers = calculate_data_transfers(
             graph, {cast(FunctionRoot, data_at(graph, function_node)): performance_models}, experiment

@@ -8,7 +8,7 @@ nav_order: 1
 # DiscoPoP Setup
 ## Prerequisites
 - LLVM/clang version 11
-- Python version 3.6 or greater 
+- Python version 3.6 or greater
 
 ## Setup
 ```

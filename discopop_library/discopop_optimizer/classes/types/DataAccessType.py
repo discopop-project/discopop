@@ -13,27 +13,37 @@ from discopop_explorer.PEGraphX import MemoryRegion
 class ReadDataAccess(object):
     memory_region: MemoryRegion
     var_name: Optional[str]
+    from_call: bool
 
-    def __init__(self, memory_region: MemoryRegion, var_name: Optional[str]):
+    def __init__(self, memory_region: MemoryRegion, var_name: Optional[str], from_call: bool = False):
         self.memory_region = memory_region
         self.var_name = var_name
+        self.from_call = from_call
 
     def __str__(self):
-        return "R(" + self.memory_region + ")"
+        return_str = ""
+        return_str += "C" if self.from_call else ""
+        return_str += "R(" + self.memory_region + ")"
+        return return_str
 
 
 class WriteDataAccess(object):
     memory_region: MemoryRegion
     unique_id: int
     var_name: Optional[str]
+    from_call: bool
 
-    def __init__(self, memory_region: MemoryRegion, unique_id: int, var_name: Optional[str]):
+    def __init__(self, memory_region: MemoryRegion, unique_id: int, var_name: Optional[str], from_call: bool = False):
         self.memory_region = memory_region
         self.unique_id = unique_id
         self.var_name = var_name
+        self.from_call = from_call
 
     def __str__(self):
-        return "W(" + self.memory_region + "-" + str(self.unique_id) + ", --> " + self.var_name + ")"
+        return_str = ""
+        return_str += "C" if self.from_call else ""
+        return_str += "W(" + self.memory_region + "-" + str(self.unique_id) + ", --> " + self.var_name + ")"
+        return return_str
 
     def __hash__(self):
         return self.unique_id
@@ -43,8 +53,9 @@ class WriteDataAccess(object):
         result_dict["memory_region"] = self.memory_region
         result_dict["unique_id"] = self.unique_id
         result_dict["var_name"] = self.var_name
+        result_dict["from_call"] = self.from_call
         return result_dict
 
 
 def write_data_access_from_dict(values: Dict[str, Any]) -> WriteDataAccess:
-    return WriteDataAccess(values["memory_region"], values["unique_id"], values["var_name"])
+    return WriteDataAccess(values["memory_region"], values["unique_id"], values["var_name"], values["from_call"])

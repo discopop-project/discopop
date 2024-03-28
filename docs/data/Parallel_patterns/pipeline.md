@@ -140,4 +140,3 @@ After interpreting and implementing the suggestion, the resulting, now parallel,
         c = delta(b, d);
     }
     a = b;
-

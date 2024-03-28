@@ -13,6 +13,7 @@ from discopop_explorer.PEGraphX import Node
 from discopop_explorer.pattern_detectors.PatternBase import PatternBase
 
 from discopop_library.PatternIdManagement.unique_pattern_id import get_unique_pattern_id
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.Update import Update, construct_update_from_dict
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
@@ -26,12 +27,13 @@ class OptimizerOutputPattern(PatternBase):
     decisions: List[int]
     host_device_id: int
 
-    def __init__(self, node: Node, decisions: List[int], host_device_id: int):
+    def __init__(self, node: Node, decisions: List[int], host_device_id: int, experiment: Experiment):
         PatternBase.__init__(self, node)
         self.applied_patterns = []
         self.data_movement = []
         self.decisions = decisions
         self.host_device_id = host_device_id
+        experiment.pattern_id_to_decisions_dict[self.pattern_id] = decisions
 
     def reconstruct_from_file(self, file_path: str):  # todo remove?
         with open(file_path, "r") as f:
@@ -62,3 +64,15 @@ class OptimizerOutputPattern(PatternBase):
 
     def add_data_movement(self, update: Update):
         self.data_movement.append(update)
+
+    def get_contained_decisions(self, experiment: Experiment) -> List[int]:
+        decision_list: List[int] = []
+        for d in self.decisions:
+            if d not in decision_list:
+                decision_list.append(d)
+        for tmp_dict in self.applied_patterns:
+            if tmp_dict["pattern_id"] in experiment.pattern_id_to_decisions_dict:
+                for d in experiment.pattern_id_to_decisions_dict[tmp_dict["pattern_id"]]:
+                    if d not in decision_list:
+                        decision_list.append(d)
+        return decision_list

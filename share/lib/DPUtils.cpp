@@ -35,7 +35,7 @@ namespace dputil {
             FileMappingPath = getenv("DOT_DISCOPOP");
             FileMappingPath += "/FileMapping.txt";
         }
-        
+
 
         int tempfid = 1;
         fstream fileMappingFile;

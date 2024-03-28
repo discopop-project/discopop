@@ -19,7 +19,7 @@ In most cases it is sufficient to overwrite the default `C-` and `CXX-Compilers`
 cd ../example
 mkdir build
 cd build
-cmake -DCMAKE_CXX_COMPILER=${DP_BUILD}/scripts/CXX_wrapper.sh .. 
+cmake -DCMAKE_CXX_COMPILER=${DP_BUILD}/scripts/CXX_wrapper.sh ..
 make
 ```
 
@@ -61,7 +61,7 @@ for patchid in $(find patch_generator -maxdepth 1 -type d); do
     echo "SUGGESTION: ${patchid}"
     for patchfile in $(find ${patchid} -type f); do
         echo "PATCH FILE: ${patchfile}"
-        cat ${patchfile} 
+        cat ${patchfile}
     done
     echo ""
 done

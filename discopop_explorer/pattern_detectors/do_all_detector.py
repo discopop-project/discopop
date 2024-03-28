@@ -7,6 +7,7 @@
 # directory for details.
 from multiprocessing import Pool
 from typing import List, Dict, Set, Tuple, cast
+import warnings
 
 from alive_progress import alive_bar  # type: ignore
 
@@ -22,7 +23,7 @@ from ..PEGraphX import (
     MemoryRegion,
     DepType,
 )
-from ..utils import classify_loop_variables
+from ..utils import classify_loop_variables, filter_for_hotspots
 from ..variable import Variable
 
 
@@ -66,7 +67,7 @@ class DoAllInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX) -> List[DoAllInfo]:
+def run_detection(pet: PEGraphX, hotspots) -> List[DoAllInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph
@@ -78,6 +79,8 @@ def run_detection(pet: PEGraphX) -> List[DoAllInfo]:
     global_pet = pet
     result: List[DoAllInfo] = []
     nodes = pet.all_nodes(LoopNode)
+
+    nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
@@ -141,10 +144,13 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
             defined_inside_loop.append((var, tmp_loop_variables[var]))
 
     # check if all subnodes are parallelizable
+    file_io_warnings = []
     for node in pet.subtree_of_type(root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
-            return False
+            file_io_warnings.append(node)
+            # return False  # too pessimistic
+            # todo: issue critical around file_io
 
     for i in range(0, len(subnodes)):
         children_cache: Dict[Node, List[Node]] = dict()
@@ -165,6 +171,9 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
             ):
                 # if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
                 return False
+
+    for fio in file_io_warnings:
+        warnings.warn("FileIO performed inside DoAll @ " + str(node.start_position()))
 
     return True
 
