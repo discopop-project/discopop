@@ -22,9 +22,9 @@ permissions:
   id-token: write
 
 jobs:
-  execute_tests:
+  execute_code_checks:
     runs-on: ubuntu-20.04
-    name: Execute CI Tests
+    name: Execute Code Checks
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -65,27 +65,22 @@ jobs:
       - name: "Check formatting of DiscoPoP Wizard - DEPRECATED"
         run: python -m black -l 120 --check DEPRECATED_discopop_wizard
 
-      - name: Test DiscoPop Explorer - DISABLED
-        run: |
-          if false; then  # disable the check temporarily
-            TARGETS="mergesort reduction simple_pipeline"
-            PATTERNS="do_all reduction"
-            for target in $TARGETS; do
-              echo "checking target: ${target}"
-              python -m discopop_explorer --path=test/${target}/data --json=test/${target}/data/result_${target}.json
-              # count different suggestions and check against test data
-              for pattern in $PATTERNS; do
-                echo "checking pattern: ${pattern}"
-                ACTUAL=$(echo "$(cat test/${target}/data/result_${target}.json | python3 -c "import sys, json; print(json.load(sys.stdin)['${pattern}'])" | grep -c "node_id")")
-                EXPECTED=$(echo "$(cat test/${target}.json | python3 -c "import sys, json; print(json.load(sys.stdin)['${pattern}'])" | grep -c "node_id")")
-                if [ "$ACTUAL" != "$EXPECTED" ]; then
-                  echo "::error:: ${pattern}: Amount of mentioned node ids in identified suggestions not equal! Expected: $EXPECTED, Actual: ${ACTUAL}"
-                  exit 1
-                fi
-              done
-              echo ""
-            done
-          fi
+  execute_unit_tests:
+    runs-on: ubuntu-20.04
+    name: Execute Unit Tests
+    needs: execute_code_checks
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+          cache: 'pip' # uses requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
 
       - name: Setup DiscoPoP Profiler - Install Dependencies
         run: |
@@ -112,22 +107,10 @@ jobs:
       - name: Python Unit-tests
         run: python -m unittest -v
 
-      - name: "Setup DiscoPoP Profiler - Create executable"
-        run: chmod +x .github/workflows/tests/profiler.sh
-
-      - name: "Execute DiscoPoP Profiler - mergesort - discopopPass"
-        run: .github/workflows/tests/profiler.sh mergesort discopopPass
-
-      - name: "Execute DiscoPoP Profiler - reduction - discopopPass"
-        run: .github/workflows/tests/profiler.sh reduction discopopPass
-
-      - name: "Execute DiscoPoP Profiler - simple_pipeline - discopopPass"
-        run: .github/workflows/tests/profiler.sh simple_pipeline discopopPass
-
   update_wiki-build:
     name: "Update Wiki - Build"
     runs-on: ubuntu-20.04
-    needs: execute_tests
+    needs: execute_code_checks
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Checkout
