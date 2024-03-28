@@ -1,5 +1,6 @@
 import os
 import pathlib
+import subprocess
 import unittest
 
 import jsonpickle
@@ -15,10 +16,8 @@ class TestMethods(unittest.TestCase):
         build_dir = os.path.join(discopop_dir, "build")
 
         src_dir = os.path.join(current_dir, "src")
-        os.chdir(src_dir)
-
         # create FileMapping
-        os.system("" + os.path.join(build_dir, "scripts", "dp-fmap"))
+        subprocess.run(os.path.join(build_dir, "scripts", "dp-fmap"), cwd=src_dir, executable="/bin/bash", shell=True)
 
         # build
         # make_command = "DP_FM_PATH=" + os.path.join(src_dir, "FileMapping.txt") + " "
@@ -27,17 +26,19 @@ class TestMethods(unittest.TestCase):
         make_command += "CXX=" + os.path.join(build_dir, "scripts", "CXX_wrapper.sh") + " "
         # make_command += "LINKER=" + os.path.join(build_dir, "scripts", "LINKER_wrapper.sh") + " "
         make_command += "make "
-        os.system(make_command)
+        subprocess.run(make_command.split(" "), cwd=src_dir, executable="/bin/bash", shell=True)
+
         # execute instrumented program
-        os.system("./prog")
+        subprocess.run("./prog", cwd=src_dir, executable="/bin/bash", shell=True)
+
         # execute DiscoPoP analysis
-        os.chdir(".discopop")
-        os.system("discopop_explorer --enable-patterns doall,reduction")
-        os.chdir("..")
+        subprocess.run(
+            ["discopop_explorer", "--enable-patterns doall,reduction"], cwd=src_dir, executable="/bin/bash", shell=True
+        )
         # validate results
         self.validate_results(current_dir, src_dir)
         # clean environment
-        os.system("make veryclean")
+        subprocess.run(["make", "veryclean"], cwd=src_dir, executable="/bin/bash", shell=True)
 
     def validate_results(self, test_dir, src_dir):
         """Check that exactly one do-all is suggested"""
