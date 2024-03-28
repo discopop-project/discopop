@@ -1,5 +1,6 @@
 import os
 import pathlib
+import subprocess
 import unittest
 
 import jsonpickle
@@ -7,6 +8,7 @@ import jsonpickle
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from test.utils.subprocess_wrapper.command_execution_wrapper import run_cmd
 from test.utils.validator_classes.DoAllInfoForValidation import DoAllInfoForValidation
+from subprocess import DEVNULL
 from discopop_library.ConfigProvider.config_provider import run as run_config_provider
 from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProviderArguments
 
@@ -26,7 +28,6 @@ class TestMethods(unittest.TestCase):
         env_vars = dict(os.environ)
 
         src_dir = os.path.join(current_dir, "src")
-
         # create FileMapping
         cmd = os.path.join(dp_build_dir, "scripts", "dp-fmap")
         run_cmd(cmd, src_dir, env_vars)
@@ -36,13 +37,13 @@ class TestMethods(unittest.TestCase):
         env_vars["CXX"] = os.path.join(dp_build_dir, "scripts", "CXX_wrapper.sh")
         cmd = "make"
         run_cmd(cmd, src_dir, env_vars)
+
         # execute instrumented program
-        cmd = "./prog"
-        run_cmd(cmd, src_dir, env_vars)
+        run_cmd("./prog", src_dir, env_vars)
+
         # execute DiscoPoP analysis
-        cwd = os.path.join(src_dir, ".discopop")
-        run_cmd("discopop_explorer", cwd, env_vars)
-        run_cmd("discopop_optimizer -o3", cwd, env_vars)
+        cmd = "discopop_explorer --enable-patterns doall,reduction"
+        run_cmd(cmd, os.path.join(src_dir, ".discopop"), env_vars)
         # validate results
         try:
             self.validate_results(current_dir, src_dir)
@@ -54,14 +55,16 @@ class TestMethods(unittest.TestCase):
             raise ex
 
     def validate_results(self, test_dir, src_dir):
-        """Check that not collapse has been identified"""
-
-        # load test output
-        test_output_file = os.path.join(src_dir, ".discopop", "optimizer", "detection_result_dump.json")
+        """Check that exactly one do-all is suggested"""
+        test_output_file = os.path.join(src_dir, ".discopop", "explorer", "detection_result_dump.json")
+        # load detection results
         with open(test_output_file, "r") as f:
             tmp_str = f.read()
         test_output: DetectionResult = jsonpickle.decode(tmp_str)
 
-        # check identified DoAllInfo objects for collapse clauses > 1
-        for do_all_info in test_output.patterns.do_all:
-            self.assertTrue(do_all_info.collapse_level <= 1)
+        for pattern_type in test_output.patterns.__dict__:
+            amount_of_identified_patterns = len(test_output.patterns.__dict__[pattern_type])
+            if pattern_type == "do_all":
+                self.assertEqual(amount_of_identified_patterns, 1)
+            else:
+                self.assertEqual(amount_of_identified_patterns, 0)
