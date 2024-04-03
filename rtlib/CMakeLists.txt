@@ -18,6 +18,7 @@ set(DiscoPoP_SOURCES
         cu_taken_branch_counter.cpp
         #../share/lib/DPUtils.cpp
         MemoryRegionTree.cpp
+        CallStack.cpp
         )
 
 set(CMAKE_CXX_FLAGS

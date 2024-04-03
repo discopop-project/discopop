@@ -13,6 +13,7 @@
 #include "perfect_shadow.hpp"
 #include "shadow.hpp"
 #include "signature.hpp"
+#include "CallStack.hpp"
 #include <string>
 #include <list>
 #include <cstdio>
@@ -69,12 +70,16 @@ namespace __dp {
     LoopRecords *loops = nullptr;      // loop merging
     BGNFuncList *beginFuncs = nullptr; // function entries
     ENDFuncList *endFuncs = nullptr;   // function returns
+    CallStack *callStack = nullptr;    // stack of loop iterations and function calls
     ofstream *out;
     ofstream *outInsts;
 
     LID lastCallOrInvoke = 0;
     LID lastProcessedLine = 0;
     int32_t FuncStackLevel = 0;
+    unsigned long funcCallCounter = 0; // overflow is not critical here
+
+
 
     MemoryRegionTree *allocatedMemRegTree;
     list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>> *allocatedMemoryRegions;
@@ -113,12 +118,48 @@ namespace __dp {
 
     /******* Helper functions *******/
 
-    void addDep(depType type, LID curr, LID depOn, char *var, string AAvar) {
+    void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallStack* depOnCallStack, char *var, string AAvar) {
         // hybrid analysis
         if (depOn == 0 && type == WAW)
             type = INIT;
         // End HA
 
+        //DEBUG
+        if(currCallStack || depOnCallStack){
+            cout << "### addDep ###\n";
+        }
+
+        if(currCallStack){
+            cout << "CURR CALLSTACK:\n";
+            currCallStack->print();
+        }
+        if(depOnCallStack){
+            cout << "DEPON CALLSTACK:\n";
+            depOnCallStack->print();
+        }
+        if(currCallStack || depOnCallStack){
+            cout << "\n\n";
+        }
+        //!DEBUG
+
+        // TEST
+        std::set<LID> intra_iteration_dependencies;
+        std::set<LID> inter_iteration_dependencies;
+        std::set<LID> intra_call_dependencies;
+        std::set<LID> inter_call_dependencies;
+        compare_callstacks(currCallStack, depOnCallStack, &intra_iteration_dependencies,
+                           &inter_iteration_dependencies, &intra_call_dependencies, &inter_call_dependencies);
+
+        if (currCallStack || depOnCallStack){
+            cout << "Intra_iteration_dependencies: " << intra_iteration_dependencies.size() << "\n";
+            cout << "Inter_iteration_dependencies: " << inter_iteration_dependencies.size() << "\n";
+            cout << "Intra_call_dependencies: " << intra_call_dependencies.size() << "\n";
+            cout << "Inter_call_dependencies: " << inter_call_dependencies.size() << "\n";
+        }
+
+        // !TEST
+
+/*
         // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are overwritten (not 0xFF anymore) and check for intra-iteration dependencies
         // Intra-Iteration dependency exists, if LoopId's and Iteration Id's are equal
         if(unpackLIDMetadata_getLoopID(curr) != (LID) 0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID) 0xFF){
@@ -181,6 +222,7 @@ namespace __dp {
 
             }
         }
+*/
 
 
         // Remove metadata to preserve result correctness and add metadata to `Dep` object
@@ -522,6 +564,7 @@ namespace __dp {
         current.var = var;
         current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        current.callStack = callStack->getCopy();
         // store loop iteration metadata (last 8 bits for loop id, last 8 bits for loop iteration)
         // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
         // first 32 bits of current.lid are reserved for metadata and thus empty
@@ -622,32 +665,48 @@ namespace __dp {
                         // hybrid analysis
                         if (access.skip) {
                             SMem->insertToRead(access.addr, access.lid);
+                            SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
                             continue;
                         }
                         // End HA
                         sigElement lastWrite = SMem->testInWrite(access.addr);
+                        CallStack* lastWriteCallStack = SMem->getLastWriteAccessCallStack(access.addr);
                         if (lastWrite != 0) {
                             // RAW
                             SMem->insertToRead(access.addr, access.lid);
-                            addDep(RAW, access.lid, lastWrite, access.var, access.AAvar);
+                            SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
+                            addDep(RAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar);
                         }
                     } else {
                         sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
+                        CallStack* lastWriteCallStack = SMem->getLastWriteAccessCallStack(access.addr);
+                        if(lastWriteCallStack){
+                            // create a temporary copy of the call stack as the entry in SMem will be deleted when overwritten
+                            lastWriteCallStack = lastWriteCallStack->getCopy();
+                        }
+                        SMem->setLastWriteAccessCallStack(access.addr, access.callStack);
                         if (lastWrite == 0) {
                             // INIT
-                            addDep(INIT, access.lid, 0, access.var, access.AAvar);
+                            addDep(INIT, access.lid, access.callStack, 0, nullptr, access.var, access.AAvar);
                         } else {
                             sigElement lastRead = SMem->testInRead(access.addr);
+                            CallStack* lastReadCallStack = SMem->getLastReadAccessCallStack(access.addr);
                             if (lastRead != 0) {
                                 // WAR
-                                addDep(WAR, access.lid, lastRead, access.var, access.AAvar);
+                                addDep(WAR, access.lid, access.callStack, lastRead, lastReadCallStack, access.var, access.AAvar);
                                 // Clear intermediate read ops
                                 SMem->insertToRead(access.addr, 0);
+                                SMem->cleanReadAccessCallStack(access.addr);
                             } else {
                                 // WAW
-                                addDep(WAW, access.lid, lastWrite, access.var, access.AAvar);
+                                addDep(WAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar);
                             }
                         }
+                        if(lastWriteCallStack){
+                            // cleanup temporary copy
+                            delete lastWriteCallStack;
+                        }
+
                     }
                 }
                 // delete the current chunk at the end
@@ -780,6 +839,7 @@ namespace __dp {
         current.var = var;
         current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        current.callStack = callStack->getCopy();
         // store loop iteration metadata (last 8 bits for loop id, last 8 bits for loop iteration)
         // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
         // first 32 bits of current.lid are reserved for metadata and thus empty
@@ -861,6 +921,7 @@ namespace __dp {
         current.var = var;
         current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        current.callStack = callStack->getCopy();
         // store loop iteration metadata if present (last 8 bits for loop id, last 8 bits for loop iteration)
         // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
         // first 32 bits of current.lid are reserved for metadata and thus empty
@@ -943,6 +1004,7 @@ namespace __dp {
         current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
         current.skip = true;
+        current.callStack = callStack->getCopy();
         // store loop iteration metadata (last 8 bits for loop id, last 8 bits for loop iteration)
         // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
         // first 32 bits of current.lid are reserved for metadata and thus empty
@@ -1155,6 +1217,7 @@ namespace __dp {
         delete outPutDeps;
         delete bbList;
         // End HA
+        delete callStack;
 
         for (auto loop: *loops) {
             delete loop.second;
@@ -1248,6 +1311,8 @@ namespace __dp {
             loops = new LoopRecords();
             beginFuncs = new BGNFuncList();
             endFuncs = new ENDFuncList();
+            callStack = new CallStack();
+
             out = new ofstream();
             // hybrid analysis
             allDeps = new depMap();
@@ -1335,6 +1400,10 @@ namespace __dp {
         if (isStart)
             *out << "START " << decodeLID(lid) << endl;
 
+        funcCallCounter++;
+        callStack->push(new CallStackEntry(0, lid, funcCallCounter));
+
+
         // Reset last call tracker
         lastCallOrInvoke = 0;
 #ifdef DP_RTLIB_VERBOSE
@@ -1383,6 +1452,7 @@ namespace __dp {
             }
 
             loopStack->pop();
+            callStack->popLoop();
 
             if (DP_DEBUG) {
                 if (loopStack->empty())
@@ -1394,6 +1464,7 @@ namespace __dp {
             }
         }
         --FuncStackLevel;
+        callStack->popFunction();
 
         if (isExit == 0)
             endFuncs->insert(lid);
@@ -1424,6 +1495,7 @@ namespace __dp {
             loopStack->push(LoopTableEntry(FuncStackLevel, loopID, 0, lid));
             if (loops->find(lid) == loops->end()) {
                 loops->insert(pair<LID, LoopRecord *>(lid, new LoopRecord(0, 0, 0)));
+                callStack->push(new CallStackEntry(1, lid, 0));
             }
             if (DP_DEBUG) {
                 cout << "(" << std::dec << FuncStackLevel << ")Loop " << loopID << " enters." << endl;
@@ -1431,6 +1503,7 @@ namespace __dp {
         } else {
             // The same loop iterates again
             loopStack->top().count++;
+            callStack->incrementIterationCounter();
             if (DP_DEBUG) {
                 cout << "(" << std::dec << loopStack->top().funcLevel << ")";
                 cout << "Loop " << loopStack->top().loopID << " iterates " << loopStack->top().count << " times."

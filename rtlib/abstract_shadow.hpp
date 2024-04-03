@@ -40,6 +40,18 @@ namespace __dp {
 
         virtual void removeFromWrite(int64_t memAddr);
 
+        virtual CallStack* getLastReadAccessCallStack(int64_t memAddr);
+
+        virtual void setLastReadAccessCallStack(int64_t memAddr, CallStack* p_cs);
+
+        virtual void cleanReadAccessCallStack(int64_t memAddr);
+
+        virtual CallStack* getLastWriteAccessCallStack(int64_t memAddr);
+
+        virtual void setLastWriteAccessCallStack(int64_t memAddr, CallStack* p_cs);
+
+        virtual void cleanWriteAccessCallStack(int64_t memAddr);
+
     };
 
 } // namespace __dp

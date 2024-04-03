@@ -28,6 +28,7 @@
 #include <sys/syscall.h>
 #include "DPUtils.hpp"
 #include "MemoryRegionTree.hpp"
+#include "CallStack.hpp"
 // hybrid analysis
 #include <regex>
 // End HA
@@ -61,6 +62,7 @@ namespace __dp {
         char *var;
         string AAvar;  // name of allocated variable -> "Anti Aliased Variable"
         ADDR addr;
+        CallStack* callStack;
     };
 
     // For runtime dependency merging

@@ -96,12 +96,12 @@ if(${TKINTER_AVAILABLE_EXIT_CODE})
 endif()
 
 # install DiscoPoP python modules
-message(STATUS "Installing DiscoPoP python modules")
-execute_process(
-        COMMAND ${Python3_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
-        RESULT_VARIABLE DP_INSTALLATION_EXIT_CODE
-        OUTPUT_VARIABLE DP_INSTALLATION_OUTPUT
-)
+message(STATUS "DISABLED: Installing DiscoPoP python modules")
+#execute_process(
+#        COMMAND ${Python3_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
+#        RESULT_VARIABLE DP_INSTALLATION_EXIT_CODE
+#        OUTPUT_VARIABLE DP_INSTALLATION_OUTPUT
+#)
 # check if installation of DiscoPoP Modules was successful
 if(${DP_INSTALLATION_EXIT_CODE})
     message(FATAL_ERROR "${DP_INSTALLATION_OUTPUT}")
