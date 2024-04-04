@@ -67,12 +67,18 @@ namespace __dp {
 
     // For runtime dependency merging
     struct Dep {
-        Dep(depType T, LID dep, char *var, string AAvar) : type(T), depOn(dep), var(var), AAvar(AAvar) {}
+        Dep(depType T, LID dep, char *var, string AAvar, std::set<LID> iaid, std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd) :
+            type(T), depOn(dep), var(var), AAvar(AAvar), intra_iteration_dependencies(iaid), inter_iteration_dependencies(ieid),
+            intra_call_dependencies(iacd), inter_call_dependencies(iecd) {}
 
         depType type;
         LID depOn;
         char *var;
         string AAvar;
+        std::set<LID> intra_iteration_dependencies;
+        std::set<LID> inter_iteration_dependencies;
+        std::set<LID> intra_call_dependencies;
+        std::set<LID> inter_call_dependencies;
     };
 
     struct compDep {

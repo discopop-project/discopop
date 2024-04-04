@@ -125,20 +125,23 @@ namespace __dp {
         // End HA
 
         //DEBUG
-        if(currCallStack || depOnCallStack){
-            cout << "### addDep ###\n";
-        }
+        bool CALLSTACK_DBG = false;
+        if(CALLSTACK_DBG){
+            if(currCallStack || depOnCallStack){
+                cout << "### addDep ###\n";
+            }
 
-        if(currCallStack){
-            cout << "CURR CALLSTACK:\n";
-            currCallStack->print();
-        }
-        if(depOnCallStack){
-            cout << "DEPON CALLSTACK:\n";
-            depOnCallStack->print();
-        }
-        if(currCallStack || depOnCallStack){
-            cout << "\n\n";
+            if(currCallStack){
+                cout << "CURR CALLSTACK:\n";
+                currCallStack->print();
+            }
+            if(depOnCallStack){
+                cout << "DEPON CALLSTACK:\n";
+                depOnCallStack->print();
+            }
+            if(currCallStack || depOnCallStack){
+                cout << "\n\n";
+            }
         }
         //!DEBUG
 
@@ -150,13 +153,14 @@ namespace __dp {
         compare_callstacks(currCallStack, depOnCallStack, &intra_iteration_dependencies,
                            &inter_iteration_dependencies, &intra_call_dependencies, &inter_call_dependencies);
 
-        if (currCallStack || depOnCallStack){
+        if(CALLSTACK_DBG){
+            if (currCallStack || depOnCallStack){
             cout << "Intra_iteration_dependencies: " << intra_iteration_dependencies.size() << "\n";
             cout << "Inter_iteration_dependencies: " << inter_iteration_dependencies.size() << "\n";
             cout << "Intra_call_dependencies: " << intra_call_dependencies.size() << "\n";
             cout << "Inter_call_dependencies: " << inter_call_dependencies.size() << "\n";
+            }
         }
-
         // !TEST
 
 /*
@@ -232,10 +236,10 @@ namespace __dp {
         depMap::iterator posInDeps = myMap->find(curr);
         if (posInDeps == myMap->end()) {
             depSet *tmp_depSet = new depSet();
-            tmp_depSet->insert(Dep(type, depOn, var, AAvar));
+            tmp_depSet->insert(Dep(type, depOn, var, AAvar, intra_iteration_dependencies, inter_iteration_dependencies, intra_call_dependencies, inter_call_dependencies));
             myMap->insert(pair<int32_t, depSet *>(curr, tmp_depSet));
         } else {
-            posInDeps->second->insert(Dep(type, depOn, var, AAvar));
+            posInDeps->second->insert(Dep(type, depOn, var, AAvar, intra_iteration_dependencies, inter_iteration_dependencies, intra_call_dependencies, inter_call_dependencies));
         }
 
         if (DP_DEBUG) {
@@ -315,9 +319,48 @@ namespace __dp {
                             break;
                     }
 
+                    // construct metadata string
+                    string metadata = "[";
+                    // add intra iteration dependencies
+                    if(d.intra_iteration_dependencies.size() > 0){
+                        metadata += "intra_iteration_dep:";
+                        for(auto entry_lid : d.intra_iteration_dependencies){
+                            metadata += decodeLID(entry_lid) + ",";
+                        }
+                        metadata += ";";
+                    }
+                    // add inter iteration dependencies
+                    if(d.inter_iteration_dependencies.size() > 0){
+                        metadata += "inter_iteration_dep:";
+                        for(auto entry_lid : d.inter_iteration_dependencies){
+                            metadata += decodeLID(entry_lid) + ",";
+                        }
+                        metadata += ";";
+                    }
+                    // add intra call dependencies
+                    if(d.intra_call_dependencies.size() > 0){
+                        metadata += "intra_call_dep:";
+                        for(auto entry_lid : d.intra_call_dependencies){
+                            metadata += decodeLID(entry_lid) + ",";
+                        }
+                        metadata += ";";
+                    }
+                    // add inter call dependencies
+                    if(d.inter_call_dependencies.size() > 0){
+                        metadata += "inter_call_dep:";
+                        for(auto entry_lid : d.inter_call_dependencies){
+                            metadata += decodeLID(entry_lid) + ",";
+                        }
+                        metadata += ";";
+                    }
+                    metadata += "]";
+                    // Done: construct metadata string
+
                     dep += " " + decodeLID(d.depOn);
                     dep += "|" + string(d.var);
                     dep += "(" + string(d.AAvar) + ")";
+                    dep += metadata;
+
                     lineDeps.insert(dep);
                 }
 

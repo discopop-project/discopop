@@ -184,22 +184,24 @@ void compare_callstacks(CallStack* cs_1, CallStack* cs_2, std::set<LID>* intra_i
         return;
     }
 
-    cout << "compare CallStacks: \n";
+    if(DBG)
+        cout << "compare CallStacks: \n";
 
     // iterate along CallStacks (check equal call paths)
     bool deviated_before = false;
     for(int i = 0; i < min(cs_1->size(), cs_2->size()); i++){
         CallStackEntry* element_1 = cs_1->getElement(i);
         CallStackEntry* element_2 = cs_2->getElement(i);
-        cout << "i: " << i << "\n";
-        cout << "  element_1: " << element_1->toString() << "\n";
-        cout << "  element_2: " << element_2->toString() << "\n";
+        if(DBG){
+            cout << "i: " << i << "\n";
+            cout << "  element_1: " << element_1->toString() << "\n";
+            cout << "  element_2: " << element_2->toString() << "\n";
+        }
 
         // check for deviations in the CallStack
         bool elements_differ = false;
         if(!(*element_1 == *element_2)){
             elements_differ = true;
-            cout << "  --> DEVIATION\n";
         }
 
         // check for intra iteration dependencies
@@ -267,7 +269,8 @@ void compare_callstacks(CallStack* cs_1, CallStack* cs_2, std::set<LID>* intra_i
             }
         }
     }
-    cout << "\n";
+    if(DBG)
+        cout << "\n";
 
 
 
