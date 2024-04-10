@@ -87,7 +87,7 @@ def run_detection(pet: PEGraphX, hotspots) -> List[DoAllInfo]:
         tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
     for local_result in tmp_result:
         result += local_result
-    print("GLOBAL RES: ", result)
+    print("GLOBAL RES: ", [r.start_line for r in result])
 
     for pattern in result:
         pattern.get_workload(pet)
