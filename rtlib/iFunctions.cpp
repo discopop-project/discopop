@@ -119,12 +119,19 @@ namespace __dp {
             type = INIT;
         // End HA
 
+//        cout << "AddDep: CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "  LoopIDS: " << hex << unpackLIDMetadata_getLoopID(curr) << ";" << hex <<  unpackLIDMetadata_getLoopID(depOn);
+//        cout << "  Loop Iterations: " << unpackLIDMetadata_getLoopIteration_0(curr) << ";" << unpackLIDMetadata_getLoopIteration_1(curr) << ";" << unpackLIDMetadata_getLoopIteration_2(curr);
+//        cout << "  " <<  unpackLIDMetadata_getLoopIteration_0(depOn) << ";" << unpackLIDMetadata_getLoopIteration_1(depOn) << ";" << unpackLIDMetadata_getLoopIteration_2(depOn) << "  orig.type: " << type;
+
         // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are overwritten (not 0xFF anymore) and check for intra-iteration dependencies
         // Intra-Iteration dependency exists, if LoopId's and Iteration Id's are equal
         if(unpackLIDMetadata_getLoopID(curr) != (LID) 0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID) 0xFF){
+//            cout << "1   CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "\n";
             if(unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn)){
+//                cout << "2   CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "\n";
                 // check innermost loop first
-                if((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) && unpackLIDMetadata_getLoopIteration_0(curr) != 0){
+                if((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn))){
+//                    cout << "3   CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "\n";
 
                     // modify depType if intraIterationDependency identified
                     switch(type) {
@@ -142,8 +149,8 @@ namespace __dp {
                     }
                 }
                 // check second loop
-                else if((unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) && unpackLIDMetadata_getLoopIteration_2(curr) != 0){
-
+                else if((unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn))){
+//                    cout << "4   CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "\n";
 
 
                     // modify depType if intraIterationDependency identified
@@ -162,7 +169,8 @@ namespace __dp {
                     }
                 }
                 // check outer loop
-                else if((unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) && unpackLIDMetadata_getLoopIteration_2(curr) != 0){
+                else if((unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_2(depOn))){
+//                    cout << "5   CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "\n";
                     // modify depType if intraIterationDependency identified
                     switch(type) {
                         case RAW:
@@ -181,6 +189,8 @@ namespace __dp {
 
             }
         }
+
+//        cout << "   --> CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "  Final Type: " << type << "\n";
 
 
         // Remove metadata to preserve result correctness and add metadata to `Dep` object

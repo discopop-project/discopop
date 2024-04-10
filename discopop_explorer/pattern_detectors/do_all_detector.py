@@ -12,6 +12,7 @@ import warnings
 from alive_progress import alive_bar  # type: ignore
 
 from .PatternInfo import PatternInfo
+from .reduction_detector import ReductionInfo
 from ..PEGraphX import (
     CUNode,
     LoopNode,
@@ -67,7 +68,7 @@ class DoAllInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX, hotspots) -> List[DoAllInfo]:
+def run_detection(pet: PEGraphX, hotspots, reduction_info: List[ReductionInfo]) -> List[DoAllInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph
@@ -79,6 +80,13 @@ def run_detection(pet: PEGraphX, hotspots) -> List[DoAllInfo]:
     global_pet = pet
     result: List[DoAllInfo] = []
     nodes = pet.all_nodes(LoopNode)
+
+    # remove reduction loops
+    print("ASDF: ", [r.node_id for r in reduction_info])
+    print("Nodes: ", [n.id for n in nodes])
+    print("pre:", len(nodes))
+    nodes = [n for n in nodes if n.id not in [r.node_id for r in reduction_info]]
+    print("post:", len(nodes))
 
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
