@@ -91,7 +91,7 @@ class PatternDetectorX(object):
             print("\tDONE.")
         if "*" in enable_patterns or "doall" in enable_patterns:
             print("DOALL...")
-            res.patterns.do_all = detect_do_all(self.pet, hotspots)
+            res.patterns.do_all = detect_do_all(self.pet, hotspots, res.patterns.reduction)
             print("\tDONE.")
         if "*" in enable_patterns or "pipeline" in enable_patterns:
             print("PIPELINE...")
