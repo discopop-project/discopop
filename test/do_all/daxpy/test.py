@@ -80,5 +80,13 @@ class TestMethods(unittest.TestCase):
             converted_test_output, key=lambda x: (x.dai.node_id, x.dai.start_line, x.dai.end_line)
         )
 
+        print("GOLD")
+        for p in converted_gold_standard:
+            print(p.dai.start_line)
+
+        print("RESULT")
+        for p in converted_test_output:
+            print(p.dai.start_line)
+
         # compare doall list elements
         self.assertListEqual(converted_gold_standard, converted_test_output)
