@@ -42,7 +42,7 @@ class TestMethods(unittest.TestCase):
         cmd = "discopop_explorer --enable-patterns doall,reduction"
         cwd = os.path.join(src_dir, ".discopop")
         run_cmd(cmd, cwd, env_vars)
-        cmd = "discopop_optimizer -o3 --log DEBUG"
+        cmd = "discopop_optimizer -o3"
         run_cmd(cmd, cwd, env_vars)
         # cleanup
         self.addCleanup(run_cmd, cmd, src_dir, env_vars)

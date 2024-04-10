@@ -67,6 +67,6 @@ class TestMethods(unittest.TestCase):
         for pattern_type in test_output.patterns.__dict__:
             amount_of_identified_patterns = len(test_output.patterns.__dict__[pattern_type])
             if pattern_type == "do_all":
-                self.assertEqual(amount_of_identified_patterns, 1)
+                self.assertEqual(amount_of_identified_patterns, 0)
             else:
                 self.assertEqual(amount_of_identified_patterns, 0)
