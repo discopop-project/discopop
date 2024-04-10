@@ -514,7 +514,7 @@ namespace __dp {
 #ifdef DP_RTLIB_VERBOSE
         cout << "enter addAccessInfo\n";
 #endif
-        int64_t workerID = addr % NUM_WORKERS;
+        int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS*4)) / 4;
         numAccesses[workerID]++;
         AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
         current.isRead = isRead;
@@ -773,7 +773,7 @@ namespace __dp {
         }
 
         //addAccessInfo(true, lid, var, addr);
-        int64_t workerID = addr % NUM_WORKERS;
+        int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS*4)) / 4;
         AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
         current.isRead = true;
         current.lid = lid;
@@ -854,7 +854,7 @@ namespace __dp {
                  << endl;
         }
 
-        int64_t workerID = addr % NUM_WORKERS;
+        int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS*4)) / 4;
         AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
         current.isRead = false;
         current.lid = lid;
@@ -935,7 +935,7 @@ namespace __dp {
                  << endl;
         }
 
-        int64_t workerID = addr % NUM_WORKERS;
+        int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS*4)) / 4;
         AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
         current.isRead = false;
         current.lid = 0;
