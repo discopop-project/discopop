@@ -151,8 +151,9 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
         if ":" in var.defLine:
             file_id = int(var.defLine.split(":")[0])
             def_line_num = int(var.defLine.split(":")[1])
-            if file_id == root_loop.file_id and def_line_num >= root_loop.start_line and def_line_num <= root_loop.end_line:
-                defined_inside_loop.append((var, tmp_loop_variables[var]))
+            for rc_cu in root_children_cus:
+                if file_id == rc_cu.file_id and def_line_num >= rc_cu.start_line and def_line_num <= rc_cu.end_line:
+                    defined_inside_loop.append((var, tmp_loop_variables[var]))
 
     # check if all subnodes are parallelizable
     file_io_warnings = []
