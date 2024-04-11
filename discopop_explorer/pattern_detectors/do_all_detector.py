@@ -83,7 +83,7 @@ def run_detection(pet: PEGraphX, hotspots, reduction_info: List[ReductionInfo]) 
 
     # remove reduction loops
     print("ASDF: ", [r.node_id for r in reduction_info])
-    print("Nodes: ", [n.id for n in nodes])
+    print("Nodes: ", [n.start_position() for n in nodes])
     print("pre:", len(nodes))
     nodes = [n for n in nodes if n.id not in [r.node_id for r in reduction_info]]
     print("post:", len(nodes))
