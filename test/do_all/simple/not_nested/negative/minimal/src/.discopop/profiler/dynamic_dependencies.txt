@@ -1,0 +1,11 @@
+START 1:4
+1:8 BGN loop 99 1 99 99
+1:13 END loop
+1:13 NOM  RAW_II_0 1:6|x(x-10)
+1:11 NOM  RAW 1:6|x(x-10) RAW 1:8|i(i-10) RAW_II_0 1:10|z(z-10) RAW_II_1 1:8|i(i-10) WAW_II_0 1:9|x(x-11)
+1:10 NOM  INIT *|z(z-10) RAW 1:6|x(x-10) RAW 1:8|i(i-10) RAW_II_1 1:11|x(x-11) RAW_II_1 1:8|i(i-10) WAR_II_1 1:11|z(z-10)
+1:9 NOM  INIT *|x(x-11) RAW 1:6|x(x-10) RAW 1:8|i(i-10) RAW_II_1 1:8|i(i-10)
+1:8 NOM  INIT *|i(i-10) RAW 1:8|i(i-10) RAW_II_1 1:8|i(i-10) WAR_II_0 1:8|i(i-10)
+1:6 NOM  INIT *|x(x-10)
+1:4 NOM  INIT *|argc(argc-10) INIT *|argv(argv-10) INIT *|retval(retval-10)
+1:14 END program
