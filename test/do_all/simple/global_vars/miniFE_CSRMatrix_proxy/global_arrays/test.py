@@ -64,6 +64,12 @@ class TestMethods(unittest.TestCase):
         for pattern_type in test_output.patterns.__dict__:
             amount_of_identified_patterns = len(test_output.patterns.__dict__[pattern_type])
             if pattern_type == "do_all":
-                self.assertEqual(amount_of_identified_patterns, 1)
+                expected_lines = ["18"]
+                for pattern in test_output.patterns.__dict__[pattern_type]:
+                    if pattern.start_line.split(":")[1] in expected_lines:
+                        expected_lines.remove(pattern.start_line.split(":")[1])
+                self.assertTrue(len(expected_lines) == 0,
+                                "Missing expected do-all patterns at line " + str(expected_lines) + ". Found: " + str(
+                                    [p.start_line for p in test_output.patterns.__dict__[pattern_type]]))
             else:
                 self.assertEqual(amount_of_identified_patterns, 0)
