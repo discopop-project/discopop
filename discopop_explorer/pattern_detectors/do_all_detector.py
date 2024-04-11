@@ -148,8 +148,11 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
     defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]] = []
     tmp_loop_variables = pet.get_variables(root_children_cus)
     for var in tmp_loop_variables:
-        if var.defLine >= root_loop.start_position() and var.defLine <= root_loop.end_position():
-            defined_inside_loop.append((var, tmp_loop_variables[var]))
+        if ":" in var.defLine:
+            file_id = int(var.defLine.split(":")[0])
+            def_line_num = int(var.defLine.split(":")[1])
+            if file_id == root_loop.file_id and def_line_num >= root_loop.start_line and def_line_num <= root_loop.end_line:
+                defined_inside_loop.append((var, tmp_loop_variables[var]))
 
     # check if all subnodes are parallelizable
     file_io_warnings = []
