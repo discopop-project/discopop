@@ -14,10 +14,11 @@ int main(int argc, const char* argv[]) {
     double *x = (double *) malloc(n * sizeof(double));
     // Initialize x, y
     // DOALL
-    for(int i = 0; i < n; ++i){
+    x[0] = 42;
+    for(int i = 1; i < n; ++i){
         x[i] = 1.0;
         foo(x, i);
-    }
+    }   
     free(x);
 return 0;
 }
