@@ -240,10 +240,6 @@ def __check_loop_dependencies(
         if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
             continue
 
-        # check if variable is defined inside loop
-        if dep.memory_region in memory_regions_defined_in_loop:
-            continue
-
         # targeted variable is not read-only
         if dep.dtype == DepType.INIT:
             continue
@@ -262,7 +258,9 @@ def __check_loop_dependencies(
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
             if not dep.intra_iteration:
                 if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
-                    return True
+                    # check if variable is defined inside loop
+                    if dep.memory_region not in memory_regions_defined_in_loop:
+                        return True
             # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
             elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
                 tmp = root_loop.get_nesting_level(pet)
