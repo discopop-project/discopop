@@ -113,6 +113,7 @@ class PatternDetectorX(object):
                 llvm_cxxfilt_path,
                 discopop_build_path,
                 hotspots,
+                res.patterns.reduction,
             )
 
         # detect GPU patterns based on previously identified patterns
