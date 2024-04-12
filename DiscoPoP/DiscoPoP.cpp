@@ -3819,7 +3819,9 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
             args.push_back(endAddr);
             args.push_back(ConstantInt::get(Int64, allocatedSize));
             args.push_back(ConstantInt::get(Int64, numElements));
-            IRB.CreateCall(DpAlloca, args, "");
+            // REMOVED TO FIX INCORRECT STACK ADDRESS TRACKING
+            // TODO: maybe replace with explicit registration of global variables
+            // IRB.CreateCall(DpAlloca, args, "");
         }
     }
 
