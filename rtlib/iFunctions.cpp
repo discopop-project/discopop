@@ -944,7 +944,8 @@ namespace __dp {
         if(stackAddrs->top().first && stackAddrs->top().second){
             if((addr <= stackAddrs->top().first) && (addr >= stackAddrs->top().second)){
 //                cout << "READ STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
-                return;
+                //return;
+                ADDR tmp = addr;  // DUMMY
 
             }
 //            else{
@@ -1051,7 +1052,8 @@ namespace __dp {
         if(stackAddrs->top().first && stackAddrs->top().second){
             if((addr <= stackAddrs->top().first) && (addr >= stackAddrs->top().second)){
 //                cout << "WRITE STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
-                return;
+                //return;
+                ADDR tmp = addr;  // DUMMY
             }
 //            else{
 //                cout << "NON WRITE STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
