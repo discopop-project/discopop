@@ -74,6 +74,7 @@ namespace __dp {
     ENDFuncList *endFuncs = nullptr;   // function returns
     ofstream *out;
     ofstream *outInsts;
+    std::stack<std::pair<ADDR, ADDR>>* stackAddrs = nullptr;  // track stack adresses for entered functions
 
     LID lastCallOrInvoke = 0;
     LID lastProcessedLine = 0;
@@ -790,6 +791,25 @@ namespace __dp {
                  << endl;
         }
 
+        // TEST
+        // check for stack access
+//        cout << "\n";
+//        cout << "READ: " << var << "  ADDR: " << hex << addr << "  Stack: " << stackAddrs->top().first << " - " << stackAddrs->top().second << "\n";
+        if(stackAddrs->top().first && stackAddrs->top().second){
+            if((addr <= stackAddrs->top().first) && (addr >= stackAddrs->top().second)){
+//                cout << "READ STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
+                return;
+
+            }
+//            else{
+//                cout << "NON READ STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
+//            }
+        }
+//        else{
+//                cout << "NON READ STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
+//            }
+        // !TEST
+
         //addAccessInfo(true, lid, var, addr);
         int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS*4)) / 4; // implicit "floor"
         AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
@@ -877,6 +897,25 @@ namespace __dp {
             cout << "instStore at encoded LID " << std::dec << decodeLID(lid) << " and addr " << std::hex << addr
                  << endl;
         }
+
+        // TEST
+//        cout << "\n";
+//        cout << "WRITE: " << var << "  ADDR: " << hex << addr << "  Stack: " << stackAddrs->top().first << " - " << stackAddrs->top().second << "\n";
+        // check for stack access
+        if(stackAddrs->top().first && stackAddrs->top().second){
+            if((addr <= stackAddrs->top().first) && (addr >= stackAddrs->top().second)){
+//                cout << "WRITE STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
+                return;
+            }
+//            else{
+//                cout << "NON WRITE STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
+//            }
+        }
+//        else{
+//                cout << "NON WRITE STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
+//            }
+        // !TEST
+
 
         int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS*4)) / 4; // implicit "floor"
         AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
@@ -1040,6 +1079,31 @@ namespace __dp {
         if(endAddr > largestAllocatedADDR){
             largestAllocatedADDR = endAddr;
         }
+
+        // TEST
+        // update stack base address, if not already set
+        if(stackAddrs->top().first == 0){
+//            cout << "SET STACK BASE!\n";
+            stackAddrs->top().first = startAddr;
+        }
+//        else{
+//            cout << "NOT NECESSARY: SET STACK BASE\n";
+//        }
+
+        // update stack top address (note: stack grows top down!)
+        if(stackAddrs->top().second == 0){
+            // initialize stack top address
+            stackAddrs->top().second = endAddr;
+        }
+        else if(stackAddrs->top().second > endAddr){
+            // update stack top
+//            cout << "UPDATE STACK TOP: " << stackAddrs->top().second << "  -->  " << endAddr << "\n";
+            stackAddrs->top().second = endAddr;
+        }
+
+//        cout << "STACK REGION: " << stackAddrs->top().first << " - " << stackAddrs->top().second << "\n";
+        // !TEST
+
 #ifdef DP_RTLIB_VERBOSE
         cout << "exit __dp_alloca\n";
 #endif
@@ -1285,6 +1349,11 @@ namespace __dp {
             beginFuncs = new BGNFuncList();
             endFuncs = new ENDFuncList();
             out = new ofstream();
+
+            // TEST
+            stackAddrs = new std::stack<std::pair<ADDR, ADDR>>();
+            // !TEST
+
             // hybrid analysis
             allDeps = new depMap();
             outPutDeps = new stringDepMap();
@@ -1368,6 +1437,13 @@ namespace __dp {
             }
         }
 
+        // TEST
+        // initialize stack addresses for function
+        stackAddrs->push(std::pair<ADDR, ADDR>(0,0));
+//        cout << "PUSH STACK ENTRY\n";
+        // !TEST
+
+
         if (isStart)
             *out << "START " << decodeLID(lid) << endl;
 
@@ -1430,6 +1506,11 @@ namespace __dp {
             }
         }
         --FuncStackLevel;
+
+        // TEST
+        // clear information on allocated stack addresses
+        stackAddrs->pop();
+        // !TEST
 
         if (isExit == 0)
             endFuncs->insert(lid);
