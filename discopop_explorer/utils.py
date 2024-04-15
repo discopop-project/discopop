@@ -731,7 +731,15 @@ def classify_task_vars(
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
     out_deps: List[Tuple[NodeID, NodeID, Dependency]],
     used_in_task_parallelism_detection=False,
-) -> Tuple[List[Variable], List[Variable], List[Variable], List[Variable], List[Variable], List[Variable], List[str],]:
+) -> Tuple[
+    List[Variable],
+    List[Variable],
+    List[Variable],
+    List[Variable],
+    List[Variable],
+    List[Variable],
+    List[str],
+]:
     """Classify task variables
 
     :param pet: CU graph
