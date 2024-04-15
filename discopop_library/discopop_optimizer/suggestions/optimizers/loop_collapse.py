@@ -130,9 +130,11 @@ def __collapse_loops_in_function(function_node_id):
                                         inner_queue += [
                                             (
                                                 p,
-                                                tmp_dist
-                                                if isinstance(data_at(global_graph, p), ContextNode)
-                                                else tmp_dist + 1,
+                                                (
+                                                    tmp_dist
+                                                    if isinstance(data_at(global_graph, p), ContextNode)
+                                                    else tmp_dist + 1
+                                                ),
                                             )
                                             for p in preds
                                         ]
