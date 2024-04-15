@@ -13,9 +13,10 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
 
 
-def get_dependencies_as_metadata(
-    pet: PEGraphX, all_dependencies: Set[Dependency]
-) -> Tuple[List[Tuple[VarName, NodeID, str]], List[Tuple[VarName, NodeID, str]],]:
+def get_dependencies_as_metadata(pet: PEGraphX, all_dependencies: Set[Dependency]) -> Tuple[
+    List[Tuple[VarName, NodeID, str]],
+    List[Tuple[VarName, NodeID, str]],
+]:
     in_deps_metadata: Set[Tuple[VarName, NodeID, str]] = set()
     out_deps_metadata: Set[Tuple[VarName, NodeID, str]] = set()
 

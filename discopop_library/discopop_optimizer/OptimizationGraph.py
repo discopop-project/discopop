@@ -125,9 +125,9 @@ class OptimizationGraph(object):
             experiment.substitutions[cast(Symbol, function.sequential_costs)] = experiment.selected_paths_per_function[
                 function
             ][0].sequential_costs
-            experiment.substitutions[
-                cast(Symbol, function.parallelizable_costs)
-            ] = experiment.selected_paths_per_function[function][0].parallelizable_costs
+            experiment.substitutions[cast(Symbol, function.parallelizable_costs)] = (
+                experiment.selected_paths_per_function[function][0].parallelizable_costs
+            )
 
         # TODO END OF DUMMY
 

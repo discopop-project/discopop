@@ -49,7 +49,10 @@ class Microbench(ABC):
     @abstractmethod
     def getMeasurements(
         self,
-    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],]:
+    ) -> Dict[
+        MicrobenchType,
+        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
+    ]:
         raise TypeError("Pure virtual method called")
 
     @abstractmethod

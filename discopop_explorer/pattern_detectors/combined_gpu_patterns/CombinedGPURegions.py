@@ -123,9 +123,9 @@ class CombinedGPURegion(PatternInfo):
         ) = get_written_and_read_memory_regions_by_cu(self.contained_regions, pet)
 
         # get memory region and variable associations for each CU
-        cu_and_variable_to_memory_regions: Dict[
-            NodeID, Dict[VarName, Set[MemoryRegion]]
-        ] = get_cu_and_varname_to_memory_regions(self.contained_regions, pet, written_memory_regions_by_cu)
+        cu_and_variable_to_memory_regions: Dict[NodeID, Dict[VarName, Set[MemoryRegion]]] = (
+            get_cu_and_varname_to_memory_regions(self.contained_regions, pet, written_memory_regions_by_cu)
+        )
 
         print("WRITTEN MEMORY REGIONS BY CU: ", file=sys.stderr)
         print(written_memory_regions_by_cu, file=sys.stderr)
@@ -136,9 +136,9 @@ class CombinedGPURegion(PatternInfo):
         print(file=sys.stderr)
 
         # get memory regions to cus and variables names
-        memory_regions_to_cus_and_variables: Dict[
-            MemoryRegion, Dict[NodeID, Set[VarName]]
-        ] = get_memory_region_to_cu_and_variables_dict(cu_and_variable_to_memory_regions)
+        memory_regions_to_cus_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]] = (
+            get_memory_region_to_cu_and_variables_dict(cu_and_variable_to_memory_regions)
+        )
         print("MEMORY REGIONS TO CUS AND VARIABLES:", file=sys.stderr)
         print(memory_regions_to_cus_and_variables, file=sys.stderr)
         print(file=sys.stderr)
@@ -150,9 +150,9 @@ class CombinedGPURegion(PatternInfo):
         print(file=sys.stderr)
 
         # extend device liveness with memory regions
-        device_liveness_plus_memory_regions: Dict[
-            VarName, List[Tuple[NodeID, Set[MemoryRegion]]]
-        ] = add_memory_regions_to_device_liveness(live_device_variables, cu_and_variable_to_memory_regions)
+        device_liveness_plus_memory_regions: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]] = (
+            add_memory_regions_to_device_liveness(live_device_variables, cu_and_variable_to_memory_regions)
+        )
 
         # ### STEP 2.2: CALCULATE LIVE DATA BY PROPAGATING MEMORY REGIONS AND EXTENDING LIFESPAN
 
@@ -252,9 +252,9 @@ class CombinedGPURegion(PatternInfo):
 
         # ### STEP 5: CONVERT MEMORY REGIONS IN UPDATES TO VARIABLE NAMES
         # propagate memory region to variable name associations within function body
-        memory_regions_to_functions_and_variables: Dict[
-            MemoryRegion, Dict[NodeID, Set[VarName]]
-        ] = propagate_variable_name_associations(pet, memory_regions_to_cus_and_variables)
+        memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]] = (
+            propagate_variable_name_associations(pet, memory_regions_to_cus_and_variables)
+        )
         print("MEMORY REGIONS TO FUNCTIONS AND VARIABLES:", file=sys.stderr)
         print(memory_regions_to_functions_and_variables, file=sys.stderr)
         print(file=sys.stderr)
