@@ -122,14 +122,7 @@ namespace __dp {
             type = INIT;
         // End HA
 
-        /*
-        cout << "AddDep: CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "  LoopIDS: " << hex << unpackLIDMetadata_getLoopID(curr) << ";" << hex <<  unpackLIDMetadata_getLoopID(depOn) << "\n";
-        cout << "  Loop Iterations(curr): " << hex << unpackLIDMetadata_getLoopIteration_0(curr) << ";"  << hex << unpackLIDMetadata_getLoopIteration_1(curr) << ";" << hex << unpackLIDMetadata_getLoopIteration_2(curr) << "\n";
-        cout << "  Loop Iterations(depOn): " << hex << unpackLIDMetadata_getLoopIteration_0(depOn) << ";"  << hex << unpackLIDMetadata_getLoopIteration_1(depOn) << ";" << hex << unpackLIDMetadata_getLoopIteration_2(depOn) << "\n";
-        cout << "  Valid(cur): " << checkLIDMetadata_getLoopIterationValidity_0(curr) << ";" << checkLIDMetadata_getLoopIterationValidity_1(curr) << ";" << checkLIDMetadata_getLoopIterationValidity_2(curr) << ";\n";
-        cout << "  Valid(dep): " << checkLIDMetadata_getLoopIterationValidity_0(depOn) << ";" << checkLIDMetadata_getLoopIterationValidity_1(depOn) << ";" << checkLIDMetadata_getLoopIterationValidity_2(depOn) << ";\n";
-        cout << "  orig.type: " << type << "\n";
-        */
+        depType originalType = type;        
 
         // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are overwritten (not 0xFF anymore) and check for intra-iteration dependencies
         // Intra-Iteration dependency exists, if LoopId's and Iteration Id's are equal
@@ -191,6 +184,19 @@ namespace __dp {
                     }
                 }
 
+            }
+        }
+
+        if(strcmp(var, "z") == 0){
+            if(type < 3){
+                cout << "AddDep: CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "  LoopIDS: " << hex << unpackLIDMetadata_getLoopID(curr) << ";" << hex <<  unpackLIDMetadata_getLoopID(depOn) << "\n";
+                cout << "  Var: " << var << "\n";
+                cout << "  Loop Iterations(curr): " << hex << unpackLIDMetadata_getLoopIteration_0(curr) << ";"  << hex << unpackLIDMetadata_getLoopIteration_1(curr) << ";" << hex << unpackLIDMetadata_getLoopIteration_2(curr) << "\n";
+                cout << "  Loop Iterations(depOn): " << hex << unpackLIDMetadata_getLoopIteration_0(depOn) << ";"  << hex << unpackLIDMetadata_getLoopIteration_1(depOn) << ";" << hex << unpackLIDMetadata_getLoopIteration_2(depOn) << "\n";
+                cout << "  Valid(cur): " << checkLIDMetadata_getLoopIterationValidity_0(curr) << ";" << checkLIDMetadata_getLoopIterationValidity_1(curr) << ";" << checkLIDMetadata_getLoopIterationValidity_2(curr) << ";\n";
+                cout << "  Valid(dep): " << checkLIDMetadata_getLoopIterationValidity_0(depOn) << ";" << checkLIDMetadata_getLoopIterationValidity_1(depOn) << ";" << checkLIDMetadata_getLoopIterationValidity_2(depOn) << ";\n";
+                cout << "  orig.type: " << originalType << "\n";
+                cout << "  final.type: " << type << "\n\n";
             }
         }
 
