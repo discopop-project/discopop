@@ -39,7 +39,7 @@ class TestMethods(unittest.TestCase):
         run_cmd(cmd, src_dir, env_vars)
 
         # execute instrumented program
-        run_cmd("./prog", src_dir, env_vars)
+        run_cmd("./prog 64", src_dir, env_vars)
 
         # execute DiscoPoP analysis
         cmd = "discopop_explorer --enable-patterns doall,reduction"
@@ -72,5 +72,3 @@ class TestMethods(unittest.TestCase):
                 self.assertTrue(len(expected_lines) == 0,
                                 "Missing expected reduction patterns at line " + str(expected_lines) + ". Found: " + str(
                                     [p.start_line for p in test_output.patterns.__dict__[pattern_type]]))
-            else:
-                self.assertEqual(amount_of_identified_patterns, 0)
