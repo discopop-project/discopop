@@ -256,19 +256,16 @@ namespace __dp {
             }
         }
 
-        if(strcmp(var, "z") == 0){
-            if(type < 3){
-                cout << "AddDep: CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "  LoopIDS: " << hex << unpackLIDMetadata_getLoopID(curr) << ";" << hex <<  unpackLIDMetadata_getLoopID(depOn) << "\n";
-                cout << "  Var: " << var << "\n";
-                cout << "  Loop Iterations(curr): " << hex << unpackLIDMetadata_getLoopIteration_0(curr) << ";"  << hex << unpackLIDMetadata_getLoopIteration_1(curr) << ";" << hex << unpackLIDMetadata_getLoopIteration_2(curr) << "\n";
-                cout << "  Loop Iterations(depOn): " << hex << unpackLIDMetadata_getLoopIteration_0(depOn) << ";"  << hex << unpackLIDMetadata_getLoopIteration_1(depOn) << ";" << hex << unpackLIDMetadata_getLoopIteration_2(depOn) << "\n";
-                cout << "  Valid(cur): " << checkLIDMetadata_getLoopIterationValidity_0(curr) << ";" << checkLIDMetadata_getLoopIterationValidity_1(curr) << ";" << checkLIDMetadata_getLoopIterationValidity_2(curr) << ";\n";
-                cout << "  Valid(dep): " << checkLIDMetadata_getLoopIterationValidity_0(depOn) << ";" << checkLIDMetadata_getLoopIterationValidity_1(depOn) << ";" << checkLIDMetadata_getLoopIterationValidity_2(depOn) << ";\n";
-                cout << "  LoopIterationOffset: " << to_string(loopIterationOffset) << "\n";
-                cout << "  orig.type: " << originalType << "\n";
-                cout << "  final.type: " << type << "\n\n";
-            }
-        }
+
+        cout << "AddDep: CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(depOn) << "  LoopIDS: " << hex << unpackLIDMetadata_getLoopID(curr) << ";" << hex <<  unpackLIDMetadata_getLoopID(depOn) << "\n";
+        cout << "  Var: " << var << "\n";
+        cout << "  Loop Iterations(curr): " << hex << unpackLIDMetadata_getLoopIteration_0(curr) << ";"  << hex << unpackLIDMetadata_getLoopIteration_1(curr) << ";" << hex << unpackLIDMetadata_getLoopIteration_2(curr) << "\n";
+        cout << "  Loop Iterations(depOn): " << hex << unpackLIDMetadata_getLoopIteration_0(depOn) << ";"  << hex << unpackLIDMetadata_getLoopIteration_1(depOn) << ";" << hex << unpackLIDMetadata_getLoopIteration_2(depOn) << "\n";
+        cout << "  Valid(cur): " << checkLIDMetadata_getLoopIterationValidity_0(curr) << ";" << checkLIDMetadata_getLoopIterationValidity_1(curr) << ";" << checkLIDMetadata_getLoopIterationValidity_2(curr) << ";\n";
+        cout << "  Valid(dep): " << checkLIDMetadata_getLoopIterationValidity_0(depOn) << ";" << checkLIDMetadata_getLoopIterationValidity_1(depOn) << ";" << checkLIDMetadata_getLoopIterationValidity_2(depOn) << ";\n";
+        cout << "  LoopIterationOffset: " << to_string(loopIterationOffset) << "\n";
+        cout << "  orig.type: " << originalType << "\n";
+        cout << "  final.type: " << type << "\n\n";
 
         // Remove metadata to preserve result correctness and add metadata to `Dep` object
         curr &= 0x00000000FFFFFFFF;
