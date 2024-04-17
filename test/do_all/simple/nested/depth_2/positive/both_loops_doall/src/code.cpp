@@ -16,7 +16,7 @@ int main(int argc, const char* argv[]) {
     for(int i = 0; i < n/10; i++){
         // Do-All
         for(int j = 0; j < 10; j++){
-            y[i*10 + j] = x[i*10 + j] + y[i*10 +j];
+            y[i*10 + j] = x[i*10 + j] / 42;
         }
     }
     free(x);
