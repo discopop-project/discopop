@@ -250,7 +250,7 @@ def __check_loop_dependencies(
                 return True
             # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
             else:
-                if source in root_children_cus and target in root_children_cus:
+                if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
                     # dep within the loop. not problematic
                     pass
                 else:
