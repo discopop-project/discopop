@@ -249,9 +249,15 @@ def __check_loop_dependencies(
             if not dep.intra_iteration:
                 return True
             # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
-            elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
-                tmp = root_loop.get_nesting_level(pet)
-                return True
+            else:
+                if source in root_children_cus and target in root_children_cus:
+                    # dep within the loop. not problematic
+                    pass
+                else:
+                    # dep could belong to a parent loop
+                    if root_loop.get_nesting_level(pet) > 1 and dep.intra_iteration_level > 0:
+                        # dep belongs to parent loop. Can not be ignored for the inner loop
+                        return True
 
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
