@@ -251,8 +251,13 @@ def __check_loop_dependencies(
             # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
             else:
                 if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
-                    # dep within the loop. not problematic
-                    pass
+                    # dep within the loop. not problematic, if intra_iteration_level == 0
+                    if dep.intra_iteration_level == 0:
+                        pass
+                    else:
+                        # might be problematic
+                        return True
+
                 else:
                     # dep could belong to a parent loop
                     if root_loop.get_nesting_level(pet) > 1 and dep.intra_iteration_level > 0:
