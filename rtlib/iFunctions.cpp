@@ -253,6 +253,64 @@ namespace __dp {
                         }
                     }
                 }
+                else if(loopIterationOffset == -2){
+                    // example: depOn inside an inner loop, curr happens after this inner loop
+                    if((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_2(depOn))
+                        && checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_2(depOn)){
+                        // modify depType if intraIterationDependency identified
+                        switch(type) {
+                            case RAW:
+                                type = RAW_II_0;
+                                break;
+                            case WAR:
+                                type = WAR_II_0;
+                                break;
+                            case WAW:
+                                type = WAW_II_0;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
+                else if(loopIterationOffset == -1){
+                    // check first loop
+                    if((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_1(depOn))
+                        && checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)){
+                        // modify depType if intraIterationDependency identified
+                        switch(type) {
+                            case RAW:
+                                type = RAW_II_0;
+                                break;
+                            case WAR:
+                                type = WAR_II_0;
+                                break;
+                            case WAW:
+                                type = WAW_II_0;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    // check second loop
+                    else if((unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_2(depOn))
+                        && checkLIDMetadata_getLoopIterationValidity_1(curr) && checkLIDMetadata_getLoopIterationValidity_2(depOn)){
+                        // modify depType if intraIterationDependency identified
+                        switch(type) {
+                            case RAW:
+                                type = RAW_II_1;
+                                break;
+                            case WAR:
+                                type = WAR_II_1;
+                                break;
+                            case WAW:
+                                type = WAW_II_1;
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                }
             }
         }
 
@@ -267,6 +325,7 @@ namespace __dp {
         cout << "  orig.type: " << originalType << "\n";
         cout << "  final.type: " << type << "\n\n";
         */
+        
 
         // Remove metadata to preserve result correctness and add metadata to `Dep` object
         curr &= 0x00000000FFFFFFFF;
