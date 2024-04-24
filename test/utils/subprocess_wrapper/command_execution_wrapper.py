@@ -9,6 +9,6 @@ def run_cmd(cmd: str, cwd: str, env):
         executable="/bin/bash",
         shell=True,
         env=env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        # stdout=subprocess.DEVNULL,
+        # stderr=subprocess.DEVNULL,
     )
