@@ -255,28 +255,27 @@ def __check_loop_dependencies(
                 else:
                     return True
 
+        #                    # dep within the loop. not problematic, if intra_iteration_level == 0
+        #                    if dep.intra_iteration_level == 0:
+        #                        pass
+        #                    else:
+        #                        # might be problematic
+        #                        # check if source and target in children loops
+        #                        contained_in_nested_loop = False
+        #                        for nested_loop in [l for l in root_children_loops if l != root_loop]:
+        #                            nested_children = pet.subtree_of_type(nested_loop, (CUNode, LoopNode))
+        #                            nested_children_cus = [cast(CUNode, cu) for cu in nested_children if cu.type == NodeType.CU]
+        #                            if pet.node_at(source) in nested_children_cus and pet.node_at(target) in nested_children_cus:
+        #                                contained_in_nested_loop = True
+        #                        if not contained_in_nested_loop:
+        #                            # problematic
+        #                            return True
 
-#                    # dep within the loop. not problematic, if intra_iteration_level == 0
-#                    if dep.intra_iteration_level == 0:
-#                        pass
-#                    else:
-#                        # might be problematic
-#                        # check if source and target in children loops
-#                        contained_in_nested_loop = False
-#                        for nested_loop in [l for l in root_children_loops if l != root_loop]:
-#                            nested_children = pet.subtree_of_type(nested_loop, (CUNode, LoopNode))
-#                            nested_children_cus = [cast(CUNode, cu) for cu in nested_children if cu.type == NodeType.CU]
-#                            if pet.node_at(source) in nested_children_cus and pet.node_at(target) in nested_children_cus:
-#                                contained_in_nested_loop = True
-#                        if not contained_in_nested_loop:
-#                            # problematic
-#                            return True
-
-#                else:
-#                    # dep could belong to a parent loop
-#                    if root_loop.get_nesting_level(pet) > 1 and dep.intra_iteration_level > 0:
-#                        # dep belongs to parent loop. Can not be ignored for the inner loop
-#                        return True
+        #                else:
+        #                    # dep could belong to a parent loop
+        #                    if root_loop.get_nesting_level(pet) > 1 and dep.intra_iteration_level > 0:
+        #                        # dep belongs to parent loop. Can not be ignored for the inner loop
+        #                        return True
 
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
