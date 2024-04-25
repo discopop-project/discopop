@@ -47,6 +47,10 @@ namespace __dp {
     }
             depType;
 
+    typedef enum {
+        NOM, II_0, II_1, II_2  // NOM -> Normal
+    } depTypeModifier;
+
     struct AccessInfo {
         AccessInfo(bool isRead, LID lid, char *var, string AAvar, ADDR addr, bool skip = false)
                 : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {}
