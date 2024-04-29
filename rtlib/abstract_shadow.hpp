@@ -40,6 +40,8 @@ namespace __dp {
 
         virtual void removeFromWrite(int64_t memAddr);
 
+        virtual std::unordered_set<ADDR> getAddrsInRange(int64_t startAddr, int64_t endAddr);
+
     };
 
 } // namespace __dp
