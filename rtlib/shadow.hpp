@@ -65,6 +65,13 @@ namespace __dp {
             sigWrite->remove(memAddr);
         }
 
+        inline std::unordered_set<ADDR> getAddrsInRange(int64_t startAddr, int64_t endAddr){
+            // not possible for Shadow, since not all addresses are kept
+            std::unordered_set<ADDR> result;
+            return result;
+        }
+
+
     private:
         Signature *sigRead;
         Signature *sigWrite;

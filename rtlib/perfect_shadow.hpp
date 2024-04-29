@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include <unordered_map>
 #include <iostream>
+#include <vector>
 
 
 namespace __dp {
@@ -70,6 +71,21 @@ namespace __dp {
 
         inline void removeFromWrite(int64_t memAddr) {
             (*sigWrite)[memAddr] = 0;
+        }
+
+        inline std::unordered_set<ADDR> getAddrsInRange(int64_t startAddr, int64_t endAddr){
+            std::unordered_set<ADDR> result;
+            for(auto pair : (*sigWrite)){
+                if((pair.first >= startAddr ) && (pair.first <= endAddr)){
+                    result.insert(pair.first);
+                }
+            }
+            for(auto pair : (*sigRead)){
+                if((pair.first >= startAddr ) && (pair.first <= endAddr)){
+                    result.insert(pair.first);
+                }
+            }
+            return result;
         }
 
     private:
