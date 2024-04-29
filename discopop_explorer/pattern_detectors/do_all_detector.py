@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import sys
 from multiprocessing import Pool
 from typing import List, Dict, Set, Tuple, cast
 import warnings
@@ -23,6 +24,7 @@ from ..PEGraphX import (
     LineID,
     MemoryRegion,
     DepType,
+    NodeID,
 )
 from ..utils import classify_loop_variables, filter_for_hotspots
 from ..variable import Variable
@@ -225,6 +227,13 @@ def __check_loop_dependencies(
         memory_regions_defined_in_loop.update(mem_regs)
 
     for source, target, dep in deps:
+
+        # todo: move this calculation to the innermost point possible to reduce computation costs
+        # get metadata for dependency
+        dep_source_nesting_level = __calculate_nesting_level(pet, root_loop, source)
+        dep_target_nesting_level = __calculate_nesting_level(pet, root_loop, target)
+        max_considered_intra_iteration_dep_level = max(dep_source_nesting_level, dep_target_nesting_level)
+
         # check if targeted variable is readonly inside loop
         if pet.is_readonly_inside_loop_body(
             dep,
@@ -250,10 +259,11 @@ def __check_loop_dependencies(
                 return True
             # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
             else:
-                if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
-                    pass
-                else:
-                    return True
+                if dep.intra_iteration_level <= max_considered_intra_iteration_dep_level:
+                    if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
+                        pass
+                    else:
+                        return True
 
         #                    # dep within the loop. not problematic, if intra_iteration_level == 0
         #                    if dep.intra_iteration_level == 0:
@@ -323,3 +333,18 @@ def __old_detect_do_all(pet: PEGraphX, root_loop: CUNode) -> bool:
                 return False
 
     return True
+
+
+def __calculate_nesting_level(pet: PEGraphX, root_loop: LoopNode, cu_node_id: str):
+    potential_parents = [(cu_node_id, -1)]  # -1 to offset the initialization with cu_node_id
+    while True:
+        if len(potential_parents) == 0:
+            # warnings.warn("root_loop: " + str(root_loop) + " not a parent of cu_node_id: " + str(cu_node_id))
+            return sys.maxsize
+        current_node_id, nesting_level = potential_parents.pop()
+        if current_node_id == root_loop.id:
+            # found
+            return nesting_level
+        # add new parents to the queue
+        for in_child_edge in pet.in_edges(cast(NodeID, current_node_id), EdgeType.CHILD):
+            potential_parents.append((in_child_edge[0], nesting_level + 1))

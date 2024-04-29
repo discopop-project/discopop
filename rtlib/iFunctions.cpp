@@ -75,6 +75,7 @@ namespace __dp {
     ofstream *out;
     ofstream *outInsts;
     std::stack<std::pair<ADDR, ADDR>>* stackAddrs = nullptr;  // track stack adresses for entered functions
+    ScopeManager* scopeManager = nullptr;
 
     LID lastCallOrInvoke = 0;
     LID lastProcessedLine = 0;
@@ -117,7 +118,7 @@ namespace __dp {
 
     /******* Helper functions *******/
 
-    void addDep(depType type, LID curr, LID depOn, char *var, string AAvar) {
+    void addDep(depType type, LID curr, LID depOn, char *var, string AAvar, bool isStackAccess, std::vector<UnValidatedDep>* threadLocal_unvalidatedStackDeps, ADDR addr, bool addrIsFirstWrittenInScope, bool positiveScopeChangeOccuredSinceLastAccess) {
         // hybrid analysis
         if (depOn == 0 && type == WAW)
             type = INIT;
@@ -128,7 +129,6 @@ namespace __dp {
 
         std::vector<depTypeModifier> identifiedDepTypes;
         bool dependencyRegistered = false;
-
         // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's are overwritten (not 0xFF anymore) and check for intra-iteration dependencies
         // Intra-Iteration dependency exists, if LoopId's and Iteration Id's are equal
         if(unpackLIDMetadata_getLoopID(curr) != (LID) 0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID) 0xFF){
@@ -233,6 +233,15 @@ namespace __dp {
                             dependencyRegistered = true;
                         }
                     }
+                    // check first loop
+                    else{
+                        if((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_1(depOn))
+                            && checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)){
+                            // II 0
+                            identifiedDepTypes.push_back(II_0);
+                            dependencyRegistered = true;
+                        }
+                    }
                     
                 }
             }
@@ -243,8 +252,13 @@ namespace __dp {
             identifiedDepTypes.push_back(NOM);
         }
 
-        
-        // TODO: Register dependencies from list
+        // validate prior stack dependencies with the same address, if the current access is a stack access as well
+        if(isStackAccess){
+            if(threadLocal_unvalidatedStackDeps->size() > 0){
+                cout << "=> Found " << to_string(threadLocal_unvalidatedStackDeps->size()) << " unvalidated stack deps for " << hex << addr << " : " << var << "\n";
+            }
+            // TODO
+        }
 
 
         // Remove metadata to preserve result correctness and add metadata to `Dep` object
@@ -254,9 +268,9 @@ namespace __dp {
         curr &= 0x00000000FFFFFFFF;
         depOn &= 0x00000000FFFFFFFF;
 
-        depMap::iterator posInDeps = myMap->find(curr);
 
-        // register dependencies
+        std::vector<std::pair<Dep, LID>> dependenciesToBeRegistered;
+        
         for(depTypeModifier dtm : identifiedDepTypes){
             depType modified_type = type;
             bool print_debug_info = false;
@@ -330,6 +344,14 @@ namespace __dp {
                 break;
             }
 
+            if(isStackAccess && (modified_type == WAR || modified_type == RAW || modified_type == WAW) && addrIsFirstWrittenInScope && positiveScopeChangeOccuredSinceLastAccess){
+                // IGNORE ACCESS                
+            }
+            else{
+                // register dependency
+                dependenciesToBeRegistered.push_back(std::pair<Dep, LID>(Dep(modified_type, depOn, var, AAvar), curr));
+            }
+        
             if(print_debug_info){
                 cout << "AddDep: CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(dbg_depOn) << "  LoopIDS: " << hex << unpackLIDMetadata_getLoopID(dbg_curr) << ";" << hex <<  unpackLIDMetadata_getLoopID(dbg_depOn) << "\n";
                 cout << "  Var: " << var << "\n";
@@ -341,39 +363,40 @@ namespace __dp {
                 cout << "  orig.type: " << originalType << "\n";
                 cout << "  final.type: " << modified_type << "\n\n";
             }
-
+        }
         
+        // register dependencies
+        for(std::pair<Dep, LID> pair : dependenciesToBeRegistered){
+            depMap::iterator posInDeps = myMap->find(pair.second);
             if (posInDeps == myMap->end()) {
                 depSet *tmp_depSet = new depSet();
-                tmp_depSet->insert(Dep(modified_type, depOn, var, AAvar));
-                myMap->insert(pair<int32_t, depSet *>(curr, tmp_depSet));
+                tmp_depSet->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var, pair.first.AAvar));
+                myMap->insert(std::pair<int32_t, depSet *>(pair.second, tmp_depSet));
             } else {
-                posInDeps->second->insert(Dep(modified_type, depOn, var, AAvar));
+                posInDeps->second->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var, pair.first.AAvar));
             }
 
             if (DP_DEBUG) {
-            cout << "inserted dep [" << decodeLID(curr) << ", ";
-            switch (type) {
-                case RAW:
-                    cout << "RAW";
-                    break;
-                case WAR:
-                    cout << "WAR";
-                    break;
-                case WAW:
-                    cout << "WAW";
-                    break;
-                case INIT:
-                    cout << "INIT";
-                    break;
-                default:
-                    break;
+                cout << "inserted dep [" << decodeLID(pair.second) << ", ";
+                switch (type) {
+                    case RAW:
+                        cout << "RAW";
+                        break;
+                    case WAR:
+                        cout << "WAR";
+                        break;
+                    case WAW:
+                        cout << "WAW";
+                        break;
+                    case INIT:
+                        cout << "INIT";
+                        break;
+                    default:
+                        break;
+                }
+                cout << ", " << decodeLID(pair.first.depOn) << "] into deps (" << myMap->size() << ")" << endl;
             }
-            cout << ", " << decodeLID(depOn) << "] into deps (" << myMap->size() << ")" << endl;
-            }
-        }
-
-        
+        }   
     }
 
     // hybrid analysis
@@ -760,6 +783,7 @@ namespace __dp {
         }
         myMap = new depMap();
         bool isLocked = false;
+        std::vector<UnValidatedDep> threadLocal_unvalidatedStackDependencies;
         while (true) {
             if (!isLocked)
                 pthread_mutex_lock(&addrChunkMutexes[id]);
@@ -780,8 +804,57 @@ namespace __dp {
                 AccessInfo access;
 
                 // analyze data dependences
+                
                 for (unsigned short i = 0; i < CHUNK_SIZE; ++i) {
                     access = accesses[i];
+
+                    if(access.stackCleanup){
+                        // Issue stack cleanup by issueing reads and writes with LID 0
+                        for(ADDR addrToBeCleaned : SMem->getAddrsInRange(access.stackCleanupRange.first, access.stackCleanupRange.second)){
+                            int64_t cleanupWorkerID = ((addrToBeCleaned - (addrToBeCleaned % 4)) % (NUM_WORKERS*4)) / 4; // implicit "floor"
+
+                            if(cleanupWorkerID == id){
+                                // perform cleanup
+                                SMem->insertToRead(addrToBeCleaned, 0);
+                                SMem->insertToWrite(addrToBeCleaned, 0);
+                            }
+                            else{
+                                // issue cleanup accesses to other workers
+                                // cleanup reads
+                                AccessInfo &cleanupReadCurrent = tempAddrChunks[cleanupWorkerID][tempAddrCount[cleanupWorkerID]++];
+                                cleanupReadCurrent.addr = addrToBeCleaned;
+                                cleanupReadCurrent.lid = 0;
+                                cleanupReadCurrent.isRead = true;
+
+                                if (tempAddrCount[cleanupWorkerID] == CHUNK_SIZE) {
+                                    pthread_mutex_lock(&addrChunkMutexes[cleanupWorkerID]);
+                                    addrChunkPresent[cleanupWorkerID] = true;
+                                    chunks[cleanupWorkerID].push(tempAddrChunks[cleanupWorkerID]);
+                                    pthread_cond_signal(&addrChunkPresentConds[cleanupWorkerID]);
+                                    pthread_mutex_unlock(&addrChunkMutexes[cleanupWorkerID]);
+                                    tempAddrChunks[cleanupWorkerID] = new AccessInfo[CHUNK_SIZE];
+                                    tempAddrCount[cleanupWorkerID] = 0;
+                                }
+                                // cleanup writes
+                                AccessInfo &cleanupWriteCurrent = tempAddrChunks[cleanupWorkerID][tempAddrCount[cleanupWorkerID]++];
+                                cleanupWriteCurrent.addr = addrToBeCleaned;
+                                cleanupWriteCurrent.lid = 0;
+                                cleanupWriteCurrent.isRead = false;
+
+                                if (tempAddrCount[cleanupWorkerID] == CHUNK_SIZE) {
+                                    pthread_mutex_lock(&addrChunkMutexes[cleanupWorkerID]);
+                                    addrChunkPresent[cleanupWorkerID] = true;
+                                    chunks[cleanupWorkerID].push(tempAddrChunks[cleanupWorkerID]);
+                                    pthread_cond_signal(&addrChunkPresentConds[cleanupWorkerID]);
+                                    pthread_mutex_unlock(&addrChunkMutexes[cleanupWorkerID]);
+                                    tempAddrChunks[cleanupWorkerID] = new AccessInfo[CHUNK_SIZE];
+                                    tempAddrCount[cleanupWorkerID] = 0;
+                                }
+                            }
+                        }
+
+                        continue;
+                    }
 
                     if (access.isRead) {
                         // hybrid analysis
@@ -794,30 +867,32 @@ namespace __dp {
                         if (lastWrite != 0) {
                             // RAW
                             SMem->insertToRead(access.addr, access.lid);
-                            addDep(RAW, access.lid, lastWrite, access.var, access.AAvar);
+                            addDep(RAW, access.lid, lastWrite, access.var, access.AAvar, access.isStackAccess, &threadLocal_unvalidatedStackDependencies, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
                         }
                     } else {
                         sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
                         if (lastWrite == 0) {
                             // INIT
-                            addDep(INIT, access.lid, 0, access.var, access.AAvar);
+                            addDep(INIT, access.lid, 0, access.var, access.AAvar, access.isStackAccess, &threadLocal_unvalidatedStackDependencies, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
                         } else {
                             sigElement lastRead = SMem->testInRead(access.addr);
                             if (lastRead != 0) {
                                 // WAR
-                                addDep(WAR, access.lid, lastRead, access.var, access.AAvar);
+                                addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.isStackAccess, &threadLocal_unvalidatedStackDependencies, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
                                 // Clear intermediate read ops
                                 SMem->insertToRead(access.addr, 0);
                             } else {
                                 // WAW
-                                addDep(WAW, access.lid, lastWrite, access.var, access.AAvar);
+                                addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, access.isStackAccess, &threadLocal_unvalidatedStackDependencies, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
                             }
                         }
                     }
                 }
+                
                 // delete the current chunk at the end
-                if (accesses)
+                if (accesses){
                     delete[] accesses;
+                }
             }
 
             if (!isLocked) {
@@ -939,22 +1014,12 @@ namespace __dp {
 
         // TEST
         // check for stack access
-//        cout << "\n";
-//        cout << "READ: " << var << "  ADDR: " << hex << addr << "  Stack: " << stackAddrs->top().first << " - " << stackAddrs->top().second << "\n";
+        bool is_stack_access = false;
         if(stackAddrs->top().first && stackAddrs->top().second){
             if((addr <= stackAddrs->top().first) && (addr >= stackAddrs->top().second)){
-//                cout << "READ STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
-                //return;
-                ADDR tmp = addr;  // DUMMY
-
+                is_stack_access = true;
             }
-//            else{
-//                cout << "NON READ STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
-//            }
         }
-//        else{
-//                cout << "NON READ STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
-//            }
         // !TEST
 
         //addAccessInfo(true, lid, var, addr);
@@ -965,6 +1030,15 @@ namespace __dp {
         current.var = var;
         current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        current.isStackAccess = is_stack_access;
+        current.addrIsFirstWrittenInScope = scopeManager->isFirstWrittenInScope(addr, false);
+        current.positiveScopeChangeOccuredSinceLastAccess = scopeManager->positiveScopeChangeOccuredSinceLastAccess(addr);
+
+        if(is_stack_access){
+            // register stack read after check for positiveScopeChangeOccuredSinceLastAccess
+            scopeManager->registerStackRead(addr, lid, var);
+        }
+
         // store loop iteration metadata (last 8 bits for loop id, 1 bit to mark loop iteration count as valid, last 7 bits for loop iteration)
         // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
         // first 32 bits of current.lid are reserved for metadata and thus empty
@@ -1046,22 +1120,14 @@ namespace __dp {
         }
 
         // TEST
-//        cout << "\n";
-//        cout << "WRITE: " << var << "  ADDR: " << hex << addr << "  Stack: " << stackAddrs->top().first << " - " << stackAddrs->top().second << "\n";
         // check for stack access
+        bool is_stack_access = false;
         if(stackAddrs->top().first && stackAddrs->top().second){
             if((addr <= stackAddrs->top().first) && (addr >= stackAddrs->top().second)){
 //                cout << "WRITE STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
-                //return;
-                ADDR tmp = addr;  // DUMMY
+                is_stack_access = true;
             }
-//            else{
-//                cout << "NON WRITE STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
-//            }
         }
-//        else{
-//                cout << "NON WRITE STACK ACCESS DETECTED! " << decodeLID(lid) << "  " << var << "\n";
-//            }
         // !TEST
 
 
@@ -1072,6 +1138,15 @@ namespace __dp {
         current.var = var;
         current.AAvar = getMemoryRegionIdFromAddr(var, addr);
         current.addr = addr;
+        current.isStackAccess = is_stack_access;
+        current.addrIsFirstWrittenInScope = scopeManager->isFirstWrittenInScope(addr, true);
+        current.positiveScopeChangeOccuredSinceLastAccess = scopeManager->positiveScopeChangeOccuredSinceLastAccess(addr);
+        
+        if(is_stack_access){
+            // register stack write after check for positiveScopeChangeOccuredSinceLastAccess
+            scopeManager->registerStackWrite(addr, lid, var);
+        }
+        
         // store loop iteration metadata (last 8 bits for loop id, 1 bit to mark loop iteration count as valid, last 7 bits for loop iteration)
         // last 8 bits are sufficient, since metadata is only used to check for different iterations, not exact values.
         // first 32 bits of current.lid are reserved for metadata and thus empty
@@ -1414,6 +1489,10 @@ namespace __dp {
         }
         delete beginFuncs;
 
+        // TEST
+        delete scopeManager;
+        // !TEST
+
         *out << decodeLID(lid) << " END program" << endl;
         out->flush();
         out->close();
@@ -1500,6 +1579,7 @@ namespace __dp {
 
             // TEST
             stackAddrs = new std::stack<std::pair<ADDR, ADDR>>();
+            scopeManager = new ScopeManager();
             // !TEST
 
             // hybrid analysis
@@ -1587,8 +1667,11 @@ namespace __dp {
 
         // TEST
         // initialize stack addresses for function
+//        if(stackAddrs->size() > 0){
+//            cout << "PUSH STACK ENTRY, PREV: " << hex << stackAddrs->top().first << " -> " << hex << stackAddrs->top().second << " \n";
+//        }
         stackAddrs->push(std::pair<ADDR, ADDR>(0,0));
-//        cout << "PUSH STACK ENTRY\n";
+        scopeManager->enterScope("function", lid);
         // !TEST
 
 
@@ -1657,7 +1740,15 @@ namespace __dp {
 
         // TEST
         // clear information on allocated stack addresses
+//        if(stackAddrs->size() > 0){
+//            cout << "POP STACK ENTRY: " << hex << stackAddrs->top().first << " -> " << hex << stackAddrs->top().second << " \n";
+//        }
+        clearStackAccesses(stackAddrs->top().first, stackAddrs->top().second);  // insert accesses with LID 0 to the queues
         stackAddrs->pop();
+//        if(stackAddrs->size() > 0){
+//            cout << "\tNEW TOP STACK ENTRY: " <<  hex << stackAddrs->top().first << " -> " << hex << stackAddrs->top().second << " \n";
+//        }
+        scopeManager->leaveScope("function", lid);
         // !TEST
 
         if (isExit == 0)
@@ -1693,6 +1784,7 @@ namespace __dp {
             if (DP_DEBUG) {
                 cout << "(" << std::dec << FuncStackLevel << ")Loop " << loopID << " enters." << endl;
             }
+            scopeManager->enterScope("loop", lid);
         } else {
             // The same loop iterates again
             loopStack->top().count++;
@@ -1720,6 +1812,9 @@ namespace __dp {
                 }
                 loopStack->top().funcLevel = FuncStackLevel;
             }
+
+            scopeManager->leaveScope("loop_iteration", lid);
+            scopeManager->enterScope("loop_iteration", lid);
         }
     }
 
@@ -1806,6 +1901,28 @@ namespace __dp {
                 cout << "Loop " << loopStack->top().loopID << "." << endl;
             }
         }
-    }
+
+        scopeManager->leaveScope("loop", lid);
+
+        }
+
+        inline void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound){
+            int64_t workerID = ((stack_lower_bound - (stack_lower_bound % 4)) % (NUM_WORKERS*4)) / 4; // implicit "floor"
+            AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
+            current.stackCleanup = true;
+            current.stackCleanupRange = pair<ADDR, ADDR>(stack_lower_bound, stack_upper_bound);
+
+            if (tempAddrCount[workerID] == CHUNK_SIZE) {
+                pthread_mutex_lock(&addrChunkMutexes[workerID]);
+                addrChunkPresent[workerID] = true;
+                chunks[workerID].push(tempAddrChunks[workerID]);
+                pthread_cond_signal(&addrChunkPresentConds[workerID]);
+                pthread_mutex_unlock(&addrChunkMutexes[workerID]);
+                tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
+                tempAddrCount[workerID] = 0;
+            }
+        }
+
+        
     }
 } // namespace __dp
