@@ -1,5 +1,6 @@
 /*
- * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ * This file is part of the DiscoPoP software
+ * (http://www.discopop.tu-darmstadt.de)
  *
  * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
  *
@@ -11,16 +12,16 @@
 
 #include <stdio.h>
 
-int main(){
-    int N = 100000;
-    long sum = 0;
-    int Arr[N];
+int main() {
+  int N = 100000;
+  long sum = 0;
+  int Arr[N];
 
-    for(int i = 0; i < N; i++){
-        Arr[i] = i % 13;
-    }
+  for (int i = 0; i < N; i++) {
+    Arr[i] = i % 13;
+  }
 
-    for(int i = 0; i < N; i++){
-        sum += Arr[i];
-    }
+  for (int i = 0; i < N; i++) {
+    sum += Arr[i];
+  }
 }

@@ -71,7 +71,7 @@ class TestMethods(unittest.TestCase):
                 do_all_patterns = test_output.patterns.__dict__[pattern_type]
 
                 for pattern in do_all_patterns:
-                    if cast(DoAllInfo, pattern).start_line == "1:302":
+                    if cast(DoAllInfo, pattern).start_line == "1:271":
                         found_main_loop = True
             else:
                 self.assertEqual(amount_of_identified_patterns, 0)

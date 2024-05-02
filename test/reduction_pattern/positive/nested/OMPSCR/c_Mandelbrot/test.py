@@ -65,7 +65,7 @@ class TestMethods(unittest.TestCase):
         for pattern_type in test_output.patterns.__dict__:
             amount_of_identified_patterns = len(test_output.patterns.__dict__[pattern_type])
             if pattern_type == "reduction":
-                expected_lines = ["102"]
+                expected_lines = ["101"]
                 for pattern in test_output.patterns.__dict__[pattern_type]:
                     if pattern.start_line.split(":")[1] in expected_lines:
                         expected_lines.remove(pattern.start_line.split(":")[1])

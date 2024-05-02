@@ -65,7 +65,7 @@ class TestMethods(unittest.TestCase):
         for pattern_type in test_output.patterns.__dict__:
             amount_of_identified_patterns = len(test_output.patterns.__dict__[pattern_type])
             if pattern_type == "do_all":
-                unexpected_lines = ["105"]
+                unexpected_lines = ["104"]
                 for pattern in test_output.patterns.__dict__[pattern_type]:
                     self.assertFalse(pattern.start_line.split(":")[1] in unexpected_lines, 
                                      "Found incorrect do-all pattern. Unexpected lines " + str(unexpected_lines) + ". Found: " + str(

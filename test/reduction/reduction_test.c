@@ -1,5 +1,6 @@
 /*
- * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ * This file is part of the DiscoPoP software
+ * (http://www.discopop.tu-darmstadt.de)
  *
  * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
  *
@@ -206,8 +207,9 @@ void no_reduction() {
   }
 }
 
-int main(int argc, char** argv) {
-  for (int i = 0; i < N; i++) global_array[i] = i;
+int main(int argc, char **argv) {
+  for (int i = 0; i < N; i++)
+    global_array[i] = i;
 
   reduction();
   no_reduction();
