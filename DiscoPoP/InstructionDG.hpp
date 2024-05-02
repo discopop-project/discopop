@@ -1,5 +1,6 @@
 /*
- * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ * This file is part of the DiscoPoP software
+ * (http://www.discopop.tu-darmstadt.de)
  *
  * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
  *
@@ -11,30 +12,34 @@
 
 #pragma once
 
-#include <string>
-#include "InstructionCFG.hpp"
 #include "DPUtils.hpp"
+#include "InstructionCFG.hpp"
 #include "unordered_map"
+#include <string>
 
 class InstructionDG : public Graph<Instruction *> {
 
 private:
-    dputil::VariableNameFinder *VNF;
-    InstructionCFG *CFG;
-    set<Instruction *> highlightedInstructionNodes;
-    int32_t fid;
+  dputil::VariableNameFinder *VNF;
+  InstructionCFG *CFG;
+  set<Instruction *> highlightedInstructionNodes;
+  int32_t fid;
 
-    void recursiveDepChecker(set<Instruction *> *checkedInstructions, Instruction *I, Instruction *C);
+  void recursiveDepChecker(set<Instruction *> *checkedInstructions,
+                           Instruction *I, Instruction *C);
 
-    void recursiveDepFinder(set<Instruction *> *checkedInstructions, Instruction *I);
+  void recursiveDepFinder(set<Instruction *> *checkedInstructions,
+                          Instruction *I);
 
 public:
-    InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid);
+  InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG,
+                int32_t _fid);
 
-    string edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap);
+  string edgeToDPDep(Edge<Instruction *> *e,
+                     unordered_map<string, pair<string, string>>
+                         &staticValueNameToMemRegIDMap);
 
-    void highlightInstructionNode(Instruction *instr);
+  void highlightInstructionNode(Instruction *instr);
 
-    void dumpToDot(const string targetPath);
-
+  void dumpToDot(const string targetPath);
 };

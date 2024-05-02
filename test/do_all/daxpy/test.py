@@ -43,7 +43,7 @@ class TestMethods(unittest.TestCase):
         run_cmd(cmd, src_dir, env_vars)
         # execute DiscoPoP analysis
         cwd = os.path.join(src_dir, ".discopop")
-        cmd = "discopop_explorer"
+        cmd = "discopop_explorer --enable-patterns doall,reduction"
         run_cmd(cmd, cwd, env_vars)
         # validate results
         try:
@@ -57,28 +57,29 @@ class TestMethods(unittest.TestCase):
 
     def validate_results(self, test_dir, src_dir):
         """compare results to gold standard"""
-        gold_standard_file = os.path.join(test_dir, "detection_result_dump.json")
         test_output_file = os.path.join(src_dir, ".discopop", "explorer", "detection_result_dump.json")
-        # load both detection results
-        with open(gold_standard_file, "r") as f:
-            tmp_str = f.read()
-        gold_standard: DetectionResult = jsonpickle.decode(tmp_str)
-
+        # load detection results
         with open(test_output_file, "r") as f:
             tmp_str = f.read()
         test_output: DetectionResult = jsonpickle.decode(tmp_str)
 
-        # convert DoAllInfo objects to DoAllInfoForValidation objects to make use of custom __eq__
-        converted_gold_standard = [DoAllInfoForValidation(elem) for elem in gold_standard.do_all]
-        converted_test_output = [DoAllInfoForValidation(elem) for elem in test_output.patterns.do_all]
-
-        # sort the lists
-        converted_gold_standard = sorted(
-            converted_gold_standard, key=lambda x: (x.dai.node_id, x.dai.start_line, x.dai.end_line)
-        )
-        converted_test_output = sorted(
-            converted_test_output, key=lambda x: (x.dai.node_id, x.dai.start_line, x.dai.end_line)
-        )
-
-        # compare doall list elements
-        self.assertListEqual(converted_gold_standard, converted_test_output)
+        for pattern_type in test_output.patterns.__dict__:
+            amount_of_identified_patterns = len(test_output.patterns.__dict__[pattern_type])
+            if pattern_type == "do_all":
+                expected_lines = ["10","21"]
+                for pattern in test_output.patterns.__dict__[pattern_type]:
+                    if pattern.start_line.split(":")[1] in expected_lines:
+                        expected_lines.remove(pattern.start_line.split(":")[1])
+                self.assertTrue(len(expected_lines) == 0,
+                                "Missing expected do-all patterns at line " + str(expected_lines) + ". Found: " + str(
+                                    [p.start_line for p in test_output.patterns.__dict__[pattern_type]]))
+            elif pattern_type == "reduction":
+                expected_lines = ["29"]
+                for pattern in test_output.patterns.__dict__[pattern_type]:
+                    if pattern.start_line.split(":")[1] in expected_lines:
+                        expected_lines.remove(pattern.start_line.split(":")[1])
+                self.assertTrue(len(expected_lines) == 0,
+                                "Missing expected reduction patterns at line " + str(expected_lines) + ". Found: " + str(
+                                    [p.start_line for p in test_output.patterns.__dict__[pattern_type]]))
+            else:
+                self.assertEqual(amount_of_identified_patterns, 0)

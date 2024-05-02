@@ -1,5 +1,6 @@
 /*
- * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ * This file is part of the DiscoPoP software
+ * (http://www.discopop.tu-darmstadt.de)
  *
  * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
  *
@@ -11,20 +12,23 @@
 
 #pragma once
 
-#include <stdint.h>
-#include <string>
+#include <assert.h>
+#include <fstream>
+#include <iostream> // std::cerr
 #include <sstream>
 #include <stdexcept>
-#include <iostream>   // std::cerr
-#include <fstream>
-#include <vector>
-#include <utility>
+#include <stdint.h>
+#include <string>
 #include <unistd.h>
-#include <assert.h>
+#include <utility>
+#include <vector>
 
-#define LIDSIZE 14    // Number of bits for holding LID
-#define LIDMETADATASIZE 32  // Number of bits for holding LID Metadata (Column + Loop ID + Loop Iteration)
-#define MAXLNO 16384  // Maximum number of lines in a single file. Has to be 2^LIDSIZE.
+#define LIDSIZE 14 // Number of bits for holding LID
+#define LIDMETADATASIZE                                                        \
+  32 // Number of bits for holding LID Metadata (Column + Loop ID + Loop
+     // Iteration)
+#define MAXLNO                                                                 \
+  16384 // Maximum number of lines in a single file. Has to be 2^LIDSIZE.
 
 typedef int64_t LID;
 typedef int64_t ADDR;
@@ -33,77 +37,77 @@ using namespace std;
 
 namespace dputil {
 
-    inline string decodeLID(int64_t lid) {
-        if (lid == 0)
-            return "*";
+inline string decodeLID(int64_t lid) {
+  if (lid == 0)
+    return "*";
 
-        stringstream ss;
-        // unpack metadata
-        // potentially TODO, currently not necessary
+  stringstream ss;
+  // unpack metadata
+  // potentially TODO, currently not necessary
 
-        // remove metadata
-        lid &= 0x00000000FFFFFFFF;
+  // remove metadata
+  lid &= 0x00000000FFFFFFFF;
 
-        ss << (lid >> LIDSIZE) << ":" << lid % MAXLNO;
-        return ss.str();
-    }
+  ss << (lid >> LIDSIZE) << ":" << lid % MAXLNO;
+  return ss.str();
+}
 
-    inline vector <string> *split(string input, char delim) {
-        vector <string> *substrings = new vector<string>();
-        istringstream inputStringStream(input);
-        string sub;
+inline vector<string> *split(string input, char delim) {
+  vector<string> *substrings = new vector<string>();
+  istringstream inputStringStream(input);
+  string sub;
 
-        while (getline(inputStringStream, sub, delim)) {
-            substrings->push_back(sub);
+  while (getline(inputStringStream, sub, delim)) {
+    substrings->push_back(sub);
+  }
+
+  return substrings;
+}
+
+inline int32_t getFileID(string fileMapping, string fullPathName) {
+  int32_t index = 0; // if the associated file id is not found, then we return 0
+  string line;
+  ifstream fileMap(fileMapping.c_str());
+
+  if (fileMap.is_open()) {
+    vector<string> *substrings = NULL;
+    while (getline(fileMap, line)) {
+      substrings = split(line, '\t');
+      if (substrings->size() == 2) {
+        string indexString = (*substrings)[0];
+        string fileName = (*substrings)[1];
+        if (fileName.compare(fullPathName) == 0) {
+          index = (int32_t)atoi(indexString.c_str());
+          break;
         }
-
-        return substrings;
+      }
+      substrings->clear();
+      delete substrings;
     }
+    fileMap.close();
+  }
+  return index;
+}
 
-    inline int32_t getFileID(string fileMapping, string fullPathName) {
-        int32_t index = 0; // if the associated file id is not found, then we return 0
-        string line;
-        ifstream fileMap(fileMapping.c_str());
+inline bool fexists(const string &filename) {
+  ifstream ifile(filename.c_str());
 
-        if (fileMap.is_open()) {
-            vector <string> *substrings = NULL;
-            while (getline(fileMap, line)) {
-                substrings = split(line, '\t');
-                if (substrings->size() == 2) {
-                    string indexString = (*substrings)[0];
-                    string fileName = (*substrings)[1];
-                    if (fileName.compare(fullPathName) == 0) {
-                        index = (int32_t) atoi(indexString.c_str());
-                        break;
-                    }
-                }
-                substrings->clear();
-                delete substrings;
-            }
-            fileMap.close();
-        }
-        return index;
-    }
+  if (ifile.fail())
+    return false;
+  else
+    return true;
+}
 
-    inline bool fexists(const string &filename) {
-        ifstream ifile(filename.c_str());
+inline string get_exe_dir() {
+  char buff[1024];
+  ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
+  if (len != -1) {
+    buff[len] = '\0';
+    string fullPath = std::string(buff);
+    return fullPath.substr(0, fullPath.find_last_of('/'));
+  } else {
+    return "";
+  }
+}
 
-        if (ifile.fail())
-            return false;
-        else
-            return true;
-    }
-
-    inline string get_exe_dir() {
-        char buff[1024];
-        ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
-        if (len != -1) {
-            buff[len] = '\0';
-            string fullPath = std::string(buff);
-            return fullPath.substr(0, fullPath.find_last_of('/'));
-        } else {
-            return "";
-        }
-    }
-
-} // namespace
+} // namespace dputil

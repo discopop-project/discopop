@@ -19,5 +19,5 @@ cd ../..
 C_CPP_FILES=$(find . -name *.c -or -name *.cpp -or -name *.h -or -name *.hpp)
 for file in $C_CPP_FILES; do
     # execute clang-format for each file
-    clang-format $file -i
+    clang-format $file -i --verbose
 done
