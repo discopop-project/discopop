@@ -9,38 +9,47 @@ import os.path
 from dataclasses import dataclass
 from typing import List, Optional
 
+from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
+
 
 @dataclass
-class OptimizerArguments(object):
+class OptimizerArguments(GeneralArguments):
     """Container Class for the arguments passed to the discopop_optimizer"""
 
     verbose: bool
     interactive: bool
-    exhaustive: bool
-    evolutionary: Optional[List[str]]
+    interactive_export: str
     doall_microbench_file: str
     reduction_microbench_file: str
     allow_nested_parallelism: bool
     plot: bool
     system_configuration_path: str
     check_called_function_for_nested_parallelism: bool
+    profiling: bool
+    pruning_level: int
+    optimization_level: int
+    optimization_level_2_parameters: str
+    single_suggestions: bool
+    pin_function_calls_to_host: bool
 
     def __post_init__(self):
-        # fix correct optimization method
-        if not self.exhaustive:
-            if self.evolutionary == None:
-                self.evolutionary = [str(50), str(5)]
-        elif self.evolutionary != None:
-            self.evolutionary = None
-
         self.__validate()
 
     def __validate(self):
         """Validate the arguments passed to the discopop_optimizer, e.g check if given files exist"""
-        if self.doall_microbench_file is not "None":
+        if self.doall_microbench_file != "None":
             if not os.path.isfile(self.doall_microbench_file):
                 raise FileNotFoundError(f"Microbenchmark file not found: {self.doall_microbench_file}")
-        if self.reduction_microbench_file is not "None":
+        if self.reduction_microbench_file != "None":
             if not os.path.isfile(self.reduction_microbench_file):
                 raise FileNotFoundError(f"Microbenchmark file not found: {self.reduction_microbench_file}")
+
+        # check pruning level values
+        if self.pruning_level not in [0, 1, 2]:
+            raise ValueError("Unsupported pruning level: ", self.pruning_level)
+
+        # check optimization level
+        if self.optimization_level not in [0, 1, 2, 3]:
+            raise ValueError("Unknown optimization level requested: ", self.optimization_level)
+
         pass

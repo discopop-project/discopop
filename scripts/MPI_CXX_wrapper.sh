@@ -35,9 +35,9 @@ LLVM_CLANGPP=$DP_BUILD_LLVM_BIN_DIR/clang++
 MPI_INCLUDES="$(mpic++ -showme:compile)"
 
 # original arguments: "$@"
-echo "WRAPPED MPI CXX COMPILE..."
-echo "ARGS: ${@}"
-echo "DP_FM_PATH: ${DP_FM_PATH}"
+#echo "WRAPPED MPI CXX COMPILE..."
+#echo "ARGS: ${@}"
+#echo "DP_FM_PATH: ${DP_FM_PATH}"
 
 ## check if environment is prepared
 #if [ -z ${DP_FM_PATH} ]; then
@@ -47,7 +47,7 @@ echo "DP_FM_PATH: ${DP_FM_PATH}"
 #  exit 1
 #fi
 
-echo "${LLVM_CLANGPP} ${MPI_INCLUDES} -g -c -O0 -S -emit-llvm -fno-discard-value-names ${@} -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP"
+#echo "${LLVM_CLANGPP} ${MPI_INCLUDES} -g -c -O0 -S -emit-llvm -fno-discard-value-names ${@} -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP"
 #clang++-11 -g -c -O0 -S -emit-llvm -fno-discard-value-names "$@" -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP -mllvm --fm-path -mllvm ${DP_FM_PATH}
 ${LLVM_CLANGPP} "$@" -g -c -O0 -fno-discard-value-names -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP -fPIC ${MPI_INCLUDES}
 

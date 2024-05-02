@@ -8,6 +8,7 @@
 import os.path
 from argparse import ArgumentParser
 from pathlib import Path
+from discopop_library.GlobalLogger.setup import setup_logger
 
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.patch_generator import run
@@ -23,6 +24,10 @@ def parse_args() -> PatchGeneratorArguments:
         "EXPERIMENTAL",
         "Arguments marked as experimental features. These flags may or may not be removed or changed in the future.",
     )
+    benchmarking_parser = parser.add_argument_group(
+        "BENCHMARKING",
+        "Arguments marked as benchmarking features. These flags may or may not be removed or changed in the future.",
+    )
 
     # fmt: off
     parser.add_argument("-v", "--verbose", action="store_true",
@@ -31,19 +36,28 @@ def parse_args() -> PatchGeneratorArguments:
         "-a", "--add-from-json", type=str, default="None",
         help="Add additional patches specified in the given patterns.json file."
     )
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:
+    # BENCHMARKING FLAGS:
+    benchmarking_parser.add_argument("--only-optimizer-output-patterns", action="store_true", help="Only generate code for optimizer_output patterns.")
+    benchmarking_parser.add_argument("--only-maximum-id-pattern", action="store_true", help="Only generate code for the pattern with the highest id.")
     # fmt: on
 
     arguments = parser.parse_args()
 
     # determine DP build path
     arguments.dp_build_path = run_config_provider(
-        ConfigProviderArguments(return_dp_build_dir=True, return_dp_source_dir=False, return_llvm_bin_dir=False)
+        ConfigProviderArguments(
+            return_dp_build_dir=True, return_dp_source_dir=False, return_llvm_bin_dir=False, return_version_string=False
+        )
     )
 
     # determine LLVM_BIN_DIR
     llvm_bin_dir = run_config_provider(
-        ConfigProviderArguments(return_dp_build_dir=False, return_dp_source_dir=False, return_llvm_bin_dir=True)
+        ConfigProviderArguments(
+            return_dp_build_dir=False, return_dp_source_dir=False, return_llvm_bin_dir=True, return_version_string=False
+        )
     )
     # determine CC
     if os.path.exists(os.path.join(llvm_bin_dir, "clang")):
@@ -67,11 +81,16 @@ def parse_args() -> PatchGeneratorArguments:
         CC=arguments.cc,
         CXX=arguments.cxx,
         add_from_json=arguments.add_from_json,
+        only_optimizer_output_patterns=arguments.only_optimizer_output_patterns,
+        log_level=arguments.log.upper(),
+        write_log=arguments.write_log,
+        only_maximum_id_pattern=arguments.only_maximum_id_pattern,
     )
 
 
 def main():
     arguments = parse_args()
+    setup_logger(arguments)
     run(arguments)
 
 

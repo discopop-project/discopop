@@ -7,6 +7,7 @@
 # directory for details.
 
 import copy
+import logging
 from multiprocessing import Pool
 from typing import Dict, List, Set, Tuple, cast
 from sympy import Integer, Symbol
@@ -14,6 +15,8 @@ from sympy import Integer, Symbol
 import networkx as nx  # type: ignore
 
 import tqdm  # type: ignore
+from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode  # type: ignore
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo  # type: ignore
 from discopop_library.PatternIdManagement.unique_pattern_id import get_unique_pattern_id
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
@@ -29,10 +32,13 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_children,
     get_out_mutex_edges,
     get_parents,
+    get_predecessors,
     get_successors,
     show,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
+
+logger = logging.getLogger("Optimizer")
 
 global_graph = None
 global_experiment = None
@@ -90,6 +96,7 @@ def __collapse_loops_in_function(function_node_id):
         #        # set of loops could change when modifications are applied, hence the copy
         #        loops = get_all_loop_nodes(global_graph)
         for loop in copy.deepcopy(relevant_loops):
+            logging.info("Checking loop collapse for @ " + str(loop))
             loop_data = data_at(global_graph, loop)
             #            if function_node_id not in get_all_parents(global_graph, loop):
             #                continue
@@ -99,6 +106,7 @@ def __collapse_loops_in_function(function_node_id):
             collapse_sources: Set[int] = set()
             while queue:
                 current = queue.pop()
+                logger.debug("\tCurrent: " + str(current))
                 current_data = data_at(global_graph, current)
 
                 if type(current_data) == Loop:
@@ -107,8 +115,33 @@ def __collapse_loops_in_function(function_node_id):
                         # if loops are located on the same device, collapse
                         if loop_data.device_id == current_data.device_id:
                             if loop not in visited_inner_loop:
-                                collapse_sources.add(current)
-                                visited_inner_loop.add(loop)
+                                # calculate distance of loop to parent to check for perfect nesting (distance <= 2 due to graph structure)
+                                distance_to_parent = 0
+                                inner_queue: List[Tuple[int, int]] = [(loop, 0)]
+                                while inner_queue:
+                                    logger.debug("\tInner queue: " + str(inner_queue))
+                                    inner_current, tmp_dist = inner_queue.pop()
+                                    preds = get_predecessors(global_graph, inner_current)
+                                    if len(preds) == 0:
+                                        if tmp_dist > distance_to_parent:
+                                            distance_to_parent = tmp_dist
+                                        continue
+                                    else:
+                                        inner_queue += [
+                                            (
+                                                p,
+                                                (
+                                                    tmp_dist
+                                                    if isinstance(data_at(global_graph, p), ContextNode)
+                                                    else tmp_dist + 1
+                                                ),
+                                            )
+                                            for p in preds
+                                        ]
+                                logger.debug("\t\tCollapse at distance: " + str(distance_to_parent))
+                                if distance_to_parent <= 2:
+                                    collapse_sources.add(current)
+                                    visited_inner_loop.add(loop)
                             continue
                     # parent is regular loop -> end search on this path
                     continue
@@ -167,6 +200,7 @@ def __collapse_loops_in_function(function_node_id):
                 pattern_info.device_type = (
                     global_experiment.get_system().get_device(node_data_copy.device_id).get_device_type()
                 )
+                pattern_info.applicable_pattern = False  # patterns are only applicable via the optimizer output pattern interfaces due to potential data movement
                 global_experiment.suggestion_to_node_ids_dict[pattern_id] = [new_node_id]
                 global_experiment.node_id_to_suggestion_dict[new_node_id] = pattern_id
 
@@ -240,6 +274,17 @@ def __collapse_loops_in_function(function_node_id):
                 # register pattern for output
                 # todo: find a nicer solution to duplicating the patterns for each device mapping
                 global_experiment.detection_result.patterns.do_all.append(pattern_info)
+                # construct optimizer output pattern to represent the non-standalone pattern_info
+                optimizer_output_pattern = OptimizerOutputPattern(
+                    pattern_info._node,
+                    [new_node_id],
+                    global_experiment.get_system().get_host_device_id(),
+                    global_experiment,
+                )
+                optimizer_output_pattern.add_pattern(
+                    pattern_info.pattern_id, pattern_info.device_id, pattern_info.device_type
+                )
+                global_experiment.detection_result.patterns.optimizer_output.append(optimizer_output_pattern)
                 print("REGISTERED PATTERN INFO: ", pattern_id, " for Device: ", data_at(global_graph, csrc).device_id)
                 print(pattern_info)
                 print()

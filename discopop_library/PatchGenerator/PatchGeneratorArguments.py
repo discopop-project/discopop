@@ -8,9 +8,11 @@
 import os.path
 from dataclasses import dataclass
 
+from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
+
 
 @dataclass
-class PatchGeneratorArguments(object):
+class PatchGeneratorArguments(GeneralArguments):
     """Container Class for the arguments passed to the discopop_patch_generator"""
 
     verbose: bool
@@ -18,6 +20,9 @@ class PatchGeneratorArguments(object):
     CC: str
     CXX: str
     add_from_json: str
+    # Benchmarking flags
+    only_optimizer_output_patterns: bool
+    only_maximum_id_pattern: bool
 
     def __post_init__(self):
         self.__validate()

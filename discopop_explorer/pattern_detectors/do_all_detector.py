@@ -5,12 +5,15 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import sys
 from multiprocessing import Pool
 from typing import List, Dict, Set, Tuple, cast
+import warnings
 
 from alive_progress import alive_bar  # type: ignore
 
 from .PatternInfo import PatternInfo
+from .reduction_detector import ReductionInfo
 from ..PEGraphX import (
     CUNode,
     LoopNode,
@@ -21,8 +24,9 @@ from ..PEGraphX import (
     LineID,
     MemoryRegion,
     DepType,
+    NodeID,
 )
-from ..utils import classify_loop_variables
+from ..utils import classify_loop_variables, filter_for_hotspots
 from ..variable import Variable
 
 
@@ -66,7 +70,7 @@ class DoAllInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX) -> List[DoAllInfo]:
+def run_detection(pet: PEGraphX, hotspots, reduction_info: List[ReductionInfo]) -> List[DoAllInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph
@@ -79,12 +83,21 @@ def run_detection(pet: PEGraphX) -> List[DoAllInfo]:
     result: List[DoAllInfo] = []
     nodes = pet.all_nodes(LoopNode)
 
+    # remove reduction loops
+    print("ASDF: ", [r.node_id for r in reduction_info])
+    print("Nodes: ", [n.start_position() for n in nodes])
+    print("pre:", len(nodes))
+    nodes = [n for n in nodes if n.id not in [r.node_id for r in reduction_info]]
+    print("post:", len(nodes))
+
+    nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
+
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
         tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
     for local_result in tmp_result:
         result += local_result
-    print("GLOBAL RES: ", result)
+    print("GLOBAL RES: ", [r.start_line for r in result])
 
     for pattern in result:
         pattern.get_workload(pet)
@@ -137,14 +150,21 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
     defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]] = []
     tmp_loop_variables = pet.get_variables(root_children_cus)
     for var in tmp_loop_variables:
-        if var.defLine >= root_loop.start_position() and var.defLine <= root_loop.end_position():
-            defined_inside_loop.append((var, tmp_loop_variables[var]))
+        if ":" in var.defLine:
+            file_id = int(var.defLine.split(":")[0])
+            def_line_num = int(var.defLine.split(":")[1])
+            for rc_cu in root_children_cus:
+                if file_id == rc_cu.file_id and def_line_num >= rc_cu.start_line and def_line_num <= rc_cu.end_line:
+                    defined_inside_loop.append((var, tmp_loop_variables[var]))
 
     # check if all subnodes are parallelizable
+    file_io_warnings = []
     for node in pet.subtree_of_type(root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
-            return False
+            file_io_warnings.append(node)
+            # return False  # too pessimistic
+            # todo: issue critical around file_io
 
     for i in range(0, len(subnodes)):
         children_cache: Dict[Node, List[Node]] = dict()
@@ -165,6 +185,9 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
             ):
                 # if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
                 return False
+
+    for fio in file_io_warnings:
+        warnings.warn("FileIO performed inside DoAll @ " + str(node.start_position()))
 
     return True
 
@@ -204,6 +227,13 @@ def __check_loop_dependencies(
         memory_regions_defined_in_loop.update(mem_regs)
 
     for source, target, dep in deps:
+
+        # todo: move this calculation to the innermost point possible to reduce computation costs
+        # get metadata for dependency
+        dep_source_nesting_level = __calculate_nesting_level(pet, root_loop, source)
+        dep_target_nesting_level = __calculate_nesting_level(pet, root_loop, target)
+        max_considered_intra_iteration_dep_level = max(dep_source_nesting_level, dep_target_nesting_level)
+
         # check if targeted variable is readonly inside loop
         if pet.is_readonly_inside_loop_body(
             dep,
@@ -219,10 +249,6 @@ def __check_loop_dependencies(
         if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
             continue
 
-        # check if variable is defined inside loop
-        if dep.memory_region in memory_regions_defined_in_loop:
-            continue
-
         # targeted variable is not read-only
         if dep.dtype == DepType.INIT:
             continue
@@ -232,16 +258,43 @@ def __check_loop_dependencies(
             if not dep.intra_iteration:
                 return True
             # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
-            elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
-                tmp = root_loop.get_nesting_level(pet)
-                return True
+            else:
+                if dep.intra_iteration_level <= max_considered_intra_iteration_dep_level:
+                    if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
+                        pass
+                    else:
+                        return True
+
+        #                    # dep within the loop. not problematic, if intra_iteration_level == 0
+        #                    if dep.intra_iteration_level == 0:
+        #                        pass
+        #                    else:
+        #                        # might be problematic
+        #                        # check if source and target in children loops
+        #                        contained_in_nested_loop = False
+        #                        for nested_loop in [l for l in root_children_loops if l != root_loop]:
+        #                            nested_children = pet.subtree_of_type(nested_loop, (CUNode, LoopNode))
+        #                            nested_children_cus = [cast(CUNode, cu) for cu in nested_children if cu.type == NodeType.CU]
+        #                            if pet.node_at(source) in nested_children_cus and pet.node_at(target) in nested_children_cus:
+        #                                contained_in_nested_loop = True
+        #                        if not contained_in_nested_loop:
+        #                            # problematic
+        #                            return True
+
+        #                else:
+        #                    # dep could belong to a parent loop
+        #                    if root_loop.get_nesting_level(pet) > 1 and dep.intra_iteration_level > 0:
+        #                        # dep belongs to parent loop. Can not be ignored for the inner loop
+        #                        return True
 
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
             if not dep.intra_iteration:
                 if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
-                    return True
+                    # check if variable is defined inside loop
+                    if dep.memory_region not in memory_regions_defined_in_loop:
+                        return True
             # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
             elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
                 tmp = root_loop.get_nesting_level(pet)
@@ -280,3 +333,18 @@ def __old_detect_do_all(pet: PEGraphX, root_loop: CUNode) -> bool:
                 return False
 
     return True
+
+
+def __calculate_nesting_level(pet: PEGraphX, root_loop: LoopNode, cu_node_id: str):
+    potential_parents = [(cu_node_id, -1)]  # -1 to offset the initialization with cu_node_id
+    while True:
+        if len(potential_parents) == 0:
+            # warnings.warn("root_loop: " + str(root_loop) + " not a parent of cu_node_id: " + str(cu_node_id))
+            return sys.maxsize
+        current_node_id, nesting_level = potential_parents.pop()
+        if current_node_id == root_loop.id:
+            # found
+            return nesting_level
+        # add new parents to the queue
+        for in_child_edge in pet.in_edges(cast(NodeID, current_node_id), EdgeType.CHILD):
+            potential_parents.append((in_child_edge[0], nesting_level + 1))

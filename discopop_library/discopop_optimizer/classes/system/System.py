@@ -27,6 +27,7 @@ class System(object):
     __host_device_id: int
     __network: Network
     __device_do_all_overhead_models: Dict[Device, Expr]
+    __device_do_all_shared_overhead_models: Dict[Device, Expr]
     __device_reduction_overhead_models: Dict[Device, Expr]
     __symbol_substitutions: List[
         Tuple[
@@ -43,6 +44,7 @@ class System(object):
         self.__host_device_id = -1
         self.__network = Network()
         self.__device_do_all_overhead_models = dict()
+        self.__device_do_all_shared_overhead_models = dict()
         self.__device_reduction_overhead_models = dict()
         self.__symbol_substitutions = []
 
@@ -91,6 +93,8 @@ class System(object):
             thread_count=Integer(device_configuration["threads"]),
             openmp_device_id=device_configuration["device_id"],
             device_specific_compiler_flags="",
+            speedup=device_configuration["speedup"],
+            compute_init_delays=device_configuration["compute_init_delays[us]"],
         )
         self.add_device(cpu, device_configuration["device_id"])
 
@@ -100,6 +104,8 @@ class System(object):
             thread_count=Integer(device_configuration["threads"]),
             openmp_device_id=device_configuration["device_id"],
             device_specific_compiler_flags="",
+            speedup=device_configuration["speedup"],
+            compute_init_delays=device_configuration["compute_init_delays[us]"],
         )
         self.add_device(gpu, device_configuration["device_id"])
 
@@ -107,6 +113,11 @@ class System(object):
         if arguments.verbose:
             print("System: Set DOALL overhead model: ", model)
         self.__device_do_all_overhead_models[device] = model
+
+    def set_device_doall_shared_overhead_model(self, device: Device, model: Expr, arguments: OptimizerArguments):
+        if arguments.verbose:
+            print("System: Set DOALL SHARED overhead model: ", model)
+        self.__device_do_all_shared_overhead_models[device] = model
 
     def set_reduction_overhead_model(self, device: Device, model: Expr, arguments: OptimizerArguments):
         if arguments.verbose:
@@ -119,6 +130,13 @@ class System(object):
                 warnings.warn("No DOALL overhead model, assuming 0 for device: " + str(device))
             return Expr(Integer(0))
         return self.__device_do_all_overhead_models[device]
+
+    def get_device_doall_shared_overhead_model(self, device: Device, arguments: OptimizerArguments) -> Expr:
+        if device not in self.__device_do_all_shared_overhead_models:
+            if arguments.verbose:
+                warnings.warn("No DOALL SHARED overhead model, assuming 0 for device: " + str(device))
+            return Expr(Integer(0))
+        return self.__device_do_all_shared_overhead_models[device]
 
     def get_device_reduction_overhead_model(self, device: Device, arguments: OptimizerArguments) -> Expr:
         if device not in self.__device_reduction_overhead_models:

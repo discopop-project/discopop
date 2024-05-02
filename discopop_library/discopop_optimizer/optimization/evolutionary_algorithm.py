@@ -42,11 +42,11 @@ def perform_evolutionary_search(
     arguments: OptimizerArguments,
     optimizer_dir: str,
 ) -> Optional[OptimizerOutputPattern]:
-    if arguments.evolutionary is None:
-        raise ValueError("Invalid arguments for evolutionary search: " + str(arguments.evolutionary))
+    if arguments.optimization_level_2_parameters is None:
+        arguments.optimization_level_2_parameters = ["50", "5"]
     ### SETTINGS
-    population_size = int(arguments.evolutionary[0])
-    generations = int(arguments.evolutionary[1])
+    population_size = int(arguments.optimization_level_2_parameters[0])
+    generations = int(arguments.optimization_level_2_parameters[1])
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
     crossovers = int(population_size / 10)
     mutations = int(population_size / 10)
@@ -319,6 +319,9 @@ def __parallel_crossover(param_tuple):
         element_2 = random.choice(global_population)
         # select crossover point
         max_crossover_idx = min(len(element_1), len(element_2))
+        if max_crossover_idx == 0:
+            # prevent index errors
+            continue
         crossover_idx = random.choice(range(0, max_crossover_idx))
 
         new_element_1 = element_1[:crossover_idx] + element_2[crossover_idx:]
@@ -381,6 +384,9 @@ def __parallel_mutate(param_tuple):
         mutation_target = random.choice(global_population)
 
         # select random mutation within the target
+        if len(mutation_target) == 0:
+            # prevent index errors
+            continue
         mutation_index = random.choice(range(0, len(mutation_target)))
 
         # perform mutation if possible
@@ -442,6 +448,7 @@ def __dump_result(
                             ),
                             [],
                             experiment.get_system().get_host_device_id(),
+                            experiment,
                         )
                     best_configuration.add_pattern(
                         pattern_id, device_id, experiment.get_system().get_device(device_id).get_device_type()

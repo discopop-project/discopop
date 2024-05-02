@@ -1,5 +1,6 @@
 /*
- * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ * This file is part of the DiscoPoP software
+ * (http://www.discopop.tu-darmstadt.de)
  *
  * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
  *
@@ -11,13 +12,13 @@
 
 #pragma once
 
-#include "llvm/IR/Instructions.h"
-#include "llvm/IR/DebugLoc.h"
-#include "llvm/IR/DebugInfoMetadata.h"
-#include "llvm/Support/Debug.h"
-#include <string>
 #include "Graph.hpp"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/Debug.h"
 #include <llvm/Support/raw_ostream.h>
+#include <string>
 
 #include "DPUtils.hpp"
 
@@ -27,28 +28,29 @@
 class InstructionCFG : public Graph<Instruction *> {
 
 private:
-    InstructionNode<Instruction *> *entry;
-    InstructionNode<Instruction *> *exit;
-    dputil::VariableNameFinder *VNF;
-    set<Instruction *> highlightedInstructionNodes;
+  InstructionNode<Instruction *> *entry;
+  InstructionNode<Instruction *> *exit;
+  dputil::VariableNameFinder *VNF;
+  set<Instruction *> highlightedInstructionNodes;
 
-    void findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction *previousInstruction);
+  void findAndAddFirstRelevantInstructionInSuccessorBlocks(
+      BasicBlock *BB, Instruction *previousInstruction);
 
 public:
-    InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F);
+  InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F);
 
-    set<Instruction *> findBoundaryInstructions(uint startLine, uint endLine);
+  set<Instruction *> findBoundaryInstructions(uint startLine, uint endLine);
 
-    InstructionNode<Instruction *> *getEntry() { return entry; }
+  InstructionNode<Instruction *> *getEntry() { return entry; }
 
-    InstructionNode<Instruction *> *getExit() { return exit; }
+  InstructionNode<Instruction *> *getExit() { return exit; }
 
-    bool isEntryOrExit(Instruction *I) {
-        return Graph::getInstructionNode(I) == entry || Graph::getInstructionNode(I) == exit;
-    }
+  bool isEntryOrExit(Instruction *I) {
+    return Graph::getInstructionNode(I) == entry ||
+           Graph::getInstructionNode(I) == exit;
+  }
 
-    void highlightInstructionNode(Instruction *instr);
+  void highlightInstructionNode(Instruction *instr);
 
-    void dumpToDot(const string targetPath);
-
+  void dumpToDot(const string targetPath);
 };

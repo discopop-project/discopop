@@ -212,12 +212,12 @@ def show_options(
 
         def __update_selection(cm, ctx):
             experiment.selected_paths_per_function[function_root] = (cm, ctx)
-            experiment.substitutions[
-                cast(Symbol, function_root.sequential_costs)
-            ] = experiment.selected_paths_per_function[function_root][0].sequential_costs
-            experiment.substitutions[
-                cast(Symbol, function_root.parallelizable_costs)
-            ] = experiment.selected_paths_per_function[function_root][0].parallelizable_costs
+            experiment.substitutions[cast(Symbol, function_root.sequential_costs)] = (
+                experiment.selected_paths_per_function[function_root][0].sequential_costs
+            )
+            experiment.substitutions[cast(Symbol, function_root.parallelizable_costs)] = (
+                experiment.selected_paths_per_function[function_root][0].parallelizable_costs
+            )
             # update displayed value
             label2.configure(state=NORMAL)
             label2.delete(0, END)

@@ -13,7 +13,7 @@ from discopop_explorer.PEGraphX import DummyNode, PEGraphX, MWType
 from discopop_explorer.parser import parse_inputs
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
-from discopop_explorer.pattern_detectors.reduction_detector import run_detection as detect_reduction
+from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo, run_detection as detect_reduction
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
     TPIType,
@@ -74,6 +74,8 @@ def build_preprocessed_graph_and_run_detection(
     cu_inst_result_file: str,
     llvm_cxxfilt_path: Optional[str],
     discopop_build_path: Optional[str],
+    hotspots,
+    reduction_info: List[ReductionInfo],
 ) -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.
     execute run_detection on newly constructed graph afterwards.
@@ -101,8 +103,8 @@ def build_preprocessed_graph_and_run_detection(
     )
 
     # execute reduction detector to enable taskloop-reduction-detection
-    detect_reduction(preprocessed_graph)
-    detect_do_all(preprocessed_graph)
+    detect_reduction(preprocessed_graph, hotspots)
+    detect_do_all(preprocessed_graph, hotspots, reduction_info)
 
     suggestions = run_detection(
         preprocessed_graph,

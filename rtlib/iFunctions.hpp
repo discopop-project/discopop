@@ -1,5 +1,6 @@
 /*
- * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ * This file is part of the DiscoPoP software
+ * (http://www.discopop.tu-darmstadt.de)
  *
  * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
  *
@@ -13,216 +14,311 @@
 
 //#define SKIP_DUP_INSTR 1
 
+#include "DPUtils.hpp"
+#include "MemoryRegionTree.hpp"
 #include <algorithm>
 #include <cstdlib>
 #include <pthread.h>
 #include <queue>
 #include <set>
 #include <stack>
+#include <string.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <unistd.h>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include <string.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <sys/syscall.h>
-#include "DPUtils.hpp"
-#include "MemoryRegionTree.hpp"
 // hybrid analysis
 #include <regex>
 // End HA
 namespace __dp {
 
-    /******* Data structures *******/
+/******* Data structures *******/
 
-    typedef enum {
-        RAW,
-        WAR,
-        WAW,
-        INIT,
-        RAW_II_0, RAW_II_1, RAW_II_2,
-        WAR_II_0, WAR_II_1, WAR_II_2,
-        WAW_II_0, WAW_II_1, WAW_II_2,
-         // .._II_x to represent inter-iteration dependencies by loop level in case of nested loops
+typedef enum {
+  RAW,
+  WAR,
+  WAW,
+  INIT,
+  RAW_II_0,
+  RAW_II_1,
+  RAW_II_2,
+  WAR_II_0,
+  WAR_II_1,
+  WAR_II_2,
+  WAW_II_0,
+  WAW_II_1,
+  WAW_II_2,
+  // .._II_x to represent inter-iteration dependencies by loop level in case of
+  // nested loops
+} depType;
+
+typedef enum {
+  NOM,
+  II_0,
+  II_1,
+  II_2 // NOM -> Normal
+} depTypeModifier;
+
+struct AccessInfo {
+  AccessInfo(bool isRead, LID lid, char *var, string AAvar, ADDR addr,
+             bool skip = false)
+      : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr),
+        skip(skip) {}
+
+  AccessInfo() : lid(0) {}
+
+  bool isRead;
+  // hybrid analysis
+  bool skip;
+  // End HA
+  LID lid;
+  char *var;
+  string AAvar; // name of allocated variable -> "Anti Aliased Variable"
+  ADDR addr;
+  bool isStackAccess = false;
+  bool addrIsFirstWrittenInScope = false;
+  bool positiveScopeChangeOccuredSinceLastAccess = false;
+};
+
+// For runtime dependency merging
+struct Dep {
+  Dep(depType T, LID dep, char *var, string AAvar)
+      : type(T), depOn(dep), var(var), AAvar(AAvar) {}
+
+  depType type;
+  LID depOn;
+  char *var;
+  string AAvar;
+};
+
+struct compDep {
+  bool operator()(const Dep &a, const Dep &b) const {
+    if (a.type < b.type) {
+      return true;
+    } else if (a.type == b.type && a.depOn < b.depOn) {
+      return true;
     }
-            depType;
+    // comparison between string is very time-consuming. So just compare
+    // variable names according to address (we only need to distinguish them)
+    else if (a.type == b.type && a.depOn == b.depOn &&
+             ((size_t)a.var < (size_t)b.var)) {
+      return true;
+    }
 
-    struct AccessInfo {
-        AccessInfo(bool isRead, LID lid, char *var, string AAvar, ADDR addr, bool skip = false)
-                : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {}
+    return false;
+  }
+};
 
-        AccessInfo() : lid(0) {}
+typedef std::set<Dep, compDep> depSet;
+typedef std::unordered_map<LID, depSet *> depMap;
+// Hybrid anaysis
+typedef std::unordered_map<std::string, std::set<std::string>> stringDepMap;
+// End HA
 
-        bool isRead;
-        // hybrid analysis
-        bool skip;
-        // End HA
-        LID lid;
-        char *var;
-        string AAvar;  // name of allocated variable -> "Anti Aliased Variable"
-        ADDR addr;
-    };
+// For loop tracking
+struct LoopTableEntry {
+  LoopTableEntry(int32_t l, int32_t id, int32_t c, LID b)
+      : funcLevel(l), loopID(id), count(c), begin(b) {}
 
-    // For runtime dependency merging
-    struct Dep {
-        Dep(depType T, LID dep, char *var, string AAvar) : type(T), depOn(dep), var(var), AAvar(AAvar) {}
+  int32_t funcLevel;
+  int32_t loopID;
+  int32_t count;
+  LID begin;
+};
 
-        depType type;
-        LID depOn;
-        char *var;
-        string AAvar;
-    };
+// typedef std::stack <LoopTableEntry> LoopTable;
+struct LoopTable {
+  LoopTable(){};
 
-    struct compDep {
-        bool operator()(const Dep &a, const Dep &b) const {
-            if (a.type < b.type) {
-                return true;
-            } else if (a.type == b.type && a.depOn < b.depOn) {
-                return true;
-            }
-                // comparison between string is very time-consuming. So just compare variable names
-                // according to address (we only need to distinguish them)
-            else if (a.type == b.type && a.depOn == b.depOn && ((size_t) a.var < (size_t) b.var)) {
-                return true;
-            }
+  vector<LoopTableEntry> contents;
 
-            return false;
-        }
-    };
+  inline LoopTableEntry &top() { return contents.back(); }
 
-    typedef std::set <Dep, compDep> depSet;
-    typedef std::unordered_map<LID, depSet *> depMap;
-    // Hybrid anaysis
-    typedef std::unordered_map <std::string, std::set<std::string>> stringDepMap;
-    // End HA
+  inline LoopTableEntry &first() { return contents[0]; }
 
-    // For loop tracking
-    struct LoopTableEntry {
-        LoopTableEntry(int32_t l, int32_t id, int32_t c, LID b) : funcLevel(l), loopID(id), count(c), begin(b) {}
+  inline LoopTableEntry &topMinusN(size_t n) {
+    return contents[contents.size() - 1 - n];
+  }
 
-        int32_t funcLevel;
-        int32_t loopID;
-        int32_t count;
-        LID begin;
-    };
+  inline void pop() { contents.pop_back(); }
 
-    //typedef std::stack <LoopTableEntry> LoopTable;
-    struct LoopTable {
-        LoopTable(){};
+  inline bool empty() { return contents.empty(); }
 
-        vector <LoopTableEntry> contents;
+  inline void push(LoopTableEntry newElement) {
+    contents.push_back(newElement);
+  }
 
-        inline LoopTableEntry& top(){
-            return contents.back();
-        }
+  inline size_t size() { return contents.size(); }
+};
 
-        inline LoopTableEntry& first(){
-            return contents[0];
-        }
+// For loop merging
+// Assumption: no more than one loops can begin at the same line
+struct LoopRecord {
+  LoopRecord(LID e, int32_t t, int32_t n) : end(e), total(t), nEntered(n) {}
 
-        inline LoopTableEntry& topMinusN(size_t n){
-            return contents[contents.size()-1-n];
-        }
+  LID end;
+  int32_t total;
+  int32_t maxIterationCount =
+      0; // maximum iterations executed during a single loop entry
+  int32_t nEntered;
+};
 
-        inline void pop(){
-            contents.pop_back();
-        }
+typedef std::unordered_map<LID, LoopRecord *> LoopRecords;
 
-        inline bool empty(){
-            return contents.empty();
-        }
+// Data structure to store information on a single source code scope
+struct Scope {
+  unsigned long scope_id;
+  std::unordered_set<ADDR> first_read;
+  std::unordered_set<ADDR> first_written;
 
-        inline void push(LoopTableEntry newElement){
-            contents.push_back(newElement);
-        }
+  Scope(unsigned long id) : scope_id(id) {}
 
-        inline size_t size(){
-            return contents.size();
-        }
+  void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
 
-    };
+    if (!(first_written.find(address) != first_written.end())) {
+      first_read.insert(address);
+    }
+  }
 
+  void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
+    if (!(first_read.find(address) != first_read.end())) {
+      first_written.insert(address);
+    }
+  }
+};
 
-    // For loop merging
-    // Assumption: no more than one loops can begin at the same line
-    struct LoopRecord {
-        LoopRecord(LID e, int32_t t, int32_t n) : end(e), total(t), nEntered(n) {}
+// Data structure for stack access management in scopes
+struct ScopeManager {
+  std::vector<Scope> scopeStack;
+  unsigned long next_scope_id = 1; // 0 marks invalid in addrToLastAccessScopeID
 
-        LID end;
-        int32_t total;
-        int32_t maxIterationCount = 0;  // maximum iterations executed during a single loop entry
-        int32_t nEntered;
-    };
+  std::unordered_map<ADDR, unsigned long> addrToLastAccessScopeID;
 
-    typedef std::unordered_map<LID, LoopRecord *> LoopRecords;
+  Scope getCurrentScope() { return scopeStack.back(); }
 
-    // For function merging
-    // 1) when two BGN func are identical
+  void enterScope(string type, LID debug_lid) {
+    scopeStack.push_back(Scope(next_scope_id++));
+  }
 
-    typedef std::unordered_map<LID, std::set < LID>*>
-    BGNFuncList;
+  void leaveScope(string type, LID debug_lid) { scopeStack.pop_back(); }
 
-    // Hybrid analysis
-    typedef std::set <uint32_t> ReportedBBSet;
-    typedef std::set <std::string> ReportedBBPairSet;
-    // End HA
-    // 2) when two END func are identical
+  void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
+    scopeStack.back().registerStackRead(address, debug_lid, debug_var);
+    addrToLastAccessScopeID[address] = scopeStack.back().scope_id;
+  }
 
-    typedef std::set <LID> ENDFuncList;
+  void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
+    scopeStack.back().registerStackWrite(address, debug_lid, debug_var);
+    addrToLastAccessScopeID[address] = scopeStack.back().scope_id;
+  }
 
-    /******* Helper functions *******/
+  bool isFirstWrittenInScope(ADDR addr, bool currentAccessIsWrite) {
+    // currentAccessIsWrite is used in case no access to addr has been
+    // registered yet
+    if (scopeStack.back().first_written.count(addr) > 0) {
+      return true;
+    }
+    if (scopeStack.back().first_read.count(addr) > 0) {
+      return false;
+    }
+    // no access to addr registered in the current scope
+    if (currentAccessIsWrite) {
+      return true;
+    }
+    return false;
+  }
 
-    void addDep(depType type, LID curr, LID depOn, char *var, char *AAvar);
+  bool positiveScopeChangeOccuredSinceLastAccess(ADDR addr) {
+    // positive Scope change --> current scope id higher than the id during the
+    // last access
+    if (!addrToLastAccessScopeID[addr]) {
+      // cout << "positiveStackChange\n";
+      return true;
+    }
 
-    void outputDeps();
+    //            cout << "LAST: " << to_string(addrToLastAccessScopeID[addr])
+    //            << "  current: " << to_string(scopeStack.back().scope_id) <<
+    //            "\n";
+    if (addrToLastAccessScopeID[addr] < scopeStack.back().scope_id) {
+      // cout << "positiveStackChange\n";
+      return true;
+    }
 
-    void outputLoops();
+    return false;
+  }
+};
 
-    void outputFuncs();
+// For function merging
+// 1) when two BGN func are identical
 
-    void readRuntimeInfo();
+typedef std::unordered_map<LID, std::set<LID> *> BGNFuncList;
 
-    void initParallelization();
+// Hybrid analysis
+typedef std::set<uint32_t> ReportedBBSet;
+typedef std::set<std::string> ReportedBBPairSet;
+// End HA
+// 2) when two END func are identical
 
-    void mergeDeps();
+typedef std::set<LID> ENDFuncList;
 
-    void *analyzeDeps(void *arg);
+/******* Helper functions *******/
 
-    string getMemoryRegionIdFromAddr(string fallback, ADDR addr);
+void addDep(depType type, LID curr, LID depOn, char *var, char *AAvar);
 
-    void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr);
+void outputDeps();
 
-    void finalizeParallelization();
+void outputLoops();
 
-    /******* Instrumentation functions *******/
-    extern "C" {
+void outputFuncs();
+
+void readRuntimeInfo();
+
+void initParallelization();
+
+void mergeDeps();
+
+void *analyzeDeps(void *arg);
+
+string getMemoryRegionIdFromAddr(string fallback, ADDR addr);
+
+void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr);
+
+void finalizeParallelization();
+
+/******* Instrumentation functions *******/
+extern "C" {
 #ifdef SKIP_DUP_INSTR
-    void __dp_read(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
-    void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
-    // hybrid analysis
-    void __dp_decl(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
-    void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements);
-    // End HA
+void __dp_read(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
+void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
+// hybrid analysis
+void __dp_decl(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
+void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
+                 int64_t numBytes, int64_t numElements);
+// End HA
 #else
-    void __dp_read(LID lid, ADDR addr, char *var);
-    void __dp_write(LID lid, ADDR addr, char *var);
-    // hybrid analysis
-    void __dp_decl(LID lid, ADDR addr, char *var);
-    void __dp_alloca(LID lid,char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements);
-    void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes);
-    void __dp_delete(LID lid, ADDR startAddr);
-    // End HA
+void __dp_read(LID lid, ADDR addr, char *var);
+void __dp_write(LID lid, ADDR addr, char *var);
+// hybrid analysis
+void __dp_decl(LID lid, ADDR addr, char *var);
+void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
+                 int64_t numBytes, int64_t numElements);
+void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes);
+void __dp_delete(LID lid, ADDR startAddr);
+// End HA
 #endif
-    // hybrid analysis
-    void __dp_report_bb(uint32_t bbIndex);
-    void __dp_report_bb_pair(int32_t counter, uint32_t bbIndex);
-    void __dp_add_bb_deps(char *depStringPtr);
-    // End HA
-    void __dp_finalize(LID lid);
-    void __dp_call(LID lid);
-    void __dp_func_entry(LID lid, int32_t isStart);
-    void __dp_func_exit(LID lid, int32_t isExit);
-    void __dp_loop_entry(LID lid, int32_t loopID);
-    void __dp_loop_exit(LID lid, int32_t loopID);
-    }
+// hybrid analysis
+void __dp_report_bb(uint32_t bbIndex);
+void __dp_report_bb_pair(int32_t counter, uint32_t bbIndex);
+void __dp_add_bb_deps(char *depStringPtr);
+// End HA
+void __dp_finalize(LID lid);
+void __dp_call(LID lid);
+void __dp_func_entry(LID lid, int32_t isStart);
+void __dp_func_exit(LID lid, int32_t isExit);
+void __dp_loop_entry(LID lid, int32_t loopID);
+void __dp_loop_exit(LID lid, int32_t loopID);
+void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound);
+}
 } // namespace __dp

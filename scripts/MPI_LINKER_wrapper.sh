@@ -36,10 +36,10 @@ MPI_INCLUDES="$(mpic++ -showme:link)"
 
 
 # original arguments: "$@"
-echo "WRAPPED MPI LINKING...."
-echo "ARGS: $@"
-
-echo "${LLVM_CLANGPP} ${MPI_INCLUDES} ${@} -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v"
+#echo "WRAPPED MPI LINKING...."
+#echo "ARGS: $@"
+#
+#echo "${LLVM_CLANGPP} ${MPI_INCLUDES} ${@} -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v"
 
 #clang++ --language=ir "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v
 ${LLVM_CLANGPP} ${MPI_INCLUDES} "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -fPIC -v

@@ -8,15 +8,20 @@
 
 import cProfile
 import json
+import logging
 import os
 import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import pstats2  # type:ignore
-from pluginbase import PluginBase  # type:ignore
+from pluginbase import PluginBase  # type: ignore
+from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments  # type: ignore
+from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
 
 from discopop_library.LineMapping.initialize import initialize_line_mapping
 from discopop_library.PathManagement.PathManagement import get_path, load_file_mapping
@@ -29,9 +34,11 @@ from .json_serializer import PatternBaseSerializer
 from .parser import parse_inputs
 from .pattern_detection import PatternDetectorX
 
+from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
+
 
 @dataclass
-class ExplorerArguments(object):
+class ExplorerArguments(GeneralArguments):
     """Container Class for the arguments passed to the discopop_explorer"""
 
     # input files and configuration
@@ -56,6 +63,7 @@ class ExplorerArguments(object):
     cu_inst_result_file: Optional[str]
     llvm_cxxfilt_path: Optional[str]
     microbench_file: Optional[str]
+    load_existing_doall_and_reduction_patterns: bool
 
     def __post_init__(self):
         self.__validate()
@@ -103,6 +111,8 @@ def __run(
     enable_patterns: str = "*",
     enable_task_pattern: bool = False,
     enable_detection_of_scheduling_clauses: bool = False,
+    hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None,
+    load_existing_doall_and_reduction_patterns: bool = False,
 ) -> DetectionResult:
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
     print("PET CREATION FINISHED.")
@@ -120,20 +130,38 @@ def __run(
 
     pattern_detector = PatternDetectorX(pet)
 
-    res: DetectionResult = pattern_detector.detect_patterns(
-        project_path,
-        cu_xml,
-        dep_file,
-        loop_counter_file,
-        reduction_file,
-        file_mapping,
-        cu_inst_result_file,
-        llvm_cxxfilt_path,
-        discopop_build_path,
-        enable_patterns,
-        enable_task_pattern,
-        enable_detection_of_scheduling_clauses,
-    )
+    if load_existing_doall_and_reduction_patterns:
+        res: DetectionResult = pattern_detector.load_existing_doall_and_reduction_patterns(
+            project_path,
+            cu_xml,
+            dep_file,
+            loop_counter_file,
+            reduction_file,
+            file_mapping,
+            cu_inst_result_file,
+            llvm_cxxfilt_path,
+            discopop_build_path,
+            enable_patterns,
+            enable_task_pattern,
+            enable_detection_of_scheduling_clauses,
+            hotspot_functions,
+        )
+    else:
+        res = pattern_detector.detect_patterns(
+            project_path,
+            cu_xml,
+            dep_file,
+            loop_counter_file,
+            reduction_file,
+            file_mapping,
+            cu_inst_result_file,
+            llvm_cxxfilt_path,
+            discopop_build_path,
+            enable_patterns,
+            enable_task_pattern,
+            enable_detection_of_scheduling_clauses,
+            hotspot_functions,
+        )
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
@@ -145,6 +173,8 @@ def __run(
 
 def run(arguments: ExplorerArguments):
     """Run the discopop_explorer with the given arguments"""
+    logger = logging.getLogger("Explorer")
+
     # create explorer directory if not already present
     if not os.path.exists(os.path.join(arguments.project_path, "explorer")):
         os.mkdir(os.path.join(arguments.project_path, "explorer"))
@@ -173,6 +203,23 @@ def run(arguments: ExplorerArguments):
         )
         sys.exit(0)
 
+    print("Loading Hotspots...")
+
+    hotspots = load_hotspots(
+        HotspotLoaderArguments(
+            verbose=True,
+            get_loops=True,
+            get_functions=True,
+            get_YES=True,
+            get_MAYBE=True,
+            get_NO=False,
+            log_level=arguments.log_level,
+            write_log=arguments.write_log,
+        )
+    )
+
+    print("Done.")
+
     start = time.time()
 
     res = __run(
@@ -189,6 +236,8 @@ def run(arguments: ExplorerArguments):
         enable_patterns=arguments.enable_patterns,
         enable_task_pattern=arguments.enable_task_pattern,
         enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
+        hotspot_functions=hotspots,
+        load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
     )
 
     end = time.time()
