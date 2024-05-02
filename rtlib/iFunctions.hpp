@@ -65,8 +65,6 @@ namespace __dp {
         char *var;
         string AAvar;  // name of allocated variable -> "Anti Aliased Variable"
         ADDR addr;
-        bool stackCleanup = false;
-        pair<ADDR, ADDR> stackCleanupRange;
         bool isStackAccess = false;
         bool addrIsFirstWrittenInScope = false;
         bool positiveScopeChangeOccuredSinceLastAccess = false;
@@ -97,16 +95,6 @@ namespace __dp {
 
             return false;
         }
-    };
-
-    struct UnValidatedDep {
-        UnValidatedDep(depType T, LID dep, char *var, string AAvar, LID curr) : type(T), depOn(dep), var(var), AAvar(AAvar), curr(curr) {}
-
-        depType type;
-        LID depOn;
-        LID curr;
-        char *var;
-        string AAvar;
     };
 
     typedef std::set <Dep, compDep> depSet;
@@ -204,6 +192,10 @@ namespace __dp {
         unsigned long next_scope_id = 1; // 0 marks invalid in addrToLastAccessScopeID
 
         std::unordered_map<ADDR, unsigned long> addrToLastAccessScopeID;
+
+        Scope getCurrentScope(){
+            return scopeStack.back();
+        }
 
         void enterScope(string type, LID debug_lid){
             scopeStack.push_back(Scope(next_scope_id++));

@@ -118,7 +118,7 @@ namespace __dp {
 
     /******* Helper functions *******/
 
-    void addDep(depType type, LID curr, LID depOn, char *var, string AAvar, bool isStackAccess, std::vector<UnValidatedDep>* threadLocal_unvalidatedStackDeps, ADDR addr, bool addrIsFirstWrittenInScope, bool positiveScopeChangeOccuredSinceLastAccess) {
+    void addDep(depType type, LID curr, LID depOn, char *var, string AAvar, bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope, bool positiveScopeChangeOccuredSinceLastAccess) {
         // hybrid analysis
         if (depOn == 0 && type == WAW)
             type = INIT;
@@ -251,15 +251,6 @@ namespace __dp {
             // register dependency with original type
             identifiedDepTypes.push_back(NOM);
         }
-
-        // validate prior stack dependencies with the same address, if the current access is a stack access as well
-        if(isStackAccess){
-            if(threadLocal_unvalidatedStackDeps->size() > 0){
-                cout << "=> Found " << to_string(threadLocal_unvalidatedStackDeps->size()) << " unvalidated stack deps for " << hex << addr << " : " << var << "\n";
-            }
-            // TODO
-        }
-
 
         // Remove metadata to preserve result correctness and add metadata to `Dep` object
         LID dbg_curr = curr;  // for printing only
@@ -783,7 +774,6 @@ namespace __dp {
         }
         myMap = new depMap();
         bool isLocked = false;
-        std::vector<UnValidatedDep> threadLocal_unvalidatedStackDependencies;
         while (true) {
             if (!isLocked)
                 pthread_mutex_lock(&addrChunkMutexes[id]);
@@ -807,55 +797,7 @@ namespace __dp {
                 
                 for (unsigned short i = 0; i < CHUNK_SIZE; ++i) {
                     access = accesses[i];
-
-                    if(access.stackCleanup){
-                        // Issue stack cleanup by issueing reads and writes with LID 0
-                        for(ADDR addrToBeCleaned : SMem->getAddrsInRange(access.stackCleanupRange.first, access.stackCleanupRange.second)){
-                            int64_t cleanupWorkerID = ((addrToBeCleaned - (addrToBeCleaned % 4)) % (NUM_WORKERS*4)) / 4; // implicit "floor"
-
-                            if(cleanupWorkerID == id){
-                                // perform cleanup
-                                SMem->insertToRead(addrToBeCleaned, 0);
-                                SMem->insertToWrite(addrToBeCleaned, 0);
-                            }
-                            else{
-                                // issue cleanup accesses to other workers
-                                // cleanup reads
-                                AccessInfo &cleanupReadCurrent = tempAddrChunks[cleanupWorkerID][tempAddrCount[cleanupWorkerID]++];
-                                cleanupReadCurrent.addr = addrToBeCleaned;
-                                cleanupReadCurrent.lid = 0;
-                                cleanupReadCurrent.isRead = true;
-
-                                if (tempAddrCount[cleanupWorkerID] == CHUNK_SIZE) {
-                                    pthread_mutex_lock(&addrChunkMutexes[cleanupWorkerID]);
-                                    addrChunkPresent[cleanupWorkerID] = true;
-                                    chunks[cleanupWorkerID].push(tempAddrChunks[cleanupWorkerID]);
-                                    pthread_cond_signal(&addrChunkPresentConds[cleanupWorkerID]);
-                                    pthread_mutex_unlock(&addrChunkMutexes[cleanupWorkerID]);
-                                    tempAddrChunks[cleanupWorkerID] = new AccessInfo[CHUNK_SIZE];
-                                    tempAddrCount[cleanupWorkerID] = 0;
-                                }
-                                // cleanup writes
-                                AccessInfo &cleanupWriteCurrent = tempAddrChunks[cleanupWorkerID][tempAddrCount[cleanupWorkerID]++];
-                                cleanupWriteCurrent.addr = addrToBeCleaned;
-                                cleanupWriteCurrent.lid = 0;
-                                cleanupWriteCurrent.isRead = false;
-
-                                if (tempAddrCount[cleanupWorkerID] == CHUNK_SIZE) {
-                                    pthread_mutex_lock(&addrChunkMutexes[cleanupWorkerID]);
-                                    addrChunkPresent[cleanupWorkerID] = true;
-                                    chunks[cleanupWorkerID].push(tempAddrChunks[cleanupWorkerID]);
-                                    pthread_cond_signal(&addrChunkPresentConds[cleanupWorkerID]);
-                                    pthread_mutex_unlock(&addrChunkMutexes[cleanupWorkerID]);
-                                    tempAddrChunks[cleanupWorkerID] = new AccessInfo[CHUNK_SIZE];
-                                    tempAddrCount[cleanupWorkerID] = 0;
-                                }
-                            }
-                        }
-
-                        continue;
-                    }
-
+                    
                     if (access.isRead) {
                         // hybrid analysis
                         if (access.skip) {
@@ -867,23 +809,23 @@ namespace __dp {
                         if (lastWrite != 0) {
                             // RAW
                             SMem->insertToRead(access.addr, access.lid);
-                            addDep(RAW, access.lid, lastWrite, access.var, access.AAvar, access.isStackAccess, &threadLocal_unvalidatedStackDependencies, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
+                            addDep(RAW, access.lid, lastWrite, access.var, access.AAvar, access.isStackAccess, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
                         }
                     } else {
                         sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
                         if (lastWrite == 0) {
                             // INIT
-                            addDep(INIT, access.lid, 0, access.var, access.AAvar, access.isStackAccess, &threadLocal_unvalidatedStackDependencies, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
+                            addDep(INIT, access.lid, 0, access.var, access.AAvar, access.isStackAccess, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
                         } else {
                             sigElement lastRead = SMem->testInRead(access.addr);
                             if (lastRead != 0) {
                                 // WAR
-                                addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.isStackAccess, &threadLocal_unvalidatedStackDependencies, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
+                                addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.isStackAccess, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
                                 // Clear intermediate read ops
                                 SMem->insertToRead(access.addr, 0);
                             } else {
                                 // WAW
-                                addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, access.isStackAccess, &threadLocal_unvalidatedStackDependencies, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
+                                addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, access.isStackAccess, access.addr, access.addrIsFirstWrittenInScope, access.positiveScopeChangeOccuredSinceLastAccess);
                             }
                         }
                     }
@@ -1907,22 +1849,39 @@ namespace __dp {
         }
 
         inline void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound){
-            int64_t workerID = ((stack_lower_bound - (stack_lower_bound % 4)) % (NUM_WORKERS*4)) / 4; // implicit "floor"
-            AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
-            current.stackCleanup = true;
-            current.stackCleanupRange = pair<ADDR, ADDR>(stack_lower_bound, stack_upper_bound);
+            for(ADDR addr: scopeManager->getCurrentScope().first_written){
+                int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS*4)) / 4; // implicit "floor"
+                // cleanup reads
+                AccessInfo &cleanupReadCurrent = tempAddrChunks[workerID][tempAddrCount[workerID]++];
+                cleanupReadCurrent.addr = addr;
+                cleanupReadCurrent.lid = 0;
+                cleanupReadCurrent.isRead = true;
 
-            if (tempAddrCount[workerID] == CHUNK_SIZE) {
-                pthread_mutex_lock(&addrChunkMutexes[workerID]);
-                addrChunkPresent[workerID] = true;
-                chunks[workerID].push(tempAddrChunks[workerID]);
-                pthread_cond_signal(&addrChunkPresentConds[workerID]);
-                pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-                tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-                tempAddrCount[workerID] = 0;
+                if (tempAddrCount[workerID] == CHUNK_SIZE) {
+                    pthread_mutex_lock(&addrChunkMutexes[workerID]);
+                    addrChunkPresent[workerID] = true;
+                    chunks[workerID].push(tempAddrChunks[workerID]);
+                    pthread_cond_signal(&addrChunkPresentConds[workerID]);
+                    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
+                    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
+                    tempAddrCount[workerID] = 0;
+                }
+                // cleanup writes
+                AccessInfo &cleanupWriteCurrent = tempAddrChunks[workerID][tempAddrCount[workerID]++];
+                cleanupWriteCurrent.addr = addr;
+                cleanupWriteCurrent.lid = 0;
+                cleanupWriteCurrent.isRead = false;
+
+                if (tempAddrCount[workerID] == CHUNK_SIZE) {
+                    pthread_mutex_lock(&addrChunkMutexes[workerID]);
+                    addrChunkPresent[workerID] = true;
+                    chunks[workerID].push(tempAddrChunks[workerID]);
+                    pthread_cond_signal(&addrChunkPresentConds[workerID]);
+                    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
+                    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
+                    tempAddrCount[workerID] = 0;
+                }
             }
         }
-
-        
     }
 } // namespace __dp
