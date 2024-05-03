@@ -52,7 +52,7 @@ six==1.16.0
 sympy==1.12
 sympy-plot-backends==2.4.3
 tomli==2.0.1
-tqdm==4.66.1
+tqdm==4.66.3
 typing_extensions==4.7.1
 typish==1.9.3
 zipp==3.16.2
