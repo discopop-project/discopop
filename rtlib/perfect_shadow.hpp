@@ -29,12 +29,31 @@ public:
     sigWrite = new std::unordered_map<int64_t, sigElement>();
   }
 
+  PerfectShadow(const PerfectShadow& other) = delete;
+  PerfectShadow(PerfectShadow&& other) {
+    sigRead = other.sigRead;
+    sigWrite = other.sigWrite;
+
+    other.sigRead = nullptr;
+    other.sigWrite = nullptr;
+  }
+
+  PerfectShadow& operator=(const PerfectShadow& other) = delete;
+  PerfectShadow& operator=(PerfectShadow&& other) {
+    std::swap(sigRead, other.sigRead);
+    std::swap(sigWrite, other.sigWrite);
+
+    return *this;
+  }
+
   ~PerfectShadow() {
     delete sigRead;
     delete sigWrite;
   }
 
-  inline sigElement testInRead(int64_t memAddr) { return (*sigRead)[memAddr]; }
+  inline sigElement testInRead(int64_t memAddr) { 
+    return (*sigRead)[memAddr]; 
+  }
 
   inline sigElement testInWrite(int64_t memAddr) {
     return (*sigWrite)[memAddr];

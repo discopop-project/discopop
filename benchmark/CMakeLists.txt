@@ -22,7 +22,8 @@ add_executable(DiscoPoP_BM)
 target_sources(
   DiscoPoP_BM
   PRIVATE 
-  benchmarks.cpp)
+  benchmarks.cpp
+  perfect_shadow/benchmark_perfect_shadow.cpp)
 
 target_include_directories(DiscoPoP_BM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(DiscoPoP_BM PRIVATE DiscoPoP_RT)
