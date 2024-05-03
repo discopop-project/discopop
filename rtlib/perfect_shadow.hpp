@@ -15,10 +15,8 @@
 #include "abstract_shadow.hpp"
 #include "signature.hpp"
 
-#include <iostream>
-#include <stdint.h>
+#include <cstdint>
 #include <unordered_map>
-#include <vector>
 
 namespace __dp {
 
@@ -80,6 +78,14 @@ public:
       }
     }
     return result;
+  }
+
+  const std::unordered_map<int64_t, sigElement>* getSigRead() const noexcept {
+    return sigRead;
+  }
+
+  const std::unordered_map<int64_t, sigElement>* getSigWrite() const noexcept {
+    return sigWrite;
   }
 
 private:
