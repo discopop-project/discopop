@@ -161,3 +161,6 @@ _deps
 # do not ignore our test data
 !/test/*
 !/test/**/Makefile
+
+**/.discopop
+**/prog
