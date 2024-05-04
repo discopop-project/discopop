@@ -14,6 +14,7 @@
 
 #include "DPTypes.hpp"
 
+#include <algorithm>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
@@ -121,6 +122,122 @@ private:
   std::vector<Scope> scopeStack;
   unsigned long next_scope_id = 1; // 0 marks invalid in addrToLastAccessScopeID
 
+  std::unordered_map<ADDR, unsigned long> addrToLastAccessScopeID;
+};
+
+// Hopefully faster version
+
+struct Scope2 {
+  // Can use vectors for a speed up when dealing with < 100 addresses
+  Scope2(const unsigned long id) : scope_id(id) {
+    first_read.reserve(64);
+    first_written.reserve(64);
+  }
+
+  void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
+    const auto not_found = first_written.find(address) == first_written.end();
+    // const auto not_found = std::find(first_written.begin(), first_written.end(), address) == first_written.end();
+    if (not_found) {
+      first_read.insert(address);
+      // first_read.emplace_back(address);
+    }
+  }
+
+  void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
+    const auto not_found = first_read.find(address) == first_read.end();
+    // const auto not_found = std::find(first_read.begin(), first_read.end(), address) == first_read.end();
+    if (not_found) {
+      first_written.insert(address);
+      // first_written.emplace_back(address);
+    }
+  }
+
+  unsigned long get_id() const noexcept {
+    return scope_id;
+  }
+
+  const std::unordered_set<ADDR>& get_first_read() const noexcept {
+    return first_read;
+  }
+
+  const std::unordered_set<ADDR>& get_first_write() const noexcept {
+    return first_written;
+  }
+
+private:
+  unsigned long scope_id;
+  std::unordered_set<ADDR> first_read;
+  std::unordered_set<ADDR> first_written;
+};
+
+struct ScopeManager2 {
+  ScopeManager2() {
+    scopeStack.reserve(32);
+    addrToLastAccessScopeID.reserve(1024);
+  }
+
+  const Scope2& getCurrentScope() const noexcept { 
+    return scopeStack.back(); 
+  }
+
+  void enterScope(const char* type, LID debug_lid) {
+    scopeStack.emplace_back(next_scope_id++);
+  }
+
+  void leaveScope(const char* type, LID debug_lid) { 
+    scopeStack.pop_back(); 
+  }
+
+  void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
+    auto& current_scope = scopeStack.back();
+
+    current_scope.registerStackRead(address, debug_lid, debug_var);
+    addrToLastAccessScopeID[address] = current_scope.get_id();
+  }
+
+  void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
+    auto& current_scope = scopeStack.back();
+
+    current_scope.registerStackWrite(address, debug_lid, debug_var);
+    addrToLastAccessScopeID[address] = current_scope.get_id();
+  }
+
+  bool isFirstWrittenInScope(ADDR addr, bool currentAccessIsWrite) const noexcept {
+    const auto& current_scope = getCurrentScope();
+
+    const auto& writes = current_scope.get_first_write();
+    const auto writes_iterator = writes.find(addr);
+    // const auto writes_iterator = std::find(writes.begin(), writes.end(), addr);
+
+    if (writes_iterator != writes.end()) {
+      return true;
+    }
+
+    const auto& reads = current_scope.get_first_read();
+    const auto reads_iterator = reads.find(addr);
+    // const auto reads_iterator = std::find(reads.begin(), reads.end(), addr);
+
+    if (reads_iterator != reads.end()) {
+      return false;
+    }
+
+    return currentAccessIsWrite;
+  }
+
+  bool positiveScopeChangeOccuredSinceLastAccess(const ADDR addr) noexcept {
+    const auto iterator = addrToLastAccessScopeID.find(addr);
+    if (iterator == addrToLastAccessScopeID.end()) {
+      return true;
+    }
+
+    const auto val = iterator->second;
+    return val < scopeStack.back().get_id();
+  }
+
+private:
+  unsigned long next_scope_id = 1;
+
+  std::vector<Scope2> scopeStack;
   std::unordered_map<ADDR, unsigned long> addrToLastAccessScopeID;
 };
 
