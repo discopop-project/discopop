@@ -25,7 +25,8 @@ target_sources(
   DiscoPoP_UT
   PRIVATE 
   tests.cpp
-  perfect_shadow/test_perfect_shadow.cpp)
+  perfect_shadow/test_perfect_shadow.cpp
+  scope/test_scope.cpp)
 
 target_include_directories(DiscoPoP_UT PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(DiscoPoP_UT PRIVATE DiscoPoP_RT)

@@ -23,7 +23,8 @@ target_sources(
   DiscoPoP_BM
   PRIVATE 
   benchmarks.cpp
-  perfect_shadow/benchmark_perfect_shadow.cpp)
+  perfect_shadow/benchmark_perfect_shadow.cpp
+  scope/benchmark_scope.cpp)
 
 target_include_directories(DiscoPoP_BM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(DiscoPoP_BM PRIVATE DiscoPoP_RT)

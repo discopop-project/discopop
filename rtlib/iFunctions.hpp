@@ -16,6 +16,8 @@
 
 #include "DPUtils.hpp"
 #include "MemoryRegionTree.hpp"
+#include "scope.hpp"
+
 #include <algorithm>
 #include <cstdlib>
 #include <pthread.h>
@@ -166,89 +168,6 @@ struct LoopRecord {
 };
 
 typedef std::unordered_map<LID, LoopRecord *> LoopRecords;
-
-// Data structure to store information on a single source code scope
-struct Scope {
-  unsigned long scope_id;
-  std::unordered_set<ADDR> first_read;
-  std::unordered_set<ADDR> first_written;
-
-  Scope(unsigned long id) : scope_id(id) {}
-
-  void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
-
-    if (!(first_written.find(address) != first_written.end())) {
-      first_read.insert(address);
-    }
-  }
-
-  void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
-    if (!(first_read.find(address) != first_read.end())) {
-      first_written.insert(address);
-    }
-  }
-};
-
-// Data structure for stack access management in scopes
-struct ScopeManager {
-  std::vector<Scope> scopeStack;
-  unsigned long next_scope_id = 1; // 0 marks invalid in addrToLastAccessScopeID
-
-  std::unordered_map<ADDR, unsigned long> addrToLastAccessScopeID;
-
-  Scope getCurrentScope() { return scopeStack.back(); }
-
-  void enterScope(string type, LID debug_lid) {
-    scopeStack.push_back(Scope(next_scope_id++));
-  }
-
-  void leaveScope(string type, LID debug_lid) { scopeStack.pop_back(); }
-
-  void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
-    scopeStack.back().registerStackRead(address, debug_lid, debug_var);
-    addrToLastAccessScopeID[address] = scopeStack.back().scope_id;
-  }
-
-  void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
-    scopeStack.back().registerStackWrite(address, debug_lid, debug_var);
-    addrToLastAccessScopeID[address] = scopeStack.back().scope_id;
-  }
-
-  bool isFirstWrittenInScope(ADDR addr, bool currentAccessIsWrite) {
-    // currentAccessIsWrite is used in case no access to addr has been
-    // registered yet
-    if (scopeStack.back().first_written.count(addr) > 0) {
-      return true;
-    }
-    if (scopeStack.back().first_read.count(addr) > 0) {
-      return false;
-    }
-    // no access to addr registered in the current scope
-    if (currentAccessIsWrite) {
-      return true;
-    }
-    return false;
-  }
-
-  bool positiveScopeChangeOccuredSinceLastAccess(ADDR addr) {
-    // positive Scope change --> current scope id higher than the id during the
-    // last access
-    if (!addrToLastAccessScopeID[addr]) {
-      // cout << "positiveStackChange\n";
-      return true;
-    }
-
-    //            cout << "LAST: " << to_string(addrToLastAccessScopeID[addr])
-    //            << "  current: " << to_string(scopeStack.back().scope_id) <<
-    //            "\n";
-    if (addrToLastAccessScopeID[addr] < scopeStack.back().scope_id) {
-      // cout << "positiveStackChange\n";
-      return true;
-    }
-
-    return false;
-  }
-};
 
 // For function merging
 // 1) when two BGN func are identical

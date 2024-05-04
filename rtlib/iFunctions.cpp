@@ -2027,7 +2027,7 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
 }
 
 inline void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
-  for (ADDR addr : scopeManager->getCurrentScope().first_written) {
+  for (ADDR addr : scopeManager->getCurrentScope().get_first_write()) {
     int64_t workerID =
         ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
     // cleanup reads
