@@ -156,18 +156,18 @@ struct Scope2 {
     return scope_id;
   }
 
-  const std::unordered_set<ADDR>& get_first_read() const noexcept {
+  const hashset<ADDR>& get_first_read() const noexcept {
     return first_read;
   }
 
-  const std::unordered_set<ADDR>& get_first_write() const noexcept {
+  const hashset<ADDR>& get_first_write() const noexcept {
     return first_written;
   }
 
 private:
   unsigned long scope_id;
-  std::unordered_set<ADDR> first_read;
-  std::unordered_set<ADDR> first_written;
+  hashset<ADDR> first_read;
+  hashset<ADDR> first_written;
 };
 
 struct ScopeManager2 {
@@ -238,7 +238,7 @@ private:
   unsigned long next_scope_id = 1;
 
   std::vector<Scope2> scopeStack;
-  std::unordered_map<ADDR, unsigned long> addrToLastAccessScopeID;
+  hashmap<ADDR, unsigned long> addrToLastAccessScopeID;
 };
 
 } // namespace __dp

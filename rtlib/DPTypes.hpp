@@ -26,3 +26,27 @@
 typedef std::int64_t LID;
 typedef std::int64_t ADDR;
 typedef std::int64_t sigElement;
+
+// TODO(Lukas): Is this valid?
+#define USE_EMHASH
+
+#ifdef USE_EMHASH
+#include "../share/include/hash_set8.hpp"
+#include "../share/include/hash_table7.hpp"
+namespace __dp {
+template <typename KeyT, typename ValueT>
+using hashmap = emhash7::HashMap<KeyT, ValueT>;
+template <typename KeyT>
+using hashset = emhash8::HashSet<KeyT>;
+} // namespace __dp
+#else
+#include <unordered_map>
+#include <unordered_set>
+namespace __dp {
+template <typename KeyT, typename ValueT>
+using hashmap = std::unordered_map<KeyT, ValueT>;
+template <typename KeyT>
+using hashset = std::unordered_set<KeyT>;
+} // namespace __dp
+#endif
+

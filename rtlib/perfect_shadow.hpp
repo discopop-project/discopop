@@ -13,7 +13,6 @@
 #pragma once
 
 #include "abstract_shadow.hpp"
-#include "signature.hpp"
 
 #include <cstdint>
 #include <unordered_map>
@@ -193,17 +192,17 @@ public:
     return result;
   }
 
-  const std::unordered_map<std::int64_t, sigElement>* getSigRead() const noexcept {
+  const hashmap<int64_t, sigElement>* getSigRead() const noexcept {
     return &read_cache;
   }
 
-  const std::unordered_map<std::int64_t, sigElement>* getSigWrite() const noexcept {
+  const hashmap<int64_t, sigElement>* getSigWrite() const noexcept {
     return &write_cache;
   }
 
 private:
-  std::unordered_map<std::int64_t, sigElement> read_cache{};
-  std::unordered_map<std::int64_t, sigElement> write_cache{};
+  hashmap<int64_t, sigElement> read_cache{};
+  hashmap<int64_t, sigElement> write_cache{};
 };
 
 } // namespace __dp
