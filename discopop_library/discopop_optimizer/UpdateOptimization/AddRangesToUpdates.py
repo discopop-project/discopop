@@ -24,21 +24,25 @@ def add_ranges_to_updates(
         # find the Variable object which belongs to the update
         candidate_variables: Dict[Variable, Set[MemoryRegion]] = dict()
         # collect known variables from source
-
-        variables = experiment.detection_result.pet.get_variables(
-            [experiment.detection_result.pet.node_at(cast(NodeID, update.source_cu_id))]
-        )
+        try:
+            variables = experiment.detection_result.pet.get_variables(
+                [experiment.detection_result.pet.node_at(cast(NodeID, update.source_cu_id))]
+            )
+        except KeyError:
+            variables = experiment.detection_result.pet.get_variables([])
 
         for v in variables:
             if v not in candidate_variables:
                 candidate_variables[v] = set()
             candidate_variables[v].update(variables[v])
 
-        # collect known variabled from target
-
-        variables = experiment.detection_result.pet.get_variables(
-            [experiment.detection_result.pet.node_at(cast(NodeID, update.target_cu_id))]
-        )
+        # collect known variables from target
+        try:
+            variables = experiment.detection_result.pet.get_variables(
+                [experiment.detection_result.pet.node_at(cast(NodeID, update.target_cu_id))]
+            )
+        except KeyError:
+            variables = experiment.detection_result.pet.get_variables([])
 
         for v in variables:
             if v not in candidate_variables:
@@ -47,13 +51,20 @@ def add_ranges_to_updates(
 
         if update.originated_from_node is not None:
             # collect known variabled from originated_from_node
-            variables = experiment.detection_result.pet.get_variables(
-                [
-                    experiment.detection_result.pet.node_at(
-                        cast(NodeID, data_at(experiment.optimization_graph, update.originated_from_node).original_cu_id)
-                    )
-                ]
-            )
+            try:
+                variables = experiment.detection_result.pet.get_variables(
+                    [
+                        experiment.detection_result.pet.node_at(
+                            cast(
+                                NodeID,
+                                data_at(experiment.optimization_graph, update.originated_from_node).original_cu_id,
+                            )
+                        )
+                    ]
+                )
+            except KeyError:
+                variables = experiment.detection_result.pet.get_variables([])
+
             for v in variables:
                 if v not in candidate_variables:
                     candidate_variables[v] = set()
