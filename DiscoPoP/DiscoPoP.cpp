@@ -2174,6 +2174,15 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M) {
   // cout << "MODULE " << M.getName().str() << "\n";
+
+  // prepare environment variables
+  char const *tmp_dp_project_dir = getenv("DP_PROFILING_ROOT_DIR");
+  if (tmp_dp_project_dir == NULL) {
+    // DP_PROJECT_DIR needs to be initialized
+    setenv("DP_PROFILING_ROOT_DIR", std::getenv("PWD"), 1);
+  }
+  std::string dp_project_dir(getenv("DP_PROFILING_ROOT_DIR"));
+
   long counter = 0;
   // cout << "\tFUNCTION:\n";
   for (Function &F : M) {
@@ -2230,6 +2239,31 @@ bool DiscoPoP::runOnFunction(Function &F) {
   if (DP_DEBUG) {
     errs() << "pass DiscoPoP: run pass on function " << F.getName().str()
            << "\n";
+  }
+
+  // avoid instrumenting functions which are defined outside the scope of the project
+  std::string dp_project_dir(getenv("DP_PROFILING_ROOT_DIR"));
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  F.getAllMetadata(MDs);
+  bool funcDefinedInProject = false;
+  for (auto &MD : MDs) {
+    if (MDNode *N = MD.second) {
+      if (auto *subProgram = dyn_cast<DISubprogram>(N)) {
+        std::string fullFileName = "";
+        if(subProgram->getDirectory().str().length() > 0){
+          fullFileName += subProgram->getDirectory().str();
+          fullFileName += "/";
+        }
+        fullFileName += subProgram->getFilename().str();
+        if (fullFileName.find(dp_project_dir) != string::npos) // function defined inside project
+        {
+          funcDefinedInProject = true;
+        }
+      }
+    }
+  }
+  if (!funcDefinedInProject){
+    return false;
   }
 
   StringRef funcName = F.getName();
