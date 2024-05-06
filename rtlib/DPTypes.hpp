@@ -23,6 +23,8 @@
 // Maximum number of lines in a single file. Has to be 2^LIDSIZE.
 #define MAXLNO 16384  
 
+// #define SKIP_DUP_INSTR 1
+
 typedef std::int64_t LID;
 typedef std::int64_t ADDR;
 typedef std::int64_t sigElement;
