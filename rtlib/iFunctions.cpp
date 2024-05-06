@@ -424,7 +424,7 @@ void generateStringDepMap() {
           break;
         }
 
-        dep += " " + decodeLID(d.depOn);
+        dep += ' ' + decodeLID(d.depOn);
         dep += "|" + string(d.var);
         dep += "(" + string(d.AAvar) + ")";
         lineDeps.insert(dep);
@@ -454,7 +454,7 @@ void outputDeps() {
   for (auto pair : *outPutDeps) {
     *out << pair.first << " NOM ";
     for (auto dep : pair.second) {
-      *out << " " << dep;
+      *out << ' ' << dep;
     }
     *out << endl;
   }
@@ -475,10 +475,10 @@ void outputLoops() {
   assert((loops != nullptr) && "Loop map is not available!");
   for (auto &loop : *loops) {
     *out << decodeLID(loop.first) << " BGN loop ";
-    *out << loop.second->total << " ";
-    *out << loop.second->nEntered << " ";
+    *out << loop.second->total << ' ';
+    *out << loop.second->nEntered << ' ';
     *out << static_cast<int32_t>(loop.second->total / loop.second->nEntered)
-         << " ";
+         << ' ';
     *out << loop.second->maxIterationCount << endl;
     *out << decodeLID(loop.second->end) << " END loop" << endl;
   }
@@ -520,28 +520,33 @@ void outputAllocations() {
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputAllocations\n";
 #endif
-  // prepare environment variables
-  char const *tmp = getenv("DOT_DISCOPOP");
-  if (tmp == NULL) {
-    // DOT_DISCOPOP needs to be initialized
-    setenv("DOT_DISCOPOP", ".discopop", 1);
-  }
-  std::string tmp_str(getenv("DOT_DISCOPOP"));
-  setenv("DOT_DISCOPOP_PROFILER", (tmp_str + "/profiler").data(), 1);
-  std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
-  tmp2 += "/memory_regions.txt";
+  const auto prepare_environment = [](){
+      // prepare environment variables
+    const char *discopop_env = getenv("DOT_DISCOPOP");
+    if (discopop_env == NULL) {
 
-  auto allocationsFileStream = new ofstream();
-  allocationsFileStream->open(tmp2.data(), ios::out);
-  for (auto memoryRegion : *allocatedMemoryRegions) {
-    string position = decodeLID(get<0>(memoryRegion));
-    string id = get<1>(memoryRegion);
-    string numBytes = to_string(get<4>(memoryRegion));
+      // DOT_DISCOPOP needs to be initialized
+      setenv("DOT_DISCOPOP", ".discopop", 1);
+      discopop_env = ".discopop";
+    }
 
-    *allocationsFileStream << id << " " << position << " " << numBytes << endl;
+    auto discopop_profiler_str = std::string(discopop_env) + "/profiler";
+    setenv("DOT_DISCOPOP_PROFILER", discopop_profiler_str.data(), 1);
+
+    return discopop_profiler_str + "/memory_regions.txt";
+  };
+  const auto path = prepare_environment();
+
+  auto allocationsFileStream = ofstream(path, ios::out);
+  for (const auto& memoryRegion : *allocatedMemoryRegions) {
+    const auto lid = get<0>(memoryRegion);
+    const auto& id = get<1>(memoryRegion);
+    const auto num_bytes = get<4>(memoryRegion);
+
+    decodeLID(lid, allocationsFileStream);
+    allocationsFileStream << ' ' << id << ' ' << num_bytes << endl;
   }
-  allocationsFileStream->flush();
-  allocationsFileStream->close();
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit outputAllocations\n";
 #endif

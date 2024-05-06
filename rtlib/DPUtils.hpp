@@ -29,18 +29,24 @@ using namespace std;
 
 namespace dputil {
 
-inline string decodeLID(int64_t lid) {
-  if (lid == 0)
-    return "*";
-
-  stringstream ss;
+inline void decodeLID(std::int64_t lid, std::ostream& out) {
+  if (lid == 0) {
+    out << '*';
+    return;
+  }
+    
   // unpack metadata
   // potentially TODO, currently not necessary
 
   // remove metadata
   lid &= 0x00000000FFFFFFFF;
 
-  ss << (lid >> LIDSIZE) << ":" << lid % MAXLNO;
+  out << (lid >> LIDSIZE) << ':' << lid % MAXLNO;
+}
+
+inline std::string decodeLID(std::int64_t lid) {
+  std::stringstream ss;
+  decodeLID(lid, ss);
   return ss.str();
 }
 

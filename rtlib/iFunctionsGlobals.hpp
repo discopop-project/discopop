@@ -51,8 +51,8 @@ extern stringDepMap *outPutDeps;
 extern std::int64_t nextFreeMemoryRegionId; // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
 
 /// (LID, identifier, startAddr, endAddr, numBytes, numElements)
-extern std::list<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;
-extern std::list<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> *allocatedMemoryRegions;
+extern std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;
+extern std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> *allocatedMemoryRegions;
 
 extern bool dpInited; // library initialization flag
 extern bool targetTerminated; // whether the target program has returned from main()

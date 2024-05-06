@@ -48,12 +48,11 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
   if (DP_DEBUG) {
     cout << "alloca: " << var << " (" << var_name << ") @ " << dputil::decodeLID(lid)
          << " : " << std::hex << startAddr << " - " << std::hex << endAddr
-         << " -> #allocations: " << std::to_string(allocatedMemoryRegions->size())
+         << " -> #allocations: " << allocatedMemoryRegions->size()
          << "\n";
   }
-  allocatedMemoryRegions->push_back(
-      tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{
-          lid, var_name, startAddr, endAddr, numBytes, numElements});
+  allocatedMemoryRegions->emplace_back(
+          lid, var_name, startAddr, endAddr, numBytes, numElements);
   allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer,
                                        tempAddrCount, NUM_WORKERS);
 

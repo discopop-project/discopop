@@ -55,9 +55,7 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
     printf(" NumBytes: %lld\n", numBytes);
   }
 
-  allocatedMemoryRegions->push_back(
-      tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{
-          lid, allocId, startAddr, endAddr, numBytes, -1});
+  allocatedMemoryRegions->emplace_back(lid, allocId, startAddr, endAddr, numBytes, -1);
   lastHitIterator = allocatedMemoryRegions->end();
   lastHitIterator--;
 
@@ -73,7 +71,6 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
 #endif
   Timers::stop_and_add(TimerRegion::NEW);
 }
-
 
 }
 

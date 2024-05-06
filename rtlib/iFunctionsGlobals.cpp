@@ -35,8 +35,8 @@ stringDepMap *outPutDeps = nullptr;
 std::int64_t nextFreeMemoryRegionId = 1; // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
 
 /// (LID, identifier, startAddr, endAddr, numBytes, numElements)
-std::list<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;
-std::list<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> *allocatedMemoryRegions = nullptr;
+std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;
+std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> *allocatedMemoryRegions = nullptr;
 
 bool dpInited = false; // library initialization flag
 bool targetTerminated = false; // whether the target program has returned from main()

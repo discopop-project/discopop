@@ -64,20 +64,17 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 
     allocatedMemRegTree = new MemoryRegionTree();
     allocatedMemoryRegions =
-        new list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>;
+        new vector<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>;
 
     if (allocatedMemoryRegions->size() == 0 &&
         allocatedMemoryRegions->empty() == 0) {
       // re-initialize the list, as something went wrong
       allocatedMemoryRegions =
-          new list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>();
+          new vector<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>();
     }
-    tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0,
-                                                           0, 0,           0};
+    
     // initialize lastHitIterator to dummy element
-    allocatedMemoryRegions->push_back(
-        tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%",
-                                                               0, 0, 0, 0});
+    allocatedMemoryRegions->emplace_back(0, "%%dummy%%", 0, 0, 0, 0);
     lastHitIterator = allocatedMemoryRegions->end();
     lastHitIterator--;
 
