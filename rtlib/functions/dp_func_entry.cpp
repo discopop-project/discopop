@@ -55,6 +55,8 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     readRuntimeInfo();
     timers = new Timers();
 
+    memory_manager = new MemoryManager();
+
     loopStack = new LoopTable();
     loops = new LoopRecords();
     beginFuncs = new BGNFuncList();

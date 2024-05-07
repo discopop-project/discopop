@@ -46,12 +46,14 @@ extern Timers* timers;
 
 extern std::mutex pthread_compatibility_mutex;
 
+extern MemoryManager* memory_manager;
+
 // hybrid analysis
 extern ReportedBBSet *bbList;
 extern stringDepMap *outPutDeps;
 // end hybrid analysis 
 
-extern std::int64_t nextFreeMemoryRegionId; // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
+// extern std::int64_t nextFreeMemoryRegionId; // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
 
 /// (LID, identifier, startAddr, endAddr, numBytes, numElements)
 extern std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;

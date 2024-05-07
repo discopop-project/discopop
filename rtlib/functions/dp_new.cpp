@@ -43,9 +43,8 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
   timers->start(TimerRegion::NEW);
 
   // instrumentation function for new and malloc
-  int64_t buffer = nextFreeMemoryRegionId;
+  std::int64_t buffer = memory_manager->get_next_free_memory_region_id();;
   string allocId = to_string(buffer);
-  nextFreeMemoryRegionId++;
 
   // calculate endAddr of memory region
   endAddr = startAddr + numBytes;

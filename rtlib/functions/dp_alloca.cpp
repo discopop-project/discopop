@@ -44,9 +44,9 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
 #endif
   timers->start(TimerRegion::ALLOCA);
 
-  std::int64_t buffer = nextFreeMemoryRegionId;
+  std::int64_t buffer = memory_manager->get_next_free_memory_region_id();
   std::string allocId = std::to_string(buffer);
-  nextFreeMemoryRegionId++;
+  
   // create entry to list of allocatedMemoryRegions
   std::string var_name = allocId;
   if (DP_DEBUG) {

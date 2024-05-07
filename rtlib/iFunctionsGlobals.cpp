@@ -29,6 +29,8 @@ Timers* timers = nullptr;
 
 std::mutex pthread_compatibility_mutex;
 
+MemoryManager* memory_manager = nullptr;
+
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
 stringDepMap *outPutDeps = nullptr;
