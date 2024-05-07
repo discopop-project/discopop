@@ -14,11 +14,32 @@
 #include "perfect_shadow.hpp"
 #include "shadow.hpp"
 #include "signature.hpp"
+#include "functions/all.hpp"
+#include "DPUtils.hpp"
+#include "MemoryRegionTree.hpp"
+#include "scope.hpp"
+#include "../share/include/timer.hpp"
+
+#include "iFunctionsGlobals.hpp"
+
 #include <cstdio>
 #include <limits>
 #include <list>
 #include <mutex>
 #include <string>
+#include <algorithm>
+#include <cstdlib>
+#include <queue>
+#include <set>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+// hybrid analysis
+#include <regex>
+// End HA
 
 #ifdef __linux__ // headers only available on Linux
 #include <linux/limits.h>
@@ -28,116 +49,17 @@
 using namespace std;
 using namespace dputil;
 
-#define unpackLIDMetadata_getLoopID(lid) (lid >> 56)
-#define unpackLIDMetadata_getLoopIteration_0(lid) ((lid >> 48) & 0x7F)
-#define unpackLIDMetadata_getLoopIteration_1(lid) ((lid >> 40) & 0x7F)
-#define unpackLIDMetadata_getLoopIteration_2(lid) ((lid >> 32) & 0x7F)
-#define checkLIDMetadata_getLoopIterationValidity_0(lid)                       \
-  ((lid & 0x0080000000000000) >> 55)
-#define checkLIDMetadata_getLoopIterationValidity_1(lid)                       \
-  ((lid & 0x0000800000000000) >> 47)
-#define checkLIDMetadata_getLoopIterationValidity_2(lid)                       \
-  ((lid & 0x0000008000000000) >> 39)
-
-// issue a warning if DP_PTHREAD_COMPATIBILITY_MODE is enabled
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-#warning                                                                       \
-    "DP_PTHREAD_COMPATIBILITY_MODE enabled! This may have negative implications on the profiling time."
-#endif
-
-bool DP_DEBUG = false; // debug flag
-
-bool USE_PERFECT = true;
-// Shadow memory parameters
-int32_t SIG_ELEM_BIT = 56;
-int32_t SIG_NUM_ELEM = 270000;
-int32_t SIG_NUM_HASH = 2;
-
-uint64_t *numAccesses;
-
 namespace __dp {
 
-std::mutex pthread_compatibility_mutex;
 
-bool dpInited = false; // library initialization flag
-bool targetTerminated =
-    false; // whether the target program has returned from main()
-// In C++, destructors of global objects can run after main().
-// However, when the target program returns from main(), dp
-// also frees all the resources. If there are destructors run
-// after main(), __dp_func_entry() will be called again, but
-// resources are freed, leading to segmentation fault.
-
-// Runtime merging structures
-depMap *allDeps = nullptr;
-// hybrid analysis
-stringDepMap *outPutDeps = nullptr;
-ReportedBBSet *bbList = nullptr;
-// End HA
-LoopTable *loopStack = nullptr;    // loop stack tracking
-LoopRecords *loops = nullptr;      // loop merging
-BGNFuncList *beginFuncs = nullptr; // function entries
-ENDFuncList *endFuncs = nullptr;   // function returns
-ofstream *out;
-ofstream *outInsts;
-std::stack<std::pair<ADDR, ADDR>> *stackAddrs =
-    nullptr; // track stack adresses for entered functions
-ScopeManager *scopeManager = nullptr;
-
-LID lastCallOrInvoke = 0;
-LID lastProcessedLine = 0;
-int32_t FuncStackLevel = 0;
-
-MemoryRegionTree *allocatedMemRegTree;
-list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>
-    *allocatedMemoryRegions;
-/// (LID, identifier, startAddr, endAddr, numBytes, numElements)
-list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>::iterator
-    lastHitIterator;
-ADDR smallestAllocatedADDR = std::numeric_limits<int64_t>::max();
-ADDR largestAllocatedADDR = std::numeric_limits<int64_t>::min();
-int64_t nextFreeMemoryRegionId = 1; // 0 is reserved as the identifier for "no
-                                    // region" in the MemoryRegionTree
-
-/******* BEGIN: parallelization section *******/
-
-pthread_cond_t *addrChunkPresentConds = nullptr; // condition variables
-pthread_mutex_t *addrChunkMutexes = nullptr;     // associated mutexes
-pthread_mutex_t allDepsLock;
-pthread_t *workers = nullptr; // worker threads
-
-#define XSTR(x) STR(x)
-#define STR(x) #x
-#ifdef DP_NUM_WORKERS
-#pragma message "Profiler: set NUM_WORKERS to " XSTR(DP_NUM_WORKERS)
-int32_t NUM_WORKERS = DP_NUM_WORKERS;
-#else
-int32_t NUM_WORKERS = 3; // default number of worker threads (multiple workers
-                         // can potentially lead to non-deterministic results)
-#endif
-int32_t CHUNK_SIZE = 500; // default number of addresses in each chunk
-queue<AccessInfo *> *chunks =
-    nullptr; // one queue of access info chunks for each worker thread
-bool *addrChunkPresent =
-    nullptr; // addrChunkPresent[thread_id] denotes whether or not a new chunk
-             // is available for the corresponding thread
-AccessInfo **tempAddrChunks =
-    nullptr; // tempAddrChunks[thread_id] is the temporary chunk to collect
-             // memory accesses for the corresponding thread
-int32_t *tempAddrCount =
-    nullptr; // tempAddrCount[thread_id] denotes the current number of accesses
-             // in the temporary chunk
-bool stop = false; // ONLY set stop to true if no more accessed addresses will
-                   // be collected
-thread_local depMap *myMap = nullptr;
-
-/******* END: parallelization section *******/
 
 /******* Helper functions *******/
 
 void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
             bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
             bool positiveScopeChangeOccuredSinceLastAccess) {
+  Timers::start(TimerRegion::ADD_DEP);
+  
   // hybrid analysis
   if (depOn == 0 && type == WAW)
     type = INIT;
@@ -301,6 +223,7 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
   depOn &= 0x00000000FFFFFFFF;
 
   std::vector<std::pair<Dep, LID>> dependenciesToBeRegistered;
+  dependenciesToBeRegistered.reserve(identifiedDepTypes.size());
 
   for (depTypeModifier dtm : identifiedDepTypes) {
     depType modified_type = type;
@@ -373,8 +296,7 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
       // IGNORE ACCESS
     } else {
       // register dependency
-      dependenciesToBeRegistered.push_back(
-          std::pair<Dep, LID>(Dep(modified_type, depOn, var, AAvar), curr));
+      dependenciesToBeRegistered.emplace_back(Dep(modified_type, depOn, var, AAvar), curr);
     }
 
     if (print_debug_info) {
@@ -441,10 +363,14 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
            << myMap->size() << ")" << endl;
     }
   }
+
+  Timers::stop_and_add(TimerRegion::ADD_DEP);
 }
 
 // hybrid analysis
 void generateStringDepMap() {
+  Timers::start(TimerRegion::GENERATE_STRING_DEP_MAP);
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter generateStringDepMap\n";
 #endif
@@ -498,7 +424,7 @@ void generateStringDepMap() {
           break;
         }
 
-        dep += " " + decodeLID(d.depOn);
+        dep += ' ' + decodeLID(d.depOn);
         dep += "|" + string(d.var);
         dep += "(" + string(d.AAvar) + ")";
         lineDeps.insert(dep);
@@ -515,45 +441,57 @@ void generateStringDepMap() {
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter generateStringDepMap\n";
 #endif
+
+  Timers::stop_and_add(TimerRegion::GENERATE_STRING_DEP_MAP);
 }
 
 void outputDeps() {
+  Timers::start(TimerRegion::OUTPUT_DEPS);
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputDeps\n";
 #endif
   for (auto pair : *outPutDeps) {
     *out << pair.first << " NOM ";
     for (auto dep : pair.second) {
-      *out << " " << dep;
+      *out << ' ' << dep;
     }
     *out << endl;
   }
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit outputDeps\n";
 #endif
+
+  Timers::stop_and_add(TimerRegion::OUTPUT_DEPS);
 }
 // End HA
 
 void outputLoops() {
+  Timers::start(TimerRegion::OUTPUT_LOOPS);
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputLoops\n";
 #endif
   assert((loops != nullptr) && "Loop map is not available!");
   for (auto &loop : *loops) {
     *out << decodeLID(loop.first) << " BGN loop ";
-    *out << loop.second->total << " ";
-    *out << loop.second->nEntered << " ";
+    *out << loop.second->total << ' ';
+    *out << loop.second->nEntered << ' ';
     *out << static_cast<int32_t>(loop.second->total / loop.second->nEntered)
-         << " ";
+         << ' ';
     *out << loop.second->maxIterationCount << endl;
     *out << decodeLID(loop.second->end) << " END loop" << endl;
   }
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit outputLoops\n";
 #endif
+
+  Timers::stop_and_add(TimerRegion::OUTPUT_LOOPS);
 }
 
 void outputFuncs() {
+  Timers::start(TimerRegion::OUTPUT_FUNCS);
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputFunc\n";
 #endif
@@ -572,40 +510,52 @@ void outputFuncs() {
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit outputFunc\n";
 #endif
+
+  Timers::stop_and_add(TimerRegion::OUTPUT_FUNCS);
 }
 
 void outputAllocations() {
+  Timers::start(TimerRegion::OUTPUT_ALLOCATIONS);
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputAllocations\n";
 #endif
-  // prepare environment variables
-  char const *tmp = getenv("DOT_DISCOPOP");
-  if (tmp == NULL) {
-    // DOT_DISCOPOP needs to be initialized
-    setenv("DOT_DISCOPOP", ".discopop", 1);
-  }
-  std::string tmp_str(getenv("DOT_DISCOPOP"));
-  setenv("DOT_DISCOPOP_PROFILER", (tmp_str + "/profiler").data(), 1);
-  std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
-  tmp2 += "/memory_regions.txt";
+  const auto prepare_environment = [](){
+      // prepare environment variables
+    const char *discopop_env = getenv("DOT_DISCOPOP");
+    if (discopop_env == NULL) {
 
-  auto allocationsFileStream = new ofstream();
-  allocationsFileStream->open(tmp2.data(), ios::out);
-  for (auto memoryRegion : *allocatedMemoryRegions) {
-    string position = decodeLID(get<0>(memoryRegion));
-    string id = get<1>(memoryRegion);
-    string numBytes = to_string(get<4>(memoryRegion));
+      // DOT_DISCOPOP needs to be initialized
+      setenv("DOT_DISCOPOP", ".discopop", 1);
+      discopop_env = ".discopop";
+    }
 
-    *allocationsFileStream << id << " " << position << " " << numBytes << endl;
+    auto discopop_profiler_str = std::string(discopop_env) + "/profiler";
+    setenv("DOT_DISCOPOP_PROFILER", discopop_profiler_str.data(), 1);
+
+    return discopop_profiler_str + "/memory_regions.txt";
+  };
+  const auto path = prepare_environment();
+
+  auto allocationsFileStream = ofstream(path, ios::out);
+  for (const auto& memoryRegion : *allocatedMemoryRegions) {
+    const auto lid = get<0>(memoryRegion);
+    const auto& id = get<1>(memoryRegion);
+    const auto num_bytes = get<4>(memoryRegion);
+
+    decodeLID(lid, allocationsFileStream);
+    allocationsFileStream << ' ' << id << ' ' << num_bytes << endl;
   }
-  allocationsFileStream->flush();
-  allocationsFileStream->close();
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit outputAllocations\n";
 #endif
+  Timers::stop_and_add(TimerRegion::OUTPUT_ALLOCATIONS);
 }
 
 void readRuntimeInfo() {
+  Timers::start(TimerRegion::READ_RUNTIME_INFO);
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter readRuntimeInfo\n";
 #endif
@@ -658,9 +608,13 @@ void readRuntimeInfo() {
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit readRuntimeInfo\n";
 #endif
+
+  Timers::stop_and_add(TimerRegion::READ_RUNTIME_INFO);
 }
 
 void initParallelization() {
+  Timers::start(TimerRegion::INIT_PARALLELIZATION);
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter initParallelization\n";
 #endif
@@ -697,12 +651,19 @@ void initParallelization() {
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit initParallelization\n";
 #endif
+
+  Timers::stop_and_add(TimerRegion::INIT_PARALLELIZATION);
 }
 
 string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
+  Timers::start(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
+  
   // use tree
-  return fallback + "-" +
+  const auto return_value = fallback + "-" +
          allocatedMemRegTree->get_memory_region_id(fallback, addr);
+
+  Timers::stop_and_add(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
+  return return_value;
 
   /*// check if accessed addr in knwon range. If not, return fallback
   immediately if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
@@ -738,6 +699,8 @@ string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
 }
 
 void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
+  Timers::start(TimerRegion::ADD_ACCESS_INFO);
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter addAccessInfo\n";
 #endif
@@ -808,14 +771,17 @@ void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit addAccessInfo\n";
 #endif
+
+  Timers::stop_and_add(TimerRegion::ADD_ACCESS_INFO);
 }
 
-void mergeDeps() {
+void mergeDeps() {  
   depSet *tmp_depSet = nullptr; // pointer to the current processing set of dps
-  depMap::iterator
-      globalPos; // position of the current processing lid in allDeps
+  depMap::iterator globalPos; // position of the current processing lid in allDeps
 
   pthread_mutex_lock(&allDepsLock);
+  Timers::start(TimerRegion::MERGE_DEPS);
+
   for (auto &dep : *myMap) {
     // if a lid occurs the first time, then add it in to the global hash table.
     // Otherwise just take the associated set of dps.
@@ -832,10 +798,14 @@ void mergeDeps() {
       tmp_depSet->insert(d);
     }
   }
+  
+  Timers::stop_and_add(TimerRegion::MERGE_DEPS);
   pthread_mutex_unlock(&allDepsLock);
 }
 
 void *analyzeDeps(void *arg) {
+  Timers::start(TimerRegion::ANALYZE_DEPS);
+  
   int64_t id = (int64_t)arg;
   Shadow *SMem;
   if (USE_PERFECT) {
@@ -943,10 +913,14 @@ void *analyzeDeps(void *arg) {
   if (DP_DEBUG) {
     cout << "thread " << id << " exits... \n";
   }
+
+  Timers::stop_and_add(TimerRegion::ANALYZE_DEPS);
   pthread_exit(NULL);
 }
 
 void finalizeParallelization() {
+  Timers::start(TimerRegion::FINALIZE_PARALLELIZATION);
+
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter finalizeParallelization\n";
 #endif
@@ -995,1084 +969,14 @@ void finalizeParallelization() {
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit finalizeParallelization\n";
 #endif
+
+  Timers::stop_and_add(TimerRegion::FINALIZE_PARALLELIZATION);
 }
 
-/******* Instrumentation functions *******/
+void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
+  Timers::start(TimerRegion::CLEAR_STACK_ACCESSES);
 
-// The wrapper is to avoid mangling
-extern "C" {
-
-#ifdef SKIP_DUP_INSTR
-void __dp_read(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
-#else
-void __dp_read(LID lid, ADDR addr, char *var) {
-#endif
-if(!dpInited){
-    return;
-}
-
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_read\n";
-#endif
-
-  if (targetTerminated) {
-    if (DP_DEBUG) {
-      cout << "__dp_read() is not executed since target program has returned "
-              "from main()."
-           << endl;
-    }
-    return;
-  }
-  // For tracking function call or invoke
-#ifdef SKIP_DUP_INSTR
-  if (lastaddr == addr && count >= 2) {
-    return;
-  }
-#endif
-  lastCallOrInvoke = 0;
-  lastProcessedLine = lid;
-
-  if (DP_DEBUG) {
-    cout << "instLoad at encoded LID " << std::dec << decodeLID(lid)
-         << " and addr " << std::hex << addr << endl;
-  }
-
-  // TEST
-  // check for stack access
-  bool is_stack_access = false;
-  if (stackAddrs->top().first && stackAddrs->top().second) {
-    if ((addr <= stackAddrs->top().first) &&
-        (addr >= stackAddrs->top().second)) {
-      is_stack_access = true;
-    }
-  }
-  // !TEST
-
-  // addAccessInfo(true, lid, var, addr);
-  int64_t workerID =
-      ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-  AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
-  current.isRead = true;
-  current.lid = lid;
-  current.var = var;
-  current.AAvar = getMemoryRegionIdFromAddr(var, addr);
-  current.addr = addr;
-  current.isStackAccess = is_stack_access;
-  current.addrIsFirstWrittenInScope =
-      scopeManager->isFirstWrittenInScope(addr, false);
-  current.positiveScopeChangeOccuredSinceLastAccess =
-      scopeManager->positiveScopeChangeOccuredSinceLastAccess(addr);
-
-  if (is_stack_access) {
-    // register stack read after check for
-    // positiveScopeChangeOccuredSinceLastAccess
-    scopeManager->registerStackRead(addr, lid, var);
-  }
-
-  // store loop iteration metadata (last 8 bits for loop id, 1 bit to mark loop
-  // iteration count as valid, last 7 bits for loop iteration) last 8 bits are
-  // sufficient, since metadata is only used to check for different iterations,
-  // not exact values. first 32 bits of current.lid are reserved for metadata
-  // and thus empty
-  if (loopStack->size() > 0) {
-    if (loopStack->size() == 1) {
-      current.lid = current.lid | (((LID)(loopStack->first().loopID & 0xFF))
-                                   << 56); // add masked loop id
-      current.lid = current.lid | (((LID)(loopStack->top().count & 0x7F))
-                                   << 48); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0080000000000000; // mark loop count valid
-    } else if (loopStack->size() == 2) {
-      current.lid = current.lid | (((LID)(loopStack->first().loopID & 0xFF))
-                                   << 56); // add masked loop id
-      current.lid = current.lid | (((LID)(loopStack->top().count & 0x7F))
-                                   << 48); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0080000000000000; // mark loop count valid
-      current.lid = current.lid | (((LID)(loopStack->topMinusN(1).count & 0x7F))
-                                   << 40); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0000800000000000; // mark loop count valid
-    } else {                                     // (loopStack->size() >= 3)
-      current.lid = current.lid | (((LID)(loopStack->first().loopID & 0xFF))
-                                   << 56); // add masked loop id
-      current.lid = current.lid | (((LID)(loopStack->top().count & 0x7F))
-                                   << 48); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0080000000000000; // mark loop count valid
-      current.lid = current.lid | (((LID)(loopStack->topMinusN(1).count & 0x7F))
-                                   << 40); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0000800000000000; // mark loop count valid
-      current.lid = current.lid | (((LID)(loopStack->topMinusN(2).count & 0x7F))
-                                   << 32); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0000008000000000; // mark loop count valid
-    }
-  } else {
-    // mark loopID as invalid (0xFF to allow 0 as valid loop id)
-    current.lid = current.lid | (((LID)0xFF) << 56);
-  }
-
-  if (tempAddrCount[workerID] == CHUNK_SIZE) {
-    pthread_mutex_lock(&addrChunkMutexes[workerID]);
-    addrChunkPresent[workerID] = true;
-    chunks[workerID].push(tempAddrChunks[workerID]);
-    pthread_cond_signal(&addrChunkPresentConds[workerID]);
-    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-    tempAddrCount[workerID] = 0;
-  }
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_read\n";
-#endif
-}
-
-#ifdef SKIP_DUP_INSTR
-void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
-#else
-void __dp_write(LID lid, ADDR addr, char *var) {
-#endif
-if(!dpInited){
-    return;
-}
-
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_write\n";
-#endif
-  if (targetTerminated) {
-    if (DP_DEBUG) {
-      cout << "__dp_write() is not executed since target program has returned "
-              "from main()."
-           << endl;
-    }
-    return;
-  }
-  // For tracking function call or invoke
-#ifdef SKIP_DUP_INSTR
-  if (lastaddr == addr && count >= 2) {
-    return;
-  }
-#endif
-  // For tracking function call or invoke
-  lastCallOrInvoke = 0;
-  lastProcessedLine = lid;
-
-  if (DP_DEBUG) {
-    cout << "instStore at encoded LID " << std::dec << decodeLID(lid)
-         << " and addr " << std::hex << addr << endl;
-  }
-
-  // TEST
-  // check for stack access
-  bool is_stack_access = false;
-  if (stackAddrs->top().first && stackAddrs->top().second) {
-    if ((addr <= stackAddrs->top().first) &&
-        (addr >= stackAddrs->top().second)) {
-      //                cout << "WRITE STACK ACCESS DETECTED! " <<
-      //                decodeLID(lid) << "  " << var << "\n";
-      is_stack_access = true;
-    }
-  }
-  // !TEST
-
-  int64_t workerID =
-      ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-  AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
-  current.isRead = false;
-  current.lid = lid;
-  current.var = var;
-  current.AAvar = getMemoryRegionIdFromAddr(var, addr);
-  current.addr = addr;
-  current.isStackAccess = is_stack_access;
-  current.addrIsFirstWrittenInScope =
-      scopeManager->isFirstWrittenInScope(addr, true);
-  current.positiveScopeChangeOccuredSinceLastAccess =
-      scopeManager->positiveScopeChangeOccuredSinceLastAccess(addr);
-
-  if (is_stack_access) {
-    // register stack write after check for
-    // positiveScopeChangeOccuredSinceLastAccess
-    scopeManager->registerStackWrite(addr, lid, var);
-  }
-
-  // store loop iteration metadata (last 8 bits for loop id, 1 bit to mark loop
-  // iteration count as valid, last 7 bits for loop iteration) last 8 bits are
-  // sufficient, since metadata is only used to check for different iterations,
-  // not exact values. first 32 bits of current.lid are reserved for metadata
-  // and thus empty
-  if (loopStack->size() > 0) {
-    if (loopStack->size() == 1) {
-      current.lid = current.lid | (((LID)(loopStack->first().loopID & 0xFF))
-                                   << 56); // add masked loop id
-      current.lid = current.lid | (((LID)(loopStack->top().count & 0x7F))
-                                   << 48); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0080000000000000; // mark loop count valid
-    } else if (loopStack->size() == 2) {
-      current.lid = current.lid | (((LID)(loopStack->first().loopID & 0xFF))
-                                   << 56); // add masked loop id
-      current.lid = current.lid | (((LID)(loopStack->top().count & 0x7F))
-                                   << 48); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0080000000000000; // mark loop count valid
-      current.lid = current.lid | (((LID)(loopStack->topMinusN(1).count & 0x7F))
-                                   << 40); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0000800000000000; // mark loop count valid
-    } else {                                     // (loopStack->size() >= 3)
-      current.lid = current.lid | (((LID)(loopStack->first().loopID & 0xFF))
-                                   << 56); // add masked loop id
-      current.lid = current.lid | (((LID)(loopStack->top().count & 0x7F))
-                                   << 48); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0080000000000000; // mark loop count valid
-      current.lid = current.lid | (((LID)(loopStack->topMinusN(1).count & 0x7F))
-                                   << 40); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0000800000000000; // mark loop count valid
-      current.lid = current.lid | (((LID)(loopStack->topMinusN(2).count & 0x7F))
-                                   << 32); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0000008000000000; // mark loop count valid
-    }
-  } else {
-    // mark loopID as invalid (0xFF to allow 0 as valid loop id)
-    current.lid = current.lid | (((LID)0xFF) << 56);
-  }
-
-  if (tempAddrCount[workerID] == CHUNK_SIZE) {
-    pthread_mutex_lock(&addrChunkMutexes[workerID]);
-    addrChunkPresent[workerID] = true;
-    chunks[workerID].push(tempAddrChunks[workerID]);
-    pthread_cond_signal(&addrChunkPresentConds[workerID]);
-    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-    tempAddrCount[workerID] = 0;
-  }
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_write\n";
-#endif
-}
-
-#ifdef SKIP_DUP_INSTR
-void __dp_decl(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
-#else
-void __dp_decl(LID lid, ADDR addr, char *var) {
-#endif
-if(!dpInited){
-    return;
-}
-
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_decl\n";
-#endif
-  if (targetTerminated) {
-    if (DP_DEBUG) {
-      cout << "__dp_write() is not executed since target program has returned "
-              "from main()."
-           << endl;
-    }
-    return;
-  }
-  // For tracking function call or invoke
-#ifdef SKIP_DUP_INSTR
-  if (lastaddr == addr && count >= 2) {
-    return;
-  }
-#endif
-  // For tracking function call or invoke
-  lastCallOrInvoke = 0;
-  lastProcessedLine = lid;
-
-  if (DP_DEBUG) {
-    cout << "instStore at encoded LID " << std::dec << decodeLID(lid)
-         << " and addr " << std::hex << addr << endl;
-  }
-
-  int64_t workerID =
-      ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-  AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
-  current.isRead = false;
-  current.lid = 0;
-  current.var = var;
-  current.AAvar = getMemoryRegionIdFromAddr(var, addr);
-  current.addr = addr;
-  current.skip = true;
-  // store loop iteration metadata (last 8 bits for loop id, 1 bit to mark loop
-  // iteration count as valid, last 7 bits for loop iteration) last 8 bits are
-  // sufficient, since metadata is only used to check for different iterations,
-  // not exact values. first 32 bits of current.lid are reserved for metadata
-  // and thus empty
-  if (loopStack->size() > 0) {
-    if (loopStack->size() == 1) {
-      current.lid = current.lid | (((LID)(loopStack->first().loopID & 0xFF))
-                                   << 56); // add masked loop id
-      current.lid = current.lid | (((LID)(loopStack->top().count & 0x7F))
-                                   << 48); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0080000000000000; // mark loop count valid
-    } else if (loopStack->size() == 2) {
-      current.lid = current.lid | (((LID)(loopStack->first().loopID & 0xFF))
-                                   << 56); // add masked loop id
-      current.lid = current.lid | (((LID)(loopStack->top().count & 0x7F))
-                                   << 48); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0080000000000000; // mark loop count valid
-      current.lid = current.lid | (((LID)(loopStack->topMinusN(1).count & 0x7F))
-                                   << 40); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0000800000000000; // mark loop count valid
-    } else {                                     // (loopStack->size() >= 3)
-      current.lid = current.lid | (((LID)(loopStack->first().loopID & 0xFF))
-                                   << 56); // add masked loop id
-      current.lid = current.lid | (((LID)(loopStack->top().count & 0x7F))
-                                   << 48); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0080000000000000; // mark loop count valid
-      current.lid = current.lid | (((LID)(loopStack->topMinusN(1).count & 0x7F))
-                                   << 40); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0000800000000000; // mark loop count valid
-      current.lid = current.lid | (((LID)(loopStack->topMinusN(2).count & 0x7F))
-                                   << 32); // add masked loop count
-      current.lid =
-          current.lid | (LID)0x0000008000000000; // mark loop count valid
-    }
-  } else {
-    // mark loopID as invalid (0xFF to allow 0 as valid loop id)
-    current.lid = current.lid | (((LID)0xFF) << 56);
-  }
-
-  if (tempAddrCount[workerID] == CHUNK_SIZE) {
-    pthread_mutex_lock(&addrChunkMutexes[workerID]);
-    addrChunkPresent[workerID] = true;
-    chunks[workerID].push(tempAddrChunks[workerID]);
-    pthread_cond_signal(&addrChunkPresentConds[workerID]);
-    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-    tempAddrCount[workerID] = 0;
-  }
-}
-
-void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
-                 int64_t numBytes, int64_t numElements) {
-  if(!dpInited){
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_alloca\n";
-#endif
-  int64_t buffer = nextFreeMemoryRegionId;
-  string allocId = to_string(buffer);
-  nextFreeMemoryRegionId++;
-  // create entry to list of allocatedMemoryRegions
-  string var_name = allocId;
-  if (DP_DEBUG) {
-    cout << "alloca: " << var << " (" << var_name << ") @ " << decodeLID(lid)
-         << " : " << std::hex << startAddr << " - " << std::hex << endAddr
-         << " -> #allocations: " << to_string(allocatedMemoryRegions->size())
-         << "\n";
-  }
-  allocatedMemoryRegions->push_back(
-      tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{
-          lid, var_name, startAddr, endAddr, numBytes, numElements});
-  allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer,
-                                       tempAddrCount, NUM_WORKERS);
-
-  // update known min and max ADDR
-  if (startAddr < smallestAllocatedADDR) {
-    smallestAllocatedADDR = startAddr;
-  }
-  if (endAddr > largestAllocatedADDR) {
-    largestAllocatedADDR = endAddr;
-  }
-
-  // TEST
-  // update stack base address, if not already set
-  if (stackAddrs->top().first == 0) {
-    //            cout << "SET STACK BASE!\n";
-    stackAddrs->top().first = startAddr;
-  }
-  //        else{
-  //            cout << "NOT NECESSARY: SET STACK BASE\n";
-  //        }
-
-  // update stack top address (note: stack grows top down!)
-  if (stackAddrs->top().second == 0) {
-    // initialize stack top address
-    stackAddrs->top().second = endAddr;
-  } else if (stackAddrs->top().second > endAddr) {
-    // update stack top
-    //            cout << "UPDATE STACK TOP: " << stackAddrs->top().second << "
-    //            -->  " << endAddr << "\n";
-    stackAddrs->top().second = endAddr;
-  }
-
-  //        cout << "STACK REGION: " << stackAddrs->top().first << " - " <<
-  //        stackAddrs->top().second << "\n";
-  // !TEST
-
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_alloca\n";
-#endif
-}
-
-void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
-  if(!dpInited){
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_new\n";
-#endif
-  // instrumentation function for new and malloc
-  int64_t buffer = nextFreeMemoryRegionId;
-  string allocId = to_string(buffer);
-  nextFreeMemoryRegionId++;
-
-  // calculate endAddr of memory region
-  endAddr = startAddr + numBytes;
-
-  allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer,
-                                       tempAddrCount, NUM_WORKERS);
-
-  if (DP_DEBUG) {
-    cout << "new/malloc: " << decodeLID(lid) << ", " << allocId << ", "
-         << std::hex << startAddr << " - " << std::hex << endAddr;
-    printf(" NumBytes: %lld\n", numBytes);
-  }
-
-  allocatedMemoryRegions->push_back(
-      tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{
-          lid, allocId, startAddr, endAddr, numBytes, -1});
-  lastHitIterator = allocatedMemoryRegions->end();
-  lastHitIterator--;
-
-  // update known min and max ADDR
-  if (startAddr < smallestAllocatedADDR) {
-    smallestAllocatedADDR = startAddr;
-  }
-  if (endAddr > largestAllocatedADDR) {
-    largestAllocatedADDR = endAddr;
-  }
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_new\n";
-#endif
-}
-
-void __dp_delete(LID lid, ADDR startAddr) {
-  if(!dpInited){
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_delete\n";
-#endif
-  // DO NOT DELETE MEMORY REGIONS AS THEY ARE STILL REQUIRED FOR LOGGING
-
-  // TODO more efficient implementation
-
-  // find memory region to be deleted
-/*        for(tuple<LID, string, int64_t, int64_t, int64_t, int64_t> entry :
-   allocatedMemoryRegions){ if(get<2>(entry) == startAddr){
-                // delete memory region
-                cout << "delete/free: " << decodeLID(lid) << ", " <<
-   get<1>(entry) << ", " << std::hex << startAddr << "\n";
-                allocatedMemoryRegions.remove(entry);
-                return;
-            }
-        }
-        cout << "__dp_delete: Could not find base addr: " << std::hex <<
-   startAddr << "\n";
-*/
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_delete\n";
-#endif
-  return;
-}
-
-void __dp_report_bb(uint32_t bbIndex) {
-  if(!dpInited){
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_report_bb\n";
-  cout << "bbIndex: " << std::to_string(bbIndex) << "\n";
-#endif
-  bbList->insert(bbIndex);
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_report_bb\n";
-#endif
-}
-
-void __dp_report_bb_pair(int32_t semaphore, uint32_t bbIndex) {
-  if(!dpInited){
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_report_bb_pair\n";
-#endif
-  if (semaphore)
-    bbList->insert(bbIndex);
-}
-
-void __dp_finalize(LID lid) {
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  pthread_compatibility_mutex.lock();
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_finalize\n";
-#endif
-  if (targetTerminated) {
-    if (DP_DEBUG) {
-      cout << "__dp_finalize() has been called before. Doing nothing this time "
-              "to avoid double free."
-           << endl;
-    }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-    pthread_compatibility_mutex.unlock();
-#endif
-    return;
-  }
-
-  // release mutex so it can be re-aquired in the called __dp_func_exit
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  pthread_compatibility_mutex.unlock();
-#endif
-
-  while (FuncStackLevel >= 0) {
-    __dp_func_exit(lid, 1);
-  }
-
-  // use lock_guard here, since no other mutex-aquiring function is called
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-
-  // Returning from main or exit from somewhere, clear up everything.
-  assert(FuncStackLevel == -1 &&
-         "Program terminates without clearing function stack!");
-  assert(loopStack->empty() &&
-         "Program terminates but loop stack is not empty!");
-
-  if (DP_DEBUG) {
-    cout << "Program terminates at LID " << std::dec << decodeLID(lid)
-         << ", clearing up" << endl;
-  }
-
-  finalizeParallelization();
-  outputLoops();
-  outputFuncs();
-  outputAllocations();
-  // hybrid analysis
-  generateStringDepMap();
-  // End HA
-  outputDeps();
-
-  delete loopStack;
-  delete endFuncs;
-  // hybrid analysis
-  delete allDeps;
-  delete outPutDeps;
-  delete bbList;
-  // End HA
-
-  for (auto loop : *loops) {
-    delete loop.second;
-  }
-  delete loops;
-
-  for (auto fb : *beginFuncs) {
-    delete fb.second;
-  }
-  delete beginFuncs;
-
-  // TEST
-  delete scopeManager;
-  // !TEST
-
-  *out << decodeLID(lid) << " END program" << endl;
-  out->flush();
-  out->close();
-
-  delete out;
-  dpInited = false;
-  targetTerminated = true; // mark the target program has returned from main()
-
-  if (DP_DEBUG) {
-    cout << "Program terminated." << endl;
-  }
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_finalize\n";
-#endif
-}
-
-// hybrid analysis
-void __dp_add_bb_deps(char *depStringPtr) {
-  if(!dpInited){
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_add_bb_deps\n";
-#endif
-  string depString(depStringPtr);
-  regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r3("[0-9]+:[0-9]+"),
-      r4("(INIT|(R|W)A(R|W)).*");
-  smatch res0, res1, res2, res3;
-
-  while (regex_search(depString, res0, r0)) {
-    string s(res0[0]);
-
-    regex_search(s, res1, r1);
-    string cond(res1[0]);
-
-    if (bbList->find(stoi(cond)) == bbList->end()) {
-      depString = res0.suffix();
-      continue;
-    }
-
-    string line(res1.suffix());
-    line.erase(0, 1);
-    while (regex_search(line, res2, r2)) {
-      string s(res2[0]);
-      regex_search(s, res3, r3);
-      string k(res3[0]);
-      regex_search(s, res3, r4);
-      string v(res3[0]);
-      if (outPutDeps->count(k) == 0) {
-        set<string> depSet;
-        (*outPutDeps)[k] = depSet;
-      }
-      (*outPutDeps)[k].insert(v);
-      line = res2.suffix();
-    }
-    depString = res0.suffix();
-  }
-}
-// End HA
-
-void __dp_call(LID lid) {
-  if(!dpInited){
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "__dp_call\n";
-#endif
-  lastCallOrInvoke = lid;
-}
-
-void __dp_func_entry(LID lid, int32_t isStart) {
-  if(targetTerminated){
-    // prevent deleting generated results after the main function has been exited.
-    // This might happen, e.g., if a destructor of a global struct is called after exiting the main function.
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_func_entry\n";
-#endif
-  if (!dpInited) {
-    // This part should be executed only once.
-    readRuntimeInfo();
-    loopStack = new LoopTable();
-    loops = new LoopRecords();
-    beginFuncs = new BGNFuncList();
-    endFuncs = new ENDFuncList();
-    out = new ofstream();
-
-    // TEST
-    stackAddrs = new std::stack<std::pair<ADDR, ADDR>>();
-    scopeManager = new ScopeManager();
-    // !TEST
-
-    // hybrid analysis
-    allDeps = new depMap();
-    outPutDeps = new stringDepMap();
-    bbList = new ReportedBBSet();
-    // End HA
-    // initialize AllocatedMemoryRegions:
-
-    allocatedMemRegTree = new MemoryRegionTree();
-    allocatedMemoryRegions =
-        new list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>;
-
-    if (allocatedMemoryRegions->size() == 0 &&
-        allocatedMemoryRegions->empty() == 0) {
-      // re-initialize the list, as something went wrong
-      allocatedMemoryRegions =
-          new list<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>();
-    }
-    tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%", 0,
-                                                           0, 0,           0};
-    // initialize lastHitIterator to dummy element
-    allocatedMemoryRegions->push_back(
-        tuple<LID, string, int64_t, int64_t, int64_t, int64_t>{0, "%%dummy%%",
-                                                               0, 0, 0, 0});
-    lastHitIterator = allocatedMemoryRegions->end();
-    lastHitIterator--;
-
-#ifdef __linux__
-    // try to get an output file name w.r.t. the target application
-    // if it is not available, fall back to "Output.txt"
-    char *selfPath = new char[PATH_MAX];
-    if (selfPath != nullptr) {
-      if (readlink("/proc/self/exe", selfPath, PATH_MAX - 1) == -1) {
-        delete[] selfPath;
-        selfPath = nullptr;
-        out->open("Output.txt", ios::out);
-      }
-      // out->open(string(selfPath) + "_dep.txt", ios::out);  # results in the
-      // old <prog>_dep.txt
-      //  prepare environment variables
-      char const *tmp = getenv("DOT_DISCOPOP");
-      if (tmp == NULL) {
-        // DOT_DISCOPOP needs to be initialized
-        setenv("DOT_DISCOPOP", ".discopop", 1);
-      }
-      std::string tmp_str(getenv("DOT_DISCOPOP"));
-      setenv("DOT_DISCOPOP_PROFILER", (tmp_str + "/profiler").data(), 1);
-      std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
-      tmp2 += "/dynamic_dependencies.txt";
-
-      out->open(tmp2.data(), ios::out);
-    }
-#else
-    out->open("Output.txt", ios::out);
-#endif
-    assert(out->is_open() && "Cannot open a file to output dependences.\n");
-
-    if (DP_DEBUG) {
-      cout << "DP initialized at LID " << std::dec << decodeLID(lid) << endl;
-    }
-    dpInited = true;
-    initParallelization();
-  } else if (targetTerminated) {
-    if (DP_DEBUG) {
-      cout << "Entering function LID " << std::dec << decodeLID(lid);
-      cout << " but target program has returned from main(). Destructors?"
-           << endl;
-    }
-  } else {
-    // Process ordinary function call/invoke.
-    assert((lastCallOrInvoke != 0 || lastProcessedLine != 0) &&
-           "Error: lastCalledFunc == lastProcessedLine == 0");
-    if (lastCallOrInvoke == 0)
-      lastCallOrInvoke = lastProcessedLine;
-    ++FuncStackLevel;
-
-    if (DP_DEBUG) {
-      cout << "Entering function LID " << std::dec << decodeLID(lid) << endl;
-      cout << "Function stack level = " << std::dec << FuncStackLevel << endl;
-    }
-    BGNFuncList::iterator func = beginFuncs->find(lastCallOrInvoke);
-    if (func == beginFuncs->end()) {
-      set<LID> *tmp = new set<LID>();
-      tmp->insert(lid);
-      beginFuncs->insert(pair<LID, set<LID> *>(lastCallOrInvoke, tmp));
-    } else {
-      func->second->insert(lid);
-    }
-  }
-
-  // TEST
-  // initialize stack addresses for function
-  //        if(stackAddrs->size() > 0){
-  //            cout << "PUSH STACK ENTRY, PREV: " << hex <<
-  //            stackAddrs->top().first << " -> " << hex <<
-  //            stackAddrs->top().second << " \n";
-  //        }
-  stackAddrs->push(std::pair<ADDR, ADDR>(0, 0));
-  scopeManager->enterScope("function", lid);
-  // !TEST
-
-  if (isStart)
-    *out << "START " << decodeLID(lid) << endl;
-
-  // Reset last call tracker
-  lastCallOrInvoke = 0;
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_func_entry\n";
-#endif
-}
-
-void __dp_func_exit(LID lid, int32_t isExit) {
-  if(!dpInited){
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "__dp_func_exit\n";
-#endif
-  if (targetTerminated) {
-    if (DP_DEBUG) {
-      cout << "Exiting function LID " << std::dec << decodeLID(lid);
-      cout << " but target program has returned from main(). Destructors?"
-           << endl;
-    }
-    return;
-  }
-
-  lastCallOrInvoke = 0;
-  lastProcessedLine = lid;
-
-  // Clear up all unfinished loops in the function.
-  // This usually happens when using return inside loop.
-  while (!loopStack->empty() &&
-         (loopStack->top().funcLevel == FuncStackLevel)) {
-
-    // No way to get the real end line of loop. Use the line where
-    // function returns instead.
-    LoopRecords::iterator loop = loops->find(loopStack->top().begin);
-    assert(loop != loops->end() &&
-           "A loop ends without its entry being recorded.");
-    if (loop->second->end == 0) {
-      loop->second->end = lid;
-    } else {
-      // TODO: FIXME: loop end line > return line
-    }
-    loop->second->total += loopStack->top().count;
-    ++loop->second->nEntered;
-
-    if (DP_DEBUG) {
-      cout << "(" << std::dec << loopStack->top().funcLevel << ")";
-      cout << "Loop " << loopStack->top().loopID
-           << " exits since function returns." << endl;
-    }
-
-    loopStack->pop();
-
-    if (DP_DEBUG) {
-      if (loopStack->empty())
-        cout << "Loop Stack is empty." << endl;
-      else {
-        cout << "TOP: (" << std::dec << loopStack->top().funcLevel << ")";
-        cout << "Loop " << loopStack->top().loopID << "." << endl;
-      }
-    }
-  }
-  --FuncStackLevel;
-
-  // TEST
-  // clear information on allocated stack addresses
-  //        if(stackAddrs->size() > 0){
-  //            cout << "POP STACK ENTRY: " << hex << stackAddrs->top().first <<
-  //            " -> " << hex << stackAddrs->top().second << " \n";
-  //        }
-  clearStackAccesses(
-      stackAddrs->top().first,
-      stackAddrs->top().second); // insert accesses with LID 0 to the queues
-  stackAddrs->pop();
-  //        if(stackAddrs->size() > 0){
-  //            cout << "\tNEW TOP STACK ENTRY: " <<  hex <<
-  //            stackAddrs->top().first << " -> " << hex <<
-  //            stackAddrs->top().second << " \n";
-  //        }
-  scopeManager->leaveScope("function", lid);
-  // !TEST
-
-  if (isExit == 0)
-    endFuncs->insert(lid);
-
-  if (DP_DEBUG) {
-    cout << "Exiting fucntion LID " << std::dec << decodeLID(lid) << endl;
-    cout << "Function stack level = " << std::dec << FuncStackLevel << endl;
-  }
-}
-
-void __dp_loop_entry(LID lid, int32_t loopID) {
-  if(!dpInited){
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "__dp_loop_entry\n";
-#endif
-  if (targetTerminated) {
-    if (DP_DEBUG) {
-      cout << "__dp_loop_entry() is not executed since target program has "
-              "returned from main()."
-           << endl;
-    }
-    return;
-  }
-  assert((loopStack != nullptr) && "Loop stack is not available!");
-
-  if (loopStack->empty() || (loopStack->top().loopID != loopID)) {
-    // A new loop
-    loopStack->push(LoopTableEntry(FuncStackLevel, loopID, 0, lid));
-    if (loops->find(lid) == loops->end()) {
-      loops->insert(pair<LID, LoopRecord *>(lid, new LoopRecord(0, 0, 0)));
-    }
-    if (DP_DEBUG) {
-      cout << "(" << std::dec << FuncStackLevel << ")Loop " << loopID
-           << " enters." << endl;
-    }
-    scopeManager->enterScope("loop", lid);
-  } else {
-    // The same loop iterates again
-    loopStack->top().count++;
-    if (DP_DEBUG) {
-      cout << "(" << std::dec << loopStack->top().funcLevel << ")";
-      cout << "Loop " << loopStack->top().loopID << " iterates "
-           << loopStack->top().count << " times." << endl;
-    }
-
-    // Handle error made in instrumentation.
-    // When recorded loopStack->top().funcLevel is different
-    // with the current FuncStackLevel, two possible errors
-    // happen during instrumentation:
-    // 1) the loop entry is wrong, earlier than the real place;
-    // 2) return of at least one function call inside the loop
-    //    is missing.
-    // So far it seems the first case happens sometimes but
-    // the second case has never been seen. Thus whenever we
-    // encounter such problem, we trust the current FuncStackLevel
-    // and update top().funcLevel.
-    if (loopStack->top().funcLevel != FuncStackLevel) {
-      if (DP_DEBUG) {
-        cout << "WARNING: changing funcLevel of Loop "
-             << loopStack->top().loopID << " from "
-             << loopStack->top().funcLevel << " to " << FuncStackLevel << endl;
-      }
-      loopStack->top().funcLevel = FuncStackLevel;
-    }
-
-    scopeManager->leaveScope("loop_iteration", lid);
-    scopeManager->enterScope("loop_iteration", lid);
-  }
-}
-
-void __dp_loop_exit(LID lid, int32_t loopID) {
-  if(!dpInited){
-    return;
-  }
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "__dp_loop_exit\n";
-#endif
-  if (targetTerminated) {
-    if (DP_DEBUG) {
-      cout << "__dp_loop_exit() is not executed since target program has "
-              "returned from main()."
-           << endl;
-    }
-    return;
-  }
-  assert((loopStack != nullptr) && "Loop stack is not available!");
-
-  // __dp_loop_exit() can be called without __dp_loop_entry()
-  // being called. This can happen when a loop is encapsulated
-  // by an "if" strucutre, and the condition of "if" fails
-  bool singleExit = false;
-  if (loopStack->empty())
-    singleExit = true;
-  else if (loopStack->top().loopID != loopID)
-    singleExit = true;
-
-  if (singleExit) {
-    if (DP_DEBUG) {
-      cout << "Ignored signle exit of loop " << loopStack->top().loopID << endl;
-    }
-    return;
-  }
-
-  // See comments in __dp_loop_entry() for explanation.
-  if (loopStack->top().funcLevel != FuncStackLevel) {
-    if (DP_DEBUG) {
-      cout << "WARNING: changing funcLevel of Loop " << loopStack->top().loopID
-           << " from " << loopStack->top().funcLevel << " to " << FuncStackLevel
-           << endl;
-    }
-    loopStack->top().funcLevel = FuncStackLevel;
-  }
-
-  LoopRecords::iterator loop = loops->find(loopStack->top().begin);
-  assert(loop != loops->end() &&
-         "A loop ends without its entry being recorded.");
-  if (loop->second->end == 0) {
-    loop->second->end = lid;
-  } else {
-    // New loop exit found and it's smaller than before. That means
-    // the current exit point can be the break inside the loop.
-    // In this case we ignore the current exit point and keep the
-    // regular one.
-
-    // Note: keep, as i may be necessary in the future?
-    if (lid < loop->second->end) {
-      //    loop->second->end = lid;
-    }
-    // New loop exit found and it's bigger than before. This can
-    // happen when the previous exit is a break inside the loop.
-    // In this case we update the loop exit to the bigger one.
-    else if (lid > loop->second->end) {
-      loop->second->end = lid;
-    }
-    // New loop exit found and it's the same as before. Good.
-  }
-  if (loop->second->maxIterationCount < loopStack->top().count) {
-    loop->second->maxIterationCount = loopStack->top().count;
-  }
-  loop->second->total += loopStack->top().count;
-  ++loop->second->nEntered;
-
-  if (DP_DEBUG) {
-    cout << "(" << std::dec << loopStack->top().funcLevel << ")";
-    cout << "Loop " << loopStack->top().loopID << " exits." << endl;
-  }
-
-  loopStack->pop();
-
-  if (DP_DEBUG) {
-    if (loopStack->empty())
-      cout << "Loop Stack is empty." << endl;
-    else {
-      cout << "TOP: (" << std::dec << loopStack->top().funcLevel << ")";
-      cout << "Loop " << loopStack->top().loopID << "." << endl;
-    }
-  }
-
-  scopeManager->leaveScope("loop", lid);
-}
-
-inline void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
-  for (ADDR addr : scopeManager->getCurrentScope().first_written) {
+  for (ADDR addr : scopeManager->getCurrentScope().get_first_write()) {
     int64_t workerID =
         ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
     // cleanup reads
@@ -2108,6 +1012,8 @@ inline void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
       tempAddrCount[workerID] = 0;
     }
   }
+
+  Timers::stop_and_add(TimerRegion::CLEAR_STACK_ACCESSES);
 }
-}
+
 } // namespace __dp

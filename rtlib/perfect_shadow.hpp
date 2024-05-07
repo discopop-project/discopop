@@ -13,12 +13,9 @@
 #pragma once
 
 #include "abstract_shadow.hpp"
-#include "signature.hpp"
 
-#include <iostream>
-#include <stdint.h>
+#include <cstdint>
 #include <unordered_map>
-#include <vector>
 
 namespace __dp {
 
@@ -31,12 +28,31 @@ public:
     sigWrite = new std::unordered_map<int64_t, sigElement>();
   }
 
+  PerfectShadow(const PerfectShadow& other) = delete;
+  PerfectShadow(PerfectShadow&& other) {
+    sigRead = other.sigRead;
+    sigWrite = other.sigWrite;
+
+    other.sigRead = nullptr;
+    other.sigWrite = nullptr;
+  }
+
+  PerfectShadow& operator=(const PerfectShadow& other) = delete;
+  PerfectShadow& operator=(PerfectShadow&& other) {
+    std::swap(sigRead, other.sigRead);
+    std::swap(sigWrite, other.sigWrite);
+
+    return *this;
+  }
+
   ~PerfectShadow() {
     delete sigRead;
     delete sigWrite;
   }
 
-  inline sigElement testInRead(int64_t memAddr) { return (*sigRead)[memAddr]; }
+  inline sigElement testInRead(int64_t memAddr) { 
+    return (*sigRead)[memAddr]; 
+  }
 
   inline sigElement testInWrite(int64_t memAddr) {
     return (*sigWrite)[memAddr];
@@ -82,9 +98,111 @@ public:
     return result;
   }
 
+  const std::unordered_map<int64_t, sigElement>* getSigRead() const noexcept {
+    return sigRead;
+  }
+
+  const std::unordered_map<int64_t, sigElement>* getSigWrite() const noexcept {
+    return sigWrite;
+  }
+
 private:
   std::unordered_map<int64_t, sigElement> *sigRead;
   std::unordered_map<int64_t, sigElement> *sigWrite;
+};
+
+// Hopefully faster version
+
+class PerfectShadow2 : public Shadow {
+public:  
+  PerfectShadow2() {
+    read_cache.reserve(1024);
+    write_cache.reserve(1024);
+  }
+
+  sigElement testInRead(const std::int64_t memAddr) noexcept { 
+    return read_cache[memAddr];
+  }
+
+  sigElement testInWrite(const std::int64_t memAddr) noexcept {
+    return write_cache[memAddr];
+  }
+
+  sigElement insertToRead(const std::int64_t memAddr, const sigElement value) {
+      const auto iterator = read_cache.find(memAddr);
+      
+      if (iterator == read_cache.end()) {
+        read_cache[memAddr] = value;
+        return 0;        
+      }
+
+      const auto old_value = iterator->second;
+      iterator->second = value;
+      return old_value;
+  }
+
+  sigElement insertToWrite(const std::int64_t memAddr, const sigElement value) {
+      const auto iterator = write_cache.find(memAddr);
+      
+      if (iterator == write_cache.end()) {
+        write_cache[memAddr] = value;
+        return 0;        
+      }
+
+      const auto old_value = iterator->second;
+      iterator->second = value;
+      return old_value;
+  }
+
+  void updateInRead(const std::int64_t memAddr, const sigElement newValue) noexcept {
+    read_cache[memAddr] = newValue;
+  }
+
+  void updateInWrite(const std::int64_t memAddr, const sigElement newValue) noexcept {
+    write_cache[memAddr] = newValue;
+  }
+
+  void removeFromRead(const std::int64_t memAddr) { 
+    read_cache[memAddr] = 0;
+  }
+
+  void removeFromWrite(const std::int64_t memAddr) { 
+    write_cache[memAddr] = 0;
+  }
+
+  std::unordered_set<ADDR> getAddrsInRange(const std::int64_t startAddr,
+                                           const std::int64_t endAddr) noexcept {    
+    std::unordered_set<ADDR> result{};
+    result.reserve(read_cache.size() + write_cache.size());
+
+    for (const auto& pair : read_cache) {
+      const auto addr = pair.first;
+      if (addr >= startAddr && addr <= endAddr) {
+        result.insert(addr);
+      }
+    }
+
+    for (const auto& pair : write_cache) {
+      const auto addr = pair.first;
+      if (addr >= startAddr && addr <= endAddr) {
+        result.insert(addr);
+      }
+    }
+
+    return result;
+  }
+
+  const hashmap<int64_t, sigElement>* getSigRead() const noexcept {
+    return &read_cache;
+  }
+
+  const hashmap<int64_t, sigElement>* getSigWrite() const noexcept {
+    return &write_cache;
+  }
+
+private:
+  hashmap<int64_t, sigElement> read_cache{};
+  hashmap<int64_t, sigElement> write_cache{};
 };
 
 } // namespace __dp
