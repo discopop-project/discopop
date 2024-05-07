@@ -125,7 +125,7 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
     }
   }
 
-  scopeManager->leaveScope("loop", lid);
+  memory_manager->leaveScope("loop", lid);
   timers->stop_and_add(TimerRegion::LOOP_EXIT);
 }
 

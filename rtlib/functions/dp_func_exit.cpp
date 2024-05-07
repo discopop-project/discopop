@@ -91,20 +91,9 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 
   // TEST
   // clear information on allocated stack addresses
-  //        if(stackAddrs->size() > 0){
-  //            cout << "POP STACK ENTRY: " << hex << stackAddrs->top().first <<
-  //            " -> " << hex << stackAddrs->top().second << " \n";
-  //        }
-  clearStackAccesses(
-      stackAddrs->top().first,
-      stackAddrs->top().second); // insert accesses with LID 0 to the queues
-  stackAddrs->pop();
-  //        if(stackAddrs->size() > 0){
-  //            cout << "\tNEW TOP STACK ENTRY: " <<  hex <<
-  //            stackAddrs->top().first << " -> " << hex <<
-  //            stackAddrs->top().second << " \n";
-  //        }
-  scopeManager->leaveScope("function", lid);
+  const auto last_addresses = memory_manager->pop_last_stack_address();
+  clearStackAccesses(last_addresses.first, last_addresses.second); // insert accesses with LID 0 to the queues
+  memory_manager->leaveScope("function", lid);
   // !TEST
 
   if (isExit == 0)

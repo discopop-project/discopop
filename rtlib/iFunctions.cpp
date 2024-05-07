@@ -538,7 +538,7 @@ void outputAllocations() {
   const auto path = prepare_environment();
 
   auto allocationsFileStream = ofstream(path, ios::out);
-  for (const auto& memoryRegion : *allocatedMemoryRegions) {
+  for (const auto& memoryRegion : memory_manager->get_allocated_memory_regions()) {
     const auto lid = get<0>(memoryRegion);
     const auto& id = get<1>(memoryRegion);
     const auto num_bytes = get<4>(memoryRegion);
@@ -656,42 +656,10 @@ string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
   
   // use tree
   const auto return_value = fallback + "-" +
-         allocatedMemRegTree->get_memory_region_id(fallback, addr);
+         memory_manager->get_memory_region_id(fallback, addr);
 
   timers->stop_and_add(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
   return return_value;
-
-  /*// check if accessed addr in knwon range. If not, return fallback
-  immediately if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
-      // FOR NOW, ONLY SEARCH BACKWARDS TO FIND THE LATEST ALLOCA ENTRY IN CASE
-  MEMORY ADDRESSES ARE REUSED if(allocatedMemoryRegions->size() != 0){
-          // search backwards in the list
-          auto bw_it = allocatedMemoryRegions->end();
-          bw_it--;
-          bool search_backwards = true;
-
-          while(true){
-              if(*bw_it == allocatedMemoryRegions->front()){
-                  search_backwards = false;
-              }
-              if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
-                  lastHitIterator = bw_it;
-                  return get<1>(*bw_it);
-              }
-
-              if(search_backwards){
-                  bw_it--;
-              }
-              else{
-                  break;
-              }
-          }
-      }
-
-  }
-
-  return fallback;
-  */
 }
 
 void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
@@ -972,7 +940,7 @@ void finalizeParallelization() {
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
   timers->start(TimerRegion::CLEAR_STACK_ACCESSES);
 
-  for (ADDR addr : scopeManager->getCurrentScope().get_first_write()) {
+  for (ADDR addr : memory_manager->getCurrentScope().get_first_write()) {
     int64_t workerID =
         ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
     // cleanup reads

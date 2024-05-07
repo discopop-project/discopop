@@ -74,13 +74,7 @@ void __dp_read(LID lid, ADDR addr, char *var) {
 
   // TEST
   // check for stack access
-  bool is_stack_access = false;
-  if (stackAddrs->top().first && stackAddrs->top().second) {
-    if ((addr <= stackAddrs->top().first) &&
-        (addr >= stackAddrs->top().second)) {
-      is_stack_access = true;
-    }
-  }
+  bool is_stack_access = memory_manager->is_stack_access(addr);
   // !TEST
 
   // addAccessInfo(true, lid, var, addr);
@@ -94,14 +88,14 @@ void __dp_read(LID lid, ADDR addr, char *var) {
   current.addr = addr;
   current.isStackAccess = is_stack_access;
   current.addrIsFirstWrittenInScope =
-      scopeManager->isFirstWrittenInScope(addr, false);
+      memory_manager->isFirstWrittenInScope(addr, false);
   current.positiveScopeChangeOccuredSinceLastAccess =
-      scopeManager->positiveScopeChangeOccuredSinceLastAccess(addr);
+      memory_manager->positiveScopeChangeOccuredSinceLastAccess(addr);
 
   if (is_stack_access) {
     // register stack read after check for
     // positiveScopeChangeOccuredSinceLastAccess
-    scopeManager->registerStackRead(addr, lid, var);
+    memory_manager->registerStackRead(addr, lid, var);
   }
 
   // store loop iteration metadata (last 8 bits for loop id, 1 bit to mark loop

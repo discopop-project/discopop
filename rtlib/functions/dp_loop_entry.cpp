@@ -63,7 +63,7 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
       cout << "(" << std::dec << FuncStackLevel << ")Loop " << loopID
            << " enters." << endl;
     }
-    scopeManager->enterScope("loop", lid);
+    memory_manager->enterScope("loop", lid);
   } else {
     // The same loop iterates again
     loopStack->top().count++;
@@ -93,8 +93,8 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
       loopStack->top().funcLevel = FuncStackLevel;
     }
 
-    scopeManager->leaveScope("loop_iteration", lid);
-    scopeManager->enterScope("loop_iteration", lid);
+    memory_manager->leaveScope("loop_iteration", lid);
+    memory_manager->enterScope("loop_iteration", lid);
   }
   
   timers->stop_and_add(TimerRegion::LOOP_ENTRY);

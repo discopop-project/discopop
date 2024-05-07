@@ -64,8 +64,8 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     out = new ofstream();
 
     // TEST
-    stackAddrs = new std::stack<std::pair<ADDR, ADDR>>();
-    scopeManager = new ScopeManager();
+    // stackAddrs = new std::stack<std::pair<ADDR, ADDR>>();
+    // scopeManager = new ScopeManager();
     // !TEST
 
     // hybrid analysis
@@ -73,23 +73,8 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     outPutDeps = new stringDepMap();
     bbList = new ReportedBBSet();
     // End HA
-    // initialize AllocatedMemoryRegions:
-
-    allocatedMemRegTree = new MemoryRegionTree();
-    allocatedMemoryRegions =
-        new vector<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>;
-
-    if (allocatedMemoryRegions->size() == 0 &&
-        allocatedMemoryRegions->empty() == 0) {
-      // re-initialize the list, as something went wrong
-      allocatedMemoryRegions =
-          new vector<tuple<LID, string, int64_t, int64_t, int64_t, int64_t>>();
-    }
     
-    // initialize lastHitIterator to dummy element
-    allocatedMemoryRegions->emplace_back(0, "%%dummy%%", 0, 0, 0, 0);
-    lastHitIterator = allocatedMemoryRegions->end();
-    lastHitIterator--;
+    memory_manager->allocate_memory_region(0, "%%dummy%%", 0, 0, 0, 0);
 
 #ifdef __linux__
     // try to get an output file name w.r.t. the target application
@@ -155,14 +140,8 @@ void __dp_func_entry(LID lid, int32_t isStart) {
   }
 
   // TEST
-  // initialize stack addresses for function
-  //        if(stackAddrs->size() > 0){
-  //            cout << "PUSH STACK ENTRY, PREV: " << hex <<
-  //            stackAddrs->top().first << " -> " << hex <<
-  //            stackAddrs->top().second << " \n";
-  //        }
-  stackAddrs->push(std::pair<ADDR, ADDR>(0, 0));
-  scopeManager->enterScope("function", lid);
+  memory_manager->enter_new_function();
+  memory_manager->enterScope("function", lid);
   // !TEST
 
   if (isStart)

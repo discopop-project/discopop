@@ -52,45 +52,21 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
   if (DP_DEBUG) {
     cout << "alloca: " << var << " (" << var_name << ") @ " << dputil::decodeLID(lid)
          << " : " << std::hex << startAddr << " - " << std::hex << endAddr
-         << " -> #allocations: " << allocatedMemoryRegions->size()
+         << " -> #allocations: " << memory_manager->get_number_allocations()
          << "\n";
   }
-  allocatedMemoryRegions->emplace_back(
+  memory_manager->allocate_memory_region(
           lid, var_name, startAddr, endAddr, numBytes, numElements);
-  allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer,
+  memory_manager->allocate_region(startAddr, endAddr, buffer,
                                        tempAddrCount, NUM_WORKERS);
 
   // update known min and max ADDR
-  if (startAddr < smallestAllocatedADDR) {
-    smallestAllocatedADDR = startAddr;
-  }
-  if (endAddr > largestAllocatedADDR) {
-    largestAllocatedADDR = endAddr;
-  }
+  memory_manager->update_smallest_allocated_address(startAddr);
+  memory_manager->update_largest_allocated_address(endAddr);
 
   // TEST
   // update stack base address, if not already set
-  if (stackAddrs->top().first == 0) {
-    //            cout << "SET STACK BASE!\n";
-    stackAddrs->top().first = startAddr;
-  }
-  //        else{
-  //            cout << "NOT NECESSARY: SET STACK BASE\n";
-  //        }
-
-  // update stack top address (note: stack grows top down!)
-  if (stackAddrs->top().second == 0) {
-    // initialize stack top address
-    stackAddrs->top().second = endAddr;
-  } else if (stackAddrs->top().second > endAddr) {
-    // update stack top
-    //            cout << "UPDATE STACK TOP: " << stackAddrs->top().second << "
-    //            -->  " << endAddr << "\n";
-    stackAddrs->top().second = endAddr;
-  }
-
-  //        cout << "STACK REGION: " << stackAddrs->top().first << " - " <<
-  //        stackAddrs->top().second << "\n";
+  memory_manager->update_stack_addresses(startAddr, endAddr);
   // !TEST
 
 #ifdef DP_RTLIB_VERBOSE

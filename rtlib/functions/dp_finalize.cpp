@@ -108,7 +108,7 @@ void __dp_finalize(LID lid) {
   delete beginFuncs;
 
   // TEST
-  delete scopeManager;
+  // delete scopeManager;
   // !TEST
 
   *out << dputil::decodeLID(lid) << " END program" << endl;

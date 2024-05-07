@@ -55,9 +55,9 @@ extern stringDepMap *outPutDeps;
 
 // extern std::int64_t nextFreeMemoryRegionId; // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
 
-/// (LID, identifier, startAddr, endAddr, numBytes, numElements)
-extern std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;
-extern std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> *allocatedMemoryRegions;
+// (LID, identifier, startAddr, endAddr, numBytes, numElements)
+// extern std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;
+// extern std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> *allocatedMemoryRegions;
 
 extern bool dpInited; // library initialization flag
 extern bool targetTerminated; // whether the target program has returned from main()
@@ -76,17 +76,17 @@ extern BGNFuncList *beginFuncs; // function entries
 extern ENDFuncList *endFuncs;   // function returns
 extern std::ofstream *out;
 extern std::ofstream *outInsts;
-extern std::stack<std::pair<ADDR, ADDR>> *stackAddrs; // track stack adresses for entered functions
-extern ScopeManager *scopeManager;
+// extern std::stack<std::pair<ADDR, ADDR>> *stackAddrs; // track stack adresses for entered functions
+// extern ScopeManager *scopeManager;
 
 extern LID lastCallOrInvoke;
 extern LID lastProcessedLine;
 extern std::int32_t FuncStackLevel;
 
-extern MemoryRegionTree *allocatedMemRegTree;
+// extern MemoryRegionTree *allocatedMemRegTree;
 
-extern ADDR smallestAllocatedADDR;
-extern ADDR largestAllocatedADDR;
+// extern ADDR smallestAllocatedADDR;
+// extern ADDR largestAllocatedADDR;
 
 
 extern pthread_cond_t *addrChunkPresentConds; // condition variables

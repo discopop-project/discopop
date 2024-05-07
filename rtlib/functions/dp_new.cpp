@@ -49,7 +49,7 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
   // calculate endAddr of memory region
   endAddr = startAddr + numBytes;
 
-  allocatedMemRegTree->allocate_region(startAddr, endAddr, buffer,
+  memory_manager->allocate_region(startAddr, endAddr, buffer,
                                        tempAddrCount, NUM_WORKERS);
 
   if (DP_DEBUG) {
@@ -58,17 +58,12 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
     printf(" NumBytes: %lld\n", numBytes);
   }
 
-  allocatedMemoryRegions->emplace_back(lid, allocId, startAddr, endAddr, numBytes, -1);
-  lastHitIterator = allocatedMemoryRegions->end();
-  lastHitIterator--;
+  memory_manager->allocate_memory_region(lid, allocId, startAddr, endAddr, numBytes, -1);
 
   // update known min and max ADDR
-  if (startAddr < smallestAllocatedADDR) {
-    smallestAllocatedADDR = startAddr;
-  }
-  if (endAddr > largestAllocatedADDR) {
-    largestAllocatedADDR = endAddr;
-  }
+  memory_manager->update_smallest_allocated_address(startAddr);
+  memory_manager->update_largest_allocated_address(endAddr);
+  
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_new\n";
 #endif

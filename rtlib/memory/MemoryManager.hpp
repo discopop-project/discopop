@@ -26,22 +26,9 @@ class MemoryManager {
 public:
     MemoryManager() {
         nextFreeMemoryRegionId = 1;
-
-        allocatedMemRegTree = new MemoryRegionTree();
         
         smallestAllocatedADDR = std::numeric_limits<ADDR>::max();
         largestAllocatedADDR = std::numeric_limits<ADDR>::min();
-
-        stackAddrs.emplace(0, 0);
-        scopeManager = new ScopeManager();
-
-        allocatedMemoryRegions = new std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>();
-    }
-
-    ~MemoryManager() {
-        delete allocatedMemoryRegions;
-        delete scopeManager;
-        delete allocatedMemRegTree;
     }
 
     MemoryManager(const MemoryManager& other) = delete;
@@ -82,6 +69,10 @@ public:
         }
     }
 
+    void enter_new_function() {
+        stackAddrs.emplace(0, 0);
+    }
+
     std::pair<ADDR, ADDR> pop_last_stack_address() {
         const auto val = stackAddrs.top();
         stackAddrs.pop();
@@ -101,6 +92,58 @@ public:
         return addrs.first <= address && address <= addrs.second;
     }
 
+    void enterScope(std::string type, LID debug_lid) {
+        scopeManager.enterScope(type, debug_lid);
+    }
+
+    void leaveScope(std::string type, LID debug_lid) { 
+        scopeManager.leaveScope(type, debug_lid); 
+    }
+
+    void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
+        scopeManager.registerStackRead(address, debug_lid, debug_var);
+    }
+
+    void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
+        scopeManager.registerStackWrite(address, debug_lid, debug_var);
+    }
+
+    bool isFirstWrittenInScope(ADDR addr, bool currentAccessIsWrite) {
+        return scopeManager.isFirstWrittenInScope(addr, currentAccessIsWrite);
+    }
+
+    bool positiveScopeChangeOccuredSinceLastAccess(ADDR addr) {
+        return scopeManager.positiveScopeChangeOccuredSinceLastAccess(addr);
+    }
+
+    Scope getCurrentScope() { 
+        return scopeManager.getCurrentScope(); 
+    }
+
+    std::string get_memory_region_id(string fallback, ADDR addr) {
+        return allocatedMemRegTree.get_memory_region_id(std::move(fallback), addr);
+    }
+
+    void allocate_region(ADDR startAddr, ADDR endAddr,
+                                       int64_t memoryRegionId,
+                                       int32_t *tempAddrCount,
+                                       int32_t NUM_WORKERS) {
+        allocatedMemRegTree.allocate_region(startAddr, endAddr, memoryRegionId, tempAddrCount, NUM_WORKERS);
+                                       }
+
+    std::size_t get_number_allocations() {
+        return allocatedMemoryRegions.size();
+    }
+
+    void allocate_memory_region(LID lid, std::string identifier, ADDR start, ADDR end, std::int64_t numBytes, std::int64_t numElements) {
+        allocatedMemoryRegions.emplace_back(lid, std::move(identifier), start, end, numBytes, numElements);
+    }
+
+    const std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>&
+        get_allocated_memory_regions() {
+            return allocatedMemoryRegions;
+        }
+
 private:
     std::int64_t nextFreeMemoryRegionId; // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
 
@@ -109,13 +152,12 @@ private:
 
     std::stack<std::pair<ADDR, ADDR>> stackAddrs; // track stack adresses for entered functions
 
-public:
-    MemoryRegionTree *allocatedMemRegTree;
+    ScopeManager scopeManager;
 
-    ScopeManager *scopeManager;
-
+    MemoryRegionTree allocatedMemRegTree;
+    
     // (LID, identifier, startAddr, endAddr, numBytes, numElements)
-    std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> *allocatedMemoryRegions;
+    std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> allocatedMemoryRegions;
     std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;
 };
 
