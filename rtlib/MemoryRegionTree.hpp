@@ -67,21 +67,23 @@ struct MRTNode {
     if (MRTVerbose)
       cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
            << " childArrPtr: " << children << "\n";
-  };
+  }
+
   MRTNode(MRTNode *parent_node, ADDR addr_i, short level)
       : parent(parent_node), addr(addr_i), level(level), children{} {
     if (MRTVerbose)
       cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
            << " with parent addr: " << parent_node->addr
            << " childArrPtr: " << children << "\n";
-  };
+  }
+
   MRTNode(MRTNode *parent_node, ADDR addr_i, uint memRegId, short level)
       : parent(parent_node), addr(addr_i), memoryRegionId(memRegId),
         level(level), children{} {
     if (MRTVerbose)
       cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
            << " childArrPtr: " << children << "\n";
-  };
+  }
 
   // Values
   ADDR addr;

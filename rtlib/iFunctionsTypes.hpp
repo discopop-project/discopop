@@ -14,6 +14,8 @@
 
 #include "DPTypes.hpp"
 
+#include "memory/MemoryManager.hpp"
+
 #include <cstdint>
 #include <unordered_map>
 #include <set>
