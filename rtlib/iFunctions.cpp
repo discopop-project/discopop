@@ -1007,6 +1007,9 @@ void __dp_read(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
 #else
 void __dp_read(LID lid, ADDR addr, char *var) {
 #endif
+if(!dpInited){
+    return;
+}
 
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
@@ -1133,6 +1136,9 @@ void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
 #else
 void __dp_write(LID lid, ADDR addr, char *var) {
 #endif
+if(!dpInited){
+    return;
+}
 
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
@@ -1260,6 +1266,9 @@ void __dp_decl(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
 #else
 void __dp_decl(LID lid, ADDR addr, char *var) {
 #endif
+if(!dpInited){
+    return;
+}
 
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
@@ -1357,6 +1366,9 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
 
 void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
                  int64_t numBytes, int64_t numElements) {
+  if(!dpInited){
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -1419,6 +1431,9 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
 }
 
 void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
+  if(!dpInited){
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -1461,6 +1476,9 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
 }
 
 void __dp_delete(LID lid, ADDR startAddr) {
+  if(!dpInited){
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -1491,6 +1509,9 @@ void __dp_delete(LID lid, ADDR startAddr) {
 }
 
 void __dp_report_bb(uint32_t bbIndex) {
+  if(!dpInited){
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -1505,6 +1526,9 @@ void __dp_report_bb(uint32_t bbIndex) {
 }
 
 void __dp_report_bb_pair(int32_t semaphore, uint32_t bbIndex) {
+  if(!dpInited){
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -1559,6 +1583,8 @@ void __dp_finalize(LID lid) {
          << ", clearing up" << endl;
   }
 
+  dpInited = false;
+
   finalizeParallelization();
   outputLoops();
   outputFuncs();
@@ -1607,6 +1633,9 @@ void __dp_finalize(LID lid) {
 
 // hybrid analysis
 void __dp_add_bb_deps(char *depStringPtr) {
+  if(!dpInited){
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -1650,6 +1679,9 @@ void __dp_add_bb_deps(char *depStringPtr) {
 // End HA
 
 void __dp_call(LID lid) {
+  if(!dpInited){
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -1791,6 +1823,9 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 }
 
 void __dp_func_exit(LID lid, int32_t isExit) {
+  if(!dpInited){
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -1874,6 +1909,9 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 }
 
 void __dp_loop_entry(LID lid, int32_t loopID) {
+  if(!dpInited){
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -1936,6 +1974,9 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
 }
 
 void __dp_loop_exit(LID lid, int32_t loopID) {
+  if(!dpInited){
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
