@@ -15,6 +15,7 @@
 #include "iFunctionsTypes.hpp"
 #include "scope.hpp"
 #include "MemoryRegionTree.hpp"
+#include "../share/include/timer.hpp"
 
 #include <pthread.h>
 
@@ -40,6 +41,8 @@ extern std::uint64_t *numAccesses;
 namespace __dp {
 
 extern bool DP_DEBUG; // debug flag
+
+extern Timers* timers;
 
 extern std::mutex pthread_compatibility_mutex;
 

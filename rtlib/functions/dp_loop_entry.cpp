@@ -30,13 +30,17 @@ namespace __dp {
 extern "C" {
 
 void __dp_loop_entry(LID lid, int32_t loopID) {
+  if (!dpInited){
+    return;
+  }
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "__dp_loop_entry\n";
 #endif
-  Timers::start(TimerRegion::LOOP_ENTRY);
+  timers->start(TimerRegion::LOOP_ENTRY);
 
   if (targetTerminated) {
     if (DP_DEBUG) {
@@ -44,7 +48,7 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
               "returned from main()."
            << endl;
     }
-    Timers::stop_and_add(TimerRegion::LOOP_ENTRY);
+    timers->stop_and_add(TimerRegion::LOOP_ENTRY);
     return;
   }
   assert((loopStack != nullptr) && "Loop stack is not available!");
@@ -93,7 +97,7 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     scopeManager->enterScope("loop_iteration", lid);
   }
   
-  Timers::stop_and_add(TimerRegion::LOOP_ENTRY);
+  timers->stop_and_add(TimerRegion::LOOP_ENTRY);
 }
 
 }

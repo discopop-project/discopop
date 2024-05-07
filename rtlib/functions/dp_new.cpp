@@ -30,13 +30,17 @@ namespace __dp {
 extern "C" {
 
 void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
+  if (!dpInited){
+    return;
+  }
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_new\n";
 #endif
-  Timers::start(TimerRegion::NEW);
+  timers->start(TimerRegion::NEW);
 
   // instrumentation function for new and malloc
   int64_t buffer = nextFreeMemoryRegionId;
@@ -69,7 +73,7 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_new\n";
 #endif
-  Timers::stop_and_add(TimerRegion::NEW);
+  timers->stop_and_add(TimerRegion::NEW);
 }
 
 }

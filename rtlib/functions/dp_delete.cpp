@@ -30,13 +30,17 @@ namespace __dp {
 extern "C" {
 
 void __dp_delete(LID lid, ADDR startAddr) {
+  if (!dpInited){
+    return;
+  }
+  
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_delete\n";
 #endif
-  Timers::start(TimerRegion::DELETE);
+  timers->start(TimerRegion::DELETE);
 
   // DO NOT DELETE MEMORY REGIONS AS THEY ARE STILL REQUIRED FOR LOGGING
 
@@ -59,7 +63,7 @@ void __dp_delete(LID lid, ADDR startAddr) {
   cout << "exit __dp_delete\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::DELETE);
+  timers->stop_and_add(TimerRegion::DELETE);
 }
 
 }

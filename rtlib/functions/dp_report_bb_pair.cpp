@@ -30,18 +30,22 @@ namespace __dp {
 extern "C" {
 
 void __dp_report_bb_pair(int32_t semaphore, uint32_t bbIndex) {
+  if (!dpInited){
+    return;
+  }
+  
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_report_bb_pair\n";
 #endif
-  Timers::start(TimerRegion::REPORT_BB_PAIR);
+  timers->start(TimerRegion::REPORT_BB_PAIR);
 
   if (semaphore)
     bbList->insert(bbIndex);
 
-  Timers::stop_and_add(TimerRegion::REPORT_BB_PAIR);
+  timers->stop_and_add(TimerRegion::REPORT_BB_PAIR);
 }
 
 }

@@ -30,17 +30,21 @@ namespace __dp {
 extern "C" {
 
 void __dp_call(LID lid) {
+  if (!dpInited){
+    return;
+  }
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "__dp_call\n";
 #endif
-  Timers::start(TimerRegion::CALL);
+  timers->start(TimerRegion::CALL);
 
   lastCallOrInvoke = lid;
 
-  Timers::stop_and_add(TimerRegion::CALL);
+  timers->stop_and_add(TimerRegion::CALL);
 }
 
 }

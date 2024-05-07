@@ -30,13 +30,17 @@ namespace __dp {
 extern "C" {
 
 void __dp_loop_exit(LID lid, int32_t loopID) {
+  if(!dpInited){
+    return;
+  }
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "__dp_loop_exit\n";
 #endif
-  Timers::start(TimerRegion::LOOP_EXIT);
+  timers->start(TimerRegion::LOOP_EXIT);
 
   if (targetTerminated) {
     if (DP_DEBUG) {
@@ -44,7 +48,7 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
               "returned from main()."
            << endl;
     }
-    Timers::stop_and_add(TimerRegion::LOOP_EXIT);
+    timers->stop_and_add(TimerRegion::LOOP_EXIT);
     return;
   }
   assert((loopStack != nullptr) && "Loop stack is not available!");
@@ -62,7 +66,7 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
     if (DP_DEBUG) {
       cout << "Ignored signle exit of loop " << loopStack->top().loopID << endl;
     }
-    Timers::stop_and_add(TimerRegion::LOOP_EXIT);
+    timers->stop_and_add(TimerRegion::LOOP_EXIT);
     return;
   }
 
@@ -122,7 +126,7 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
   }
 
   scopeManager->leaveScope("loop", lid);
-  Timers::stop_and_add(TimerRegion::LOOP_EXIT);
+  timers->stop_and_add(TimerRegion::LOOP_EXIT);
 }
 
 }

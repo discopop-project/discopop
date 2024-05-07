@@ -29,6 +29,10 @@ namespace __dp {
 extern "C" {
 // hybrid analysis
 void __dp_add_bb_deps(char *depStringPtr) {
+  if(!dpInited){
+    return;
+  }
+  
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -36,7 +40,7 @@ void __dp_add_bb_deps(char *depStringPtr) {
   std::cout << "enter __dp_add_bb_deps\n";
 #endif
 
-  Timers::start(TimerRegion::ADD_BB_DEPS);
+  timers->start(TimerRegion::ADD_BB_DEPS);
 
   std::string depString(depStringPtr);
   std::regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r3("[0-9]+:[0-9]+"),
@@ -72,7 +76,7 @@ void __dp_add_bb_deps(char *depStringPtr) {
     depString = res0.suffix();
   }
 
-  Timers::stop_and_add(TimerRegion::ADD_BB_DEPS);
+  timers->stop_and_add(TimerRegion::ADD_BB_DEPS);
 }
 // End HA
 }

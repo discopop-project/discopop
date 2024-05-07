@@ -25,6 +25,8 @@ namespace __dp {
 
 bool DP_DEBUG = false; // debug flag
 
+Timers* timers = nullptr;
+
 std::mutex pthread_compatibility_mutex;
 
 // hybrid analysis

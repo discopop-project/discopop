@@ -76,11 +76,19 @@ class Timers {
     using index_type = std::vector<time_point>::size_type;
 
 public:
+    Timers() {
+        time_start = std::vector<Timers::time_point> { NUMBER_TIMERS };
+        time_stop = std::vector<Timers::time_point> { NUMBER_TIMERS };
+
+        number_called = std::vector<std::size_t> (NUMBER_TIMERS, std::size_t(0));
+        time_elapsed = std::vector<std::chrono::nanoseconds>{ NUMBER_TIMERS };
+    }
+
     /**
      * @brief Starts the respective timer
      * @param timer The timer to start
      */
-    static void start(const TimerRegion timer) {
+    void start(const TimerRegion timer) {
 #ifdef DP_SKIP_INTERNAL_TIMER
         return;
 #endif
@@ -93,7 +101,7 @@ public:
      * @brief Stops the respective timer
      * @param timer The timer to stops
      */
-    static void stop(const TimerRegion timer) {
+    void stop(const TimerRegion timer) {
 #ifdef DP_SKIP_INTERNAL_TIMER
         return;
 #endif
@@ -105,7 +113,7 @@ public:
      * @brief Stops the respective timer and adds the elapsed time
      * @param timer The timer to stops
      */
-    static void stop_and_add(const TimerRegion timer) {
+    void stop_and_add(const TimerRegion timer) {
 #ifdef DP_SKIP_INTERNAL_TIMER
         return;
 #endif
@@ -117,7 +125,7 @@ public:
      * @brief Adds the difference between the current start and stop time points to the elapsed time
      * @param timer The timer for which to add the difference
      */
-    static void add_start_stop_diff_to_elapsed(const TimerRegion timer) {
+    void add_start_stop_diff_to_elapsed(const TimerRegion timer) {
 #ifdef DP_SKIP_INTERNAL_TIMER
         return;
 #endif
@@ -129,7 +137,7 @@ public:
      * @brief Resets the elapsed time for the timer
      * @param timer The timer for which to reset the elapsed time
      */
-    static void reset_elapsed(const TimerRegion timer) {
+    void reset_elapsed(const TimerRegion timer) {
 #ifdef DP_SKIP_INTERNAL_TIMER
         return;
 #endif
@@ -142,7 +150,7 @@ public:
      * @param timer The timer for which to return the elapsed time
      * @return The elapsed time
      */
-    [[nodiscard]] static std::chrono::nanoseconds get_elapsed(const TimerRegion timer) {
+    [[nodiscard]] std::chrono::nanoseconds get_elapsed(const TimerRegion timer) {
 #ifdef DP_SKIP_INTERNAL_TIMER
         return std::chrono::nanoseconds{};
 #endif
@@ -154,7 +162,7 @@ public:
      * @brief Prints a formatted output to the stream
      * @param stream The out stream
      */
-    static void print(std::ostream& stream) {
+    void print(std::ostream& stream) {
         stream << "\n========== DiscoPoP TIMERS: Inserted calls ==========\n";
         print(stream, " Function call                                   : ", TimerRegion::CALL);
         print(stream, " Function entry                                  : ", TimerRegion::FUNC_ENTRY);
@@ -203,7 +211,7 @@ public:
      * @brief Returns the current time as a string
      * @return The current time as a string
      */
-    [[nodiscard]] static std::string wall_clock_time() {
+    [[nodiscard]] std::string wall_clock_time() {
         // The time is printed with 24 interesting characters followed by '\n'
         constexpr auto size_of_date_string = 24;
 
@@ -239,12 +247,12 @@ private:
      * @param timer The timer as an enum value
      * @result The timer as an index
      */
-    [[nodiscard]] static index_type get_timer_index(const TimerRegion timer) noexcept {
+    [[nodiscard]] index_type get_timer_index(const TimerRegion timer) noexcept {
         const auto timer_id = static_cast<index_type>(timer);
         return timer_id;
     }
 
-    static void print(std::ostream& stream, const char* message, const TimerRegion region) {
+    void print(std::ostream& stream, const char* message, const TimerRegion region) {
         const auto index = get_timer_index(region);
 
         const auto counted = time_elapsed[index].count();
@@ -255,9 +263,9 @@ private:
         stream << message << std::setw(8) << std::fixed << seconds << "\t(" << called << " times called)\n";
     }
 
-    static std::vector<time_point> time_start;
-    static std::vector<time_point> time_stop;
+    std::vector<time_point> time_start;
+    std::vector<time_point> time_stop;
 
-    static std::vector<std::size_t> number_called;
-    static std::vector<std::chrono::nanoseconds> time_elapsed;
+    std::vector<std::size_t> number_called;
+    std::vector<std::chrono::nanoseconds> time_elapsed;
 };

@@ -32,13 +32,17 @@ extern "C" {
 
 void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
                  int64_t numBytes, int64_t numElements) {
+  if (!dpInited){
+    return;
+  }
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
   std::cout << "enter __dp_alloca\n";
 #endif
-  Timers::start(TimerRegion::ALLOCA);
+  timers->start(TimerRegion::ALLOCA);
 
   std::int64_t buffer = nextFreeMemoryRegionId;
   std::string allocId = std::to_string(buffer);
@@ -93,7 +97,7 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
   cout << "exit __dp_alloca\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::ALLOCA);
+  timers->stop_and_add(TimerRegion::ALLOCA);
 }
 
 

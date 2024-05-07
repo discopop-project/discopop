@@ -37,7 +37,7 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 #ifdef DP_RTLIB_VERBOSE
   cout << "__dp_func_exit\n";
 #endif
-  Timers::start(TimerRegion::FUNC_EXIT);
+  timers->start(TimerRegion::FUNC_EXIT);
 
   if (targetTerminated) {
     if (DP_DEBUG) {
@@ -45,7 +45,7 @@ void __dp_func_exit(LID lid, int32_t isExit) {
       cout << " but target program has returned from main(). Destructors?"
            << endl;
     }
-    Timers::stop_and_add(TimerRegion::FUNC_EXIT);
+    timers->stop_and_add(TimerRegion::FUNC_EXIT);
     return;
   }
 
@@ -115,7 +115,7 @@ void __dp_func_exit(LID lid, int32_t isExit) {
     cout << "Function stack level = " << std::dec << FuncStackLevel << endl;
   }
   
-  Timers::stop_and_add(TimerRegion::FUNC_EXIT);
+  timers->stop_and_add(TimerRegion::FUNC_EXIT);
 }
 
 }

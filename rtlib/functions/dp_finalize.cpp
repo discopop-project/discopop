@@ -39,7 +39,7 @@ void __dp_finalize(LID lid) {
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_finalize\n";
 #endif
-  Timers::start(TimerRegion::FINALIZE);
+  timers->start(TimerRegion::FINALIZE);
 
   if (targetTerminated) {
     if (DP_DEBUG) {
@@ -50,8 +50,8 @@ void __dp_finalize(LID lid) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
     pthread_compatibility_mutex.unlock();
 #endif
-    Timers::stop_and_add(TimerRegion::FINALIZE);
-    Timers::print(std::cout);
+    timers->stop_and_add(TimerRegion::FINALIZE);
+    timers->print(std::cout);
     return;
   }
 
@@ -116,6 +116,8 @@ void __dp_finalize(LID lid) {
   out->close();
 
   delete out;
+
+  dpInited = false;
   targetTerminated = true; // mark the target program has returned from main()
 
   if (DP_DEBUG) {
@@ -126,8 +128,10 @@ void __dp_finalize(LID lid) {
   cout << "exit __dp_finalize\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::FINALIZE);
-  Timers::print(std::cout);
+  timers->stop_and_add(TimerRegion::FINALIZE);
+  timers->print(std::cout);
+
+  delete timers;
 }
 
 }

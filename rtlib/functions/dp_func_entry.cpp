@@ -33,17 +33,28 @@ namespace __dp {
 extern "C" {
 
 void __dp_func_entry(LID lid, int32_t isStart) {
+  if (targetTerminated) {
+    // prevent deleting generated results after the main function has been exited.
+    // This might happen, e.g., if a destructor of a global struct is called after exiting the main function.
+    return;
+  }
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_func_entry\n";
 #endif
-  Timers::start(TimerRegion::FUNC_ENTRY);
+  const auto dp_inited_previous = dpInited;
+  if (dp_inited_previous) {
+    timers->start(TimerRegion::FUNC_ENTRY);
+  }
 
   if (!dpInited) {
     // This part should be executed only once.
     readRuntimeInfo();
+    timers = new Timers();
+
     loopStack = new LoopTable();
     loops = new LoopRecords();
     beginFuncs = new BGNFuncList();
@@ -161,7 +172,9 @@ void __dp_func_entry(LID lid, int32_t isStart) {
   cout << "exit __dp_func_entry\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::FUNC_ENTRY);
+  if (dp_inited_previous) {
+    timers->stop_and_add(TimerRegion::FUNC_ENTRY);
+  }
 }
 
 }

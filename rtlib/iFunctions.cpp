@@ -58,7 +58,7 @@ namespace __dp {
 void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
             bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
             bool positiveScopeChangeOccuredSinceLastAccess) {
-  Timers::start(TimerRegion::ADD_DEP);
+  timers->start(TimerRegion::ADD_DEP);
   
   // hybrid analysis
   if (depOn == 0 && type == WAW)
@@ -364,12 +364,12 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
     }
   }
 
-  Timers::stop_and_add(TimerRegion::ADD_DEP);
+  timers->stop_and_add(TimerRegion::ADD_DEP);
 }
 
 // hybrid analysis
 void generateStringDepMap() {
-  Timers::start(TimerRegion::GENERATE_STRING_DEP_MAP);
+  timers->start(TimerRegion::GENERATE_STRING_DEP_MAP);
   
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter generateStringDepMap\n";
@@ -442,11 +442,11 @@ void generateStringDepMap() {
   cout << "enter generateStringDepMap\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::GENERATE_STRING_DEP_MAP);
+  timers->stop_and_add(TimerRegion::GENERATE_STRING_DEP_MAP);
 }
 
 void outputDeps() {
-  Timers::start(TimerRegion::OUTPUT_DEPS);
+  timers->start(TimerRegion::OUTPUT_DEPS);
   
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputDeps\n";
@@ -462,12 +462,12 @@ void outputDeps() {
   cout << "exit outputDeps\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::OUTPUT_DEPS);
+  timers->stop_and_add(TimerRegion::OUTPUT_DEPS);
 }
 // End HA
 
 void outputLoops() {
-  Timers::start(TimerRegion::OUTPUT_LOOPS);
+  timers->start(TimerRegion::OUTPUT_LOOPS);
   
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputLoops\n";
@@ -486,11 +486,11 @@ void outputLoops() {
   cout << "exit outputLoops\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::OUTPUT_LOOPS);
+  timers->stop_and_add(TimerRegion::OUTPUT_LOOPS);
 }
 
 void outputFuncs() {
-  Timers::start(TimerRegion::OUTPUT_FUNCS);
+  timers->start(TimerRegion::OUTPUT_FUNCS);
   
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputFunc\n";
@@ -511,11 +511,11 @@ void outputFuncs() {
   cout << "exit outputFunc\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::OUTPUT_FUNCS);
+  timers->stop_and_add(TimerRegion::OUTPUT_FUNCS);
 }
 
 void outputAllocations() {
-  Timers::start(TimerRegion::OUTPUT_ALLOCATIONS);
+  timers->start(TimerRegion::OUTPUT_ALLOCATIONS);
   
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputAllocations\n";
@@ -550,12 +550,10 @@ void outputAllocations() {
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit outputAllocations\n";
 #endif
-  Timers::stop_and_add(TimerRegion::OUTPUT_ALLOCATIONS);
+  timers->stop_and_add(TimerRegion::OUTPUT_ALLOCATIONS);
 }
 
-void readRuntimeInfo() {
-  Timers::start(TimerRegion::READ_RUNTIME_INFO);
-  
+void readRuntimeInfo() {  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter readRuntimeInfo\n";
 #endif
@@ -608,12 +606,10 @@ void readRuntimeInfo() {
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit readRuntimeInfo\n";
 #endif
-
-  Timers::stop_and_add(TimerRegion::READ_RUNTIME_INFO);
 }
 
 void initParallelization() {
-  Timers::start(TimerRegion::INIT_PARALLELIZATION);
+  timers->start(TimerRegion::INIT_PARALLELIZATION);
   
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter initParallelization\n";
@@ -652,17 +648,17 @@ void initParallelization() {
   cout << "exit initParallelization\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::INIT_PARALLELIZATION);
+  timers->stop_and_add(TimerRegion::INIT_PARALLELIZATION);
 }
 
 string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
-  Timers::start(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
+  timers->start(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
   
   // use tree
   const auto return_value = fallback + "-" +
          allocatedMemRegTree->get_memory_region_id(fallback, addr);
 
-  Timers::stop_and_add(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
+  timers->stop_and_add(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
   return return_value;
 
   /*// check if accessed addr in knwon range. If not, return fallback
@@ -699,7 +695,7 @@ string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
 }
 
 void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
-  Timers::start(TimerRegion::ADD_ACCESS_INFO);
+  timers->start(TimerRegion::ADD_ACCESS_INFO);
   
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter addAccessInfo\n";
@@ -772,7 +768,7 @@ void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
   cout << "exit addAccessInfo\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::ADD_ACCESS_INFO);
+  timers->stop_and_add(TimerRegion::ADD_ACCESS_INFO);
 }
 
 void mergeDeps() {  
@@ -780,7 +776,7 @@ void mergeDeps() {
   depMap::iterator globalPos; // position of the current processing lid in allDeps
 
   pthread_mutex_lock(&allDepsLock);
-  Timers::start(TimerRegion::MERGE_DEPS);
+  timers->start(TimerRegion::MERGE_DEPS);
 
   for (auto &dep : *myMap) {
     // if a lid occurs the first time, then add it in to the global hash table.
@@ -799,12 +795,12 @@ void mergeDeps() {
     }
   }
   
-  Timers::stop_and_add(TimerRegion::MERGE_DEPS);
+  timers->stop_and_add(TimerRegion::MERGE_DEPS);
   pthread_mutex_unlock(&allDepsLock);
 }
 
 void *analyzeDeps(void *arg) {
-  Timers::start(TimerRegion::ANALYZE_DEPS);
+  timers->start(TimerRegion::ANALYZE_DEPS);
   
   int64_t id = (int64_t)arg;
   Shadow *SMem;
@@ -914,12 +910,12 @@ void *analyzeDeps(void *arg) {
     cout << "thread " << id << " exits... \n";
   }
 
-  Timers::stop_and_add(TimerRegion::ANALYZE_DEPS);
+  timers->stop_and_add(TimerRegion::ANALYZE_DEPS);
   pthread_exit(NULL);
 }
 
 void finalizeParallelization() {
-  Timers::start(TimerRegion::FINALIZE_PARALLELIZATION);
+  timers->start(TimerRegion::FINALIZE_PARALLELIZATION);
 
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter finalizeParallelization\n";
@@ -970,11 +966,11 @@ void finalizeParallelization() {
   cout << "exit finalizeParallelization\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::FINALIZE_PARALLELIZATION);
+  timers->stop_and_add(TimerRegion::FINALIZE_PARALLELIZATION);
 }
 
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
-  Timers::start(TimerRegion::CLEAR_STACK_ACCESSES);
+  timers->start(TimerRegion::CLEAR_STACK_ACCESSES);
 
   for (ADDR addr : scopeManager->getCurrentScope().get_first_write()) {
     int64_t workerID =
@@ -1013,7 +1009,7 @@ void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
     }
   }
 
-  Timers::stop_and_add(TimerRegion::CLEAR_STACK_ACCESSES);
+  timers->stop_and_add(TimerRegion::CLEAR_STACK_ACCESSES);
 }
 
 } // namespace __dp

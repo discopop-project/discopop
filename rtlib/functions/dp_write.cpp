@@ -36,13 +36,17 @@ void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
 void __dp_write(LID lid, ADDR addr, char *var) {
 #endif
 
+  if (!dpInited){
+    return;
+  }
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_write\n";
 #endif
-  Timers::start(TimerRegion::WRITE);
+  timers->start(TimerRegion::WRITE);
 
   if (targetTerminated) {
     if (DP_DEBUG) {
@@ -50,13 +54,13 @@ void __dp_write(LID lid, ADDR addr, char *var) {
               "from main()."
            << endl;
     }
-    Timers::stop_and_add(TimerRegion::WRITE);
+    timers->stop_and_add(TimerRegion::WRITE);
     return;
   }
   // For tracking function call or invoke
 #ifdef SKIP_DUP_INSTR
   if (lastaddr == addr && count >= 2) {
-    Timers::stop_and_add(TimerRegion::WRITE);
+    timers->stop_and_add(TimerRegion::WRITE);
     return;
   }
 #endif
@@ -161,7 +165,7 @@ void __dp_write(LID lid, ADDR addr, char *var) {
   cout << "exit __dp_write\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::WRITE);
+  timers->stop_and_add(TimerRegion::WRITE);
 }
 
 }

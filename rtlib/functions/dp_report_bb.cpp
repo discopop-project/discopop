@@ -30,6 +30,10 @@ namespace __dp {
 extern "C" {
 
 void __dp_report_bb(uint32_t bbIndex) {
+  if (!dpInited){
+    return;
+  }
+  
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -37,14 +41,14 @@ void __dp_report_bb(uint32_t bbIndex) {
   cout << "enter __dp_report_bb\n";
   cout << "bbIndex: " << std::to_string(bbIndex) << "\n";
 #endif
-  Timers::start(TimerRegion::REPORT_BB);
+  timers->start(TimerRegion::REPORT_BB);
 
   bbList->insert(bbIndex);
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_report_bb\n";
 #endif
 
-  Timers::stop_and_add(TimerRegion::REPORT_BB);
+  timers->stop_and_add(TimerRegion::REPORT_BB);
 }
 
 }
