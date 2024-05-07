@@ -1583,8 +1583,6 @@ void __dp_finalize(LID lid) {
          << ", clearing up" << endl;
   }
 
-  dpInited = false;
-
   finalizeParallelization();
   outputLoops();
   outputFuncs();
@@ -1621,6 +1619,7 @@ void __dp_finalize(LID lid) {
   out->close();
 
   delete out;
+  dpInited = false;
   targetTerminated = true; // mark the target program has returned from main()
 
   if (DP_DEBUG) {
@@ -1692,6 +1691,11 @@ void __dp_call(LID lid) {
 }
 
 void __dp_func_entry(LID lid, int32_t isStart) {
+  if(targetTerminated){
+    // prevent deleting generated results after the main function has been exited.
+    // This might happen, e.g., if a destructor of a global struct is called after exiting the main function.
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
