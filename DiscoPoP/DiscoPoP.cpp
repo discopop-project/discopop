@@ -122,6 +122,19 @@ bool DiscoPoP::doInitialization(Module &M) {
     mkdir(getenv("DOT_DISCOPOP_PROFILER"), 0777);
   }
 
+  // prepare target directory if not present
+  char const *tmp2 = getenv("DP_PROJECT_ROOT_DIR");
+  if (tmp2 == NULL) {
+    // DP_PROJECT_ROOT_DIR needs to be initialized
+    std::cerr << "\nWARNING: No value for DP_PROJECT_ROOT_DIR found. \n";
+    std::cerr << "         As a result, library functions might be instrumented which can lead to\n";
+    std::cerr << "         increased profiling times and unexpected behavior.\n";
+    std::cerr << "         Please consider to specify the environment variable and rebuild.\n";
+    std::cerr << "         https://discopop-project.github.io/discopop/setup/environment_variables/\n\n";
+    // define fallback
+    setenv("DP_PROJECT_ROOT_DIR", "/", 1);
+  }
+
   // CUGeneration
   {
     CUIDCounter = 0;
@@ -2173,15 +2186,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
 
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M) {
-  // cout << "MODULE " << M.getName().str() << "\n";
-
-  // prepare environment variables
-  char const *tmp_dp_project_dir = getenv("DP_PROFILING_ROOT_DIR");
-  if (tmp_dp_project_dir == NULL) {
-    // DP_PROJECT_DIR needs to be initialized
-    setenv("DP_PROFILING_ROOT_DIR", std::getenv("PWD"), 1);
-  }
-  std::string dp_project_dir(getenv("DP_PROFILING_ROOT_DIR"));
+  //cout << "MODULE " << M.getName().str() << "\n";
 
   long counter = 0;
   // cout << "\tFUNCTION:\n";
@@ -2242,7 +2247,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
   }
 
   // avoid instrumenting functions which are defined outside the scope of the project
-  std::string dp_project_dir(getenv("DP_PROFILING_ROOT_DIR"));
+  std::string dp_project_dir(getenv("DP_PROJECT_ROOT_DIR"));
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   F.getAllMetadata(MDs);
   bool funcDefinedInProject = false;
@@ -2291,7 +2296,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
   if (funcName.find("pthread_") != string::npos) {
     return false;
   }
-
+  
   vector<CU *> CUVector;
   set<string> globalVariablesSet; // list of variables which appear in more than
   // one basic block

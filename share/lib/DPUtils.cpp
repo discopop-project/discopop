@@ -40,8 +40,8 @@ int32_t getFileID(string fileMapping, string fullPathName) {
     FileMappingPath += "/FileMapping.txt";
   }
 
-  // check if path in DP_PROFILING_ROOT_DIR
-  std::string dp_project_dir(getenv("DP_PROFILING_ROOT_DIR"));
+  // check if path in DP_PROJECT_ROOT_DIR
+  std::string dp_project_dir(getenv("DP_PROJECT_ROOT_DIR"));
   if (fullPathName.find(dp_project_dir) == string::npos) // function defined outside project
   {
     return 0;
