@@ -122,6 +122,19 @@ bool DiscoPoP::doInitialization(Module &M) {
     mkdir(getenv("DOT_DISCOPOP_PROFILER"), 0777);
   }
 
+  // prepare target directory if not present
+  char const *tmp2 = getenv("DP_PROJECT_ROOT_DIR");
+  if (tmp2 == NULL) {
+    // DP_PROJECT_ROOT_DIR needs to be initialized
+    std::cerr << "\nWARNING: No value for DP_PROJECT_ROOT_DIR found. \n";
+    std::cerr << "         As a result, library functions might be instrumented which can lead to\n";
+    std::cerr << "         increased profiling times and unexpected behavior.\n";
+    std::cerr << "         Please consider to specify the environment variable and rebuild.\n";
+    std::cerr << "         https://discopop-project.github.io/discopop/setup/environment_variables/\n\n";
+    // define fallback
+    setenv("DP_PROJECT_ROOT_DIR", "/", 1);
+  }
+
   // CUGeneration
   {
     CUIDCounter = 0;
@@ -2173,7 +2186,8 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
 
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M) {
-  // cout << "MODULE " << M.getName().str() << "\n";
+  //cout << "MODULE " << M.getName().str() << "\n";
+
   long counter = 0;
   // cout << "\tFUNCTION:\n";
   for (Function &F : M) {
@@ -2232,6 +2246,31 @@ bool DiscoPoP::runOnFunction(Function &F) {
            << "\n";
   }
 
+  // avoid instrumenting functions which are defined outside the scope of the project
+  std::string dp_project_dir(getenv("DP_PROJECT_ROOT_DIR"));
+  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+  F.getAllMetadata(MDs);
+  bool funcDefinedInProject = false;
+  for (auto &MD : MDs) {
+    if (MDNode *N = MD.second) {
+      if (auto *subProgram = dyn_cast<DISubprogram>(N)) {
+        std::string fullFileName = "";
+        if(subProgram->getDirectory().str().length() > 0){
+          fullFileName += subProgram->getDirectory().str();
+          fullFileName += "/";
+        }
+        fullFileName += subProgram->getFilename().str();
+        if (fullFileName.find(dp_project_dir) != string::npos) // function defined inside project
+        {
+          funcDefinedInProject = true;
+        }
+      }
+    }
+  }
+  if (!funcDefinedInProject){
+    return false;
+  }
+
   StringRef funcName = F.getName();
   // Avoid functions we don't want to instrument
   if (funcName.find("llvm.") != string::npos) // llvm debug calls
@@ -2257,7 +2296,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
   if (funcName.find("pthread_") != string::npos) {
     return false;
   }
-
+  
   vector<CU *> CUVector;
   set<string> globalVariablesSet; // list of variables which appear in more than
   // one basic block
