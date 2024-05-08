@@ -61,7 +61,7 @@ void __dp_finalize(LID lid) {
   pthread_compatibility_mutex.unlock();
 #endif
 
-  while (FuncStackLevel >= 0) {
+  while (function_manager->get_current_stack_level() >= 0) {
     __dp_func_exit(lid, 1);
   }
 
@@ -71,7 +71,7 @@ void __dp_finalize(LID lid) {
 #endif
 
   // Returning from main or exit from somewhere, clear up everything.
-  assert(FuncStackLevel == -1 &&
+  assert(function_manager->get_current_stack_level() == -1 &&
          "Program terminates without clearing function stack!");
   assert(loop_manager->empty() &&
          "Program terminates but loop stack is not empty!");
@@ -89,19 +89,14 @@ void __dp_finalize(LID lid) {
   // End HA
   outputDeps();
 
-  delete endFuncs;
   // hybrid analysis
   delete allDeps;
   delete outPutDeps;
   delete bbList;
   // End HA
 
+  delete function_manager;
   delete loop_manager;
-
-  for (auto fb : *beginFuncs) {
-    delete fb.second;
-  }
-  delete beginFuncs;
 
   *out << dputil::decodeLID(lid) << " END program" << endl;
   out->flush();

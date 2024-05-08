@@ -65,7 +65,8 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
   }
 
   // See comments in __dp_loop_entry() for explanation.
-  loop_manager->correct_func_level(FuncStackLevel);
+  const auto function_stack_level = function_manager->get_current_stack_level();
+  loop_manager->correct_func_level(function_stack_level);
   loop_manager->exit_loop(lid);
 
   memory_manager->leaveScope("loop", lid);

@@ -30,11 +30,10 @@ namespace __dp {
 
 /******* Instrumentation function *******/
 extern "C" {
-
 #ifdef SKIP_DUP_INSTR
-void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
+void __dp_read(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
 #else
-void __dp_write(LID lid, ADDR addr, char *var) {
+void __dp_read(LID lid, ADDR addr, char *var) {
 #endif
 
   if (!dpInited){
@@ -45,15 +44,15 @@ void __dp_write(LID lid, ADDR addr, char *var) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("__dp_write");
+  const auto debug_print = make_debug_print("__dp_read");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::WRITE);
+  const auto timer = Timer(timers, TimerRegion::READ);
 #endif
 
   if (targetTerminated) {
     if (DP_DEBUG) {
-      cout << "__dp_write() is not executed since target program has returned "
+      cout << "__dp_read() is not executed since target program has returned "
               "from main()."
            << endl;
     }
@@ -66,12 +65,10 @@ void __dp_write(LID lid, ADDR addr, char *var) {
   }
 #endif
 
-  // For tracking function call or invoke
-  lastCallOrInvoke = 0;
-  lastProcessedLine = lid;
+  function_manager->reset_call(lid);
 
   if (DP_DEBUG) {
-    cout << "instStore at encoded LID " << std::dec << dputil::decodeLID(lid)
+    cout << "instLoad at encoded LID " << std::dec << dputil::decodeLID(lid)
          << " and addr " << std::hex << addr << endl;
   }
 
@@ -80,24 +77,25 @@ void __dp_write(LID lid, ADDR addr, char *var) {
   bool is_stack_access = memory_manager->is_stack_access(addr);
   // !TEST
 
+  // addAccessInfo(true, lid, var, addr);
   int64_t workerID =
       ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
-  current.isRead = false;
+  current.isRead = true;
   current.lid = loop_manager->update_lid(lid);
   current.var = var;
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
   current.isStackAccess = is_stack_access;
   current.addrIsFirstWrittenInScope =
-      memory_manager->isFirstWrittenInScope(addr, true);
+      memory_manager->isFirstWrittenInScope(addr, false);
   current.positiveScopeChangeOccuredSinceLastAccess =
       memory_manager->positiveScopeChangeOccuredSinceLastAccess(addr);
 
   if (is_stack_access) {
-    // register stack write after check for
+    // register stack read after check for
     // positiveScopeChangeOccuredSinceLastAccess
-    memory_manager->registerStackWrite(addr, lid, var);
+    memory_manager->registerStackRead(addr, lid, var);
   }
 
   if (tempAddrCount[workerID] == CHUNK_SIZE) {

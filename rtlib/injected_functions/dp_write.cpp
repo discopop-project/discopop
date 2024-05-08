@@ -32,9 +32,9 @@ namespace __dp {
 extern "C" {
 
 #ifdef SKIP_DUP_INSTR
-void __dp_decl(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
+void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
 #else
-void __dp_decl(LID lid, ADDR addr, char *var) {
+void __dp_write(LID lid, ADDR addr, char *var) {
 #endif
 
   if (!dpInited){
@@ -45,10 +45,10 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("__dp_decl");
+  const auto debug_print = make_debug_print("__dp_write");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::DECL);
+  const auto timer = Timer(timers, TimerRegion::WRITE);
 #endif
 
   if (targetTerminated) {
@@ -62,28 +62,42 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   // For tracking function call or invoke
 #ifdef SKIP_DUP_INSTR
   if (lastaddr == addr && count >= 2) {
-    timers->stop_and_add(TimerRegion::DECL);
     return;
   }
 #endif
+
   // For tracking function call or invoke
-  lastCallOrInvoke = 0;
-  lastProcessedLine = lid;
+  function_manager->reset_call(lid);
 
   if (DP_DEBUG) {
     cout << "instStore at encoded LID " << std::dec << dputil::decodeLID(lid)
          << " and addr " << std::hex << addr << endl;
   }
 
+  // TEST
+  // check for stack access
+  bool is_stack_access = memory_manager->is_stack_access(addr);
+  // !TEST
+
   int64_t workerID =
       ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
   current.isRead = false;
-  current.lid = loop_manager->update_lid(0);
+  current.lid = loop_manager->update_lid(lid);
   current.var = var;
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
-  current.skip = true;
+  current.isStackAccess = is_stack_access;
+  current.addrIsFirstWrittenInScope =
+      memory_manager->isFirstWrittenInScope(addr, true);
+  current.positiveScopeChangeOccuredSinceLastAccess =
+      memory_manager->positiveScopeChangeOccuredSinceLastAccess(addr);
+
+  if (is_stack_access) {
+    // register stack write after check for
+    // positiveScopeChangeOccuredSinceLastAccess
+    memory_manager->registerStackWrite(addr, lid, var);
+  }
 
   if (tempAddrCount[workerID] == CHUNK_SIZE) {
     pthread_mutex_lock(&addrChunkMutexes[workerID]);

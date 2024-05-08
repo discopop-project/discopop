@@ -14,6 +14,7 @@
 
 #include "DPTypes.hpp"
 
+#include "functions/FunctionManager.hpp"
 #include "loop/LoopManager.hpp"
 #include "memory/MemoryManager.hpp"
 
@@ -103,22 +104,13 @@ struct compDep {
 
 typedef std::set<Dep, compDep> depSet;
 typedef std::unordered_map<LID, depSet *> depMap;
+
 // Hybrid anaysis
 typedef std::unordered_map<std::string, std::set<std::string>> stringDepMap;
-// End HA
-
-// For function merging
-// 1) when two BGN func are identical
-
-typedef std::unordered_map<LID, std::set<LID> *> BGNFuncList;
-
-// Hybrid analysis
 typedef std::set<std::uint32_t> ReportedBBSet;
 typedef std::set<std::string> ReportedBBPairSet;
 // End HA
-// 2) when two END func are identical
 
-typedef std::set<LID> ENDFuncList;
 } // namespace __dp
 
 // issue a warning if DP_PTHREAD_COMPATIBILITY_MODE is enabled

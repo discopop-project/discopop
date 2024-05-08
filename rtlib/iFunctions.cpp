@@ -19,7 +19,7 @@
 #include "memory/perfect_shadow.hpp"
 #include "memory/shadow.hpp"
 #include "memory/signature.hpp"
-#include "functions/all.hpp"
+#include "injected_functions/all.hpp"
 #include "../share/include/debug_print.hpp"
 #include "../share/include/timer.hpp"
 
@@ -449,7 +449,6 @@ void outputDeps() {
   const auto timer = Timer(timers, TimerRegion::OUTPUT_DEPS);
 #endif
 
-
   for (auto pair : *outPutDeps) {
     *out << pair.first << " NOM ";
     for (auto dep : pair.second) {
@@ -479,18 +478,7 @@ void outputFuncs() {
   const auto timer = Timer(timers, TimerRegion::OUTPUT_FUNCS);
 #endif
 
-  assert(beginFuncs != nullptr && endFuncs != nullptr &&
-         "Function maps are not available!");
-  for (auto &func_begin : *beginFuncs) {
-    for (auto fb : *(func_begin.second)) {
-      *out << decodeLID(func_begin.first) << " BGN func ";
-      *out << decodeLID(fb) << endl;
-    }
-  }
-
-  for (auto fe : *endFuncs) {
-    *out << decodeLID(fe) << " END func" << endl;
-  }
+  function_manager->output_functions(*out);
 }
 
 void outputAllocations() {

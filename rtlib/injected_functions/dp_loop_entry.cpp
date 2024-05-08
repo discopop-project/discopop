@@ -51,19 +51,18 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
               "returned from main()."
            << endl;
     }
-#ifdef DP_INTERNAL_TIMER
-    timers->stop_and_add(TimerRegion::LOOP_ENTRY);
-#endif
     return;
   }
   
+  const auto function_stack_level = function_manager->get_current_stack_level();
   const auto is_new_loop = loop_manager->is_new_loop(loopID);
+  
   if (is_new_loop) {
-    loop_manager->create_new_loop(FuncStackLevel, loopID, lid); 
+    loop_manager->create_new_loop(function_stack_level, loopID, lid); 
     memory_manager->enterScope("loop", lid);
   } else {
     // The same loop iterates again
-    loop_manager->iterate_loop(FuncStackLevel);
+    loop_manager->iterate_loop(function_stack_level);
 
     // Handle error made in instrumentation.
     // When recorded loopStack->top().funcLevel is different
@@ -77,7 +76,7 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     // encounter such problem, we trust the current FuncStackLevel
     // and update top().funcLevel.
 
-    loop_manager->correct_func_level(FuncStackLevel);
+    loop_manager->correct_func_level(function_stack_level);
 
     memory_manager->leaveScope("loop_iteration", lid);
     memory_manager->enterScope("loop_iteration", lid);

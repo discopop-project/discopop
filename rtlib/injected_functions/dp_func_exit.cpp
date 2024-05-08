@@ -52,12 +52,10 @@ void __dp_func_exit(LID lid, int32_t isExit) {
     return;
   }
 
-  lastCallOrInvoke = 0;
-  lastProcessedLine = lid;
+  loop_manager->clean_function_exit(function_manager->get_current_stack_level(), lid);
 
-  loop_manager->clean_function_exit(FuncStackLevel, lid);
-
-  --FuncStackLevel;
+  function_manager->reset_call(lid);
+  function_manager->decrease_stack_level();
 
   // TEST
   // clear information on allocated stack addresses
@@ -67,12 +65,12 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   // !TEST
 
   if (isExit == 0){
-    endFuncs->insert(lid);
+    function_manager->register_function_end(lid);
   }
 
   if (DP_DEBUG) {
     cout << "Exiting fucntion LID " << std::dec << dputil::decodeLID(lid) << endl;
-    cout << "Function stack level = " << std::dec << FuncStackLevel << endl;
+    cout << "Function stack level = " << std::dec << function_manager->get_current_stack_level() << endl;
   }
 }
 

@@ -29,8 +29,9 @@ Timers* timers = nullptr;
 
 std::mutex pthread_compatibility_mutex;
 
-MemoryManager* memory_manager = nullptr;
+FunctionManager* function_manager = nullptr;
 LoopManager* loop_manager= nullptr;
+MemoryManager* memory_manager = nullptr;
 
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
@@ -48,15 +49,7 @@ bool targetTerminated = false; // whether the target program has returned from m
 // Runtime merging structures
 depMap *allDeps = nullptr;
 
-BGNFuncList *beginFuncs = nullptr; // function entries
-ENDFuncList *endFuncs = nullptr;   // function returns
 std::ofstream *out = nullptr;
-std::ofstream *outInsts = nullptr;
-
-LID lastCallOrInvoke = 0;
-LID lastProcessedLine = 0;
-std::int32_t FuncStackLevel = 0;
-
 
 /******* BEGIN: parallelization section *******/
 pthread_cond_t *addrChunkPresentConds = nullptr; // condition variables

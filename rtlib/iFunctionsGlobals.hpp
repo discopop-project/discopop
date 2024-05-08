@@ -44,8 +44,9 @@ extern Timers* timers;
 
 extern std::mutex pthread_compatibility_mutex;
 
-extern MemoryManager* memory_manager;
+extern FunctionManager* function_manager;
 extern LoopManager* loop_manager;
+extern MemoryManager* memory_manager;
 
 // hybrid analysis
 extern ReportedBBSet *bbList;
@@ -63,14 +64,7 @@ extern bool targetTerminated; // whether the target program has returned from ma
 // Runtime merging structures
 extern depMap *allDeps;
 
-extern BGNFuncList *beginFuncs; // function entries
-extern ENDFuncList *endFuncs;   // function returns
 extern std::ofstream *out;
-extern std::ofstream *outInsts;
-
-extern LID lastCallOrInvoke;
-extern LID lastProcessedLine;
-extern std::int32_t FuncStackLevel;
 
 extern pthread_cond_t *addrChunkPresentConds; // condition variables
 extern pthread_mutex_t *addrChunkMutexes;     // associated mutexes

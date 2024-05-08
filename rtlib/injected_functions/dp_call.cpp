@@ -45,7 +45,7 @@ void __dp_call(LID lid) {
   const auto timer = Timer(timers, TimerRegion::CALL);
 #endif
 
-  lastCallOrInvoke = lid;
+  function_manager->log_call(lid);
 }
 
 }

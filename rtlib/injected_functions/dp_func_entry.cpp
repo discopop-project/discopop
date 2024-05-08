@@ -47,23 +47,18 @@ void __dp_func_entry(LID lid, int32_t isStart) {
   const auto debug_print = make_debug_print("__dp_func_entry");
 #endif
 
-  const auto dp_inited_previous = dpInited;
-  if (dp_inited_previous) {
-#ifdef DP_INTERNAL_TIMER
-   const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
-#endif
-  }
-
   if (!dpInited) {
     // This part should be executed only once.
     readRuntimeInfo();
     timers = new Timers();
-
+#ifdef DP_INTERNAL_TIMER
+   const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
+#endif
     memory_manager = new MemoryManager();
     loop_manager = new LoopManager();
 
-    beginFuncs = new BGNFuncList();
-    endFuncs = new ENDFuncList();
+    function_manager = new FunctionManager();
+
     out = new ofstream();
 
     // TEST
@@ -121,27 +116,12 @@ void __dp_func_entry(LID lid, int32_t isStart) {
            << endl;
     }
   } else {
-    // Process ordinary function call/invoke.
-    assert((lastCallOrInvoke != 0 || lastProcessedLine != 0) &&
-           "Error: lastCalledFunc == lastProcessedLine == 0");
-    if (lastCallOrInvoke == 0)
-      lastCallOrInvoke = lastProcessedLine;
-    ++FuncStackLevel;
-
-    if (DP_DEBUG) {
-      cout << "Entering function LID " << std::dec << dputil::decodeLID(lid) << endl;
-      cout << "Function stack level = " << std::dec << FuncStackLevel << endl;
-    }
-    BGNFuncList::iterator func = beginFuncs->find(lastCallOrInvoke);
-    if (func == beginFuncs->end()) {
-      set<LID> *tmp = new set<LID>();
-      tmp->insert(lid);
-      beginFuncs->insert(pair<LID, set<LID> *>(lastCallOrInvoke, tmp));
-    } else {
-      func->second->insert(lid);
-    }
+    function_manager->register_function_start(lid);
   }
 
+#ifdef DP_INTERNAL_TIMER
+   const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
+#endif
   // TEST
   memory_manager->enter_new_function();
   memory_manager->enterScope("function", lid);
@@ -151,7 +131,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     *out << "START " << dputil::decodeLID(lid) << endl;
 
   // Reset last call tracker
-  lastCallOrInvoke = 0;
+  function_manager->log_call(0);
 }
 
 }
