@@ -21,21 +21,21 @@ set(DiscoPoP_SOURCES
         ../share/lib/timer.cpp
         MemoryRegionTree.cpp
 		
-		functions/dp_add_bb_deps.cpp
-		functions/dp_alloca.cpp
-		functions/dp_call.cpp
-		functions/dp_decl.cpp
-		functions/dp_delete.cpp
-		functions/dp_finalize.cpp
-		functions/dp_func_entry.cpp
-		functions/dp_func_exit.cpp
-		functions/dp_loop_entry.cpp
-		functions/dp_loop_exit.cpp
-		functions/dp_new.cpp
-		functions/dp_read.cpp
-		functions/dp_report_bb.cpp
-		functions/dp_report_bb_pair.cpp
-		functions/dp_write.cpp
+	functions/dp_add_bb_deps.cpp
+	functions/dp_alloca.cpp
+	functions/dp_call.cpp
+	functions/dp_decl.cpp
+	functions/dp_delete.cpp
+	functions/dp_finalize.cpp
+	functions/dp_func_entry.cpp
+	functions/dp_func_exit.cpp
+	functions/dp_loop_entry.cpp
+	functions/dp_loop_exit.cpp
+	functions/dp_new.cpp
+	functions/dp_read.cpp
+	functions/dp_report_bb.cpp
+	functions/dp_report_bb_pair.cpp
+	functions/dp_write.cpp
         )
 
 set(CMAKE_CXX_FLAGS
