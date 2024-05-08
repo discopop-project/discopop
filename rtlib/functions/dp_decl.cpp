@@ -15,6 +15,7 @@
 #include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -44,10 +45,10 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_decl\n";
+  const auto debug_print = make_debug_print("__dp_decl");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::DECL);
+  const auto timer = Timer(timers, TimerRegion::DECL);
 #endif
 
   if (targetTerminated) {
@@ -56,9 +57,6 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
               "from main()."
            << endl;
     }
-#ifdef DP_INTERNAL_TIMER
-    timers->stop_and_add(TimerRegion::DECL);
-#endif
     return;
   }
   // For tracking function call or invoke
@@ -96,13 +94,6 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
     tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
     tempAddrCount[workerID] = 0;
   }
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::DECL);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  std::cout << "exit __dp_decl\n";
-#endif
 }
 
 }

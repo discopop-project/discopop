@@ -14,6 +14,7 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -37,10 +38,10 @@ void __dp_add_bb_deps(char *depStringPtr) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  std::cout << "enter __dp_add_bb_deps\n";
+  const auto debug_print = make_debug_print("__dp_add_bb_deps");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::ADD_BB_DEPS);
+  const auto timer = Timer(timers, TimerRegion::ADD_BB_DEPS);
 #endif
 
   std::string depString(depStringPtr);
@@ -76,13 +77,6 @@ void __dp_add_bb_deps(char *depStringPtr) {
     }
     depString = res0.suffix();
   }
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::ADD_BB_DEPS);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  std::cout << "exit __dp_add_bb_deps\n";
-#endif
 }
 // End HA
 }

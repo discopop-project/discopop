@@ -15,6 +15,7 @@
 #include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -43,10 +44,10 @@ void __dp_read(LID lid, ADDR addr, char *var) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_read\n";
+  const auto debug_print = make_debug_print("__dp_read");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::READ);
+  const auto timer = Timer(timers, TimerRegion::READ);
 #endif
 
   if (targetTerminated) {
@@ -55,23 +56,11 @@ void __dp_read(LID lid, ADDR addr, char *var) {
               "from main()."
            << endl;
     }
-#ifdef DP_INTERNAL_TIMER
-    timers->stop_and_add(TimerRegion::READ);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_read\n";
-#endif
     return;
   }
   // For tracking function call or invoke
 #ifdef SKIP_DUP_INSTR
   if (lastaddr == addr && count >= 2) {
-#ifdef DP_INTERNAL_TIMER
-    timers->stop_and_add(TimerRegion::READ);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_read\n";
-#endif
     return;
   }
 #endif
@@ -119,13 +108,6 @@ void __dp_read(LID lid, ADDR addr, char *var) {
     tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
     tempAddrCount[workerID] = 0;
   }
-
-#ifdef DP_INTERNAL_TIMER
-    timers->stop_and_add(TimerRegion::READ);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_read\n";
-#endif
 }
 
 }

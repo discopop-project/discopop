@@ -14,6 +14,7 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -38,10 +39,10 @@ void __dp_delete(LID lid, ADDR startAddr) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_delete\n";
+  const auto debug_print = make_debug_print("__dp_delete");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::DELETE);
+  const auto timer = Timer(timers, TimerRegion::DELETE);
 #endif
 
   // DO NOT DELETE MEMORY REGIONS AS THEY ARE STILL REQUIRED FOR LOGGING
@@ -61,13 +62,6 @@ void __dp_delete(LID lid, ADDR startAddr) {
         cout << "__dp_delete: Could not find base addr: " << std::hex <<
    startAddr << "\n";
 */
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::DELETE);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_delete\n";
-#endif
 }
 
 }

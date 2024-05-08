@@ -15,6 +15,7 @@
 #include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include "dp_func_exit.hpp"
@@ -37,10 +38,10 @@ void __dp_finalize(LID lid) {
   pthread_compatibility_mutex.lock();
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_finalize\n";
+  const auto debug_print = make_debug_print("__dp_loop_exit");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::FINALIZE);
+  const auto timer = Timer(timers, TimerRegion::FINALIZE, true);
 #endif
 
   if (targetTerminated) {
@@ -51,13 +52,6 @@ void __dp_finalize(LID lid) {
     }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
     pthread_compatibility_mutex.unlock();
-#endif
-#ifdef DP_INTERNAL_TIMER
-    timers->stop_and_add(TimerRegion::FINALIZE);
-    timers->print(std::cout);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_finalize\n";
 #endif
     return;
   }
@@ -120,15 +114,6 @@ void __dp_finalize(LID lid) {
 
 #ifdef DP_DEBUG
     std::cout << "Program terminated." << std::endl;
-#endif
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::FINALIZE);
-  timers->print(std::cout);
-  delete timers;
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_finalize\n";
 #endif
 }
 

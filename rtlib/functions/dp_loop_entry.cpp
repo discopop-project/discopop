@@ -14,6 +14,7 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -38,10 +39,10 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_loop_entry\n";
+  const auto debug_print = make_debug_print("__dp_loop_entry");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::LOOP_ENTRY);
+  const auto timer = Timer(timers, TimerRegion::LOOP_ENTRY);
 #endif
 
   if (targetTerminated) {
@@ -52,9 +53,6 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     }
 #ifdef DP_INTERNAL_TIMER
     timers->stop_and_add(TimerRegion::LOOP_ENTRY);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_loop_entry\n";
 #endif
     return;
   }
@@ -84,13 +82,6 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     memory_manager->leaveScope("loop_iteration", lid);
     memory_manager->enterScope("loop_iteration", lid);
   }
-  
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::LOOP_ENTRY);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  std::cout << "exit __dp_loop_entry\n";
-#endif
 }
 
 }

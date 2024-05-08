@@ -15,6 +15,7 @@
 #include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <linux/limits.h>
@@ -43,13 +44,13 @@ void __dp_func_entry(LID lid, int32_t isStart) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_func_entry\n";
+  const auto debug_print = make_debug_print("__dp_func_entry");
 #endif
 
   const auto dp_inited_previous = dpInited;
   if (dp_inited_previous) {
 #ifdef DP_INTERNAL_TIMER
-    timers->start(TimerRegion::FUNC_ENTRY);
+   const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
 #endif
   }
 
@@ -151,15 +152,6 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 
   // Reset last call tracker
   lastCallOrInvoke = 0;
-
-#ifdef DP_INTERNAL_TIMER
-  if (dp_inited_previous) {
-    timers->stop_and_add(TimerRegion::FUNC_ENTRY);
-  }
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  std::cout << "exit __dp_func_entry\n";
-#endif
 }
 
 }

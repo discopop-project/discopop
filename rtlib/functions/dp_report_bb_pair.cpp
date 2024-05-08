@@ -14,6 +14,7 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -38,22 +39,15 @@ void __dp_report_bb_pair(int32_t semaphore, uint32_t bbIndex) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_report_bb_pair\n";
+  const auto debug_print = make_debug_print("__dp_report_bb_pair");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::REPORT_BB_PAIR);
+  const auto timer = Timer(timers, TimerRegion::REPORT_BB_PAIR);
 #endif
 
   if (semaphore) {
     bbList->insert(bbIndex);
   }
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::REPORT_BB_PAIR);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_report_bb_pair\n";
-#endif
 }
 
 }

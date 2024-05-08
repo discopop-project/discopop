@@ -20,6 +20,7 @@
 #include "memory/shadow.hpp"
 #include "memory/signature.hpp"
 #include "functions/all.hpp"
+#include "../share/include/debug_print.hpp"
 #include "../share/include/timer.hpp"
 
 #include <cstdio>
@@ -57,7 +58,7 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
             bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
             bool positiveScopeChangeOccuredSinceLastAccess) {
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::ADD_DEP);
+  const auto timer = Timer(timers, TimerRegion::ADD_DEP);
 #endif
   
   // hybrid analysis
@@ -363,19 +364,15 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
            << myMap->size() << ")" << endl;
     }
   }
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::ADD_DEP);
-#endif
 }
 
 // hybrid analysis
 void generateStringDepMap() {
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter generateStringDepMap\n";
+  const auto debug_print = make_debug_print("generateStringDepMap");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::GENERATE_STRING_DEP_MAP);
+  const auto timer = Timer(timers, TimerRegion::GENERATE_STRING_DEP_MAP);
 #endif
 
   for (auto &dline : *allDeps) {
@@ -442,21 +439,14 @@ void generateStringDepMap() {
       delete dline.second;
     }
   }
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::GENERATE_STRING_DEP_MAP);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter generateStringDepMap\n";
-#endif
 }
 
 void outputDeps() {  
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter outputDeps\n";
+  const auto debug_print = make_debug_print("outputDeps");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::OUTPUT_DEPS);
+  const auto timer = Timer(timers, TimerRegion::OUTPUT_DEPS);
 #endif
 
 
@@ -467,40 +457,26 @@ void outputDeps() {
     }
     *out << endl;
   }
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::OUTPUT_DEPS);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit outputDeps\n";
-#endif
 }
 // End HA
 
 void outputLoops() {
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter outputLoops\n";
+  const auto debug_print = make_debug_print("outputLoops");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::OUTPUT_LOOPS);
+  const auto timer = Timer(timers, TimerRegion::OUTPUT_LOOPS);
 #endif
   
   loop_manager->output(*out);
-  
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::OUTPUT_LOOPS);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit outputLoops\n";
-#endif
 }
 
 void outputFuncs() {  
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter outputFunc\n";
+  const auto debug_print = make_debug_print("outputFunc");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::OUTPUT_FUNCS);
+  const auto timer = Timer(timers, TimerRegion::OUTPUT_FUNCS);
 #endif
 
   assert(beginFuncs != nullptr && endFuncs != nullptr &&
@@ -515,21 +491,14 @@ void outputFuncs() {
   for (auto fe : *endFuncs) {
     *out << decodeLID(fe) << " END func" << endl;
   }
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::OUTPUT_FUNCS);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit outputFunc\n";
-#endif
 }
 
 void outputAllocations() {
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter outputAllocations\n";
+  const auto debug_print = make_debug_print("outputAllocations");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::OUTPUT_ALLOCATIONS);
+  const auto timer = Timer(timers, TimerRegion::OUTPUT_ALLOCATIONS);
 #endif
 
   const auto prepare_environment = [](){
@@ -551,13 +520,6 @@ void outputAllocations() {
 
   auto allocationsFileStream = ofstream(path, ios::out);
   memory_manager->output_memory_regions(allocationsFileStream);
-  
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::OUTPUT_ALLOCATIONS);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit outputAllocations\n";
-#endif
 }
 
 void readRuntimeInfo() {  
@@ -619,10 +581,10 @@ void readRuntimeInfo() {
 
 void initParallelization() {  
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter initParallelization\n";
+  const auto debug_print = make_debug_print("initParallelization");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::INIT_PARALLELIZATION);
+  const auto timer = Timer(timers, TimerRegion::INIT_PARALLELIZATION);
 #endif
 
   // initialize global variables
@@ -655,35 +617,23 @@ void initParallelization() {
   }
 
   pthread_attr_destroy(&attr);
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::INIT_PARALLELIZATION);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit initParallelization\n";
-#endif
 }
 
 string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
+  const auto timer = Timer(timers, TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
 #endif
 
   const auto return_value = fallback + "-" + memory_manager->get_memory_region_id(fallback, addr);
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
-#endif
-
   return return_value;
 }
 
 void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter addAccessInfo\n";
+  const auto debug_print = make_debug_print("addAccessInfo");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::ADD_ACCESS_INFO);
+  const auto timer = Timer(timers, TimerRegion::ADD_ACCESS_INFO);
 #endif
   
   int64_t workerID =
@@ -705,13 +655,6 @@ void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
     tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
     tempAddrCount[workerID] = 0;
   }
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::ADD_ACCESS_INFO);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit addAccessInfo\n";
-#endif
 }
 
 void mergeDeps() {  
@@ -720,7 +663,7 @@ void mergeDeps() {
 
   pthread_mutex_lock(&allDepsLock);
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::MERGE_DEPS);
+  const auto timer = Timer(timers, TimerRegion::MERGE_DEPS);
 #endif
 
   for (auto &dep : *myMap) {
@@ -740,15 +683,12 @@ void mergeDeps() {
     }
   }
   
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::MERGE_DEPS);
-#endif
   pthread_mutex_unlock(&allDepsLock);
 }
 
 void* analyzeDeps(void *arg) {
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::ANALYZE_DEPS);
+  const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
 #endif
   
   int64_t id = (int64_t)arg;
@@ -859,20 +799,16 @@ void* analyzeDeps(void *arg) {
     cout << "thread " << id << " exits... \n";
   }
 
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::ANALYZE_DEPS);
-#endif
   pthread_exit(NULL);
-
   return nullptr;
 }
 
 void finalizeParallelization() {
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter finalizeParallelization\n";
+  const auto debug_print = make_debug_print("finalizeParallelization");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::FINALIZE_PARALLELIZATION);
+  const auto timer = Timer(timers, TimerRegion::FINALIZE_PARALLELIZATION);
 #endif
 
   if (DP_DEBUG) {
@@ -917,18 +853,11 @@ void finalizeParallelization() {
   if (DP_DEBUG) {
     cout << "END: finalize parallelization... \n";
   }
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::FINALIZE_PARALLELIZATION);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit finalizeParallelization\n";
-#endif
 }
 
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::CLEAR_STACK_ACCESSES);
+  const auto timer = Timer(timers, TimerRegion::CLEAR_STACK_ACCESSES);
 #endif
 
   for (ADDR addr : memory_manager->getCurrentScope().get_first_write()) {
@@ -967,10 +896,6 @@ void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
       tempAddrCount[workerID] = 0;
     }
   }
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::CLEAR_STACK_ACCESSES);
-#endif
 }
 
 } // namespace __dp

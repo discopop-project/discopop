@@ -14,6 +14,7 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -38,10 +39,10 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_loop_exit\n";
+  const auto debug_print = make_debug_print("__dp_loop_exit");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::LOOP_EXIT);
+  const auto timer = Timer(timers, TimerRegion::LOOP_EXIT);
 #endif
 
   if (targetTerminated) {
@@ -50,12 +51,6 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
               "returned from main()."
            << endl;
     }
-#ifdef DP_INTERNAL_TIMER
-    timers->stop_and_add(TimerRegion::LOOP_EXIT);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_loop_exit\n";
-#endif
     return;
   }
 
@@ -66,12 +61,6 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
     if (DP_DEBUG) {
       std::cout << "Ignored single exit of loop " << loop_manager->get_current_loop_id() << endl;
     }
-#ifdef DP_INTERNAL_TIMER
-    timers->stop_and_add(TimerRegion::LOOP_EXIT);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_loop_exit\n";
-#endif
     return;
   }
 
@@ -80,13 +69,6 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
   loop_manager->exit_loop(lid);
 
   memory_manager->leaveScope("loop", lid);
-  
-#ifdef DP_INTERNAL_TIMER
-    timers->stop_and_add(TimerRegion::LOOP_EXIT);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_loop_exit\n";
-#endif
 }
 
 }

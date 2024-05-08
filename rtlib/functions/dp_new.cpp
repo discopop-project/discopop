@@ -14,6 +14,7 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -38,10 +39,10 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_new\n";
+  const auto debug_print = make_debug_print("__dp_new");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::NEW);
+  const auto timer = Timer(timers, TimerRegion::NEW);
 #endif
 
   // calculate endAddr of memory region
@@ -55,13 +56,6 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
          << std::hex << startAddr << " - " << std::hex << endAddr;
     printf(" NumBytes: %lld\n", numBytes);
   }
-  
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::NEW);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_new\n";
-#endif
 }
 
 }

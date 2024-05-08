@@ -14,6 +14,7 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -38,20 +39,13 @@ void __dp_call(LID lid) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_call\n";
+  const auto debug_print = make_debug_print("__dp_call");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::CALL);
+  const auto timer = Timer(timers, TimerRegion::CALL);
 #endif
 
   lastCallOrInvoke = lid;
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::CALL);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_call\n";
-#endif
 }
 
 }

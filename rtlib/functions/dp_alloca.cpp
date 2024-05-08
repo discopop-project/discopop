@@ -15,6 +15,7 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -40,10 +41,10 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  std::cout << "enter __dp_alloca\n";
+  const auto debug_print = make_debug_print("__dp_alloca");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::ALLOCA);
+  const auto timer = Timer(timers, TimerRegion::ALLOCA);
 #endif
   
   // create entry to list of allocatedMemoryRegions
@@ -54,13 +55,6 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
          << " : " << std::hex << startAddr << " - " << std::hex << endAddr
          << " -> #allocations: " << memory_manager->get_number_allocations()
          << "\n";
-#endif
-
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::ALLOCA);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_alloca\n";
 #endif
 }
 

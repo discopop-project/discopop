@@ -248,3 +248,24 @@ private:
     std::vector<std::size_t> number_called;
     std::vector<std::chrono::nanoseconds> time_elapsed;
 };
+
+class Timer {
+public:
+    Timer(Timers* timers, TimerRegion region, bool also_print = false) 
+        : timers(timers), region(region), print(also_print) {
+        assert(timers != nullptr && "Timer started but timers is nullptr");
+        timers->start(region);
+    }
+
+    ~Timer() {
+        timers->stop_and_add(region);
+        if (print) {
+            timers->print(std::cout);
+        }
+    }
+    
+private:
+    Timers* timers;
+    TimerRegion region;
+    bool print;
+};

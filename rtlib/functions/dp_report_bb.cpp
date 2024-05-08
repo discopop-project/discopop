@@ -14,6 +14,7 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -38,21 +39,14 @@ void __dp_report_bb(uint32_t bbIndex) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter __dp_report_bb\n";
-  cout << "bbIndex: " << std::to_string(bbIndex) << "\n";
+  const auto debug_print = make_debug_print("__dp_report_bb");
+  std::cout << "bbIndex: " << std::to_string(bbIndex) << '\n';
 #endif
 #ifdef DP_INTERNAL_TIMER
-  timers->start(TimerRegion::REPORT_BB);
+  const auto timer = Timer(timers, TimerRegion::REPORT_BB);
 #endif
 
   bbList->insert(bbIndex);
-  
-#ifdef DP_INTERNAL_TIMER
-  timers->stop_and_add(TimerRegion::REPORT_BB);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_report_bb\n";
-#endif
 }
 
 }
