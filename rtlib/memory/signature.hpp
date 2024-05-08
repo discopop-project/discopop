@@ -12,10 +12,10 @@
 
 #pragma once
 
-#include <assert.h>
-#include <stdint.h>
+#include "../DPTypes.hpp"
 
-#include "DPTypes.hpp"
+#include <cassert>
+#include <cstdint>
 
 #include <iostream>
 

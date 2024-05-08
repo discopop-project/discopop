@@ -11,16 +11,15 @@
  */
 
 #include "iFunctions.hpp"
-#include "perfect_shadow.hpp"
-#include "shadow.hpp"
-#include "signature.hpp"
-#include "functions/all.hpp"
-#include "DPUtils.hpp"
-#include "MemoryRegionTree.hpp"
-#include "scope.hpp"
-#include "../share/include/timer.hpp"
-
 #include "iFunctionsGlobals.hpp"
+
+#include "DPUtils.hpp"
+
+#include "memory/perfect_shadow.hpp"
+#include "memory/shadow.hpp"
+#include "memory/signature.hpp"
+#include "functions/all.hpp"
+#include "../share/include/timer.hpp"
 
 #include <cstdio>
 #include <limits>

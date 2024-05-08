@@ -13,8 +13,9 @@
 #pragma once
 
 #include "../DPTypes.hpp"
-#include "../MemoryRegionTree.hpp"
-#include "../scope.hpp"
+
+#include "MemoryRegionTree.hpp"
+#include "scope.hpp"
 
 #include <limits>
 #include <stack>

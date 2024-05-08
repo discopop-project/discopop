@@ -12,7 +12,7 @@
 
 #include "signature.hpp"
 
-#include "stdint.h"
+#include <cstdint>
 #include <iostream>
 
 using namespace std;

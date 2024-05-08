@@ -16,7 +16,7 @@
 #include "signature.hpp"
 
 #include <iostream>
-#include <stdint.h>
+#include <cstdint>
 
 using namespace std;
 

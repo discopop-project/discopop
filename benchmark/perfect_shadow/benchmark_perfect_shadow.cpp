@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "../../rtlib/perfect_shadow.hpp"
+#include "../../rtlib/memory/perfect_shadow.hpp"
 
 // General functions
 
