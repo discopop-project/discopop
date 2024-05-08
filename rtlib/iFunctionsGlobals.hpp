@@ -45,6 +45,7 @@ extern Timers* timers;
 extern std::mutex pthread_compatibility_mutex;
 
 extern MemoryManager* memory_manager;
+extern LoopManager* loop_manager;
 
 // hybrid analysis
 extern ReportedBBSet *bbList;
@@ -62,8 +63,6 @@ extern bool targetTerminated; // whether the target program has returned from ma
 // Runtime merging structures
 extern depMap *allDeps;
 
-extern LoopTable *loopStack;    // loop stack tracking
-extern LoopRecords *loops;      // loop merging
 extern BGNFuncList *beginFuncs; // function entries
 extern ENDFuncList *endFuncs;   // function returns
 extern std::ofstream *out;

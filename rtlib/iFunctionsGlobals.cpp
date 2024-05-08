@@ -30,6 +30,7 @@ Timers* timers = nullptr;
 std::mutex pthread_compatibility_mutex;
 
 MemoryManager* memory_manager = nullptr;
+LoopManager* loop_manager= nullptr;
 
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
@@ -47,8 +48,6 @@ bool targetTerminated = false; // whether the target program has returned from m
 // Runtime merging structures
 depMap *allDeps = nullptr;
 
-LoopTable *loopStack = nullptr;    // loop stack tracking
-LoopRecords *loops = nullptr;      // loop merging
 BGNFuncList *beginFuncs = nullptr; // function entries
 ENDFuncList *endFuncs = nullptr;   // function returns
 std::ofstream *out = nullptr;

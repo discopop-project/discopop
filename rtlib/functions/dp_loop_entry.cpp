@@ -58,27 +58,14 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
 #endif
     return;
   }
-  assert((loopStack != nullptr) && "Loop stack is not available!");
-
-  if (loopStack->empty() || (loopStack->top().loopID != loopID)) {
-    // A new loop
-    loopStack->push(LoopTableEntry(FuncStackLevel, loopID, 0, lid));
-    if (loops->find(lid) == loops->end()) {
-      loops->insert(pair<LID, LoopRecord *>(lid, new LoopRecord(0, 0, 0)));
-    }
-    if (DP_DEBUG) {
-      cout << "(" << std::dec << FuncStackLevel << ")Loop " << loopID
-           << " enters." << endl;
-    }
+  
+  const auto is_new_loop = loop_manager->is_new_loop(loopID);
+  if (is_new_loop) {
+    loop_manager->create_new_loop(FuncStackLevel, loopID, lid); 
     memory_manager->enterScope("loop", lid);
   } else {
     // The same loop iterates again
-    loopStack->top().count++;
-    if (DP_DEBUG) {
-      cout << "(" << std::dec << loopStack->top().funcLevel << ")";
-      cout << "Loop " << loopStack->top().loopID << " iterates "
-           << loopStack->top().count << " times." << endl;
-    }
+    loop_manager->iterate_loop(FuncStackLevel);
 
     // Handle error made in instrumentation.
     // When recorded loopStack->top().funcLevel is different
@@ -91,14 +78,8 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     // the second case has never been seen. Thus whenever we
     // encounter such problem, we trust the current FuncStackLevel
     // and update top().funcLevel.
-    if (loopStack->top().funcLevel != FuncStackLevel) {
-      if (DP_DEBUG) {
-        cout << "WARNING: changing funcLevel of Loop "
-             << loopStack->top().loopID << " from "
-             << loopStack->top().funcLevel << " to " << FuncStackLevel << endl;
-      }
-      loopStack->top().funcLevel = FuncStackLevel;
-    }
+
+    loop_manager->correct_func_level(FuncStackLevel);
 
     memory_manager->leaveScope("loop_iteration", lid);
     memory_manager->enterScope("loop_iteration", lid);

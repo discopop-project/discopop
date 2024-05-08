@@ -79,7 +79,7 @@ void __dp_finalize(LID lid) {
   // Returning from main or exit from somewhere, clear up everything.
   assert(FuncStackLevel == -1 &&
          "Program terminates without clearing function stack!");
-  assert(loopStack->empty() &&
+  assert(loop_manager->empty() &&
          "Program terminates but loop stack is not empty!");
 
   if (DP_DEBUG) {
@@ -96,7 +96,6 @@ void __dp_finalize(LID lid) {
   // End HA
   outputDeps();
 
-  delete loopStack;
   delete endFuncs;
   // hybrid analysis
   delete allDeps;
@@ -104,19 +103,12 @@ void __dp_finalize(LID lid) {
   delete bbList;
   // End HA
 
-  for (auto loop : *loops) {
-    delete loop.second;
-  }
-  delete loops;
+  delete loop_manager;
 
   for (auto fb : *beginFuncs) {
     delete fb.second;
   }
   delete beginFuncs;
-
-  // TEST
-  // delete scopeManager;
-  // !TEST
 
   *out << dputil::decodeLID(lid) << " END program" << endl;
   out->flush();

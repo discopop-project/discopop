@@ -59,41 +59,8 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   lastCallOrInvoke = 0;
   lastProcessedLine = lid;
 
-  // Clear up all unfinished loops in the function.
-  // This usually happens when using return inside loop.
-  while (!loopStack->empty() &&
-         (loopStack->top().funcLevel == FuncStackLevel)) {
+  loop_manager->clean_function_exit(FuncStackLevel, lid);
 
-    // No way to get the real end line of loop. Use the line where
-    // function returns instead.
-    LoopRecords::iterator loop = loops->find(loopStack->top().begin);
-    assert(loop != loops->end() &&
-           "A loop ends without its entry being recorded.");
-    if (loop->second->end == 0) {
-      loop->second->end = lid;
-    } else {
-      // TODO: FIXME: loop end line > return line
-    }
-    loop->second->total += loopStack->top().count;
-    ++loop->second->nEntered;
-
-    if (DP_DEBUG) {
-      cout << "(" << std::dec << loopStack->top().funcLevel << ")";
-      cout << "Loop " << loopStack->top().loopID
-           << " exits since function returns." << endl;
-    }
-
-    loopStack->pop();
-
-    if (DP_DEBUG) {
-      if (loopStack->empty())
-        cout << "Loop Stack is empty." << endl;
-      else {
-        cout << "TOP: (" << std::dec << loopStack->top().funcLevel << ")";
-        cout << "Loop " << loopStack->top().loopID << "." << endl;
-      }
-    }
-  }
   --FuncStackLevel;
 
   // TEST
@@ -103,8 +70,9 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   memory_manager->leaveScope("function", lid);
   // !TEST
 
-  if (isExit == 0)
+  if (isExit == 0){
     endFuncs->insert(lid);
+  }
 
   if (DP_DEBUG) {
     cout << "Exiting fucntion LID " << std::dec << dputil::decodeLID(lid) << endl;

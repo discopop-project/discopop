@@ -14,11 +14,11 @@
 set(DiscoPoP_SOURCES
         iFunctions.cpp
         iFunctionsGlobals.cpp
-        iFunctionsTypes.cpp
-        loop_counter.cpp
         cu_taken_branch_counter.cpp
         
         ../share/lib/timer.cpp
+
+        loop/LoopCounter.cpp
         
         memory/MemoryManager.cpp
         memory/MemoryRegionTree.cpp

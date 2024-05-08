@@ -14,6 +14,7 @@
 
 #include "DPTypes.hpp"
 
+#include "loop/LoopManager.hpp"
 #include "memory/MemoryManager.hpp"
 
 #include <cstdint>
@@ -106,56 +107,6 @@ typedef std::unordered_map<LID, depSet *> depMap;
 typedef std::unordered_map<std::string, std::set<std::string>> stringDepMap;
 // End HA
 
-// For loop tracking
-struct LoopTableEntry {
-  LoopTableEntry(std::int32_t l, std::int32_t id, std::int32_t c, LID b)
-      : funcLevel(l), loopID(id), count(c), begin(b) {}
-
-  std::int32_t funcLevel;
-  std::int32_t loopID;
-  std::int32_t count;
-  LID begin;
-};
-
-// typedef std::stack <LoopTableEntry> LoopTable;
-struct LoopTable {
-  LoopTable(){};
-
-  std::vector<LoopTableEntry> contents;
-
-  inline LoopTableEntry &top() { return contents.back(); }
-
-  inline LoopTableEntry &first() { return contents[0]; }
-
-  inline LoopTableEntry &topMinusN(std::size_t n) {
-    return contents[contents.size() - 1 - n];
-  }
-
-  inline void pop() { contents.pop_back(); }
-
-  inline bool empty() { return contents.empty(); }
-
-  inline void push(LoopTableEntry newElement) {
-    contents.push_back(newElement);
-  }
-
-  inline std::size_t size() { return contents.size(); }
-};
-
-// For loop merging
-// Assumption: no more than one loops can begin at the same line
-struct LoopRecord {
-  LoopRecord(LID e, std::int32_t t, std::int32_t n) : end(e), total(t), nEntered(n) {}
-
-  LID end;
-  std::int32_t total;
-  std::int32_t maxIterationCount =
-      0; // maximum iterations executed during a single loop entry
-  std::int32_t nEntered;
-};
-
-typedef std::unordered_map<LID, LoopRecord *> LoopRecords;
-
 // For function merging
 // 1) when two BGN func are identical
 
@@ -169,17 +120,6 @@ typedef std::set<std::string> ReportedBBPairSet;
 
 typedef std::set<LID> ENDFuncList;
 } // namespace __dp
-
-#define unpackLIDMetadata_getLoopID(lid) (lid >> 56)
-#define unpackLIDMetadata_getLoopIteration_0(lid) ((lid >> 48) & 0x7F)
-#define unpackLIDMetadata_getLoopIteration_1(lid) ((lid >> 40) & 0x7F)
-#define unpackLIDMetadata_getLoopIteration_2(lid) ((lid >> 32) & 0x7F)
-#define checkLIDMetadata_getLoopIterationValidity_0(lid)                       \
-  ((lid & 0x0080000000000000) >> 55)
-#define checkLIDMetadata_getLoopIterationValidity_1(lid)                       \
-  ((lid & 0x0000800000000000) >> 47)
-#define checkLIDMetadata_getLoopIterationValidity_2(lid)                       \
-  ((lid & 0x0000008000000000) >> 39)
 
 // issue a warning if DP_PTHREAD_COMPATIBILITY_MODE is enabled
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
