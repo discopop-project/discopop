@@ -459,57 +459,6 @@ void outputDeps() {
 }
 // End HA
 
-void outputLoops() {
-#ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("outputLoops");
-#endif
-#ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::OUTPUT_LOOPS);
-#endif
-  
-  loop_manager->output(*out);
-}
-
-void outputFuncs() {  
-#ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("outputFunc");
-#endif
-#ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::OUTPUT_FUNCS);
-#endif
-
-  function_manager->output_functions(*out);
-}
-
-void outputAllocations() {
-#ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("outputAllocations");
-#endif
-#ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::OUTPUT_ALLOCATIONS);
-#endif
-
-  const auto prepare_environment = [](){
-      // prepare environment variables
-    const char *discopop_env = getenv("DOT_DISCOPOP");
-    if (discopop_env == NULL) {
-
-      // DOT_DISCOPOP needs to be initialized
-      setenv("DOT_DISCOPOP", ".discopop", 1);
-      discopop_env = ".discopop";
-    }
-
-    auto discopop_profiler_str = std::string(discopop_env) + "/profiler";
-    setenv("DOT_DISCOPOP_PROFILER", discopop_profiler_str.data(), 1);
-
-    return discopop_profiler_str + "/memory_regions.txt";
-  };
-  const auto path = prepare_environment();
-
-  auto allocationsFileStream = ofstream(path, ios::out);
-  memory_manager->output_memory_regions(allocationsFileStream);
-}
-
 void readRuntimeInfo() {  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter readRuntimeInfo\n";
@@ -612,8 +561,7 @@ string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
   const auto timer = Timer(timers, TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
 #endif
 
-  const auto return_value = fallback + "-" + memory_manager->get_memory_region_id(fallback, addr);
-  return return_value;
+  return fallback + '-' + memory_manager->get_memory_region_id(fallback, addr);
 }
 
 void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {

@@ -54,17 +54,11 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 #ifdef DP_INTERNAL_TIMER
    const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
 #endif
-    memory_manager = new MemoryManager();
-    loop_manager = new LoopManager();
-
     function_manager = new FunctionManager();
+    loop_manager = new LoopManager();
+    memory_manager = new MemoryManager();
 
     out = new ofstream();
-
-    // TEST
-    // stackAddrs = new std::stack<std::pair<ADDR, ADDR>>();
-    // scopeManager = new ScopeManager();
-    // !TEST
 
     // hybrid analysis
     allDeps = new depMap();

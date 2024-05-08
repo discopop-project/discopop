@@ -24,12 +24,6 @@ void addDep(depType type, LID curr, LID depOn, char *var, char *AAvar);
 
 void outputDeps();
 
-void outputLoops();
-
-void outputFuncs();
-
-void outputAllocations();
-
 void generateStringDepMap();
 
 void readRuntimeInfo();

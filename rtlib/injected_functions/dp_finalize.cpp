@@ -81,9 +81,60 @@ void __dp_finalize(LID lid) {
 #endif
 
   finalizeParallelization();
-  outputLoops();
-  outputFuncs();
-  outputAllocations();
+
+  const auto output_loops = []() {
+#ifdef DP_RTLIB_VERBOSE
+    const auto debug_print = make_debug_print("outputLoops");
+#endif
+#ifdef DP_INTERNAL_TIMER
+    const auto timer = Timer(timers, TimerRegion::OUTPUT_LOOPS);
+#endif
+  
+    loop_manager->output(*out);
+  };
+  output_loops();
+
+  const auto output_functions = []() {
+#ifdef DP_RTLIB_VERBOSE
+    const auto debug_print = make_debug_print("outputFunc");
+#endif
+#ifdef DP_INTERNAL_TIMER
+    const auto timer = Timer(timers, TimerRegion::OUTPUT_FUNCS);
+#endif
+    function_manager->output_functions(*out);
+  };
+  output_functions();
+
+  const auto output_allocations = []() {
+#ifdef DP_RTLIB_VERBOSE
+    const auto debug_print = make_debug_print("outputAllocations");
+#endif
+#ifdef DP_INTERNAL_TIMER
+    const auto timer = Timer(timers, TimerRegion::OUTPUT_ALLOCATIONS);
+#endif
+
+    const auto prepare_environment = [](){
+      // prepare environment variables
+      const char *discopop_env = getenv("DOT_DISCOPOP");
+      if (discopop_env == NULL) {
+
+        // DOT_DISCOPOP needs to be initialized
+        setenv("DOT_DISCOPOP", ".discopop", 1);
+        discopop_env = ".discopop";
+      }
+
+      auto discopop_profiler_str = std::string(discopop_env) + "/profiler";
+      setenv("DOT_DISCOPOP_PROFILER", discopop_profiler_str.data(), 1);
+
+      return discopop_profiler_str + "/memory_regions.txt";
+    };
+    const auto path = prepare_environment();
+
+    auto allocationsFileStream = ofstream(path, ios::out);
+    memory_manager->output_memory_regions(allocationsFileStream);
+  };
+  output_allocations();
+
   // hybrid analysis
   generateStringDepMap();
   // End HA
