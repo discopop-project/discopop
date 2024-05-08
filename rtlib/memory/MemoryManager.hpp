@@ -89,7 +89,7 @@ public:
             return false;
         }
 
-        return addrs.first <= address && address <= addrs.second;
+        return address <= addrs.first && addrs.second <= address;
     }
 
     void enterScope(std::string type, LID debug_lid) {
