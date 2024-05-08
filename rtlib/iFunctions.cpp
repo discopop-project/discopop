@@ -51,8 +51,6 @@ using namespace dputil;
 
 namespace __dp {
 
-
-
 /******* Helper functions *******/
 
 void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
@@ -552,14 +550,7 @@ void outputAllocations() {
   const auto path = prepare_environment();
 
   auto allocationsFileStream = ofstream(path, ios::out);
-  for (const auto& memoryRegion : memory_manager->get_allocated_memory_regions()) {
-    const auto lid = get<0>(memoryRegion);
-    const auto& id = get<1>(memoryRegion);
-    const auto num_bytes = get<4>(memoryRegion);
-
-    decodeLID(lid, allocationsFileStream);
-    allocationsFileStream << ' ' << id << ' ' << num_bytes << endl;
-  }
+  memory_manager->output_memory_regions(allocationsFileStream);
   
 #ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::OUTPUT_ALLOCATIONS);

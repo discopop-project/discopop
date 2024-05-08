@@ -13,11 +13,13 @@
 #pragma once
 
 #include "../DPTypes.hpp"
+#include "../DPUtils.hpp"
 
 #include "MemoryRegionTree.hpp"
 #include "scope.hpp"
 
 #include <limits>
+#include <ostream>
 #include <stack>
 #include <utility>
 
@@ -127,6 +129,17 @@ public:
         get_allocated_memory_regions() {
             return allocatedMemoryRegions;
         }
+
+    void output_memory_regions(std::ostream& stream) {
+        for (const auto& memoryRegion : allocatedMemoryRegions) {
+            const auto lid = get<0>(memoryRegion);
+            const auto& id = get<1>(memoryRegion);
+            const auto num_bytes = get<4>(memoryRegion);
+
+            dputil::decodeLID(lid, stream);
+            stream << ' ' << id << ' ' << num_bytes << endl;
+        }
+    }
 
 private:
     std::int64_t nextFreeMemoryRegionId; // 0 is reserved as the identifier for "no region" in the MemoryRegionTree

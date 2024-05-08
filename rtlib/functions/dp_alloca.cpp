@@ -49,12 +49,12 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
   // create entry to list of allocatedMemoryRegions
   const std::string allocId = memory_manager->allocate_memory(lid, startAddr, endAddr, numBytes, numElements);
 
-  if (DP_DEBUG) {
+#ifdef DP_DEBUG
     cout << "alloca: " << var << " (" << allocId << ") @ " << dputil::decodeLID(lid)
          << " : " << std::hex << startAddr << " - " << std::hex << endAddr
          << " -> #allocations: " << memory_manager->get_number_allocations()
          << "\n";
-  }
+#endif
 
 #ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::ALLOCA);

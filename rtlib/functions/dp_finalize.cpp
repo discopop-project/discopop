@@ -82,10 +82,9 @@ void __dp_finalize(LID lid) {
   assert(loop_manager->empty() &&
          "Program terminates but loop stack is not empty!");
 
-  if (DP_DEBUG) {
-    cout << "Program terminates at LID " << std::dec << dputil::decodeLID(lid)
-         << ", clearing up" << endl;
-  }
+#ifdef DP_DEBUG
+    std::cout << "Program terminates at LID " << std::dec << dputil::decodeLID(lid) << ", clearing up" << std::endl;
+#endif
 
   finalizeParallelization();
   outputLoops();
@@ -119,9 +118,9 @@ void __dp_finalize(LID lid) {
   dpInited = false;
   targetTerminated = true; // mark the target program has returned from main()
 
-  if (DP_DEBUG) {
-    cout << "Program terminated." << endl;
-  }
+#ifdef DP_DEBUG
+    std::cout << "Program terminated." << std::endl;
+#endif
 
 #ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::FINALIZE);
