@@ -10,6 +10,8 @@
  *
  */
 
+#pragma once
+
 #include "DPUtils.hpp"
 
 #define MRTVerbose false

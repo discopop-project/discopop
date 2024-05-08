@@ -12,11 +12,10 @@
 
 #pragma once
 
-#include "signature.hpp"
+#include "DPTypes.hpp"
 
-#include <iostream>
-#include <map>
-#include <stdint.h>
+#include <cstdint>
+#include <unordered_set>
 
 namespace __dp {
 
@@ -24,24 +23,24 @@ class Shadow {
 public:
   virtual ~Shadow() {}
 
-  virtual sigElement testInRead(int64_t memAddr);
+  virtual sigElement testInRead(int64_t memAddr) = 0;
 
-  virtual sigElement testInWrite(int64_t memAddr);
+  virtual sigElement testInWrite(int64_t memAddr) = 0;
 
-  virtual sigElement insertToRead(int64_t memAddr, sigElement value);
+  virtual sigElement insertToRead(int64_t memAddr, sigElement value) = 0;
 
-  virtual sigElement insertToWrite(int64_t memAddr, sigElement value);
+  virtual sigElement insertToWrite(int64_t memAddr, sigElement value) = 0;
 
-  virtual void updateInRead(int64_t memAddr, sigElement newValue);
+  virtual void updateInRead(int64_t memAddr, sigElement newValue) = 0;
 
-  virtual void updateInWrite(int64_t memAddr, sigElement newValue);
+  virtual void updateInWrite(int64_t memAddr, sigElement newValue) = 0;
 
-  virtual void removeFromRead(int64_t memAddr);
+  virtual void removeFromRead(int64_t memAddr) = 0;
 
-  virtual void removeFromWrite(int64_t memAddr);
+  virtual void removeFromWrite(int64_t memAddr) = 0;
 
   virtual std::unordered_set<ADDR> getAddrsInRange(int64_t startAddr,
-                                                   int64_t endAddr);
+                                                   int64_t endAddr) = 0;
 };
 
 } // namespace __dp
