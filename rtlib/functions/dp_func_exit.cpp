@@ -35,9 +35,11 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "__dp_func_exit\n";
+  cout << "enter __dp_func_exit\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::FUNC_EXIT);
+#endif
 
   if (targetTerminated) {
     if (DP_DEBUG) {
@@ -45,7 +47,12 @@ void __dp_func_exit(LID lid, int32_t isExit) {
       cout << " but target program has returned from main(). Destructors?"
            << endl;
     }
+#ifdef DP_INTERNAL_TIMER
     timers->stop_and_add(TimerRegion::FUNC_EXIT);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  cout << "exit __dp_func_exit\n";
+#endif
     return;
   }
 
@@ -103,8 +110,13 @@ void __dp_func_exit(LID lid, int32_t isExit) {
     cout << "Exiting fucntion LID " << std::dec << dputil::decodeLID(lid) << endl;
     cout << "Function stack level = " << std::dec << FuncStackLevel << endl;
   }
-  
+
+#ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::FUNC_EXIT);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  std::cout << "exit __dp_func_exit\n";
+#endif
 }
 
 }

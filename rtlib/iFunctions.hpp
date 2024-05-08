@@ -38,7 +38,7 @@ void initParallelization();
 
 void mergeDeps();
 
-void *analyzeDeps(void *arg);
+void* analyzeDeps(void *arg);
 
 std::string getMemoryRegionIdFromAddr(std::string fallback, ADDR addr);
 

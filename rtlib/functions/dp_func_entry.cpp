@@ -45,9 +45,12 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_func_entry\n";
 #endif
+
   const auto dp_inited_previous = dpInited;
   if (dp_inited_previous) {
+#ifdef DP_INTERNAL_TIMER
     timers->start(TimerRegion::FUNC_ENTRY);
+#endif
   }
 
   if (!dpInited) {
@@ -149,13 +152,15 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 
   // Reset last call tracker
   lastCallOrInvoke = 0;
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit __dp_func_entry\n";
-#endif
 
+#ifdef DP_INTERNAL_TIMER
   if (dp_inited_previous) {
     timers->stop_and_add(TimerRegion::FUNC_ENTRY);
   }
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  std::cout << "exit __dp_func_entry\n";
+#endif
 }
 
 }

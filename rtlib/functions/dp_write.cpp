@@ -46,7 +46,9 @@ void __dp_write(LID lid, ADDR addr, char *var) {
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_write\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::WRITE);
+#endif
 
   if (targetTerminated) {
     if (DP_DEBUG) {
@@ -54,13 +56,23 @@ void __dp_write(LID lid, ADDR addr, char *var) {
               "from main()."
            << endl;
     }
+#ifdef DP_INTERNAL_TIMER
     timers->stop_and_add(TimerRegion::WRITE);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  cout << "exit __dp_write\n";
+#endif
     return;
   }
   // For tracking function call or invoke
 #ifdef SKIP_DUP_INSTR
   if (lastaddr == addr && count >= 2) {
+    #ifdef DP_INTERNAL_TIMER
     timers->stop_and_add(TimerRegion::WRITE);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  cout << "exit __dp_write\n";
+#endif
     return;
   }
 #endif
@@ -153,11 +165,13 @@ void __dp_write(LID lid, ADDR addr, char *var) {
     tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
     tempAddrCount[workerID] = 0;
   }
+  
+#ifdef DP_INTERNAL_TIMER
+    timers->stop_and_add(TimerRegion::WRITE);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_write\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::WRITE);
 }
 
 }

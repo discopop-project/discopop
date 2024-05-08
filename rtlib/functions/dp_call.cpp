@@ -30,7 +30,7 @@ namespace __dp {
 extern "C" {
 
 void __dp_call(LID lid) {
-  if (!dpInited){
+  if (!dpInited) {
     return;
   }
 
@@ -38,13 +38,20 @@ void __dp_call(LID lid) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "__dp_call\n";
+  cout << "enter __dp_call\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::CALL);
+#endif
 
   lastCallOrInvoke = lid;
 
+#ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::CALL);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  cout << "exit __dp_call\n";
+#endif
 }
 
 }

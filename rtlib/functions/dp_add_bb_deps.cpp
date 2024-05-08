@@ -29,7 +29,7 @@ namespace __dp {
 extern "C" {
 // hybrid analysis
 void __dp_add_bb_deps(char *depStringPtr) {
-  if(!dpInited){
+  if (!dpInited) {
     return;
   }
   
@@ -39,8 +39,9 @@ void __dp_add_bb_deps(char *depStringPtr) {
 #ifdef DP_RTLIB_VERBOSE
   std::cout << "enter __dp_add_bb_deps\n";
 #endif
-
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::ADD_BB_DEPS);
+#endif
 
   std::string depString(depStringPtr);
   std::regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r3("[0-9]+:[0-9]+"),
@@ -76,7 +77,12 @@ void __dp_add_bb_deps(char *depStringPtr) {
     depString = res0.suffix();
   }
 
+#ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::ADD_BB_DEPS);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  std::cout << "exit __dp_add_bb_deps\n";
+#endif
 }
 // End HA
 }

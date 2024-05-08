@@ -39,7 +39,9 @@ void __dp_finalize(LID lid) {
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_finalize\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::FINALIZE);
+#endif
 
   if (targetTerminated) {
     if (DP_DEBUG) {
@@ -50,8 +52,13 @@ void __dp_finalize(LID lid) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
     pthread_compatibility_mutex.unlock();
 #endif
+#ifdef DP_INTERNAL_TIMER
     timers->stop_and_add(TimerRegion::FINALIZE);
     timers->print(std::cout);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  cout << "exit __dp_finalize\n";
+#endif
     return;
   }
 
@@ -124,14 +131,14 @@ void __dp_finalize(LID lid) {
     cout << "Program terminated." << endl;
   }
 
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::FINALIZE);
+  timers->print(std::cout);
+  delete timers;
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_finalize\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::FINALIZE);
-  timers->print(std::cout);
-
-  delete timers;
 }
 
 }

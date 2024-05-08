@@ -38,9 +38,11 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  cout << "__dp_loop_entry\n";
+  cout << "enter __dp_loop_entry\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::LOOP_ENTRY);
+#endif
 
   if (targetTerminated) {
     if (DP_DEBUG) {
@@ -48,7 +50,12 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
               "returned from main()."
            << endl;
     }
+#ifdef DP_INTERNAL_TIMER
     timers->stop_and_add(TimerRegion::LOOP_ENTRY);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  cout << "exit __dp_loop_entry\n";
+#endif
     return;
   }
   assert((loopStack != nullptr) && "Loop stack is not available!");
@@ -97,7 +104,12 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     memory_manager->enterScope("loop_iteration", lid);
   }
   
+#ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::LOOP_ENTRY);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  std::cout << "exit __dp_loop_entry\n";
+#endif
 }
 
 }

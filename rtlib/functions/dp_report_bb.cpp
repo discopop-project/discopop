@@ -41,14 +41,18 @@ void __dp_report_bb(uint32_t bbIndex) {
   cout << "enter __dp_report_bb\n";
   cout << "bbIndex: " << std::to_string(bbIndex) << "\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::REPORT_BB);
+#endif
 
   bbList->insert(bbIndex);
+  
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::REPORT_BB);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_report_bb\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::REPORT_BB);
 }
 
 }

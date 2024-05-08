@@ -25,6 +25,12 @@
 
 // #define SKIP_DUP_INSTR 1
 
+// To manually enable/disable internal timing
+// #define DP_SKIP_INTERNAL_TIMER
+#ifndef DP_SKIP_INTERNAL_TIMER
+#define DP_INTERNAL_TIMER
+#endif
+
 typedef std::int64_t LID;
 typedef std::int64_t ADDR;
 typedef std::int64_t sigElement;

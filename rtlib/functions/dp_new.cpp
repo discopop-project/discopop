@@ -40,7 +40,9 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_new\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::NEW);
+#endif
 
   // calculate endAddr of memory region
   endAddr = startAddr + numBytes;
@@ -54,10 +56,12 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
     printf(" NumBytes: %lld\n", numBytes);
   }
   
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::NEW);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_new\n";
 #endif
-  timers->stop_and_add(TimerRegion::NEW);
 }
 
 }

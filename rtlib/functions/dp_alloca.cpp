@@ -32,7 +32,7 @@ extern "C" {
 
 void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
                  int64_t numBytes, int64_t numElements) {
-  if (!dpInited){
+  if (!dpInited) {
     return;
   }
 
@@ -42,7 +42,9 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
 #ifdef DP_RTLIB_VERBOSE
   std::cout << "enter __dp_alloca\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::ALLOCA);
+#endif
   
   // create entry to list of allocatedMemoryRegions
   const std::string allocId = memory_manager->allocate_memory(lid, startAddr, endAddr, numBytes, numElements);
@@ -54,11 +56,12 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
          << "\n";
   }
 
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::ALLOCA);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_alloca\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::ALLOCA);
 }
 
 }

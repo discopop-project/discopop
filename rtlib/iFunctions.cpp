@@ -58,7 +58,9 @@ namespace __dp {
 void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
             bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
             bool positiveScopeChangeOccuredSinceLastAccess) {
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::ADD_DEP);
+#endif
   
   // hybrid analysis
   if (depOn == 0 && type == WAW)
@@ -364,16 +366,20 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
     }
   }
 
+#ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::ADD_DEP);
+#endif
 }
 
 // hybrid analysis
 void generateStringDepMap() {
-  timers->start(TimerRegion::GENERATE_STRING_DEP_MAP);
-  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter generateStringDepMap\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
+  timers->start(TimerRegion::GENERATE_STRING_DEP_MAP);
+#endif
+
   for (auto &dline : *allDeps) {
     if (dline.first) {
       string lid = decodeLID(dline.first);
@@ -438,19 +444,24 @@ void generateStringDepMap() {
       delete dline.second;
     }
   }
+
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::GENERATE_STRING_DEP_MAP);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter generateStringDepMap\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::GENERATE_STRING_DEP_MAP);
 }
 
-void outputDeps() {
-  timers->start(TimerRegion::OUTPUT_DEPS);
-  
+void outputDeps() {  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputDeps\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
+  timers->start(TimerRegion::OUTPUT_DEPS);
+#endif
+
+
   for (auto pair : *outPutDeps) {
     *out << pair.first << " NOM ";
     for (auto dep : pair.second) {
@@ -458,20 +469,24 @@ void outputDeps() {
     }
     *out << endl;
   }
+
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::OUTPUT_DEPS);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit outputDeps\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::OUTPUT_DEPS);
 }
 // End HA
 
 void outputLoops() {
-  timers->start(TimerRegion::OUTPUT_LOOPS);
-  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputLoops\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
+  timers->start(TimerRegion::OUTPUT_LOOPS);
+#endif
+  
   assert((loops != nullptr) && "Loop map is not available!");
   for (auto &loop : *loops) {
     *out << decodeLID(loop.first) << " BGN loop ";
@@ -482,19 +497,23 @@ void outputLoops() {
     *out << loop.second->maxIterationCount << endl;
     *out << decodeLID(loop.second->end) << " END loop" << endl;
   }
+  
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::OUTPUT_LOOPS);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit outputLoops\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::OUTPUT_LOOPS);
 }
 
-void outputFuncs() {
-  timers->start(TimerRegion::OUTPUT_FUNCS);
-  
+void outputFuncs() {  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputFunc\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
+  timers->start(TimerRegion::OUTPUT_FUNCS);
+#endif
+
   assert(beginFuncs != nullptr && endFuncs != nullptr &&
          "Function maps are not available!");
   for (auto &func_begin : *beginFuncs) {
@@ -507,19 +526,23 @@ void outputFuncs() {
   for (auto fe : *endFuncs) {
     *out << decodeLID(fe) << " END func" << endl;
   }
+
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::OUTPUT_FUNCS);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit outputFunc\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::OUTPUT_FUNCS);
 }
 
 void outputAllocations() {
-  timers->start(TimerRegion::OUTPUT_ALLOCATIONS);
-  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter outputAllocations\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
+  timers->start(TimerRegion::OUTPUT_ALLOCATIONS);
+#endif
+
   const auto prepare_environment = [](){
       // prepare environment variables
     const char *discopop_env = getenv("DOT_DISCOPOP");
@@ -547,16 +570,19 @@ void outputAllocations() {
     allocationsFileStream << ' ' << id << ' ' << num_bytes << endl;
   }
   
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::OUTPUT_ALLOCATIONS);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit outputAllocations\n";
 #endif
-  timers->stop_and_add(TimerRegion::OUTPUT_ALLOCATIONS);
 }
 
 void readRuntimeInfo() {  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter readRuntimeInfo\n";
 #endif
+
   ifstream conf(get_exe_dir() + "/dp.conf");
   string line;
   if (conf.is_open()) {
@@ -603,17 +629,20 @@ void readRuntimeInfo() {
     cout << "chunk_size   = " << CHUNK_SIZE << "\n";
     sleep(2);
   }
+
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit readRuntimeInfo\n";
 #endif
 }
 
-void initParallelization() {
-  timers->start(TimerRegion::INIT_PARALLELIZATION);
-  
+void initParallelization() {  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter initParallelization\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
+  timers->start(TimerRegion::INIT_PARALLELIZATION);
+#endif
+
   // initialize global variables
   addrChunkPresentConds = new pthread_cond_t[NUM_WORKERS];
   addrChunkMutexes = new pthread_mutex_t[NUM_WORKERS];
@@ -644,30 +673,37 @@ void initParallelization() {
   }
 
   pthread_attr_destroy(&attr);
+
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::INIT_PARALLELIZATION);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit initParallelization\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::INIT_PARALLELIZATION);
 }
 
 string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
-  
-  // use tree
-  const auto return_value = fallback + "-" +
-         memory_manager->get_memory_region_id(fallback, addr);
+#endif
 
+  const auto return_value = fallback + "-" + memory_manager->get_memory_region_id(fallback, addr);
+
+#ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
+#endif
+
   return return_value;
 }
 
 void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
-  timers->start(TimerRegion::ADD_ACCESS_INFO);
-  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter addAccessInfo\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
+  timers->start(TimerRegion::ADD_ACCESS_INFO);
+#endif
+  
   int64_t workerID =
       ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   numAccesses[workerID]++;
@@ -732,11 +768,13 @@ void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
     tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
     tempAddrCount[workerID] = 0;
   }
+
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::ADD_ACCESS_INFO);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit addAccessInfo\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::ADD_ACCESS_INFO);
 }
 
 void mergeDeps() {  
@@ -744,7 +782,9 @@ void mergeDeps() {
   depMap::iterator globalPos; // position of the current processing lid in allDeps
 
   pthread_mutex_lock(&allDepsLock);
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::MERGE_DEPS);
+#endif
 
   for (auto &dep : *myMap) {
     // if a lid occurs the first time, then add it in to the global hash table.
@@ -763,12 +803,16 @@ void mergeDeps() {
     }
   }
   
+#ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::MERGE_DEPS);
+#endif
   pthread_mutex_unlock(&allDepsLock);
 }
 
-void *analyzeDeps(void *arg) {
+void* analyzeDeps(void *arg) {
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::ANALYZE_DEPS);
+#endif
   
   int64_t id = (int64_t)arg;
   Shadow *SMem;
@@ -878,16 +922,22 @@ void *analyzeDeps(void *arg) {
     cout << "thread " << id << " exits... \n";
   }
 
+#ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::ANALYZE_DEPS);
+#endif
   pthread_exit(NULL);
+
+  return nullptr;
 }
 
 void finalizeParallelization() {
-  timers->start(TimerRegion::FINALIZE_PARALLELIZATION);
-
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter finalizeParallelization\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
+  timers->start(TimerRegion::FINALIZE_PARALLELIZATION);
+#endif
+
   if (DP_DEBUG) {
     cout << "BEGIN: finalize parallelization... \n";
   }
@@ -930,15 +980,19 @@ void finalizeParallelization() {
   if (DP_DEBUG) {
     cout << "END: finalize parallelization... \n";
   }
+
+#ifdef DP_INTERNAL_TIMER
+  timers->stop_and_add(TimerRegion::FINALIZE_PARALLELIZATION);
+#endif
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit finalizeParallelization\n";
 #endif
-
-  timers->stop_and_add(TimerRegion::FINALIZE_PARALLELIZATION);
 }
 
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::CLEAR_STACK_ACCESSES);
+#endif
 
   for (ADDR addr : memory_manager->getCurrentScope().get_first_write()) {
     int64_t workerID =
@@ -977,7 +1031,9 @@ void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
     }
   }
 
+#ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::CLEAR_STACK_ACCESSES);
+#endif
 }
 
 } // namespace __dp

@@ -46,7 +46,9 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter __dp_decl\n";
 #endif
+#ifdef DP_INTERNAL_TIMER
   timers->start(TimerRegion::DECL);
+#endif
 
   if (targetTerminated) {
     if (DP_DEBUG) {
@@ -54,7 +56,9 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
               "from main()."
            << endl;
     }
+#ifdef DP_INTERNAL_TIMER
     timers->stop_and_add(TimerRegion::DECL);
+#endif
     return;
   }
   // For tracking function call or invoke
@@ -136,8 +140,13 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
     tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
     tempAddrCount[workerID] = 0;
   }
-  
+
+#ifdef DP_INTERNAL_TIMER
   timers->stop_and_add(TimerRegion::DECL);
+#endif
+#ifdef DP_RTLIB_VERBOSE
+  std::cout << "exit __dp_decl\n";
+#endif
 }
 
 }
