@@ -43,31 +43,16 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
   std::cout << "enter __dp_alloca\n";
 #endif
   timers->start(TimerRegion::ALLOCA);
-
-  std::int64_t buffer = memory_manager->get_next_free_memory_region_id();
-  std::string allocId = std::to_string(buffer);
   
   // create entry to list of allocatedMemoryRegions
-  std::string var_name = allocId;
+  const std::string allocId = memory_manager->allocate_memory(lid, startAddr, endAddr, numBytes, numElements);
+
   if (DP_DEBUG) {
-    cout << "alloca: " << var << " (" << var_name << ") @ " << dputil::decodeLID(lid)
+    cout << "alloca: " << var << " (" << allocId << ") @ " << dputil::decodeLID(lid)
          << " : " << std::hex << startAddr << " - " << std::hex << endAddr
          << " -> #allocations: " << memory_manager->get_number_allocations()
          << "\n";
   }
-  memory_manager->allocate_memory_region(
-          lid, var_name, startAddr, endAddr, numBytes, numElements);
-  memory_manager->allocate_region(startAddr, endAddr, buffer,
-                                       tempAddrCount, NUM_WORKERS);
-
-  // update known min and max ADDR
-  memory_manager->update_smallest_allocated_address(startAddr);
-  memory_manager->update_largest_allocated_address(endAddr);
-
-  // TEST
-  // update stack base address, if not already set
-  memory_manager->update_stack_addresses(startAddr, endAddr);
-  // !TEST
 
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_alloca\n";
@@ -75,7 +60,6 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
 
   timers->stop_and_add(TimerRegion::ALLOCA);
 }
-
 
 }
 

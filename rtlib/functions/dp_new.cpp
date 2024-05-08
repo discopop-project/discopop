@@ -42,27 +42,17 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
 #endif
   timers->start(TimerRegion::NEW);
 
-  // instrumentation function for new and malloc
-  std::int64_t buffer = memory_manager->get_next_free_memory_region_id();;
-  string allocId = to_string(buffer);
-
   // calculate endAddr of memory region
   endAddr = startAddr + numBytes;
 
-  memory_manager->allocate_region(startAddr, endAddr, buffer,
-                                       tempAddrCount, NUM_WORKERS);
+  // -1 indicates 'on heap'
+  std::string allocID = memory_manager->allocate_memory(lid, startAddr, endAddr, numBytes, -1);
 
   if (DP_DEBUG) {
-    cout << "new/malloc: " << dputil::decodeLID(lid) << ", " << allocId << ", "
+    cout << "new/malloc: " << dputil::decodeLID(lid) << ", " << allocID << ", "
          << std::hex << startAddr << " - " << std::hex << endAddr;
     printf(" NumBytes: %lld\n", numBytes);
   }
-
-  memory_manager->allocate_memory_region(lid, allocId, startAddr, endAddr, numBytes, -1);
-
-  // update known min and max ADDR
-  memory_manager->update_smallest_allocated_address(startAddr);
-  memory_manager->update_largest_allocated_address(endAddr);
   
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_new\n";

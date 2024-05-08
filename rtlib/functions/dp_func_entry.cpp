@@ -74,7 +74,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     bbList = new ReportedBBSet();
     // End HA
     
-    memory_manager->allocate_memory_region(0, "%%dummy%%", 0, 0, 0, 0);
+    memory_manager->allocate_dummy_region();
 
 #ifdef __linux__
     // try to get an output file name w.r.t. the target application

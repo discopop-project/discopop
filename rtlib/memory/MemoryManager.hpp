@@ -43,18 +43,6 @@ public:
         return old_value;
     }
 
-    void update_smallest_allocated_address(const ADDR other) {
-        if (other < smallestAllocatedADDR) {
-            smallestAllocatedADDR = other;
-        }
-    }
-
-    void update_largest_allocated_address(const ADDR other) {
-        if (other > largestAllocatedADDR) {
-            largestAllocatedADDR = other;
-        }
-    }
-
     void update_stack_addresses(const ADDR start, const ADDR end) {
         auto& top = stackAddrs.top();
         if (top.first == 0) {
@@ -124,19 +112,14 @@ public:
         return allocatedMemRegTree.get_memory_region_id(std::move(fallback), addr);
     }
 
-    void allocate_region(ADDR startAddr, ADDR endAddr,
-                                       int64_t memoryRegionId,
-                                       int32_t *tempAddrCount,
-                                       int32_t NUM_WORKERS) {
-        allocatedMemRegTree.allocate_region(startAddr, endAddr, memoryRegionId, tempAddrCount, NUM_WORKERS);
-                                       }
+    std::string allocate_memory(const LID line_id, const ADDR start_address, const ADDR end_address, const std::int64_t number_bytes, const std::int64_t number_elements);
+    
+    void allocate_dummy_region() {
+        allocatedMemoryRegions.emplace_back(0, std::string("%%dummy%%"), 0, 0, 0, 0);
+    }
 
     std::size_t get_number_allocations() {
         return allocatedMemoryRegions.size();
-    }
-
-    void allocate_memory_region(LID lid, std::string identifier, ADDR start, ADDR end, std::int64_t numBytes, std::int64_t numElements) {
-        allocatedMemoryRegions.emplace_back(lid, std::move(identifier), start, end, numBytes, numElements);
     }
 
     const std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>&
@@ -158,7 +141,6 @@ private:
     
     // (LID, identifier, startAddr, endAddr, numBytes, numElements)
     std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> allocatedMemoryRegions;
-    std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;
 };
 
 } // namespace __dp
