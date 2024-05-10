@@ -81,7 +81,7 @@ struct ScopeManager {
     addrToLastAccessScopeID[address] = scopeStack.back().get_id();
   }
 
-  bool isFirstWrittenInScope(ADDR addr, bool currentAccessIsWrite) {
+  bool isOwnedByScope(ADDR addr, bool currentAccessIsWrite) {
     // currentAccessIsWrite is used in case no access to addr has been
     
     // check for first_writes in previous scopes (i.e.: search for the "owner" of the stack variable)
@@ -221,26 +221,41 @@ struct ScopeManager2 {
     addrToLastAccessScopeID[address] = current_scope.get_id();
   }
 
-  bool isFirstWrittenInScope(ADDR addr, bool currentAccessIsWrite) const noexcept {
-    const auto& current_scope = getCurrentScope();
-
-    const auto& writes = current_scope.get_first_write();
-    const auto writes_iterator = writes.find(addr);
-    // const auto writes_iterator = std::find(writes.begin(), writes.end(), addr);
-
-    if (writes_iterator != writes.end()) {
+  bool isOwnedByScope(ADDR addr, bool currentAccessIsWrite) {
+    // currentAccessIsWrite is used in case no access to addr has been
+    
+    // check for first_writes in previous scopes (i.e.: search for the "owner" of the stack variable)
+    int idx = 0;
+    for(auto scope: scopeStack){
+      if(scope.get_first_write().count(addr) > 0){
+        if(idx == scopeStack.size()-1){
+          return true;
+        }
+        else{
+          // scope variable "belongs" to a parent scope.
+          // Thus, it may not be considered a scope variable for the inner scope.
+          return false;
+        }
+      }
+      idx++;
+      
+    }
+    
+    // registered already
+    if (scopeStack.back().get_first_write().count(addr) > 0) {
       return true;
     }
 
-    const auto& reads = current_scope.get_first_read();
-    const auto reads_iterator = reads.find(addr);
-    // const auto reads_iterator = std::find(reads.begin(), reads.end(), addr);
-
-    if (reads_iterator != reads.end()) {
+    if (scopeStack.back().get_first_read().count(addr) > 0) {
       return false;
     }
 
-    return currentAccessIsWrite;
+    // no access to addr registered in the current scope
+    if (currentAccessIsWrite) {
+      return true;
+    }
+
+    return false;
   }
 
   bool positiveScopeChangeOccuredSinceLastAccess(const ADDR addr) noexcept {
