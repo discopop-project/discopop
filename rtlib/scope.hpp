@@ -19,6 +19,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <iostream>
 
 namespace __dp {
 
@@ -82,7 +83,25 @@ struct ScopeManager {
 
   bool isFirstWrittenInScope(ADDR addr, bool currentAccessIsWrite) {
     // currentAccessIsWrite is used in case no access to addr has been
-    // registered yet
+    
+    // check for first_writes in previous scopes (i.e.: search for the "owner" of the stack variable)
+    int idx = 0;
+    for(auto scope: scopeStack){
+      if(scope.get_first_write().count(addr) > 0){
+        if(idx == scopeStack.size()-1){
+          return true;
+        }
+        else{
+          // scope variable "belongs" to a parent scope.
+          // Thus, it may not be considered a scope variable for the inner scope.
+          return false;
+        }
+      }
+      idx++;
+      
+    }
+    
+    // registered already
     if (scopeStack.back().get_first_write().count(addr) > 0) {
       return true;
     }
