@@ -74,13 +74,17 @@ void __dp_read(LID lid, ADDR addr, char *var) {
 
   // TEST
   // check for stack access
+  timers->start(TimerRegion::STACK_CHECK_READ_ACCESS);
   bool is_stack_access = false;
   if (stackAddrs->top().first && stackAddrs->top().second) {
     if ((addr <= stackAddrs->top().first) &&
         (addr >= stackAddrs->top().second)) {
+          timers->start(TimerRegion::STACK_FOUND_READ_ACCESS);
       is_stack_access = true;
+          timers->stop_and_add(TimerRegion::STACK_FOUND_READ_ACCESS);
     }
   }
+  timers->stop_and_add(TimerRegion::STACK_CHECK_READ_ACCESS);
   // !TEST
 
   // addAccessInfo(true, lid, var, addr);

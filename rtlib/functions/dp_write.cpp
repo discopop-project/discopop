@@ -76,15 +76,19 @@ void __dp_write(LID lid, ADDR addr, char *var) {
 
   // TEST
   // check for stack access
+  timers->start(TimerRegion::STACK_CHECK_WRITE_ACCESS);
   bool is_stack_access = false;
   if (stackAddrs->top().first && stackAddrs->top().second) {
     if ((addr <= stackAddrs->top().first) &&
         (addr >= stackAddrs->top().second)) {
       //                cout << "WRITE STACK ACCESS DETECTED! " <<
       //                dputil::decodeLID(lid) << "  " << var << "\n";
+      timers->start(TimerRegion::STACK_FOUND_WRITE_ACCESS);
       is_stack_access = true;
+      timers->stop_and_add(TimerRegion::STACK_FOUND_WRITE_ACCESS);
     }
   }
+  timers->stop_and_add(TimerRegion::STACK_CHECK_WRITE_ACCESS);
   // !TEST
 
   int64_t workerID =
