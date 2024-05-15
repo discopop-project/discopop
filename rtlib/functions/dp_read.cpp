@@ -97,8 +97,14 @@ void __dp_read(LID lid, ADDR addr, char *var) {
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
   current.isStackAccess = is_stack_access;
+  timers->start(TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE);
   current.addrIsOwnedByScope =
       scopeManager->isOwnedByScope(addr, false);
+  timers->stop_and_add(TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE);
+  if(current.addrIsOwnedByScope){
+    timers->start(TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE_TRUE);
+      timers->stop_and_add(TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE_TRUE);
+  }
   current.positiveScopeChangeOccuredSinceLastAccess =
       scopeManager->positiveScopeChangeOccuredSinceLastAccess(addr);
 

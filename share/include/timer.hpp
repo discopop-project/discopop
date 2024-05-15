@@ -64,6 +64,8 @@ enum class TimerRegion : unsigned int {
     STACK_CHECK_WRITE_ACCESS,
     STACK_FOUND_READ_ACCESS,
     STACK_FOUND_WRITE_ACCESS,
+    STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE,
+    STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE_TRUE,
 
     SIZE_DONT_USE,
 };
@@ -219,6 +221,8 @@ public:
         print(stream, " Check for write access to stack                 : ", TimerRegion::STACK_CHECK_WRITE_ACCESS);
         print(stream, " Found read access to stack                      : ", TimerRegion::STACK_FOUND_READ_ACCESS);
         print(stream, " Found write access to stack                     : ", TimerRegion::STACK_FOUND_WRITE_ACCESS);
+        print(stream, " Check for addr is owned by scope                : ", TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE);
+        print(stream, " Found addr is owned by scope                    : ", TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE_TRUE);
     }
 
     /**
