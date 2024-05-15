@@ -12,6 +12,7 @@
 
 #pragma once
 
+#include "LoopCounter.hpp"
 #include "LoopRecord.hpp"
 #include "LoopTable.hpp"
 
@@ -32,15 +33,30 @@ public:
         }
     }
 
-    LID update_lid(LID lid) {
-        return loopStack.update_lid(lid);
+    void create_new_loop(const std::int32_t function_level, const std::int32_t loop_id, const LID begin_line) {
+        loopStack.push(LoopTableEntry(function_level, loop_id, 0, begin_line));
+        if (loops.find(begin_line) == loops.end()) {
+            loops.insert(pair<LID, LoopRecord *>(begin_line, new LoopRecord(0, 0, 0)));
+        }
+#ifdef DP_DEBUG
+        std::cout << "(" << std::dec << FuncStackLevel << ")Loop " << loop_id << " enters." << std::endl;
+#endif
     }
 
-    bool empty() {
-        return loopStack.empty();
+    bool is_new_loop(const std::int32_t loop_id) const {
+        return loopStack.empty() || (loopStack.top().loopID != loop_id);
     }
 
-    void clean_function_exit(const std::int32_t function_level, const LID lid) {
+    void iterate_loop(const std::int32_t function_level) {
+        loopStack.increment_top_count();
+#ifdef DP_DEBUG
+      std::cout << "(" << std::dec << loopStack.top().funcLevel << ")";
+      std::cout << "Loop " << loopStack.top().loopID << " iterates "
+           << loopStack.top().count << " times." << std::endl;
+#endif
+    }
+
+    void clean_function_exit(const std::int32_t function_level, const LID end_line) {
         // Clear up all unfinished loops in the function.
         // This usually happens when using return inside loop.
         while (!loopStack.empty() &&
@@ -52,12 +68,12 @@ public:
             assert(loop != loops.end() && "A loop ends without its entry being recorded.");
 
             if (loop->second->end == 0) {
-                loop->second->end = lid;
+                loop->second->end = end_line;
             } else {
                 // TODO: FIXME: loop end line > return line
             }
 
-            loop->second->total += loopStack.top().count;
+            loop->second->total += loopStack.top().get_count();
             ++loop->second->nEntered;
 
             loopStack.debug_output();
@@ -66,27 +82,8 @@ public:
         }
     }
 
-    bool is_new_loop(const std::int32_t loop_id) {
-        return loopStack.empty() || (loopStack.top().loopID != loop_id);
-    }
-
-    void create_new_loop(const std::int32_t function_level, const std::int32_t loop_id, const LID lid) {
-        loopStack.push(LoopTableEntry(function_level, loop_id, 0, lid));
-        if (loops.find(lid) == loops.end()) {
-            loops.insert(pair<LID, LoopRecord *>(lid, new LoopRecord(0, 0, 0)));
-        }
-#ifdef DP_DEBUG
-        std::cout << "(" << std::dec << FuncStackLevel << ")Loop " << loop_id << " enters." << std::endl;
-#endif
-    }
-
-    void iterate_loop(const std::int32_t function_level) {
-        loopStack.top().count++;
-#ifdef DP_DEBUG
-      std::cout << "(" << std::dec << loopStack.top().funcLevel << ")";
-      std::cout << "Loop " << loopStack.top().loopID << " iterates "
-           << loopStack.top().count << " times." << std::endl;
-#endif
+    LID update_lid(LID lid) {
+        return loopStack.update_lid(lid);
     }
 
     void exit_loop(const LID lid) {
@@ -111,11 +108,11 @@ public:
             // New loop exit found and it's the same as before. Good.
         }
 
-        if (loop->second->maxIterationCount < loopStack.top().count) {
-            loop->second->maxIterationCount = loopStack.top().count;
+        if (loop->second->maxIterationCount < loopStack.top().get_count()) {
+            loop->second->maxIterationCount = loopStack.top().get_count();
         }
 
-        loop->second->total += loopStack.top().count;
+        loop->second->total += loopStack.top().get_count();
         ++loop->second->nEntered;
 
         loopStack.debug_output();
@@ -127,12 +124,16 @@ public:
         return loopStack.is_single_exit(loop_id);
     }
 
+    void correct_func_level(const std::int32_t function_level) {
+        loopStack.correct_func_level(function_level);
+    }
+
     std::int32_t get_current_loop_id() {
         return loopStack.top().loopID;
     }
 
-    void correct_func_level(const std::int32_t function_level) {
-        loopStack.correct_func_level(function_level);
+    bool empty() {
+        return loopStack.empty();
     }
 
     void output(std::ostream& stream) {
@@ -146,10 +147,17 @@ public:
         }
     }
 
+    const LoopTable& get_stack() const {
+        return loopStack;
+    }
+
+    const LoopRecords& get_loops() const {
+        return loops;
+    }
+
 private:
     LoopTable loopStack;    // loop stack tracking
     LoopRecords loops;      // loop merging
-
 };
 
 } // namespace __dp

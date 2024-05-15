@@ -10,18 +10,23 @@
  *
  */
 
-#pragma once
+#include "../DPTypes.hpp"
+
+#include "../iFunctionsGlobals.hpp"
 
 namespace __dp {
 
-struct VarCounter {
-  unsigned int counters_[2] = {0, 0};
-  long long mem_addr_ = 0;
-  bool valid_ = true;
+/******* Instrumentation function *******/
+extern "C" {
 
-  bool operator==(const VarCounter& other) const noexcept {
-    return counters_[0] == other.counters_[0] && counters_[1] == other.counters_[1] && mem_addr_ == other.mem_addr_ && valid_ == other.valid_;
+void dp_loop_incr(const int loop_id){
+  if (alreadyDone) {
+    return;
   }
-};
+  
+  lc.incr_loop_counter(loop_id);
+}
+
+}
 
 } // namespace __dp

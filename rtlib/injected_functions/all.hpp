@@ -22,6 +22,8 @@
 #include "dp_func_exit.hpp"
 #include "dp_loop_entry.hpp"
 #include "dp_loop_exit.hpp"
+#include "dp_loop_incr.hpp"
+#include "dp_loop_output.hpp"
 #include "dp_new.hpp"
 #include "dp_read.hpp"
 #include "dp_report_bb.hpp"

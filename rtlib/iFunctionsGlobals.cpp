@@ -23,6 +23,9 @@ std::uint64_t *numAccesses = nullptr;
 
 namespace __dp {
 
+LoopCounter lc;
+bool alreadyDone;
+
 bool DP_DEBUG = false; // debug flag
 
 Timers* timers = nullptr;

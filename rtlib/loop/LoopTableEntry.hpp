@@ -20,13 +20,23 @@ namespace __dp {
 
 // For loop tracking
 struct LoopTableEntry {
-  LoopTableEntry(std::int32_t l, std::int32_t id, std::int32_t c, LID b)
-      : funcLevel(l), loopID(id), count(c), begin(b) {}
+  LoopTableEntry(std::int32_t function_level, std::int32_t loop_id, std::int32_t number_hits, LID begin_line)
+      : funcLevel(function_level), loopID(loop_id), count(number_hits), begin(begin_line) {}
 
   std::int32_t funcLevel;
   std::int32_t loopID;
-  std::int32_t count;
   LID begin;
+
+  bool operator==(const LoopTableEntry& other) const noexcept {
+    return funcLevel == other.funcLevel && loopID == other.loopID && count == other.count && begin == other.begin;
+  }
+
+  std::int32_t get_count() const noexcept { return count; }
+
+  void increment_count() noexcept { ++count; }
+
+private:
+  std::int32_t count;
 };
 
 } // namespace __dp

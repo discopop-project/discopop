@@ -34,6 +34,8 @@ set(DiscoPoP_SOURCES
         injected_functions/dp_func_exit.cpp
         injected_functions/dp_loop_entry.cpp
         injected_functions/dp_loop_exit.cpp
+        injected_functions/dp_loop_incr.cpp
+        injected_functions/dp_loop_output.cpp
         injected_functions/dp_new.cpp
         injected_functions/dp_read.cpp
         injected_functions/dp_report_bb.cpp

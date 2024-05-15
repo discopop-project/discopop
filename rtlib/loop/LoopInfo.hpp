@@ -15,9 +15,13 @@
 namespace __dp {
 
 struct loop_info_t {
-  int line_nr_;
-  int loop_id_;
-  int file_id_;
+  int line_nr_ = 0;
+  int loop_id_ = 0;
+  int file_id_ = 0;
+
+  bool operator==(const loop_info_t& other) const noexcept {
+    return line_nr_ == other.line_nr_ && loop_id_ == other.loop_id_ && file_id_ == other.file_id_;
+  }
 };
 
 } // namespace __dp

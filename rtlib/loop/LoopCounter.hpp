@@ -22,12 +22,12 @@ class LoopCounter {
 public:
   void incr_loop_counter(int loop_id);
 
-  void incr_counter(int var_id, int instr_type);
+  const std::vector<unsigned int> get_loop_counters() const noexcept {
+    return loop_counters_;
+  }
 
-  void update_ptr(int var_id, int instr_type, long long addr);
-
-  std::vector<VarCounter> var_counters_;
-  std::vector<unsigned> loop_counters_;
+private:
+  std::vector<unsigned int> loop_counters_;
 };
 
 } // namespace __dp

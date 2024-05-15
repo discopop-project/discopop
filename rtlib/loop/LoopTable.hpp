@@ -26,15 +26,15 @@ public:
     contents.reserve(32);
   }
 
-  LoopTableEntry &top() { 
+  const LoopTableEntry &top() const { 
     return contents.back(); 
   }
 
-  LoopTableEntry &first() { 
+  const LoopTableEntry &first() const { 
     return contents[0]; 
   }
 
-  LoopTableEntry &topMinusN(std::size_t n) {
+  const LoopTableEntry &topMinusN(const std::size_t n) const {
     return contents[contents.size() - 1 - n];
   }
 
@@ -42,11 +42,11 @@ public:
     contents.pop_back(); 
   }
 
-  bool empty() { 
+  bool empty() const { 
     return contents.empty();
   }
 
-  bool is_single_exit(const std::int32_t loopID) {
+  bool is_single_exit(const std::int32_t loopID) const {
     if (empty())
       return true;
  
@@ -56,37 +56,28 @@ public:
     return false;
   }
 
-  void correct_func_level(std::int32_t func_level) {
+  void correct_func_level(const std::int32_t func_level) {
     if (top().funcLevel != func_level) {
 #ifdef DP_DEBUG
         std::cout << "WARNING: changing funcLevel of Loop " << top().loopID
             << " from " << top().funcLevel << " to " << func_level
             << std::endl;
 #endif
-      top().funcLevel = func_level;
+      contents.back().funcLevel = func_level;
     }
   }
-
-  void debug_output() {
-#ifdef DP_DEBUG
-      if (empty())
-        std::cout << "Loop Stack is empty." << endl;
-      else {
-        std::cout << "TOP: (" << std::dec << top().funcLevel << ")";
-        std::cout << "Loop " << top().loopID << "." << std::endl;
-      }
-#endif
-  }
   
-  void push(LoopTableEntry newElement) {
+  void push(const LoopTableEntry newElement) {
     contents.push_back(newElement);
   }
 
-  std::size_t size() { 
+  std::size_t size() const { 
     return contents.size(); 
   }
 
-  LID update_lid(LID lid) {
+  LID update_lid(const LID old_lid) const {
+    auto lid = old_lid;
+    
     if (empty()) {
       return lid | (((LID)0xFF) << 56);
     }
@@ -99,24 +90,41 @@ public:
 
     if (size() > 0) {
       lid = lid | (((LID)(first().loopID & 0xFF)) << 56); // add masked loop id
-      lid = lid | (((LID)(top().count & 0x7F)) << 48); // add masked loop count
+      lid = lid | (((LID)(top().get_count() & 0x7F)) << 48); // add masked loop count
       lid = lid | (LID)0x0080000000000000; // mark loop count valid
     }  
     
     if (size() > 1) {
-      lid = lid | (((LID)(topMinusN(1).count & 0x7F)) << 40); // add masked loop count
+      lid = lid | (((LID)(topMinusN(1).get_count() & 0x7F)) << 40); // add masked loop count
       lid = lid | (LID)0x0000800000000000; // mark loop count valid
     } 
     
     if (size() > 2) { 
-      lid = lid | (((LID)(topMinusN(2).count & 0x7F)) << 32); // add masked loop count
+      lid = lid | (((LID)(topMinusN(2).get_count() & 0x7F)) << 32); // add masked loop count
       lid = lid | (LID)0x0000008000000000; // mark loop count valid
     }
 
     return lid;
   }
 
+  void increment_top_count() {
+    contents.back().increment_count();
+  }
+
+  void debug_output() const {
+#ifdef DP_DEBUG
+      if (empty())
+        std::cout << "Loop Stack is empty." << endl;
+      else {
+        std::cout << "TOP: (" << std::dec << top().funcLevel << ")";
+        std::cout << "Loop " << top().loopID << "." << std::endl;
+      }
+#endif
+  }
+  
 private:
+  
+
   std::vector<LoopTableEntry> contents;
 };
 

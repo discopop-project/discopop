@@ -30,6 +30,10 @@ struct LoopRecord {
   
   // maximum iterations executed during a single loop entry
   std::int32_t maxIterationCount = 0; 
+
+  bool operator==(const LoopRecord& other) const noexcept {
+    return end == other.end && total == other.total && nEntered == other.nEntered && maxIterationCount == other.maxIterationCount;  
+  }
 };
 
 typedef std::unordered_map<LID, LoopRecord *> LoopRecords;
