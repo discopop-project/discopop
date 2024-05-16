@@ -976,40 +976,10 @@ void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
   timers->start(TimerRegion::CLEAR_STACK_ACCESSES);
 
   for (ADDR addr : scopeManager->getCurrentScope().get_first_write()) {
-    int64_t workerID =
-        ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-    // cleanup reads
-    AccessInfo &cleanupReadCurrent =
-        tempAddrChunks[workerID][tempAddrCount[workerID]++];
-    cleanupReadCurrent.addr = addr;
-    cleanupReadCurrent.lid = 0;
-    cleanupReadCurrent.isRead = true;
-
-    if (tempAddrCount[workerID] == CHUNK_SIZE) {
-      pthread_mutex_lock(&addrChunkMutexes[workerID]);
-      addrChunkPresent[workerID] = true;
-      chunks[workerID].push(tempAddrChunks[workerID]);
-      pthread_cond_signal(&addrChunkPresentConds[workerID]);
-      pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-      tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-      tempAddrCount[workerID] = 0;
-    }
-    // cleanup writes
-    AccessInfo &cleanupWriteCurrent =
-        tempAddrChunks[workerID][tempAddrCount[workerID]++];
-    cleanupWriteCurrent.addr = addr;
-    cleanupWriteCurrent.lid = 0;
-    cleanupWriteCurrent.isRead = false;
-
-    if (tempAddrCount[workerID] == CHUNK_SIZE) {
-      pthread_mutex_lock(&addrChunkMutexes[workerID]);
-      addrChunkPresent[workerID] = true;
-      chunks[workerID].push(tempAddrChunks[workerID]);
-      pthread_cond_signal(&addrChunkPresentConds[workerID]);
-      pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-      tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-      tempAddrCount[workerID] = 0;
-    }
+    //cleanup reads
+    __dp_read(0, addr, "");
+    //cleanup writes
+    __dp_write(0, addr, "");
   }
 
   timers->stop_and_add(TimerRegion::CLEAR_STACK_ACCESSES);
