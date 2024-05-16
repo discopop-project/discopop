@@ -87,7 +87,6 @@ void __dp_read(LID lid, ADDR addr, char *var) {
   timers->stop_and_add(TimerRegion::STACK_CHECK_READ_ACCESS);
   // !TEST
 
-  // addAccessInfo(true, lid, var, addr);
   int64_t workerID =
       ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
