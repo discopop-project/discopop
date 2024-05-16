@@ -91,9 +91,13 @@ void __dp_write(LID lid, ADDR addr, char *var) {
   timers->stop_and_add(TimerRegion::STACK_CHECK_WRITE_ACCESS);
   // !TEST
 
-  int64_t workerID =
-      ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
+#if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
+  AccessInfo current;
+#else
+  int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
+#endif
+
   current.isRead = false;
   current.lid = lid;
   current.var = var;
@@ -162,6 +166,9 @@ void __dp_write(LID lid, ADDR addr, char *var) {
     current.lid = current.lid | (((LID)0xFF) << 56);
   }
 
+#if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
+  analyzeSingleAccess(singleThreadedExecutionSMem, current);
+#else
   if (tempAddrCount[workerID] == CHUNK_SIZE) {
     pthread_mutex_lock(&addrChunkMutexes[workerID]);
     addrChunkPresent[workerID] = true;
@@ -171,6 +178,8 @@ void __dp_write(LID lid, ADDR addr, char *var) {
     tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
     tempAddrCount[workerID] = 0;
   }
+#endif
+
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit __dp_write\n";
 #endif

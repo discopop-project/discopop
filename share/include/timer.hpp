@@ -55,7 +55,7 @@ enum class TimerRegion : unsigned int {
     GET_MEMORY_REGION_ID_FROM_ADDR,
     MERGE_DEPS,
     ANALYZE_DEPS,
-    ANALYZE_DEPS_INNER,
+    ANALYZE_SINGLE_ACCESS,
     FINALIZE_PARALLELIZATION,
     CLEAR_STACK_ACCESSES,
 
@@ -203,7 +203,7 @@ public:
         print(stream, " Add a dependency                                : ", TimerRegion::ADD_DEP);
         print(stream, " Merge dendencies                                : ", TimerRegion::MERGE_DEPS);
         print(stream, " Analyze the dependencies (incorrect!            : ", TimerRegion::ANALYZE_DEPS); // Incorrect due to multithreading
-        print(stream, " Analyze the dependencies (inner)                : ", TimerRegion::ANALYZE_DEPS_INNER);
+        print(stream, " Analyze single accesses                         : ", TimerRegion::ANALYZE_SINGLE_ACCESS);
         stream << '\n';
         print(stream, " Output the dependencies                         : ", TimerRegion::OUTPUT_DEPS);
         print(stream, " Output the loops                                : ", TimerRegion::OUTPUT_LOOPS);

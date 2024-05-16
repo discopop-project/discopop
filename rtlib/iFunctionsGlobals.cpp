@@ -85,6 +85,8 @@ int32_t NUM_WORKERS = DP_NUM_WORKERS;
 int32_t NUM_WORKERS = 3; // default number of worker threads (multiple workers
                          // can potentially lead to non-deterministic results)
 #endif
+#pragma message "Profiler: set NUM_WORKERS to " XSTR(NUM_WORKERS)
+extern Shadow* singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
 int32_t CHUNK_SIZE = 500; // default number of addresses in each chunk
 std::queue<AccessInfo *> *chunks =
     nullptr; // one queue of access info chunks for each worker thread

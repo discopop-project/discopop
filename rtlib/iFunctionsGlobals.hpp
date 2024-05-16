@@ -16,6 +16,7 @@
 #include "scope.hpp"
 #include "MemoryRegionTree.hpp"
 #include "../share/include/timer.hpp"
+#include "shadow.hpp"
 
 #include <pthread.h>
 
@@ -93,6 +94,7 @@ extern pthread_mutex_t allDepsLock;
 extern pthread_t *workers; // worker threads
 
 extern int32_t NUM_WORKERS; 
+extern Shadow* singleThreadedExecutionSMem;
 
 extern int32_t CHUNK_SIZE; // default number of addresses in each chunk
 extern std::queue<AccessInfo *> *chunks; // one queue of access info chunks for each worker thread
@@ -106,4 +108,5 @@ extern int32_t *tempAddrCount; // tempAddrCount[thread_id] denotes the current n
 extern bool stop; // ONLY set stop to true if no more accessed addresses will
                    // be collected
 extern thread_local depMap *myMap;
+
 } // namespace __dp
