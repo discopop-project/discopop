@@ -53,7 +53,6 @@ enum class TimerRegion : unsigned int {
     READ_RUNTIME_INFO,
     INIT_PARALLELIZATION,
     GET_MEMORY_REGION_ID_FROM_ADDR,
-    ADD_ACCESS_INFO,
     MERGE_DEPS,
     ANALYZE_DEPS,
     ANALYZE_DEPS_INNER,
@@ -212,7 +211,6 @@ public:
         print(stream, " Output the allocations                          : ", TimerRegion::OUTPUT_ALLOCATIONS);
         stream << '\n';
         print(stream, " Get memory region by id from address            : ", TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
-        print(stream, " Add access information                          : ", TimerRegion::ADD_ACCESS_INFO);
         print(stream, " Clear the stack accesses                        : ", TimerRegion::CLEAR_STACK_ACCESSES);
         stream << '\n';
 
