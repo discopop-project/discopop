@@ -651,6 +651,44 @@ void initParallelization() {
   timers->stop_and_add(TimerRegion::INIT_PARALLELIZATION);
 }
 
+void initSingleThreadedExecution() {
+#ifdef DP_RTLIB_VERBOSE
+  cout << "enter initSingleThreadedExecution\n";
+#endif
+timers->start(TimerRegion::ANALYZE_DEPS);
+  
+  if (USE_PERFECT) {
+    singleThreadedExecutionSMem = new PerfectShadow(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
+  } else {
+    singleThreadedExecutionSMem = new ShadowMemory(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
+  }
+  myMap = new depMap();
+
+#ifdef DP_RTLIB_VERBOSE
+  cout << "exit initSingleThreadedExecution\n";
+#endif
+}
+
+void finalizeSingleThreadedExecution() {
+
+#ifdef DP_RTLIB_VERBOSE
+  cout << "enter finalizeSingleThreadedExecution\n";
+#endif
+  if (DP_DEBUG) {
+    cout << "BEGIN: finalize Single Threaded Execution... \n";
+  }
+
+  delete singleThreadedExecutionSMem;
+  mergeDeps();
+
+  if (DP_DEBUG) {
+    cout << "END: finalize Single Threaded Execution... \n";
+  }
+#ifdef DP_RTLIB_VERBOSE
+  cout << "exit finalizeSingleThreadedExecution\n";
+#endif
+}
+
 string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
   timers->start(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
   
@@ -722,6 +760,57 @@ void mergeDeps() {
   pthread_mutex_unlock(&allDepsLock);
 }
 
+void analyzeSingleAccess(__dp::Shadow* SMem, __dp::AccessInfo& access){
+  // analyze data dependences
+  timers->start(TimerRegion::ANALYZE_SINGLE_ACCESS);
+
+  if (access.isRead) {
+    // hybrid analysis
+    if (access.skip) {
+      SMem->insertToRead(access.addr, access.lid);
+      timers->stop_and_add(TimerRegion::ANALYZE_SINGLE_ACCESS);
+      return;
+    }
+    // End HA
+    sigElement lastWrite = SMem->testInWrite(access.addr);
+    if (lastWrite != 0) {
+      // RAW
+      SMem->insertToRead(access.addr, access.lid);
+      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
+              access.isStackAccess, access.addr,
+              access.addrIsOwnedByScope,
+              access.positiveScopeChangeOccuredSinceLastAccess);
+    }
+  } else {
+    sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
+    if (lastWrite == 0) {
+      // INIT
+      addDep(INIT, access.lid, 0, access.var, access.AAvar,
+              access.isStackAccess, access.addr,
+              access.addrIsOwnedByScope,
+              access.positiveScopeChangeOccuredSinceLastAccess);
+    } else {
+      sigElement lastRead = SMem->testInRead(access.addr);
+      if (lastRead != 0) {
+        // WAR
+        addDep(WAR, access.lid, lastRead, access.var, access.AAvar,
+                access.isStackAccess, access.addr,
+                access.addrIsOwnedByScope,
+                access.positiveScopeChangeOccuredSinceLastAccess);
+        // Clear intermediate read ops
+        SMem->insertToRead(access.addr, 0);
+      } else {
+        // WAW
+        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar,
+                access.isStackAccess, access.addr,
+                access.addrIsOwnedByScope,
+                access.positiveScopeChangeOccuredSinceLastAccess);
+      }
+    }
+  }
+  timers->stop_and_add(TimerRegion::ANALYZE_SINGLE_ACCESS);
+}
+
 void *analyzeDeps(void *arg) {
   timers->start(TimerRegion::ANALYZE_DEPS);
   
@@ -754,56 +843,10 @@ void *analyzeDeps(void *arg) {
       AccessInfo access;
 
       // analyze data dependences
-
       for (unsigned short i = 0; i < CHUNK_SIZE; ++i) {
-        timers->start(TimerRegion::ANALYZE_DEPS_INNER);
+        
         access = accesses[i];
-
-        if (access.isRead) {
-          // hybrid analysis
-          if (access.skip) {
-            SMem->insertToRead(access.addr, access.lid);
-            timers->stop_and_add(TimerRegion::ANALYZE_DEPS_INNER);
-            continue;
-          }
-          // End HA
-          sigElement lastWrite = SMem->testInWrite(access.addr);
-          if (lastWrite != 0) {
-            // RAW
-            SMem->insertToRead(access.addr, access.lid);
-            addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
-                   access.isStackAccess, access.addr,
-                   access.addrIsOwnedByScope,
-                   access.positiveScopeChangeOccuredSinceLastAccess);
-          }
-        } else {
-          sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
-          if (lastWrite == 0) {
-            // INIT
-            addDep(INIT, access.lid, 0, access.var, access.AAvar,
-                   access.isStackAccess, access.addr,
-                   access.addrIsOwnedByScope,
-                   access.positiveScopeChangeOccuredSinceLastAccess);
-          } else {
-            sigElement lastRead = SMem->testInRead(access.addr);
-            if (lastRead != 0) {
-              // WAR
-              addDep(WAR, access.lid, lastRead, access.var, access.AAvar,
-                     access.isStackAccess, access.addr,
-                     access.addrIsOwnedByScope,
-                     access.positiveScopeChangeOccuredSinceLastAccess);
-              // Clear intermediate read ops
-              SMem->insertToRead(access.addr, 0);
-            } else {
-              // WAW
-              addDep(WAW, access.lid, lastWrite, access.var, access.AAvar,
-                     access.isStackAccess, access.addr,
-                     access.addrIsOwnedByScope,
-                     access.positiveScopeChangeOccuredSinceLastAccess);
-            }
-          }
-        }
-        timers->stop_and_add(TimerRegion::ANALYZE_DEPS_INNER);
+        analyzeSingleAccess(SMem, access);
       }
 
       // delete the current chunk at the end

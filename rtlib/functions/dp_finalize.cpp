@@ -80,7 +80,13 @@ void __dp_finalize(LID lid) {
          << ", clearing up" << endl;
   }
 
-  finalizeParallelization();
+  if(NUM_WORKERS > 0){
+    finalizeParallelization();
+  }
+  else{
+    finalizeSingleThreadedExecution();
+  }
+  
   outputLoops();
   outputFuncs();
   outputAllocations();
