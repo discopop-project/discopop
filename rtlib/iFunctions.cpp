@@ -833,12 +833,14 @@ void *analyzeDeps(void *arg) {
       // analyze data dependences
 
       for (unsigned short i = 0; i < CHUNK_SIZE; ++i) {
+        timers->start(TimerRegion::ANALYZE_DEPS_INNER);
         access = accesses[i];
 
         if (access.isRead) {
           // hybrid analysis
           if (access.skip) {
             SMem->insertToRead(access.addr, access.lid);
+            timers->stop_and_add(TimerRegion::ANALYZE_DEPS_INNER);
             continue;
           }
           // End HA
@@ -878,6 +880,7 @@ void *analyzeDeps(void *arg) {
             }
           }
         }
+        timers->stop_and_add(TimerRegion::ANALYZE_DEPS_INNER);
       }
 
       // delete the current chunk at the end
