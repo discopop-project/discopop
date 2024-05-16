@@ -13,22 +13,24 @@
 #include "MemoryRegionTree.hpp"
 
 MemoryRegionTree::MemoryRegionTree() {
-  if (MRTVerbose)
+#if MRTVerbose
     cout << "DBG: MRT: creating new Tree.\n";
+#endif
   root = new MRTNode(0xFFFFFFFFFFFFFFFF, -1);
-  if (MRTVerbose) {
+#if MRTVerbose
     cout << "DBG: RootNode: " << root << "\n";
     cout << "DBG: MRT: Done.\n";
-  }
+#endif
 }
 
 void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr,
                                        int64_t memoryRegionId,
                                        int32_t *tempAddrCount,
                                        int32_t NUM_WORKERS) {
-  if (MRTVerbose)
+#if MRTVerbose
     cout << "DBG: MRT: allocating: " << startAddr << " - " << endAddr << " as "
          << memoryRegionId << "\n";
+#endif
 
   // create leaf node for start of the allocated region
   MRTNode *currentNode = root;
@@ -51,8 +53,11 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr,
     currentNode = next_level_node;
     next_level_node = nullptr;
   }
-  if (MRTVerbose)
+
+#if MRTVerbose
     cout << "DBG: MRT: found leaf node for startAddr: " << startAddr << "\n";
+#endif
+
   // set memory region id in lead node
   currentNode->memoryRegionId = memoryRegionId;
 
@@ -144,15 +149,20 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr,
       }
     }
   }
-  if (MRTVerbose)
+  
+#if MRTVerbose
     cout << "DBG: MRT: found leaf node for endAddr: " << endAddr << "\n";
+#endif
+
   // set memory region id in leaf node
   currentNode->memoryRegionId = memoryRegionId;
 }
 
 string MemoryRegionTree::get_memory_region_id(string fallback, ADDR addr) {
-  if (MRTVerbose)
+#if MRTVerbose
     cout << "Retrieving MemoryRegionID for ADDR: " << addr << " --> ";
+#endif
+
   MRTNode *currentNode = root;
   MRTNode *next_level_node = nullptr;
   ADDR current_addr = 0x0;
@@ -182,11 +192,13 @@ string MemoryRegionTree::get_memory_region_id(string fallback, ADDR addr) {
     next_level_node = nullptr;
   }
 
-  if (MRTVerbose)
+#if MRTVerbose
     cout << memoryRegionId << "\n";
+#endif
 
   if (memoryRegionId == 0) {
     return fallback;
   }
+  
   return std::to_string(memoryRegionId);
 }

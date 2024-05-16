@@ -64,25 +64,28 @@ struct MRTNode {
   MRTNode(const MRTNode &) = delete;
 
   MRTNode(ADDR addr_i, short level) : addr(addr_i), level(level), children{} {
-    if (MRTVerbose)
-      cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
+#if MRTVerbose
+      std::cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
            << " childArrPtr: " << children << "\n";
+#endif
   }
 
   MRTNode(MRTNode *parent_node, ADDR addr_i, short level)
       : parent(parent_node), addr(addr_i), level(level), children{} {
-    if (MRTVerbose)
-      cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
+#if MRTVerbose
+      std::cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
            << " with parent addr: " << parent_node->addr
            << " childArrPtr: " << children << "\n";
+#endif
   }
 
   MRTNode(MRTNode *parent_node, ADDR addr_i, uint memRegId, short level)
       : parent(parent_node), addr(addr_i), memoryRegionId(memRegId),
         level(level), children{} {
-    if (MRTVerbose)
-      cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
+#if MRTVerbose
+      std::cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
            << " childArrPtr: " << children << "\n";
+#endif
   }
 
   // Values
