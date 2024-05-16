@@ -26,8 +26,9 @@ namespace __dp {
 extern "C" {
 
 void dp_loop_output() {
-  if (alreadyDone)
+  if (loop_manager->is_done()) {
     return;
+  }
 
   std::cout << "Outputting instrumentation results... ";
 
@@ -55,7 +56,7 @@ void dp_loop_output() {
   std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
   tmp2 += "/loop_counter_output.txt";
   ofile.open(tmp2.data());
-  const auto& loop_counters = lc.get_loop_counters();
+  const auto& loop_counters = loop_manager->get_loop_counters();
   
   for (auto i = 1; i < loop_counters.size(); ++i) {
     loop_info_t &loop_info = loop_infos[i];
@@ -67,7 +68,7 @@ void dp_loop_output() {
 
   std::cout << "done" << std::endl;
 
-  alreadyDone = true;
+  loop_manager->set_done();
 }
 
 }

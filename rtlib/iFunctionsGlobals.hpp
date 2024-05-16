@@ -48,9 +48,6 @@ extern FunctionManager* function_manager;
 extern LoopManager* loop_manager;
 extern MemoryManager* memory_manager;
 
-extern LoopCounter lc;
-extern bool alreadyDone;
-
 // hybrid analysis
 extern ReportedBBSet *bbList;
 extern stringDepMap *outPutDeps;

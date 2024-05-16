@@ -20,9 +20,15 @@ namespace __dp {
 
 class LoopCounter {
 public:
-  void incr_loop_counter(int loop_id);
+  void incr_loop_counter(int loop_id) {
+    if (loop_counters_.size() < loop_id + 1) {
+      loop_counters_.resize(loop_id + 1);
+    }
 
-  const std::vector<unsigned int> get_loop_counters() const noexcept {
+    loop_counters_[loop_id] += 1;
+  }
+
+  const std::vector<unsigned int>& get_loop_counters() const noexcept {
     return loop_counters_;
   }
 

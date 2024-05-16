@@ -155,9 +155,27 @@ public:
         return loops;
     }
 
+    bool is_done() const noexcept {
+        return alreadyDone;
+    }
+
+    void set_done() noexcept {
+        alreadyDone = true;
+    }
+
+    void incr_loop_counter(int loop_id) {
+        lc.incr_loop_counter(loop_id);
+    }
+
+    const std::vector<unsigned int>& get_loop_counters() const {
+        return lc.get_loop_counters();
+    }
+
 private:
     LoopTable loopStack;    // loop stack tracking
     LoopRecords loops;      // loop merging
+    LoopCounter lc;         // loop counter
+    bool alreadyDone;
 };
 
 } // namespace __dp

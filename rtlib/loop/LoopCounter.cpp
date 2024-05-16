@@ -9,17 +9,3 @@
  * directory for details.
  *
  */
-
-#include "LoopCounter.hpp"
-
-namespace __dp {
-
-void LoopCounter::incr_loop_counter(int loop_id) {
-  if (loop_counters_.size() < loop_id + 1) {
-    loop_counters_.resize(loop_id + 1);
-  }
-
-  loop_counters_[loop_id] += 1;
-}
-
-} // namespace __dp

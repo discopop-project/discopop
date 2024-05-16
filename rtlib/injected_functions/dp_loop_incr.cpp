@@ -20,11 +20,11 @@ namespace __dp {
 extern "C" {
 
 void dp_loop_incr(const int loop_id){
-  if (alreadyDone) {
+  if (loop_manager->is_done()) {
     return;
   }
   
-  lc.incr_loop_counter(loop_id);
+  loop_manager->incr_loop_counter(loop_id);
 }
 
 }
