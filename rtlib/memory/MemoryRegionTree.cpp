@@ -12,21 +12,8 @@
 
 #include "MemoryRegionTree.hpp"
 
-MemoryRegionTree::MemoryRegionTree() {
-#if MRTVerbose
-    cout << "DBG: MRT: creating new Tree.\n";
-#endif
-  root = new MRTNode(0xFFFFFFFFFFFFFFFF, -1);
-#if MRTVerbose
-    cout << "DBG: RootNode: " << root << "\n";
-    cout << "DBG: MRT: Done.\n";
-#endif
-}
-
 void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr,
-                                       int64_t memoryRegionId,
-                                       int32_t *tempAddrCount,
-                                       int32_t NUM_WORKERS) {
+                                       int64_t memoryRegionId) {
 #if MRTVerbose
     cout << "DBG: MRT: allocating: " << startAddr << " - " << endAddr << " as "
          << memoryRegionId << "\n";
@@ -38,10 +25,12 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr,
   ADDR current_addr = 0x0;
   int level = 0;
   for (; level < 16; level++) {
-    int64_t char_at_level = get_char_at_level(startAddr, level);
+    const auto char_at_level = get_char_at_level(startAddr, level);
+
     // append char to currently visited address
     current_addr = current_addr | (((char_at_level << 60) >> (4 * level)) &
                                    get_level_shifting_mask(level));
+
     // traverse tree downwards
     next_level_node = currentNode->children[char_at_level];
     if (next_level_node == nullptr) {
@@ -49,6 +38,7 @@ void MemoryRegionTree::allocate_region(ADDR startAddr, ADDR endAddr,
       next_level_node = new MRTNode(currentNode, current_addr, level);
       currentNode->children[char_at_level] = next_level_node;
     }
+
     // proceed to next level
     currentNode = next_level_node;
     next_level_node = nullptr;

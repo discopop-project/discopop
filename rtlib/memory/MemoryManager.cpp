@@ -19,7 +19,7 @@ std::string __dp::MemoryManager::allocate_memory(const LID line_id, const ADDR s
         const auto memory_region_id_str = std::to_string(memory_region_id);
 
         // tempAddrCount and NUM_WORKERS are still global variables
-        allocatedMemRegTree.allocate_region(start_address, end_address, memory_region_id, tempAddrCount, NUM_WORKERS);
+        allocatedMemRegTree.allocate_region(start_address, end_address, memory_region_id);
         allocatedMemoryRegions.emplace_back(line_id, memory_region_id_str, start_address, end_address, number_bytes, number_elements);
 
         if (start_address < smallestAllocatedADDR) {

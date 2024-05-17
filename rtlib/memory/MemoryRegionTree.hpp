@@ -98,19 +98,37 @@ struct MRTNode {
 };
 
 struct MemoryRegionTree {
-  // Constructors
-  MemoryRegionTree();
-  // Destructors
-  ~MemoryRegionTree(); // TODO
+  MemoryRegionTree() {
+#if MRTVerbose
+    cout << "DBG: MRT: creating new Tree.\n";
+#endif
+  root = new MRTNode(0xFFFFFFFFFFFFFFFF, -1);
+#if MRTVerbose
+    cout << "DBG: RootNode: " << root << "\n";
+    cout << "DBG: MRT: Done.\n";
+#endif
+  }
+
+  ~MemoryRegionTree() = default;
+
+  MRTNode* get_root() noexcept {
+    return root;
+  }
+
+  const MRTNode* get_root() const noexcept {
+    return root;
+  }
 
   // Functions
-  void allocate_region(ADDR startAddr, ADDR endAddr, int64_t memory_region_id,
-                       int32_t *tempAddrCount, int32_t NUM_WORKERS); // TODO-WIP
-  void free_region(ADDR startADDR);                                  // TODO
+  void allocate_region(ADDR startAddr, ADDR endAddr, int64_t memory_region_id); // TODO-WIP
+
   string get_memory_region_id(string fallback, ADDR addr);           // TODO
+
+  void free_region(ADDR startADDR);                                  // TODO
+
   void wait_for_empty_chunks(int32_t *tempAddrCount, int32_t NUM_WORKERS);
 
-  // Values
-  MRTNode *root; // Root has ADDR 0xFF...FF and level -1 such that level 0
-                 // corresponds to first character of hex code
+private:
+  // Root has ADDR 0xFF...FF and level -1 such that level 0corresponds to first character of hex code
+  MRTNode *root;
 };
