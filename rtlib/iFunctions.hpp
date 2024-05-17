@@ -24,12 +24,6 @@ void addDep(depType type, LID curr, LID depOn, char *var, char *AAvar);
 
 void outputDeps();
 
-void outputLoops();
-
-void outputFuncs();
-
-void outputAllocations();
-
 void generateStringDepMap();
 
 void readRuntimeInfo();
@@ -38,7 +32,7 @@ void initParallelization();
 
 void mergeDeps();
 
-void *analyzeDeps(void *arg);
+void* analyzeDeps(void *arg);
 
 std::string getMemoryRegionIdFromAddr(std::string fallback, ADDR addr);
 

@@ -12,6 +12,12 @@
 
 #include "cu_taken_branch_counter.hpp"
 
+#include <fstream>
+#include <iostream>
+#include <stdlib.h>
+#include <string>
+#include <unordered_map>
+
 static std::unordered_map<char *, long> cuec;
 
 extern "C" {
