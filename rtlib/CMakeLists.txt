@@ -17,8 +17,6 @@ set(DiscoPoP_SOURCES
         cu_taken_branch_counter.cpp
         
         ../share/lib/timer.cpp
-
-        loop/LoopCounter.cpp
         
         memory/MemoryManager.cpp
         memory/MemoryRegionTree.cpp
