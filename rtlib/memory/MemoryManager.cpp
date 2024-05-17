@@ -31,6 +31,7 @@ std::string __dp::MemoryManager::allocate_memory(const LID line_id, const ADDR s
         }
 
         if (number_elements >= 0) {
+            assert (start_address <= end_address && "start_address <= end_address");
             // update stack base address, if not already set
             update_stack_addresses(start_address, end_address);
         }

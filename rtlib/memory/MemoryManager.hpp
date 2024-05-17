@@ -46,22 +46,25 @@ public:
         return old_value;
     }
 
+    void enter_new_function() {
+        stackAddrs.emplace(0, 0);
+    }
+
     void update_stack_addresses(const ADDR start, const ADDR end) {
         auto& top = stackAddrs.top();
         if (top.first == 0) {
+            top.first = start;
+        }
+        else if (top.first > start) {
             top.first = start;
         }
 
         if (top.second == 0) {
             top.second = end;
         } 
-        else if (top.second > end) {
+        else if (top.second < end) {
             top.second = end;
         }
-    }
-
-    void enter_new_function() {
-        stackAddrs.emplace(0, 0);
     }
 
     std::pair<ADDR, ADDR> pop_last_stack_address() {
@@ -80,7 +83,8 @@ public:
             return false;
         }
 
-        return address <= addrs.first && addrs.second <= address;
+        return addrs.first <= address && address <= addrs.second;
+        // return address <= addrs.first && addrs.second <= address;
     }
 
     void enterScope(std::string type, LID debug_lid) {
@@ -139,6 +143,14 @@ public:
             dputil::decodeLID(lid, stream);
             stream << ' ' << id << ' ' << num_bytes << endl;
         }
+    }
+
+    ADDR get_smallest_allocated_addr() const noexcept {
+        return smallestAllocatedADDR;
+    }
+
+    ADDR get_largest_allocated_addr() const noexcept {
+        return largestAllocatedADDR;
     }
 
 private:
