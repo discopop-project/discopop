@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../../../rtlib/memory/scope.hpp"
+#include "../../../../rtlib/memory/scope.hpp"
 
 // Tests for old version (i.e., capturing functionality)
 

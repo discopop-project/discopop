@@ -89,11 +89,11 @@ struct MRTNode {
   }
 
   // Values
-  ADDR addr;
-  short level;
-  MRTNode *parent;
-  uint memoryRegionId;
-  MRTNode *children[16]; // 16 to split 64 bit addresses into 16 levels using
+  ADDR addr = 0;
+  short level = -1;
+  MRTNode *parent = nullptr;
+  unsigned int memoryRegionId = 0U;
+  MRTNode *children[16] = {}; // 16 to split 64 bit addresses into 16 levels using
                          // Hex representation
 };
 
