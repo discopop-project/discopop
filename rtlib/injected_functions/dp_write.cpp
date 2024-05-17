@@ -88,7 +88,7 @@ void __dp_write(LID lid, ADDR addr, char *var) {
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
   current.isStackAccess = is_stack_access;
-  current.addrIsFirstWrittenInScope =
+  current.addrIsOwnedByScope =
       memory_manager->isFirstWrittenInScope(addr, true);
   current.positiveScopeChangeOccuredSinceLastAccess =
       memory_manager->positiveScopeChangeOccuredSinceLastAccess(addr);

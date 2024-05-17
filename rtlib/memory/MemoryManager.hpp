@@ -100,7 +100,7 @@ public:
     }
 
     bool isFirstWrittenInScope(ADDR addr, bool currentAccessIsWrite) {
-        return scopeManager.isFirstWrittenInScope(addr, currentAccessIsWrite);
+        return scopeManager.isOwnedByScope(addr, currentAccessIsWrite);
     }
 
     bool positiveScopeChangeOccuredSinceLastAccess(ADDR addr) {
