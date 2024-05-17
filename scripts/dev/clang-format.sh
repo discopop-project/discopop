@@ -19,5 +19,18 @@ cd ../..
 C_CPP_FILES=$(find . -name *.c -or -name *.cpp -or -name *.h -or -name *.hpp)
 for file in $C_CPP_FILES; do
     # execute clang-format for each file
+
+    # ignore third-party libraries
+    if [[ "$file" == "./third_party/"* ]]; then
+      echo "Skipping third-party file: $file"
+      continue
+    fi
+
+    # ignore build folder
+    if [[ "$file" == "./build/"* ]]; then
+      echo "Skipping build file: $file"
+      continue
+    fi
+
     clang-format $file -i --verbose
 done

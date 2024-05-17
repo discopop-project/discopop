@@ -330,18 +330,18 @@ TEST_F(ScopeManagerTest, testFirstWritten) {
     manager.registerStackWrite(36, 5, "");
     manager.registerStackRead(40, 6, "");
 
-    ASSERT_TRUE(manager.isFirstWrittenInScope(36, true));
-    ASSERT_TRUE(manager.isFirstWrittenInScope(12, true));
-    ASSERT_TRUE(manager.isFirstWrittenInScope(24, true));
-    ASSERT_TRUE(manager.isFirstWrittenInScope(1012, true));
-    ASSERT_TRUE(manager.isFirstWrittenInScope(1024, true));
+    ASSERT_TRUE(manager.isOwnedByScope(36, true));
+    ASSERT_TRUE(manager.isOwnedByScope(1012, true));
+    ASSERT_TRUE(manager.isOwnedByScope(1024, true));
 
-    ASSERT_FALSE(manager.isFirstWrittenInScope(32, true));
-    ASSERT_FALSE(manager.isFirstWrittenInScope(32, false));
-    ASSERT_FALSE(manager.isFirstWrittenInScope(40, true));
-    ASSERT_FALSE(manager.isFirstWrittenInScope(40, false));
-    ASSERT_FALSE(manager.isFirstWrittenInScope(1012, false));
-    ASSERT_FALSE(manager.isFirstWrittenInScope(1024, false));
+    ASSERT_FALSE(manager.isOwnedByScope(12, true));
+    ASSERT_FALSE(manager.isOwnedByScope(24, true));
+    ASSERT_FALSE(manager.isOwnedByScope(32, true));
+    ASSERT_FALSE(manager.isOwnedByScope(32, false));
+    ASSERT_FALSE(manager.isOwnedByScope(40, true));
+    ASSERT_FALSE(manager.isOwnedByScope(40, false));
+    ASSERT_FALSE(manager.isOwnedByScope(1012, false));
+    ASSERT_FALSE(manager.isOwnedByScope(1024, false));
 }
 
 TEST_F(ScopeManagerTest, testPositiveChange) {
@@ -731,18 +731,18 @@ TEST_F(ScopeManager2Test, testFirstWritten) {
     manager.registerStackWrite(36, 5, "");
     manager.registerStackRead(40, 6, "");
 
-    ASSERT_TRUE(manager.isFirstWrittenInScope(36, true));
-    ASSERT_TRUE(manager.isFirstWrittenInScope(12, true));
-    ASSERT_TRUE(manager.isFirstWrittenInScope(24, true));
-    ASSERT_TRUE(manager.isFirstWrittenInScope(1012, true));
-    ASSERT_TRUE(manager.isFirstWrittenInScope(1024, true));
+    ASSERT_TRUE(manager.isOwnedByScope(36, true));
+    ASSERT_TRUE(manager.isOwnedByScope(1012, true));
+    ASSERT_TRUE(manager.isOwnedByScope(1024, true));
 
-    ASSERT_FALSE(manager.isFirstWrittenInScope(32, true));
-    ASSERT_FALSE(manager.isFirstWrittenInScope(32, false));
-    ASSERT_FALSE(manager.isFirstWrittenInScope(40, true));
-    ASSERT_FALSE(manager.isFirstWrittenInScope(40, false));
-    ASSERT_FALSE(manager.isFirstWrittenInScope(1012, false));
-    ASSERT_FALSE(manager.isFirstWrittenInScope(1024, false));
+    ASSERT_FALSE(manager.isOwnedByScope(12, true));
+    ASSERT_FALSE(manager.isOwnedByScope(24, true));
+    ASSERT_FALSE(manager.isOwnedByScope(32, true));
+    ASSERT_FALSE(manager.isOwnedByScope(32, false));
+    ASSERT_FALSE(manager.isOwnedByScope(40, true));
+    ASSERT_FALSE(manager.isOwnedByScope(40, false));
+    ASSERT_FALSE(manager.isOwnedByScope(1012, false));
+    ASSERT_FALSE(manager.isOwnedByScope(1024, false));
 }
 
 TEST_F(ScopeManager2Test, testPositiveChange) {

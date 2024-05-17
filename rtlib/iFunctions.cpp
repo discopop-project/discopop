@@ -673,7 +673,7 @@ void* analyzeDeps(void *arg) {
             SMem->insertToRead(access.addr, access.lid);
             addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
                    access.isStackAccess, access.addr,
-                   access.addrIsFirstWrittenInScope,
+                   access.addrIsOwnedByScope,
                    access.positiveScopeChangeOccuredSinceLastAccess);
           }
         } else {
@@ -682,7 +682,7 @@ void* analyzeDeps(void *arg) {
             // INIT
             addDep(INIT, access.lid, 0, access.var, access.AAvar,
                    access.isStackAccess, access.addr,
-                   access.addrIsFirstWrittenInScope,
+                   access.addrIsOwnedByScope,
                    access.positiveScopeChangeOccuredSinceLastAccess);
           } else {
             sigElement lastRead = SMem->testInRead(access.addr);
@@ -690,7 +690,7 @@ void* analyzeDeps(void *arg) {
               // WAR
               addDep(WAR, access.lid, lastRead, access.var, access.AAvar,
                      access.isStackAccess, access.addr,
-                     access.addrIsFirstWrittenInScope,
+                     access.addrIsOwnedByScope,
                      access.positiveScopeChangeOccuredSinceLastAccess);
               // Clear intermediate read ops
               SMem->insertToRead(access.addr, 0);
@@ -698,7 +698,7 @@ void* analyzeDeps(void *arg) {
               // WAW
               addDep(WAW, access.lid, lastWrite, access.var, access.AAvar,
                      access.isStackAccess, access.addr,
-                     access.addrIsFirstWrittenInScope,
+                     access.addrIsOwnedByScope,
                      access.positiveScopeChangeOccuredSinceLastAccess);
             }
           }

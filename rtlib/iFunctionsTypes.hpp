@@ -69,7 +69,7 @@ struct AccessInfo {
   std::string AAvar; // name of allocated variable -> "Anti Aliased Variable"
   ADDR addr;
   bool isStackAccess = false;
-  bool addrIsFirstWrittenInScope = false;
+  bool addrIsOwnedByScope = false;
   bool positiveScopeChangeOccuredSinceLastAccess = false;
 };
 

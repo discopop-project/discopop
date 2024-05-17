@@ -43,6 +43,10 @@ for file in "$@"; do
     [[ "$file" = *"LICENSE" ]] && continue
     [[ "$file" = *"VERSION" ]] && continue
 
+    # third-party software
+    [[ "$file" = *"third_party/"* ]] && continue
+
+
     # check for the license tag in the first 20 lines of the file
     FILE_ERROR=""
     head -n 20 ${file} | grep -q "DiscoPoP software" || FILE_ERROR="yes"

@@ -1,3 +1,15 @@
+/*
+ * This file is part of the DiscoPoP software
+ * (http://www.discopop.tu-darmstadt.de)
+ *
+ * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+ *
+ * This software may be modified and distributed under the terms of
+ * the 3-Clause BSD License. See the LICENSE file in the package base
+ * directory for details.
+ *
+ */
+
 #include <benchmark/benchmark.h>
 
 #include <cstdint>
@@ -234,7 +246,7 @@ static void benchmark_scope_manager_first_written(benchmark::State& state) {
             }
 
             if (first_written_address(addr, 1)) {
-                const auto b = manager.isFirstWrittenInScope(addr, true);
+                const auto b = manager.isOwnedByScope(addr, true);
             }
         }
 
@@ -250,7 +262,7 @@ static void benchmark_scope_manager_first_written(benchmark::State& state) {
             }
 
             if (first_written_address(addr, 2)) {
-                const auto b = manager.isFirstWrittenInScope(addr, true);
+                const auto b = manager.isOwnedByScope(addr, true);
             }
         }
 
@@ -266,7 +278,7 @@ static void benchmark_scope_manager_first_written(benchmark::State& state) {
             }
 
             if (first_written_address(addr, 3)) {
-                const auto b = manager.isFirstWrittenInScope(addr, true);
+                const auto b = manager.isOwnedByScope(addr, true);
             }
         }
 
@@ -285,7 +297,7 @@ static void benchmark_scope_manager_first_written(benchmark::State& state) {
             }
 
             if (first_written_address(addr, 4)) {
-                const auto b = manager.isFirstWrittenInScope(addr, true);
+                const auto b = manager.isOwnedByScope(addr, true);
             }
         }
 
@@ -588,7 +600,7 @@ static void benchmark_scope_manager_2_first_written(benchmark::State& state) {
             }
 
             if (first_written_address(addr, 1)) {
-                const auto b = manager.isFirstWrittenInScope(addr, true);
+                const auto b = manager.isOwnedByScope(addr, true);
             }
         }
 
@@ -604,7 +616,7 @@ static void benchmark_scope_manager_2_first_written(benchmark::State& state) {
             }
 
             if (first_written_address(addr, 2)) {
-                const auto b = manager.isFirstWrittenInScope(addr, true);
+                const auto b = manager.isOwnedByScope(addr, true);
             }
         }
 
@@ -620,7 +632,7 @@ static void benchmark_scope_manager_2_first_written(benchmark::State& state) {
             }
 
             if (first_written_address(addr, 3)) {
-                const auto b = manager.isFirstWrittenInScope(addr, true);
+                const auto b = manager.isOwnedByScope(addr, true);
             }
         }
 
@@ -639,7 +651,7 @@ static void benchmark_scope_manager_2_first_written(benchmark::State& state) {
             }
 
             if (first_written_address(addr, 4)) {
-                const auto b = manager.isFirstWrittenInScope(addr, true);
+                const auto b = manager.isOwnedByScope(addr, true);
             }
         }
 
