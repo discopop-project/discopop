@@ -30,7 +30,7 @@ namespace __dp {
 extern "C" {
 
 void __dp_delete(LID lid, ADDR startAddr) {
-  if (!dpInited){
+  if ((!dpInited) || (targetTerminated)){
     return;
   }
   
