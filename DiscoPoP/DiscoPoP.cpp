@@ -2004,7 +2004,7 @@ void DiscoPoP::dp_reduction_insert_functions() {
   llvm::FunctionType *loop_incr_fn_type = llvm::FunctionType::get(
       llvm::Type::getVoidTy(*ctx_), loop_incr_fn_args, false);
   FunctionCallee incr_loop_counter_callee =
-      module_->getOrInsertFunction("dp_loop_incr", loop_incr_fn_type);
+      module_->getOrInsertFunction("__dp_loop_incr", loop_incr_fn_type);
 
   for (auto const &loop_info : loops_) {
     llvm::Value *val =
@@ -2023,7 +2023,7 @@ void DiscoPoP::dp_reduction_insert_functions() {
   llvm::FunctionType *output_fn_type =
       llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), false);
   FunctionCallee loop_counter_output_callee =
-      module_->getOrInsertFunction("dp_loop_output", output_fn_type);
+      module_->getOrInsertFunction("__dp_loop_output", output_fn_type);
   FunctionCallee cu_taken_branch_counter_output_callee =
       module_->getOrInsertFunction("__dp_taken_branch_counter_output",
                                    output_fn_type);
