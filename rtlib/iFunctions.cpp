@@ -797,7 +797,9 @@ void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
   const auto timer = Timer(timers, TimerRegion::CLEAR_STACK_ACCESSES);
 #endif
 
-  for (ADDR addr : memory_manager->getCurrentScope().get_first_write()) {
+  const auto& current_scope = memory_manager->getCurrentScope();
+  const auto& writes = current_scope.get_first_write();
+  for (ADDR addr : writes) {
     int64_t workerID =
         ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
     // cleanup reads
