@@ -561,7 +561,7 @@ string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
   const auto timer = Timer(timers, TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
 #endif
 
-  return fallback + '-' + memory_manager->get_memory_region_id(fallback, addr);
+  return fallback + '-' + memory_manager->get_memory_region_id(addr, fallback);
 }
 
 void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {

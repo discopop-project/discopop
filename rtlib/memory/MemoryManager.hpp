@@ -18,6 +18,7 @@
 #include "MemoryRegionTree.hpp"
 #include "scope.hpp"
 
+#include <cstdint>
 #include <limits>
 #include <ostream>
 #include <stack>
@@ -87,27 +88,27 @@ public:
         // return address <= addrs.first && addrs.second <= address;
     }
 
-    void enterScope(std::string type, LID debug_lid) {
-        scopeManager.enterScope(type, debug_lid);
+    void enterScope(std::string type, const LID debug_lid) {
+        scopeManager.enterScope(std::move(type), debug_lid);
     }
 
-    void leaveScope(std::string type, LID debug_lid) { 
-        scopeManager.leaveScope(type, debug_lid); 
+    void leaveScope(std::string type, const LID debug_lid) { 
+        scopeManager.leaveScope(std::move(type), debug_lid); 
     }
 
-    void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
+    void registerStackRead(const ADDR address, const LID debug_lid, char *debug_var) {
         scopeManager.registerStackRead(address, debug_lid, debug_var);
     }
 
-    void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
+    void registerStackWrite(const ADDR address, const LID debug_lid, char *debug_var) {
         scopeManager.registerStackWrite(address, debug_lid, debug_var);
     }
 
-    bool isFirstWrittenInScope(ADDR addr, bool currentAccessIsWrite) {
+    bool isFirstWrittenInScope(const ADDR addr, const bool currentAccessIsWrite) {
         return scopeManager.isOwnedByScope(addr, currentAccessIsWrite);
     }
 
-    bool positiveScopeChangeOccuredSinceLastAccess(ADDR addr) {
+    bool positiveScopeChangeOccuredSinceLastAccess(const ADDR addr) {
         return scopeManager.positiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
@@ -115,12 +116,14 @@ public:
         return scopeManager.getCurrentScope(); 
     }
 
-    std::string get_memory_region_id(string fallback, ADDR addr) {
-        return allocatedMemRegTree.get_memory_region_id(std::move(fallback), addr);
+    std::string get_memory_region_id(const ADDR addr, std::string fallback) {
+        return allocatedMemRegTree.get_memory_region_id_string(addr, fallback.c_str());
     }
 
     std::string allocate_memory(const LID line_id, const ADDR start_address, const ADDR end_address, const std::int64_t number_bytes, const std::int64_t number_elements);
     
+    std::string allocate_stack_memory(const LID line_id, const ADDR start_address, const ADDR end_address, const std::int64_t number_bytes, const std::int64_t number_elements);
+
     void allocate_dummy_region() {
         allocatedMemoryRegions.emplace_back(0, std::string("%%dummy%%"), 0, 0, 0, 0);
     }
@@ -163,7 +166,7 @@ private:
 
     ScopeManager scopeManager;
 
-    MemoryRegionTree allocatedMemRegTree;
+    MemoryRegionTree2 allocatedMemRegTree;
     
     // (LID, identifier, startAddr, endAddr, numBytes, numElements)
     std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> allocatedMemoryRegions;
