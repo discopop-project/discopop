@@ -36,8 +36,6 @@ void* analyzeDeps(void *arg);
 
 std::string getMemoryRegionIdFromAddr(std::string fallback, ADDR addr);
 
-void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr);
-
 void finalizeParallelization();
 
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound);

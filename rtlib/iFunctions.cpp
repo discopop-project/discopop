@@ -565,35 +565,6 @@ string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
   return fallback + '-' + memory_manager->get_memory_region_id(addr, fallback);
 }
 
-void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
-#ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("addAccessInfo");
-#endif
-#ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::ADD_ACCESS_INFO);
-#endif
-  
-  int64_t workerID =
-      ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-  numAccesses[workerID]++;
-  AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
-  current.isRead = isRead;
-  current.lid = loop_manager->update_lid(lid);
-  current.var = var;
-  current.AAvar = getMemoryRegionIdFromAddr(var, addr);
-  current.addr = addr;
-
-  if (tempAddrCount[workerID] == CHUNK_SIZE) {
-    pthread_mutex_lock(&addrChunkMutexes[workerID]);
-    addrChunkPresent[workerID] = true;
-    chunks[workerID].push(tempAddrChunks[workerID]);
-    pthread_cond_signal(&addrChunkPresentConds[workerID]);
-    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-    tempAddrCount[workerID] = 0;
-  }
-}
-
 void mergeDeps() {  
   depSet *tmp_depSet = nullptr; // pointer to the current processing set of dps
   depMap::iterator globalPos; // position of the current processing lid in allDeps
@@ -659,6 +630,9 @@ void* analyzeDeps(void *arg) {
       // analyze data dependences
 
       for (unsigned short i = 0; i < CHUNK_SIZE; ++i) {
+#ifdef DP_INTERNAL_TIMER
+        const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS_INNER);
+#endif
         access = accesses[i];
 
         if (access.isRead) {
@@ -800,40 +774,10 @@ void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
   const auto& current_scope = memory_manager->getCurrentScope();
   const auto& writes = current_scope.get_first_write();
   for (ADDR addr : writes) {
-    int64_t workerID =
-        ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-    // cleanup reads
-    AccessInfo &cleanupReadCurrent =
-        tempAddrChunks[workerID][tempAddrCount[workerID]++];
-    cleanupReadCurrent.addr = addr;
-    cleanupReadCurrent.lid = 0;
-    cleanupReadCurrent.isRead = true;
-
-    if (tempAddrCount[workerID] == CHUNK_SIZE) {
-      pthread_mutex_lock(&addrChunkMutexes[workerID]);
-      addrChunkPresent[workerID] = true;
-      chunks[workerID].push(tempAddrChunks[workerID]);
-      pthread_cond_signal(&addrChunkPresentConds[workerID]);
-      pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-      tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-      tempAddrCount[workerID] = 0;
-    }
-    // cleanup writes
-    AccessInfo &cleanupWriteCurrent =
-        tempAddrChunks[workerID][tempAddrCount[workerID]++];
-    cleanupWriteCurrent.addr = addr;
-    cleanupWriteCurrent.lid = 0;
-    cleanupWriteCurrent.isRead = false;
-
-    if (tempAddrCount[workerID] == CHUNK_SIZE) {
-      pthread_mutex_lock(&addrChunkMutexes[workerID]);
-      addrChunkPresent[workerID] = true;
-      chunks[workerID].push(tempAddrChunks[workerID]);
-      pthread_cond_signal(&addrChunkPresentConds[workerID]);
-      pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-      tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-      tempAddrCount[workerID] = 0;
-    }
+    //cleanup reads
+    __dp_read(0, addr, "");
+    //cleanup writes
+    __dp_write(0, addr, "");
   }
 }
 

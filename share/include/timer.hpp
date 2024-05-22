@@ -50,9 +50,9 @@ enum class TimerRegion : unsigned int {
     READ_RUNTIME_INFO,
     INIT_PARALLELIZATION,
     GET_MEMORY_REGION_ID_FROM_ADDR,
-    ADD_ACCESS_INFO,
     MERGE_DEPS,
     ANALYZE_DEPS,
+    ANALYZE_DEPS_INNER,
     FINALIZE_PARALLELIZATION,
     CLEAR_STACK_ACCESSES,
 
@@ -181,7 +181,8 @@ public:
         print(stream, " Generate the dependency map                     : ", TimerRegion::GENERATE_STRING_DEP_MAP);
         print(stream, " Add a dependency                                : ", TimerRegion::ADD_DEP);
         print(stream, " Merge dendencies                                : ", TimerRegion::MERGE_DEPS);
-        print(stream, " Analyze the dependencies (incorrect!            : ", TimerRegion::ANALYZE_DEPS); // Incorrect due to multithreading
+        print(stream, " Analyze the dependencies (incorrect!)           : ", TimerRegion::ANALYZE_DEPS); // Incorrect due to multithreading
+        print(stream, " Analyze the dependencies (inner)                : ", TimerRegion::ANALYZE_DEPS_INNER);
         stream << '\n';
         print(stream, " Output the dependencies                         : ", TimerRegion::OUTPUT_DEPS);
         print(stream, " Output the loops                                : ", TimerRegion::OUTPUT_LOOPS);
@@ -189,7 +190,6 @@ public:
         print(stream, " Output the allocations                          : ", TimerRegion::OUTPUT_ALLOCATIONS);
         stream << '\n';
         print(stream, " Get memory region by id from address            : ", TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
-        print(stream, " Add access information                          : ", TimerRegion::ADD_ACCESS_INFO);
         print(stream, " Clear the stack accesses                        : ", TimerRegion::CLEAR_STACK_ACCESSES);
         stream << '\n';
 

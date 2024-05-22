@@ -77,7 +77,6 @@ void __dp_read(LID lid, ADDR addr, char *var) {
   bool is_stack_access = memory_manager->is_stack_access(addr);
   // !TEST
 
-  // addAccessInfo(true, lid, var, addr);
   int64_t workerID =
       ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
