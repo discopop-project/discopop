@@ -5,192 +5,10 @@
 #include <cstdint>
 #include <vector>
 
-// Tests for old version (i.e., capturing functionality)
-
-class MemoryRegionTreeTest : public ::testing::Test { };
-
-TEST_F(MemoryRegionTreeTest, testConstructor) {
-    const auto mrt = MemoryRegionTree{};
-
-    const auto* root = mrt.get_root();
-
-    ASSERT_EQ(root->addr, 0xFFFFFFFFFFFFFFFF);
-    ASSERT_EQ(root->level, -1);
-    ASSERT_EQ(root->parent, nullptr);
-    ASSERT_EQ(root->memoryRegionId, 0);
-
-    for (auto i = 0; i < 16; i++) {
-        ASSERT_EQ(root->children[i], nullptr);
-    }
-}
-
-TEST_F(MemoryRegionTreeTest, testAllocateRegion1) {
-    auto mrt = MemoryRegionTree{};
-
-    const auto start_addr = 0x1000000000000000LL;
-    const auto end_addr = 0x2000000000000000LL;
-
-    const auto memory_region_id = 45LL;
-
-    mrt.allocate_region(start_addr, end_addr, memory_region_id);
-
-    const auto* root = mrt.get_root();
-
-    ASSERT_EQ(root->addr, 0xFFFFFFFFFFFFFFFF);
-    ASSERT_EQ(root->level, -1);
-    ASSERT_EQ(root->parent, nullptr);
-    ASSERT_EQ(root->memoryRegionId, 0);
-
-    for (auto i = 0; i < 16; i++) {
-        const auto* child = root->children[i];
-        ASSERT_NE(child, nullptr);
-
-        ASSERT_EQ(child->level, 0);
-        ASSERT_EQ(child->parent, root);
-
-        ASSERT_EQ(child->memoryRegionId, 45);
-
-        for (auto j = 0; j < 16; j++) {
-            const auto* grandchild = child->children[j];
-            // std::cout << grandchild << std::endl;
-
-            if (grandchild != nullptr) {
-                // std::cout << "Reporting for " << i << " " << j << std::endl;
-
-                for (auto k = 0; k < 16; k++) {
-                    const auto* great_grandchild = grandchild->children[k];
-                    // std::cout << great_grandchild << std::endl;
-                }
-
-                // std::cout << std::endl;
-            }
-        }
-
-        // std::cout << std::endl;
-    }
-}
-
-TEST_F(MemoryRegionTreeTest, testAllocateRegion2) {
-    auto mrt = MemoryRegionTree{};
-
-    const auto start_addr = 0x0040000000000000LL;
-    const auto end_addr = 0x0080000000000000LL;
-
-    const auto memory_region_id = 12LL;
-
-    mrt.allocate_region(start_addr, end_addr, memory_region_id);
-
-    const auto* root = mrt.get_root();
-
-    ASSERT_EQ(root->addr, 0xFFFFFFFFFFFFFFFF);
-    ASSERT_EQ(root->level, -1);
-    ASSERT_EQ(root->parent, nullptr);
-    ASSERT_EQ(root->memoryRegionId, 0);
-
-    for (auto i = 0; i < 16; i++) {
-        const auto* child = root->children[i];
-        ASSERT_NE(child, nullptr);
-
-        ASSERT_EQ(child->level, 0);
-        ASSERT_EQ(child->parent, root);
-
-        ASSERT_EQ(child->memoryRegionId, 12);
-
-        for (auto j = 0; j < 16; j++) {
-            const auto* grandchild = child->children[j];
-            
-            if (j == 0 && i == 0) {
-                ASSERT_NE(grandchild, nullptr);
-            } else {
-                ASSERT_EQ(grandchild, nullptr);
-            }
-        }
-    }
-
-    const auto* descendent = root->children[0]->children[0];
-
-    ASSERT_NE(descendent, nullptr);
-    ASSERT_EQ(descendent->addr, 0LL);
-    ASSERT_EQ(descendent->level, 1);
-    ASSERT_EQ(descendent->parent, root->children[0]);
-    ASSERT_EQ(descendent->memoryRegionId, 12);
-
-    ASSERT_NE(descendent->children[0], nullptr);
-    ASSERT_NE(descendent->children[1], nullptr);
-    ASSERT_NE(descendent->children[2], nullptr);
-    ASSERT_NE(descendent->children[3], nullptr);
-    ASSERT_NE(descendent->children[4], nullptr);
-    ASSERT_EQ(descendent->children[5], nullptr);
-    ASSERT_EQ(descendent->children[6], nullptr);
-    ASSERT_EQ(descendent->children[7], nullptr);
-    ASSERT_NE(descendent->children[8], nullptr);
-    ASSERT_EQ(descendent->children[9], nullptr);
-    ASSERT_EQ(descendent->children[10], nullptr);
-    ASSERT_EQ(descendent->children[11], nullptr);
-    ASSERT_EQ(descendent->children[12], nullptr);
-    ASSERT_EQ(descendent->children[13], nullptr);
-    ASSERT_EQ(descendent->children[14], nullptr);
-    ASSERT_EQ(descendent->children[15], nullptr);
-
-    // TODO(Lukas): Add some further sense for this test?
-}
-
-TEST_F(MemoryRegionTreeTest, testOutput1) {
-    auto mrt = MemoryRegionTree{};
-
-    mrt.allocate_region(0x1000000000000000LL, 0x2000000000000000LL, 12);
-    mrt.allocate_region(0x2000000000000000LL, 0x4000000000000000LL, 13);
-
-    const auto start_addr = 0x1000000000000000LL;
-    for (auto i = 0LL; i < 16LL; i++) {
-        std::cout << std::hex << (start_addr * i) << ":\t" << mrt.get_memory_region_id("Fallback", start_addr * i) << std::endl;
-    }
-}
-
-TEST_F(MemoryRegionTreeTest, testOutput2) {
-    auto mrt = MemoryRegionTree{};
-
-    mrt.allocate_region(0x1000000000000000LL, 0x2000000000000000LL, 12);
-    mrt.allocate_region(0x4000000000000000LL, 0x8000000000000000LL, 13);
-
-    const auto start_addr = 0x1000000000000000LL;
-    for (auto i = 0LL; i < 16LL; i++) {
-        std::cout << std::hex << (start_addr * i) << ":\t" << mrt.get_memory_region_id("Fallback", start_addr * i) << std::endl;
-    }
-}
-
-TEST_F(MemoryRegionTreeTest, testOutput3) {
-    auto mrt = MemoryRegionTree{};
-
-    mrt.allocate_region(0x0040000000000000LL, 0x0080000000000000LL, 13);
-    mrt.allocate_region(0x0010000000000000LL, 0x0020000000000000LL, 12);
-
-    const auto start_addr = 0x1000000000000000LL;
-    for (auto i = 0LL; i < 16LL; i++) {
-        std::cout << std::hex << (start_addr * i) << ":\t" << mrt.get_memory_region_id("Fallback", start_addr * i) << std::endl;
-    }
-    const auto start_addr2 = 0x0010000000000000LL;
-    for (auto i = 0LL; i < 16LL; i++) {
-        std::cout << std::hex << (start_addr2 * i) << ":\t" << mrt.get_memory_region_id("Fallback", start_addr * i) << std::endl;
-    }
-}
-
-TEST_F(MemoryRegionTreeTest, testOutput4) {
-    auto mrt = MemoryRegionTree{};
-
-    mrt.allocate_region(0x4000000000000000LL, 0x8000000000000000LL, 13);
-    mrt.allocate_region(0x2000000000000000LL, 0x4000000000000000LL, 12);
-
-    const auto start_addr = 0x1000000000000000LL;
-    for (auto i = 0LL; i < 16LL; i++) {
-        std::cout << std::hex << (start_addr * i) << ":\t" << mrt.get_memory_region_id("Fallback", start_addr * i) << std::endl;
-    }
-}
-
 class MemoryRegionTreeTest2 : public ::testing::Test { };
 
 TEST_F(MemoryRegionTreeTest2, testConstructor) {
-    const auto tree = MemoryRegionTree2{};
+    const auto tree = __dp::MemoryRegionTree2{};
 
     const auto* root = tree.get_root();
 
@@ -204,7 +22,7 @@ TEST_F(MemoryRegionTreeTest2, testConstructor) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testAllocateRegion1) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x7FFFFFFFFFFFFFFFLL;
@@ -221,7 +39,7 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion1) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testAllocateRegion2) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x0FFFFFFFFFFFFFFFLL;
@@ -245,7 +63,7 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion2) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testAllocateRegion3) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x1000000000000000LL;
     const auto end_addr = 0x3FFFFFFFFFFFFFFFLL;
@@ -288,7 +106,7 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion3) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testAllocateRegion4) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x1000000000000000LL;
     const auto end_addr = 0x2CFFFFFFFFFFFFFFLL;
@@ -340,7 +158,7 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion4) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testAllocateRegion5) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x13542698001FAB52LL;
     const auto end_addr = 0x13542698001FAB52LL;
@@ -366,7 +184,7 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion5) {
         }
 
         auto counter = 0;
-        MRTNode2* new_node = nullptr;
+        __dp::MRTNode2* new_node = nullptr;
 
         for (auto i = 0; i < 16; i++) {
             auto* child = node->get_child(i);
@@ -383,7 +201,7 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion5) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testAllocateRegion6) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -428,7 +246,7 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion6) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testAllocateRegion7) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -485,7 +303,7 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion7) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId1) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x7FFFFFFFFFFFFFFFLL;
@@ -504,7 +322,7 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId1) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId2) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x7FFFFFFFFFFFFFFFLL;
@@ -523,7 +341,7 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId2) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId3) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x1000'0000'0000'0000LL;
     const auto end_addr = 0x2000'0000'0000'0000LL;
@@ -542,7 +360,7 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId3) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId4) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -568,7 +386,7 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId4) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId5) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -597,7 +415,7 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId5) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr1) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x7FFFFFFFFFFFFFFFLL;
@@ -616,7 +434,7 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr1) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr2) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x7FFFFFFFFFFFFFFFLL;
@@ -635,7 +453,7 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr2) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr3) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x1000'0000'0000'0000LL;
     const auto end_addr = 0x2000'0000'0000'0000LL;
@@ -654,7 +472,7 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr3) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr4) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -680,7 +498,7 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr4) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr5) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -709,7 +527,7 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr5) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testFreeRegion1) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
     
     const auto start_addr = 0x0000000000000000LL;
 
@@ -724,7 +542,7 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion1) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testFreeRegion2) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x7FFFFFFFFFFFFFFFLL;
 
@@ -739,7 +557,7 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion2) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testFreeRegion3) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x9472dcab36975afaLL;
 
@@ -754,7 +572,7 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion3) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testFreeRegion4) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x1000'0000'0000'0000LL;
     const auto end_addr = 0x1FFF'FFFF'FFFF'FFFFLL;
@@ -773,7 +591,7 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion4) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testFreeRegion5) {
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr = 0x0000'0000'0000'0000LL;
     const auto end_addr = 0x7FFF'FFFF'FFFF'FFFFLL;
@@ -792,7 +610,7 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion5) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testFreeRegion6) {    
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -844,7 +662,7 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion6) {
 }
 
 TEST_F(MemoryRegionTreeTest2, testFreeRegion7) {    
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;

@@ -45,11 +45,11 @@ static void benchmark_mrt_allocate_region(benchmark::State& state) {
     const auto addresses = convert_to_address(number_iterations * 2);
 
     // This exists so that the destructor call does not interfere with the timing
-    auto dumping_ground = std::vector<MemoryRegionTree2>{};
+    auto dumping_ground = std::vector<__dp::MemoryRegionTree2>{};
 
     for (auto _ : state) {
         state.PauseTiming();
-        auto tree = MemoryRegionTree2{};
+        auto tree = __dp::MemoryRegionTree2{};
         state.ResumeTiming();
 
         for (auto i = 0; i < number_iterations * 2; i += 2) {
@@ -67,7 +67,7 @@ static void benchmark_mrt_get_memory_region_id(benchmark::State& state) {
 
     const auto addresses = convert_to_address(number_iterations * 2);
 
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     for (auto i = 0; i < number_iterations * 2; i += 2) {
         tree.allocate_region(addresses[i], addresses[i + 1], i + 1);
@@ -85,7 +85,7 @@ static void benchmark_mrt_get_memory_region_id_string_found(benchmark::State& st
 
     const auto addresses = convert_to_address(number_iterations * 2);
 
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     for (auto i = 0; i < number_iterations * 2; i += 2) {
         tree.allocate_region(addresses[i], addresses[i + 1], i + 1);
@@ -107,7 +107,7 @@ static void benchmark_mrt_get_memory_region_id_string_fallback(benchmark::State&
 
     const auto addresses = convert_to_address(number_iterations * 2);
 
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     for (auto i = 0; i < number_iterations * 2; i += 2) {
         tree.allocate_region(addresses[i], addresses[i + 1], i + 1);
@@ -134,7 +134,7 @@ static void benchmark_mrt_destructor(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        auto tree = MemoryRegionTree2{};
+        auto tree = __dp::MemoryRegionTree2{};
         for (auto i = 0; i < number_iterations * 2; i += 2) {
             tree.allocate_region(addresses[i], addresses[i + 1], i + 1);
         }
@@ -148,9 +148,9 @@ static void benchmark_mrt_free_region(benchmark::State& state) {
     const auto addresses = convert_to_address(number_iterations * 2);
 
     // This exists so that the destructor call does not interfere with the timing
-    auto dumping_ground = std::vector<MemoryRegionTree2>{};
+    auto dumping_ground = std::vector<__dp::MemoryRegionTree2>{};
 
-    auto tree = MemoryRegionTree2{};
+    auto tree = __dp::MemoryRegionTree2{};
 
     for (auto i = 0; i < number_iterations * 2; i += 2) {
         tree.allocate_region(addresses[i], addresses[i + 1], i + 1);
@@ -158,7 +158,7 @@ static void benchmark_mrt_free_region(benchmark::State& state) {
 
     for (auto _ : state) {
         state.PauseTiming();
-        auto tree = MemoryRegionTree2{};
+        auto tree = __dp::MemoryRegionTree2{};
         for (auto i = 0; i < number_iterations * 2; i += 2) {
             tree.allocate_region(addresses[i], addresses[i + 1], i + 1);
         }

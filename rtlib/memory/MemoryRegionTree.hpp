@@ -97,80 +97,7 @@ inline int get_shift(int level) {
   }
 }
 
-struct MRTNode {
-  // Constructors
-  MRTNode() = delete;
-  MRTNode(const MRTNode &) = delete;
-
-  MRTNode(ADDR addr_i, short level) : addr(addr_i), level(level), children{} {
-#if MRTVerbose
-      std::cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
-           << " childArrPtr: " << children << "\n";
-#endif
-  }
-
-  MRTNode(MRTNode *parent_node, ADDR addr_i, short level)
-      : parent(parent_node), addr(addr_i), level(level), children{} {
-#if MRTVerbose
-      std::cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
-           << " with parent addr: " << parent_node->addr
-           << " childArrPtr: " << children << "\n";
-#endif
-  }
-
-  MRTNode(MRTNode *parent_node, ADDR addr_i, uint memRegId, short level)
-      : parent(parent_node), addr(addr_i), memoryRegionId(memRegId),
-        level(level), children{} {
-#if MRTVerbose
-      std::cout << "DBG: MRT: Creating Node addr: " << addr << " at level: " << level
-           << " childArrPtr: " << children << "\n";
-#endif
-  }
-
-  // Values
-  ADDR addr = 0;
-  short level = -1;
-  MRTNode *parent = nullptr;
-  unsigned int memoryRegionId = 0U;
-  MRTNode *children[16] = {}; // 16 to split 64 bit addresses into 16 levels using
-                         // Hex representation
-};
-
-struct MemoryRegionTree {
-  MemoryRegionTree() {
-#if MRTVerbose
-    cout << "DBG: MRT: creating new Tree.\n";
-#endif
-  root = new MRTNode(0xFFFFFFFFFFFFFFFF, -1);
-#if MRTVerbose
-    cout << "DBG: RootNode: " << root << "\n";
-    cout << "DBG: MRT: Done.\n";
-#endif
-  }
-
-  ~MemoryRegionTree() = default;
-
-  MRTNode* get_root() noexcept {
-    return root;
-  }
-
-  const MRTNode* get_root() const noexcept {
-    return root;
-  }
-
-  // Functions
-  void allocate_region(ADDR startAddr, ADDR endAddr, int64_t memory_region_id); // TODO-WIP
-
-  string get_memory_region_id(string fallback, ADDR addr);           // TODO
-
-  void free_region(ADDR startADDR);                                  // TODO
-
-  void wait_for_empty_chunks(int32_t *tempAddrCount, int32_t NUM_WORKERS);
-
-private:
-  // Root has ADDR 0xFF...FF and level -1 such that level 0corresponds to first character of hex code
-  MRTNode *root;
-};
+namespace __dp {
 
 class MRTNode2 {
 public:
@@ -340,7 +267,8 @@ private:
     assert(start >= node->get_first_addr() && end <= node->get_last_addr() && "Invalid memory region for node");
 
     if (start == node->get_first_addr() && end == node->get_last_addr()) {
-      assert(node->get_memory_region_id() == 0 && "Memory region already allocated");
+      // This assert is valid once dp_delete is implemented
+      // assert(node->get_memory_region_id() == 0 && "Memory region already allocated");
       node->set_memory_region_id(memory_region_id);
 
       return;
@@ -432,3 +360,5 @@ private:
 
   MRTNode2* root{};
 };
+
+} // namespace __dp
