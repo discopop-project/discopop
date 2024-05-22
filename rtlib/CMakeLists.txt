@@ -14,7 +14,6 @@
 set(DiscoPoP_SOURCES
         iFunctions.cpp
         iFunctionsGlobals.cpp
-        cu_taken_branch_counter.cpp
         
         ../share/lib/timer.cpp
         
@@ -29,6 +28,7 @@ set(DiscoPoP_SOURCES
         injected_functions/dp_finalize.cpp
         injected_functions/dp_func_entry.cpp
         injected_functions/dp_func_exit.cpp
+        injected_functions/dp_incr_taken_branch_counter.cpp
         injected_functions/dp_loop_entry.cpp
         injected_functions/dp_loop_exit.cpp
         injected_functions/dp_loop_incr.cpp
@@ -37,6 +37,7 @@ set(DiscoPoP_SOURCES
         injected_functions/dp_read.cpp
         injected_functions/dp_report_bb.cpp
         injected_functions/dp_report_bb_pair.cpp
+        injected_functions/dp_taken_branch_counter_output.cpp
         injected_functions/dp_write.cpp
         )
 

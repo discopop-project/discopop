@@ -36,7 +36,9 @@ MemoryManager* memory_manager = nullptr;
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
 stringDepMap *outPutDeps = nullptr;
-// end hybrid analysis 
+// end hybrid analysis
+
+std::unordered_map<char *, long> cuec;
 
 bool dpInited = false; // library initialization flag
 bool targetTerminated = false; // whether the target program has returned from main()

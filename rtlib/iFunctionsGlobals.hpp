@@ -25,6 +25,7 @@
 #include <stack>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 
 extern bool USE_PERFECT;
@@ -52,6 +53,8 @@ extern MemoryManager* memory_manager;
 extern ReportedBBSet *bbList;
 extern stringDepMap *outPutDeps;
 // end hybrid analysis 
+
+extern std::unordered_map<char *, long> cuec;
 
 extern bool dpInited; // library initialization flag
 extern bool targetTerminated; // whether the target program has returned from main()
