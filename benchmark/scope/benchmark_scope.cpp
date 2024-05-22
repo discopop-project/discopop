@@ -15,7 +15,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "../../rtlib/memory/scope.hpp"
+#include "../../rtlib/memory/Scope.hpp"
 
 // General functions
 

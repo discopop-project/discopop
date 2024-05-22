@@ -5,14 +5,14 @@
 #include <cstdint>
 #include <vector>
 
-class MRTNodeTest2 : public ::testing::Test { };
+class MRTNodeTest : public ::testing::Test { };
 
-TEST_F(MRTNodeTest2, testConstructor) {
+TEST_F(MRTNodeTest, testConstructor) {
     const auto start_addr = 0x1234567890ABCDEFLL;
     const auto end_addr = 0x2234567890ABCDEFLL;
     const auto level = 0x1234;
     
-    const auto node = __dp::MRTNode2(start_addr, end_addr, level);
+    const auto node = __dp::MRTNode(start_addr, end_addr, level);
 
     ASSERT_EQ(node.get_first_addr(), start_addr);
     ASSERT_EQ(node.get_last_addr(), end_addr);
@@ -28,13 +28,13 @@ TEST_F(MRTNodeTest2, testConstructor) {
     }
 }
 
-TEST_F(MRTNodeTest2, testGetChildIndex) {
+TEST_F(MRTNodeTest, testGetChildIndex) {
     const auto start_addr = 0x1200000000000000LL;
     const auto end_addr = 0x12FFFFFFFFFFFFFFLL;
     
     const auto level = 2;
 
-    const auto node = __dp::MRTNode2(start_addr, end_addr, level);
+    const auto node = __dp::MRTNode(start_addr, end_addr, level);
 
     const auto base_addr = 0x010000000000000LL;
     for (auto i = 0; i < 16; i++) {
@@ -55,13 +55,13 @@ TEST_F(MRTNodeTest2, testGetChildIndex) {
     ASSERT_EQ(node.get_child_index(0xEFFFFFFFFFFFFFFFLL), -1);
 }
 
-TEST_F(MRTNodeTest2, testAddChild0) {
+TEST_F(MRTNodeTest, testAddChild0) {
     const auto start_addr = 0x1000000000000000LL;
     const auto end_addr = 0x1FFFFFFFFFFFFFFFLL;
 
     const auto level = 1;
 
-    auto node = __dp::MRTNode2(start_addr, end_addr, level);
+    auto node = __dp::MRTNode(start_addr, end_addr, level);
 
     node.add_child(0);
 
@@ -81,13 +81,13 @@ TEST_F(MRTNodeTest2, testAddChild0) {
     }
 }
 
-TEST_F(MRTNodeTest2, testAddChild1) {
+TEST_F(MRTNodeTest, testAddChild1) {
     const auto start_addr = 0x2E00000000000000LL;
     const auto end_addr = 0x2EFFFFFFFFFFFFFFLL;
 
     const auto level = 2;
 
-    auto node = __dp::MRTNode2(start_addr, end_addr, level);
+    auto node = __dp::MRTNode(start_addr, end_addr, level);
 
     node.add_child(3);
 
@@ -107,13 +107,13 @@ TEST_F(MRTNodeTest2, testAddChild1) {
     }
 }
 
-TEST_F(MRTNodeTest2, testSetMemoryRegionId) {
+TEST_F(MRTNodeTest, testSetMemoryRegionId) {
     const auto start_addr = 0x1000000000000000LL;
     const auto end_addr = 0x1FFFFFFFFFFFFFFFLL;
 
     const auto level = 1;
 
-    auto node = __dp::MRTNode2(start_addr, end_addr, level);
+    auto node = __dp::MRTNode(start_addr, end_addr, level);
 
     const auto memory_region_id = 0x1234;
     node.set_memory_region_id(memory_region_id);

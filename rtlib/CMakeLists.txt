@@ -19,8 +19,7 @@ set(DiscoPoP_SOURCES
         ../share/lib/timer.cpp
         
         memory/MemoryManager.cpp
-        memory/MemoryRegionTree.cpp
-        memory/signature.cpp
+        memory/Signature.cpp
 		
         injected_functions/dp_add_bb_deps.cpp
         injected_functions/dp_alloca.cpp

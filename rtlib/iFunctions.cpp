@@ -16,9 +16,9 @@
 #include "DPUtils.hpp"
 
 #include "loop/Makros.hpp"
-#include "memory/perfect_shadow.hpp"
-#include "memory/shadow.hpp"
-#include "memory/signature.hpp"
+#include "memory/PerfectShadow.hpp"
+#include "memory/ShadowMemory.hpp"
+#include "memory/Signature.hpp"
 #include "injected_functions/all.hpp"
 #include "../share/include/debug_print.hpp"
 #include "../share/include/timer.hpp"
@@ -628,7 +628,7 @@ void* analyzeDeps(void *arg) {
 #endif
   
   int64_t id = (int64_t)arg;
-  Shadow *SMem;
+  AbstractShadow *SMem;
   if (USE_PERFECT) {
     SMem = new PerfectShadow(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
   } else {

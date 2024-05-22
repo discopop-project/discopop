@@ -16,7 +16,7 @@
 #include "../DPUtils.hpp"
 
 #include "MemoryRegionTree.hpp"
-#include "scope.hpp"
+#include "Scope.hpp"
 
 #include <cstdint>
 #include <limits>
@@ -166,7 +166,7 @@ private:
 
     ScopeManager scopeManager;
 
-    MemoryRegionTree2 allocatedMemRegTree;
+    MemoryRegionTree allocatedMemRegTree;
     
     // (LID, identifier, startAddr, endAddr, numBytes, numElements)
     std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> allocatedMemoryRegions;

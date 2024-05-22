@@ -5,10 +5,10 @@
 #include <cstdint>
 #include <vector>
 
-class MemoryRegionTreeTest2 : public ::testing::Test { };
+class MemoryRegionTreeTest : public ::testing::Test { };
 
-TEST_F(MemoryRegionTreeTest2, testConstructor) {
-    const auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testConstructor) {
+    const auto tree = __dp::MemoryRegionTree{};
 
     const auto* root = tree.get_root();
 
@@ -21,8 +21,8 @@ TEST_F(MemoryRegionTreeTest2, testConstructor) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testAllocateRegion1) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testAllocateRegion1) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x7FFFFFFFFFFFFFFFLL;
@@ -38,8 +38,8 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion1) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testAllocateRegion2) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testAllocateRegion2) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x0FFFFFFFFFFFFFFFLL;
@@ -62,8 +62,8 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion2) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testAllocateRegion3) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testAllocateRegion3) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x1000000000000000LL;
     const auto end_addr = 0x3FFFFFFFFFFFFFFFLL;
@@ -105,8 +105,8 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion3) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testAllocateRegion4) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testAllocateRegion4) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x1000000000000000LL;
     const auto end_addr = 0x2CFFFFFFFFFFFFFFLL;
@@ -157,8 +157,8 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion4) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testAllocateRegion5) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testAllocateRegion5) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x13542698001FAB52LL;
     const auto end_addr = 0x13542698001FAB52LL;
@@ -184,7 +184,7 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion5) {
         }
 
         auto counter = 0;
-        __dp::MRTNode2* new_node = nullptr;
+        __dp::MRTNode* new_node = nullptr;
 
         for (auto i = 0; i < 16; i++) {
             auto* child = node->get_child(i);
@@ -200,8 +200,8 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion5) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testAllocateRegion6) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testAllocateRegion6) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -245,8 +245,8 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion6) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testAllocateRegion7) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testAllocateRegion7) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -302,8 +302,8 @@ TEST_F(MemoryRegionTreeTest2, testAllocateRegion7) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId1) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testGetMemoryRegionId1) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x7FFFFFFFFFFFFFFFLL;
@@ -321,8 +321,8 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId1) {
     ASSERT_EQ(tree.get_memory_region_id(0x622516846acd64b6LL), memory_region_id);
 }
 
-TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId2) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testGetMemoryRegionId2) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x7FFFFFFFFFFFFFFFLL;
@@ -340,8 +340,8 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId2) {
     ASSERT_EQ(tree.get_memory_region_id(0xF22516846acd64b6LL), 0xFFFF'FFFFU);
 }
 
-TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId3) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testGetMemoryRegionId3) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x1000'0000'0000'0000LL;
     const auto end_addr = 0x2000'0000'0000'0000LL;
@@ -359,8 +359,8 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId3) {
     ASSERT_EQ(tree.get_memory_region_id(0x8225'1684'6ac4'd4b6LL), 0xFFFF'FFFFU);
 }
 
-TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId4) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testGetMemoryRegionId4) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -385,8 +385,8 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId4) {
     ASSERT_EQ(tree.get_memory_region_id(0x3000'0000'0000'0000LL), 0xFFFF'FFFFU);
 }
 
-TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId5) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testGetMemoryRegionId5) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -414,8 +414,8 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionId5) {
     ASSERT_EQ(tree.get_memory_region_id(0x53FF'FFFF'FFFF'FFFFLL), memory_region_id_2);
 }
 
-TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr1) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testGetMemoryRegionIdStr1) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x7FFFFFFFFFFFFFFFLL;
@@ -433,8 +433,8 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr1) {
     ASSERT_EQ(tree.get_memory_region_id_string(0x622516846acd64b6LL, "fallback"), std::to_string(memory_region_id));
 }
 
-TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr2) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testGetMemoryRegionIdStr2) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x0000000000000000LL;
     const auto end_addr = 0x7FFFFFFFFFFFFFFFLL;
@@ -452,8 +452,8 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr2) {
     ASSERT_EQ(tree.get_memory_region_id_string(0xF22516846acd64b6LL, "fallback8"), std::string("fallback8"));
 }
 
-TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr3) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testGetMemoryRegionIdStr3) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x1000'0000'0000'0000LL;
     const auto end_addr = 0x2000'0000'0000'0000LL;
@@ -471,8 +471,8 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr3) {
     ASSERT_EQ(tree.get_memory_region_id_string(0x8225'1684'6ac4'd4b6LL, "fallback"), std::string("fallback"));
 }
 
-TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr4) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testGetMemoryRegionIdStr4) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -497,8 +497,8 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr4) {
     ASSERT_EQ(tree.get_memory_region_id_string(0x3000'0000'0000'0000LL, "fallback"), std::string("fallback"));
 }
 
-TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr5) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testGetMemoryRegionIdStr5) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -526,8 +526,8 @@ TEST_F(MemoryRegionTreeTest2, testGetMemoryRegionIdStr5) {
     ASSERT_EQ(tree.get_memory_region_id_string(0x53FF'FFFF'FFFF'FFFFLL, "fallback"), std::to_string(memory_region_id_2));
 }
 
-TEST_F(MemoryRegionTreeTest2, testFreeRegion1) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testFreeRegion1) {
+    auto tree = __dp::MemoryRegionTree{};
     
     const auto start_addr = 0x0000000000000000LL;
 
@@ -541,8 +541,8 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion1) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testFreeRegion2) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testFreeRegion2) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x7FFFFFFFFFFFFFFFLL;
 
@@ -556,8 +556,8 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion2) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testFreeRegion3) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testFreeRegion3) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x9472dcab36975afaLL;
 
@@ -571,8 +571,8 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion3) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testFreeRegion4) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testFreeRegion4) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x1000'0000'0000'0000LL;
     const auto end_addr = 0x1FFF'FFFF'FFFF'FFFFLL;
@@ -590,8 +590,8 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion4) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testFreeRegion5) {
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testFreeRegion5) {
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr = 0x0000'0000'0000'0000LL;
     const auto end_addr = 0x7FFF'FFFF'FFFF'FFFFLL;
@@ -609,8 +609,8 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion5) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testFreeRegion6) {    
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testFreeRegion6) {    
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;
@@ -661,8 +661,8 @@ TEST_F(MemoryRegionTreeTest2, testFreeRegion6) {
     }
 }
 
-TEST_F(MemoryRegionTreeTest2, testFreeRegion7) {    
-    auto tree = __dp::MemoryRegionTree2{};
+TEST_F(MemoryRegionTreeTest, testFreeRegion7) {    
+    auto tree = __dp::MemoryRegionTree{};
 
     const auto start_addr_1 = 0x1000000000000000LL;
     const auto end_addr_1 = 0x1FFFFFFFFFFFFFFFLL;

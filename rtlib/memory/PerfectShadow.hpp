@@ -12,14 +12,17 @@
 
 #pragma once
 
-#include "abstract_shadow.hpp"
+#include "AbstractShadow.hpp"
+
+#include "../DPTypes.hpp"
 
 #include <cstdint>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace __dp {
 
-class PerfectShadow : public Shadow {
+class PerfectShadow : public AbstractShadow {
 public:
   PerfectShadow(int slotSize, int size, int numHash) : PerfectShadow() {}
 
@@ -50,40 +53,40 @@ public:
     delete sigWrite;
   }
 
-  inline sigElement testInRead(int64_t memAddr) { 
+  inline sigElement testInRead(std::int64_t memAddr) { 
     return (*sigRead)[memAddr]; 
   }
 
-  inline sigElement testInWrite(int64_t memAddr) {
+  inline sigElement testInWrite(std::int64_t memAddr) {
     return (*sigWrite)[memAddr];
   }
 
-  inline sigElement insertToRead(int64_t memAddr, sigElement value) {
+  inline sigElement insertToRead(std::int64_t memAddr, sigElement value) {
     sigElement oldValue = testInRead(memAddr);
     (*sigRead)[memAddr] = value;
     return oldValue;
   }
 
-  inline sigElement insertToWrite(int64_t memAddr, sigElement value) {
+  inline sigElement insertToWrite(std::int64_t memAddr, sigElement value) {
     sigElement oldValue = testInWrite(memAddr);
     (*sigWrite)[memAddr] = value;
     return oldValue;
   }
 
-  inline void updateInRead(int64_t memAddr, sigElement newValue) {
+  inline void updateInRead(std::int64_t memAddr, sigElement newValue) {
     (*sigRead)[memAddr] = newValue;
   }
 
-  inline void updateInWrite(int64_t memAddr, sigElement newValue) {
+  inline void updateInWrite(std::int64_t memAddr, sigElement newValue) {
     (*sigWrite)[memAddr] = newValue;
   }
 
-  inline void removeFromRead(int64_t memAddr) { (*sigRead)[memAddr] = 0; }
+  inline void removeFromRead(std::int64_t memAddr) { (*sigRead)[memAddr] = 0; }
 
-  inline void removeFromWrite(int64_t memAddr) { (*sigWrite)[memAddr] = 0; }
+  inline void removeFromWrite(std::int64_t memAddr) { (*sigWrite)[memAddr] = 0; }
 
-  inline std::unordered_set<ADDR> getAddrsInRange(int64_t startAddr,
-                                                  int64_t endAddr) {
+  inline std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr,
+                                                  std::int64_t endAddr) {
     std::unordered_set<ADDR> result;
     for (auto pair : (*sigWrite)) {
       if ((pair.first >= startAddr) && (pair.first <= endAddr)) {
@@ -98,22 +101,22 @@ public:
     return result;
   }
 
-  const std::unordered_map<int64_t, sigElement>* getSigRead() const noexcept {
+  const std::unordered_map<std::int64_t, sigElement>* getSigRead() const noexcept {
     return sigRead;
   }
 
-  const std::unordered_map<int64_t, sigElement>* getSigWrite() const noexcept {
+  const std::unordered_map<std::int64_t, sigElement>* getSigWrite() const noexcept {
     return sigWrite;
   }
 
 private:
-  std::unordered_map<int64_t, sigElement> *sigRead;
-  std::unordered_map<int64_t, sigElement> *sigWrite;
+  std::unordered_map<std::int64_t, sigElement> *sigRead;
+  std::unordered_map<std::int64_t, sigElement> *sigWrite;
 };
 
 // Hopefully faster version
 
-class PerfectShadow2 : public Shadow {
+class PerfectShadow2 : public AbstractShadow {
 public:  
   PerfectShadow2() {
     read_cache.reserve(1024);
