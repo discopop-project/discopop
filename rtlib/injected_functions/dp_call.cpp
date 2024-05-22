@@ -31,7 +31,7 @@ namespace __dp {
 extern "C" {
 
 void __dp_call(LID lid) {
-  if (!dpInited) {
+  if (!dpInited || targetTerminated) {
     return;
   }
 

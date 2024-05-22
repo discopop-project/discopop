@@ -30,7 +30,7 @@ namespace __dp {
 extern "C" {
 // hybrid analysis
 void __dp_add_bb_deps(char *depStringPtr) {
-  if (!dpInited) {
+  if (!dpInited || targetTerminated) {
     return;
   }
   

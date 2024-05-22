@@ -31,7 +31,7 @@ namespace __dp {
 extern "C" {
 
 void __dp_loop_entry(LID lid, int32_t loopID) {
-  if (!dpInited){
+  if (!dpInited || targetTerminated) {
     return;
   }
 

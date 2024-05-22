@@ -32,6 +32,15 @@ namespace __dp {
 extern "C" {
 
 void __dp_func_exit(LID lid, int32_t isExit) {
+  if (targetTerminated) {
+    if (DP_DEBUG) {
+      cout << "Exiting function LID " << std::dec << dputil::decodeLID(lid);
+      cout << " but target program has returned from main(). Destructors?"
+           << endl;
+    }
+    return;
+  }
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -42,15 +51,6 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   timers->start(TimerRegion::FUNC_EXIT);
   const auto timer = Timer(timers, TimerRegion::FUNC_EXIT);
 #endif
-
-  if (targetTerminated) {
-    if (DP_DEBUG) {
-      cout << "Exiting function LID " << std::dec << dputil::decodeLID(lid);
-      cout << " but target program has returned from main(). Destructors?"
-           << endl;
-    }
-    return;
-  }
 
   loop_manager->clean_function_exit(function_manager->get_current_stack_level(), lid);
 

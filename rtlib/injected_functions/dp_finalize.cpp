@@ -34,6 +34,9 @@ namespace __dp {
 extern "C" {
 
 void __dp_finalize(LID lid) {
+  if (targetTerminated) {
+    return;
+  }
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   pthread_compatibility_mutex.lock();
 #endif
