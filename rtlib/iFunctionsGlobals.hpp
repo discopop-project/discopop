@@ -91,4 +91,5 @@ extern int32_t *tempAddrCount; // tempAddrCount[thread_id] denotes the current n
 extern bool stop; // ONLY set stop to true if no more accessed addresses will
                    // be collected
 extern thread_local depMap *myMap;
+
 } // namespace __dp

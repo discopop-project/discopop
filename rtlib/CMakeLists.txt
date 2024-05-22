@@ -14,9 +14,7 @@
 set(DiscoPoP_SOURCES
         iFunctions.cpp
         iFunctionsGlobals.cpp
-        
-        ../share/lib/timer.cpp
-        
+                
         memory/MemoryManager.cpp
         memory/Signature.cpp
 		

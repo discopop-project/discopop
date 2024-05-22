@@ -696,8 +696,8 @@ void* analyzeDeps(void *arg) {
       AccessInfo access;
 
       // analyze data dependences
-
       for (unsigned short i = 0; i < CHUNK_SIZE; ++i) {
+        
         access = accesses[i];
         analyzeSingleAccess(SMem, access);
       }
