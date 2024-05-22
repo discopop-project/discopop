@@ -78,7 +78,6 @@ extern pthread_t *workers; // worker threads
 extern AbstractShadow* singleThreadedExecutionSMem;
 
 extern int32_t NUM_WORKERS; 
-extern Shadow* singleThreadedExecutionSMem;
 
 extern int32_t CHUNK_SIZE; // default number of addresses in each chunk
 extern std::queue<AccessInfo *> *chunks; // one queue of access info chunks for each worker thread
