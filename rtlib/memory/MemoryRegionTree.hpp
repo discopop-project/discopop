@@ -200,6 +200,11 @@ public:
     return children;
   }
 
+  void delete_child(const unsigned int index) {
+    delete children[index];
+    children[index] = nullptr;
+  }
+
   MRTNode2* get_child(const unsigned int index) const noexcept {
     return children[index];
   }
@@ -255,49 +260,66 @@ public:
     return root;
   }
 
-  void allocate_region(const ADDR start, const ADDR end, const std::int64_t memory_region_id) {
+  void allocate_region(const ADDR start, const ADDR end, const unsigned int memory_region_id) {
     assert(start <= end && "Invalid memory region");
+    assert(memory_region_id != 0 && "Invalid memory region id");
     allocate(start, end, memory_region_id, root);
   }
 
-  std::string get_memory_region_id(const ADDR addr, const char* fallback) {
+  unsigned int get_memory_region_id(const ADDR addr) {
     auto* node = root;
 
-    std::cout << "Searching " << addr << std::endl;
-
     while (true) {
-      std::cout << "Node [" << node->get_first_addr() << ", " << node->get_last_addr() << "] with memory region id " << node->get_memory_region_id() << std::endl;
-
       if (node->get_memory_region_id() != 0) {
         if (addr >= node->get_first_addr() && addr <= node->get_last_addr()) {
-          return std::to_string(node->get_memory_region_id());
+          return node->get_memory_region_id();
         }
 
-        std::cout << node->get_first_addr() << " <= " << addr << " <= " << node->get_last_addr() << " not satisfied" << std::endl;
-        return fallback;
+        return 0xFFFF'FFFFU;
       }
 
       const auto index = node->get_child_index(addr);
       if (index == -1) {
-        return fallback;
+        return 0xFFFF'FFFFU;
       }
 
       const auto child = node->get_child(index);
       if (child == nullptr) {
-        return fallback;
+        return 0xFFFF'FFFFU;
       }
 
       node = child;
     }
 
-    return fallback;
+    return 0xFFFF'FFFFU;
+  }
+
+  std::string get_memory_region_id_string(const ADDR addr, const char* fallback) {
+    const auto memory_region_id = get_memory_region_id(addr);
+    if (memory_region_id == 0xFFFF'FFFFU) {
+      return fallback;
+    }
+
+    return std::to_string(memory_region_id);
+  }
+
+  void free_region(const ADDR start) {
+    // NOTE: Given an allocation [start, end], this function can also handle free(x) for x in (start, end].
+    // Not sure if this functionality is required. 
+
+    const auto memory_region_id = get_memory_region_id(start);
+    if (memory_region_id == 0xFFFF'FFFFU) {
+      return;
+    }
+
+    // This actually searches the whole tree again, but it's fine for now
+    const auto clean_root = free(start, memory_region_id, root);
+    
+    // We never delete the root node
   }
 
 private:
-  static void allocate(const ADDR start, const ADDR end, const std::int64_t memory_region_id, MRTNode2* node) {
-    std::cout << "DBG: MRT: Allocating memory region [" << start << ", " << end << "] with memory region id " << memory_region_id << "\n";
-    std::cout << "DBG: MRT: Node [" << node->get_first_addr() << ", " << node->get_last_addr() << "] with memory region id " << node->get_memory_region_id() << "\n";
-
+  static void allocate(const ADDR start, const ADDR end, const unsigned int memory_region_id, MRTNode2* node) {
     assert(node != nullptr && "Node is null");
     assert(start >= node->get_first_addr() && end <= node->get_last_addr() && "Invalid memory region for node");
 
@@ -305,7 +327,6 @@ private:
       assert(node->get_memory_region_id() == 0 && "Memory region already allocated");
       node->set_memory_region_id(memory_region_id);
 
-      std::cout << "DBG: MRT: Allocated memory region [" << start << ", " << end << "] with memory region id " << memory_region_id << "\n";
       return;
     }
 
@@ -327,6 +348,56 @@ private:
 
       allocate(clamped_start, clamped_end, memory_region_id, child);
     }
+  }
+
+  static bool free(const ADDR start, const unsigned int memory_region_id, MRTNode2* node) {
+    assert(node != nullptr && "Node is null");
+
+    const auto memory_region_id_node = node->get_memory_region_id();
+    if (memory_region_id_node == memory_region_id) {
+      // node is a leaf with the correct id -> free it
+      node->set_memory_region_id(0);
+
+      return true;
+    }
+
+    if (memory_region_id_node != 0) {
+      // node is a leaf with a different id -> Overstepped the allocation
+      return false;
+    }
+
+    const auto start_index = node->get_child_index(start);
+    if (start_index == -1) {
+      // start is not in the node -> Technically a bug?
+      return false;
+    }
+
+    for (auto index = start_index; index < 16; index++) {
+      auto* child = node->get_child(index);
+      if (child == nullptr) {
+        // We might need to clean node -> no return here
+        break;
+      }
+
+      const auto belongs_to_allocation = free(start, memory_region_id, child);
+      if (!belongs_to_allocation) {
+        // We found a child that doesn't belong to the allocation -> We are done
+        return false;
+      }
+
+      // Child belongs to the allocation -> Free it
+      node->delete_child(index);
+    }
+
+    for (auto i = 0; i < 16; i++) {
+      if (node->get_child(i) != nullptr) {
+        // There are still children -> We do not need to clean node
+        return false;
+      }
+    }
+
+    // There are no children left -> Clean node
+    return true;
   }
 
   MRTNode2* root{};
