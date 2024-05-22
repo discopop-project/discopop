@@ -89,11 +89,11 @@ public:
     }
 
     void enterScope(std::string type, const LID debug_lid) {
-        scopeManager.enterScope(std::move(type), debug_lid);
+        scopeManager.enterScope(type.c_str(), debug_lid);
     }
 
     void leaveScope(std::string type, const LID debug_lid) { 
-        scopeManager.leaveScope(std::move(type), debug_lid); 
+        scopeManager.leaveScope(type.c_str(), debug_lid); 
     }
 
     void registerStackRead(const ADDR address, const LID debug_lid, char *debug_var) {
@@ -112,8 +112,12 @@ public:
         return scopeManager.positiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
-    Scope getCurrentScope() { 
+    const Scope& getCurrentScope() { 
         return scopeManager.getCurrentScope(); 
+    }
+
+    std::size_t number_open_scopes() const noexcept {
+        return scopeManager.number_open_scopes();
     }
 
     std::string get_memory_region_id(const ADDR addr, std::string fallback) {
