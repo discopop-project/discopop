@@ -574,6 +574,44 @@ void initSingleThreadedExecution() {
   myMap = new depMap();
 }
 
+void initSingleThreadedExecution() {
+#ifdef DP_RTLIB_VERBOSE
+  cout << "enter initSingleThreadedExecution\n";
+#endif
+timers->start(TimerRegion::ANALYZE_DEPS);
+  
+  if (USE_PERFECT) {
+    singleThreadedExecutionSMem = new PerfectShadow(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
+  } else {
+    singleThreadedExecutionSMem = new ShadowMemory(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
+  }
+  myMap = new depMap();
+
+#ifdef DP_RTLIB_VERBOSE
+  cout << "exit initSingleThreadedExecution\n";
+#endif
+}
+
+void finalizeSingleThreadedExecution() {
+
+#ifdef DP_RTLIB_VERBOSE
+  cout << "enter finalizeSingleThreadedExecution\n";
+#endif
+  if (DP_DEBUG) {
+    cout << "BEGIN: finalize Single Threaded Execution... \n";
+  }
+
+  delete singleThreadedExecutionSMem;
+  mergeDeps();
+
+  if (DP_DEBUG) {
+    cout << "END: finalize Single Threaded Execution... \n";
+  }
+#ifdef DP_RTLIB_VERBOSE
+  cout << "exit finalizeSingleThreadedExecution\n";
+#endif
+}
+
 string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
@@ -696,8 +734,8 @@ void* analyzeDeps(void *arg) {
       AccessInfo access;
 
       // analyze data dependences
-
       for (unsigned short i = 0; i < CHUNK_SIZE; ++i) {
+        
         access = accesses[i];
         analyzeSingleAccess(SMem, access);
       }
