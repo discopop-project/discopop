@@ -80,7 +80,11 @@ void __dp_finalize(LID lid) {
     std::cout << "Program terminates at LID " << std::dec << dputil::decodeLID(lid) << ", clearing up" << std::endl;
 #endif
 
-  finalizeParallelization();
+  if (NUM_WORKERS > 0) {
+    finalizeParallelization();
+  } else {
+    finalizeSingleThreadedExecution();
+  }
 
   const auto output_loops = []() {
 #ifdef DP_RTLIB_VERBOSE

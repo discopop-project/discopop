@@ -63,9 +63,7 @@ if(DEFINED DP_RTLIB_VERBOSE)
 endif()
 
 if(DEFINED DP_NUM_WORKERS)
-        if(NOT ${DP_NUM_WORKERS} EQUAL 0)
-                target_compile_definitions(DiscoPoP_RT PUBLIC DP_NUM_WORKERS=${DP_NUM_WORKERS})
-        endif()
+        target_compile_definitions(DiscoPoP_RT PUBLIC DP_NUM_WORKERS=${DP_NUM_WORKERS})
 endif()
 
 # end of compiler flags

@@ -14,6 +14,7 @@
 
 #include "iFunctionsTypes.hpp"
 #include "../share/include/timer.hpp"
+#include "memory/AbstractShadow.hpp"
 
 #include <pthread.h>
 
@@ -73,6 +74,8 @@ extern pthread_cond_t *addrChunkPresentConds; // condition variables
 extern pthread_mutex_t *addrChunkMutexes;     // associated mutexes
 extern pthread_mutex_t allDepsLock;
 extern pthread_t *workers; // worker threads
+
+extern AbstractShadow* singleThreadedExecutionSMem;
 
 extern int32_t NUM_WORKERS; 
 

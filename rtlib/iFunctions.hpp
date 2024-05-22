@@ -14,6 +14,7 @@
 
 #include "DPTypes.hpp"
 #include "iFunctionsTypes.hpp"
+#include "memory/AbstractShadow.hpp"
 
 #include <string>
 
@@ -30,13 +31,19 @@ void readRuntimeInfo();
 
 void initParallelization();
 
+void initSingleThreadedExecution();
+
 void mergeDeps();
 
 void* analyzeDeps(void *arg);
 
+void analyzeSingleAccess(__dp::AbstractShadow* SMem, __dp::AccessInfo& access);
+
 std::string getMemoryRegionIdFromAddr(std::string fallback, ADDR addr);
 
 void finalizeParallelization();
+
+void finalizeSingleThreadedExecution();
 
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound);
 } // namespace __dp
