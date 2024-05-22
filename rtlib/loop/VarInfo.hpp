@@ -28,6 +28,8 @@ struct var_info_t {
     return var_name_ == other.var_name_ && file_id_ == other.file_id_ && instr_id_ == other.instr_id_ &&
            loop_line_nr_ == other.loop_line_nr_ && instr_line_ == other.instr_line_ && operation_ == other.operation_;
   }
+
+  bool operator!=(const var_info_t& other) const noexcept { return !(*this == other); }
 };
 
 } // namespace __dp

@@ -22,6 +22,8 @@ struct loop_info_t {
   bool operator==(const loop_info_t& other) const noexcept {
     return line_nr_ == other.line_nr_ && loop_id_ == other.loop_id_ && file_id_ == other.file_id_;
   }
+
+  bool operator!=(const loop_info_t& other) const noexcept { return !(*this == other); }
 };
 
 } // namespace __dp

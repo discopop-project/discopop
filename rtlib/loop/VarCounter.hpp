@@ -22,6 +22,8 @@ struct VarCounter {
   bool operator==(const VarCounter& other) const noexcept {
     return counters_[0] == other.counters_[0] && counters_[1] == other.counters_[1] && mem_addr_ == other.mem_addr_ && valid_ == other.valid_;
   }
+
+  bool operator!=(const VarCounter& other) const noexcept { return !(*this == other); }
 };
 
 } // namespace __dp

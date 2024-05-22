@@ -34,6 +34,8 @@ struct LoopRecord {
   bool operator==(const LoopRecord& other) const noexcept {
     return end == other.end && total == other.total && nEntered == other.nEntered && maxIterationCount == other.maxIterationCount;  
   }
+
+  bool operator!=(const LoopRecord& other) const noexcept { return !(*this == other); }
 };
 
 typedef std::unordered_map<LID, LoopRecord *> LoopRecords;

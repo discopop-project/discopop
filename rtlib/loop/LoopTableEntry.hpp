@@ -31,6 +31,8 @@ struct LoopTableEntry {
     return funcLevel == other.funcLevel && loopID == other.loopID && count == other.count && begin == other.begin;
   }
 
+  bool operator!=(const LoopTableEntry& other) const noexcept { return !(*this == other); }
+
   std::int32_t get_count() const noexcept { return count; }
 
   void increment_count() noexcept { ++count; }
