@@ -9,3 +9,18 @@
  * directory for details.
  *
  */
+
+#pragma once
+
+#include "../DPTypes.hpp"
+
+namespace __dp {
+
+/******* Instrumentation function *******/
+extern "C" {
+
+void __dp_taken_branch_counter_output();
+
+}
+
+} // namespace __dp

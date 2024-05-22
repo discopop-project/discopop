@@ -58,7 +58,7 @@ struct AccessInfo {
       : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr),
         skip(skip) {}
 
-  AccessInfo() : lid(0) {}
+  AccessInfo() : isRead(false), lid(0), var(""), AAvar(""), addr(0), skip(false) {}
 
   bool isRead;
   // hybrid analysis

@@ -102,7 +102,11 @@ void __dp_func_entry(LID lid, int32_t isStart) {
       cout << "DP initialized at LID " << std::dec << dputil::decodeLID(lid) << endl;
     }
     dpInited = true;
-    initParallelization();
+    if(NUM_WORKERS > 0) {
+      initParallelization();
+    } else {
+      initSingleThreadedExecution();
+    }
   } else if (targetTerminated) {
     if (DP_DEBUG) {
       cout << "Entering function LID " << std::dec << dputil::decodeLID(lid);

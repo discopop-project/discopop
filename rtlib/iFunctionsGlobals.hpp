@@ -14,6 +14,7 @@
 
 #include "iFunctionsTypes.hpp"
 #include "../share/include/timer.hpp"
+#include "memory/AbstractShadow.hpp"
 
 #include <pthread.h>
 
@@ -25,6 +26,7 @@
 #include <stack>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 
 extern bool USE_PERFECT;
@@ -53,6 +55,8 @@ extern ReportedBBSet *bbList;
 extern stringDepMap *outPutDeps;
 // end hybrid analysis 
 
+extern std::unordered_map<char *, long> cuec;
+
 extern bool dpInited; // library initialization flag
 extern bool targetTerminated; // whether the target program has returned from main()
 // In C++, destructors of global objects can run after main().
@@ -70,6 +74,8 @@ extern pthread_cond_t *addrChunkPresentConds; // condition variables
 extern pthread_mutex_t *addrChunkMutexes;     // associated mutexes
 extern pthread_mutex_t allDepsLock;
 extern pthread_t *workers; // worker threads
+
+extern AbstractShadow* singleThreadedExecutionSMem;
 
 extern int32_t NUM_WORKERS; 
 

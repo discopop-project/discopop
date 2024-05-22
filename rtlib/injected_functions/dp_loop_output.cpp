@@ -25,7 +25,7 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void dp_loop_output() {
+void __dp_loop_output() {
   if (loop_manager->is_done()) {
     return;
   }

@@ -32,6 +32,7 @@ target_sources(
   DiscoPoP_BM
   PRIVATE 
   benchmarks.cpp
+  memory_region_tree/benchmark_memory_region_tree.cpp
   perfect_shadow/benchmark_perfect_shadow.cpp
   scope/benchmark_scope.cpp)
 

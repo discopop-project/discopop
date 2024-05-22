@@ -16,9 +16,9 @@
 #include "DPUtils.hpp"
 
 #include "loop/Makros.hpp"
-#include "memory/perfect_shadow.hpp"
-#include "memory/shadow.hpp"
-#include "memory/signature.hpp"
+#include "memory/PerfectShadow.hpp"
+#include "memory/ShadowMemory.hpp"
+#include "memory/Signature.hpp"
 #include "injected_functions/all.hpp"
 #include "../share/include/debug_print.hpp"
 #include "../share/include/timer.hpp"
@@ -32,6 +32,7 @@
 #include <cstdlib>
 #include <queue>
 #include <set>
+#include <sstream>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -556,41 +557,29 @@ void initParallelization() {
   pthread_attr_destroy(&attr);
 }
 
+void initSingleThreadedExecution() {
+#ifdef DP_RTLIB_VERBOSE
+  const auto debug_print = make_debug_print("initSingleThreadedExecution");
+#endif
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
+#endif
+
+  if (USE_PERFECT) {
+    singleThreadedExecutionSMem = new PerfectShadow(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
+  } else {
+    singleThreadedExecutionSMem = new ShadowMemory(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
+  }
+
+  myMap = new depMap();
+}
+
 string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
 #endif
 
-  return fallback + '-' + memory_manager->get_memory_region_id(fallback, addr);
-}
-
-void addAccessInfo(bool isRead, LID lid, char *var, ADDR addr) {
-#ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("addAccessInfo");
-#endif
-#ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::ADD_ACCESS_INFO);
-#endif
-  
-  int64_t workerID =
-      ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-  numAccesses[workerID]++;
-  AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
-  current.isRead = isRead;
-  current.lid = loop_manager->update_lid(lid);
-  current.var = var;
-  current.AAvar = getMemoryRegionIdFromAddr(var, addr);
-  current.addr = addr;
-
-  if (tempAddrCount[workerID] == CHUNK_SIZE) {
-    pthread_mutex_lock(&addrChunkMutexes[workerID]);
-    addrChunkPresent[workerID] = true;
-    chunks[workerID].push(tempAddrChunks[workerID]);
-    pthread_cond_signal(&addrChunkPresentConds[workerID]);
-    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-    tempAddrCount[workerID] = 0;
-  }
+  return fallback + '-' + memory_manager->get_memory_region_id(addr, fallback);
 }
 
 void mergeDeps() {  
@@ -622,13 +611,64 @@ void mergeDeps() {
   pthread_mutex_unlock(&allDepsLock);
 }
 
+void analyzeSingleAccess(__dp::AbstractShadow* SMem, __dp::AccessInfo& access){
+  // analyze data dependences
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::ANALYZE_SINGLE_ACCESS);
+#endif
+
+  if (access.isRead) {
+    // hybrid analysis
+    if (access.skip) {
+      SMem->insertToRead(access.addr, access.lid);
+      return;
+    }
+    // End HA
+    sigElement lastWrite = SMem->testInWrite(access.addr);
+    if (lastWrite != 0) {
+      // RAW
+      SMem->insertToRead(access.addr, access.lid);
+      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
+              access.isStackAccess, access.addr,
+              access.addrIsOwnedByScope,
+              access.positiveScopeChangeOccuredSinceLastAccess);
+    }
+  } else {
+    sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
+    if (lastWrite == 0) {
+      // INIT
+      addDep(INIT, access.lid, 0, access.var, access.AAvar,
+              access.isStackAccess, access.addr,
+              access.addrIsOwnedByScope,
+              access.positiveScopeChangeOccuredSinceLastAccess);
+    } else {
+      sigElement lastRead = SMem->testInRead(access.addr);
+      if (lastRead != 0) {
+        // WAR
+        addDep(WAR, access.lid, lastRead, access.var, access.AAvar,
+                access.isStackAccess, access.addr,
+                access.addrIsOwnedByScope,
+                access.positiveScopeChangeOccuredSinceLastAccess);
+        // Clear intermediate read ops
+        SMem->insertToRead(access.addr, 0);
+      } else {
+        // WAW
+        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar,
+                access.isStackAccess, access.addr,
+                access.addrIsOwnedByScope,
+                access.positiveScopeChangeOccuredSinceLastAccess);
+      }
+    }
+  }
+}
+
 void* analyzeDeps(void *arg) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
 #endif
   
   int64_t id = (int64_t)arg;
-  Shadow *SMem;
+  AbstractShadow *SMem;
   if (USE_PERFECT) {
     SMem = new PerfectShadow(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
   } else {
@@ -659,50 +699,7 @@ void* analyzeDeps(void *arg) {
 
       for (unsigned short i = 0; i < CHUNK_SIZE; ++i) {
         access = accesses[i];
-
-        if (access.isRead) {
-          // hybrid analysis
-          if (access.skip) {
-            SMem->insertToRead(access.addr, access.lid);
-            continue;
-          }
-          // End HA
-          sigElement lastWrite = SMem->testInWrite(access.addr);
-          if (lastWrite != 0) {
-            // RAW
-            SMem->insertToRead(access.addr, access.lid);
-            addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
-                   access.isStackAccess, access.addr,
-                   access.addrIsOwnedByScope,
-                   access.positiveScopeChangeOccuredSinceLastAccess);
-          }
-        } else {
-          sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
-          if (lastWrite == 0) {
-            // INIT
-            addDep(INIT, access.lid, 0, access.var, access.AAvar,
-                   access.isStackAccess, access.addr,
-                   access.addrIsOwnedByScope,
-                   access.positiveScopeChangeOccuredSinceLastAccess);
-          } else {
-            sigElement lastRead = SMem->testInRead(access.addr);
-            if (lastRead != 0) {
-              // WAR
-              addDep(WAR, access.lid, lastRead, access.var, access.AAvar,
-                     access.isStackAccess, access.addr,
-                     access.addrIsOwnedByScope,
-                     access.positiveScopeChangeOccuredSinceLastAccess);
-              // Clear intermediate read ops
-              SMem->insertToRead(access.addr, 0);
-            } else {
-              // WAW
-              addDep(WAW, access.lid, lastWrite, access.var, access.AAvar,
-                     access.isStackAccess, access.addr,
-                     access.addrIsOwnedByScope,
-                     access.positiveScopeChangeOccuredSinceLastAccess);
-            }
-          }
-        }
+        analyzeSingleAccess(SMem, access);
       }
 
       // delete the current chunk at the end
@@ -791,46 +788,35 @@ void finalizeParallelization() {
   }
 }
 
+void finalizeSingleThreadedExecution() {
+#ifdef DP_RTLIB_VERBOSE
+  const auto debug_print = make_debug_print("finalizeSingleThreadedExecution");
+#endif
+
+  if (DP_DEBUG) {
+    std::cout << "BEGIN: finalize Single Threaded Execution... \n";
+  }
+
+  delete singleThreadedExecutionSMem;
+  mergeDeps();
+
+  if (DP_DEBUG) {
+    std::cout << "END: finalize Single Threaded Execution... \n";
+  }
+}
+
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::CLEAR_STACK_ACCESSES);
 #endif
 
-  for (ADDR addr : memory_manager->getCurrentScope().get_first_write()) {
-    int64_t workerID =
-        ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-    // cleanup reads
-    AccessInfo &cleanupReadCurrent =
-        tempAddrChunks[workerID][tempAddrCount[workerID]++];
-    cleanupReadCurrent.addr = addr;
-    cleanupReadCurrent.lid = 0;
-    cleanupReadCurrent.isRead = true;
-
-    if (tempAddrCount[workerID] == CHUNK_SIZE) {
-      pthread_mutex_lock(&addrChunkMutexes[workerID]);
-      addrChunkPresent[workerID] = true;
-      chunks[workerID].push(tempAddrChunks[workerID]);
-      pthread_cond_signal(&addrChunkPresentConds[workerID]);
-      pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-      tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-      tempAddrCount[workerID] = 0;
-    }
-    // cleanup writes
-    AccessInfo &cleanupWriteCurrent =
-        tempAddrChunks[workerID][tempAddrCount[workerID]++];
-    cleanupWriteCurrent.addr = addr;
-    cleanupWriteCurrent.lid = 0;
-    cleanupWriteCurrent.isRead = false;
-
-    if (tempAddrCount[workerID] == CHUNK_SIZE) {
-      pthread_mutex_lock(&addrChunkMutexes[workerID]);
-      addrChunkPresent[workerID] = true;
-      chunks[workerID].push(tempAddrChunks[workerID]);
-      pthread_cond_signal(&addrChunkPresentConds[workerID]);
-      pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-      tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-      tempAddrCount[workerID] = 0;
-    }
+  const auto& current_scope = memory_manager->getCurrentScope();
+  const auto& writes = current_scope.get_first_write();
+  for (ADDR addr : writes) {
+    //cleanup reads
+    __dp_read(0, addr, "");
+    //cleanup writes
+    __dp_write(0, addr, "");
   }
 }
 

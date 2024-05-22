@@ -36,7 +36,9 @@ MemoryManager* memory_manager = nullptr;
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
 stringDepMap *outPutDeps = nullptr;
-// end hybrid analysis 
+// end hybrid analysis
+
+std::unordered_map<char *, long> cuec;
 
 bool dpInited = false; // library initialization flag
 bool targetTerminated = false; // whether the target program has returned from main()
@@ -66,6 +68,10 @@ int32_t NUM_WORKERS = DP_NUM_WORKERS;
 int32_t NUM_WORKERS = 3; // default number of worker threads (multiple workers
                          // can potentially lead to non-deterministic results)
 #endif
+
+#pragma message "Profiler: set NUM_WORKERS to " XSTR(NUM_WORKERS)
+AbstractShadow* singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
+
 int32_t CHUNK_SIZE = 500; // default number of addresses in each chunk
 std::queue<AccessInfo *> *chunks =
     nullptr; // one queue of access info chunks for each worker thread

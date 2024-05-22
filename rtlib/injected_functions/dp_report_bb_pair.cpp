@@ -31,7 +31,7 @@ namespace __dp {
 extern "C" {
 
 void __dp_report_bb_pair(int32_t semaphore, uint32_t bbIndex) {
-  if (!dpInited){
+  if (!dpInited || targetTerminated) {
     return;
   }
   

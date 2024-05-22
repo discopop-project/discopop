@@ -59,8 +59,12 @@ private:
 
 // Data structure for stack access management in scopes
 struct ScopeManager {
-  Scope getCurrentScope() { 
+  const Scope& getCurrentScope() { 
     return scopeStack.back(); 
+  }
+
+  std::size_t number_open_scopes() const noexcept {
+    return scopeStack.size();
   }
 
   void enterScope(std::string type, LID debug_lid) {
@@ -197,6 +201,10 @@ struct ScopeManager2 {
 
   const Scope2& getCurrentScope() const noexcept { 
     return scopeStack.back(); 
+  }
+
+  std::size_t number_open_scopes() const noexcept {
+    return scopeStack.size();
   }
 
   void enterScope(const char* type, LID debug_lid) {

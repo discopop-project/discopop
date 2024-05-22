@@ -10,34 +10,22 @@
  *
  */
 
-#include "cu_taken_branch_counter.hpp"
+#include "../DPTypes.hpp"
+
+#include "../iFunctionsGlobals.hpp"
 
 #include <fstream>
 #include <iostream>
-#include <stdlib.h>
 #include <string>
-#include <unordered_map>
 
-static std::unordered_map<char *, long> cuec;
+namespace __dp {
 
+/******* Instrumentation function *******/
 extern "C" {
-
-void __dp_incr_taken_branch_counter(char *source_and_target, int cmp_res,
-                                    int active_on) {
-  if (cmp_res == active_on) {
-    if (cuec.count(source_and_target) == 0) {
-      cuec[source_and_target] = 1;
-    } else {
-      cuec[source_and_target] = cuec[source_and_target] + 1;
-    }
-  }
-}
 
 void __dp_taken_branch_counter_output() {
   std::cout << "Outputting instrumentation results (taken branches)... ";
 
-  std::ifstream ifile;
-  std::string line;
   std::ofstream ofile;
 
   // output information about the loops
@@ -53,4 +41,7 @@ void __dp_taken_branch_counter_output() {
 
   std::cout << "done" << std::endl;
 }
+
 }
+
+} // namespace __dp

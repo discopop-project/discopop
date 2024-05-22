@@ -14,38 +14,23 @@
 
 #include "../iFunctionsGlobals.hpp"
 
-#include "../../share/include/debug_print.hpp"
-#include "../../share/include/timer.hpp"
-
-#include <cstdint>
-#include <iostream>
-#include <mutex>
-#include <set>
-#include <string>
-
-using namespace std;
-
 namespace __dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_call(LID lid) {
+void __dp_incr_taken_branch_counter(char *source_and_target, int cmp_res, int active_on) {
   if (!dpInited || targetTerminated) {
     return;
   }
 
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
-#endif
-#ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("__dp_call");
-#endif
-#ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::CALL);
-#endif
-
-  function_manager->log_call(lid);
+  if (cmp_res == active_on) {
+    if (cuec.count(source_and_target) == 0) {
+      cuec[source_and_target] = 1;
+    } else {
+      cuec[source_and_target] = cuec[source_and_target] + 1;
+    }
+  }
 }
 
 }

@@ -15,7 +15,7 @@
 #include <cstdint>
 #include <vector>
 
-#include "../../rtlib/memory/perfect_shadow.hpp"
+#include "../../rtlib/memory/PerfectShadow.hpp"
 
 // General functions
 

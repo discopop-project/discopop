@@ -16,8 +16,9 @@
 #include "../DPUtils.hpp"
 
 #include "MemoryRegionTree.hpp"
-#include "scope.hpp"
+#include "Scope.hpp"
 
+#include <cstdint>
 #include <limits>
 #include <ostream>
 #include <stack>
@@ -46,22 +47,25 @@ public:
         return old_value;
     }
 
+    void enter_new_function() {
+        stackAddrs.emplace(0, 0);
+    }
+
     void update_stack_addresses(const ADDR start, const ADDR end) {
         auto& top = stackAddrs.top();
         if (top.first == 0) {
+            top.first = start;
+        }
+        else if (top.first > start) {
             top.first = start;
         }
 
         if (top.second == 0) {
             top.second = end;
         } 
-        else if (top.second > end) {
+        else if (top.second < end) {
             top.second = end;
         }
-    }
-
-    void enter_new_function() {
-        stackAddrs.emplace(0, 0);
     }
 
     std::pair<ADDR, ADDR> pop_last_stack_address() {
@@ -80,43 +84,50 @@ public:
             return false;
         }
 
-        return address <= addrs.first && addrs.second <= address;
+        return addrs.first <= address && address <= addrs.second;
+        // return address <= addrs.first && addrs.second <= address;
     }
 
-    void enterScope(std::string type, LID debug_lid) {
-        scopeManager.enterScope(type, debug_lid);
+    void enterScope(std::string type, const LID debug_lid) {
+        scopeManager.enterScope(type.c_str(), debug_lid);
     }
 
-    void leaveScope(std::string type, LID debug_lid) { 
-        scopeManager.leaveScope(type, debug_lid); 
+    void leaveScope(std::string type, const LID debug_lid) { 
+        scopeManager.leaveScope(type.c_str(), debug_lid); 
     }
 
-    void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
+    void registerStackRead(const ADDR address, const LID debug_lid, char *debug_var) {
         scopeManager.registerStackRead(address, debug_lid, debug_var);
     }
 
-    void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
+    void registerStackWrite(const ADDR address, const LID debug_lid, char *debug_var) {
         scopeManager.registerStackWrite(address, debug_lid, debug_var);
     }
 
-    bool isFirstWrittenInScope(ADDR addr, bool currentAccessIsWrite) {
+    bool isFirstWrittenInScope(const ADDR addr, const bool currentAccessIsWrite) {
         return scopeManager.isOwnedByScope(addr, currentAccessIsWrite);
     }
 
-    bool positiveScopeChangeOccuredSinceLastAccess(ADDR addr) {
+    bool positiveScopeChangeOccuredSinceLastAccess(const ADDR addr) {
         return scopeManager.positiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
-    Scope getCurrentScope() { 
+    const Scope& getCurrentScope() { 
         return scopeManager.getCurrentScope(); 
     }
 
-    std::string get_memory_region_id(string fallback, ADDR addr) {
-        return allocatedMemRegTree.get_memory_region_id(std::move(fallback), addr);
+    std::size_t number_open_scopes() const noexcept {
+        return scopeManager.number_open_scopes();
+    }
+
+    std::string get_memory_region_id(const ADDR addr, std::string fallback) {
+        return allocatedMemRegTree.get_memory_region_id_string(addr, fallback.c_str());
     }
 
     std::string allocate_memory(const LID line_id, const ADDR start_address, const ADDR end_address, const std::int64_t number_bytes, const std::int64_t number_elements);
     
+    std::string allocate_stack_memory(const LID line_id, const ADDR start_address, const ADDR end_address, const std::int64_t number_bytes, const std::int64_t number_elements);
+
     void allocate_dummy_region() {
         allocatedMemoryRegions.emplace_back(0, std::string("%%dummy%%"), 0, 0, 0, 0);
     }
@@ -139,6 +150,14 @@ public:
             dputil::decodeLID(lid, stream);
             stream << ' ' << id << ' ' << num_bytes << endl;
         }
+    }
+
+    ADDR get_smallest_allocated_addr() const noexcept {
+        return smallestAllocatedADDR;
+    }
+
+    ADDR get_largest_allocated_addr() const noexcept {
+        return largestAllocatedADDR;
     }
 
 private:

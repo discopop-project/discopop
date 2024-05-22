@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../../../rtlib/memory/scope.hpp"
+#include "../../../../rtlib/memory/Scope.hpp"
 
 // Tests for old version (i.e., capturing functionality)
 
@@ -103,6 +103,83 @@ TEST_F(ScopeTest, testRegister) {
     ASSERT_NE(writes.find(1024), writes.end());
     ASSERT_NE(writes.find(1024), writes.end());
     ASSERT_NE(writes.find(1876), writes.end());
+}
+
+TEST_F(ScopeTest, testCopy1) {
+    const auto scope_1 = __dp::Scope(4);
+    const auto scope_2 = __dp::Scope(scope_1);
+
+    ASSERT_EQ(scope_1.get_id(), scope_2.get_id());
+    ASSERT_TRUE(scope_1.get_first_read().empty());
+    ASSERT_TRUE(scope_1.get_first_write().empty());
+    ASSERT_TRUE(scope_2.get_first_read().empty());
+    ASSERT_TRUE(scope_2.get_first_write().empty());
+}
+
+TEST_F(ScopeTest, testCopy2) {
+    auto scope_1 = __dp::Scope(4);
+    scope_1.registerStackRead(24, 0, "");
+    scope_1.registerStackRead(32, 1, "");
+    scope_1.registerStackWrite(1024, 0, "");
+    scope_1.registerStackWrite(1032, 1, "");
+
+    const auto scope_2 = __dp::Scope(scope_1);
+
+    ASSERT_EQ(scope_1.get_id(), scope_2.get_id());
+    ASSERT_EQ(scope_1.get_first_read(), scope_2.get_first_read());
+    ASSERT_EQ(scope_1.get_first_write(), scope_2.get_first_write());
+}
+
+TEST_F(ScopeTest, testCopy3) {
+    auto scope_1 = __dp::Scope(4);
+    scope_1.registerStackRead(24, 0, "");
+    scope_1.registerStackRead(32, 1, "");
+    scope_1.registerStackWrite(1024, 0, "");
+    scope_1.registerStackWrite(1032, 1, "");
+
+    auto scope_2 = __dp::Scope(scope_1);
+    auto scope_3 = __dp::Scope(scope_1);
+
+    scope_2.registerStackRead(72, 1, "");
+    scope_2.registerStackRead(24, 6, "");
+    scope_2.registerStackRead(32, 1, "");
+
+    scope_2.registerStackWrite(1072, 1, "");
+    scope_2.registerStackWrite(1024, 6, "");
+    scope_2.registerStackWrite(1032, 1, "");
+
+    ASSERT_EQ(scope_1.get_id(), scope_3.get_id());
+    ASSERT_EQ(scope_1.get_first_read(), scope_3.get_first_read());
+    ASSERT_EQ(scope_1.get_first_write(), scope_3.get_first_write());
+}
+
+TEST_F(ScopeTest, testCopy4) {
+    auto scope_1 = __dp::Scope(4);
+    scope_1.registerStackRead(24, 0, "");
+    scope_1.registerStackRead(32, 1, "");
+    scope_1.registerStackWrite(1024, 0, "");
+    scope_1.registerStackWrite(1032, 1, "");
+
+    auto scope_2 = __dp::Scope(scope_1);
+    auto scope_3 = __dp::Scope(scope_1);
+
+    scope_2.registerStackRead(72, 1, "");
+    scope_2.registerStackRead(24, 6, "");
+    scope_2.registerStackRead(32, 1, "");
+
+    scope_2.registerStackWrite(1072, 1, "");
+    scope_2.registerStackWrite(1024, 6, "");
+    scope_2.registerStackWrite(1032, 1, "");
+
+    scope_2 = scope_3;
+
+    ASSERT_EQ(scope_1.get_id(), scope_2.get_id());
+    ASSERT_EQ(scope_1.get_first_read(), scope_2.get_first_read());
+    ASSERT_EQ(scope_1.get_first_write(), scope_2.get_first_write());
+
+    ASSERT_EQ(scope_1.get_id(), scope_3.get_id());
+    ASSERT_EQ(scope_1.get_first_read(), scope_3.get_first_read());
+    ASSERT_EQ(scope_1.get_first_write(), scope_3.get_first_write());
 }
 
 TEST_F(ScopeManagerTest, testScoping) {
@@ -416,7 +493,7 @@ TEST_F(Scope2Test, testConstructor) {
     ASSERT_TRUE(scope_1.get_first_read().empty());
     ASSERT_TRUE(scope_1.get_first_write().empty());
 
-    const auto scope_2 = __dp::Scope(9);
+    const auto scope_2 = __dp::Scope2(9);
     ASSERT_EQ(scope_2.get_id(), 9);
 
     ASSERT_TRUE(scope_2.get_first_read().empty());
@@ -505,6 +582,84 @@ TEST_F(Scope2Test, testRegister) {
     ASSERT_NE(writes.find(1024), writes.end());
     ASSERT_NE(writes.find(1876), writes.end());
 }
+
+TEST_F(Scope2Test, testCopy1) {
+    const auto scope_1 = __dp::Scope2(4);
+    const auto scope_2 = __dp::Scope2(scope_1);
+
+    ASSERT_EQ(scope_1.get_id(), scope_2.get_id());
+    ASSERT_TRUE(scope_1.get_first_read().empty());
+    ASSERT_TRUE(scope_1.get_first_write().empty());
+    ASSERT_TRUE(scope_2.get_first_read().empty());
+    ASSERT_TRUE(scope_2.get_first_write().empty());
+}
+
+TEST_F(Scope2Test, testCopy2) {
+    auto scope_1 = __dp::Scope2(4);
+    scope_1.registerStackRead(24, 0, "");
+    scope_1.registerStackRead(32, 1, "");
+    scope_1.registerStackWrite(1024, 0, "");
+    scope_1.registerStackWrite(1032, 1, "");
+
+    const auto scope_2 = __dp::Scope2(scope_1);
+
+    ASSERT_EQ(scope_1.get_id(), scope_2.get_id());
+    ASSERT_EQ(scope_1.get_first_read(), scope_2.get_first_read());
+    ASSERT_EQ(scope_1.get_first_write(), scope_2.get_first_write());
+}
+
+TEST_F(Scope2Test, testCopy3) {
+    auto scope_1 = __dp::Scope2(4);
+    scope_1.registerStackRead(24, 0, "");
+    scope_1.registerStackRead(32, 1, "");
+    scope_1.registerStackWrite(1024, 0, "");
+    scope_1.registerStackWrite(1032, 1, "");
+
+    auto scope_2 = __dp::Scope2(scope_1);
+    auto scope_3 = __dp::Scope2(scope_1);
+
+    scope_2.registerStackRead(72, 1, "");
+    scope_2.registerStackRead(24, 6, "");
+    scope_2.registerStackRead(32, 1, "");
+
+    scope_2.registerStackWrite(1072, 1, "");
+    scope_2.registerStackWrite(1024, 6, "");
+    scope_2.registerStackWrite(1032, 1, "");
+
+    ASSERT_EQ(scope_1.get_id(), scope_3.get_id());
+    ASSERT_EQ(scope_1.get_first_read(), scope_3.get_first_read());
+    ASSERT_EQ(scope_1.get_first_write(), scope_3.get_first_write());
+}
+
+TEST_F(Scope2Test, testCopy4) {
+    auto scope_1 = __dp::Scope2(4);
+    scope_1.registerStackRead(24, 0, "");
+    scope_1.registerStackRead(32, 1, "");
+    scope_1.registerStackWrite(1024, 0, "");
+    scope_1.registerStackWrite(1032, 1, "");
+
+    auto scope_2 = __dp::Scope2(scope_1);
+    auto scope_3 = __dp::Scope2(scope_1);
+
+    scope_2.registerStackRead(72, 1, "");
+    scope_2.registerStackRead(24, 6, "");
+    scope_2.registerStackRead(32, 1, "");
+
+    scope_2.registerStackWrite(1072, 1, "");
+    scope_2.registerStackWrite(1024, 6, "");
+    scope_2.registerStackWrite(1032, 1, "");
+
+    scope_2 = scope_3;
+
+    ASSERT_EQ(scope_1.get_id(), scope_2.get_id());
+    ASSERT_EQ(scope_1.get_first_read(), scope_2.get_first_read());
+    ASSERT_EQ(scope_1.get_first_write(), scope_2.get_first_write());
+
+    ASSERT_EQ(scope_1.get_id(), scope_3.get_id());
+    ASSERT_EQ(scope_1.get_first_read(), scope_3.get_first_read());
+    ASSERT_EQ(scope_1.get_first_write(), scope_3.get_first_write());
+}
+
 
 TEST_F(ScopeManager2Test, testScoping) {
     auto manager = __dp::ScopeManager2{};
