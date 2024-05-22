@@ -248,7 +248,23 @@ public:
     root = new MRTNode2(0x0000000000000000, 0x7FFFFFFFFFFFFFFF, 0);
   }
 
+  MemoryRegionTree2(const MemoryRegionTree2&) = delete;
+  MemoryRegionTree2& operator=(const MemoryRegionTree2&) = delete;
+
+  MemoryRegionTree2(MemoryRegionTree2&& other) noexcept {
+    root = other.root;
+    other.root = nullptr;
+  }
+
+  MemoryRegionTree2& operator=(MemoryRegionTree2&& other) noexcept {
+    auto* temp = root;
+    root = other.root;
+    other.root = temp;
+    return *this;
+  } 
+
   ~MemoryRegionTree2() {
+    delete_nodes(root);
     delete root;
   }
 
@@ -398,6 +414,20 @@ private:
 
     // There are no children left -> Clean node
     return true;
+  }
+
+  static void delete_nodes(MRTNode2* node) {
+    if (node == nullptr) {
+      return;
+    }
+    
+    for (auto i = 0; i < 16; i++) {
+      auto* child = node->get_child(i);
+      if (child != nullptr) {
+        delete_nodes(child);
+        delete child;
+      }
+    }
   }
 
   MRTNode2* root{};
