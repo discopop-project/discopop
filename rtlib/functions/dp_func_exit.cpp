@@ -14,6 +14,7 @@
 
 #include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
+#include "../CallStack.hpp"
 
 #include "../../share/include/timer.hpp"
 
@@ -77,6 +78,7 @@ void __dp_func_exit(LID lid, int32_t isExit) {
     }
 
     loopStack->pop();
+    callStack->popLoop();
 
     if (DP_DEBUG) {
       if (loopStack->empty())
@@ -88,6 +90,7 @@ void __dp_func_exit(LID lid, int32_t isExit) {
     }
   }
   --FuncStackLevel;
+  callStack->popFunction();
 
   // TEST
   // clear information on allocated stack addresses

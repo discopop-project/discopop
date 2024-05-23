@@ -53,6 +53,7 @@ depMap *allDeps = nullptr;
 
 LoopTable *loopStack = nullptr;    // loop stack tracking
 LoopRecords *loops = nullptr;      // loop merging
+CallStack *callStack = nullptr;    // call stack profiling
 BGNFuncList *beginFuncs = nullptr; // function entries
 ENDFuncList *endFuncs = nullptr;   // function returns
 std::ofstream *out = nullptr;
@@ -68,6 +69,8 @@ MemoryRegionTree *allocatedMemRegTree = nullptr;
 
 ADDR smallestAllocatedADDR = std::numeric_limits<std::int64_t>::max();
 ADDR largestAllocatedADDR = std::numeric_limits<std::int64_t>::min();
+
+unsigned long funcCallCounter = 0; // overflow is not critical here 
 
 
 /******* BEGIN: parallelization section *******/

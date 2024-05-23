@@ -8,7 +8,7 @@
 
 
 from multiprocessing import Pool
-from typing import List, cast
+from typing import List, cast, Set
 
 from alive_progress import alive_bar  # type: ignore
 
@@ -22,6 +22,7 @@ from ..PEGraphX import (
     LineID,
     DepType,
     EdgeType,
+    NodeID,
 )
 from ..utils import filter_for_hotspots, is_reduction_var, classify_loop_variables
 from ..variable import Variable
@@ -136,6 +137,10 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
     reduction_var_names = [v.name for v in reduction_vars]
     fp, p, lp, s, r = classify_loop_variables(pet, root)
 
+    # get parents of loop
+    parent_function_lineid = pet.get_parent_function(root).start_position()
+    called_functions_lineids = __get_called_functions(pet, root)
+
     if __check_loop_dependencies(
         pet,
         root,
@@ -146,6 +151,8 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
         fp,
         p,
         lp,
+        parent_function_lineid,
+        called_functions_lineids,
     ):
         return False
 
@@ -167,6 +174,8 @@ def __check_loop_dependencies(
     first_privates: List[Variable],
     privates: List[Variable],
     last_privates: List[Variable],
+    parent_function_lineid: LineID,
+    called_functions_lineids: List[LineID],
 ) -> bool:
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Reduction pattern."""
@@ -212,12 +221,30 @@ def __check_loop_dependencies(
             else:
                 # RAW does not target a reduction variable.
                 # RAW problematic, if it is not an intra-iteration RAW.
-                if not dep.intra_iteration:
+                if (
+                    not dep.intra_iteration
+                    and (dep.metadata_intra_iteration_dep is None or len(dep.metadata_intra_iteration_dep) == 0)
+                    and parent_function_lineid
+                    in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
+                ) or (
+                    False
+                    if dep.metadata_inter_call_dep is None
+                    else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]))
+                ) > 0:
                     return True
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
-            if not dep.intra_iteration:
+            if (
+                not dep.intra_iteration
+                and (dep.metadata_intra_iteration_dep is None or len(dep.metadata_intra_iteration_dep) == 0)
+                and parent_function_lineid
+                in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
+            ) or (
+                False
+                if dep.metadata_inter_call_dep is None
+                else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]))
+            ) > 0:
                 if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                     return True
         elif dep.dtype == DepType.WAW:
@@ -229,3 +256,24 @@ def __check_loop_dependencies(
 
     # no problem found. Potentially suggest reduction
     return False
+
+
+def __get_called_functions(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
+    """duplicates exists: do_all_detector <-> reduction_detector !"""
+    # identify children CUs without following function calls
+    called_functions: Set[NodeID] = set()
+    queue = [root_loop.id]
+    visited: Set[NodeID] = set()
+    while queue:
+        current = queue.pop()
+        visited.add(current)
+        # get called functions
+        for s, t, e in pet.out_edges(current, EdgeType.CALLSNODE):
+            called_functions.add(t)
+        # add children to queue
+        for s, t, e in pet.out_edges(current, EdgeType.CHILD):
+            if t not in queue and t not in visited:
+                queue.append(t)
+
+    # convert node ids of called functions to line ids
+    return [pet.node_at(n).start_position() for n in called_functions]

@@ -55,7 +55,7 @@ namespace __dp {
 
 /******* Helper functions *******/
 
-void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
+void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallStack* depOnCallStack, char *var, string AAvar,
             bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
             bool positiveScopeChangeOccuredSinceLastAccess) {
   timers->start(TimerRegion::ADD_DEP);
@@ -64,6 +64,45 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
   if (depOn == 0 && type == WAW)
     type = INIT;
   // End HA
+
+   //DEBUG 
+    bool CALLSTACK_DBG = false; 
+    if(CALLSTACK_DBG){ 
+        if(currCallStack || depOnCallStack){ 
+            cout << "### addDep ###\n"; 
+        } 
+
+        if(currCallStack){ 
+            cout << "CURR CALLSTACK:\n"; 
+            currCallStack->print(); 
+        } 
+        if(depOnCallStack){ 
+            cout << "DEPON CALLSTACK:\n"; 
+            depOnCallStack->print(); 
+        } 
+        if(currCallStack || depOnCallStack){ 
+            cout << "\n\n"; 
+        } 
+    } 
+    //!DEBUG 
+
+    // TEST 
+    std::set<LID> intra_iteration_dependencies; 
+    std::set<LID> inter_iteration_dependencies; 
+    std::set<LID> intra_call_dependencies; 
+    std::set<LID> inter_call_dependencies; 
+    callStack->util_compare_callstacks(currCallStack, depOnCallStack, &intra_iteration_dependencies, 
+                        &inter_iteration_dependencies, &intra_call_dependencies, &inter_call_dependencies); 
+
+    if(CALLSTACK_DBG){ 
+        if (currCallStack || depOnCallStack){ 
+        cout << "Intra_iteration_dependencies: " << intra_iteration_dependencies.size() << "\n"; 
+        cout << "Inter_iteration_dependencies: " << inter_iteration_dependencies.size() << "\n"; 
+        cout << "Intra_call_dependencies: " << intra_call_dependencies.size() << "\n"; 
+        cout << "Inter_call_dependencies: " << inter_call_dependencies.size() << "\n"; 
+        } 
+    } 
+    // !TEST 
 
   depType originalType = type;
   int loopIterationOffset = 0;
@@ -296,7 +335,8 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
       // IGNORE ACCESS
     } else {
       // register dependency
-      dependenciesToBeRegistered.emplace_back(Dep(modified_type, depOn, var, AAvar), curr);
+      // depType T, LID dep, char *var, std::string AAvar, std::set<LID> iaid, std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd
+      dependenciesToBeRegistered.emplace_back(Dep(modified_type, depOn, var, AAvar, intra_iteration_dependencies, inter_iteration_dependencies, intra_call_dependencies, inter_call_dependencies), curr);
     }
 
     if (print_debug_info) {
@@ -334,11 +374,11 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
     if (posInDeps == myMap->end()) {
       depSet *tmp_depSet = new depSet();
       tmp_depSet->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var,
-                             pair.first.AAvar));
+                             pair.first.AAvar, pair.first.intra_iteration_dependencies, pair.first.inter_iteration_dependencies, pair.first.intra_call_dependencies, pair.first.inter_call_dependencies));
       myMap->insert(std::pair<int32_t, depSet *>(pair.second, tmp_depSet));
     } else {
       posInDeps->second->insert(Dep(pair.first.type, pair.first.depOn,
-                                    pair.first.var, pair.first.AAvar));
+                                    pair.first.var, pair.first.AAvar, pair.first.intra_iteration_dependencies, pair.first.inter_iteration_dependencies, pair.first.intra_call_dependencies, pair.first.inter_call_dependencies));
     }
 
     if (DP_DEBUG) {
@@ -424,9 +464,48 @@ void generateStringDepMap() {
           break;
         }
 
+        // construct metadata string 
+        string metadata = "["; 
+        // add intra iteration dependencies 
+        if(d.intra_iteration_dependencies.size() > 0){ 
+            metadata += "intra_iteration_dep:"; 
+            for(auto entry_lid : d.intra_iteration_dependencies){ 
+                metadata += decodeLID(entry_lid) + ","; 
+            } 
+            metadata += ";"; 
+        } 
+        // add inter iteration dependencies 
+        if(d.inter_iteration_dependencies.size() > 0){ 
+            metadata += "inter_iteration_dep:"; 
+            for(auto entry_lid : d.inter_iteration_dependencies){ 
+                metadata += decodeLID(entry_lid) + ","; 
+            } 
+            metadata += ";"; 
+        } 
+        // add intra call dependencies 
+        if(d.intra_call_dependencies.size() > 0){ 
+            metadata += "intra_call_dep:"; 
+            for(auto entry_lid : d.intra_call_dependencies){ 
+                metadata += decodeLID(entry_lid) + ","; 
+            } 
+            metadata += ";"; 
+        } 
+        // add inter call dependencies 
+        if(d.inter_call_dependencies.size() > 0){ 
+            metadata += "inter_call_dep:"; 
+            for(auto entry_lid : d.inter_call_dependencies){ 
+                metadata += decodeLID(entry_lid) + ","; 
+            } 
+            metadata += ";"; 
+        } 
+        metadata += "]"; 
+        // Done: construct metadata string 
+
         dep += ' ' + decodeLID(d.depOn);
         dep += "|" + string(d.var);
         dep += "(" + string(d.AAvar) + ")";
+        dep += metadata;
+
         lineDeps.insert(dep);
       }
 
@@ -768,45 +847,60 @@ void analyzeSingleAccess(__dp::Shadow* SMem, __dp::AccessInfo& access){
     // hybrid analysis
     if (access.skip) {
       SMem->insertToRead(access.addr, access.lid);
+      SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
       timers->stop_and_add(TimerRegion::ANALYZE_SINGLE_ACCESS);
       return;
     }
     // End HA
     sigElement lastWrite = SMem->testInWrite(access.addr);
+    CallStack* lastWriteCallStack = SMem->getLastWriteAccessCallStack(access.addr);
     if (lastWrite != 0) {
       // RAW
       SMem->insertToRead(access.addr, access.lid);
-      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
+      SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
+      addDep(RAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar,
               access.isStackAccess, access.addr,
               access.addrIsOwnedByScope,
               access.positiveScopeChangeOccuredSinceLastAccess);
     }
   } else {
     sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
+    CallStack* lastWriteCallStack = SMem->getLastWriteAccessCallStack(access.addr);
+    if(lastWriteCallStack){ 
+                            // create a temporary copy of the call stack as the entry in SMem will be deleted when overwritten 
+                            lastWriteCallStack = lastWriteCallStack->getCopy(); 
+                        } 
+    SMem->setLastWriteAccessCallStack(access.addr, access.callStack); 
     if (lastWrite == 0) {
       // INIT
-      addDep(INIT, access.lid, 0, access.var, access.AAvar,
+      addDep(INIT, access.lid, access.callStack, 0, nullptr, access.var, access.AAvar,
               access.isStackAccess, access.addr,
               access.addrIsOwnedByScope,
               access.positiveScopeChangeOccuredSinceLastAccess);
     } else {
       sigElement lastRead = SMem->testInRead(access.addr);
+      CallStack* lastReadCallStack = SMem->getLastReadAccessCallStack(access.addr); 
       if (lastRead != 0) {
         // WAR
-        addDep(WAR, access.lid, lastRead, access.var, access.AAvar,
+        addDep(WAR, access.lid, access.callStack, lastRead, lastReadCallStack, access.var, access.AAvar,
                 access.isStackAccess, access.addr,
                 access.addrIsOwnedByScope,
                 access.positiveScopeChangeOccuredSinceLastAccess);
         // Clear intermediate read ops
         SMem->insertToRead(access.addr, 0);
+        SMem->cleanReadAccessCallStack(access.addr);
       } else {
         // WAW
-        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar,
+        addDep(WAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar,
                 access.isStackAccess, access.addr,
                 access.addrIsOwnedByScope,
                 access.positiveScopeChangeOccuredSinceLastAccess);
       }
     }
+    if(lastWriteCallStack){ 
+                            // cleanup temporary copy 
+                            delete lastWriteCallStack; 
+    } 
   }
   timers->stop_and_add(TimerRegion::ANALYZE_SINGLE_ACCESS);
 }

@@ -115,6 +115,7 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
   }
 
   loopStack->pop();
+  callStack->popLoop();
 
   if (DP_DEBUG) {
     if (loopStack->empty())

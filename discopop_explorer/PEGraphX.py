@@ -142,6 +142,10 @@ class Dependency:
     sink_line: Optional[LineID] = None
     intra_iteration: bool = False
     intra_iteration_level: int = -1
+    metadata_intra_iteration_dep: Optional[List[LineID]] = None
+    metadata_inter_iteration_dep: Optional[List[LineID]] = None
+    metadata_intra_call_dep: Optional[List[LineID]] = None
+    metadata_inter_call_dep: Optional[List[LineID]] = None
 
     def __init__(self, type: EdgeType):
         self.etype = type
@@ -567,6 +571,33 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
         d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
     d.memory_region = dep.memory_region
+    # parse metadata
+    if ";" in dep.metadata:
+        for md in dep.metadata.split(";"):
+            if len(md) == 0:
+                continue
+            md_type = md[: md.index(":")]
+            md_raw_values = md[md.index(":") + 1 :]
+            md_values = [tmp for tmp in md_raw_values.split(",") if len(tmp) > 0]
+
+            if md_type == "intra_iteration_dep":
+                if d.metadata_intra_iteration_dep is None:
+                    d.metadata_intra_iteration_dep = []
+                d.metadata_intra_iteration_dep += md_values
+            elif md_type == "inter_iteration_dep":
+                if d.metadata_inter_iteration_dep is None:
+                    d.metadata_inter_iteration_dep = []
+                d.metadata_inter_iteration_dep += md_values
+            elif md_type == "intra_call_dep":
+                if d.metadata_intra_call_dep is None:
+                    d.metadata_intra_call_dep = []
+                d.metadata_intra_call_dep += md_values
+            elif md_type == "inter_call_dep":
+                if d.metadata_inter_call_dep is None:
+                    d.metadata_inter_call_dep = []
+                d.metadata_inter_call_dep += md_values
+            else:
+                raise ValueError("Unknown metadata type: ", md_type)
     return d
 
 

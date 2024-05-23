@@ -14,6 +14,8 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../CallStack.hpp"
+
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -58,6 +60,7 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     loopStack->push(LoopTableEntry(FuncStackLevel, loopID, 0, lid));
     if (loops->find(lid) == loops->end()) {
       loops->insert(pair<LID, LoopRecord *>(lid, new LoopRecord(0, 0, 0)));
+      callStack->push(new CallStackEntry(1, lid, 0));
     }
     if (DP_DEBUG) {
       cout << "(" << std::dec << FuncStackLevel << ")Loop " << loopID
@@ -67,6 +70,7 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
   } else {
     // The same loop iterates again
     loopStack->top().count++;
+    callStack->incrementIterationCounter();
     if (DP_DEBUG) {
       cout << "(" << std::dec << loopStack->top().funcLevel << ")";
       cout << "Loop " << loopStack->top().loopID << " iterates "

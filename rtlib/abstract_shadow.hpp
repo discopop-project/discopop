@@ -14,6 +14,8 @@
 
 #include "DPTypes.hpp"
 
+#include "CallStack.hpp"
+
 #include <cstdint>
 #include <unordered_set>
 
@@ -41,6 +43,18 @@ public:
 
   virtual std::unordered_set<ADDR> getAddrsInRange(int64_t startAddr,
                                                    int64_t endAddr) = 0;
+
+                                                   virtual CallStack* getLastReadAccessCallStack(int64_t memAddr); 
+ 
+        virtual void setLastReadAccessCallStack(int64_t memAddr, CallStack* p_cs); 
+ 
+        virtual void cleanReadAccessCallStack(int64_t memAddr); 
+ 
+        virtual CallStack* getLastWriteAccessCallStack(int64_t memAddr); 
+ 
+        virtual void setLastWriteAccessCallStack(int64_t memAddr, CallStack* p_cs); 
+ 
+        virtual void cleanWriteAccessCallStack(int64_t memAddr); 
 };
 
 } // namespace __dp

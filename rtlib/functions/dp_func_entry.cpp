@@ -15,6 +15,8 @@
 #include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
 
+#include "../CallStack.hpp"
+
 #include "../../share/include/timer.hpp"
 
 #include <linux/limits.h>
@@ -59,6 +61,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     loops = new LoopRecords();
     beginFuncs = new BGNFuncList();
     endFuncs = new ENDFuncList();
+    callStack = new CallStack();
     out = new ofstream();
 
     // TEST
@@ -171,6 +174,9 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 
   if (isStart)
     *out << "START " << dputil::decodeLID(lid) << endl;
+  
+  funcCallCounter++;
+  callStack->push(new CallStackEntry(0, lid, funcCallCounter));
 
   // Reset last call tracker
   lastCallOrInvoke = 0;

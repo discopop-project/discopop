@@ -15,6 +15,8 @@
 #include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
 
+#include "../CallStack.hpp"
+
 #include "../../share/include/timer.hpp"
 
 #include <cstdint>
@@ -81,6 +83,7 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   current.var = var;
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
+  //current.callStack = callStack->getCopy(); 
   current.skip = true;
   // store loop iteration metadata (last 8 bits for loop id, 1 bit to mark loop
   // iteration count as valid, last 7 bits for loop iteration) last 8 bits are

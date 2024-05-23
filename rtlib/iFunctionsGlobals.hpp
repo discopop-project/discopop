@@ -71,6 +71,7 @@ extern depMap *allDeps;
 
 extern LoopTable *loopStack;    // loop stack tracking
 extern LoopRecords *loops;      // loop merging
+extern CallStack *callStack;    // call stack profiling
 extern BGNFuncList *beginFuncs; // function entries
 extern ENDFuncList *endFuncs;   // function returns
 extern std::ofstream *out;
@@ -86,6 +87,8 @@ extern MemoryRegionTree *allocatedMemRegTree;
 
 extern ADDR smallestAllocatedADDR;
 extern ADDR largestAllocatedADDR;
+
+extern unsigned long funcCallCounter; // overflow is not critical here 
 
 
 extern pthread_cond_t *addrChunkPresentConds; // condition variables

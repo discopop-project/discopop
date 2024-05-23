@@ -100,6 +100,7 @@ void __dp_read(LID lid, ADDR addr, char *var) {
   current.var = var;
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
+  current.callStack = callStack->getCopy(); 
   current.isStackAccess = is_stack_access;
   timers->start(TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE);
   current.addrIsOwnedByScope =

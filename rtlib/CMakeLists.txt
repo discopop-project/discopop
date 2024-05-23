@@ -20,6 +20,7 @@ set(DiscoPoP_SOURCES
         cu_taken_branch_counter.cpp
         ../share/lib/timer.cpp
         MemoryRegionTree.cpp
+        CallStack.cpp
 		
 	functions/dp_add_bb_deps.cpp
 	functions/dp_alloca.cpp
