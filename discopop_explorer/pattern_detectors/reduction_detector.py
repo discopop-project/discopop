@@ -229,8 +229,8 @@ def __check_loop_dependencies(
                 ) or (
                     False
                     if dep.metadata_inter_call_dep is None
-                    else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]))
-                ) > 0:
+                    else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                ):
                     return True
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
@@ -243,8 +243,8 @@ def __check_loop_dependencies(
             ) or (
                 False
                 if dep.metadata_inter_call_dep is None
-                else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]))
-            ) > 0:
+                else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+            ):
                 if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                     return True
         elif dep.dtype == DepType.WAW:
