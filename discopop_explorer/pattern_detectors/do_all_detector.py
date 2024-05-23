@@ -276,9 +276,16 @@ def __check_loop_dependencies(
                 and parent_function_lineid
                 in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
             ) or (
-                False
-                if dep.metadata_inter_call_dep is None
-                else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                (
+                    False
+                    if dep.metadata_inter_call_dep is None
+                    else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                )
+                and (
+                    False
+                    if dep.metadata_inter_iteration_dep is None
+                    else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
+                )
             ):
                 if root_loop.start_position() == "1:618":
                     pass
@@ -311,9 +318,16 @@ def __check_loop_dependencies(
                 and parent_function_lineid
                 in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
             ) or (
-                False
-                if dep.metadata_inter_call_dep is None
-                else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                (
+                    False
+                    if dep.metadata_inter_call_dep is None
+                    else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                )
+                and (
+                    False
+                    if dep.metadata_inter_iteration_dep is None
+                    else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
+                )
             ):
                 if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                     # check if variable is defined inside loop
@@ -388,6 +402,7 @@ def __calculate_nesting_level(pet: PEGraphX, root_loop: LoopNode, cu_node_id: st
 
 
 def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode):
+    """duplicates exists: do_all_detector <-> reduction_detector !"""
     parents: List[NodeID] = []
     queue = [root_loop.id]
     visited: Set[NodeID] = set()

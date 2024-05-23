@@ -138,6 +138,7 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
     fp, p, lp, s, r = classify_loop_variables(pet, root)
 
     # get parents of loop
+    parent_loops = __get_parent_loops(pet, root)
     parent_function_lineid = pet.get_parent_function(root).start_position()
     called_functions_lineids = __get_called_functions(pet, root)
 
@@ -151,6 +152,7 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
         fp,
         p,
         lp,
+        parent_loops,
         parent_function_lineid,
         called_functions_lineids,
     ):
@@ -174,6 +176,7 @@ def __check_loop_dependencies(
     first_privates: List[Variable],
     privates: List[Variable],
     last_privates: List[Variable],
+    parent_loops: List[LineID],
     parent_function_lineid: LineID,
     called_functions_lineids: List[LineID],
 ) -> bool:
@@ -227,9 +230,16 @@ def __check_loop_dependencies(
                     and parent_function_lineid
                     in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
                 ) or (
-                    False
-                    if dep.metadata_inter_call_dep is None
-                    else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                    (
+                        False
+                        if dep.metadata_inter_call_dep is None
+                        else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                    )
+                    and (
+                        False
+                        if dep.metadata_inter_iteration_dep is None
+                        else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
+                    )
                 ):
                     return True
         elif dep.dtype == DepType.WAR:
@@ -241,9 +251,16 @@ def __check_loop_dependencies(
                 and parent_function_lineid
                 in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
             ) or (
-                False
-                if dep.metadata_inter_call_dep is None
-                else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                (
+                    False
+                    if dep.metadata_inter_call_dep is None
+                    else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                )
+                and (
+                    False
+                    if dep.metadata_inter_iteration_dep is None
+                    else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
+                )
             ):
                 if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                     return True
@@ -256,6 +273,30 @@ def __check_loop_dependencies(
 
     # no problem found. Potentially suggest reduction
     return False
+
+
+def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode):
+    """duplicates exists: do_all_detector <-> reduction_detector !"""
+    parents: List[NodeID] = []
+    queue = [root_loop.id]
+    visited: Set[NodeID] = set()
+    while queue:
+        current = queue.pop()
+        visited.add(current)
+        if type(pet.node_at(current)) == LoopNode:
+            parents.append(current)
+
+        # process incoming child edges
+        for s, t, e in pet.in_edges(current, EdgeType.CHILD):
+            if s not in visited and s not in queue:
+                queue.append(s)
+        # process incoming call edges
+        for s, t, e in pet.in_edges(current, EdgeType.CALLSNODE):
+            if s not in visited and s not in queue:
+                queue.append(s)
+
+    parents.remove(root_loop.id)
+    return [pet.node_at(p).start_position() for p in parents]
 
 
 def __get_called_functions(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
