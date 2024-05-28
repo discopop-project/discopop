@@ -71,7 +71,9 @@ extern depMap *allDeps;
 
 extern LoopTable *loopStack;    // loop stack tracking
 extern LoopRecords *loops;      // loop merging
+#if DP_CALLSTACK_PROFILING
 extern CallStack *callStack;    // call stack profiling
+#endif
 extern BGNFuncList *beginFuncs; // function entries
 extern ENDFuncList *endFuncs;   // function returns
 extern std::ofstream *out;

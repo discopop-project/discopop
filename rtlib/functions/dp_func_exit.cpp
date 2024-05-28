@@ -78,7 +78,9 @@ void __dp_func_exit(LID lid, int32_t isExit) {
     }
 
     loopStack->pop();
+#if DP_CALLSTACK_PROFILING
     callStack->popLoop();
+#endif
 
     if (DP_DEBUG) {
       if (loopStack->empty())
@@ -90,7 +92,9 @@ void __dp_func_exit(LID lid, int32_t isExit) {
     }
   }
   --FuncStackLevel;
+#if DP_CALLSTACK_PROFILING
   callStack->popFunction();
+#endif
 
   // TEST
   // clear information on allocated stack addresses

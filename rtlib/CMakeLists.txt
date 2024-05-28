@@ -64,6 +64,12 @@ if(DEFINED DP_NUM_WORKERS)
         target_compile_definitions(DiscoPoP_RT PUBLIC DP_NUM_WORKERS=${DP_NUM_WORKERS})
 endif()
 
+if(DEFINED DP_CALLSTACK_PROFILING)
+        if(NOT ${DP_CALLSTACK_PROFILING} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLSTACK_PROFILING=${DP_CALLSTACK_PROFILING})
+        endif()
+endif()
+
 # end of compiler flags
 
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)

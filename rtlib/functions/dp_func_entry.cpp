@@ -61,7 +61,9 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     loops = new LoopRecords();
     beginFuncs = new BGNFuncList();
     endFuncs = new ENDFuncList();
+#if DP_CALLSTACK_PROFILING
     callStack = new CallStack();
+#endif
     out = new ofstream();
 
     // TEST
@@ -176,7 +178,9 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     *out << "START " << dputil::decodeLID(lid) << endl;
   
   funcCallCounter++;
+#if DP_CALLSTACK_PROFILING
   callStack->push(new CallStackEntry(0, lid, funcCallCounter));
+#endif
 
   // Reset last call tracker
   lastCallOrInvoke = 0;

@@ -102,7 +102,9 @@ void __dp_finalize(LID lid) {
   delete outPutDeps;
   delete bbList;
   // End HA
+#if DP_CALLSTACK_PROFILING
   delete callStack;
+#endif
 
   for (auto loop : *loops) {
     delete loop.second;

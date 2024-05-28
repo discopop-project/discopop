@@ -103,7 +103,9 @@ void __dp_write(LID lid, ADDR addr, char *var) {
   current.var = var;
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
+#if DP_CALLSTACK_PROFILING
   current.callStack = callStack->getCopy(); 
+#endif
   current.isStackAccess = is_stack_access;
   timers->start(TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE);
   current.addrIsOwnedByScope =

@@ -53,7 +53,9 @@ depMap *allDeps = nullptr;
 
 LoopTable *loopStack = nullptr;    // loop stack tracking
 LoopRecords *loops = nullptr;      // loop merging
+#if DP_CALLSTACK_PROFILING
 CallStack *callStack = nullptr;    // call stack profiling
+#endif
 BGNFuncList *beginFuncs = nullptr; // function entries
 ENDFuncList *endFuncs = nullptr;   // function returns
 std::ofstream *out = nullptr;

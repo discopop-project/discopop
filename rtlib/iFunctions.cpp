@@ -66,6 +66,11 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
   // End HA
 
    //DEBUG 
+    std::set<LID> intra_iteration_dependencies; 
+    std::set<LID> inter_iteration_dependencies; 
+    std::set<LID> intra_call_dependencies; 
+    std::set<LID> inter_call_dependencies; 
+#if DP_CALLSTACK_PROFILING
     bool CALLSTACK_DBG = false; 
     if(CALLSTACK_DBG){ 
         if(currCallStack || depOnCallStack){ 
@@ -87,10 +92,6 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
     //!DEBUG 
 
     // TEST 
-    std::set<LID> intra_iteration_dependencies; 
-    std::set<LID> inter_iteration_dependencies; 
-    std::set<LID> intra_call_dependencies; 
-    std::set<LID> inter_call_dependencies; 
     callStack->util_compare_callstacks(currCallStack, depOnCallStack, &intra_iteration_dependencies, 
                         &inter_iteration_dependencies, &intra_call_dependencies, &inter_call_dependencies); 
 
@@ -102,6 +103,7 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
         cout << "Inter_call_dependencies: " << inter_call_dependencies.size() << "\n"; 
         } 
     } 
+  #endif
     // !TEST 
 
   depType originalType = type;
@@ -847,30 +849,44 @@ void analyzeSingleAccess(__dp::Shadow* SMem, __dp::AccessInfo& access){
     // hybrid analysis
     if (access.skip) {
       SMem->insertToRead(access.addr, access.lid);
+#if DP_CALLSTACK_PROFILING
       SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
+#endif
       timers->stop_and_add(TimerRegion::ANALYZE_SINGLE_ACCESS);
       return;
     }
     // End HA
     sigElement lastWrite = SMem->testInWrite(access.addr);
+#if DP_CALLSTACK_PROFILING
     CallStack* lastWriteCallStack = SMem->getLastWriteAccessCallStack(access.addr);
+#endif
     if (lastWrite != 0) {
       // RAW
       SMem->insertToRead(access.addr, access.lid);
+#if DP_CALLSTACK_PROFILING
       SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
       addDep(RAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar,
               access.isStackAccess, access.addr,
               access.addrIsOwnedByScope,
               access.positiveScopeChangeOccuredSinceLastAccess);
     }
+#else
+      addDep(RAW, access.lid, access.callStack, lastWrite, nullptr, access.var, access.AAvar,
+                access.isStackAccess, access.addr,
+                access.addrIsOwnedByScope,
+                access.positiveScopeChangeOccuredSinceLastAccess);
+      }
+#endif 
   } else {
     sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
+#if DP_CALLSTACK_PROFILING
     CallStack* lastWriteCallStack = SMem->getLastWriteAccessCallStack(access.addr);
     if(lastWriteCallStack){ 
                             // create a temporary copy of the call stack as the entry in SMem will be deleted when overwritten 
                             lastWriteCallStack = lastWriteCallStack->getCopy(); 
                         } 
     SMem->setLastWriteAccessCallStack(access.addr, access.callStack); 
+#endif 
     if (lastWrite == 0) {
       // INIT
       addDep(INIT, access.lid, access.callStack, 0, nullptr, access.var, access.AAvar,
@@ -879,28 +895,49 @@ void analyzeSingleAccess(__dp::Shadow* SMem, __dp::AccessInfo& access){
               access.positiveScopeChangeOccuredSinceLastAccess);
     } else {
       sigElement lastRead = SMem->testInRead(access.addr);
+#if DP_CALLSTACK_PROFILING
       CallStack* lastReadCallStack = SMem->getLastReadAccessCallStack(access.addr); 
+#endif
       if (lastRead != 0) {
         // WAR
+#if DP_CALLSTACK_PROFILING
         addDep(WAR, access.lid, access.callStack, lastRead, lastReadCallStack, access.var, access.AAvar,
                 access.isStackAccess, access.addr,
                 access.addrIsOwnedByScope,
                 access.positiveScopeChangeOccuredSinceLastAccess);
+#else
+        addDep(WAR, access.lid, access.callStack, lastRead, nullptr, access.var, access.AAvar,
+                access.isStackAccess, access.addr,
+                access.addrIsOwnedByScope,
+                access.positiveScopeChangeOccuredSinceLastAccess);
+#endif
         // Clear intermediate read ops
         SMem->insertToRead(access.addr, 0);
+#if DP_CALLSTACK_PROFILING
         SMem->cleanReadAccessCallStack(access.addr);
+#endif
       } else {
         // WAW
+#if DP_CALLSTACK_PROFILING 
         addDep(WAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar,
                 access.isStackAccess, access.addr,
                 access.addrIsOwnedByScope,
                 access.positiveScopeChangeOccuredSinceLastAccess);
+#else
+        addDep(WAW, access.lid, access.callStack, lastWrite, nullptr, access.var, access.AAvar,
+                access.isStackAccess, access.addr,
+                access.addrIsOwnedByScope,
+                access.positiveScopeChangeOccuredSinceLastAccess);
+
+#endif
       }
     }
+#if DP_CALLSTACK_PROFILING
     if(lastWriteCallStack){ 
                             // cleanup temporary copy 
                             delete lastWriteCallStack; 
     } 
+#endif
   }
   timers->stop_and_add(TimerRegion::ANALYZE_SINGLE_ACCESS);
 }
