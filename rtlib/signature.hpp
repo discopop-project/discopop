@@ -15,10 +15,11 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include "DPTypes.hpp"
+
 #include <iostream>
 
 using namespace std;
-typedef int64_t sigElement;
 
 namespace __dp {
 class Signature {
