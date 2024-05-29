@@ -376,7 +376,9 @@ void generateStringDepMap() {
 #endif
   for (auto &dline : *allDeps) {
     if (dline.first) {
-      string lid = decodeLID(dline.first);
+      // TODO ADD FLAG TO CHECK FOR PERFOGRAPH EXPORT
+      string lid = to_string(dline.first); //decodeLID(dline.first);
+
       set<string> lineDeps;
       for (auto &d : *(dline.second)) {
         string dep = "";
@@ -424,7 +426,9 @@ void generateStringDepMap() {
           break;
         }
 
-        dep += ' ' + decodeLID(d.depOn);
+        // TODO ADD FLAG TO CHECK FOR PERFOGRAPH EXPORT
+        dep += ' ' + to_string(d.depOn); //decodeLID(d.depOn);
+
         dep += "|" + string(d.var);
         dep += "(" + string(d.AAvar) + ")";
         lineDeps.insert(dep);

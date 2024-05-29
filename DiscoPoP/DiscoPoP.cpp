@@ -184,6 +184,9 @@ bool DiscoPoP::doInitialization(Module &M) {
     } else {
       loopID = -1;
     }
+
+    // PerfoGraph compatibility
+    unique_llvm_ir_instruction_id = 0;
   }
   // DPInstrumentation end
 
@@ -3342,6 +3345,17 @@ A real case would be:
 // TODO: atomic variables
 void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
   for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
+    // TEST
+    // add identified to the llvm ir metadata if requested
+    // TODO: add preprocessor flag
+    LLVMContext& ctx = BI->getContext();
+    int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
+    MDNode* N = MDNode::get(ctx, MDString::get(ctx, to_string(llvm_ir_instruction_id)));
+    BI->setMetadata("dp.md.instr.id", N);
+    //Inst* inst = cast<Inst>(BI);
+
+    // !TEST
+
     if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
       assert(DI->getOperand(0));
       if (AllocaInst *alloc = dyn_cast<AllocaInst>(DI->getOperand(0))) {
@@ -3421,11 +3435,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
     }
     // load instruction
     else if (isa<LoadInst>(BI)) {
-      instrumentLoad(cast<LoadInst>(BI));
+      instrumentLoad(cast<LoadInst>(BI), llvm_ir_instruction_id);
     }
     // // store instruction
     else if (isa<StoreInst>(BI)) {
-      instrumentStore(cast<StoreInst>(BI));
+      instrumentStore(cast<StoreInst>(BI), llvm_ir_instruction_id);
     }
     // call and invoke
     else if (isaCallOrInvoke(&*BI)) {
@@ -3789,7 +3803,7 @@ void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
   IRB.CreateCall(DpDelete, args, "");
 }
 
-void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
+void DiscoPoP::instrumentLoad(LoadInst *toInstrument, int32_t llvm_ir_instruction_id) {
 
   LID lid = getLID(toInstrument, fileID);
   if (lid == 0)
@@ -3797,7 +3811,8 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 
   vector<Value *> args;
 
-  args.push_back(ConstantInt::get(Int32, lid));
+  // TODO ADD FLAG TO CHECK FOR PERFOGRAPH EXPORT
+  args.push_back(ConstantInt::get(Int32, llvm_ir_instruction_id));
 
   Value *memAddr = PtrToIntInst::CreatePointerCast(
       toInstrument->getPointerOperand(), Int64, "", toInstrument);
@@ -3846,14 +3861,15 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 #endif
 }
 
-void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
+void DiscoPoP::instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruction_id) {
 
   LID lid = getLID(toInstrument, fileID);
   if (lid == 0)
     return;
 
   vector<Value *> args;
-  args.push_back(ConstantInt::get(Int32, lid));
+  // TODO ADD FLAG TO CHECK FOR PERFOGRAPH EXPORT
+  args.push_back(ConstantInt::get(Int32, llvm_ir_instruction_id));
 
   Value *memAddr = PtrToIntInst::CreatePointerCast(
       toInstrument->getPointerOperand(), Int64, "", toInstrument);
