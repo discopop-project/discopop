@@ -156,9 +156,9 @@ private:
 
   void instrumentDeleteOrFree(CallBase *toInstrument);
 
-  void instrumentStore(StoreInst *toInstrument);
+  void instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruction_id);
 
-  void instrumentLoad(LoadInst *toInstrument);
+  void instrumentLoad(LoadInst *toInstrument, int32_t llvm_ir_instruction_id);
 
   void insertDpFinalize(Instruction *before);
 
@@ -209,6 +209,9 @@ private:
   int nextFreeStaticMemoryRegionID;
 
   // DPInstrumentationOmission end
+
+  // PerfoGraph compatibility
+  uint32_t unique_llvm_ir_instruction_id;
 
 public:
   DiscoPoP() : ModulePass(ID), uniqueNum(1){};
