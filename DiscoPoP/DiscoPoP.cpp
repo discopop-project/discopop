@@ -186,7 +186,7 @@ bool DiscoPoP::doInitialization(Module &M) {
     }
 
     // PerfoGraph compatibility
-    unique_llvm_ir_instruction_id = 0;
+    unique_llvm_ir_instruction_id = 1;
   }
   // DPInstrumentation end
 
@@ -3350,10 +3350,8 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
     // TODO: add preprocessor flag
     LLVMContext& ctx = BI->getContext();
     int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
-    MDNode* N = MDNode::get(ctx, MDString::get(ctx, to_string(llvm_ir_instruction_id)));
+    MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+to_string(llvm_ir_instruction_id)));
     BI->setMetadata("dp.md.instr.id", N);
-    //Inst* inst = cast<Inst>(BI);
-
     // !TEST
 
     if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
