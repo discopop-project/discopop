@@ -38,13 +38,13 @@ void add_ptr_instr_rec(int loopLineNumber, long long var_id,
   lc.update_ptr((int)var_id, instruction_type, addr);
 }
 
-void incr_loop_counter(int loop_id) {
+void __dp_incr_loop_counter(int loop_id) {
   if (alreadyDone)
     return;
   lc.incr_loop_counter(loop_id);
 }
 
-void loop_counter_output() {
+void __dp_loop_counter_output() {
   if (alreadyDone)
     return;
 
