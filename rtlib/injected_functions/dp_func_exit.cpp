@@ -42,7 +42,7 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   }
 
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
-  std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
+  pthread_compatibility_mutex.lock();
 #endif
 #ifdef DP_RTLIB_VERBOSE
   const auto debug_print = make_debug_print("__dp_func_exit");
@@ -60,7 +60,13 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   // TEST
   // clear information on allocated stack addresses
   const auto last_addresses = memory_manager->pop_last_stack_address();
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+  pthread_compatibility_mutex.unlock();
+#endif
   clearStackAccesses(last_addresses.first, last_addresses.second); // insert accesses with LID 0 to the queues
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+  pthread_compatibility_mutex.lock();
+#endif
   memory_manager->leaveScope("function", lid);
   // !TEST
 
@@ -72,6 +78,9 @@ void __dp_func_exit(LID lid, int32_t isExit) {
     cout << "Exiting fucntion LID " << std::dec << dputil::decodeLID(lid) << endl;
     cout << "Function stack level = " << std::dec << function_manager->get_current_stack_level() << endl;
   }
+#ifdef DP_PTHREAD_COMPATIBILITY_MODE
+  pthread_compatibility_mutex.unlock();
+#endif
 }
 
 }
