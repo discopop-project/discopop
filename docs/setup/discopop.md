@@ -34,6 +34,7 @@ where `<CMAKE_FLAGS>` can consist of any combination of the following flags and 
 - `-DDP_NUM_WORKERS=<int>` &ndash; Specify the number of worker threads available for the dependency analysis during profiling. Default: `3` worker threads. `0` can be used to disable the creation of additional threads for the analysis.
 #### Development and debugging
 - `-DDP_RTLIB_VERBOSE=[0|1]` &ndash; Enable verbose output during profiling.
+- `-DDP_INTERNAL_TIMER=[0|1]`&ndash; Enable timing of runtime library functions.
 
 
 ## Testing the installation

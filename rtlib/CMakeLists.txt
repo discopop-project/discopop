@@ -64,6 +64,12 @@ if(DEFINED DP_NUM_WORKERS)
         target_compile_definitions(DiscoPoP_RT PUBLIC DP_NUM_WORKERS=${DP_NUM_WORKERS})
 endif()
 
+if(DEFINED DP_INTERNAL_TIMER)
+        if(NOT ${DP_INTERNAL_TIMER} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_INTERNAL_TIMER=${DP_INTERNAL_TIMER})
+        endif()
+endif()
+
 # end of compiler flags
 
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)
