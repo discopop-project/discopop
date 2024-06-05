@@ -29,16 +29,16 @@ Timers* timers = nullptr;
 
 std::mutex pthread_compatibility_mutex;
 
+FunctionManager* function_manager = nullptr;
+LoopManager* loop_manager= nullptr;
+MemoryManager* memory_manager = nullptr;
+
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
 stringDepMap *outPutDeps = nullptr;
-// end hybrid analysis 
+// end hybrid analysis
 
-std::int64_t nextFreeMemoryRegionId = 1; // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
-
-/// (LID, identifier, startAddr, endAddr, numBytes, numElements)
-std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;
-std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> *allocatedMemoryRegions = nullptr;
+std::unordered_map<char *, long> cuec;
 
 bool dpInited = false; // library initialization flag
 bool targetTerminated = false; // whether the target program has returned from main()
@@ -51,24 +51,7 @@ bool targetTerminated = false; // whether the target program has returned from m
 // Runtime merging structures
 depMap *allDeps = nullptr;
 
-LoopTable *loopStack = nullptr;    // loop stack tracking
-LoopRecords *loops = nullptr;      // loop merging
-BGNFuncList *beginFuncs = nullptr; // function entries
-ENDFuncList *endFuncs = nullptr;   // function returns
 std::ofstream *out = nullptr;
-std::ofstream *outInsts = nullptr;
-std::stack<std::pair<ADDR, ADDR>> *stackAddrs = nullptr; // track stack adresses for entered functions
-ScopeManager *scopeManager = nullptr;
-
-LID lastCallOrInvoke = 0;
-LID lastProcessedLine = 0;
-std::int32_t FuncStackLevel = 0;
-
-MemoryRegionTree *allocatedMemRegTree = nullptr;
-
-ADDR smallestAllocatedADDR = std::numeric_limits<std::int64_t>::max();
-ADDR largestAllocatedADDR = std::numeric_limits<std::int64_t>::min();
-
 
 /******* BEGIN: parallelization section *******/
 pthread_cond_t *addrChunkPresentConds = nullptr; // condition variables
@@ -85,8 +68,10 @@ int32_t NUM_WORKERS = DP_NUM_WORKERS;
 int32_t NUM_WORKERS = 3; // default number of worker threads (multiple workers
                          // can potentially lead to non-deterministic results)
 #endif
+
 #pragma message "Profiler: set NUM_WORKERS to " XSTR(NUM_WORKERS)
-extern Shadow* singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
+AbstractShadow* singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
+
 int32_t CHUNK_SIZE = 500; // default number of addresses in each chunk
 std::queue<AccessInfo *> *chunks =
     nullptr; // one queue of access info chunks for each worker thread

@@ -13,10 +13,8 @@
 #pragma once
 
 #include "iFunctionsTypes.hpp"
-#include "scope.hpp"
-#include "MemoryRegionTree.hpp"
 #include "../share/include/timer.hpp"
-#include "shadow.hpp"
+#include "memory/AbstractShadow.hpp"
 
 #include <pthread.h>
 
@@ -28,6 +26,7 @@
 #include <stack>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <utility>
 
 extern bool USE_PERFECT;
@@ -47,16 +46,16 @@ extern Timers* timers;
 
 extern std::mutex pthread_compatibility_mutex;
 
+extern FunctionManager* function_manager;
+extern LoopManager* loop_manager;
+extern MemoryManager* memory_manager;
+
 // hybrid analysis
 extern ReportedBBSet *bbList;
 extern stringDepMap *outPutDeps;
 // end hybrid analysis 
 
-extern std::int64_t nextFreeMemoryRegionId; // 0 is reserved as the identifier for "no region" in the MemoryRegionTree
-
-/// (LID, identifier, startAddr, endAddr, numBytes, numElements)
-extern std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>>::iterator lastHitIterator;
-extern std::vector<std::tuple<LID, std::string, std::int64_t, std::int64_t, std::int64_t, std::int64_t>> *allocatedMemoryRegions;
+extern std::unordered_map<char *, long> cuec;
 
 extern bool dpInited; // library initialization flag
 extern bool targetTerminated; // whether the target program has returned from main()
@@ -69,32 +68,16 @@ extern bool targetTerminated; // whether the target program has returned from ma
 // Runtime merging structures
 extern depMap *allDeps;
 
-extern LoopTable *loopStack;    // loop stack tracking
-extern LoopRecords *loops;      // loop merging
-extern BGNFuncList *beginFuncs; // function entries
-extern ENDFuncList *endFuncs;   // function returns
 extern std::ofstream *out;
-extern std::ofstream *outInsts;
-extern std::stack<std::pair<ADDR, ADDR>> *stackAddrs; // track stack adresses for entered functions
-extern ScopeManager *scopeManager;
-
-extern LID lastCallOrInvoke;
-extern LID lastProcessedLine;
-extern std::int32_t FuncStackLevel;
-
-extern MemoryRegionTree *allocatedMemRegTree;
-
-extern ADDR smallestAllocatedADDR;
-extern ADDR largestAllocatedADDR;
-
 
 extern pthread_cond_t *addrChunkPresentConds; // condition variables
 extern pthread_mutex_t *addrChunkMutexes;     // associated mutexes
 extern pthread_mutex_t allDepsLock;
 extern pthread_t *workers; // worker threads
 
+extern AbstractShadow* singleThreadedExecutionSMem;
+
 extern int32_t NUM_WORKERS; 
-extern Shadow* singleThreadedExecutionSMem;
 
 extern int32_t CHUNK_SIZE; // default number of addresses in each chunk
 extern std::queue<AccessInfo *> *chunks; // one queue of access info chunks for each worker thread

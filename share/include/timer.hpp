@@ -19,9 +19,6 @@
 #include <string>
 #include <vector>
 
-// To manually enable/disable internal timing
-// #define DP_SKIP_INTERNAL_TIMER
-
 /**
  * This type allows type-safe specification of a specific timer
  */
@@ -97,9 +94,6 @@ public:
      * @param timer The timer to start
      */
     void start(const TimerRegion timer) {
-#ifdef DP_SKIP_INTERNAL_TIMER
-        return;
-#endif
         const auto timer_id = get_timer_index(timer);
         number_called[timer_id]++;
         time_start[timer_id] = std::chrono::high_resolution_clock::now();
@@ -110,9 +104,6 @@ public:
      * @param timer The timer to stops
      */
     void stop(const TimerRegion timer) {
-#ifdef DP_SKIP_INTERNAL_TIMER
-        return;
-#endif
         const auto timer_id = get_timer_index(timer);
         time_stop[timer_id] = std::chrono::high_resolution_clock::now();
     }
@@ -122,9 +113,6 @@ public:
      * @param timer The timer to stops
      */
     void stop_and_add(const TimerRegion timer) {
-#ifdef DP_SKIP_INTERNAL_TIMER
-        return;
-#endif
         stop(timer);
         add_start_stop_diff_to_elapsed(timer);
     }
@@ -134,9 +122,6 @@ public:
      * @param timer The timer for which to add the difference
      */
     void add_start_stop_diff_to_elapsed(const TimerRegion timer) {
-#ifdef DP_SKIP_INTERNAL_TIMER
-        return;
-#endif
         const auto timer_id = get_timer_index(timer);
         time_elapsed[timer_id] += (time_stop[timer_id] - time_start[timer_id]);
     }
@@ -146,9 +131,6 @@ public:
      * @param timer The timer for which to reset the elapsed time
      */
     void reset_elapsed(const TimerRegion timer) {
-#ifdef DP_SKIP_INTERNAL_TIMER
-        return;
-#endif
         const auto timer_id = get_timer_index(timer);
         time_elapsed[timer_id] = std::chrono::nanoseconds(0);
     }
@@ -159,9 +141,6 @@ public:
      * @return The elapsed time
      */
     [[nodiscard]] std::chrono::nanoseconds get_elapsed(const TimerRegion timer) {
-#ifdef DP_SKIP_INTERNAL_TIMER
-        return std::chrono::nanoseconds{};
-#endif
         const auto timer_id = get_timer_index(timer);
         return time_elapsed[timer_id];
     }
@@ -202,8 +181,8 @@ public:
         print(stream, " Generate the dependency map                     : ", TimerRegion::GENERATE_STRING_DEP_MAP);
         print(stream, " Add a dependency                                : ", TimerRegion::ADD_DEP);
         print(stream, " Merge dendencies                                : ", TimerRegion::MERGE_DEPS);
-        print(stream, " Analyze the dependencies (incorrect!            : ", TimerRegion::ANALYZE_DEPS); // Incorrect due to multithreading
-        print(stream, " Analyze single accesses                         : ", TimerRegion::ANALYZE_SINGLE_ACCESS);
+        print(stream, " Analyze the dependencies (incorrect!)           : ", TimerRegion::ANALYZE_DEPS); // Incorrect due to multithreading
+        print(stream, " Analyze singe accesses                          : ", TimerRegion::ANALYZE_SINGLE_ACCESS);
         stream << '\n';
         print(stream, " Output the dependencies                         : ", TimerRegion::OUTPUT_DEPS);
         print(stream, " Output the loops                                : ", TimerRegion::OUTPUT_LOOPS);
@@ -286,4 +265,25 @@ private:
 
     std::vector<std::size_t> number_called;
     std::vector<std::chrono::nanoseconds> time_elapsed;
+};
+
+class Timer {
+public:
+    Timer(Timers* timers, TimerRegion region, bool also_print = false) 
+        : timers(timers), region(region), print(also_print) {
+        assert(timers != nullptr && "Timer started but timers is nullptr");
+        timers->start(region);
+    }
+
+    ~Timer() {
+        timers->stop_and_add(region);
+        if (print) {
+            timers->print(std::cout);
+        }
+    }
+    
+private:
+    Timers* timers;
+    TimerRegion region;
+    bool print;
 };

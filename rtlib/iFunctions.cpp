@@ -11,16 +11,17 @@
  */
 
 #include "iFunctions.hpp"
-#include "perfect_shadow.hpp"
-#include "shadow.hpp"
-#include "signature.hpp"
-#include "functions/all.hpp"
-#include "DPUtils.hpp"
-#include "MemoryRegionTree.hpp"
-#include "scope.hpp"
-#include "../share/include/timer.hpp"
-
 #include "iFunctionsGlobals.hpp"
+
+#include "DPUtils.hpp"
+
+#include "loop/Makros.hpp"
+#include "memory/PerfectShadow.hpp"
+#include "memory/ShadowMemory.hpp"
+#include "memory/Signature.hpp"
+#include "injected_functions/all.hpp"
+#include "../share/include/debug_print.hpp"
+#include "../share/include/timer.hpp"
 
 #include <cstdio>
 #include <limits>
@@ -31,6 +32,7 @@
 #include <cstdlib>
 #include <queue>
 #include <set>
+#include <sstream>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -51,14 +53,14 @@ using namespace dputil;
 
 namespace __dp {
 
-
-
 /******* Helper functions *******/
 
 void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
             bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
             bool positiveScopeChangeOccuredSinceLastAccess) {
-  timers->start(TimerRegion::ADD_DEP);
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::ADD_DEP);
+#endif
   
   // hybrid analysis
   if (depOn == 0 && type == WAW)
@@ -363,17 +365,17 @@ void addDep(depType type, LID curr, LID depOn, char *var, string AAvar,
            << myMap->size() << ")" << endl;
     }
   }
-
-  timers->stop_and_add(TimerRegion::ADD_DEP);
 }
 
 // hybrid analysis
 void generateStringDepMap() {
-  timers->start(TimerRegion::GENERATE_STRING_DEP_MAP);
-  
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter generateStringDepMap\n";
+  const auto debug_print = make_debug_print("generateStringDepMap");
 #endif
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::GENERATE_STRING_DEP_MAP);
+#endif
+
   for (auto &dline : *allDeps) {
     if (dline.first) {
       string lid = decodeLID(dline.first);
@@ -438,19 +440,16 @@ void generateStringDepMap() {
       delete dline.second;
     }
   }
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter generateStringDepMap\n";
-#endif
-
-  timers->stop_and_add(TimerRegion::GENERATE_STRING_DEP_MAP);
 }
 
-void outputDeps() {
-  timers->start(TimerRegion::OUTPUT_DEPS);
-  
+void outputDeps() {  
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter outputDeps\n";
+  const auto debug_print = make_debug_print("outputDeps");
 #endif
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::OUTPUT_DEPS);
+#endif
+
   for (auto pair : *outPutDeps) {
     *out << pair.first << " NOM ";
     for (auto dep : pair.second) {
@@ -458,105 +457,14 @@ void outputDeps() {
     }
     *out << endl;
   }
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit outputDeps\n";
-#endif
-
-  timers->stop_and_add(TimerRegion::OUTPUT_DEPS);
 }
 // End HA
-
-void outputLoops() {
-  timers->start(TimerRegion::OUTPUT_LOOPS);
-  
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter outputLoops\n";
-#endif
-  assert((loops != nullptr) && "Loop map is not available!");
-  for (auto &loop : *loops) {
-    *out << decodeLID(loop.first) << " BGN loop ";
-    *out << loop.second->total << ' ';
-    *out << loop.second->nEntered << ' ';
-    *out << static_cast<int32_t>(loop.second->total / loop.second->nEntered)
-         << ' ';
-    *out << loop.second->maxIterationCount << endl;
-    *out << decodeLID(loop.second->end) << " END loop" << endl;
-  }
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit outputLoops\n";
-#endif
-
-  timers->stop_and_add(TimerRegion::OUTPUT_LOOPS);
-}
-
-void outputFuncs() {
-  timers->start(TimerRegion::OUTPUT_FUNCS);
-  
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter outputFunc\n";
-#endif
-  assert(beginFuncs != nullptr && endFuncs != nullptr &&
-         "Function maps are not available!");
-  for (auto &func_begin : *beginFuncs) {
-    for (auto fb : *(func_begin.second)) {
-      *out << decodeLID(func_begin.first) << " BGN func ";
-      *out << decodeLID(fb) << endl;
-    }
-  }
-
-  for (auto fe : *endFuncs) {
-    *out << decodeLID(fe) << " END func" << endl;
-  }
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit outputFunc\n";
-#endif
-
-  timers->stop_and_add(TimerRegion::OUTPUT_FUNCS);
-}
-
-void outputAllocations() {
-  timers->start(TimerRegion::OUTPUT_ALLOCATIONS);
-  
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter outputAllocations\n";
-#endif
-  const auto prepare_environment = [](){
-      // prepare environment variables
-    const char *discopop_env = getenv("DOT_DISCOPOP");
-    if (discopop_env == NULL) {
-
-      // DOT_DISCOPOP needs to be initialized
-      setenv("DOT_DISCOPOP", ".discopop", 1);
-      discopop_env = ".discopop";
-    }
-
-    auto discopop_profiler_str = std::string(discopop_env) + "/profiler";
-    setenv("DOT_DISCOPOP_PROFILER", discopop_profiler_str.data(), 1);
-
-    return discopop_profiler_str + "/memory_regions.txt";
-  };
-  const auto path = prepare_environment();
-
-  auto allocationsFileStream = ofstream(path, ios::out);
-  for (const auto& memoryRegion : *allocatedMemoryRegions) {
-    const auto lid = get<0>(memoryRegion);
-    const auto& id = get<1>(memoryRegion);
-    const auto num_bytes = get<4>(memoryRegion);
-
-    decodeLID(lid, allocationsFileStream);
-    allocationsFileStream << ' ' << id << ' ' << num_bytes << endl;
-  }
-  
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit outputAllocations\n";
-#endif
-  timers->stop_and_add(TimerRegion::OUTPUT_ALLOCATIONS);
-}
 
 void readRuntimeInfo() {  
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter readRuntimeInfo\n";
 #endif
+
   ifstream conf(get_exe_dir() + "/dp.conf");
   string line;
   if (conf.is_open()) {
@@ -603,17 +511,20 @@ void readRuntimeInfo() {
     cout << "chunk_size   = " << CHUNK_SIZE << "\n";
     sleep(2);
   }
+
 #ifdef DP_RTLIB_VERBOSE
   cout << "exit readRuntimeInfo\n";
 #endif
 }
 
-void initParallelization() {
-  timers->start(TimerRegion::INIT_PARALLELIZATION);
-  
+void initParallelization() {  
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter initParallelization\n";
+  const auto debug_print = make_debug_print("initParallelization");
 #endif
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::INIT_PARALLELIZATION);
+#endif
+
   // initialize global variables
   addrChunkPresentConds = new pthread_cond_t[NUM_WORKERS];
   addrChunkMutexes = new pthread_mutex_t[NUM_WORKERS];
@@ -644,92 +555,31 @@ void initParallelization() {
   }
 
   pthread_attr_destroy(&attr);
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit initParallelization\n";
-#endif
-
-  timers->stop_and_add(TimerRegion::INIT_PARALLELIZATION);
 }
 
 void initSingleThreadedExecution() {
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter initSingleThreadedExecution\n";
+  const auto debug_print = make_debug_print("initSingleThreadedExecution");
 #endif
-timers->start(TimerRegion::ANALYZE_DEPS);
-  
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
+#endif
+
   if (USE_PERFECT) {
     singleThreadedExecutionSMem = new PerfectShadow(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
   } else {
     singleThreadedExecutionSMem = new ShadowMemory(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
   }
+
   myMap = new depMap();
-
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit initSingleThreadedExecution\n";
-#endif
-}
-
-void finalizeSingleThreadedExecution() {
-
-#ifdef DP_RTLIB_VERBOSE
-  cout << "enter finalizeSingleThreadedExecution\n";
-#endif
-  if (DP_DEBUG) {
-    cout << "BEGIN: finalize Single Threaded Execution... \n";
-  }
-
-  delete singleThreadedExecutionSMem;
-  mergeDeps();
-
-  if (DP_DEBUG) {
-    cout << "END: finalize Single Threaded Execution... \n";
-  }
-#ifdef DP_RTLIB_VERBOSE
-  cout << "exit finalizeSingleThreadedExecution\n";
-#endif
 }
 
 string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
-  timers->start(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
-  
-  // use tree
-  const auto return_value = fallback + "-" +
-         allocatedMemRegTree->get_memory_region_id(fallback, addr);
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
+#endif
 
-  timers->stop_and_add(TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
-  return return_value;
-
-  /*// check if accessed addr in knwon range. If not, return fallback
-  immediately if(addr >= smallestAllocatedADDR && addr <= largestAllocatedADDR){
-      // FOR NOW, ONLY SEARCH BACKWARDS TO FIND THE LATEST ALLOCA ENTRY IN CASE
-  MEMORY ADDRESSES ARE REUSED if(allocatedMemoryRegions->size() != 0){
-          // search backwards in the list
-          auto bw_it = allocatedMemoryRegions->end();
-          bw_it--;
-          bool search_backwards = true;
-
-          while(true){
-              if(*bw_it == allocatedMemoryRegions->front()){
-                  search_backwards = false;
-              }
-              if(get<2>(*bw_it) <= addr && get<3>(*bw_it) >= addr){
-                  lastHitIterator = bw_it;
-                  return get<1>(*bw_it);
-              }
-
-              if(search_backwards){
-                  bw_it--;
-              }
-              else{
-                  break;
-              }
-          }
-      }
-
-  }
-
-  return fallback;
-  */
+  return fallback + '-' + memory_manager->get_memory_region_id(addr, fallback);
 }
 
 void mergeDeps() {  
@@ -737,7 +587,9 @@ void mergeDeps() {
   depMap::iterator globalPos; // position of the current processing lid in allDeps
 
   pthread_mutex_lock(&allDepsLock);
-  timers->start(TimerRegion::MERGE_DEPS);
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::MERGE_DEPS);
+#endif
 
   for (auto &dep : *myMap) {
     // if a lid occurs the first time, then add it in to the global hash table.
@@ -756,19 +608,19 @@ void mergeDeps() {
     }
   }
   
-  timers->stop_and_add(TimerRegion::MERGE_DEPS);
   pthread_mutex_unlock(&allDepsLock);
 }
 
-void analyzeSingleAccess(__dp::Shadow* SMem, __dp::AccessInfo& access){
+void analyzeSingleAccess(__dp::AbstractShadow* SMem, __dp::AccessInfo& access){
   // analyze data dependences
-  timers->start(TimerRegion::ANALYZE_SINGLE_ACCESS);
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::ANALYZE_SINGLE_ACCESS);
+#endif
 
   if (access.isRead) {
     // hybrid analysis
     if (access.skip) {
       SMem->insertToRead(access.addr, access.lid);
-      timers->stop_and_add(TimerRegion::ANALYZE_SINGLE_ACCESS);
       return;
     }
     // End HA
@@ -808,14 +660,15 @@ void analyzeSingleAccess(__dp::Shadow* SMem, __dp::AccessInfo& access){
       }
     }
   }
-  timers->stop_and_add(TimerRegion::ANALYZE_SINGLE_ACCESS);
 }
 
-void *analyzeDeps(void *arg) {
-  timers->start(TimerRegion::ANALYZE_DEPS);
+void* analyzeDeps(void *arg) {
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
+#endif
   
   int64_t id = (int64_t)arg;
-  Shadow *SMem;
+  AbstractShadow *SMem;
   if (USE_PERFECT) {
     SMem = new PerfectShadow(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
   } else {
@@ -879,16 +732,18 @@ void *analyzeDeps(void *arg) {
     cout << "thread " << id << " exits... \n";
   }
 
-  timers->stop_and_add(TimerRegion::ANALYZE_DEPS);
   pthread_exit(NULL);
+  return nullptr;
 }
 
 void finalizeParallelization() {
-  timers->start(TimerRegion::FINALIZE_PARALLELIZATION);
-
 #ifdef DP_RTLIB_VERBOSE
-  cout << "enter finalizeParallelization\n";
+  const auto debug_print = make_debug_print("finalizeParallelization");
 #endif
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::FINALIZE_PARALLELIZATION);
+#endif
+
   if (DP_DEBUG) {
     cout << "BEGIN: finalize parallelization... \n";
   }
@@ -931,24 +786,38 @@ void finalizeParallelization() {
   if (DP_DEBUG) {
     cout << "END: finalize parallelization... \n";
   }
+}
+
+void finalizeSingleThreadedExecution() {
 #ifdef DP_RTLIB_VERBOSE
-  cout << "exit finalizeParallelization\n";
+  const auto debug_print = make_debug_print("finalizeSingleThreadedExecution");
 #endif
 
-  timers->stop_and_add(TimerRegion::FINALIZE_PARALLELIZATION);
+  if (DP_DEBUG) {
+    std::cout << "BEGIN: finalize Single Threaded Execution... \n";
+  }
+
+  delete singleThreadedExecutionSMem;
+  mergeDeps();
+
+  if (DP_DEBUG) {
+    std::cout << "END: finalize Single Threaded Execution... \n";
+  }
 }
 
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
-  timers->start(TimerRegion::CLEAR_STACK_ACCESSES);
+#ifdef DP_INTERNAL_TIMER
+  const auto timer = Timer(timers, TimerRegion::CLEAR_STACK_ACCESSES);
+#endif
 
-  for (ADDR addr : scopeManager->getCurrentScope().get_first_write()) {
+  const auto& current_scope = memory_manager->getCurrentScope();
+  const auto& writes = current_scope.get_first_write();
+  for (ADDR addr : writes) {
     //cleanup reads
     __dp_read(0, addr, "");
     //cleanup writes
     __dp_write(0, addr, "");
   }
-
-  timers->stop_and_add(TimerRegion::CLEAR_STACK_ACCESSES);
 }
 
 } // namespace __dp
