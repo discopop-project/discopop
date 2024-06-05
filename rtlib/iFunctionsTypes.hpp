@@ -65,7 +65,7 @@ struct AccessInfo {
   bool skip;
   // End HA
   LID lid;
-  char *var;
+  const char *var;
   std::string AAvar; // name of allocated variable -> "Anti Aliased Variable"
   ADDR addr;
   bool isStackAccess = false;
@@ -75,12 +75,12 @@ struct AccessInfo {
 
 // For runtime dependency merging
 struct Dep {
-  Dep(depType T, LID dep, char *var, std::string AAvar)
+  Dep(depType T, LID dep, const char *var, std::string AAvar)
       : type(T), depOn(dep), var(var), AAvar(AAvar) {}
 
   depType type;
   LID depOn;
-  char *var;
+  const char *var;
   std::string AAvar;
 };
 
@@ -109,12 +109,7 @@ typedef std::unordered_map<LID, depSet *> depMap;
 typedef std::unordered_map<std::string, std::set<std::string>> stringDepMap;
 typedef std::set<std::uint32_t> ReportedBBSet;
 typedef std::set<std::string> ReportedBBPairSet;
+typedef std::set<std::string> ReportedBBPairSet;
 // End HA
 
 } // namespace __dp
-
-// issue a warning if DP_PTHREAD_COMPATIBILITY_MODE is enabled
-#ifdef DP_PTHREAD_COMPATIBILITY_MODE
-#warning                                                                       \
-    "DP_PTHREAD_COMPATIBILITY_MODE enabled! This may have negative implications on the profiling time."
-#endif

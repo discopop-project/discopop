@@ -96,11 +96,11 @@ public:
         scopeManager.leaveScope(type.c_str(), debug_lid); 
     }
 
-    void registerStackRead(const ADDR address, const LID debug_lid, char *debug_var) {
+    void registerStackRead(const ADDR address, const LID debug_lid, const char *debug_var) {
         scopeManager.registerStackRead(address, debug_lid, debug_var);
     }
 
-    void registerStackWrite(const ADDR address, const LID debug_lid, char *debug_var) {
+    void registerStackWrite(const ADDR address, const LID debug_lid, const char *debug_var) {
         scopeManager.registerStackWrite(address, debug_lid, debug_var);
     }
 

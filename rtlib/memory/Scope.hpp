@@ -27,13 +27,13 @@ namespace __dp {
 struct Scope {
   Scope(unsigned long id) : scope_id(id) {}
 
-  void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
+  void registerStackRead(ADDR address, LID debug_lid, const char *debug_var) {
     if (!(first_written.find(address) != first_written.end())) {
       first_read.insert(address);
     }
   }
 
-  void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
+  void registerStackWrite(ADDR address, LID debug_lid, const char *debug_var) {
     if (!(first_read.find(address) != first_read.end())) {
       first_written.insert(address);
     }
@@ -75,12 +75,12 @@ struct ScopeManager {
     scopeStack.pop_back(); 
   }
 
-  void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
+  void registerStackRead(ADDR address, LID debug_lid, const char *debug_var) {
     scopeStack.back().registerStackRead(address, debug_lid, debug_var);
     addrToLastAccessScopeID[address] = scopeStack.back().get_id();
   }
 
-  void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
+  void registerStackWrite(ADDR address, LID debug_lid, const char *debug_var) {
     scopeStack.back().registerStackWrite(address, debug_lid, debug_var);
     addrToLastAccessScopeID[address] = scopeStack.back().get_id();
   }
