@@ -809,6 +809,7 @@ void finalizeSingleThreadedExecution() {
   }
 }
 
+#if DP_STACK_ACCESS_DETECTION
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::CLEAR_STACK_ACCESSES);
@@ -823,5 +824,6 @@ void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
     __dp_write(0, addr, "");
   }
 }
+#endif
 
 } // namespace __dp

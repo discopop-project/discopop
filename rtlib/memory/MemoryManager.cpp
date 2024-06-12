@@ -47,11 +47,13 @@ std::string __dp::MemoryManager::allocate_stack_memory(const LID line_id, const 
         largestAllocatedADDR = end_address;
     }
 
+#if DP_STACK_ACCESS_DETECTION
     if (number_elements >= 0) {
         assert (start_address <= end_address && "start_address <= end_address is violated!");
         // update stack base address, if not already set
         update_stack_addresses(start_address, end_address);
     }
+#endif
 
     return memory_region_id_str;
 }

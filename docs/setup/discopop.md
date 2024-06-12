@@ -34,6 +34,7 @@ where `<CMAKE_FLAGS>` can consist of any combination of the following flags and 
 - `-DDP_NUM_WORKERS=<int>` &ndash; Specify the number of worker threads available for the dependency analysis during profiling. Default: `3` worker threads. `0` can be used to disable the creation of additional threads for the analysis.
 - `-DDP_HYBRID_PROFILING=[0|1]` &ndash; Enbale hybrid profiling. Default: `1`.
 - `-DDP_MEMORY_REGION_DEALIASING=[0|1]`: Enable or disable the generation of dependency de-aliasing information. Reduces potential false positive parallelization suggestions, but increases the profiling overhead.
+- `-DDP_STACK_ACCESS_DETECTION=[0|1]`: Enable or disable stack dependency detection. Enabling will reduce false positive dependences, but increase the profiling overhead. This flag only has an effect on the results, if `-DDP_HYBRID_PROFILING=0`.
 
 #### Development and debugging
 - `-DDP_RTLIB_VERBOSE=[0|1]` &ndash; Enable verbose output during profiling.

@@ -69,7 +69,10 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
   loop_manager->correct_func_level(function_stack_level);
   loop_manager->exit_loop(lid);
 
+#if DP_STACK_ACCESS_DETECTION
   memory_manager->leaveScope("loop", lid);
+#endif
+
 }
 
 }

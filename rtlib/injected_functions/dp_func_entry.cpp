@@ -120,10 +120,11 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 #ifdef DP_INTERNAL_TIMER
    const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
 #endif
-  // TEST
+  
+#if DP_STACK_ACCESS_DETECTION
   memory_manager->enter_new_function();
   memory_manager->enterScope("function", lid);
-  // !TEST
+#endif
 
   if (isStart)
     *out << "START " << dputil::decodeLID(lid) << endl;

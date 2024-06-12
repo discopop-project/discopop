@@ -76,7 +76,9 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 
   // TEST
   // check for stack access
+#if DP_STACK_ACCESS_DETECTION
   bool is_stack_access = memory_manager->is_stack_access(addr);
+#endif
   // !TEST
 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
@@ -91,6 +93,8 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
   current.var = var;
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
+
+#if DP_STACK_ACCESS_DETECTION
   current.isStackAccess = is_stack_access;
   current.addrIsOwnedByScope =
       memory_manager->isFirstWrittenInScope(addr, true);
@@ -102,6 +106,7 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
     // positiveScopeChangeOccuredSinceLastAccess
     memory_manager->registerStackWrite(addr, lid, var);
   }
+#endif
 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
   analyzeSingleAccess(singleThreadedExecutionSMem, current);

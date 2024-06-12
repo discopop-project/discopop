@@ -59,7 +59,11 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
   
   if (is_new_loop) {
     loop_manager->create_new_loop(function_stack_level, loopID, lid); 
+
+#if DP_STACK_ACCESS_DETECTION
     memory_manager->enterScope("loop", lid);
+#endif
+
   } else {
     // The same loop iterates again
     loop_manager->iterate_loop(function_stack_level);
@@ -78,8 +82,11 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
 
     loop_manager->correct_func_level(function_stack_level);
 
+#if DP_STACK_ACCESS_DETECTION
     memory_manager->leaveScope("loop_iteration", lid);
     memory_manager->enterScope("loop_iteration", lid);
+#endif  
+
   }
 }
 

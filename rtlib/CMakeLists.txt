@@ -76,6 +76,12 @@ if(DEFINED DP_MEMORY_REGION_DEALIASING)
         endif()
 endif()
 
+if(DEFINED DP_STACK_ACCESS_DETECTION)
+        if(NOT ${DP_STACK_ACCESS_DETECTION} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_STACK_ACCESS_DETECTION=${DP_STACK_ACCESS_DETECTION})
+        endif()
+endif()
+
 # end of compiler flags
 
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)

@@ -45,5 +45,7 @@ void finalizeParallelization();
 
 void finalizeSingleThreadedExecution();
 
+#if DP_STACK_ACCESS_DETECTION
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound);
+#endif
 } // namespace __dp

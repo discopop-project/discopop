@@ -63,11 +63,18 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   pthread_compatibility_mutex.unlock();
 #endif
+
+#if DP_STACK_ACCESS_DETECTION
   clearStackAccesses(last_addresses.first, last_addresses.second); // insert accesses with LID 0 to the queues
+#endif
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   pthread_compatibility_mutex.lock();
 #endif
+
+#if DP_STACK_ACCESS_DETECTION
   memory_manager->leaveScope("function", lid);
+#endif
   // !TEST
 
   if (isExit == 0){
