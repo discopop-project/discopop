@@ -15,7 +15,7 @@
 #include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
 
-#include "../CallStack.hpp"
+#include "../callstack/CallStack.hpp"
 
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
@@ -134,8 +134,8 @@ void __dp_func_entry(LID lid, int32_t isStart) {
   if (isStart)
     *out << "START " << dputil::decodeLID(lid) << endl;
   
-  funcCallCounter++;
 #if DP_CALLSTACK_PROFILING
+  funcCallCounter++;
   callStack->push(new CallStackEntry(0, lid, funcCallCounter));
 #endif
 

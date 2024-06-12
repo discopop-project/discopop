@@ -155,6 +155,10 @@ void __dp_finalize(LID lid) {
   delete bbList;
   // End HA
 
+#if DP_CALLSTACK_PROFILING
+  delete callStack;
+#endif
+
   delete function_manager;
   delete loop_manager;
 

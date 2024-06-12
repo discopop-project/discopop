@@ -17,6 +17,8 @@ set(DiscoPoP_SOURCES
                 
         memory/MemoryManager.cpp
         memory/Signature.cpp
+
+        callstack/CallStack.cpp
 		
         injected_functions/dp_add_bb_deps.cpp
         injected_functions/dp_alloca.cpp

@@ -27,14 +27,17 @@ public:
   ShadowMemory(int slotSize, int size, int numHash) {
     sigRead = new Signature(slotSize, size, numHash);
     sigWrite = new Signature(slotSize, size, numHash);
+#if DP_CALLSTACK_PROFILING
     addrToLastReadAccessCallStack = new std::unordered_map<int64_t, CallStack*>(); 
     addrToLastWriteAccessCallStack = new std::unordered_map<int64_t, CallStack*>(); 
+#endif
   }
 
   ~ShadowMemory() {
     delete sigRead;
     delete sigWrite;
 
+#if DP_CALLSTACK_PROFILING
     for (auto elem : *addrToLastReadAccessCallStack){ 
                 cleanReadAccessCallStack(elem.first); 
             } 
@@ -43,7 +46,9 @@ public:
             } 
             delete addrToLastReadAccessCallStack; 
             delete addrToLastWriteAccessCallStack; 
+#endif
   }
+
 
   inline sigElement testInRead(std::int64_t memAddr) {
     return sigRead->membershipCheck(memAddr);
@@ -73,6 +78,7 @@ public:
 
   inline void removeFromWrite(std::int64_t memAddr) { sigWrite->remove(memAddr); }
 
+#if DP_CALLSTACK_PROFILING
    inline CallStack* getLastReadAccessCallStack(int64_t memAddr){ 
            return (*addrToLastReadAccessCallStack)[memAddr]; 
         } 
@@ -128,6 +134,7 @@ public:
                 (*addrToLastWriteAccessCallStack)[memAddr] = nullptr; 
             } 
         } 
+#endif
 
   inline std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr,
                                                   std::int64_t endAddr) {
@@ -139,8 +146,10 @@ public:
 private:
   Signature *sigRead;
   Signature *sigWrite;
+#if DP_CALLSTACK_PROFILING
   std::unordered_map <int64_t, CallStack*> *addrToLastReadAccessCallStack; 
-        std::unordered_map <int64_t, CallStack*> *addrToLastWriteAccessCallStack; 
+  std::unordered_map <int64_t, CallStack*> *addrToLastWriteAccessCallStack; 
+#endif
 };
 
 } // namespace __dp

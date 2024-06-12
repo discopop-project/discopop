@@ -19,7 +19,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
-#include "CallStack.hpp"
+#include "../callstack/CallStack.hpp"
 
 namespace __dp {
 
@@ -30,9 +30,10 @@ public:
   PerfectShadow() {
     sigRead = new std::unordered_map<int64_t, sigElement>();
     sigWrite = new std::unordered_map<int64_t, sigElement>();
-
+#if DP_CALLSTACK_PROFILING
     addrToLastReadAccessCallStack = new std::unordered_map<int64_t, CallStack*>(); 
     addrToLastWriteAccessCallStack = new std::unordered_map<int64_t, CallStack*>(); 
+#endif
   }
 
   PerfectShadow(const PerfectShadow& other) = delete;
@@ -56,6 +57,7 @@ public:
     delete sigRead;
     delete sigWrite;
 
+#if DP_CALLSTACK_PROFILING
     for (auto elem : *addrToLastReadAccessCallStack){ 
                 cleanReadAccessCallStack(elem.first); 
             } 
@@ -64,6 +66,7 @@ public:
             } 
             delete addrToLastReadAccessCallStack; 
             delete addrToLastWriteAccessCallStack; 
+#endif
   }
 
   inline sigElement testInRead(std::int64_t memAddr) { 
@@ -122,9 +125,10 @@ public:
     return sigWrite;
   }
 
+#if DP_CALLSTACK_PROFILING
   inline CallStack* getLastReadAccessCallStack(int64_t memAddr){ 
            return (*addrToLastReadAccessCallStack)[memAddr]; 
-        } 
+        }  
  
         inline void setLastReadAccessCallStack(int64_t memAddr, CallStack* p_cs){ 
             // check if entry exists already 
@@ -177,12 +181,15 @@ public:
                 (*addrToLastWriteAccessCallStack)[memAddr] = nullptr; 
             } 
         } 
+#endif
 
 private:
   std::unordered_map<std::int64_t, sigElement> *sigRead;
   std::unordered_map<std::int64_t, sigElement> *sigWrite;
+#if DP_CALLSTACK_PROFILING
   std::unordered_map <int64_t, CallStack*> *addrToLastReadAccessCallStack; 
   std::unordered_map <int64_t, CallStack*> *addrToLastWriteAccessCallStack; 
+#endif
 };
 
 
@@ -194,11 +201,14 @@ public:
   PerfectShadow2() {
     read_cache.reserve(1024);
     write_cache.reserve(1024);
+#if DP_CALLSTACK_PROFILING
     addrToLastReadAccessCallStack = new std::unordered_map<int64_t, CallStack*>(); 
     addrToLastWriteAccessCallStack = new std::unordered_map<int64_t, CallStack*>();
+#endif
   }
 
   ~PerfectShadow2(){
+#if DP_CALLSTACK_PROFILING
     for (auto elem : *addrToLastReadAccessCallStack){ 
                 cleanReadAccessCallStack(elem.first); 
             } 
@@ -207,6 +217,7 @@ public:
             } 
             delete addrToLastReadAccessCallStack; 
             delete addrToLastWriteAccessCallStack; 
+#endif
     }
 
 
@@ -290,6 +301,7 @@ public:
     return &write_cache;
   }
 
+#if DP_CALLSTACK_PROFILING
   inline CallStack* getLastReadAccessCallStack(int64_t memAddr){ 
            return (*addrToLastReadAccessCallStack)[memAddr]; 
         } 
@@ -345,12 +357,15 @@ public:
                 (*addrToLastWriteAccessCallStack)[memAddr] = nullptr; 
             } 
         } 
+#endif
 
 private:
   hashmap<int64_t, sigElement> read_cache{};
   hashmap<int64_t, sigElement> write_cache{};
+#if DP_CALLSTACK_PROFILING
   std::unordered_map <int64_t, CallStack*> *addrToLastReadAccessCallStack; 
   std::unordered_map <int64_t, CallStack*> *addrToLastWriteAccessCallStack; 
+#endif
 };
 
 

@@ -13,11 +13,11 @@
 #pragma once
 
 #include "DPTypes.hpp"
-#include "CallStack.hpp"
 
 #include "functions/FunctionManager.hpp"
 #include "loop/LoopManager.hpp"
 #include "memory/MemoryManager.hpp"
+#include "callstack/CallStack.hpp"
 
 #include <cstdint>
 #include <unordered_map>
@@ -77,7 +77,7 @@ struct AccessInfo {
 
 // For runtime dependency merging
 struct Dep {
-  Dep(depType T, LID dep, char *var, std::string AAvar, std::set<LID> iaid, std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd)
+  Dep(depType T, LID dep, const char *var, std::string AAvar, std::set<LID> iaid, std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd)
       : type(T), depOn(dep), var(var), AAvar(AAvar), intra_iteration_dependencies(iaid), inter_iteration_dependencies(ieid), 
             intra_call_dependencies(iacd), inter_call_dependencies(iecd)  {}
 

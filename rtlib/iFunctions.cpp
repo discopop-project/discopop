@@ -55,7 +55,7 @@ namespace __dp {
 
 /******* Helper functions *******/
 
-void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallStack* depOnCallStack, char *var, string AAvar,
+void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallStack* depOnCallStack, const char *var, string AAvar,
             bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
             bool positiveScopeChangeOccuredSinceLastAccess) {
 #ifdef DP_INTERNAL_TIMER
