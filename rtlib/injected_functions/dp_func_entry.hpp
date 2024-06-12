@@ -20,7 +20,6 @@ namespace __dp {
 extern "C" {
 
 void __dp_func_entry(LID lid, int32_t isStart);
-
 }
 
 } // namespace __dp

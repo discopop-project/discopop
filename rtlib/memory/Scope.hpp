@@ -15,11 +15,11 @@
 #include "../DPTypes.hpp"
 
 #include <algorithm>
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <iostream>
 
 namespace __dp {
 
@@ -39,17 +39,11 @@ struct Scope {
     }
   }
 
-  unsigned long get_id() const noexcept {
-    return scope_id;
-  }
+  unsigned long get_id() const noexcept { return scope_id; }
 
-  const std::unordered_set<ADDR>& get_first_read() const noexcept {
-    return first_read;
-  }
+  const std::unordered_set<ADDR> &get_first_read() const noexcept { return first_read; }
 
-  const std::unordered_set<ADDR>& get_first_write() const noexcept {
-    return first_written;
-  }
+  const std::unordered_set<ADDR> &get_first_write() const noexcept { return first_written; }
 
 private:
   unsigned long scope_id;
@@ -59,21 +53,13 @@ private:
 
 // Data structure for stack access management in scopes
 struct ScopeManager {
-  const Scope& getCurrentScope() { 
-    return scopeStack.back(); 
-  }
+  const Scope &getCurrentScope() { return scopeStack.back(); }
 
-  std::size_t number_open_scopes() const noexcept {
-    return scopeStack.size();
-  }
+  std::size_t number_open_scopes() const noexcept { return scopeStack.size(); }
 
-  void enterScope(std::string type, LID debug_lid) {
-    scopeStack.push_back(Scope(next_scope_id++));
-  }
+  void enterScope(std::string type, LID debug_lid) { scopeStack.push_back(Scope(next_scope_id++)); }
 
-  void leaveScope(std::string type, LID debug_lid) { 
-    scopeStack.pop_back(); 
-  }
+  void leaveScope(std::string type, LID debug_lid) { scopeStack.pop_back(); }
 
   void registerStackRead(ADDR address, LID debug_lid, const char *debug_var) {
     scopeStack.back().registerStackRead(address, debug_lid, debug_var);
@@ -87,24 +73,24 @@ struct ScopeManager {
 
   bool isOwnedByScope(ADDR addr, bool currentAccessIsWrite) {
     // currentAccessIsWrite is used in case no access to addr has been
-    
-    // check for first_writes in previous scopes (i.e.: search for the "owner" of the stack variable)
+
+    // check for first_writes in previous scopes (i.e.: search for the "owner"
+    // of the stack variable)
     int idx = 0;
-    for(auto scope: scopeStack){
-      if(scope.get_first_write().count(addr) > 0){
-        if(idx == scopeStack.size()-1){
+    for (auto scope : scopeStack) {
+      if (scope.get_first_write().count(addr) > 0) {
+        if (idx == scopeStack.size() - 1) {
           return true;
-        }
-        else{
+        } else {
           // scope variable "belongs" to a parent scope.
-          // Thus, it may not be considered a scope variable for the inner scope.
+          // Thus, it may not be considered a scope variable for the inner
+          // scope.
           return false;
         }
       }
       idx++;
-      
     }
-    
+
     // registered already
     if (scopeStack.back().get_first_write().count(addr) > 0) {
       return true;
@@ -159,7 +145,8 @@ struct Scope2 {
 
   void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
     const auto not_found = first_written.find(address) == first_written.end();
-    // const auto not_found = std::find(first_written.begin(), first_written.end(), address) == first_written.end();
+    // const auto not_found = std::find(first_written.begin(),
+    // first_written.end(), address) == first_written.end();
     if (not_found) {
       first_read.insert(address);
       // first_read.emplace_back(address);
@@ -168,24 +155,19 @@ struct Scope2 {
 
   void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
     const auto not_found = first_read.find(address) == first_read.end();
-    // const auto not_found = std::find(first_read.begin(), first_read.end(), address) == first_read.end();
+    // const auto not_found = std::find(first_read.begin(), first_read.end(),
+    // address) == first_read.end();
     if (not_found) {
       first_written.insert(address);
       // first_written.emplace_back(address);
     }
   }
 
-  unsigned long get_id() const noexcept {
-    return scope_id;
-  }
+  unsigned long get_id() const noexcept { return scope_id; }
 
-  const hashset<ADDR>& get_first_read() const noexcept {
-    return first_read;
-  }
+  const hashset<ADDR> &get_first_read() const noexcept { return first_read; }
 
-  const hashset<ADDR>& get_first_write() const noexcept {
-    return first_written;
-  }
+  const hashset<ADDR> &get_first_write() const noexcept { return first_written; }
 
 private:
   unsigned long scope_id;
@@ -199,31 +181,23 @@ struct ScopeManager2 {
     addrToLastAccessScopeID.reserve(1024);
   }
 
-  const Scope2& getCurrentScope() const noexcept { 
-    return scopeStack.back(); 
-  }
+  const Scope2 &getCurrentScope() const noexcept { return scopeStack.back(); }
 
-  std::size_t number_open_scopes() const noexcept {
-    return scopeStack.size();
-  }
+  std::size_t number_open_scopes() const noexcept { return scopeStack.size(); }
 
-  void enterScope(const char* type, LID debug_lid) {
-    scopeStack.emplace_back(next_scope_id++);
-  }
+  void enterScope(const char *type, LID debug_lid) { scopeStack.emplace_back(next_scope_id++); }
 
-  void leaveScope(const char* type, LID debug_lid) { 
-    scopeStack.pop_back(); 
-  }
+  void leaveScope(const char *type, LID debug_lid) { scopeStack.pop_back(); }
 
   void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
-    auto& current_scope = scopeStack.back();
+    auto &current_scope = scopeStack.back();
 
     current_scope.registerStackRead(address, debug_lid, debug_var);
     addrToLastAccessScopeID[address] = current_scope.get_id();
   }
 
   void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
-    auto& current_scope = scopeStack.back();
+    auto &current_scope = scopeStack.back();
 
     current_scope.registerStackWrite(address, debug_lid, debug_var);
     addrToLastAccessScopeID[address] = current_scope.get_id();
@@ -231,24 +205,24 @@ struct ScopeManager2 {
 
   bool isOwnedByScope(ADDR addr, bool currentAccessIsWrite) {
     // currentAccessIsWrite is used in case no access to addr has been
-    
-    // check for first_writes in previous scopes (i.e.: search for the "owner" of the stack variable)
+
+    // check for first_writes in previous scopes (i.e.: search for the "owner"
+    // of the stack variable)
     int idx = 0;
-    for(auto scope: scopeStack){
-      if(scope.get_first_write().count(addr) > 0){
-        if(idx == scopeStack.size()-1){
+    for (auto scope : scopeStack) {
+      if (scope.get_first_write().count(addr) > 0) {
+        if (idx == scopeStack.size() - 1) {
           return true;
-        }
-        else{
+        } else {
           // scope variable "belongs" to a parent scope.
-          // Thus, it may not be considered a scope variable for the inner scope.
+          // Thus, it may not be considered a scope variable for the inner
+          // scope.
           return false;
         }
       }
       idx++;
-      
     }
-    
+
     // registered already
     if (scopeStack.back().get_first_write().count(addr) > 0) {
       return true;

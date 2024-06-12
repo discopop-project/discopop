@@ -55,19 +55,19 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     }
     return;
   }
-  
+
   const auto function_stack_level = function_manager->get_current_stack_level();
   const auto is_new_loop = loop_manager->is_new_loop(loopID);
-  
+
   if (is_new_loop) {
-    loop_manager->create_new_loop(function_stack_level, loopID, lid); 
+    loop_manager->create_new_loop(function_stack_level, loopID, lid);
 
 #if DP_STACK_ACCESS_DETECTION
     memory_manager->enterScope("loop", lid);
 #endif
 
 #if DP_CALLSTACK_PROFILING
-      callStack->push(new CallStackEntry(1, lid, 0));
+    callStack->push(new CallStackEntry(1, lid, 0));
 #endif
   } else {
     // The same loop iterates again
@@ -93,11 +93,9 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
 #if DP_STACK_ACCESS_DETECTION
     memory_manager->leaveScope("loop_iteration", lid);
     memory_manager->enterScope("loop_iteration", lid);
-#endif  
-
+#endif
   }
 }
-
 }
 
 } // namespace __dp

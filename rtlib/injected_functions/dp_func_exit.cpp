@@ -12,8 +12,8 @@
 
 #include "../DPTypes.hpp"
 
-#include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
+#include "../iFunctionsGlobals.hpp"
 
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
@@ -35,8 +35,7 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   if (targetTerminated) {
     if (DP_DEBUG) {
       cout << "Exiting function LID " << std::dec << dputil::decodeLID(lid);
-      cout << " but target program has returned from main(). Destructors?"
-           << endl;
+      cout << " but target program has returned from main(). Destructors?" << endl;
     }
     return;
   }
@@ -76,7 +75,8 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 #endif
 
 #if DP_STACK_ACCESS_DETECTION
-  clearStackAccesses(last_addresses.first, last_addresses.second); // insert accesses with LID 0 to the queues
+  clearStackAccesses(last_addresses.first,
+                     last_addresses.second); // insert accesses with LID 0 to the queues
 #endif
 
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
@@ -88,7 +88,7 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 #endif
   // !TEST
 
-  if (isExit == 0){
+  if (isExit == 0) {
     function_manager->register_function_end(lid);
   }
 
@@ -100,7 +100,6 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   pthread_compatibility_mutex.unlock();
 #endif
 }
-
 }
 
 } // namespace __dp

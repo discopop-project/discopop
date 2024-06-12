@@ -22,7 +22,6 @@ extern "C" {
 // hybrid analysis
 void __dp_add_bb_deps(char *depStringPtr);
 // End HA
-
 }
 
 } // namespace __dp

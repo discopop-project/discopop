@@ -18,7 +18,6 @@ namespace __dp {
 extern "C" {
 
 void __dp_loop_output();
-
 }
 
 } // namespace __dp

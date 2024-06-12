@@ -27,15 +27,16 @@ struct LoopRecord {
   LID end;
   std::int32_t total;
   std::int32_t nEntered;
-  
-  // maximum iterations executed during a single loop entry
-  std::int32_t maxIterationCount = 0; 
 
-  bool operator==(const LoopRecord& other) const noexcept {
-    return end == other.end && total == other.total && nEntered == other.nEntered && maxIterationCount == other.maxIterationCount;  
+  // maximum iterations executed during a single loop entry
+  std::int32_t maxIterationCount = 0;
+
+  bool operator==(const LoopRecord &other) const noexcept {
+    return end == other.end && total == other.total && nEntered == other.nEntered &&
+           maxIterationCount == other.maxIterationCount;
   }
 
-  bool operator!=(const LoopRecord& other) const noexcept { return !(*this == other); }
+  bool operator!=(const LoopRecord &other) const noexcept { return !(*this == other); }
 };
 
 typedef std::unordered_map<LID, LoopRecord *> LoopRecords;

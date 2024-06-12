@@ -15,24 +15,24 @@
 
 #include "DPUtils.hpp"
 
+#include "../share/include/debug_print.hpp"
+#include "../share/include/timer.hpp"
+#include "injected_functions/all.hpp"
 #include "loop/Makros.hpp"
 #include "memory/PerfectShadow.hpp"
 #include "memory/ShadowMemory.hpp"
 #include "memory/Signature.hpp"
-#include "injected_functions/all.hpp"
-#include "../share/include/debug_print.hpp"
-#include "../share/include/timer.hpp"
 
+#include <algorithm>
 #include <cstdio>
+#include <cstdlib>
 #include <limits>
 #include <list>
 #include <mutex>
-#include <string>
-#include <algorithm>
-#include <cstdlib>
 #include <queue>
 #include <set>
 #include <sstream>
+#include <string>
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -55,58 +55,58 @@ namespace __dp {
 
 /******* Helper functions *******/
 
-void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallStack* depOnCallStack, const char *var, string AAvar,
-            bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
+void addDep(depType type, LID curr, CallStack *currCallStack, LID depOn, CallStack *depOnCallStack, const char *var,
+            string AAvar, bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
             bool positiveScopeChangeOccuredSinceLastAccess) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ADD_DEP);
 #endif
-  
+
   // hybrid analysis
   if (depOn == 0 && type == WAW)
     type = INIT;
   // End HA
 
-   //DEBUG 
-    std::set<LID> intra_iteration_dependencies; 
-    std::set<LID> inter_iteration_dependencies; 
-    std::set<LID> intra_call_dependencies; 
-    std::set<LID> inter_call_dependencies; 
+  // DEBUG
+  std::set<LID> intra_iteration_dependencies;
+  std::set<LID> inter_iteration_dependencies;
+  std::set<LID> intra_call_dependencies;
+  std::set<LID> inter_call_dependencies;
 #if DP_CALLSTACK_PROFILING
-    bool CALLSTACK_DBG = false; 
-    if(CALLSTACK_DBG){ 
-        if(currCallStack || depOnCallStack){ 
-            cout << "### addDep ###\n"; 
-        } 
+  bool CALLSTACK_DBG = false;
+  if (CALLSTACK_DBG) {
+    if (currCallStack || depOnCallStack) {
+      cout << "### addDep ###\n";
+    }
 
-        if(currCallStack){ 
-            cout << "CURR CALLSTACK:\n"; 
-            currCallStack->print(); 
-        } 
-        if(depOnCallStack){ 
-            cout << "DEPON CALLSTACK:\n"; 
-            depOnCallStack->print(); 
-        } 
-        if(currCallStack || depOnCallStack){ 
-            cout << "\n\n"; 
-        } 
-    } 
-    //!DEBUG 
+    if (currCallStack) {
+      cout << "CURR CALLSTACK:\n";
+      currCallStack->print();
+    }
+    if (depOnCallStack) {
+      cout << "DEPON CALLSTACK:\n";
+      depOnCallStack->print();
+    }
+    if (currCallStack || depOnCallStack) {
+      cout << "\n\n";
+    }
+  }
+  //! DEBUG
 
-    // TEST 
-    callStack->util_compare_callstacks(currCallStack, depOnCallStack, &intra_iteration_dependencies, 
-                        &inter_iteration_dependencies, &intra_call_dependencies, &inter_call_dependencies); 
+  // TEST
+  callStack->util_compare_callstacks(currCallStack, depOnCallStack, &intra_iteration_dependencies,
+                                     &inter_iteration_dependencies, &intra_call_dependencies, &inter_call_dependencies);
 
-    if(CALLSTACK_DBG){ 
-        if (currCallStack || depOnCallStack){ 
-        cout << "Intra_iteration_dependencies: " << intra_iteration_dependencies.size() << "\n"; 
-        cout << "Inter_iteration_dependencies: " << inter_iteration_dependencies.size() << "\n"; 
-        cout << "Intra_call_dependencies: " << intra_call_dependencies.size() << "\n"; 
-        cout << "Inter_call_dependencies: " << inter_call_dependencies.size() << "\n"; 
-        } 
-    } 
-  #endif
-    // !TEST 
+  if (CALLSTACK_DBG) {
+    if (currCallStack || depOnCallStack) {
+      cout << "Intra_iteration_dependencies: " << intra_iteration_dependencies.size() << "\n";
+      cout << "Inter_iteration_dependencies: " << inter_iteration_dependencies.size() << "\n";
+      cout << "Intra_call_dependencies: " << intra_call_dependencies.size() << "\n";
+      cout << "Inter_call_dependencies: " << inter_call_dependencies.size() << "\n";
+    }
+  }
+#endif
+  // !TEST
 
   depType originalType = type;
   int loopIterationOffset = 0;
@@ -117,59 +117,47 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
   // are overwritten (not 0xFF anymore) and check for intra-iteration
   // dependencies Intra-Iteration dependency exists, if LoopId's and Iteration
   // Id's are equal
-  if (unpackLIDMetadata_getLoopID(curr) != (LID)0xFF &&
-      unpackLIDMetadata_getLoopID(depOn) != (LID)0xFF) {
-    if (unpackLIDMetadata_getLoopID(curr) ==
-        unpackLIDMetadata_getLoopID(depOn)) {
+  if (unpackLIDMetadata_getLoopID(curr) != (LID)0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID)0xFF) {
+    if (unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn)) {
 
       // determine iteration count offset in case a new loop has been entered
       // between curr and depOn
-      loopIterationOffset = checkLIDMetadata_getLoopIterationValidity_0(curr) +
-                            checkLIDMetadata_getLoopIterationValidity_1(curr) +
-                            checkLIDMetadata_getLoopIterationValidity_2(curr) -
-                            checkLIDMetadata_getLoopIterationValidity_0(depOn) -
-                            checkLIDMetadata_getLoopIterationValidity_1(depOn) -
-                            checkLIDMetadata_getLoopIterationValidity_2(depOn);
+      loopIterationOffset =
+          checkLIDMetadata_getLoopIterationValidity_0(curr) + checkLIDMetadata_getLoopIterationValidity_1(curr) +
+          checkLIDMetadata_getLoopIterationValidity_2(curr) - checkLIDMetadata_getLoopIterationValidity_0(depOn) -
+          checkLIDMetadata_getLoopIterationValidity_1(depOn) - checkLIDMetadata_getLoopIterationValidity_2(depOn);
 
       if (loopIterationOffset == 0) {
 
-        if (checkLIDMetadata_getLoopIterationValidity_0(curr) &&
-            checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
-          if (checkLIDMetadata_getLoopIterationValidity_1(curr) &&
-              checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
+        if (checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
+          if (checkLIDMetadata_getLoopIterationValidity_1(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
             if (checkLIDMetadata_getLoopIterationValidity_2(curr) &&
                 checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
               // loop 0+1+2 valid
-              if (unpackLIDMetadata_getLoopIteration_2(curr) ==
-                  unpackLIDMetadata_getLoopIteration_2(depOn)) {
+              if (unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) {
                 identifiedDepTypes.push_back(II_2);
                 dependencyRegistered = true;
 
-                if (unpackLIDMetadata_getLoopIteration_1(curr) ==
-                    unpackLIDMetadata_getLoopIteration_1(depOn)) {
+                if (unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) {
                   identifiedDepTypes.push_back(II_1);
-                  if (unpackLIDMetadata_getLoopIteration_0(curr) ==
-                      unpackLIDMetadata_getLoopIteration_0(depOn)) {
+                  if (unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) {
                     identifiedDepTypes.push_back(II_0);
                   }
                 }
               }
             } else {
               // loop 0+1 valid
-              if (unpackLIDMetadata_getLoopIteration_1(curr) ==
-                  unpackLIDMetadata_getLoopIteration_1(depOn)) {
+              if (unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) {
                 identifiedDepTypes.push_back(II_1);
                 dependencyRegistered = true;
-                if (unpackLIDMetadata_getLoopIteration_0(curr) ==
-                    unpackLIDMetadata_getLoopIteration_0(depOn)) {
+                if (unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) {
                   identifiedDepTypes.push_back(II_0);
                 }
               }
             }
           } else {
             // loop 0 valid
-            if (unpackLIDMetadata_getLoopIteration_0(curr) ==
-                unpackLIDMetadata_getLoopIteration_0(depOn)) {
+            if (unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) {
               identifiedDepTypes.push_back(II_0);
               dependencyRegistered = true;
             }
@@ -180,17 +168,14 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
 
       } else if (loopIterationOffset == 1) {
         // check outer loop
-        if ((unpackLIDMetadata_getLoopIteration_2(curr) ==
-             unpackLIDMetadata_getLoopIteration_1(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_2(curr) &&
-            checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
+        if ((unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) &&
+            checkLIDMetadata_getLoopIterationValidity_2(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
           // II 2
           identifiedDepTypes.push_back(II_2);
           dependencyRegistered = true;
         }
         // check second loop
-        else if ((unpackLIDMetadata_getLoopIteration_1(curr) ==
-                  unpackLIDMetadata_getLoopIteration_0(depOn)) &&
+        else if ((unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) &&
                  checkLIDMetadata_getLoopIterationValidity_1(curr) &&
                  checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
           // II 1
@@ -199,10 +184,8 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
         }
       } else if (loopIterationOffset == 2) {
         // check outer loop
-        if ((unpackLIDMetadata_getLoopIteration_2(curr) ==
-             unpackLIDMetadata_getLoopIteration_0(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_2(curr) &&
-            checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
+        if ((unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) &&
+            checkLIDMetadata_getLoopIterationValidity_2(curr) && checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
           // II 2
           identifiedDepTypes.push_back(II_2);
           dependencyRegistered = true;
@@ -210,28 +193,22 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
       } else if (loopIterationOffset == -2) {
         // example: depOn inside an inner loop, curr happens after this inner
         // loop
-        if ((unpackLIDMetadata_getLoopIteration_0(curr) ==
-             unpackLIDMetadata_getLoopIteration_2(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_0(curr) &&
-            checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
+        if ((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) &&
+            checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
           // II 0
           identifiedDepTypes.push_back(II_0);
           dependencyRegistered = true;
         }
       } else if (loopIterationOffset == -1) {
         // check second loop
-        if ((unpackLIDMetadata_getLoopIteration_1(curr) ==
-             unpackLIDMetadata_getLoopIteration_2(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_1(curr) &&
-            checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
+        if ((unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) &&
+            checkLIDMetadata_getLoopIterationValidity_1(curr) && checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
           // II 1
           identifiedDepTypes.push_back(II_1);
           dependencyRegistered = true;
           // check first loop
-          if ((unpackLIDMetadata_getLoopIteration_0(curr) ==
-               unpackLIDMetadata_getLoopIteration_1(depOn)) &&
-              checkLIDMetadata_getLoopIterationValidity_0(curr) &&
-              checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
+          if ((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) &&
+              checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
             // II 0
             identifiedDepTypes.push_back(II_0);
             dependencyRegistered = true;
@@ -239,10 +216,8 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
         }
         // check first loop
         else {
-          if ((unpackLIDMetadata_getLoopIteration_0(curr) ==
-               unpackLIDMetadata_getLoopIteration_1(depOn)) &&
-              checkLIDMetadata_getLoopIterationValidity_0(curr) &&
-              checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
+          if ((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) &&
+              checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
             // II 0
             identifiedDepTypes.push_back(II_0);
             dependencyRegistered = true;
@@ -331,42 +306,36 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
       break;
     }
 
-    if (isStackAccess &&
-        (modified_type == WAR || modified_type == RAW ||
-         modified_type == WAW) &&
-        addrIsFirstWrittenInScope &&
-        positiveScopeChangeOccuredSinceLastAccess) {
+    if (isStackAccess && (modified_type == WAR || modified_type == RAW || modified_type == WAW) &&
+        addrIsFirstWrittenInScope && positiveScopeChangeOccuredSinceLastAccess) {
       // IGNORE ACCESS
     } else {
       // register dependency
-      // depType T, LID dep, char *var, std::string AAvar, std::set<LID> iaid, std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd
-      dependenciesToBeRegistered.emplace_back(Dep(modified_type, depOn, var, AAvar, intra_iteration_dependencies, inter_iteration_dependencies, intra_call_dependencies, inter_call_dependencies), curr);
+      // depType T, LID dep, char *var, std::string AAvar, std::set<LID> iaid,
+      // std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd
+      dependenciesToBeRegistered.emplace_back(Dep(modified_type, depOn, var, AAvar, intra_iteration_dependencies,
+                                                  inter_iteration_dependencies, intra_call_dependencies,
+                                                  inter_call_dependencies),
+                                              curr);
     }
 
     if (print_debug_info) {
-      cout << "AddDep: CURR: " << decodeLID(curr)
-           << "  DepOn: " << decodeLID(dbg_depOn) << "  LoopIDS: " << hex
-           << unpackLIDMetadata_getLoopID(dbg_curr) << ";" << hex
-           << unpackLIDMetadata_getLoopID(dbg_depOn) << "\n";
+      cout << "AddDep: CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(dbg_depOn) << "  LoopIDS: " << hex
+           << unpackLIDMetadata_getLoopID(dbg_curr) << ";" << hex << unpackLIDMetadata_getLoopID(dbg_depOn) << "\n";
       cout << "  Var: " << var << "\n";
-      cout << "  Loop Iterations(curr): " << hex
-           << unpackLIDMetadata_getLoopIteration_0(dbg_curr) << ";" << hex
+      cout << "  Loop Iterations(curr): " << hex << unpackLIDMetadata_getLoopIteration_0(dbg_curr) << ";" << hex
            << unpackLIDMetadata_getLoopIteration_1(dbg_curr) << ";" << hex
            << unpackLIDMetadata_getLoopIteration_2(dbg_curr) << "\n";
-      cout << "  Loop Iterations(depOn): " << hex
-           << unpackLIDMetadata_getLoopIteration_0(dbg_depOn) << ";" << hex
+      cout << "  Loop Iterations(depOn): " << hex << unpackLIDMetadata_getLoopIteration_0(dbg_depOn) << ";" << hex
            << unpackLIDMetadata_getLoopIteration_1(dbg_depOn) << ";" << hex
            << unpackLIDMetadata_getLoopIteration_2(dbg_depOn) << "\n";
-      cout << "  Valid(cur): "
-           << checkLIDMetadata_getLoopIterationValidity_0(dbg_curr) << ";"
+      cout << "  Valid(cur): " << checkLIDMetadata_getLoopIterationValidity_0(dbg_curr) << ";"
            << checkLIDMetadata_getLoopIterationValidity_1(dbg_curr) << ";"
            << checkLIDMetadata_getLoopIterationValidity_2(dbg_curr) << ";\n";
-      cout << "  Valid(dep): "
-           << checkLIDMetadata_getLoopIterationValidity_0(dbg_depOn) << ";"
+      cout << "  Valid(dep): " << checkLIDMetadata_getLoopIterationValidity_0(dbg_depOn) << ";"
            << checkLIDMetadata_getLoopIterationValidity_1(dbg_depOn) << ";"
            << checkLIDMetadata_getLoopIterationValidity_2(dbg_depOn) << ";\n";
-      cout << "  LoopIterationOffset: " << to_string(loopIterationOffset)
-           << "\n";
+      cout << "  LoopIterationOffset: " << to_string(loopIterationOffset) << "\n";
       cout << "  orig.type: " << originalType << "\n";
       cout << "  final.type: " << modified_type << "\n\n";
     }
@@ -377,12 +346,14 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
     depMap::iterator posInDeps = myMap->find(pair.second);
     if (posInDeps == myMap->end()) {
       depSet *tmp_depSet = new depSet();
-      tmp_depSet->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var,
-                             pair.first.AAvar, pair.first.intra_iteration_dependencies, pair.first.inter_iteration_dependencies, pair.first.intra_call_dependencies, pair.first.inter_call_dependencies));
+      tmp_depSet->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var, pair.first.AAvar,
+                             pair.first.intra_iteration_dependencies, pair.first.inter_iteration_dependencies,
+                             pair.first.intra_call_dependencies, pair.first.inter_call_dependencies));
       myMap->insert(std::pair<int32_t, depSet *>(pair.second, tmp_depSet));
     } else {
-      posInDeps->second->insert(Dep(pair.first.type, pair.first.depOn,
-                                    pair.first.var, pair.first.AAvar, pair.first.intra_iteration_dependencies, pair.first.inter_iteration_dependencies, pair.first.intra_call_dependencies, pair.first.inter_call_dependencies));
+      posInDeps->second->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var, pair.first.AAvar,
+                                    pair.first.intra_iteration_dependencies, pair.first.inter_iteration_dependencies,
+                                    pair.first.intra_call_dependencies, pair.first.inter_call_dependencies));
     }
 
     if (DP_DEBUG) {
@@ -403,8 +374,7 @@ void addDep(depType type, LID curr, CallStack* currCallStack, LID depOn, CallSta
       default:
         break;
       }
-      cout << ", " << decodeLID(pair.first.depOn) << "] into deps ("
-           << myMap->size() << ")" << endl;
+      cout << ", " << decodeLID(pair.first.depOn) << "] into deps (" << myMap->size() << ")" << endl;
     }
   }
 }
@@ -468,42 +438,42 @@ void generateStringDepMap() {
           break;
         }
 
-        // construct metadata string 
-        string metadata = "["; 
-        // add intra iteration dependencies 
-        if(d.intra_iteration_dependencies.size() > 0){ 
-            metadata += "intra_iteration_dep:"; 
-            for(auto entry_lid : d.intra_iteration_dependencies){ 
-                metadata += decodeLID(entry_lid) + ","; 
-            } 
-            metadata += ";"; 
-        } 
-        // add inter iteration dependencies 
-        if(d.inter_iteration_dependencies.size() > 0){ 
-            metadata += "inter_iteration_dep:"; 
-            for(auto entry_lid : d.inter_iteration_dependencies){ 
-                metadata += decodeLID(entry_lid) + ","; 
-            } 
-            metadata += ";"; 
-        } 
-        // add intra call dependencies 
-        if(d.intra_call_dependencies.size() > 0){ 
-            metadata += "intra_call_dep:"; 
-            for(auto entry_lid : d.intra_call_dependencies){ 
-                metadata += decodeLID(entry_lid) + ","; 
-            } 
-            metadata += ";"; 
-        } 
-        // add inter call dependencies 
-        if(d.inter_call_dependencies.size() > 0){ 
-            metadata += "inter_call_dep:"; 
-            for(auto entry_lid : d.inter_call_dependencies){ 
-                metadata += decodeLID(entry_lid) + ","; 
-            } 
-            metadata += ";"; 
-        } 
-        metadata += "]"; 
-        // Done: construct metadata string 
+        // construct metadata string
+        string metadata = "[";
+        // add intra iteration dependencies
+        if (d.intra_iteration_dependencies.size() > 0) {
+          metadata += "intra_iteration_dep:";
+          for (auto entry_lid : d.intra_iteration_dependencies) {
+            metadata += decodeLID(entry_lid) + ",";
+          }
+          metadata += ";";
+        }
+        // add inter iteration dependencies
+        if (d.inter_iteration_dependencies.size() > 0) {
+          metadata += "inter_iteration_dep:";
+          for (auto entry_lid : d.inter_iteration_dependencies) {
+            metadata += decodeLID(entry_lid) + ",";
+          }
+          metadata += ";";
+        }
+        // add intra call dependencies
+        if (d.intra_call_dependencies.size() > 0) {
+          metadata += "intra_call_dep:";
+          for (auto entry_lid : d.intra_call_dependencies) {
+            metadata += decodeLID(entry_lid) + ",";
+          }
+          metadata += ";";
+        }
+        // add inter call dependencies
+        if (d.inter_call_dependencies.size() > 0) {
+          metadata += "inter_call_dep:";
+          for (auto entry_lid : d.inter_call_dependencies) {
+            metadata += decodeLID(entry_lid) + ",";
+          }
+          metadata += ";";
+        }
+        metadata += "]";
+        // Done: construct metadata string
 
         dep += ' ' + decodeLID(d.depOn);
         dep += "|" + string(d.var);
@@ -523,7 +493,7 @@ void generateStringDepMap() {
   }
 }
 
-void outputDeps() {  
+void outputDeps() {
 #ifdef DP_RTLIB_VERBOSE
   const auto debug_print = make_debug_print("outputDeps");
 #endif
@@ -541,7 +511,7 @@ void outputDeps() {
 }
 // End HA
 
-void readRuntimeInfo() {  
+void readRuntimeInfo() {
 #ifdef DP_RTLIB_VERBOSE
   cout << "enter readRuntimeInfo\n";
 #endif
@@ -556,10 +526,8 @@ void readRuntimeInfo() {
       if (substrings->size() == 2) {
         string variable = (*substrings)[0];
         string value = (*substrings)[1];
-        variable.erase(std::remove_if(variable.begin(), variable.end(), func),
-                       variable.end());
-        value.erase(std::remove_if(value.begin(), value.end(), func),
-                    value.end());
+        variable.erase(std::remove_if(variable.begin(), variable.end(), func), variable.end());
+        value.erase(std::remove_if(value.begin(), value.end(), func), value.end());
 
         int32_t intValue = (int32_t)atoi(value.c_str());
         if (intValue > 0) {
@@ -598,7 +566,7 @@ void readRuntimeInfo() {
 #endif
 }
 
-void initParallelization() {  
+void initParallelization() {
 #ifdef DP_RTLIB_VERBOSE
   const auto debug_print = make_debug_print("initParallelization");
 #endif
@@ -667,9 +635,9 @@ string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
 #endif
 }
 
-void mergeDeps() {  
+void mergeDeps() {
   depSet *tmp_depSet = nullptr; // pointer to the current processing set of dps
-  depMap::iterator globalPos; // position of the current processing lid in allDeps
+  depMap::iterator globalPos;   // position of the current processing lid in allDeps
 
   pthread_mutex_lock(&allDepsLock);
 #ifdef DP_INTERNAL_TIMER
@@ -692,11 +660,11 @@ void mergeDeps() {
       tmp_depSet->insert(d);
     }
   }
-  
+
   pthread_mutex_unlock(&allDepsLock);
 }
 
-void analyzeSingleAccess(__dp::AbstractShadow* SMem, __dp::AccessInfo& access){
+void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
   // analyze data dependences
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ANALYZE_SINGLE_ACCESS);
@@ -714,7 +682,7 @@ void analyzeSingleAccess(__dp::AbstractShadow* SMem, __dp::AccessInfo& access){
     // End HA
     sigElement lastWrite = SMem->testInWrite(access.addr);
 #if DP_CALLSTACK_PROFILING
-    CallStack* lastWriteCallStack = SMem->getLastWriteAccessCallStack(access.addr);
+    CallStack *lastWriteCallStack = SMem->getLastWriteAccessCallStack(access.addr);
 #endif
     if (lastWrite != 0) {
       // RAW
@@ -722,50 +690,43 @@ void analyzeSingleAccess(__dp::AbstractShadow* SMem, __dp::AccessInfo& access){
 #if DP_CALLSTACK_PROFILING
       SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
       addDep(RAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar,
-              access.isStackAccess, access.addr,
-              access.addrIsOwnedByScope,
-              access.positiveScopeChangeOccuredSinceLastAccess);
+             access.isStackAccess, access.addr, access.addrIsOwnedByScope,
+             access.positiveScopeChangeOccuredSinceLastAccess);
     }
 #else
-      addDep(RAW, access.lid, access.callStack, lastWrite, nullptr, access.var, access.AAvar,
-                access.isStackAccess, access.addr,
-                access.addrIsOwnedByScope,
-                access.positiveScopeChangeOccuredSinceLastAccess);
-      }
-#endif 
+      addDep(RAW, access.lid, access.callStack, lastWrite, nullptr, access.var, access.AAvar, access.isStackAccess,
+             access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+    }
+#endif
   } else {
     sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
 #if DP_CALLSTACK_PROFILING
-    CallStack* lastWriteCallStack = SMem->getLastWriteAccessCallStack(access.addr);
-    if(lastWriteCallStack){ 
-                            // create a temporary copy of the call stack as the entry in SMem will be deleted when overwritten 
-                            lastWriteCallStack = lastWriteCallStack->getCopy(); 
-                        } 
-    SMem->setLastWriteAccessCallStack(access.addr, access.callStack); 
-#endif 
+    CallStack *lastWriteCallStack = SMem->getLastWriteAccessCallStack(access.addr);
+    if (lastWriteCallStack) {
+      // create a temporary copy of the call stack as the entry in SMem will be
+      // deleted when overwritten
+      lastWriteCallStack = lastWriteCallStack->getCopy();
+    }
+    SMem->setLastWriteAccessCallStack(access.addr, access.callStack);
+#endif
     if (lastWrite == 0) {
       // INIT
-      addDep(INIT, access.lid, access.callStack, 0, nullptr, access.var, access.AAvar,
-              access.isStackAccess, access.addr,
-              access.addrIsOwnedByScope,
-              access.positiveScopeChangeOccuredSinceLastAccess);
+      addDep(INIT, access.lid, access.callStack, 0, nullptr, access.var, access.AAvar, access.isStackAccess,
+             access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
     } else {
       sigElement lastRead = SMem->testInRead(access.addr);
 #if DP_CALLSTACK_PROFILING
-      CallStack* lastReadCallStack = SMem->getLastReadAccessCallStack(access.addr); 
+      CallStack *lastReadCallStack = SMem->getLastReadAccessCallStack(access.addr);
 #endif
       if (lastRead != 0) {
         // WAR
 #if DP_CALLSTACK_PROFILING
         addDep(WAR, access.lid, access.callStack, lastRead, lastReadCallStack, access.var, access.AAvar,
-                access.isStackAccess, access.addr,
-                access.addrIsOwnedByScope,
-                access.positiveScopeChangeOccuredSinceLastAccess);
+               access.isStackAccess, access.addr, access.addrIsOwnedByScope,
+               access.positiveScopeChangeOccuredSinceLastAccess);
 #else
-        addDep(WAR, access.lid, access.callStack, lastRead, nullptr, access.var, access.AAvar,
-                access.isStackAccess, access.addr,
-                access.addrIsOwnedByScope,
-                access.positiveScopeChangeOccuredSinceLastAccess);
+        addDep(WAR, access.lid, access.callStack, lastRead, nullptr, access.var, access.AAvar, access.isStackAccess,
+               access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
 #endif
         // Clear intermediate read ops
         SMem->insertToRead(access.addr, 0);
@@ -774,34 +735,31 @@ void analyzeSingleAccess(__dp::AbstractShadow* SMem, __dp::AccessInfo& access){
 #endif
       } else {
         // WAW
-#if DP_CALLSTACK_PROFILING 
+#if DP_CALLSTACK_PROFILING
         addDep(WAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar,
-                access.isStackAccess, access.addr,
-                access.addrIsOwnedByScope,
-                access.positiveScopeChangeOccuredSinceLastAccess);
+               access.isStackAccess, access.addr, access.addrIsOwnedByScope,
+               access.positiveScopeChangeOccuredSinceLastAccess);
 #else
-        addDep(WAW, access.lid, access.callStack, lastWrite, nullptr, access.var, access.AAvar,
-                access.isStackAccess, access.addr,
-                access.addrIsOwnedByScope,
-                access.positiveScopeChangeOccuredSinceLastAccess);
+        addDep(WAW, access.lid, access.callStack, lastWrite, nullptr, access.var, access.AAvar, access.isStackAccess,
+               access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
 
 #endif
       }
     }
 #if DP_CALLSTACK_PROFILING
-    if(lastWriteCallStack){ 
-                            // cleanup temporary copy 
-                            delete lastWriteCallStack; 
-    } 
+    if (lastWriteCallStack) {
+      // cleanup temporary copy
+      delete lastWriteCallStack;
+    }
 #endif
   }
 }
 
-void* analyzeDeps(void *arg) {
+void *analyzeDeps(void *arg) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
 #endif
-  
+
   int64_t id = (int64_t)arg;
   AbstractShadow *SMem;
   if (USE_PERFECT) {
@@ -832,7 +790,7 @@ void* analyzeDeps(void *arg) {
 
       // analyze data dependences
       for (unsigned short i = 0; i < CHUNK_SIZE; ++i) {
-        
+
         access = accesses[i];
         analyzeSingleAccess(SMem, access);
       }
@@ -946,12 +904,12 @@ void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
   const auto timer = Timer(timers, TimerRegion::CLEAR_STACK_ACCESSES);
 #endif
 
-  const auto& current_scope = memory_manager->getCurrentScope();
-  const auto& writes = current_scope.get_first_write();
+  const auto &current_scope = memory_manager->getCurrentScope();
+  const auto &writes = current_scope.get_first_write();
   for (ADDR addr : writes) {
-    //cleanup reads
+    // cleanup reads
     __dp_read(0, addr, "");
-    //cleanup writes
+    // cleanup writes
     __dp_write(0, addr, "");
   }
 }

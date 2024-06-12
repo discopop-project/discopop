@@ -41,7 +41,6 @@ void __dp_taken_branch_counter_output() {
 
   std::cout << "done" << std::endl;
 }
-
 }
 
 } // namespace __dp

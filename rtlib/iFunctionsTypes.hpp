@@ -14,19 +14,19 @@
 
 #include "DPTypes.hpp"
 
+#include "callstack/CallStack.hpp"
 #include "functions/FunctionManager.hpp"
 #include "loop/LoopManager.hpp"
 #include "memory/MemoryManager.hpp"
-#include "callstack/CallStack.hpp"
 
 #include <cstdint>
-#include <unordered_map>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace __dp {
-    /******* Data structures *******/
+/******* Data structures *******/
 
 typedef enum {
   RAW,
@@ -54,10 +54,8 @@ typedef enum {
 } depTypeModifier;
 
 struct AccessInfo {
-  AccessInfo(bool isRead, LID lid, char *var, std::string AAvar, ADDR addr,
-             bool skip = false)
-      : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr),
-        skip(skip) {}
+  AccessInfo(bool isRead, LID lid, char *var, std::string AAvar, ADDR addr, bool skip = false)
+      : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {}
 
   AccessInfo() : isRead(false), lid(0), var(""), AAvar(""), addr(0), skip(false), callStack(nullptr) {}
 
@@ -69,7 +67,7 @@ struct AccessInfo {
   const char *var;
   std::string AAvar; // name of allocated variable -> "Anti Aliased Variable"
   ADDR addr;
-  CallStack* callStack; 
+  CallStack *callStack;
   bool isStackAccess = false;
   bool addrIsOwnedByScope = false;
   bool positiveScopeChangeOccuredSinceLastAccess = false;
@@ -77,18 +75,19 @@ struct AccessInfo {
 
 // For runtime dependency merging
 struct Dep {
-  Dep(depType T, LID dep, const char *var, std::string AAvar, std::set<LID> iaid, std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd)
-      : type(T), depOn(dep), var(var), AAvar(AAvar), intra_iteration_dependencies(iaid), inter_iteration_dependencies(ieid), 
-            intra_call_dependencies(iacd), inter_call_dependencies(iecd)  {}
+  Dep(depType T, LID dep, const char *var, std::string AAvar, std::set<LID> iaid, std::set<LID> ieid,
+      std::set<LID> iacd, std::set<LID> iecd)
+      : type(T), depOn(dep), var(var), AAvar(AAvar), intra_iteration_dependencies(iaid),
+        inter_iteration_dependencies(ieid), intra_call_dependencies(iacd), inter_call_dependencies(iecd) {}
 
   depType type;
   LID depOn;
   const char *var;
   std::string AAvar;
-  std::set<LID> intra_iteration_dependencies; 
-  std::set<LID> inter_iteration_dependencies; 
-  std::set<LID> intra_call_dependencies; 
-  std::set<LID> inter_call_dependencies; 
+  std::set<LID> intra_iteration_dependencies;
+  std::set<LID> inter_iteration_dependencies;
+  std::set<LID> intra_call_dependencies;
+  std::set<LID> inter_call_dependencies;
 };
 
 struct compDep {
@@ -100,8 +99,7 @@ struct compDep {
     }
     // comparison between string is very time-consuming. So just compare
     // variable names according to address (we only need to distinguish them)
-    else if (a.type == b.type && a.depOn == b.depOn &&
-             ((size_t)a.var < (size_t)b.var)) {
+    else if (a.type == b.type && a.depOn == b.depOn && ((size_t)a.var < (size_t)b.var)) {
       return true;
     }
 

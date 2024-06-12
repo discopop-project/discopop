@@ -21,14 +21,11 @@ using namespace clang;
 class BinCallBack : public MatchFinder::MatchCallback {
 public:
   void run(const MatchFinder::MatchResult &r) override {
-    const clang::Stmt *simpleStatement =
-        r.Nodes.getNodeAs<Stmt>("simpleStatement");
+    const clang::Stmt *simpleStatement = r.Nodes.getNodeAs<Stmt>("simpleStatement");
     ASTContext *ctx = r.Context;
-    simpleStatement->getSourceRange().getBegin().print(llvm::outs(),
-                                                       ctx->getSourceManager());
+    simpleStatement->getSourceRange().getBegin().print(llvm::outs(), ctx->getSourceManager());
     llvm::outs() << ": ";
-    simpleStatement->printPretty(llvm::outs(), nullptr,
-                                 ctx->getPrintingPolicy());
+    simpleStatement->printPretty(llvm::outs(), nullptr, ctx->getPrintingPolicy());
     llvm::outs() << "\n\n";
   }
 };

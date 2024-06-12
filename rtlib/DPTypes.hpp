@@ -15,13 +15,13 @@
 #include <cstdint>
 
 // Number of bits for holding LID
-#define LIDSIZE 14 
+#define LIDSIZE 14
 
 // Number of bits for holding LID Metadata (Column + Loop ID + LoopIteration)
-#define LIDMETADATASIZE 32 
+#define LIDMETADATASIZE 32
 
 // Maximum number of lines in a single file. Has to be 2^LIDSIZE.
-#define MAXLNO 16384  
+#define MAXLNO 16384
 
 // #define SKIP_DUP_INSTR 1
 
@@ -36,19 +36,14 @@ typedef std::int64_t sigElement;
 #include "../third_party/emhash/hash_set8.hpp"
 #include "../third_party/emhash/hash_table7.hpp"
 namespace __dp {
-template <typename KeyT, typename ValueT>
-using hashmap = emhash7::HashMap<KeyT, ValueT>;
-template <typename KeyT>
-using hashset = emhash8::HashSet<KeyT>;
+template <typename KeyT, typename ValueT> using hashmap = emhash7::HashMap<KeyT, ValueT>;
+template <typename KeyT> using hashset = emhash8::HashSet<KeyT>;
 } // namespace __dp
 #else
 #include <unordered_map>
 #include <unordered_set>
 namespace __dp {
-template <typename KeyT, typename ValueT>
-using hashmap = std::unordered_map<KeyT, ValueT>;
-template <typename KeyT>
-using hashset = std::unordered_set<KeyT>;
+template <typename KeyT, typename ValueT> using hashmap = std::unordered_map<KeyT, ValueT>;
+template <typename KeyT> using hashset = std::unordered_set<KeyT>;
 } // namespace __dp
 #endif
-

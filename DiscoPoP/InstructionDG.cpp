@@ -14,8 +14,7 @@
 
 #include "DPUtils.hpp"
 
-InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF,
-                             InstructionCFG *_CFG, int32_t _fid)
+InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid)
     : VNF(_VNF), CFG(_CFG), fid(_fid) {
   for (auto edge : CFG->getInEdges(CFG->getExit())) {
     // check for nullptr
@@ -25,8 +24,7 @@ InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF,
   }
 }
 
-void InstructionDG::recursiveDepChecker(set<Instruction *> *checkedInstructions,
-                                        Instruction *I, Instruction *C) {
+void InstructionDG::recursiveDepChecker(set<Instruction *> *checkedInstructions, Instruction *I, Instruction *C) {
   if (CFG->isEntryOrExit(C))
     return;
   checkedInstructions->insert(C);
@@ -46,31 +44,25 @@ void InstructionDG::recursiveDepChecker(set<Instruction *> *checkedInstructions,
     return;
   }
   for (auto edge : CFG->getInEdges(C))
-    if (checkedInstructions->find(edge->getSrc()->getItem()) ==
-        checkedInstructions->end())
+    if (checkedInstructions->find(edge->getSrc()->getItem()) == checkedInstructions->end())
       recursiveDepChecker(checkedInstructions, I, edge->getSrc()->getItem());
 }
 
-void InstructionDG::recursiveDepFinder(set<Instruction *> *checkedInstructions,
-                                       Instruction *I) {
-  if (CFG->isEntryOrExit(I) ||
-      checkedInstructions->find(I) != checkedInstructions->end())
+void InstructionDG::recursiveDepFinder(set<Instruction *> *checkedInstructions, Instruction *I) {
+  if (CFG->isEntryOrExit(I) || checkedInstructions->find(I) != checkedInstructions->end())
     return;
   checkedInstructions->insert(I);
   if (isa<StoreInst>(I) || isa<LoadInst>(I))
     Graph::addInstructionNode(I);
   for (auto edge : CFG->getInEdges(I)) {
     if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
-      recursiveDepChecker(new set<Instruction *>(), I,
-                          edge->getSrc()->getItem());
+      recursiveDepChecker(new set<Instruction *>(), I, edge->getSrc()->getItem());
     }
     recursiveDepFinder(checkedInstructions, edge->getSrc()->getItem());
   }
 }
 
-void InstructionDG::highlightInstructionNode(Instruction *instr) {
-  highlightedInstructionNodes.insert(instr);
-}
+void InstructionDG::highlightInstructionNode(Instruction *instr) { highlightedInstructionNodes.insert(instr); }
 
 string getInstructionLine(Instruction *I) {
   if (DebugLoc dl = I->getDebugLoc()) {
@@ -80,9 +72,8 @@ string getInstructionLine(Instruction *I) {
   }
 }
 
-string InstructionDG::edgeToDPDep(
-    Edge<Instruction *> *e,
-    unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap) {
+string InstructionDG::edgeToDPDep(Edge<Instruction *> *e,
+                                  unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap) {
   // staticValueNameToMemRegIDMap maps: <SSA variable name> TO (original
   // variable name, statically assigned MemReg ID)
   Instruction *I = e->getSrc()->getItem();
@@ -91,30 +82,24 @@ string InstructionDG::edgeToDPDep(
   string depType;
   if (isa<AllocaInst>(J)) {
     depType = "INIT";
-    return to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " +
-           depType + " *|" +
+    return to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " + depType + " *|" +
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]
                .first // use original variable name instead of LLVM IR SSA name
-           + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second +
-           ")";
+           + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
   } else if (DebugLoc dl = J->getDebugLoc()) {
-    depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" +
-              (isa<LoadInst>(J) ? string("R") : string("W"));
-    return to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " +
-           depType + " " + to_string(fid) + ":" + getInstructionLine(J) + "|" +
+    depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
+    return to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " + depType + " " + to_string(fid) + ":" +
+           getInstructionLine(J) + "|" +
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]
                .first // use original variable name instead of LLVM IR SSA name
-           + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second +
-           ")";
+           + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
   } else {
-    depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" +
-              (isa<LoadInst>(J) ? string("R") : string("W"));
-    return to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " +
-           depType + " " + to_string(fid) + ":" + getInstructionLine(J) + "|" +
+    depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
+    return to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " + depType + " " + to_string(fid) + ":" +
+           getInstructionLine(J) + "|" +
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]
                .first // use original variable name instead of LLVM IR SSA name
-           + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second +
-           ")";
+           + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
   }
 }
 
@@ -126,8 +111,7 @@ void InstructionDG::dumpToDot(const string targetPath) {
   dotStream << "digraph g {\n";
   // Create all nodes in DOT format
   for (auto instNode : getInstructionNodes()) {
-    string label = "label=\"" +
-                   to_string(Graph::getInstructionNodeIndex(instNode)) + "\\n";
+    string label = "label=\"" + to_string(Graph::getInstructionNodeIndex(instNode)) + "\\n";
     Instruction *instr = instNode->getItem();
     if (isa<StoreInst>(instr)) {
       if (DebugLoc dl = instr->getDebugLoc())
@@ -149,21 +133,19 @@ void InstructionDG::dumpToDot(const string targetPath) {
       label += instr->getFunction()->getSubprogram()->getLine() + "\n";
     }
     label += "\"";
-    if (highlightedInstructionNodes.find(instr) !=
-        highlightedInstructionNodes.end()) {
+    if (highlightedInstructionNodes.find(instr) != highlightedInstructionNodes.end()) {
       label += ",fillcolor=cyan,style=filled";
     }
 
   printInstructionNode:
-    dotStream << "\t\"" << getInstructionNodeIndex(instNode) << "\" [" << label
-              << "];\n";
+    dotStream << "\t\"" << getInstructionNodeIndex(instNode) << "\" [" << label << "];\n";
   }
   dotStream << "\n\n";
 
   // Now print all outgoing edges and their labels
   for (auto e : getEdges()) {
-    dotStream << "\t\"" << getInstructionNodeIndex(e->getSrc()) << "\" -> \""
-              << getInstructionNodeIndex(e->getDst()) << "\";\n";
+    dotStream << "\t\"" << getInstructionNodeIndex(e->getSrc()) << "\" -> \"" << getInstructionNodeIndex(e->getDst())
+              << "\";\n";
   }
   dotStream << "}";
   dotStream.close();

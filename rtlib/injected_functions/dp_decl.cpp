@@ -12,8 +12,8 @@
 
 #include "../DPTypes.hpp"
 
-#include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
+#include "../iFunctionsGlobals.hpp"
 
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
@@ -53,7 +53,8 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
 
   if (targetTerminated) {
     if (DP_DEBUG) {
-      std::cout << "__dp_write() is not executed since target program has returned from main().\n";
+      std::cout << "__dp_write() is not executed since target program has "
+                   "returned from main().\n";
     }
     return;
   }
@@ -67,12 +68,11 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   function_manager->reset_call(lid);
 
   if (DP_DEBUG) {
-    cout << "instStore at encoded LID " << std::dec << dputil::decodeLID(lid)
-         << " and addr " << std::hex << addr << endl;
+    cout << "instStore at encoded LID " << std::dec << dputil::decodeLID(lid) << " and addr " << std::hex << addr
+         << endl;
   }
 
-  int64_t workerID =
-      ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
+  int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
   current.isRead = false;
   current.lid = loop_manager->update_lid(0);
@@ -91,7 +91,6 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
     tempAddrCount[workerID] = 0;
   }
 }
-
 }
 
 } // namespace __dp

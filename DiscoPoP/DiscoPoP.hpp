@@ -42,11 +42,10 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Instrumentation.h"
-
 
 #include "DPUtils.hpp"
 #include "InstructionDG.hpp"
@@ -72,14 +71,10 @@ using namespace std;
 using namespace dputil;
 
 // Command line options
-static cl::opt<bool> ClCheckLoopPar("dp-loop-par", cl::init(true),
-                                    cl::desc("Check loop parallelism"),
-                                    cl::Hidden);
+static cl::opt<bool> ClCheckLoopPar("dp-loop-par", cl::init(true), cl::desc("Check loop parallelism"), cl::Hidden);
 
-static cl::opt<bool>
-    DumpToDot("dp-omissions-dump-dot", cl::init(false),
-              cl::desc("Generate a .dot representation of the CFG and DG"),
-              cl::Hidden);
+static cl::opt<bool> DumpToDot("dp-omissions-dump-dot", cl::init(false),
+                               cl::desc("Generate a .dot representation of the CFG and DG"), cl::Hidden);
 
 namespace {
 
@@ -103,24 +98,17 @@ typedef struct Variable_struct {
   string sizeInBytes;
 
   Variable_struct(const Variable_struct &other)
-      : name(other.name), type(other.type), defLine(other.defLine),
-        readAccess(other.readAccess), writeAccess(other.writeAccess),
-        sizeInBytes(other.sizeInBytes) {}
+      : name(other.name), type(other.type), defLine(other.defLine), readAccess(other.readAccess),
+        writeAccess(other.writeAccess), sizeInBytes(other.sizeInBytes) {}
 
-  Variable_struct(string n, string t, string d, bool readAccess,
-                  bool writeAccess, string sizeInBytes)
-      : name(n), type(t), defLine(d), readAccess(readAccess),
-        writeAccess(writeAccess), sizeInBytes(sizeInBytes) {}
+  Variable_struct(string n, string t, string d, bool readAccess, bool writeAccess, string sizeInBytes)
+      : name(n), type(t), defLine(d), readAccess(readAccess), writeAccess(writeAccess), sizeInBytes(sizeInBytes) {}
 
   // We have a set of this struct. The set doesn't know how to order the
   // elements.
-  inline bool operator<(const Variable_struct &rhs) const {
-    return name < rhs.name;
-  }
+  inline bool operator<(const Variable_struct &rhs) const { return name < rhs.name; }
 
-  inline bool operator>(const Variable_struct &rhs) const {
-    return name > rhs.name;
-  }
+  inline bool operator>(const Variable_struct &rhs) const { return name > rhs.name; }
 
 } Variable;
 
@@ -256,20 +244,17 @@ private:
 
   string getOrInsertVarName_static(string varName, IRBuilder<> &builder);
 
-  Value *findStructMemberName(MDNode *structNode, unsigned idx,
-                              IRBuilder<> &builder);
+  Value *findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
 
   Type *pointsToStruct(PointerType *PTy);
 
   Value *determineVariableName_dynamic(Instruction *const I);
 
-  string determineVariableName_static(
-      Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/,
-      bool disable_MetadataMap);
+  string determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/,
+                                      bool disable_MetadataMap);
 
-  void getTrueVarNamesFromMetadata(
-      Region *TopRegion, Node *root,
-      std::map<string, string> *trueVarNamesFromMetadataMap);
+  void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
+                                   std::map<string, string> *trueVarNamesFromMetadataMap);
 
   // Control flow analysis
   void CFA(Function &F, LoopInfo &LI);
@@ -377,20 +362,14 @@ public:
   bool isRecursive(Function &F, CallGraph &CG);
 
   // Populate variable sets global to BB
-  void populateGlobalVariablesSet(Region *TopRegion,
-                                  set<string> &globalVariablesSet);
+  void populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet);
 
-  void createCUs(Region *TopRegion, set<string> &globalVariablesSet,
-                 vector<CU *> &CUVector,
-                 map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root,
-                 LoopInfo &LI);
+  void createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
+                 map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI);
 
-  void
-  createTakenBranchInstrumentation(Region *TopRegion,
-                                   map<string, vector<CU *>> &BBIDToCUIDsMap);
+  void createTakenBranchInstrumentation(Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap);
 
-  void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet,
-                       vector<CU *> &CUVector,
+  void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
                        map<string, vector<CU *>> &BBIDToCUIDsMap);
 
   void fillStartEndLineNumbers(Node *root, LoopInfo &LI);
@@ -421,41 +400,30 @@ public:
 
   // DPReduction
 
-  void instrument_module(llvm::Module *module,
-                         map<string, string> *trueVarNamesFromMetadataMap);
+  void instrument_module(llvm::Module *module, map<string, string> *trueVarNamesFromMetadataMap);
   bool inlinedFunction(Function *F);
-  void instrument_function(llvm::Function *function,
-                           map<string, string> *trueVarNamesFromMetadataMap);
+  void instrument_function(llvm::Function *function, map<string, string> *trueVarNamesFromMetadataMap);
   void instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI,
                        map<string, string> *trueVarNamesFromMetadataMap);
   std::string dp_reduction_CFA(Function &F, llvm::Loop *loop, int file_id);
-  string dp_reduction_determineVariableName(
-      Instruction *I, map<string, string> *trueVarNamesFromMetadataMap);
+  string dp_reduction_determineVariableName(Instruction *I, map<string, string> *trueVarNamesFromMetadataMap);
   string dp_reduction_determineVariableType(Instruction *I);
-  llvm::Instruction *
-  dp_reduction_get_reduction_instr(llvm::Instruction *store_instr,
-                                   llvm::Instruction **load_instr);
+  llvm::Instruction *dp_reduction_get_reduction_instr(llvm::Instruction *store_instr, llvm::Instruction **load_instr);
   llvm::Instruction *dp_reduction_find_reduction_instr(llvm::Value *val);
-  llvm::Instruction *
-  dp_reduction_get_load_instr(llvm::Value *load_val,
-                              llvm::Instruction *cur_instr,
-                              std::vector<char> &reduction_operations);
+  llvm::Instruction *dp_reduction_get_load_instr(llvm::Value *load_val, llvm::Instruction *cur_instr,
+                                                 std::vector<char> &reduction_operations);
   llvm::Value *dp_reduction_points_to_var(llvm::GetElementPtrInst *instr);
   llvm::Value *dp_reduction_get_var(llvm::Instruction *instr);
   llvm::Value *dp_reduction_get_var_rec(llvm::Value *val);
-  llvm::Instruction *dp_reduction_get_prev_use(llvm::Instruction *instr,
-                                               llvm::Value *val);
-  inline bool dp_reduction_loc_exists(llvm::DebugLoc const &loc) {
-    return static_cast<bool>(loc);
-  }
+  llvm::Instruction *dp_reduction_get_prev_use(llvm::Instruction *instr, llvm::Value *val);
+  inline bool dp_reduction_loc_exists(llvm::DebugLoc const &loc) { return static_cast<bool>(loc); }
   unsigned dp_reduction_get_file_id(llvm::Function *func);
   bool dp_reduction_init_util(std::string fmap_path);
   char dp_reduction_get_char_for_opcode(llvm::Instruction *instr);
   bool dp_reduction_is_operand(llvm::Instruction *instr, llvm::Value *operand);
   int dp_reduction_get_op_order(char c);
   Type *dp_reduction_pointsToStruct(PointerType *PTy);
-  string findStructMemberName_static(MDNode *structNode, unsigned idx,
-                                     IRBuilder<> &builder);
+  string findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
   bool dp_reduction_sanityCheck(BasicBlock *BB, int file_id);
   LID dp_reduction_getLID(Instruction *BI, int32_t &fileID);
   void dp_reduction_insert_functions();
@@ -475,19 +443,15 @@ public:
 
 char DiscoPoP::ID = 0;
 
-static RegisterPass<DiscoPoP>
-    X("DiscoPoP", "DiscoPoP: finding potential parallelism.", false, false);
+static RegisterPass<DiscoPoP> X("DiscoPoP", "DiscoPoP: finding potential parallelism.", false, false);
 
-static void loadPass(const PassManagerBuilder &Builder,
-                     legacy::PassManagerBase &PM) {
+static void loadPass(const PassManagerBuilder &Builder, legacy::PassManagerBase &PM) {
   PM.add(new LoopInfoWrapperPass());
   PM.add(new DiscoPoP());
 }
 
-static RegisterStandardPasses
-    DiscoPoPLoader_Ox(PassManagerBuilder::EP_OptimizerLast, loadPass);
-static RegisterStandardPasses
-    DiscoPoPLoader_O0(PassManagerBuilder::EP_EnabledOnOptLevel0, loadPass);
+static RegisterStandardPasses DiscoPoPLoader_Ox(PassManagerBuilder::EP_OptimizerLast, loadPass);
+static RegisterStandardPasses DiscoPoPLoader_O0(PassManagerBuilder::EP_EnabledOnOptLevel0, loadPass);
 
 ModulePass *createDiscoPoPPass() {
   if (DP_DEBUG) {

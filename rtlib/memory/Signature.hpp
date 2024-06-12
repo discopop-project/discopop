@@ -25,8 +25,7 @@ class Signature {
 public:
   Signature(std::int32_t slotSize, std::int32_t size, std::int32_t numOfHash = 1)
       : sigSlotSize(slotSize), numSlot(size), numHash(numOfHash) {
-    assert((slotSize % 8 == 0) && (slotSize <= 32 && slotSize >= 8) &&
-           "slotSize must be byte aligned!");
+    assert((slotSize % 8 == 0) && (slotSize <= 32 && slotSize >= 8) && "slotSize must be byte aligned!");
     sigSlotSizeInByte = sigSlotSize / 8;
     sigSizeInByte = sigSlotSizeInByte * numSlot;
 
@@ -64,9 +63,7 @@ private:
   std::int32_t insertedElem;
   std::int32_t conflictElem;
 
-  std::uint32_t hash(std::int64_t value) {
-    return (std::uint32_t)((value >> 8) + value) % numSlot;
-  }
+  std::uint32_t hash(std::int64_t value) { return (std::uint32_t)((value >> 8) + value) % numSlot; }
 };
 
 } // namespace __dp

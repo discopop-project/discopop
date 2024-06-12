@@ -28,7 +28,6 @@ void __dp_decl(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
 void __dp_decl(LID lid, ADDR addr, char *var);
 // End HA
 #endif
-
 }
 
 } // namespace __dp

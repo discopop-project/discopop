@@ -12,8 +12,8 @@
 
 #include "../DPTypes.hpp"
 
-#include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
+#include "../iFunctionsGlobals.hpp"
 
 #include "../callstack/CallStack.hpp"
 
@@ -37,8 +37,9 @@ extern "C" {
 
 void __dp_func_entry(LID lid, int32_t isStart) {
   if (targetTerminated) {
-    // prevent deleting generated results after the main function has been exited.
-    // This might happen, e.g., if a destructor of a global struct is called after exiting the main function.
+    // prevent deleting generated results after the main function has been
+    // exited. This might happen, e.g., if a destructor of a global struct is
+    // called after exiting the main function.
     return;
   }
 
@@ -54,7 +55,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     readRuntimeInfo();
     timers = new Timers();
 #ifdef DP_INTERNAL_TIMER
-   const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
+    const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
 #endif
     function_manager = new FunctionManager();
     loop_manager = new LoopManager();
@@ -70,7 +71,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     outPutDeps = new stringDepMap();
     bbList = new ReportedBBSet();
     // End HA
-    
+
     memory_manager->allocate_dummy_region();
 
 #ifdef __linux__
@@ -107,7 +108,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
       cout << "DP initialized at LID " << std::dec << dputil::decodeLID(lid) << endl;
     }
     dpInited = true;
-    if(NUM_WORKERS > 0) {
+    if (NUM_WORKERS > 0) {
       initParallelization();
     } else {
       initSingleThreadedExecution();
@@ -115,17 +116,16 @@ void __dp_func_entry(LID lid, int32_t isStart) {
   } else if (targetTerminated) {
     if (DP_DEBUG) {
       cout << "Entering function LID " << std::dec << dputil::decodeLID(lid);
-      cout << " but target program has returned from main(). Destructors?"
-           << endl;
+      cout << " but target program has returned from main(). Destructors?" << endl;
     }
   } else {
     function_manager->register_function_start(lid);
   }
 
 #ifdef DP_INTERNAL_TIMER
-   const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
+  const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
 #endif
-  
+
 #if DP_STACK_ACCESS_DETECTION
   memory_manager->enter_new_function();
   memory_manager->enterScope("function", lid);
@@ -133,7 +133,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 
   if (isStart)
     *out << "START " << dputil::decodeLID(lid) << endl;
-  
+
 #if DP_CALLSTACK_PROFILING
   funcCallCounter++;
   callStack->push(new CallStackEntry(0, lid, funcCallCounter));
@@ -142,7 +142,6 @@ void __dp_func_entry(LID lid, int32_t isStart) {
   // Reset last call tracker
   function_manager->log_call(0);
 }
-
 }
 
 } // namespace __dp

@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "iFunctionsTypes.hpp"
 #include "../share/include/timer.hpp"
+#include "iFunctionsTypes.hpp"
 #include "memory/AbstractShadow.hpp"
 
 #include <pthread.h>
@@ -42,22 +42,22 @@ namespace __dp {
 
 extern bool DP_DEBUG; // debug flag
 
-extern Timers* timers;
+extern Timers *timers;
 
 extern std::mutex pthread_compatibility_mutex;
 
-extern FunctionManager* function_manager;
-extern LoopManager* loop_manager;
-extern MemoryManager* memory_manager;
+extern FunctionManager *function_manager;
+extern LoopManager *loop_manager;
+extern MemoryManager *memory_manager;
 
 // hybrid analysis
 extern ReportedBBSet *bbList;
 extern stringDepMap *outPutDeps;
-// end hybrid analysis 
+// end hybrid analysis
 
 extern std::unordered_map<char *, long> cuec;
 
-extern bool dpInited; // library initialization flag
+extern bool dpInited;         // library initialization flag
 extern bool targetTerminated; // whether the target program has returned from main()
 // In C++, destructors of global objects can run after main().
 // However, when the target program returns from main(), dp
@@ -69,7 +69,7 @@ extern bool targetTerminated; // whether the target program has returned from ma
 extern depMap *allDeps;
 
 #if DP_CALLSTACK_PROFILING
-extern CallStack *callStack;    // call stack profiling
+extern CallStack *callStack; // call stack profiling
 extern unsigned long funcCallCounter;
 #endif
 extern std::ofstream *out;
@@ -79,21 +79,21 @@ extern pthread_mutex_t *addrChunkMutexes;     // associated mutexes
 extern pthread_mutex_t allDepsLock;
 extern pthread_t *workers; // worker threads
 
-extern AbstractShadow* singleThreadedExecutionSMem;
+extern AbstractShadow *singleThreadedExecutionSMem;
 
-extern int32_t NUM_WORKERS; 
+extern int32_t NUM_WORKERS;
 
-extern int32_t CHUNK_SIZE; // default number of addresses in each chunk
+extern int32_t CHUNK_SIZE;               // default number of addresses in each chunk
 extern std::queue<AccessInfo *> *chunks; // one queue of access info chunks for each worker thread
-extern bool *addrChunkPresent; // addrChunkPresent[thread_id] denotes whether or not a new chunk
-             // is available for the corresponding thread
+extern bool *addrChunkPresent;           // addrChunkPresent[thread_id] denotes whether or not a
+                                         // new chunk is available for the corresponding thread
 
-extern AccessInfo **tempAddrChunks; // tempAddrChunks[thread_id] is the temporary chunk to collect
-             // memory accesses for the corresponding thread
-extern int32_t *tempAddrCount; // tempAddrCount[thread_id] denotes the current number of accesses
-             // in the temporary chunk
-extern bool stop; // ONLY set stop to true if no more accessed addresses will
-                   // be collected
+extern AccessInfo **tempAddrChunks; // tempAddrChunks[thread_id] is the temporary chunk to
+                                    // collect memory accesses for the corresponding thread
+extern int32_t *tempAddrCount;      // tempAddrCount[thread_id] denotes the current
+                                    // number of accesses in the temporary chunk
+extern bool stop;                   // ONLY set stop to true if no more accessed addresses will
+                                    // be collected
 extern thread_local depMap *myMap;
 
 } // namespace __dp

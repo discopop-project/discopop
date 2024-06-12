@@ -12,8 +12,8 @@
 
 #include "../DPTypes.hpp"
 
-#include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
+#include "../iFunctionsGlobals.hpp"
 
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
@@ -70,8 +70,8 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
   function_manager->reset_call(lid);
 
   if (DP_DEBUG) {
-    cout << "instStore at encoded LID " << std::dec << dputil::decodeLID(lid)
-         << " and addr " << std::hex << addr << endl;
+    cout << "instStore at encoded LID " << std::dec << dputil::decodeLID(lid) << " and addr " << std::hex << addr
+         << endl;
   }
 
   // TEST
@@ -84,8 +84,7 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
   AccessInfo current;
 #else
-  int64_t workerID =
-      ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
+  int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
 #endif
   current.isRead = false;
@@ -100,10 +99,8 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 
 #if DP_STACK_ACCESS_DETECTION
   current.isStackAccess = is_stack_access;
-  current.addrIsOwnedByScope =
-      memory_manager->isFirstWrittenInScope(addr, true);
-  current.positiveScopeChangeOccuredSinceLastAccess =
-      memory_manager->positiveScopeChangeOccuredSinceLastAccess(addr);
+  current.addrIsOwnedByScope = memory_manager->isFirstWrittenInScope(addr, true);
+  current.positiveScopeChangeOccuredSinceLastAccess = memory_manager->positiveScopeChangeOccuredSinceLastAccess(addr);
 
   if (is_stack_access) {
     // register stack write after check for
@@ -126,7 +123,6 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
   }
 #endif
 }
-
 }
 
 } // namespace __dp

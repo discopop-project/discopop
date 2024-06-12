@@ -20,7 +20,6 @@ namespace __dp {
 extern "C" {
 
 void __dp_call(LID lid);
-
 }
 
 } // namespace __dp

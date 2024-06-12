@@ -32,5 +32,5 @@ for file in $C_CPP_FILES; do
       continue
     fi
 
-    clang-format $file -i --verbose
+    clang-format --style=file $file -i --verbose
 done

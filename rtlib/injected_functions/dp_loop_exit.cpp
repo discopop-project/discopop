@@ -76,9 +76,7 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
 #if DP_STACK_ACCESS_DETECTION
   memory_manager->leaveScope("loop", lid);
 #endif
-
 }
-
 }
 
 } // namespace __dp

@@ -39,21 +39,20 @@ public:
 
   virtual void removeFromWrite(std::int64_t memAddr) = 0;
 
-  virtual std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr,
-                                                   std::int64_t endAddr) = 0;
+  virtual std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr, std::int64_t endAddr) = 0;
 
 #if DP_CALLSTACK_PROFILING
-  virtual CallStack* getLastReadAccessCallStack(int64_t memAddr); 
- 
-  virtual void setLastReadAccessCallStack(int64_t memAddr, CallStack* p_cs); 
+  virtual CallStack *getLastReadAccessCallStack(int64_t memAddr);
 
-  virtual void cleanReadAccessCallStack(int64_t memAddr); 
+  virtual void setLastReadAccessCallStack(int64_t memAddr, CallStack *p_cs);
 
-  virtual CallStack* getLastWriteAccessCallStack(int64_t memAddr); 
+  virtual void cleanReadAccessCallStack(int64_t memAddr);
 
-  virtual void setLastWriteAccessCallStack(int64_t memAddr, CallStack* p_cs); 
+  virtual CallStack *getLastWriteAccessCallStack(int64_t memAddr);
 
-  virtual void cleanWriteAccessCallStack(int64_t memAddr); 
+  virtual void setLastWriteAccessCallStack(int64_t memAddr, CallStack *p_cs);
+
+  virtual void cleanWriteAccessCallStack(int64_t memAddr);
 #endif
 };
 
