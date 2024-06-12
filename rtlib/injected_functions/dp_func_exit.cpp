@@ -59,7 +59,10 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 
   // TEST
   // clear information on allocated stack addresses
+#if DP_STACK_ACCESS_DETECTION
   const auto last_addresses = memory_manager->pop_last_stack_address();
+#endif
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   pthread_compatibility_mutex.unlock();
 #endif
