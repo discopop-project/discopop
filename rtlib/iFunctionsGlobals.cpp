@@ -51,7 +51,20 @@ bool targetTerminated = false; // whether the target program has returned from m
 // Runtime merging structures
 depMap *allDeps = nullptr;
 
+#if DP_CALLSTACK_PROFILING
+CallStack *callStack = nullptr;    // call stack profiling
+#endif
 std::ofstream *out = nullptr;
+
+LID lastCallOrInvoke = 0;
+LID lastProcessedLine = 0;
+std::int32_t FuncStackLevel = 0;
+
+MemoryRegionTree *allocatedMemRegTree = nullptr;
+
+ADDR smallestAllocatedADDR = std::numeric_limits<std::int64_t>::max();
+ADDR largestAllocatedADDR = std::numeric_limits<std::int64_t>::min();
+
 
 /******* BEGIN: parallelization section *******/
 pthread_cond_t *addrChunkPresentConds = nullptr; // condition variables

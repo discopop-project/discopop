@@ -68,7 +68,20 @@ extern bool targetTerminated; // whether the target program has returned from ma
 // Runtime merging structures
 extern depMap *allDeps;
 
+#if DP_CALLSTACK_PROFILING
+extern CallStack *callStack;    // call stack profiling
+#endif
 extern std::ofstream *out;
+
+extern LID lastCallOrInvoke;
+extern LID lastProcessedLine;
+extern std::int32_t FuncStackLevel;
+
+extern MemoryRegionTree *allocatedMemRegTree;
+
+extern ADDR smallestAllocatedADDR;
+extern ADDR largestAllocatedADDR;
+
 
 extern pthread_cond_t *addrChunkPresentConds; // condition variables
 extern pthread_mutex_t *addrChunkMutexes;     // associated mutexes

@@ -13,6 +13,7 @@
 #pragma once
 
 #include "DPTypes.hpp"
+#include "CallStack.hpp"
 
 #include "functions/FunctionManager.hpp"
 #include "loop/LoopManager.hpp"
@@ -58,7 +59,7 @@ struct AccessInfo {
       : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr),
         skip(skip) {}
 
-  AccessInfo() : isRead(false), lid(0), var(""), AAvar(""), addr(0), skip(false) {}
+  AccessInfo() : isRead(false), lid(0), var(""), AAvar(""), addr(0), skip(false), callStack(nullptr) {}
 
   bool isRead;
   // hybrid analysis
@@ -68,6 +69,7 @@ struct AccessInfo {
   const char *var;
   std::string AAvar; // name of allocated variable -> "Anti Aliased Variable"
   ADDR addr;
+  CallStack* callStack; 
   bool isStackAccess = false;
   bool addrIsOwnedByScope = false;
   bool positiveScopeChangeOccuredSinceLastAccess = false;
@@ -75,13 +77,18 @@ struct AccessInfo {
 
 // For runtime dependency merging
 struct Dep {
-  Dep(depType T, LID dep, const char *var, std::string AAvar)
-      : type(T), depOn(dep), var(var), AAvar(AAvar) {}
+  Dep(depType T, LID dep, char *var, std::string AAvar, std::set<LID> iaid, std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd)
+      : type(T), depOn(dep), var(var), AAvar(AAvar), intra_iteration_dependencies(iaid), inter_iteration_dependencies(ieid), 
+            intra_call_dependencies(iacd), inter_call_dependencies(iecd)  {}
 
   depType type;
   LID depOn;
   const char *var;
   std::string AAvar;
+  std::set<LID> intra_iteration_dependencies; 
+  std::set<LID> inter_iteration_dependencies; 
+  std::set<LID> intra_call_dependencies; 
+  std::set<LID> inter_call_dependencies; 
 };
 
 struct compDep {

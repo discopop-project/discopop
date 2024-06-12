@@ -15,6 +15,8 @@
 #include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
 
+#include "../CallStack.hpp"
+
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
@@ -58,6 +60,9 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     loop_manager = new LoopManager();
     memory_manager = new MemoryManager();
 
+#if DP_CALLSTACK_PROFILING
+    callStack = new CallStack();
+#endif
     out = new ofstream();
 
     // hybrid analysis
@@ -128,6 +133,11 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 
   if (isStart)
     *out << "START " << dputil::decodeLID(lid) << endl;
+  
+  funcCallCounter++;
+#if DP_CALLSTACK_PROFILING
+  callStack->push(new CallStackEntry(0, lid, funcCallCounter));
+#endif
 
   // Reset last call tracker
   function_manager->log_call(0);

@@ -14,6 +14,8 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../CallStack.hpp"
+
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
@@ -64,9 +66,15 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     memory_manager->enterScope("loop", lid);
 #endif
 
+#if DP_CALLSTACK_PROFILING
+      callStack->push(new CallStackEntry(1, lid, 0));
+#endif
   } else {
     // The same loop iterates again
     loop_manager->iterate_loop(function_stack_level);
+#if DP_CALLSTACK_PROFILING
+    callStack->incrementIterationCounter();
+#endif
 
     // Handle error made in instrumentation.
     // When recorded loopStack->top().funcLevel is different
