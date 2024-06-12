@@ -16,8 +16,10 @@
 #include <ctime>
 #include <iomanip>
 #include <ostream>
+#include <iostream>
 #include <string>
 #include <vector>
+#include <cassert>
 
 /**
  * This type allows type-safe specification of a specific timer
