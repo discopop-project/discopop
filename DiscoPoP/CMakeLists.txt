@@ -16,3 +16,13 @@ add_llvm_library(LLVMDiscoPoP MODULE
         InstructionDG.cpp
         ../share/lib/DPUtils.cpp
         )
+
+# forward compiler flags
+if(DEFINED DP_HYBRID_PROFILING)
+        message("Defined DP_HYBRID_PROFILING=" ${DP_HYBRID_PROFILING})
+        target_compile_definitions(LLVMDiscoPoP PUBLIC DP_HYBRID_PROFILING=${DP_HYBRID_PROFILING})
+else()
+        target_compile_definitions(LLVMDiscoPoP PUBLIC DP_HYBRID_PROFILING=1)
+        message("Default defined DP_HYBRID_PROFILING=1")
+endif()
+# end of compiler flags

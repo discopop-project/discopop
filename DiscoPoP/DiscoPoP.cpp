@@ -19,8 +19,6 @@
 #define DP_DEBUG false
 #define DP_VERBOSE false // prints warning messages
 #define DP_hybrid_DEBUG false
-#define DP_hybrid_SKIP                                                         \
-  true // todo add parameter to disable hybrid dependence analysis on demand.
 #define DP_BRANCH_TRACKING                                                     \
   true // toggles the creation of instrumentation calls for tracking taken
        // branches. Required by the graph pruning step of the DiscoPoP
@@ -2407,9 +2405,17 @@ bool DiscoPoP::runOnFunction(Function &F) {
   {
     if (F.getInstructionCount() == 0)
       return false;
-    if (DP_hybrid_SKIP) {
+
+// Enable / Disable hybrid profiling
+#ifndef DP_HYBRID_PROFILING
+#define DP_HYBRID_PROFILING 1
+#endif
+
+#if DP_HYBRID_PROFILING==0
       return true;
-    }
+#endif
+/////
+
     if (DP_hybrid_DEBUG)
       errs() << "\n---------- Omission Analysis on " << F.getName()
              << " ----------\n";
