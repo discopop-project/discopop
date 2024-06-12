@@ -138,7 +138,9 @@ void __dp_finalize(LID lid) {
     const auto path = prepare_environment();
 
     auto allocationsFileStream = ofstream(path, ios::out);
+#if DP_MEMORY_REGION_DEALIASING 
     memory_manager->output_memory_regions(allocationsFileStream);
+#endif
   };
   output_allocations();
 

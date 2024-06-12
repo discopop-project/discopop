@@ -70,6 +70,12 @@ if(DEFINED DP_INTERNAL_TIMER)
         endif()
 endif()
 
+if(DEFINED DP_MEMORY_REGION_DEALIASING)
+        if(NOT ${DP_MEMORY_REGION_DEALIASING} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_MEMORY_REGION_DEALIASING=${DP_MEMORY_REGION_DEALIASING})
+        endif()
+endif()
+
 # end of compiler flags
 
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)
