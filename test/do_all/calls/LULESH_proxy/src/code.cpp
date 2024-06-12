@@ -11,8 +11,8 @@ private:
   double *arr_fz;
 
 public:
-  void setPointers(double *arg_arr_x, double *arg_arr_y, double *arg_arr_z,
-                   double *arg_fx, double *arg_fy, double *arg_fz) {
+  void setPointers(double *arg_arr_x, double *arg_arr_y, double *arg_arr_z, double *arg_fx, double *arg_fy,
+                   double *arg_fz) {
     arr_x = arg_arr_x;
     arr_y = arg_arr_y;
     arr_z = arg_arr_z;
@@ -34,11 +34,8 @@ public:
   double &fz(int idx) { return arr_fz[idx]; }
 };
 
-static inline void CollectDomainNodesToElemNodes(Domain domain,
-                                                 const short *elemToNode,
-                                                 double elemX[8],
-                                                 double elemY[8],
-                                                 double elemZ[8]) {
+static inline void CollectDomainNodesToElemNodes(Domain domain, const short *elemToNode, double elemX[8],
+                                                 double elemY[8], double elemZ[8]) {
   short nd0i = elemToNode[0];
   short nd1i = elemToNode[1];
   short nd2i = elemToNode[2];
@@ -76,10 +73,7 @@ static inline void CollectDomainNodesToElemNodes(Domain domain,
   elemZ[7] = domain.z(nd7i);
 }
 
-static inline void CalcElemShapeFunctionDerivatives(double const x[],
-                                                    double const y[],
-                                                    double const z[],
-                                                    double b[][8],
+static inline void CalcElemShapeFunctionDerivatives(double const x[], double const y[], double const z[], double b[][8],
                                                     double *const volume) {
   const double x0 = x[0];
   const double x1 = x[1];
@@ -166,13 +160,12 @@ static inline void CalcElemShapeFunctionDerivatives(double const x[],
   *volume = double(8.) * (fjxet * cjxet + fjyet * cjyet + fjzet * cjzet);
 }
 
-static inline void SumElemFaceNormal(
-    double *normalX0, double *normalY0, double *normalZ0, double *normalX1,
-    double *normalY1, double *normalZ1, double *normalX2, double *normalY2,
-    double *normalZ2, double *normalX3, double *normalY3, double *normalZ3,
-    const double x0, const double y0, const double z0, const double x1,
-    const double y1, const double z1, const double x2, const double y2,
-    const double z2, const double x3, const double y3, const double z3) {
+static inline void SumElemFaceNormal(double *normalX0, double *normalY0, double *normalZ0, double *normalX1,
+                                     double *normalY1, double *normalZ1, double *normalX2, double *normalY2,
+                                     double *normalZ2, double *normalX3, double *normalY3, double *normalZ3,
+                                     const double x0, const double y0, const double z0, const double x1,
+                                     const double y1, const double z1, const double x2, const double y2,
+                                     const double z2, const double x3, const double y3, const double z3) {
   double bisectX0 = double(0.5) * (x3 + x2 - x1 - x0);
   double bisectY0 = double(0.5) * (y3 + y2 - y1 - y0);
   double bisectZ0 = double(0.5) * (z3 + z2 - z1 - z0);
@@ -199,8 +192,7 @@ static inline void SumElemFaceNormal(
   *normalZ3 += areaZ;
 }
 
-static inline void CalcElemNodeNormals(double pfx[8], double pfy[8],
-                                       double pfz[8], const double x[8],
+static inline void CalcElemNodeNormals(double pfx[8], double pfy[8], double pfz[8], const double x[8],
                                        const double y[8], const double z[8]) {
   for (int i = 0; i < 8; ++i) {
     pfx[i] = double(0.0);
@@ -208,41 +200,27 @@ static inline void CalcElemNodeNormals(double pfx[8], double pfy[8],
     pfz[i] = double(0.0);
   }
   /* evaluate face one: nodes 0, 1, 2, 3 */
-  SumElemFaceNormal(&pfx[0], &pfy[0], &pfz[0], &pfx[1], &pfy[1], &pfz[1],
-                    &pfx[2], &pfy[2], &pfz[2], &pfx[3], &pfy[3], &pfz[3], x[0],
-                    y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2], x[3], y[3],
-                    z[3]);
+  SumElemFaceNormal(&pfx[0], &pfy[0], &pfz[0], &pfx[1], &pfy[1], &pfz[1], &pfx[2], &pfy[2], &pfz[2], &pfx[3], &pfy[3],
+                    &pfz[3], x[0], y[0], z[0], x[1], y[1], z[1], x[2], y[2], z[2], x[3], y[3], z[3]);
   /* evaluate face two: nodes 0, 4, 5, 1 */
-  SumElemFaceNormal(&pfx[0], &pfy[0], &pfz[0], &pfx[4], &pfy[4], &pfz[4],
-                    &pfx[5], &pfy[5], &pfz[5], &pfx[1], &pfy[1], &pfz[1], x[0],
-                    y[0], z[0], x[4], y[4], z[4], x[5], y[5], z[5], x[1], y[1],
-                    z[1]);
+  SumElemFaceNormal(&pfx[0], &pfy[0], &pfz[0], &pfx[4], &pfy[4], &pfz[4], &pfx[5], &pfy[5], &pfz[5], &pfx[1], &pfy[1],
+                    &pfz[1], x[0], y[0], z[0], x[4], y[4], z[4], x[5], y[5], z[5], x[1], y[1], z[1]);
   /* evaluate face three: nodes 1, 5, 6, 2 */
-  SumElemFaceNormal(&pfx[1], &pfy[1], &pfz[1], &pfx[5], &pfy[5], &pfz[5],
-                    &pfx[6], &pfy[6], &pfz[6], &pfx[2], &pfy[2], &pfz[2], x[1],
-                    y[1], z[1], x[5], y[5], z[5], x[6], y[6], z[6], x[2], y[2],
-                    z[2]);
+  SumElemFaceNormal(&pfx[1], &pfy[1], &pfz[1], &pfx[5], &pfy[5], &pfz[5], &pfx[6], &pfy[6], &pfz[6], &pfx[2], &pfy[2],
+                    &pfz[2], x[1], y[1], z[1], x[5], y[5], z[5], x[6], y[6], z[6], x[2], y[2], z[2]);
   /* evaluate face four: nodes 2, 6, 7, 3 */
-  SumElemFaceNormal(&pfx[2], &pfy[2], &pfz[2], &pfx[6], &pfy[6], &pfz[6],
-                    &pfx[7], &pfy[7], &pfz[7], &pfx[3], &pfy[3], &pfz[3], x[2],
-                    y[2], z[2], x[6], y[6], z[6], x[7], y[7], z[7], x[3], y[3],
-                    z[3]);
+  SumElemFaceNormal(&pfx[2], &pfy[2], &pfz[2], &pfx[6], &pfy[6], &pfz[6], &pfx[7], &pfy[7], &pfz[7], &pfx[3], &pfy[3],
+                    &pfz[3], x[2], y[2], z[2], x[6], y[6], z[6], x[7], y[7], z[7], x[3], y[3], z[3]);
   /* evaluate face five: nodes 3, 7, 4, 0 */
-  SumElemFaceNormal(&pfx[3], &pfy[3], &pfz[3], &pfx[7], &pfy[7], &pfz[7],
-                    &pfx[4], &pfy[4], &pfz[4], &pfx[0], &pfy[0], &pfz[0], x[3],
-                    y[3], z[3], x[7], y[7], z[7], x[4], y[4], z[4], x[0], y[0],
-                    z[0]);
+  SumElemFaceNormal(&pfx[3], &pfy[3], &pfz[3], &pfx[7], &pfy[7], &pfz[7], &pfx[4], &pfy[4], &pfz[4], &pfx[0], &pfy[0],
+                    &pfz[0], x[3], y[3], z[3], x[7], y[7], z[7], x[4], y[4], z[4], x[0], y[0], z[0]);
   /* evaluate face six: nodes 4, 7, 6, 5 */
-  SumElemFaceNormal(&pfx[4], &pfy[4], &pfz[4], &pfx[7], &pfy[7], &pfz[7],
-                    &pfx[6], &pfy[6], &pfz[6], &pfx[5], &pfy[5], &pfz[5], x[4],
-                    y[4], z[4], x[7], y[7], z[7], x[6], y[6], z[6], x[5], y[5],
-                    z[5]);
+  SumElemFaceNormal(&pfx[4], &pfy[4], &pfz[4], &pfx[7], &pfy[7], &pfz[7], &pfx[6], &pfy[6], &pfz[6], &pfx[5], &pfy[5],
+                    &pfz[5], x[4], y[4], z[4], x[7], y[7], z[7], x[6], y[6], z[6], x[5], y[5], z[5]);
 }
 
-static inline void
-SumElemStressesToNodeForces(const double B[][8], const double stress_xx,
-                            const double stress_yy, const double stress_zz,
-                            double fx[], double fy[], double fz[]) {
+static inline void SumElemStressesToNodeForces(const double B[][8], const double stress_xx, const double stress_yy,
+                                               const double stress_zz, double fx[], double fy[], double fz[]) {
   for (int i = 0; i < 8; i++) {
     fx[i] = -(stress_xx * B[0][i]);
     fy[i] = -(stress_yy * B[1][i]);
@@ -277,16 +255,14 @@ int main(int argc, const char *argv[]) {
     short elemToNode[8] = {4, 3, 2, 1, 5, 6, 7, 0};
 
     // get nodal coordinates from global arrays and copy into local arrays.
-    CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local,
-                                  z_local);
+    CollectDomainNodesToElemNodes(domain, elemToNode, x_local, y_local, z_local);
 
     // Volume calculation involves extra work for numerical consistency
     CalcElemShapeFunctionDerivatives(x_local, y_local, z_local, B, &volumes[k]);
 
     CalcElemNodeNormals(B[0], B[1], B[2], x_local, y_local, z_local);
 
-    SumElemStressesToNodeForces(B, sigxx, sigyy, sigzz, fx_local, fy_local,
-                                fz_local);
+    SumElemStressesToNodeForces(B, sigxx, sigyy, sigzz, fx_local, fy_local, fz_local);
 
     // copy nodal force contributions to global force arrray.
     for (int lnode = 0; lnode < 8; ++lnode) {

@@ -24,7 +24,6 @@ void __dp_write(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count);
 #else
 void __dp_write(LID lid, ADDR addr, const char *var);
 #endif
-
 }
 
 } // namespace __dp

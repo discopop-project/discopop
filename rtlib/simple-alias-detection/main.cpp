@@ -36,11 +36,9 @@ int main(int argc, const char **argv) {
   CommonOptionsParser op(argc, argv, SimpleStatement);
   ClangTool Tool(op.getCompilations(), op.getSourcePathList());
   StatementMatcher bin_stmt =
-      clang::ast_matchers::binaryOperator(anything(), isExpansionInMainFile())
-          .bind("simpleStatement");
+      clang::ast_matchers::binaryOperator(anything(), isExpansionInMainFile()).bind("simpleStatement");
   StatementMatcher decl_stmt =
-      clang::ast_matchers::declStmt(anything(), isExpansionInMainFile())
-          .bind("simpleStatement");
+      clang::ast_matchers::declStmt(anything(), isExpansionInMainFile()).bind("simpleStatement");
   MatchFinder finder;
   BinCallBack bin_cb;
   finder.addMatcher(bin_stmt, &bin_cb);

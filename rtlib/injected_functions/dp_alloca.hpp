@@ -24,7 +24,6 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBy
 #else
 void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements);
 #endif
-
 }
 
 } // namespace __dp

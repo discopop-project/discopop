@@ -20,11 +20,11 @@ using namespace std;
 //                                  cl::Hidden);
 string FileMappingPath = "";
 
-cl::opt<bool> DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS(
-    "memory-profiling-skip-function-arguments", cl::init(false),
-    cl::desc("disable the memory profiling for allocations which belong to "
-             "function arguments"),
-    cl::Hidden);
+cl::opt<bool>
+    DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS("memory-profiling-skip-function-arguments", cl::init(false),
+                                                cl::desc("disable the memory profiling for allocations which belong to "
+                                                         "function arguments"),
+                                                cl::Hidden);
 
 namespace dputil {
 
@@ -46,7 +46,6 @@ int32_t getFileID(string fileMapping, string fullPathName) {
   {
     return 0;
   }
-  
 
   int tempfid = 1;
   fstream fileMappingFile;
@@ -200,16 +199,14 @@ void determineFileID(Function &F, int32_t &fileID) {
           File = Loc->getFilename();
           Dir = Loc->getDirectory();
 
-          char *absolutePathFileName =
-              realpath((Dir.str() + "/" + File.str()).c_str(), NULL);
+          char *absolutePathFileName = realpath((Dir.str() + "/" + File.str()).c_str(), NULL);
 
           if (absolutePathFileName == NULL) {
             absolutePathFileName = realpath(File.data(), NULL);
           }
 
           if (absolutePathFileName) {
-            fileID = dputil::getFileID(FileMappingPath,
-                                       string(absolutePathFileName));
+            fileID = dputil::getFileID(FileMappingPath, string(absolutePathFileName));
             delete[] absolutePathFileName;
           }
           break;
@@ -364,8 +361,7 @@ string VariableNameFinder::getVarName(Value const *V) {
   }
 
   if (const GEPOperator *gepo = dyn_cast<GEPOperator>(V)) {
-    if (const GlobalVariable *gv =
-            dyn_cast<GlobalVariable>(gepo->getPointerOperand())) {
+    if (const GlobalVariable *gv = dyn_cast<GlobalVariable>(gepo->getPointerOperand())) {
       string r = gv->getGlobalIdentifier();
       Type *st = gepo->getSourceElementType();
       if (StructType *ct = dyn_cast<StructType>(st)) {

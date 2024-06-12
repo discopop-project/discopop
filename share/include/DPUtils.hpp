@@ -63,11 +63,10 @@
 #include <vector>
 
 #define LIDSIZE 14 // Number of bits for holding LID
-#define LIDMETADATASIZE                                                        \
-  32 // Number of bits for holding LID Metadata (Column + Loop ID + Loop
-     // Iteration)
-#define MAXLNO                                                                 \
-  16384 // Maximum number of lines in a single file. Has to be 2^LIDSIZE.
+#define LIDMETADATASIZE                                                                                                \
+  32                 // Number of bits for holding LID Metadata (Column + Loop ID + Loop
+                     // Iteration)
+#define MAXLNO 16384 // Maximum number of lines in a single file. Has to be 2^LIDSIZE.
 
 typedef int64_t LID;
 typedef int64_t ADDR;

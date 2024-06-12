@@ -44,8 +44,7 @@ void __dp_loop_output() {
   ifile.open(tmp.data());
   while (std::getline(ifile, line)) {
     loop_info_t loop_info;
-    int cnt = sscanf(line.c_str(), "%d %d %d", &loop_info.file_id_,
-                     &loop_info.loop_id_, &loop_info.line_nr_);
+    int cnt = sscanf(line.c_str(), "%d %d %d", &loop_info.file_id_, &loop_info.loop_id_, &loop_info.line_nr_);
     if (cnt == 3) {
       loop_infos.push_back(loop_info);
     }
@@ -56,8 +55,8 @@ void __dp_loop_output() {
   std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
   tmp2 += "/loop_counter_output.txt";
   ofile.open(tmp2.data());
-  const auto& loop_counters = loop_manager->get_loop_counters();
-  
+  const auto &loop_counters = loop_manager->get_loop_counters();
+
   for (auto i = 1; i < loop_counters.size(); ++i) {
     loop_info_t &loop_info = loop_infos[i];
     ofile << loop_info.file_id_ << " ";
@@ -70,7 +69,6 @@ void __dp_loop_output() {
 
   loop_manager->set_done();
 }
-
 }
 
 } // namespace __dp

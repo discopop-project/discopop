@@ -34,7 +34,7 @@ void __dp_delete(LID lid, ADDR startAddr) {
   if (!dpInited || targetTerminated) {
     return;
   }
-  
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -50,20 +50,19 @@ void __dp_delete(LID lid, ADDR startAddr) {
   // TODO more efficient implementation
 
   // find memory region to be deleted
-/*        for(tuple<LID, string, int64_t, int64_t, int64_t, int64_t> entry :
-   allocatedMemoryRegions){ if(get<2>(entry) == startAddr){
-                // delete memory region
-                cout << "delete/free: " << decodeLID(lid) << ", " <<
-   get<1>(entry) << ", " << std::hex << startAddr << "\n";
-                allocatedMemoryRegions.remove(entry);
-                return;
-            }
-        }
-        cout << "__dp_delete: Could not find base addr: " << std::hex <<
-   startAddr << "\n";
-*/
+  /*        for(tuple<LID, string, int64_t, int64_t, int64_t, int64_t> entry :
+     allocatedMemoryRegions){ if(get<2>(entry) == startAddr){
+                  // delete memory region
+                  cout << "delete/free: " << decodeLID(lid) << ", " <<
+     get<1>(entry) << ", " << std::hex << startAddr << "\n";
+                  allocatedMemoryRegions.remove(entry);
+                  return;
+              }
+          }
+          cout << "__dp_delete: Could not find base addr: " << std::hex <<
+     startAddr << "\n";
+  */
 }
-
 }
 
 } // namespace __dp

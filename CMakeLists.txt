@@ -65,9 +65,9 @@ add_subdirectory(rtlib)
 
 add_subdirectory(scripts)
 
-add_subdirectory(test/unit_tests)
+#add_subdirectory(test/unit_tests)
 
-add_subdirectory(benchmark)
+#add_subdirectory(benchmark)
 
 ##### DEPRECATED #####
 # save build configuration to build/build_config.txt

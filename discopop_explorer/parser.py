@@ -31,6 +31,7 @@ class DependenceItem(object):
     type: Any
     var_name: Any
     memory_region: Any
+    metadata: Any
     # TODO improve typing
 
 
@@ -154,17 +155,21 @@ def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], Li
             var_str = "" if len(source_fields) == 1 else source_fields[1]
             var_name = ""
             aa_var_name = ""
+            metadata = ""
             if len(var_str) > 0:
                 if "(" in var_str:
                     split_var_str = var_str.split("(")
                     var_name = split_var_str[0]
                     aa_var_name = split_var_str[1][
-                        :-1
+                        : split_var_str[1].index(")")
                     ]  # name of the allocated variable which is accessed, i.e. variable name after anti aliasing
+                    metadata_str = split_var_str[1][split_var_str[1].index(")") + 1 :]
+                    if "[" in metadata_str:
+                        metadata = metadata_str[1:-1]
                 else:
                     # compatibility with results created without alias analysis
                     var_name = var_str
-            dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_name, aa_var_name))
+            dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, metadata))
 
     return dependencies_list, loop_data_list
 

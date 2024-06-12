@@ -12,8 +12,8 @@
 
 #include "../DPTypes.hpp"
 
-#include "../iFunctionsGlobals.hpp"
 #include "../iFunctions.hpp"
+#include "../iFunctionsGlobals.hpp"
 
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
@@ -74,13 +74,11 @@ void __dp_finalize(LID lid) {
 #endif
 
   // Returning from main or exit from somewhere, clear up everything.
-  assert(function_manager->get_current_stack_level() == -1 &&
-         "Program terminates without clearing function stack!");
-  assert(loop_manager->empty() &&
-         "Program terminates but loop stack is not empty!");
+  assert(function_manager->get_current_stack_level() == -1 && "Program terminates without clearing function stack!");
+  assert(loop_manager->empty() && "Program terminates but loop stack is not empty!");
 
 #ifdef DP_DEBUG
-    std::cout << "Program terminates at LID " << std::dec << dputil::decodeLID(lid) << ", clearing up" << std::endl;
+  std::cout << "Program terminates at LID " << std::dec << dputil::decodeLID(lid) << ", clearing up" << std::endl;
 #endif
 
   if (NUM_WORKERS > 0) {
@@ -96,7 +94,7 @@ void __dp_finalize(LID lid) {
 #ifdef DP_INTERNAL_TIMER
     const auto timer = Timer(timers, TimerRegion::OUTPUT_LOOPS);
 #endif
-  
+
     loop_manager->output(*out);
   };
   output_loops();
@@ -120,7 +118,7 @@ void __dp_finalize(LID lid) {
     const auto timer = Timer(timers, TimerRegion::OUTPUT_ALLOCATIONS);
 #endif
 
-    const auto prepare_environment = [](){
+    const auto prepare_environment = []() {
       // prepare environment variables
       const char *discopop_env = getenv("DOT_DISCOPOP");
       if (discopop_env == NULL) {
@@ -138,7 +136,9 @@ void __dp_finalize(LID lid) {
     const auto path = prepare_environment();
 
     auto allocationsFileStream = ofstream(path, ios::out);
+#if DP_MEMORY_REGION_DEALIASING
     memory_manager->output_memory_regions(allocationsFileStream);
+#endif
   };
   output_allocations();
 
@@ -153,6 +153,10 @@ void __dp_finalize(LID lid) {
   delete bbList;
   // End HA
 
+#if DP_CALLSTACK_PROFILING
+  delete callStack;
+#endif
+
   delete function_manager;
   delete loop_manager;
 
@@ -166,10 +170,9 @@ void __dp_finalize(LID lid) {
   targetTerminated = true; // mark the target program has returned from main()
 
 #ifdef DP_DEBUG
-    std::cout << "Program terminated." << std::endl;
+  std::cout << "Program terminated." << std::endl;
 #endif
 }
-
 }
 
 } // namespace __dp

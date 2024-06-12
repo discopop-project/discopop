@@ -33,7 +33,7 @@ void __dp_add_bb_deps(char *depStringPtr) {
   if (!dpInited || targetTerminated) {
     return;
   }
-  
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -45,8 +45,7 @@ void __dp_add_bb_deps(char *depStringPtr) {
 #endif
 
   std::string depString(depStringPtr);
-  std::regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r3("[0-9]+:[0-9]+"),
-      r4("(INIT|(R|W)A(R|W)).*");
+  std::regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r3("[0-9]+:[0-9]+"), r4("(INIT|(R|W)A(R|W)).*");
   std::smatch res0, res1, res2, res3;
 
   while (regex_search(depString, res0, r0)) {

@@ -19,9 +19,7 @@
 #define DP_DEBUG false
 #define DP_VERBOSE false // prints warning messages
 #define DP_hybrid_DEBUG false
-#define DP_hybrid_SKIP                                                         \
-  true // todo add parameter to disable hybrid dependence analysis on demand.
-#define DP_BRANCH_TRACKING                                                     \
+#define DP_BRANCH_TRACKING                                                                                             \
   true // toggles the creation of instrumentation calls for tracking taken
        // branches. Required by the graph pruning step of the DiscoPoP
        // optimizer.
@@ -35,10 +33,8 @@ StringRef DiscoPoP::getPassName() const { return "DiscoPoP"; }
 // Initializations
 void DiscoPoP::setupDataTypes() {
   Void = const_cast<Type *>(Type::getVoidTy(*ThisModuleContext));
-  Int32 =
-      const_cast<IntegerType *>(IntegerType::getInt32Ty(*ThisModuleContext));
-  Int64 =
-      const_cast<IntegerType *>(IntegerType::getInt64Ty(*ThisModuleContext));
+  Int32 = const_cast<IntegerType *>(IntegerType::getInt32Ty(*ThisModuleContext));
+  Int64 = const_cast<IntegerType *>(IntegerType::getInt64Ty(*ThisModuleContext));
   CharPtr = const_cast<PointerType *>(Type::getInt8PtrTy(*ThisModuleContext));
 }
 
@@ -48,8 +44,7 @@ void DiscoPoP::setupCallbacks() {
    * arg types
    * NULL
    */
-  DpInit =
-      ThisModule->getOrInsertFunction("__dp_init", Void, Int32, Int32, Int32);
+  DpInit = ThisModule->getOrInsertFunction("__dp_init", Void, Int32, Int32, Int32);
 
   DpFinalize = ThisModule->getOrInsertFunction("__dp_finalize", Void, Int32);
 
@@ -71,30 +66,24 @@ void DiscoPoP::setupCallbacks() {
 
   DpAlloca = ThisModule->getOrInsertFunction("__dp_alloca", Void,
 
-                                             Int32, CharPtr, Int64, Int64,
-                                             Int64, Int64);
+                                             Int32, CharPtr, Int64, Int64, Int64, Int64);
 
-  DpNew = ThisModule->getOrInsertFunction("__dp_new", Void, Int32, Int64, Int64,
-                                          Int64);
+  DpNew = ThisModule->getOrInsertFunction("__dp_new", Void, Int32, Int64, Int64, Int64);
 
   DpDelete = ThisModule->getOrInsertFunction("__dp_delete", Void, Int32, Int64);
 
   DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call", Void, Int32);
 
-  DpFuncEntry =
-      ThisModule->getOrInsertFunction("__dp_func_entry", Void, Int32, Int32);
+  DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry", Void, Int32, Int32);
 
-  DpFuncExit =
-      ThisModule->getOrInsertFunction("__dp_func_exit", Void, Int32, Int32);
+  DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit", Void, Int32, Int32);
 
-  DpLoopEntry =
-      ThisModule->getOrInsertFunction("__dp_loop_entry", Void, Int32, Int32);
+  DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry", Void, Int32, Int32);
 
-  DpLoopExit =
-      ThisModule->getOrInsertFunction("__dp_loop_exit", Void, Int32, Int32);
+  DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit", Void, Int32, Int32);
 
-  DpTakenBranchCounterIncr = ThisModule->getOrInsertFunction(
-      "__dp_incr_taken_branch_counter", Void, CharPtr, Int32, Int32);
+  DpTakenBranchCounterIncr =
+      ThisModule->getOrInsertFunction("__dp_incr_taken_branch_counter", Void, CharPtr, Int32, Int32);
 }
 
 bool DiscoPoP::doInitialization(Module &M) {
@@ -127,10 +116,14 @@ bool DiscoPoP::doInitialization(Module &M) {
   if (tmp2 == NULL) {
     // DP_PROJECT_ROOT_DIR needs to be initialized
     std::cerr << "\nWARNING: No value for DP_PROJECT_ROOT_DIR found. \n";
-    std::cerr << "         As a result, library functions might be instrumented which can lead to\n";
+    std::cerr << "         As a result, library functions might be "
+                 "instrumented which can lead to\n";
     std::cerr << "         increased profiling times and unexpected behavior.\n";
-    std::cerr << "         Please consider to specify the environment variable and rebuild.\n";
-    std::cerr << "         https://discopop-project.github.io/discopop/setup/environment_variables/\n\n";
+    std::cerr << "         Please consider to specify the environment variable "
+                 "and rebuild.\n";
+    std::cerr << "         "
+                 "https://discopop-project.github.io/discopop/setup/"
+                 "environment_variables/\n\n";
     // define fallback
     setenv("DP_PROJECT_ROOT_DIR", "/", 1);
   }
@@ -144,8 +137,7 @@ bool DiscoPoP::doInitialization(Module &M) {
 
     initializeCUIDCounter();
 
-    for (Module::global_iterator I = ThisModule->global_begin();
-         I != ThisModule->global_end(); I++) {
+    for (Module::global_iterator I = ThisModule->global_begin(); I != ThisModule->global_end(); I++) {
       Value *globalVariable = dyn_cast<Value>(I);
       string glo = string(globalVariable->getName());
       if (glo.find(".") == glo.npos) {
@@ -162,8 +154,7 @@ bool DiscoPoP::doInitialization(Module &M) {
     ThisModule = &M;
     ThisModuleContext = &(M.getContext());
 
-    for (set<DIGlobalVariable *>::iterator it = GlobalVars.begin();
-         it != GlobalVars.end(); ++it) {
+    for (set<DIGlobalVariable *>::iterator it = GlobalVars.begin(); it != GlobalVars.end(); ++it) {
       GlobalVars.erase(it);
     }
 
@@ -194,8 +185,7 @@ bool DiscoPoP::doInitialization(Module &M) {
     initializeBBDepCounter();
 
     ReportBB = M.getOrInsertFunction("__dp_report_bb", Void, Int32);
-    ReportBBPair =
-        M.getOrInsertFunction("__dp_report_bb_pair", Void, Int32, Int32);
+    ReportBBPair = M.getOrInsertFunction("__dp_report_bb_pair", Void, Int32, Int32);
     VNF = new dputil::VariableNameFinder(M);
     int nextFreeStaticMemoryRegionID = 0;
   }
@@ -229,11 +219,8 @@ bool DiscoPoP::doFinalization(Module &M) {
           if (Function *Fun = call_inst->getCalledFunction()) {
             if (Fun->getName() == "__dp_finalize") {
               IRBuilder<> builder(call_inst);
-              Value *V = builder.CreateGlobalStringPtr(StringRef(bbDepString),
-                                                       ".dp_bb_deps");
-              CallInst::Create(F.getParent()->getOrInsertFunction(
-                                   "__dp_add_bb_deps", Void, CharPtr),
-                               V, "", call_inst);
+              Value *V = builder.CreateGlobalStringPtr(StringRef(bbDepString), ".dp_bb_deps");
+              CallInst::Create(F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr), V, "", call_inst);
             }
           }
         }
@@ -277,10 +264,8 @@ void DiscoPoP::getAnalysisUsage(AnalysisUsage &AU) const {
 
 void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
   int lid = 0;
-  for (Region::block_iterator bb = TopRegion->block_begin();
-       bb != TopRegion->block_end(); ++bb) {
-    for (BasicBlock::iterator instruction = (*bb)->begin();
-         instruction != (*bb)->end(); ++instruction) {
+  for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
+    for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<ReturnInst>(instruction)) {
         lid = getLID(&*instruction, fileID);
         if (lid > 0)
@@ -296,9 +281,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
   bool isGlobal = false;
   string varName = determineVariableName_static(&*I, isGlobal, true);
   // varName = refineVarName(varName);
-  varName = (varName.find(".addr") == varName.npos)
-                ? varName
-                : varName.erase(varName.find(".addr"), 5);
+  varName = (varName.find(".addr") == varName.npos) ? varName : varName.erase(varName.find(".addr"), 5);
   // varName.erase(varName.find(".addr"), 5);
   // size_t pos = varName.find(".addr");
   // if (pos != varName.npos)
@@ -309,18 +292,14 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
   if (programGlobalVariablesSet.count(varName)) {
     varDefLine = "GlobalVar";
     // Find definition line of global variables
-    GlobalVariable *globalVariable =
-        I->getParent()->getParent()->getParent()->getGlobalVariable(
-            StringRef(varName));
+    GlobalVariable *globalVariable = I->getParent()->getParent()->getParent()->getGlobalVariable(StringRef(varName));
     if (globalVariable) {
       MDNode *metadata = globalVariable->getMetadata("dbg");
       if (metadata) {
         if (isa<DIGlobalVariableExpression>(metadata)) {
-          varDefLine = to_string(fileID) + ":" +
-                       to_string(cast<DIGlobalVariableExpression>(
-                                     globalVariable->getMetadata("dbg"))
-                                     ->getVariable()
-                                     ->getLine());
+          varDefLine =
+              to_string(fileID) + ":" +
+              to_string(cast<DIGlobalVariableExpression>(globalVariable->getMetadata("dbg"))->getVariable()->getLine());
         }
       }
     }
@@ -335,8 +314,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
 
         if (auto *N = dyn_cast<MDNode>(DI->getVariable())) {
           if (auto *DV = dyn_cast<DILocalVariable>(N)) {
-            if (varType.find("ARRAY") != string::npos ||
-                varType.find("STRUCT") != string::npos) {
+            if (varType.find("ARRAY") != string::npos || varType.find("STRUCT") != string::npos) {
               if (DV->getName() == varName) {
                 varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
                 break;
@@ -356,8 +334,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
                   }
                 }
                 if (vn == varName || vn == varName + ".addr") {
-                  varDefLine =
-                      to_string(fileID) + ":" + to_string(DV->getLine());
+                  varDefLine = to_string(fileID) + ":" + to_string(DV->getLine());
                   break;
                 }
               }
@@ -412,21 +389,16 @@ string DiscoPoP::determineVariableType(Instruction *I) {
 
 // recieves the region and outputs all variables and variables crossing basic
 // block boundaries in the region.
-void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion,
-                                          set<string> &globalVariablesSet) {
+void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet) {
 
   map<string, BasicBlock *> variableToBBMap;
   bool isGlobalVariable;
-  for (Region::block_iterator bb = TopRegion->block_begin();
-       bb != TopRegion->block_end(); ++bb) {
-    for (BasicBlock::iterator instruction = (*bb)->begin();
-         instruction != (*bb)->end(); ++instruction) {
-      if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction) ||
-          isa<CallInst>(instruction)) {
+  for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
+    for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
+      if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction) || isa<CallInst>(instruction)) {
 
         // NOTE: changed 'instruction' to '&*instruction'
-        string varName = determineVariableName_static(&*instruction,
-                                                      isGlobalVariable, false);
+        string varName = determineVariableName_static(&*instruction, isGlobalVariable, false);
 
         if (isGlobalVariable) // add it if it is a global variable in the
                               // program
@@ -449,13 +421,10 @@ void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion,
   }
 }
 
-void DiscoPoP::createTakenBranchInstrumentation(
-    Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap) {
+void DiscoPoP::createTakenBranchInstrumentation(Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap) {
   /* Create calls to count taken branches inbetween CUs during execution */
-  for (Region::block_iterator bb = TopRegion->block_begin();
-       bb != TopRegion->block_end(); ++bb) {
-    for (BasicBlock::iterator instruction = (*bb)->begin();
-         instruction != (*bb)->end(); ++instruction) {
+  for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
+    for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<BranchInst>(instruction)) {
         BranchInst *branchInst = cast<BranchInst>(instruction);
         // check for conditional branches, as unconditional ones can be ignored
@@ -469,19 +438,16 @@ void DiscoPoP::createTakenBranchInstrumentation(
           for (auto source_cu : BBIDToCUIDsMap[source_BBID]) {
             // get BBIds of all targets
             for (int i = 0; i < branchInst->getNumSuccessors(); i++) {
-              string successor_BBID =
-                  branchInst->getSuccessor(i)->getName().str();
+              string successor_BBID = branchInst->getSuccessor(i)->getName().str();
               // get CUs of all targets
               for (auto target_cu : BBIDToCUIDsMap[successor_BBID]) {
                 // add instrumentation prior to the branch instruction
                 vector<Value *> args;
                 string source_and_target = source_cu->ID + ";" + target_cu->ID;
-                args.push_back(
-                    getOrInsertVarName_dynamic(source_and_target, IRB));
+                args.push_back(getOrInsertVarName_dynamic(source_and_target, IRB));
                 args.push_back(branchInst->getCondition());
                 bool counter_active_on_cmp_value = (i == 0 ? 1 : 0);
-                args.push_back(
-                    ConstantInt::get(Int32, counter_active_on_cmp_value));
+                args.push_back(ConstantInt::get(Int32, counter_active_on_cmp_value));
                 IRB.CreateCall(DpTakenBranchCounterIncr, args);
               }
             }
@@ -492,12 +458,9 @@ void DiscoPoP::createTakenBranchInstrumentation(
   }
 }
 
-void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
-                         vector<CU *> &CUVector,
-                         map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root,
-                         LoopInfo &LI) {
-  const DataLayout *DL =
-      &ThisModule->getDataLayout(); // used to get data size of variables,
+void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
+                         map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI) {
+  const DataLayout *DL = &ThisModule->getDataLayout(); // used to get data size of variables,
   // pointers, structs etc.
   Node *currentNode = root;
   CU *cu;
@@ -510,8 +473,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
   map<Loop *, Node *> loopToNodeMap;
 
-  for (Region::block_iterator bb = TopRegion->block_begin();
-       bb != TopRegion->block_end(); ++bb) {
+  for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
 
     // Get the closest loop where bb lives in.
     // (loop == NULL) if bb is not in any loop.
@@ -536,14 +498,11 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
     } else {
       // end of loops. go to the parent of the loop. may have to jump several
       // nodes in case of nested loops
-      for (map<Loop *, Node *>::iterator it = loopToNodeMap.begin();
-           it != loopToNodeMap.end(); it++)
-        if (it->second ==
-            currentNode) // current node found in loop map jump to its parent.
+      for (map<Loop *, Node *>::iterator it = loopToNodeMap.begin(); it != loopToNodeMap.end(); it++)
+        if (it->second == currentNode) // current node found in loop map jump to its parent.
         {
           currentNode = currentNode->parentNode;
-          it = loopToNodeMap
-                   .begin(); // search the whole map again for current node
+          it = loopToNodeMap.begin();    // search the whole map again for current node
           if (it->second == currentNode) // due to it++ we need to check first
             // element of map ourself
             currentNode = currentNode->parentNode;
@@ -560,12 +519,10 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
     currentNode->childrenNodes.push_back(cu);
     vector<CU *> basicBlockCUVector;
     basicBlockCUVector.push_back(cu);
-    BBIDToCUIDsMap.insert(
-        pair<string, vector<CU *>>(bb->getName(), basicBlockCUVector));
+    BBIDToCUIDsMap.insert(pair<string, vector<CU *>>(bb->getName(), basicBlockCUVector));
     DILocalScope *scopeBuffer = NULL;
 
-    for (BasicBlock::iterator instruction = (*bb)->begin();
-         instruction != (*bb)->end(); ++instruction) {
+    for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       // NOTE: 'instruction' --> '&*instruction'
       lid = getLID(&*instruction, fileID);
       basicBlockName = bb->getName().str();
@@ -578,9 +535,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
 
           int scopeIsParentOfBuffer = 0;
           if (scopeBuffer) {
-            scopeIsParentOfBuffer =
-                (&*instruction)->getDebugLoc()->getScope() ==
-                scopeBuffer->getScope();
+            scopeIsParentOfBuffer = (&*instruction)->getDebugLoc()->getScope() == scopeBuffer->getScope();
           }
 
           if (scopeIsParentOfBuffer) {
@@ -591,8 +546,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             // different scopes in the source code.
 
             // create new CU if the old one contains any instruction
-            if ((!cu->readPhaseLineNumbers.empty()) ||
-                (!cu->writePhaseLineNumbers.empty()) ||
+            if ((!cu->readPhaseLineNumbers.empty()) || (!cu->writePhaseLineNumbers.empty()) ||
                 (!cu->returnInstructions.empty())) {
               cu->startLine = *(cu->instructionsLineNumbers.begin());
               cu->endLine = *(cu->instructionsLineNumbers.rbegin());
@@ -600,8 +554,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
               cu->basicBlockName = basicBlockName;
               CUVector.push_back(cu);
               suspiciousVariables.clear();
-              CU *temp =
-                  cu; // keep current CU to make a reference to the successor CU
+              CU *temp = cu; // keep current CU to make a reference to the successor CU
               cu = new CU;
 
               cu->BBID = bb->getName().str();
@@ -628,10 +581,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
         else if (isa<BranchInst>(instruction)) {
           if ((cast<BranchInst>(instruction))->isUnconditional()) {
             if ((cast<BranchInst>(instruction))->getNumSuccessors() == 1) {
-              BasicBlock *successorBB =
-                  (cast<BranchInst>(instruction))->getSuccessor(0);
-              for (BasicBlock::iterator innerInstruction = successorBB->begin();
-                   innerInstruction != successorBB->end(); ++innerInstruction) {
+              BasicBlock *successorBB = (cast<BranchInst>(instruction))->getSuccessor(0);
+              for (BasicBlock::iterator innerInstruction = successorBB->begin(); innerInstruction != successorBB->end();
+                   ++innerInstruction) {
                 if (isa<ReturnInst>(innerInstruction)) {
                   cu->returnInstructions.insert(lid);
                   break;
@@ -646,8 +598,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           Type *Ty = operand->getType();
           unsigned u = DL->getTypeSizeInBits(Ty);
           cu->writeDataSize += u;
-          varName =
-              determineVariableName_static(&*instruction, isGlobalVar, false);
+          varName = determineVariableName_static(&*instruction, isGlobalVar, false);
           varType = determineVariableType(&*instruction);
           suspiciousVariables.insert(varName);
           if (lid > 0)
@@ -657,8 +608,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           Type *Ty = instruction->getType();
           unsigned u = DL->getTypeSizeInBits(Ty);
           cu->readDataSize += u;
-          varName =
-              determineVariableName_static(&*instruction, isGlobalVar, false);
+          varName = determineVariableName_static(&*instruction, isGlobalVar, false);
           if (suspiciousVariables.count(varName)) {
             // VIOLATION OF CAUTIOUS PROPERTY
             // it is a load instruction which read the value of a global
@@ -680,8 +630,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             cu->basicBlockName = basicBlockName;
             CUVector.push_back(cu);
             suspiciousVariables.clear();
-            CU *temp =
-                cu; // keep current CU to make a reference to the successor CU
+            CU *temp = cu; // keep current CU to make a reference to the successor CU
             cu = new CU;
 
             cu->BBID = bb->getName().str();
@@ -695,8 +644,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
               cu->instructionsLineNumbers.insert(lid);
             }
           } else {
-            if (globalVariablesSet.count(varName) ||
-                programGlobalVariablesSet.count(varName)) {
+            if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName)) {
               if (lid > 0)
                 cu->readPhaseLineNumbers.insert(lid);
             }
@@ -706,37 +654,25 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           // is called
           CallInst *ci = cast<CallInst>(instruction);
           set<string> IOFunctions{
-              "fopen",       "fopen_s",        "freopen",     "freopen_s",
-              "fclose",      "fflush",         "setbuf",      "setvbuf",
-              "fwide",       "fread",          "fwrite",      "fgetc",
-              "getc",        "fgets",          "fputc",       "putc",
-              "fputs",       "getchar",        "gets",        "gets_s",
-              "putchar",     "puts",           "ungetc",      "fgetwc",
-              "getwc",       "fgetws",         "fputwc",      "putwc",
-              "fputws",      "getwchar",       "putwchar",    "ungetwc",
-              "scanf",       "fscanf",         "sscanf",      "scanf_s",
-              "fscanf_s",    "sscanf_s",       "vscanf",      "vfscanf",
-              "vsscanf",     "vscanf_s",       "vfscanf_s",   "vsscanf_s",
-              "printf",      "fprintf",        "sprintf",     "snprintf",
-              "printf_s",    "fprintf_s",      "sprintf_s",   "snprintf_s",
-              "vprintf",     "vfprintf",       "vsprintf",    "vsnprintf",
-              "vprintf_s",   "vfprintf_s",     "vsprintf_s",  "vsnprintf_s",
-              "wscanf",      "fwscanf",        "swscanf",     "wscanf_s",
-              "fwscanf_s",   "swscanf_s",      "vwscanf",     "vfwscanf",
-              "vswscanf",    "vwscanf_s",      "vfwscanf_s",  "vswscanf_s",
-              "wprintf",     "fwprintf",       "swprintf",    "wprintf_s",
-              "wprintf_s",   "swprintf_s",     "snwprintf_s", "vwprintf",
-              "vfwprintf",   "vswprintf",      "vwprintf_s",  "vfwprintf_s",
-              "vswprintf_s", "vsnwprintf_s",   "ftell",       "fgetpos",
-              "fseek",       "fsetpos",        "rewind",      "clearerr",
-              "feof",        "ferror",         "perror",      "remove",
-              "rename",      "tmpfile",        "tmpfile_s",   "tmpnam",
-              "tmpnam_s",    "__isoc99_fscanf"};
+              "fopen",       "fopen_s",      "freopen",    "freopen_s",      "fclose",    "fflush",     "setbuf",
+              "setvbuf",     "fwide",        "fread",      "fwrite",         "fgetc",     "getc",       "fgets",
+              "fputc",       "putc",         "fputs",      "getchar",        "gets",      "gets_s",     "putchar",
+              "puts",        "ungetc",       "fgetwc",     "getwc",          "fgetws",    "fputwc",     "putwc",
+              "fputws",      "getwchar",     "putwchar",   "ungetwc",        "scanf",     "fscanf",     "sscanf",
+              "scanf_s",     "fscanf_s",     "sscanf_s",   "vscanf",         "vfscanf",   "vsscanf",    "vscanf_s",
+              "vfscanf_s",   "vsscanf_s",    "printf",     "fprintf",        "sprintf",   "snprintf",   "printf_s",
+              "fprintf_s",   "sprintf_s",    "snprintf_s", "vprintf",        "vfprintf",  "vsprintf",   "vsnprintf",
+              "vprintf_s",   "vfprintf_s",   "vsprintf_s", "vsnprintf_s",    "wscanf",    "fwscanf",    "swscanf",
+              "wscanf_s",    "fwscanf_s",    "swscanf_s",  "vwscanf",        "vfwscanf",  "vswscanf",   "vwscanf_s",
+              "vfwscanf_s",  "vswscanf_s",   "wprintf",    "fwprintf",       "swprintf",  "wprintf_s",  "wprintf_s",
+              "swprintf_s",  "snwprintf_s",  "vwprintf",   "vfwprintf",      "vswprintf", "vwprintf_s", "vfwprintf_s",
+              "vswprintf_s", "vsnwprintf_s", "ftell",      "fgetpos",        "fseek",     "fsetpos",    "rewind",
+              "clearerr",    "feof",         "ferror",     "perror",         "remove",    "rename",     "tmpfile",
+              "tmpfile_s",   "tmpnam",       "tmpnam_s",   "__isoc99_fscanf"};
           if (ci) {
             if (ci->getCalledFunction()) {
               if (ci->getCalledFunction()->hasName()) {
-                if (find(IOFunctions.begin(), IOFunctions.end(),
-                         ci->getCalledFunction()->getName().str()) !=
+                if (find(IOFunctions.begin(), IOFunctions.end(), ci->getCalledFunction()->getName().str()) !=
                     IOFunctions.end()) {
                   // Called function performs FileIO
                   cu->performsFileIO = true;
@@ -761,8 +697,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
     suspiciousVariables.clear();
 
     // check for call instructions in current basic block
-    for (BasicBlock::iterator instruction = (*bb)->begin();
-         instruction != (*bb)->end(); ++instruction) {
+    for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       // Note: Don't create nodes for library functions (c++/llvm).
       LID lid = getLID(&*instruction, fileID);
       if (lid > 0) {
@@ -775,16 +710,14 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           if (f) {
             Function::iterator FI = f->begin();
             bool externalFunction = true;
-            for (Function::iterator FI = f->begin(), FE = f->end(); FI != FE;
-                 ++FI) {
+            for (Function::iterator FI = f->begin(), FE = f->end(); FI != FE; ++FI) {
               externalFunction = false;
               auto tempBI = FI->begin();
               if (DebugLoc dl = tempBI->getDebugLoc()) {
                 lid = to_string(dl->getLine());
               } else {
                 if (tempBI->getFunction()->getSubprogram())
-                  lid = to_string(
-                      tempBI->getFunction()->getSubprogram()->getLine());
+                  lid = to_string(tempBI->getFunction()->getSubprogram()->getLine());
                 else {
                   lid = "LineNotFound";
                 }
@@ -813,8 +746,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
             // have checked if f is not null here. Anyway, I (Mohammad) had to
             // bring the for loop inside to avoid the segmentation fault. If you
             // think it is not appropriate, find a solution for it. 14.2.2016
-            for (Function::arg_iterator it = f->arg_begin(); it != f->arg_end();
-                 it++) {
+            for (Function::arg_iterator it = f->arg_begin(); it != f->arg_end(); it++) {
               string type_str;
               raw_string_ostream rso(type_str);
               (it->getType())->print(rso);
@@ -837,8 +769,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
           CallGraphWrapperPass *CGWP = &(getAnalysis<CallGraphWrapperPass>());
           if (isRecursive(*f, CGWP->getCallGraph())) {
             int lid = getLID(&*instruction, fileID);
-            n->recursiveFunctionCall =
-                n->name + " " + dputil::decodeLID(lid) + ",";
+            n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
           }
 
           vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName().str()];
@@ -858,9 +789,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet,
   }
 }
 
-void DiscoPoP::fillCUVariables(Region *TopRegion,
-                               set<string> &globalVariablesSet,
-                               vector<CU *> &CUVector,
+void DiscoPoP::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
                                map<string, vector<CU *>> &BBIDToCUIDsMap) {
   int lid;
   string varName, varType, varDefLine;
@@ -869,10 +798,8 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
   const Instruction *TInst;
   string successorBB;
 
-  for (Region::block_iterator bb = TopRegion->block_begin();
-       bb != TopRegion->block_end(); ++bb) {
-    CU *lastCU = BBIDToCUIDsMap[bb->getName().str()]
-                     .back(); // get the last CU in the basic block
+  for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
+    CU *lastCU = BBIDToCUIDsMap[bb->getName().str()].back(); // get the last CU in the basic block
     // get all successor basic blocks for bb
     TInst = bb->getTerminator();
     for (unsigned i = 0, nSucc = TInst->getNumSuccessors(); i < nSucc; ++i) {
@@ -884,16 +811,14 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
     }
 
     auto bbCU = BBIDToCUIDsMap[bb->getName().str()].begin();
-    for (BasicBlock::iterator instruction = (*bb)->begin();
-         instruction != (*bb)->end(); ++instruction) {
+    for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction)) {
         // NOTE: changed 'instruction' to '&*instruction'
         lid = getLID(&*instruction, fileID);
         if (lid == 0)
           continue;
         // NOTE: changed 'instruction' to '&*instruction', next 2 lines
-        varName =
-            determineVariableName_static(&*instruction, isGlobalVar, false);
+        varName = determineVariableName_static(&*instruction, isGlobalVar, false);
         varType = determineVariableType(&*instruction);
 
         int index = isa<StoreInst>(&*instruction) ? 1 : 0;
@@ -902,22 +827,19 @@ void DiscoPoP::fillCUVariables(Region *TopRegion,
           variableType = variableType->getPointerElementType();
         }
 
-        string varSizeInBytes =
-            to_string(variableType->getScalarSizeInBits() / 8);
+        string varSizeInBytes = to_string(variableType->getScalarSizeInBits() / 8);
 
         varDefLine = determineVariableDefLine(&*instruction);
 
         bool readAccess = isa<LoadInst>(instruction);
         bool writeAccess = isa<StoreInst>(instruction);
 
-        Variable v(varName, varType, varDefLine, readAccess, writeAccess,
-                   varSizeInBytes);
+        Variable v(varName, varType, varDefLine, readAccess, writeAccess, varSizeInBytes);
 
         if (lid > (*bbCU)->endLine) {
           bbCU = next(bbCU, 1);
         }
-        if (globalVariablesSet.count(varName) ||
-            programGlobalVariablesSet.count(varName)) {
+        if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName)) {
           (*bbCU)->globalVariableNames.insert(v);
         } else {
           (*bbCU)->localVariableNames.insert(v);
@@ -1008,14 +930,12 @@ bool DiscoPoP::isRecursive(Function &F, CallGraph &CG) {
 
 // iterates over all functions in the module and calls 'instrument_function'
 // on suitable ones
-void DiscoPoP::instrument_module(
-    llvm::Module *module, map<string, string> *trueVarNamesFromMetadataMap) {
-  for (llvm::Module::iterator func_it = module->begin();
-       func_it != module->end(); ++func_it) {
+void DiscoPoP::instrument_module(llvm::Module *module, map<string, string> *trueVarNamesFromMetadataMap) {
+  for (llvm::Module::iterator func_it = module->begin(); func_it != module->end(); ++func_it) {
     llvm::Function *func = &(*func_it);
     std::string fn_name = func->getName().str();
-    if (func->isDeclaration() || (strcmp(fn_name.c_str(), "NULL") == 0) ||
-        fn_name.find("llvm") != std::string::npos || inlinedFunction(func)) {
+    if (func->isDeclaration() || (strcmp(fn_name.c_str(), "NULL") == 0) || fn_name.find("llvm") != std::string::npos ||
+        inlinedFunction(func)) {
       continue;
     }
     instrument_function(func, trueVarNamesFromMetadataMap);
@@ -1036,9 +956,7 @@ bool DiscoPoP::inlinedFunction(Function *F) {
 
 // iterates over all loops in a function and calls 'instrument_loop' for each
 // one
-void DiscoPoP::instrument_function(
-    llvm::Function *function,
-    map<string, string> *trueVarNamesFromMetadataMap) {
+void DiscoPoP::instrument_function(llvm::Function *function, map<string, string> *trueVarNamesFromMetadataMap) {
 
   // get the corresponding file id
   int32_t tmp_file_id;
@@ -1047,13 +965,10 @@ void DiscoPoP::instrument_function(
     return;
   }
 
-  llvm::LoopInfo &loop_info =
-      getAnalysis<llvm::LoopInfoWrapperPass>(*function).getLoopInfo();
+  llvm::LoopInfo &loop_info = getAnalysis<llvm::LoopInfoWrapperPass>(*function).getLoopInfo();
 
-  for (auto loop_it = loop_info.begin(); loop_it != loop_info.end();
-       ++loop_it) {
-    instrument_loop(*function, tmp_file_id, *loop_it, loop_info,
-                    trueVarNamesFromMetadataMap);
+  for (auto loop_it = loop_info.begin(); loop_it != loop_info.end(); ++loop_it) {
+    instrument_loop(*function, tmp_file_id, *loop_it, loop_info, trueVarNamesFromMetadataMap);
   }
 }
 
@@ -1061,9 +976,8 @@ void DiscoPoP::instrument_function(
 // suitable for reduction.
 // An entry is added to the 'loops_' vector and for each suitable instruction,
 // an entry is added to the 'instructions_' vector.
-void DiscoPoP::instrument_loop(
-    Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI,
-    map<string, string> *trueVarNamesFromMetadataMap) {
+void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI,
+                               map<string, string> *trueVarNamesFromMetadataMap) {
 
   auto loc = loop->getStartLoc();
   if (!dp_reduction_loc_exists(loc)) {
@@ -1087,8 +1001,7 @@ void DiscoPoP::instrument_loop(
 
   // call 'instrument_loop' on all its subloops
   auto const sub_loops = loop->getSubLoops();
-  for (auto loop_it = sub_loops.begin(); loop_it != sub_loops.end();
-       ++loop_it) {
+  for (auto loop_it = sub_loops.begin(); loop_it != sub_loops.end(); ++loop_it) {
     instrument_loop(F, file_id, *loop_it, LI, trueVarNamesFromMetadataMap);
   }
   // The key corresponds to the variable that is loaded / stored.
@@ -1102,8 +1015,7 @@ void DiscoPoP::instrument_loop(
     llvm::BasicBlock *const bb = basic_blocks[i];
 
     std::string bb_name = bb->getName().str();
-    if ((std::strncmp("for.inc", bb_name.c_str(), 7) == 0) ||
-        (std::strncmp("for.cond", bb_name.c_str(), 8) == 0)) {
+    if ((std::strncmp("for.inc", bb_name.c_str(), 7) == 0) || (std::strncmp("for.cond", bb_name.c_str(), 8) == 0)) {
       continue;
     }
 
@@ -1111,8 +1023,7 @@ void DiscoPoP::instrument_loop(
       llvm::Instruction *instr = &(*instr_it);
 
       auto opcode = instr->getOpcode();
-      if (opcode != llvm::Instruction::Store &&
-          opcode != llvm::Instruction::Load) {
+      if (opcode != llvm::Instruction::Store && opcode != llvm::Instruction::Load) {
         continue;
       }
 
@@ -1122,15 +1033,13 @@ void DiscoPoP::instrument_loop(
       llvm::Value *operand = dp_reduction_get_var(instr);
       if (operand) {
         std::map<llvm::Value *, llvm::Instruction *> *map_ptr =
-            (opcode == llvm::Instruction::Store) ? &store_instructions
-                                                 : &load_instructions;
+            (opcode == llvm::Instruction::Store) ? &store_instructions : &load_instructions;
         if (!map_ptr->insert(std::make_pair(operand, instr)).second) {
           if ((*map_ptr)[operand]) {
             llvm::DebugLoc new_loc = instr->getDebugLoc();
             llvm::DebugLoc old_loc = (*map_ptr)[operand]->getDebugLoc();
 
-            if (!dp_reduction_loc_exists(new_loc) ||
-                !dp_reduction_loc_exists(old_loc)) {
+            if (!dp_reduction_loc_exists(new_loc) || !dp_reduction_loc_exists(old_loc)) {
               (*map_ptr)[operand] = nullptr;
             } else if (new_loc.getLine() != old_loc.getLine()) {
               (*map_ptr)[operand] = nullptr;
@@ -1146,8 +1055,7 @@ void DiscoPoP::instrument_loop(
   // - a variable must not be read or written more than once
   // - the store instruction comes after the load instruction
   std::vector<instr_info_t> candidates;
-  for (auto it = load_instructions.begin(); it != load_instructions.end();
-       ++it) {
+  for (auto it = load_instructions.begin(); it != load_instructions.end(); ++it) {
     if (!it->second)
       continue;
 
@@ -1155,18 +1063,15 @@ void DiscoPoP::instrument_loop(
     if (it2 != store_instructions.end() && it2->second) {
       llvm::DebugLoc load_loc = it->second->getDebugLoc();
       llvm::DebugLoc store_loc = it2->second->getDebugLoc();
-      if (!dp_reduction_loc_exists(load_loc) ||
-          !dp_reduction_loc_exists(store_loc))
+      if (!dp_reduction_loc_exists(load_loc) || !dp_reduction_loc_exists(store_loc))
         continue;
       if (load_loc.getLine() > store_loc.getLine())
         continue;
-      if (load_loc.getLine() == loop_info.line_nr_ ||
-          store_loc.getLine() == loop_info.line_nr_)
+      if (load_loc.getLine() == loop_info.line_nr_ || store_loc.getLine() == loop_info.line_nr_)
         continue;
 
       if (loop_info.end_line == "LOOPENDNOTFOUND") {
-        errs() << "WARNING: Loop end not found! File: " << file_id
-               << " Function: " << F.getName()
+        errs() << "WARNING: Loop end not found! File: " << file_id << " Function: " << F.getName()
                << " Start line: " << loop_info.start_line << "\n";
         continue;
       }
@@ -1174,17 +1079,14 @@ void DiscoPoP::instrument_loop(
         continue;
 
       // Check if both load and store insts belong to the loop
-      if (load_loc.getLine() < loop_info.line_nr_ ||
-          load_loc.getLine() > std::stoul(loop_info.end_line))
+      if (load_loc.getLine() < loop_info.line_nr_ || load_loc.getLine() > std::stoul(loop_info.end_line))
         continue;
-      if (store_loc.getLine() < loop_info.line_nr_ ||
-          store_loc.getLine() > std::stoul(loop_info.end_line))
+      if (store_loc.getLine() < loop_info.line_nr_ || store_loc.getLine() > std::stoul(loop_info.end_line))
         continue;
 
       if (it->first->hasName()) {
         instr_info_t info;
-        info.var_name_ = dp_reduction_determineVariableName(
-            it->second, trueVarNamesFromMetadataMap);
+        info.var_name_ = dp_reduction_determineVariableName(it->second, trueVarNamesFromMetadataMap);
         info.loop_line_nr_ = loop_info.line_nr_;
         info.file_id_ = file_id;
         info.store_inst_ = llvm::dyn_cast<llvm::StoreInst>(it2->second);
@@ -1202,22 +1104,16 @@ void DiscoPoP::instrument_loop(
     string varTypeLoad = "SCALAR";
     llvm::DebugLoc loc = (candidate.load_inst_)->getDebugLoc();
 
-    varNameLoad = dp_reduction_determineVariableName(
-        candidate.load_inst_, trueVarNamesFromMetadataMap);
+    varNameLoad = dp_reduction_determineVariableName(candidate.load_inst_, trueVarNamesFromMetadataMap);
     varTypeLoad = dp_reduction_determineVariableType(candidate.load_inst_);
-    if (llvm::isa<llvm::GetElementPtrInst>(
-            candidate.load_inst_->getOperand(index))) {
-      if (varTypeLoad.find("ARRAY,") == std::string::npos ||
-          varNameLoad.find(".addr") == std::string::npos ||
+    if (llvm::isa<llvm::GetElementPtrInst>(candidate.load_inst_->getOperand(index))) {
+      if (varTypeLoad.find("ARRAY,") == std::string::npos || varNameLoad.find(".addr") == std::string::npos ||
           varTypeLoad.find("**") != std::string::npos) {
         continue;
-      } else if (varTypeLoad.find("ARRAY,") != std::string::npos ||
-                 varNameLoad.find(".addr") != std::string::npos ||
-                 varTypeLoad.find("STRUCT,") != std::string::npos ||
-                 varTypeLoad.find("**") != std::string::npos) {
+      } else if (varTypeLoad.find("ARRAY,") != std::string::npos || varNameLoad.find(".addr") != std::string::npos ||
+                 varTypeLoad.find("STRUCT,") != std::string::npos || varTypeLoad.find("**") != std::string::npos) {
         llvm::Instruction *load_instr = nullptr;
-        llvm::Instruction *instr = dp_reduction_get_reduction_instr(
-            candidate.store_inst_, &load_instr);
+        llvm::Instruction *instr = dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
         if (instr) {
           candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
           candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
@@ -1226,13 +1122,10 @@ void DiscoPoP::instrument_loop(
         }
       }
     } else {
-      if (varTypeLoad.find("ARRAY,") != std::string::npos ||
-          varNameLoad.find(".addr") != std::string::npos ||
-          varTypeLoad.find("STRUCT,") != std::string::npos ||
-          varTypeLoad.find("**") != std::string::npos) {
+      if (varTypeLoad.find("ARRAY,") != std::string::npos || varNameLoad.find(".addr") != std::string::npos ||
+          varTypeLoad.find("STRUCT,") != std::string::npos || varTypeLoad.find("**") != std::string::npos) {
         llvm::Instruction *load_instr = nullptr;
-        llvm::Instruction *instr = dp_reduction_get_reduction_instr(
-            candidate.store_inst_, &load_instr);
+        llvm::Instruction *instr = dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
         if (instr) {
           candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
           candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
@@ -1243,8 +1136,7 @@ void DiscoPoP::instrument_loop(
         }
       } else {
         llvm::Instruction *load_instr = nullptr;
-        llvm::Instruction *instr = dp_reduction_get_reduction_instr(
-            candidate.store_inst_, &load_instr);
+        llvm::Instruction *instr = dp_reduction_get_reduction_instr(candidate.store_inst_, &load_instr);
         if (instr) {
           candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
           candidate.operation_ = dp_reduction_get_char_for_opcode(instr);
@@ -1257,16 +1149,14 @@ void DiscoPoP::instrument_loop(
           string bbName = BB->getName().str();
 
           // Ignore loops. Only look for conditional blocks
-          if (bbName.find("if") != std::string::npos ||
-              bbName.find("for") != std::string::npos) {
+          if (bbName.find("if") != std::string::npos || bbName.find("for") != std::string::npos) {
             // e.g. in lulesh.cc: "if (domain.vdov(indx) != Real_t(0.)) { if (
             // dtf < dtcourant_tmp ) { dtcourant_tmp = dtf ; courant_elem  =
             // indx ; }}"
 
             // check if loaded value is used in the store instruction to prevent
             // "false positives"
-            if (check_value_usage(candidate.store_inst_->getValueOperand(),
-                                  cast<Value>(candidate.load_inst_))) {
+            if (check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_))) {
               candidate.operation_ = '>';
             } else {
               continue;
@@ -1281,8 +1171,7 @@ void DiscoPoP::instrument_loop(
   }
 }
 
-bool DiscoPoP::check_value_usage(llvm::Value *parentValue,
-                                 llvm::Value *searchedValue) {
+bool DiscoPoP::check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue) {
   // Return true, if searchedValue is used within the computation of parentValue
   if (parentValue == searchedValue) {
     return true;
@@ -1351,8 +1240,7 @@ unsigned DiscoPoP::dp_reduction_get_file_id(llvm::Function *func) {
       llvm::StringRef filename = di_loc->getFilename();
       llvm::StringRef directory = di_loc->getDirectory();
 
-      char *success =
-          realpath((directory.str() + "/" + filename.str()).c_str(), abs_path);
+      char *success = realpath((directory.str() + "/" + filename.str()).c_str(), abs_path);
       if (!success) {
         realpath(filename.str().c_str(), abs_path);
       }
@@ -1375,8 +1263,7 @@ unsigned DiscoPoP::dp_reduction_get_file_id(llvm::Function *func) {
 }
 
 // finds the previous use of 'val'
-llvm::Instruction *DiscoPoP::dp_reduction_get_prev_use(llvm::Instruction *instr,
-                                                       llvm::Value *val) {
+llvm::Instruction *DiscoPoP::dp_reduction_get_prev_use(llvm::Instruction *instr, llvm::Value *val) {
   if (!instr)
     return nullptr;
 
@@ -1402,19 +1289,16 @@ llvm::Value *DiscoPoP::dp_reduction_get_var_rec(llvm::Value *val) {
   if (!val)
     return nullptr;
 
-  if (llvm::isa<llvm::AllocaInst>(val) ||
-      llvm::isa<llvm::GlobalVariable>(val)) {
+  if (llvm::isa<llvm::AllocaInst>(val) || llvm::isa<llvm::GlobalVariable>(val)) {
     return val;
   }
   if (llvm::isa<llvm::GetElementPtrInst>(val)) {
-    llvm::GetElementPtrInst *elem_ptr_instr =
-        llvm::cast<llvm::GetElementPtrInst>(val);
+    llvm::GetElementPtrInst *elem_ptr_instr = llvm::cast<llvm::GetElementPtrInst>(val);
 
     // struct member reductions are not supported by OpenMP
     llvm::Value *points_to = dp_reduction_points_to_var(elem_ptr_instr);
     llvm::AllocaInst *a_instr = llvm::dyn_cast<llvm::AllocaInst>(points_to);
-    llvm::Type *type =
-        (a_instr) ? a_instr->getAllocatedType() : points_to->getType();
+    llvm::Type *type = (a_instr) ? a_instr->getAllocatedType() : points_to->getType();
     if (type->isStructTy()) {
       return nullptr;
     }
@@ -1439,12 +1323,10 @@ llvm::Value *DiscoPoP::dp_reduction_get_var(llvm::Instruction *instr) {
 // 'store_instr' (if such a reduction operation exists).
 // The parameter 'load_instr' will point to the load instruction that actually
 // loads the value (if such a load instruction exists).
-llvm::Instruction *
-DiscoPoP::dp_reduction_get_reduction_instr(llvm::Instruction *store_instr,
-                                           llvm::Instruction **load_instr) {
+llvm::Instruction *DiscoPoP::dp_reduction_get_reduction_instr(llvm::Instruction *store_instr,
+                                                              llvm::Instruction **load_instr) {
   // find the reduction operation for the source operand of the 'store_instr'
-  llvm::Instruction *reduction_instr =
-      dp_reduction_find_reduction_instr(store_instr->getOperand(0));
+  llvm::Instruction *reduction_instr = dp_reduction_find_reduction_instr(store_instr->getOperand(0));
   if (!reduction_instr) {
     return nullptr;
   }
@@ -1454,8 +1336,7 @@ DiscoPoP::dp_reduction_get_reduction_instr(llvm::Instruction *store_instr,
   llvm::Value *store_dst = dp_reduction_get_var_rec(store_instr->getOperand(1));
   if (store_dst) {
     std::vector<char> reduction_operations;
-    *load_instr = dp_reduction_get_load_instr(store_dst, reduction_instr,
-                                              reduction_operations);
+    *load_instr = dp_reduction_get_load_instr(store_dst, reduction_instr, reduction_operations);
     // { *, / } > { +, - } > { & } > { ^ } > { | }
     if (reduction_operations.size() > 1) {
       int order = dp_reduction_get_op_order(reduction_operations[0]);
@@ -1500,8 +1381,7 @@ Type *DiscoPoP::dp_reduction_pointsToStruct(PointerType *PTy) {
   return structType->getTypeID() == Type::StructTyID ? structType : NULL;
 }
 
-string DiscoPoP::findStructMemberName_static(MDNode *structNode, unsigned idx,
-                                             IRBuilder<> &builder) {
+string DiscoPoP::findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder) {
   assert(structNode);
   assert(structNode->getOperand(10));
   MDNode *memberListNodes = cast<MDNode>(structNode->getOperand(10));
@@ -1509,9 +1389,7 @@ string DiscoPoP::findStructMemberName_static(MDNode *structNode, unsigned idx,
     assert(memberListNodes->getOperand(idx));
     MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
     if (member->getOperand(3)) {
-      getOrInsertVarName_static(
-          dyn_cast<MDString>(member->getOperand(3))->getString().str(),
-          builder);
+      getOrInsertVarName_static(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
       return dyn_cast<MDString>(member->getOperand(3))->getString().str();
     }
   }
@@ -1519,8 +1397,7 @@ string DiscoPoP::findStructMemberName_static(MDNode *structNode, unsigned idx,
 }
 
 // returns the value that the GetElementPtrInst ultimately points to
-llvm::Value *
-DiscoPoP::dp_reduction_points_to_var(llvm::GetElementPtrInst *instr) {
+llvm::Value *DiscoPoP::dp_reduction_points_to_var(llvm::GetElementPtrInst *instr) {
   llvm::Value *points_to = nullptr;
   while (instr) {
     points_to = instr->getPointerOperand();
@@ -1531,10 +1408,8 @@ DiscoPoP::dp_reduction_points_to_var(llvm::GetElementPtrInst *instr) {
 
 // Finds the load instruction that actually loads the value from the address
 // 'load_val'.
-llvm::Instruction *
-DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val,
-                                      llvm::Instruction *cur_instr,
-                                      std::vector<char> &reduction_operations) {
+llvm::Instruction *DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val, llvm::Instruction *cur_instr,
+                                                         std::vector<char> &reduction_operations) {
   if (!load_val || !cur_instr)
     return nullptr;
   if (llvm::isa<llvm::LoadInst>(cur_instr)) {
@@ -1550,23 +1425,19 @@ DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val,
     llvm::Instruction *prev_use = dp_reduction_get_prev_use(cur_instr, val);
     if (prev_use) {
       if (llvm::isa<llvm::StoreInst>(prev_use)) {
-        return dp_reduction_get_load_instr(load_val, prev_use,
-                                           reduction_operations);
+        return dp_reduction_get_load_instr(load_val, prev_use, reduction_operations);
       } else if (llvm::isa<llvm::GetElementPtrInst>(prev_use)) {
-        llvm::GetElementPtrInst *ptr_instr =
-            llvm::cast<llvm::GetElementPtrInst>(prev_use);
+        llvm::GetElementPtrInst *ptr_instr = llvm::cast<llvm::GetElementPtrInst>(prev_use);
         llvm::Value *points_to = dp_reduction_points_to_var(ptr_instr);
         if (points_to == load_val) {
           return cur_instr;
         } else {
           bool found = static_cast<bool>(dp_reduction_get_load_instr(
-              load_val, llvm::dyn_cast<llvm::Instruction>(points_to),
-              reduction_operations));
+              load_val, llvm::dyn_cast<llvm::Instruction>(points_to), reduction_operations));
           return (found) ? cur_instr : nullptr;
         }
       } else {
-        bool found = static_cast<bool>(dp_reduction_get_load_instr(
-            load_val, prev_use, reduction_operations));
+        bool found = static_cast<bool>(dp_reduction_get_load_instr(load_val, prev_use, reduction_operations));
         return (found) ? cur_instr : nullptr;
       }
     } else {
@@ -1587,9 +1458,7 @@ DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val,
   for (unsigned int i = 0; i != cur_instr->getNumOperands(); ++i) {
     llvm::Value *operand = cur_instr->getOperand(i);
     if (llvm::isa<llvm::Instruction>(operand)) {
-      result = dp_reduction_get_load_instr(
-          load_val, llvm::cast<llvm::Instruction>(operand),
-          reduction_operations);
+      result = dp_reduction_get_load_instr(load_val, llvm::cast<llvm::Instruction>(operand), reduction_operations);
       if (result) {
         break;
       }
@@ -1605,8 +1474,7 @@ DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val,
 
 // returns the reduction instruction where 'val' is the operand if it can find
 // such an operation
-llvm::Instruction *
-DiscoPoP::dp_reduction_find_reduction_instr(llvm::Value *val) {
+llvm::Instruction *DiscoPoP::dp_reduction_find_reduction_instr(llvm::Value *val) {
   if (!val || !llvm::isa<llvm::Instruction>(val)) {
     return nullptr;
   }
@@ -1616,8 +1484,7 @@ DiscoPoP::dp_reduction_find_reduction_instr(llvm::Value *val) {
   if (c != ' ') {
     return instr;
   } else if (opcode == llvm::Instruction::Load) {
-    llvm::Instruction *prev_use =
-        dp_reduction_get_prev_use(instr, instr->getOperand(0));
+    llvm::Instruction *prev_use = dp_reduction_get_prev_use(instr, instr->getOperand(0));
     return dp_reduction_find_reduction_instr(prev_use);
   } else if (opcode == llvm::Instruction::Store) {
     return dp_reduction_find_reduction_instr(instr->getOperand(0));
@@ -1632,8 +1499,7 @@ DiscoPoP::dp_reduction_find_reduction_instr(llvm::Value *val) {
   return nullptr;
 }
 
-string DiscoPoP::dp_reduction_determineVariableName(
-    Instruction *I, map<string, string> *trueVarNamesFromMetadataMap) {
+string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, string> *trueVarNamesFromMetadataMap) {
 
   assert(I && "Instruction cannot be NULL \n");
   int index = isa<StoreInst>(I) ? 1 : 0;
@@ -1643,8 +1509,7 @@ string DiscoPoP::dp_reduction_determineVariableName(
 
   if (operand == NULL) {
     string retVal = getOrInsertVarName_static("", builder);
-    if (trueVarNamesFromMetadataMap->find(retVal) ==
-        trueVarNamesFromMetadataMap->end()) {
+    if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
       return retVal; // not found
     } else {
       return (*trueVarNamesFromMetadataMap)[retVal]; // found
@@ -1655,8 +1520,7 @@ string DiscoPoP::dp_reduction_determineVariableName(
     //// we've found a global variable
     if (isa<GlobalVariable>(*operand)) {
       string retVal = string(operand->getName());
-      if (trueVarNamesFromMetadataMap->find(retVal) ==
-          trueVarNamesFromMetadataMap->end()) {
+      if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
         return retVal; // not found
       } else {
         return (*trueVarNamesFromMetadataMap)[retVal]; // found
@@ -1678,20 +1542,17 @@ string DiscoPoP::dp_reduction_determineVariableName(
             string strName(structType->getStructName().data());
             map<string, MDNode *>::iterator it = Structs.find(strName);
             if (it != Structs.end()) {
-              std::string ret =
-                  findStructMemberName_static(it->second, memberIdx, builder);
+              std::string ret = findStructMemberName_static(it->second, memberIdx, builder);
               if (ret.size() > 0) {
                 string retVal = ret;
-                if (trueVarNamesFromMetadataMap->find(retVal) ==
-                    trueVarNamesFromMetadataMap->end()) {
+                if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
                   return retVal; // not found
                 } else {
                   return (*trueVarNamesFromMetadataMap)[retVal]; // found
                 }
               } else {
                 string retVal = getOrInsertVarName_static("", builder);
-                if (trueVarNamesFromMetadataMap->find(retVal) ==
-                    trueVarNamesFromMetadataMap->end()) {
+                if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
                   return retVal; // not found
                 } else {
                   return (*trueVarNamesFromMetadataMap)[retVal]; // found
@@ -1703,17 +1564,13 @@ string DiscoPoP::dp_reduction_determineVariableName(
       }
 
       // we've found an array
-      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID &&
-          isa<GetElementPtrInst>(*ptrOperand)) {
-        return dp_reduction_determineVariableName((Instruction *)ptrOperand,
-                                                  trueVarNamesFromMetadataMap);
+      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
+        return dp_reduction_determineVariableName((Instruction *)ptrOperand, trueVarNamesFromMetadataMap);
       }
-      return dp_reduction_determineVariableName((Instruction *)gep,
-                                                trueVarNamesFromMetadataMap);
+      return dp_reduction_determineVariableName((Instruction *)gep, trueVarNamesFromMetadataMap);
     }
     string retVal = string(operand->getName().data());
-    if (trueVarNamesFromMetadataMap->find(retVal) ==
-        trueVarNamesFromMetadataMap->end()) {
+    if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
       return retVal; // not found
     } else {
       return (*trueVarNamesFromMetadataMap)[retVal]; // found
@@ -1721,8 +1578,7 @@ string DiscoPoP::dp_reduction_determineVariableName(
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
-    return dp_reduction_determineVariableName((Instruction *)(operand),
-                                              trueVarNamesFromMetadataMap);
+    return dp_reduction_determineVariableName((Instruction *)(operand), trueVarNamesFromMetadataMap);
   }
   // if we cannot determine the name, then return *
   return "*";
@@ -1767,8 +1623,7 @@ string DiscoPoP::dp_reduction_determineVariableType(Instruction *I) {
   return s;
 }
 
-std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L,
-                                       int file_id) {
+std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) {
   std::string lid = "LOOPENDNOTFOUND";
   SmallVector<BasicBlock *, 8> ExitBlocks;
   for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE; ++BB) {
@@ -1801,14 +1656,10 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L,
       // successors of the break statement(s).
       SmallVector<BasicBlock *, 4> RealExitBlocks;
 
-      for (SmallVectorImpl<BasicBlock *>::iterator EI = ExitBlocks.begin(),
-                                                   END = ExitBlocks.end();
-           EI != END; ++EI) {
+      for (SmallVectorImpl<BasicBlock *>::iterator EI = ExitBlocks.begin(), END = ExitBlocks.end(); EI != END; ++EI) {
         StringRef exitType = (*EI)->getName().split('.').first;
-        if (exitType.equals(loopType) &&
-            ((*EI)->getName().find("end") != string::npos) &&
-            (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), *EI) ==
-             RealExitBlocks.end())) {
+        if (exitType.equals(loopType) && ((*EI)->getName().find("end") != string::npos) &&
+            (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), *EI) == RealExitBlocks.end())) {
           RealExitBlocks.push_back(*EI);
         } else {
           // Changed TerminatorInst to Instruction
@@ -1818,10 +1669,8 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L,
           for (unsigned int i = 0; i < numSucc; ++i) {
             BasicBlock *succ = TI->getSuccessor(i);
             exitType = succ->getName().split('.').first;
-            if (exitType.equals(loopType) &&
-                (succ->getName().find("end") != string::npos) &&
-                (std::find(RealExitBlocks.begin(), RealExitBlocks.end(),
-                           succ) == RealExitBlocks.end())) {
+            if (exitType.equals(loopType) && (succ->getName().find("end") != string::npos) &&
+                (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), succ) == RealExitBlocks.end())) {
               RealExitBlocks.push_back(succ);
             }
           }
@@ -1834,26 +1683,21 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L,
 
       // Check if entry block and exit block(s) have valid LID.
       bool hasValidExit = false;
-      for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(),
-                                                   END = RealExitBlocks.end();
-           EI != END; ++EI) {
+      for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
+           ++EI) {
         hasValidExit = dp_reduction_sanityCheck(*EI, file_id);
         if (hasValidExit == true)
           break;
       }
 
       if (hasValidExit) {
-        for (SmallVectorImpl<BasicBlock *>::iterator
-                 EI = RealExitBlocks.begin(),
-                 END = RealExitBlocks.end();
-             EI != END; ++EI) {
+        for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
+             ++EI) {
           BasicBlock *currentBB = *EI;
           vector<Value *> args;
           LID lid = 0;
 
-          for (BasicBlock::iterator BI = currentBB->begin(),
-                                    EI = currentBB->end();
-               BI != EI; ++BI) {
+          for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
             lid = dp_reduction_getLID(&*BI, file_id);
             uint64_t ulid = (uint64_t)lid;
             if (ulid != 0) {
@@ -1931,8 +1775,7 @@ char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction *instr) {
     if (instr->getNumOperands() >= 1) {
       Value *rhs_value = instr->getOperand(1);
       if (isa<ConstantInt>(rhs_value)) {
-        operand_is_negative_constant =
-            cast<ConstantInt>(rhs_value)->isNegative();
+        operand_is_negative_constant = cast<ConstantInt>(rhs_value)->isNegative();
       }
     }
 
@@ -1946,8 +1789,7 @@ char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction *instr) {
     if (instr->getNumOperands() >= 1) {
       Value *rhs_value = instr->getOperand(1);
       if (isa<ConstantInt>(rhs_value)) {
-        operand_is_negative_constant =
-            cast<ConstantInt>(rhs_value)->isNegative();
+        operand_is_negative_constant = cast<ConstantInt>(rhs_value)->isNegative();
       }
     }
 
@@ -1968,8 +1810,7 @@ char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction *instr) {
 }
 
 // return true if 'operand' is an operand of the instruction 'instr'
-bool DiscoPoP::dp_reduction_is_operand(llvm::Instruction *instr,
-                                       llvm::Value *operand) {
+bool DiscoPoP::dp_reduction_is_operand(llvm::Instruction *instr, llvm::Value *operand) {
   unsigned num_operands = instr->getNumOperands();
   for (unsigned i = 0; i < num_operands; ++i) {
     if (instr->getOperand(i) == operand)
@@ -2001,17 +1842,14 @@ void DiscoPoP::dp_reduction_insert_functions() {
   int loop_id = 1;
   llvm::Type *loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ctx_);
   llvm::ArrayRef<llvm::Type *> loop_incr_fn_args(loop_incr_fn_arg_type);
-  llvm::FunctionType *loop_incr_fn_type = llvm::FunctionType::get(
-      llvm::Type::getVoidTy(*ctx_), loop_incr_fn_args, false);
-  FunctionCallee incr_loop_counter_callee =
-      module_->getOrInsertFunction("__dp_loop_incr", loop_incr_fn_type);
+  llvm::FunctionType *loop_incr_fn_type =
+      llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), loop_incr_fn_args, false);
+  FunctionCallee incr_loop_counter_callee = module_->getOrInsertFunction("__dp_loop_incr", loop_incr_fn_type);
 
   for (auto const &loop_info : loops_) {
-    llvm::Value *val =
-        llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_id);
+    llvm::Value *val = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_id);
     llvm::ArrayRef<llvm::Value *> args(val);
-    llvm::CallInst::Create(incr_loop_counter_callee, args, "",
-                           loop_info.first_body_instr_);
+    llvm::CallInst::Create(incr_loop_counter_callee, args, "", loop_info.first_body_instr_);
     loop_metadata_file << loop_info.file_id_ << " ";
     loop_metadata_file << loop_id++ << " ";
     loop_metadata_file << loop_info.line_nr_ << "\n";
@@ -2020,17 +1858,13 @@ void DiscoPoP::dp_reduction_insert_functions() {
 
   // add a function to output the final data
   // dp_loop_output
-  llvm::FunctionType *output_fn_type =
-      llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), false);
-  FunctionCallee loop_counter_output_callee =
-      module_->getOrInsertFunction("__dp_loop_output", output_fn_type);
+  llvm::FunctionType *output_fn_type = llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), false);
+  FunctionCallee loop_counter_output_callee = module_->getOrInsertFunction("__dp_loop_output", output_fn_type);
   FunctionCallee cu_taken_branch_counter_output_callee =
-      module_->getOrInsertFunction("__dp_taken_branch_counter_output",
-                                   output_fn_type);
+      module_->getOrInsertFunction("__dp_taken_branch_counter_output", output_fn_type);
   llvm::Function *main_fn = module_->getFunction("main");
   if (main_fn) {
-    for (auto it = llvm::inst_begin(main_fn); it != llvm::inst_end(main_fn);
-         ++it) {
+    for (auto it = llvm::inst_begin(main_fn); it != llvm::inst_end(main_fn); ++it) {
       if (llvm::isa<llvm::ReturnInst>(&(*it))) {
         llvm::IRBuilder<> ir_builder(&(*it));
         ir_builder.CreateCall(loop_counter_output_callee);
@@ -2049,8 +1883,7 @@ void DiscoPoP::dp_reduction_insert_functions() {
 
 // Helper functions
 bool DiscoPoP::isaCallOrInvoke(Instruction *BI) {
-  return (BI != NULL) && ((isa<CallInst>(BI) && (!isa<DbgDeclareInst>(BI))) ||
-                          isa<InvokeInst>(BI));
+  return (BI != NULL) && ((isa<CallInst>(BI) && (!isa<DbgDeclareInst>(BI))) || isa<InvokeInst>(BI));
 }
 
 bool DiscoPoP::sanityCheck(BasicBlock *BB) {
@@ -2083,8 +1916,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
     if (L != NULL && LI.isLoopHeader(tmpBB)) {
       StringRef loopType = tmpBB->getName().split('.').first;
       if (DP_DEBUG) {
-        errs() << "loop [" << loopType << "] header: " << tmpBB->getName()
-               << "\n";
+        errs() << "loop [" << loopType << "] header: " << tmpBB->getName() << "\n";
       }
 
       // If tmpBB is the header block, get the exit blocks of the loop.
@@ -2097,8 +1929,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
       }
 
       if (ExitBlocks.size() == 0) {
-        errs() << "WARNING: loop at " << tmpBB
-               << " is ignored: exit BB not found.\n";
+        errs() << "WARNING: loop at " << tmpBB << " is ignored: exit BB not found.\n";
         continue;
       }
 
@@ -2110,14 +1941,10 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
       if (DP_DEBUG) {
         errs() << "loop exits:";
       }
-      for (SmallVectorImpl<BasicBlock *>::iterator EI = ExitBlocks.begin(),
-                                                   END = ExitBlocks.end();
-           EI != END; ++EI) {
+      for (SmallVectorImpl<BasicBlock *>::iterator EI = ExitBlocks.begin(), END = ExitBlocks.end(); EI != END; ++EI) {
         StringRef exitType = (*EI)->getName().split('.').first;
-        if (exitType.equals(loopType) &&
-            ((*EI)->getName().find("end") != string::npos) &&
-            (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), *EI) ==
-             RealExitBlocks.end())) {
+        if (exitType.equals(loopType) && ((*EI)->getName().find("end") != string::npos) &&
+            (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), *EI) == RealExitBlocks.end())) {
           RealExitBlocks.push_back(*EI);
           if (DP_DEBUG) {
             errs() << " " << (*EI)->getName();
@@ -2130,10 +1957,8 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
           for (unsigned int i = 0; i < numSucc; ++i) {
             BasicBlock *succ = TI->getSuccessor(i);
             exitType = succ->getName().split('.').first;
-            if (exitType.equals(loopType) &&
-                (succ->getName().find("end") != string::npos) &&
-                (std::find(RealExitBlocks.begin(), RealExitBlocks.end(),
-                           succ) == RealExitBlocks.end())) {
+            if (exitType.equals(loopType) && (succ->getName().find("end") != string::npos) &&
+                (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), succ) == RealExitBlocks.end())) {
               RealExitBlocks.push_back(succ);
               if (DP_DEBUG) {
                 errs() << " " << succ->getName();
@@ -2150,8 +1975,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
       // exit block!");
       if (RealExitBlocks.size() == 0) {
         if (DP_VERBOSE) {
-          errs() << "WARNING: loop at " << tmpBB
-                 << " is ignored: exit blocks are not well formed.\n";
+          errs() << "WARNING: loop at " << tmpBB << " is ignored: exit blocks are not well formed.\n";
         }
         continue;
       }
@@ -2159,9 +1983,8 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
       // Check if entry block and exit block(s) have valid LID.
       bool hasValidEntry = sanityCheck(tmpBB);
       bool hasValidExit = false;
-      for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(),
-                                                   END = RealExitBlocks.end();
-           EI != END; ++EI) {
+      for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
+           ++EI) {
         hasValidExit = sanityCheck(*EI);
         if (hasValidExit == true)
           break;
@@ -2172,10 +1995,8 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
         instrumentLoopEntry(tmpBB, loopID);
 
         // Instrument loop exit block(s).
-        for (SmallVectorImpl<BasicBlock *>::iterator
-                 EI = RealExitBlocks.begin(),
-                 END = RealExitBlocks.end();
-             EI != END; ++EI) {
+        for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
+             ++EI) {
           instrumentLoopExit(*EI, loopID);
         }
         ++loopID;
@@ -2186,7 +2007,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
 
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M) {
-  //cout << "MODULE " << M.getName().str() << "\n";
+  // cout << "MODULE " << M.getName().str() << "\n";
 
   long counter = 0;
   // cout << "\tFUNCTION:\n";
@@ -2242,11 +2063,11 @@ bool DiscoPoP::runOnModule(Module &M) {
 
 bool DiscoPoP::runOnFunction(Function &F) {
   if (DP_DEBUG) {
-    errs() << "pass DiscoPoP: run pass on function " << F.getName().str()
-           << "\n";
+    errs() << "pass DiscoPoP: run pass on function " << F.getName().str() << "\n";
   }
 
-  // avoid instrumenting functions which are defined outside the scope of the project
+  // avoid instrumenting functions which are defined outside the scope of the
+  // project
   std::string dp_project_dir(getenv("DP_PROJECT_ROOT_DIR"));
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   F.getAllMetadata(MDs);
@@ -2255,7 +2076,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
     if (MDNode *N = MD.second) {
       if (auto *subProgram = dyn_cast<DISubprogram>(N)) {
         std::string fullFileName = "";
-        if(subProgram->getDirectory().str().length() > 0){
+        if (subProgram->getDirectory().str().length() > 0) {
           fullFileName += subProgram->getDirectory().str();
           fullFileName += "/";
         }
@@ -2267,7 +2088,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
       }
     }
   }
-  if (!funcDefinedInProject){
+  if (!funcDefinedInProject) {
     return false;
   }
 
@@ -2296,7 +2117,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
   if (funcName.find("pthread_") != string::npos) {
     return false;
   }
-  
+
   vector<CU *> CUVector;
   set<string> globalVariablesSet; // list of variables which appear in more than
   // one basic block
@@ -2334,8 +2155,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
       while (variableType->isPointerTy()) {
         variableType = variableType->getPointerElementType();
       }
-      Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid,
-                 true, true,
+      Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true,
                  to_string(variableType->getScalarSizeInBits() / 8));
       root->argumentsList.push_back(v);
     }
@@ -2354,8 +2174,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
     populateGlobalVariablesSet(TopRegion, globalVariablesSet);
 
-    createCUs(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, root,
-              LI);
+    createCUs(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, root, LI);
 
     if (DP_BRANCH_TRACKING) {
       createTakenBranchInstrumentation(TopRegion, BBIDToCUIDsMap);
@@ -2407,12 +2226,19 @@ bool DiscoPoP::runOnFunction(Function &F) {
   {
     if (F.getInstructionCount() == 0)
       return false;
-    if (DP_hybrid_SKIP) {
-      return true;
-    }
+
+// Enable / Disable hybrid profiling
+#ifndef DP_HYBRID_PROFILING
+#define DP_HYBRID_PROFILING 1
+#endif
+
+#if DP_HYBRID_PROFILING == 0
+    return true;
+#endif
+    /////
+
     if (DP_hybrid_DEBUG)
-      errs() << "\n---------- Omission Analysis on " << F.getName()
-             << " ----------\n";
+      errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
 
     DebugLoc dl;
     Value *V;
@@ -2432,15 +2258,12 @@ bool DiscoPoP::runOnFunction(Function &F) {
         // other functions (by ref/ptr)
         if (CallInst *call_inst = dyn_cast<CallInst>(&I)) {
           if (Function *Fun = call_inst->getCalledFunction()) {
-            if (Fun->getName() == "__dp_write" ||
-                Fun->getName() == "__dp_read" ||
-                Fun->getName() == "__dp_alloca") {
+            if (Fun->getName() == "__dp_write" || Fun->getName() == "__dp_read" || Fun->getName() == "__dp_alloca") {
               ++totalInstrumentations;
             }
             for (uint i = 0; i < call_inst->getNumOperands() - 1; ++i) {
               V = call_inst->getArgOperand(i);
-              std::set<Value *>::iterator it =
-                  staticallyPredictableValues.find(V);
+              std::set<Value *>::iterator it = staticallyPredictableValues.find(V);
               if (it != staticallyPredictableValues.end()) {
                 staticallyPredictableValues.erase(V);
                 if (DP_hybrid_DEBUG)
@@ -2463,9 +2286,8 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
     // assign static memory region IDs to statically predictable values and thus
     // dependencies
-    unordered_map<string, pair<string, string>>
-        staticValueNameToMemRegIDMap; // <SSA variable name>: (original variable
-                                      // name, statically assigned MemReg ID)
+    unordered_map<string, pair<string, string>> staticValueNameToMemRegIDMap; // <SSA variable name>: (original variable
+                                                                              // name, statically assigned MemReg ID)
     bool tmpIsGlobal;
     long next_id;
     string llvmIRVarName;
@@ -2485,8 +2307,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         originalVarName = llvmIRVarName;
       }
       staticMemoryRegionID = "S" + to_string(next_id);
-      staticValueNameToMemRegIDMap[llvmIRVarName] =
-          pair<string, string>(originalVarName, staticMemoryRegionID);
+      staticValueNameToMemRegIDMap[llvmIRVarName] = pair<string, string>(originalVarName, staticMemoryRegionID);
     }
 
     if (DP_hybrid_DEBUG) {
@@ -2514,8 +2335,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
       if (isa<AllocaInst>(Dst))
         V = dyn_cast<Value>(Dst);
 
-      if (staticallyPredictableValues.find(V) ==
-          staticallyPredictableValues.end())
+      if (staticallyPredictableValues.find(V) == staticallyPredictableValues.end())
         continue;
 
       if (Src != Dst && DT.dominates(Dst, Src)) {
@@ -2523,15 +2343,13 @@ bool DiscoPoP::runOnFunction(Function &F) {
           set<string> tmp;
           conditionalBBDepMap[Src->getParent()] = tmp;
         }
-        conditionalBBDepMap[Src->getParent()].insert(
-            DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap));
+        conditionalBBDepMap[Src->getParent()].insert(DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap));
       } else {
         if (!conditionalBBPairDepMap.count(Dst->getParent())) {
           map<BasicBlock *, set<string>> tmp;
           conditionalBBPairDepMap[Dst->getParent()] = tmp;
         }
-        if (!conditionalBBPairDepMap[Dst->getParent()].count(
-                Src->getParent())) {
+        if (!conditionalBBPairDepMap[Dst->getParent()].count(Src->getParent())) {
           set<string> tmp;
           conditionalBBPairDepMap[Dst->getParent()][Src->getParent()] = tmp;
         }
@@ -2548,8 +2366,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         continue;
       V = node->getItem()->getOperand(isa<StoreInst>(node->getItem()) ? 1 : 0);
       if (!DG.getInEdges(node).size() && !DG.getOutEdges(node).size() &&
-          staticallyPredictableValues.find(V) !=
-              staticallyPredictableValues.end())
+          staticallyPredictableValues.find(V) != staticallyPredictableValues.end())
         omittableInstructions.insert(node->getItem());
     }
 
@@ -2560,8 +2377,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
       if (isa<ReturnInst>(pair.first->getTerminator())) {
         insertionPoint = insertionPoint->getPrevNonDebugInstruction();
       }
-      auto CI = CallInst::Create(ReportBB, ConstantInt::get(Int32, bbDepCount),
-                                 "", insertionPoint);
+      auto CI = CallInst::Create(ReportBB, ConstantInt::get(Int32, bbDepCount), "", insertionPoint);
 
       // ---- Insert deps into string ----
       if (bbDepCount)
@@ -2581,11 +2397,8 @@ bool DiscoPoP::runOnFunction(Function &F) {
     // Add observation of in-order execution of pairs of basic blocks
     for (auto pair1 : conditionalBBPairDepMap) {
       // Alloca and init semaphore var for BB
-      auto AI = new AllocaInst(
-          Int32, 0, "__dp_bb",
-          F.getEntryBlock().getFirstNonPHI()->getNextNonDebugInstruction());
-      new StoreInst(ConstantInt::get(Int32, 0), AI, false,
-                    AI->getNextNonDebugInstruction());
+      auto AI = new AllocaInst(Int32, 0, "__dp_bb", F.getEntryBlock().getFirstNonPHI()->getNextNonDebugInstruction());
+      new StoreInst(ConstantInt::get(Int32, 0), AI, false, AI->getNextNonDebugInstruction());
 
       for (auto pair2 : pair1.second) {
         // Insert check for semaphore
@@ -2613,8 +2426,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         ++bbDepCount;
       }
       // Insert semaphore update to true
-      new StoreInst(ConstantInt::get(Int32, 1), AI, false,
-                    pair1.first->getTerminator());
+      new StoreInst(ConstantInt::get(Int32, 1), AI, false, pair1.first->getTerminator());
     }
 
     if (DumpToDot) {
@@ -2648,11 +2460,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
         for (Instruction &I : BB) {
           if (!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I))
             continue;
-          errs() << "\t"
-                 << (isa<StoreInst>(I)
-                         ? "Write "
-                         : (isa<AllocaInst>(I) ? "Alloca " : "Read "))
-                 << " | ";
+          errs() << "\t" << (isa<StoreInst>(I) ? "Write " : (isa<AllocaInst>(I) ? "Alloca " : "Read ")) << " | ";
           if (dl = I.getDebugLoc()) {
             errs() << dl.getLine() << "," << dl.getCol();
           } else {
@@ -2734,16 +2542,14 @@ void DiscoPoP::collectDebugInfo() {
 
 DIGlobalVariable *DiscoPoP::findDbgGlobalDeclare(GlobalVariable *v) {
   assert(v && "Global variable cannot be null");
-  for (set<DIGlobalVariable *>::iterator it = GlobalVars.begin();
-       it != GlobalVars.end(); ++it) {
+  for (set<DIGlobalVariable *>::iterator it = GlobalVars.begin(); it != GlobalVars.end(); ++it) {
     if ((*it)->getDisplayName() == v->getName())
       return *it;
   }
   return NULL;
 }
 
-string DiscoPoP::getOrInsertVarName_static(string varName,
-                                           IRBuilder<> &builder) {
+string DiscoPoP::getOrInsertVarName_static(string varName, IRBuilder<> &builder) {
   Value *valName = NULL;
   std::string vName = varName;
   map<string, Value *>::iterator pair = VarNames.find(varName);
@@ -2758,12 +2564,10 @@ string DiscoPoP::getOrInsertVarName_static(string varName,
   return vName;
 }
 
-Value *DiscoPoP::getOrInsertVarName_dynamic(string varName,
-                                            IRBuilder<> &builder) {
+Value *DiscoPoP::getOrInsertVarName_dynamic(string varName, IRBuilder<> &builder) {
   // 26.08.2022 Lukas
   // update varName with original varName from Metadata
-  if (trueVarNamesFromMetadataMap.find(varName) ==
-      trueVarNamesFromMetadataMap.end()) {
+  if (trueVarNamesFromMetadataMap.find(varName) == trueVarNamesFromMetadataMap.end()) {
     // not found, do nothing
   } else {
     // found, update varName
@@ -2781,8 +2585,7 @@ Value *DiscoPoP::getOrInsertVarName_dynamic(string varName,
   return vName;
 }
 
-Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx,
-                                      IRBuilder<> &builder) {
+Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder) {
   assert(structNode);
   assert(structNode->getOperand(10));
   MDNode *memberListNodes = cast<MDNode>(structNode->getOperand(10));
@@ -2790,9 +2593,7 @@ Value *DiscoPoP::findStructMemberName(MDNode *structNode, unsigned idx,
     assert(memberListNodes->getOperand(idx));
     MDNode *member = cast<MDNode>(memberListNodes->getOperand(idx));
     if (member->getOperand(3)) {
-      return getOrInsertVarName_dynamic(
-          dyn_cast<MDString>(member->getOperand(3))->getString().str(),
-          builder);
+      return getOrInsertVarName_dynamic(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
     }
   }
   return NULL;
@@ -2809,9 +2610,8 @@ Type *DiscoPoP::pointsToStruct(PointerType *PTy) {
   return structType->getTypeID() == Type::StructTyID ? structType : NULL;
 }
 
-string DiscoPoP::determineVariableName_static(
-    Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/,
-    bool disable_MetadataMap) {
+string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/,
+                                              bool disable_MetadataMap) {
 
   assert(I && "Instruction cannot be NULL \n");
   int index = isa<StoreInst>(I) ? 1 : 0;
@@ -2821,9 +2621,7 @@ string DiscoPoP::determineVariableName_static(
 
   if (operand == NULL) {
     string retVal = getOrInsertVarName_static("", builder);
-    if (trueVarNamesFromMetadataMap.find(retVal) ==
-            trueVarNamesFromMetadataMap.end() ||
-        disable_MetadataMap) {
+    if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
       return retVal; // not found
     } else {
       return trueVarNamesFromMetadataMap[retVal]; // found
@@ -2836,9 +2634,7 @@ string DiscoPoP::determineVariableName_static(
       // MOHAMMAD ADDED THIS FOR CHECKING
       isGlobalVariable = true;
       string retVal = string(operand->getName());
-      if (trueVarNamesFromMetadataMap.find(retVal) ==
-              trueVarNamesFromMetadataMap.end() ||
-          disable_MetadataMap) {
+      if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
         return retVal; // not found
       } else {
         return trueVarNamesFromMetadataMap[retVal]; // found
@@ -2860,12 +2656,10 @@ string DiscoPoP::determineVariableName_static(
             string strName(structType->getStructName().data());
             map<string, MDNode *>::iterator it = Structs.find(strName);
             if (it != Structs.end()) {
-              std::string ret =
-                  findStructMemberName_static(it->second, memberIdx, builder);
+              std::string ret = findStructMemberName_static(it->second, memberIdx, builder);
               if (ret.size() > 0) {
                 string retVal = ret;
-                if (trueVarNamesFromMetadataMap.find(retVal) ==
-                        trueVarNamesFromMetadataMap.end() ||
+                if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() ||
                     disable_MetadataMap) {
                   return retVal; // not found
                 } else {
@@ -2873,8 +2667,7 @@ string DiscoPoP::determineVariableName_static(
                 }
               } else {
                 string retVal = getOrInsertVarName_static("", builder);
-                if (trueVarNamesFromMetadataMap.find(retVal) ==
-                        trueVarNamesFromMetadataMap.end() ||
+                if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() ||
                     disable_MetadataMap) {
                   return retVal; // not found
                 } else {
@@ -2888,18 +2681,13 @@ string DiscoPoP::determineVariableName_static(
       }
 
       // we've found an array
-      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID &&
-          isa<GetElementPtrInst>(*ptrOperand)) {
-        return determineVariableName_static((Instruction *)ptrOperand,
-                                            isGlobalVariable, false);
+      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
+        return determineVariableName_static((Instruction *)ptrOperand, isGlobalVariable, false);
       }
-      return determineVariableName_static((Instruction *)gep, isGlobalVariable,
-                                          false);
+      return determineVariableName_static((Instruction *)gep, isGlobalVariable, false);
     }
     string retVal = string(operand->getName().data());
-    if (trueVarNamesFromMetadataMap.find(retVal) ==
-            trueVarNamesFromMetadataMap.end() ||
-        disable_MetadataMap) {
+    if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
       return retVal; // not found
     } else {
       return trueVarNamesFromMetadataMap[retVal]; // found
@@ -2908,8 +2696,7 @@ string DiscoPoP::determineVariableName_static(
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
-    return determineVariableName_static((Instruction *)(operand),
-                                        isGlobalVariable, false);
+    return determineVariableName_static((Instruction *)(operand), isGlobalVariable, false);
   }
   // if we cannot determine the name, then return *
   return ""; // getOrInsertVarName("*", builder);
@@ -2929,11 +2716,9 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I) {
   if (operand->hasName()) {
     // we've found a global variable
     if (isa<GlobalVariable>(*operand)) {
-      DIGlobalVariable *gv =
-          findDbgGlobalDeclare(cast<GlobalVariable>(operand));
+      DIGlobalVariable *gv = findDbgGlobalDeclare(cast<GlobalVariable>(operand));
       if (gv != NULL) {
-        return getOrInsertVarName_dynamic(string(gv->getDisplayName().data()),
-                                          builder);
+        return getOrInsertVarName_dynamic(string(gv->getDisplayName().data()), builder);
       }
     }
     if (isa<GetElementPtrInst>(*operand)) {
@@ -2963,14 +2748,12 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I) {
       }
 
       // we've found an array
-      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID &&
-          isa<GetElementPtrInst>(*ptrOperand)) {
+      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
         return determineVariableName_dynamic((Instruction *)ptrOperand);
       }
       return determineVariableName_dynamic((Instruction *)gep);
     }
-    return getOrInsertVarName_dynamic(string(operand->getName().data()),
-                                      builder);
+    return getOrInsertVarName_dynamic(string(operand->getName().data()), builder);
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
@@ -2983,21 +2766,17 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I) {
   return getOrInsertVarName_dynamic("*", builder);
 }
 
-void DiscoPoP::getTrueVarNamesFromMetadata(
-    Region *TopRegion, Node *root,
-    std::map<string, string> *trueVarNamesFromMetadataMap) {
+void DiscoPoP::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
+                                           std::map<string, string> *trueVarNamesFromMetadataMap) {
   int lid = 0;
-  for (Region::block_iterator bb = TopRegion->block_begin();
-       bb != TopRegion->block_end(); ++bb) {
-    for (BasicBlock::iterator instruction = (*bb)->begin();
-         instruction != (*bb)->end(); ++instruction) {
+  for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
+    for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       // search for call instructions to @llvm.dbg.declare
       if (isa<CallInst>(instruction)) {
         Function *f = (cast<CallInst>(instruction))->getCalledFunction();
         if (f) {
           StringRef funcName = f->getName();
-          if (funcName.find("llvm.dbg.declare") !=
-              string::npos) // llvm debug calls
+          if (funcName.find("llvm.dbg.declare") != string::npos) // llvm debug calls
           {
             CallInst *call = cast<CallInst>(instruction);
             // check if @llvm.dbg.declare is called
@@ -3009,23 +2788,19 @@ void DiscoPoP::getTrueVarNamesFromMetadata(
             string SRCVarName;
             string IRVarName;
 
-            Metadata *Meta =
-                cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
+            Metadata *Meta = cast<MetadataAsValue>(call->getOperand(0))->getMetadata();
             if (isa<ValueAsMetadata>(Meta)) {
               Value *V = cast<ValueAsMetadata>(Meta)->getValue();
               IRVarName = V->getName().str();
             }
-            DIVariable *V = cast<DIVariable>(
-                cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
+            DIVariable *V = cast<DIVariable>(cast<MetadataAsValue>(call->getOperand(1))->getMetadata());
             SRCVarName = V->getName().str();
 
             // add to trueVarNamesFromMetadataMap
             // overwrite entry if already existing
-            if (trueVarNamesFromMetadataMap->find(IRVarName) ==
-                trueVarNamesFromMetadataMap->end()) {
+            if (trueVarNamesFromMetadataMap->find(IRVarName) == trueVarNamesFromMetadataMap->end()) {
               // not found
-              trueVarNamesFromMetadataMap->insert(
-                  std::pair<string, string>(IRVarName, SRCVarName));
+              trueVarNamesFromMetadataMap->insert(std::pair<string, string>(IRVarName, SRCVarName));
             } else {
               // found
               (*trueVarNamesFromMetadataMap)[IRVarName] = SRCVarName;
@@ -3037,14 +2812,12 @@ void DiscoPoP::getTrueVarNamesFromMetadata(
   }
 }
 
-void DiscoPoP::processStructTypes(string const &fullStructName,
-                                  MDNode *structNode) {
+void DiscoPoP::processStructTypes(string const &fullStructName, MDNode *structNode) {
   assert(structNode && "structNode cannot be NULL");
   DIType *strDes = cast<DIType>(structNode);
   assert(strDes->getTag() == dwarf::DW_TAG_structure_type);
   // sometimes it's impossible to get the list of struct members (e.g badref)
-  if (structNode->getNumOperands() <= 10 ||
-      structNode->getOperand(10) == NULL) {
+  if (structNode->getNumOperands() <= 10 || structNode->getOperand(10) == NULL) {
     errs() << "cannot process member list of this struct: \n";
     structNode->dump();
     return;
@@ -3065,16 +2838,14 @@ void DiscoPoP::processStructTypes(string const &fullStructName,
       if (memberTypeDes->getTag() == dwarf::DW_TAG_structure_type) {
         string fullName = "";
         // try to get namespace
-        if (memberType->getNumOperands() > 2 &&
-            structNode->getOperand(2) != NULL) {
+        if (memberType->getNumOperands() > 2 && structNode->getOperand(2) != NULL) {
           MDNode *namespaceNode = cast<MDNode>(structNode->getOperand(2));
           DINamespace *dins = cast<DINamespace>(namespaceNode);
           // DINameSpace dins(namespaceNode);
           fullName = "struct." + string(dins->getName().data()) + "::";
         }
         // fullName += string(memberType->getOperand(3)->getName().data());
-        fullName +=
-            (dyn_cast<MDString>(memberType->getOperand(3)))->getString();
+        fullName += (dyn_cast<MDString>(memberType->getOperand(3)))->getString();
 
         if (Structs.find(fullName) == Structs.end())
           processStructTypes(fullName, memberType);
@@ -3142,15 +2913,14 @@ string DiscoPoP::getLineNumbersString(set<int> LineNumbers) {
 string DiscoPoP::getChildrenNodesString(Node *root) {
   string childrenIDs = "";
   int i = 0;
-  std::for_each(root->childrenNodes.begin(), root->childrenNodes.end(),
-                [&](Node *node) {
-                  if (i == 0) {
-                    childrenIDs = node->ID;
-                    i++;
-                  } else {
-                    childrenIDs += "," + node->ID;
-                  }
-                });
+  std::for_each(root->childrenNodes.begin(), root->childrenNodes.end(), [&](Node *node) {
+    if (i == 0) {
+      childrenIDs = node->ID;
+      i++;
+    } else {
+      childrenIDs += "," + node->ID;
+    }
+  });
   return childrenIDs;
 }
 
@@ -3167,13 +2937,12 @@ void DiscoPoP::printData(Node *root) {
 void DiscoPoP::printTree(Node *root, bool isRoot) {
   printNode(root, isRoot);
 
-  std::for_each(root->childrenNodes.begin(), root->childrenNodes.end(),
-                [&](Node *node) {
-                  if (node->type == nodeTypes::func) {
-                    isRoot = false;
-                  }
-                  printTree(node, isRoot);
-                });
+  std::for_each(root->childrenNodes.begin(), root->childrenNodes.end(), [&](Node *node) {
+    if (node->type == nodeTypes::func) {
+      isRoot = false;
+    }
+    printTree(node, isRoot);
+  });
 }
 
 void DiscoPoP::printNode(Node *root, bool isRoot) {
@@ -3191,17 +2960,15 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             << " startsAtLine = \"" << start << "\""
             << " endsAtLine = \"" << dputil::decodeLID(root->endLine) << "\""
             << ">" << endl;
-    *outCUs << "\t\t<childrenNodes>" << getChildrenNodesString(root)
-            << "</childrenNodes>" << endl;
+    *outCUs << "\t\t<childrenNodes>" << getChildrenNodesString(root) << "</childrenNodes>" << endl;
     if (root->type == nodeTypes::func || root->type == nodeTypes::dummy) {
       *outCUs << "\t\t<funcArguments>" << endl;
       for (auto ai : root->argumentsList) {
         *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
                 << " defLine=\"" << xmlEscape(ai.defLine) << "\""
                 << " sizeInByte=\"" << ai.sizeInBytes << "\""
-                << " accessMode=\"" << (ai.readAccess ? "R" : "")
-                << (ai.writeAccess ? "W" : "") << "\">" << xmlEscape(ai.name)
-                << "</arg>" << endl;
+                << " accessMode=\"" << (ai.readAccess ? "R" : "") << (ai.writeAccess ? "W" : "") << "\">"
+                << xmlEscape(ai.name) << "</arg>" << endl;
       }
       *outCUs << "\t\t</funcArguments>" << endl;
 
@@ -3209,38 +2976,25 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
       for (auto rl : root->returnLines) {
         rlVals += dputil::decodeLID(rl) + ", ";
       }
-      *outCUs << "\t\t<funcReturnLines>" << rlVals << "</funcReturnLines>"
-              << endl;
+      *outCUs << "\t\t<funcReturnLines>" << rlVals << "</funcReturnLines>" << endl;
     }
 
     if (root->type == nodeTypes::cu) {
       CU *cu = static_cast<CU *>(root);
       *outCUs << "\t\t<BasicBlockID>" << cu->BBID << "</BasicBlockID>" << endl;
-      *outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>"
-              << endl;
-      *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize
-              << "</writeDataSize>" << endl;
-      *outCUs << "\t\t<performsFileIO>" << cu->performsFileIO
-              << "</performsFileIO>" << endl;
+      *outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>" << endl;
+      *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize << "</writeDataSize>" << endl;
+      *outCUs << "\t\t<performsFileIO>" << cu->performsFileIO << "</performsFileIO>" << endl;
 
-      *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount
-              << "</instructionsCount>" << endl;
-      *outCUs << "\t\t<instructionLines count=\""
-              << (cu->instructionsLineNumbers).size() << "\">"
-              << getLineNumbersString(cu->instructionsLineNumbers)
-              << "</instructionLines>" << endl;
-      *outCUs << "\t\t<readPhaseLines count=\""
-              << (cu->readPhaseLineNumbers).size() << "\">"
-              << getLineNumbersString(cu->readPhaseLineNumbers)
-              << "</readPhaseLines>" << endl;
-      *outCUs << "\t\t<writePhaseLines count=\""
-              << (cu->writePhaseLineNumbers).size() << "\">"
-              << getLineNumbersString(cu->writePhaseLineNumbers)
-              << "</writePhaseLines>" << endl;
-      *outCUs << "\t\t<returnInstructions count=\""
-              << (cu->returnInstructions).size() << "\">"
-              << getLineNumbersString(cu->returnInstructions)
-              << "</returnInstructions>" << endl;
+      *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount << "</instructionsCount>" << endl;
+      *outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">"
+              << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << endl;
+      *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">"
+              << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
+      *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">"
+              << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
+      *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\">"
+              << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
       *outCUs << "\t\t<successors>" << endl;
       for (auto sucCUi : cu->successorCUs) {
         *outCUs << "\t\t\t<CU>" << sucCUi << "</CU>" << endl;
@@ -3252,9 +3006,8 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
         *outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\""
                 << " defLine=\"" << xmlEscape(lvi.defLine) << "\""
                 << " sizeInByte=\"" << lvi.sizeInBytes << "\""
-                << " accessMode=\"" << (lvi.readAccess ? "R" : "")
-                << (lvi.writeAccess ? "W" : "") << "\">" << xmlEscape(lvi.name)
-                << "</local>" << endl;
+                << " accessMode=\"" << (lvi.readAccess ? "R" : "") << (lvi.writeAccess ? "W" : "") << "\">"
+                << xmlEscape(lvi.name) << "</local>" << endl;
       }
       *outCUs << "\t\t</localVariables>" << endl;
 
@@ -3263,20 +3016,18 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
         *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\""
                 << " defLine=\"" << xmlEscape(gvi.defLine) << "\""
                 << " sizeInByte=\"" << gvi.sizeInBytes << "\""
-                << " accessMode=\"" << (gvi.readAccess ? "R" : "")
-                << (gvi.writeAccess ? "W" : "") << "\">" << xmlEscape(gvi.name)
-                << "</global>" << endl;
+                << " accessMode=\"" << (gvi.readAccess ? "R" : "") << (gvi.writeAccess ? "W" : "") << "\">"
+                << xmlEscape(gvi.name) << "</global>" << endl;
       }
       *outCUs << "\t\t</globalVariables>" << endl;
 
       *outCUs << "\t\t<callsNode>" << endl;
       for (auto i : (cu->callLineTofunctionMap)) {
         for (auto ii : i.second) {
-          *outCUs << "\t\t\t<nodeCalled atLine=\"" << dputil::decodeLID(i.first)
-                  << "\">" << ii->ID << "</nodeCalled>" << endl;
+          *outCUs << "\t\t\t<nodeCalled atLine=\"" << dputil::decodeLID(i.first) << "\">" << ii->ID << "</nodeCalled>"
+                  << endl;
           // specifica for recursive fucntions inside loops. (Mo 5.11.2019)
-          *outCUs << "\t\t\t\t<recursiveFunctionCall>"
-                  << ii->recursiveFunctionCall << "</recursiveFunctionCall>"
+          *outCUs << "\t\t\t\t<recursiveFunctionCall>" << ii->recursiveFunctionCall << "</recursiveFunctionCall>"
                   << endl;
         }
       }
@@ -3455,14 +3206,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           // pthread_exit does not return to its caller.
           // Therefore, we insert DpFuncExit before pthread_exit
           IRBuilder<> IRBRet(&*BI);
-          ArrayRef<Value *> arguments(
-              {ConstantInt::get(Int32, getLID(&*BI, fileID)),
-               ConstantInt::get(Int32, 0)});
+          ArrayRef<Value *> arguments({ConstantInt::get(Int32, getLID(&*BI, fileID)), ConstantInt::get(Int32, 0)});
           IRBRet.CreateCall(DpFuncExit, arguments);
           continue;
         }
-        if (fn.equals("exit") ||
-            F->doesNotReturn()) // using exit() to terminate program
+        if (fn.equals("exit") || F->doesNotReturn()) // using exit() to terminate program
         {
           // only insert DpFinalize right before the main program exits
           insertDpFinalize(&*BI);
@@ -3539,8 +3287,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
         insertDpFinalize(&*BI);
       } else {
         IRBuilder<> IRBRet(&*BI);
-        ArrayRef<Value *> arguments(
-            {ConstantInt::get(Int32, lid), ConstantInt::get(Int32, 0)});
+        ArrayRef<Value *> arguments({ConstantInt::get(Int32, lid), ConstantInt::get(Int32, 0)});
         IRBRet.CreateCall(DpFuncExit, arguments);
       }
 
@@ -3572,13 +3319,11 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
   args.push_back(startAddr);
 
   Value *endAddr = startAddr;
-  uint64_t elementSizeInBytes =
-      toInstrument->getAllocatedType()->getScalarSizeInBits() / 8;
+  uint64_t elementSizeInBytes = toInstrument->getAllocatedType()->getScalarSizeInBits() / 8;
   Value *numElements = toInstrument->getOperand(0);
   if (toInstrument->isArrayAllocation()) {
     // endAddr = startAddr + allocated size
-    endAddr =
-        IRB.CreateAdd(startAddr, IRB.CreateIntCast(numElements, Int64, true));
+    endAddr = IRB.CreateAdd(startAddr, IRB.CreateIntCast(numElements, Int64, true));
   } else if (toInstrument->getAllocatedType()->isArrayTy()) {
     // unpack potentially multidimensional allocations
 
@@ -3602,13 +3347,12 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
 
     // endAddr = startAddr + allocated size
     numElements = ConstantInt::get(Int64, tmp_numElements);
-    endAddr =
-        IRB.CreateAdd(startAddr, IRB.CreateIntCast(numElements, Int64, true));
+    endAddr = IRB.CreateAdd(startAddr, IRB.CreateIntCast(numElements, Int64, true));
   }
 
   args.push_back(endAddr);
-  args.push_back(IRB.CreateMul(IRB.CreateIntCast(numElements, Int64, true),
-                               ConstantInt::get(Int64, elementSizeInBytes)));
+  args.push_back(
+      IRB.CreateMul(IRB.CreateIntCast(numElements, Int64, true), ConstantInt::get(Int64, elementSizeInBytes)));
   args.push_back(IRB.CreateIntCast(numElements, Int64, true));
   IRB.CreateCall(DpAlloca, args, "");
 }
@@ -3630,8 +3374,7 @@ void DiscoPoP::instrumentNewOrMalloc(CallBase *toInstrument) {
     // resumed at a "normal destination" basic block. Set the first instruction
     // of the normal destination as nextInst in order to add the Instrumentation
     // at the correct location.
-    nextInst =
-        cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    nextInst = cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
   }
 
   IRBuilder<> IRB(nextInst);
@@ -3639,8 +3382,7 @@ void DiscoPoP::instrumentNewOrMalloc(CallBase *toInstrument) {
   vector<Value *> args;
   args.push_back(ConstantInt::get(Int32, lid));
 
-  Value *startAddr =
-      PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", nextInst);
+  Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", nextInst);
   Value *endAddr = startAddr;
   Value *numBytes = toInstrument->getArgOperand(0);
 
@@ -3668,8 +3410,7 @@ void DiscoPoP::instrumentRealloc(CallBase *toInstrument) {
     // resumed at a "normal destination" basic block. Set the first instruction
     // of the normal destination as nextInst in order to add the Instrumentation
     // at the correct location.
-    nextInst =
-        cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    nextInst = cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
   }
 
   IRBuilder<> IRB(nextInst);
@@ -3677,8 +3418,8 @@ void DiscoPoP::instrumentRealloc(CallBase *toInstrument) {
 
   // deallocate
   args.push_back(ConstantInt::get(Int32, lid));
-  Value *startAddr = PtrToIntInst::CreatePointerCast(
-      toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode());
+  Value *startAddr =
+      PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode());
   args.push_back(startAddr);
   IRB.CreateCall(DpDelete, args, "");
   args.clear();
@@ -3711,8 +3452,7 @@ void DiscoPoP::instrumentCalloc(CallBase *toInstrument) {
     // resumed at a "normal destination" basic block. Set the first instruction
     // of the normal destination as nextInst in order to add the Instrumentation
     // at the correct location.
-    nextInst =
-        cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    nextInst = cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
   }
 
   IRBuilder<> IRB(nextInst);
@@ -3720,11 +3460,9 @@ void DiscoPoP::instrumentCalloc(CallBase *toInstrument) {
   vector<Value *> args;
   args.push_back(ConstantInt::get(Int32, lid));
 
-  Value *startAddr =
-      PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", nextInst);
+  Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", nextInst);
   Value *endAddr = startAddr;
-  Value *numBytes = IRB.CreateMul(toInstrument->getArgOperand(0),
-                                  toInstrument->getArgOperand(1));
+  Value *numBytes = IRB.CreateMul(toInstrument->getArgOperand(0), toInstrument->getArgOperand(1));
 
   args.push_back(startAddr);
   args.push_back(endAddr); // currently unused
@@ -3750,8 +3488,7 @@ void DiscoPoP::instrumentPosixMemalign(CallBase *toInstrument) {
     // resumed at a "normal destination" basic block. Set the first instruction
     // of the normal destination as nextInst in order to add the Instrumentation
     // at the correct location.
-    nextInst =
-        cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    nextInst = cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
   }
 
   IRBuilder<> IRB(nextInst);
@@ -3759,8 +3496,7 @@ void DiscoPoP::instrumentPosixMemalign(CallBase *toInstrument) {
   vector<Value *> args;
   args.push_back(ConstantInt::get(Int32, lid));
 
-  Value *startAddr = PtrToIntInst::CreatePointerCast(
-      toInstrument->getArgOperand(0), Int64, "", nextInst);
+  Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", nextInst);
   Value *endAddr = startAddr;
   Value *numBytes = toInstrument->getArgOperand(2);
 
@@ -3781,8 +3517,8 @@ void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
   vector<Value *> args;
   args.push_back(ConstantInt::get(Int32, lid));
 
-  Value *startAddr = PtrToIntInst::CreatePointerCast(
-      toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode());
+  Value *startAddr =
+      PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode());
 
   args.push_back(startAddr);
 
@@ -3799,8 +3535,7 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 
   args.push_back(ConstantInt::get(Int32, lid));
 
-  Value *memAddr = PtrToIntInst::CreatePointerCast(
-      toInstrument->getPointerOperand(), Int64, "", toInstrument);
+  Value *memAddr = PtrToIntInst::CreatePointerCast(toInstrument->getPointerOperand(), Int64, "", toInstrument);
   args.push_back(memAddr);
 
   args.push_back(determineVariableName_dynamic(toInstrument));
@@ -3808,22 +3543,18 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 #ifdef SKIP_DUP_INSTR
   Twine name = Twine("L").concat(Twine(uniqueNum));
 
-  GlobalVariable *addrTracker =
-      new GlobalVariable(*this->ThisModule,
-                         Int64, // trackerType
-                         false, GlobalVariable::PrivateLinkage,
-                         Constant::getNullValue(Int64), // trackerType
-                         name);
-  GlobalVariable *countTracker = new GlobalVariable(
-      *this->ThisModule, Int64, false, GlobalVariable::PrivateLinkage,
-      Constant::getNullValue(Int64), name.concat(Twine("count")));
+  GlobalVariable *addrTracker = new GlobalVariable(*this->ThisModule,
+                                                   Int64, // trackerType
+                                                   false, GlobalVariable::PrivateLinkage,
+                                                   Constant::getNullValue(Int64), // trackerType
+                                                   name);
+  GlobalVariable *countTracker = new GlobalVariable(*this->ThisModule, Int64, false, GlobalVariable::PrivateLinkage,
+                                                    Constant::getNullValue(Int64), name.concat(Twine("count")));
   uniqueNum++;
 
   // Load current values before instr
-  LoadInst *currentAddrTracker =
-      new LoadInst::LoadInst(addrTracker, Twine(), toInstrument);
-  LoadInst *currentCount =
-      new LoadInst::LoadInst(countTracker, Twine(), toInstrument);
+  LoadInst *currentAddrTracker = new LoadInst::LoadInst(addrTracker, Twine(), toInstrument);
+  LoadInst *currentCount = new LoadInst::LoadInst(countTracker, Twine(), toInstrument);
 
   // add instr before before
   args.push_back(currentAddrTracker);
@@ -3835,8 +3566,8 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
   // Post instrumentation call
   // Create updates
   StoreInst *addrUpdate = new StoreInst::StoreInst(memAddr, addrTracker);
-  BinaryOperator::BinaryOperator *incCount = BinaryOperator::Create(
-      Instruction::Add, currentCount, ConstantInt::get(Int64, 1));
+  BinaryOperator::BinaryOperator *incCount =
+      BinaryOperator::Create(Instruction::Add, currentCount, ConstantInt::get(Int64, 1));
   StoreInst *countUpdate = new StoreInst::StoreInst(incCount, countTracker);
 
   // add updates after before
@@ -3855,8 +3586,7 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
   vector<Value *> args;
   args.push_back(ConstantInt::get(Int32, lid));
 
-  Value *memAddr = PtrToIntInst::CreatePointerCast(
-      toInstrument->getPointerOperand(), Int64, "", toInstrument);
+  Value *memAddr = PtrToIntInst::CreatePointerCast(toInstrument->getPointerOperand(), Int64, "", toInstrument);
   args.push_back(memAddr);
 
   args.push_back(determineVariableName_dynamic(toInstrument));
@@ -3864,22 +3594,18 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
 #ifdef SKIP_DUP_INSTR
   Twine name = Twine("S").concat(Twine(uniqueNum));
 
-  GlobalVariable *addrTracker =
-      new GlobalVariable(*this->ThisModule,
-                         Int64, // trackerType
-                         false, GlobalVariable::PrivateLinkage,
-                         Constant::getNullValue(Int64), // trackerType
-                         name);
-  GlobalVariable *countTracker = new GlobalVariable(
-      *this->ThisModule, Int64, false, GlobalVariable::PrivateLinkage,
-      Constant::getNullValue(Int64), name.concat(Twine("count")));
+  GlobalVariable *addrTracker = new GlobalVariable(*this->ThisModule,
+                                                   Int64, // trackerType
+                                                   false, GlobalVariable::PrivateLinkage,
+                                                   Constant::getNullValue(Int64), // trackerType
+                                                   name);
+  GlobalVariable *countTracker = new GlobalVariable(*this->ThisModule, Int64, false, GlobalVariable::PrivateLinkage,
+                                                    Constant::getNullValue(Int64), name.concat(Twine("count")));
   uniqueNum++;
 
   // Load current values before instr
-  LoadInst *currentAddrTracker =
-      new LoadInst::LoadInst(addrTracker, Twine(), toInstrument);
-  LoadInst *currentCount =
-      new LoadInst::LoadInst(countTracker, Twine(), toInstrument);
+  LoadInst *currentAddrTracker = new LoadInst::LoadInst(addrTracker, Twine(), toInstrument);
+  LoadInst *currentCount = new LoadInst::LoadInst(countTracker, Twine(), toInstrument);
 
   // add instr before before
   args.push_back(currentAddrTracker);
@@ -3892,8 +3618,8 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
   // Post instrumentation call
   // Create updates
   StoreInst *addrUpdate = new StoreInst::StoreInst(memAddr, addrTracker);
-  BinaryOperator::BinaryOperator *incCount = BinaryOperator::Create(
-      Instruction::Add, currentCount, ConstantInt::get(Int64, 1));
+  BinaryOperator::BinaryOperator *incCount =
+      BinaryOperator::Create(Instruction::Add, currentCount, ConstantInt::get(Int64, 1));
   StoreInst *countUpdate = new StoreInst::StoreInst(incCount, countTracker);
 
   // add updates after before
@@ -3925,8 +3651,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
     auto tmp_end = F.getParent()->getGlobalList().end();
     tmp_end--; // necessary, since the list of Globals is modified when e.g. new
                // strings are created.
-    for (auto Global_it = F.getParent()->getGlobalList().begin();
-         Global_it != tmp_end; Global_it++) {
+    for (auto Global_it = F.getParent()->getGlobalList().begin(); Global_it != tmp_end; Global_it++) {
       // ignore globals which make use of "Appending Linkage", since they are
       // system internal and do not behave like regular values. An example for
       // such a value is @llvm.global_ctors
@@ -3938,14 +3663,12 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
 
       vector<Value *> args;
       args.push_back(ConstantInt::get(Int32, lid));
-      args.push_back(
-          getOrInsertVarName_dynamic(Global_it->getName().str(), IRB));
+      args.push_back(getOrInsertVarName_dynamic(Global_it->getName().str(), IRB));
 
       bool isGlobal;
       // Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64,
       // "", toInstrument->getNextNonDebugInstruction());
-      Value *startAddr =
-          IRB.CreatePtrToInt(cast<Value>(&*Global_it), Int64, "");
+      Value *startAddr = IRB.CreatePtrToInt(cast<Value>(&*Global_it), Int64, "");
       args.push_back(startAddr);
 
       Value *endAddr = startAddr;
@@ -3971,8 +3694,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
         allocatedSize = elementSizeInBytes * numElements;
 
         // endAddr = startAddr + allocated size
-        endAddr =
-            IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
+        endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
       }
 
       args.push_back(endAddr);
@@ -3987,14 +3709,12 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
   // We always want to insert __dp_func_entry at the beginning
   // of the basic block, but we need the first valid LID to
   // get the entry line of the function.
-  for (BasicBlock::iterator BI = entryBB.begin(), EI = entryBB.end(); BI != EI;
-       ++BI) {
+  for (BasicBlock::iterator BI = entryBB.begin(), EI = entryBB.end(); BI != EI; ++BI) {
     lid = getLID(&*BI, fileID);
     if (lid > 0 && !isa<PHINode>(BI)) {
       IRBuilder<> IRB(&*entryBB.begin());
       // NOTE: Changed to arrayref
-      ArrayRef<Value *> arguments(
-          {ConstantInt::get(Int32, lid), ConstantInt::get(Int32, isStart)});
+      ArrayRef<Value *> arguments({ConstantInt::get(Int32, lid), ConstantInt::get(Int32, isStart)});
       IRB.CreateCall(DpFuncEntry, arguments);
       if (DP_DEBUG) {
         errs() << "DiscoPoP: funcEntry instrumented\n";
@@ -4016,8 +3736,7 @@ void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
   // Usually every loop has a .end block as the exit block, thus the
   // exit of a loop will not be the entry of another loop. The first if
   // check is just in case the blocks are organized in a abnormal way.
-  for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end();
-       BI != EI; ++BI) {
+  for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
     if (isa<CallInst>(BI)) {
       Function *tmpF = (cast<CallInst>(BI))->getCalledFunction();
       StringRef tmpFn = tmpF->getName();
@@ -4041,8 +3760,7 @@ void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id) {
   vector<Value *> args;
   LID lid = 0;
 
-  for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end();
-       BI != EI; ++BI) {
+  for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
     lid = getLID(&*BI, fileID);
     if (lid > 0 && !isa<PHINode>(BI)) {
       args.push_back(ConstantInt::get(Int32, lid));

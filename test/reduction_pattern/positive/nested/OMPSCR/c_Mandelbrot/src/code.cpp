@@ -27,12 +27,10 @@
   COMMENTS TO:       sande@csi.ull.es
   DESCRIPTION:       This program computes an estimation to the
                            Mandelbrot Set area using MonteCarlo sampling.
-                                                                                 The best known estimate so far is 1.50659177 +- 0.00000008.
-  COMMENTS:	         The Mandelbrot set is a fractal that is defined as the
-set of points c in the complex plane for which the sequence z_{n+1} = z_n^2 + c
-                     with z_0 = 0 does not tend to infinity.
-                     The area of the Mandelbrot set is an open question that has
-been discussed in the recent past. It is not easy to obtain an accurate
+                                                                                 The best known estimate so far
+is 1.50659177 +- 0.00000008. COMMENTS:	         The Mandelbrot set is a fractal that is defined as the set of points c
+in the complex plane for which the sequence z_{n+1} = z_n^2 + c with z_0 = 0 does not tend to infinity. The area of the
+Mandelbrot set is an open question that has been discussed in the recent past. It is not easy to obtain an accurate
 analytical estimate, and therefore statistical methods have been used. The
 program explores the rectangle ranging over (-2.0, 0.5) in the real axis and
 (0.0, 1.125) in the imaginary axis. This rectangle covers the top half of the

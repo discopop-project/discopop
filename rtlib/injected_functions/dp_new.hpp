@@ -24,7 +24,6 @@ extern "C" {
 void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes);
 // End HA
 #endif
-
 }
 
 } // namespace __dp

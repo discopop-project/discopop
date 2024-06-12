@@ -29,12 +29,12 @@ using namespace std;
 
 namespace dputil {
 
-inline void decodeLID(std::int64_t lid, std::ostream& out) {
+inline void decodeLID(std::int64_t lid, std::ostream &out) {
   if (lid == 0) {
     out << '*';
     return;
   }
-    
+
   // unpack metadata
   // potentially TODO, currently not necessary
 

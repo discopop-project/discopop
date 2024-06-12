@@ -42,6 +42,7 @@ for file in "$@"; do
     [[ "$file" = *"build/"* ]] && continue
     [[ "$file" = *"LICENSE" ]] && continue
     [[ "$file" = *"VERSION" ]] && continue
+    [[ "$file" = *".clang-format" ]] && continue
 
     # third-party software
     [[ "$file" = *"third_party/"* ]] && continue

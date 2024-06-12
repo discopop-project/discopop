@@ -14,8 +14,7 @@
 
 #include "../DPUtils.hpp"
 
-#define get_char_at_level(addr, level)                                         \
-  ((((addr) << ((level) * 4)) >> 60) & 0x000000000000000F)
+#define get_char_at_level(addr, level) ((((addr) << ((level)*4)) >> 60) & 0x000000000000000F)
 
 inline ADDR get_level_shifting_mask(int level) {
   switch (level) {
@@ -99,40 +98,27 @@ namespace __dp {
 
 class MRTNode {
 public:
-  MRTNode(const ADDR first_addr, const ADDR last_addr, const short level) : first_addr(first_addr), last_addr(last_addr), level(level) {}
+  MRTNode(const ADDR first_addr, const ADDR last_addr, const short level)
+      : first_addr(first_addr), last_addr(last_addr), level(level) {}
 
-  ADDR get_first_addr() const noexcept {
-    return first_addr;
-  }
+  ADDR get_first_addr() const noexcept { return first_addr; }
 
-  ADDR get_last_addr() const noexcept {
-    return last_addr;
-  }
+  ADDR get_last_addr() const noexcept { return last_addr; }
 
-  void set_memory_region_id(const unsigned int memory_region_id) noexcept {
-    this->memory_region_id = memory_region_id;
-  }
+  void set_memory_region_id(const unsigned int memory_region_id) noexcept { this->memory_region_id = memory_region_id; }
 
-  unsigned int get_memory_region_id() const noexcept {
-    return memory_region_id;
-  }
+  unsigned int get_memory_region_id() const noexcept { return memory_region_id; }
 
-  short get_level() const noexcept {
-    return level;
-  }
- 
-  const std::array<MRTNode*, 16>& get_children() const noexcept {
-    return children;
-  }
+  short get_level() const noexcept { return level; }
+
+  const std::array<MRTNode *, 16> &get_children() const noexcept { return children; }
 
   void delete_child(const unsigned int index) {
     delete children[index];
     children[index] = nullptr;
   }
 
-  MRTNode* get_child(const unsigned int index) const noexcept {
-    return children[index];
-  }
+  MRTNode *get_child(const unsigned int index) const noexcept { return children[index]; }
 
   int get_child_index(const ADDR addr) const noexcept {
     if (addr < first_addr || addr > last_addr) {
@@ -141,7 +127,7 @@ public:
 
     const auto shift = get_shift(level);
     const auto mask = get_level_shifting_mask(level);
-    const auto index = (addr & mask) >> shift; 
+    const auto index = (addr & mask) >> shift;
 
     return index;
   }
@@ -150,9 +136,9 @@ public:
     assert(children[index] == nullptr && "Child already exists");
 
     const auto shift = get_shift(level);
-    
+
     const auto child_start = first_addr | (static_cast<ADDR>(index) << shift);
-    const	auto child_end = child_start | ((1ULL << shift) - 1ULL);
+    const auto child_end = child_start | ((1ULL << shift) - 1ULL);
 
     children[index] = new MRTNode(child_start, child_end, level + 1);
   }
@@ -164,42 +150,36 @@ private:
   unsigned int memory_region_id = 0U;
   unsigned short level = 65535;
 
-  std::array<MRTNode*, 16> children = {};
+  std::array<MRTNode *, 16> children = {};
 };
 
 class MemoryRegionTree {
 public:
-  MemoryRegionTree() {
-    root = new MRTNode(0x0000000000000000, 0x7FFFFFFFFFFFFFFF, 0);
-  }
+  MemoryRegionTree() { root = new MRTNode(0x0000000000000000, 0x7FFFFFFFFFFFFFFF, 0); }
 
-  MemoryRegionTree(const MemoryRegionTree&) = delete;
-  MemoryRegionTree& operator=(const MemoryRegionTree&) = delete;
+  MemoryRegionTree(const MemoryRegionTree &) = delete;
+  MemoryRegionTree &operator=(const MemoryRegionTree &) = delete;
 
-  MemoryRegionTree(MemoryRegionTree&& other) noexcept {
+  MemoryRegionTree(MemoryRegionTree &&other) noexcept {
     root = other.root;
     other.root = nullptr;
   }
 
-  MemoryRegionTree& operator=(MemoryRegionTree&& other) noexcept {
-    auto* temp = root;
+  MemoryRegionTree &operator=(MemoryRegionTree &&other) noexcept {
+    auto *temp = root;
     root = other.root;
     other.root = temp;
     return *this;
-  } 
+  }
 
   ~MemoryRegionTree() {
     delete_nodes(root);
     delete root;
   }
 
-  MRTNode* get_root() noexcept {
-    return root;
-  }
+  MRTNode *get_root() noexcept { return root; }
 
-  const MRTNode* get_root() const noexcept {
-    return root;
-  }
+  const MRTNode *get_root() const noexcept { return root; }
 
   void allocate_region(const ADDR start, const ADDR end, const unsigned int memory_region_id) {
     assert(start <= end && "Invalid memory region");
@@ -208,7 +188,7 @@ public:
   }
 
   unsigned int get_memory_region_id(const ADDR addr) {
-    auto* node = root;
+    auto *node = root;
 
     while (true) {
       if (node->get_memory_region_id() != 0) {
@@ -235,7 +215,7 @@ public:
     return 0xFFFF'FFFFU;
   }
 
-  std::string get_memory_region_id_string(const ADDR addr, const char* fallback) {
+  std::string get_memory_region_id_string(const ADDR addr, const char *fallback) {
     const auto memory_region_id = get_memory_region_id(addr);
     if (memory_region_id == 0xFFFF'FFFFU) {
       return fallback;
@@ -245,8 +225,9 @@ public:
   }
 
   void free_region(const ADDR start) {
-    // NOTE: Given an allocation [start, end], this function can also handle free(x) for x in (start, end].
-    // Not sure if this functionality is required. 
+    // NOTE: Given an allocation [start, end], this function can also handle
+    // free(x) for x in (start, end]. Not sure if this functionality is
+    // required.
 
     const auto memory_region_id = get_memory_region_id(start);
     if (memory_region_id == 0xFFFF'FFFFU) {
@@ -255,18 +236,19 @@ public:
 
     // This actually searches the whole tree again, but it's fine for now
     const auto clean_root = free(start, memory_region_id, root);
-    
+
     // We never delete the root node
   }
 
 private:
-  static void allocate(const ADDR start, const ADDR end, const unsigned int memory_region_id, MRTNode* node) {
+  static void allocate(const ADDR start, const ADDR end, const unsigned int memory_region_id, MRTNode *node) {
     assert(node != nullptr && "Node is null");
     assert(start >= node->get_first_addr() && end <= node->get_last_addr() && "Invalid memory region for node");
 
     if (start == node->get_first_addr() && end == node->get_last_addr()) {
       // This assert is valid once dp_delete is implemented
-      // assert(node->get_memory_region_id() == 0 && "Memory region already allocated");
+      // assert(node->get_memory_region_id() == 0 && "Memory region already
+      // allocated");
       node->set_memory_region_id(memory_region_id);
 
       return;
@@ -280,7 +262,7 @@ private:
         node->add_child(index);
       }
 
-      auto* child = node->get_child(index);
+      auto *child = node->get_child(index);
 
       const auto child_start = child->get_first_addr();
       const auto child_end = child->get_last_addr();
@@ -292,7 +274,7 @@ private:
     }
   }
 
-  static bool free(const ADDR start, const unsigned int memory_region_id, MRTNode* node) {
+  static bool free(const ADDR start, const unsigned int memory_region_id, MRTNode *node) {
     assert(node != nullptr && "Node is null");
 
     const auto memory_region_id_node = node->get_memory_region_id();
@@ -315,7 +297,7 @@ private:
     }
 
     for (auto index = start_index; index < 16; index++) {
-      auto* child = node->get_child(index);
+      auto *child = node->get_child(index);
       if (child == nullptr) {
         // We might need to clean node -> no return here
         break;
@@ -342,13 +324,13 @@ private:
     return true;
   }
 
-  static void delete_nodes(MRTNode* node) {
+  static void delete_nodes(MRTNode *node) {
     if (node == nullptr) {
       return;
     }
-    
+
     for (auto i = 0; i < 16; i++) {
-      auto* child = node->get_child(i);
+      auto *child = node->get_child(i);
       if (child != nullptr) {
         delete_nodes(child);
         delete child;
@@ -356,7 +338,7 @@ private:
     }
   }
 
-  MRTNode* root{};
+  MRTNode *root{};
 };
 
 } // namespace __dp

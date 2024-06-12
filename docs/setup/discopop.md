@@ -26,11 +26,21 @@ cd ..
 ```
 
 where `<CMAKE_FLAGS>` can consist of any combination of the following flags and commonly used CMAKE_FLAGS:
-- In case you want to use a specific Version of LLVM, it is possible to specify the `-DUSE_LLVM_VERSION=<version>` flag.
-- In case you want to use a specific LLVM installation, specify the location via the `-DLLVM_DIST_PATH=<llvm_base_dir>` flag.
-- In case your application uses PThreads, please specify `-DDP_PTHREAD_COMPATIBILITY_MODE=[0|1]`. Note, however, that this can influence the runtime of the profiling.
-- In case you require a more verbose output of the runtime library, specify the `-DDP_RTLIB_VERBOSE=[0|1]` flag.
-- In case you want to specify the number of Workers available for the profiling step, specify the `-DDP_NUM_WORKERS=<int>` flag. By default, `3` worker threads are used to analyze the observed memory accesses. `0` might be used to disable the creation of additional threads for the analysis.
+#### Environment configuration
+- `-DUSE_LLVM_VERSION=<version>` &ndash; Use a specific Version of LLVM
+- `-DLLVM_DIST_PATH=<llvm_base_dir>` &ndash; Use a specific LLVM installation by specifiying the location
+#### Profiling configuration
+- `-DDP_PTHREAD_COMPATIBILITY_MODE=[0|1]` &ndash; If your application uses PThreads, please specify this flag to serialize the calls to the DiscoPoP runtime functions. Note, however, that this can negatively influence the runtime of the profiling.
+- `-DDP_NUM_WORKERS=<int>` &ndash; Specify the number of worker threads available for the dependency analysis during profiling. Default: `3` worker threads. `0` can be used to disable the creation of additional threads for the analysis.
+- `-DDP_HYBRID_PROFILING=[0|1]` &ndash; Enbale hybrid profiling. Default: `1`.
+- `-DDP_MEMORY_REGION_DEALIASING=[0|1]`: Enable or disable the generation of dependency de-aliasing information. Reduces potential false positive parallelization suggestions, but increases the profiling overhead.
+- `-DDP_STACK_ACCESS_DETECTION=[0|1]`: Enable or disable stack dependency detection. Enabling will reduce false positive dependences, but increase the profiling overhead. This flag only has an effect on the results, if `-DDP_HYBRID_PROFILING=0`.
+- `-DDP_CALLSTACK_PROFILING=[0|1]`: Enable or disable callstack profiling. Enabling will allow the detection of parallelization suggestions for more complex code regions, but significantly increase the profiling overhead. 
+
+#### Development and debugging
+- `-DDP_RTLIB_VERBOSE=[0|1]` &ndash; Enable verbose output during profiling.
+- `-DDP_INTERNAL_TIMER=[0|1]`&ndash; Enable timing of runtime library functions.
+
 
 ## Testing the installation
 To test the installation, it is possible to execute the provided set of unit tests.

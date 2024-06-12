@@ -35,9 +35,9 @@ void initSingleThreadedExecution();
 
 void mergeDeps();
 
-void* analyzeDeps(void *arg);
+void *analyzeDeps(void *arg);
 
-void analyzeSingleAccess(__dp::AbstractShadow* SMem, __dp::AccessInfo& access);
+void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access);
 
 std::string getMemoryRegionIdFromAddr(std::string fallback, ADDR addr);
 
@@ -45,5 +45,7 @@ void finalizeParallelization();
 
 void finalizeSingleThreadedExecution();
 
+#if DP_STACK_ACCESS_DETECTION
 void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound);
+#endif
 } // namespace __dp

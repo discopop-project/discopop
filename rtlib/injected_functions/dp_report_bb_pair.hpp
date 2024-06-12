@@ -22,7 +22,6 @@ extern "C" {
 // hybrid analysis
 void __dp_report_bb_pair(int32_t counter, uint32_t bbIndex);
 // End HA
-
 }
 
 } // namespace __dp

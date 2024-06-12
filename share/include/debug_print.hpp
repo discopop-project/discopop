@@ -14,26 +14,22 @@
 
 #include <iostream>
 
-template <std::size_t N>
-class DebugPrint {
+template <std::size_t N> class DebugPrint {
 public:
-    DebugPrint(const char message[N]) {
-        for (auto i = 0; i < N; i++) {
-            buffer[i] = message[i];
-        }
-
-        std::cout << "enter: " << buffer << '\n';
+  DebugPrint(const char message[N]) {
+    for (auto i = 0; i < N; i++) {
+      buffer[i] = message[i];
     }
 
-    ~DebugPrint() {
-        std::cout << "exit: " << buffer << '\n';
-    }
+    std::cout << "enter: " << buffer << '\n';
+  }
+
+  ~DebugPrint() { std::cout << "exit: " << buffer << '\n'; }
 
 private:
-    char buffer[N];
+  char buffer[N];
 };
 
-template <std::size_t N>
-inline DebugPrint<N> make_debug_print(const char(&message)[N]) {
-    return DebugPrint<N>(message);
+template <std::size_t N> inline DebugPrint<N> make_debug_print(const char (&message)[N]) {
+  return DebugPrint<N>(message);
 }

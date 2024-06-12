@@ -33,8 +33,7 @@ private:
   dputil::VariableNameFinder *VNF;
   set<Instruction *> highlightedInstructionNodes;
 
-  void findAndAddFirstRelevantInstructionInSuccessorBlocks(
-      BasicBlock *BB, Instruction *previousInstruction);
+  void findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction *previousInstruction);
 
 public:
   InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F);
@@ -46,8 +45,7 @@ public:
   InstructionNode<Instruction *> *getExit() { return exit; }
 
   bool isEntryOrExit(Instruction *I) {
-    return Graph::getInstructionNode(I) == entry ||
-           Graph::getInstructionNode(I) == exit;
+    return Graph::getInstructionNode(I) == entry || Graph::getInstructionNode(I) == exit;
   }
 
   void highlightInstructionNode(Instruction *instr);

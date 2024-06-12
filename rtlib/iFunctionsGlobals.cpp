@@ -25,13 +25,13 @@ namespace __dp {
 
 bool DP_DEBUG = false; // debug flag
 
-Timers* timers = nullptr;
+Timers *timers = nullptr;
 
 std::mutex pthread_compatibility_mutex;
 
-FunctionManager* function_manager = nullptr;
-LoopManager* loop_manager= nullptr;
-MemoryManager* memory_manager = nullptr;
+FunctionManager *function_manager = nullptr;
+LoopManager *loop_manager = nullptr;
+MemoryManager *memory_manager = nullptr;
 
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
@@ -40,7 +40,7 @@ stringDepMap *outPutDeps = nullptr;
 
 std::unordered_map<char *, long> cuec;
 
-bool dpInited = false; // library initialization flag
+bool dpInited = false;         // library initialization flag
 bool targetTerminated = false; // whether the target program has returned from main()
 // In C++, destructors of global objects can run after main().
 // However, when the target program returns from main(), dp
@@ -51,6 +51,10 @@ bool targetTerminated = false; // whether the target program has returned from m
 // Runtime merging structures
 depMap *allDeps = nullptr;
 
+#if DP_CALLSTACK_PROFILING
+CallStack *callStack = nullptr; // call stack profiling
+extern unsigned long funcCallCounter = 0;
+#endif
 std::ofstream *out = nullptr;
 
 /******* BEGIN: parallelization section *******/
@@ -70,22 +74,18 @@ int32_t NUM_WORKERS = 3; // default number of worker threads (multiple workers
 #endif
 
 #pragma message "Profiler: set NUM_WORKERS to " XSTR(NUM_WORKERS)
-AbstractShadow* singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
+AbstractShadow *singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
 
-int32_t CHUNK_SIZE = 500; // default number of addresses in each chunk
-std::queue<AccessInfo *> *chunks =
-    nullptr; // one queue of access info chunks for each worker thread
-bool *addrChunkPresent =
-    nullptr; // addrChunkPresent[thread_id] denotes whether or not a new chunk
-             // is available for the corresponding thread
-AccessInfo **tempAddrChunks =
-    nullptr; // tempAddrChunks[thread_id] is the temporary chunk to collect
-             // memory accesses for the corresponding thread
-int32_t *tempAddrCount =
-    nullptr; // tempAddrCount[thread_id] denotes the current number of accesses
-             // in the temporary chunk
-bool stop = false; // ONLY set stop to true if no more accessed addresses will
-                   // be collected
+int32_t CHUNK_SIZE = 500;                   // default number of addresses in each chunk
+std::queue<AccessInfo *> *chunks = nullptr; // one queue of access info chunks for each worker thread
+bool *addrChunkPresent = nullptr;           // addrChunkPresent[thread_id] denotes whether or not a new chunk
+                                            // is available for the corresponding thread
+AccessInfo **tempAddrChunks = nullptr;      // tempAddrChunks[thread_id] is the temporary chunk to collect
+                                            // memory accesses for the corresponding thread
+int32_t *tempAddrCount = nullptr;           // tempAddrCount[thread_id] denotes the current number of accesses
+                                            // in the temporary chunk
+bool stop = false;                          // ONLY set stop to true if no more accessed addresses will
+                                            // be collected
 thread_local depMap *myMap = nullptr;
 
 /******* END: parallelization section *******/

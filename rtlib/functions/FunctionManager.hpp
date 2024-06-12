@@ -31,79 +31,67 @@ typedef std::set<LID> ENDFuncList;
 
 class FunctionManager {
 public:
-    FunctionManager() {
-    }
+  FunctionManager() {}
 
-    ~FunctionManager() {
-    }
+  ~FunctionManager() {}
 
-    void log_call(const LID current_lid) {
-        lastCallOrInvoke = current_lid;
-    }
+  void log_call(const LID current_lid) { lastCallOrInvoke = current_lid; }
 
-    void reset_call(const LID current_lid) {
-        lastCallOrInvoke = 0;
-        lastProcessedLine = current_lid;
-    }
+  void reset_call(const LID current_lid) {
+    lastCallOrInvoke = 0;
+    lastProcessedLine = current_lid;
+  }
 
-    void increase_stack_level() {
-        ++FuncStackLevel;
-    }
+  void increase_stack_level() { ++FuncStackLevel; }
 
-    void decrease_stack_level() {
-        --FuncStackLevel;
-    }
+  void decrease_stack_level() { --FuncStackLevel; }
 
-    void register_function_end(const LID current_lid) {
-        endFuncs.insert(current_lid);
-    }
+  void register_function_end(const LID current_lid) { endFuncs.insert(current_lid); }
 
-    std::int32_t get_current_stack_level() {
-        return FuncStackLevel;
-    }
+  std::int32_t get_current_stack_level() { return FuncStackLevel; }
 
-    void register_function_start(const LID current_lid) {
-        // Process ordinary function call/invoke.
-  
-        if (lastCallOrInvoke == 0)
-            lastCallOrInvoke = lastProcessedLine;
-        ++FuncStackLevel;
+  void register_function_start(const LID current_lid) {
+    // Process ordinary function call/invoke.
+
+    if (lastCallOrInvoke == 0)
+      lastCallOrInvoke = lastProcessedLine;
+    ++FuncStackLevel;
 
 #ifdef DP_DEBUG
-        std::cout << "Entering function LID " << std::dec << dputil::decodeLID(lid) << std::endl;
-        std::cout << "Function stack level = " << std::dec << FuncStackLevel << std::endl;
+    std::cout << "Entering function LID " << std::dec << dputil::decodeLID(lid) << std::endl;
+    std::cout << "Function stack level = " << std::dec << FuncStackLevel << std::endl;
 #endif
 
-        BGNFuncList::iterator func = beginFuncs.find(lastCallOrInvoke);
-        if (func == beginFuncs.end()) {
-            std::set<LID> tmp{};
-            tmp.insert(current_lid);
-            beginFuncs.emplace(lastCallOrInvoke, std::move(tmp));
-        } else {
-            func->second.insert(current_lid);
-        }
+    BGNFuncList::iterator func = beginFuncs.find(lastCallOrInvoke);
+    if (func == beginFuncs.end()) {
+      std::set<LID> tmp{};
+      tmp.insert(current_lid);
+      beginFuncs.emplace(lastCallOrInvoke, std::move(tmp));
+    } else {
+      func->second.insert(current_lid);
+    }
+  }
+
+  void output_functions(std::ostream &stream) {
+    for (const auto &func_begin : beginFuncs) {
+      for (auto fb : func_begin.second) {
+        stream << dputil::decodeLID(func_begin.first) << " BGN func ";
+        stream << dputil::decodeLID(fb) << std::endl;
+      }
     }
 
-    void output_functions(std::ostream& stream) {
-        for (const auto &func_begin : beginFuncs) {
-            for (auto fb : func_begin.second) {
-                stream << dputil::decodeLID(func_begin.first) << " BGN func ";
-                stream << dputil::decodeLID(fb) << std::endl;
-            }
-        }
-
-        for (auto fe : endFuncs) {
-           stream << dputil::decodeLID(fe) << " END func" << std::endl;
-        }
+    for (auto fe : endFuncs) {
+      stream << dputil::decodeLID(fe) << " END func" << std::endl;
     }
+  }
 
 private:
-    BGNFuncList beginFuncs; // function entries
-    ENDFuncList endFuncs;   // function returns
+  BGNFuncList beginFuncs; // function entries
+  ENDFuncList endFuncs;   // function returns
 
-    LID lastCallOrInvoke = 0;
-    LID lastProcessedLine = 0;
-    std::int32_t FuncStackLevel = 0;
+  LID lastCallOrInvoke = 0;
+  LID lastProcessedLine = 0;
+  std::int32_t FuncStackLevel = 0;
 };
 
 } // namespace __dp

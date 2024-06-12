@@ -45,6 +45,7 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
   const auto timer = Timer(timers, TimerRegion::NEW);
 #endif
 
+#if DP_MEMORY_REGION_DEALIASING
   // calculate endAddr of memory region
   endAddr = startAddr + numBytes;
 
@@ -52,12 +53,12 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
   std::string allocID = memory_manager->allocate_memory(lid, startAddr, endAddr, numBytes, -1);
 
   if (DP_DEBUG) {
-    cout << "new/malloc: " << dputil::decodeLID(lid) << ", " << allocID << ", "
-         << std::hex << startAddr << " - " << std::hex << endAddr;
+    cout << "new/malloc: " << dputil::decodeLID(lid) << ", " << allocID << ", " << std::hex << startAddr << " - "
+         << std::hex << endAddr;
     printf(" NumBytes: %lld\n", numBytes);
   }
+#endif
 }
-
 }
 
 } // namespace __dp

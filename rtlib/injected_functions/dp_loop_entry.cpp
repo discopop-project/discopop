@@ -14,6 +14,8 @@
 
 #include "../iFunctionsGlobals.hpp"
 
+#include "../callstack/CallStack.hpp"
+
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
@@ -53,16 +55,26 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     }
     return;
   }
-  
+
   const auto function_stack_level = function_manager->get_current_stack_level();
   const auto is_new_loop = loop_manager->is_new_loop(loopID);
-  
+
   if (is_new_loop) {
-    loop_manager->create_new_loop(function_stack_level, loopID, lid); 
+    loop_manager->create_new_loop(function_stack_level, loopID, lid);
+
+#if DP_STACK_ACCESS_DETECTION
     memory_manager->enterScope("loop", lid);
+#endif
+
+#if DP_CALLSTACK_PROFILING
+    callStack->push(new CallStackEntry(1, lid, 0));
+#endif
   } else {
     // The same loop iterates again
     loop_manager->iterate_loop(function_stack_level);
+#if DP_CALLSTACK_PROFILING
+    callStack->incrementIterationCounter();
+#endif
 
     // Handle error made in instrumentation.
     // When recorded loopStack->top().funcLevel is different
@@ -78,11 +90,12 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
 
     loop_manager->correct_func_level(function_stack_level);
 
+#if DP_STACK_ACCESS_DETECTION
     memory_manager->leaveScope("loop_iteration", lid);
     memory_manager->enterScope("loop_iteration", lid);
+#endif
   }
 }
-
 }
 
 } // namespace __dp

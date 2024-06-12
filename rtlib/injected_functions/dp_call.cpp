@@ -47,7 +47,6 @@ void __dp_call(LID lid) {
 
   function_manager->log_call(lid);
 }
-
 }
 
 } // namespace __dp

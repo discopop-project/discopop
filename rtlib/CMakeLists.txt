@@ -17,6 +17,8 @@ set(DiscoPoP_SOURCES
                 
         memory/MemoryManager.cpp
         memory/Signature.cpp
+
+        callstack/CallStack.cpp
 		
         injected_functions/dp_add_bb_deps.cpp
         injected_functions/dp_alloca.cpp
@@ -62,6 +64,30 @@ endif()
 
 if(DEFINED DP_NUM_WORKERS)
         target_compile_definitions(DiscoPoP_RT PUBLIC DP_NUM_WORKERS=${DP_NUM_WORKERS})
+endif()
+
+if(DEFINED DP_INTERNAL_TIMER)
+        if(NOT ${DP_INTERNAL_TIMER} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_INTERNAL_TIMER=${DP_INTERNAL_TIMER})
+        endif()
+endif()
+
+if(DEFINED DP_MEMORY_REGION_DEALIASING)
+        if(NOT ${DP_MEMORY_REGION_DEALIASING} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_MEMORY_REGION_DEALIASING=${DP_MEMORY_REGION_DEALIASING})
+        endif()
+endif()
+
+if(DEFINED DP_STACK_ACCESS_DETECTION)
+        if(NOT ${DP_STACK_ACCESS_DETECTION} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_STACK_ACCESS_DETECTION=${DP_STACK_ACCESS_DETECTION})
+        endif()
+endif()
+
+if(DEFINED DP_CALLSTACK_PROFILING)
+        if(NOT ${DP_CALLSTACK_PROFILING} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLSTACK_PROFILING=${DP_CALLSTACK_PROFILING})
+        endif()
 endif()
 
 # end of compiler flags

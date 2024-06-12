@@ -19,7 +19,7 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_loop_incr(const int loop_id){
+void __dp_loop_incr(const int loop_id) {
   if (!dpInited || targetTerminated) {
     return;
   }
@@ -27,10 +27,9 @@ void __dp_loop_incr(const int loop_id){
   if (loop_manager->is_done()) {
     return;
   }
-  
+
   loop_manager->incr_loop_counter(loop_id);
 }
-
 }
 
 } // namespace __dp

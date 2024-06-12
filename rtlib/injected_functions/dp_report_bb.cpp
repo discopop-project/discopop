@@ -34,7 +34,7 @@ void __dp_report_bb(uint32_t bbIndex) {
   if (!dpInited || targetTerminated) {
     return;
   }
-  
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -48,7 +48,6 @@ void __dp_report_bb(uint32_t bbIndex) {
 
   bbList->insert(bbIndex);
 }
-
 }
 
 } // namespace __dp

@@ -24,7 +24,6 @@ extern "C" {
 void __dp_delete(LID lid, ADDR startAddr);
 // End HA
 #endif
-
 }
 
 } // namespace __dp

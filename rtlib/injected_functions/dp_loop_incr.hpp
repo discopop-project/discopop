@@ -18,7 +18,6 @@ namespace __dp {
 extern "C" {
 
 void __dp_loop_incr(int loop_id);
-
 }
 
 } // namespace __dp

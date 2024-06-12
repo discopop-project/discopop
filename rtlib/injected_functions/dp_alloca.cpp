@@ -31,8 +31,7 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
-                 int64_t numBytes, int64_t numElements) {
+void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements) {
   if (!dpInited || targetTerminated) {
     return;
   }
@@ -46,18 +45,20 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr,
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ALLOCA);
 #endif
-  
+
+#if DP_MEMORY_REGION_DEALIASING
   // create entry to list of allocatedMemoryRegions
   const std::string allocId = memory_manager->allocate_stack_memory(lid, startAddr, endAddr, numBytes, numElements);
-  // std::cout << "alloca: " << var << " (" << allocId << ") @ " << dputil::decodeLID(lid) << " : " << std::hex << startAddr << " - " << std::hex << endAddr << " -> #allocations: " << memory_manager->get_number_allocations() << "\n";
+  // std::cout << "alloca: " << var << " (" << allocId << ") @ " <<
+  // dputil::decodeLID(lid) << " : " << std::hex << startAddr << " - " <<
+  // std::hex << endAddr << " -> #allocations: " <<
+  // memory_manager->get_number_allocations() << "\n";
 #ifdef DP_DEBUG
-    cout << "alloca: " << var << " (" << allocId << ") @ " << dputil::decodeLID(lid)
-         << " : " << std::hex << startAddr << " - " << std::hex << endAddr
-         << " -> #allocations: " << memory_manager->get_number_allocations()
-         << "\n";
+  cout << "alloca: " << var << " (" << allocId << ") @ " << dputil::decodeLID(lid) << " : " << std::hex << startAddr
+       << " - " << std::hex << endAddr << " -> #allocations: " << memory_manager->get_number_allocations() << "\n";
+#endif
 #endif
 }
-
 }
 
 } // namespace __dp

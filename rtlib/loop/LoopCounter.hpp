@@ -28,9 +28,7 @@ public:
     loop_counters_[loop_id] += 1;
   }
 
-  const std::vector<unsigned int>& get_loop_counters() const noexcept {
-    return loop_counters_;
-  }
+  const std::vector<unsigned int> &get_loop_counters() const noexcept { return loop_counters_; }
 
 private:
   std::vector<unsigned int> loop_counters_;

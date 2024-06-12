@@ -12,8 +12,7 @@
 
 #include "InstructionCFG.hpp"
 
-InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F)
-    : VNF(_VNF) {
+InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F) : VNF(_VNF) {
   entry = Graph::addInstructionNode((Instruction *)ENTRY);
   exit = Graph::addInstructionNode((Instruction *)EXIT);
   Instruction *previousInstruction;
@@ -32,8 +31,7 @@ InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F)
     // Add edges from last instruction in current block to first instruction all
     // the successor blocks
     if (previousInstruction != nullptr)
-      findAndAddFirstRelevantInstructionInSuccessorBlocks(&BB,
-                                                          previousInstruction);
+      findAndAddFirstRelevantInstructionInSuccessorBlocks(&BB, previousInstruction);
   }
 
   // Conect entry/exit nodes
@@ -48,8 +46,8 @@ InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F)
   }
 }
 
-void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(
-    BasicBlock *BB, Instruction *previousInstruction) {
+void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB,
+                                                                         Instruction *previousInstruction) {
   bool hasSuccessors = false;
   for (BasicBlock *S : successors(BB)) {
     hasSuccessors = true;
@@ -65,18 +63,14 @@ void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(
       }
     }
     if (S != BB)
-      findAndAddFirstRelevantInstructionInSuccessorBlocks(S,
-                                                          previousInstruction);
+      findAndAddFirstRelevantInstructionInSuccessorBlocks(S, previousInstruction);
   next:;
   }
 }
 
-set<Instruction *> InstructionCFG::findBoundaryInstructions(uint startLine,
-                                                            uint endLine) {}
+set<Instruction *> InstructionCFG::findBoundaryInstructions(uint startLine, uint endLine) {}
 
-void InstructionCFG::highlightInstructionNode(Instruction *instr) {
-  highlightedInstructionNodes.insert(instr);
-}
+void InstructionCFG::highlightInstructionNode(Instruction *instr) { highlightedInstructionNodes.insert(instr); }
 
 void InstructionCFG::dumpToDot(const std::string targetPath) {
   // Write the graph to a DOT file
@@ -96,8 +90,7 @@ void InstructionCFG::dumpToDot(const std::string targetPath) {
       label = "label=EXIT";
       goto printInstructionNode;
     }
-    label = "label=\"" + to_string(Graph::getInstructionNodeIndex(instNode)) +
-            "\\n";
+    label = "label=\"" + to_string(Graph::getInstructionNodeIndex(instNode)) + "\\n";
     instr = instNode->getItem();
     dl = instr->getDebugLoc();
     if (isa<StoreInst>(instr) || isa<LoadInst>(instr)) {
@@ -119,8 +112,7 @@ void InstructionCFG::dumpToDot(const std::string targetPath) {
         label += to_string(instr->getFunction()->getSubprogram()->getLine());
       }
       label += "\"";
-      if (highlightedInstructionNodes.find(instr) !=
-          highlightedInstructionNodes.end()) {
+      if (highlightedInstructionNodes.find(instr) != highlightedInstructionNodes.end()) {
         label += "\",fillcolor=cyan,style=filled";
       }
     } else if (isa<AllocaInst>(instr)) {
@@ -130,15 +122,14 @@ void InstructionCFG::dumpToDot(const std::string targetPath) {
       label += "?\"";
 
   printInstructionNode:
-    dotStream << "\t\"" << getInstructionNodeIndex(instNode) << "\" [" << label
-              << "];\n";
+    dotStream << "\t\"" << getInstructionNodeIndex(instNode) << "\" [" << label << "];\n";
   }
   dotStream << "\n\n";
 
   // Now print all outgoing edges and their labels
   for (auto e : getEdges()) {
-    dotStream << "\t\"" << getInstructionNodeIndex(e->getSrc()) << "\" -> \""
-              << getInstructionNodeIndex(e->getDst()) << "\";\n";
+    dotStream << "\t\"" << getInstructionNodeIndex(e->getSrc()) << "\" -> \"" << getInstructionNodeIndex(e->getDst())
+              << "\";\n";
   }
   dotStream << "}";
   dotStream.close();
