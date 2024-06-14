@@ -35,7 +35,7 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_func_entry(LID lid, int32_t isStart) {
+void __dp_func_entry(LID lid, int32_t isStart, uint32_t bb_counter) {
   if (targetTerminated) {
     // prevent deleting generated results after the main function has been
     // exited. This might happen, e.g., if a destructor of a global struct is
@@ -63,6 +63,11 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 
 #if DP_CALLSTACK_PROFILING
     callStack = new CallStack();
+    bb_visits_since_last_new_dependency_metadata = new uint32_t[bb_counter];
+    for(int i = 0; i < bb_counter; i++){
+      bb_visits_since_last_new_dependency_metadata[i] = 0;
+    }
+    cout << "created BB visits array;\n";
 #endif
     out = new ofstream();
 

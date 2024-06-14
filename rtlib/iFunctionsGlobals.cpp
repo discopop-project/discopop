@@ -88,6 +88,9 @@ bool stop = false;                          // ONLY set stop to true if no more 
                                             // be collected
 thread_local depMap *myMap = nullptr;
 
+uint32_t *bb_visits_since_last_new_dependency_metadata = nullptr;  // assigns each BB a counter to
+                                                                  // track entries since newly found metadata
+
 /******* END: parallelization section *******/
 
 } // namespace __dp

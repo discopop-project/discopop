@@ -286,6 +286,7 @@ private:
   int64_t uniqueNum;
 
   uint32_t unique_llvm_ir_unique_bb_id;
+  uint32_t total_bb_counter;
 
   // Callbacks to run-time library
   FunctionCallee DpInit, DpFinalize;

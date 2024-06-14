@@ -58,9 +58,9 @@ void DiscoPoP::setupCallbacks() {
 
   DpWrite = ThisModule->getOrInsertFunction("__dp_write", Void,
 #ifdef SKIP_DUP_INSTR
-                                            Int32, Int64, CharPtr, Int64, Int64
+                                            Int32, Int32, Int64, CharPtr, Int64, Int64
 #else
-                                            Int32, Int64, CharPtr
+                                            Int32, Int32, Int64, CharPtr
 #endif
   );
 
@@ -74,7 +74,7 @@ void DiscoPoP::setupCallbacks() {
 
   DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call", Void, Int32);
 
-  DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry", Void, Int32, Int32);
+  DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry", Void, Int32, Int32, Int32);
 
   DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit", Void, Int32, Int32);
 
@@ -178,6 +178,7 @@ bool DiscoPoP::doInitialization(Module &M) {
     }
 
     // initialize assigning unique BB ids
+    total_bb_counter = 0;
     unique_llvm_ir_unique_bb_id = 1;
   }
   // DPInstrumentation end
@@ -2013,6 +2014,13 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
 bool DiscoPoP::runOnModule(Module &M) {
   // cout << "MODULE " << M.getName().str() << "\n";
 
+  // count basic blocks
+  for(Function &F : M){
+    for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
+      total_bb_counter += 1;
+    }
+  }
+
   long counter = 0;
   // cout << "\tFUNCTION:\n";
   for (Function &F : M) {
@@ -3723,7 +3731,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
     if (lid > 0 && !isa<PHINode>(BI)) {
       IRBuilder<> IRB(&*entryBB.begin());
       // NOTE: Changed to arrayref
-      ArrayRef<Value *> arguments({ConstantInt::get(Int32, lid), ConstantInt::get(Int32, isStart)});
+      ArrayRef<Value *> arguments({ConstantInt::get(Int32, lid), ConstantInt::get(Int32, isStart), ConstantInt::get(Int32, total_bb_counter)});
       IRB.CreateCall(DpFuncEntry, arguments);
       if (DP_DEBUG) {
         errs() << "DiscoPoP: funcEntry instrumented\n";

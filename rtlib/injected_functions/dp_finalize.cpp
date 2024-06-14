@@ -155,6 +155,7 @@ void __dp_finalize(LID lid) {
 
 #if DP_CALLSTACK_PROFILING
   delete callStack;
+  delete bb_visits_since_last_new_dependency_metadata;
 #endif
 
   delete function_manager;

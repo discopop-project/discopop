@@ -19,7 +19,7 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_func_entry(LID lid, int32_t isStart);
+void __dp_func_entry(LID lid, int32_t isStart, uint32_t bb_counter);
 }
 
 } // namespace __dp
