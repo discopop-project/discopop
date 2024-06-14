@@ -92,9 +92,26 @@ void __dp_write(LID lid, uint32_t parent_bb_id, ADDR addr, const char *var) {
   current.var = var;
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
+  current.parent_bb_id = parent_bb_id;
 
 #if DP_CALLSTACK_PROFILING
-  current.callStack = callStack->getCopy();
+  if(callstack_profiling_bb_switches[parent_bb_id]){
+    // callstack profiling enabled for current BB
+    current.callStack = callStack->getCopy();
+    //cout << "visited BB: " << parent_bb_id << " :\t" << callstack_profiling_bb_visits_since_last_new_dependency_metadata[parent_bb_id] << "\n";
+    callstack_profiling_bb_visits_since_last_new_dependency_metadata[parent_bb_id]++;
+
+    // DEBUG - specify fixed cutoff
+    if(callstack_profiling_bb_visits_since_last_new_dependency_metadata[parent_bb_id] > 100){
+      callstack_profiling_bb_switches[parent_bb_id] = false;
+    }
+    // END DEBUG
+  }
+  else{
+    // callstack profiling disabled for current BB
+    current.callStack = nullptr;
+  }
+  
 #endif
 
 #if DP_STACK_ACCESS_DETECTION

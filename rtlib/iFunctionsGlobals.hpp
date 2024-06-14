@@ -96,8 +96,9 @@ extern bool stop;                   // ONLY set stop to true if no more accessed
                                     // be collected
 extern thread_local depMap *myMap;
 
-extern uint32_t *bb_visits_since_last_new_dependency_metadata;  // assigns each BB a counter to
+extern uint32_t *callstack_profiling_bb_visits_since_last_new_dependency_metadata;  // assigns each BB a counter to
                                                                // track entries since newly found metadata
                                                                // only used, if DP_CALLSTACK_PROFILING is active
+extern bool *callstack_profiling_bb_switches; // enable or disable callstack profiling for BBs at runtime
 
 } // namespace __dp

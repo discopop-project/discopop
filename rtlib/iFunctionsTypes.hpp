@@ -68,6 +68,7 @@ struct AccessInfo {
   std::string AAvar; // name of allocated variable -> "Anti Aliased Variable"
   ADDR addr;
   CallStack *callStack;
+  uint32_t parent_bb_id = 0;
   bool isStackAccess = false;
   bool addrIsOwnedByScope = false;
   bool positiveScopeChangeOccuredSinceLastAccess = false;

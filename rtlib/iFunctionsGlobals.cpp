@@ -88,8 +88,9 @@ bool stop = false;                          // ONLY set stop to true if no more 
                                             // be collected
 thread_local depMap *myMap = nullptr;
 
-uint32_t *bb_visits_since_last_new_dependency_metadata = nullptr;  // assigns each BB a counter to
+uint32_t *callstack_profiling_bb_visits_since_last_new_dependency_metadata = nullptr;  // assigns each BB a counter to
                                                                   // track entries since newly found metadata
+bool *callstack_profiling_bb_switches = nullptr; // enable or disable callstack profiling for BBs at runtime
 
 /******* END: parallelization section *******/
 

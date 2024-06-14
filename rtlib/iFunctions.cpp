@@ -675,7 +675,15 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
     if (access.skip) {
       SMem->insertToRead(access.addr, access.lid);
 #if DP_CALLSTACK_PROFILING
-      SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
+      if(callstack_profiling_bb_switches[access.parent_bb_id]){
+        // callstack profiling disabled for BB
+        SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
+      }
+      else{
+        // TODO: Can we remove this call savely? 
+        SMem->cleanReadAccessCallStack(access.addr);
+      }      
+      
 #endif
       return;
     }
@@ -688,7 +696,15 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
       // RAW
       SMem->insertToRead(access.addr, access.lid);
 #if DP_CALLSTACK_PROFILING
-      SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
+      if(callstack_profiling_bb_switches[access.parent_bb_id]){
+        // callstack profiling disabled for BB
+        SMem->setLastReadAccessCallStack(access.addr, access.callStack->getCopy());
+      }
+      else{
+        // TODO: Can we remove this call savely? 
+        SMem->cleanReadAccessCallStack(access.addr);
+      } 
+
       addDep(RAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar,
              access.isStackAccess, access.addr, access.addrIsOwnedByScope,
              access.positiveScopeChangeOccuredSinceLastAccess);
