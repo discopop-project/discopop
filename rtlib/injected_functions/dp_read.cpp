@@ -31,9 +31,9 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 #ifdef SKIP_DUP_INSTR
-void __dp_read(LID lid, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
+void __dp_read(LID lid, uint32_t parent_bb_id, ADDR addr, char *var, ADDR lastaddr, int64_t count) {
 #else
-void __dp_read(LID lid, ADDR addr, const char *var) {
+void __dp_read(LID lid, uint32_t parent_bb_id, ADDR addr, const char *var) {
 #endif
 
   if (!dpInited || targetTerminated) {

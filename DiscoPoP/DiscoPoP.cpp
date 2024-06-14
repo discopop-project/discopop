@@ -148,6 +148,7 @@ bool DiscoPoP::doInitialization(Module &M) {
   }
   // CUGeneration end
 
+
   // DPInstrumentation
   {
     // Export M to the outside
@@ -175,6 +176,9 @@ bool DiscoPoP::doInitialization(Module &M) {
     } else {
       loopID = -1;
     }
+
+    // initialize assigning unique BB ids
+    unique_llvm_ir_unique_bb_id = 1;
   }
   // DPInstrumentation end
 
@@ -3092,6 +3096,9 @@ A real case would be:
 */
 // TODO: atomic variables
 void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
+  int32_t llvm_ir_unique_bb_id = unique_llvm_ir_unique_bb_id++;
+  cout << "Parsing Basic block: " << llvm_ir_unique_bb_id << "\n";
+
   for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
     if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
       assert(DI->getOperand(0));
@@ -3172,11 +3179,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
     }
     // load instruction
     else if (isa<LoadInst>(BI)) {
-      instrumentLoad(cast<LoadInst>(BI));
+      instrumentLoad(cast<LoadInst>(BI), llvm_ir_unique_bb_id);
     }
     // // store instruction
     else if (isa<StoreInst>(BI)) {
-      instrumentStore(cast<StoreInst>(BI));
+      instrumentStore(cast<StoreInst>(BI), llvm_ir_unique_bb_id);
     }
     // call and invoke
     else if (isaCallOrInvoke(&*BI)) {
@@ -3525,7 +3532,7 @@ void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
   IRB.CreateCall(DpDelete, args, "");
 }
 
-void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
+void DiscoPoP::instrumentLoad(LoadInst *toInstrument, uint32_t parent_BB_id) {
 
   LID lid = getLID(toInstrument, fileID);
   if (lid == 0)
@@ -3534,6 +3541,7 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
   vector<Value *> args;
 
   args.push_back(ConstantInt::get(Int32, lid));
+  args.push_back(ConstantInt::get(Int32, parent_BB_id));
 
   Value *memAddr = PtrToIntInst::CreatePointerCast(toInstrument->getPointerOperand(), Int64, "", toInstrument);
   args.push_back(memAddr);
@@ -3577,7 +3585,7 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 #endif
 }
 
-void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
+void DiscoPoP::instrumentStore(StoreInst *toInstrument, uint32_t parent_BB_id) {
 
   LID lid = getLID(toInstrument, fileID);
   if (lid == 0)
@@ -3585,6 +3593,7 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument) {
 
   vector<Value *> args;
   args.push_back(ConstantInt::get(Int32, lid));
+  args.push_back(ConstantInt::get(Int32, parent_BB_id));
 
   Value *memAddr = PtrToIntInst::CreatePointerCast(toInstrument->getPointerOperand(), Int64, "", toInstrument);
   args.push_back(memAddr);

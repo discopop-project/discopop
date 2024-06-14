@@ -908,9 +908,9 @@ void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
   const auto &writes = current_scope.get_first_write();
   for (ADDR addr : writes) {
     // cleanup reads
-    __dp_read(0, addr, "");
+    __dp_read(0, 0, addr, "");
     // cleanup writes
-    __dp_write(0, addr, "");
+    __dp_write(0, 0, addr, "");
   }
 }
 #endif

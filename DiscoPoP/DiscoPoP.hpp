@@ -271,9 +271,9 @@ private:
 
   void instrumentDeleteOrFree(CallBase *toInstrument);
 
-  void instrumentStore(StoreInst *toInstrument);
+  void instrumentStore(StoreInst *toInstrument, uint32_t parent_bb_id);
 
-  void instrumentLoad(LoadInst *toInstrument);
+  void instrumentLoad(LoadInst *toInstrument, uint32_t parent_bb_id);
 
   void insertDpFinalize(Instruction *before);
 
@@ -284,6 +284,8 @@ private:
   void instrumentLoopExit(BasicBlock *bb, int32_t id);
 
   int64_t uniqueNum;
+
+  uint32_t unique_llvm_ir_unique_bb_id;
 
   // Callbacks to run-time library
   FunctionCallee DpInit, DpFinalize;
