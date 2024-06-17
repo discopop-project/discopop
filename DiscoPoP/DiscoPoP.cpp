@@ -3105,7 +3105,6 @@ A real case would be:
 // TODO: atomic variables
 void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
   int32_t llvm_ir_unique_bb_id = unique_llvm_ir_unique_bb_id++;
-  cout << "Parsing Basic block: " << llvm_ir_unique_bb_id << "\n";
 
   for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
     if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {

@@ -90,6 +90,12 @@ if(DEFINED DP_CALLSTACK_PROFILING)
         endif()
 endif()
 
+if(DEFINED DP_CALLSTACK_PROFILING_ENABLE_CUTOFF)
+        if(NOT ${DP_CALLSTACK_PROFILING_ENABLE_CUTOFF} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLSTACK_PROFILING_ENABLE_CUTOFF=${DP_CALLSTACK_PROFILING_ENABLE_CUTOFF})
+        endif()
+endif()
+
 # end of compiler flags
 
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)

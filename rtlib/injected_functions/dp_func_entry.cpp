@@ -67,12 +67,10 @@ void __dp_func_entry(LID lid, int32_t isStart, uint32_t bb_counter) {
     for(int i = 0; i < bb_counter; i++){
       callstack_profiling_bb_visits_since_last_new_dependency_metadata[i] = 0;
     }
-    cout << "created BB visits array;\n";
     callstack_profiling_bb_switches = new bool[bb_counter];
     for(int i = 0; i < bb_counter; i++){
       callstack_profiling_bb_switches[i] = true;
     }
-    cout << "created BB callstack profiling switches\n";
 #endif
     out = new ofstream();
 

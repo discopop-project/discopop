@@ -98,13 +98,15 @@ void __dp_write(LID lid, uint32_t parent_bb_id, ADDR addr, const char *var) {
   if(callstack_profiling_bb_switches[parent_bb_id]){
     // callstack profiling enabled for current BB
     current.callStack = callStack->getCopy();
-    //cout << "visited BB: " << parent_bb_id << " :\t" << callstack_profiling_bb_visits_since_last_new_dependency_metadata[parent_bb_id] << "\n";
+    //cout << "visited BB write: " << parent_bb_id << " :\t" << callstack_profiling_bb_visits_since_last_new_dependency_metadata[parent_bb_id] << "\n";
     callstack_profiling_bb_visits_since_last_new_dependency_metadata[parent_bb_id]++;
 
     // DEBUG - specify fixed cutoff
+    /*
     if(callstack_profiling_bb_visits_since_last_new_dependency_metadata[parent_bb_id] > 100){
       callstack_profiling_bb_switches[parent_bb_id] = false;
     }
+    */
     // END DEBUG
   }
   else{

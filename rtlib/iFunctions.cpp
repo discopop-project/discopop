@@ -57,7 +57,7 @@ namespace __dp {
 
 void addDep(depType type, LID curr, CallStack *currCallStack, LID depOn, CallStack *depOnCallStack, const char *var,
             string AAvar, bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
-            bool positiveScopeChangeOccuredSinceLastAccess) {
+            bool positiveScopeChangeOccuredSinceLastAccess, uint32_t access_parent_bb_id) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ADD_DEP);
 #endif
@@ -73,6 +73,16 @@ void addDep(depType type, LID curr, CallStack *currCallStack, LID depOn, CallSta
   std::set<LID> intra_call_dependencies;
   std::set<LID> inter_call_dependencies;
 #if DP_CALLSTACK_PROFILING
+  bool disable_callstack_check = false;
+#if DP_CALLSTACK_PROFILING_ENABLE_CUTOFF
+  if(callstack_profiling_bb_switches[access_parent_bb_id]){
+    if(callstack_profiling_bb_visits_since_last_new_dependency_metadata[access_parent_bb_id] > 1000){
+      callstack_profiling_bb_switches[access_parent_bb_id] = false;
+      //cout << "Disabled csp BB_id: " << access_parent_bb_id << "\n";
+    }
+  }
+#endif
+
   bool CALLSTACK_DBG = false;
   if (CALLSTACK_DBG) {
     if (currCallStack || depOnCallStack) {
@@ -246,6 +256,9 @@ void addDep(depType type, LID curr, CallStack *currCallStack, LID depOn, CallSta
   for (depTypeModifier dtm : identifiedDepTypes) {
     depType modified_type = type;
     bool print_debug_info = false;
+
+#if DP_CALLSTACK_PROFILING
+#else
     switch (dtm) {
     case NOM:
       // keep modified_type = type
@@ -305,6 +318,7 @@ void addDep(depType type, LID curr, CallStack *currCallStack, LID depOn, CallSta
     default:
       break;
     }
+#endif
 
     if (isStackAccess && (modified_type == WAR || modified_type == RAW || modified_type == WAW) &&
         addrIsFirstWrittenInScope && positiveScopeChangeOccuredSinceLastAccess) {
@@ -315,7 +329,7 @@ void addDep(depType type, LID curr, CallStack *currCallStack, LID depOn, CallSta
       // std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd
       dependenciesToBeRegistered.emplace_back(Dep(modified_type, depOn, var, AAvar, intra_iteration_dependencies,
                                                   inter_iteration_dependencies, intra_call_dependencies,
-                                                  inter_call_dependencies),
+                                                  inter_call_dependencies, access_parent_bb_id),
                                               curr);
     }
 
@@ -348,13 +362,95 @@ void addDep(depType type, LID curr, CallStack *currCallStack, LID depOn, CallSta
       depSet *tmp_depSet = new depSet();
       tmp_depSet->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var, pair.first.AAvar,
                              pair.first.intra_iteration_dependencies, pair.first.inter_iteration_dependencies,
-                             pair.first.intra_call_dependencies, pair.first.inter_call_dependencies));
+                             pair.first.intra_call_dependencies, pair.first.inter_call_dependencies, pair.first.access_parent_bb_id));
       myMap->insert(std::pair<int32_t, depSet *>(pair.second, tmp_depSet));
+#if DP_CALLSTACK_PROFILING
+      //callstack_profiling_bb_visits_since_last_new_dependency_metadata[pair.first.access_parent_bb_id] = 0;
+      //cout << "set distance of " << pair.first.access_parent_bb_id << " to 0\n";
+#endif
     } else {
+#if DP_CALLSTACK_PROFILING
+      // check if a new metadata is found
+/*
+      if(callstack_profiling_bb_switches[pair.first.access_parent_bb_id]){
+        for(auto existingDep : *(posInDeps->second)){
+
+          if((pair.first.type == existingDep.type)
+              && (pair.first.depOn == existingDep.depOn)
+              && (pair.first.AAvar == existingDep.AAvar)
+              && (pair.first.var == existingDep.var))
+              {
+                if ((pair.first.intra_iteration_dependencies.size() != existingDep.intra_iteration_dependencies.size())
+                || (pair.first.inter_iteration_dependencies.size() != existingDep.inter_iteration_dependencies.size())
+                || (pair.first.intra_call_dependencies.size() != existingDep.intra_call_dependencies.size())
+                || (pair.first.inter_call_dependencies.size() != existingDep.inter_call_dependencies.size()))
+                {
+                  cout << "Found new metadata @ " << pair.first.access_parent_bb_id << " @ visit: " << callstack_profiling_bb_visits_since_last_new_dependency_metadata[pair.first.access_parent_bb_id] << "!\n";
+                  callstack_profiling_bb_visits_since_last_new_dependency_metadata[pair.first.access_parent_bb_id] = 0;
+                  cout << "set distance of " << pair.first.access_parent_bb_id << " to 0\n";
+                  break;
+                }
+              }     
+        }
+      }
+*/
+#endif
+      int size_diff = posInDeps->second->size();
+      // DEBUG
+/*
+      cout << "\nPRE:\n";
+      for(auto x : *(posInDeps->second)){
+        cout << "Dep: " << decodeLID(x.depOn) << " " << x.type << " " << x.var << "\n";
+        for(auto iai : x.intra_iteration_dependencies){
+          cout << "iai: " << decodeLID(iai) << "\n";
+        } 
+        for(auto iei : x.inter_iteration_dependencies){
+          cout << "iei: " << decodeLID(iei) << "\n";
+        }
+        for(auto iac : x.intra_call_dependencies){
+          cout << "iac: " << decodeLID(iac) << "\n";
+        } 
+        for(auto iec : x.inter_call_dependencies){
+          cout << "iec: " << decodeLID(iec) << "\n";
+        } 
+      }
+*/
+      // END DEBUG
+
       posInDeps->second->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var, pair.first.AAvar,
                                     pair.first.intra_iteration_dependencies, pair.first.inter_iteration_dependencies,
-                                    pair.first.intra_call_dependencies, pair.first.inter_call_dependencies));
+                                    pair.first.intra_call_dependencies, pair.first.inter_call_dependencies, pair.first.access_parent_bb_id));
+#if DP_CALLSTACK_PROFILING
+      size_diff -= posInDeps->second->size();
+      if(size_diff != 0){
+        // found new metadata
+        //cout << "NMD;" << pair.first.access_parent_bb_id << ";" << callstack_profiling_bb_visits_since_last_new_dependency_metadata[pair.first.access_parent_bb_id] << ";\n";
+        callstack_profiling_bb_visits_since_last_new_dependency_metadata[pair.first.access_parent_bb_id] = 0;
+
+        // DEBUG
+/*        cout << "\nPOST:\n";
+        for(auto x : *(posInDeps->second)){
+          cout << "Dep: " << decodeLID(x.depOn) << " " << x.type << " " << x.var << "\n";
+          for(auto iai : x.intra_iteration_dependencies){
+          cout << "iai: " << decodeLID(iai) << "\n";
+          } 
+          for(auto iei : x.inter_iteration_dependencies){
+            cout << "iei: " << decodeLID(iei) << "\n";
+          }
+          for(auto iac : x.intra_call_dependencies){
+            cout << "iac: " << decodeLID(iac) << "\n";
+          } 
+          for(auto iec : x.inter_call_dependencies){
+            cout << "iec: " << decodeLID(iec) << "\n";
+          }  
+        }
+        cout <<"\n";
+*/
+      // END DEBUG
+      }
+#endif
     }
+
 
     if (DP_DEBUG) {
       cout << "inserted dep [" << decodeLID(pair.second) << ", ";
@@ -707,11 +803,11 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
 
       addDep(RAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar,
              access.isStackAccess, access.addr, access.addrIsOwnedByScope,
-             access.positiveScopeChangeOccuredSinceLastAccess);
+             access.positiveScopeChangeOccuredSinceLastAccess, access.parent_bb_id);
     }
 #else
       addDep(RAW, access.lid, access.callStack, lastWrite, nullptr, access.var, access.AAvar, access.isStackAccess,
-             access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+             access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess, access.parent_bb_id);
     }
 #endif
   } else {
@@ -728,7 +824,7 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
     if (lastWrite == 0) {
       // INIT
       addDep(INIT, access.lid, access.callStack, 0, nullptr, access.var, access.AAvar, access.isStackAccess,
-             access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+             access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess, access.parent_bb_id);
     } else {
       sigElement lastRead = SMem->testInRead(access.addr);
 #if DP_CALLSTACK_PROFILING
@@ -739,10 +835,10 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
 #if DP_CALLSTACK_PROFILING
         addDep(WAR, access.lid, access.callStack, lastRead, lastReadCallStack, access.var, access.AAvar,
                access.isStackAccess, access.addr, access.addrIsOwnedByScope,
-               access.positiveScopeChangeOccuredSinceLastAccess);
+               access.positiveScopeChangeOccuredSinceLastAccess, access.parent_bb_id);
 #else
         addDep(WAR, access.lid, access.callStack, lastRead, nullptr, access.var, access.AAvar, access.isStackAccess,
-               access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+               access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess, access.parent_bb_id);
 #endif
         // Clear intermediate read ops
         SMem->insertToRead(access.addr, 0);
@@ -754,10 +850,10 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
 #if DP_CALLSTACK_PROFILING
         addDep(WAW, access.lid, access.callStack, lastWrite, lastWriteCallStack, access.var, access.AAvar,
                access.isStackAccess, access.addr, access.addrIsOwnedByScope,
-               access.positiveScopeChangeOccuredSinceLastAccess);
+               access.positiveScopeChangeOccuredSinceLastAccess, access.parent_bb_id);
 #else
         addDep(WAW, access.lid, access.callStack, lastWrite, nullptr, access.var, access.AAvar, access.isStackAccess,
-               access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+               access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess, access.parent_bb_id);
 
 #endif
       }

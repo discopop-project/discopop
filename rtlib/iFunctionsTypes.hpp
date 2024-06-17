@@ -60,7 +60,7 @@ struct AccessInfo {
   AccessInfo() : isRead(false), lid(0), var(""), AAvar(""), addr(0), skip(false), callStack(nullptr) {}
 
   bool isRead;
-  // hybrid analysis
+  // hybrid
   bool skip;
   // End HA
   LID lid;
@@ -77,9 +77,9 @@ struct AccessInfo {
 // For runtime dependency merging
 struct Dep {
   Dep(depType T, LID dep, const char *var, std::string AAvar, std::set<LID> iaid, std::set<LID> ieid,
-      std::set<LID> iacd, std::set<LID> iecd)
+      std::set<LID> iacd, std::set<LID> iecd, uint32_t acc_p_bb_id)
       : type(T), depOn(dep), var(var), AAvar(AAvar), intra_iteration_dependencies(iaid),
-        inter_iteration_dependencies(ieid), intra_call_dependencies(iacd), inter_call_dependencies(iecd) {}
+        inter_iteration_dependencies(ieid), intra_call_dependencies(iacd), inter_call_dependencies(iecd), access_parent_bb_id(acc_p_bb_id) {}
 
   depType type;
   LID depOn;
@@ -89,6 +89,7 @@ struct Dep {
   std::set<LID> inter_iteration_dependencies;
   std::set<LID> intra_call_dependencies;
   std::set<LID> inter_call_dependencies;
+  uint32_t access_parent_bb_id;
 };
 
 struct compDep {
@@ -100,7 +101,8 @@ struct compDep {
     }
     // comparison between string is very time-consuming. So just compare
     // variable names according to address (we only need to distinguish them)
-    else if (a.type == b.type && a.depOn == b.depOn && ((size_t)a.var < (size_t)b.var)) {
+    // comapre sizes of sets as proxy, since comparing elements would be expensive
+    else if (a.type == b.type && a.depOn == b.depOn && ((size_t)a.var < (size_t)b.var)){ // && (a.intra_iteration_dependencies.size() == b.intra_iteration_dependencies.size()) && (a.inter_iteration_dependencies.size() == b.inter_iteration_dependencies.size()) && (a.intra_call_dependencies.size() == b.intra_call_dependencies.size()) && (a.inter_call_dependencies.size() == b.inter_call_dependencies.size())) {
       return true;
     }
 
