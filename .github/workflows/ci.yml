@@ -65,7 +65,7 @@ jobs:
       - name: "Check formatting of DiscoPoP Wizard - DEPRECATED"
         run: python -m black -l 120 --check DEPRECATED_discopop_wizard
 
-  execute_c++_unit_tests:
+  execute_cxx_unit_tests:
     runs-on: ubuntu-20.04
     name: Execute C++ unit tests
     needs: execute_code_checks
