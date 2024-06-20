@@ -53,16 +53,8 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 
   loop_manager->clean_function_exit(function_manager->get_current_stack_level(), lid);
 
-#if DP_CALLSTACK_PROFILING
-  callStack->popLoop();
-#endif
-
   function_manager->reset_call(lid);
   function_manager->decrease_stack_level();
-
-#if DP_CALLSTACK_PROFILING
-  callStack->popFunction();
-#endif
 
   // TEST
   // clear information on allocated stack addresses

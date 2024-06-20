@@ -270,25 +270,7 @@ def __check_loop_dependencies(
         elif dep.dtype == DepType.RAW:
             # check RAW dependencies
             # RAW problematic, if it is not an intra-iteration RAW
-            if (
-                not dep.intra_iteration
-                and (dep.metadata_intra_iteration_dep is None or len(dep.metadata_intra_iteration_dep) == 0)
-                and parent_function_lineid
-                in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
-            ) or (
-                (
-                    False
-                    if dep.metadata_inter_call_dep is None
-                    else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
-                )
-                and (
-                    False
-                    if dep.metadata_inter_iteration_dep is None
-                    else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
-                )
-            ):
-                if root_loop.start_position() == "1:618":
-                    pass
+            if not dep.intra_iteration:
                 return True
             # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
             else:
@@ -296,60 +278,20 @@ def __check_loop_dependencies(
                     if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
                         pass
                     else:
-                        # check if metadata exists
-                        if dep.metadata_intra_iteration_dep is not None:
-                            for t in dep.metadata_intra_iteration_dep:
-                                if t in parent_loops:
-                                    if root_loop.start_position() == "1:618":
-                                        pass
-                                    return True
-                            return False
-                        else:
-                            if root_loop.start_position() == "1:618":
-                                pass
-                            return True
+                        return True
 
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
-            if (
-                not dep.intra_iteration
-                and (dep.metadata_intra_iteration_dep is None or len(dep.metadata_intra_iteration_dep) == 0)
-                and parent_function_lineid
-                in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
-            ) or (
-                (
-                    False
-                    if dep.metadata_inter_call_dep is None
-                    else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
-                )
-                and (
-                    False
-                    if dep.metadata_inter_iteration_dep is None
-                    else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
-                )
-            ):
+            if not dep.intra_iteration:
                 if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                     # check if variable is defined inside loop
                     if dep.memory_region not in memory_regions_defined_in_loop:
-                        if root_loop.start_position() == "1:618":
-                            pass
                         return True
             # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
             elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
                 tmp = root_loop.get_nesting_level(pet)
-                # check if metadata exists
-                if dep.metadata_intra_iteration_dep is not None:
-                    for t in dep.metadata_intra_iteration_dep:
-                        if t in parent_loops:
-                            if root_loop.start_position() == "1:618":
-                                pass
-                            return True
-                    return False
-                else:
-                    if root_loop.start_position() == "1:618":
-                        pass
-                    return True
+                return True
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
             # handled by variable classification

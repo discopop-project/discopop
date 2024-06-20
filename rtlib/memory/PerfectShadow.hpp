@@ -16,7 +16,6 @@
 
 #include "../DPTypes.hpp"
 
-#include "../callstack/CallStack.hpp"
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
@@ -30,10 +29,6 @@ public:
   PerfectShadow() {
     sigRead = new std::unordered_map<int64_t, sigElement>();
     sigWrite = new std::unordered_map<int64_t, sigElement>();
-#if DP_CALLSTACK_PROFILING
-    addrToLastReadAccessCallStack = new std::unordered_map<int64_t, CallStack *>();
-    addrToLastWriteAccessCallStack = new std::unordered_map<int64_t, CallStack *>();
-#endif
   }
 
   PerfectShadow(const PerfectShadow &other) = delete;
@@ -56,17 +51,6 @@ public:
   ~PerfectShadow() {
     delete sigRead;
     delete sigWrite;
-
-#if DP_CALLSTACK_PROFILING
-    for (auto elem : *addrToLastReadAccessCallStack) {
-      cleanReadAccessCallStack(elem.first);
-    }
-    for (auto elem : *addrToLastWriteAccessCallStack) {
-      cleanWriteAccessCallStack(elem.first);
-    }
-    delete addrToLastReadAccessCallStack;
-    delete addrToLastWriteAccessCallStack;
-#endif
   }
 
   inline sigElement testInRead(std::int64_t memAddr) { return (*sigRead)[memAddr]; }
@@ -112,65 +96,9 @@ public:
 
   const std::unordered_map<std::int64_t, sigElement> *getSigWrite() const noexcept { return sigWrite; }
 
-#if DP_CALLSTACK_PROFILING
-  inline CallStack *getLastReadAccessCallStack(int64_t memAddr) { return (*addrToLastReadAccessCallStack)[memAddr]; }
-
-  inline void setLastReadAccessCallStack(int64_t memAddr, CallStack *p_cs) {
-    // check if entry exists already
-    std::unordered_map<int64_t, CallStack *>::const_iterator got = (*addrToLastReadAccessCallStack).find(memAddr);
-    if (got == (*addrToLastReadAccessCallStack).end()) {
-      // no entry exists
-      (*addrToLastReadAccessCallStack)[memAddr] = p_cs;
-    } else {
-      // entry exists already. Cleanup the old CallStack and save the new one.
-      CallStack *p_old_cs = (CallStack *)(*addrToLastReadAccessCallStack)[memAddr];
-      if (p_old_cs) {
-        delete p_old_cs;
-      }
-      (*addrToLastReadAccessCallStack)[memAddr] = p_cs;
-    }
-  }
-
-  inline void cleanReadAccessCallStack(int64_t memAddr) {
-    if ((*addrToLastReadAccessCallStack)[memAddr]) {
-      delete (*addrToLastReadAccessCallStack)[memAddr];
-      (*addrToLastReadAccessCallStack)[memAddr] = nullptr;
-    }
-  }
-
-  inline CallStack *getLastWriteAccessCallStack(int64_t memAddr) { return (*addrToLastWriteAccessCallStack)[memAddr]; }
-
-  inline void setLastWriteAccessCallStack(int64_t memAddr, CallStack *p_cs) {
-    // check if entry exists already
-    std::unordered_map<int64_t, CallStack *>::const_iterator got = (*addrToLastWriteAccessCallStack).find(memAddr);
-    if (got == (*addrToLastWriteAccessCallStack).end()) {
-      // no entry exists
-      (*addrToLastWriteAccessCallStack)[memAddr] = p_cs;
-    } else {
-      // entry exists already. Cleanup the old CallStack and save the new one.
-      CallStack *p_old_cs = (CallStack *)(*addrToLastWriteAccessCallStack)[memAddr];
-      if (p_old_cs) {
-        delete p_old_cs;
-      }
-      (*addrToLastWriteAccessCallStack)[memAddr] = p_cs;
-    }
-  }
-
-  inline void cleanWriteAccessCallStack(int64_t memAddr) {
-    if ((*addrToLastWriteAccessCallStack)[memAddr]) {
-      delete (*addrToLastWriteAccessCallStack)[memAddr];
-      (*addrToLastWriteAccessCallStack)[memAddr] = nullptr;
-    }
-  }
-#endif
-
 private:
   std::unordered_map<std::int64_t, sigElement> *sigRead;
   std::unordered_map<std::int64_t, sigElement> *sigWrite;
-#if DP_CALLSTACK_PROFILING
-  std::unordered_map<int64_t, CallStack *> *addrToLastReadAccessCallStack;
-  std::unordered_map<int64_t, CallStack *> *addrToLastWriteAccessCallStack;
-#endif
 };
 
 // Hopefully faster version
@@ -180,23 +108,9 @@ public:
   PerfectShadow2() {
     read_cache.reserve(1024);
     write_cache.reserve(1024);
-#if DP_CALLSTACK_PROFILING
-    addrToLastReadAccessCallStack = new std::unordered_map<int64_t, CallStack *>();
-    addrToLastWriteAccessCallStack = new std::unordered_map<int64_t, CallStack *>();
-#endif
   }
 
   ~PerfectShadow2() {
-#if DP_CALLSTACK_PROFILING
-    for (auto elem : *addrToLastReadAccessCallStack) {
-      cleanReadAccessCallStack(elem.first);
-    }
-    for (auto elem : *addrToLastWriteAccessCallStack) {
-      cleanWriteAccessCallStack(elem.first);
-    }
-    delete addrToLastReadAccessCallStack;
-    delete addrToLastWriteAccessCallStack;
-#endif
   }
 
   sigElement testInRead(const std::int64_t memAddr) noexcept { return read_cache[memAddr]; }
@@ -264,65 +178,9 @@ public:
 
   const hashmap<int64_t, sigElement> *getSigWrite() const noexcept { return &write_cache; }
 
-#if DP_CALLSTACK_PROFILING
-  inline CallStack *getLastReadAccessCallStack(int64_t memAddr) { return (*addrToLastReadAccessCallStack)[memAddr]; }
-
-  inline void setLastReadAccessCallStack(int64_t memAddr, CallStack *p_cs) {
-    // check if entry exists already
-    std::unordered_map<int64_t, CallStack *>::const_iterator got = (*addrToLastReadAccessCallStack).find(memAddr);
-    if (got == (*addrToLastReadAccessCallStack).end()) {
-      // no entry exists
-      (*addrToLastReadAccessCallStack)[memAddr] = p_cs;
-    } else {
-      // entry exists already. Cleanup the old CallStack and save the new one.
-      CallStack *p_old_cs = (CallStack *)(*addrToLastReadAccessCallStack)[memAddr];
-      if (p_old_cs) {
-        delete p_old_cs;
-      }
-      (*addrToLastReadAccessCallStack)[memAddr] = p_cs;
-    }
-  }
-
-  inline void cleanReadAccessCallStack(int64_t memAddr) {
-    if ((*addrToLastReadAccessCallStack)[memAddr]) {
-      delete (*addrToLastReadAccessCallStack)[memAddr];
-      (*addrToLastReadAccessCallStack)[memAddr] = nullptr;
-    }
-  }
-
-  inline CallStack *getLastWriteAccessCallStack(int64_t memAddr) { return (*addrToLastWriteAccessCallStack)[memAddr]; }
-
-  inline void setLastWriteAccessCallStack(int64_t memAddr, CallStack *p_cs) {
-    // check if entry exists already
-    std::unordered_map<int64_t, CallStack *>::const_iterator got = (*addrToLastWriteAccessCallStack).find(memAddr);
-    if (got == (*addrToLastWriteAccessCallStack).end()) {
-      // no entry exists
-      (*addrToLastWriteAccessCallStack)[memAddr] = p_cs;
-    } else {
-      // entry exists already. Cleanup the old CallStack and save the new one.
-      CallStack *p_old_cs = (CallStack *)(*addrToLastWriteAccessCallStack)[memAddr];
-      if (p_old_cs) {
-        delete p_old_cs;
-      }
-      (*addrToLastWriteAccessCallStack)[memAddr] = p_cs;
-    }
-  }
-
-  inline void cleanWriteAccessCallStack(int64_t memAddr) {
-    if ((*addrToLastWriteAccessCallStack)[memAddr]) {
-      delete (*addrToLastWriteAccessCallStack)[memAddr];
-      (*addrToLastWriteAccessCallStack)[memAddr] = nullptr;
-    }
-  }
-#endif
-
 private:
   hashmap<int64_t, sigElement> read_cache{};
   hashmap<int64_t, sigElement> write_cache{};
-#if DP_CALLSTACK_PROFILING
-  std::unordered_map<int64_t, CallStack *> *addrToLastReadAccessCallStack;
-  std::unordered_map<int64_t, CallStack *> *addrToLastWriteAccessCallStack;
-#endif
 };
 
 } // namespace __dp
