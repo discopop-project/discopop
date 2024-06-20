@@ -65,6 +65,49 @@ jobs:
       - name: "Check formatting of DiscoPoP Wizard - DEPRECATED"
         run: python -m black -l 120 --check DEPRECATED_discopop_wizard
 
+  execute_c++_unit_tests:
+    runs-on: ubuntu-20.04
+    name: Execute C++ unit tests
+    needs: execute_code_checks
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.8
+          cache: 'pip' # uses requirements.txt
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Setup DiscoPoP Profiler - Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get remove clang-8 clang-9 clang-10 clang-11 clang-12
+          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
+          sudo apt-get update
+          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
+          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
+          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
+          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
+          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
+          sudo apt-get install -y python3-tk
+
+      - name: "Setup DiscoPoP Profiler - Build"
+        run: |
+          rm -rf build
+          mkdir build
+          cd build
+          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          make -j3
+
+      - name: C++ unit tests
+        run: |
+          build/test/unit_tests/DiscoPoP_UT
+  
   execute_end_to_end_tests:
     runs-on: ubuntu-20.04
     name: Execute end-to-end tests
