@@ -66,7 +66,7 @@ add_subdirectory(rtlib)
 
 add_subdirectory(scripts)
 
-#add_subdirectory(test/unit_tests)
+add_subdirectory(test/unit_tests)
 
 #add_subdirectory(benchmark)
 
