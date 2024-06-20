@@ -70,267 +70,41 @@ void addDep(depType type, LID curr, LID depOn, const char *var,
   depType originalType = type;
   int loopIterationOffset = 0;
 
-  std::vector<depTypeModifier> identifiedDepTypes;
-  bool dependencyRegistered = false;
-  // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's
-  // are overwritten (not 0xFF anymore) and check for intra-iteration
-  // dependencies Intra-Iteration dependency exists, if LoopId's and Iteration
-  // Id's are equal
-  if (unpackLIDMetadata_getLoopID(curr) != (LID)0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID)0xFF) {
-    if (unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn)) {
-
-      // determine iteration count offset in case a new loop has been entered
-      // between curr and depOn
-      loopIterationOffset =
-          checkLIDMetadata_getLoopIterationValidity_0(curr) + checkLIDMetadata_getLoopIterationValidity_1(curr) +
-          checkLIDMetadata_getLoopIterationValidity_2(curr) - checkLIDMetadata_getLoopIterationValidity_0(depOn) -
-          checkLIDMetadata_getLoopIterationValidity_1(depOn) - checkLIDMetadata_getLoopIterationValidity_2(depOn);
-
-      if (loopIterationOffset == 0) {
-
-        if (checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
-          if (checkLIDMetadata_getLoopIterationValidity_1(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
-            if (checkLIDMetadata_getLoopIterationValidity_2(curr) &&
-                checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
-              // loop 0+1+2 valid
-              if (unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) {
-                identifiedDepTypes.push_back(II_2);
-                dependencyRegistered = true;
-
-                if (unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) {
-                  identifiedDepTypes.push_back(II_1);
-                  if (unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) {
-                    identifiedDepTypes.push_back(II_0);
-                  }
-                }
-              }
-            } else {
-              // loop 0+1 valid
-              if (unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) {
-                identifiedDepTypes.push_back(II_1);
-                dependencyRegistered = true;
-                if (unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) {
-                  identifiedDepTypes.push_back(II_0);
-                }
-              }
-            }
-          } else {
-            // loop 0 valid
-            if (unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) {
-              identifiedDepTypes.push_back(II_0);
-              dependencyRegistered = true;
-            }
-          }
-        } else {
-          // no loop valid
-        }
-
-      } else if (loopIterationOffset == 1) {
-        // check outer loop
-        if ((unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_2(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
-          // II 2
-          identifiedDepTypes.push_back(II_2);
-          dependencyRegistered = true;
-        }
-        // check second loop
-        else if ((unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) &&
-                 checkLIDMetadata_getLoopIterationValidity_1(curr) &&
-                 checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
-          // II 1
-          identifiedDepTypes.push_back(II_1);
-          dependencyRegistered = true;
-        }
-      } else if (loopIterationOffset == 2) {
-        // check outer loop
-        if ((unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_2(curr) && checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
-          // II 2
-          identifiedDepTypes.push_back(II_2);
-          dependencyRegistered = true;
-        }
-      } else if (loopIterationOffset == -2) {
-        // example: depOn inside an inner loop, curr happens after this inner
-        // loop
-        if ((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
-          // II 0
-          identifiedDepTypes.push_back(II_0);
-          dependencyRegistered = true;
-        }
-      } else if (loopIterationOffset == -1) {
-        // check second loop
-        if ((unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_1(curr) && checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
-          // II 1
-          identifiedDepTypes.push_back(II_1);
-          dependencyRegistered = true;
-          // check first loop
-          if ((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) &&
-              checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
-            // II 0
-            identifiedDepTypes.push_back(II_0);
-            dependencyRegistered = true;
-          }
-        }
-        // check first loop
-        else {
-          if ((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) &&
-              checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
-            // II 0
-            identifiedDepTypes.push_back(II_0);
-            dependencyRegistered = true;
-          }
-        }
-      }
-    }
-  }
-
-  if (!dependencyRegistered) {
-    // register dependency with original type
-    identifiedDepTypes.push_back(NOM);
-  }
-
   // Remove metadata to preserve result correctness and add metadata to `Dep`
   // object
-  LID dbg_curr = curr;   // for printing only
-  LID dbg_depOn = depOn; // for printing only
 
-  curr &= 0x00000000FFFFFFFF;
-  depOn &= 0x00000000FFFFFFFF;
+  // register dependency
+  depMap::iterator posInDeps = myMap->find(curr);
+  if (posInDeps == myMap->end()) {
+    depSet *tmp_depSet = new depSet();
+    tmp_depSet->insert(Dep(type, depOn, var, AAvar));
+    myMap->insert(std::pair<int32_t, depSet *>(curr, tmp_depSet));
+  } else {
+    posInDeps->second->insert(Dep(type, depOn, var, AAvar));
+  }
 
-  std::vector<std::pair<Dep, LID>> dependenciesToBeRegistered;
-  dependenciesToBeRegistered.reserve(identifiedDepTypes.size());
-
-  for (depTypeModifier dtm : identifiedDepTypes) {
-    depType modified_type = type;
-    bool print_debug_info = false;
-    switch (dtm) {
-    case NOM:
-      // keep modified_type = type
-      // print_debug_info = true;
+  if (DP_DEBUG) {
+    cout << "inserted dep [" << decodeLID(curr) << ", ";
+    switch (type) {
+    case RAW:
+      cout << "RAW";
       break;
-    case II_0: {
-      switch (type) {
-      case RAW:
-        modified_type = RAW_II_0;
-        break;
-      case WAR:
-        modified_type = WAR_II_0;
-        break;
-      case WAW:
-        modified_type = WAW_II_0;
-        break;
-      case INIT:
-        break;
-      default:
-        break;
-      }
-    } break;
-    case II_1: {
-      switch (type) {
-      case RAW:
-        modified_type = RAW_II_1;
-        break;
-      case WAR:
-        modified_type = WAR_II_1;
-        break;
-      case WAW:
-        modified_type = WAW_II_1;
-        break;
-      case INIT:
-        break;
-      default:
-        break;
-      }
-    } break;
-    case II_2: {
-      switch (type) {
-      case RAW:
-        modified_type = RAW_II_2;
-        break;
-      case WAR:
-        modified_type = WAR_II_2;
-        break;
-      case WAW:
-        modified_type = WAW_II_2;
-        break;
-      case INIT:
-        break;
-      default:
-        break;
-      }
-    } break;
+    case WAR:
+      cout << "WAR";
+      break;
+    case WAW:
+      cout << "WAW";
+      break;
+    case INIT:
+      cout << "INIT";
+      break;
     default:
       break;
     }
-
-    if (isStackAccess && (modified_type == WAR || modified_type == RAW || modified_type == WAW) &&
-        addrIsFirstWrittenInScope && positiveScopeChangeOccuredSinceLastAccess) {
-      // IGNORE ACCESS
-    } else {
-      // register dependency
-      // depType T, LID dep, char *var, std::string AAvar, std::set<LID> iaid,
-      // std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd
-      dependenciesToBeRegistered.emplace_back(Dep(modified_type, depOn, var, AAvar),
-                                              curr);
-    }
-
-    if (print_debug_info) {
-      cout << "AddDep: CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(dbg_depOn) << "  LoopIDS: " << hex
-           << unpackLIDMetadata_getLoopID(dbg_curr) << ";" << hex << unpackLIDMetadata_getLoopID(dbg_depOn) << "\n";
-      cout << "  Var: " << var << "\n";
-      cout << "  Loop Iterations(curr): " << hex << unpackLIDMetadata_getLoopIteration_0(dbg_curr) << ";" << hex
-           << unpackLIDMetadata_getLoopIteration_1(dbg_curr) << ";" << hex
-           << unpackLIDMetadata_getLoopIteration_2(dbg_curr) << "\n";
-      cout << "  Loop Iterations(depOn): " << hex << unpackLIDMetadata_getLoopIteration_0(dbg_depOn) << ";" << hex
-           << unpackLIDMetadata_getLoopIteration_1(dbg_depOn) << ";" << hex
-           << unpackLIDMetadata_getLoopIteration_2(dbg_depOn) << "\n";
-      cout << "  Valid(cur): " << checkLIDMetadata_getLoopIterationValidity_0(dbg_curr) << ";"
-           << checkLIDMetadata_getLoopIterationValidity_1(dbg_curr) << ";"
-           << checkLIDMetadata_getLoopIterationValidity_2(dbg_curr) << ";\n";
-      cout << "  Valid(dep): " << checkLIDMetadata_getLoopIterationValidity_0(dbg_depOn) << ";"
-           << checkLIDMetadata_getLoopIterationValidity_1(dbg_depOn) << ";"
-           << checkLIDMetadata_getLoopIterationValidity_2(dbg_depOn) << ";\n";
-      cout << "  LoopIterationOffset: " << to_string(loopIterationOffset) << "\n";
-      cout << "  orig.type: " << originalType << "\n";
-      cout << "  final.type: " << modified_type << "\n\n";
-    }
-  }
-
-  // register dependencies
-  for (std::pair<Dep, LID> pair : dependenciesToBeRegistered) {
-    depMap::iterator posInDeps = myMap->find(pair.second);
-    if (posInDeps == myMap->end()) {
-      depSet *tmp_depSet = new depSet();
-      tmp_depSet->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var, pair.first.AAvar));
-      myMap->insert(std::pair<int32_t, depSet *>(pair.second, tmp_depSet));
-    } else {
-      posInDeps->second->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var, pair.first.AAvar));
-    }
-
-    if (DP_DEBUG) {
-      cout << "inserted dep [" << decodeLID(pair.second) << ", ";
-      switch (type) {
-      case RAW:
-        cout << "RAW";
-        break;
-      case WAR:
-        cout << "WAR";
-        break;
-      case WAW:
-        cout << "WAW";
-        break;
-      case INIT:
-        cout << "INIT";
-        break;
-      default:
-        break;
-      }
-      cout << ", " << decodeLID(pair.first.depOn) << "] into deps (" << myMap->size() << ")" << endl;
-    }
+    cout << ", " << decodeLID(depOn) << "] into deps (" << myMap->size() << ")" << endl;
   }
 }
+
 
 // hybrid analysis
 void generateStringDepMap() {
@@ -356,33 +130,6 @@ void generateStringDepMap() {
           break;
         case WAW:
           dep += "WAW";
-          break;
-        case RAW_II_0:
-          dep += "RAW_II_0";
-          break;
-        case WAR_II_0:
-          dep += "WAR_II_0";
-          break;
-        case WAW_II_0:
-          dep += "WAW_II_0";
-          break;
-        case RAW_II_1:
-          dep += "RAW_II_1";
-          break;
-        case WAR_II_1:
-          dep += "WAR_II_1";
-          break;
-        case WAW_II_1:
-          dep += "WAW_II_1";
-          break;
-        case RAW_II_2:
-          dep += "RAW_II_2";
-          break;
-        case WAR_II_2:
-          dep += "WAR_II_2";
-          break;
-        case WAW_II_2:
-          dep += "WAW_II_2";
           break;
         case INIT:
           dep += "INIT";

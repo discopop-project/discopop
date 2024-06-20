@@ -75,7 +75,7 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
   current.isRead = false;
-  current.lid = loop_manager->update_lid(0);
+  current.lid = 0;
   current.var = var;
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
