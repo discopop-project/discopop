@@ -6,6 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import os
+from pathlib import Path
 from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProviderArguments
 from discopop_library.ConfigProvider.assets.build_config import DP_BUILD, DP_SOURCE, LLVM_BIN_DIR  # type: ignore
 from discopop_library.global_data.version.utils import get_version
@@ -20,6 +22,16 @@ def run(arguments: ConfigProviderArguments) -> str:
         return DP_SOURCE  # type: ignore
     elif arguments.return_llvm_bin_dir:
         return LLVM_BIN_DIR  # type: ignore
+    elif arguments.return_full_config:
+        ret_str = ""
+        assets_path = os.path.join(Path(__file__).parent.absolute(), "assets", "build_config.py")
+        with open(assets_path, "r") as f:
+            for line in f.readlines():
+                ret_str += line
+        # remove trailing \n
+        if ret_str[-1] == "\n":
+            ret_str = ret_str[:-1]
+        return ret_str
     elif arguments.return_version_string:
         return get_version()
     else:
