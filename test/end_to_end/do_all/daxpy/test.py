@@ -12,7 +12,7 @@ from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProvid
 
 
 class TestMethods(unittest.TestCase):
-    def test(self):
+    def setUp(self):
         current_dir = pathlib.Path(__file__).parent.resolve()
         dp_build_dir = run_config_provider(
             ConfigProviderArguments(
@@ -46,19 +46,16 @@ class TestMethods(unittest.TestCase):
         cwd = os.path.join(src_dir, ".discopop")
         cmd = "discopop_explorer --enable-patterns doall,reduction"
         run_cmd(cmd, cwd, env_vars)
-        # validate results
-        try:
-            self.validate_results(current_dir, src_dir)
-            # clean environment
-            run_cmd("make veryclean", src_dir, env_vars)
-        except Exception as ex:
-            # clean environment
-            run_cmd("make veryclean", src_dir, env_vars)
-            raise ex
 
-    def validate_results(self, test_dir, src_dir):
+        self.src_dir = src_dir
+        self.env_vars = env_vars
+
+    def tearDown(self):
+        run_cmd("make veryclean", self.src_dir, self.env_vars)
+
+    def test(self):
         """compare results to gold standard"""
-        test_output_file = os.path.join(src_dir, ".discopop", "explorer", "detection_result_dump.json")
+        test_output_file = os.path.join(self.src_dir, ".discopop", "explorer", "detection_result_dump.json")
         # load detection results
         with open(test_output_file, "r") as f:
             tmp_str = f.read()
