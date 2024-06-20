@@ -17,8 +17,6 @@ set(DiscoPoP_SOURCES
                 
         memory/MemoryManager.cpp
         memory/Signature.cpp
-
-        callstack/CallStack.cpp
 		
         injected_functions/dp_add_bb_deps.cpp
         injected_functions/dp_alloca.cpp
@@ -85,13 +83,6 @@ if(DEFINED DP_STACK_ACCESS_DETECTION)
         if(NOT ${DP_STACK_ACCESS_DETECTION} EQUAL 0)
                 target_compile_definitions(DiscoPoP_RT PUBLIC DP_STACK_ACCESS_DETECTION=${DP_STACK_ACCESS_DETECTION})
                 message(STATUS "WARNING: DiscoPoP configuration: DP_STACK_ACCESS_DETECTION enabled. Reduces profiling speed.")
-        endif()
-endif()
-
-if(DEFINED DP_CALLSTACK_PROFILING)
-        if(NOT ${DP_CALLSTACK_PROFILING} EQUAL 0)
-                target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLSTACK_PROFILING=${DP_CALLSTACK_PROFILING})
-                message(STATUS "WARNING: DiscoPoP configuration: DP_CALLSTACK_PROFILING enabled. Reduces profiling speed.")
         endif()
 endif()
 

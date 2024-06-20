@@ -91,10 +91,6 @@ void __dp_read(LID lid, ADDR addr, const char *var) {
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
 
-#if DP_CALLSTACK_PROFILING
-  current.callStack = callStack->getCopy();
-#endif
-
 #if DP_STACK_ACCESS_DETECTION
   current.isStackAccess = is_stack_access;
   current.addrIsOwnedByScope = memory_manager->isFirstWrittenInScope(addr, false);

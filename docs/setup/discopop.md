@@ -35,7 +35,6 @@ where `<CMAKE_FLAGS>` can consist of any combination of the following flags and 
 - `-DDP_HYBRID_PROFILING=[0|1]` &ndash; Enbale hybrid profiling. Default: `1`.
 - `-DDP_MEMORY_REGION_DEALIASING=[0|1]`: Enable or disable the generation of dependency de-aliasing information. Reduces potential false positive parallelization suggestions, but increases the profiling overhead.
 - `-DDP_STACK_ACCESS_DETECTION=[0|1]`: Enable or disable stack dependency detection. Enabling will reduce false positive dependences, but increase the profiling overhead. This flag only has an effect on the results, if `-DDP_HYBRID_PROFILING=0`.
-- `-DDP_CALLSTACK_PROFILING=[0|1]`: Enable or disable callstack profiling. Enabling will allow the detection of parallelization suggestions for more complex code regions, but significantly increase the profiling overhead. 
 
 #### Development and debugging
 - `-DDP_RTLIB_VERBOSE=[0|1]` &ndash; Enable verbose output during profiling.
