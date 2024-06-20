@@ -56,8 +56,7 @@ namespace __dp {
 /******* Helper functions *******/
 
 void addDep(depType type, LID curr, LID depOn, const char *var,
-            string AAvar, bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
-            bool positiveScopeChangeOccuredSinceLastAccess) {
+            string AAvar, ADDR addr) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ADD_DEP);
 #endif
@@ -343,28 +342,28 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
     if (lastWrite != 0) {
       // RAW
       SMem->insertToRead(access.addr, access.lid);
-      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar, access.isStackAccess,
-             access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
+             access.addr);
     }
 
   } else {
     sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
     if (lastWrite == 0) {
       // INIT
-      addDep(INIT, access.lid, 0, access.var, access.AAvar, access.isStackAccess,
-             access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+      addDep(INIT, access.lid, 0, access.var, access.AAvar,
+             access.addr);
     } else {
       sigElement lastRead = SMem->testInRead(access.addr);
       if (lastRead != 0) {
         // WAR
-        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.isStackAccess,
-               access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, 
+               access.addr);
         // Clear intermediate read ops
         SMem->insertToRead(access.addr, 0);
       } else {
         // WAW
-        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, access.isStackAccess,
-               access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, 
+               access.addr);
       }
     }
   }

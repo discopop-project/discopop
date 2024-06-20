@@ -72,20 +72,6 @@ if(DEFINED DP_INTERNAL_TIMER)
         endif()
 endif()
 
-if(DEFINED DP_MEMORY_REGION_DEALIASING)
-        if(NOT ${DP_MEMORY_REGION_DEALIASING} EQUAL 0)
-                target_compile_definitions(DiscoPoP_RT PUBLIC DP_MEMORY_REGION_DEALIASING=${DP_MEMORY_REGION_DEALIASING})
-                message(STATUS "WARNING: DiscoPoP configuration: DP_MEMORY_REGION_DEALIASING enabled. Reduces profiling speed.")
-        endif()
-endif()
-
-if(DEFINED DP_STACK_ACCESS_DETECTION)
-        if(NOT ${DP_STACK_ACCESS_DETECTION} EQUAL 0)
-                target_compile_definitions(DiscoPoP_RT PUBLIC DP_STACK_ACCESS_DETECTION=${DP_STACK_ACCESS_DETECTION})
-                message(STATUS "WARNING: DiscoPoP configuration: DP_STACK_ACCESS_DETECTION enabled. Reduces profiling speed.")
-        endif()
-endif()
-
 # end of compiler flags
 
 install(TARGETS DiscoPoP_RT ARCHIVE DESTINATION lib)

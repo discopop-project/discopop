@@ -66,9 +66,6 @@ struct AccessInfo {
   const char *var;
   std::string AAvar; // name of allocated variable -> "Anti Aliased Variable"
   ADDR addr;
-  bool isStackAccess = false;
-  bool addrIsOwnedByScope = false;
-  bool positiveScopeChangeOccuredSinceLastAccess = false;
 };
 
 // For runtime dependency merging
