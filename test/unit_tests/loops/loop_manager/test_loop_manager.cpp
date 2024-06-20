@@ -23,9 +23,6 @@ TEST_F(LoopManagerTest, testInitialization) {
   for (auto i = 0; i < 100; i++) {
     ASSERT_TRUE(lm.is_single_exit(i));
   }
-
-  const auto lid = (LID)0;
-  ASSERT_EQ(lm.update_lid(lid), 0xFF00000000000000LL);
 }
 
 TEST_F(LoopManagerTest, testCreateNewLoop) {
@@ -112,46 +109,6 @@ TEST_F(LoopManagerTest, testCleanFunctionExit) {
   ASSERT_EQ(loop->maxIterationCount, 0);
   ASSERT_EQ(loop->nEntered, 1);
   ASSERT_EQ(loop->total, 0);
-}
-
-TEST_F(LoopManagerTest, testUpdateLid) {
-  auto lm = __dp::LoopManager();
-
-  const auto &table = lm.get_stack();
-  const auto &loops = lm.get_loops();
-
-  lm.create_new_loop(1, 2, 0);
-  lm.create_new_loop(4, 5, 0);
-  lm.create_new_loop(7, 8, 0);
-  lm.create_new_loop(10, 11, 0);
-  lm.create_new_loop(13, 14, 0);
-
-  const auto lid_1 = 0b0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000LL;
-  const auto lid_2 = 0b1111'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000LL;
-  const auto lid_3 = 0b0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'0000'1111LL;
-  const auto lid_4 = 0b0000'1111'0000'1111'0000'1111'0000'1111'0000'1111'0000'1111'0000'1111'0000'1111LL;
-  const auto lid_5 = 0b1111'0000'1111'0000'1111'0000'1111'0000'1111'0000'1111'0000'1111'0000'1111'0000LL;
-  const auto lid_6 = 0b0000'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111LL;
-  const auto lid_7 = 0b1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'0000LL;
-  const auto lid_8 = 0b1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111'1111LL;
-
-  const auto expected_lid_1 = table.update_lid(lid_1);
-  const auto expected_lid_2 = table.update_lid(lid_2);
-  const auto expected_lid_3 = table.update_lid(lid_3);
-  const auto expected_lid_4 = table.update_lid(lid_4);
-  const auto expected_lid_5 = table.update_lid(lid_5);
-  const auto expected_lid_6 = table.update_lid(lid_6);
-  const auto expected_lid_7 = table.update_lid(lid_7);
-  const auto expected_lid_8 = table.update_lid(lid_8);
-
-  ASSERT_EQ(expected_lid_1, lm.update_lid(lid_1));
-  ASSERT_EQ(expected_lid_2, lm.update_lid(lid_2));
-  ASSERT_EQ(expected_lid_3, lm.update_lid(lid_3));
-  ASSERT_EQ(expected_lid_4, lm.update_lid(lid_4));
-  ASSERT_EQ(expected_lid_5, lm.update_lid(lid_5));
-  ASSERT_EQ(expected_lid_6, lm.update_lid(lid_6));
-  ASSERT_EQ(expected_lid_7, lm.update_lid(lid_7));
-  ASSERT_EQ(expected_lid_8, lm.update_lid(lid_8));
 }
 
 TEST_F(LoopManagerTest, testExitLoop) {

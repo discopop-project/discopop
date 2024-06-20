@@ -86,7 +86,7 @@ void __dp_read(LID lid, ADDR addr, const char *var) {
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
 #endif
   current.isRead = true;
-  current.lid = loop_manager->update_lid(lid);
+  current.lid = lid;
   current.var = var;
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
