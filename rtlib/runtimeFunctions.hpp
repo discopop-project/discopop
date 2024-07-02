@@ -13,7 +13,7 @@
 #pragma once
 
 #include "DPTypes.hpp"
-#include "iFunctionsTypes.hpp"
+#include "runtimeFunctionsTypes.hpp"
 #include "memory/AbstractShadow.hpp"
 
 #include <string>

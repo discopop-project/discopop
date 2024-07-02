@@ -12,8 +12,8 @@
 
 #include "../DPTypes.hpp"
 
-#include "../iFunctions.hpp"
-#include "../iFunctionsGlobals.hpp"
+#include "../runtimeFunctions.hpp"
+#include "../runtimeFunctionsGlobals.hpp"
 
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
