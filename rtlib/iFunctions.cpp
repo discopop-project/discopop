@@ -22,6 +22,7 @@
 #include "memory/PerfectShadow.hpp"
 #include "memory/ShadowMemory.hpp"
 #include "memory/Signature.hpp"
+#include "calltree/utils.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -55,9 +56,15 @@ namespace __dp {
 
 /******* Helper functions *******/
 
+
+#if DP_CALLTREE_PROFILING
 void addDep(depType type, LID curr, LID depOn, const char *var,
-            string AAvar, bool isStackAccess, ADDR addr, bool addrIsFirstWrittenInScope,
-            bool positiveScopeChangeOccuredSinceLastAccess) {
+            string AAvar, ADDR addr, std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_write_addr_to_call_tree_node_map, std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_read_addr_to_call_tree_node_map){
+#else
+void addDep(depType type, LID curr, LID depOn, const char *var,
+            string AAvar, ADDR addr){
+#endif
+
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ADD_DEP);
 #endif
@@ -70,267 +77,87 @@ void addDep(depType type, LID curr, LID depOn, const char *var,
   depType originalType = type;
   int loopIterationOffset = 0;
 
-  std::vector<depTypeModifier> identifiedDepTypes;
-  bool dependencyRegistered = false;
-  // Compare metadata (Loop ID's and Loop Iterations) from LID's if loop id's
-  // are overwritten (not 0xFF anymore) and check for intra-iteration
-  // dependencies Intra-Iteration dependency exists, if LoopId's and Iteration
-  // Id's are equal
-  if (unpackLIDMetadata_getLoopID(curr) != (LID)0xFF && unpackLIDMetadata_getLoopID(depOn) != (LID)0xFF) {
-    if (unpackLIDMetadata_getLoopID(curr) == unpackLIDMetadata_getLoopID(depOn)) {
-
-      // determine iteration count offset in case a new loop has been entered
-      // between curr and depOn
-      loopIterationOffset =
-          checkLIDMetadata_getLoopIterationValidity_0(curr) + checkLIDMetadata_getLoopIterationValidity_1(curr) +
-          checkLIDMetadata_getLoopIterationValidity_2(curr) - checkLIDMetadata_getLoopIterationValidity_0(depOn) -
-          checkLIDMetadata_getLoopIterationValidity_1(depOn) - checkLIDMetadata_getLoopIterationValidity_2(depOn);
-
-      if (loopIterationOffset == 0) {
-
-        if (checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
-          if (checkLIDMetadata_getLoopIterationValidity_1(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
-            if (checkLIDMetadata_getLoopIterationValidity_2(curr) &&
-                checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
-              // loop 0+1+2 valid
-              if (unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) {
-                identifiedDepTypes.push_back(II_2);
-                dependencyRegistered = true;
-
-                if (unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) {
-                  identifiedDepTypes.push_back(II_1);
-                  if (unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) {
-                    identifiedDepTypes.push_back(II_0);
-                  }
-                }
-              }
-            } else {
-              // loop 0+1 valid
-              if (unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) {
-                identifiedDepTypes.push_back(II_1);
-                dependencyRegistered = true;
-                if (unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) {
-                  identifiedDepTypes.push_back(II_0);
-                }
-              }
-            }
-          } else {
-            // loop 0 valid
-            if (unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) {
-              identifiedDepTypes.push_back(II_0);
-              dependencyRegistered = true;
-            }
-          }
-        } else {
-          // no loop valid
-        }
-
-      } else if (loopIterationOffset == 1) {
-        // check outer loop
-        if ((unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_2(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
-          // II 2
-          identifiedDepTypes.push_back(II_2);
-          dependencyRegistered = true;
-        }
-        // check second loop
-        else if ((unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) &&
-                 checkLIDMetadata_getLoopIterationValidity_1(curr) &&
-                 checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
-          // II 1
-          identifiedDepTypes.push_back(II_1);
-          dependencyRegistered = true;
-        }
-      } else if (loopIterationOffset == 2) {
-        // check outer loop
-        if ((unpackLIDMetadata_getLoopIteration_2(curr) == unpackLIDMetadata_getLoopIteration_0(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_2(curr) && checkLIDMetadata_getLoopIterationValidity_0(depOn)) {
-          // II 2
-          identifiedDepTypes.push_back(II_2);
-          dependencyRegistered = true;
-        }
-      } else if (loopIterationOffset == -2) {
-        // example: depOn inside an inner loop, curr happens after this inner
-        // loop
-        if ((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
-          // II 0
-          identifiedDepTypes.push_back(II_0);
-          dependencyRegistered = true;
-        }
-      } else if (loopIterationOffset == -1) {
-        // check second loop
-        if ((unpackLIDMetadata_getLoopIteration_1(curr) == unpackLIDMetadata_getLoopIteration_2(depOn)) &&
-            checkLIDMetadata_getLoopIterationValidity_1(curr) && checkLIDMetadata_getLoopIterationValidity_2(depOn)) {
-          // II 1
-          identifiedDepTypes.push_back(II_1);
-          dependencyRegistered = true;
-          // check first loop
-          if ((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) &&
-              checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
-            // II 0
-            identifiedDepTypes.push_back(II_0);
-            dependencyRegistered = true;
-          }
-        }
-        // check first loop
-        else {
-          if ((unpackLIDMetadata_getLoopIteration_0(curr) == unpackLIDMetadata_getLoopIteration_1(depOn)) &&
-              checkLIDMetadata_getLoopIterationValidity_0(curr) && checkLIDMetadata_getLoopIterationValidity_1(depOn)) {
-            // II 0
-            identifiedDepTypes.push_back(II_0);
-            dependencyRegistered = true;
-          }
-        }
-      }
-    }
-  }
-
-  if (!dependencyRegistered) {
-    // register dependency with original type
-    identifiedDepTypes.push_back(NOM);
-  }
-
   // Remove metadata to preserve result correctness and add metadata to `Dep`
   // object
-  LID dbg_curr = curr;   // for printing only
-  LID dbg_depOn = depOn; // for printing only
 
-  curr &= 0x00000000FFFFFFFF;
-  depOn &= 0x00000000FFFFFFFF;
+  // register dependency
+  depMap::iterator posInDeps = myMap->find(curr);
+  if (posInDeps == myMap->end()) {
+    depSet *tmp_depSet = new depSet();
+    tmp_depSet->insert(Dep(type, depOn, var, AAvar));
+    myMap->insert(std::pair<int32_t, depSet *>(curr, tmp_depSet));
+  } else {
+    posInDeps->second->insert(Dep(type, depOn, var, AAvar));
+  }
 
-  std::vector<std::pair<Dep, LID>> dependenciesToBeRegistered;
-  dependenciesToBeRegistered.reserve(identifiedDepTypes.size());
 
-  for (depTypeModifier dtm : identifiedDepTypes) {
-    depType modified_type = type;
-    bool print_debug_info = false;
-    switch (dtm) {
-    case NOM:
-      // keep modified_type = type
-      // print_debug_info = true;
+#if DP_CALLTREE_PROFILING
+  // register dependency for call_tree based metadata calculation 
+  DependencyMetadata dmd;
+  switch(type){
+    case RAW:
+      // register metadata calculation
+      //cout << "Register metadata calculation: RAW " << decodeLID(curr) << " " << decodeLID(depOn) << " " << var << " (" <<  (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ") " << " (" <<  (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ")\n";
+
+      // process directly
+      dmd = processQueueElement(MetaDataQueueElement(type, curr, depOn, var, AAvar, (*thread_private_read_addr_to_call_tree_node_map)[addr], (*thread_private_write_addr_to_call_tree_node_map)[addr]));
+      dependency_metadata_results_mtx->lock();
+      dependency_metadata_results->insert(dmd);
+      dependency_metadata_results_mtx->unlock();
+
+      //metadata_queue->insert(); // optimization potential: do not use copies here!      
       break;
-    case II_0: {
-      switch (type) {
-      case RAW:
-        modified_type = RAW_II_0;
-        break;
-      case WAR:
-        modified_type = WAR_II_0;
-        break;
-      case WAW:
-        modified_type = WAW_II_0;
-        break;
-      case INIT:
-        break;
-      default:
-        break;
-      }
-    } break;
-    case II_1: {
-      switch (type) {
-      case RAW:
-        modified_type = RAW_II_1;
-        break;
-      case WAR:
-        modified_type = WAR_II_1;
-        break;
-      case WAW:
-        modified_type = WAW_II_1;
-        break;
-      case INIT:
-        break;
-      default:
-        break;
-      }
-    } break;
-    case II_2: {
-      switch (type) {
-      case RAW:
-        modified_type = RAW_II_2;
-        break;
-      case WAR:
-        modified_type = WAR_II_2;
-        break;
-      case WAW:
-        modified_type = WAW_II_2;
-        break;
-      case INIT:
-        break;
-      default:
-        break;
-      }
-    } break;
+    case WAR:
+      // update write
+      // register metadata calculation
+      //cout << "Register metadata calculation: WAR " << decodeLID(curr) << " " << decodeLID(depOn) << " " << var << " (" <<  (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ") " << " (" <<  (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ")\n";
+
+      dmd = processQueueElement(MetaDataQueueElement(type, curr, depOn, var, AAvar, (*thread_private_write_addr_to_call_tree_node_map)[addr], (*thread_private_read_addr_to_call_tree_node_map)[addr]));
+      dependency_metadata_results_mtx->lock();
+      dependency_metadata_results->insert(dmd);
+      dependency_metadata_results_mtx->unlock();
+      // metadata_queue->insert(); // optimization potential: do not use copies here!      
+      break;
+    case WAW:
+      // register metadata calculation
+      //cout << "Register metadata calculation: WAW " << decodeLID(curr) << " " << decodeLID(depOn) << " " << var << " (" <<  (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ") " << " (" <<  (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ")\n";
+      dmd = processQueueElement(MetaDataQueueElement(type, curr, depOn, var, AAvar, (*thread_private_write_addr_to_call_tree_node_map)[addr], (*thread_private_write_addr_to_call_tree_node_map)[addr]));
+      dependency_metadata_results_mtx->lock();
+      dependency_metadata_results->insert(dmd);
+      dependency_metadata_results_mtx->unlock();
+      //metadata_queue->insert(); // optimization potential: do not use copies here!      
+      break;
+    case INIT:
+      break;
+    default:
+      break;
+  }
+  
+#endif
+
+
+  if (DP_DEBUG) {
+    cout << "inserted dep [" << decodeLID(curr) << ", ";
+    switch (type) {
+    case RAW:
+      cout << "RAW";
+      break;
+    case WAR:
+      cout << "WAR";
+      break;
+    case WAW:
+      cout << "WAW";
+      break;
+    case INIT:
+      cout << "INIT";
+      break;
     default:
       break;
     }
-
-    if (isStackAccess && (modified_type == WAR || modified_type == RAW || modified_type == WAW) &&
-        addrIsFirstWrittenInScope && positiveScopeChangeOccuredSinceLastAccess) {
-      // IGNORE ACCESS
-    } else {
-      // register dependency
-      // depType T, LID dep, char *var, std::string AAvar, std::set<LID> iaid,
-      // std::set<LID> ieid, std::set<LID> iacd, std::set<LID> iecd
-      dependenciesToBeRegistered.emplace_back(Dep(modified_type, depOn, var, AAvar),
-                                              curr);
-    }
-
-    if (print_debug_info) {
-      cout << "AddDep: CURR: " << decodeLID(curr) << "  DepOn: " << decodeLID(dbg_depOn) << "  LoopIDS: " << hex
-           << unpackLIDMetadata_getLoopID(dbg_curr) << ";" << hex << unpackLIDMetadata_getLoopID(dbg_depOn) << "\n";
-      cout << "  Var: " << var << "\n";
-      cout << "  Loop Iterations(curr): " << hex << unpackLIDMetadata_getLoopIteration_0(dbg_curr) << ";" << hex
-           << unpackLIDMetadata_getLoopIteration_1(dbg_curr) << ";" << hex
-           << unpackLIDMetadata_getLoopIteration_2(dbg_curr) << "\n";
-      cout << "  Loop Iterations(depOn): " << hex << unpackLIDMetadata_getLoopIteration_0(dbg_depOn) << ";" << hex
-           << unpackLIDMetadata_getLoopIteration_1(dbg_depOn) << ";" << hex
-           << unpackLIDMetadata_getLoopIteration_2(dbg_depOn) << "\n";
-      cout << "  Valid(cur): " << checkLIDMetadata_getLoopIterationValidity_0(dbg_curr) << ";"
-           << checkLIDMetadata_getLoopIterationValidity_1(dbg_curr) << ";"
-           << checkLIDMetadata_getLoopIterationValidity_2(dbg_curr) << ";\n";
-      cout << "  Valid(dep): " << checkLIDMetadata_getLoopIterationValidity_0(dbg_depOn) << ";"
-           << checkLIDMetadata_getLoopIterationValidity_1(dbg_depOn) << ";"
-           << checkLIDMetadata_getLoopIterationValidity_2(dbg_depOn) << ";\n";
-      cout << "  LoopIterationOffset: " << to_string(loopIterationOffset) << "\n";
-      cout << "  orig.type: " << originalType << "\n";
-      cout << "  final.type: " << modified_type << "\n\n";
-    }
-  }
-
-  // register dependencies
-  for (std::pair<Dep, LID> pair : dependenciesToBeRegistered) {
-    depMap::iterator posInDeps = myMap->find(pair.second);
-    if (posInDeps == myMap->end()) {
-      depSet *tmp_depSet = new depSet();
-      tmp_depSet->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var, pair.first.AAvar));
-      myMap->insert(std::pair<int32_t, depSet *>(pair.second, tmp_depSet));
-    } else {
-      posInDeps->second->insert(Dep(pair.first.type, pair.first.depOn, pair.first.var, pair.first.AAvar));
-    }
-
-    if (DP_DEBUG) {
-      cout << "inserted dep [" << decodeLID(pair.second) << ", ";
-      switch (type) {
-      case RAW:
-        cout << "RAW";
-        break;
-      case WAR:
-        cout << "WAR";
-        break;
-      case WAW:
-        cout << "WAW";
-        break;
-      case INIT:
-        cout << "INIT";
-        break;
-      default:
-        break;
-      }
-      cout << ", " << decodeLID(pair.first.depOn) << "] into deps (" << myMap->size() << ")" << endl;
-    }
+    cout << ", " << decodeLID(depOn) << "] into deps (" << myMap->size() << ")" << endl;
   }
 }
+
 
 // hybrid analysis
 void generateStringDepMap() {
@@ -356,33 +183,6 @@ void generateStringDepMap() {
           break;
         case WAW:
           dep += "WAW";
-          break;
-        case RAW_II_0:
-          dep += "RAW_II_0";
-          break;
-        case WAR_II_0:
-          dep += "WAR_II_0";
-          break;
-        case WAW_II_0:
-          dep += "WAW_II_0";
-          break;
-        case RAW_II_1:
-          dep += "RAW_II_1";
-          break;
-        case WAR_II_1:
-          dep += "WAR_II_1";
-          break;
-        case WAW_II_1:
-          dep += "WAW_II_1";
-          break;
-        case RAW_II_2:
-          dep += "RAW_II_2";
-          break;
-        case WAR_II_2:
-          dep += "WAR_II_2";
-          break;
-        case WAW_II_2:
-          dep += "WAW_II_2";
           break;
         case INIT:
           dep += "INIT";
@@ -579,7 +379,12 @@ void mergeDeps() {
   pthread_mutex_unlock(&allDepsLock);
 }
 
+#if DP_CALLTREE_PROFILING
+void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access, std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_write_addr_to_call_tree_node_map, std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_read_addr_to_call_tree_node_map) {
+#else
 void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
+#endif
+
   // analyze data dependences
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ANALYZE_SINGLE_ACCESS);
@@ -589,6 +394,11 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
     // hybrid analysis
     if (access.skip) {
       SMem->insertToRead(access.addr, access.lid);
+#if DP_CALLTREE_PROFILING
+      //cout << "Acc1 " << access.addr << " " << access.call_tree_node_ptr << "\n";
+      (*thread_private_read_addr_to_call_tree_node_map)[access.addr] = access.call_tree_node_ptr;
+      //cout << "Access read succ\n";
+#endif
       return;
     }
     // End HA
@@ -596,28 +406,67 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
     if (lastWrite != 0) {
       // RAW
       SMem->insertToRead(access.addr, access.lid);
-      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar, access.isStackAccess,
-             access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+#if DP_CALLTREE_PROFILING
+      //cout << "Acc2 " << access.addr << " " << access.call_tree_node_ptr << "\n";
+      (*thread_private_read_addr_to_call_tree_node_map)[access.addr] = access.call_tree_node_ptr;
+      //cout << "Access read succ\n";
+#endif
+#if DP_CALLTREE_PROFILING
+      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
+             access.addr, thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
+#else
+      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
+             access.addr);
+#endif             
     }
 
   } else {
     sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
+#if DP_CALLTREE_PROFILING
+      //cout << "Acc3 " << access.addr << " " << access.call_tree_node_ptr << "\n";
+      //cout << "Acc3-0: " << write_addr_to_call_tree_node_map << "\n";
+      
+      //cout << "Acc3-2 " << write_addr_to_call_tree_node_map << "\n"; 
+
+      (*thread_private_write_addr_to_call_tree_node_map)[access.addr] = access.call_tree_node_ptr;
+      //cout << "Access write succ\n";
+#endif
     if (lastWrite == 0) {
       // INIT
-      addDep(INIT, access.lid, 0, access.var, access.AAvar, access.isStackAccess,
-             access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+#if DP_CALLTREE_PROFILING
+      addDep(INIT, access.lid, 0, access.var, access.AAvar,
+             access.addr, thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
+#else
+      addDep(INIT, access.lid, 0, access.var, access.AAvar,
+             access.addr);
+#endif             
     } else {
       sigElement lastRead = SMem->testInRead(access.addr);
       if (lastRead != 0) {
         // WAR
-        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.isStackAccess,
-               access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+#if DP_CALLTREE_PROFILING
+        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, 
+               access.addr, thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
+#else
+        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, 
+               access.addr);
+#endif
         // Clear intermediate read ops
         SMem->insertToRead(access.addr, 0);
+#if DP_CALLTREE_PROFILING
+        //cout << "Acc4 " << access.addr << " " << access.call_tree_node_ptr << "\n";
+        (*thread_private_read_addr_to_call_tree_node_map)[access.addr] = access.call_tree_node_ptr;
+        //cout << "Access read succ\n";
+#endif
       } else {
         // WAW
-        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, access.isStackAccess,
-               access.addr, access.addrIsOwnedByScope, access.positiveScopeChangeOccuredSinceLastAccess);
+#if DP_CALLTREE_PROFILING        
+        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, 
+               access.addr, thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
+#else
+        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, 
+               access.addr);
+#endif
       }
     }
   }
@@ -636,6 +485,10 @@ void *analyzeDeps(void *arg) {
     SMem = new ShadowMemory(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
   }
   myMap = new depMap();
+#if DP_CALLTREE_PROFILING
+  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_write_addr_to_call_tree_node_map = new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_read_addr_to_call_tree_node_map = new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+#endif
   bool isLocked = false;
   while (true) {
     if (!isLocked)
@@ -660,7 +513,11 @@ void *analyzeDeps(void *arg) {
       for (unsigned short i = 0; i < CHUNK_SIZE; ++i) {
 
         access = accesses[i];
+#if DP_CALLTREE_PROFILING
+        analyzeSingleAccess(SMem, access, thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
+#else
         analyzeSingleAccess(SMem, access);
+#endif
       }
 
       // delete the current chunk at the end
@@ -686,6 +543,10 @@ void *analyzeDeps(void *arg) {
   }
 
   delete SMem;
+#if DP_CALLSTACK_PROFILING
+  delete thread_private_write_addr_to_call_tree_node_map;
+  delete thread_private_read_addr_to_call_tree_node_map;
+#endif
   pthread_mutex_unlock(&addrChunkMutexes[id]);
   mergeDeps();
 
@@ -731,6 +592,11 @@ void finalizeParallelization() {
   // wait for worker threads
   for (int i = 0; i < NUM_WORKERS; ++i)
     pthread_join(workers[i], NULL);
+
+
+#if DP_CALLTREE_PROFILING
+  //metadata_queue->blocking_finalize_queue();  
+#endif
 
   // destroy mutexes and condition variables
   for (int i = 0; i < NUM_WORKERS; ++i) {

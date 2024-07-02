@@ -12,7 +12,7 @@ import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from os.path import abspath, dirname
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from lxml import objectify  # type:ignore
 
@@ -113,6 +113,31 @@ def __map_dummy_nodes(cu_dict):
 def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], List[LoopData]]:
     dependencies_list: List[DependenceItem] = []
     loop_data_list: List[LoopData] = []
+
+    # read dependency metadata
+    dependency_metadata_lines = []
+    if os.path.exists(os.path.join(output_path, "dependency_metadata.txt")):
+        with open(os.path.join(output_path, "dependency_metadata.txt"), "r") as dep_metadata_fd:
+            dependency_metadata_lines = dep_metadata_fd.readlines()
+    dependency_metadata: Dict[Tuple[Any, Any, Any, Any, Any], List[str]] = dict()
+    for line in dependency_metadata_lines:
+        line = line.replace("\n", "")
+        split_line = line.split(" ")
+        if split_line[0].startswith("#"):
+            continue
+        type = split_line[0]
+        sink = split_line[1]
+        source = split_line[2]
+        var = split_line[3]
+        AAvar = split_line[4]
+        line_metadata = " ".join(
+            [split_line[5], split_line[6], split_line[7], split_line[8], split_line[9], split_line[10]]
+        )  # IAC, IAI, IEC, IEI, SINK_ANC, SOURCE_ANC)
+        key_tuple = sink, source, type, var, AAvar
+        if key_tuple not in dependency_metadata:
+            dependency_metadata[key_tuple] = []
+        dependency_metadata[key_tuple].append(line_metadata)
+
     # read static dependencies
     static_dependency_lines = []
     if not os.path.exists(os.path.join(output_path, "static_dependencies.txt")):
@@ -155,7 +180,7 @@ def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], Li
             var_str = "" if len(source_fields) == 1 else source_fields[1]
             var_name = ""
             aa_var_name = ""
-            metadata = ""
+            metadata = []
             if len(var_str) > 0:
                 if "(" in var_str:
                     split_var_str = var_str.split("(")
@@ -163,13 +188,21 @@ def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], Li
                     aa_var_name = split_var_str[1][
                         : split_var_str[1].index(")")
                     ]  # name of the allocated variable which is accessed, i.e. variable name after anti aliasing
-                    metadata_str = split_var_str[1][split_var_str[1].index(")") + 1 :]
-                    if "[" in metadata_str:
-                        metadata = metadata_str[1:-1]
                 else:
                     # compatibility with results created without alias analysis
                     var_name = var_str
-            dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, metadata))
+            # retrieve metadata
+            key_tuple = sink, source_fields[0], type, var_name, aa_var_name
+            if key_tuple in dependency_metadata:
+                metadata = dependency_metadata[key_tuple]
+            # register dependencies
+            if len(metadata) == 0:
+                dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, ""))
+            else:
+                for md_set in metadata:
+                    dependencies_list.append(
+                        DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, md_set)
+                    )
 
     return dependencies_list, loop_data_list
 

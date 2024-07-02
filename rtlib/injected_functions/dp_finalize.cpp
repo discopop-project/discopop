@@ -156,6 +156,35 @@ void __dp_finalize(LID lid) {
   delete function_manager;
   delete loop_manager;
 
+
+#ifdef DP_CALLTREE_PROFILING
+  delete call_tree;
+  //delete metadata_queue;
+  // output metadata to file
+  std::cout << "Outputting dependency metadata... ";
+  std::ifstream ifile;
+  std::string line;
+  std::ofstream ofile;
+  std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+  // output information about the loops
+  tmp += "/dependency_metadata.txt";
+  ofile.open(tmp.data());
+  ofile << "# IAC : intra-call-dependency \n";
+  ofile << "# IAI : intra-iteration-dependency \n";
+  ofile << "# IEC : inter-call-dependency \n";
+  ofile << "# IEI : inter-iteration-dependency \n";
+  ofile << "# SINK_ANC : entered functions and loops for sink location \n";
+  ofile << "# SOURCE_ANC : entered functions and loops for source location \n";
+  ofile << "# Format: <DepType> <sink> <source> <var> <AAvar> <IAC> <IAI> <IEC> <IEI> <SINK_ANC> <SOURCE_ANC>\n";
+  for (auto dmd : *dependency_metadata_results) {
+      ofile << dmd.toString() << "\n";
+  }
+  ofile.close();
+  delete dependency_metadata_results_mtx;
+  delete dependency_metadata_results;
+#endif
+
+
   *out << dputil::decodeLID(lid) << " END program" << endl;
   out->flush();
   out->close();

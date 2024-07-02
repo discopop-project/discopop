@@ -95,13 +95,17 @@ jobs:
           sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
           sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
           sudo apt-get install -y python3-tk
+          sudo apt-get install -y libboost-all-dev
 
       - name: "Setup DiscoPoP Profiler - Build"
         run: |
           rm -rf build
           mkdir build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          cmake \
+           -DCMAKE_BUILD_TYPE=Debug \
+           -DDP_CALLTREE_PROFILING=1 \
+           ..
           make -j3
 
       - name: C++ unit tests
@@ -138,13 +142,17 @@ jobs:
           sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
           sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
           sudo apt-get install -y python3-tk
+          sudo apt-get install -y libboost-all-dev
 
       - name: "Setup DiscoPoP Profiler - Build"
         run: |
           rm -rf build
           mkdir build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          cmake \
+           -DCMAKE_BUILD_TYPE=Debug \
+           -DDP_CALLTREE_PROFILING=1 \
+           ..
           make -j3
 
       - name: Python end-to-end-tests

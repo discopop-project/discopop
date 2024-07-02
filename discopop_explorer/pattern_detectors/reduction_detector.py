@@ -8,7 +8,8 @@
 
 
 from multiprocessing import Pool
-from typing import List, cast, Set
+from typing import List, cast, Set, Tuple
+import warnings
 
 from alive_progress import alive_bar  # type: ignore
 
@@ -23,6 +24,8 @@ from ..PEGraphX import (
     DepType,
     EdgeType,
     NodeID,
+    MemoryRegion,
+    Dependency,
 )
 from ..utils import filter_for_hotspots, is_reduction_var, classify_loop_variables
 from ..variable import Variable
@@ -77,6 +80,8 @@ def run_detection(pet: PEGraphX, hotspots) -> List[ReductionInfo]:
     nodes = pet.all_nodes(LoopNode)
 
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
+
+    warnings.warn("REDUCTION DETECTION CURRENTLY ASSUMES THE EXISTENCE OF DEPENDENCY METADATA!")
 
     param_list = [(node) for node in nodes]
     with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
@@ -142,6 +147,17 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
     parent_function_lineid = pet.get_parent_function(root).start_position()
     called_functions_lineids = __get_called_functions(pet, root)
 
+    # get variables which are defined inside the loop
+    defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]] = []
+    tmp_loop_variables = pet.get_variables(root_children_cus)
+    for var in tmp_loop_variables:
+        if ":" in var.defLine:
+            file_id = int(var.defLine.split(":")[0])
+            def_line_num = int(var.defLine.split(":")[1])
+            for rc_cu in root_children_cus:
+                if file_id == rc_cu.file_id and def_line_num >= rc_cu.start_line and def_line_num <= rc_cu.end_line:
+                    defined_inside_loop.append((var, tmp_loop_variables[var]))
+
     if __check_loop_dependencies(
         pet,
         root,
@@ -152,6 +168,7 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
         fp,
         p,
         lp,
+        defined_inside_loop,
         parent_loops,
         parent_function_lineid,
         called_functions_lineids,
@@ -176,6 +193,7 @@ def __check_loop_dependencies(
     first_privates: List[Variable],
     privates: List[Variable],
     last_privates: List[Variable],
+    defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]],
     parent_loops: List[LineID],
     parent_function_lineid: LineID,
     called_functions_lineids: List[LineID],
@@ -190,6 +208,11 @@ def __check_loop_dependencies(
     for n in loop_children_ids:
         deps.update([(s, t, d) for s, t, d in pet.in_edges(n, EdgeType.DATA) if s in loop_children_ids])
         deps.update([(s, t, d) for s, t, d in pet.out_edges(n, EdgeType.DATA) if t in loop_children_ids])
+
+    # get memory regions which are defined inside the loop
+    memory_regions_defined_in_loop = set()
+    for var, mem_regs in defined_inside_loop:
+        memory_regions_defined_in_loop.update(mem_regs)
 
     for source, target, dep in deps:
         # check if targeted variable is readonly inside loop
@@ -206,6 +229,15 @@ def __check_loop_dependencies(
         # check if targeted variable is loop index
         if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
             continue
+
+        # ignore dependencies where either source or sink do not lie within root_loop
+        if len(dep.metadata_source_ancestors) > 0 and len(dep.metadata_sink_ancestors) > 0:
+            if not (
+                (root_loop.start_position() in dep.metadata_sink_ancestors)
+                and root_loop.start_position() in dep.metadata_source_ancestors
+            ):
+                tmp = root_loop.start_position()
+                continue
 
         # targeted variable is not read-only
         if dep.dtype == DepType.INIT:
@@ -224,14 +256,52 @@ def __check_loop_dependencies(
             else:
                 # RAW does not target a reduction variable.
                 # RAW problematic, if it is not an intra-iteration RAW.
-                if not dep.intra_iteration:
+                if (
+                    not dep.intra_iteration
+                    and (dep.metadata_intra_iteration_dep is None or len(dep.metadata_intra_iteration_dep) == 0)
+                    and parent_function_lineid
+                    in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
+                ) or (
+                    (
+                        False
+                        if dep.metadata_inter_call_dep is None
+                        else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                    )
+                    and (
+                        False
+                        if dep.metadata_inter_iteration_dep is None
+                        else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
+                    )
+                ):
                     return True
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
-            if not dep.intra_iteration:
+            if (
+                not dep.intra_iteration
+                and (dep.metadata_intra_iteration_dep is None or len(dep.metadata_intra_iteration_dep) == 0)
+                and parent_function_lineid
+                in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
+            ) or (
+                (
+                    False
+                    if dep.metadata_inter_call_dep is None
+                    else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                )
+                and (
+                    False
+                    if dep.metadata_inter_iteration_dep is None
+                    else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
+                )
+            ):
                 if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
-                    return True
+                    # check if variable is defined inside loop
+                    if dep.memory_region not in memory_regions_defined_in_loop:
+                        return True
+                    # check if the definitions of the accessed variable originates from a function call
+                    if __check_for_problematic_function_argument_access(pet, source, target, dep):
+                        pass
+                        return True
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
             # handled by variable classification
@@ -286,3 +356,35 @@ def __get_called_functions(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
 
     # convert node ids of called functions to line ids
     return [pet.node_at(n).start_position() for n in called_functions]
+
+
+def __check_for_problematic_function_argument_access(
+    pet: PEGraphX, source: NodeID, target: NodeID, dep: Dependency
+) -> bool:
+    """duplicates exists: do_all_detector <-> reduction_detector !"""
+    # check if the "same" function argument is accessed and it is a pointer type.
+    # if so, return True. Else. return false
+
+    # find accessed function argument for source
+    source_pf = pet.get_parent_function(pet.node_at(source))
+    source_accessed_pf_args = [a for a in source_pf.args if a.name == dep.var_name]
+    if len(source_accessed_pf_args) == 0:
+        return False
+
+    # find accessed function argument for target
+    target_pf = pet.get_parent_function(pet.node_at(target))
+    target_accessed_pf_args = [a for a in target_pf.args if a.name == dep.var_name]
+    if len(target_accessed_pf_args) == 0:
+        return False
+
+    # check for overlap in accessed args
+
+    for source_a in source_accessed_pf_args:
+        for target_a in target_accessed_pf_args:
+            if source_a == target_a:
+                # found overlap
+                # check for pointer type
+                if "*" in source_a.type:
+                    return True
+    # not problematic
+    return False

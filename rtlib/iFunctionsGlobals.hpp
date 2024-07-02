@@ -15,6 +15,8 @@
 #include "../share/include/timer.hpp"
 #include "iFunctionsTypes.hpp"
 #include "memory/AbstractShadow.hpp"
+#include "calltree/CallTree.hpp"
+#include "calltree/DependencyMetadata.hpp"
 
 #include <pthread.h>
 
@@ -49,6 +51,10 @@ extern std::mutex pthread_compatibility_mutex;
 extern FunctionManager *function_manager;
 extern LoopManager *loop_manager;
 extern MemoryManager *memory_manager;
+extern CallTree *call_tree;
+//extern MetaDataQueue * metadata_queue;
+extern std::mutex* dependency_metadata_results_mtx;
+extern std::unordered_set<DependencyMetadata>* dependency_metadata_results;
 
 // hybrid analysis
 extern ReportedBBSet *bbList;

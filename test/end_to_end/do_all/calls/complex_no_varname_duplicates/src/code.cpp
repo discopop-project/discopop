@@ -1,16 +1,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-void perform_calculation(double* base, int offset_1, int offset_2){
-    base[offset_1] = 42 + base[offset_2];
+void perform_calculation(double* base_1, int offset_1, int offset_2){
+    base_1[offset_1] = 42 + base_1[offset_2];
 }
 
-void doall_possible(double* base, int index){
-    perform_calculation(base, index, index);
+void doall_possible(double* base_2, int index_2){
+    perform_calculation(base_2, index_2, index_2);
 }
 
-void doall_not_possible(double* base, int index, int n){
-    perform_calculation(base, index, (index + 422 % n));
+void doall_not_possible(double* base_3, int index_3, int n_3){
+    perform_calculation(base_3, index_3, (index_3 + 422 % n_3));
 }
 
 int main(int argc, const char* argv[]) {

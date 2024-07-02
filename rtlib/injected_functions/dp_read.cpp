@@ -86,20 +86,12 @@ void __dp_read(LID lid, ADDR addr, const char *var) {
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
 #endif
   current.isRead = true;
-  current.lid = loop_manager->update_lid(lid);
+  current.lid = lid;
   current.var = var;
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
-
-#if DP_STACK_ACCESS_DETECTION
-  current.isStackAccess = is_stack_access;
-  current.addrIsOwnedByScope = memory_manager->isFirstWrittenInScope(addr, false);
-  current.positiveScopeChangeOccuredSinceLastAccess = memory_manager->positiveScopeChangeOccuredSinceLastAccess(addr);
-  if (is_stack_access) {
-    // register stack read after check for
-    // positiveScopeChangeOccuredSinceLastAccess
-    memory_manager->registerStackRead(addr, lid, var);
-  }
+#if DP_CALLTREE_PROFILING
+  current.call_tree_node_ptr = call_tree->get_current_node_ptr();
 #endif
 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
