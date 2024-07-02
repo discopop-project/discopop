@@ -66,6 +66,13 @@ enum class TimerRegion : unsigned int {
   STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE,
   STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE_TRUE,
 
+  // Statistics regarding calltree profiling
+  ADD_DEP_CALLTREE_REGISTER_METADATAQUEUEELEMENT,
+  METADATAQUEUE_PROCESSQUEUE,
+  METADATAQUEUE_PROCESSQUEUEELEMENT,
+  METADATAQUEUE_PROCESSQUEUE_FETCH,
+  PROCESSQUEUEELEMENT,
+
   SIZE_DONT_USE,
 };
 
@@ -183,11 +190,11 @@ public:
     print(stream, " Finalizing the parallelization                  : ", TimerRegion::FINALIZE_PARALLELIZATION);
     stream << '\n';
     print(stream, " Generate the dependency map                     : ", TimerRegion::GENERATE_STRING_DEP_MAP);
-    print(stream, " Add a dependency                                : ", TimerRegion::ADD_DEP);
+    print(stream, " Analyze singe accesses                          : ", TimerRegion::ANALYZE_SINGLE_ACCESS);
+    print(stream, "  |- Add a dependency                            : ", TimerRegion::ADD_DEP);
     print(stream, " Merge dendencies                                : ", TimerRegion::MERGE_DEPS);
     print(stream, " Analyze the dependencies (incorrect!)           : ",
           TimerRegion::ANALYZE_DEPS); // Incorrect due to multithreading
-    print(stream, " Analyze singe accesses                          : ", TimerRegion::ANALYZE_SINGLE_ACCESS);
     stream << '\n';
     print(stream, " Output the dependencies                         : ", TimerRegion::OUTPUT_DEPS);
     print(stream, " Output the loops                                : ", TimerRegion::OUTPUT_LOOPS);
@@ -210,6 +217,20 @@ public:
           " Check for addr is owned by scope                : ", TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE);
     print(stream,
           " Found addr is owned by scope                    : ", TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE_TRUE);
+    stream << "\n";
+
+#if DP_CALLTREE_PROFILING
+    stream << "\n========== DiscoPoP TIMERS: calltree profiling ======\n";
+    print(stream, " Context: Analyze singe accesses                 : ", TimerRegion::ANALYZE_SINGLE_ACCESS);
+    print(stream, "  |- Context: Add a dependency                   : ", TimerRegion::ADD_DEP);
+    print(stream, "  |- Register MetaDataQueueElements              : ", TimerRegion::ADD_DEP_CALLTREE_REGISTER_METADATAQUEUEELEMENT);
+    print(stream, " MetaDataQueue: processQueue                     : ", TimerRegion::METADATAQUEUE_PROCESSQUEUE);
+    print(stream, "  |- Fetch MetaDataQueueElement                  : ", TimerRegion::METADATAQUEUE_PROCESSQUEUE_FETCH);
+    print(stream, "  |- processQueueElement                         : ", TimerRegion::METADATAQUEUE_PROCESSQUEUEELEMENT);
+    print(stream, " Stand-alone processQueueElement                 : ", TimerRegion::PROCESSQUEUEELEMENT);
+    stream << "\n";
+#endif
+
   }
 
   /**

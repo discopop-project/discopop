@@ -142,13 +142,21 @@ class Dependency:
     sink_line: Optional[LineID] = None
     intra_iteration: bool = False
     intra_iteration_level: int = -1
-    metadata_intra_iteration_dep: Optional[List[LineID]] = None
-    metadata_inter_iteration_dep: Optional[List[LineID]] = None
-    metadata_intra_call_dep: Optional[List[LineID]] = None
-    metadata_inter_call_dep: Optional[List[LineID]] = None
+    metadata_intra_iteration_dep: List[LineID]
+    metadata_inter_iteration_dep: List[LineID]
+    metadata_intra_call_dep: List[LineID]
+    metadata_inter_call_dep: List[LineID]
+    metadata_sink_ancestors: List[LineID]
+    metadata_source_ancestors: List[LineID]
 
     def __init__(self, type: EdgeType):
         self.etype = type
+        self.metadata_intra_iteration_dep = []
+        self.metadata_inter_iteration_dep = []
+        self.metadata_intra_call_dep = []
+        self.metadata_inter_call_dep = []
+        self.metadata_sink_ancestors = []
+        self.metadata_source_ancestors = []
 
     def __str__(self):
         return self.var_name if self.var_name is not None else str(self.etype)
@@ -572,30 +580,27 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
     d.var_name = dep.var_name
     d.memory_region = dep.memory_region
     # parse metadata
-    if ";" in dep.metadata:
-        for md in dep.metadata.split(";"):
+    if len(dep.metadata) > 0:
+        for md in dep.metadata.split(" "):
             if len(md) == 0:
                 continue
-            md_type = md[: md.index(":")]
-            md_raw_values = md[md.index(":") + 1 :]
+            # unpack metadata
+            md_type = md[: md.index("[")]
+            md_raw_values = md[md.index("[") + 1 : -1]
             md_values = [tmp for tmp in md_raw_values.split(",") if len(tmp) > 0]
-
-            if md_type == "intra_iteration_dep":
-                if d.metadata_intra_iteration_dep is None:
-                    d.metadata_intra_iteration_dep = []
+            # store metadata
+            if md_type == "IAI":
                 d.metadata_intra_iteration_dep += md_values
-            elif md_type == "inter_iteration_dep":
-                if d.metadata_inter_iteration_dep is None:
-                    d.metadata_inter_iteration_dep = []
+            elif md_type == "IEI":
                 d.metadata_inter_iteration_dep += md_values
-            elif md_type == "intra_call_dep":
-                if d.metadata_intra_call_dep is None:
-                    d.metadata_intra_call_dep = []
+            elif md_type == "IAC":
                 d.metadata_intra_call_dep += md_values
-            elif md_type == "inter_call_dep":
-                if d.metadata_inter_call_dep is None:
-                    d.metadata_inter_call_dep = []
+            elif md_type == "IEC":
                 d.metadata_inter_call_dep += md_values
+            elif md_type == "SINK_ANC":
+                d.metadata_sink_ancestors += md_values
+            elif md_type == "SOURCE_ANC":
+                d.metadata_source_ancestors += md_values
             else:
                 raise ValueError("Unknown metadata type: ", md_type)
     return d
