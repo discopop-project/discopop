@@ -51,10 +51,6 @@ bool targetTerminated = false; // whether the target program has returned from m
 // Runtime merging structures
 depMap *allDeps = nullptr;
 
-#if DP_CALLSTACK_PROFILING
-CallStack *callStack = nullptr; // call stack profiling
-extern unsigned long funcCallCounter = 0;
-#endif
 std::ofstream *out = nullptr;
 
 /******* BEGIN: parallelization section *******/

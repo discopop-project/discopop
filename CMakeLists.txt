@@ -17,6 +17,7 @@ endif()
 
 # Print DiscoPoP version to be installed
 file(READ ${CMAKE_CURRENT_LIST_DIR}/discopop_library/global_data/version/VERSION DiscoPoP_VERSION)
+string(REGEX REPLACE "\n$" "" DiscoPoP_VERSION "${DiscoPoP_VERSION}")
 message(STATUS "DiscoPoP version: ${DiscoPoP_VERSION}")
 
 if(NOT ${LLVM_DIST_PATH} STREQUAL "")
@@ -65,7 +66,7 @@ add_subdirectory(rtlib)
 
 add_subdirectory(scripts)
 
-#add_subdirectory(test/unit_tests)
+add_subdirectory(test/unit_tests)
 
 #add_subdirectory(benchmark)
 
@@ -82,10 +83,24 @@ file(APPEND "${DiscoPoP_BINARY_DIR}/build_config.txt" "PYTHON_EXECUTABLE=${Pytho
 # save build_config.py to discopop_library/ConfigProvider/assets for easy accessibility and global use
 file(REMOVE "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py")
 file(TOUCH "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_VERSION=\"${DiscoPoP_VERSION}\"\n")
 file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_BUILD=\"${DiscoPoP_BINARY_DIR}\"\n")
 file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_SOURCE=\"${DiscoPoP_SOURCE_DIR}\"\n")
 file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "LLVM_BIN_DIR=\"${LLVM_TOOLS_BINARY_DIR}\"\n")
 file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "PYTHON_EXECUTABLE=\"${Python3_EXECUTABLE}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_HYBRID_PROFILING=\"${DP_HYBRID_PROFILING}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_PTHREAD_COMPATIBILITY_MODE=\"${DP_PTHREAD_COMPATIBILITY_MODE}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_RTLIB_VERBOSE=\"${DP_RTLIB_VERBOSE}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_NUM_WORKERS=\"${DP_NUM_WORKERS}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_INTERNAL_TIMER=\"${DP_INTERNAL_TIMER}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_MEMORY_REGION_DEALIASING=\"${DP_MEMORY_REGION_DEALIASING}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_STACK_ACCESS_DETECTION=\"${DP_STACK_ACCESS_DETECTION}\"\n")
+
+# print DiscoPoP configuration
+file(READ ${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py DiscoPoP_CONFIGURATION)
+string(REGEX REPLACE "\n$" "" DiscoPoP_CONFIGURATION "${DiscoPoP_CONFIGURATION}")
+string(REGEX REPLACE "\n" "\n    " DiscoPoP_CONFIGURATION "${DiscoPoP_CONFIGURATION}")
+message(STATUS "DiscoPoP configuration:\n    ${DiscoPoP_CONFIGURATION}")
 
 # install DiscoPoP python modules
 find_package(Python3 REQUIRED COMPONENTS Interpreter)

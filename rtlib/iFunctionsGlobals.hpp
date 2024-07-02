@@ -68,10 +68,6 @@ extern bool targetTerminated; // whether the target program has returned from ma
 // Runtime merging structures
 extern depMap *allDeps;
 
-#if DP_CALLSTACK_PROFILING
-extern CallStack *callStack; // call stack profiling
-extern unsigned long funcCallCounter;
-#endif
 extern std::ofstream *out;
 
 extern pthread_cond_t *addrChunkPresentConds; // condition variables

@@ -15,6 +15,7 @@ class ConfigProviderArguments(object):
     return_dp_build_dir: bool
     return_dp_source_dir: bool
     return_llvm_bin_dir: bool
+    return_full_config: bool
     return_version_string: bool
 
     def __post_init__(self):
