@@ -14,7 +14,8 @@ from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProvid
 
 
 class TestMethods(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(self):
         current_dir = pathlib.Path(__file__).parent.resolve()
         dp_build_dir = run_config_provider(
             ConfigProviderArguments(
@@ -36,11 +37,12 @@ class TestMethods(unittest.TestCase):
         # build
         env_vars["CC"] = os.path.join(dp_build_dir, "scripts", "CC_wrapper.sh")
         env_vars["CXX"] = os.path.join(dp_build_dir, "scripts", "CXX_wrapper.sh")
+        env_vars["DP_PROJECT_ROOT_DIR"] = src_dir
         cmd = "make"
         run_cmd(cmd, src_dir, env_vars)
 
         # execute instrumented program
-        run_cmd("./prog 64", src_dir, env_vars)
+        run_cmd("./prog 16", src_dir, env_vars)
 
         # execute DiscoPoP analysis
         cmd = "discopop_explorer --enable-patterns doall,reduction"
@@ -49,24 +51,25 @@ class TestMethods(unittest.TestCase):
         self.src_dir = src_dir
         self.env_vars = env_vars
 
-    def tearDown(self):
-        run_cmd("make veryclean", self.src_dir, self.env_vars)
-
-    def test(self):
-        """Check that exactly one do-all is suggested"""
         test_output_file = os.path.join(self.src_dir, ".discopop", "explorer", "detection_result_dump.json")
         # load detection results
         with open(test_output_file, "r") as f:
             tmp_str = f.read()
-        test_output: DetectionResult = jsonpickle.decode(tmp_str)
+        self.test_output: DetectionResult = jsonpickle.decode(tmp_str)
 
-        for pattern_type in test_output.patterns.__dict__:
-            amount_of_identified_patterns = len(test_output.patterns.__dict__[pattern_type])
+    @classmethod
+    def tearDownClass(self):
+        run_cmd("make veryclean", self.src_dir, self.env_vars)
+
+    def test(self):
+        """Check that exactly one do-all is suggested"""
+        for pattern_type in self.test_output.patterns.__dict__:
+            amount_of_identified_patterns = len(self.test_output.patterns.__dict__[pattern_type])
             if pattern_type == "reduction":
-                expected_lines = ["101"]
-                for pattern in test_output.patterns.__dict__[pattern_type]:
+                expected_lines = ["99"]
+                for pattern in self.test_output.patterns.__dict__[pattern_type]:
                     if pattern.start_line.split(":")[1] in expected_lines:
                         expected_lines.remove(pattern.start_line.split(":")[1])
                 self.assertTrue(len(expected_lines) == 0,
                                 "Missing expected reduction patterns at line " + str(expected_lines) + ". Found: " + str(
-                                    [p.start_line for p in test_output.patterns.__dict__[pattern_type]]))
+                                    [p.start_line for p in self.test_output.patterns.__dict__[pattern_type]]))
