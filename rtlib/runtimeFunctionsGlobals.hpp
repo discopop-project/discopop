@@ -13,7 +13,7 @@
 #pragma once
 
 #include "../share/include/timer.hpp"
-#include "iFunctionsTypes.hpp"
+#include "runtimeFunctionsTypes.hpp"
 #include "memory/AbstractShadow.hpp"
 
 #include <pthread.h>

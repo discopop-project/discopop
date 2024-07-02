@@ -12,8 +12,8 @@
 
 # Runtime library sources and build flags.
 set(DiscoPoP_SOURCES
-        iFunctions.cpp
-        iFunctionsGlobals.cpp
+        runtimeFunctions.cpp
+        runtimeFunctionsGlobals.cpp
                 
         memory/MemoryManager.cpp
         memory/Signature.cpp
