@@ -38,7 +38,10 @@ target_sources(
   memory/memory_region_tree/test_memory_region_tree.cpp
   memory/mrtnode/test_mrtnode.cpp
   memory/perfect_shadow/test_perfect_shadow.cpp
-  memory/scope/test_scope.cpp)
+  memory/scope/test_scope.cpp
+  calltree/call_tree/test_call_tree.cpp
+  calltree/call_tree_node/test_call_tree_node.cpp
+  calltree/metadata_queue/test_metadata_queue.cpp)
 
 target_include_directories(DiscoPoP_UT PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(DiscoPoP_UT PRIVATE DiscoPoP_RT)
