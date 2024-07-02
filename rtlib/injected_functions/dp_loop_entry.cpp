@@ -64,6 +64,11 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
     memory_manager->enterScope("loop", lid);
 #endif
 
+#ifdef DP_CALLTREE_PROFILING
+  call_tree->enter_loop(lid);
+  call_tree->enter_iteration(0);
+#endif
+
   } else {
     // The same loop iterates again
     loop_manager->iterate_loop(function_stack_level);
@@ -85,6 +90,10 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
 #if DP_STACK_ACCESS_DETECTION
     memory_manager->leaveScope("loop_iteration", lid);
     memory_manager->enterScope("loop_iteration", lid);
+#endif
+
+#ifdef DP_CALLTREE_PROFILING
+  call_tree->enter_iteration(0);
 #endif
   }
 }

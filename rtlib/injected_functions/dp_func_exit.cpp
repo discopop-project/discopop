@@ -78,6 +78,10 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 #if DP_STACK_ACCESS_DETECTION
   memory_manager->leaveScope("function", lid);
 #endif
+
+#ifdef DP_CALLTREE_PROFILING
+  call_tree->exit_function();
+#endif
   // !TEST
 
   if (isExit == 0) {

@@ -47,8 +47,12 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBy
 #endif
 
 #if DP_MEMORY_REGION_DEALIASING
+#if DP_STACK_ACCESS_DETECTION
   // create entry to list of allocatedMemoryRegions
   const std::string allocId = memory_manager->allocate_stack_memory(lid, startAddr, endAddr, numBytes, numElements);
+#else
+  const std::string allocId = memory_manager->allocate_memory(lid, startAddr, endAddr, numBytes, numElements);
+#endif
   // std::cout << "alloca: " << var << " (" << allocId << ") @ " <<
   // dputil::decodeLID(lid) << " : " << std::hex << startAddr << " - " <<
   // std::hex << endAddr << " -> #allocations: " <<

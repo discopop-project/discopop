@@ -33,6 +33,9 @@ where `<CMAKE_FLAGS>` can consist of any combination of the following flags and 
 - `-DDP_PTHREAD_COMPATIBILITY_MODE=[0|1]` &ndash; If your application uses PThreads, please specify this flag to serialize the calls to the DiscoPoP runtime functions. Note, however, that this can negatively influence the runtime of the profiling.
 - `-DDP_NUM_WORKERS=<int>` &ndash; Specify the number of worker threads available for the dependency analysis during profiling. Default: `3` worker threads. `0` can be used to disable the creation of additional threads for the analysis.
 - `-DDP_HYBRID_PROFILING=[0|1]` &ndash; Enbale hybrid profiling. Default: `1`.
+- `-DDP_CALLTREE_PROFILING=[0|1]` &ndash; Enable creation of a call tree during profiling to create extended dependency metadata for improved result quality. Negatively impacts profiling performance.
+- `-DDP_MEMORY_REGION_DEALIASING=[0|1]`: Enable or disable the generation of dependency de-aliasing information. Reduces potential false positive parallelization suggestions, but increases the profiling overhead.
+
 
 #### Development and debugging
 - `-DDP_RTLIB_VERBOSE=[0|1]` &ndash; Enable verbose output during profiling.
