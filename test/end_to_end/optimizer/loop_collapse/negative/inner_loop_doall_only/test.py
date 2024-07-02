@@ -12,7 +12,8 @@ from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProvid
 
 
 class TestMethods(unittest.TestCase):
-    def setUp(self):
+    @classmethod
+    def setUpClass(self):
         current_dir = pathlib.Path(__file__).parent.resolve()
         dp_build_dir = run_config_provider(
             ConfigProviderArguments(
@@ -34,6 +35,7 @@ class TestMethods(unittest.TestCase):
         # build
         env_vars["CC"] = os.path.join(dp_build_dir, "scripts", "CC_wrapper.sh")
         env_vars["CXX"] = os.path.join(dp_build_dir, "scripts", "CXX_wrapper.sh")
+        env_vars["DP_PROJECT_ROOT_DIR"] = src_dir
         cmd = "make"
         run_cmd(cmd, src_dir, env_vars)
         # execute instrumented program
@@ -47,18 +49,18 @@ class TestMethods(unittest.TestCase):
         self.src_dir = src_dir
         self.env_vars = env_vars
 
-    def tearDown(self):
+        test_output_file = os.path.join(self.src_dir, ".discopop", "explorer", "detection_result_dump.json")
+        # load detection results
+        with open(test_output_file, "r") as f:
+            tmp_str = f.read()
+        self.test_output: DetectionResult = jsonpickle.decode(tmp_str)
+
+    @classmethod
+    def tearDownClass(self):
         run_cmd("make veryclean", self.src_dir, self.env_vars)
 
     def test(self):
         """Check that not collapse has been identified"""
-
-        # load test output
-        test_output_file = os.path.join(self.src_dir, ".discopop", "optimizer", "detection_result_dump.json")
-        with open(test_output_file, "r") as f:
-            tmp_str = f.read()
-        test_output: DetectionResult = jsonpickle.decode(tmp_str)
-
         # check identified DoAllInfo objects for collapse clauses > 1
-        for do_all_info in test_output.patterns.do_all:
+        for do_all_info in self.test_output.patterns.do_all:
             self.assertTrue(do_all_info.collapse_level <= 1)
