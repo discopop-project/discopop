@@ -16,7 +16,7 @@
 #include "CallTreeNode.hpp"
 #include <memory>
 #include <boost/functional/hash.hpp>
-#include "../iFunctionsTypes.hpp"
+#include "../runtimeFunctionsTypes.hpp"
 
 namespace __dp
 {

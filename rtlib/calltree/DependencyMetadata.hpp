@@ -13,7 +13,7 @@
 #pragma once
 
 #include "../DPUtils.hpp"
-#include "../iFunctionsTypes.hpp"
+#include "../runtimeFunctionsTypes.hpp"
 #include "MetaDataQueueElement.hpp"
 
 namespace __dp

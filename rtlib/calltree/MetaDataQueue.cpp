@@ -13,7 +13,7 @@
 #include "MetaDataQueue.hpp"
 
 #include "../../share/include/timer.hpp"
-#include "../iFunctionsGlobals.hpp"
+#include "../runtimeFunctionsGlobals.hpp"
 
 namespace __dp
 {
