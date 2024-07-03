@@ -12,7 +12,7 @@
 
 #include "utils.hpp"
 #include "../../share/include/timer.hpp"
-#include "../iFunctionsGlobals.hpp"
+#include "../runtimeFunctionsGlobals.hpp"
 #include <iostream>
 
 namespace __dp{
