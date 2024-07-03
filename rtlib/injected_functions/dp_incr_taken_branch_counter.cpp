@@ -12,7 +12,7 @@
 
 #include "../DPTypes.hpp"
 
-#include "../iFunctionsGlobals.hpp"
+#include "../runtimeFunctionsGlobals.hpp"
 
 namespace __dp {
 

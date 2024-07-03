@@ -12,7 +12,7 @@
 
 #include "MemoryManager.hpp"
 
-#include "../iFunctionsGlobals.hpp"
+#include "../runtimeFunctionsGlobals.hpp"
 
 std::string __dp::MemoryManager::allocate_memory(const LID line_id, const ADDR start_address, const ADDR end_address,
                                                  const std::int64_t number_bytes, const std::int64_t number_elements) {

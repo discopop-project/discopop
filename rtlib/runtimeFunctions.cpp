@@ -10,8 +10,8 @@
  *
  */
 
-#include "iFunctions.hpp"
-#include "iFunctionsGlobals.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 #include "DPUtils.hpp"
 
