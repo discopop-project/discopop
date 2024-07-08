@@ -17,12 +17,12 @@
 
 #include "../share/include/debug_print.hpp"
 #include "../share/include/timer.hpp"
+#include "calltree/utils.hpp"
 #include "injected_functions/all.hpp"
 #include "loop/Makros.hpp"
 #include "memory/PerfectShadow.hpp"
 #include "memory/ShadowMemory.hpp"
 #include "memory/Signature.hpp"
-#include "calltree/utils.hpp"
 
 #include <algorithm>
 #include <cstdio>
@@ -56,13 +56,12 @@ namespace __dp {
 
 /******* Helper functions *******/
 
-
 #if DP_CALLTREE_PROFILING
-void addDep(depType type, LID curr, LID depOn, const char *var,
-            string AAvar, ADDR addr, std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_write_addr_to_call_tree_node_map, std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_read_addr_to_call_tree_node_map){
+void addDep(depType type, LID curr, LID depOn, const char *var, string AAvar, ADDR addr,
+            std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_write_addr_to_call_tree_node_map,
+            std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_read_addr_to_call_tree_node_map) {
 #else
-void addDep(depType type, LID curr, LID depOn, const char *var,
-            string AAvar, ADDR addr){
+void addDep(depType type, LID curr, LID depOn, const char *var, string AAvar, ADDR addr) {
 #endif
 
 #ifdef DP_INTERNAL_TIMER
@@ -90,51 +89,67 @@ void addDep(depType type, LID curr, LID depOn, const char *var,
     posInDeps->second->insert(Dep(type, depOn, var, AAvar));
   }
 
-
 #if DP_CALLTREE_PROFILING
-  // register dependency for call_tree based metadata calculation 
+  // register dependency for call_tree based metadata calculation
   DependencyMetadata dmd;
-  switch(type){
-    case RAW:
-      // register metadata calculation
-      //cout << "Register metadata calculation: RAW " << decodeLID(curr) << " " << decodeLID(depOn) << " " << var << " (" <<  (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ") " << " (" <<  (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ")\n";
+  switch (type) {
+  case RAW:
+    // register metadata calculation
+    // cout << "Register metadata calculation: RAW " << decodeLID(curr) << " " << decodeLID(depOn) << " " << var << " ("
+    // <<  (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " <<
+    // (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ") " << " (" <<
+    // (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " <<
+    // (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ")\n";
 
-      // process directly
-      dmd = processQueueElement(MetaDataQueueElement(type, curr, depOn, var, AAvar, (*thread_private_read_addr_to_call_tree_node_map)[addr], (*thread_private_write_addr_to_call_tree_node_map)[addr]));
-      dependency_metadata_results_mtx->lock();
-      dependency_metadata_results->insert(dmd);
-      dependency_metadata_results_mtx->unlock();
+    // process directly
+    dmd = processQueueElement(MetaDataQueueElement(type, curr, depOn, var, AAvar,
+                                                   (*thread_private_read_addr_to_call_tree_node_map)[addr],
+                                                   (*thread_private_write_addr_to_call_tree_node_map)[addr]));
+    dependency_metadata_results_mtx->lock();
+    dependency_metadata_results->insert(dmd);
+    dependency_metadata_results_mtx->unlock();
 
-      //metadata_queue->insert(); // optimization potential: do not use copies here!      
-      break;
-    case WAR:
-      // update write
-      // register metadata calculation
-      //cout << "Register metadata calculation: WAR " << decodeLID(curr) << " " << decodeLID(depOn) << " " << var << " (" <<  (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ") " << " (" <<  (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ")\n";
+    // metadata_queue->insert(); // optimization potential: do not use copies here!
+    break;
+  case WAR:
+    // update write
+    // register metadata calculation
+    // cout << "Register metadata calculation: WAR " << decodeLID(curr) << " " << decodeLID(depOn) << " " << var << " ("
+    // <<  (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " <<
+    // (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ") " << " (" <<
+    // (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " <<
+    // (*thread_private_write_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ")\n";
 
-      dmd = processQueueElement(MetaDataQueueElement(type, curr, depOn, var, AAvar, (*thread_private_write_addr_to_call_tree_node_map)[addr], (*thread_private_read_addr_to_call_tree_node_map)[addr]));
-      dependency_metadata_results_mtx->lock();
-      dependency_metadata_results->insert(dmd);
-      dependency_metadata_results_mtx->unlock();
-      // metadata_queue->insert(); // optimization potential: do not use copies here!      
-      break;
-    case WAW:
-      // register metadata calculation
-      //cout << "Register metadata calculation: WAW " << decodeLID(curr) << " " << decodeLID(depOn) << " " << var << " (" <<  (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ") " << " (" <<  (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " << (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ")\n";
-      dmd = processQueueElement(MetaDataQueueElement(type, curr, depOn, var, AAvar, (*thread_private_write_addr_to_call_tree_node_map)[addr], (*thread_private_write_addr_to_call_tree_node_map)[addr]));
-      dependency_metadata_results_mtx->lock();
-      dependency_metadata_results->insert(dmd);
-      dependency_metadata_results_mtx->unlock();
-      //metadata_queue->insert(); // optimization potential: do not use copies here!      
-      break;
-    case INIT:
-      break;
-    default:
-      break;
+    dmd = processQueueElement(MetaDataQueueElement(type, curr, depOn, var, AAvar,
+                                                   (*thread_private_write_addr_to_call_tree_node_map)[addr],
+                                                   (*thread_private_read_addr_to_call_tree_node_map)[addr]));
+    dependency_metadata_results_mtx->lock();
+    dependency_metadata_results->insert(dmd);
+    dependency_metadata_results_mtx->unlock();
+    // metadata_queue->insert(); // optimization potential: do not use copies here!
+    break;
+  case WAW:
+    // register metadata calculation
+    // cout << "Register metadata calculation: WAW " << decodeLID(curr) << " " << decodeLID(depOn) << " " << var << " ("
+    // <<  (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " <<
+    // (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ") " << " (" <<
+    // (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_loop_or_function_id() << " , " <<
+    // (*thread_private_read_addr_to_call_tree_node_map)[addr]->get_iteration_id() << ")\n";
+    dmd = processQueueElement(MetaDataQueueElement(type, curr, depOn, var, AAvar,
+                                                   (*thread_private_write_addr_to_call_tree_node_map)[addr],
+                                                   (*thread_private_write_addr_to_call_tree_node_map)[addr]));
+    dependency_metadata_results_mtx->lock();
+    dependency_metadata_results->insert(dmd);
+    dependency_metadata_results_mtx->unlock();
+    // metadata_queue->insert(); // optimization potential: do not use copies here!
+    break;
+  case INIT:
+    break;
+  default:
+    break;
   }
-  
-#endif
 
+#endif
 
   if (DP_DEBUG) {
     cout << "inserted dep [" << decodeLID(curr) << ", ";
@@ -157,7 +172,6 @@ void addDep(depType type, LID curr, LID depOn, const char *var,
     cout << ", " << decodeLID(depOn) << "] into deps (" << myMap->size() << ")" << endl;
   }
 }
-
 
 // hybrid analysis
 void generateStringDepMap() {
@@ -380,7 +394,10 @@ void mergeDeps() {
 }
 
 #if DP_CALLTREE_PROFILING
-void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access, std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_write_addr_to_call_tree_node_map, std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_read_addr_to_call_tree_node_map) {
+void analyzeSingleAccess(
+    __dp::AbstractShadow *SMem, __dp::AccessInfo &access,
+    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_write_addr_to_call_tree_node_map,
+    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_read_addr_to_call_tree_node_map) {
 #else
 void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
 #endif
@@ -395,9 +412,9 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
     if (access.skip) {
       SMem->insertToRead(access.addr, access.lid);
 #if DP_CALLTREE_PROFILING
-      //cout << "Acc1 " << access.addr << " " << access.call_tree_node_ptr << "\n";
+      // cout << "Acc1 " << access.addr << " " << access.call_tree_node_ptr << "\n";
       (*thread_private_read_addr_to_call_tree_node_map)[access.addr] = access.call_tree_node_ptr;
-      //cout << "Access read succ\n";
+      // cout << "Access read succ\n";
 #endif
       return;
     }
@@ -407,65 +424,61 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
       // RAW
       SMem->insertToRead(access.addr, access.lid);
 #if DP_CALLTREE_PROFILING
-      //cout << "Acc2 " << access.addr << " " << access.call_tree_node_ptr << "\n";
+      // cout << "Acc2 " << access.addr << " " << access.call_tree_node_ptr << "\n";
       (*thread_private_read_addr_to_call_tree_node_map)[access.addr] = access.call_tree_node_ptr;
-      //cout << "Access read succ\n";
+      // cout << "Access read succ\n";
 #endif
 #if DP_CALLTREE_PROFILING
-      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
-             access.addr, thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
+      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar, access.addr,
+             thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
 #else
-      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar,
-             access.addr);
-#endif             
+      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar, access.addr);
+#endif
     }
 
   } else {
     sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
 #if DP_CALLTREE_PROFILING
-      //cout << "Acc3 " << access.addr << " " << access.call_tree_node_ptr << "\n";
-      //cout << "Acc3-0: " << write_addr_to_call_tree_node_map << "\n";
-      
-      //cout << "Acc3-2 " << write_addr_to_call_tree_node_map << "\n"; 
+    // cout << "Acc3 " << access.addr << " " << access.call_tree_node_ptr << "\n";
+    // cout << "Acc3-0: " << write_addr_to_call_tree_node_map << "\n";
 
-      (*thread_private_write_addr_to_call_tree_node_map)[access.addr] = access.call_tree_node_ptr;
-      //cout << "Access write succ\n";
+    // cout << "Acc3-2 " << write_addr_to_call_tree_node_map << "\n";
+
+    (*thread_private_write_addr_to_call_tree_node_map)[access.addr] = access.call_tree_node_ptr;
+    // cout << "Access write succ\n";
 #endif
     if (lastWrite == 0) {
       // INIT
 #if DP_CALLTREE_PROFILING
-      addDep(INIT, access.lid, 0, access.var, access.AAvar,
-             access.addr, thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
+      addDep(INIT, access.lid, 0, access.var, access.AAvar, access.addr,
+             thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
 #else
-      addDep(INIT, access.lid, 0, access.var, access.AAvar,
-             access.addr);
-#endif             
+      addDep(INIT, access.lid, 0, access.var, access.AAvar, access.addr);
+#endif
     } else {
       sigElement lastRead = SMem->testInRead(access.addr);
       if (lastRead != 0) {
         // WAR
 #if DP_CALLTREE_PROFILING
-        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, 
-               access.addr, thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
+        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.addr,
+               thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
 #else
-        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, 
-               access.addr);
+        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.addr);
 #endif
         // Clear intermediate read ops
         SMem->insertToRead(access.addr, 0);
 #if DP_CALLTREE_PROFILING
-        //cout << "Acc4 " << access.addr << " " << access.call_tree_node_ptr << "\n";
+        // cout << "Acc4 " << access.addr << " " << access.call_tree_node_ptr << "\n";
         (*thread_private_read_addr_to_call_tree_node_map)[access.addr] = access.call_tree_node_ptr;
-        //cout << "Access read succ\n";
+        // cout << "Access read succ\n";
 #endif
       } else {
         // WAW
-#if DP_CALLTREE_PROFILING        
-        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, 
-               access.addr, thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
+#if DP_CALLTREE_PROFILING
+        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, access.addr,
+               thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
 #else
-        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, 
-               access.addr);
+        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, access.addr);
 #endif
       }
     }
@@ -486,8 +499,10 @@ void *analyzeDeps(void *arg) {
   }
   myMap = new depMap();
 #if DP_CALLTREE_PROFILING
-  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_write_addr_to_call_tree_node_map = new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
-  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>* thread_private_read_addr_to_call_tree_node_map = new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_write_addr_to_call_tree_node_map =
+      new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_read_addr_to_call_tree_node_map =
+      new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
 #endif
   bool isLocked = false;
   while (true) {
@@ -514,7 +529,8 @@ void *analyzeDeps(void *arg) {
 
         access = accesses[i];
 #if DP_CALLTREE_PROFILING
-        analyzeSingleAccess(SMem, access, thread_private_write_addr_to_call_tree_node_map, thread_private_read_addr_to_call_tree_node_map);
+        analyzeSingleAccess(SMem, access, thread_private_write_addr_to_call_tree_node_map,
+                            thread_private_read_addr_to_call_tree_node_map);
 #else
         analyzeSingleAccess(SMem, access);
 #endif
@@ -593,9 +609,8 @@ void finalizeParallelization() {
   for (int i = 0; i < NUM_WORKERS; ++i)
     pthread_join(workers[i], NULL);
 
-
 #if DP_CALLTREE_PROFILING
-  //metadata_queue->blocking_finalize_queue();  
+    // metadata_queue->blocking_finalize_queue();
 #endif
 
   // destroy mutexes and condition variables

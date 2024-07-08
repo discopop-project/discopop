@@ -65,8 +65,8 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
 #endif
 
 #ifdef DP_CALLTREE_PROFILING
-  call_tree->enter_loop(lid);
-  call_tree->enter_iteration(0);
+    call_tree->enter_loop(lid);
+    call_tree->enter_iteration(0);
 #endif
 
   } else {
@@ -93,7 +93,7 @@ void __dp_loop_entry(LID lid, int32_t loopID) {
 #endif
 
 #ifdef DP_CALLTREE_PROFILING
-  call_tree->enter_iteration(0);
+    call_tree->enter_iteration(0);
 #endif
   }
 }

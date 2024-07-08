@@ -15,10 +15,5 @@
 #include "../DPUtils.hpp"
 
 namespace __dp {
-    enum class CallTreeNodeType {
-        Function,
-        Loop,
-        Iteration,
-        Root
-    };
+enum class CallTreeNodeType { Function, Loop, Iteration, Root };
 } // namespace __dp

@@ -13,6 +13,6 @@
 #include "DependencyMetadata.hpp"
 #include "MetaDataQueueElement.hpp"
 
-namespace __dp{
-    DependencyMetadata processQueueElement(MetaDataQueueElement mdqe);
+namespace __dp {
+DependencyMetadata processQueueElement(MetaDataQueueElement mdqe);
 } // namespace __dp

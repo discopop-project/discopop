@@ -14,29 +14,28 @@
 
 #include "../DPUtils.hpp"
 
-#include <atomic>
-#include "CallTreeNode.hpp"
 #include "CallTreeGlobals.hpp"
+#include "CallTreeNode.hpp"
+#include <atomic>
 #include <memory>
 
 namespace __dp {
 
 class CallTree {
 public:
-    CallTree();
-    ~CallTree();
-    void enter_function(unsigned int function_id);
-    void exit_function();
-    void enter_loop(unsigned int loop_id);
-    void exit_loop();
-    void enter_iteration(unsigned int iteration_id);
-    // exit_iteration not possible, as determining the iteration end is not trivial
-    unsigned int get_node_count();
-    std::shared_ptr<CallTreeNode> get_current_node_ptr();
+  CallTree();
+  ~CallTree();
+  void enter_function(unsigned int function_id);
+  void exit_function();
+  void enter_loop(unsigned int loop_id);
+  void exit_loop();
+  void enter_iteration(unsigned int iteration_id);
+  // exit_iteration not possible, as determining the iteration end is not trivial
+  unsigned int get_node_count();
+  std::shared_ptr<CallTreeNode> get_current_node_ptr();
 
 private:
-    std::shared_ptr<CallTreeNode> current;
-    
+  std::shared_ptr<CallTreeNode> current;
 };
 
 } // namespace __dp

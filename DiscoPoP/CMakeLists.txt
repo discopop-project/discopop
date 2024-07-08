@@ -12,9 +12,62 @@ include_directories(
 
 add_llvm_library(LLVMDiscoPoP MODULE
         DiscoPoP.cpp
-        InstructionCFG.cpp
-        InstructionDG.cpp
         ../share/lib/DPUtils.cpp
+
+        Globals.cpp
+        RegisterPass.cpp
+
+        instrumentation/low_level/instrumentAlloca.cpp
+        instrumentation/low_level/instrumentNewOrMalloc.cpp
+        instrumentation/low_level/instrumentRealloc.cpp
+        instrumentation/low_level/instrumentCalloc.cpp
+        instrumentation/low_level/instrumentPosixMemalign.cpp
+        instrumentation/low_level/instrumentDeleteOrFree.cpp
+        instrumentation/low_level/instrumentLoad.cpp
+        instrumentation/low_level/instrumentStore.cpp
+        instrumentation/low_level/instrumentFuncEntry.cpp
+        instrumentation/low_level/instrumentLoopEntry.cpp
+        instrumentation/low_level/instrumentLoopExit.cpp
+        instrumentation/low_level/insertDPFinalize.cpp
+
+        instrumentation/high_level/instrumentFunction.cpp
+        instrumentation/high_level/instrumentLoop.cpp
+        instrumentation/high_level/instrumentModule.cpp
+
+        instrumentation/taken_branches/createInstrumentation.cpp
+
+        initialization/initializeCUIDCounter.cpp
+        initialization/initializeBBDepCounter.cpp
+        
+        llvm_hooks/doInitialization.cpp
+        llvm_hooks/doFinalization.cpp
+        llvm_hooks/runOnBasicBlock.cpp
+        llvm_hooks/runOnFunction.cpp
+        llvm_hooks/runOnModule.cpp
+
+        dp_reduction/get_load_instr.cpp
+        dp_reduction/find_reduction_instr.cpp
+        dp_reduction/determine_variable_name.cpp
+        dp_reduction/determine_variable_type.cpp
+        dp_reduction/CFA.cpp
+        dp_reduction/get_var.cpp
+        dp_reduction/get_reduction_instr.cpp        
+        dp_reduction/utils.cpp
+        dp_reduction/insert_functions.cpp
+
+        utils/simple.cpp
+        utils/output.cpp
+        utils/CFA.cpp
+        utils/variables/names.cpp
+        utils/variables/types.cpp
+        utils/variables/defLine.cpp
+
+        static_analysis/createCUs.cpp
+        static_analysis/fillCUVariables.cpp
+        static_analysis/populateGlobalVariablesSet.cpp
+
+        hybrid_analysis/InstructionCFG.cpp
+        hybrid_analysis/InstructionDG.cpp
         )
 
 # forward compiler flags

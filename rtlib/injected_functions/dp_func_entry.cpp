@@ -60,7 +60,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     memory_manager = new MemoryManager();
 #if DP_CALLTREE_PROFILING
     call_tree = new CallTree();
-    //metadata_queue = new MetaDataQueue(6); // TODO: add Worker argument
+    // metadata_queue = new MetaDataQueue(6); // TODO: add Worker argument
     dependency_metadata_results_mtx = new std::mutex();
     dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
 #endif
@@ -135,7 +135,6 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 #ifdef DP_CALLTREE_PROFILING
   call_tree->enter_function(lid);
 #endif
-
 
   if (isStart)
     *out << "START " << dputil::decodeLID(lid) << endl;
