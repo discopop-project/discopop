@@ -493,7 +493,7 @@ void *analyzeDeps(void *arg) {
   int64_t id = (int64_t)arg;
   AbstractShadow *SMem;
   if (USE_PERFECT) {
-    SMem = new PerfectShadow(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
+    SMem = new PerfectShadow2();
   } else {
     SMem = new ShadowMemory(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
   }
