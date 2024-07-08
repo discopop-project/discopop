@@ -48,7 +48,9 @@
 #include "llvm/Transforms/Instrumentation.h"
 
 #include "DPUtils.hpp"
-#include "InstructionDG.hpp"
+#include "hybrid_analysis/InstructionDG.hpp"
+
+#include "Structs.hpp"
 
 #include <algorithm>
 #include <cstdlib>
@@ -64,144 +66,31 @@
 
 #include <stdlib.h>
 
+#include "Globals.hpp"
+
 #define DP_DEBUG false
+
+#define ClCheckLoopPar true
+#define DumpToDot false
+#define DP_BRANCH_TRACKING                                                                                             \
+  true // toggles the creation of instrumentation calls for tracking taken
+       // branches. Required by the graph pruning step of the DiscoPoP
+       // optimizer.
+#define DP_DEBUG false
+#define DP_VERBOSE false // prints warning messages
+#define DP_hybrid_DEBUG false
 
 using namespace llvm;
 using namespace std;
 using namespace dputil;
 
+/*
 // Command line options
 static cl::opt<bool> ClCheckLoopPar("dp-loop-par", cl::init(true), cl::desc("Check loop parallelism"), cl::Hidden);
 
 static cl::opt<bool> DumpToDot("dp-omissions-dump-dot", cl::init(false),
                                cl::desc("Generate a .dot representation of the CFG and DG"), cl::Hidden);
-
-namespace {
-
-STATISTIC(totalInstrumentations, "Total DP-Instrumentations");
-STATISTIC(removedInstrumentations, "Disregarded DP-Instructions");
-
-// CUGeneration
-
-static unsigned int CUIDCounter;
-static unsigned int bbDepCount;
-static bool defaultIsGlobalVariableValue;
-int32_t fileID;
-
-typedef struct Variable_struct {
-  string name;
-  string type;
-  string defLine;
-  string isArray;
-  bool readAccess;
-  bool writeAccess;
-  string sizeInBytes;
-
-  Variable_struct(const Variable_struct &other)
-      : name(other.name), type(other.type), defLine(other.defLine), readAccess(other.readAccess),
-        writeAccess(other.writeAccess), sizeInBytes(other.sizeInBytes) {}
-
-  Variable_struct(string n, string t, string d, bool readAccess, bool writeAccess, string sizeInBytes)
-      : name(n), type(t), defLine(d), readAccess(readAccess), writeAccess(writeAccess), sizeInBytes(sizeInBytes) {}
-
-  // We have a set of this struct. The set doesn't know how to order the
-  // elements.
-  inline bool operator<(const Variable_struct &rhs) const { return name < rhs.name; }
-
-  inline bool operator>(const Variable_struct &rhs) const { return name > rhs.name; }
-
-} Variable;
-
-enum nodeTypes { cu, func, loop, dummy } type;
-
-typedef struct Node_struct {
-  string ID;
-  nodeTypes type;
-  int startLine;
-  int endLine;
-  BasicBlock *BB;
-
-  // Only for func type
-  string name;
-  vector<Variable> argumentsList;
-  set<int> returnLines;
-
-  vector<Node_struct *> childrenNodes;
-  Node_struct *parentNode;
-
-  // isRecursive function (Mo 5.11.2019)
-  string recursiveFunctionCall = "";
-
-  Node_struct() {
-    ID = to_string(fileID) + ":" + to_string(CUIDCounter++);
-    parentNode = NULL;
-    BB = NULL;
-  }
-} Node;
-
-typedef struct CU_struct : Node_struct {
-
-  string BBID; // BasicBlock Id where the CU appears in
-
-  unsigned readDataSize;  // number of bytes read from memory by the cu
-  unsigned writeDataSize; // number of bytes written into memory during the cu
-  unsigned instructionsCount;
-
-  // basic block id & successor basic blocks for control dependence
-  vector<string> successorCUs; // keeps IDs of control dependent CUs
-  string basicBlockName;
-
-  set<int> instructionsLineNumbers;
-  set<int> readPhaseLineNumbers;
-  set<int> writePhaseLineNumbers;
-  set<int> returnInstructions;
-
-  set<Variable> localVariableNames;
-  set<Variable> globalVariableNames;
-
-  bool performsFileIO;
-
-  // Map to record function call line numbers
-  map<int, vector<Node *>> callLineTofunctionMap;
-
-  CU_struct() {
-    type = nodeTypes::cu;
-    readDataSize = 0;
-    writeDataSize = 0;
-    instructionsCount = 0;
-    // BB = NULL;
-    performsFileIO = false;
-  }
-
-  void removeCU() {
-    CUIDCounter--; // if a CU does not contain any instruction, e.g. entry
-                   // basic blocks, then remove it.
-  }
-
-} CU;
-
-// DPReduction
-
-struct instr_info_t {
-  std::string var_name_;
-  std::string var_type_;
-  int loop_line_nr_;
-  int file_id_;
-  llvm::StoreInst *store_inst_;
-  llvm::LoadInst *load_inst_;
-  char operation_ = ' ';
-};
-
-struct loop_info_t {
-  unsigned int line_nr_;
-  int file_id_;
-  llvm::Instruction *first_body_instr_;
-  std::string start_line;
-  std::string end_line;
-  std::string function_name;
-};
-
-// DPReduction end
+*/
 
 class DiscoPoP : public ModulePass {
 private:
@@ -419,7 +308,7 @@ public:
   inline bool dp_reduction_loc_exists(llvm::DebugLoc const &loc) { return static_cast<bool>(loc); }
   unsigned dp_reduction_get_file_id(llvm::Function *func);
   bool dp_reduction_init_util(std::string fmap_path);
-  char dp_reduction_get_char_for_opcode(llvm::Instruction *instr);
+  char dp_reduction_get_char_for_opcode(llvm::Instruction *instr); //} // namespace
   bool dp_reduction_is_operand(llvm::Instruction *instr, llvm::Value *operand);
   int dp_reduction_get_op_order(char c);
   Type *dp_reduction_pointsToStruct(PointerType *PTy);
@@ -439,24 +328,3 @@ public:
   // DPReduction end
 
 }; // end of class DiscoPoP
-} // namespace
-
-char DiscoPoP::ID = 0;
-
-static RegisterPass<DiscoPoP> X("DiscoPoP", "DiscoPoP: finding potential parallelism.", false, false);
-
-static void loadPass(const PassManagerBuilder &Builder, legacy::PassManagerBase &PM) {
-  PM.add(new LoopInfoWrapperPass());
-  PM.add(new DiscoPoP());
-}
-
-static RegisterStandardPasses DiscoPoPLoader_Ox(PassManagerBuilder::EP_OptimizerLast, loadPass);
-static RegisterStandardPasses DiscoPoPLoader_O0(PassManagerBuilder::EP_EnabledOnOptLevel0, loadPass);
-
-ModulePass *createDiscoPoPPass() {
-  if (DP_DEBUG) {
-    errs() << "create DiscoPoP \n";
-  }
-  initializeLoopInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-  return new DiscoPoP();
-}

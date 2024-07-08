@@ -33,9 +33,9 @@ FunctionManager *function_manager = nullptr;
 LoopManager *loop_manager = nullptr;
 MemoryManager *memory_manager = nullptr;
 CallTree *call_tree = nullptr;
-//MetaDataQueue *metadata_queue = nullptr;
-std::mutex* dependency_metadata_results_mtx = nullptr;
-std::unordered_set<DependencyMetadata>* dependency_metadata_results = nullptr;
+// MetaDataQueue *metadata_queue = nullptr;
+std::mutex *dependency_metadata_results_mtx = nullptr;
+std::unordered_set<DependencyMetadata> *dependency_metadata_results = nullptr;
 
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;

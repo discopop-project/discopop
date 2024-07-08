@@ -12,43 +12,38 @@
 
 #pragma once
 
+#include "DependencyMetadata.hpp"
+#include "MetaDataQueueElement.hpp"
+#include <iostream>
 #include <mutex>
 #include <queue>
 #include <set>
-#include <unordered_set>
 #include <thread>
+#include <unordered_set>
 #include <vector>
-#include <iostream>
-#include "MetaDataQueueElement.hpp"
-#include "DependencyMetadata.hpp"
 
-
-namespace __dp
-{
-class MetaDataQueue{
+namespace __dp {
+class MetaDataQueue {
 public:
-    MetaDataQueue(int worker_count);  // worker_count: minimum 1
-    ~MetaDataQueue();
-    void insert(MetaDataQueueElement && mdqe);  // TODO optimization potential, do not use copies here!
-    const std::set<DependencyMetadata>& get_metadata();
-    int get_size();
-    void blocking_finalize_queue();
-    bool finalize_queue;
-    std::mutex queue_mtx;
-    std::queue<MetaDataQueueElement> queue;
-    std::mutex results_mtx;
-    std::vector<DependencyMetadata> results;
-    std::mutex enqueued_mtx;
-    std::unordered_set<MetaDataQueueElement> enqueued;
+  MetaDataQueue(int worker_count); // worker_count: minimum 1
+  ~MetaDataQueue();
+  void insert(MetaDataQueueElement &&mdqe); // TODO optimization potential, do not use copies here!
+  const std::set<DependencyMetadata> &get_metadata();
+  int get_size();
+  void blocking_finalize_queue();
+  bool finalize_queue;
+  std::mutex queue_mtx;
+  std::queue<MetaDataQueueElement> queue;
+  std::mutex results_mtx;
+  std::vector<DependencyMetadata> results;
+  std::mutex enqueued_mtx;
+  std::unordered_set<MetaDataQueueElement> enqueued;
 
 private:
-    std::vector<std::thread> threads;
-    
+  std::vector<std::thread> threads;
 };
 
-static void processQueue(MetaDataQueue* mdq);
+static void processQueue(MetaDataQueue *mdq);
 static DependencyMetadata processQueueElement(MetaDataQueueElement mdqe);
-
-
 
 } // namespace __dp

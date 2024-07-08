@@ -12,14 +12,14 @@
 
 #pragma once
 
+#include <cassert>
 #include <chrono>
 #include <ctime>
 #include <iomanip>
-#include <ostream>
 #include <iostream>
+#include <ostream>
 #include <string>
 #include <vector>
-#include <cassert>
 
 /**
  * This type allows type-safe specification of a specific timer
@@ -223,14 +223,15 @@ public:
     stream << "\n========== DiscoPoP TIMERS: calltree profiling ======\n";
     print(stream, " Context: Analyze singe accesses                 : ", TimerRegion::ANALYZE_SINGLE_ACCESS);
     print(stream, "  |- Context: Add a dependency                   : ", TimerRegion::ADD_DEP);
-    print(stream, "  |- Register MetaDataQueueElements              : ", TimerRegion::ADD_DEP_CALLTREE_REGISTER_METADATAQUEUEELEMENT);
+    print(stream, "  |- Register MetaDataQueueElements              : ",
+          TimerRegion::ADD_DEP_CALLTREE_REGISTER_METADATAQUEUEELEMENT);
     print(stream, " MetaDataQueue: processQueue                     : ", TimerRegion::METADATAQUEUE_PROCESSQUEUE);
     print(stream, "  |- Fetch MetaDataQueueElement                  : ", TimerRegion::METADATAQUEUE_PROCESSQUEUE_FETCH);
-    print(stream, "  |- processQueueElement                         : ", TimerRegion::METADATAQUEUE_PROCESSQUEUEELEMENT);
+    print(stream,
+          "  |- processQueueElement                         : ", TimerRegion::METADATAQUEUE_PROCESSQUEUEELEMENT);
     print(stream, " Stand-alone processQueueElement                 : ", TimerRegion::PROCESSQUEUEELEMENT);
     stream << "\n";
 #endif
-
   }
 
   /**
