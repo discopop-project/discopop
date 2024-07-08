@@ -4,5 +4,4 @@
 
 class MetaDataQueueTest : public ::testing::Test {};
 
-TEST_F(MetaDataQueueTest, dummy) {
-}
+TEST_F(MetaDataQueueTest, dummy) {}

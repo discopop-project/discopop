@@ -13,8 +13,8 @@
 #pragma once
 
 #include "DPTypes.hpp"
-#include "runtimeFunctionsTypes.hpp"
 #include "memory/AbstractShadow.hpp"
+#include "runtimeFunctionsTypes.hpp"
 
 #include <string>
 

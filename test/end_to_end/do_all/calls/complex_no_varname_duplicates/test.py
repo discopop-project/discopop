@@ -66,7 +66,7 @@ class TestMethods(unittest.TestCase):
         for pattern_type in test_output.patterns.__dict__:
             amount_of_identified_patterns = len(test_output.patterns.__dict__[pattern_type])
             if pattern_type == "do_all":
-                expected = ["1:22", "1:27"]
+                expected = ["1:19", "1:24"]
                 for pattern in test_output.patterns.__dict__[pattern_type]:
                     self.assertTrue(pattern.start_line in expected, "False positive: Pattern at " + pattern.start_line + " not in expected result: " + str(expected))
                 self.assertTrue(len(test_output.patterns.__dict__[pattern_type]) == 2, "False negative: Missed pattern. \nFound: " + " ".join([p.start_line for p in test_output.patterns.__dict__[pattern_type]])+"\nExpected: " + " ".join(expected))

@@ -13,53 +13,50 @@
 #pragma once
 
 #include "../DPUtils.hpp"
-#include "CallTreeNode.hpp"
-#include <memory>
-#include <boost/functional/hash.hpp>
 #include "../runtimeFunctionsTypes.hpp"
+#include "CallTreeNode.hpp"
+#include <boost/functional/hash.hpp>
+#include <memory>
 
-namespace __dp
-{
+namespace __dp {
 
-class MetaDataQueueElement{
+class MetaDataQueueElement {
 public:
-    MetaDataQueueElement(depType arg_type, LID arg_sink, LID arg_source, const char* arg_var, string arg_AAvar, shared_ptr<CallTreeNode> arg_sink_ctn, shared_ptr<CallTreeNode> arg_source_ctn);
-    bool operator==(const MetaDataQueueElement& other) const;
-    string toString();
-    depType type;
-    LID sink;
-    LID source;
-    const char* var;
-    string AAvar;
-    shared_ptr<CallTreeNode> sink_ctn;
-    shared_ptr<CallTreeNode> source_ctn;
+  MetaDataQueueElement(depType arg_type, LID arg_sink, LID arg_source, const char *arg_var, string arg_AAvar,
+                       shared_ptr<CallTreeNode> arg_sink_ctn, shared_ptr<CallTreeNode> arg_source_ctn);
+  bool operator==(const MetaDataQueueElement &other) const;
+  string toString();
+  depType type;
+  LID sink;
+  LID source;
+  const char *var;
+  string AAvar;
+  shared_ptr<CallTreeNode> sink_ctn;
+  shared_ptr<CallTreeNode> source_ctn;
 };
-}
+} // namespace __dp
 
-template <>
-struct std::hash<__dp::MetaDataQueueElement>
-{
-  std::size_t operator()(const __dp::MetaDataQueueElement& k) const
-  {
-    using boost::hash_value;
+template <> struct std::hash<__dp::MetaDataQueueElement> {
+  std::size_t operator()(const __dp::MetaDataQueueElement &k) const {
     using boost::hash_combine;
+    using boost::hash_value;
 
     // Start with a hash value of 0    .
     std::size_t seed = 0;
 
     // Modify 'seed' by XORing and bit-shifting in
     // one member of 'Key' after the other:
-    hash_combine(seed,hash_value(k.type));
-    hash_combine(seed,hash_value(k.sink));
-    hash_combine(seed,hash_value(k.source));
-    hash_combine(seed,hash_value(k.var));
-    hash_combine(seed,hash_value(k.AAvar));
-    hash_combine(seed,hash_value(k.sink_ctn->get_node_type()));
-    hash_combine(seed,hash_value(k.sink_ctn->get_loop_or_function_id()));
-    hash_combine(seed,hash_value(k.sink_ctn->get_iteration_id()));
-    hash_combine(seed,hash_value(k.source_ctn->get_node_type()));
-    hash_combine(seed,hash_value(k.source_ctn->get_loop_or_function_id()));
-    hash_combine(seed,hash_value(k.source_ctn->get_iteration_id()));
+    hash_combine(seed, hash_value(k.type));
+    hash_combine(seed, hash_value(k.sink));
+    hash_combine(seed, hash_value(k.source));
+    hash_combine(seed, hash_value(k.var));
+    hash_combine(seed, hash_value(k.AAvar));
+    hash_combine(seed, hash_value(k.sink_ctn->get_node_type()));
+    hash_combine(seed, hash_value(k.sink_ctn->get_loop_or_function_id()));
+    hash_combine(seed, hash_value(k.sink_ctn->get_iteration_id()));
+    hash_combine(seed, hash_value(k.source_ctn->get_node_type()));
+    hash_combine(seed, hash_value(k.source_ctn->get_loop_or_function_id()));
+    hash_combine(seed, hash_value(k.source_ctn->get_iteration_id()));
 
     // Return the result.
     return seed;

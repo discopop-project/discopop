@@ -60,13 +60,13 @@ struct AccessInfo {
   AccessInfo(bool isRead, LID lid, char *var, std::string AAvar, ADDR addr, bool skip = false)
       : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {
 #if DP_CALLTREE_PROFILING
-  call_tree_node_ptr = nullptr;
+    call_tree_node_ptr = nullptr;
 #endif
-      }
+  }
 
   AccessInfo() : isRead(false), lid(0), var(""), AAvar(""), addr(0), skip(false) {
 #if DP_CALLTREE_PROFILING
-  call_tree_node_ptr = nullptr;
+    call_tree_node_ptr = nullptr;
 #endif
   }
 
@@ -85,8 +85,7 @@ struct AccessInfo {
 
 // For runtime dependency merging
 struct Dep {
-  Dep(depType T, LID dep, const char *var, std::string AAvar)
-      : type(T), depOn(dep), var(var), AAvar(AAvar) {}
+  Dep(depType T, LID dep, const char *var, std::string AAvar) : type(T), depOn(dep), var(var), AAvar(AAvar) {}
 
   depType type;
   LID depOn;

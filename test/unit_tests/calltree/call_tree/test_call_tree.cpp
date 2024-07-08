@@ -49,7 +49,7 @@ TEST_F(CallTreeTest, testEnterLoop) {
   ASSERT_EQ(ct.get_current_node_ptr()->get_loop_or_function_id(), 42);
 }
 
-TEST_F(CallTreeTest, testExitLoop){
+TEST_F(CallTreeTest, testExitLoop) {
   auto ct = __dp::CallTree();
   ct.enter_function(42);
   ct.enter_loop(43);
@@ -58,7 +58,7 @@ TEST_F(CallTreeTest, testExitLoop){
   ct.exit_loop();
 
   ASSERT_EQ(ct.get_current_node_ptr()->get_node_type(), __dp::CallTreeNodeType::Function);
-  ASSERT_EQ(ct.get_current_node_ptr()->get_loop_or_function_id(), 42) ;
+  ASSERT_EQ(ct.get_current_node_ptr()->get_loop_or_function_id(), 42);
   ASSERT_EQ(ct.get_node_count(), 2);
 }
 
@@ -71,7 +71,7 @@ TEST_F(CallTreeTest, testEnterFunction) {
   ASSERT_EQ(ct.get_current_node_ptr()->get_loop_or_function_id(), 42);
 }
 
-TEST_F(CallTreeTest, testExitFunctionSimple){
+TEST_F(CallTreeTest, testExitFunctionSimple) {
   auto ct = __dp::CallTree();
   ct.enter_function(42);
   ct.enter_loop(43);
@@ -83,7 +83,7 @@ TEST_F(CallTreeTest, testExitFunctionSimple){
   ASSERT_EQ(ct.get_node_count(), 1);
 }
 
-TEST_F(CallTreeTest, testExitFunction){
+TEST_F(CallTreeTest, testExitFunction) {
   auto ct = __dp::CallTree();
   ct.enter_function(42);
   ct.enter_loop(43);
@@ -98,7 +98,6 @@ TEST_F(CallTreeTest, testExitFunction){
   ASSERT_EQ(ct.get_current_node_ptr()->get_node_type(), __dp::CallTreeNodeType::Root);
   ASSERT_EQ(ct.get_node_count(), 1);
 }
-
 
 TEST_F(CallTreeTest, testEnterIterations) {
   auto ct = __dp::CallTree();
@@ -122,7 +121,7 @@ TEST_F(CallTreeTest, testEnterIterations) {
   ASSERT_EQ(ct.get_current_node_ptr()->get_iteration_id(), 2);
 }
 
-TEST_F(CallTreeTest, testAutomaticCleanup){
+TEST_F(CallTreeTest, testAutomaticCleanup) {
   auto ct = __dp::CallTree();
   ct.enter_function(42);
   ct.enter_loop(43);
@@ -134,17 +133,17 @@ TEST_F(CallTreeTest, testAutomaticCleanup){
   ASSERT_EQ(ct.get_node_count(), 4);
 }
 
-TEST_F(CallTreeTest, testPreventAutomaticCleanup){
+TEST_F(CallTreeTest, testPreventAutomaticCleanup) {
   auto ct = __dp::CallTree();
   ct.enter_function(42);
   ct.enter_loop(43);
   ct.enter_iteration(1);
   ASSERT_EQ(ct.get_node_count(), 4);
-  
+
   {
     // save ptr to iteration 1 to prevent cleanup
     std::shared_ptr<__dp::CallTreeNode> dummy_ptr = ct.get_current_node_ptr();
-    
+
     ct.enter_iteration(2);
     // iteration node 1 shall NOT be deleted, since a referenced still exists
     ASSERT_EQ(ct.get_node_count(), 5);
@@ -154,7 +153,7 @@ TEST_F(CallTreeTest, testPreventAutomaticCleanup){
   ASSERT_EQ(ct.get_node_count(), 4);
 }
 
-TEST_F(CallTreeTest, testImmediateFuncExit){
+TEST_F(CallTreeTest, testImmediateFuncExit) {
   auto ct = __dp::CallTree();
   ct.exit_function();
   // check for segfaults
