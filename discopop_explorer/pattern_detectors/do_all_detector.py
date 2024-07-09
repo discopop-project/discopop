@@ -283,7 +283,7 @@ def __check_loop_dependencies(
             )
             cond_2 = len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0
             cond_3 = len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0
-            if (cond_1) or ((cond_2) and (cond_3)):
+            if cond_1 or cond_2 or cond_3:
                 return True
             # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
             else:
@@ -409,7 +409,6 @@ def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode):
             if s not in visited and s not in queue:
                 queue.append(s)
 
-    parents.remove(root_loop.id)
     return [pet.node_at(p).start_position() for p in parents]
 
 

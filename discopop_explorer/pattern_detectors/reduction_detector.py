@@ -256,24 +256,14 @@ def __check_loop_dependencies(
             else:
                 # RAW does not target a reduction variable.
                 # RAW problematic, if it is not an intra-iteration RAW.
-                if (
-                    not dep.intra_iteration
-                    and (dep.metadata_intra_iteration_dep is None or len(dep.metadata_intra_iteration_dep) == 0)
-                    and parent_function_lineid
-                    in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
-                ) or (
-                    (
-                        False
-                        if dep.metadata_inter_call_dep is None
-                        else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
-                    )
-                    and (
-                        False
-                        if dep.metadata_inter_iteration_dep is None
-                        else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
-                    )
-                ):
+                cond_1 = (len(dep.metadata_intra_iteration_dep) == 0) and parent_function_lineid in (
+                    dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else []
+                )
+                cond_2 = len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0
+                cond_3 = len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0
+                if cond_1 or cond_2 or cond_3:
                     return True
+                # check for
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
@@ -333,7 +323,6 @@ def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode):
             if s not in visited and s not in queue:
                 queue.append(s)
 
-    parents.remove(root_loop.id)
     return [pet.node_at(p).start_position() for p in parents]
 
 
