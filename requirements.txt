@@ -55,4 +55,4 @@ tomli==2.0.1
 tqdm==4.66.3
 typing_extensions==4.7.1
 typish==1.9.3
-zipp==3.16.2
+zipp==3.19.1
