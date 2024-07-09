@@ -69,7 +69,12 @@ public:
     loopStack.increment_top_count();
 #if DP_CALLTREE_PROFILING
     if(! DP_CALLTREE_PROFILING_METADATA_CUTOFF == 0){
+#if DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY
+      loopStack.non_const_top().set_dependency_metadata_calculation_enabled((loopStack.top().get_dependency_metadata_calculation_enabled() && (DP_CALLTREE_PROFILING_METADATA_CUTOFF > loopStack.top().get_count())) || ((rand() % 1000) < DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY));
+#else
+      // DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY is 0
       loopStack.non_const_top().set_dependency_metadata_calculation_enabled(loopStack.top().get_dependency_metadata_calculation_enabled() && (DP_CALLTREE_PROFILING_METADATA_CUTOFF > loopStack.top().get_count()));
+#endif
     }
 #endif
 #ifdef DP_DEBUG
