@@ -26,6 +26,8 @@ public:
 
   const LoopTableEntry &top() const { return contents.back(); }
 
+  LoopTableEntry &non_const_top() { return contents.back(); }
+
   const LoopTableEntry &first() const { return contents[0]; }
 
   const LoopTableEntry &topMinusN(const std::size_t n) const { return contents[contents.size() - 1 - n]; }
