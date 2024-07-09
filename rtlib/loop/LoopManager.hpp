@@ -33,7 +33,20 @@ public:
   }
 
   void create_new_loop(const std::int32_t function_level, const std::int32_t loop_id, const LID begin_line) {
+#if DP_CALLTREE_PROFILING
+    // check if dependency metadata calculation should be disabled due to inheritance
+    bool inherited_dep_metadata_calculation = true;
+    if (! loopStack.empty()){
+      inherited_dep_metadata_calculation = loopStack.top().get_dependency_metadata_calculation_enabled();
+    }
+     
+#endif 
     loopStack.push(LoopTableEntry(function_level, loop_id, 0, begin_line));
+#if DP_CALLTREE_PROFILING
+    // set the inherited metadata calculation flag
+    loopStack.non_const_top().set_dependency_metadata_calculation_enabled(inherited_dep_metadata_calculation);
+
+#endif
     if (loops.find(begin_line) == loops.end()) {
       loops.insert(pair<LID, LoopRecord *>(begin_line, new LoopRecord(0, 0, 0)));
     }
@@ -46,8 +59,19 @@ public:
     return loopStack.empty() || (loopStack.top().loopID != loop_id);
   }
 
+#if DP_CALLTREE_PROFILING
+  bool enable_calculate_dependency_metadata() {
+    return loopStack.top().get_dependency_metadata_calculation_enabled();
+  }; 
+#endif
+
   void iterate_loop(const std::int32_t function_level) {
     loopStack.increment_top_count();
+#if DP_CALLTREE_PROFILING
+    if(! DP_CALLTREE_PROFILING_METADATA_CUTOFF == 0){
+      loopStack.non_const_top().set_dependency_metadata_calculation_enabled(loopStack.top().get_dependency_metadata_calculation_enabled() && (DP_CALLTREE_PROFILING_METADATA_CUTOFF > loopStack.top().get_count()));
+    }
+#endif
 #ifdef DP_DEBUG
     std::cout << "(" << std::dec << loopStack.top().funcLevel << ")";
     std::cout << "Loop " << loopStack.top().loopID << " iterates " << loopStack.top().count << " times." << std::endl;

@@ -152,6 +152,7 @@ jobs:
           cmake \
            -DCMAKE_BUILD_TYPE=Debug \
            -DDP_CALLTREE_PROFILING=1 \
+           -DDP_CALLTREE_PROFILING_METADATA_CUTOFF=0 \
            ..
           make -j3
 
