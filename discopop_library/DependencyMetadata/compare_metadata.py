@@ -29,7 +29,7 @@ def main():
             if line.startswith("#"):
                 continue
             test_results.add(line)
-    
+
     print("Total gold standard: ", len(gold_standard))
     print("Total test results: ", len(test_results))
     # identify number of matching results
@@ -40,7 +40,7 @@ def main():
     missed = gold_standard.difference(test_results)
     print("Missed: ", len(missed))
 
-    # identify number of additional results 
+    # identify number of additional results
     additional = test_results.difference(gold_standard)
     print("Additional: ", len(additional))
 
