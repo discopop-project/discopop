@@ -95,6 +95,7 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 
 #if DP_CALLTREE_PROFILING
   current.call_tree_node_ptr = call_tree->get_current_node_ptr();
+  current.calculate_dependency_metadata = loop_manager->enable_calculate_dependency_metadata();
 #endif
 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0

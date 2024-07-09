@@ -61,12 +61,14 @@ struct AccessInfo {
       : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {
 #if DP_CALLTREE_PROFILING
     call_tree_node_ptr = nullptr;
+    calculate_dependency_metadata = true;
 #endif
   }
 
   AccessInfo() : isRead(false), lid(0), var(""), AAvar(""), addr(0), skip(false) {
 #if DP_CALLTREE_PROFILING
     call_tree_node_ptr = nullptr;
+    calculate_dependency_metadata = true;
 #endif
   }
 
@@ -80,6 +82,7 @@ struct AccessInfo {
   ADDR addr;
 #if DP_CALLTREE_PROFILING
   shared_ptr<CallTreeNode> call_tree_node_ptr;
+  bool calculate_dependency_metadata;
 #endif
 };
 

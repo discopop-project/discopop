@@ -86,6 +86,13 @@ if(DEFINED DP_CALLTREE_PROFILING)
         endif()
 endif()
 
+if(DEFINED DP_CALLTREE_PROFILING_METADATA_CUTOFF)
+        target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING_METADATA_CUTOFF=${DP_CALLTREE_PROFILING_METADATA_CUTOFF})
+        message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF enabled. Incomplete dependency metadata possible.")
+else()
+        target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING_METADATA_CUTOFF=50)
+        message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF set to default value: 50.")
+endif()
 
 if(DEFINED DP_MEMORY_REGION_DEALIASING)
         if(NOT ${DP_MEMORY_REGION_DEALIASING} EQUAL 0)

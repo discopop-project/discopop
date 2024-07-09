@@ -21,7 +21,11 @@ namespace __dp {
 // For loop tracking
 struct LoopTableEntry {
   LoopTableEntry(std::int32_t function_level, std::int32_t loop_id, std::int32_t number_hits, LID begin_line)
-      : funcLevel(function_level), loopID(loop_id), count(number_hits), begin(begin_line) {}
+      : funcLevel(function_level), loopID(loop_id), count(number_hits), begin(begin_line) {
+#if DP_CALLTREE_PROFILING
+    dependency_metadata_calculation_enabled = true;
+#endif
+      }
 
   std::int32_t funcLevel;
   std::int32_t loopID;
@@ -37,8 +41,21 @@ struct LoopTableEntry {
 
   void increment_count() noexcept { ++count; }
 
+#if DP_CALLTREE_PROFILING
+  void set_dependency_metadata_calculation_enabled(bool value){
+    dependency_metadata_calculation_enabled = value;
+  }
+
+  bool get_dependency_metadata_calculation_enabled() const {
+    return dependency_metadata_calculation_enabled;
+  }
+#endif
+
 private:
   std::int32_t count;
+#if DP_CALLTREE_PROFILING
+  bool dependency_metadata_calculation_enabled;
+#endif
 };
 
 } // namespace __dp
