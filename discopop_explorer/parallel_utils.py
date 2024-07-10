@@ -7,9 +7,9 @@
 # directory for details.
 
 from .PEGraphX import Node, NodeID, PEGraphX
-from typing import List, Set
+from typing import List, Optional, Set
 
-global_pet: None | PEGraphX = None
+global_pet: Optional[PEGraphX] = None
 
 
 def pet_function_metadata_initialize_worker(pet):
