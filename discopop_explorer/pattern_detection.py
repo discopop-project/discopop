@@ -8,6 +8,7 @@
 import json
 import os
 import sys
+from typing import cast
 
 from alive_progress import alive_bar  # type: ignore
 
@@ -28,7 +29,7 @@ from .PEGraphX import DummyNode, LoopNode, NodeID, PEGraphX, EdgeType
 from .pattern_detectors.do_all_detector import DoAllInfo, run_detection as detect_do_all
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
 from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline
-from .pattern_detectors.reduction_detector import run_detection as detect_reduction
+from .pattern_detectors.reduction_detector import ReductionInfo, run_detection as detect_reduction
 from .pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
 
 
@@ -289,6 +290,6 @@ class PatternDetectorX(object):
             pt.last_private = [__get_var_obj_from_name(v) for v in pattern_dict["last_private"]]
             pt.shared = [__get_var_obj_from_name(v) for v in pattern_dict["shared"]]
             pt.reduction = [__get_red_var_obj_from_name(v) for v in pattern_dict["reduction"]]
-            res.patterns.reduction.append(pt)
+            res.patterns.reduction.append(cast(ReductionInfo, pt))
 
         return res

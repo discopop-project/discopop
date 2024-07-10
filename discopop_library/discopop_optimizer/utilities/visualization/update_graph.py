@@ -195,11 +195,11 @@ def show_update_graph(graph, configuration: OptimizerOutputPattern, experiment: 
                     if cont:
                         update_annot(ind, node_ids[node_type])
                         annot.set_visible(True)
-                        fig.canvas.draw_idle()
+                        fig.canvas.draw_idle()  # type: ignore
                     else:
                         if vis:
                             annot.set_visible(False)
-                            fig.canvas.draw_idle()
+                            fig.canvas.draw_idle()  # type: ignore
                 except TypeError:
                     pass
 

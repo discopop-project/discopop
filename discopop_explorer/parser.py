@@ -249,6 +249,8 @@ def is_reduction(reduction_line, fmap_lines, file_mapping):
     if not rex:
         return False
     res = rex.search(reduction_line)
+    if res is None:
+        return False
     file_id = int(res.group(1))
     file_line = int(res.group(2))
 

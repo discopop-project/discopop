@@ -58,7 +58,7 @@ class ReductionInfo(PatternInfo):
             f"private: {[v.name for v in self.private]}\n"
             f"shared: {[v.name for v in self.shared]}\n"
             f"first private: {[v.name for v in self.first_private]}\n"
-            f'reduction: {[v.operation + ":" + v.name for v in self.reduction]}\n'
+            f'reduction: {[str(v.operation) + ":" + v.name for v in self.reduction]}\n'
             f"last private: {[v.name for v in self.last_private]}"
         )
 
@@ -106,6 +106,8 @@ def __check_node(param_tuple):
     global global_pet
     local_result = []
     node = param_tuple
+    if global_pet is None:
+        raise ValueError("global_pet is None!")
     if __detect_reduction(global_pet, node):
         node.reduction = True
         if node.loop_iterations >= 0 and not node.contains_array_reduction:

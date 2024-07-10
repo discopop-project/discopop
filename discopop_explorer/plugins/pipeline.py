@@ -142,11 +142,11 @@ def get_correlation_coefficient(matrix):
     for i in range(0, len(matrix) - 1):
         graph_vector.append(matrix[i + 1][i])
 
-    pipeline_vector = []
+    pipeline_vector: List[float] = []
     for i in range(0, len(matrix) - 1):
-        pipeline_vector.append(1)
+        pipeline_vector.append(1.0)
 
-    min_weight = 1
+    min_weight = 1.0
     for i in range(0, len(matrix) - 1):
         for j in range(i + 1, len(matrix)):
             if matrix[i][j] == 1:
@@ -156,7 +156,7 @@ def get_correlation_coefficient(matrix):
 
     if min_weight == 1:
         graph_vector.append(0)
-        pipeline_vector.append(0)
+        pipeline_vector.append(0.0)
     else:
         graph_vector.append(1)
         pipeline_vector.append(min_weight)

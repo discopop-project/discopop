@@ -163,7 +163,7 @@ class OmittableCuInfo(PatternInfo):
             f"CU Start line: {self.start_line}\n"
             f"CU End line: {self.end_line}\n"
             f"Combinable with: {self.cwn_id}\n"
-            f'in_dep: {" ".join(self.in_dep)}\n'
-            f'out_dep: {" ".join(self.out_dep)}\n'
-            f'in_out_dep: {" ".join(self.in_out_dep)}\n'
+            f'in_dep: {" ".join([str(s) for s in self.in_dep])}\n'
+            f'out_dep: {" ".join([str(s) for s in self.out_dep])}\n'
+            f'in_out_dep: {" ".join([str(s) for s in self.in_out_dep])}\n'
         )

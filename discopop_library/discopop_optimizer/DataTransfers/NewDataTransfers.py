@@ -310,7 +310,7 @@ class DataFrame(object):
         for device_id in self.entered_data_regions_by_device:
             logger.debug("-> Device: " + str(device_id))
             for wda in self.entered_data_regions_by_device[device_id]:
-                logger.debug("\t-> " + str(wda.memory_region) + " : " + wda.var_name)
+                logger.debug("\t-> " + str(wda.memory_region) + " : " + str(wda.var_name))
         logger.debug("")
 
 

@@ -6,10 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from .PEGraphX import Node, NodeID
+from .PEGraphX import Node, NodeID, PEGraphX
 from typing import List, Set
 
-global_pet = None
+global_pet: None | PEGraphX = None
 
 
 def pet_function_metadata_initialize_worker(pet):
@@ -18,6 +18,9 @@ def pet_function_metadata_initialize_worker(pet):
 
 
 def pet_function_metadata_parse_func(func_node):
+    if global_pet is None:
+        raise ValueError("global_pet is None!")
+
     stack: List[Node] = global_pet.direct_children(func_node)
     func_node.children_cu_ids = [node.id for node in stack]
     local_children: Set[NodeID] = set()

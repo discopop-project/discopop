@@ -42,14 +42,14 @@ class WriteDataAccess(object):
     def __str__(self):
         return_str = ""
         return_str += "C" if self.from_call else ""
-        return_str += "W(" + self.memory_region + "-" + str(self.unique_id) + ", --> " + self.var_name + ")"
+        return_str += "W(" + self.memory_region + "-" + str(self.unique_id) + ", --> " + str(self.var_name) + ")"
         return return_str
 
     def __hash__(self):
         return self.unique_id
 
     def toDict(self):
-        result_dict = {}
+        result_dict: Dict[str, Any] = {}
         result_dict["memory_region"] = self.memory_region
         result_dict["unique_id"] = self.unique_id
         result_dict["var_name"] = self.var_name
