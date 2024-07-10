@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from cProfile import Profile
 import os
 from pathlib import Path
 from typing import Dict, Tuple, Set, Optional, List, Any
@@ -78,6 +79,8 @@ class Experiment(object):
 
     hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]
     hotspot_function_node_ids: List[int]
+
+    profile: Optional[Profile]
 
     def __init__(
         self,

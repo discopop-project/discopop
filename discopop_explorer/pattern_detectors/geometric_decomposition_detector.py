@@ -119,6 +119,8 @@ def __check_node(param_tuple):
     global global_pet
     local_result = []
     node = param_tuple
+    if global_pet is None:
+        raise ValueError("global_pet is None!")
 
     if __detect_geometric_decomposition(global_pet, node):
         node.geometric_decomposition = True

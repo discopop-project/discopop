@@ -81,6 +81,11 @@ def __collapse_loops_in_function(function_node_id):
     global global_graph
     global global_experiment
 
+    if global_experiment is None:
+        raise ValueError("global_experiment is None!")
+    if global_graph is None:
+        raise ValueError("global_graph is None!")
+
     modifiation_found = True
     return_value = False
     visited_inner_loop: Set[int] = set()
@@ -97,7 +102,7 @@ def __collapse_loops_in_function(function_node_id):
         #        loops = get_all_loop_nodes(global_graph)
         for loop in copy.deepcopy(relevant_loops):
             logging.info("Checking loop collapse for @ " + str(loop))
-            loop_data = data_at(global_graph, loop)
+            loop_data = cast(Loop, data_at(global_graph, loop))
             #            if function_node_id not in get_all_parents(global_graph, loop):
             #                continue
             # loop contained in function
@@ -148,7 +153,7 @@ def __collapse_loops_in_function(function_node_id):
 
                 # parent is empty node -> skip
                 if isinstance(current_data, Workload):
-                    if cast(Workload, current_data).sequential_workload == Integer(0):
+                    if current_data.sequential_workload == Integer(0):
                         queue += get_parents(global_graph, current)
                         continue
                 # parent is regular node -> end search on this path (no perfect nesting)
@@ -159,7 +164,7 @@ def __collapse_loops_in_function(function_node_id):
             invalid: Set[int] = set()
             for csrc in collapse_sources:
                 # check that only a single loop exists as a direct child
-                queue: List[int] = get_children(global_graph, csrc)
+                queue = get_children(global_graph, csrc)
                 ignore_list: List[int] = []
                 found_loop: bool = False
                 while queue:
@@ -184,12 +189,14 @@ def __collapse_loops_in_function(function_node_id):
                 # create new collapse node
                 new_node_id = global_experiment.get_next_free_node_id()
                 relevant_loops.add(new_node_id)
-                node_data_copy = copy.deepcopy(data_at(global_graph, csrc))
+                node_data_copy = cast(Loop, copy.deepcopy(data_at(global_graph, csrc)))
                 node_data_copy.node_id = new_node_id
                 # increase and set collapse level
-                cast(Loop, node_data_copy).collapse_level = loop_data.collapse_level + 1
+                node_data_copy.collapse_level = loop_data.collapse_level + 1
 
                 # register a new pattern
+                if node_data_copy.original_cu_id is None:
+                    raise ValueError("Node is not assigned to an original cu id!")
                 pattern_info = DoAllInfo(
                     global_experiment.detection_result.pet,
                     global_experiment.detection_result.pet.node_at(node_data_copy.original_cu_id),
@@ -260,11 +267,11 @@ def __collapse_loops_in_function(function_node_id):
                     Loop, data_at(global_graph, seq_loop_option)
                 ).iterations
                 cast(Loop, data_at(global_graph, new_node_id)).iterations_symbol = Symbol(
-                    "loop_" + str(new_node_id) + "_pos_" + str(cast(Loop, node_data_copy).position) + "_iterations"
+                    "loop_" + str(new_node_id) + "_pos_" + str(node_data_copy.position) + "_iterations"
                 )
                 global_experiment.register_free_symbol(
-                    cast(Loop, node_data_copy).iterations_symbol,
-                    value_suggestion=Integer(cast(Loop, node_data_copy).iterations),
+                    node_data_copy.iterations_symbol,
+                    value_suggestion=Integer(node_data_copy.iterations),
                 )
 
                 # create a new requirements edge to the single-iteration sequential version of the inner loop

@@ -15,7 +15,7 @@ class ScrollableTextWidget(object):
     text_container: tk.Text
 
     def __init__(self, parent_frame):
-        self.frame = ttk.Frame(parent_frame)
+        self.frame = ttk.Frame(parent_frame)  # type: ignore
         self.frame.pack(fill=tk.BOTH, expand=True)
         self.frame.rowconfigure(0, weight=1)
         self.frame.columnconfigure(0, weight=1)

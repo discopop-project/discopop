@@ -139,6 +139,10 @@ def __initialize_worker(
 def __evaluate_configuration(param_tuple):
     global global_experiment
     global global_arguments
+    if global_experiment is None:
+        raise ValueError("global_experiment is None!")
+    if global_arguments is None:
+        raise ValueError("global_arguments is None!")
     decisions = param_tuple
     return evaluate_configuration(global_experiment, decisions, global_arguments)
 

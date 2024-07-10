@@ -7,7 +7,7 @@
 # directory for details.
 import tkinter as tk
 from tkinter import *
-from typing import List, Tuple, Optional, Dict, cast, Union
+from typing import Any, List, Tuple, Optional, Dict, cast, Union
 
 from sympy import Symbol, Expr
 
@@ -120,7 +120,7 @@ def query_user_for_symbol_values(
         for row_idx, row in enumerate(rows):
             if row_idx == 0:
                 continue
-            row_element = []
+            row_element: List[Any] = []
             for col_idx, col in enumerate(row):
                 if col_idx == 0:
                     # append symbol to row_element
