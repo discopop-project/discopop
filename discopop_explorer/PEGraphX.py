@@ -735,6 +735,8 @@ class PEGraphX(object):
                 for _, _, d2 in out_deps:
                     if d1.var_name == d2.var_name:
                         if d1.memory_region != d2.memory_region:
+                            if d1.memory_region is None or d2.memory_region is None:
+                                continue
                             if d1.memory_region not in mem_reg_mappings:
                                 mem_reg_mappings[d1.memory_region] = set()
                             if d2.memory_region not in mem_reg_mappings:
@@ -748,6 +750,8 @@ class PEGraphX(object):
         for node_id in [n.id for n in self.all_nodes(CUNode)]:
             out_deps = [(s, t, d) for s, t, d in self.out_edges(node_id) if d.etype == EdgeType.DATA]
             for s, t, d in out_deps:
+                if d.memory_region is None:
+                    continue
                 if d.memory_region.startswith("S"):
                     # Static dependency found
                     # check if mappings exist
@@ -889,7 +893,7 @@ class PEGraphX(object):
             # identify loop indices
             loop_indices: Set[Variable] = set()
             for v in candidates:
-                if self.is_loop_index(v.name, loop.start_position(), subtree):
+                if self.is_loop_index(v.name, [loop.start_position()], subtree):
                     loop_indices.add(v)
             loop.loop_indices = [v.name for v in loop_indices]
         print("\tDone.")
@@ -902,7 +906,7 @@ class PEGraphX(object):
         :return:
         """
         # print("showing")
-        plt.plot()
+        plt.plot()  # type: ignore
         pos = self.pos
 
         # draw nodes
@@ -1672,6 +1676,8 @@ class PEGraphX(object):
             self.g.edges[edge]["edge_type"] = str(dep.etype.name)
             if dep.etype == EdgeType.DATA:
                 self.g.edges[edge]["var"] = dep.var_name
+                if dep.dtype is None:
+                    raise ValueError("dep.dtype has no type name!")
                 self.g.edges[edge]["dep_type"] = str(dep.dtype.name)
         nx.write_gexf(self.g, name)
 

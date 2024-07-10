@@ -192,6 +192,9 @@ def __check_node(param_tuple):
 
     node = param_tuple
 
+    if global_pet is None:
+        raise ValueError("global_pet is None!")
+
     node.pipeline = __detect_pipeline(global_pet, node)
     if node.pipeline > __pipeline_threshold:
         local_result.append(PipelineInfo(global_pet, node))

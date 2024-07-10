@@ -19,7 +19,7 @@ class ScrollableFrameWidget(object):
         self.container = ttk.Frame(parent_frame)
         self.canvas = tk.Canvas(self.container)
         self.scrollbar = ttk.Scrollbar(self.container, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = ttk.Frame(self.canvas)
+        self.scrollable_frame = ttk.Frame(self.canvas)  # type: ignore
 
         # configure weights
         self.container.rowconfigure(0, weight=1)

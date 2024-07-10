@@ -34,7 +34,9 @@ class BranchCosts(RegularCosts):
 
 
 class WorkloadStack(object):
-    stack: List[Union[List[Any], RegularCosts]]  # List of WorkloadStacks or integer tuples (min_wl, max_wl)
+    stack: List[
+        Any
+    ]  # List[Union[List[Any], RegularCosts]]  # List of WorkloadStacks or integer tuples (min_wl, max_wl)
 
     def __init__(self):
         self.stack = []
@@ -104,8 +106,8 @@ class WorkloadStack(object):
                 max_branch_wl = max_costs
 
         # accumulate total costs for branched section
-        min_wl += 0 if min_branch_wl is None else cast(int, min_branch_wl)
-        max_wl += 0 if max_branch_wl is None else cast(int, max_branch_wl)
+        min_wl += 0 if min_branch_wl is None else min_branch_wl
+        max_wl += 0 if max_branch_wl is None else max_branch_wl
 
         # replace innermost stack with accumulated costs
         cur_elem = self.stack

@@ -7,7 +7,7 @@
 # directory for details.
 import copy
 import sys
-from typing import Set, Tuple, Dict, List, cast, Optional, Union
+from typing import Any, Set, Tuple, Dict, List, cast, Optional, Union
 
 from networkx import MultiDiGraph  # type: ignore
 
@@ -354,7 +354,7 @@ def remove_duplicates(target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPo
 
 
 def join_elements(target_set):
-    grouping_dict = dict()
+    grouping_dict: Dict[Any, List[Any]] = dict()
 
     for elem in target_set:
         if elem.get_position_identifier() not in grouping_dict:
@@ -372,4 +372,5 @@ def join_elements(target_set):
             else:
                 joined_entry_point.join(elem)
         result_set.add(cast(EntryPoint, joined_entry_point))
+
     return result_set

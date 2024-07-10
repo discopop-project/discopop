@@ -194,6 +194,12 @@ def __parallel_get_random_configuration(param_tuple):
     global global_experiment
     global global_arguments
     global global_available_decisions
+    if global_experiment is None:
+        raise ValueError("global_experiment is None!")
+    if global_arguments is None:
+        raise ValueError("global_arguments is None!")
+    if global_population is None:
+        raise ValueError("global_population is None!")
     return __get_random_configuration(global_experiment, global_available_decisions, global_arguments)
 
 
@@ -313,6 +319,13 @@ def __parallel_crossover(param_tuple):
     global global_arguments
     global global_population
 
+    if global_experiment is None:
+        raise ValueError("global_experiment is None!")
+    if global_arguments is None:
+        raise ValueError("global_arguments is None!")
+    if global_population is None:
+        raise ValueError("global_population is None!")
+
     for i in range(0, 1000):
         # select two random elements
         element_1 = random.choice(global_population)
@@ -378,6 +391,12 @@ def __parallel_mutate(param_tuple):
     global global_experiment
     global global_arguments
     global global_population
+    if global_experiment is None:
+        raise ValueError("global_experiment is None!")
+    if global_arguments is None:
+        raise ValueError("global_arguments is None!")
+    if global_population is None:
+        raise ValueError("global_population is None!")
 
     for i in range(0, 1000):
         # select random mutation target from population
