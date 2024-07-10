@@ -35,6 +35,7 @@ where `<CMAKE_FLAGS>` can consist of any combination of the following flags and 
 - `-DDP_HYBRID_PROFILING=[0|1]` &ndash; Enbale hybrid profiling. Default: `1`.
 - `-DDP_CALLTREE_PROFILING=[0|1]` &ndash; Enable creation of a call tree during profiling to create extended dependency metadata for improved result quality. Negatively impacts profiling performance.
 - `-DDP_CALLTREE_PROFILING_METADATA_CUTOFF=<int>` &ndash; Set a cutoff amount of vitis per basic block for dependency metadata calculation. Set `0` to disable cutoff. Default: `50000`.
+- `-DDP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY=[0-1000]` &ndash; Enable or disable probablistic cutoff. Ignores cutoff with a configurable probability. Set `0` to disable probabilistic cutoff. Set `25` for a probability of 2.5% etc.
 - `-DDP_MEMORY_REGION_DEALIASING=[0|1]`: Enable or disable the generation of dependency de-aliasing information. Reduces potential false positive parallelization suggestions, but increases the profiling overhead.
 
 
