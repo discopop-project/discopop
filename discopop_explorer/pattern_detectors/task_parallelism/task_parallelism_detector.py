@@ -7,7 +7,7 @@
 # directory for details.
 
 
-from typing import List, Optional, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 from discopop_explorer.PEGraphX import DummyNode, PEGraphX, MWType
 from discopop_explorer.parser import parse_inputs
@@ -15,6 +15,7 @@ from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo, run_detection as detect_reduction
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
+    Task,
     TaskParallelismInfo,
     TPIType,
 )
@@ -62,6 +63,8 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
     detect_mw_types,
     get_var_definition_line_dict,
 )
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 __global_llvm_cxxfilt_path: str = ""
 
@@ -74,7 +77,7 @@ def build_preprocessed_graph_and_run_detection(
     cu_inst_result_file: str,
     llvm_cxxfilt_path: Optional[str],
     discopop_build_path: Optional[str],
-    hotspots,
+    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
     reduction_info: List[ReductionInfo],
 ) -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.
@@ -162,7 +165,9 @@ def run_detection(
 
     for fork in fs:
         if fork.child_tasks:
-            result.append(TaskParallelismInfo(fork.nodes[0], TPIType.DUMMY, ["dummy_fork"], [], [], [], []))
+            result.append(
+                TaskParallelismInfo(fork.nodes[0], TPIType.DUMMY, ["dummy_fork"], fork.start_line, [], [], [])
+            )
     # Preprocessing
     check_loop_scopes(pet)
     # Suggestion generation

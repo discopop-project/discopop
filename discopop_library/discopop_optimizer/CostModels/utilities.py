@@ -114,7 +114,7 @@ def get_node_performance_models(
     do_not_allow_decisions: Optional[Set[int]] = None,
     get_single_random_model: bool = False,
     ignore_node_costs: Optional[List[int]] = None,
-    current_device_id=None,
+    current_device_id: Optional[int] = None,
     allow_sequential: bool = False,
 ) -> List[CostModel]:
     """Returns the performance models for the given node.
@@ -392,7 +392,7 @@ def get_performance_models_for_children(
     return child_models
 
 
-def print_introduced_symbols_per_node(graph: nx.DiGraph):
+def print_introduced_symbols_per_node(graph: nx.DiGraph) -> None:
     print("Introduced Symbols:")
     for node_id in graph.nodes:
         print("NodeID: ", node_id)

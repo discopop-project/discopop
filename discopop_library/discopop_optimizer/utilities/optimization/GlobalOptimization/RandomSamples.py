@@ -30,7 +30,13 @@ def find_quasi_optimal_using_random_samples(
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution],
     verbose: bool = False,
-):
+) -> Tuple[
+    Tuple[CostModel, ContextObject],
+    Tuple[CostModel, ContextObject],
+    Tuple[CostModel, ContextObject],
+    Tuple[CostModel, ContextObject],
+    Tuple[CostModel, ContextObject],
+]:
     """Returns the identified minimum, maximum, median, 25% quartile and 75% quartile of the random_path_count samples.
     NOTE: The decisions should be treated as suggestions, not mathematically accurate decisions
     due to the used comparison method!"""

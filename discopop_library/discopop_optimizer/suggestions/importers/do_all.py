@@ -7,7 +7,7 @@
 # directory for details.
 import copy
 import logging
-from typing import Set, cast, Tuple, List, Dict
+from typing import Callable, Set, cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
 from sympy import Expr, Integer, Symbol, log, Float, init_printing
@@ -35,7 +35,7 @@ logger = logging.getLogger("Optimizer")
 
 
 def import_suggestion(
-    graph: nx.DiGraph, suggestion, get_next_free_node_id_function, environment: Experiment
+    graph: nx.DiGraph, suggestion: DoAllInfo, get_next_free_node_id_function: Callable[[], int], environment: Experiment
 ) -> nx.DiGraph:
     # find a node which belongs to the suggestion
     buffer = [n for n in graph.nodes]

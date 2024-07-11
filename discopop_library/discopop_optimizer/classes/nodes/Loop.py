@@ -5,14 +5,16 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Optional
+from typing import List, Optional
 
 from sympy import Symbol, Integer, Expr, Float  # type: ignore
 
 from discopop_explorer.PEGraphX import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
+from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 
 
 class Loop(Workload):
@@ -89,7 +91,9 @@ class Loop(Workload):
             "Device ID: " + str(self.device_id)
         )
 
-    def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:
+    def get_cost_model(
+        self, experiment: Experiment, all_function_nodes: List[FunctionRoot], current_device: Device
+    ) -> CostModel:
         """Performance model of a workload consists of the workload itself.
         Individual Workloads are assumed to be not parallelizable.
         Workloads of Loop etc. are parallelizable."""
@@ -111,7 +115,9 @@ class Loop(Workload):
 
         return cm
 
-    def register_child(self, other, experiment, all_function_nodes, current_device):
+    def register_child(
+        self, other: CostModel, experiment: Experiment, all_function_nodes: List[FunctionRoot], current_device: Device
+    ) -> CostModel:
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
 

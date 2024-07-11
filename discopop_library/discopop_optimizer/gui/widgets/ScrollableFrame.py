@@ -35,7 +35,7 @@ class ScrollableFrameWidget(object):
 
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
 
-    def finalize(self, row_count: int, row: int = 0, col: int = 0, rowspan: int = 1, columnspan: int = 1):
+    def finalize(self, row_count: int, row: int = 0, col: int = 0, rowspan: int = 1, columnspan: int = 1) -> None:
         if rowspan < 1:
             rowspan = 1
         if columnspan < 1:

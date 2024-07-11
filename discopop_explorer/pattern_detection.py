@@ -8,7 +8,7 @@
 import json
 import os
 import sys
-from typing import cast
+from typing import Dict, List, Optional, Tuple, cast
 
 from alive_progress import alive_bar  # type: ignore
 
@@ -16,6 +16,8 @@ from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detec
     build_preprocessed_graph_and_run_detection as detect_tp,
 )
 from discopop_explorer.variable import Variable
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
@@ -43,7 +45,7 @@ class PatternDetectorX(object):
         """
         self.pet = pet_graph
 
-    def __merge(self, loop_type: bool, remove_dummies: bool):
+    def __merge(self, loop_type: bool, remove_dummies: bool) -> None:
         """Removes dummy nodes
 
         :param loop_type: loops only
@@ -63,20 +65,20 @@ class PatternDetectorX(object):
 
     def detect_patterns(
         self,
-        project_path,
-        cu_dict,
-        dependencies,
-        loop_data,
-        reduction_vars,
-        file_mapping,
-        cu_inst_result_file,
-        llvm_cxxfilt_path,
-        discopop_build_path,
-        enable_patterns,
-        enable_task_pattern,
-        enable_detection_of_scheduling_clauses,
-        hotspots,
-    ):
+        project_path: str,
+        cu_dict: str,
+        dependencies: str,
+        loop_data: str,
+        reduction_vars: str,
+        file_mapping: Optional[str],
+        cu_inst_result_file: Optional[str],
+        llvm_cxxfilt_path: Optional[str],
+        discopop_build_path: Optional[str],
+        enable_patterns: str,
+        enable_task_pattern: bool,
+        enable_detection_of_scheduling_clauses: bool,
+        hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+    ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()
@@ -105,6 +107,10 @@ class PatternDetectorX(object):
 
         # check if task pattern should be enabled
         if enable_task_pattern:
+            if cu_inst_result_file is None:
+                raise ValueError("cu_inst_result_file not specified.")
+            if file_mapping is None:
+                raise ValueError("file_mapping not specified.")
             res.patterns.task = detect_tp(
                 cu_dict,
                 dependencies,

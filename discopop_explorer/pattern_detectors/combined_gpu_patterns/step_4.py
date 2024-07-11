@@ -23,6 +23,7 @@ from discopop_explorer.PEGraphX import (
     Dependency,
     FunctionNode,
 )
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import CombinedGPURegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
 
@@ -131,7 +132,7 @@ class Context(object):
 
         return required_updates
 
-    def synchronize_states(self, new_device_id: int):
+    def synchronize_states(self, new_device_id: int) -> None:
         overlapping_mem_reg = [
             mem_reg
             for mem_reg in self.seen_writes_by_device[self.device_id]
@@ -145,7 +146,9 @@ class Context(object):
                     print("SYNCHRONIZED: ", mem_reg, (ident, origin), file=sys.stderr)
                 self.seen_writes_by_device[new_device_id][mem_reg].add((ident, origin))
 
-    def request_updates_from_other_devices(self, pet, new_device_id: int) -> Set[Tuple[MemoryRegion, int, int, NodeID]]:
+    def request_updates_from_other_devices(
+        self, pet: PEGraphX, new_device_id: int
+    ) -> Set[Tuple[MemoryRegion, int, int, NodeID]]:
         required_updates: Set[Tuple[MemoryRegion, int, int, NodeID]] = set()
         to_be_removed = set()
         for mem_reg in self.seen_writes_by_device[new_device_id]:
@@ -198,7 +201,7 @@ class Context(object):
         self,
         pet: PEGraphX,
         next_cu_id: NodeID,
-        comb_gpu_reg,
+        comb_gpu_reg: CombinedGPURegion,
         writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
     ) -> Set[Update]:
         print("UPDATE TO: ", next_cu_id, file=sys.stderr)
@@ -287,14 +290,14 @@ class Context(object):
         return required_updates
 
 
-def get_device_id(comb_gpu_reg, cu_id: NodeID) -> int:
+def get_device_id(comb_gpu_reg: CombinedGPURegion, cu_id: NodeID) -> int:
     if cu_id in comb_gpu_reg.device_cu_ids:
         return 1
     return 0
 
 
-def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
-    def check_validity_of_potential_merge_node(node_id: NodeID):
+def __identify_merge_node(pet: PEGraphX, successors: List[NodeID]) -> Optional[NodeID]:
+    def check_validity_of_potential_merge_node(node_id: NodeID) -> bool:
         # return True if the given node is a valid merge node.
         # return False otherwise.
         # do not allow return BB's as merge nodes, since this would be trivially true for every path split
@@ -366,7 +369,7 @@ def __identify_merge_node(pet, successors: List[NodeID]) -> Optional[NodeID]:
 
 
 def identify_updates(
-    comb_gpu_reg,
+    comb_gpu_reg: CombinedGPURegion,
     pet: PEGraphX,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
     unrolled_function_graph: MultiDiGraph,
@@ -435,7 +438,7 @@ def get_update_type(from_device_id: int, to_device_id: int) -> UpdateType:
 
 def __calculate_updates(
     pet: PEGraphX,
-    comb_gpu_reg,
+    comb_gpu_reg: CombinedGPURegion,
     context: Context,
     cur_node_id: NodeID,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
@@ -518,7 +521,7 @@ def __calculate_updates(
     return identified_updates
 
 
-def create_circle_free_function_graphs(pet: PEGraphX, add_dummy_node=True):
+def create_circle_free_function_graphs(pet: PEGraphX, add_dummy_node: bool = True) -> Dict[FunctionNode, MultiDiGraph]:
     """Remove loops from the CUGraph by unrolling loops in the successor graphs of each function."""
     import networkx as nx
 
@@ -728,7 +731,7 @@ def add_accesses_from_called_functions(
 
 
 def identify_updates_in_unrolled_function_graphs(
-    comb_gpu_reg,
+    comb_gpu_reg: CombinedGPURegion,
     pet: PEGraphX,
     writes_by_device: Dict[int, Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]],
     unrolled_function_graphs: Dict[FunctionNode, MultiDiGraph],

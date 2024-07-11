@@ -5,12 +5,21 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from __future__ import annotations
 from typing import Optional, List, Set
 
 from sympy import Symbol, Function, Integer  # type: ignore
 
 from discopop_explorer.PEGraphX import NodeID
+from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    print("TYPE CHECKING")
+    from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+    from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     ReadDataAccess,
@@ -28,13 +37,12 @@ class GenericNode(object):
     read_memory_regions: Set[ReadDataAccess]
     device_id: DeviceID
     execute_in_parallel: bool
-
     branch_affiliation: List[int]
 
     def __init__(
         self,
         node_id: int,
-        experiment,
+        experiment: Experiment,
         cu_id: Optional[NodeID] = None,
         written_memory_regions: Optional[Set[WriteDataAccess]] = None,
         read_memory_regions: Optional[Set[ReadDataAccess]] = None,
@@ -45,7 +53,7 @@ class GenericNode(object):
         self.original_cu_id = cu_id  # used for the creation of update suggestions
         self.introduced_symbols = []
         self.performance_model = CostModel(Integer(0), Integer(0))
-        self.suggestion = None
+        self.suggestion: Optional[PatternInfo] = None
         self.suggestion_type: Optional[str] = None
         self.branch_affiliation = []
         self.execute_in_parallel = False
@@ -74,10 +82,14 @@ class GenericNode(object):
     def get_hover_text(self) -> str:
         return ""
 
-    def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:
+    def get_cost_model(
+        self, experiment: Experiment, all_function_nodes: List[FunctionRoot], current_device: Device
+    ) -> CostModel:
         raise NotImplementedError("Implementation needs to be provided by derived class: !", type(self))
 
-    def register_child(self, other, experiment, all_function_nodes, current_device):
+    def register_child(
+        self, other: CostModel, experiment: Experiment, all_function_nodes: List[FunctionRoot], current_device: Device
+    ) -> CostModel:
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
         raise NotImplementedError("Implementation needs to be provided by derived class: !", type(self))

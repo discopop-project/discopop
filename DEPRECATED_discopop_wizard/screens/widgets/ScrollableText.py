@@ -37,7 +37,7 @@ class ScrollableTextWidget(object):
         self.text_container["xscrollcommand"] = x_scrollbar.set
         self.text_container.config(state=tk.DISABLED)
 
-    def set_text(self, content: str):
+    def set_text(self, content: str) -> None:
         self.text_container.config(state=tk.NORMAL)
         self.text_container.delete("1.0", tk.END)
         self.text_container.insert("1.0", content)

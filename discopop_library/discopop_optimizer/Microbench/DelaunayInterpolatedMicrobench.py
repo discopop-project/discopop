@@ -44,27 +44,29 @@ class DelaunayInterpolatedMicrobench(Microbench):
         if removeOutliers:
             self.data.removeOutliers()
 
-    def removeZeroParameters(self):
+    def removeZeroParameters(self) -> None:
         self.data.removeZeroParameters()
         self.__isInterpolated = False
 
-    def clampValues(self, min: float = 0.0, max: float = float("inf")):
+    def clampValues(self, min: float = 0.0, max: float = float("inf")) -> None:
         self.data.clampValues()
         self.__isInterpolated = False
 
-    def removeOutliers(self):
+    def removeOutliers(self) -> None:
         self.data.removeOutliers()
         self.__isInterpolated = False
 
-    def useMedian(self):
+    def useMedian(self) -> None:
         self.data.useMedian()
         self.__isInterpolated = False
 
-    def useMean(self):
+    def useMean(self) -> None:
         self.data.useMean()
         self.__isInterpolated = False
 
-    def __getTuples(self, benchType: MicrobenchType, benchDim: MicrobenchDimension):
+    def __getTuples(
+        self, benchType: MicrobenchType, benchDim: MicrobenchDimension
+    ) -> List[Tuple[int, Union[int, float], int, float]]:
         tuples: List[Tuple[int, Union[int, float], int, float]] = []
         for benchCoord, values in self.data[benchType][benchDim].items():
             tuples.append((*benchCoord, np.median(values).item()))
@@ -95,8 +97,8 @@ class DelaunayInterpolatedMicrobench(Microbench):
         benchType: MicrobenchType,
         benchDim: MicrobenchDimension,
         benchCoord: Union[MicrobenchCoordinate, Tuple[int, float, float]],
-    ):
+    ) -> float:
         if not self.__isInterpolated:
             self.__interpolate()
             self.__isInterpolated = True
-        return self.interpolator[benchType][benchDim](benchCoord) / 1000000.0  # convert microseconds to seconds
+        return float(self.interpolator[benchType][benchDim](benchCoord) / 1000000.0)  # convert microseconds to seconds

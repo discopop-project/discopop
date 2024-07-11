@@ -160,7 +160,7 @@ def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[Patte
             # check if task suggestion inside do-all loop exists
             if line_contained_in_region(ts._node.start_position(), loop_cu.start_position(), loop_cu.end_position()):
 
-                def find_taskwaits(cu_node: Node, visited: List[Node]):
+                def find_taskwaits(cu_node: Node, visited: List[Node]) -> List[Node]:
                     if cu_node.tp_contains_taskwait:
                         return [cu_node]
                     result = []
@@ -175,7 +175,7 @@ def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[Patte
                     return result
 
                 # find successive taskwaits
-                successive_taskwait_cus = find_taskwaits(ts._node, [])
+                successive_taskwait_cus = cast(List[CUNode], find_taskwaits(ts._node, []))
                 for stws_cu in successive_taskwait_cus:
                     if loop_cu.do_all:
                         # check if stws is suggested at loop increment
@@ -193,7 +193,10 @@ def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[Patte
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
                                 if s.type is TPIType.TASKWAIT and s._node == stws_cu:
-                                    s.pragma_line = int(loop_cu.end_position().split(":")[1]) + 1
+                                    s.pragma_line = LineID(
+                                        str(loop_cu.file_id) + ":" + str(int(loop_cu.end_position().split(":")[1]) + 1)
+                                    )
+
                     else:
                         # Regular loop: task = loop body, move taskwait to the end of the loop body
                         # protect RAW to shared with critical section around CU (general)  or atomic (reduction)
@@ -210,7 +213,7 @@ def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[Patte
                         for s in suggestions:
                             if type(s) == TaskParallelismInfo:
                                 if s.type is TPIType.TASKWAIT and s._node == stws_cu:
-                                    s.pragma_line = int(loop_cu.end_position().split(":")[1])
+                                    s.pragma_line = loop_cu.end_position()
                         # move pragma task line to beginning of loop body (i.e. make the entire loop body a task)
                         # set task region lines accordingly
                         # if ts._node is a direct child of loop_cu
@@ -221,9 +224,11 @@ def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[Patte
                                 " to: ",
                                 int(loop_cu.start_position().split(":")[1]) + 1,
                             )
-                            ts.pragma_line = int(loop_cu.start_position().split(":")[1]) + 1
+                            ts.pragma_line = LineID(
+                                str(loop_cu.file_id) + ":" + str(int(loop_cu.start_position().split(":")[1]) + 1)
+                            )
                             ts.region_start_line = str(ts.pragma_line)
-                            ts.region_end_line = loop_cu.end_position().split(":")[1]
+                            ts.region_end_line = loop_cu.end_position()
 
                             # protect RAW-Writes to shared variables with critical section
                             # i.e. find in-deps to shared variables and suggest critical section around CUs
@@ -317,7 +322,7 @@ def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[Patte
 
 def __identify_atomic_or_critical_sections(
     pet: PEGraphX, ts: TaskParallelismInfo, found_cus: List[Node], selector: bool
-):
+) -> None:
     """Identifies and marks atomic or critical sections.
     :param pet: PET Graph
     :param ts: task suggestion

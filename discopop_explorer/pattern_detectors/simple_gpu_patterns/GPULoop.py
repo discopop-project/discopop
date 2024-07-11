@@ -42,6 +42,7 @@ from discopop_explorer.utils import (
 )
 from discopop_explorer.variable import Variable
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
+from discopop_library.result_classes.DetectionResult import DetectionResult
 from .GPUMemory import getCalledFunctions, map_node
 
 """
@@ -180,8 +181,8 @@ class GPULoopPattern(PatternInfo):
         self,
         pet: PEGraphX,
         nodeID: NodeID,
-        startLine,
-        endLine,
+        startLine: LineID,
+        endLine: LineID,
         iterationCount: int,
         project_folder_path: str,
         reduction_vars: Optional[List[Variable]] = None,
@@ -240,7 +241,7 @@ class GPULoopPattern(PatternInfo):
             f"OpenMP constructs: {construct_str}\n"
         )
 
-    def save_omp_constructs(self, pet: PEGraphX, project_folder_path: str):
+    def save_omp_constructs(self, pet: PEGraphX, project_folder_path: str) -> None:
         """Save OpenMP constructs such that they are included in the exported JSON file."""
         constructs = self.__get_constructs(pet, project_folder_path)
         self.constructs = constructs
@@ -633,7 +634,7 @@ class GPULoopPattern(PatternInfo):
             if children.end_line > endLine:
                 endLine = children.end_line
 
-    def setCollapseClause(self, pet: PEGraphX, node_id: NodeID, res):
+    def setCollapseClause(self, pet: PEGraphX, node_id: NodeID, res: DetectionResult) -> None:
         """
 
         :param node_id:

@@ -9,6 +9,7 @@
 from typing import Dict, List, Tuple, Set, Optional
 
 from discopop_explorer.PEGraphX import PEGraphX, EdgeType, NodeID, CUNode, MemoryRegion
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import CombinedGPURegion
 
 global_write_unique_id = 0
 
@@ -39,7 +40,7 @@ def initialize_writes(
 
 
 def propagate_writes(
-    comb_gpu_reg, pet: PEGraphX, writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]
+    comb_gpu_reg: CombinedGPURegion, pet: PEGraphX, writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]
 ) -> Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]:
     """propagate writes to parents.
      propagate writes to successors and their children.

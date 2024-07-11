@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from io import TextIOWrapper
 from typing import List, cast, TextIO
 
 from .PEGraphX import (
@@ -22,7 +23,7 @@ from .PEGraphX import (
 from .parser import parse_inputs
 
 
-def __collect_children_ids(pet: PEGraphX, parent_id: NodeID, children_ids: List[NodeID]):
+def __collect_children_ids(pet: PEGraphX, parent_id: NodeID, children_ids: List[NodeID]) -> List[NodeID]:
     if parent_id in children_ids:
         # this id has already been processed. No need to go through it again
         return children_ids
@@ -104,7 +105,7 @@ def __output_dependencies_of_type(
     output_file: TextIO,
     dep_type: DepType,
     dep_identifier: str,
-):
+) -> None:
     """check for and output dependencies of the given type
     :param pet: PET Graph
     :param child_id: specific node id, taken from children_ids
@@ -131,7 +132,7 @@ def __output_dependencies_of_type(
             )
 
 
-def __search_recursive_calls(pet: PEGraphX, output_file, node: Node):
+def __search_recursive_calls(pet: PEGraphX, output_file: TextIOWrapper, node: Node) -> None:
     if not isinstance(node, CUNode):
         return
     for recursive_function_call in node.recursive_function_calls:
@@ -165,7 +166,7 @@ def __search_recursive_calls(pet: PEGraphX, output_file, node: Node):
         output_file.write("\n")
 
 
-def cu_instantiation_input_cpp(pet: PEGraphX, output_file: str):
+def cu_instantiation_input_cpp(pet: PEGraphX, output_file: str) -> None:
     """translation of CUInstantiationInput.cpp, previously contained in discopop-analyzer/analyzer/src.
     Wrapper to gather information on recursive function calls for CU Instantiation.
     :param pet: PET Graph
@@ -175,7 +176,7 @@ def cu_instantiation_input_cpp(pet: PEGraphX, output_file: str):
             __search_recursive_calls(pet, data_cu_inst_file, node)
 
 
-def wrapper(cu_xml, dep_file, loop_counter_file, reduction_file, output_file):
+def wrapper(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, output_file: str) -> None:
     """Wrapper to generate the Data_CUInst.txt file, required for the generation of CUInstResult.txt"""
     # 1. generate PET Graph
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file))

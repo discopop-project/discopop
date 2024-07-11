@@ -116,7 +116,9 @@ class ExitPoint(object):
         self.memory_regions.update(other.memory_regions)
         self.dependencies.update(other.dependencies)
 
-    def get_as_metadata(self, pet: PEGraphX, project_folder_path: str):
+    def get_as_metadata(
+        self, pet: PEGraphX, project_folder_path: str
+    ) -> Tuple[str, NodeID, NodeID, ExitPointType, str, ExitPointPositioning]:
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.var_names:
@@ -146,11 +148,11 @@ class ExitPoint(object):
         else:
             modified_var_names = [(vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes]
 
-        return [
+        return (
             ",".join(modified_var_names),
             self.source_cu_id,
             self.sink_cu_id,
             self.exit_point_type,
             self.pragma_line,
             self.exit_point_positioning,
-        ]
+        )

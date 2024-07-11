@@ -44,7 +44,7 @@ def show_function_models(
     parent_frame: tk.Frame,
     destroy_window_after_execution: bool,
     show_functions: Optional[List[FunctionRoot]] = None,
-):
+) -> None:
     considered_functions = show_functions if show_functions is not None else experiment.function_models
     # show function selection dialogue
     parent_frame.rowconfigure(0, weight=1)
@@ -104,7 +104,7 @@ def show_function_models(
 
 def perform_headless_execution(
     experiment: Experiment,
-):
+) -> None:
     print("Headless execution...")
     for function in experiment.function_models:
         print("\t", function.name)
@@ -128,7 +128,7 @@ def perform_headless_execution(
         experiment.function_models[function] = updated_options
 
 
-def export_to_json(experiment: Experiment, export_path):
+def export_to_json(experiment: Experiment, export_path: str) -> None:
     # convert functionRoot in function_models to node ids
     to_be_added = []
     to_be_deleted = []
@@ -148,7 +148,7 @@ def export_to_json(experiment: Experiment, export_path):
     pickle.dump(experiment, open(experiment_dump_path, "wb"))
 
 
-def export_patterns_to_json(experiment: Experiment, export_path):
+def export_patterns_to_json(experiment: Experiment, export_path: str) -> None:
     detection_result_copy = copy.deepcopy(experiment.detection_result)
     # pet is not serializable and needs to be deleted
     del detection_result_copy.pet
@@ -156,7 +156,7 @@ def export_patterns_to_json(experiment: Experiment, export_path):
         json.dump(detection_result_copy, f, indent=2, cls=PatternBaseSerializer)
 
 
-def export_detection_result_to_json(experiment: Experiment, export_path):
+def export_detection_result_to_json(experiment: Experiment, export_path: str) -> None:
     with open(export_path, "w+") as f:
         f.write(experiment.detection_result.dump_to_pickled_json())
         f.flush()
@@ -182,7 +182,7 @@ def restore_session(json_file: str) -> Experiment:
     return experiment
 
 
-def create_optimization_graph(experiment: Experiment, arguments: OptimizerArguments):
+def create_optimization_graph(experiment: Experiment, arguments: OptimizerArguments) -> None:
     if arguments.verbose:
         print("Creating optimization graph...", end="")
     pet_parser = PETParser(experiment)
@@ -209,7 +209,7 @@ def get_sequential_cost_model(experiment: Experiment) -> Dict[FunctionRoot, List
 
 def initialize_free_symbol_ranges_and_distributions(
     experiment: Experiment, arguments: OptimizerArguments, system: System
-):
+) -> None:
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution] = dict()
     sorted_free_symbols = sorted(list(experiment.free_symbols), key=lambda x: x.name)

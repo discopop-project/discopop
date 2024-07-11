@@ -122,14 +122,14 @@ def __calculate_fitness(
 def __initialize_fitness_worker(
     experiment: Experiment,
     arguments: OptimizerArguments,
-):
+) -> None:
     global global_experiment
     global global_arguments
     global_experiment = experiment
     global_arguments = arguments
 
 
-def __get_score(param_tuple) -> Tuple[List[int], int, ContextObject]:
+def __get_score(param_tuple: List[int]) -> Tuple[List[int], int, ContextObject]:
     global global_experiment
     global global_arguments
     configuration = param_tuple
@@ -151,7 +151,7 @@ def __print_population(
     population: List[List[int]],
     fitness: List[int],
     arguments: OptimizerArguments,
-):
+) -> None:
     sorted_fitness = sorted(enumerate(fitness), key=lambda x: x[1], reverse=True)
     print("# POPULATION")
     for fitness_idx, fitness_value in sorted_fitness:
@@ -181,7 +181,7 @@ def __initialize_fill_worker(
     experiment: Experiment,
     available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
-):
+) -> None:
     global global_experiment
     global global_arguments
     global global_available_decisions
@@ -246,7 +246,7 @@ def __select(
     population: List[List[int]],
     fitness: List[int],
     new_population_size: int,
-):
+) -> List[List[int]]:
     """Performs a fitness-proportionate Selection"""
     # get Sum of scores
     score_sum = 0.0
@@ -276,7 +276,7 @@ def __crossover(
     arguments: OptimizerArguments,
     population: List[List[int]],
     crossovers: int,
-):
+) -> List[List[int]]:
     global global_experiment
     global global_arguments
     global global_population
@@ -305,7 +305,9 @@ def __crossover(
     return population
 
 
-def __initialize_crossover_worker(experiment: Experiment, arguments: OptimizerArguments, population: List[List[int]]):
+def __initialize_crossover_worker(
+    experiment: Experiment, arguments: OptimizerArguments, population: List[List[int]]
+) -> None:
     global global_experiment
     global global_arguments
     global global_population
@@ -314,7 +316,9 @@ def __initialize_crossover_worker(experiment: Experiment, arguments: OptimizerAr
     global_population = population
 
 
-def __parallel_crossover(param_tuple):
+def __parallel_crossover(
+    param_tuple: None,
+) -> Optional[Tuple[Tuple[List[int], List[int]], Tuple[List[int], List[int]]]]:
     global global_experiment
     global global_arguments
     global global_population
@@ -378,7 +382,9 @@ def __mutate(
     return population
 
 
-def __initialize_mutate_worker(experiment: Experiment, arguments: OptimizerArguments, population: List[List[int]]):
+def __initialize_mutate_worker(
+    experiment: Experiment, arguments: OptimizerArguments, population: List[List[int]]
+) -> None:
     global global_experiment
     global global_arguments
     global global_population
@@ -490,7 +496,7 @@ def __get_random_configuration(
     experiment: Experiment,
     available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
-):
+) -> List[int]:
     while True:
         random_configuration: List[int] = []
         # fill configuration

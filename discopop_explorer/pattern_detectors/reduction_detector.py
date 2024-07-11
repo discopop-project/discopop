@@ -8,10 +8,11 @@
 
 
 from multiprocessing import Pool
-from typing import List, cast, Set, Tuple
+from typing import Dict, List, Optional, cast, Set, Tuple
 import warnings
 
-from alive_progress import alive_bar  # type: ignore
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
 from .PatternInfo import PatternInfo
 from ..PEGraphX import (
@@ -66,7 +67,9 @@ class ReductionInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX, hotspots) -> List[ReductionInfo]:
+def run_detection(
+    pet: PEGraphX, hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]]
+) -> List[ReductionInfo]:
     """Search for reduction pattern
 
     :param pet: PET graph
@@ -141,7 +144,7 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
         if is_reduction_var(root.start_position(), v.name, pet.reduction_vars)
         # and "**" not in v.type --> replaced by check for array reduction
     ]
-    reduction_var_names = [v.name for v in reduction_vars]
+    reduction_var_names = cast(List[str], [v.name for v in reduction_vars])
     fp, p, lp, s, r = classify_loop_variables(pet, root)
 
     # get parents of loop
@@ -315,7 +318,7 @@ def __check_loop_dependencies(
     return False
 
 
-def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode):
+def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
     """duplicates exists: do_all_detector <-> reduction_detector !"""
     parents: List[NodeID] = []
     queue = [root_loop.id]

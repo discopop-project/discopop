@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from __future__ import annotations
 import random
 import sys
 from typing import List, Dict, Tuple, Optional
@@ -36,9 +37,9 @@ class CostModel(object):
         parallelizable_costs: Expr,
         sequential_costs: Expr,
         identifier: str = "None",
-        path_decisions=None,
+        path_decisions: Optional[List[int]] = None,
         symbol_value_suggestions: Optional[Dict[Symbol, Expr]] = None,
-    ):
+    ) -> None:
         if sequential_costs == sympy.nan:
             raise ValueError("NAN: ", sequential_costs)
         if path_decisions is None:
@@ -64,7 +65,7 @@ class CostModel(object):
         print("\tSERIAL")
         print("\t", self.sequential_costs, file=file)
 
-    def parallelizable_plus_combine(self, other):
+    def parallelizable_plus_combine(self, other: CostModel) -> CostModel:
         """Combines both models in the following fashion:
         f(x,y) =
         ==> x.parallelizable_costs + y.parallelizable_costs
@@ -220,7 +221,7 @@ class CostModel(object):
         else:
             return False
 
-    def __plot_weibull_distributions(self, alpha: float, beta: float):
+    def __plot_weibull_distributions(self, alpha: float, beta: float) -> None:
         """For Debug reasons. Plots the left and right side heavy weibull distributions using the given parameters."""
         x = np.arange(1, 100.0) / 100.0  # normalized to [0,1]
 

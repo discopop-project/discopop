@@ -10,7 +10,8 @@
 import math
 from typing import Dict, List, Tuple, Optional, cast
 
-from alive_progress import alive_bar  # type: ignore
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
 from .PatternInfo import PatternInfo
 from ..PEGraphX import FunctionNode, LoopNode, NodeID, PEGraphX, Node, EdgeType
@@ -78,7 +79,9 @@ class GDInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX, hotspots) -> List[GDInfo]:
+def run_detection(
+    pet: PEGraphX, hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]]
+) -> List[GDInfo]:
     """Detects geometric decomposition
 
     :param pet: PET graph

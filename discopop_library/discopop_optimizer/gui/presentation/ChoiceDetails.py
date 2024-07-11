@@ -16,7 +16,7 @@ from discopop_library.discopop_optimizer.utilities.simple_utilities import data_
 from DEPRECATED_discopop_wizard.screens.widgets.ScrollableText import ScrollableTextWidget
 
 
-def display_choices_for_model(graph: nx.DiGraph, model: CostModel, window_title: Optional[str] = None):
+def display_choices_for_model(graph: nx.DiGraph, model: CostModel, window_title: Optional[str] = None) -> None:
     root = Tk()
     if window_title is not None:
         root.configure()

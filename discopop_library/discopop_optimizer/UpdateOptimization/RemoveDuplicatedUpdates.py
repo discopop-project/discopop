@@ -13,7 +13,9 @@ from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 
-def remove_duplicated_updates(configuration: OptimizerOutputPattern, arguments: OptimizerArguments):
+def remove_duplicated_updates(
+    configuration: OptimizerOutputPattern, arguments: OptimizerArguments
+) -> OptimizerOutputPattern:
     logger = logging.getLogger("Optimizer").getChild("RemoveDuplicatedUpdates")
     logger.setLevel(arguments.log_level)
     cleaned_updates: List[Update] = []

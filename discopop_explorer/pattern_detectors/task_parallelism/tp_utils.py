@@ -188,7 +188,7 @@ def get_predecessor_nodes(pet: PEGraphX, root: Node, visited_nodes: List[Node]) 
     return result, visited_nodes
 
 
-def check_neighbours(first: Task, second: Task):
+def check_neighbours(first: Task, second: Task) -> bool:
     """Checks if second task immediately follows first task
 
     :param first: predecessor task
@@ -241,7 +241,7 @@ def check_neighbours(first: Task, second: Task):
 #            pass
 
 
-def create_task_tree(pet: PEGraphX, root: Node):
+def create_task_tree(pet: PEGraphX, root: Node) -> None:
     """generates task tree data from root node
 
     :param pet: PET graph
@@ -252,7 +252,7 @@ def create_task_tree(pet: PEGraphX, root: Node):
     create_task_tree_helper(pet, root, root_task, [])
 
 
-def create_task_tree_helper(pet: PEGraphX, current: Node, root: Task, visited_func: List[Node]):
+def create_task_tree_helper(pet: PEGraphX, current: Node, root: Task, visited_func: List[Node]) -> None:
     """generates task tree data recursively
 
     :param pet: PET graph
@@ -521,7 +521,7 @@ def get_called_function_and_parameter_names_from_function_call(
     return cast(Optional[str], function_name), result_parameters
 
 
-def set_global_llvm_cxxfilt_path(value: str):
+def set_global_llvm_cxxfilt_path(value: str) -> None:
     """setter for __global_llvm_cxxfilt_path
     :param value: value to place in __global_llvm_cxxfilt_path"""
     global __global_llvm_cxxfilt_path
@@ -566,7 +566,7 @@ def contains_reduction(pet: PEGraphX, node: Node) -> bool:
     return False
 
 
-def detect_mw_types(pet: PEGraphX, main_node: Node):
+def detect_mw_types(pet: PEGraphX, main_node: Node) -> None:
     """The mainNode we want to compute the Task Parallelism Pattern for it
     use Breadth First Search (BFS) to detect all barriers and workers.
     1.) all child nodes become first worker if they are not marked as worker before
