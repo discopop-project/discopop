@@ -8,7 +8,7 @@
 
 import copy
 import os
-from typing import List
+from typing import Any, List
 
 from lxml import objectify, etree  # type: ignore
 
@@ -347,7 +347,7 @@ def __add_parent_id_to_children(parsed_cu, parent):
             parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
 
 
-def __preprocessor_cu_contains_at_least_two_recursive_calls(node) -> bool:
+def __preprocessor_cu_contains_at_least_two_recursive_calls(node: Any) -> bool:
     """Check if >= 2 recursive function calls are contained in a cu's code region.
     Returns True, if so.
     Returns False, else.
@@ -383,7 +383,7 @@ def __preprocessor_cu_contains_at_least_two_recursive_calls(node) -> bool:
     return False
 
 
-def check_loop_scopes(pet: PEGraphX):
+def check_loop_scopes(pet: PEGraphX) -> None:
     """Checks if the scope of loop CUs matches these of their children. Corrects the scope of the loop CU
     (expand only) if necessary
     :param pet: PET graph"""

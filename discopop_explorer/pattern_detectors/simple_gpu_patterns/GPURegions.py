@@ -72,7 +72,7 @@ class GPURegionInfo(PatternInfo):
     def __str__(self):
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
-    def to_string(self, pet: PEGraphX):
+    def to_string(self, pet: PEGraphX) -> str:
         contained_loops_str = "\n" if len(self.contained_loops) > 0 else ""
         for loop in self.contained_loops:
             loop_str = loop.to_string(pet)
@@ -346,8 +346,8 @@ class GPURegions:
             lastNodeID = self.cascadingLoopsInRegions[i][t]
             fn = map_node(self.pet, firstNodeID)
             ln = map_node(self.pet, lastNodeID)
-            start = fn.start_line
-            end = ln.end_line
+            start = fn.start_position()
+            end = ln.end_position()
             gpuRegionLoop = GPULoopPattern(self.pet, firstNodeID, start, end, 1000, self.project_folder_path)
             visitedVars: Set[Variable] = set()
             while t >= 0:

@@ -10,7 +10,7 @@ from typing import List, cast
 
 from alive_progress import alive_bar  # type: ignore
 
-from discopop_explorer.PEGraphX import PEGraphX, LoopNode
+from discopop_explorer.PEGraphX import LineID, PEGraphX, LoopNode
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
@@ -18,9 +18,10 @@ from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
     GPURegionInfo,
 )
 from discopop_explorer.variable import Variable
+from discopop_library.result_classes.DetectionResult import DetectionResult
 
 
-def run_detection(pet: PEGraphX, res, project_folder_path: str) -> List[PatternInfo]:
+def run_detection(pet: PEGraphX, res: DetectionResult, project_folder_path: str) -> List[PatternInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph
@@ -46,8 +47,8 @@ def run_detection(pet: PEGraphX, res, project_folder_path: str) -> List[PatternI
                 gpulp = GPULoopPattern(
                     pet,
                     node.id,
-                    node.start_line,
-                    node.end_line,
+                    LineID(str(node.file_id) + ":" + str(node.start_line)),
+                    LineID(str(node.file_id) + ":" + str(node.end_line)),
                     node.loop_iterations,
                     project_folder_path,
                     reduction_vars,

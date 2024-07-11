@@ -29,7 +29,7 @@ from networkx.drawing.nx_pydot import graphviz_layout  # type: ignore
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
 
 
-def show_update_graph(graph, configuration: OptimizerOutputPattern, experiment: Experiment):
+def show_update_graph(graph: nx.DiGraph, configuration: OptimizerOutputPattern, experiment: Experiment) -> None:
     matplotlib.use("TkAgg")
     fig, ax = plt.subplots()
     try:

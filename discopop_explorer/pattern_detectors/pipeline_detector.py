@@ -7,9 +7,10 @@
 # directory for details.
 
 
-from typing import List, Tuple, Dict, Set, cast
+from typing import List, Optional, Tuple, Dict, Set, cast
 
-from alive_progress import alive_bar  # type: ignore
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
 from .PatternInfo import PatternInfo
 from ..PEGraphX import (
@@ -29,7 +30,13 @@ __pipeline_threshold = 0.9
 
 
 class PipelineStage(object):
-    def __init__(self, pet: PEGraphX, node: Node, in_dep, out_dep):
+    def __init__(
+        self,
+        pet: PEGraphX,
+        node: Node,
+        in_dep: List[Tuple[NodeID, NodeID, Dependency]],
+        out_dep: List[Tuple[NodeID, NodeID, Dependency]],
+    ):
         self.node = node.id
         self.startsAtLine = node.start_position()
         self.endsAtLine = node.end_position()
@@ -84,7 +91,7 @@ class PipelineInfo(PatternInfo):
 
         self.stages = [self.__output_stage(s) for s in self._stages]
 
-    def __in_dep(self, node: Node):
+    def __in_dep(self, node: Node) -> List[Tuple[NodeID, NodeID, Dependency]]:
         raw: List[Tuple[NodeID, NodeID, Dependency]] = []
         for n in self._pet.subtree_of_type(node, CUNode):
             raw.extend((s, t, d) for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
@@ -95,7 +102,7 @@ class PipelineInfo(PatternInfo):
 
         return [dep for dep in raw if dep[1] in [n.id for n in nodes_before]]
 
-    def __out_dep(self, node: Node):
+    def __out_dep(self, node: Node) -> List[Tuple[NodeID, NodeID, Dependency]]:
         raw: List[Tuple[NodeID, NodeID, Dependency]] = []
         for n in self._pet.subtree_of_type(node, CUNode):
             raw.extend((s, t, d) for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
@@ -148,7 +155,9 @@ def is_pipeline_subnode(root: Node, current: Node, children_start_lines: List[Li
 global_pet = None
 
 
-def run_detection(pet: PEGraphX, hotspots) -> List[PipelineInfo]:
+def run_detection(
+    pet: PEGraphX, hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]]
+) -> List[PipelineInfo]:
     """Search for pipeline pattern on all the loops in the graph
     except for doall loops
 
@@ -162,8 +171,6 @@ def run_detection(pet: PEGraphX, hotspots) -> List[PipelineInfo]:
     global_pet = pet
 
     result: List[PipelineInfo] = []
-    children_cache: Dict[Node, List[Node]] = dict()
-    dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
     nodes = pet.all_nodes(LoopNode)
 
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
@@ -202,13 +209,11 @@ def __check_node(param_tuple):
     return local_result
 
 
-def __detect_pipeline(pet: PEGraphX, root: Node, children_cache=None, dep_cache=None) -> float:
+def __detect_pipeline(pet: PEGraphX, root: Node) -> float:
     """Calculate pipeline value for node
 
     :param pet: PET graph
     :param root: current node
-    :param children_cache: used to cache intermediate children
-    :param dep_cache: used to cache intermediate dependencies
     :return: Pipeline scalar value
     """
 

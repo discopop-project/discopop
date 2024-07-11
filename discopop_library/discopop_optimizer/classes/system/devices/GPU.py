@@ -7,6 +7,8 @@
 # directory for details.
 from typing import Dict, Tuple
 
+from sympy import Integer
+
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
@@ -15,10 +17,10 @@ from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum i
 class GPU(Device):
     def __init__(
         self,
-        frequency,
-        thread_count,
-        openmp_device_id,
-        device_specific_compiler_flags,
+        frequency: Integer,
+        thread_count: Integer,
+        openmp_device_id: int,
+        device_specific_compiler_flags: str,
         speedup: float,
         compute_init_delays: Dict[str, float],
     ):

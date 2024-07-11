@@ -178,7 +178,7 @@ class DeviceMemory(object):
 
         return updates
 
-    def perform_write(self, node_id: int, device_id: DeviceID, wda: WriteDataAccess):
+    def perform_write(self, node_id: int, device_id: DeviceID, wda: WriteDataAccess) -> None:
         if device_id not in self.memory:
             self.memory[device_id] = dict()
         self.memory[device_id][wda.memory_region] = wda
@@ -198,7 +198,7 @@ class DataFrame(object):
     def __init__(self):
         self.entered_data_regions_by_device = dict()
 
-    def parse_update(self, update: Update):
+    def parse_update(self, update: Update) -> None:
         if update.is_first_data_occurrence:
             if update.target_device_id not in self.entered_data_regions_by_device:
                 self.entered_data_regions_by_device[update.target_device_id] = []
@@ -317,7 +317,7 @@ class DataFrame(object):
 def new_calculate_data_transfers(
     graph: nx.DiGraph,
     decisions: List[int],
-    experiment,
+    experiment: Experiment,
     targeted_functions: Optional[List[int]] = None,
     arguments: Optional[OptimizerArguments] = None,
 ) -> List[Update]:
@@ -491,7 +491,7 @@ def new_calculate_data_transfers(
 
 
 def calculate_data_transfers_by_models(
-    graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]], experiment
+    graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]], experiment: Experiment
 ) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     """Calculate data transfers for each performance model and append the respective ContextObject to the result."""
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()

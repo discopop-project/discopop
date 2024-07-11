@@ -21,6 +21,7 @@ from discopop_explorer.PEGraphX import (
     Dependency,
     FunctionNode,
 )
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import CombinedGPURegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -30,7 +31,9 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.utilities import 
 )
 
 
-def populate_live_data(comb_gpu_reg, pet: PEGraphX, ignore_update_instructions=False) -> Dict[VarName, List[NodeID]]:
+def populate_live_data(
+    comb_gpu_reg: CombinedGPURegion, pet: PEGraphX, ignore_update_instructions: bool = False
+) -> Dict[VarName, List[NodeID]]:
     """calculate List of cu-id's in the combined region for each variable in which the respective data is live.
     The gathered information is used for the optimization / creation of data mapping instructions afterwards.
     """
@@ -56,13 +59,14 @@ def populate_live_data(comb_gpu_reg, pet: PEGraphX, ignore_update_instructions=F
 
     if not ignore_update_instructions:
         # populate liveness sets based on update instructions
-        for source_id, sink_id, update_type, var, meta_line_num in comb_gpu_reg.update_instructions:
-            if var not in liveness:
-                liveness[var] = []
+        for source_id, sink_id, update_type, varname_str, meta_line_num in comb_gpu_reg.update_instructions:
+            varname: VarName = VarName(varname_str)
+            if varname not in liveness:
+                liveness[varname] = []
             if update_type == UpdateType.TO_DEVICE:
-                liveness[var].append(sink_id)
+                liveness[varname].append(sink_id)
             elif update_type == UpdateType.FROM_DEVICE:
-                liveness[var].append(source_id)
+                liveness[varname].append(source_id)
             else:
                 raise ValueError("Unsupported Update type: ", update_type)
 
@@ -266,7 +270,7 @@ def extend_data_lifespan(
 
 
 def calculate_host_liveness(
-    comb_gpu_reg,
+    comb_gpu_reg: CombinedGPURegion,
     pet: PEGraphX,
 ) -> Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]:
     """

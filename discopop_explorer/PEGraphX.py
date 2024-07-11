@@ -19,7 +19,8 @@ import networkx as nx  # type:ignore
 from alive_progress import alive_bar  # type: ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
-from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType  # type:ignore
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
 
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
@@ -195,12 +196,12 @@ class Node:
         self.id = node_id
         self.file_id, self.node_id = parse_id(node_id)
 
-    @classmethod
-    def from_kwargs(cls, node_id: NodeID, **kwargs):
-        node = cls(node_id)
-        for key, value in kwargs.items():
-            setattr(node, key, value)
-        return node
+    #    @classmethod
+    #    def from_kwargs(cls, node_id: NodeID, **kwargs) -> Node:
+    #        node = cls(node_id)
+    #        for key, value in kwargs.items():
+    #            setattr(node, key, value)
+    #        return node
 
     def start_position(self) -> LineID:
         """Start position file_id:line
@@ -219,7 +220,7 @@ class Node:
         """
         return LineID(f"{self.file_id}:{self.end_line}")
 
-    def contains_line(self, other_line) -> bool:
+    def contains_line(self, other_line: str) -> bool:
         if other_line == "GlobalVar" or other_line == "LineNotFound":
             return False
         if not ":" in other_line:
@@ -380,7 +381,7 @@ class FunctionNode(Node):
                     exit_cu_ids.add(child_cu_id)
         return exit_cu_ids
 
-    def calculate_reachability_pairs(self, pet: PEGraphX):
+    def calculate_reachability_pairs(self, pet: PEGraphX) -> Dict[NodeID, Set[NodeID]]:
         reachability_pairs: Dict[NodeID, Set[NodeID]] = dict()
         # create graph copy and remove all but successor edges
         copied_graph = pet.g.copy()
@@ -614,7 +615,7 @@ class PEGraphX(object):
     main: Node
     pos: Dict[Any, Any]
 
-    def __init__(self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos):
+    def __init__(self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos: Dict[Any, Any]):
         self.g = g
         self.reduction_vars = reduction_vars
         for _, node in g.nodes(data="data"):
@@ -629,7 +630,7 @@ class PEGraphX(object):
         dependencies_list: List[DependenceItem],
         loop_data: Dict[str, LoopData],
         reduction_vars: List[Dict[str, str]],
-    ):
+    ) -> PEGraphX:
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
         g = nx.MultiDiGraph()
         print("\tCreating graph...")
@@ -766,7 +767,11 @@ class PEGraphX(object):
 
         print("Done.")
 
-    def calculateFunctionMetadata(self, hotspot_information=None, func_nodes=None) -> None:
+    def calculateFunctionMetadata(
+        self,
+        hotspot_information: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None,
+        func_nodes: Optional[List[FunctionNode]] = None,
+    ) -> None:
         # store id of parent function in each node
         # and store in each function node a list of all children ids
         if func_nodes is None:
@@ -1088,7 +1093,7 @@ class PEGraphX(object):
 
         return res
 
-    def __cu_equal__(self, cu_1: Node, cu_2: Node):
+    def __cu_equal__(self, cu_1: Node, cu_2: Node) -> bool:
         """Alternative to CUNode.__eq__, bypasses the isinstance-check and relies on MyPy for type safety.
         :param cu_1: CUNode 1
         :param cu_2: CUNode 2
@@ -1358,7 +1363,7 @@ class PEGraphX(object):
 
         return vars
 
-    def unused_is_first_written_in_loop(self, dep: Dependency, root_loop: Node):
+    def unused_is_first_written_in_loop(self, dep: Dependency, root_loop: Node) -> bool:
         """Checks whether a variable is first written inside the current node
 
         :param var:

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, TypeVar, Union, overload
+from typing import Callable, Dict, List, Tuple, TypeVar, Union, overload
 
 import numpy as np
 
@@ -23,7 +23,7 @@ from .Microbench import (
 T = TypeVar("T")
 
 
-def __partition(pred, list: List[T]) -> Tuple[List[T], List[T]]:
+def __partition(pred: Callable[[T], bool], list: List[T]) -> Tuple[List[T], List[T]]:
     trues: List[T] = []
     falses: List[T] = []
     for item in list:
@@ -34,7 +34,7 @@ def __partition(pred, list: List[T]) -> Tuple[List[T], List[T]]:
     return trues, falses
 
 
-def __remove_outliers_using_iqr(values: List[float], iqr_factor=1.5) -> List[float]:
+def __remove_outliers_using_iqr(values: List[float], iqr_factor: float = 1.5) -> List[float]:
     values.sort()
     q1, q3 = np.percentile(values, [25, 75], method="linear")
     iqr = q3 - q1
@@ -153,7 +153,7 @@ class PureDataMicrobench(Microbench):
         ],
         min: float = float("-inf"),
         max: float = float("inf"),
-    ):
+    ) -> None:
         for type, dimMap in self.measurements.items():
             for d in dim:
                 if d in dimMap:
@@ -162,7 +162,7 @@ class PureDataMicrobench(Microbench):
                             v if v >= min and v <= max else (min if v < min else max) for v in values
                         ]
 
-    def merge(self, other: PureDataMicrobench):
+    def merge(self, other: PureDataMicrobench) -> None:
         for type, dimMap in other.measurements.items():
             if type not in self.measurements:
                 self.measurements[type] = {}
@@ -175,7 +175,7 @@ class PureDataMicrobench(Microbench):
                     self.measurements[type][dim][coord].extend(values)
         # TODO check for duplicates? (but maybe we want them?)
 
-    def mergeAll(self, others: List[PureDataMicrobench]):
+    def mergeAll(self, others: List[PureDataMicrobench]) -> None:
         for other in others:
             self.merge(other)
 
@@ -214,5 +214,5 @@ class PureDataMicrobench(Microbench):
         benchType: MicrobenchType,
         benchDim: MicrobenchDimension,
         benchCoord: Union[MicrobenchCoordinate, Tuple[int, float, float]],
-    ):
+    ) -> float:
         raise TypeError("This class does not support interpolation.")

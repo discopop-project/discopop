@@ -25,7 +25,7 @@ def from_json_patterns(
     patterns_by_type: Dict[str, List[str]],
     file_mapping: Dict[int, Path],
     patch_generator_dir: str,
-):
+) -> None:
     # collect metadata
     max_pattern_id = 0
     for suggestion_type in patterns_by_type:

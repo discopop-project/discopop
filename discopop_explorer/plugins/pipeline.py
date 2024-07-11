@@ -17,11 +17,11 @@ before: List[float] = []
 after: List[float] = []
 
 
-def run_before(pet: PEGraphX):
+def run_before(pet: PEGraphX) -> PEGraphX:
     return pet
 
 
-def run_after(pet: PEGraphX):
+def run_after(pet: PEGraphX) -> PEGraphX:
     for node in pet.all_nodes(LoopNode):
         check_pipeline(pet, node)
 
@@ -31,7 +31,7 @@ def run_after(pet: PEGraphX):
     return pet
 
 
-def check_pipeline(pet: PEGraphX, root: Node):
+def check_pipeline(pet: PEGraphX, root: Node) -> None:
     """Tries to optimize dependencies for pipeline detection
     1. Deletes independent lines, that do not contribute to the pipeline
     2. Deletes similar CU (that have same dependencies), as those can be one step in the pipeline

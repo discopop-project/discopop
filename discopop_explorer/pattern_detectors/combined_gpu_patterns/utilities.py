@@ -47,7 +47,7 @@ def prepare_liveness_metadata(
     liveness: Dict[MemoryRegion, List[NodeID]],
     writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]],
     meta_liveness: Dict[MemoryRegion, List[str]],
-):
+) -> Dict[MemoryRegion, List[str]]:
     for mem_reg in liveness:
         for cu_id in liveness[mem_reg]:
             if mem_reg not in meta_liveness:

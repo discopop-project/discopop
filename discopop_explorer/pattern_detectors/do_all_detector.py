@@ -7,10 +7,11 @@
 # directory for details.
 import sys
 from multiprocessing import Pool
-from typing import List, Dict, Set, Tuple, cast
+from typing import List, Dict, Optional, Set, Tuple, cast
 import warnings
 
-from alive_progress import alive_bar  # type: ignore
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
 from .PatternInfo import PatternInfo
 from .reduction_detector import ReductionInfo
@@ -71,7 +72,11 @@ class DoAllInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX, hotspots, reduction_info: List[ReductionInfo]) -> List[DoAllInfo]:
+def run_detection(
+    pet: PEGraphX,
+    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+    reduction_info: List[ReductionInfo],
+) -> List[DoAllInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph
@@ -376,7 +381,7 @@ def __old_detect_do_all(pet: PEGraphX, root_loop: CUNode) -> bool:
     return True
 
 
-def __calculate_nesting_level(pet: PEGraphX, root_loop: LoopNode, cu_node_id: str):
+def __calculate_nesting_level(pet: PEGraphX, root_loop: LoopNode, cu_node_id: str) -> int:
     potential_parents = [(cu_node_id, -1)]  # -1 to offset the initialization with cu_node_id
     while True:
         if len(potential_parents) == 0:
@@ -391,7 +396,7 @@ def __calculate_nesting_level(pet: PEGraphX, root_loop: LoopNode, cu_node_id: st
             potential_parents.append((in_child_edge[0], nesting_level + 1))
 
 
-def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode):
+def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
     """duplicates exists: do_all_detector <-> reduction_detector !"""
     parents: List[NodeID] = []
     queue = [root_loop.id]

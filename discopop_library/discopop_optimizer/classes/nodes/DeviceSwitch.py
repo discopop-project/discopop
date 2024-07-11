@@ -8,6 +8,7 @@
 from typing import Optional, Set
 
 from sympy import Function, Symbol, Integer, Expr
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess  # type: ignore
 
 from discopop_explorer.PEGraphX import NodeID
@@ -20,7 +21,7 @@ class DeviceSwitch(Workload):
     def __init__(
         self,
         node_id: int,
-        experiment,
+        experiment: Experiment,
         cu_id: Optional[NodeID],
         sequential_workload: Optional[Expr],
         parallelizable_workload: Optional[Expr],

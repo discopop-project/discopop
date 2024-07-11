@@ -495,7 +495,7 @@ class PETParser(object):
                 print("\tTimeout after: ", timeout, "s")
                 self.invalid_functions.add(function)
 
-    def __fix_too_many_successors(self, node, dbg_function_node=None) -> bool:
+    def __fix_too_many_successors(self, node: int, dbg_function_node: Optional[FunctionRoot] = None) -> bool:
         """Return True if a graph modification has been applied. False otherwise."""
         retval = False
 
@@ -580,7 +580,7 @@ class PETParser(object):
         retval = True
         return retval
 
-    def __fix_too_many_predecessors(self, node) -> Tuple[bool, List[int]]:
+    def __fix_too_many_predecessors(self, node: int) -> Tuple[bool, List[int]]:
         """Return True if a graph modification has been applied. False otherwise."""
         retval = False
         modified_nodes: List[int] = []
@@ -857,7 +857,7 @@ class PETParser(object):
             added_node_ids.append(dummy_node_id)
         return added_node_ids
 
-    def __insert_context_nodes(self, node_list: List[int]):
+    def __insert_context_nodes(self, node_list: List[int]) -> None:
         """flattens the graph via inserting context nodes"""
         modification_found = True
         from time import time
