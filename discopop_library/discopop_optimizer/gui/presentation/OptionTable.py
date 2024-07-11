@@ -44,7 +44,7 @@ def show_options(
     function_root: FunctionRoot,
     parent_frame: tkinter.Frame,
     spawned_windows: List[tkinter.Toplevel],
-    window_title=None,
+    window_title: Optional[str] = None,
 ) -> List[Tuple[CostModel, ContextObject, str]]:
     """Shows a tkinter table to browse and plot models"""
     # root = tkinter.Toplevel()
@@ -240,7 +240,7 @@ def __save_models(
     experiment: Experiment,
     function_root: FunctionRoot,
     options: List[Tuple[CostModel, ContextObject, str]],
-):
+) -> None:
     print("SAVE: ", function_root)
     print("\ttype; ", type(function_root))
     experiment.function_models[function_root] = options
@@ -259,7 +259,7 @@ def add_random_models(
     function_root: FunctionRoot,
     parent_frame: Optional[tkinter.Frame],
     spawned_windows: List[tkinter.Toplevel],
-    window_title=None,
+    window_title: Optional[str] = None,
     show_results: bool = True,
 ) -> List[Tuple[CostModel, ContextObject, str]]:
     if root is not None:

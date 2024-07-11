@@ -9,7 +9,7 @@
 from enum import Enum
 from typing import List, Optional
 
-from discopop_explorer.PEGraphX import Node, MWType, PEGraphX
+from discopop_explorer.PEGraphX import LineID, Node, MWType, PEGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 
 
@@ -22,8 +22,8 @@ class Task(object):
 
     nodes: List[Node]
     child_tasks: List["Task"]
-    start_line: str
-    end_line: str
+    start_line: LineID
+    end_line: LineID
 
     def __init__(self, pet: PEGraphX, node: Node):
         self.node_id = node.id
@@ -47,7 +47,7 @@ class Task(object):
         self.workload = 0
         self.child_tasks = []
 
-    def aggregate(self, other: "Task"):
+    def aggregate(self, other: "Task") -> None:
         """Aggregates given task into current task
 
         :param other: task to aggregate
@@ -70,7 +70,16 @@ class TPIType(Enum):
 class TaskParallelismInfo(PatternInfo):
     """Class, that contains task parallelism detection result"""
 
-    def __init__(self, node: Node, type: TPIType, pragma, pragma_line, first_private, private, shared):
+    def __init__(
+        self,
+        node: Node,
+        type: TPIType,
+        pragma: List[str],
+        pragma_line: str,
+        first_private: List[str],
+        private: List[str],
+        shared: List[str],
+    ):
         """
         :param node: node, where task parallelism was detected
         :param type: type of the suggestion (task, taskwait, taskloop)
@@ -123,7 +132,7 @@ class TaskParallelismInfo(PatternInfo):
 class ParallelRegionInfo(PatternInfo):
     """Class, that contains parallel region info."""
 
-    def __init__(self, node: Node, type: TPIType, region_start_line, region_end_line):
+    def __init__(self, node: Node, type: TPIType, region_start_line: LineID, region_end_line: LineID):
         PatternInfo.__init__(self, node)
         self.region_start_line = region_start_line
         self.region_end_line = region_end_line

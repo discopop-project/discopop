@@ -228,7 +228,7 @@ def __count_adjacent_nodes(
 
 def __check_dependences_and_predecessors(
     pet: PEGraphX, out_dep_edges: List[Tuple[Any, Any, Any]], parent_task: Node, cur_cu: Node
-):
+) -> bool:
     """Checks if only dependences to self, parent omittable node or path to target task exists.
     Checks if node is a direct successor of an omittable node or a task node.
     :param pet: PET Graph
@@ -266,7 +266,7 @@ def __split_suggestions(
     taskwait_suggestions: List[TaskParallelismInfo],
     task_suggestions: List[TaskParallelismInfo],
     omittable_suggestions: List[PatternInfo],
-):
+) -> None:
     """Split suggestions into taskwait, task and omittable suggestions.
     :param suggestions: list of suggestions to be split
     :param taskwait_suggestions: list to store taskwait suggestions

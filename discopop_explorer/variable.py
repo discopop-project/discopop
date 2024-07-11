@@ -7,13 +7,15 @@
 # directory for details.
 from typing import Optional
 
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
+
 
 class Variable(object):
     operation: Optional[str]
 
     def __init__(self, type, name, defLine, accessMode="", sizeInByte=0):
         self.type = type
-        self.name: str = name
+        self.name: VarName = name
         self.defLine = defLine
         self.operation = None
         self.accessMode = accessMode

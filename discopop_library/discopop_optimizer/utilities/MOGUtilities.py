@@ -129,7 +129,7 @@ def get_function_return_node(graph: nx.DiGraph, function: int) -> int:
 
 def show_decision_graph(
     graph: nx.DiGraph, decisions: List[int], show_dataflow: bool = True, show_mutex_edges: bool = False
-):
+) -> None:
     print("Decisions: ", decisions)
     contained_nodes: Set[int] = set()
     for function in get_all_function_nodes(graph):
@@ -167,7 +167,9 @@ def show_decision_graph(
     show(graph.subgraph(contained_nodes), show_dataflow=show_dataflow, show_mutex_edges=show_mutex_edges)
 
 
-def show_function(graph: nx.DiGraph, function: FunctionRoot, show_dataflow: bool = True, show_mutex_edges: bool = True):
+def show_function(
+    graph: nx.DiGraph, function: FunctionRoot, show_dataflow: bool = True, show_mutex_edges: bool = True
+) -> None:
     # get nodes in subtree of function
     contained_nodes: Set[int] = set()
     queue: List[int] = [function.node_id]
@@ -181,7 +183,7 @@ def show_function(graph: nx.DiGraph, function: FunctionRoot, show_dataflow: bool
     show(graph.subgraph(contained_nodes), show_dataflow=show_dataflow, show_mutex_edges=show_mutex_edges)
 
 
-def show(graph: nx.DiGraph, show_dataflow: bool = True, show_mutex_edges: bool = True):
+def show(graph: nx.DiGraph, show_dataflow: bool = True, show_mutex_edges: bool = True) -> None:
     """Plots the graph
 
     :return:
@@ -376,32 +378,32 @@ def show(graph: nx.DiGraph, show_dataflow: bool = True, show_mutex_edges: bool =
     plt.show()
 
 
-def add_successor_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+def add_successor_edge(graph: nx.DiGraph, source_id: int, target_id: int) -> None:
     edge_data = SuccessorEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
 
 
-def add_child_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+def add_child_edge(graph: nx.DiGraph, source_id: int, target_id: int) -> None:
     edge_data = ChildEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
 
 
-def add_call_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+def add_call_edge(graph: nx.DiGraph, source_id: int, target_id: int) -> None:
     edge_data = CallEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
 
 
-def add_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+def add_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int) -> None:
     edge_data = TemporaryEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
 
 
-def add_dataflow_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+def add_dataflow_edge(graph: nx.DiGraph, source_id: int, target_id: int) -> None:
     edge_data = DataFlowEdge()
     graph.add_edge(source_id, target_id, data=edge_data)
 
 
-def delete_outgoing_temporary_edges(graph: nx.DiGraph, source_id: int):
+def delete_outgoing_temporary_edges(graph: nx.DiGraph, source_id: int) -> None:
     to_be_deleted = set()
     for edge in graph.out_edges(source_id):
         edge_data = graph.edges[edge]["data"]
@@ -417,17 +419,17 @@ def redirect_edge(
     new_source_id: int,
     old_target_id: int,
     new_target_id: int,
-):
+) -> None:
     edge_data = graph.edges[(old_source_id, old_target_id)]["data"]
     remove_edge(graph, old_source_id, old_target_id)
     graph.add_edge(new_source_id, new_target_id, data=edge_data)
 
 
-def remove_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+def remove_edge(graph: nx.DiGraph, source_id: int, target_id: int) -> None:
     graph.remove_edge(source_id, target_id)
 
 
-def convert_temporary_edges(graph: nx.DiGraph):
+def convert_temporary_edges(graph: nx.DiGraph) -> None:
     """Convert temporary edges to Successor edges"""
     for edge in graph.edges:
         edge_data = graph.edges[edge]["data"]
@@ -435,7 +437,7 @@ def convert_temporary_edges(graph: nx.DiGraph):
             graph.edges[edge]["data"] = edge_data.convert_to_successor_edge()
 
 
-def convert_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int):
+def convert_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int) -> None:
     """Converts a single temporary edge to a successor edge"""
     edge_data = graph.edges[(source_id, target_id)]["data"]
     if isinstance(edge_data, TemporaryEdge):
@@ -611,7 +613,7 @@ def get_available_decisions_for_functions(
     return available_decisions
 
 
-def __initialize_availability_worker(graph: nx.DiGraph, arguments: OptimizerArguments):
+def __initialize_availability_worker(graph: nx.DiGraph, arguments: OptimizerArguments) -> None:
     global global_graph
     global global_arguments
     global_graph = graph
@@ -622,7 +624,7 @@ def __parallel_get_decisions_from_node_recursive(function_node):
     global global_graph
     global global_arguments
 
-    def get_decisions_from_node_recursive(node_id, prev_decisions: List[int]) -> List[List[int]]:
+    def get_decisions_from_node_recursive(node_id: int, prev_decisions: List[int]) -> List[List[int]]:
         children_paths: List[List[int]] = []
         # get decisions from children
         for child in get_children(global_graph, node_id):

@@ -169,14 +169,14 @@ def __get_dicision_list(decisions_dict):
 def __initialize_cost_caluclation_worker(
     experiment: Experiment,
     arguments: OptimizerArguments,
-):
+) -> None:
     global global_experiment
     global global_arguments
     global_experiment = experiment
     global_arguments = arguments
 
 
-def __get_score(param_tuple) -> Tuple[Dict[int, List[List[int]]], int, ContextObject]:
+def __get_score(param_tuple: Dict[int, List[List[int]]]) -> Tuple[Dict[int, List[List[int]]], int, ContextObject]:
     global global_experiment
     global global_arguments
     configuration = param_tuple

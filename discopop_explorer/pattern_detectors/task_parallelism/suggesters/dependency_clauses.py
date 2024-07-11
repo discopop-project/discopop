@@ -19,6 +19,7 @@ from discopop_explorer.PEGraphX import (
     LineID,
 )
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.pattern_detectors.task_parallelism.alias_detection import (
     get_alias_information as get_alias_detection_result,
 )
@@ -162,7 +163,9 @@ def get_dict_from_cu_inst_result_file(
     return res_dict
 
 
-def get_alias_information(pet: PEGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]):
+def get_alias_information(
+    pet: PEGraphX, suggestions: List[PatternInfo], source_code_files: Dict[str, str]
+) -> Dict[TaskParallelismInfo, List[List[Tuple[str, str, LineID, LineID]]]]:
     """Generate and return alias information dictionary.
     :param pet: PET Graph
     :param suggestions: List[PatternInfo]
@@ -554,10 +557,10 @@ def identify_dependencies_for_same_functions(
                     break
                 # 3. get R/W information for cf's parameters based on CUInstResult.txt
                 called_function_name_1, call_line_1 = recursive_function_call_entry_1.split(",")[0].split(" ")
-                lower_line_num_1 = ts_1.pragma_line
-                if ":" in lower_line_num_1:
-                    lower_line_num_1 = lower_line_num_1.split(":")[1]
-                lower_line_num_1 = int(lower_line_num_1)
+                lower_line_id_1 = ts_1.pragma_line
+                if ":" in lower_line_id_1:
+                    lower_line_num_str_1 = lower_line_id_1.split(":")[1]
+                lower_line_num_1 = int(lower_line_num_str_1)
                 ret_val_1 = get_function_call_parameter_rw_information(
                     pet,
                     call_line_1,
@@ -588,10 +591,10 @@ def identify_dependencies_for_same_functions(
                         continue
                     # 5. get R/W Information for scf
                     called_function_name_2, call_line_2 = recursive_function_call_entry_2.split(",")[0].split(" ")
-                    lower_line_num_2 = ts_1.pragma_line
-                    if ":" in lower_line_num_2:
-                        lower_line_num_2 = lower_line_num_2.split(":")[1]
-                    lower_line_num_2 = int(lower_line_num_2)
+                    lower_line_id_2 = ts_1.pragma_line
+                    if ":" in lower_line_id_2:
+                        lower_line_num_str_2 = lower_line_id_2.split(":")[1]
+                    lower_line_num_2 = int(lower_line_num_str_2)
                     ret_val_2 = get_function_call_parameter_rw_information(
                         pet,
                         call_line_2,
@@ -698,7 +701,7 @@ def get_alias_for_parameter_at_position(
     source_code_files: Dict[str, str],
     visited: List[Tuple[Node, int]],
     called_function_cache: Dict[Any, Any],
-) -> List[Tuple[str, str, LineID, LineID]]:
+) -> List[Tuple[VarName, str, LineID, LineID]]:
     """Returns alias information for a parameter at a specific position.
     :param pet: PET Graph
     :param function: CUNode of called function
@@ -1137,7 +1140,8 @@ def get_function_call_parameter_rw_information_recursion_step(
     # if parameter alias entry for parent function exists:
     if called_function_cu.name in function_parameter_alias_dict:
         alias_entries = function_parameter_alias_dict[called_function_cu.name]
-        for var_name, alias_name in alias_entries:
+        for var_name_str, alias_name in alias_entries:
+            var_name_2: VarName = VarName(var_name_str)
             var_name_is_modified = False
             # check if alias_name occurs in any depencendy in any of called_function_cu's children,
             # recursively visits all children cu nodes in function body.
@@ -1172,7 +1176,7 @@ def get_function_call_parameter_rw_information_recursion_step(
             if var_name_is_modified:
                 # update RAW information
                 for idx, (old_var_name, raw_info, _) in enumerate(called_function_args_raw_information):
-                    if old_var_name == var_name:
+                    if old_var_name == var_name_2:
                         if not raw_info:
                             called_function_args_raw_information[idx] = (old_var_name, True, True)
                             # second True denotes the pessimistic nature of a potential created dependency

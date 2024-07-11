@@ -335,7 +335,7 @@ def is_func_arg(pet: PEGraphX, var: str, node: Node) -> bool:
     return False
 
 
-def is_scalar_val(var) -> bool:
+def is_scalar_val(var: Variable) -> bool:
     """Checks if variable is a scalar value
 
     :param var: variable
@@ -419,7 +419,7 @@ def is_first_written_new(
     reverse_raw_deps: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_war_deps: Set[Tuple[NodeID, NodeID, Dependency]],
     tree: Sequence[Node],
-):
+) -> bool:
     """Checks whether a variable is first written inside the current node
 
     :param var:
@@ -730,7 +730,7 @@ def classify_task_vars(
     type: str,
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
     out_deps: List[Tuple[NodeID, NodeID, Dependency]],
-    used_in_task_parallelism_detection=False,
+    used_in_task_parallelism_detection: bool = False,
 ) -> Tuple[
     List[Variable],
     List[Variable],

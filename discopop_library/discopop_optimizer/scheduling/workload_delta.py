@@ -116,7 +116,7 @@ class WorkloadStack(object):
                 cur_elem = cur_elem[index]
             cur_elem[indices[-1]] = RegularCosts((min_wl, max_wl))
 
-    def register_workload(self, min_wl: int, max_wl: int):
+    def register_workload(self, min_wl: int, max_wl: int) -> None:
         # get the innermost workload stack
         innermost_stack, _ = self.__get_innermost_workload_stack()
         innermost_stack.append(RegularCosts((min_wl, max_wl)))

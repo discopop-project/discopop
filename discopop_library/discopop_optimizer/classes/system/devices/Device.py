@@ -60,7 +60,7 @@ class Device(object):
     def get_measured_speedup(self) -> Expr:
         return Float(self.__speedup)
 
-    def get_estimated_execution_time_in_micro_seconds(self, workload: Expr, is_sequential: bool):
+    def get_estimated_execution_time_in_micro_seconds(self, workload: Optional[Expr], is_sequential: bool) -> Expr:
         """execution time is estimated by:
         - convert workload to estimated amount of CPU instructions using a extra-p model
         - NOTE: use "perf stat ./<cmd" to get the amount of instructions and instructions per cycle
@@ -74,6 +74,8 @@ class Device(object):
          instructions_per_core_per_second = self.__frequency / avg_cycles_per_instruction
          avg_cycles_per_instruction = 1 / avg_instructions_per_cycle
         """
+        if workload is None:
+            raise ValueError("workload is None")
 
         # todo -> define functions to evaluate workloads on different devices. include these functions in the construction of the cost model for later evaluation instead of "manually" converting the workload to time values
         # todo: correctly set is_sequential argument
@@ -91,7 +93,7 @@ class Device(object):
 
         execution_time_in_seconds = workload_in_instructions / instructions_per_second
         execution_time_in_micro_seconds = execution_time_in_seconds * 1000000
-        return execution_time_in_micro_seconds
+        return Float(execution_time_in_micro_seconds)
 
     def get_device_type(self) -> DeviceTypeEnum:
         raise ValueError("This method need to be overwritten by subclasses!")

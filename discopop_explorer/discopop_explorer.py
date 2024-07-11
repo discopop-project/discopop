@@ -171,7 +171,7 @@ def __run(
     return res
 
 
-def run(arguments: ExplorerArguments):
+def run(arguments: ExplorerArguments) -> None:
     """Run the discopop_explorer with the given arguments"""
     logger = logging.getLogger("Explorer")
 

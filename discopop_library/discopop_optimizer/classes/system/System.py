@@ -9,7 +9,7 @@ import json
 import os
 import pathlib
 import warnings
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple, Optional, cast
 
 from sympy import Float, Symbol, Expr, Integer
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
@@ -52,7 +52,7 @@ class System(object):
 
     # todo: support the replication of device ids (e.g. CPU-0 and GPU-0)
 
-    def __build_from_configuration_file(self, arguments: OptimizerArguments):
+    def __build_from_configuration_file(self, arguments: OptimizerArguments) -> None:
         with open(arguments.system_configuration_path, "r") as f:
             system_configuration = json.load(f)
         self.__host_device_id = system_configuration["host_device"]
@@ -87,7 +87,7 @@ class System(object):
                 # no transfer speed information exists
                 pass
 
-    def __build_CPU(self, device_configuration: Dict[str, Any]):
+    def __build_CPU(self, device_configuration: Dict[str, Any]) -> None:
         cpu = CPU(
             frequency=Integer(device_configuration["frequency"]),
             thread_count=Integer(device_configuration["threads"]),
@@ -98,7 +98,7 @@ class System(object):
         )
         self.add_device(cpu, device_configuration["device_id"])
 
-    def __build_GPU(self, device_configuration: Dict[str, Any]):
+    def __build_GPU(self, device_configuration: Dict[str, Any]) -> None:
         gpu = GPU(
             frequency=Integer(device_configuration["frequency"]),
             thread_count=Integer(device_configuration["threads"]),
@@ -109,17 +109,19 @@ class System(object):
         )
         self.add_device(gpu, device_configuration["device_id"])
 
-    def set_device_doall_overhead_model(self, device: Device, model: Expr, arguments: OptimizerArguments):
+    def set_device_doall_overhead_model(self, device: Device, model: Expr, arguments: OptimizerArguments) -> None:
         if arguments.verbose:
             print("System: Set DOALL overhead model: ", model)
         self.__device_do_all_overhead_models[device] = model
 
-    def set_device_doall_shared_overhead_model(self, device: Device, model: Expr, arguments: OptimizerArguments):
+    def set_device_doall_shared_overhead_model(
+        self, device: Device, model: Expr, arguments: OptimizerArguments
+    ) -> None:
         if arguments.verbose:
             print("System: Set DOALL SHARED overhead model: ", model)
         self.__device_do_all_shared_overhead_models[device] = model
 
-    def set_reduction_overhead_model(self, device: Device, model: Expr, arguments: OptimizerArguments):
+    def set_reduction_overhead_model(self, device: Device, model: Expr, arguments: OptimizerArguments) -> None:
         if arguments.verbose:
             print("System: Set REDUCTION overhead model: ", model)
         self.__device_reduction_overhead_models[device] = model
@@ -128,24 +130,24 @@ class System(object):
         if device not in self.__device_do_all_overhead_models:
             if arguments.verbose:
                 warnings.warn("No DOALL overhead model, assuming 0 for device: " + str(device))
-            return Expr(Integer(0))
+            return cast(Expr, Integer(0))
         return self.__device_do_all_overhead_models[device]
 
     def get_device_doall_shared_overhead_model(self, device: Device, arguments: OptimizerArguments) -> Expr:
         if device not in self.__device_do_all_shared_overhead_models:
             if arguments.verbose:
                 warnings.warn("No DOALL SHARED overhead model, assuming 0 for device: " + str(device))
-            return Expr(Integer(0))
+            return cast(Expr, Integer(0))
         return self.__device_do_all_shared_overhead_models[device]
 
     def get_device_reduction_overhead_model(self, device: Device, arguments: OptimizerArguments) -> Expr:
         if device not in self.__device_reduction_overhead_models:
             if arguments.verbose:
                 warnings.warn("No REDUCTION overhead model, assuming 0 for device: " + str(device))
-            return Expr(Integer(0))
+            return cast(Expr, Integer(0))
         return self.__device_reduction_overhead_models[device]
 
-    def add_device(self, device: Device, device_id: int):
+    def add_device(self, device: Device, device_id: int) -> None:
         self.__devices[device_id] = device
 
     def get_device(self, device_id: Optional[int]) -> Device:

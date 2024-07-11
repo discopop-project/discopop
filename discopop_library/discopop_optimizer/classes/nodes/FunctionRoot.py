@@ -5,13 +5,19 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Optional
+from __future__ import annotations
+from typing import Any, List, Optional
 
 from sympy import Function, Symbol, Integer, Expr  # type: ignore
 
 from discopop_explorer.PEGraphX import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
+from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 
 
 class FunctionRoot(Workload):
@@ -20,7 +26,7 @@ class FunctionRoot(Workload):
     sequential_costs: Expr
     performance_model: CostModel
 
-    def __init__(self, node_id: int, experiment, cu_id: Optional[NodeID], name: str):
+    def __init__(self, node_id: int, experiment: Experiment, cu_id: Optional[NodeID], name: str):
         super().__init__(
             node_id,
             experiment,
@@ -42,7 +48,9 @@ class FunctionRoot(Workload):
     def get_plot_label(self) -> str:
         return self.name
 
-    def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:
+    def get_cost_model(
+        self, experiment: Experiment, all_function_nodes: List[Any], current_device: Device
+    ) -> CostModel:
         """Model:
         Spawn overhead + children"""
         # todo this is only a dummy, not a finished model!

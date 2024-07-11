@@ -22,8 +22,8 @@ def from_pattern_info(
     patterns_by_type: Dict[str, List[PatternInfo]],
     skip_compilation_check: bool = False,
     compile_check_command: Optional[str] = None,
-    CC="clang",
-    CXX="clang++",
+    CC: str = "clang",
+    CXX: str = "clang++",
 ) -> Dict[int, str]:
     """Insert the given parallel patterns into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -51,8 +51,8 @@ def from_json_strings(
     pattern_json_strings_by_type: Dict[str, List[str]],
     skip_compilation_check: bool = False,
     compile_check_command: Optional[str] = None,
-    CC="clang",
-    CXX="clang++",
+    CC: str = "clang",
+    CXX: str = "clang++",
 ) -> Dict[int, str]:
     """Insert the parallel patterns described by the given json strings into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -124,9 +124,9 @@ def from_json_strings_with_mapping(
     pattern_json_strings_with_mapping_by_type: Dict[str, List[Tuple[str, DeviceID, Optional[DeviceTypeEnum]]]],
     skip_compilation_check: bool = False,
     compile_check_command: Optional[str] = None,
-    CC="clang",
-    CXX="clang++",
-    host_device_id=0,
+    CC: str = "clang",
+    CXX: str = "clang++",
+    host_device_id: int = 0,
 ) -> Dict[int, str]:
     """Insert the parallel patterns described by the given json strings into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.

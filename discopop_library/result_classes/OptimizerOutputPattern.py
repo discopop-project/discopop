@@ -35,7 +35,7 @@ class OptimizerOutputPattern(PatternBase):
         self.host_device_id = host_device_id
         experiment.pattern_id_to_decisions_dict[self.pattern_id] = decisions
 
-    def reconstruct_from_file(self, file_path: str):  # todo remove?
+    def reconstruct_from_file(self, file_path: str) -> None:  # todo remove?
         with open(file_path, "r") as f:
             loaded_data = json.load(f)
         self.applied_patterns = loaded_data["applied_patterns"]
@@ -45,7 +45,7 @@ class OptimizerOutputPattern(PatternBase):
         for values in loaded_data["data_movement"]:
             self.data_movement.append(construct_update_from_dict(values))
 
-    def dump_to_file(self, file_path: str):  # todo remove?
+    def dump_to_file(self, file_path: str) -> None:  # todo remove?
         dumpable_dict: Dict[str, Any] = dict()
         dumpable_dict["applied_patterns"] = self.applied_patterns
         dumpable_dict["data_movement"] = [update.toDict() for update in self.data_movement]
@@ -55,14 +55,14 @@ class OptimizerOutputPattern(PatternBase):
         with open(file_path, "w") as f:
             json.dump(dumpable_dict, f)
 
-    def add_pattern(self, pattern_id: SuggestionId, target_device_id: DeviceID, device_type: DeviceTypeEnum):
+    def add_pattern(self, pattern_id: SuggestionId, target_device_id: DeviceID, device_type: DeviceTypeEnum) -> None:
         if self.pattern_id is None:
             # get a unique pattern_id
             self.pattern_id = get_unique_pattern_id()
         tmp_dict = {"pattern_id": pattern_id, "device_id": target_device_id, "device_type": device_type}
         self.applied_patterns.append(tmp_dict)
 
-    def add_data_movement(self, update: Update):
+    def add_data_movement(self, update: Update) -> None:
         self.data_movement.append(update)
 
     def get_contained_decisions(self, experiment: Experiment) -> List[int]:

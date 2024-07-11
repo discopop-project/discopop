@@ -76,14 +76,14 @@ from discopop_library.discopop_optimizer.suggestions.importers.main import impor
 from ..HostpotLoader.hostpot_loader import run as load_hotspots
 
 
-def run(arguments: OptimizerArguments):
+def run(arguments: OptimizerArguments) -> None:
     if arguments.interactive:
         run_interactive_optimizer(arguments)
     else:
         run_passive_optimizer(arguments)
 
 
-def run_passive_optimizer(arguments: OptimizerArguments):
+def run_passive_optimizer(arguments: OptimizerArguments) -> None:
     logger = logging.getLogger("Optimizer")
 
     # check prerequisites and setup folder structure

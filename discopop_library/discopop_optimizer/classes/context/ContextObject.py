@@ -5,13 +5,19 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from __future__ import annotations
 from typing import Dict, Set, List, Optional
 import warnings
+
 
 from sympy import Expr, Integer, Symbol  # type: ignore
 import networkx as nx  # type: ignore
 
 from discopop_explorer.PEGraphX import MemoryRegion
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
@@ -46,9 +52,9 @@ class ContextObject(object):
         reading_device_id: int,
         reading_node_id: int,
         graph: nx.DiGraph,
-        experiment,
+        experiment: Experiment,
         updates_originated_from: Optional[int] = None,
-    ):
+    ) -> ContextObject:
         """checks if the specified list of ReadDataAccesses performed by the specified device id makes updates
         necessary. If so, the updates will get append to the list of updates of the current ContextObject.
         The list of seen writes by device of the ContextObject will be updated to reflect the identified data transfers.
@@ -180,6 +186,8 @@ class ContextObject(object):
                         self.initialize_seen_writes_by_device(
                             update.target_device_id, update.write_data_access.memory_region
                         )
+                    if update.target_device_id is None:
+                        raise ValueError("Value is None")
                     self.__add_seen_write(
                         update.target_device_id, update.write_data_access.memory_region, update.write_data_access
                     )
@@ -188,7 +196,7 @@ class ContextObject(object):
 
         return self
 
-    def add_writes(self, node_writes: Set[WriteDataAccess], writing_device_id: int):
+    def add_writes(self, node_writes: Set[WriteDataAccess], writing_device_id: int) -> ContextObject:
         """Add the specified writes to the list of seen writes of the given device
         and returns a reference to this ContextObject."""
         # check if the device is known to the context
@@ -203,7 +211,7 @@ class ContextObject(object):
             self.__add_seen_write(writing_device_id, write.memory_region, write)
         return self
 
-    def set_last_visited_node_id(self, node_id: int):
+    def set_last_visited_node_id(self, node_id: int) -> None:
         self.last_visited_node_id = node_id
 
     def get_seen_writes_by_device(self, device_id: DeviceID) -> Dict[MemoryRegion, Set[WriteDataAccess]]:
@@ -226,19 +234,19 @@ class ContextObject(object):
 
         return seen_dict
 
-    def initialize_seen_writes_by_device(self, device_id: DeviceID, memory_region: MemoryRegion):
+    def initialize_seen_writes_by_device(self, device_id: DeviceID, memory_region: MemoryRegion) -> None:
         if device_id not in self.seen_writes_by_device:
             self.seen_writes_by_device[device_id] = dict()
         self.seen_writes_by_device[device_id][memory_region] = set()
 
-    def __add_seen_write(self, device_id, memory_region: MemoryRegion, write: WriteDataAccess):
+    def __add_seen_write(self, device_id: int, memory_region: MemoryRegion, write: WriteDataAccess) -> None:
         if device_id not in self.seen_writes_by_device:
             self.seen_writes_by_device[device_id] = dict()
         if memory_region not in self.seen_writes_by_device[device_id]:
             self.seen_writes_by_device[device_id][memory_region] = set()
         self.seen_writes_by_device[device_id][memory_region].add(write)
 
-    def __get_known_device_ids(self):
+    def __get_known_device_ids(self) -> Set[DeviceID]:
         seen_devices: Set[DeviceID] = set()
         for stack_entry in self.snapshot_stack:
             for device_id in stack_entry[0]:

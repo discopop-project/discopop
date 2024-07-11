@@ -6,16 +6,17 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Tuple, Dict, Set, cast
+from typing import List, Tuple, Dict, Set, cast
 
 from discopop_explorer.PEGraphX import EdgeType, DepType, PEGraphX, NodeID, CUNode, MemoryRegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
 
 
 def get_written_and_read_memory_regions_by_cu(
-    contained_regions, pet: PEGraphX
+    contained_regions: List[GPURegionInfo], pet: PEGraphX
 ) -> Tuple[Dict[NodeID, Set[MemoryRegion]], Dict[NodeID, Set[MemoryRegion]]]:
     all_function_cu_ids: Set[NodeID] = set()
     for region in contained_regions:
@@ -67,7 +68,7 @@ def get_written_and_read_memory_regions_by_cu(
 
 
 def get_cu_and_varname_to_memory_regions(
-    contained_regions, pet: PEGraphX, written_memory_regions_by_cu: Dict[NodeID, Set[MemoryRegion]]
+    contained_regions: List[GPURegionInfo], pet: PEGraphX, written_memory_regions_by_cu: Dict[NodeID, Set[MemoryRegion]]
 ) -> Dict[NodeID, Dict[VarName, Set[MemoryRegion]]]:
     # dict -> {Cu_ID: {var_name: [memory regions]}}
     result_dict: Dict[NodeID, Dict[VarName, Set[MemoryRegion]]] = dict()

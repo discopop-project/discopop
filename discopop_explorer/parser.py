@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from io import TextIOWrapper
 import os
 import re
 import warnings
@@ -110,7 +111,7 @@ def __map_dummy_nodes(cu_dict):
     return cu_dict
 
 
-def __parse_dep_file(dep_fd, output_path: str) -> Tuple[List[DependenceItem], List[LoopData]]:
+def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[DependenceItem], List[LoopData]]:
     dependencies_list: List[DependenceItem] = []
     loop_data_list: List[LoopData] = []
 

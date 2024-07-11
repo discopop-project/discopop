@@ -34,7 +34,14 @@ class UnpackedSuggestion(object):
     device_type: Optional[DeviceTypeEnum]
     host_device_id: int
 
-    def __init__(self, type_str: str, values: Dict[str, Any], device_id=None, device_type=None, host_device_id=0):
+    def __init__(
+        self,
+        type_str: str,
+        values: Dict[str, Any],
+        device_id: Optional[DeviceID] = None,
+        device_type: Optional[DeviceTypeEnum] = None,
+        host_device_id: int = 0,
+    ):
         self.type = type_str
         self.values = values
         self.device_id = device_id
@@ -234,16 +241,16 @@ class UnpackedSuggestion(object):
 
     def __get_simple_gpu_pragmas(
         self,
-        region_start,
-        region_end,
-        contained_loops,
-        map_to_vars,
-        map_from_vars,
-        map_to_from_vars,
-        map_alloc_vars,
-        map_delete_vars,
-        consumed_vars,
-        produced_vars,
+        region_start: Any,
+        region_end: Any,
+        contained_loops: Any,
+        map_to_vars: Any,
+        map_from_vars: Any,
+        map_to_from_vars: Any,
+        map_alloc_vars: Any,
+        map_delete_vars: Any,
+        consumed_vars: Any,
+        produced_vars: Any,
         indentation: int = 0,
         ignore_mapping_clauses: bool = False,
     ) -> List[Pragma]:
@@ -309,7 +316,7 @@ class UnpackedSuggestion(object):
             pragmas.append(loop_pragma)
         return pragmas
 
-    def __get_update_pragmas(self, update_instructions) -> List[Pragma]:
+    def __get_update_pragmas(self, update_instructions: List[Tuple[str, str, UpdateType, str, str]]) -> List[Pragma]:
         pragmas = []
         for source_cu_id, sink_cu_id, update_type, target_var, pragma_line in update_instructions:
             pragma = Pragma()
@@ -338,7 +345,9 @@ class UnpackedSuggestion(object):
             pragmas.append(pragma)
         return pragmas
 
-    def __get_data_region_dependencies(self, depend_in, depend_out) -> List[Pragma]:
+    def __get_data_region_dependencies(
+        self, depend_in: List[Tuple[str, str, str]], depend_out: List[Tuple[str, str, str]]
+    ) -> List[Pragma]:
         pragmas = []
         for var_name, cu_id, pragma_line in depend_in:
             pragma = Pragma()
@@ -362,7 +371,11 @@ class UnpackedSuggestion(object):
 
         return pragmas
 
-    def __get_data_region_pragmas(self, entry_points, exit_points) -> List[Pragma]:
+    def __get_data_region_pragmas(
+        self,
+        entry_points: List[Tuple[str, str, str, EntryPointType, str, EntryPointPositioning]],
+        exit_points: List[Tuple[str, str, str, ExitPointType, str, ExitPointPositioning]],
+    ) -> List[Pragma]:
         pragmas = []
         for (
             var_name,
