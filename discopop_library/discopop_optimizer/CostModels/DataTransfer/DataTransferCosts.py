@@ -8,7 +8,6 @@
 from typing import Dict, List, Tuple
 
 import networkx as nx  # type: ignore
-from sympy import Integer  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment

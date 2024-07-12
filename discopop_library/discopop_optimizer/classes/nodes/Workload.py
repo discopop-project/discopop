@@ -8,7 +8,7 @@
 from __future__ import annotations
 from typing import Optional, Set, List, cast
 
-from sympy import Integer, Expr  # type: ignore
+from sympy import Integer, Expr
 
 from discopop_explorer.PEGraphX import NodeID, PEGraphX, EdgeType
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel

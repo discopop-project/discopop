@@ -19,9 +19,9 @@ from lxml import objectify  # type:ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
 # Map to record which line belongs to read set of nodes. LID -> NodeIds
-readlineToCUIdMap = defaultdict(set)  # type: ignore
+readlineToCUIdMap = defaultdict(set)
 # Map to record which line belongs to write set of nodes. LID -> NodeIds
-writelineToCUIdMap = defaultdict(set)  # type: ignore
+writelineToCUIdMap = defaultdict(set)
 # Map to record which line belongs to set of nodes. LID -> NodeIds
 lineToCUIdMap = defaultdict(set)  # type: ignore
 

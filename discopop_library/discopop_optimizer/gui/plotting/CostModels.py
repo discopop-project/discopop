@@ -8,10 +8,10 @@
 import copy
 from typing import List, Dict, Tuple, Optional, cast
 
-import matplotlib  # type: ignore
+import matplotlib
 import numpy as np
 import sympy
-from matplotlib import pyplot as plt  # type: ignore
+from matplotlib import pyplot as plt
 from spb import plot3d, MB, plot  # type: ignore
 from sympy import Integer
 from sympy import Symbol, Expr
@@ -313,7 +313,7 @@ def __1d_plot(
     plt.figure(__unique_plot_id)
     __unique_plot_id += 1
     if title is not None:
-        plt.title(title)  # type: ignore
+        plt.title(title)
     if super_title is not None:
         plt.suptitle(super_title)  # type: ignore
     plt.bar(y_pos, height)  # type: ignore

@@ -12,7 +12,7 @@ from typing import Dict, List, Tuple, Optional, cast
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 from .PatternInfo import PatternInfo
 from ..PEGraphX import FunctionNode, LoopNode, NodeID, PEGraphX, Node, EdgeType

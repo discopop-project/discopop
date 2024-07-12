@@ -23,7 +23,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     redirect_edge,
 )
 
-from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at  # type: ignore
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 def prepare_forced_data_movement_prior_to_call(experiment: Experiment) -> nx.DiGraph:

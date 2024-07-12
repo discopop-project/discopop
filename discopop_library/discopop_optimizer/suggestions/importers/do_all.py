@@ -12,7 +12,7 @@ from typing import Callable, Set, cast, Tuple, List, Dict
 import networkx as nx  # type: ignore
 from sympy import Expr, Integer, Symbol, log, Float, init_printing
 from discopop_explorer.PEGraphX import NodeID
-from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo  # type: ignore
+from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Microbench.utils import (

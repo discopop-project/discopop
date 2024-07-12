@@ -11,8 +11,8 @@ from multiprocessing import Pool
 from typing import Any, ClassVar, Dict, List, Optional, cast, Set, Tuple
 import warnings
 
-import matplotlib  # type: ignore
-import matplotlib.pyplot as plt  # type:ignore
+import matplotlib
+import matplotlib.pyplot as plt
 import networkx as nx  # type: ignore
 import tqdm  # type: ignore
 

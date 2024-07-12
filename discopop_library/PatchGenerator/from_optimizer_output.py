@@ -20,8 +20,6 @@ from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.result_classes.DetectionResult import DetectionResult
 import jsonpickle  # type: ignore
 
-from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
-
 
 def from_optimizer_output(
     file_mapping: Dict[int, Path],

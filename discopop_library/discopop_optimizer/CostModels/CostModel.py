@@ -12,8 +12,8 @@ from typing import Any, List, Dict, TextIO, Tuple, Optional
 
 import numpy as np
 import sympy
-from matplotlib import pyplot as plt  # type: ignore
-from sympy import Function, Symbol, init_printing, Expr, N, nsimplify, Integer  # type: ignore
+from matplotlib import pyplot as plt
+from sympy import Function, Symbol, init_printing, Expr, N, nsimplify, Integer
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

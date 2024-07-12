@@ -8,7 +8,7 @@
 from __future__ import annotations
 from typing import Optional, List, Set
 
-from sympy import Symbol, Function, Integer  # type: ignore
+from sympy import Symbol, Function, Integer
 
 from discopop_explorer.PEGraphX import NodeID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo

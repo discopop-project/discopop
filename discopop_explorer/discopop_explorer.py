@@ -18,10 +18,10 @@ from typing import Dict, List, Optional, Tuple
 
 import pstats2  # type:ignore
 from pluginbase import PluginBase  # type: ignore
-from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments  # type: ignore
+from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 from discopop_library.LineMapping.initialize import initialize_line_mapping
 from discopop_library.PathManagement.PathManagement import get_path, load_file_mapping

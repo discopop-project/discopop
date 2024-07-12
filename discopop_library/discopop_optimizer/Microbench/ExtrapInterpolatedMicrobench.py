@@ -16,7 +16,7 @@ from extrap.entities.parameter import Parameter  # type: ignore
 from extrap.fileio.json_file_reader import read_json_file  # type: ignore
 from extrap.modelers.model_generator import ModelGenerator  # type: ignore
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler  # type: ignore
-from sympy.parsing.sympy_parser import parse_expr  # type: ignore
+from sympy.parsing.sympy_parser import parse_expr
 
 from .Microbench import (
     Microbench,

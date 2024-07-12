@@ -16,13 +16,13 @@ from typing import Dict, List, Optional, Tuple, cast
 import jsonpickle  # type: ignore
 import jsons  # type: ignore
 from sympy import Float, Symbol
-from discopop_explorer.json_serializer import PatternBaseSerializer  # type: ignore
+from discopop_explorer.json_serializer import PatternBaseSerializer
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
 from discopop_library.discopop_optimizer.CostModels.utilities import get_performance_models_for_functions
-from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers  # type: ignore
+from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
-from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser  # type: ignore
+from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
@@ -96,7 +96,7 @@ def show_function_models(
             parent_frame.quit()
 
     # add exit button
-    exit_button = Button(parent_frame, text="Exit", command=lambda: __on_press())  # type: ignore
+    exit_button = Button(parent_frame, text="Exit", command=lambda: __on_press())
     exit_button.grid(row=1, column=0)
 
     parent_frame.mainloop()

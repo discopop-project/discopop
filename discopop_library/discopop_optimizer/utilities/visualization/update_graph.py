@@ -7,11 +7,11 @@
 # directory for details.
 from typing import Any, Dict, List
 import matplotlib
-import matplotlib.pyplot as plt  # type: ignore
+import matplotlib.pyplot as plt
 
 import networkx as nx  # type: ignore
 
-from discopop_library.discopop_optimizer.Variables.Experiment import Experiment  # type: ignore
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
 from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
@@ -26,7 +26,7 @@ from discopop_library.discopop_optimizer.utilities.simple_utilities import data_
 
 from networkx.drawing.nx_pydot import graphviz_layout  # type: ignore
 
-from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
+from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 
 def show_update_graph(graph: nx.DiGraph, configuration: OptimizerOutputPattern, experiment: Experiment) -> None:

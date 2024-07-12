@@ -8,7 +8,7 @@
 
 from typing import List, Set, Tuple, cast
 import networkx as nx  # type: ignore
-from sympy import Integer  # type: ignore
+from sympy import Integer
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.DeviceSwitch import DeviceSwitch
 from discopop_library.discopop_optimizer.classes.nodes.SynchronizationTrigger import SynchronizationTrigger

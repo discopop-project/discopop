@@ -14,13 +14,13 @@ from enum import IntEnum, Enum
 from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload, Any
 
 import jsonpickle  # type:ignore
-import matplotlib.pyplot as plt  # type:ignore
+import matplotlib.pyplot as plt
 import networkx as nx  # type:ignore
 from alive_progress import alive_bar  # type: ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable

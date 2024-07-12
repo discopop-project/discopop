@@ -10,7 +10,6 @@ from typing import Dict, Set, List, Optional
 import warnings
 
 
-from sympy import Expr, Integer, Symbol  # type: ignore
 import networkx as nx  # type: ignore
 
 from discopop_explorer.PEGraphX import MemoryRegion

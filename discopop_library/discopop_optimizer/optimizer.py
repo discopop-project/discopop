@@ -15,7 +15,7 @@ from typing import Dict, List, Tuple, cast
 import warnings
 
 import jsonpickle  # type: ignore
-from sympy import Float, Symbol  # type: ignore
+from sympy import Float, Symbol
 
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
@@ -206,8 +206,8 @@ def run_passive_optimizer(arguments: OptimizerArguments) -> None:
     experiment = Experiment(file_mapping, system, detection_result, profiler_dir, arguments, hotspot_functions)
 
     if arguments.profiling:
-        experiment.profile = cProfile.Profile()  # type: ignore
-        experiment.profile.enable()  # type: ignore
+        experiment.profile = cProfile.Profile()
+        experiment.profile.enable()
 
     # build optimization graph
     if arguments.verbose:
@@ -299,9 +299,9 @@ def run_passive_optimizer(arguments: OptimizerArguments) -> None:
         if os.path.exists("optimizer_profile.txt"):
             os.remove("optimizer_profile.txt")
         with open("optimizer_profile.txt", "w+") as f:
-            stats = pstats.Stats(experiment.profile, stream=f).sort_stats("time").reverse_order()  # type: ignore
+            stats = pstats.Stats(experiment.profile, stream=f).sort_stats("time").reverse_order()
             stats.print_stats()
-        del experiment.profile  # type: ignore
+        del experiment.profile
 
     # save full experiment to disk
     export_to_json(experiment, optimizer_dir)

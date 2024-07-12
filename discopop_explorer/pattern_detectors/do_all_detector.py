@@ -11,7 +11,7 @@ from typing import List, Dict, Optional, Set, Tuple, cast
 import warnings
 
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 from .PatternInfo import PatternInfo
 from .reduction_detector import ReductionInfo

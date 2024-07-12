@@ -26,7 +26,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
 )
 
 
-from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at  # type: ignore
+from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 
 
 def prepare_force_branch_end_data_movement(experiment: Experiment) -> nx.DiGraph:

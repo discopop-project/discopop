@@ -81,9 +81,9 @@ def show_options(
     plot_button = Button(
         root,
         text="Plot using selections",
-        command=lambda: plot_CostModels_using_function_path_selections(  # type: ignore
+        command=lambda: plot_CostModels_using_function_path_selections(
             experiment,
-            [experiment.selected_paths_per_function[function_root][0]],  # type: ignore
+            [experiment.selected_paths_per_function[function_root][0]],
             sorted_free_symbols,
             free_symbol_ranges,
             [function_root.name],
@@ -96,7 +96,7 @@ def show_options(
     print_selections_button = Button(
         root,
         text="Print selections",
-        command=lambda: print_current_function_path_selections(  # type: ignore
+        command=lambda: print_current_function_path_selections(
             experiment,
         ),
     )
@@ -105,7 +105,7 @@ def show_options(
     print_substitutions_button = Button(
         root,
         text="Print substitutions",
-        command=lambda: print_current_substitutions(  # type: ignore
+        command=lambda: print_current_substitutions(
             experiment,
         ),
     )
@@ -114,9 +114,9 @@ def show_options(
     print_simplified_function_button = Button(
         root,
         text="Print simplified",
-        command=lambda: print_simplified_function(  # type: ignore
+        command=lambda: print_simplified_function(
             experiment,
-            [experiment.selected_paths_per_function[function_root][0]],  # type: ignore
+            [experiment.selected_paths_per_function[function_root][0]],
             sorted_free_symbols,
             free_symbol_ranges,
             [function_root.name],
@@ -138,7 +138,7 @@ def show_options(
             title="Full Plot",
             super_title=function_root.name,
         ),
-    ).grid()  # type: ignore
+    ).grid()
     Button(
         root,
         text="Add Random (10)",
@@ -183,7 +183,7 @@ def show_options(
             text="Plot",
             command=lambda opt=option, opt_name=option_name: plot_CostModels(  # type: ignore
                 experiment,
-                [opt],  # type: ignore
+                [opt],
                 sorted_free_symbols,
                 free_symbol_ranges,
                 [opt_name],
@@ -196,7 +196,7 @@ def show_options(
             options_field,
             text="Details",
             command=lambda opt=option, opt_name=option_name: display_choices_for_model(  # type: ignore
-                graph, opt, window_title=opt_name  # type: ignore
+                graph, opt, window_title=opt_name
             ),
         )
         details_button.grid(row=0, column=1)

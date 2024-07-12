@@ -11,8 +11,8 @@ from typing import List, Dict, cast, Set, Optional
 import warnings
 
 import networkx as nx  # type: ignore
-import sympy  # type: ignore
-from sympy import Integer, Expr, Symbol  # type: ignore
+import sympy
+from sympy import Integer, Expr, Symbol
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment

@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, cast, Set, Tuple
 import warnings
 
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 from .PatternInfo import PatternInfo
 from ..PEGraphX import (

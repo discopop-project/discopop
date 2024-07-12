@@ -15,7 +15,7 @@ import warnings
 
 from sympy import Expr
 import tqdm  # type: ignore
-from discopop_explorer.PEGraphX import NodeID  # type: ignore
+from discopop_explorer.PEGraphX import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 
@@ -215,7 +215,7 @@ def __fill_population(
     global global_available_decisions
     global_experiment = experiment
     global_arguments = arguments
-    global_available_decisions = available_decisions  # type: ignore
+    global_available_decisions = available_decisions
     # select random candidates
     print("Filling the population...")
     param_list = [(None) for element in range(len(population), population_size)]

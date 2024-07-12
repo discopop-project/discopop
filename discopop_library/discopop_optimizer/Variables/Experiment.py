@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, Tuple, Set, Optional, List, Any
 
 import networkx as nx  # type: ignore
-from sympy import Integer, Symbol, Expr, Float  # type: ignore
+from sympy import Integer, Symbol, Expr
 
 from discopop_explorer.PEGraphX import MemoryRegion
 from discopop_library.HostpotLoader.HotspotType import HotspotType

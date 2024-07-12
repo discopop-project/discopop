@@ -13,12 +13,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional, Tuple, Union
 
-import matplotlib  # type: ignore
+import matplotlib
 import numpy as np
 
 matplotlib.use("Agg")
-from matplotlib import cm  # type: ignore
-from matplotlib import pyplot as plt  # type: ignore
+from matplotlib import cm
+from matplotlib import pyplot as plt
 from matplotlib.ticker import LinearLocator  # type: ignore
 
 

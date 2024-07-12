@@ -10,9 +10,8 @@ from typing import Dict, cast, List, Tuple, Optional, Any
 
 import jsonpickle  # type: ignore
 import networkx as nx  # type: ignore
-import sympy  # type: ignore
 from spb import plot3d, MB  # type: ignore
-from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify, diff  # type: ignore
+from sympy import Integer, Expr, Symbol, lambdify, plot, Float, init_printing, simplify, diff
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import (

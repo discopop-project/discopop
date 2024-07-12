@@ -9,7 +9,7 @@ import copy
 from typing import Callable, Set, cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
-from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
+from sympy import Expr, Integer, Symbol, log, Float, init_printing
 
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
