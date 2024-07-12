@@ -82,7 +82,7 @@ def show_function_models(
     # finalize scrollable frame
     scrollable_frame_widget.finalize(row_count=len(considered_functions), row=0, col=0)
 
-    def __on_press():
+    def __on_press() -> None:
         for w in spawned_windows:
             try:
                 w.destroy()

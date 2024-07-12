@@ -50,7 +50,7 @@ class DoAllInfo(PatternInfo):
         self.scheduling_clause = "static"
         self.collapse_level = 1
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Do-all at: {self.node_id}\n"
             f"Start line: {self.start_line}\n"
@@ -119,12 +119,12 @@ def run_detection(
     return result
 
 
-def __initialize_worker(pet):
+def __initialize_worker(pet: PEGraphX) -> None:
     global global_pet
     global_pet = pet
 
 
-def __check_node(param_tuple):
+def __check_node(param_tuple: LoopNode) -> List[DoAllInfo]:
     global global_pet
     local_result = []
     node = param_tuple

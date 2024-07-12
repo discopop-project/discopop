@@ -6,7 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import tkinter as tk
-from tkinter import ttk
+from tkinter import Tk, ttk
+from typing import Union
 
 
 class ScrollableFrameWidget(object):
@@ -15,7 +16,7 @@ class ScrollableFrameWidget(object):
     scrollbar: tk.Scrollbar
     scrollable_frame: tk.Frame  # important
 
-    def __init__(self, parent_frame):
+    def __init__(self, parent_frame: Union[tk.Frame, Tk]) -> None:
         self.container = ttk.Frame(parent_frame)
         self.canvas = tk.Canvas(self.container)
         self.scrollbar = ttk.Scrollbar(self.container, orient="vertical", command=self.canvas.yview)

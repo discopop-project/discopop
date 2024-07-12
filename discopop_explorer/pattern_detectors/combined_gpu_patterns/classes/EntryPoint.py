@@ -52,7 +52,7 @@ class EntryPoint(object):
         self.entry_point_positioning = EntryPointPositioning.BEFORE_CU
         self.dependencies = set()
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             "EntryPoint("
             + str(self.var_names)
@@ -67,7 +67,9 @@ class EntryPoint(object):
             + ")"
         )
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, EntryPoint):
+            raise TypeError()
         if (
             tuple(self.var_names),
             #            tuple(self.memory_regions),  # leads to duplicated outputs
@@ -90,7 +92,7 @@ class EntryPoint(object):
             return True
         return False
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(
             (
                 tuple(self.var_names),
@@ -104,7 +106,7 @@ class EntryPoint(object):
             )
         )
 
-    def get_position_identifier(self):
+    def get_position_identifier(self) -> Tuple[NodeID, NodeID, EntryPointType, EntryPointPositioning]:
         # used to join multiple elements
         return (
             self.sink_cu_id,
@@ -113,7 +115,7 @@ class EntryPoint(object):
             self.entry_point_positioning,
         )
 
-    def join(self, other):
+    def join(self, other: EntryPoint) -> None:
         self.var_names.update(other.var_names)
         self.memory_regions.update(other.memory_regions)
         self.dependencies.update(other.dependencies)

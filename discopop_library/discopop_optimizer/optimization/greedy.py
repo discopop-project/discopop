@@ -157,7 +157,7 @@ def greedy_search(
     )
 
 
-def __get_dicision_list(decisions_dict):
+def __get_dicision_list(decisions_dict: Dict[int, List[List[int]]]) -> List[int]:
     """Converts a dictionary based description of a configuration into a list of integers"""
     res_list = []
     for function in decisions_dict:

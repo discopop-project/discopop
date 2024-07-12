@@ -58,7 +58,7 @@ class Update(object):
         self.delete_data = delete_data
         self.copy_delete_data = copy_delete_data
 
-    def __str__(self):
+    def __str__(self) -> str:
         result_str = ""
         result_str += "IssueCopyDelete " if self.copy_delete_data else ""
         result_str += "IssueDelete " if self.delete_data else ""

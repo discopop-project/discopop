@@ -7,7 +7,7 @@
 # directory for details.
 
 from json import JSONEncoder
-from typing import Dict, Any
+from typing import Dict, Any, List
 from discopop_explorer.pattern_detectors.PatternBase import PatternBase
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess
@@ -37,7 +37,7 @@ def filter_members(d: Dict[Any, Any]) -> Dict[Any, Any]:
 class PatternBaseSerializer(JSONEncoder):
     """Json Encoder for Pattern Info"""
 
-    def default(self, o):
+    def default(self, o: Any) -> Any:
         try:
             iterable = iter(o)
         except TypeError:

@@ -93,7 +93,7 @@ def check_pipeline(pet: PEGraphX, root: Node) -> None:
             print(" ".join([str(x) for x in matrix[i]]))
 
 
-def delete_lines(matrix, loop_nodes, lines):
+def delete_lines(matrix: List[List[int]], loop_nodes: List[Node], lines: List[int]) -> None:
     if lines:
         lines.sort(reverse=True)
         for i in range(0, len(lines)):
@@ -103,8 +103,8 @@ def delete_lines(matrix, loop_nodes, lines):
                 del matrix[j][lines[i]]
 
 
-def get_independent_lines(matrix):
-    res = []
+def get_independent_lines(matrix: List[List[int]]) -> List[int]:
+    res: List[int] = []
     for i in range(0, len(matrix)):
         indep = True
         for j in range(0, len(matrix)):
@@ -115,8 +115,8 @@ def get_independent_lines(matrix):
     return res
 
 
-def get_mergeable_nodes(matrix):
-    res = []
+def get_mergeable_nodes(matrix: List[List[int]]) -> List[int]:
+    res: List[int] = []
     for i in reversed(range(1, len(matrix))):
         if matrix[i] == matrix[i - 1]:
             same = True
@@ -137,8 +137,8 @@ def get_matrix(pet: PEGraphX, root: Node, loop_subnodes: List[Node]) -> List[Lis
     return res
 
 
-def get_correlation_coefficient(matrix):
-    graph_vector = []
+def get_correlation_coefficient(matrix: List[List[int]]) -> float:
+    graph_vector: List[float] = []
     for i in range(0, len(matrix) - 1):
         graph_vector.append(matrix[i + 1][i])
 

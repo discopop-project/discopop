@@ -10,6 +10,7 @@
 import math
 from typing import Dict, List, Tuple, Optional, cast
 
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
@@ -50,7 +51,7 @@ class GDInfo(PatternInfo):
         self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
         lp: List[Variable] = []
         fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(pet, node, "GeometricDecomposition", [], [])
-        fp.append(Variable("int", "i", "", sizeInByte=4))
+        fp.append(Variable("int", VarName("i"), "", sizeInByte=4))
 
         self.first_private = fp
         self.private = p
@@ -58,7 +59,7 @@ class GDInfo(PatternInfo):
         self.shared = s
         self.reduction = r
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Geometric decomposition at: {self.node_id}\n"
             f"Start line: {self.start_line}\n"
@@ -113,14 +114,14 @@ def run_detection(
     return result
 
 
-def __initialize_worker(pet):
+def __initialize_worker(pet: PEGraphX) -> None:
     global global_pet
     global_pet = pet
 
 
-def __check_node(param_tuple):
+def __check_node(param_tuple: Node) -> List[GDInfo]:
     global global_pet
-    local_result = []
+    local_result: List[GDInfo] = []
     node = param_tuple
     if global_pet is None:
         raise ValueError("global_pet is None!")

@@ -72,8 +72,8 @@ class DelaunayInterpolatedMicrobench(Microbench):
             tuples.append((*benchCoord, np.median(values).item()))
         return tuples
 
-    def __interpolate(self):
-        def __createInterpolator(tuples):
+    def __interpolate(self) -> None:
+        def __createInterpolator(tuples: List[Tuple[int, int | float, int, float]]) -> LinearNDInterpolator:
             coords = []
             values = []
             for t in tuples:
@@ -86,10 +86,12 @@ class DelaunayInterpolatedMicrobench(Microbench):
             for type, dimMap in self.data.getMeasurements().items()
         }
 
-    def getMeasurements(self):
+    def getMeasurements(
+        self,
+    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]]]:
         return self.data.getMeasurements()
 
-    def toJSON(self):
+    def toJSON(self) -> str:
         return self.data.toJSON()
 
     def evaluateInterpolation(

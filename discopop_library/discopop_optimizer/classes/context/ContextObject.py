@@ -43,7 +43,7 @@ class ContextObject(object):
         self.snapshot_stack = []  # type: ignore
         self.save_stack = []  # type: ignore  # list of lists of ContextObjects, one list per branching depth
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.necessary_updates)
 
     def calculate_and_perform_necessary_updates(

@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from ast import Dict
-from typing import List
+from typing import List, cast
 
 import jsonpickle  # type: ignore
 
@@ -32,7 +32,7 @@ class DetectionResult(object):
         self.patterns = PatternStorage()
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         result_str = ""
         for v in self.__dict__.values():
             if type(v) == PEGraphX:
@@ -46,11 +46,11 @@ class DetectionResult(object):
             result_str += value_str
         return result_str
 
-    def dump_to_pickled_json(self):
+    def dump_to_pickled_json(self) -> str:
         """Encodes and returns the entire Object into a pickled json string.
         The encoded string can be reconstructed into an object by using:
         jsonpickle.decode(json_str)
 
         :return: encoded string
         """
-        return jsonpickle.encode(self)
+        return cast(str, jsonpickle.encode(self))

@@ -399,13 +399,13 @@ def get_function_call_from_source_code(
     if ")" in function_call_string and "(" not in function_call_string:
         function_call_string = function_call_string[function_call_string.index(")") + 1 :]
 
-    def __get_word_prior_to_bracket(string):
+    def __get_word_prior_to_bracket(string: str) -> Optional[str]:
         if "(" not in string:
             return None
         string = string[: string.index("(")]
-        string = string.split(" ")
-        string = [e for e in string if len(e) > 0]
-        string = string[-1]
+        split_string = string.split(" ")
+        split_string = [e for e in split_string if len(e) > 0]
+        string = split_string[-1]
         return string
 
     called_function_name_contained = called_function_name is None

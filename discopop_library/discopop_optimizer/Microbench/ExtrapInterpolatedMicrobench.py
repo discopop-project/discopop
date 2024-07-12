@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Dict, Tuple, Union, cast
+from typing import Dict, List, Tuple, Union, cast
 
 
 import sympy
@@ -39,7 +39,7 @@ class ExtrapInterpolatedMicrobench(Microbench):
         self.models = experiment.modelers[0].models
 
     # convenient for debugging: print the model functions
-    def printModelFunctions(self):
+    def printModelFunctions(self) -> None:
         for callpathMetric, model in self.models.items():
             test = str(callpathMetric[0]).ljust(12)
             metric = str(callpathMetric[1])
@@ -75,10 +75,13 @@ class ExtrapInterpolatedMicrobench(Microbench):
         expr = parse_expr(function_str, local_dict=function_mappings)
         return cast(sympy.Expr, expr)
 
-    def getMeasurements(self):
+    def getMeasurements(self) -> Dict[
+        MicrobenchType,
+        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
+    ]:
         raise NotImplementedError("TODO")  # TODO
 
-    def toJSON(self):
+    def toJSON(self) -> str:
         raise NotImplementedError("TODO")  # TODO
 
     def evaluateInterpolation(

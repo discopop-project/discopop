@@ -159,7 +159,7 @@ def parse_args() -> ExplorerArguments:
     )
 
 
-def main():
+def main() -> None:
     arguments = parse_args()
     setup_logger(arguments)
     run(arguments)

@@ -213,7 +213,7 @@ class OptimizationGraph(object):
             # perform actions for headless mode
             perform_headless_execution(experiment)
 
-    def get_next_free_node_id(self):
+    def get_next_free_node_id(self) -> int:
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer

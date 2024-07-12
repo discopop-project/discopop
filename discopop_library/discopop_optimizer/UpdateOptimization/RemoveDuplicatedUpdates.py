@@ -7,7 +7,7 @@
 # directory for details.
 
 import logging
-from typing import List
+from typing import List, Tuple
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
@@ -21,7 +21,7 @@ def remove_duplicated_updates(
     cleaned_updates: List[Update] = []
     buffer: List[str] = []
 
-    def get_buffer_str(updt, ignore_first_update=False):
+    def get_buffer_str(updt: Update, ignore_first_update: bool = False) -> str:
         if ignore_first_update:
             result_str = ""
         else:
@@ -74,7 +74,7 @@ def remove_duplicated_updates(
             pass
     configuration.data_movement = cleaned_updates
 
-    def get_delete_copy_from_buffer_str(updt):
+    def get_delete_copy_from_buffer_str(updt: Update) -> Tuple[str, bool]:
         result_str = "C" if updt.copy_delete_data else ""
         return (
             result_str

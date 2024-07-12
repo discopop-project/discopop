@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple, cast
 
 from alive_progress import alive_bar  # type: ignore
 
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import (
     build_preprocessed_graph_and_run_detection as detect_tp,
 )
@@ -194,20 +195,20 @@ class PatternDetectorX(object):
 
     def load_existing_doall_and_reduction_patterns(
         self,
-        project_path,
-        cu_dict,
-        dependencies,
-        loop_data,
-        reduction_vars,
-        file_mapping,
-        cu_inst_result_file,
-        llvm_cxxfilt_path,
-        discopop_build_path,
-        enable_patterns,
-        enable_task_pattern,
-        enable_detection_of_scheduling_clauses,
-        hotspots,
-    ):
+        project_path: str,
+        cu_dict: str,
+        dependencies: str,
+        loop_data: str,
+        reduction_vars: str,
+        file_mapping: Optional[str],
+        cu_inst_result_file: Optional[str],
+        llvm_cxxfilt_path: Optional[str],
+        discopop_build_path: Optional[str],
+        enable_patterns: str,
+        enable_task_pattern: bool,
+        enable_detection_of_scheduling_clauses: bool,
+        hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+    ) -> DetectionResult:
         """skips the pattern discovery on the CU graph and loads a pre-existing pattern file"""
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()
@@ -235,12 +236,12 @@ class PatternDetectorX(object):
         print("PATTERNS:")
         print(pattern_contents)
 
-        def __get_var_obj_from_name(name):
-            return Variable(type="", name=name, defLine="", accessMode="", sizeInByte="0")
+        def __get_var_obj_from_name(name: VarName) -> Variable:
+            return Variable(type="", name=name, defLine="", accessMode="", sizeInByte=0)
 
-        def __get_red_var_obj_from_name(name):
+        def __get_red_var_obj_from_name(name: str) -> Variable:
             split_name = name.split(":")
-            v = Variable(type="", name=split_name[0], defLine="", accessMode="", sizeInByte="0")
+            v = Variable(type="", name=VarName(split_name[0]), defLine="", accessMode="", sizeInByte=0)
             v.operation = split_name[1]
             return v
 

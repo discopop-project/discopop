@@ -38,25 +38,25 @@ class WorkloadStack(object):
         Any
     ]  # List[Union[List[Any], RegularCosts]]  # List of WorkloadStacks or integer tuples (min_wl, max_wl)
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.stack = []
 
-    def enter_new_branched_section(self):
+    def enter_new_branched_section(self) -> None:
         """add a new list to the end of self.stack"""
         innermost_stack, _ = self.__get_innermost_workload_stack()
         innermost_stack.append([])
 
-    def exit_branched_section(self):
+    def exit_branched_section(self) -> None:
         """aggregate the contained branches"""
         # do nothing, as the functionality is implemented in aggregate
         pass
 
-    def enter_new_branch(self):
+    def enter_new_branch(self) -> None:
         """same behavior as enter_branched_section"""
         innermost_stack, _ = self.__get_innermost_workload_stack()
         innermost_stack.append([])
 
-    def exit_branch(self):
+    def exit_branch(self) -> None:
         """Accumulates costs of the current branch, i.e. the innermost List"""
         # get innermost stack
         innermost_stack, indices = self.__get_innermost_workload_stack()
@@ -75,7 +75,7 @@ class WorkloadStack(object):
                 cur_elem = cur_elem[index]
             cur_elem[indices[-1]] = BranchCosts((min_wl, max_wl))
 
-    def aggregate(self):
+    def aggregate(self) -> None:
         # get innermost stack
         innermost_stack, indices = self.__get_innermost_workload_stack()
         min_wl = 0

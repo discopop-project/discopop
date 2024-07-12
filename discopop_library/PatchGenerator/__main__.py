@@ -96,7 +96,7 @@ def parse_args() -> PatchGeneratorArguments:
     )
 
 
-def main():
+def main() -> None:
     arguments = parse_args()
     setup_logger(arguments)
     run(arguments)

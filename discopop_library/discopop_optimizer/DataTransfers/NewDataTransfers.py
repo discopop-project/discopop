@@ -183,7 +183,7 @@ class DeviceMemory(object):
             self.memory[device_id] = dict()
         self.memory[device_id][wda.memory_region] = wda
 
-    def log_state(self):
+    def log_state(self) -> None:
         logger.debug("Memory state:")
         for device_id in self.memory:
             logger.debug("-> Device: " + str(device_id))
@@ -195,7 +195,7 @@ class DeviceMemory(object):
 class DataFrame(object):
     entered_data_regions_by_device: Dict[DeviceID, List[WriteDataAccess]]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.entered_data_regions_by_device = dict()
 
     def parse_update(self, update: Update) -> None:
@@ -305,7 +305,7 @@ class DataFrame(object):
 
         return updates
 
-    def log_state(self):
+    def log_state(self) -> None:
         logger.debug("DataFrame:")
         for device_id in self.entered_data_regions_by_device:
             logger.debug("-> Device: " + str(device_id))

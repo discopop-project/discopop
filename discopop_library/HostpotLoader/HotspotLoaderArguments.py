@@ -22,13 +22,13 @@ class HotspotLoaderArguments(GeneralArguments):
     get_NO: bool
     get_MAYBE: bool
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
+    def __validate(self) -> None:
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.__dict__)
 
     def get_considered_hotness(self) -> List[str]:

@@ -130,7 +130,7 @@ class Loop(Workload):
         cm.path_decisions += other.path_decisions
         return cm
 
-    def register_successor(self, other):
+    def register_successor(self, other: CostModel) -> CostModel:
         """Registers a successor node for the given model.
         Does not modify the stored model in self or other."""
         # sequential composition is depicted by simply adding the performance models

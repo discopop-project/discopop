@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import itertools
-from typing import List, Optional, Sequence, Set, Dict, Tuple, cast
+from typing import Callable, List, Optional, Sequence, Set, Dict, Tuple, TypeVar, cast
 
 import numpy as np
 import warnings
@@ -33,8 +33,10 @@ from .variable import Variable
 
 loop_data: Dict[LineID, int] = {}
 
+T = TypeVar("T")
 
-def contains(list, filter):
+
+def contains(list: List[T], filter: Callable[[T], bool]) -> bool:
     for x in list:
         if filter(x):
             return True
@@ -341,7 +343,7 @@ def is_scalar_val(var: Variable) -> bool:
     :param var: variable
     :return: true if scalar
     """
-    return not (var.type.endswith("**") or var.type.startswith("ARRAY" or var.type.startswith("[")))
+    return not (var.type.endswith("**") or var.type.startswith("ARRAY") or var.type.startswith("["))
 
 
 def is_readonly(
