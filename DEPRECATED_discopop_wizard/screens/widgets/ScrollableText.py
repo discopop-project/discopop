@@ -7,14 +7,15 @@
 # directory for details.
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import Tk, ttk
+from typing import Union
 
 
 class ScrollableTextWidget(object):
     frame: tk.Frame
     text_container: tk.Text
 
-    def __init__(self, parent_frame):
+    def __init__(self, parent_frame: Union[tk.Frame, Tk]):
         self.frame = ttk.Frame(parent_frame)  # type: ignore
         self.frame.pack(fill=tk.BOTH, expand=True)
         self.frame.rowconfigure(0, weight=1)
