@@ -69,14 +69,14 @@ def collapse_loops(experiment: Experiment) -> nx.DiGraph:
     return global_graph
 
 
-def __initialize_worker(graph, experiment):
+def __initialize_worker(graph: nx.DiGraph, experiment: Experiment) -> None:
     global global_graph
     global global_experiment
     global_graph = graph
     global_experiment = experiment
 
 
-def __collapse_loops_in_function(function_node_id):
+def __collapse_loops_in_function(function_node_id: int) -> bool:
     """Return True, if a modification has been found. Return False otherwise."""
     global global_graph
     global global_experiment

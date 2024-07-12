@@ -8,14 +8,21 @@
 from __future__ import annotations
 import random
 import sys
-from typing import List, Dict, Tuple, Optional
+from typing import Any, List, Dict, TextIO, Tuple, Optional
 
 import numpy as np
 import sympy
 from matplotlib import pyplot as plt  # type: ignore
 from sympy import Function, Symbol, init_printing, Expr, N, nsimplify, Integer  # type: ignore
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+    from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
+    from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
+from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 
 
 class CostModel(object):
@@ -29,7 +36,7 @@ class CostModel(object):
     free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution]
     symbol_value_suggestions: Dict[Symbol, Expr]
 
-    def toJSON(self):
+    def toJSON(self) -> str:
         return "AsDF"
 
     def __init__(
@@ -55,10 +62,10 @@ class CostModel(object):
         self.parallelizable_costs = parallelizable_costs
         self.sequential_costs = sequential_costs
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.parallelizable_costs) + str(self.sequential_costs)
 
-    def print(self, file=sys.stdout):
+    def print(self, file: TextIO = sys.stdout) -> None:
         init_printing()
         print("\tPARALLEL:")
         print("\t", self.parallelizable_costs, file=file)
@@ -84,7 +91,7 @@ class CostModel(object):
             symbol_value_suggestions=value_suggestions,
         )
 
-    def parallelizable_divide_combine(self, other):
+    def parallelizable_divide_combine(self, other: CostModel) -> CostModel:
         """Combines both models in the following fashion:
         f(x,y) =
         ==> x.parallelizable_costs / y.parallelizable_costs
@@ -102,7 +109,7 @@ class CostModel(object):
             symbol_value_suggestions=value_suggestions,
         )
 
-    def parallelizable_multiply_combine(self, other):
+    def parallelizable_multiply_combine(self, other: CostModel) -> CostModel:
         """Combines both models in the following fashion:
         f(x,y) =
         ==> x.parallelizable_costs * y.parallelizable_costs
@@ -121,17 +128,24 @@ class CostModel(object):
             symbol_value_suggestions=value_suggestions,
         )
 
-    def register_child(self, other, root_node, experiment, all_function_nodes, current_device):
+    def register_child(
+        self,
+        other: CostModel,
+        root_node: GenericNode,
+        experiment: Experiment,
+        all_function_nodes: List[FunctionRoot],
+        current_device: Device,
+    ) -> CostModel:
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
         return root_node.register_child(other, experiment, all_function_nodes, current_device)
 
-    def register_successor(self, other, root_node):
+    def register_successor(self, other: CostModel, root_node: GenericNode) -> CostModel:
         """Registers a successor node for the given model.
         Does not modify the stored model in self or other."""
         return root_node.register_successor(other)
 
-    def __lt__(self, other):
+    def __lt__(self, other: CostModel) -> bool:
         """Compare both models.
         The comparison is based on random sampling and may not be correct in all cases!
         """
@@ -225,7 +239,7 @@ class CostModel(object):
         """For Debug reasons. Plots the left and right side heavy weibull distributions using the given parameters."""
         x = np.arange(1, 100.0) / 100.0  # normalized to [0,1]
 
-        def weibull(x, n, a):
+        def weibull(x: Any, n: float, a: float) -> Any:
             return (a / n) * (x / n) ** (a - 1) * np.exp(-((x / n) ** a))
 
         plt.plot(x, weibull(x, alpha, beta), label="Alpha: " + str(alpha) + " Beta: " + str(beta))

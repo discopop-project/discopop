@@ -190,7 +190,7 @@ def __initialize_fill_worker(
     global_available_decisions = available_decisions
 
 
-def __parallel_get_random_configuration(param_tuple):
+def __parallel_get_random_configuration(param_tuple: None) -> List[int]:
     global global_experiment
     global global_arguments
     global global_available_decisions
@@ -393,7 +393,7 @@ def __initialize_mutate_worker(
     global_population = population
 
 
-def __parallel_mutate(param_tuple):
+def __parallel_mutate(param_tuple: None) -> Optional[Tuple[List[int], List[int]]]:
     global global_experiment
     global global_arguments
     global global_population

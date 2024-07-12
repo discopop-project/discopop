@@ -94,7 +94,7 @@ class GenericNode(object):
         Does not modify the stored model in self or other."""
         raise NotImplementedError("Implementation needs to be provided by derived class: !", type(self))
 
-    def register_successor(self, other, root_node):
+    def register_successor(self, other: CostModel) -> CostModel:
         """Registers a successor node for the given model.
         Does not modify the stored model in self or other."""
         raise NotImplementedError("Implementation needs to be provided by derived class: !", type(self))

@@ -51,7 +51,7 @@ class PipelineStage(object):
         self.out_deps = out_deps
         self.in_out_deps = in_out_deps
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"\tNode: {self.node}\n"
             f"\tStart line: {self.startsAtLine}\n"
@@ -119,7 +119,7 @@ class PipelineInfo(PatternInfo):
 
         return PipelineStage(self._pet, node, in_d, out_d)
 
-    def __str__(self):
+    def __str__(self) -> str:
         s = "\n\n".join([str(s) for s in self.stages])
         return (
             f"Pipeline at: {self.node_id}\n"
@@ -188,12 +188,12 @@ def run_detection(
     return result
 
 
-def __initialize_worker(pet):
+def __initialize_worker(pet: PEGraphX) -> None:
     global global_pet
     global_pet = pet
 
 
-def __check_node(param_tuple):
+def __check_node(param_tuple: LoopNode) -> List[PipelineInfo]:
     global global_pet
     local_result = []
 

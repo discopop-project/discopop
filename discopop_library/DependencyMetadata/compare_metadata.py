@@ -9,7 +9,7 @@
 from typing import Set
 
 
-def main():
+def main() -> None:
     gold_result_path = "/home/lukas/dependency_metadata.txt"
     gold_standard: Set[str] = set()
 

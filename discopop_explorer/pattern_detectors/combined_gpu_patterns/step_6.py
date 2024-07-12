@@ -7,7 +7,7 @@
 # directory for details.
 import copy
 import sys
-from typing import Any, Set, Tuple, Dict, List, cast, Optional, Union
+from typing import Any, Set, Tuple, Dict, List, TypeVar, cast, Optional, Union, overload
 
 from networkx import MultiDiGraph  # type: ignore
 
@@ -355,7 +355,7 @@ def remove_duplicates(
     return target_set
 
 
-def join_elements(target_set):
+def join_update_elements(target_set: Set[Update]) -> Set[Update]:
     grouping_dict: Dict[Any, List[Any]] = dict()
 
     for elem in target_set:
@@ -367,12 +367,58 @@ def join_elements(target_set):
 
     for key in grouping_dict:
         # assemble a single EntryPoint
-        joined_entry_point: Optional[EntryPoint] = None
+        joined_entry_point = None
+        for elem in grouping_dict[key]:
+            if joined_entry_point is None:
+                joined_entry_point = elem
+            else:
+                joined_entry_point.join(elem)
+        result_set.add(cast(Update, joined_entry_point))
+
+    return result_set
+
+
+def join_entryPoint_elements(target_set: Set[EntryPoint]) -> Set[EntryPoint]:
+    grouping_dict: Dict[Any, List[Any]] = dict()
+
+    for elem in target_set:
+        if elem.get_position_identifier() not in grouping_dict:
+            grouping_dict[elem.get_position_identifier()] = []
+        grouping_dict[elem.get_position_identifier()].append(elem)
+
+    result_set = set()
+
+    for key in grouping_dict:
+        # assemble a single EntryPoint
+        joined_entry_point = None
         for elem in grouping_dict[key]:
             if joined_entry_point is None:
                 joined_entry_point = elem
             else:
                 joined_entry_point.join(elem)
         result_set.add(cast(EntryPoint, joined_entry_point))
+
+    return result_set
+
+
+def join_exitPoint_elements(target_set: Set[ExitPoint]) -> Set[ExitPoint]:
+    grouping_dict: Dict[Any, List[Any]] = dict()
+
+    for elem in target_set:
+        if elem.get_position_identifier() not in grouping_dict:
+            grouping_dict[elem.get_position_identifier()] = []
+        grouping_dict[elem.get_position_identifier()].append(elem)
+
+    result_set = set()
+
+    for key in grouping_dict:
+        # assemble a single EntryPoint
+        joined_entry_point = None
+        for elem in grouping_dict[key]:
+            if joined_entry_point is None:
+                joined_entry_point = elem
+            else:
+                joined_entry_point.join(elem)
+        result_set.add(cast(ExitPoint, joined_entry_point))
 
     return result_set

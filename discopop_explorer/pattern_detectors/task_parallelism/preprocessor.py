@@ -203,7 +203,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
     return modified_cu_xml
 
 
-def __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids):
+def __generate_new_cu_id(parent: Any, parent_copy: Any, used_node_ids: Any, self_added_node_ids: Any) -> None:
     """Generate the next free CU id and assign it to the parent CU.
     :param parent: parent CU, id will be updated
     :param parent_copy: copy of parent CU (newly created CU)
@@ -219,7 +219,7 @@ def __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids
     self_added_node_ids.append(incremented_id)
 
 
-def __set_parent_copy_childrennodes(parent_copy):
+def __set_parent_copy_childrennodes(parent_copy: Any) -> None:
     """Adds cu nodes called by parent_copy to the childrenNodes list of parent_copy, if not already contained.
     :param parent_copy: cu node to be updated"""
     parent_copy.childrenNodes._setText("")
@@ -242,7 +242,7 @@ def __set_parent_copy_childrennodes(parent_copy):
             continue
 
 
-def __remove_overlapping_start_and_end_lines(parent_copy, target_list):
+def __remove_overlapping_start_and_end_lines(parent_copy: Any, target_list: Any) -> None:
     """Removes the first line of parent_copy from parent´s readPhaseLines, writePhaseLines or instructionLines.
     As a result, start and end Lines of both nodes do not overlap anymore.
     :param parent_copy: copy of parent node (newly added node)
@@ -258,7 +258,7 @@ def __remove_overlapping_start_and_end_lines(parent_copy, target_list):
         target_list.set("count", "1")
 
 
-def __filter_rwi_lines(parent_copy, target_list):
+def __filter_rwi_lines(parent_copy: Any, target_list: Any) -> None:
     """Removes entries from instructionLines, readPhaseLines and writePhraseLines of parent_copy if their value is not
     between parent_copy.startsAtLine and parent_copy.endsAtLine.
     :param parent_copy: cu node to be filtered
@@ -275,7 +275,7 @@ def __filter_rwi_lines(parent_copy, target_list):
         pass
 
 
-def __insert_separator_line(parent_copy, target_list):
+def __insert_separator_line(parent_copy: Any, target_list: Any) -> None:
     """Insert separator line to parent_copys instruction, read and writePhaseLines if not already present
     :param parent_copy: cu node to be updated
     :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent_copy"""
@@ -291,7 +291,7 @@ def __insert_separator_line(parent_copy, target_list):
     target_list._setText(target_list.text.replace(",,", ","))
 
 
-def __insert_missing_rwi_lines(parent, target_list):
+def __insert_missing_rwi_lines(parent: Any, target_list: Any) -> None:
     """Insert all lines contained in parent to instruction, read and writePhaseLines
     :param parent: cu node to be updated
     :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent"""
@@ -308,7 +308,7 @@ def __insert_missing_rwi_lines(parent, target_list):
     target_list._setText(target_list.text.replace(",,", ","))
 
 
-def __remove_unnecessary_return_instructions(target):
+def __remove_unnecessary_return_instructions(target: Any) -> None:
     """Remove returnInstructions if they are not part of target cu anymore.
     :param target: cu to be checked"""
     if int(target.returnInstructions.get("count")) != 0:
@@ -321,7 +321,7 @@ def __remove_unnecessary_return_instructions(target):
         target.returnInstructions.set("count", str(len(new_entries)))
 
 
-def __add_parent_id_to_children(parsed_cu, parent):
+def __add_parent_id_to_children(parsed_cu: Any, parent: Any) -> None:
     """ "Add parent.id to parent_function.childrenNodes
     :param: parsed_cu: parsed contents of cu_xml file
     :param parent: cu node to be added to parent_function's children

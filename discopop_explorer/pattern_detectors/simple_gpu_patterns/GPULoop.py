@@ -218,7 +218,7 @@ class GPULoopPattern(PatternInfo):
         self.constructs = []
         self.declared_global_variables: Set[Variable] = set()
 
-    def __str__(self):
+    def __str__(self) -> str:
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
     def to_string(self, pet: PEGraphX) -> str:
@@ -430,12 +430,14 @@ class GPULoopPattern(PatternInfo):
         self.declared_global_variables.update(used_global_vars)
         for global_var in used_global_vars:
             constructs.append(
-                omp_construct_dict("#pragma omp declare target  // " + str(global_var.name), global_var.defLine, [])
+                omp_construct_dict(
+                    "#pragma omp declare target  // " + str(global_var.name), LineID(global_var.defLine), []
+                )
             )
             constructs.append(
                 omp_construct_dict(
                     "#pragma omp end declare target  // " + str(global_var.name),
-                    global_var.defLine,
+                    LineID(global_var.defLine),
                     [],
                     positioning=OmpConstructPositioning.AFTER_LINE,
                 )

@@ -159,7 +159,7 @@ class Dependency:
         self.metadata_sink_ancestors = []
         self.metadata_source_ancestors = []
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.var_name if self.var_name is not None else str(self.etype)
 
 
@@ -233,13 +233,13 @@ class Node:
             return True
         return False
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.id
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         return isinstance(other, Node) and other.file_id == self.file_id and other.node_id == self.node_id
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.id)
 
     def get_parent_id(self, pet: PEGraphX) -> Optional[NodeID]:
@@ -722,7 +722,7 @@ class PEGraphX(object):
         print("\tAdded dependencies...")
         return cls(g, reduction_vars, pos)
 
-    def map_static_and_dynamic_dependencies(self):
+    def map_static_and_dynamic_dependencies(self) -> None:
         print("\tMapping static to dynamic dependencies...")
         print("\t\tIdentifying mappings between static and dynamic memory regions...", end=" ")
         mem_reg_mappings: Dict[MemoryRegion, Set[MemoryRegion]] = dict()
@@ -883,7 +883,7 @@ class PEGraphX(object):
             self.g.remove_edge(edge[0], edge[1], edge[2])
         print("Cleaning dependencies II done.")
 
-    def calculateLoopMetadata(self):
+    def calculateLoopMetadata(self) -> None:
         print("Calculating loop metadata")
 
         # calculate loop indices
@@ -905,7 +905,7 @@ class PEGraphX(object):
 
         print("Calculating loop metadata done.")
 
-    def show(self):
+    def show(self) -> None:
         """Plots the graph
 
         :return:
@@ -1011,7 +1011,7 @@ class PEGraphX(object):
     @overload
     def all_nodes(self, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
 
-    def all_nodes(self, type=Node):
+    def all_nodes(self, type: Any = Node) -> List[NodeT]:
         """List of all nodes of specified type
 
         :param type: type(s) of nodes
@@ -1057,7 +1057,7 @@ class PEGraphX(object):
     @overload
     def subtree_of_type(self, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
 
-    def subtree_of_type(self, root, type=Node):
+    def subtree_of_type(self, root: Node, type: Any = Node) -> List[NodeT]:
         """Gets all nodes in subtree of specified type including root
 
         :param root: root node
@@ -1074,7 +1074,7 @@ class PEGraphX(object):
         self, root: Node, visited: Set[Node], type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]
     ) -> List[NodeT]: ...
 
-    def subtree_of_type_rec(self, root, visited, type=Node):
+    def subtree_of_type_rec(self, root: Node, visited: Set[Node], type: Any = Node) -> List[NodeT]:
         """recursive helper function for subtree_of_type"""
         # check if root is of type target
         res = []
@@ -1286,7 +1286,7 @@ class PEGraphX(object):
         """
         for x in allVars:
             if x.name == var:
-                return not (x.type.endswith("**") or x.type.startswith("ARRAY" or x.type.startswith("[")))
+                return not (x.type.endswith("**") or x.type.startswith("ARRAY") or x.type.startswith("["))
             else:
                 return False
         raise ValueError("allVars must not be empty.")
@@ -1557,14 +1557,14 @@ class PEGraphX(object):
                 return rv["operation"]
         return ""
 
-    def dump_to_pickled_json(self):
+    def dump_to_pickled_json(self) -> str:
         """Encodes and returns the entire Object into a pickled json string.
         The encoded string can be reconstructed into an object by using:
         jsonpickle.decode(json_str)
 
         :return: encoded string
         """
-        return jsonpickle.encode(self)
+        return cast(str, jsonpickle.encode(self))
 
     def check_reachability(self, target: Node, source: Node, edge_types: List[EdgeType]) -> bool:
         """check if target is reachable from source via edges of types edge_type.
@@ -1667,7 +1667,7 @@ class PEGraphX(object):
                         queue.append((cast(CUNode, self.node_at(e[0])), tmp_path))
         return False, []
 
-    def dump_to_gephi_file(self, name="pet.gexf"):
+    def dump_to_gephi_file(self, name: str = "pet.gexf") -> None:
         """Note: Destroys the PETGraph!"""
         # replace node data with label
         for node_id in self.g.nodes:

@@ -39,7 +39,7 @@ class Context(object):
         self.seen_writes_by_device = dict()
         self.print()
 
-    def __str__(self):
+    def __str__(self) -> str:
         result_str = ""
         result_str += "Context:\n"
         result_str += "\tcu_id: " + str(self.cu_id) + "\n"
@@ -55,7 +55,7 @@ class Context(object):
             result_str += "\n"
         return result_str
 
-    def print(self):
+    def print(self) -> None:
         print(self, file=sys.stderr)
 
     def update_writes(

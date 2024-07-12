@@ -57,8 +57,10 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     identify_end_of_life_points,
     add_aliases,
     extend_region_liveness_using_unrolled_functions,
+    join_entryPoint_elements,
+    join_exitPoint_elements,
+    join_update_elements,
     remove_duplicates,
-    join_elements,
 )
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
 
@@ -310,9 +312,9 @@ class CombinedGPURegion(PatternInfo):
         exit_points = cast(Set[ExitPoint], remove_duplicates(exit_points))
 
         # join entries
-        updates = join_elements(updates)
-        entry_points = join_elements(entry_points)
-        exit_points = join_elements(exit_points)
+        updates = join_update_elements(updates)
+        entry_points = join_entryPoint_elements(entry_points)
+        exit_points = join_exitPoint_elements(exit_points)
 
         # ### PREPARE METADATA
         # prepare device liveness
@@ -354,7 +356,7 @@ class CombinedGPURegion(PatternInfo):
 
         self.data_region_depend_in, self.data_region_depend_out = get_dependencies_as_metadata(pet, all_dependencies)
 
-    def __str__(self):
+    def __str__(self) -> str:
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
     def to_string(self, pet: PEGraphX) -> str:

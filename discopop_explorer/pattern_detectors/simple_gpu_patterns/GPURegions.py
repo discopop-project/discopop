@@ -69,7 +69,7 @@ class GPURegionInfo(PatternInfo):
         self.end_line = max([l.end_line for l in contained_loops])
         self.project_folder_path = project_folder_path
 
-    def __str__(self):
+    def __str__(self) -> str:
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
     def to_string(self, pet: PEGraphX) -> str:
@@ -141,7 +141,7 @@ class GPURegions:
     consumed_vars: Dict[Tuple[str, ...], List[str]]
     project_folder_path: str
 
-    def __init__(self, pet, gpu_patterns, project_folder_path):
+    def __init__(self, pet: PEGraphX, gpu_patterns: List[GPULoopPattern], project_folder_path: str):
         self.loopsInRegion = []
         self.gpu_loop_patterns = gpu_patterns
         self.project_folder_path = project_folder_path

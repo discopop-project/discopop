@@ -345,7 +345,7 @@ def show(graph: nx.DiGraph, show_dataflow: bool = True, show_mutex_edges: bool =
     for idx, node in enumerate(graph.nodes):
         idx_to_node_dict[idx] = node
 
-    def update_annot(ind, node_ids_list):
+    def update_annot(ind: Any, node_ids_list: Any) -> None:
         node_idx = ind["ind"][0]
         node_id = node_ids_list[node_idx]
         xy = pos[node_id]
@@ -355,7 +355,7 @@ def show(graph: nx.DiGraph, show_dataflow: bool = True, show_mutex_edges: bool =
         text = data_at(graph, node_id).get_hover_text()
         annot.set_text(text)
 
-    def hover(event):
+    def hover(event: Any) -> None:
         vis = annot.get_visible()
         if event.inaxes == ax:
             for node_type in node_insertion_sequence:
@@ -620,7 +620,7 @@ def __initialize_availability_worker(graph: nx.DiGraph, arguments: OptimizerArgu
     global_arguments = arguments
 
 
-def __parallel_get_decisions_from_node_recursive(function_node):
+def __parallel_get_decisions_from_node_recursive(function_node: int) -> Tuple[int, List[List[int]]]:
     global global_graph
     global global_arguments
 
@@ -662,7 +662,7 @@ def __parallel_get_decisions_from_node_recursive(function_node):
     return function_node, get_decisions_from_node_recursive(function_node, [])
 
 
-def __parallel_get_decisions_from_node(function_node):
+def __parallel_get_decisions_from_node(function_node: int) -> Tuple[int, List[List[int]]]:
     global global_graph
     global global_arguments
 

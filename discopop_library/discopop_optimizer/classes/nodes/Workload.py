@@ -142,7 +142,7 @@ class Workload(GenericNode):
         # since workloads do not modify their children, the performance model of other is simply added to self.
         return self.performance_model.parallelizable_plus_combine(other)
 
-    def register_successor(self, other):
+    def register_successor(self, other: CostModel) -> CostModel:
         """Registers a successor node for the given model.
         Does not modify the stored model in self or other."""
         # sequential composition is depicted by simply adding the performance models

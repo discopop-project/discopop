@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from __future__ import annotations
 import os
 from typing import Set, Dict, cast, Optional, List, Tuple
 
@@ -81,7 +82,7 @@ class Update(object):
     #                        )
     #                    )
 
-    def __str__(self):
+    def __str__(self) -> str:
         result_str = ""
         result_str += (
             str(self.update_type)
@@ -101,7 +102,9 @@ class Update(object):
         )
         return result_str
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Update):
+            raise ValueError("other is not of correct type!")
         if (
             self.synchronous_source_cu_id,
             self.asynchronous_source_cu_id,
@@ -126,7 +129,7 @@ class Update(object):
             return True
         return False
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(
             (
                 self.synchronous_source_cu_id,
@@ -287,7 +290,7 @@ class Update(object):
             else:
                 self.variable_names.add(VarName("UNDETERMINED(" + mem_reg + ")"))
 
-    def remove_dummy_marks(self):
+    def remove_dummy_marks(self) -> None:
         if self.sink_cu_id.startswith("dummy:"):
             self.sink_cu_id = NodeID(self.sink_cu_id[6:])
         if self.synchronous_source_cu_id.startswith("dummy:"):

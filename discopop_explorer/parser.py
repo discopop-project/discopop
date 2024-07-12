@@ -13,9 +13,10 @@ import warnings
 from collections import defaultdict
 from dataclasses import dataclass
 from os.path import abspath, dirname
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from lxml import objectify  # type:ignore
+from lxml.objectify import ObjectifiedElement  # type: ignore
 
 # Map to record which line belongs to read set of nodes. LID -> NodeIds
 readlineToCUIdMap = defaultdict(set)  # type: ignore
@@ -46,7 +47,7 @@ class LoopData(object):
     maximum_iteration_count: int
 
 
-def __parse_xml_input(xml_fd):
+def __parse_xml_input(xml_fd: TextIOWrapper) -> Dict[str, ObjectifiedElement]:
     xml_content = ""
     for line in xml_fd.readlines():
         if not (line.rstrip().endswith("</Nodes>") or line.rstrip().endswith("<Nodes>")):
@@ -68,12 +69,13 @@ def __parse_xml_input(xml_fd):
             # entry exists already! merge the two entries
             pass
         else:
+            tmp = node.get("id")
             cu_dict[node.get("id")] = node
 
     return cu_dict
 
 
-def __map_dummy_nodes(cu_dict):
+def __map_dummy_nodes(cu_dict: Dict[str, ObjectifiedElement]) -> Dict[str, ObjectifiedElement]:
     dummy_node_args_to_id_map = defaultdict(list)
     func_node_args_to_id_map = dict()
     dummy_to_func_ids_map = dict()
@@ -208,12 +210,14 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
     return dependencies_list, loop_data_list
 
 
-def parse_inputs(cu_file, dependencies, reduction_file, file_mapping):
+def parse_inputs(
+    cu_file: str, dependencies_file_path: str, reduction_file: str, file_mapping: str
+) -> Tuple[Dict[str, ObjectifiedElement], List[DependenceItem], Dict[str, LoopData], Optional[List[Dict[str, str]]]]:
     with open(cu_file) as f:
         cu_dict = __parse_xml_input(f)
     cu_dict = __map_dummy_nodes(cu_dict)
 
-    with open(dependencies) as f:
+    with open(dependencies_file_path) as f:
         dependencies, loop_info = __parse_dep_file(f, dirname(abspath(cu_file)))
 
     loop_data = {loop.line_id: loop for loop in loop_info}
@@ -245,7 +249,7 @@ def parse_inputs(cu_file, dependencies, reduction_file, file_mapping):
     return cu_dict, dependencies, loop_data, reduction_vars
 
 
-def is_reduction(reduction_line, fmap_lines, file_mapping):
+def is_reduction(reduction_line: str, fmap_lines: List[str], file_mapping: str) -> bool:
     rex = re.compile("FileID : ([0-9]*) Loop Line Number : [0-9]* Reduction Line Number : ([0-9]*) ")
     if not rex:
         return False
@@ -265,7 +269,7 @@ def is_reduction(reduction_line, fmap_lines, file_mapping):
     return possible_reduction(file_line, src_lines)
 
 
-def possible_reduction(line, src_lines):
+def possible_reduction(line: int, src_lines: List[str]) -> bool:
     assert line > 0 and line <= len(src_lines), "invalid src line"
     src_line = src_lines[line - 1]
     while not ";" in src_line:
@@ -299,7 +303,7 @@ def possible_reduction(line, src_lines):
     return True
 
 
-def get_filepath(file_id, fmap_lines, file_mapping):
+def get_filepath(file_id: int, fmap_lines: List[str], file_mapping: str) -> str:
     assert file_id > 0 and file_id <= len(fmap_lines), "invalid file id"
     line = fmap_lines[file_id - 1]
     tokens = line.split(sep="\t")
@@ -309,7 +313,7 @@ def get_filepath(file_id, fmap_lines, file_mapping):
         return tokens[1]
 
 
-def get_enclosed_str(data):
+def get_enclosed_str(data: str) -> str:
     num_open_brackets = 1
     for i in range(0, len(data)):
         if data[i] == "[":
@@ -318,10 +322,11 @@ def get_enclosed_str(data):
             num_open_brackets = num_open_brackets - 1
             if num_open_brackets == 0:
                 return data[0:i]
+    raise ValueError("No enclosed str found!")
 
 
-def find_array_indices(array_name, src_line):
-    indices = []
+def find_array_indices(array_name: str, src_line: str) -> List[str]:
+    indices: List[str] = []
     uses = list(re.finditer(array_name, src_line))
     for use in uses:
         if src_line[use.end()] == "[":
