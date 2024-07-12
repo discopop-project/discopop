@@ -210,7 +210,7 @@ def show_options(
         )
         export_code_button.grid(row=0, column=2)
 
-        def __update_selection(cm, ctx):
+        def __update_selection(cm: CostModel, ctx: ContextObject) -> None:
             experiment.selected_paths_per_function[function_root] = (cm, ctx)
             experiment.substitutions[cast(Symbol, function_root.sequential_costs)] = (
                 experiment.selected_paths_per_function[function_root][0].sequential_costs

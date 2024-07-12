@@ -18,11 +18,11 @@ class ConfigProviderArguments(object):
     return_full_config: bool
     return_version_string: bool
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
+    def __validate(self) -> None:
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.__dict__)

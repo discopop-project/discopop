@@ -175,7 +175,7 @@ def show_update_graph(graph: nx.DiGraph, configuration: OptimizerOutputPattern, 
     for idx, node in enumerate(graph.nodes):
         idx_to_node_dict[idx] = node
 
-    def update_annot(ind, node_ids_list):
+    def update_annot(ind: Any, node_ids_list: Any) -> None:
         node_idx = ind["ind"][0]
         node_id = node_ids_list[node_idx]
         xy = pos[node_id]
@@ -185,7 +185,7 @@ def show_update_graph(graph: nx.DiGraph, configuration: OptimizerOutputPattern, 
         text = data_at(graph, node_id).get_hover_text()
         annot.set_text(text)
 
-    def hover(event):
+    def hover(event: Any) -> None:
         vis = annot.get_visible()
         if event.inaxes == ax:
             for node_type in node_insertion_sequence:

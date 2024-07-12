@@ -61,7 +61,7 @@ class UnpackedSuggestion(object):
             if self.values["device_type"] is not None:
                 self.device_type = self.values["device_type"]
 
-    def __get_device_update_pragmas(self):
+    def __get_device_update_pragmas(self) -> List[Pragma]:
         pragmas = []
         pragma = Pragma()
 
@@ -75,7 +75,7 @@ class UnpackedSuggestion(object):
         delete_data: bool = self.values["delete_data"]
         copy_delete_data: bool = self.values["copy_delete_data"]
 
-        def get_range_str(r):
+        def get_range_str(r: Optional[Tuple[int, int]]) -> str:
             return "" if r is None else "[" + str(r[0]) + ":" + str(r[1]) + "]"
 
         if source_device_id == self.host_device_id and target_device_id == self.host_device_id:

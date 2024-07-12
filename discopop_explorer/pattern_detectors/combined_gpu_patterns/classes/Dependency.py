@@ -32,7 +32,7 @@ class Dependency(object):
         self.var_names = var_names
         self.memory_regions = memory_regions
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             "Dependency("
             + self.source

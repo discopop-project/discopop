@@ -1,0 +1,1 @@
+1	/home/lukas/git/discopop/test/end_to_end/reduction_pattern/negative/case_1/src/code.cpp

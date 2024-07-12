@@ -6,18 +6,18 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from .PEGraphX import Node, NodeID, PEGraphX
-from typing import List, Optional, Set
+from .PEGraphX import FunctionNode, Node, NodeID, PEGraphX
+from typing import Any, List, Optional, Set, Tuple
 
 global_pet: Optional[PEGraphX] = None
 
 
-def pet_function_metadata_initialize_worker(pet):
+def pet_function_metadata_initialize_worker(pet: PEGraphX) -> None:
     global global_pet
     global_pet = pet
 
 
-def pet_function_metadata_parse_func(func_node):
+def pet_function_metadata_parse_func(func_node: FunctionNode) -> Tuple[NodeID, Any, set[NodeID]]:
     if global_pet is None:
         raise ValueError("global_pet is None!")
 

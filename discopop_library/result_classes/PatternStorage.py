@@ -27,7 +27,7 @@ class PatternStorage(object):
     optimizer_output: List[PatternBase]
     merged_pattern: List[PatternBase]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.optimizer_output = []
         self.merged_pattern = []
 

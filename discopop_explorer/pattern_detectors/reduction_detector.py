@@ -50,7 +50,7 @@ class ReductionInfo(PatternInfo):
         self.shared = s
         self.reduction = r
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Reduction at: {self.node_id}\n"
             f"Start line: {self.start_line}\n"
@@ -100,14 +100,14 @@ def run_detection(
     return result
 
 
-def __initialize_worker(pet):
+def __initialize_worker(pet: PEGraphX) -> None:
     global global_pet
     global_pet = pet
 
 
-def __check_node(param_tuple):
+def __check_node(param_tuple: LoopNode) -> List[ReductionInfo]:
     global global_pet
-    local_result = []
+    local_result: List[ReductionInfo] = []
     node = param_tuple
     if global_pet is None:
         raise ValueError("global_pet is None!")

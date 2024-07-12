@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Tuple, TypeVar, Union, overload
+from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union, overload
 
 import numpy as np
 
@@ -65,7 +65,7 @@ class PureDataMicrobench(Microbench):
     def __getitem__(self, key: Tuple[MicrobenchType, MicrobenchDimension, MicrobenchCoordinate]) -> List[float]: ...
 
     # allow to use this class like a dictionary
-    def __getitem__(self, key):
+    def __getitem__(self, key: Any) -> Any:
         if isinstance(key, MicrobenchType):
             return self.measurements[key]
         elif (
@@ -87,7 +87,7 @@ class PureDataMicrobench(Microbench):
             raise KeyError("Invalid key type:" + str(type(key)))
 
     # allow to use this class like a dictionary
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: Any, value: Any) -> None:
         if isinstance(key, MicrobenchType):
             if not isinstance(value, Dict):
                 raise ValueError(
@@ -119,25 +119,25 @@ class PureDataMicrobench(Microbench):
         else:
             raise KeyError("Invalid key type:" + str(type(key)))
 
-    def removeOutliers(self):
+    def removeOutliers(self) -> None:
         for type, dimMap in self.measurements.items():
             for dim, coordMap in dimMap.items():
                 for coord, values in coordMap.items():
                     self.measurements[type][dim][coord] = __remove_outliers_using_iqr(values)
 
-    def useMedian(self):
+    def useMedian(self) -> None:
         for type, dimMap in self.measurements.items():
             for dim, coordMap in dimMap.items():
                 for coord, values in coordMap.items():
                     self.measurements[type][dim][coord] = [np.median(values).item()]
 
-    def useMean(self):
+    def useMean(self) -> None:
         for type, dimMap in self.measurements.items():
             for dim, coordMap in dimMap.items():
                 for coord, values in coordMap.items():
                     self.measurements[type][dim][coord] = [np.mean(values).item()]
 
-    def removeZeroParameters(self):
+    def removeZeroParameters(self) -> None:
         for type, dimMap in self.measurements.items():
             for dim, coordMap in dimMap.items():
                 for coord in list(coordMap.keys()):

@@ -113,7 +113,7 @@ def query_user_for_symbol_values(
                     col.configure(background="red")
         return ret_val
 
-    def onPress():
+    def onPress() -> None:
         if not validate():
             return
         # fetch entries

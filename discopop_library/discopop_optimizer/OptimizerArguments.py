@@ -32,10 +32,10 @@ class OptimizerArguments(GeneralArguments):
     single_suggestions: bool
     pin_function_calls_to_host: bool
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
+    def __validate(self) -> None:
         """Validate the arguments passed to the discopop_optimizer, e.g check if given files exist"""
         if self.doall_microbench_file != "None":
             if not os.path.isfile(self.doall_microbench_file):

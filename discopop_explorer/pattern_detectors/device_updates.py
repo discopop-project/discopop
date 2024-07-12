@@ -53,7 +53,7 @@ class DeviceUpdateInfo(PatternInfo):
         self.openmp_source_device_id = openmp_source_device_id
         self.openmp_target_device_id = openmp_target_device_id
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             # f"Device update at: {self.node_id}\n" # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
             f"Start line: {self.start_line}\n"

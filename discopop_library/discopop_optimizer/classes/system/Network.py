@@ -18,7 +18,7 @@ class Network(object):
     __transfer_speeds: Dict[Tuple[Device, Device], Expr]  # (MB/s)
     __transfer_initialization_costs: Dict[Tuple[Device, Device], Expr]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.__host_device = None
         self.__transfer_speeds = dict()
         self.__transfer_initialization_costs = dict()

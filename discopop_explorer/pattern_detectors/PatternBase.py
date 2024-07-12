@@ -44,7 +44,7 @@ class PatternBase(object):
         self.end_line = node.end_position()
         self.applicable_pattern = True
 
-    def to_json(self):
+    def to_json(self) -> str:
         dic = self.__dict__
         keys = [k for k in dic.keys()]
         for key in keys:

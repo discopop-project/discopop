@@ -65,10 +65,10 @@ class ExplorerArguments(GeneralArguments):
     microbench_file: Optional[str]
     load_existing_doall_and_reduction_patterns: bool
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
+    def __validate(self) -> None:
         """Validate the arguments passed to the discopop_explorer, e.g check if given files exist"""
         validation_failure = False
 
@@ -114,7 +114,7 @@ def __run(
     hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None,
     load_existing_doall_and_reduction_patterns: bool = False,
 ) -> DetectionResult:
-    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
+    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))  # type: ignore
     print("PET CREATION FINISHED.")
     # pet.show()
     # TODO add visualization

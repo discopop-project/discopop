@@ -179,7 +179,7 @@ def cu_instantiation_input_cpp(pet: PEGraphX, output_file: str) -> None:
 def wrapper(cu_xml: str, dep_file: str, loop_counter_file: str, reduction_file: str, output_file: str) -> None:
     """Wrapper to generate the Data_CUInst.txt file, required for the generation of CUInstResult.txt"""
     # 1. generate PET Graph
-    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file))
+    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, loop_counter_file, reduction_file))  # type: ignore
     # 2. Generate Data_CUInst.txt
     cu_instantiation_input_cpp(pet, output_file)
 

@@ -108,7 +108,7 @@ class TaskParallelismInfo(PatternInfo):
         self.atomic_sections: List[str] = []
         self.task_group: List[int] = []
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Task parallelism at CU: {self.node_id}\n"
             f"CU Start line: {self.start_line}\n"
@@ -139,7 +139,7 @@ class ParallelRegionInfo(PatternInfo):
         self.pragma = "#pragma omp parallel\n\t#pragma omp single"
         self.type = type
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Task Parallel Region at CU: {self.node_id}\n"
             f"CU Start line: {self.start_line}\n"
@@ -166,7 +166,7 @@ class OmittableCuInfo(PatternInfo):
         self.out_dep: List[Optional[str]] = []
         self.in_out_dep: List[Optional[str]] = []
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Omittable CU: {self.node_id}\n"
             f"CU Start line: {self.start_line}\n"
