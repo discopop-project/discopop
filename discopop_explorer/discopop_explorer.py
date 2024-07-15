@@ -283,14 +283,26 @@ def run(arguments: ExplorerArguments) -> None:
             sympyExpr = extrapBench.getFunctionSympy()
             print(sympyExpr)
             print(sympyExpr.free_symbols)
-    except BaseException:
-        # required to correctly write profiling data if the program terminates
-        pass
 
-    if arguments.enable_profiling_dump_file is not None:
-        profile.disable()
-        if os.path.exists(arguments.enable_profiling_dump_file):
-            os.remove(arguments.enable_profiling_dump_file)
-        with open(arguments.enable_profiling_dump_file, "w+") as f:
-            stats = pstats2.Stats(profile, stream=f).sort_stats("time").reverse_order()
-            stats.print_stats()
+        # print profiling results
+        if arguments.enable_profiling_dump_file is not None:
+            profile.disable()
+            if os.path.exists(arguments.enable_profiling_dump_file):
+                os.remove(arguments.enable_profiling_dump_file)
+            with open(arguments.enable_profiling_dump_file, "w+") as f:
+                stats = pstats2.Stats(profile, stream=f).sort_stats("tottime").reverse_order()
+                stats.print_stats()
+        
+    except BaseException as be:
+        # required to correctly write profiling data if the program terminates
+        # print profiling results
+        if arguments.enable_profiling_dump_file is not None:
+            profile.disable()
+            if os.path.exists(arguments.enable_profiling_dump_file):
+                os.remove(arguments.enable_profiling_dump_file)
+            with open(arguments.enable_profiling_dump_file, "w+") as f:
+                stats = pstats2.Stats(profile, stream=f).sort_stats("tottime").reverse_order()
+                stats.print_stats()
+        raise be
+
+    
