@@ -34,11 +34,13 @@ class CodeConfiguration(object):
     def execute(self)->None:
         # compile code
         logger.info("Compiling configuration: " + str(self))
-        subprocess.run("./DP_COMPILE.sh", cwd=self.root_path, executable="/bin/bash", shell=True)
+        compile_result = subprocess.run("./DP_COMPILE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True)
+        logger.getChild("compilationOutput").debug(str(compile_result.stdout.decode("utf-8")))
         # execute code
         logger.info("Executing configuration: " + str(self))
         start_time = time.time()
-        result = subprocess.run("./DP_EXECUTE.sh", cwd=self.root_path, executable="/bin/bash", shell=True)
+        result = subprocess.run("./DP_EXECUTE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True)
+        logger.getChild("executionOutput").debug(str(result.stdout.decode("utf-8")))
         end_time = time.time()
         required_time = end_time - start_time
 
@@ -46,14 +48,15 @@ class CodeConfiguration(object):
         result_valid = True
         if os.path.exists(os.path.join(self.root_path, "DP_VALIDATE.sh")):
             logger.info("Checking result validity: " + str(self))
-            validity_check_result = subprocess.run("./DP_VALIDATE.sh", cwd=self.root_path, executable="/bin/bash", shell=True)
+            validity_check_result = subprocess.run("./DP_VALIDATE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True)
+            logger.getChild("validationOutput").debug(str(validity_check_result.stdout.decode("utf-8")))
             if validity_check_result.returncode != 0:
                 result_valid = False
 
         # reporting
-        logger.info("Execution took " + str(round(required_time, 4)) + " s")
-        logger.info("Execution return code: " + str(result.returncode))
-        logger.info("Execution result valid: " + str(result_valid))
+        logger.debug("Execution took " + str(round(required_time, 4)) + " s")
+        logger.debug("Execution return code: " + str(result.returncode))
+        logger.debug("Execution result valid: " + str(result_valid))
 
         self.execution_result = ExecutionResult(required_time, result.returncode, result_valid)
 

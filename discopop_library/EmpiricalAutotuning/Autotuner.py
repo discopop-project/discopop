@@ -90,7 +90,7 @@ def run(arguments: AutotunerArguments) -> None:
     stats_str += "[time]\t[applied suggestions]\n"
     for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
         stats_str += str(round(stats[1], 3)) + "s" + "\t" + str(stats[0]) + "\n"
-    logger.debug(stats_str)
+    logger.info(stats_str)
 
     # calculate result statistics
     speedup = cast(ExecutionResult, reference_configuration.execution_result).runtime / cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime
@@ -100,11 +100,9 @@ def run(arguments: AutotunerArguments) -> None:
     if best_suggestion_configuration[1] is None:
         print("No valid configuration found!")
     else:
-        print("")
-        print("------------------------------")
-        print("Best configuration located a1t:")
-        print(best_suggestion_configuration[1].root_path)
-        print("Applied suggestions: ")
-        print(best_suggestion_configuration[0])
+        print("##############################")
+        print("Best configuration located at: " + best_suggestion_configuration[1].root_path)
+        print("Applied suggestions: " + str(best_suggestion_configuration[0]))
         print("Speedup: ", round(speedup, 3))
+        print("##############################")
 
