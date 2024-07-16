@@ -36,8 +36,6 @@ def main() -> None:
     setup_logger(arguments)
     arguments.log()
     run(arguments)
-    
-
 
 
 if __name__ == "__main__":

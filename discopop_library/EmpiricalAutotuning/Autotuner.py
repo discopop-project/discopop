@@ -18,12 +18,12 @@ logger = logging.getLogger("Autotuner")
 configuration_counter = 1
 
 
-
-def get_unique_configuration_id()->int:
+def get_unique_configuration_id() -> int:
     global configuration_counter
     buffer = configuration_counter
     configuration_counter += 1
     return buffer
+
 
 def run(arguments: AutotunerArguments) -> None:
     logger.info("Starting discopop autotuner.")
@@ -35,7 +35,9 @@ def run(arguments: AutotunerArguments) -> None:
     debug_stats.append(([], cast(ExecutionResult, reference_configuration.execution_result).runtime))
 
     # load hotspots
-    hsl_arguments = HotspotLoaderArguments(arguments.log_level, arguments.write_log, False, arguments.dot_dp_path, True, False, True, True, True)
+    hsl_arguments = HotspotLoaderArguments(
+        arguments.log_level, arguments.write_log, False, arguments.dot_dp_path, True, False, True, True, True
+    )
     hotspot_information = load_hotspots(hsl_arguments)
     logger.debug("loaded hotspots")
     # load suggestions
@@ -70,18 +72,28 @@ def run(arguments: AutotunerArguments) -> None:
                 tmp_config.apply_suggestions(arguments, current_config)
                 tmp_config.execute()
                 # only consider valid code
-                if cast(ExecutionResult, tmp_config.execution_result).result_valid and cast(ExecutionResult, tmp_config.execution_result).return_code == 0:
+                if (
+                    cast(ExecutionResult, tmp_config.execution_result).result_valid
+                    and cast(ExecutionResult, tmp_config.execution_result).return_code == 0
+                ):
                     suggestion_effects.append((current_config, tmp_config))
                     debug_stats.append((current_config, cast(ExecutionResult, tmp_config.execution_result).runtime))
             # add current best configuration for reference / to detect "no suggestions is beneficial"
             suggestion_effects.append(best_suggestion_configuration)
 
-            logger.debug("Suggestion effects:\n"+str([(str(t[0]), str(t[1].execution_result)) for t in suggestion_effects]))
+            logger.debug(
+                "Suggestion effects:\n" + str([(str(t[0]), str(t[1].execution_result)) for t in suggestion_effects])
+            )
 
             # select the best option and save it in the current best_configuration
             buffer = sorted(suggestion_effects, key=lambda x: cast(ExecutionResult, x[1].execution_result).runtime)[0]
             best_suggestion_configuration = buffer
-            logger.debug("Current best configuration: " + str(best_suggestion_configuration[0]) + " stored at " + best_suggestion_configuration[1].root_path)
+            logger.debug(
+                "Current best configuration: "
+                + str(best_suggestion_configuration[0])
+                + " stored at "
+                + best_suggestion_configuration[1].root_path
+            )
             # continue with the next loop
 
     # show debug stats
@@ -92,9 +104,11 @@ def run(arguments: AutotunerArguments) -> None:
     logger.info(stats_str)
 
     # calculate result statistics
-    speedup = cast(ExecutionResult, reference_configuration.execution_result).runtime / cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime
+    speedup = (
+        cast(ExecutionResult, reference_configuration.execution_result).runtime
+        / cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime
+    )
 
-    
     # show result and statistics
     if best_suggestion_configuration[1] is None:
         print("No valid configuration found!")
@@ -104,4 +118,3 @@ def run(arguments: AutotunerArguments) -> None:
         print("Applied suggestions: " + str(best_suggestion_configuration[0]))
         print("Speedup: ", round(speedup, 3))
         print("##############################")
-

@@ -13,6 +13,7 @@ from discopop_library.PatchApplicator.patch_applicator import run as apply_patch
 
 logger = logging.getLogger("CodeConfiguration")
 
+
 class CodeConfiguration(object):
     root_path: str
     config_dot_dp_path: str
@@ -28,18 +29,22 @@ class CodeConfiguration(object):
         self.execution_result = None
         logger.debug("Created configuration: " + root_path)
 
-    def __str__(self)->str:
+    def __str__(self) -> str:
         return self.root_path
 
-    def execute(self)->None:
+    def execute(self) -> None:
         # compile code
         logger.info("Compiling configuration: " + str(self))
-        compile_result = subprocess.run("./DP_COMPILE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True)
+        compile_result = subprocess.run(
+            "./DP_COMPILE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True
+        )
         logger.getChild("compilationOutput").debug(str(compile_result.stdout.decode("utf-8")))
         # execute code
         logger.info("Executing configuration: " + str(self))
         start_time = time.time()
-        result = subprocess.run("./DP_EXECUTE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True)
+        result = subprocess.run(
+            "./DP_EXECUTE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True
+        )
         logger.getChild("executionOutput").debug(str(result.stdout.decode("utf-8")))
         end_time = time.time()
         required_time = end_time - start_time
@@ -48,7 +53,9 @@ class CodeConfiguration(object):
         result_valid = True
         if os.path.exists(os.path.join(self.root_path, "DP_VALIDATE.sh")):
             logger.info("Checking result validity: " + str(self))
-            validity_check_result = subprocess.run("./DP_VALIDATE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True)
+            validity_check_result = subprocess.run(
+                "./DP_VALIDATE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True
+            )
             logger.getChild("validationOutput").debug(str(validity_check_result.stdout.decode("utf-8")))
             if validity_check_result.returncode != 0:
                 result_valid = False
@@ -60,48 +67,49 @@ class CodeConfiguration(object):
 
         self.execution_result = ExecutionResult(required_time, result.returncode, result_valid)
 
-    def create_copy(self, get_new_configuration_id: Callable[[], int])->CodeConfiguration:
-        # create a copy of the project folder 
-        dest_path = self.root_path + "_dpautotune_"+str(get_new_configuration_id())
+    def create_copy(self, get_new_configuration_id: Callable[[], int]) -> CodeConfiguration:
+        # create a copy of the project folder
+        dest_path = self.root_path + "_dpautotune_" + str(get_new_configuration_id())
         if os.path.exists(dest_path):
             shutil.rmtree(dest_path)
         shutil.copytree(self.root_path, dest_path)
         # get updated .discopop folder location
         new_dot_discopop_path = self.config_dot_dp_path.replace(self.root_path, dest_path)
         logger.debug("Copied folder: " + self.root_path + " to " + dest_path)
-        logger.debug("Set "+ self.config_dot_dp_path + " to " + new_dot_discopop_path)
+        logger.debug("Set " + self.config_dot_dp_path + " to " + new_dot_discopop_path)
         # update FileMapping.txt in new .discopop folder
         with open(os.path.join(new_dot_discopop_path, "NewFileMapping.txt"), "w+") as o:
             with open(os.path.join(new_dot_discopop_path, "FileMapping.txt"), "r") as f:
                 for line in f.readlines():
                     line = line.replace(self.root_path, dest_path)
                     o.write(line)
-        shutil.move(os.path.join(new_dot_discopop_path, "NewFileMapping.txt"), os.path.join(new_dot_discopop_path, "FileMapping.txt"))
+        shutil.move(
+            os.path.join(new_dot_discopop_path, "NewFileMapping.txt"),
+            os.path.join(new_dot_discopop_path, "FileMapping.txt"),
+        )
         logger.debug("Updated " + os.path.join(new_dot_discopop_path, "FileMapping.txt"))
 
-        
         # create a new CodeConfiguration object
         return CodeConfiguration(dest_path, new_dot_discopop_path)
-    
-    def apply_suggestions(self, arguments: AutotunerArguments, suggestion_ids: List[SUGGESTION_ID])->None:
+
+    def apply_suggestions(self, arguments: AutotunerArguments, suggestion_ids: List[SUGGESTION_ID]) -> None:
         """Applies the given suggestion to the code configuration via discopop_patch_applicator"""
         sub_logger = logger.getChild("apply_suggestions")
-        
+
         sub_logger.debug("Applying patch applicator for: " + str(suggestion_ids))
         suggestion_ids_str = [str(id) for id in suggestion_ids]
 
         save_dir = os.getcwd()
         os.chdir(self.config_dot_dp_path)
         try:
-            ret_val = apply_patches(PatchApplicatorArguments(arguments.log_level, arguments.write_log, False, suggestion_ids_str, [], False, False, False))
+            ret_val = apply_patches(
+                PatchApplicatorArguments(
+                    arguments.log_level, arguments.write_log, False, suggestion_ids_str, [], False, False, False
+                )
+            )
             sub_logger.debug("Patch applicator return code: " + str(ret_val))
             os.chdir(save_dir)
         except Exception as ex:
             sub_logger.debug("Got Exception during call to patch applicator.")
             os.chdir(save_dir)
             raise ex
-        
-        
-
-
-

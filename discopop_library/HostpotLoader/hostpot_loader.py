@@ -21,7 +21,9 @@ NAME = str
 AVERAGE_RUNTIME = float
 
 
-def run(arguments: HotspotLoaderArguments) -> Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME, AVERAGE_RUNTIME]]]:
+def run(
+    arguments: HotspotLoaderArguments,
+) -> Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME, AVERAGE_RUNTIME]]]:
     """Loads Hotspots for processing in other tools of the framework"""
 
     logger = logging.getLogger("HotspotLoader")
@@ -52,8 +54,8 @@ def run(arguments: HotspotLoaderArguments) -> Dict[HotspotType, List[Tuple[FILEI
                                 int(entry["lineNum"]),
                                 get_HotspotNodeType_from_string(entry["typ"]),
                                 entry["name"],
-                                float(entry["avr"])
+                                float(entry["avr"]),
                             )
                         )
-    logger.info("Loaded hotspots:\n"+str(result_dict))
+    logger.info("Loaded hotspots:\n" + str(result_dict))
     return result_dict
