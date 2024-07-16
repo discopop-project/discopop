@@ -1,10 +1,12 @@
 import logging
 import os
-from typing import Optional
+from typing import List, Optional, Tuple, cast
 
 import jsonpickle
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
+from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
+from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -14,6 +16,8 @@ from discopop_library.result_classes.DetectionResult import DetectionResult
 logger = logging.getLogger("Autotuner")
 
 configuration_counter = 1
+
+
 
 def get_unique_configuration_id()->int:
     global configuration_counter
@@ -45,8 +49,9 @@ def run(arguments: AutotunerArguments) -> Optional[CodeConfiguration]:
     detection_result: DetectionResult = jsonpickle.decode(tmp_str)
     logger.debug("loaded suggestions")
 
-    # greedy search for best configuration:
+    # greedy search for best suggestion configuration:
     # for all hotspot types in descending importance:
+    best_suggestion_configuration: List[int] = []
     for hotspot_type in [HotspotType.YES, HotspotType.MAYBE, HotspotType.NO]:
         if hotspot_type not in hotspot_information:
             continue
@@ -59,6 +64,15 @@ def run(arguments: AutotunerArguments) -> Optional[CodeConfiguration]:
             # create code and execute for all applicable suggestions
             applicable_suggestions = get_applicable_suggestion_ids(loop_tuple[0], loop_tuple[1], detection_result)
             logger.debug("--> applicable suggestions: " + str(applicable_suggestions))
+            suggestion_effects: List[Tuple[SUGGESTION_ID, ExecutionResult]] = []
+            for suggestion_id in applicable_suggestions:
+                tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
+                tmp_config.apply_suggestions(arguments, best_suggestion_configuration + [suggestion_id])
+                tmp_config.execute()
+                suggestion_effects.append((suggestion_id, cast(ExecutionResult, tmp_config.execution_result)))
+            logger.debug("Suggestion effects:\n"+str([(str(t[0]), str(t[1])) for t in suggestion_effects]))
+            
+
 
             # select the best option and save it in the current best_configuration
             # continue with the next loop

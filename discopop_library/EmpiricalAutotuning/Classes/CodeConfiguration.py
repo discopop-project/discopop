@@ -4,8 +4,12 @@ import os
 import shutil
 import subprocess
 import time
-from typing import Callable, Optional
+from typing import Callable, List, Optional
+from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
+from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
+from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
+from discopop_library.PatchApplicator.patch_applicator import run as apply_patches
 
 logger = logging.getLogger("CodeConfiguration")
 
@@ -75,5 +79,26 @@ class CodeConfiguration(object):
         
         # create a new CodeConfiguration object
         return CodeConfiguration(dest_path, new_dot_discopop_path)
+    
+    def apply_suggestions(self, arguments: AutotunerArguments, suggestion_ids: List[SUGGESTION_ID])->None:
+        """Applies the given suggestion to the code configuration via discopop_patch_applicator"""
+        sub_logger = logger.getChild("apply_suggestions")
+        
+        sub_logger.debug("Applying patch applicator for: " + str(suggestion_ids))
+        suggestion_ids_str = [str(id) for id in suggestion_ids]
+
+        save_dir = os.getcwd()
+        os.chdir(self.config_dot_dp_path)
+        try:
+            ret_val = apply_patches(PatchApplicatorArguments(arguments.log_level, arguments.write_log, False, suggestion_ids_str, [], False, False, False))
+            sub_logger.debug("Patch applicator return code: " + str(ret_val))
+            os.chdir(save_dir)
+        except Exception as ex:
+            sub_logger.debug("Got Exception during call to patch applicator.")
+            os.chdir(save_dir)
+            raise ex
+        
+        
+
 
 
