@@ -51,7 +51,7 @@ def run(arguments: AutotunerArguments) -> Optional[CodeConfiguration]:
 
     # greedy search for best suggestion configuration:
     # for all hotspot types in descending importance:
-    best_suggestion_configuration: List[int] = []
+    best_suggestion_configuration: List[SUGGESTION_ID] = []
     for hotspot_type in [HotspotType.YES, HotspotType.MAYBE, HotspotType.NO]:
         if hotspot_type not in hotspot_information:
             continue
@@ -64,12 +64,19 @@ def run(arguments: AutotunerArguments) -> Optional[CodeConfiguration]:
             # create code and execute for all applicable suggestions
             applicable_suggestions = get_applicable_suggestion_ids(loop_tuple[0], loop_tuple[1], detection_result)
             logger.debug("--> applicable suggestions: " + str(applicable_suggestions))
-            suggestion_effects: List[Tuple[SUGGESTION_ID, ExecutionResult]] = []
+            suggestion_effects: List[Tuple[List[SUGGESTION_ID], ExecutionResult]] = []
             for suggestion_id in applicable_suggestions:
+                current_config = best_suggestion_configuration + [suggestion_id]
                 tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
-                tmp_config.apply_suggestions(arguments, best_suggestion_configuration + [suggestion_id])
+                tmp_config.apply_suggestions(arguments, current_config)
                 tmp_config.execute()
-                suggestion_effects.append((suggestion_id, cast(ExecutionResult, tmp_config.execution_result)))
+                suggestion_effects.append((current_config, cast(ExecutionResult, tmp_config.execution_result)))
+            # add current best configuration for reference / to detect "no suggestions is beneficial"
+            tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
+            tmp_config.apply_suggestions(arguments, best_suggestion_configuration)
+            tmp_config.execute()
+            suggestion_effects.append((best_suggestion_configuration, cast(ExecutionResult, tmp_config.execution_result)))
+
             logger.debug("Suggestion effects:\n"+str([(str(t[0]), str(t[1])) for t in suggestion_effects]))
             
 
