@@ -27,9 +27,14 @@ class AutotunerArguments(GeneralArguments):
         
         required_files = [
             self.project_path,
-            self.dp_build_path,
             os.path.join(self.project_path, "DP_COMPILE.sh"),
             os.path.join(self.project_path, "DP_EXECUTE.sh"),
+            self.dp_build_path,
+            os.path.join(self.dp_build_path, "FileMapping.txt"),
+            os.path.join(self.dp_build_path, "profiler"),
+            os.path.join(self.dp_build_path, "explorer"),
+            os.path.join(self.dp_build_path, "patch_generator"),
+            os.path.join(self.dp_build_path, "line_mapping.json"),
         ]
         for file in required_files:
             if not os.path.exists(file):
