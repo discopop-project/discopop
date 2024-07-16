@@ -87,6 +87,7 @@ def run(arguments: AutotunerArguments) -> None:
 
     # show debug stats
     stats_str = "Configuration measurements:\n"
+    stats_str += "[time]\t[applied suggestions]\n"
     for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
         stats_str += str(round(stats[1], 3)) + "s" + "\t" + str(stats[0]) + "\n"
     logger.debug(stats_str)
@@ -105,5 +106,5 @@ def run(arguments: AutotunerArguments) -> None:
         print(best_suggestion_configuration[1].root_path)
         print("Applied suggestions: ")
         print(best_suggestion_configuration[0])
-        print("Speedup: ", speedup)
+        print("Speedup: ", round(speedup, 3))
 
