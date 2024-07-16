@@ -16,6 +16,7 @@ class HotspotLoaderArguments(GeneralArguments):
     """Container Class for the arguments passed to the hotspot loader"""
 
     verbose: bool
+    dot_discopop_path: str
     get_loops: bool
     get_functions: bool
     get_YES: bool

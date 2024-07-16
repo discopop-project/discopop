@@ -34,7 +34,11 @@ class AutotunerArguments(GeneralArguments):
             os.path.join(self.dot_dp_path, "profiler"),
             os.path.join(self.dot_dp_path, "explorer"),
             os.path.join(self.dot_dp_path, "patch_generator"),
+            os.path.join(self.dot_dp_path, "hotspot_detection"),
+            os.path.join(self.dot_dp_path, "hotspot_detection", "Hotspots.json"),
             os.path.join(self.dot_dp_path, "line_mapping.json"),
+            
+            
         ]
         for file in required_files:
             if not os.path.exists(file):

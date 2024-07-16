@@ -209,6 +209,7 @@ def run(arguments: ExplorerArguments) -> None:
         hotspots = load_hotspots(
             HotspotLoaderArguments(
                 verbose=True,
+                dot_discopop_path=os.getcwd(),
                 get_loops=True,
                 get_functions=True,
                 get_YES=True,
