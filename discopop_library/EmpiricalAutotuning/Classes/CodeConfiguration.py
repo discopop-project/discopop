@@ -1,8 +1,10 @@
+from __future__ import annotations
 import logging
 import os
+import shutil
 import subprocess
 import time
-from typing import Optional
+from typing import Callable, Optional
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 
 logger = logging.getLogger("CodeConfiguration")
@@ -13,6 +15,8 @@ class CodeConfiguration(object):
 
     def __init__(self, root_path: str):
         self.root_path = root_path
+        if self.root_path.endswith("/"):
+            self.root_path = self.root_path[:-1]
         self.execution_result = None
         logger.debug("Created configuration: " + root_path)
 
@@ -39,21 +43,20 @@ class CodeConfiguration(object):
                 result_valid = False
 
         # reporting
-        logger.info("Execution took " + str(required_time) + " s")
+        logger.info("Execution took " + str(round(required_time, 4)) + " s")
         logger.info("Execution return code: " + str(result.returncode))
         logger.info("Execution result valid: " + str(result_valid))
 
         self.execution_result = ExecutionResult(required_time, result.returncode, result_valid)
 
+    def create_copy(self, get_new_configuration_id: Callable[[], int])->CodeConfiguration:
+        # create a copy of the project folder 
+        dest_path = self.root_path + "_dpautotune_"+str(get_new_configuration_id())
+        if os.path.exists(dest_path):
+            shutil.rmtree(dest_path)
+        shutil.copytree(self.root_path, dest_path)
+        logger.debug("Copied folder: " + self.root_path + " to " + dest_path)
+        # create a new CodeConfiguration object
+        return CodeConfiguration(dest_path)
 
-        # retrieve 
-        
-#        subprocess.run(
-#            cmd,
-#            cwd=cwd,
-#            executable="/bin/bash",
-#            shell=True,
-#            env=env,
-#            stdout=subprocess.DEVNULL,
-#            stderr=subprocess.DEVNULL,
-#            )
+
