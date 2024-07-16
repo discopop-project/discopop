@@ -35,14 +35,8 @@ def main() -> None:
     arguments = parse_args()
     setup_logger(arguments)
     arguments.log()
-    best_configuration = run(arguments)
-    if best_configuration is None:
-        print("No valid configuration found!")
-    else:
-        print("")
-        print("------------------------------")
-        print("Best configuration located at:")
-        print(best_configuration.root_path)
+    run(arguments)
+    
 
 
 

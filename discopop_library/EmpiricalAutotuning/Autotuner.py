@@ -25,19 +25,12 @@ def get_unique_configuration_id()->int:
     configuration_counter += 1
     return buffer
 
-def run(arguments: AutotunerArguments) -> Optional[CodeConfiguration]:
+def run(arguments: AutotunerArguments) -> None:
     logger.info("Starting discopop autotuner.")
 
     # get untuned reference result
     reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path)
     reference_configuration.execute()
-
-
-    # DEBUG
-    # create a copied configuration
-    copied_configuration_1 = reference_configuration.create_copy(get_unique_configuration_id)
-    copied_configuration_1.execute()
-    # !DEBUG
 
     # load hotspots
     hsl_arguments = HotspotLoaderArguments(arguments.log_level, arguments.write_log, False, arguments.dot_dp_path, True, False, True, True, True)
@@ -51,7 +44,8 @@ def run(arguments: AutotunerArguments) -> Optional[CodeConfiguration]:
 
     # greedy search for best suggestion configuration:
     # for all hotspot types in descending importance:
-    best_suggestion_configuration: List[SUGGESTION_ID] = []
+    debug_stats: List[Tuple[List[SUGGESTION_ID], float]] = []
+    best_suggestion_configuration: Tuple[List[SUGGESTION_ID], CodeConfiguration] = ([], reference_configuration)
     for hotspot_type in [HotspotType.YES, HotspotType.MAYBE, HotspotType.NO]:
         if hotspot_type not in hotspot_information:
             continue
@@ -64,27 +58,52 @@ def run(arguments: AutotunerArguments) -> Optional[CodeConfiguration]:
             # create code and execute for all applicable suggestions
             applicable_suggestions = get_applicable_suggestion_ids(loop_tuple[0], loop_tuple[1], detection_result)
             logger.debug("--> applicable suggestions: " + str(applicable_suggestions))
-            suggestion_effects: List[Tuple[List[SUGGESTION_ID], ExecutionResult]] = []
+            suggestion_effects: List[Tuple[List[SUGGESTION_ID], CodeConfiguration]] = []
             for suggestion_id in applicable_suggestions:
-                current_config = best_suggestion_configuration + [suggestion_id]
+                current_config = best_suggestion_configuration[0] + [suggestion_id]
                 tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
                 tmp_config.apply_suggestions(arguments, current_config)
                 tmp_config.execute()
-                suggestion_effects.append((current_config, cast(ExecutionResult, tmp_config.execution_result)))
+                # only consider valid code
+                if cast(ExecutionResult, tmp_config.execution_result).result_valid and cast(ExecutionResult, tmp_config.execution_result).return_code == 0:
+                    suggestion_effects.append((current_config, tmp_config))
+                    debug_stats.append((current_config, cast(ExecutionResult, tmp_config.execution_result).runtime))
             # add current best configuration for reference / to detect "no suggestions is beneficial"
             tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
-            tmp_config.apply_suggestions(arguments, best_suggestion_configuration)
+            tmp_config.apply_suggestions(arguments, best_suggestion_configuration[0])
             tmp_config.execute()
-            suggestion_effects.append((best_suggestion_configuration, cast(ExecutionResult, tmp_config.execution_result)))
+            # only consider valid code
+            if cast(ExecutionResult, tmp_config.execution_result).result_valid and cast(ExecutionResult, tmp_config.execution_result).return_code == 0:
+                suggestion_effects.append((best_suggestion_configuration[0], tmp_config))
+                debug_stats.append((best_suggestion_configuration[0], cast(ExecutionResult, tmp_config.execution_result).runtime))
 
-            logger.debug("Suggestion effects:\n"+str([(str(t[0]), str(t[1])) for t in suggestion_effects]))
-            
-
+            logger.debug("Suggestion effects:\n"+str([(str(t[0]), str(t[1].execution_result)) for t in suggestion_effects]))
 
             # select the best option and save it in the current best_configuration
+            buffer = sorted(suggestion_effects, key=lambda x: cast(ExecutionResult, x[1].execution_result).runtime)[0]
+            best_suggestion_configuration = buffer
+            logger.debug("Current best configuration: " + str(best_suggestion_configuration[0]) + " stored at " + best_suggestion_configuration[1].root_path)
             # continue with the next loop
 
+    # show debug stats
+    stats_str = "Configuration measurements:\n"
+    for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
+        stats_str += str(round(stats[1], 3)) + "s" + "\t" + str(stats[0]) + "\n"
+    logger.debug(stats_str)
 
+    # calculate result statistics
+    speedup = cast(ExecutionResult, reference_configuration.execution_result).runtime / cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime
 
-    # TODO return the best configuration
-    return reference_configuration
+    
+    # show result and statistics
+    if best_suggestion_configuration[1] is None:
+        print("No valid configuration found!")
+    else:
+        print("")
+        print("------------------------------")
+        print("Best configuration located a1t:")
+        print(best_suggestion_configuration[1].root_path)
+        print("Applied suggestions: ")
+        print(best_suggestion_configuration[0])
+        print("Speedup: ", speedup)
+
