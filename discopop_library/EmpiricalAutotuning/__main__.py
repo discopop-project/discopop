@@ -18,7 +18,7 @@ def parse_args() -> AutotunerArguments:
                         DP_COMPILER.sh must allow the inclusion of OpenMP pragmas into the code. \
                         DP_EXECUTE.sh may return not 0, if either the execution or validation of the result failed. \
                         A third script DP_VALIDATE.sh might be added to add a validation step, where return code 0 is interpreted as a success, i.e. a valid result.")
-    parser.add_argument("--dp-build-path", type=str, default=os.path.join(os.getcwd(), ".discopop"), help="Path to the .discopop folder.")
+    parser.add_argument("--dot-dp-path", type=str, default=os.path.join(os.getcwd(), ".discopop"), help="Path to the .discopop folder.")
     # fmt: on
 
     arguments = parser.parse_args()
@@ -27,7 +27,7 @@ def parse_args() -> AutotunerArguments:
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
         project_path=arguments.project_path,
-        dp_build_path=arguments.dp_build_path,
+        dot_dp_path=arguments.dot_dp_path,
     )
 
 

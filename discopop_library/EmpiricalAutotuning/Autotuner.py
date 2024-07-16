@@ -17,7 +17,7 @@ def run(arguments: AutotunerArguments) -> Optional[CodeConfiguration]:
     logger.info("Starting discopop autotuner.")
 
     # get untuned reference result
-    reference_configuration = CodeConfiguration(arguments.project_path)
+    reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path)
     reference_configuration.execute()
 
 

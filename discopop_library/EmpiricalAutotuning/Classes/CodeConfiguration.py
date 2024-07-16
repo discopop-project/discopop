@@ -11,12 +11,16 @@ logger = logging.getLogger("CodeConfiguration")
 
 class CodeConfiguration(object):
     root_path: str
+    config_dot_dp_path: str
     execution_result: Optional[ExecutionResult]
 
-    def __init__(self, root_path: str):
+    def __init__(self, root_path: str, config_dot_dp_path: str):
         self.root_path = root_path
         if self.root_path.endswith("/"):
             self.root_path = self.root_path[:-1]
+        self.config_dot_dp_path = config_dot_dp_path
+        if self.config_dot_dp_path.endswith("/"):
+            self.config_dot_dp_path = self.config_dot_dp_path[:-1]
         self.execution_result = None
         logger.debug("Created configuration: " + root_path)
 
@@ -55,8 +59,21 @@ class CodeConfiguration(object):
         if os.path.exists(dest_path):
             shutil.rmtree(dest_path)
         shutil.copytree(self.root_path, dest_path)
+        # get updated .discopop folder location
+        new_dot_discopop_path = self.config_dot_dp_path.replace(self.root_path, dest_path)
         logger.debug("Copied folder: " + self.root_path + " to " + dest_path)
+        logger.debug("Set "+ self.config_dot_dp_path + " to " + new_dot_discopop_path)
+        # update FileMapping.txt in new .discopop folder
+        with open(os.path.join(new_dot_discopop_path, "NewFileMapping.txt"), "w+") as o:
+            with open(os.path.join(new_dot_discopop_path, "FileMapping.txt"), "r") as f:
+                for line in f.readlines():
+                    line = line.replace(self.root_path, dest_path)
+                    o.write(line)
+        shutil.move(os.path.join(new_dot_discopop_path, "NewFileMapping.txt"), os.path.join(new_dot_discopop_path, "FileMapping.txt"))
+        logger.debug("Updated " + os.path.join(new_dot_discopop_path, "FileMapping.txt"))
+
+        
         # create a new CodeConfiguration object
-        return CodeConfiguration(dest_path)
+        return CodeConfiguration(dest_path, new_dot_discopop_path)
 
 
