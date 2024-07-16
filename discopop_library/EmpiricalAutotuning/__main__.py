@@ -16,7 +16,7 @@ def parse_args() -> AutotunerArguments:
     parser.add_argument("--project-path", type=str, default=os.getcwd(), help="Root path of the project to be tuned. \
                         Important: Project root will be copied multiple times! It has to contain the executable scripts DP_COMPILER.sh and DP_EXECUTE.sh!\
                         DP_EXECUTE.sh may return not 0, if either the execution or validation of the result failed. \
-                        A third script DP_VALIDATE.sh might be added to add a validation step, where return code 0 is interpreted as a success.")
+                        A third script DP_VALIDATE.sh might be added to add a validation step, where return code 0 is interpreted as a success, i.e. a valid result.")
     parser.add_argument("--dp-build-path", type=str, default=os.path.join(os.getcwd(), ".discopop"), help="Path to the .discopop folder.")
     # fmt: on
 

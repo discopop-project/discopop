@@ -1,5 +1,7 @@
 import logging
+import os
 import subprocess
+import time
 from typing import Optional
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 
@@ -23,7 +25,26 @@ class CodeConfiguration(object):
         subprocess.run("./DP_COMPILE.sh", cwd=self.root_path, executable="/bin/bash", shell=True)
         # execute code
         logger.info("Executing configuration: " + str(self))
-        subprocess.run("./DP_EXECUTE.sh", cwd=self.root_path, executable="/bin/bash", shell=True)
+        start_time = time.time()
+        result = subprocess.run("./DP_EXECUTE.sh", cwd=self.root_path, executable="/bin/bash", shell=True)
+        end_time = time.time()
+        required_time = end_time - start_time
+
+        # check for result validity
+        result_valid = True
+        if os.path.exists(os.path.join(self.root_path, "DP_VALIDATE.sh")):
+            logger.info("Checking result validity: " + str(self))
+            validity_check_result = subprocess.run("./DP_VALIDATE.sh", cwd=self.root_path, executable="/bin/bash", shell=True)
+            if validity_check_result.returncode != 0:
+                result_valid = False
+
+        # reporting
+        logger.info("Execution took " + str(required_time) + " s")
+        logger.info("Execution return code: " + str(result.returncode))
+        logger.info("Execution result valid: " + str(result_valid))
+
+        self.execution_result = ExecutionResult(required_time, result.returncode, result_valid)
+
 
         # retrieve 
         
