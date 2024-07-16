@@ -5,7 +5,9 @@ from typing import Optional
 import jsonpickle
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
+from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 from discopop_library.result_classes.DetectionResult import DetectionResult
 
@@ -44,10 +46,22 @@ def run(arguments: AutotunerArguments) -> Optional[CodeConfiguration]:
     logger.debug("loaded suggestions")
 
     # greedy search for best configuration:
-    # for all loops in descending order by hotspot rating:
-        # create code and execute for all applicable suggestions
-        # select the best option and save it in the current best_configuration
-        # continue with the next loop
+    # for all hotspot types in descending importance:
+    for hotspot_type in [HotspotType.YES, HotspotType.MAYBE, HotspotType.NO]:
+        if hotspot_type not in hotspot_information:
+            continue
+        # for all loops in descending order by average execution time
+        loop_tuples = hotspot_information[hotspot_type]
+        sorted_loop_tuples = sorted(loop_tuples, key=lambda x: x[4], reverse=True)
+        for loop_tuple in sorted_loop_tuples:
+            # identify all applicable suggestions for this loop
+            logger.debug(str(hotspot_type) + " loop: " + str(loop_tuple))
+            # create code and execute for all applicable suggestions
+            applicable_suggestions = get_applicable_suggestion_ids(loop_tuple[0], loop_tuple[1], detection_result)
+            logger.debug("--> applicable suggestions: " + str(applicable_suggestions))
+
+            # select the best option and save it in the current best_configuration
+            # continue with the next loop
 
 
 
