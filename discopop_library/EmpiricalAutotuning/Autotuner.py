@@ -24,6 +24,19 @@ def run(arguments: AutotunerArguments) -> Optional[CodeConfiguration]:
     # DEBUG
     # create a copied configuration
     copied_configuration_1 = reference_configuration.create_copy(get_unique_configuration_id)
+    copied_configuration_1.execute()
     # !DEBUG
 
+    # load hotspots
+    # load suggestions
+    
+    # greedy search for best configuration:
+    # for all loops in descending order by hotspot rating:
+        # create code and execute for all applicable suggestions
+        # select the best option and save it in the current best_configuration
+        # continue with the next loop
+
+
+
+    # TODO return the best configuration
     return reference_configuration
