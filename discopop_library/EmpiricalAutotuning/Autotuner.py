@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import List, Optional, Tuple, cast
+from typing import List, Optional, Set, Tuple, cast
 
 import jsonpickle
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
@@ -27,10 +27,12 @@ def get_unique_configuration_id()->int:
 
 def run(arguments: AutotunerArguments) -> None:
     logger.info("Starting discopop autotuner.")
+    debug_stats: List[Tuple[List[SUGGESTION_ID], float]] = []
 
     # get untuned reference result
     reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path)
     reference_configuration.execute()
+    debug_stats.append(([], cast(ExecutionResult, reference_configuration.execution_result).runtime))
 
     # load hotspots
     hsl_arguments = HotspotLoaderArguments(arguments.log_level, arguments.write_log, False, arguments.dot_dp_path, True, False, True, True, True)
@@ -44,7 +46,7 @@ def run(arguments: AutotunerArguments) -> None:
 
     # greedy search for best suggestion configuration:
     # for all hotspot types in descending importance:
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float]] = []
+    visited_configurations: List[List[SUGGESTION_ID]] = []
     best_suggestion_configuration: Tuple[List[SUGGESTION_ID], CodeConfiguration] = ([], reference_configuration)
     for hotspot_type in [HotspotType.YES, HotspotType.MAYBE, HotspotType.NO]:
         if hotspot_type not in hotspot_information:
@@ -61,6 +63,9 @@ def run(arguments: AutotunerArguments) -> None:
             suggestion_effects: List[Tuple[List[SUGGESTION_ID], CodeConfiguration]] = []
             for suggestion_id in applicable_suggestions:
                 current_config = best_suggestion_configuration[0] + [suggestion_id]
+                if current_config in visited_configurations:
+                    continue
+                visited_configurations.append(current_config)
                 tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
                 tmp_config.apply_suggestions(arguments, current_config)
                 tmp_config.execute()
@@ -69,13 +74,7 @@ def run(arguments: AutotunerArguments) -> None:
                     suggestion_effects.append((current_config, tmp_config))
                     debug_stats.append((current_config, cast(ExecutionResult, tmp_config.execution_result).runtime))
             # add current best configuration for reference / to detect "no suggestions is beneficial"
-            tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
-            tmp_config.apply_suggestions(arguments, best_suggestion_configuration[0])
-            tmp_config.execute()
-            # only consider valid code
-            if cast(ExecutionResult, tmp_config.execution_result).result_valid and cast(ExecutionResult, tmp_config.execution_result).return_code == 0:
-                suggestion_effects.append((best_suggestion_configuration[0], tmp_config))
-                debug_stats.append((best_suggestion_configuration[0], cast(ExecutionResult, tmp_config.execution_result).runtime))
+            suggestion_effects.append(best_suggestion_configuration)
 
             logger.debug("Suggestion effects:\n"+str([(str(t[0]), str(t[1].execution_result)) for t in suggestion_effects]))
 
