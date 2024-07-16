@@ -69,8 +69,8 @@ def parse_args() -> ExplorerArguments:
         help="Dump DetectionResult object to JSON file. If a path is given, the DetectionResult object is written to the given file, otherwise to detection_result_dump.json. Contents are equivalent to the json output. NOTE: This dump contains a dump of the PET Graph!",
     )
     parser.add_argument(
-        "--enable-patterns", type=str, nargs="?", default="*",
-        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,pipeline,geodec,simplegpu. Default: *",
+        "--enable-patterns", type=str, nargs="?", default="reduction,doall,pipeline,geodec",
+        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,pipeline,geodec,simplegpu. Default: reduction,doall,pipeline,geodec",
     )
     parser.add_argument("--load-existing-doall-and-reduction-patterns", action="store_true", help="Skip pattern detection and insert existing patterns.json contents into the created detection_result.json")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
