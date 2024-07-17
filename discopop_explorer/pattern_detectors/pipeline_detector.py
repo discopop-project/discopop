@@ -156,7 +156,7 @@ global_pet = None
 
 
 def run_detection(
-    pet: PEGraphX, hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]]
+    pet: PEGraphX, hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]]
 ) -> List[PipelineInfo]:
     """Search for pipeline pattern on all the loops in the graph
     except for doall loops

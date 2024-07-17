@@ -111,7 +111,7 @@ def __run(
     enable_patterns: str = "*",
     enable_task_pattern: bool = False,
     enable_detection_of_scheduling_clauses: bool = False,
-    hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None,
+    hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]] = None,
     load_existing_doall_and_reduction_patterns: bool = False,
 ) -> DetectionResult:
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))  # type: ignore
@@ -209,6 +209,7 @@ def run(arguments: ExplorerArguments) -> None:
         hotspots = load_hotspots(
             HotspotLoaderArguments(
                 verbose=True,
+                dot_discopop_path=os.getcwd(),
                 get_loops=True,
                 get_functions=True,
                 get_YES=True,
@@ -265,8 +266,6 @@ def run(arguments: ExplorerArguments) -> None:
             with open(arguments.enable_json_file, "w+") as f:
                 json.dump(res, f, indent=2, cls=PatternBaseSerializer)
 
-
-
         # initialize the line_mapping.json
         initialize_line_mapping(load_file_mapping(arguments.file_mapping_file), arguments.project_path)
 
@@ -292,7 +291,7 @@ def run(arguments: ExplorerArguments) -> None:
             with open(arguments.enable_profiling_dump_file, "w+") as f:
                 stats = pstats2.Stats(profile, stream=f).sort_stats("tottime").reverse_order()
                 stats.print_stats()
-        
+
     except BaseException as be:
         # required to correctly write profiling data if the program terminates
         # print profiling results
@@ -304,5 +303,3 @@ def run(arguments: ExplorerArguments) -> None:
                 stats = pstats2.Stats(profile, stream=f).sort_stats("tottime").reverse_order()
                 stats.print_stats()
         raise be
-
-    

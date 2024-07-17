@@ -74,7 +74,7 @@ global_pet = None
 
 def run_detection(
     pet: PEGraphX,
-    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
     reduction_info: List[ReductionInfo],
 ) -> List[DoAllInfo]:
     """Search for do-all loop pattern

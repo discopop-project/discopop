@@ -125,6 +125,7 @@ def run_passive_optimizer(arguments: OptimizerArguments) -> None:
     hotspot_functions = load_hotspots(
         HotspotLoaderArguments(
             verbose=arguments.verbose,
+            dot_discopop_path=os.getcwd(),
             get_loops=False,
             get_functions=True,
             get_YES=True,

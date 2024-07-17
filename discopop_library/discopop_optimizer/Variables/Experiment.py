@@ -78,7 +78,7 @@ class Experiment(object):
     node_id_to_suggestion_dict: Dict[int, int]
     pattern_id_to_decisions_dict: Dict[int, List[int]]
 
-    hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]
+    hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]
     hotspot_function_node_ids: List[int]
 
     profile: Optional[Profile]
@@ -90,7 +90,7 @@ class Experiment(object):
         detection_result: DetectionResult,
         profiler_dir: str,
         arguments: OptimizerArguments,
-        hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]],
+        hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]],
     ):
         self.__system = system
         self.detection_result = detection_result
