@@ -937,7 +937,7 @@ def __is_written_prior_to_task(pet: PEGraphX, var: Variable, task: Node) -> bool
 def filter_for_hotspots(
     pet: PEGraphX,
     nodes: List[Node],
-    hotspot_information: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+    hotspot_information: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
 ) -> List[Node]:
     """Removes such nodes from the list which are not identified as hotspots"""
     if hotspot_information is None:
@@ -945,7 +945,7 @@ def filter_for_hotspots(
     if len(hotspot_information) == 0:
         return nodes
     # collect hotspot information
-    all_hotspot_descriptions: List[Tuple[int, int, HotspotNodeType, str]] = []
+    all_hotspot_descriptions: List[Tuple[int, int, HotspotNodeType, str, float]] = []
     for key in hotspot_information:
         for entry in hotspot_information[key]:
             all_hotspot_descriptions.append(entry)

@@ -81,7 +81,7 @@ global_pet = None
 
 
 def run_detection(
-    pet: PEGraphX, hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]]
+    pet: PEGraphX, hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]]
 ) -> List[GDInfo]:
     """Detects geometric decomposition
 

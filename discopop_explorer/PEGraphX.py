@@ -769,7 +769,7 @@ class PEGraphX(object):
 
     def calculateFunctionMetadata(
         self,
-        hotspot_information: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None,
+        hotspot_information: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]] = None,
         func_nodes: Optional[List[FunctionNode]] = None,
     ) -> None:
         # store id of parent function in each node

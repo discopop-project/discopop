@@ -630,7 +630,7 @@ class PETParser(object):
             return
         all_hotspot_functions_raw: List[Tuple[int, str]] = []
         for key in self.experiment.hotspot_functions:
-            for file_id, line_num, hs_node_type, name in self.experiment.hotspot_functions[key]:
+            for file_id, line_num, hs_node_type, name, _ in self.experiment.hotspot_functions[key]:
                 if hs_node_type == HotspotNodeType.FUNCTION:
                     all_hotspot_functions_raw.append((file_id, name))
 

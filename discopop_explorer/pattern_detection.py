@@ -78,7 +78,7 @@ class PatternDetectorX(object):
         enable_patterns: str,
         enable_task_pattern: bool,
         enable_detection_of_scheduling_clauses: bool,
-        hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+        hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
@@ -207,7 +207,7 @@ class PatternDetectorX(object):
         enable_patterns: str,
         enable_task_pattern: bool,
         enable_detection_of_scheduling_clauses: bool,
-        hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+        hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
     ) -> DetectionResult:
         """skips the pattern discovery on the CU graph and loads a pre-existing pattern file"""
         self.__merge(False, True)
