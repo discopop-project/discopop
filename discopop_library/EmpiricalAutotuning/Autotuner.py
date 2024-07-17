@@ -40,7 +40,7 @@ def run(arguments: AutotunerArguments) -> None:
     # get untuned reference result
     reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path)
     reference_configuration.execute(timeout=None)
-    timeout_after = cast(ExecutionResult, reference_configuration.execution_result).runtime*2
+    timeout_after = cast(ExecutionResult, reference_configuration.execution_result).runtime * 2
     debug_stats.append(([], cast(ExecutionResult, reference_configuration.execution_result).runtime))
 
     # load hotspots
@@ -95,7 +95,9 @@ def run(arguments: AutotunerArguments) -> None:
             )
 
             # select the best option and save it in the current best_configuration
-            sorted_suggestion_effects = sorted(suggestion_effects, key=lambda x: cast(ExecutionResult, x[1].execution_result).runtime)
+            sorted_suggestion_effects = sorted(
+                suggestion_effects, key=lambda x: cast(ExecutionResult, x[1].execution_result).runtime
+            )
             buffer = sorted_suggestion_effects[0]
             best_suggestion_configuration = buffer
             sorted_suggestion_effects = sorted_suggestion_effects[1:]  # in preparation of cleanup step
@@ -126,7 +128,7 @@ def run(arguments: AutotunerArguments) -> None:
         cast(ExecutionResult, reference_configuration.execution_result).runtime
         / cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime
     )
-    parallel_efficiency = speedup*(1/cast(int, (0 if os.cpu_count() is None else os.cpu_count())))
+    parallel_efficiency = speedup * (1 / cast(int, (0 if os.cpu_count() is None else os.cpu_count())))
 
     # show result and statistics
     if best_suggestion_configuration[1] is None:

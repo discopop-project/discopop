@@ -40,7 +40,7 @@ class CodeConfiguration(object):
     def __str__(self) -> str:
         return self.root_path
 
-    def execute(self, timeout: Optional[float] ) -> None:
+    def execute(self, timeout: Optional[float]) -> None:
         # create timeout string
         timeout_string = "" if timeout is None else "timeout " + str(timeout) + " "
         # compile code
@@ -53,7 +53,11 @@ class CodeConfiguration(object):
         logger.info("Executing configuration: " + str(self) + " with " + timeout_string)
         start_time = time.time()
         result = subprocess.run(
-            timeout_string + "./DP_EXECUTE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True
+            timeout_string + "./DP_EXECUTE.sh",
+            cwd=self.root_path,
+            executable="/bin/bash",
+            shell=True,
+            capture_output=True,
         )
         logger.getChild("executionOutput").debug(str(result.stdout.decode("utf-8")))
         end_time = time.time()
@@ -101,14 +105,13 @@ class CodeConfiguration(object):
 
         # create a new CodeConfiguration object
         return CodeConfiguration(dest_path, new_dot_discopop_path)
-    
+
     def deleteFolder(self) -> None:
-        # delete the root folder. 
+        # delete the root folder.
         if not os.path.exists(self.root_path):
             raise FileNotFoundError(self.root_path)
         shutil.rmtree(self.root_path)
         logger.debug("Deleted " + self.root_path)
-
 
     def apply_suggestions(self, arguments: AutotunerArguments, suggestion_ids: List[SUGGESTION_ID]) -> None:
         """Applies the given suggestion to the code configuration via discopop_patch_applicator"""
