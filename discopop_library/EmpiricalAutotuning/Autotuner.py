@@ -2,7 +2,7 @@ import logging
 import os
 from typing import List, Optional, Set, Tuple, cast
 
-import jsonpickle
+import jsonpickle  # type: ignore
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult

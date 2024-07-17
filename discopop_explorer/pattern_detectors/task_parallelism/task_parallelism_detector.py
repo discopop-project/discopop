@@ -77,7 +77,7 @@ def build_preprocessed_graph_and_run_detection(
     cu_inst_result_file: str,
     llvm_cxxfilt_path: Optional[str],
     discopop_build_path: Optional[str],
-    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
     reduction_info: List[ReductionInfo],
 ) -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.

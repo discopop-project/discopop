@@ -111,7 +111,7 @@ def __run(
     enable_patterns: str = "*",
     enable_task_pattern: bool = False,
     enable_detection_of_scheduling_clauses: bool = False,
-    hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None,
+    hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]] = None,
     load_existing_doall_and_reduction_patterns: bool = False,
 ) -> DetectionResult:
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))  # type: ignore
