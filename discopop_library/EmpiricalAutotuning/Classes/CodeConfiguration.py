@@ -91,6 +91,14 @@ class CodeConfiguration(object):
 
         # create a new CodeConfiguration object
         return CodeConfiguration(dest_path, new_dot_discopop_path)
+    
+    def deleteFolder(self) -> None:
+        # delete the root folder. 
+        if not os.path.exists(self.root_path):
+            raise FileNotFoundError(self.root_path)
+        shutil.rmtree(self.root_path)
+        logger.debug("Deleted " + self.root_path)
+
 
     def apply_suggestions(self, arguments: AutotunerArguments, suggestion_ids: List[SUGGESTION_ID]) -> None:
         """Applies the given suggestion to the code configuration via discopop_patch_applicator"""

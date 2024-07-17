@@ -86,14 +86,23 @@ def run(arguments: AutotunerArguments) -> None:
             )
 
             # select the best option and save it in the current best_configuration
-            buffer = sorted(suggestion_effects, key=lambda x: cast(ExecutionResult, x[1].execution_result).runtime)[0]
+            sorted_suggestion_effects = sorted(suggestion_effects, key=lambda x: cast(ExecutionResult, x[1].execution_result).runtime)
+            buffer = sorted_suggestion_effects[0]
             best_suggestion_configuration = buffer
+            sorted_suggestion_effects = sorted_suggestion_effects[1:]  # in preparation of cleanup step
             logger.debug(
                 "Current best configuration: "
                 + str(best_suggestion_configuration[0])
                 + " stored at "
                 + best_suggestion_configuration[1].root_path
             )
+            # cleanup other configurations (excluding original version)
+            logger.debug("Cleanup:")
+            for _, config in sorted_suggestion_effects:
+                if config.root_path == reference_configuration.root_path:
+                    continue
+                config.deleteFolder()
+
             # continue with the next loop
 
     # show debug stats
