@@ -31,7 +31,8 @@ def run(arguments: AutotunerArguments) -> None:
 
     # get untuned reference result
     reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path)
-    reference_configuration.execute()
+    reference_configuration.execute(timeout=None)
+    timeout_after = cast(ExecutionResult, reference_configuration.execution_result).runtime*2
     debug_stats.append(([], cast(ExecutionResult, reference_configuration.execution_result).runtime))
 
     # load hotspots
@@ -70,7 +71,7 @@ def run(arguments: AutotunerArguments) -> None:
                 visited_configurations.append(current_config)
                 tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
                 tmp_config.apply_suggestions(arguments, current_config)
-                tmp_config.execute()
+                tmp_config.execute(timeout=timeout_after)
                 # only consider valid code
                 if (
                     cast(ExecutionResult, tmp_config.execution_result).result_valid
@@ -117,6 +118,7 @@ def run(arguments: AutotunerArguments) -> None:
         cast(ExecutionResult, reference_configuration.execution_result).runtime
         / cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime
     )
+    parallel_efficiency = speedup*(1/cast(int, (0 if os.cpu_count() is None else os.cpu_count())))
 
     # show result and statistics
     if best_suggestion_configuration[1] is None:
@@ -126,4 +128,5 @@ def run(arguments: AutotunerArguments) -> None:
         print("Best configuration located at: " + best_suggestion_configuration[1].root_path)
         print("Applied suggestions: " + str(best_suggestion_configuration[0]))
         print("Speedup: ", round(speedup, 3))
+        print("Parallel efficiency: ", round(parallel_efficiency, 3))
         print("##############################")

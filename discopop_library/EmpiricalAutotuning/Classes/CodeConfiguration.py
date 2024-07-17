@@ -32,7 +32,9 @@ class CodeConfiguration(object):
     def __str__(self) -> str:
         return self.root_path
 
-    def execute(self) -> None:
+    def execute(self, timeout: Optional[float] ) -> None:
+        # create timeout string
+        timeout_string = "" if timeout is None else "timeout " + str(timeout) + " "
         # compile code
         logger.info("Compiling configuration: " + str(self))
         compile_result = subprocess.run(
@@ -40,10 +42,10 @@ class CodeConfiguration(object):
         )
         logger.getChild("compilationOutput").debug(str(compile_result.stdout.decode("utf-8")))
         # execute code
-        logger.info("Executing configuration: " + str(self))
+        logger.info("Executing configuration: " + str(self) + " with " + timeout_string)
         start_time = time.time()
         result = subprocess.run(
-            "./DP_EXECUTE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True
+            timeout_string + "./DP_EXECUTE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True
         )
         logger.getChild("executionOutput").debug(str(result.stdout.decode("utf-8")))
         end_time = time.time()
