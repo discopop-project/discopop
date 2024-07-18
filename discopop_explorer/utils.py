@@ -619,11 +619,24 @@ def get_child_loops(pet: PEGraphX, node: Node) -> Tuple[List[Node], List[Node]]:
 def get_initialized_memory_regions_in(pet: PEGraphX, cu_nodes: List[CUNode]) -> Dict[Variable, Set[MemoryRegion]]:
     initialized_memory_regions: Dict[Variable, Set[MemoryRegion]] = dict()
     for cu in cu_nodes:
+        parent_function = pet.get_parent_function(cu)
         for s, t, d in pet.out_edges(cu.id, EdgeType.DATA):
             if d.dtype == DepType.INIT and d.memory_region is not None:
                 # get variable object from cu
                 for var in cu.global_vars + cu.local_vars:
                     if var.name == d.var_name:
+                        # ignore pass by value type function arguments
+                        is_passed_by_value = False
+                        if str(parent_function.start_position()) == var.defLine:
+                            for arg in parent_function.args:
+                                if arg.name == var.name:
+                                    if "*" not in arg.type:
+                                        # found pass by value argument
+                                        is_passed_by_value = True
+                                        break
+                        if is_passed_by_value:
+                            continue
+
                         if var not in initialized_memory_regions:
                             initialized_memory_regions[var] = set()
                         # create entry for initialized variable

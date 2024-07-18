@@ -121,7 +121,6 @@ def __check_node(param_tuple: LoopNode) -> List[ReductionInfo]:
 
 def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
     """Detects reduction pattern in loop
-
     :param pet: PET graph
     :param root: the loop node
     :return: true if is reduction loop
