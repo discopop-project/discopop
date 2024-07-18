@@ -25,7 +25,7 @@ struct LoopTableEntry {
 #if DP_CALLTREE_PROFILING
     dependency_metadata_calculation_enabled = true;
 #endif
-      }
+  }
 
   std::int32_t funcLevel;
   std::int32_t loopID;
@@ -42,13 +42,9 @@ struct LoopTableEntry {
   void increment_count() noexcept { ++count; }
 
 #if DP_CALLTREE_PROFILING
-  void set_dependency_metadata_calculation_enabled(bool value){
-    dependency_metadata_calculation_enabled = value;
-  }
+  void set_dependency_metadata_calculation_enabled(bool value) { dependency_metadata_calculation_enabled = value; }
 
-  bool get_dependency_metadata_calculation_enabled() const {
-    return dependency_metadata_calculation_enabled;
-  }
+  bool get_dependency_metadata_calculation_enabled() const { return dependency_metadata_calculation_enabled; }
 #endif
 
 private:
