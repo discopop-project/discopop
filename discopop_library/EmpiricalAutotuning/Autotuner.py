@@ -87,6 +87,9 @@ def run(arguments: AutotunerArguments) -> None:
                 ):
                     suggestion_effects.append((current_config, tmp_config))
                     debug_stats.append((current_config, cast(ExecutionResult, tmp_config.execution_result).runtime))
+                else:
+                    # delete invalid code
+                    tmp_config.deleteFolder()
             # add current best configuration for reference / to detect "no suggestions is beneficial"
             suggestion_effects.append(best_suggestion_configuration)
 
