@@ -410,6 +410,13 @@ def is_first_written(
                     break
             if not res:
                 return False
+
+    # catch potential false-positives if len(war) == 0
+    if len(war) == 0:
+        for eraw in raw:
+            if eraw[2].memory_region in mem_regs and eraw[1] not in [n.id for n in sub]:
+                # value written prior to loop is read --> can not be first written
+                return False
     return True
 
 
@@ -703,19 +710,26 @@ def classify_loop_variables(
                     # array type variable is written
                     shared.append(var)
                 else:
-                    private.append(var)
+                    if is_first_written(vars[var], raw, waw, sub):
+                        private.append(var)
+                    else:
+                        first_private.append(var)
 
         elif is_first_written(vars[var], raw, war, sub):
-            if is_read_in_subtree(vars[var], rev_raw, rst):
-                if is_scalar_val(var):
-                    last_private.append(var)
-                else:
-                    shared.append(var)
+            if len(vars[var].intersection(initialized_memory_regions)) > 0:
+                # variable is initialized in loop. No data sharing clauses required.
+                pass
             else:
-                if is_scalar_val(var):
-                    private.append(var)
+                if is_read_in_subtree(vars[var], rev_raw, rst):
+                    if is_scalar_val(var):
+                        last_private.append(var)
+                    else:
+                        shared.append(var)
                 else:
-                    shared.append(var)
+                    if is_scalar_val(var):
+                        private.append(var)
+                    else:
+                        shared.append(var)
     # return first_private, private, last_private, shared, reduction
     return (
         sorted(first_private),
