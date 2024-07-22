@@ -32,9 +32,18 @@ private:
 public:
   InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid);
 
+  bool edgeIsINIT(Edge<Instruction *> *e);
+
   string edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap);
 
   void highlightInstructionNode(Instruction *instr);
 
   void dumpToDot(const string targetPath);
+  
+  string getInstructionLine(Instruction *I);
+  
+  string getInitEdgeInstructionLine(Edge<Instruction *> *e);
+
+  string getValueNameAndMemRegIDFromEdge(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap);
+
 };

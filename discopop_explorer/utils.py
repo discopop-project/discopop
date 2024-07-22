@@ -412,6 +412,40 @@ def is_first_written(
                 return False
     return True
 
+def is_initialized_and_first_written(
+    mem_regs: Set[MemoryRegion],
+    raw: Set[Tuple[NodeID, NodeID, Dependency]],
+    war: Set[Tuple[NodeID, NodeID, Dependency]],
+    init: Set[Tuple[NodeID, NodeID, Dependency]],
+    sub: List[CUNode],
+) -> bool:
+    """Checks whether a variable is first written inside the current node
+
+    :param var: variable name
+    :param raw: raw dependencies of the loop
+    :param war: war dependencies of the loop
+    :param sub: subtree of the loop
+    :return: true if first written
+    """
+    print("INIT: ")
+    print([str(d[2]) for d in init])
+    for e in war:
+        if e[2].memory_region in mem_regs and any([n.id == e[1] for n in sub]):
+            res = False
+            for eraw in raw:
+                if (
+                    eraw[2].memory_region in mem_regs
+                    and any([n.id == e[1] for n in sub])
+                    and e[2].source_line == eraw[2].sink_line
+
+                ):
+
+                    res = True
+                    break
+            if not res:
+                return False
+    return False
+
 
 def is_first_written_new(
     var: Variable,
@@ -706,16 +740,20 @@ def classify_loop_variables(
                     private.append(var)
 
         elif is_first_written(vars[var], raw, war, sub):
-            if is_read_in_subtree(vars[var], rev_raw, rst):
-                if is_scalar_val(var):
-                    last_private.append(var)
-                else:
-                    shared.append(var)
+            if len(vars[var].intersection(initialized_memory_regions)) > 0:
+                # variable is initialized in loop. No data sharing clauses required.
+                pass
             else:
-                if is_scalar_val(var):
-                    private.append(var)
+                if is_read_in_subtree(vars[var], rev_raw, rst):
+                    if is_scalar_val(var):
+                        last_private.append(var)
+                    else:
+                        shared.append(var)
                 else:
-                    shared.append(var)
+                    if is_scalar_val(var):
+                        private.append(var)
+                    else:
+                        shared.append(var)
     # return first_private, private, last_private, shared, reduction
     return (
         sorted(first_private),
