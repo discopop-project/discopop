@@ -8,7 +8,7 @@ import unittest
 import jsonpickle
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from test.utils.data_sharing_clauses.clauses_utils import check_clauses_for_FN, check_clauses_for_FP
+from test.utils.sharing_clauses.clauses_utils import check_clauses_for_FN, check_clauses_for_FP
 from test.utils.subprocess_wrapper.command_execution_wrapper import run_cmd
 from test.utils.validator_classes.DoAllInfoForValidation import DoAllInfoForValidation
 from subprocess import DEVNULL
