@@ -414,10 +414,7 @@ def is_first_written(
     # catch potential false-positives if len(war) == 0
     if len(war) == 0:
         for eraw in raw:
-            if (
-                    eraw[2].memory_region in mem_regs and
-                    eraw[1] not in [n.id for n in sub]
-            ):
+            if eraw[2].memory_region in mem_regs and eraw[1] not in [n.id for n in sub]:
                 # value written prior to loop is read --> can not be first written
                 return False
     return True
