@@ -64,12 +64,31 @@ void InstructionDG::recursiveDepFinder(set<Instruction *> *checkedInstructions, 
 
 void InstructionDG::highlightInstructionNode(Instruction *instr) { highlightedInstructionNodes.insert(instr); }
 
-string getInstructionLine(Instruction *I) {
+string InstructionDG::getInstructionLine(Instruction *I) {
   if (DebugLoc dl = I->getDebugLoc()) {
     return to_string(dl->getLine());
   } else {
     return to_string(I->getFunction()->getSubprogram()->getLine());
   }
+}
+
+bool InstructionDG::edgeIsINIT(Edge<Instruction *> *e){
+  Instruction *I = e->getSrc()->getItem();
+  Instruction *J = e->getDst()->getItem();
+
+  if(isa<AllocaInst>(J)){
+    return true;
+  }
+  return false;
+}
+
+string InstructionDG::getInitEdgeInstructionLine(Edge<Instruction *> *e){
+  return getInstructionLine(e->getSrc()->getItem());
+}
+
+string InstructionDG::getValueNameAndMemRegIDFromEdge(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap){
+  Instruction *I = e->getSrc()->getItem();
+  return staticValueNameToMemRegIDMap[VNF->getVarName(I)].first + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
 }
 
 string InstructionDG::edgeToDPDep(Edge<Instruction *> *e,
