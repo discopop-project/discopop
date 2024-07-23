@@ -16,7 +16,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
   string varDefLine{"LineNotFound"};
 
   bool isGlobal = false;
-  string varName = determineVariableName_static(&*I, isGlobal, true);
+  string varName = determineVariableName_static(&*I, isGlobal, true, "");
   // varName = refineVarName(varName);
   varName = (varName.find(".addr") == varName.npos) ? varName : varName.erase(varName.find(".addr"), 5);
   // varName.erase(varName.find(".addr"), 5);
@@ -63,10 +63,10 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
               if (AI) {
                 for (User *U : AI->users()) {
                   if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
-                    vn = determineVariableName_static(&*SI, isGlobal, true);
+                    vn = determineVariableName_static(&*SI, isGlobal, true, "");
                     break;
                   } else if (LoadInst *LI = dyn_cast<LoadInst>(U)) {
-                    vn = determineVariableName_static(&*LI, isGlobal, true);
+                    vn = determineVariableName_static(&*LI, isGlobal, true, "");
                     break;
                   }
                 }

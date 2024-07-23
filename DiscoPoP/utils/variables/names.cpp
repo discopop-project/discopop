@@ -14,6 +14,11 @@
 
 string DiscoPoP::getOrInsertVarName_static(string varName, IRBuilder<> &builder) {
   Value *valName = NULL;
+  // remove .addr if added. Replaced by the GEPRESULT_ tag
+  if (varName.find(".addr") != std::string::npos){
+    varName.erase(varName.find(".addr"), 5);
+  }
+
   std::string vName = varName;
   map<string, Value *>::iterator pair = VarNames.find(varName);
   if (pair == VarNames.end()) {
@@ -28,6 +33,11 @@ string DiscoPoP::getOrInsertVarName_static(string varName, IRBuilder<> &builder)
 }
 
 Value *DiscoPoP::getOrInsertVarName_dynamic(string varName, IRBuilder<> &builder) {
+  // remove .addr if added. Replaced by the GEPRESULT_ tag
+  if (varName.find(".addr") != std::string::npos){
+    varName.erase(varName.find(".addr"), 5);
+  }
+
   // 26.08.2022 Lukas
   // update varName with original varName from Metadata
   if (trueVarNamesFromMetadataMap.find(varName) == trueVarNamesFromMetadataMap.end()) {
@@ -49,7 +59,7 @@ Value *DiscoPoP::getOrInsertVarName_dynamic(string varName, IRBuilder<> &builder
 }
 
 string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/,
-                                              bool disable_MetadataMap) {
+                                              bool disable_MetadataMap, string prefix) {
 
   assert(I && "Instruction cannot be NULL \n");
   int index = isa<StoreInst>(I) ? 1 : 0;
@@ -120,9 +130,9 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
 
       // we've found an array
       if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
-        return determineVariableName_static((Instruction *)ptrOperand, isGlobalVariable, false);
+        return determineVariableName_static((Instruction *)ptrOperand, isGlobalVariable, false, prefix);
       }
-      return determineVariableName_static((Instruction *)gep, isGlobalVariable, false);
+      return determineVariableName_static((Instruction *)gep, isGlobalVariable, false, "GEPRESULT_" + prefix);
     }
     string retVal = string(operand->getName().data());
     if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
@@ -134,13 +144,13 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
-    return determineVariableName_static((Instruction *)(operand), isGlobalVariable, false);
+    return determineVariableName_static((Instruction *)(operand), isGlobalVariable, false, prefix);
   }
   // if we cannot determine the name, then return *
   return ""; // getOrInsertVarName("*", builder);
 }
 
-Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I) {
+Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I, string prefix) {
   assert(I && "Instruction cannot be NULL \n");
   int index = isa<StoreInst>(I) ? 1 : 0;
   Value *operand = I->getOperand(index);
@@ -156,7 +166,7 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I) {
     if (isa<GlobalVariable>(*operand)) {
       DIGlobalVariable *gv = findDbgGlobalDeclare(cast<GlobalVariable>(operand));
       if (gv != NULL) {
-        return getOrInsertVarName_dynamic(string(gv->getDisplayName().data()), builder);
+        return getOrInsertVarName_dynamic(prefix +  string(gv->getDisplayName().data()), builder);
       }
     }
     if (isa<GetElementPtrInst>(*operand)) {
@@ -187,21 +197,21 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I) {
 
       // we've found an array
       if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
-        return determineVariableName_dynamic((Instruction *)ptrOperand);
+        return determineVariableName_dynamic((Instruction *)ptrOperand, prefix);
       }
-      return determineVariableName_dynamic((Instruction *)gep);
+      return determineVariableName_dynamic((Instruction *)gep, "GEPRESULT_"+prefix);
     }
-    return getOrInsertVarName_dynamic(string(operand->getName().data()), builder);
+    return getOrInsertVarName_dynamic(prefix + string(operand->getName().data()), builder);
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
-    return determineVariableName_dynamic((Instruction *)(operand));
+    return determineVariableName_dynamic((Instruction *)(operand), prefix);
   }
   if (isa<AllocaInst>(I)) {
-    return getOrInsertVarName_dynamic(I->getName().str(), builder);
+    return getOrInsertVarName_dynamic(prefix + I->getName().str(), builder);
   }
   // if we cannot determine the name, then return *
-  return getOrInsertVarName_dynamic("*", builder);
+  return getOrInsertVarName_dynamic(prefix +  "*", builder);
 }
 
 void DiscoPoP::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,

@@ -23,7 +23,7 @@ void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion, set<string> &global
       if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction) || isa<CallInst>(instruction)) {
 
         // NOTE: changed 'instruction' to '&*instruction'
-        string varName = determineVariableName_static(&*instruction, isGlobalVariable, false);
+        string varName = determineVariableName_static(&*instruction, isGlobalVariable, false, "");
 
         if (isGlobalVariable) // add it if it is a global variable in the
                               // program

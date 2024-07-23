@@ -283,9 +283,6 @@ bool DiscoPoP::runOnFunction(Function &F) {
       if(DG.edgeIsINIT(edge)){
         string initLine = DG.getInitEdgeInstructionLine(edge);
         string varIdentifier = DG.getValueNameAndMemRegIDFromEdge(edge, staticValueNameToMemRegIDMap);
-        std::cout << "Found init: " << DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap) << "\n";
-        std::cout << "\t@ " << initLine << "\n";
-        std::cout << "\tvar: " << varIdentifier << "\n";
         
         if(lineToInitializedVarsMap.find(initLine) == lineToInitializedVarsMap.end()){
           set<string> tmp;
@@ -310,52 +307,26 @@ bool DiscoPoP::runOnFunction(Function &F) {
         if (!conditionalBBDepMap.count(Src->getParent())) {
           set<string> tmp;
           conditionalBBDepMap[Src->getParent()] = tmp;
-
-          std::cout<< "Registered set1: \n";
-          for(auto s : tmp){
-            std::cout << "--> " << s << "\n";
-          }
         }
         conditionalBBDepMap[Src->getParent()].insert(DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap));
-        std::cout << "Inserted1: " << DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap) << "\n";
       } else {
         if (!conditionalBBPairDepMap.count(Dst->getParent())) {
           map<BasicBlock *, set<string>> tmp;
           conditionalBBPairDepMap[Dst->getParent()] = tmp;
-          std::cout<< "Registered set2: \n";
-          for(auto pair : tmp){
-            for(auto s : pair.second){
-              std::cout << "--> " << s << "\n";
-            }
-          }
         }
         if (!conditionalBBPairDepMap[Dst->getParent()].count(Src->getParent())) {
           set<string> tmp;
           conditionalBBPairDepMap[Dst->getParent()][Src->getParent()] = tmp;
-          std::cout<< "Registered set3: \n";
-          for(auto s : tmp){
-            std::cout << "--> " << s << "\n";
-          }
         }
-        std::cout << "First: " << Dst << "\n";
-        Dst->print(outs());
-        std::cout << "\n";
-        std::cout << "Second: " << Src << "\n";
-        Src->print(outs());
-        std::cout << "\n";
         // Prevent reporting of false-positive WAW Dependencies due to alloca movement from e.g. loops to function entry 
         bool insertDep = true;
         if(Dst == Src){ // check if instruciton are the same
-          std::cout << "==> Potential for false-positive WAW\n";
-          std::cout << "--> same inst\n";
           // check if initialization exists in the instruction line
           if(lineToInitializedVarsMap.find(DG.getInstructionLine(Dst)) != lineToInitializedVarsMap.end()){
-            std::cout << "--> same init exists\n";
             // check if the accessed variable is initialed here
             string varIdentifier = DG.getValueNameAndMemRegIDFromEdge(edge, staticValueNameToMemRegIDMap);
             if(lineToInitializedVarsMap[DG.getInstructionLine(Dst)].find(varIdentifier) != lineToInitializedVarsMap[DG.getInstructionLine(Dst)].end()){
               // ignore this access as the initialized variable is accessed
-              std::cout << "==> initialized var accessed\n";
               insertDep = false;
             }
           }
@@ -364,7 +335,6 @@ bool DiscoPoP::runOnFunction(Function &F) {
         if(insertDep){
           conditionalBBPairDepMap[Dst->getParent()][Src->getParent()].insert(
             DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap));
-          std::cout << "Inserted: " << DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap) << "\n";
         }
       }
       omittableInstructions.insert(Src);

@@ -12,7 +12,7 @@ int g(int i) { return i; }
 
 int main() {
   int N = 100000;
-  int Arr[100000];
+  int Arr[N];
 
   // DOALL
   for (int i = 0; i < N; i++) {
