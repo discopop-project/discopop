@@ -41,7 +41,7 @@ class CodeConfiguration(object):
     def __str__(self) -> str:
         return self.root_path
 
-    def execute(self, timeout: Optional[float], is_initial: bool =False) -> None:
+    def execute(self, timeout: Optional[float], is_initial: bool = False) -> None:
         # create timeout string
         timeout_string = "" if timeout is None else "timeout " + str(timeout) + " "
         if is_initial:
@@ -140,14 +140,18 @@ class CodeConfiguration(object):
 
     def get_statistics_graph_label(self) -> str:
         res_str = "" + self.root_path + "\n"
-        res_str += str(round(self.execution_result.runtime, 3)) + "s" 
+        if self.execution_result is None:
+            res_str += "Not executed."
+        else:
+            res_str += str(round(self.execution_result.runtime, 3)) + "s"
 
-        return  res_str
-    
+        return res_str
+
     def get_statistics_graph_color(self) -> NodeColor:
+        if self.execution_result is None:
+            return NodeColor.ORANGE
         if self.execution_result.result_valid and self.execution_result.return_code == 0:
             return NodeColor.GREEN
         if self.execution_result.return_code == 0 and not self.execution_result.result_valid:
             return NodeColor.ORANGE
         return NodeColor.RED
-        

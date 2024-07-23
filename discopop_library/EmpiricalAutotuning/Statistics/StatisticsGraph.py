@@ -15,6 +15,7 @@ import networkx as nx  # type: ignore
 
 logger = logging.getLogger("StatisticsGraph")
 
+
 class NodeShape(Enum):
     SQUARE = "square"
     CIRCLE = "circle"
@@ -46,14 +47,17 @@ class StatisticsGraph(object):
         self.dump_to_dot()
         self.create_svg_from_dot()
 
-    def set_root(self, label: str) -> None:
-        self.G.add_node(label)
+    def set_root(self, label: str, color: NodeColor = NodeColor.WHITE, shape: NodeShape = NodeShape.NONE) -> None:
+        if shape == NodeShape.NONE:
+            self.G.add_node(label, color="black", fillcolor=color.value, style="filled")
+        else:
+            self.G.add_node(label, color="black", fillcolor=color.value, style="filled", shape=shape.value)
         self.current_node = label
 
-    def update_current_node(self, label: str)->None:
+    def update_current_node(self, label: str) -> None:
         self.current_node = label
 
-    def add_child(self, child: str, color:NodeColor = NodeColor.WHITE, shape: NodeShape = NodeShape.NONE) -> None:
+    def add_child(self, child: str, color: NodeColor = NodeColor.WHITE, shape: NodeShape = NodeShape.NONE) -> None:
         if shape == NodeShape.NONE:
             self.G.add_node(child, color="black", fillcolor=color.value, style="filled")
         else:
@@ -61,15 +65,15 @@ class StatisticsGraph(object):
         self.G.add_edge(self.current_node, child)
 
     def create_svg_from_dot(self) -> None:
-        
+
         cmd = "dot -Tsvg dp_autotuner_statistics.dot -o dp_autotuner_statistics.svg"
         res = subprocess.run(
-        cmd,
-        cwd=os.getcwd(),
-        executable="/bin/bash",
-        shell=True,
+            cmd,
+            cwd=os.getcwd(),
+            executable="/bin/bash",
+            shell=True,
         )
-        if res.returncode != 0: 
+        if res.returncode != 0:
             logger.warning("Failed: dot -Tsvg dp_autotuner_statistics.dot -o dp_autotuner_statistics.svg")
         else:
             logger.info("Updated dp_autotuner_statistics.svg")
