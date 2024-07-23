@@ -15,6 +15,7 @@ import time
 from typing import Callable, List, Optional
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
+from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
 from discopop_library.PatchApplicator.patch_applicator import run as apply_patches
@@ -40,9 +41,11 @@ class CodeConfiguration(object):
     def __str__(self) -> str:
         return self.root_path
 
-    def execute(self, timeout: Optional[float]) -> None:
+    def execute(self, timeout: Optional[float], is_initial: bool =False) -> None:
         # create timeout string
         timeout_string = "" if timeout is None else "timeout " + str(timeout) + " "
+        if is_initial:
+            timeout_string += "source "
         # compile code
         logger.info("Compiling configuration: " + str(self))
         compile_result = subprocess.run(
@@ -134,3 +137,17 @@ class CodeConfiguration(object):
             sub_logger.debug("Got Exception during call to patch applicator.")
             os.chdir(save_dir)
             raise ex
+
+    def get_statistics_graph_label(self) -> str:
+        res_str = "" + self.root_path + "\n"
+        res_str += str(round(self.execution_result.runtime, 3)) + "s" 
+
+        return  res_str
+    
+    def get_statistics_graph_color(self) -> NodeColor:
+        if self.execution_result.result_valid and self.execution_result.return_code == 0:
+            return NodeColor.GREEN
+        if self.execution_result.return_code == 0 and not self.execution_result.result_valid:
+            return NodeColor.ORANGE
+        return NodeColor.RED
+        

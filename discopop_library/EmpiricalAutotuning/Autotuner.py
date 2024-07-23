@@ -14,6 +14,7 @@ import jsonpickle  # type: ignore
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
+from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeShape, StatisticsGraph
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
@@ -36,12 +37,16 @@ def get_unique_configuration_id() -> int:
 def run(arguments: AutotunerArguments) -> None:
     logger.info("Starting discopop autotuner.")
     debug_stats: List[Tuple[List[SUGGESTION_ID], float]] = []
+    statistics_graph = StatisticsGraph()
+    statistics_step_num = 0
 
     # get untuned reference result
     reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path)
-    reference_configuration.execute(timeout=None)
+    reference_configuration.execute(timeout=None, is_initial=True)
+    statistics_graph.set_root(reference_configuration)
     timeout_after = cast(ExecutionResult, reference_configuration.execution_result).runtime * 2
     debug_stats.append(([], cast(ExecutionResult, reference_configuration.execution_result).runtime))
+
 
     # load hotspots
     hsl_arguments = HotspotLoaderArguments(
@@ -66,6 +71,9 @@ def run(arguments: AutotunerArguments) -> None:
         loop_tuples = hotspot_information[hotspot_type]
         sorted_loop_tuples = sorted(loop_tuples, key=lambda x: x[4], reverse=True)
         for loop_tuple in sorted_loop_tuples:
+            loop_str = "" + str(loop_tuple[0]) + "@" + str(loop_tuple[1]) + " - "+ str(loop_tuple[2]) + " " + loop_tuple[3] + " " + str(round(loop_tuple[4], 3))+"s"
+            statistics_graph.add_child(loop_str)
+            statistics_graph.update_current_node(loop_str)
             # identify all applicable suggestions for this loop
             logger.debug(str(hotspot_type) + " loop: " + str(loop_tuple))
             # create code and execute for all applicable suggestions
@@ -80,6 +88,7 @@ def run(arguments: AutotunerArguments) -> None:
                 tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
                 tmp_config.apply_suggestions(arguments, current_config)
                 tmp_config.execute(timeout=timeout_after)
+                statistics_graph.add_child("step " + str(statistics_step_num) + "\n" + str(current_config) + "\n" + tmp_config.get_statistics_graph_label(), shape=NodeShape.BOX, color=tmp_config.get_statistics_graph_color())
                 # only consider valid code
                 if (
                     cast(ExecutionResult, tmp_config.execution_result).result_valid
@@ -92,6 +101,7 @@ def run(arguments: AutotunerArguments) -> None:
                     tmp_config.deleteFolder()
             # add current best configuration for reference / to detect "no suggestions is beneficial"
             suggestion_effects.append(best_suggestion_configuration)
+            statistics_graph.add_child("step " + str(statistics_step_num) + "\n" +str(best_suggestion_configuration[0]) + "\n" + best_suggestion_configuration[1].get_statistics_graph_label(), shape=NodeShape.BOX, color=best_suggestion_configuration[1].get_statistics_graph_color())
 
             logger.debug(
                 "Suggestion effects:\n" + str([(str(t[0]), str(t[1].execution_result)) for t in suggestion_effects])
@@ -110,6 +120,10 @@ def run(arguments: AutotunerArguments) -> None:
                 + " stored at "
                 + best_suggestion_configuration[1].root_path
             )
+            statistics_graph.add_child("step " + str(statistics_step_num) + "\n" +str(best_suggestion_configuration[0]) + "\n" + best_suggestion_configuration[1].get_statistics_graph_label(), shape=NodeShape.BOX, color=best_suggestion_configuration[1].get_statistics_graph_color())
+            statistics_graph.update_current_node("step " + str(statistics_step_num) + "\n" +str(best_suggestion_configuration[0]) + "\n" + best_suggestion_configuration[1].get_statistics_graph_label())
+            statistics_graph.output()
+            statistics_step_num += 1
             # cleanup other configurations (excluding original version)
             logger.debug("Cleanup:")
             for _, config in sorted_suggestion_effects:
@@ -143,3 +157,6 @@ def run(arguments: AutotunerArguments) -> None:
         print("Speedup: ", round(speedup, 3))
         print("Parallel efficiency: ", round(parallel_efficiency, 3))
         print("##############################")
+
+    # output statistics graph
+    statistics_graph.output()
