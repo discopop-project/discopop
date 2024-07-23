@@ -14,6 +14,11 @@
 
 string DiscoPoP::getOrInsertVarName_static(string varName, IRBuilder<> &builder) {
   Value *valName = NULL;
+  // remove .addr if added. Replaced by the GEPRESULT_ tag
+  if (varName.find(".addr") != std::string::npos){
+    varName.erase(varName.find(".addr"), 5);
+  }
+
   std::string vName = varName;
   map<string, Value *>::iterator pair = VarNames.find(varName);
   if (pair == VarNames.end()) {
@@ -28,6 +33,11 @@ string DiscoPoP::getOrInsertVarName_static(string varName, IRBuilder<> &builder)
 }
 
 Value *DiscoPoP::getOrInsertVarName_dynamic(string varName, IRBuilder<> &builder) {
+  // remove .addr if added. Replaced by the GEPRESULT_ tag
+  if (varName.find(".addr") != std::string::npos){
+    varName.erase(varName.find(".addr"), 5);
+  }
+
   // 26.08.2022 Lukas
   // update varName with original varName from Metadata
   if (trueVarNamesFromMetadataMap.find(varName) == trueVarNamesFromMetadataMap.end()) {
