@@ -33,6 +33,7 @@ class DependenceItem(object):
     type: Any
     var_name: Any
     memory_region: Any
+    is_gep_result_dependency: bool
     metadata: Any
     # TODO improve typing
 
@@ -198,13 +199,24 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             key_tuple = sink, source_fields[0], type, var_name, aa_var_name
             if key_tuple in dependency_metadata:
                 metadata = dependency_metadata[key_tuple]
+
+            # check if the dependency originates from the result of a GEP instruction
+            is_gep_result_dependency = False
+            if var_name.startswith("GEPRESULT_"):
+                var_name = var_name.replace("GEPRESULT_", "")
+                is_gep_result_dependency = True
+
             # register dependencies
             if len(metadata) == 0:
-                dependencies_list.append(DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, ""))
+                dependencies_list.append(
+                    DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, is_gep_result_dependency, "")
+                )
             else:
                 for md_set in metadata:
                     dependencies_list.append(
-                        DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, md_set)
+                        DependenceItem(
+                            sink, source_fields[0], type, var_name, aa_var_name, is_gep_result_dependency, md_set
+                        )
                     )
 
     return dependencies_list, loop_data_list

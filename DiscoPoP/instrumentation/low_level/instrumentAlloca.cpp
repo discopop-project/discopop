@@ -24,7 +24,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
 
   vector<Value *> args;
   args.push_back(ConstantInt::get(Int32, lid));
-  args.push_back(determineVariableName_dynamic(toInstrument));
+  args.push_back(determineVariableName_dynamic(toInstrument, ""));
 
   bool isGlobal;
   // Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "",

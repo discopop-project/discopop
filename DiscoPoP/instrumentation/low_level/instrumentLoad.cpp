@@ -25,7 +25,7 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
   Value *memAddr = PtrToIntInst::CreatePointerCast(toInstrument->getPointerOperand(), Int64, "", toInstrument);
   args.push_back(memAddr);
 
-  args.push_back(determineVariableName_dynamic(toInstrument));
+  args.push_back(determineVariableName_dynamic(toInstrument, ""));
 
 #ifdef SKIP_DUP_INSTR
   Twine name = Twine("L").concat(Twine(uniqueNum));
