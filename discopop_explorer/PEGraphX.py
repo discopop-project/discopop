@@ -738,6 +738,8 @@ class PEGraphX(object):
                         if d1.memory_region != d2.memory_region:
                             if d1.memory_region is None or d2.memory_region is None:
                                 continue
+                            if d1.memory_region.startswith("GEPRESULT_") or d2.memory_region.startswith("GEPRESULT_"):
+                                continue
                             if d1.memory_region not in mem_reg_mappings:
                                 mem_reg_mappings[d1.memory_region] = set()
                             if d2.memory_region not in mem_reg_mappings:

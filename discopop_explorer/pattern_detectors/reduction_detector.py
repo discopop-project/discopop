@@ -145,6 +145,7 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
         # and "**" not in v.type --> replaced by check for array reduction
     ]
     reduction_var_names = cast(List[str], [v.name for v in reduction_vars])
+
     fp, p, lp, s, r = classify_loop_variables(pet, root)
 
     # get parents of loop

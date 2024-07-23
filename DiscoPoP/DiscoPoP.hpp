@@ -71,14 +71,14 @@
 #define DP_DEBUG false
 
 #define ClCheckLoopPar true
-#define DumpToDot true
+#define DumpToDot false
 #define DP_BRANCH_TRACKING                                                                                             \
   true // toggles the creation of instrumentation calls for tracking taken
        // branches. Required by the graph pruning step of the DiscoPoP
        // optimizer.
 #define DP_DEBUG false
 #define DP_VERBOSE false // prints warning messages
-#define DP_hybrid_DEBUG true
+#define DP_hybrid_DEBUG false
 
 using namespace llvm;
 using namespace std;
@@ -137,10 +137,10 @@ private:
 
   Type *pointsToStruct(PointerType *PTy);
 
-  Value *determineVariableName_dynamic(Instruction *const I);
+  Value *determineVariableName_dynamic(Instruction *const I, string prefix);
 
   string determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/,
-                                      bool disable_MetadataMap);
+                                      bool disable_MetadataMap, string prefix);
 
   void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
                                    std::map<string, string> *trueVarNamesFromMetadataMap);

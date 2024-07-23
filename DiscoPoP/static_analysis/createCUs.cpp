@@ -152,7 +152,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
           Type *Ty = operand->getType();
           unsigned u = DL->getTypeSizeInBits(Ty);
           cu->writeDataSize += u;
-          varName = determineVariableName_static(&*instruction, isGlobalVar, false);
+          varName = determineVariableName_static(&*instruction, isGlobalVar, false, "");
           varType = determineVariableType(&*instruction);
           suspiciousVariables.insert(varName);
           if (lid > 0)
@@ -162,7 +162,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
           Type *Ty = instruction->getType();
           unsigned u = DL->getTypeSizeInBits(Ty);
           cu->readDataSize += u;
-          varName = determineVariableName_static(&*instruction, isGlobalVar, false);
+          varName = determineVariableName_static(&*instruction, isGlobalVar, false, "");
           if (suspiciousVariables.count(varName)) {
             // VIOLATION OF CAUTIOUS PROPERTY
             // it is a load instruction which read the value of a global

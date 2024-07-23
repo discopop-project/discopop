@@ -4,6 +4,8 @@ prog: code.o
 	$(CXX) -o prog code.o $(CXXFLAGS)
 
 code.o:
+	$(CXX) -c -S -emit-llvm -o code.ll code.cpp $(CXXFLAGS)
+	rm -r .discopop
 	$(CXX) -c -o code.o code.cpp $(CXXFLAGS)
 
 clean:

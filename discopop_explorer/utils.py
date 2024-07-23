@@ -685,51 +685,100 @@ def classify_loop_variables(
         )
 
     # vars = list(pet.get_variables(sub))
+    metadata_safe_index_accesses: List[Variable] = []
     for var in vars:
-        if is_loop_index2(pet, loop, var.name):
-            if is_read_in_subtree(vars[var], rev_raw, rst):
-                last_private.append(var)
-            else:
-                private.append(var)
-        elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
-            var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
-            reduction.append(var)
-        elif is_written_in_subtree(vars[var], raw, waw, lst) or is_func_arg(pet, var.name, loop) and is_scalar_val(var):
-            if is_readonly(vars[var], war, waw, rev_raw):
-                if is_global(var.name, sub):
-                    shared.append(var)
-                else:
-                    first_private.append(var)
-            elif is_read_in_subtree(vars[var], rev_raw, rst):
-                if is_scalar_val(var):
+        if loop.start_position() == "1:281" and (var.name == "d" or var.name == "d2"):
+            pass
+        # separate pointer and pointee dependencies for separated clasification
+        # classifications will be merged before returning
+        non_gep_mem_regs = set([mr for mr in vars[var] if not mr.startswith("GEPRESULT_")])
+        gep_mem_regs = set([mr for mr in vars[var] if mr.startswith("GEPRESULT_")])
+
+        for subset_idx, mem_reg_subset in enumerate([non_gep_mem_regs, gep_mem_regs]):
+            if subset_idx > 0 and len(mem_reg_subset) == 0:
+                continue
+            if is_loop_index2(pet, loop, var.name):
+                if is_read_in_subtree(mem_reg_subset, rev_raw, rst):
                     last_private.append(var)
                 else:
-                    shared.append(var)
-            else:
-                if not is_scalar_val(var):
-                    # array type variable is written
-                    shared.append(var)
-                else:
-                    if is_first_written(vars[var], raw, waw, sub):
-                        private.append(var)
+                    private.append(var)
+            elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
+                var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
+                reduction.append(var)
+            elif (
+                is_written_in_subtree(mem_reg_subset, raw, waw, lst)
+                or is_func_arg(pet, var.name, loop)
+                and is_scalar_val(var)
+            ):
+                if is_readonly(mem_reg_subset, war, waw, rev_raw):
+                    if is_global(var.name, sub):
+                        shared.append(var)
                     else:
                         first_private.append(var)
-
-        elif is_first_written(vars[var], raw, war, sub):
-            if len(vars[var].intersection(initialized_memory_regions)) > 0:
-                # variable is initialized in loop. No data sharing clauses required.
-                pass
-            else:
-                if is_read_in_subtree(vars[var], rev_raw, rst):
+                elif is_read_in_subtree(mem_reg_subset, rev_raw, rst):
                     if is_scalar_val(var):
                         last_private.append(var)
                     else:
                         shared.append(var)
                 else:
-                    if is_scalar_val(var):
-                        private.append(var)
-                    else:
+                    if not is_scalar_val(var):
+                        # array type variable is written
                         shared.append(var)
+                    else:
+                        if is_first_written(mem_reg_subset, raw, waw, sub):
+                            private.append(var)
+                        else:
+                            first_private.append(var)
+
+            elif is_first_written(mem_reg_subset, raw, war, sub):
+                if len(mem_reg_subset.intersection(initialized_memory_regions)) > 0 and subset_idx < 1:
+                    # subset_idx < 1 to ignore this check for gep memory regions, as they create additional INIT dependencies
+                    # variable is initialized in loop.
+
+                    # No data sharing clauses required, if the variable is declared inside the loop.
+                    if var_declared_in_subtree(var, sub):
+                        pass
+                    # Else, the variable requires a private clause
+                    else:
+                        private.append(var)
+                else:
+                    if is_read_in_subtree(mem_reg_subset, rev_raw, rst):
+                        if is_scalar_val(var):
+                            last_private.append(var)
+                        else:
+                            shared.append(var)
+                    else:
+                        # do not distinguish between scalar and structure types
+                        private.append(var)
+                        # keep old code until above replacement is proven to work
+                        # BEGIN: OLD CODE
+                        # if is_scalar_val(var):
+                        #    private.append(var)
+                        # else:
+                        #    shared.append(var)
+                        # END: OLD CODE
+            if subset_idx >= 1 and no_inter_iteration_dependency_exists(
+                mem_reg_subset, raw, war, sub, cast(LoopNode, loop)
+            ):
+                # check if metadata suggests, that index accesses are not problematic wrt. parallelization
+                metadata_safe_index_accesses.append(var)
+
+    if loop.start_position() == "1:281":
+        pass
+    # modify classifications
+    first_private, private, last_private, shared, reduction = __modify_classifications(
+        first_private, private, last_private, shared, reduction, metadata_safe_index_accesses
+    )
+
+    if loop.start_position() == "1:281":
+        pass
+    # merge classifications
+    first_private, private, last_private, shared, reduction = __merge_classifications(
+        first_private, private, last_private, shared, reduction
+    )
+
+    if loop.start_position() == "1:281":
+        pass
     # return first_private, private, last_private, shared, reduction
     return (
         sorted(first_private),
@@ -738,6 +787,98 @@ def classify_loop_variables(
         sorted(shared),
         sorted(reduction),
     )
+
+
+def var_declared_in_subtree(var: Variable, sub: list[CUNode]) -> bool:
+    var_file_id = int(var.defLine.split(":")[0])
+    var_def_line = int(var.defLine.split(":")[1])
+    for node in sub:
+        if (node.file_id == var_file_id) and (node.start_line <= var_def_line) and (node.end_line >= var_def_line):
+            return True
+    return False
+
+
+def no_inter_iteration_dependency_exists(
+    mem_regs: Set[MemoryRegion],
+    raw: Set[Tuple[NodeID, NodeID, Dependency]],
+    war: Set[Tuple[NodeID, NodeID, Dependency]],
+    sub: List[CUNode],
+    root_loop: LoopNode,
+) -> bool:
+
+    for dep in raw.union(war):
+        if dep[0] in [s.id for s in sub] and dep[1] in [s.id for s in sub]:
+            if dep[2].memory_region in mem_regs:
+                if root_loop.start_position() in dep[2].metadata_inter_iteration_dep:
+                    return False
+    return True
+
+
+def __modify_classifications(
+    first_private: list[Variable],
+    private: list[Variable],
+    last_private: list[Variable],
+    shared: list[Variable],
+    reduction: list[Variable],
+    metadata_safe_index_accesses: list[Variable],
+) -> Tuple[list[Variable], list[Variable], list[Variable], list[Variable], list[Variable]]:
+    # Rule 1: if structure index accesses suggest, that parallelizing is safe without data sharing clauses, loosen private clauses to shared.
+    # --> this rule does not affect first_ and last_private clauses, as they require a specific access / dependency pattern
+    move_to_shared: List[Variable] = []
+    for var in metadata_safe_index_accesses:
+        if var in private:
+            move_to_shared.append(var)
+    for var in move_to_shared:
+        if var in private:
+            private.remove(var)
+        if var not in shared:
+            shared.append(var)
+
+    return first_private, private, last_private, shared, reduction
+
+
+def __merge_classifications(
+    first_private: list[Variable],
+    private: list[Variable],
+    last_private: list[Variable],
+    shared: list[Variable],
+    reduction: list[Variable],
+) -> Tuple[list[Variable], list[Variable], list[Variable], list[Variable], list[Variable]]:
+    new_first_private: list[Variable] = []
+    new_private: list[Variable] = []
+    new_last_private: list[Variable] = []
+    new_shared: list[Variable] = []
+    new_reduction: list[Variable] = reduction
+
+    remove_from_private: Set[Variable] = set()
+    remove_from_first_private: Set[Variable] = set()
+    remove_from_last_private: Set[Variable] = set()
+    remove_from_shared: Set[Variable] = set()
+    remove_from_reduction: Set[Variable] = set()
+
+    # Rule 1: firstprivate is more restrictive than private
+    for var_1 in first_private:
+        for var_2 in private:
+            if var_1.name == var_2.name:
+                remove_from_private.add(var_2)
+    # Rule 2: lastprivate is more restrictive than private
+    for var_1 in last_private:
+        for var_2 in private:
+            if var_1.name == var_2.name:
+                remove_from_private.add(var_2)
+    # Rule 3: shared is less restrictive than any private
+    for var_1 in first_private + last_private + private:
+        for var_2 in shared:
+            if var_1.name == var_2.name:
+                remove_from_shared.add(var_2)
+
+    new_first_private = [v for v in first_private if v not in remove_from_first_private]
+    new_last_private = [v for v in last_private if v not in remove_from_last_private]
+    new_private = [v for v in private if v not in remove_from_private]
+    new_shared = [v for v in shared if v not in remove_from_shared]
+    new_reduction = [v for v in reduction if v not in remove_from_reduction]
+
+    return new_first_private, new_private, new_last_private, new_shared, new_reduction
 
 
 def classify_task_vars(
