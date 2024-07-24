@@ -5,7 +5,7 @@ void perform_calculation(double *base, int offset_1, int offset_2) { base[offset
 
 void doall_possible(double *base, int index) { perform_calculation(base, index, index); }
 
-void doall_not_possible(double *base, int index, int n) { perform_calculation(base, index, (index + 422 % n)); }
+void doall_not_possible(double *base, int index, int n) { perform_calculation(base, index, (index + 422) % n); }
 
 int main(int argc, const char *argv[]) {
   static int n = 5000;

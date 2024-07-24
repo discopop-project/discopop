@@ -59,6 +59,13 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
     }
     return;
   }
+
+#if DP_HYBRID_PROFILING
+  if(! loop_manager->enable_hybrid_calculate_dependency()){
+    return;
+  }
+#endif
+
   // For tracking function call or invoke
 #ifdef SKIP_DUP_INSTR
   if (lastaddr == addr && count >= 2) {

@@ -39,13 +39,24 @@ public:
     if (!loopStack.empty()) {
       inherited_dep_metadata_calculation = loopStack.top().get_dependency_metadata_calculation_enabled();
     }
-
 #endif
+
+#if DP_HYBRID_PROFILING
+    // check if hybrid dependency calculation should be disabled due to inheritance
+    bool inherited_hybrid_dependency_calculation = true;
+    if (!loopStack.empty()) {
+      inherited_hybrid_dependency_calculation = loopStack.top().get_hybrid_dependency_calculation_enabled();
+    }
+#endif
+
     loopStack.push(LoopTableEntry(function_level, loop_id, 0, begin_line));
 #if DP_CALLTREE_PROFILING
     // set the inherited metadata calculation flag
     loopStack.non_const_top().set_dependency_metadata_calculation_enabled(inherited_dep_metadata_calculation);
-
+#endif
+#if DP_HYBRID_PROFILING
+    // set the inherited hybrid dependency calculation flag
+    loopStack.non_const_top().set_hybrid_dependency_calculation_enabled(inherited_hybrid_dependency_calculation);
 #endif
     if (loops.find(begin_line) == loops.end()) {
       loops.insert(pair<LID, LoopRecord *>(begin_line, new LoopRecord(0, 0, 0)));
@@ -63,6 +74,10 @@ public:
   bool enable_calculate_dependency_metadata() { return loopStack.top().get_dependency_metadata_calculation_enabled(); };
 #endif
 
+#if DP_HYBRID_PROFILING
+  bool enable_hybrid_calculate_dependency() { return loopStack.top().get_hybrid_dependency_calculation_enabled(); };
+#endif
+
   void iterate_loop(const std::int32_t function_level) {
     loopStack.increment_top_count();
 #if DP_CALLTREE_PROFILING
@@ -77,6 +92,22 @@ public:
       loopStack.non_const_top().set_dependency_metadata_calculation_enabled(
           loopStack.top().get_dependency_metadata_calculation_enabled() &&
           (DP_CALLTREE_PROFILING_METADATA_CUTOFF > loopStack.top().get_count()));
+#endif
+    }
+#endif
+
+#if DP_HYBRID_PROFILING
+    if (!DP_HYBRID_PROFILING_CUTOFF == 0) {
+#if DP_HYBRID_PROFILING_CUTOFF_IGNORE_PROBABILITY
+      loopStack.non_const_top().set_hybrid_dependency_calculation_enabled(
+          (loopStack.top().get_hybrid_dependency_calculation_enabled() &&
+           (DP_HYBRID_PROFILING_CUTOFF > loopStack.top().get_count())) ||
+          ((rand() % 1000) < DP_HYBRID_PROFILING_CUTOFF_IGNORE_PROBABILITY));
+#else
+      // DP_HYBRID_PROFILING_CUTOFF_IGNORE_PROBABILITY is 0
+      loopStack.non_const_top().set_hybrid_dependency_calculation_enabled(
+          loopStack.top().get_hybrid_dependency_calculation_enabled() &&
+          (DP_HYBRID_PROFILING_CUTOFF > loopStack.top().get_count()));
 #endif
     }
 #endif

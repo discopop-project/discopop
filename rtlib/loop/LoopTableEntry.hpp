@@ -25,6 +25,10 @@ struct LoopTableEntry {
 #if DP_CALLTREE_PROFILING
     dependency_metadata_calculation_enabled = true;
 #endif
+
+#if DP_HYBRID_PROFILING
+    hybrid_dependency_calculation_enabled = true;
+#endif
   }
 
   std::int32_t funcLevel;
@@ -47,10 +51,19 @@ struct LoopTableEntry {
   bool get_dependency_metadata_calculation_enabled() const { return dependency_metadata_calculation_enabled; }
 #endif
 
+#if DP_HYBRID_PROFILING
+  void set_hybrid_dependency_calculation_enabled(bool value) { hybrid_dependency_calculation_enabled = value; }
+
+  bool get_hybrid_dependency_calculation_enabled() const { return hybrid_dependency_calculation_enabled; }
+#endif
+
 private:
   std::int32_t count;
 #if DP_CALLTREE_PROFILING
   bool dependency_metadata_calculation_enabled;
+#endif
+#if DP_HYBRID_PROFILING
+  bool hybrid_dependency_calculation_enabled;
 #endif
 };
 
