@@ -224,10 +224,14 @@ bool DiscoPoP::runOnFunction(Function &F) {
         // Remove values from locals if dereferenced
         if (isa<StoreInst>(I)) {
           V = I.getOperand(0);
+          std::set < Value*> to_be_removed;
           for (Value *w : staticallyPredictableValues) {
             if (w == V) {
-              staticallyPredictableValues.erase(V);
+              to_be_removed.insert(V);
             }
+          }
+          for(Value* w: to_be_removed){
+            staticallyPredictableValues.erase(V);
           }
         }
       }
