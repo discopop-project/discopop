@@ -36,7 +36,7 @@ def get_unique_configuration_id() -> int:
 
 def run(arguments: AutotunerArguments) -> None:
     logger.info("Starting discopop autotuner.")
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float]] = []
+    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, str]] = []
     statistics_graph = StatisticsGraph()
     statistics_step_num = 0
 
@@ -49,7 +49,7 @@ def run(arguments: AutotunerArguments) -> None:
         shape=NodeShape.BOX,
     )
     timeout_after = cast(ExecutionResult, reference_configuration.execution_result).runtime * 2
-    debug_stats.append(([], cast(ExecutionResult, reference_configuration.execution_result).runtime))
+    debug_stats.append(([], cast(ExecutionResult, reference_configuration.execution_result).runtime, cast(ExecutionResult, reference_configuration.execution_result).return_code, reference_configuration.root_path))
 
     # load hotspots
     hsl_arguments = HotspotLoaderArguments(
@@ -114,13 +114,15 @@ def run(arguments: AutotunerArguments) -> None:
                     color=tmp_config.get_statistics_graph_color(),
                 )
                 # only consider valid code
+                debug_stats.append((current_config, cast(ExecutionResult, tmp_config.execution_result).runtime, cast(ExecutionResult, tmp_config.execution_result).return_code, tmp_config.root_path))
                 if (
                     cast(ExecutionResult, tmp_config.execution_result).result_valid
                     and cast(ExecutionResult, tmp_config.execution_result).return_code == 0
                 ):
                     suggestion_effects.append((current_config, tmp_config))
-                    debug_stats.append((current_config, cast(ExecutionResult, tmp_config.execution_result).runtime))
                 else:
+                    if arguments.skip_cleanup:
+                        continue
                     # delete invalid code
                     tmp_config.deleteFolder()
             # add current best configuration for reference / to detect "no suggestions is beneficial"
@@ -174,20 +176,27 @@ def run(arguments: AutotunerArguments) -> None:
             statistics_graph.output()
             statistics_step_num += 1
             # cleanup other configurations (excluding original version)
-            logger.debug("Cleanup:")
-            for _, config in sorted_suggestion_effects:
-                if config.root_path == reference_configuration.root_path:
-                    continue
-                config.deleteFolder()
+            if not arguments.skip_cleanup:
+                logger.debug("Cleanup:")
+                for _, config in sorted_suggestion_effects:
+                    if config.root_path == reference_configuration.root_path:
+                        continue
+                    config.deleteFolder()
 
             # continue with the next loop
 
     # show debug stats
     stats_str = "Configuration measurements:\n"
-    stats_str += "[time]\t[applied suggestions]\n"
+    stats_str += "[time]\t[applied suggestions]\t[return code]\t[path]\n"
     for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
-        stats_str += str(round(stats[1], 3)) + "s" + "\t" + str(stats[0]) + "\n"
+        stats_str += str(round(stats[1], 3)) + "s" + "\t" + str(stats[0]) +  "\t" + str(stats[2]) + "\t" + str(stats[3]) +  "\n"
     logger.info(stats_str)
+
+    # export measurements for pdf creation
+    with open("measurements.csv", "w+") as f:
+        f.write("ID; time; return_code;\n")
+        for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
+            f.write(str(stats[0]) + "; " + str(round(stats[1], 3)) + "; " + str(stats[2]) + ";" + "\n")
 
     # calculate result statistics
     speedup = (
