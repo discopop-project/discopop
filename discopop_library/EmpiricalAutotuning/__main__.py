@@ -37,7 +37,7 @@ def parse_args() -> AutotunerArguments:
         write_log=arguments.write_log,
         project_path=arguments.project_path,
         dot_dp_path=arguments.dot_dp_path,
-        skip_cleanup=arguments.skip_cleanup
+        skip_cleanup=arguments.skip_cleanup,
     )
 
 
