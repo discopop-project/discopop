@@ -49,7 +49,14 @@ def run(arguments: AutotunerArguments) -> None:
         shape=NodeShape.BOX,
     )
     timeout_after = cast(ExecutionResult, reference_configuration.execution_result).runtime * 2
-    debug_stats.append(([], cast(ExecutionResult, reference_configuration.execution_result).runtime, cast(ExecutionResult, reference_configuration.execution_result).return_code, reference_configuration.root_path))
+    debug_stats.append(
+        (
+            [],
+            cast(ExecutionResult, reference_configuration.execution_result).runtime,
+            cast(ExecutionResult, reference_configuration.execution_result).return_code,
+            reference_configuration.root_path,
+        )
+    )
 
     # load hotspots
     hsl_arguments = HotspotLoaderArguments(
@@ -114,7 +121,14 @@ def run(arguments: AutotunerArguments) -> None:
                     color=tmp_config.get_statistics_graph_color(),
                 )
                 # only consider valid code
-                debug_stats.append((current_config, cast(ExecutionResult, tmp_config.execution_result).runtime, cast(ExecutionResult, tmp_config.execution_result).return_code, tmp_config.root_path))
+                debug_stats.append(
+                    (
+                        current_config,
+                        cast(ExecutionResult, tmp_config.execution_result).runtime,
+                        cast(ExecutionResult, tmp_config.execution_result).return_code,
+                        tmp_config.root_path,
+                    )
+                )
                 if (
                     cast(ExecutionResult, tmp_config.execution_result).result_valid
                     and cast(ExecutionResult, tmp_config.execution_result).return_code == 0
@@ -189,7 +203,9 @@ def run(arguments: AutotunerArguments) -> None:
     stats_str = "Configuration measurements:\n"
     stats_str += "[time]\t[applied suggestions]\t[return code]\t[path]\n"
     for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
-        stats_str += str(round(stats[1], 3)) + "s" + "\t" + str(stats[0]) +  "\t" + str(stats[2]) + "\t" + str(stats[3]) +  "\n"
+        stats_str += (
+            str(round(stats[1], 3)) + "s" + "\t" + str(stats[0]) + "\t" + str(stats[2]) + "\t" + str(stats[3]) + "\n"
+        )
     logger.info(stats_str)
 
     # export measurements for pdf creation

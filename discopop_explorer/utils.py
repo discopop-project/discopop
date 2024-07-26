@@ -789,9 +789,10 @@ def classify_loop_variables(
         sorted(reduction),
     )
 
-def __remove_duplicate_variables(vars: List[Variable]) ->List[Variable]:
-    buffer : List[str] = []
-    vars_wo_duplicates : List[Variable] = []
+
+def __remove_duplicate_variables(vars: List[Variable]) -> List[Variable]:
+    buffer: List[str] = []
+    vars_wo_duplicates: List[Variable] = []
     for var in vars:
         if var.name + var.defLine not in buffer:
             vars_wo_duplicates.append(var)
