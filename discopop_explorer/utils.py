@@ -763,22 +763,23 @@ def classify_loop_variables(
                 # check if metadata suggests, that index accesses are not problematic wrt. parallelization
                 metadata_safe_index_accesses.append(var)
 
-    if loop.start_position() == "1:281":
-        pass
     # modify classifications
     first_private, private, last_private, shared, reduction = __modify_classifications(
         first_private, private, last_private, shared, reduction, metadata_safe_index_accesses
     )
 
-    if loop.start_position() == "1:281":
-        pass
     # merge classifications
     first_private, private, last_private, shared, reduction = __merge_classifications(
         first_private, private, last_private, shared, reduction
     )
 
-    if loop.start_position() == "1:281":
-        pass
+    # remove duplicates
+    first_private = __remove_duplicate_variables(first_private)
+    private = __remove_duplicate_variables(private)
+    last_private = __remove_duplicate_variables(last_private)
+    shared = __remove_duplicate_variables(shared)
+    reduction = __remove_duplicate_variables(reduction)
+
     # return first_private, private, last_private, shared, reduction
     return (
         sorted(first_private),
@@ -787,6 +788,18 @@ def classify_loop_variables(
         sorted(shared),
         sorted(reduction),
     )
+
+def __remove_duplicate_variables(vars: List[Variable]) ->List[Variable]:
+    buffer : List[str] = []
+    vars_wo_duplicates : List[Variable] = []
+    for var in vars:
+        if var.name + var.defLine not in buffer:
+            vars_wo_duplicates.append(var)
+            buffer.append(var.name + var.defLine)
+        else:
+            # duplicate found
+            continue
+    return vars_wo_duplicates
 
 
 def var_declared_in_subtree(var: Variable, sub: list[CUNode]) -> bool:
