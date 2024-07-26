@@ -48,7 +48,7 @@ def run(arguments: AutotunerArguments) -> None:
         color=reference_configuration.get_statistics_graph_color(),
         shape=NodeShape.BOX,
     )
-    timeout_after = cast(ExecutionResult, reference_configuration.execution_result).runtime * 2
+    timeout_after = max(3.0, cast(ExecutionResult, reference_configuration.execution_result).runtime * 2)
     debug_stats.append(
         (
             [],
@@ -108,7 +108,10 @@ def run(arguments: AutotunerArguments) -> None:
                     continue
                 visited_configurations.append(current_config)
                 tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
-                tmp_config.apply_suggestions(arguments, current_config)
+                try:
+                    tmp_config.apply_suggestions(arguments, current_config)
+                except ValueError:
+                    continue
                 tmp_config.execute(timeout=timeout_after)
                 statistics_graph.add_child(
                     "step "
