@@ -11,6 +11,7 @@ import os
 from typing import List, Optional, Set, Tuple, cast
 
 import jsonpickle  # type: ignore
+from discopop_explorer.PEGraphX import LoopNode
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
@@ -18,6 +19,7 @@ from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import Node
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 from discopop_library.result_classes.DetectionResult import DetectionResult
@@ -75,11 +77,21 @@ def run(arguments: AutotunerArguments) -> None:
     visited_configurations: List[List[SUGGESTION_ID]] = []
     best_suggestion_configuration: Tuple[List[SUGGESTION_ID], CodeConfiguration] = ([], reference_configuration)
     for hotspot_type in [HotspotType.YES, HotspotType.MAYBE, HotspotType.NO]:
-        if hotspot_type not in hotspot_information:
-            continue
-        # for all loops in descending order by average execution time
-        loop_tuples = hotspot_information[hotspot_type]
+        if hotspot_information:
+            # hotspot information exists
+            if hotspot_type not in hotspot_information:
+                continue
+            # for all loops in descending order by average execution time
+            loop_tuples = hotspot_information[hotspot_type]
+            sorted_loop_tuples = sorted(loop_tuples, key=lambda x: x[4], reverse=True)
+        else:
+            # no hotspot information was found
+            # get loop tuples from detection result
+            loop_nodes = detection_result.pet.all_nodes(type=LoopNode)
+            loop_tuples = [(l.file_id, l.start_line, HotspotNodeType.LOOP, "", 0.0) for l in loop_nodes]
+
         sorted_loop_tuples = sorted(loop_tuples, key=lambda x: x[4], reverse=True)
+
         for loop_tuple in sorted_loop_tuples:
             loop_str = (
                 ""
