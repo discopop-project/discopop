@@ -37,7 +37,7 @@ where `<CMAKE_FLAGS>` can consist of any combination of the following flags and 
 - `-DDP_CALLTREE_PROFILING_METADATA_CUTOFF=<int>` &ndash; Set a cutoff amount of vitis per basic block for dependency metadata calculation. Set `0` to disable cutoff. Default: `50000`.
 - `-DDP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY=[0-1000]` &ndash; Enable or disable probablistic cutoff. Ignores cutoff with a configurable probability. Set `0` to disable probabilistic cutoff. Set `25` for a probability of 2.5% etc.
 - `-DDP_MEMORY_REGION_DEALIASING=[0|1]`: Enable or disable the generation of dependency de-aliasing information. Reduces potential false positive parallelization suggestions, but increases the profiling overhead.
-
+- `-DDP_BRANCH_TRACKING=[0|1]`: Toggles the creation of instrumentation calls for tracking taken branches. Required by the graph pruning step of the DiscoPoP optimizer. Disabled by default.
 
 #### Development and debugging
 - `-DDP_RTLIB_VERBOSE=[0|1]` &ndash; Enable verbose output during profiling.

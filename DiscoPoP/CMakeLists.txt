@@ -38,7 +38,7 @@ add_llvm_library(LLVMDiscoPoP MODULE
 
         initialization/initializeCUIDCounter.cpp
         initialization/initializeBBDepCounter.cpp
-        
+
         llvm_hooks/doInitialization.cpp
         llvm_hooks/doFinalization.cpp
         llvm_hooks/runOnBasicBlock.cpp
@@ -51,7 +51,7 @@ add_llvm_library(LLVMDiscoPoP MODULE
         dp_reduction/determine_variable_type.cpp
         dp_reduction/CFA.cpp
         dp_reduction/get_var.cpp
-        dp_reduction/get_reduction_instr.cpp        
+        dp_reduction/get_reduction_instr.cpp
         dp_reduction/utils.cpp
         dp_reduction/insert_functions.cpp
 
@@ -78,5 +78,14 @@ if(DEFINED DP_HYBRID_PROFILING)
         endif()
 else()
         target_compile_definitions(LLVMDiscoPoP PUBLIC DP_HYBRID_PROFILING=1)
+endif()
+
+if(DEFINED DP_BRANCH_TRACKING)
+        target_compile_definitions(LLVMDiscoPoP PUBLIC DP_BRANCH_TRACKING=${DP_BRANCH_TRACKING})
+        if(NOT ${DP_BRANCH_TRACKING} EQUAL 0)
+                message(STATUS "WARNING: DiscoPoP configuration: DP_BRANCH_TRACKING enabled. Reduces profiling speed.")
+        endif()
+else()
+        target_compile_definitions(LLVMDiscoPoP PUBLIC DP_BRANCH_TRACKING=0)
 endif()
 # end of compiler flags

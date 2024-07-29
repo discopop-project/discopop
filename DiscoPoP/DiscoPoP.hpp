@@ -72,10 +72,6 @@
 
 #define ClCheckLoopPar true
 #define DumpToDot false
-#define DP_BRANCH_TRACKING                                                                                             \
-  true // toggles the creation of instrumentation calls for tracking taken
-       // branches. Required by the graph pruning step of the DiscoPoP
-       // optimizer.
 #define DP_DEBUG false
 #define DP_VERBOSE false // prints warning messages
 #define DP_hybrid_DEBUG false
