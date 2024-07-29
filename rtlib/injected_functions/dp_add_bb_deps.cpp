@@ -23,6 +23,7 @@
 #include <regex>
 #include <set>
 #include <string>
+#include <boost/algorithm/string.hpp>
 
 namespace __dp {
 
@@ -46,16 +47,15 @@ void __dp_add_bb_deps(char *depStringPtr) {
 
   std::string depString(depStringPtr);
   std::regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r3("[0-9]+:[0-9]+"), r4("(INIT|(R|W)A(R|W)).*");
-  std::smatch res0, res1, res2, res3;
+  std::smatch res1, res2, res3;
 
-  while (regex_search(depString, res0, r0)) {
-    std::string s(res0[0]);
+  std::vector<std::string> strs;
+  boost::split(strs, depString, boost::is_any_of("/"));
 
-    regex_search(s, res1, r1);
+  for(string substring : strs) {
+    regex_search(substring, res1, r1);
     std::string cond(res1[0]);
-
     if (bbList->find(stoi(cond)) == bbList->end()) {
-      depString = res0.suffix();
       continue;
     }
 
@@ -74,7 +74,6 @@ void __dp_add_bb_deps(char *depStringPtr) {
       (*outPutDeps)[k].insert(v);
       line = res2.suffix();
     }
-    depString = res0.suffix();
   }
 }
 // End HA
