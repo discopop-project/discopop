@@ -55,10 +55,14 @@ void __dp_add_bb_deps(char *depStringPtr) {
   for(string substring : strs) {
     regex_search(substring, res1, r1);
     std::string cond(res1[0]);
+
+    if(cond.length() == 0){
+      // skip invalid entry
+      continue;
+    }
     if (bbList->find(stoi(cond)) == bbList->end()) {
       continue;
     }
-
     std::string line(res1.suffix());
     line.erase(0, 1);
     while (regex_search(line, res2, r2)) {
