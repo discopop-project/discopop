@@ -7,7 +7,7 @@
 # directory for details.
 
 from typing import Dict, List, Optional, Set, cast
-from discopop_explorer.PEGraphX import MemoryRegion
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.variable import Variable
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments

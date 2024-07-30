@@ -21,6 +21,7 @@ from lxml.objectify import ObjectifiedElement  # type: ignore
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
 from .aliases.LineID import LineID
+from .aliases.MemoryRegion import MemoryRegion
 from .aliases.NodeID import NodeID
 from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
@@ -58,13 +59,6 @@ global_pet = None
 def parse_id(node_id: str) -> Tuple[int, int]:
     split = node_id.split(":")
     return int(split[0]), int(split[1])
-
-
-class MemoryRegion(str):
-    # simpler but still strong typing alternative:
-    def __init__(self, id_string: str):
-        super().__init__()
-        pass
 
 
 #        # check format of newly created MemoryRegion

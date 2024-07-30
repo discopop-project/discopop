@@ -11,8 +11,8 @@ from .PatternInfo import PatternInfo
 from ..PEGraphX import (
     PEGraphX,
     Node,
-    MemoryRegion,
 )
+from ..aliases.MemoryRegion import MemoryRegion
 from ..aliases.LineID import LineID
 
 

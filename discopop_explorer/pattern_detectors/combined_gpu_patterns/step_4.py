@@ -15,11 +15,11 @@ from networkx import NetworkXNoCycle, MultiDiGraph
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    MemoryRegion,
     CUNode,
     Dependency,
     FunctionNode,
 )
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.EdgeType import EdgeType

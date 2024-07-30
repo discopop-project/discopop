@@ -13,7 +13,7 @@ from typing import Dict, Tuple, Set, Optional, List, Any
 import networkx as nx  # type: ignore
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
-from discopop_explorer.PEGraphX import MemoryRegion
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.PathManagement.PathManagement import load_file_mapping

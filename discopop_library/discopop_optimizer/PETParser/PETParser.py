@@ -21,8 +21,8 @@ from discopop_explorer.PEGraphX import (
     FunctionNode,
     LoopNode,
     CUNode,
-    MemoryRegion,
 )
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.utils import calculate_workload
