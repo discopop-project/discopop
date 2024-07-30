@@ -22,11 +22,11 @@ from ..PEGraphX import (
     NodeType,
     Node,
     LineID,
-    DepType,
     NodeID,
     MemoryRegion,
     Dependency,
 )
+from ..enums.DepType import DepType
 from ..enums.EdgeType import EdgeType
 from ..utils import filter_for_hotspots, is_reduction_var, classify_loop_variables
 from ..variable import Variable

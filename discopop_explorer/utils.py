@@ -23,10 +23,10 @@ from .PEGraphX import (
     PEGraphX,
     NodeType,
     Node,
-    DepType,
     Dependency,
     MemoryRegion,
 )
+from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
 from .parser import LoopData
 from .variable import Variable
