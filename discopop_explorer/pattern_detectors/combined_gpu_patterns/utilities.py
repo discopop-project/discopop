@@ -10,10 +10,10 @@ from typing import List, Set, Dict, Tuple, Optional
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    NodeID,
     FunctionNode,
     MemoryRegion,
 )
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
 
 

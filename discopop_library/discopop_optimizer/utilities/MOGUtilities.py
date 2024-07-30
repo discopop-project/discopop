@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt  # type:ignore
 import networkx as nx  # type: ignore
 import tqdm  # type: ignore
 
-from discopop_explorer.PEGraphX import MemoryRegion, NodeID
+from discopop_explorer.PEGraphX import MemoryRegion
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.classes.edges.CallEdge import CallEdge
 from discopop_library.discopop_optimizer.classes.edges.DataFlowEdge import DataFlowEdge

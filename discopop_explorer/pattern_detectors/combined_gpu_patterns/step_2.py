@@ -14,11 +14,11 @@ import networkx as nx  # type: ignore
 from discopop_explorer.PEGraphX import (
     PEGraphX,
     CUNode,
-    NodeID,
     MemoryRegion,
     Dependency,
     FunctionNode,
 )
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import CombinedGPURegion
