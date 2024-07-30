@@ -12,11 +12,11 @@ from typing import List, cast, TextIO
 from .PEGraphX import (
     CUNode,
     FunctionNode,
-    LineID,
     LoopNode,
     PEGraphX,
     Node,
 )
+from .aliases.LineID import LineID
 from .aliases.NodeID import NodeID
 from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType

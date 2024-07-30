@@ -17,13 +17,13 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType
 from .PEGraphX import (
     CUNode,
     FunctionNode,
-    LineID,
     LoopNode,
     PEGraphX,
     Node,
     Dependency,
     MemoryRegion,
 )
+from .aliases.LineID import LineID
 from .aliases.NodeID import NodeID
 from .enums.NodeType import NodeType
 from .enums.DepType import DepType

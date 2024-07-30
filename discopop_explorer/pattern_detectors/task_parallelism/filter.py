@@ -8,7 +8,8 @@
 
 from typing import List, Dict, cast, Optional, Union
 
-from discopop_explorer.PEGraphX import CUNode, LineID, Node, PEGraphX
+from discopop_explorer.PEGraphX import CUNode, Node, PEGraphX
+from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
