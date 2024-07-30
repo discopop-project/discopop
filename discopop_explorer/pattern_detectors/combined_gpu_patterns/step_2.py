@@ -11,7 +11,7 @@ from typing import Dict, List, Set, Tuple, cast
 
 import networkx as nx  # type: ignore
 
-from discopop_explorer.PEGraphX import (
+from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
 from discopop_explorer.classes.FunctionNode import FunctionNode

@@ -8,7 +8,7 @@
 
 from typing import List, cast
 
-from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import (
     find_combined_gpu_regions,

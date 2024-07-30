@@ -9,7 +9,7 @@
 import os
 from typing import List, Dict, Tuple, Optional, cast, Any
 
-from discopop_explorer.PEGraphX import (
+from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
 from discopop_explorer.classes.FunctionNode import FunctionNode

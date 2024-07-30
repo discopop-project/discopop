@@ -8,10 +8,9 @@
 
 from typing import List, Dict, cast, Optional, Union
 
-from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_explorer.classes.CUNode import CUNode
 from discopop_explorer.classes.Node import Node
-from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
@@ -27,7 +26,6 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
     check_reachability,
 )
 from discopop_explorer.utils import is_loop_index2
-from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 
 
 def filter_data_sharing_clauses(

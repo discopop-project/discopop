@@ -9,7 +9,7 @@
 
 from typing import Dict, List, Optional, Tuple, cast
 
-from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_explorer.classes.DummyNode import DummyNode
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.parser import parse_inputs
@@ -17,7 +17,6 @@ from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo, run_detection as detect_reduction
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
-    Task,
     TaskParallelismInfo,
     TPIType,
 )
