@@ -12,9 +12,9 @@ from alive_progress import alive_bar  # type: ignore
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    CUNode,
     LoopNode,
 )
+from ...classes.CUNode import CUNode
 from ...classes.Node import Node
 from ...aliases.NodeID import NodeID
 from ...enums.NodeType import NodeType

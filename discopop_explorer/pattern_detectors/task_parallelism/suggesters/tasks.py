@@ -9,11 +9,11 @@
 from typing import List, Dict, cast
 
 from discopop_explorer.PEGraphX import (
-    CUNode,
     FunctionNode,
     LoopNode,
     PEGraphX,
 )
+from discopop_explorer.classes.CUNode import CUNode
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.MWType import MWType

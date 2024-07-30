@@ -10,10 +10,10 @@ import os
 from typing import List, Dict, Tuple, Optional, cast, Any
 
 from discopop_explorer.PEGraphX import (
-    CUNode,
     FunctionNode,
     PEGraphX,
 )
+from discopop_explorer.classes.CUNode import CUNode
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID

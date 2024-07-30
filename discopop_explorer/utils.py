@@ -15,11 +15,11 @@ from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 from .PEGraphX import (
-    CUNode,
     FunctionNode,
     LoopNode,
     PEGraphX,
 )
+from .classes.CUNode import CUNode
 from .classes.Node import Node
 from .classes.Dependency import Dependency
 from .aliases.MemoryRegion import MemoryRegion
