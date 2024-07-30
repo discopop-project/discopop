@@ -8,7 +8,7 @@
 
 from typing import List, cast, Tuple, Any
 
-from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_explorer.classes.CUNode import CUNode
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.aliases.LineID import LineID

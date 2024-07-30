@@ -12,7 +12,7 @@ from typing import List, Tuple, Dict, Optional, cast
 import networkx as nx  # type: ignore
 from sympy import Symbol
 
-from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
@@ -212,12 +212,12 @@ def show_options(
 
         def __update_selection(cm: CostModel, ctx: ContextObject) -> None:
             experiment.selected_paths_per_function[function_root] = (cm, ctx)
-            experiment.substitutions[cast(Symbol, function_root.sequential_costs)] = (
-                experiment.selected_paths_per_function[function_root][0].sequential_costs
-            )
-            experiment.substitutions[cast(Symbol, function_root.parallelizable_costs)] = (
-                experiment.selected_paths_per_function[function_root][0].parallelizable_costs
-            )
+            experiment.substitutions[
+                cast(Symbol, function_root.sequential_costs)
+            ] = experiment.selected_paths_per_function[function_root][0].sequential_costs
+            experiment.substitutions[
+                cast(Symbol, function_root.parallelizable_costs)
+            ] = experiment.selected_paths_per_function[function_root][0].parallelizable_costs
             # update displayed value
             label2.configure(state=NORMAL)
             label2.delete(0, END)

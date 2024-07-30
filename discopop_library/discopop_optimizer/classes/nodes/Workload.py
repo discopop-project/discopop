@@ -6,11 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from __future__ import annotations
-from typing import Optional, Set, List, cast
+from typing import Optional, Set, List
 
 from sympy import Integer, Expr  # type: ignore
 
-from discopop_explorer.PEGraphX import PEGraphX
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel

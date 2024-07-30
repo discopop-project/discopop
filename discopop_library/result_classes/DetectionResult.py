@@ -5,18 +5,11 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from ast import Dict
-from typing import List, cast
+from typing import cast
 
 import jsonpickle  # type: ignore
 
-from discopop_explorer.PEGraphX import PEGraphX
-from discopop_explorer.pattern_detectors.PatternBase import PatternBase
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
-from discopop_explorer.pattern_detectors.geometric_decomposition_detector import GDInfo
-from discopop_explorer.pattern_detectors.pipeline_detector import PipelineInfo
-from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
+from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_library.global_data.version.utils import get_version
 from discopop_library.result_classes.PatternStorage import PatternStorage
 

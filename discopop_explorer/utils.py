@@ -14,7 +14,7 @@ from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 
-from .PEGraphX import (
+from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
 from .classes.FunctionNode import FunctionNode

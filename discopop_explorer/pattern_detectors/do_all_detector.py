@@ -15,7 +15,7 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: igno
 
 from .PatternInfo import PatternInfo
 from .reduction_detector import ReductionInfo
-from ..PEGraphX import (
+from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
 from ..classes.LoopNode import LoopNode
