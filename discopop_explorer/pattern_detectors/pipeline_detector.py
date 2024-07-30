@@ -20,9 +20,9 @@ from ..PEGraphX import (
     NodeID,
     PEGraphX,
     Node,
-    DepType,
     Dependency,
 )
+from ..enums.DepType import DepType
 from ..enums.EdgeType import EdgeType
 from ..utils import correlation_coefficient, classify_task_vars, filter_for_hotspots
 

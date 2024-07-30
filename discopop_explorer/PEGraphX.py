@@ -21,6 +21,7 @@ from lxml.objectify import ObjectifiedElement  # type: ignore
 
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
+from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
 
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
@@ -54,13 +55,6 @@ global_pet = None
 def parse_id(node_id: str) -> Tuple[int, int]:
     split = node_id.split(":")
     return int(split[0]), int(split[1])
-
-
-class DepType(Enum):
-    RAW = 0
-    WAR = 1
-    WAW = 2
-    INIT = 3
 
 
 class NodeType(IntEnum):

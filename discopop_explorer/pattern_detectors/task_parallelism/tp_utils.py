@@ -18,10 +18,10 @@ from discopop_explorer.PEGraphX import (
     Node,
     NodeType,
     MWType,
-    DepType,
     PEGraphX,
     LineID,
 )
+from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.task_parallelism.classes import Task, TaskParallelismInfo
 from discopop_explorer.utils import depends
