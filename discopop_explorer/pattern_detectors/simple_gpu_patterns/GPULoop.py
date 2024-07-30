@@ -13,7 +13,6 @@ from discopop_explorer.PEGraphX import (
     PEGraphX,
     CUNode,
     parse_id,
-    DepType,
     NodeID,
     LineID,
     MemoryRegion,
@@ -21,6 +20,7 @@ from discopop_explorer.PEGraphX import (
     Node,
     LoopNode,
 )
+from ...enums.DepType import DepType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.utils import (
     __get_dep_of_type as get_dep_of_type,

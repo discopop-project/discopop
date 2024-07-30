@@ -14,11 +14,11 @@ from discopop_explorer.PEGraphX import (
     PEGraphX,
     CUNode,
     NodeType,
-    DepType,
     NodeID,
     LoopNode,
     Node,
 )
+from ...enums.DepType import DepType
 from ...enums.EdgeType import EdgeType
 from discopop_explorer.variable import Variable
 from .GPULoop import GPULoopPattern

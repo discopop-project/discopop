@@ -17,8 +17,8 @@ from .PEGraphX import (
     NodeID,
     PEGraphX,
     Node,
-    DepType,
 )
+from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
 from .parser import parse_inputs
 

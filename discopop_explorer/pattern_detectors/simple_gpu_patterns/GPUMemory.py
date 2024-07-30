@@ -12,7 +12,6 @@ from typing import List, Set, cast, Tuple
 from discopop_explorer.PEGraphX import (
     PEGraphX,
     CUNode,
-    DepType,
     NodeID,
     Node,
     DummyNode,
@@ -20,6 +19,7 @@ from discopop_explorer.PEGraphX import (
     LoopNode,
     Dependency,
 )
+from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.utils import is_func_arg, is_global, __get_dep_of_type as get_dep_of_type
 from discopop_explorer.variable import Variable
 
