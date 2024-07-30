@@ -6,7 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from .PEGraphX import FunctionNode, Node, NodeID, PEGraphX
+from .PEGraphX import FunctionNode, Node, PEGraphX
+from .aliases.NodeID import NodeID
 from typing import Any, List, Optional, Set, Tuple
 
 global_pet: Optional[PEGraphX] = None

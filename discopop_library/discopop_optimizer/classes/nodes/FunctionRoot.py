@@ -10,7 +10,7 @@ from typing import Any, List, Optional
 
 from sympy import Function, Symbol, Integer, Expr  # type: ignore
 
-from discopop_explorer.PEGraphX import NodeID
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from typing import TYPE_CHECKING
 

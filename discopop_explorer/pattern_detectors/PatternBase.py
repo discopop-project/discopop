@@ -10,7 +10,8 @@ import json
 import os
 
 from filelock import FileLock  # type: ignore
-from discopop_explorer.PEGraphX import LineID, Node, NodeID
+from discopop_explorer.PEGraphX import LineID, Node
+from discopop_explorer.aliases.NodeID import NodeID
 
 
 class PatternBase(object):

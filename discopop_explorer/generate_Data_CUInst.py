@@ -14,10 +14,10 @@ from .PEGraphX import (
     FunctionNode,
     LineID,
     LoopNode,
-    NodeID,
     PEGraphX,
     Node,
 )
+from .aliases.NodeID import NodeID
 from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
 from .parser import parse_inputs

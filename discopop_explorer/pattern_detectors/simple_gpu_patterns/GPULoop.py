@@ -13,13 +13,13 @@ from discopop_explorer.PEGraphX import (
     PEGraphX,
     CUNode,
     parse_id,
-    NodeID,
     LineID,
     MemoryRegion,
     FunctionNode,
     Node,
     LoopNode,
 )
+from ...aliases.NodeID import NodeID
 from ...enums.DepType import DepType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.utils import (

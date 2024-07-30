@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Set, Tuple, cast
 
 from sympy import Expr
 import tqdm  # type: ignore
-from discopop_explorer.PEGraphX import NodeID  # type: ignore
+from discopop_explorer.aliases.NodeID import NodeID
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
