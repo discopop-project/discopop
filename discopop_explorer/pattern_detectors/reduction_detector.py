@@ -19,13 +19,13 @@ from ..PEGraphX import (
     CUNode,
     LoopNode,
     PEGraphX,
-    NodeType,
     Node,
     LineID,
     NodeID,
     MemoryRegion,
     Dependency,
 )
+from ..enums.NodeType import NodeType
 from ..enums.DepType import DepType
 from ..enums.EdgeType import EdgeType
 from ..utils import filter_for_hotspots, is_reduction_var, classify_loop_variables
