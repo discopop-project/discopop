@@ -13,7 +13,7 @@ import warnings
 from sympy import Expr, Integer, Symbol  # type: ignore
 import networkx as nx  # type: ignore
 
-from discopop_explorer.PEGraphX import MemoryRegion
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

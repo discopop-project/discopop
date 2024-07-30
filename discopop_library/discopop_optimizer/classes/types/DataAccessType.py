@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Any, Dict, Optional
 
-from discopop_explorer.PEGraphX import MemoryRegion
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 
 
 class ReadDataAccess(object):
