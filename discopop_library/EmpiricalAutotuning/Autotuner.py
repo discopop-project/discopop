@@ -224,10 +224,24 @@ def run(arguments: AutotunerArguments) -> None:
     logger.info(stats_str)
 
     # export measurements for pdf creation
-    with open("measurements.csv", "w+") as f:
-        f.write("ID; time; return_code;\n")
-        for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
-            f.write(str(stats[0]) + "; " + str(round(stats[1], 3)) + "; " + str(stats[2]) + ";" + "\n")
+    if False:  # export all measurements
+        with open("measurements.csv", "w+") as f:
+            f.write("ID; time; return_code;\n")
+            for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
+                f.write(str(stats[0]) + "; " + str(round(stats[1], 3)) + "; " + str(stats[2]) + ";" + "\n")
+    else:  # export only sequential and best measurement
+        with open("measurements.csv", "w+") as f:
+            f.write("ID; time; return_code;\n")
+            # write sequential measurement
+            for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
+                if str(stats[0]) == "[]":
+                    f.write(str(stats[0]) + "; " + str(round(stats[1], 3)) + "; " + str(stats[2]) + ";" + "\n")
+            # write best measurement
+            for stats in sorted(debug_stats, key=lambda x: x[1], reverse=False):
+                if str(stats[2]) != "0":
+                    continue
+                f.write(str(stats[0]) + "; " + str(round(stats[1], 3)) + "; " + str(stats[2]) + ";" + "\n")
+                break
 
     # calculate result statistics
     speedup = (
