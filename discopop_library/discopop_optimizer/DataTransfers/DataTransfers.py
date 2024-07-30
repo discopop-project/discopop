@@ -8,7 +8,8 @@
 from typing import Dict, List, Optional, Set, Tuple, cast
 
 import networkx as nx  # type: ignore
-from discopop_explorer.PEGraphX import EdgeType, MemoryRegion
+from discopop_explorer.PEGraphX import MemoryRegion
+from discopop_explorer.enums.EdgeType import EdgeType
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment

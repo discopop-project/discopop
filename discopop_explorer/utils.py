@@ -24,10 +24,10 @@ from .PEGraphX import (
     NodeType,
     Node,
     DepType,
-    EdgeType,
     Dependency,
     MemoryRegion,
 )
+from .enums.EdgeType import EdgeType
 from .parser import LoopData
 from .variable import Variable
 
@@ -832,7 +832,6 @@ def no_inter_iteration_dependency_exists(
     sub: List[CUNode],
     root_loop: LoopNode,
 ) -> bool:
-
     for dep in raw.union(war):
         if dep[0] in [s.id for s in sub] and dep[1] in [s.id for s in sub]:
             if dep[2].memory_region in mem_regs:
@@ -915,15 +914,7 @@ def classify_task_vars(
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
     out_deps: List[Tuple[NodeID, NodeID, Dependency]],
     used_in_task_parallelism_detection: bool = False,
-) -> Tuple[
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[str],
-]:
+) -> Tuple[List[Variable], List[Variable], List[Variable], List[Variable], List[Variable], List[Variable], List[str],]:
     """Classify task variables
 
     :param pet: CU graph

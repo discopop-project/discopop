@@ -13,13 +13,13 @@ from networkx import MultiDiGraph  # type: ignore
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    EdgeType,
     NodeID,
     MemoryRegion,
     DepType,
     CUNode,
     FunctionNode,
 )
+from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )

@@ -21,13 +21,13 @@ from ..PEGraphX import (
     PEGraphX,
     Node,
     NodeType,
-    EdgeType,
     LineID,
     MemoryRegion,
     DepType,
     NodeID,
     Dependency,
 )
+from ..enums.EdgeType import EdgeType
 from ..utils import classify_loop_variables, filter_for_hotspots
 from ..variable import Variable
 

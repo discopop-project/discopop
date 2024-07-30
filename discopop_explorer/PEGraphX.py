@@ -21,6 +21,7 @@ from lxml.objectify import ObjectifiedElement  # type: ignore
 
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
+from .enums.EdgeType import EdgeType
 
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
@@ -53,14 +54,6 @@ global_pet = None
 def parse_id(node_id: str) -> Tuple[int, int]:
     split = node_id.split(":")
     return int(split[0]), int(split[1])
-
-
-class EdgeType(Enum):
-    CHILD = 0
-    SUCCESSOR = 1
-    DATA = 2
-    CALLSNODE = 3
-    PRODUCE_CONSUME = 4
 
 
 class DepType(Enum):
@@ -173,9 +166,9 @@ class Node:
     end_line: int
     type: NodeType
     name: str
-    parent_function_id: Optional[NodeID] = (
-        None  # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
-    )
+    parent_function_id: Optional[
+        NodeID
+    ] = None  # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
     workload: Optional[int] = None
 
     # properties of CU Nodes
@@ -1008,10 +1001,12 @@ class PEGraphX(object):
     NodeT = TypeVar("NodeT", bound=Node)
 
     @overload
-    def all_nodes(self) -> List[Node]: ...
+    def all_nodes(self) -> List[Node]:
+        ...
 
     @overload
-    def all_nodes(self, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
+    def all_nodes(self, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]:
+        ...
 
     def all_nodes(self, type: Any = Node) -> List[NodeT]:
         """List of all nodes of specified type
@@ -1054,10 +1049,12 @@ class PEGraphX(object):
             return [t for t in self.g.in_edges(node_id, data="data") if t[2].etype == etype]
 
     @overload
-    def subtree_of_type(self, root: Node) -> List[Node]: ...
+    def subtree_of_type(self, root: Node) -> List[Node]:
+        ...
 
     @overload
-    def subtree_of_type(self, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
+    def subtree_of_type(self, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]:
+        ...
 
     def subtree_of_type(self, root: Node, type: Any = Node) -> List[NodeT]:
         """Gets all nodes in subtree of specified type including root
@@ -1069,12 +1066,14 @@ class PEGraphX(object):
         return self.subtree_of_type_rec(root, set(), type)
 
     @overload
-    def subtree_of_type_rec(self, root: Node, visited: Set[Node]) -> List[Node]: ...
+    def subtree_of_type_rec(self, root: Node, visited: Set[Node]) -> List[Node]:
+        ...
 
     @overload
     def subtree_of_type_rec(
         self, root: Node, visited: Set[Node], type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]
-    ) -> List[NodeT]: ...
+    ) -> List[NodeT]:
+        ...
 
     def subtree_of_type_rec(self, root: Node, visited: Set[Node], type: Any = Node) -> List[NodeT]:
         """recursive helper function for subtree_of_type"""
