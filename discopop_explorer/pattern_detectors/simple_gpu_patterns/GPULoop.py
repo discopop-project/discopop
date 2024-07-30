@@ -12,9 +12,9 @@ from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 from discopop_explorer.PEGraphX import (
     PEGraphX,
     parse_id,
-    FunctionNode,
-    LoopNode,
 )
+from ...classes.FunctionNode import FunctionNode
+from ...classes.LoopNode import LoopNode
 from ...classes.CUNode import CUNode
 from ...classes.Node import Node
 from ...aliases.MemoryRegion import MemoryRegion

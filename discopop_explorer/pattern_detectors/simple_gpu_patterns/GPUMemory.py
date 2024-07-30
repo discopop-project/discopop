@@ -11,10 +11,10 @@ from typing import List, Set, cast, Tuple
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    DummyNode,
-    FunctionNode,
-    LoopNode,
 )
+from discopop_explorer.classes.FunctionNode import FunctionNode
+from discopop_explorer.classes.DummyNode import DummyNode
+from discopop_explorer.classes.LoopNode import LoopNode
 from discopop_explorer.classes.CUNode import CUNode
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.classes.Dependency import Dependency

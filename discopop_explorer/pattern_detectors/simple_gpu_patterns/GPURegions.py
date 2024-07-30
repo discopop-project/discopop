@@ -12,8 +12,8 @@ from alive_progress import alive_bar  # type: ignore
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    LoopNode,
 )
+from ...classes.LoopNode import LoopNode
 from ...classes.CUNode import CUNode
 from ...classes.Node import Node
 from ...aliases.NodeID import NodeID

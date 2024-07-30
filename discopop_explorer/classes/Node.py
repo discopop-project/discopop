@@ -9,7 +9,8 @@ from __future__ import annotations
 
 from typing import Optional, List, Dict, Any
 
-from discopop_explorer.PEGraphX import parse_id, PEGraphX, FunctionNode
+from discopop_explorer.PEGraphX import parse_id, PEGraphX
+from discopop_explorer.classes.FunctionNode import FunctionNode
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
