@@ -14,8 +14,8 @@ from discopop_explorer.PEGraphX import (
     PEGraphX,
     CUNode,
     LoopNode,
-    Node,
 )
+from ...classes.Node import Node
 from ...aliases.NodeID import NodeID
 from ...enums.NodeType import NodeType
 from ...enums.DepType import DepType

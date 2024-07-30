@@ -14,9 +14,9 @@ from discopop_explorer.PEGraphX import (
     CUNode,
     parse_id,
     FunctionNode,
-    Node,
     LoopNode,
 )
+from ...classes.Node import Node
 from ...aliases.MemoryRegion import MemoryRegion
 from ...aliases.LineID import LineID
 from ...aliases.NodeID import NodeID
