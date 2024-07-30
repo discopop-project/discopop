@@ -12,7 +12,8 @@ from discopop_explorer.pattern_detectors.PatternBase import PatternBase
 
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 
-from ..PEGraphX import LoopNode, PEGraphX
+from ..PEGraphX import PEGraphX
+from ..classes.LoopNode import LoopNode
 from ..classes.Node import Node
 from ..aliases.LineID import LineID
 from ..aliases.NodeID import NodeID

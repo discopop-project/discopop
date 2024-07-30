@@ -13,10 +13,10 @@ from lxml import objectify  # type: ignore
 
 import discopop_explorer.classes.Node
 from discopop_explorer.PEGraphX import (
-    DummyNode,
-    FunctionNode,
     PEGraphX,
 )
+from discopop_explorer.classes.FunctionNode import FunctionNode
+from discopop_explorer.classes.DummyNode import DummyNode
 from discopop_explorer.classes.CUNode import CUNode
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.aliases.LineID import LineID

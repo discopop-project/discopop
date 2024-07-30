@@ -28,7 +28,9 @@ from discopop_library.discopop_optimizer.scheduling.workload_delta import (
 )
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_nodes_from_cu_id
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from .PEGraphX import DummyNode, LoopNode, PEGraphX
+from .PEGraphX import PEGraphX
+from .classes.DummyNode import DummyNode
+from .classes.LoopNode import LoopNode
 from .aliases.NodeID import NodeID
 from .enums.EdgeType import EdgeType
 from .pattern_detectors.do_all_detector import DoAllInfo, run_detection as detect_do_all

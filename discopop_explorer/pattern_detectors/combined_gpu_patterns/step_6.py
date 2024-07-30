@@ -13,8 +13,8 @@ from networkx import MultiDiGraph  # type: ignore
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    FunctionNode,
 )
+from discopop_explorer.classes.FunctionNode import FunctionNode
 from discopop_explorer.classes.CUNode import CUNode
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID

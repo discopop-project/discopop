@@ -9,7 +9,8 @@
 
 from typing import Dict, List, Optional, Tuple, cast
 
-from discopop_explorer.PEGraphX import DummyNode, PEGraphX
+from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.classes.DummyNode import DummyNode
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.parser import parse_inputs
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
