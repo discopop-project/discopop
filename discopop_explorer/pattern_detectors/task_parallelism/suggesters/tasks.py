@@ -12,11 +12,11 @@ from discopop_explorer.PEGraphX import (
     CUNode,
     FunctionNode,
     LoopNode,
-    MWType,
     Node,
     PEGraphX,
     LineID,
 )
+from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (

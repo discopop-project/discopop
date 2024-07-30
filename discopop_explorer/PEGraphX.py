@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import copy
 import itertools
-from enum import IntEnum, Enum
+from enum import IntEnum
 from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload, Any
 
 import jsonpickle  # type:ignore
@@ -23,6 +23,7 @@ from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
 from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
+from .enums.MWType import MWType
 
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
@@ -62,15 +63,6 @@ class NodeType(IntEnum):
     FUNC = 1
     LOOP = 2
     DUMMY = 3
-
-
-class MWType(Enum):
-    NONE = 0
-    ROOT = 1
-    FORK = 2
-    WORKER = 3
-    BARRIER = 4
-    BARRIER_WORKER = 5
 
 
 class NodeID(str):

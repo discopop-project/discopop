@@ -9,7 +9,8 @@
 from enum import Enum
 from typing import List, Optional
 
-from discopop_explorer.PEGraphX import LineID, Node, MWType, PEGraphX
+from discopop_explorer.PEGraphX import LineID, Node, PEGraphX
+from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 
 
