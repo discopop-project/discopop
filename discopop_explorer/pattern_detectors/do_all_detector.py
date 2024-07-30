@@ -20,10 +20,10 @@ from ..PEGraphX import (
     LoopNode,
     PEGraphX,
     Node,
-    LineID,
     MemoryRegion,
     Dependency,
 )
+from ..aliases.LineID import LineID
 from ..aliases.NodeID import NodeID
 from ..enums.NodeType import NodeType
 from ..enums.DepType import DepType

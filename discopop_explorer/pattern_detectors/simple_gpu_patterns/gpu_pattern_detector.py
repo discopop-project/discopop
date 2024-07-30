@@ -10,7 +10,8 @@ from typing import List, cast
 
 from alive_progress import alive_bar  # type: ignore
 
-from discopop_explorer.PEGraphX import LineID, PEGraphX, LoopNode
+from discopop_explorer.PEGraphX import PEGraphX, LoopNode
+from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (

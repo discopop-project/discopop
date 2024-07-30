@@ -17,8 +17,8 @@ from discopop_explorer.PEGraphX import (
     CUNode,
     Node,
     PEGraphX,
-    LineID,
 )
+from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.enums.DepType import DepType

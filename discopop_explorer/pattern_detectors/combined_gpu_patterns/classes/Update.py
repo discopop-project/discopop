@@ -9,7 +9,8 @@ from __future__ import annotations
 import os
 from typing import Set, Dict, cast, Optional, List, Tuple
 
-from discopop_explorer.PEGraphX import LineID, PEGraphX, MemoryRegion
+from discopop_explorer.PEGraphX import PEGraphX, MemoryRegion
+from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,

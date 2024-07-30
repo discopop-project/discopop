@@ -9,7 +9,8 @@
 from copy import deepcopy
 from typing import List
 
-from ..PEGraphX import LineID, LoopNode, PEGraphX, Node
+from ..PEGraphX import LoopNode, PEGraphX, Node
+from ..aliases.LineID import LineID
 from ..enums.EdgeType import EdgeType
 from ..utils import correlation_coefficient
 

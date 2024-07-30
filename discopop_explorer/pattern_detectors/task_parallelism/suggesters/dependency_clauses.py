@@ -14,8 +14,8 @@ from discopop_explorer.PEGraphX import (
     FunctionNode,
     Node,
     PEGraphX,
-    LineID,
 )
+from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo

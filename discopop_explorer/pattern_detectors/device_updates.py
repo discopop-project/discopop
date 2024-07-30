@@ -11,9 +11,9 @@ from .PatternInfo import PatternInfo
 from ..PEGraphX import (
     PEGraphX,
     Node,
-    LineID,
     MemoryRegion,
 )
+from ..aliases.LineID import LineID
 
 
 class DeviceUpdateInfo(PatternInfo):
