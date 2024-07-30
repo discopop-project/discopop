@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import List, Optional, Dict, Set, cast, Tuple
 
-import networkx as nx
+import networkx as nx  # type: ignore
 
-from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.CUNode import CUNode

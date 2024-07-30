@@ -7,11 +7,11 @@
 # directory for details.
 import copy
 import sys
-from typing import Any, Set, Tuple, Dict, List, TypeVar, cast, Optional, Union, overload
+from typing import Any, Set, Tuple, Dict, List, cast, Union
 
 from networkx import MultiDiGraph  # type: ignore
 
-from discopop_explorer.PEGraphX import (
+from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
 from discopop_explorer.classes.FunctionNode import FunctionNode

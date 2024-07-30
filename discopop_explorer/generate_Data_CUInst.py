@@ -9,7 +9,7 @@
 from io import TextIOWrapper
 from typing import List, cast, TextIO
 
-from .PEGraphX import (
+from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
 from .classes.FunctionNode import FunctionNode

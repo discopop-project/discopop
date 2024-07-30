@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Optional, List
 
-from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_explorer.classes.FunctionNode import FunctionNode
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.Node import Node

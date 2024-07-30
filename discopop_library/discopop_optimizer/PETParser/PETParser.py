@@ -16,7 +16,7 @@ import warnings
 
 from sympy import Integer
 
-from discopop_explorer.PEGraphX import (
+from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
 from discopop_explorer.classes.FunctionNode import FunctionNode
@@ -39,7 +39,6 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshot import Co
 from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshotPop import ContextSnapshotPop
 from discopop_library.discopop_optimizer.classes.nodes.FunctionReturn import FunctionReturn
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
@@ -50,8 +49,6 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_parents,
     get_nodes_by_functions,
     get_out_call_edges,
-    get_parent_function,
-    get_parents,
     get_path_entry,
     get_predecessors,
     get_successors,
@@ -64,7 +61,6 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_function_nodes,
     get_read_and_written_data_from_subgraph,
     remove_edge,
-    show,
     show_function,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at

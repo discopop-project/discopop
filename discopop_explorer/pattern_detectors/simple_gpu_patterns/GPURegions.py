@@ -10,7 +10,7 @@ from typing import List, Set, Optional, cast, Dict, Tuple
 
 from alive_progress import alive_bar  # type: ignore
 
-from discopop_explorer.PEGraphX import (
+from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
 from ...classes.LoopNode import LoopNode

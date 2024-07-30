@@ -7,7 +7,6 @@
 # directory for details.
 import json
 import os
-import sys
 from typing import Dict, List, Optional, Tuple, cast
 
 from alive_progress import alive_bar  # type: ignore
@@ -20,18 +19,10 @@ from discopop_explorer.variable import Variable
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
-from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
-from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.classes.system.System import System
-from discopop_library.discopop_optimizer.scheduling.workload_delta import (
-    get_workload_delta_for_cu_node,
-)
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_nodes_from_cu_id
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from .PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraphX import PEGraphX
 from .classes.DummyNode import DummyNode
 from .classes.LoopNode import LoopNode
-from .aliases.NodeID import NodeID
 from .enums.EdgeType import EdgeType
 from .pattern_detectors.do_all_detector import DoAllInfo, run_detection as detect_do_all
 from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd

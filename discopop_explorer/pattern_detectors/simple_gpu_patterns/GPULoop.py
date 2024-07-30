@@ -9,10 +9,10 @@ import os
 from enum import IntEnum
 from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 
-from discopop_explorer.PEGraphX import (
+from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
-    parse_id,
 )
+from ...utilities.PEGraphConstruction import parse_id
 from ...classes.FunctionNode import FunctionNode
 from ...classes.LoopNode import LoopNode
 from ...classes.CUNode import CUNode

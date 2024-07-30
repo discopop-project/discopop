@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from typing import Set, Dict, cast, Optional, List, Tuple
 
-from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
