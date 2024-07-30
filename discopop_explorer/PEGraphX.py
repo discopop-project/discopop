@@ -23,6 +23,7 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignor
 from .aliases.LineID import LineID
 from .aliases.MemoryRegion import MemoryRegion
 from .aliases.NodeID import NodeID
+from .classes.Dependency import Dependency
 from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
 from .enums.MWType import MWType
@@ -66,35 +67,6 @@ def parse_id(node_id: str) -> Tuple[int, int]:
 #            int(id_string)
 #        except ValueError:
 #            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
-
-
-class Dependency:
-    etype: EdgeType
-    dtype: Optional[DepType] = None
-    var_name: Optional[str] = None
-    memory_region: Optional[MemoryRegion] = None
-    source_line: Optional[LineID] = None
-    sink_line: Optional[LineID] = None
-    intra_iteration: bool = False
-    intra_iteration_level: int = -1
-    metadata_intra_iteration_dep: List[LineID]
-    metadata_inter_iteration_dep: List[LineID]
-    metadata_intra_call_dep: List[LineID]
-    metadata_inter_call_dep: List[LineID]
-    metadata_sink_ancestors: List[LineID]
-    metadata_source_ancestors: List[LineID]
-
-    def __init__(self, type: EdgeType):
-        self.etype = type
-        self.metadata_intra_iteration_dep = []
-        self.metadata_inter_iteration_dep = []
-        self.metadata_intra_call_dep = []
-        self.metadata_inter_call_dep = []
-        self.metadata_sink_ancestors = []
-        self.metadata_source_ancestors = []
-
-    def __str__(self) -> str:
-        return self.var_name if self.var_name is not None else str(self.etype)
 
 
 # TODO make the Node class abstract

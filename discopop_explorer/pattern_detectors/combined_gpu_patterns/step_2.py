@@ -14,9 +14,9 @@ import networkx as nx  # type: ignore
 from discopop_explorer.PEGraphX import (
     PEGraphX,
     CUNode,
-    Dependency,
     FunctionNode,
 )
+from discopop_explorer.classes.Dependency import Dependency
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.NodeType import NodeType

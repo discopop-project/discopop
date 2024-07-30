@@ -18,8 +18,8 @@ from ..PEGraphX import (
     LoopNode,
     PEGraphX,
     Node,
-    Dependency,
 )
+from ..classes.Dependency import Dependency
 from ..aliases.LineID import LineID
 from ..aliases.NodeID import NodeID
 from ..enums.DepType import DepType
