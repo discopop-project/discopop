@@ -21,8 +21,8 @@ from .PEGraphX import (
     PEGraphX,
     Node,
     Dependency,
-    MemoryRegion,
 )
+from .aliases.MemoryRegion import MemoryRegion
 from .aliases.LineID import LineID
 from .aliases.NodeID import NodeID
 from .enums.NodeType import NodeType

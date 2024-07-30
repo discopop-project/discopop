@@ -13,10 +13,10 @@ from networkx import MultiDiGraph  # type: ignore
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    MemoryRegion,
     CUNode,
     FunctionNode,
 )
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType

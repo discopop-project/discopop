@@ -8,7 +8,8 @@
 
 import logging
 from typing import List, Set, cast
-from discopop_explorer.PEGraphX import LoopNode, MemoryRegion
+from discopop_explorer.PEGraphX import LoopNode
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.Update import Update

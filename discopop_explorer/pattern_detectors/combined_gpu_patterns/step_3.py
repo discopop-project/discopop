@@ -8,7 +8,8 @@
 
 from typing import Dict, List, Tuple, Set, Optional
 
-from discopop_explorer.PEGraphX import PEGraphX, CUNode, MemoryRegion
+from discopop_explorer.PEGraphX import PEGraphX, CUNode
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import CombinedGPURegion

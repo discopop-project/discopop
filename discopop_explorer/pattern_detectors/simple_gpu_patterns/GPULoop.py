@@ -13,11 +13,11 @@ from discopop_explorer.PEGraphX import (
     PEGraphX,
     CUNode,
     parse_id,
-    MemoryRegion,
     FunctionNode,
     Node,
     LoopNode,
 )
+from ...aliases.MemoryRegion import MemoryRegion
 from ...aliases.LineID import LineID
 from ...aliases.NodeID import NodeID
 from ...enums.DepType import DepType
