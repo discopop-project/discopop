@@ -71,6 +71,10 @@ coverage.xml
 # Profiling reports
 profiling_stats.txt
 
+# Code structure diagrams
+classes.png
+packages.png
+
 # Translations
 *.mo
 *.pot
