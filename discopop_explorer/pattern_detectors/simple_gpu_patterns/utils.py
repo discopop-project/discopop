@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from discopop_explorer.PEGraphX import NodeID
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 
 

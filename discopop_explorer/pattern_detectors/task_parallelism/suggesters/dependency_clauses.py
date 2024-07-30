@@ -14,9 +14,9 @@ from discopop_explorer.PEGraphX import (
     FunctionNode,
     Node,
     PEGraphX,
-    NodeID,
     LineID,
 )
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName

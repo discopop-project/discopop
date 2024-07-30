@@ -22,9 +22,9 @@ from ..PEGraphX import (
     Node,
     LineID,
     MemoryRegion,
-    NodeID,
     Dependency,
 )
+from ..aliases.NodeID import NodeID
 from ..enums.NodeType import NodeType
 from ..enums.DepType import DepType
 from ..enums.EdgeType import EdgeType
