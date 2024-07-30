@@ -15,7 +15,6 @@ from networkx import NetworkXNoCycle, MultiDiGraph
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    EdgeType,
     NodeType,
     NodeID,
     MemoryRegion,
@@ -23,6 +22,7 @@ from discopop_explorer.PEGraphX import (
     Dependency,
     FunctionNode,
 )
+from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import CombinedGPURegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
