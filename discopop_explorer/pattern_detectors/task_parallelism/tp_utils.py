@@ -16,10 +16,10 @@ from discopop_explorer.PEGraphX import (
     FunctionNode,
     CUNode,
     Node,
-    NodeType,
     PEGraphX,
     LineID,
 )
+from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
