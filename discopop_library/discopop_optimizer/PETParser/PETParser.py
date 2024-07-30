@@ -19,12 +19,12 @@ from sympy import Integer
 from discopop_explorer.PEGraphX import (
     PEGraphX,
     FunctionNode,
-    EdgeType,
     LoopNode,
     CUNode,
     NodeID,
     MemoryRegion,
 )
+from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.utils import calculate_workload
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.discopop_optimizer.PETParser.DataAccesses.FromCUs import (

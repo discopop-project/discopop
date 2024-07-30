@@ -7,7 +7,8 @@
 # directory for details.
 from typing import Tuple, Set, cast
 
-from discopop_explorer.PEGraphX import NodeID, PEGraphX, MemoryRegion, CUNode, EdgeType, DepType
+from discopop_explorer.PEGraphX import NodeID, PEGraphX, MemoryRegion, CUNode, DepType
+from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     WriteDataAccess,
     ReadDataAccess,

@@ -20,10 +20,10 @@ from ..PEGraphX import (
     NodeID,
     PEGraphX,
     Node,
-    EdgeType,
     DepType,
     Dependency,
 )
+from ..enums.EdgeType import EdgeType
 from ..utils import correlation_coefficient, classify_task_vars, filter_for_hotspots
 
 __pipeline_threshold = 0.9

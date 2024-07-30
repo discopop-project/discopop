@@ -8,7 +8,8 @@
 
 from typing import List, cast, Dict, Optional, Tuple
 
-from discopop_explorer.PEGraphX import Node, EdgeType, PEGraphX
+from discopop_explorer.PEGraphX import Node, PEGraphX
+from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,

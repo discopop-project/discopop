@@ -10,11 +10,11 @@ from typing import List, Set, Dict, Tuple, Optional
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    EdgeType,
     NodeID,
     FunctionNode,
     MemoryRegion,
 )
+from discopop_explorer.enums.EdgeType import EdgeType
 
 
 def get_contained_lines(start_line: str, end_line: str) -> List[str]:

@@ -10,7 +10,8 @@ from typing import Optional, Set, List, cast
 
 from sympy import Integer, Expr  # type: ignore
 
-from discopop_explorer.PEGraphX import NodeID, PEGraphX, EdgeType
+from discopop_explorer.PEGraphX import NodeID, PEGraphX
+from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from typing import TYPE_CHECKING
 

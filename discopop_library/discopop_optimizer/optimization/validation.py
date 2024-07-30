@@ -7,7 +7,8 @@
 # directory for details.
 
 from typing import List, cast, Set
-from discopop_explorer.PEGraphX import EdgeType, NodeID
+from discopop_explorer.PEGraphX import NodeID
+from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
