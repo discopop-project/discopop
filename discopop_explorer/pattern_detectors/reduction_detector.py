@@ -156,9 +156,18 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
     parent_function_lineid = pet.get_parent_function(root).start_position()
     called_functions_lineids = __get_called_functions(pet, root)
 
+    # get in and out data dependencies for CUs in loop
+    in_data_dependencies: Dict[NodeID, List[Tuple[NodeID, NodeID, Dependency]]] = dict()
+    out_data_dependencies: Dict[NodeID, List[Tuple[NodeID, NodeID, Dependency]]] = dict()
+    for rc_cu in root_children_cus:
+        in_data_dependencies[rc_cu.id] = pet.in_edges(rc_cu.id, EdgeType.DATA)
+        out_data_dependencies[rc_cu.id] = pet.out_edges(rc_cu.id, EdgeType.DATA)
+
     # get variables which are defined inside the loop
     defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]] = []
-    tmp_loop_variables = pet.get_variables(root_children_cus)
+    tmp_loop_variables = pet.get_variables_using_buffered_dependencies(
+        root_children_cus, in_data_dependencies, out_data_dependencies
+    )
     for var in tmp_loop_variables:
         if ":" in var.defLine:
             file_id = int(var.defLine.split(":")[0])
@@ -181,6 +190,8 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
         parent_loops,
         parent_function_lineid,
         called_functions_lineids,
+        in_data_dependencies,
+        out_data_dependencies,
     ):
         return False
 
@@ -206,6 +217,8 @@ def __check_loop_dependencies(
     parent_loops: List[LineID],
     parent_function_lineid: LineID,
     called_functions_lineids: List[LineID],
+    in_data_dependencies: Dict[NodeID, List[Tuple[NodeID, NodeID, Dependency]]],
+    out_data_dependencies: Dict[NodeID, List[Tuple[NodeID, NodeID, Dependency]]],
 ) -> bool:
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Reduction pattern."""
@@ -215,8 +228,8 @@ def __check_loop_dependencies(
     # get dependency edges between children nodes
     deps = set()
     for n in loop_children_ids:
-        deps.update([(s, t, d) for s, t, d in pet.in_edges(n, EdgeType.DATA) if s in loop_children_ids])
-        deps.update([(s, t, d) for s, t, d in pet.out_edges(n, EdgeType.DATA) if t in loop_children_ids])
+        deps.update([(s, t, d) for s, t, d in in_data_dependencies[n] if s in loop_children_ids])
+        deps.update([(s, t, d) for s, t, d in out_data_dependencies[n] if t in loop_children_ids])
 
     # get memory regions which are defined inside the loop
     memory_regions_defined_in_loop = set()
@@ -225,18 +238,22 @@ def __check_loop_dependencies(
 
     for source, target, dep in deps:
         # check if targeted variable is readonly inside loop
-        if pet.is_readonly_inside_loop_body(
+        if pet.is_readonly_inside_loop_body_using_buffered_dependencies(
             dep,
             root_loop,
             root_children_cus,
             root_children_loops,
+            in_data_dependencies,
+            out_data_dependencies,
             loops_start_lines=loop_start_lines,
         ):
             # variable is readonly -> no problem
             continue
 
         # check if targeted variable is loop index
-        if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
+        if pet.is_loop_index_using_buffered_dependencies(
+            dep.var_name, loop_start_lines, root_children_cus, out_data_dependencies
+        ):
             continue
 
         # ignore dependencies where either source or sink do not lie within root_loop

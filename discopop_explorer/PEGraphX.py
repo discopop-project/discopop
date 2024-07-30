@@ -1316,13 +1316,68 @@ class PEGraphX(object):
                         res[v] = set()
                 out_data_edges = self.out_edges(node.id, EdgeType.DATA)
                 in_data_edges = self.in_edges(node.id, EdgeType.DATA)
+
+                # split depdendencies by variable names
+                var_name_to_deps: Dict[Optional[str], List[Dependency]] = dict()
+                for _, _, dep in out_data_edges + in_data_edges:
+                    if dep.var_name not in var_name_to_deps:
+                        var_name_to_deps[dep.var_name] = []
+                    var_name_to_deps[dep.var_name].append(dep)
+
                 # try to identify memory regions
                 for var_name in res:
                     # since the variable name is checked for equality afterwards,
                     # it is safe to consider incoming dependencies at this point as well.
                     # Note that INIT type edges are considered as well!
-                    for _, _, dep in out_data_edges + in_data_edges:
-                        if dep.var_name == var_name.name:
+                    # for _, _, dep in out_data_edges + in_data_edges:
+                    #    if dep.var_name == var_name.name:
+                    #        if dep.memory_region is not None:
+                    #            res[var_name].add(dep.memory_region)
+                    if var_name.name in var_name_to_deps:
+                        for dep in var_name_to_deps[var_name.name]:
+                            if dep.memory_region is not None:
+                                res[var_name].add(dep.memory_region)
+        return res
+
+    def get_variables_using_buffered_dependencies(
+        self,
+        nodes: Sequence[Node],
+        in_data_dependencies: Dict[NodeID, List[Tuple[NodeID, NodeID, Dependency]]],
+        out_data_dependencies: Dict[NodeID, List[Tuple[NodeID, NodeID, Dependency]]],
+    ) -> Dict[Variable, Set[MemoryRegion]]:
+        """Gets all variables and corresponding memory regions in nodes
+
+        :param nodes: nodes
+        :return: Set of variables
+        """
+        res: Dict[Variable, Set[MemoryRegion]] = dict()
+        for node in nodes:
+            if isinstance(node, CUNode):
+                for v in node.local_vars:
+                    if v not in res:
+                        res[v] = set()
+                for v in node.global_vars:
+                    if v not in res:
+                        res[v] = set()
+
+                # split depdendencies by variable names
+                var_name_to_deps: Dict[Optional[str], List[Dependency]] = dict()
+                for _, _, dep in out_data_dependencies[node.id] + in_data_dependencies[node.id]:
+                    if dep.var_name not in var_name_to_deps:
+                        var_name_to_deps[dep.var_name] = []
+                    var_name_to_deps[dep.var_name].append(dep)
+
+                # try to identify memory regions
+                for var_name in res:
+                    # since the variable name is checked for equality afterwards,
+                    # it is safe to consider incoming dependencies at this point as well.
+                    # Note that INIT type edges are considered as well!
+                    # for _, _, dep in out_data_dependencies[node.id] + in_data_dependencies[node.id]:
+                    #                        if dep.var_name == var_name.name:
+                    #                           if dep.memory_region is not None:
+                    #                               res[var_name].add(dep.memory_region)
+                    if var_name.name in var_name_to_deps:
+                        for dep in var_name_to_deps[var_name.name]:
                             if dep.memory_region is not None:
                                 res[var_name].add(dep.memory_region)
         return res
@@ -1427,6 +1482,33 @@ class PEGraphX(object):
 
         return False
 
+    def is_loop_index_using_buffered_dependencies(
+        self,
+        var_name: Optional[str],
+        loops_start_lines: List[LineID],
+        children: Sequence[Node],
+        out_data_dependencies: Dict[NodeID, List[Tuple[NodeID, NodeID, Dependency]]],
+    ) -> bool:
+        """Checks, whether the variable is a loop index.
+
+        :param var_name: name of the variable
+        :param loops_start_lines: start lines of the loops
+        :param children: children nodes of the loops
+        :return: true if edge represents loop index
+        """
+
+        # If there is a raw dependency for var, the source cu is part of the loop
+        # and the dependency occurs in loop header, then var is loop index+
+
+        for c in children:
+            for t, d in [
+                (t, d) for s, t, d in out_data_dependencies[c.id] if d.dtype == DepType.RAW and d.var_name == var_name
+            ]:
+                if d.sink_line == d.source_line and d.source_line in loops_start_lines and self.node_at(t) in children:
+                    return True
+
+        return False
+
     def is_readonly_inside_loop_body(
         self,
         dep: Dependency,
@@ -1455,6 +1537,40 @@ class PEGraphX(object):
                 if dep.memory_region == d.memory_region and not (d.sink_line in loops_start_lines):
                     return False
             for t, d in [(t, d) for s, t, d in self.in_edges(v.id, EdgeType.DATA) if d.dtype == DepType.RAW]:
+                # If there is a reverse raw dependency for var, then var is written in loop
+                # (source is always inside loop for reverse raw)
+                if dep.memory_region == d.memory_region and not (d.source_line in loops_start_lines):
+                    return False
+        return True
+
+    def is_readonly_inside_loop_body_using_buffered_dependencies(
+        self,
+        dep: Dependency,
+        root_loop: Node,
+        children_cus: Sequence[Node],
+        children_loops: Sequence[Node],
+        in_data_dependencies: Dict[NodeID, List[Tuple[NodeID, NodeID, Dependency]]],
+        out_data_dependencies: Dict[NodeID, List[Tuple[NodeID, NodeID, Dependency]]],
+        loops_start_lines: Optional[List[LineID]] = None,
+    ) -> bool:
+        """Checks, whether a variable is read-only in loop body
+
+        :param dep: dependency variable
+        :param root_loop: root loop
+        :return: true if variable is read-only in loop body
+        """
+        if loops_start_lines is None:
+            loops_start_lines = [v.start_position() for v in children_loops]
+
+        for v in children_cus:
+            for t, d in [
+                (t, d) for s, t, d in out_data_dependencies[v.id] if d.dtype == DepType.WAR or d.dtype == DepType.WAW
+            ]:
+                # If there is a waw dependency for var, then var is written in loop
+                # (sink is always inside loop for waw/war)
+                if dep.memory_region == d.memory_region and not (d.sink_line in loops_start_lines):
+                    return False
+            for t, d in [(t, d) for s, t, d in in_data_dependencies[v.id] if d.dtype == DepType.RAW]:
                 # If there is a reverse raw dependency for var, then var is written in loop
                 # (source is always inside loop for reverse raw)
                 if dep.memory_region == d.memory_region and not (d.source_line in loops_start_lines):
