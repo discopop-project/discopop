@@ -21,11 +21,11 @@ from .PEGraphX import (
     LoopNode,
     NodeID,
     PEGraphX,
-    NodeType,
     Node,
     Dependency,
     MemoryRegion,
 )
+from .enums.NodeType import NodeType
 from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
 from .parser import LoopData

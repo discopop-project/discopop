@@ -13,11 +13,11 @@ from alive_progress import alive_bar  # type: ignore
 from discopop_explorer.PEGraphX import (
     PEGraphX,
     CUNode,
-    NodeType,
     NodeID,
     LoopNode,
     Node,
 )
+from ...enums.NodeType import NodeType
 from ...enums.DepType import DepType
 from ...enums.EdgeType import EdgeType
 from discopop_explorer.variable import Variable

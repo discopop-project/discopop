@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import copy
 import itertools
-from enum import IntEnum
 from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload, Any
 
 import jsonpickle  # type:ignore
@@ -24,6 +23,7 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignor
 from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
 from .enums.MWType import MWType
+from .enums.NodeType import NodeType
 
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
 from .variable import Variable
@@ -56,13 +56,6 @@ global_pet = None
 def parse_id(node_id: str) -> Tuple[int, int]:
     split = node_id.split(":")
     return int(split[0]), int(split[1])
-
-
-class NodeType(IntEnum):
-    CU = 0
-    FUNC = 1
-    LOOP = 2
-    DUMMY = 3
 
 
 class NodeID(str):

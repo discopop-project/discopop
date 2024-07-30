@@ -20,12 +20,12 @@ from ..PEGraphX import (
     LoopNode,
     PEGraphX,
     Node,
-    NodeType,
     LineID,
     MemoryRegion,
     NodeID,
     Dependency,
 )
+from ..enums.NodeType import NodeType
 from ..enums.DepType import DepType
 from ..enums.EdgeType import EdgeType
 from ..utils import classify_loop_variables, filter_for_hotspots
