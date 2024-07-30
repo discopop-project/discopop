@@ -15,12 +15,12 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: igno
 from .PatternInfo import PatternInfo
 from ..PEGraphX import (
     CUNode,
-    LineID,
     LoopNode,
     PEGraphX,
     Node,
     Dependency,
 )
+from ..aliases.LineID import LineID
 from ..aliases.NodeID import NodeID
 from ..enums.DepType import DepType
 from ..enums.EdgeType import EdgeType
