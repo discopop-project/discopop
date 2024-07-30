@@ -15,7 +15,9 @@ from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
 from .PatternInfo import PatternInfo
-from ..PEGraphX import FunctionNode, LoopNode, PEGraphX
+from ..PEGraphX import PEGraphX
+from ..classes.FunctionNode import FunctionNode
+from ..classes.LoopNode import LoopNode
 from ..classes.Node import Node
 from ..aliases.NodeID import NodeID
 from ..enums.EdgeType import EdgeType

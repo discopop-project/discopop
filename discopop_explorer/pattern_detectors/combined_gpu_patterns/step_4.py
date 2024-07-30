@@ -15,8 +15,8 @@ from networkx import NetworkXNoCycle, MultiDiGraph
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    FunctionNode,
 )
+from discopop_explorer.classes.FunctionNode import FunctionNode
 from discopop_explorer.classes.CUNode import CUNode
 from discopop_explorer.classes.Dependency import Dependency
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion

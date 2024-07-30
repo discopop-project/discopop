@@ -9,7 +9,8 @@
 from copy import deepcopy
 from typing import List
 
-from ..PEGraphX import LoopNode, PEGraphX
+from ..PEGraphX import PEGraphX
+from ..classes.LoopNode import LoopNode
 from ..classes.Node import Node
 from ..aliases.LineID import LineID
 from ..enums.EdgeType import EdgeType
