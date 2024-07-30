@@ -14,6 +14,8 @@ from typing import Dict, List, Optional, Match, cast, Any
 
 from lxml import objectify  # type: ignore
 
+import discopop_explorer.classes.Node
+
 
 def __prune_statement(stmt_copy: str, statement: str, var_name: str, var_type: str) -> Optional[List[str]]:
     """splits a statement and performs multiple alias analyses if necessary (more than one '=' contained

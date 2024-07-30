@@ -12,9 +12,9 @@ from typing import List, Dict, Tuple, Optional, cast, Any
 from discopop_explorer.PEGraphX import (
     CUNode,
     FunctionNode,
-    Node,
     PEGraphX,
 )
+from discopop_explorer.classes.Node import Node
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType

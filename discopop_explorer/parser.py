@@ -18,6 +18,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from lxml import objectify  # type:ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
+import discopop_explorer.classes.Node
+
 # Map to record which line belongs to read set of nodes. LID -> NodeIds
 readlineToCUIdMap = defaultdict(set)  # type: ignore
 # Map to record which line belongs to write set of nodes. LID -> NodeIds

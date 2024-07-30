@@ -10,8 +10,8 @@ from typing import Optional
 from .PatternInfo import PatternInfo
 from ..PEGraphX import (
     PEGraphX,
-    Node,
 )
+from ..classes.Node import Node
 from ..aliases.MemoryRegion import MemoryRegion
 from ..aliases.LineID import LineID
 

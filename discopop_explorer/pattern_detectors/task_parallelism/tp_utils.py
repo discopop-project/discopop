@@ -11,13 +11,14 @@ from typing import Union, cast, Dict, List, Tuple, Optional, Any
 
 from lxml import objectify  # type: ignore
 
+import discopop_explorer.classes.Node
 from discopop_explorer.PEGraphX import (
     DummyNode,
     FunctionNode,
     CUNode,
-    Node,
     PEGraphX,
 )
+from discopop_explorer.classes.Node import Node
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.MWType import MWType

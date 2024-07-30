@@ -14,8 +14,8 @@ from .PEGraphX import (
     FunctionNode,
     LoopNode,
     PEGraphX,
-    Node,
 )
+from .classes.Node import Node
 from .aliases.LineID import LineID
 from .aliases.NodeID import NodeID
 from .enums.DepType import DepType

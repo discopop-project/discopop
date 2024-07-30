@@ -12,11 +12,11 @@ from typing import List, Set, cast, Tuple
 from discopop_explorer.PEGraphX import (
     PEGraphX,
     CUNode,
-    Node,
     DummyNode,
     FunctionNode,
     LoopNode,
 )
+from discopop_explorer.classes.Node import Node
 from discopop_explorer.classes.Dependency import Dependency
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.DepType import DepType
