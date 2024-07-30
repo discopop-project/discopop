@@ -16,10 +16,10 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: igno
 
 from .PatternInfo import PatternInfo
 from ..PEGraphX import (
-    CUNode,
     LoopNode,
     PEGraphX,
 )
+from ..classes.CUNode import CUNode
 from ..classes.Node import Node
 from ..classes.Dependency import Dependency
 from ..aliases.MemoryRegion import MemoryRegion

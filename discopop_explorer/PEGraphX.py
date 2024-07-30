@@ -23,6 +23,7 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignor
 from .aliases.LineID import LineID
 from .aliases.MemoryRegion import MemoryRegion
 from .aliases.NodeID import NodeID
+from .classes.CUNode import CUNode
 from .classes.Dependency import Dependency
 from .classes.Node import Node
 from .enums.DepType import DepType
@@ -67,20 +68,6 @@ def parse_id(node_id: str) -> Tuple[int, int]:
 #            int(id_string)
 #        except ValueError:
 #            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
-
-
-# Data.xml: type="0"
-class CUNode(Node):
-    instructions_count: int = -1
-    basic_block_id = ""
-    return_instructions_count: int = -1
-    local_vars: List[Variable] = []
-    global_vars: List[Variable] = []
-    performs_file_io: bool = False
-
-    def __init__(self, node_id: NodeID):
-        super().__init__(node_id)
-        self.type = NodeType.CU
 
 
 # Data.xml: type="2"

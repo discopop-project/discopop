@@ -10,11 +10,11 @@ from io import TextIOWrapper
 from typing import List, cast, TextIO
 
 from .PEGraphX import (
-    CUNode,
     FunctionNode,
     LoopNode,
     PEGraphX,
 )
+from .classes.CUNode import CUNode
 from .classes.Node import Node
 from .aliases.LineID import LineID
 from .aliases.NodeID import NodeID
