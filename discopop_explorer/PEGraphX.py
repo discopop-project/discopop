@@ -173,9 +173,9 @@ class Node:
     end_line: int
     type: NodeType
     name: str
-    parent_function_id: Optional[NodeID] = (
-        None  # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
-    )
+    parent_function_id: Optional[
+        NodeID
+    ] = None  # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
     workload: Optional[int] = None
 
     # properties of CU Nodes
@@ -1008,10 +1008,12 @@ class PEGraphX(object):
     NodeT = TypeVar("NodeT", bound=Node)
 
     @overload
-    def all_nodes(self) -> List[Node]: ...
+    def all_nodes(self) -> List[Node]:
+        ...
 
     @overload
-    def all_nodes(self, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
+    def all_nodes(self, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]:
+        ...
 
     def all_nodes(self, type: Any = Node) -> List[NodeT]:
         """List of all nodes of specified type
@@ -1054,10 +1056,12 @@ class PEGraphX(object):
             return [t for t in self.g.in_edges(node_id, data="data") if t[2].etype == etype]
 
     @overload
-    def subtree_of_type(self, root: Node) -> List[Node]: ...
+    def subtree_of_type(self, root: Node) -> List[Node]:
+        ...
 
     @overload
-    def subtree_of_type(self, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
+    def subtree_of_type(self, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]:
+        ...
 
     def subtree_of_type(self, root: Node, type: Any = Node) -> List[NodeT]:
         """Gets all nodes in subtree of specified type including root
@@ -1069,12 +1073,14 @@ class PEGraphX(object):
         return self.subtree_of_type_rec(root, set(), type)
 
     @overload
-    def subtree_of_type_rec(self, root: Node, visited: Set[Node]) -> List[Node]: ...
+    def subtree_of_type_rec(self, root: Node, visited: Set[Node]) -> List[Node]:
+        ...
 
     @overload
     def subtree_of_type_rec(
         self, root: Node, visited: Set[Node], type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]
-    ) -> List[NodeT]: ...
+    ) -> List[NodeT]:
+        ...
 
     def subtree_of_type_rec(self, root: Node, visited: Set[Node], type: Any = Node) -> List[NodeT]:
         """recursive helper function for subtree_of_type"""
@@ -1308,12 +1314,14 @@ class PEGraphX(object):
                 for v in node.global_vars:
                     if v not in res:
                         res[v] = set()
+                out_data_edges = self.out_edges(node.id, EdgeType.DATA)
+                in_data_edges = self.in_edges(node.id, EdgeType.DATA)
                 # try to identify memory regions
                 for var_name in res:
                     # since the variable name is checked for equality afterwards,
                     # it is safe to consider incoming dependencies at this point as well.
                     # Note that INIT type edges are considered as well!
-                    for _, _, dep in self.out_edges(node.id, EdgeType.DATA) + self.in_edges(node.id, EdgeType.DATA):
+                    for _, _, dep in out_data_edges + in_data_edges:
                         if dep.var_name == var_name.name:
                             if dep.memory_region is not None:
                                 res[var_name].add(dep.memory_region)
