@@ -12,9 +12,9 @@ from discopop_explorer.PEGraphX import (
     CUNode,
     FunctionNode,
     LoopNode,
-    Node,
     PEGraphX,
 )
+from discopop_explorer.classes.Node import Node
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.enums.EdgeType import EdgeType

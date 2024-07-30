@@ -24,9 +24,9 @@ from .aliases.LineID import LineID
 from .aliases.MemoryRegion import MemoryRegion
 from .aliases.NodeID import NodeID
 from .classes.Dependency import Dependency
+from .classes.Node import Node
 from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
-from .enums.MWType import MWType
 from .enums.NodeType import NodeType
 
 from .parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
@@ -67,103 +67,6 @@ def parse_id(node_id: str) -> Tuple[int, int]:
 #            int(id_string)
 #        except ValueError:
 #            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
-
-
-# TODO make the Node class abstract
-class Node:
-    # properties of every Node
-    id: NodeID
-    file_id: int
-    node_id: int
-    start_line: int
-    end_line: int
-    type: NodeType
-    name: str
-    parent_function_id: Optional[
-        NodeID
-    ] = None  # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
-    workload: Optional[int] = None
-
-    # properties of CU Nodes
-    node_calls: List[Dict[str, str]] = []
-    recursive_function_calls: List[str] = []
-
-    # properties related to pattern analysis
-    reduction: bool = False
-    do_all: bool = False
-    geometric_decomposition: bool = False
-    pipeline: float = -1
-    tp_contains_task: bool = False
-    tp_contains_taskwait: bool = False
-    tp_omittable: bool = False
-    mw_type = MWType.FORK
-
-    def __init__(self, node_id: NodeID):
-        self.id = node_id
-        self.file_id, self.node_id = parse_id(node_id)
-
-    #    @classmethod
-    #    def from_kwargs(cls, node_id: NodeID, **kwargs) -> Node:
-    #        node = cls(node_id)
-    #        for key, value in kwargs.items():
-    #            setattr(node, key, value)
-    #        return node
-
-    def start_position(self) -> LineID:
-        """Start position file_id:line
-        e.g. 23:45
-
-        :return:
-        """
-
-        return LineID(f"{self.file_id}:{self.start_line}")
-
-    def end_position(self) -> LineID:
-        """End position file_id:line
-        e.g. 23:45
-
-        :return:
-        """
-        return LineID(f"{self.file_id}:{self.end_line}")
-
-    def contains_line(self, other_line: str) -> bool:
-        if other_line == "GlobalVar" or other_line == "LineNotFound":
-            return False
-        if not ":" in other_line:
-            return False
-        other_file_id = int(other_line.split(":")[0])
-        other_line_num = int(other_line.split(":")[1])
-        if other_file_id != self.file_id:
-            return False
-        if other_line_num >= self.start_line and other_line_num <= self.end_line:
-            return True
-        return False
-
-    def __str__(self) -> str:
-        return self.id
-
-    def __eq__(self, other: Any) -> bool:
-        return isinstance(other, Node) and other.file_id == self.file_id and other.node_id == self.node_id
-
-    def __hash__(self) -> int:
-        return hash(self.id)
-
-    def get_parent_id(self, pet: PEGraphX) -> Optional[NodeID]:
-        parents = [s for s, t, d in pet.in_edges(self.id, EdgeType.CHILD)]
-        if len(parents) == 0:
-            return None
-        elif len(parents) == 1:
-            return parents[0]
-        else:
-            # it is possible that a node has a function-type and e.g. loop type parent
-            # in this case, return the non-function type parent, since it will be a child of the function itself.
-            if len(parents) > 2:
-                raise ValueError("Node: ", self.id, "has too many parents!")
-            else:
-                for parent in parents:
-                    if type(pet.node_at(parent)) != FunctionNode:
-                        return parent
-        return None
 
 
 # Data.xml: type="0"

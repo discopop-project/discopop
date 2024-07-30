@@ -17,8 +17,8 @@ from ..PEGraphX import (
     CUNode,
     LoopNode,
     PEGraphX,
-    Node,
 )
+from ..classes.Node import Node
 from ..classes.Dependency import Dependency
 from ..aliases.LineID import LineID
 from ..aliases.NodeID import NodeID
