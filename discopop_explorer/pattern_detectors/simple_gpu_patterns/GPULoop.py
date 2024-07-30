@@ -11,11 +11,11 @@ from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 
 from discopop_explorer.PEGraphX import (
     PEGraphX,
-    CUNode,
     parse_id,
     FunctionNode,
     LoopNode,
 )
+from ...classes.CUNode import CUNode
 from ...classes.Node import Node
 from ...aliases.MemoryRegion import MemoryRegion
 from ...aliases.LineID import LineID
