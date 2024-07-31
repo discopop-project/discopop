@@ -9,7 +9,7 @@ import os
 from enum import IntEnum
 from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 
-from discopop_explorer.classes.PEGraphX import (
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
 from ...classes.FunctionNode import FunctionNode

@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from discopop_explorer.classes.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from .classes.FunctionNode import FunctionNode
 from .classes.Node import Node
 from .aliases.NodeID import NodeID

@@ -11,7 +11,7 @@ from typing import Any, Set, Tuple, Dict, List, cast, Union
 
 from networkx import MultiDiGraph  # type: ignore
 
-from discopop_explorer.classes.PEGraphX import (
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
 from discopop_explorer.classes.FunctionNode import FunctionNode

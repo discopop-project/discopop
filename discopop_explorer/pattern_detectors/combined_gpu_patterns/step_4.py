@@ -13,7 +13,7 @@ from typing import Dict, Set, Tuple, Optional, List, cast
 import networkx as nx  # type: ignore
 from networkx import NetworkXNoCycle, MultiDiGraph
 
-from discopop_explorer.classes.PEGraphX import (
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
 from discopop_explorer.classes.FunctionNode import FunctionNode

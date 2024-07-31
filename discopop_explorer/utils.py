@@ -31,7 +31,7 @@ from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import Loo
 from discopop_explorer.classes.variable import Variable
 
 if TYPE_CHECKING:
-    from discopop_explorer.classes.PEGraphX import PEGraphX
+    from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 
 loop_data: Dict[LineID, int] = {}
 
