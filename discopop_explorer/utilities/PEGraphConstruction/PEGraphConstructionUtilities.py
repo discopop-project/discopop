@@ -12,7 +12,7 @@ from typing import Union
 
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
-from discopop_explorer.classes.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
 
 from discopop_explorer.classes.Dependency import Dependency
 from discopop_explorer.classes.DummyNode import DummyNode

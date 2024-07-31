@@ -15,7 +15,7 @@ from discopop_explorer.classes.PEGraph.PEGraphX import (
 from discopop_explorer.classes.FunctionNode import FunctionNode
 from discopop_explorer.classes.DummyNode import DummyNode
 from discopop_explorer.classes.LoopNode import LoopNode
-from discopop_explorer.classes.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.classes.Dependency import Dependency
 from discopop_explorer.aliases.NodeID import NodeID
