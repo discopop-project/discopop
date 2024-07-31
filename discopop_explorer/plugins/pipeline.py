@@ -10,8 +10,8 @@ from copy import deepcopy
 from typing import List
 
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
-from ..classes.LoopNode import LoopNode
-from ..classes.Node import Node
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.Node import Node
 from ..aliases.LineID import LineID
 from ..enums.EdgeType import EdgeType
 from ..utils import correlation_coefficient

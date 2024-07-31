@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, List
 
-from discopop_explorer.classes.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.aliases.NodeID import NodeID
-from discopop_explorer.classes.Node import Node
+from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData

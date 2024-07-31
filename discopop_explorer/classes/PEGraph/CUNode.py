@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List
 
-from discopop_explorer.classes.Node import Node
+from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.enums.NodeType import NodeType
 
 if TYPE_CHECKING:

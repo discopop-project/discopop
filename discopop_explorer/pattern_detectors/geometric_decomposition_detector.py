@@ -16,9 +16,9 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: igno
 
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
-from ..classes.FunctionNode import FunctionNode
-from ..classes.LoopNode import LoopNode
-from ..classes.Node import Node
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.Node import Node
 from ..aliases.NodeID import NodeID
 from ..enums.EdgeType import EdgeType
 from ..utils import classify_task_vars, filter_for_hotspots, get_child_loops
