@@ -20,7 +20,7 @@ from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
-from discopop_explorer.parser import parse_inputs
+from discopop_explorer.utilities.PEGraphConstruction.parser import parse_inputs
 
 
 def __collect_children_ids(pet: PEGraphX, parent_id: NodeID, children_ids: List[NodeID]) -> List[NodeID]:

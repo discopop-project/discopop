@@ -28,7 +28,7 @@ from .aliases.NodeID import NodeID
 from .enums.NodeType import NodeType
 from .enums.DepType import DepType
 from .enums.EdgeType import EdgeType
-from .parser import LoopData
+from .utilities.PEGraphConstruction.classes.LoopData import LoopData
 from .variable import Variable
 
 loop_data: Dict[LineID, int] = {}
