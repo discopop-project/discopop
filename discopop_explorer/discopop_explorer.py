@@ -193,7 +193,7 @@ def run(arguments: ExplorerArguments) -> None:
     try:
         if arguments.generate_data_cu_inst is not None:
             # start generation of Data_CUInst and stop execution afterwards
-            from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
+            from discopop_explorer.utilities.generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
 
             generate_data_cuinst_wrapper(
                 arguments.cu_xml_file,
