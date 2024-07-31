@@ -14,7 +14,7 @@ from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.enums.NodeType import NodeType
-from discopop_explorer.utils import parse_id
+from discopop_explorer.utilities.PEGraphConstruction.ParserUtilities import parse_id
 
 
 # TODO make the Node class abstract

@@ -22,7 +22,7 @@ from ..classes.Node import Node
 from ..aliases.NodeID import NodeID
 from ..enums.EdgeType import EdgeType
 from ..utils import classify_task_vars, filter_for_hotspots, get_child_loops
-from ..variable import Variable
+from ..classes.variable import Variable
 
 __loop_iterations: Dict[NodeID, int] = {}
 

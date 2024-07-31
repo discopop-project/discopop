@@ -24,7 +24,7 @@ from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
 from discopop_explorer.classes.variable import Variable
-from discopop_explorer.utils import parse_id
+from discopop_explorer.utilities.PEGraphConstruction.ParserUtilities import parse_id
 
 
 def parse_dependency(dep: DependenceItem) -> Dependency:

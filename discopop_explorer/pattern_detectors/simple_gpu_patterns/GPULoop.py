@@ -23,8 +23,8 @@ from ...enums.DepType import DepType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.utils import (
     __get_dep_of_type as get_dep_of_type,
-    parse_id,
 )
+from ...utilities.PEGraphConstruction.ParserUtilities import parse_id
 from discopop_explorer.utils import (
     is_scalar_val,
     is_loop_index2,

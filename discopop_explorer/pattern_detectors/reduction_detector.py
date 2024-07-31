@@ -29,7 +29,7 @@ from ..enums.NodeType import NodeType
 from ..enums.DepType import DepType
 from ..enums.EdgeType import EdgeType
 from ..utils import filter_for_hotspots, is_reduction_var, classify_loop_variables
-from ..variable import Variable
+from ..classes.variable import Variable
 
 
 class ReductionInfo(PatternInfo):
