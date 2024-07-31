@@ -12,15 +12,15 @@ from typing import List, cast, TextIO
 from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
-from .classes.FunctionNode import FunctionNode
-from .classes.LoopNode import LoopNode
-from .classes.CUNode import CUNode
-from .classes.Node import Node
-from .aliases.LineID import LineID
-from .aliases.NodeID import NodeID
-from .enums.DepType import DepType
-from .enums.EdgeType import EdgeType
-from .parser import parse_inputs
+from discopop_explorer.classes.FunctionNode import FunctionNode
+from discopop_explorer.classes.LoopNode import LoopNode
+from discopop_explorer.classes.CUNode import CUNode
+from discopop_explorer.classes.Node import Node
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.parser import parse_inputs
 
 
 def __collect_children_ids(pet: PEGraphX, parent_id: NodeID, children_ids: List[NodeID]) -> List[NodeID]:
