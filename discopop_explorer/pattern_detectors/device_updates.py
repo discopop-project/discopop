@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Optional
 
-from .PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )

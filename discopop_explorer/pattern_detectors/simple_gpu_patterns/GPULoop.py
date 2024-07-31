@@ -21,7 +21,7 @@ from ...aliases.MemoryRegion import MemoryRegion
 from ...aliases.LineID import LineID
 from ...aliases.NodeID import NodeID
 from ...enums.DepType import DepType
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.utils import (
     __get_dep_of_type as get_dep_of_type,
 )

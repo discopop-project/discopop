@@ -18,7 +18,7 @@ from discopop_explorer.classes.Node import Node
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.pattern_detectors.task_parallelism.alias_detection import (
     get_alias_information as get_alias_detection_result,

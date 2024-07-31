@@ -23,7 +23,7 @@ from ...enums.EdgeType import EdgeType
 from discopop_explorer.variable import Variable
 from .GPULoop import GPULoopPattern
 from .GPUMemory import map_node
-from ..PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 
 
 class GPURegionInfo(PatternInfo):

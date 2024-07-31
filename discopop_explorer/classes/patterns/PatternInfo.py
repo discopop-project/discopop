@@ -11,9 +11,9 @@ from discopop_explorer.pattern_detectors.PatternBase import PatternBase
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 
 from discopop_explorer.classes.PEGraphX import PEGraphX
-from ..classes.LoopNode import LoopNode
-from ..classes.Node import Node
-from ..utils import calculate_workload, calculate_per_iteration_workload_of_loop
+from discopop_explorer.classes.LoopNode import LoopNode
+from discopop_explorer.classes.Node import Node
+from discopop_explorer.utils import calculate_workload, calculate_per_iteration_workload_of_loop
 
 
 class PatternInfo(PatternBase):
