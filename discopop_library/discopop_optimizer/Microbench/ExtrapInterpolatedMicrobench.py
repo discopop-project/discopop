@@ -18,7 +18,7 @@ from extrap.modelers.model_generator import ModelGenerator  # type: ignore
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler  # type: ignore
 from sympy.parsing.sympy_parser import parse_expr  # type: ignore
 
-from .Microbench import (
+from discopop_library.discopop_optimizer.Microbench.Microbench import (
     Microbench,
     MicrobenchType,
     MicrobenchDimension,
@@ -75,10 +75,9 @@ class ExtrapInterpolatedMicrobench(Microbench):
         expr = parse_expr(function_str, local_dict=function_mappings)
         return cast(sympy.Expr, expr)
 
-    def getMeasurements(self) -> Dict[
-        MicrobenchType,
-        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
-    ]:
+    def getMeasurements(
+        self,
+    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],]:
         raise NotImplementedError("TODO")  # TODO
 
     def toJSON(self) -> str:

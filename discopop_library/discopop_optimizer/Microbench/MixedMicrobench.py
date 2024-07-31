@@ -7,8 +7,12 @@
 # directory for details.
 from typing import Dict, List, Tuple, Union
 
-from .Microbench import Microbench
-from .Microbench import MicrobenchCoordinate, MicrobenchDimension, MicrobenchType
+from discopop_library.discopop_optimizer.Microbench.Microbench import (
+    Microbench,
+    MicrobenchCoordinate,
+    MicrobenchDimension,
+    MicrobenchType,
+)
 
 
 # This class can be used to mix two microbench models.
@@ -26,28 +30,19 @@ class MixedMicrobench(Microbench):
 
     def getMeasurements(
         self,
-    ) -> Dict[
-        MicrobenchType,
-        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
-    ]:
+    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],]:
         raise TypeError(
             "This MixedMicrobench might be based on two different sets of measurements. Use getInnerMeasurements() or getOuterMeasurements() instead."
         )
 
     def getInnerMeasurements(
         self,
-    ) -> Dict[
-        MicrobenchType,
-        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
-    ]:
+    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],]:
         return self.inner.getMeasurements()
 
     def getOuterMeasurements(
         self,
-    ) -> Dict[
-        MicrobenchType,
-        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
-    ]:
+    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],]:
         return self.outer.getMeasurements()
 
     def toJSON(self) -> str:

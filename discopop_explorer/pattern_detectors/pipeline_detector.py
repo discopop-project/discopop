@@ -20,11 +20,11 @@ from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
-from ..aliases.LineID import LineID
-from ..aliases.NodeID import NodeID
-from ..enums.DepType import DepType
-from ..enums.EdgeType import EdgeType
-from ..utils import correlation_coefficient, classify_task_vars, filter_for_hotspots
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.utils import correlation_coefficient, classify_task_vars, filter_for_hotspots
 
 __pipeline_threshold = 0.9
 

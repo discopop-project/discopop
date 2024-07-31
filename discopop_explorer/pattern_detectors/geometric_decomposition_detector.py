@@ -19,10 +19,10 @@ from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.Node import Node
-from ..aliases.NodeID import NodeID
-from ..enums.EdgeType import EdgeType
-from ..utils import classify_task_vars, filter_for_hotspots, get_child_loops
-from ..classes.variable import Variable
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.utils import classify_task_vars, filter_for_hotspots, get_child_loops
+from discopop_explorer.classes.variable import Variable
 
 __loop_iterations: Dict[NodeID, int] = {}
 
