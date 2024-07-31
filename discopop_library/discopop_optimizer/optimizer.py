@@ -73,7 +73,7 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
 )
 from discopop_library.discopop_optimizer.suggestions.importers.main import import_suggestions
 
-from ..HostpotLoader.hostpot_loader import run as load_hotspots
+from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 
 
 def run(arguments: OptimizerArguments) -> None:

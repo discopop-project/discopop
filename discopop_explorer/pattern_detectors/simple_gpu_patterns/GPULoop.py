@@ -16,15 +16,15 @@ from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.Node import Node
-from ...aliases.MemoryRegion import MemoryRegion
-from ...aliases.LineID import LineID
-from ...aliases.NodeID import NodeID
-from ...enums.DepType import DepType
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.utils import (
     __get_dep_of_type as get_dep_of_type,
 )
-from ...utilities.PEGraphConstruction.ParserUtilities import parse_id
+from discopop_explorer.utilities.PEGraphConstruction.ParserUtilities import parse_id
 from discopop_explorer.utils import (
     is_scalar_val,
     is_loop_index2,
@@ -43,7 +43,7 @@ from discopop_explorer.utils import (
 from discopop_explorer.classes.variable import Variable
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from .GPUMemory import getCalledFunctions, map_node
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPUMemory import getCalledFunctions, map_node
 
 """
 def remove_duplicates(my_list: List) -> List:

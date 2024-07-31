@@ -9,7 +9,7 @@
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.classes.PEGraph.Node import Node
-from .aliases.NodeID import NodeID
+from discopop_explorer.aliases.NodeID import NodeID
 from typing import Any, List, Optional, Set, Tuple
 
 global_pet: Optional[PEGraphX] = None

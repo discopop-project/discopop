@@ -22,14 +22,14 @@ from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
-from ..aliases.MemoryRegion import MemoryRegion
-from ..aliases.LineID import LineID
-from ..aliases.NodeID import NodeID
-from ..enums.NodeType import NodeType
-from ..enums.DepType import DepType
-from ..enums.EdgeType import EdgeType
-from ..utils import filter_for_hotspots, is_reduction_var, classify_loop_variables
-from ..classes.variable import Variable
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.utils import filter_for_hotspots, is_reduction_var, classify_loop_variables
+from discopop_explorer.classes.variable import Variable
 
 
 class ReductionInfo(PatternInfo):
