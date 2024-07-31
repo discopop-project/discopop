@@ -14,7 +14,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
-from .PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.classes.PEGraphX import PEGraphX
 from ..classes.FunctionNode import FunctionNode
 from ..classes.LoopNode import LoopNode

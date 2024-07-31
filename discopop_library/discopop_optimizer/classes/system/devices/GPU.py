@@ -9,7 +9,7 @@ from typing import Dict, Tuple
 
 from sympy import Integer
 
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 
