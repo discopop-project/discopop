@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from typing import Optional
-from discopop_explorer.pattern_detectors.PatternBase import PatternBase
+from discopop_explorer.classes.patterns.PatternBase import PatternBase
 
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 

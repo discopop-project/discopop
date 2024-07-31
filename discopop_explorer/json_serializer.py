@@ -8,7 +8,7 @@
 
 from json import JSONEncoder
 from typing import Dict, Any
-from discopop_explorer.pattern_detectors.PatternBase import PatternBase
+from discopop_explorer.classes.patterns.PatternBase import PatternBase
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess
 
