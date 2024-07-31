@@ -8,10 +8,10 @@
 
 import logging
 import os
-from typing import List, Optional, Set, Tuple, cast
+from typing import List, Tuple, cast
 
 import jsonpickle  # type: ignore
-from discopop_explorer.classes.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult

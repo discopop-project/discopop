@@ -12,10 +12,10 @@ from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
-from ...classes.FunctionNode import FunctionNode
-from ...classes.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
-from ...classes.Node import Node
+from discopop_explorer.classes.PEGraph.Node import Node
 from ...aliases.MemoryRegion import MemoryRegion
 from ...aliases.LineID import LineID
 from ...aliases.NodeID import NodeID

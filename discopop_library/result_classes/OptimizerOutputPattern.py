@@ -9,7 +9,7 @@
 
 import json
 from typing import Any, Dict, List
-from discopop_explorer.classes.Node import Node
+from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.patterns.PatternBase import PatternBase
 
 from discopop_library.PatternIdManagement.unique_pattern_id import get_unique_pattern_id

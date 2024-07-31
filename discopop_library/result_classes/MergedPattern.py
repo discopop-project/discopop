@@ -8,7 +8,7 @@
 
 
 from typing import List
-from discopop_explorer.classes.Node import Node
+from discopop_explorer.classes.PEGraph.Node import Node
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern

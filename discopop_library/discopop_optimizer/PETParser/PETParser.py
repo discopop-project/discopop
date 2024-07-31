@@ -19,8 +19,8 @@ from sympy import Integer
 from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
-from discopop_explorer.classes.FunctionNode import FunctionNode
-from discopop_explorer.classes.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
