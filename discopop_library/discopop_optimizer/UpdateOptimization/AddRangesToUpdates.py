@@ -9,7 +9,7 @@
 from typing import Dict, List, Optional, Set, cast
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at

@@ -19,7 +19,7 @@ from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
     GPURegions,
     GPURegionInfo,
 )
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
 from discopop_library.result_classes.DetectionResult import DetectionResult
 
 

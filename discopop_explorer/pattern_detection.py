@@ -15,7 +15,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
 from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import (
     build_preprocessed_graph_and_run_detection as detect_tp,
 )
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json

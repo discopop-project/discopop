@@ -12,7 +12,7 @@ from typing import List
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.enums.NodeType import NodeType
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
 
 
 # Data.xml: type="0"

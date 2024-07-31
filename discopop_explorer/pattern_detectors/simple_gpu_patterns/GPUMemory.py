@@ -21,7 +21,7 @@ from discopop_explorer.classes.Dependency import Dependency
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.utils import is_func_arg, is_global, __get_dep_of_type as get_dep_of_type
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
 
 
 def map_node(pet: PEGraphX, nodeID: NodeID) -> Node:
