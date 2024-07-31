@@ -37,7 +37,7 @@ from discopop_explorer.utilities.PEGraphConstruction.parser import readlineToCUI
 from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
 from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
 from discopop_explorer.utilities.PEGraphConstruction.PEGraphConstructionUtilities import parse_dependency, parse_cu
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
 
 global_pet = None
 

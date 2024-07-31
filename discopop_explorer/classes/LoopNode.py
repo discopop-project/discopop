@@ -7,15 +7,17 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import Optional, List
+from typing import TYPE_CHECKING, Optional, List
 
-from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_explorer.classes.FunctionNode import FunctionNode
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
+
+if TYPE_CHECKING:
+    from discopop_explorer.classes.PEGraphX import PEGraphX
 
 
 # Data.xml: type="2"

@@ -9,12 +9,12 @@ from __future__ import annotations
 
 from typing import Optional, List, Dict, Any, Tuple
 
-from discopop_explorer.classes.FunctionNode import FunctionNode
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.utils import parse_id
 
 
 # TODO make the Node class abstract
@@ -48,7 +48,7 @@ class Node:
 
     def __init__(self, node_id: NodeID):
         self.id = node_id
-        self.file_id, self.node_id = self.__parse_id(node_id)
+        self.file_id, self.node_id = parse_id(node_id)
 
     #    @classmethod
     #    def from_kwargs(cls, node_id: NodeID, **kwargs) -> Node:
@@ -95,7 +95,3 @@ class Node:
 
     def __hash__(self) -> int:
         return hash(self.id)
-
-    def __parse_id(self, node_id: str) -> Tuple[int, int]:
-        split = node_id.split(":")
-        return int(split[0]), int(split[1])
