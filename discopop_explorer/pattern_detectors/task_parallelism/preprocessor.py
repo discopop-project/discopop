@@ -12,7 +12,7 @@ from typing import Any, List
 
 from lxml import objectify, etree  # type: ignore
 
-from discopop_explorer.classes.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.LoopNode import LoopNode
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
 

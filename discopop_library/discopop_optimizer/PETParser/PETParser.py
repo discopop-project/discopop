@@ -16,7 +16,7 @@ import warnings
 
 from sympy import Integer
 
-from discopop_explorer.classes.PEGraphX import (
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
 from discopop_explorer.classes.FunctionNode import FunctionNode

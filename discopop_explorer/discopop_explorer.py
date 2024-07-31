@@ -29,7 +29,7 @@ from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench
     ExtrapInterpolatedMicrobench,
 )
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from discopop_explorer.classes.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from .json_serializer import PatternBaseSerializer
 from discopop_explorer.utilities.PEGraphConstruction.parser import parse_inputs
 from .pattern_detection import PatternDetectorX

@@ -9,7 +9,7 @@ from typing import cast
 
 import jsonpickle  # type: ignore
 
-from discopop_explorer.classes.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_library.global_data.version.utils import get_version
 from discopop_library.result_classes.PatternStorage import PatternStorage
 

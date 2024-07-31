@@ -11,7 +11,7 @@ from typing import Union, cast, Dict, List, Tuple, Optional, Any
 
 from lxml import objectify  # type: ignore
 
-from discopop_explorer.classes.PEGraphX import (
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
 from discopop_explorer.classes.FunctionNode import FunctionNode

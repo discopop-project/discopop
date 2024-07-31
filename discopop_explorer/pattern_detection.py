@@ -20,7 +20,7 @@ from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from discopop_explorer.classes.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from .classes.DummyNode import DummyNode
 from .classes.LoopNode import LoopNode
 from .enums.EdgeType import EdgeType
