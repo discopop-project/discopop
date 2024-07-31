@@ -12,7 +12,6 @@ from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
-from ...utilities.PEGraphConstruction.PEGraphConstructionUtilities import parse_id
 from ...classes.FunctionNode import FunctionNode
 from ...classes.LoopNode import LoopNode
 from ...classes.CUNode import CUNode
@@ -24,6 +23,7 @@ from ...enums.DepType import DepType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.utils import (
     __get_dep_of_type as get_dep_of_type,
+    parse_id,
 )
 from discopop_explorer.utils import (
     is_scalar_val,
@@ -40,7 +40,7 @@ from discopop_explorer.utils import (
     is_first_written,
     is_read_in_subtree,
 )
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from .GPUMemory import getCalledFunctions, map_node

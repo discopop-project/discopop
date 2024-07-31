@@ -7,11 +7,10 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import List, Optional, Dict, Set, cast, Tuple
+from typing import TYPE_CHECKING, List, Optional, Dict, Set, cast, Tuple
 
 import networkx as nx  # type: ignore
 
-from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.CUNode import CUNode
@@ -19,7 +18,10 @@ from discopop_explorer.classes.Dependency import Dependency
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
+
+if TYPE_CHECKING:
+    from discopop_explorer.classes.PEGraphX import PEGraphX
 
 
 # Data.xml: type="1"

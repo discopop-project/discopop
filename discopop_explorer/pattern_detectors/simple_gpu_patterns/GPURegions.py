@@ -20,7 +20,7 @@ from ...aliases.NodeID import NodeID
 from ...enums.NodeType import NodeType
 from ...enums.DepType import DepType
 from ...enums.EdgeType import EdgeType
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
 from .GPULoop import GPULoopPattern
 from .GPUMemory import map_node
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo

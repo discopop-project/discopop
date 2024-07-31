@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import Union, Tuple
+from typing import Union
 
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
@@ -23,7 +23,8 @@ from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
+from discopop_explorer.utils import parse_id
 
 
 def parse_dependency(dep: DependenceItem) -> Dependency:
@@ -138,13 +139,8 @@ def parse_cu(node: ObjectifiedElement) -> Node:
     else:
         assert False, "invalid NodeType"
 
-    _, n.start_line = __parse_id(node.get("startsAtLine"))
-    _, n.end_line = __parse_id(node.get("endsAtLine"))
+    _, n.start_line = parse_id(node.get("startsAtLine"))
+    _, n.end_line = parse_id(node.get("endsAtLine"))
     n.name = node.get("name")
 
     return n
-
-
-def __parse_id(node_id: str) -> Tuple[int, int]:
-    split = node_id.split(":")
-    return int(split[0]), int(split[1])
