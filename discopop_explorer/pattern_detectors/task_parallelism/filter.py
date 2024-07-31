@@ -9,7 +9,7 @@
 from typing import List, Dict, cast, Optional, Union
 
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
-from discopop_explorer.classes.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.EdgeType import EdgeType
