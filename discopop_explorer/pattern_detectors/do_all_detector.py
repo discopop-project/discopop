@@ -13,7 +13,7 @@ import warnings
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
-from .PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from .reduction_detector import ReductionInfo
 from discopop_explorer.classes.PEGraphX import (
     PEGraphX,

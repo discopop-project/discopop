@@ -11,7 +11,7 @@ from typing import Optional, List, Set
 from sympy import Symbol, Function, Integer  # type: ignore
 
 from discopop_explorer.aliases.NodeID import NodeID
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from typing import TYPE_CHECKING
 

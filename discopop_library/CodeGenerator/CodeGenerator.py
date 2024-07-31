@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 
 import jsons  # type: ignore
 
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_library.CodeGenerator.classes.ContentBuffer import ContentBuffer
 from discopop_library.CodeGenerator.classes.UnpackedSuggestion import UnpackedSuggestion
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
