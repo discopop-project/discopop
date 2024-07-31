@@ -14,7 +14,7 @@ from discopop_explorer.classes.PEGraph.PEGraphX import (
 )
 from ...classes.FunctionNode import FunctionNode
 from ...classes.LoopNode import LoopNode
-from ...classes.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from ...classes.Node import Node
 from ...aliases.MemoryRegion import MemoryRegion
 from ...aliases.LineID import LineID

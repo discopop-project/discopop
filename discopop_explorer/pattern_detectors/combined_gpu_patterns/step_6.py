@@ -15,7 +15,7 @@ from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
 from discopop_explorer.classes.FunctionNode import FunctionNode
-from discopop_explorer.classes.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.DepType import DepType
