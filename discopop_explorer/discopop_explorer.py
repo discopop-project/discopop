@@ -31,7 +31,7 @@ from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_explorer.classes.PEGraphX import PEGraphX
 from .json_serializer import PatternBaseSerializer
-from .parser import parse_inputs
+from discopop_explorer.utilities.PEGraphConstruction.parser import parse_inputs
 from .pattern_detection import PatternDetectorX
 
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots

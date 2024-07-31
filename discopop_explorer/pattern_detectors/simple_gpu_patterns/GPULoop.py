@@ -12,7 +12,7 @@ from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 from discopop_explorer.classes.PEGraphX import (
     PEGraphX,
 )
-from ...utilities.PEGraphConstruction import parse_id
+from ...utilities.PEGraphConstruction.PEGraphConstructionUtilities import parse_id
 from ...classes.FunctionNode import FunctionNode
 from ...classes.LoopNode import LoopNode
 from ...classes.CUNode import CUNode

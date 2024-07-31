@@ -11,14 +11,14 @@ import os
 import re
 import warnings
 from collections import defaultdict
-from dataclasses import dataclass
 from os.path import abspath, dirname
 from typing import Any, Dict, List, Optional, Tuple
 
 from lxml import objectify  # type:ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
-import discopop_explorer.classes.Node
+from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
+from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
 
 # Map to record which line belongs to read set of nodes. LID -> NodeIds
 readlineToCUIdMap = defaultdict(set)  # type: ignore
@@ -26,28 +26,6 @@ readlineToCUIdMap = defaultdict(set)  # type: ignore
 writelineToCUIdMap = defaultdict(set)  # type: ignore
 # Map to record which line belongs to set of nodes. LID -> NodeIds
 lineToCUIdMap = defaultdict(set)  # type: ignore
-
-
-@dataclass
-class DependenceItem(object):
-    sink: Any
-    source: Any
-    type: Any
-    var_name: Any
-    memory_region: Any
-    is_gep_result_dependency: bool
-    metadata: Any
-    # TODO improve typing
-
-
-# TODO move this class to a better place, we need it not only for parsing
-@dataclass
-class LoopData(object):
-    line_id: str  # file_id:line_nr
-    total_iteration_count: int
-    entry_count: int
-    average_iteration_count: int
-    maximum_iteration_count: int
 
 
 def __parse_xml_input(xml_fd: TextIOWrapper) -> Dict[str, ObjectifiedElement]:

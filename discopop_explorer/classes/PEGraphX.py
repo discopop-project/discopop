@@ -33,8 +33,10 @@ from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 
-from discopop_explorer.parser import LoopData, readlineToCUIdMap, writelineToCUIdMap, DependenceItem
-from discopop_explorer.utilities.PEGraphConstruction import parse_dependency, parse_cu
+from discopop_explorer.utilities.PEGraphConstruction.parser import readlineToCUIdMap, writelineToCUIdMap
+from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
+from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
+from discopop_explorer.utilities.PEGraphConstruction.PEGraphConstructionUtilities import parse_dependency, parse_cu
 from discopop_explorer.variable import Variable
 
 global_pet = None
