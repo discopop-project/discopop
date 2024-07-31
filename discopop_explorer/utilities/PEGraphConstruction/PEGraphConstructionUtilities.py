@@ -138,13 +138,13 @@ def parse_cu(node: ObjectifiedElement) -> Node:
     else:
         assert False, "invalid NodeType"
 
-    _, n.start_line = parse_id(node.get("startsAtLine"))
-    _, n.end_line = parse_id(node.get("endsAtLine"))
+    _, n.start_line = __parse_id(node.get("startsAtLine"))
+    _, n.end_line = __parse_id(node.get("endsAtLine"))
     n.name = node.get("name")
 
     return n
 
 
-def parse_id(node_id: str) -> Tuple[int, int]:
+def __parse_id(node_id: str) -> Tuple[int, int]:
     split = node_id.split(":")
     return int(split[0]), int(split[1])
