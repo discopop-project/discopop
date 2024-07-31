@@ -13,7 +13,7 @@ from typing import Any, Callable, Dict, List, Tuple, TypeVar, Union, overload
 
 import numpy as np
 
-from .Microbench import (
+from discopop_library.discopop_optimizer.Microbench.Microbench import (
     Microbench,
     MicrobenchType,
     MicrobenchDimension,
@@ -52,17 +52,16 @@ class PureDataMicrobench(Microbench):
     ]
 
     @overload
-    def __getitem__(
-        self, key: MicrobenchType
-    ) -> Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]]: ...
+    def __getitem__(self, key: MicrobenchType) -> Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]]:
+        ...
 
     @overload
-    def __getitem__(
-        self, key: Tuple[MicrobenchType, MicrobenchDimension]
-    ) -> Dict[MicrobenchCoordinate, List[float]]: ...
+    def __getitem__(self, key: Tuple[MicrobenchType, MicrobenchDimension]) -> Dict[MicrobenchCoordinate, List[float]]:
+        ...
 
     @overload
-    def __getitem__(self, key: Tuple[MicrobenchType, MicrobenchDimension, MicrobenchCoordinate]) -> List[float]: ...
+    def __getitem__(self, key: Tuple[MicrobenchType, MicrobenchDimension, MicrobenchCoordinate]) -> List[float]:
+        ...
 
     # allow to use this class like a dictionary
     def __getitem__(self, key: Any) -> Any:
@@ -182,10 +181,7 @@ class PureDataMicrobench(Microbench):
     # inherited from Microbench
     def getMeasurements(
         self,
-    ) -> Dict[
-        MicrobenchType,
-        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
-    ]:
+    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],]:
         return self.measurements
 
     # inherited from Microbench

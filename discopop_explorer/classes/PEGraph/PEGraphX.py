@@ -258,7 +258,10 @@ class PEGraphX(object):
         print("Calculating local metadata results for functions...")
         import tqdm  # type: ignore
         from multiprocessing import Pool
-        from ..parallel_utils import pet_function_metadata_initialize_worker, pet_function_metadata_parse_func
+        from discopop_explorer.parallel_utils import (
+            pet_function_metadata_initialize_worker,
+            pet_function_metadata_parse_func,
+        )
 
         param_list = func_nodes
         with Pool(initializer=pet_function_metadata_initialize_worker, initargs=(self,)) as pool:

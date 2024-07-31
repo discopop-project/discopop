@@ -16,13 +16,13 @@ from discopop_explorer.classes.PEGraph.PEGraphX import (
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.Node import Node
-from ...aliases.NodeID import NodeID
-from ...enums.NodeType import NodeType
-from ...enums.DepType import DepType
-from ...enums.EdgeType import EdgeType
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.variable import Variable
-from .GPULoop import GPULoopPattern
-from .GPUMemory import map_node
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPUMemory import map_node
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 
 

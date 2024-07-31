@@ -14,7 +14,7 @@ from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
-from .reduction_detector import ReductionInfo
+from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
@@ -22,14 +22,14 @@ from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
-from ..aliases.MemoryRegion import MemoryRegion
-from ..aliases.LineID import LineID
-from ..aliases.NodeID import NodeID
-from ..enums.NodeType import NodeType
-from ..enums.DepType import DepType
-from ..enums.EdgeType import EdgeType
-from ..utils import classify_loop_variables, filter_for_hotspots
-from ..classes.variable import Variable
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.utils import classify_loop_variables, filter_for_hotspots
+from discopop_explorer.classes.variable import Variable
 
 
 class DoAllInfo(PatternInfo):

@@ -23,12 +23,12 @@ from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.PEGraph.DummyNode import DummyNode
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
-from .enums.EdgeType import EdgeType
-from .pattern_detectors.do_all_detector import DoAllInfo, run_detection as detect_do_all
-from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
-from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline
-from .pattern_detectors.reduction_detector import ReductionInfo, run_detection as detect_reduction
-from .pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo, run_detection as detect_do_all
+from discopop_explorer.pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
+from discopop_explorer.pattern_detectors.pipeline_detector import run_detection as detect_pipeline
+from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo, run_detection as detect_reduction
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
 
 
 class PatternDetectorX(object):

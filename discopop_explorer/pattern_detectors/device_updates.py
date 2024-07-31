@@ -12,8 +12,8 @@ from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
 from discopop_explorer.classes.PEGraph.Node import Node
-from ..aliases.MemoryRegion import MemoryRegion
-from ..aliases.LineID import LineID
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.LineID import LineID
 
 
 class DeviceUpdateInfo(PatternInfo):

@@ -11,7 +11,7 @@ from pathlib import Path
 from discopop_library.GlobalLogger.setup import setup_logger
 
 from discopop_library.PathManagement.PathManagement import get_path, get_path_or_none
-from .discopop_explorer import ExplorerArguments, run
+from discopop_explorer.discopop_explorer import ExplorerArguments, run
 
 
 def parse_args() -> ExplorerArguments:

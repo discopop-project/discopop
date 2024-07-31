@@ -30,9 +30,9 @@ from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench
 )
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
-from .json_serializer import PatternBaseSerializer
+from discopop_explorer.json_serializer import PatternBaseSerializer
 from discopop_explorer.utilities.PEGraphConstruction.parser import parse_inputs
-from .pattern_detection import PatternDetectorX
+from discopop_explorer.pattern_detection import PatternDetectorX
 
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 
