@@ -22,7 +22,7 @@ from discopop_explorer.classes.Node import Node
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
-from discopop_explorer.parser import DependenceItem
+from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
 from discopop_explorer.variable import Variable
 
 

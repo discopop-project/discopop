@@ -15,7 +15,7 @@ from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.Node import Node
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
-from discopop_explorer.parser import LoopData
+from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
 
 
 # Data.xml: type="2"
