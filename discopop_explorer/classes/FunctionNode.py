@@ -122,8 +122,9 @@ class FunctionNode(Node):
                 visited = set()
                 use_original = False
                 while (
-                    pet.node_at(node_id).get_parent_id(pet) == pet.node_at(post_dom_id).get_parent_id(pet)
-                    and type(pet.node_at(cast(NodeID, pet.node_at(post_dom_id).get_parent_id(pet)))) != FunctionNode
+                    pet.get_node_parent_id(pet.node_at(node_id)) == pet.get_node_parent_id(pet.node_at(post_dom_id))
+                    and type(pet.node_at(cast(NodeID, pet.get_node_parent_id(pet.node_at(post_dom_id)))))
+                    != FunctionNode
                 ):
                     if post_dom_id in visited:
                         # cycle detected!

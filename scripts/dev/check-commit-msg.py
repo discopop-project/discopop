@@ -20,7 +20,7 @@ with open(path_to_commit_msg, "r") as f:
     commit_msg = f.read()
     commit_msg = commit_msg.replace("\n", "")
 
-pattern = re.compile("^(feat|fix|test|chore|refactor|doc|docs|perf|ci|build|style)(\(.+\))?(\[.+\])?:.+$")
+pattern = re.compile("^(feat|fix|test|chore|refactor|doc|docs|perf|wip|ci|build|style)(\(.+\))?(\[.+\])?:.+$")
 matches = bool(pattern.match(commit_msg))
 
 if matches:
