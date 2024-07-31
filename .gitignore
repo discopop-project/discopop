@@ -72,8 +72,8 @@ coverage.xml
 profiling_stats.txt
 
 # Code structure diagrams
-classes.png
-packages.png
+classes.svg
+packages.svg
 
 # Translations
 *.mo
