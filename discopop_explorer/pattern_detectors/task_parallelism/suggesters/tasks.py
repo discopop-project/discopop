@@ -11,10 +11,10 @@ from typing import List, Dict, cast
 from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
-from discopop_explorer.classes.FunctionNode import FunctionNode
-from discopop_explorer.classes.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
-from discopop_explorer.classes.Node import Node
+from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.enums.EdgeType import EdgeType

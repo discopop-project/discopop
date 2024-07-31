@@ -11,7 +11,7 @@ from typing import List, cast
 from alive_progress import alive_bar  # type: ignore
 
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
-from discopop_explorer.classes.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern

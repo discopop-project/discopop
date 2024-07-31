@@ -14,7 +14,7 @@ from discopop_library.discopop_optimizer.classes.types.DataAccessType import Wri
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.result_classes.PatternStorage import PatternStorage
-from .classes.Node import Node
+from discopop_explorer.classes.PEGraph.Node import Node
 from .pattern_detectors.pipeline_detector import PipelineStage
 from .pattern_detectors.task_parallelism.classes import TPIType
 from .classes.variable import Variable

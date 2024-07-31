@@ -7,8 +7,8 @@
 # directory for details.
 
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
-from .classes.FunctionNode import FunctionNode
-from .classes.Node import Node
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.Node import Node
 from .aliases.NodeID import NodeID
 from typing import Any, List, Optional, Set, Tuple
 

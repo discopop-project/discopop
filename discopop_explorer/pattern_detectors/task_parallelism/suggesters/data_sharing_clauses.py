@@ -9,7 +9,7 @@
 from typing import List
 
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
-from discopop_explorer.classes.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
