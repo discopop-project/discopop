@@ -572,6 +572,24 @@ class PEGraphX(object):
             return True
         return False
 
+    def get_node_parent_id(self, node: Node) -> Optional[NodeID]:
+        """Returns the id of the FunctionNode which is the parent of the given node"""
+        parents = [s for s, t, d in self.in_edges(node.id, EdgeType.CHILD)]
+        if len(parents) == 0:
+            return None
+        elif len(parents) == 1:
+            return parents[0]
+        else:
+            # it is possible that a node has a function-type and e.g. loop type parent
+            # in this case, return the non-function type parent, since it will be a child of the function itself.
+            if len(parents) > 2:
+                raise ValueError("Node: ", node.id, "has too many parents!")
+            else:
+                for parent in parents:
+                    if type(self.node_at(parent)) != FunctionNode:
+                        return parent
+        return None
+
     def direct_successors(self, root: Node) -> List[Node]:
         """Gets only direct successors of any type
 
