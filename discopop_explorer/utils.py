@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import itertools
-from typing import Callable, List, Optional, Sequence, Set, Dict, Tuple, TypeVar, cast
+from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Set, Dict, Tuple, TypeVar, cast
 
 import numpy as np
 import warnings
@@ -16,22 +16,22 @@ from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 
-from discopop_explorer.classes.PEGraphX import (
-    PEGraphX,
-)
-from .classes.FunctionNode import FunctionNode
-from .classes.LoopNode import LoopNode
-from .classes.CUNode import CUNode
-from .classes.Node import Node
-from .classes.Dependency import Dependency
-from .aliases.MemoryRegion import MemoryRegion
-from .aliases.LineID import LineID
-from .aliases.NodeID import NodeID
-from .enums.NodeType import NodeType
-from .enums.DepType import DepType
-from .enums.EdgeType import EdgeType
-from .utilities.PEGraphConstruction.classes.LoopData import LoopData
-from .variable import Variable
+from discopop_explorer.classes.FunctionNode import FunctionNode
+from discopop_explorer.classes.LoopNode import LoopNode
+from discopop_explorer.classes.CUNode import CUNode
+from discopop_explorer.classes.Node import Node
+from discopop_explorer.classes.Dependency import Dependency
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
+from discopop_explorer.classes.variable import Variable
+
+if TYPE_CHECKING:
+    from discopop_explorer.classes.PEGraphX import PEGraphX
 
 loop_data: Dict[LineID, int] = {}
 
@@ -1151,8 +1151,3 @@ def filter_for_hotspots(
     #                        continue
 
     return list(result_set)
-
-
-def parse_id(node_id: str) -> Tuple[int, int]:
-    split = node_id.split(":")
-    return int(split[0]), int(split[1])

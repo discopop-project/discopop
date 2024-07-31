@@ -17,7 +17,7 @@ from discopop_library.result_classes.PatternStorage import PatternStorage
 from .classes.Node import Node
 from .pattern_detectors.pipeline_detector import PipelineStage
 from .pattern_detectors.task_parallelism.classes import TPIType
-from .variable import Variable
+from .classes.variable import Variable
 
 
 def filter_members(d: Dict[Any, Any]) -> Dict[Any, Any]:

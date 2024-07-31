@@ -29,7 +29,7 @@ from ..enums.NodeType import NodeType
 from ..enums.DepType import DepType
 from ..enums.EdgeType import EdgeType
 from ..utils import classify_loop_variables, filter_for_hotspots
-from ..variable import Variable
+from ..classes.variable import Variable
 
 
 class DoAllInfo(PatternInfo):
