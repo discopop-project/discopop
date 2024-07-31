@@ -8,7 +8,7 @@
 from typing import Optional
 
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
-from discopop_explorer.classes.PEGraphX import (
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
 )
 from ..classes.Node import Node

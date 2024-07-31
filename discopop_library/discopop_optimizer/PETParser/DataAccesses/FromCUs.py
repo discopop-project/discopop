@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Tuple, Set, cast
 
-from discopop_explorer.classes.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.CUNode import CUNode
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID

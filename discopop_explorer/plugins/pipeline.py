@@ -9,7 +9,7 @@
 from copy import deepcopy
 from typing import List
 
-from discopop_explorer.classes.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from ..classes.LoopNode import LoopNode
 from ..classes.Node import Node
 from ..aliases.LineID import LineID

@@ -7,7 +7,7 @@
 # directory for details.
 import json
 from typing import Any, Dict, Optional, Tuple, cast
-from discopop_explorer.classes.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
