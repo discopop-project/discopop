@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from typing import Optional, List, Dict, Any
 
-from discopop_explorer.classes.PEGraphX import PEGraphX
 from discopop_explorer.utilities.PEGraphConstruction.PEGraphConstructionUtilities import parse_id
 from discopop_explorer.classes.FunctionNode import FunctionNode
 from discopop_explorer.aliases.LineID import LineID
@@ -97,20 +96,3 @@ class Node:
 
     def __hash__(self) -> int:
         return hash(self.id)
-
-    def get_parent_id(self, pet: PEGraphX) -> Optional[NodeID]:
-        parents = [s for s, t, d in pet.in_edges(self.id, EdgeType.CHILD)]
-        if len(parents) == 0:
-            return None
-        elif len(parents) == 1:
-            return parents[0]
-        else:
-            # it is possible that a node has a function-type and e.g. loop type parent
-            # in this case, return the non-function type parent, since it will be a child of the function itself.
-            if len(parents) > 2:
-                raise ValueError("Node: ", self.id, "has too many parents!")
-            else:
-                for parent in parents:
-                    if type(pet.node_at(parent)) != FunctionNode:
-                        return parent
-        return None
