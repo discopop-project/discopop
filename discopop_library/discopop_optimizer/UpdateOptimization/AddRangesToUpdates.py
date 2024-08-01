@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Set, cast
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.variable import Variable
+from discopop_explorer.functions.PEGraph.queries.variables import get_variables
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
@@ -26,8 +27,9 @@ def add_ranges_to_updates(
         candidate_variables: Dict[Variable, Set[MemoryRegion]] = dict()
         # collect known variables from source
 
-        variables = experiment.detection_result.pet.get_variables(
-            [experiment.detection_result.pet.node_at(cast(NodeID, update.source_cu_id))]
+        variables = get_variables(
+            experiment.detection_result.pet,
+            [experiment.detection_result.pet.node_at(cast(NodeID, update.source_cu_id))],
         )
 
         for v in variables:
@@ -37,8 +39,9 @@ def add_ranges_to_updates(
 
         # collect known variabled from target
 
-        variables = experiment.detection_result.pet.get_variables(
-            [experiment.detection_result.pet.node_at(cast(NodeID, update.target_cu_id))]
+        variables = get_variables(
+            experiment.detection_result.pet,
+            [experiment.detection_result.pet.node_at(cast(NodeID, update.target_cu_id))],
         )
 
         for v in variables:
@@ -48,12 +51,13 @@ def add_ranges_to_updates(
 
         if update.originated_from_node is not None:
             # collect known variabled from originated_from_node
-            variables = experiment.detection_result.pet.get_variables(
+            variables = get_variables(
+                experiment.detection_result.pet,
                 [
                     experiment.detection_result.pet.node_at(
                         cast(NodeID, data_at(experiment.optimization_graph, update.originated_from_node).original_cu_id)
                     )
-                ]
+                ],
             )
             for v in variables:
                 if v not in candidate_variables:

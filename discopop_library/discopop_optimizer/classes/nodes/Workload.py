@@ -12,6 +12,7 @@ from sympy import Integer, Expr  # type: ignore
 
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from typing import TYPE_CHECKING
 
@@ -121,7 +122,8 @@ class Workload(GenericNode):
         # get CUIDs of called functions
         if self.original_cu_id is not None:
             called_cu_ids: List[str] = [
-                str(t) for s, t, d in experiment.detection_result.pet.out_edges(self.original_cu_id, EdgeType.CALLSNODE)
+                str(t)
+                for s, t, d in out_edges(experiment.detection_result.pet, self.original_cu_id, EdgeType.CALLSNODE)
             ]
             # filter for called FunctionRoots
             called_function_nodes = [fr for fr in all_function_nodes if str(fr.original_cu_id) in called_cu_ids]

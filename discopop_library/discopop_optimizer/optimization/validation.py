@@ -9,6 +9,7 @@
 from typing import List, cast, Set
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
@@ -109,8 +110,8 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int],
             # add called functions
             called_cu_ids: List[str] = [
                 str(t)
-                for s, t, d in experiment.detection_result.pet.out_edges(
-                    cast(NodeID, current_node.original_cu_id), EdgeType.CALLSNODE
+                for s, t, d in out_edges(
+                    experiment.detection_result.pet, cast(NodeID, current_node.original_cu_id), EdgeType.CALLSNODE
                 )
             ]
             # filter for called FunctionRoots
