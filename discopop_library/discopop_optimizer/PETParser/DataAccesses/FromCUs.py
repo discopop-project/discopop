@@ -13,6 +13,9 @@ from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     WriteDataAccess,
     ReadDataAccess,
@@ -31,11 +34,11 @@ def get_next_free_unique_write_id() -> int:
 def get_data_accesses_for_cu(pet: PEGraphX, cu_id: NodeID) -> Tuple[Set[WriteDataAccess], Set[ReadDataAccess]]:
     """Calculates and returns the sets of accessed memory regions for the given cu node.
     The first element contains write accesses, the second element contains read accesses."""
-    parent_function = pet.get_parent_function(pet.node_at(cu_id))
-    subtree = pet.subtree_of_type(parent_function, CUNode)
+    parent_function = get_parent_function(pet, pet.node_at(cu_id))
+    subtree = subtree_of_type(pet, parent_function, CUNode)
 
-    in_dep_edges = pet.in_edges(cu_id, EdgeType.DATA)
-    out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
+    in_dep_edges = in_edges(pet, cu_id, EdgeType.DATA)
+    out_dep_edges = out_edges(pet, cu_id, EdgeType.DATA)
 
     written_memory_regions = [
         WriteDataAccess(MemoryRegion(cast(str, d.memory_region)), get_next_free_unique_write_id(), d.var_name)

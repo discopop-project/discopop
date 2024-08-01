@@ -11,6 +11,7 @@ import networkx as nx  # type: ignore
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.enums.EdgeType import EdgeType
 
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
@@ -156,8 +157,8 @@ def get_path_context_iterative(
             node_data = data_at(graph, node)
             if node_data.original_cu_id is None:
                 continue
-            for out_dep_edge in experiment.detection_result.pet.out_edges(
-                node_data.original_cu_id, etype=EdgeType.DATA
+            for out_dep_edge in out_edges(
+                experiment.detection_result.pet, node_data.original_cu_id, etype=EdgeType.DATA
             ):
                 target = out_dep_edge[1]
                 if target in cu_nodes_in_function:

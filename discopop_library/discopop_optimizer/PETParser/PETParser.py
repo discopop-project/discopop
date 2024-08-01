@@ -25,6 +25,9 @@ from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_explorer.utils import calculate_workload
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.discopop_optimizer.PETParser.DataAccesses.FromCUs import (
@@ -194,8 +197,8 @@ class PETParser(object):
             # get functions called by the node
             if node_data.original_cu_id is None:
                 raise ValueError("Node: " + str(node) + " has no original_cu_id")
-            for out_call_edge in self.experiment.detection_result.pet.out_edges(
-                node_data.original_cu_id, etype=EdgeType.CALLSNODE
+            for out_call_edge in out_edges(
+                self.experiment.detection_result.pet, node_data.original_cu_id, etype=EdgeType.CALLSNODE
             ):
                 # create a call edge to the function
                 for function in all_function_nodes:
@@ -1056,8 +1059,8 @@ class PETParser(object):
         To make this possible, Context Snapshot, Restore and Merge points are added to allow a synchronization
         'between' the different branches"""
         visited_nodes: Set[int] = set()
-        for idx, function_node in enumerate(self.pet.all_nodes(FunctionNode)):
-            print("parsing ", function_node.name, idx, "/", len(self.pet.all_nodes(FunctionNode)))
+        for idx, function_node in enumerate(all_nodes(self.pet, FunctionNode)):
+            print("parsing ", function_node.name, idx, "/", len(all_nodes(self.pet, FunctionNode)))
             _, _ = self.__parse_raw_node(self.cu_id_to_graph_node_id[function_node.id], visited_nodes)
 
         # remove visited nodes, since duplicates exist now
@@ -1181,7 +1184,7 @@ class PETParser(object):
     def __add_cu_nodes(self) -> None:
         """adds Workload nodes which represent the CU Nodes to the graph.
         The added nodes will not be connected in any way."""
-        for cu_node in self.pet.all_nodes(CUNode):
+        for cu_node in all_nodes(self.pet, CUNode):
             # create new node for CU
             new_node_id = self.get_new_node_id()
             self.cu_id_to_graph_node_id[cu_node.id] = new_node_id
@@ -1210,9 +1213,9 @@ class PETParser(object):
     def __add_loop_nodes(self) -> None:
         """adds Loop Nodes to the graph.
         connects contained nodes using Children edges"""
-        for loop_node in self.pet.all_nodes(LoopNode):
+        for loop_node in all_nodes(self.pet, LoopNode):
             # calculate metadata
-            loop_subtree = self.pet.subtree_of_type(loop_node, CUNode)
+            loop_subtree = subtree_of_type(self.pet, loop_node, CUNode)
 
             # get iteration count for loop
             if loop_node.loop_data is not None:
@@ -1251,7 +1254,7 @@ class PETParser(object):
             add_child_edge(self.graph, new_node_id, self.cu_id_to_graph_node_id[entry_node_cu_id])
 
             # redirect edges from outside the loop to the entry node to the Loop node
-            for s, t, d in self.pet.in_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
+            for s, t, d in in_edges(self.pet, entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(s) not in loop_subtree:
                     try:
                         redirect_edge(
@@ -1266,7 +1269,7 @@ class PETParser(object):
                             print("ignoring redirect of edge due to KeyError: ", ke)
 
             # redirect edges to the outside of the loop
-            for s, t, d in self.pet.out_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
+            for s, t, d in out_edges(self.pet, entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(t) not in loop_subtree:
                     redirect_edge(
                         self.graph,
@@ -1283,7 +1286,7 @@ class PETParser(object):
             self.graph.add_node(copied_entry_node_id, data=entry_node_data)
 
             # redirect edges from inside the loop to the copy of the entry node
-            for s, t, d in self.pet.in_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
+            for s, t, d in in_edges(self.pet, entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(s) in loop_subtree:
                     redirect_edge(
                         self.graph,
@@ -1299,7 +1302,7 @@ class PETParser(object):
     def __add_functions(self) -> None:
         """parse function nodes in the PET graph.
         Results in the creation of a forest of function graphs."""
-        for function_node in self.pet.all_nodes(FunctionNode):
+        for function_node in all_nodes(self.pet, FunctionNode):
             # create function root node and register it in the graph
             new_node_id = self.get_new_node_id()
             self.graph.add_node(
@@ -1321,8 +1324,8 @@ class PETParser(object):
             self.cu_id_to_graph_node_id[function_node.id] = new_node_id
 
     def __add_pet_successor_edges(self) -> None:
-        for cu_node in self.pet.all_nodes(CUNode):
-            for successor_cu_id in [t for s, t, d in self.pet.out_edges(cu_node.id, EdgeType.SUCCESSOR)]:
+        for cu_node in all_nodes(self.pet, CUNode):
+            for successor_cu_id in [t for s, t, d in out_edges(self.pet, cu_node.id, EdgeType.SUCCESSOR)]:
                 add_successor_edge(
                     self.graph,
                     self.cu_id_to_graph_node_id[cu_node.id],
