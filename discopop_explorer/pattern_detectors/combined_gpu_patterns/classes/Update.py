@@ -13,6 +13,8 @@ from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.functions.PEGraph.queries.variables import get_variable
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -176,12 +178,12 @@ class Update(object):
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.variable_names:
-            var_obj = pet.get_variable(self.sink_cu_id, var_name)
+            var_obj = get_variable(pet, self.sink_cu_id, var_name)
             source_cu_id = (
                 self.asynchronous_source_cu_id if self.asynchronous_possible else self.synchronous_source_cu_id
             )
             if var_obj is None:
-                var_obj = pet.get_variable(cast(NodeID, source_cu_id), var_name)
+                var_obj = get_variable(pet, cast(NodeID, source_cu_id), var_name)
             if var_obj is None:
                 var_names_types_and_sizes.append((var_name, "", 1))
             else:
@@ -236,12 +238,12 @@ class Update(object):
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.variable_names:
-            var_obj = pet.get_variable(self.sink_cu_id, var_name)
+            var_obj = get_variable(pet, self.sink_cu_id, var_name)
             source_cu_id = (
                 self.asynchronous_source_cu_id if self.asynchronous_possible else self.synchronous_source_cu_id
             )
             if var_obj is None:
-                var_obj = pet.get_variable(cast(NodeID, source_cu_id), var_name)
+                var_obj = get_variable(pet, cast(NodeID, source_cu_id), var_name)
             if var_obj is None:
                 var_names_types_and_sizes.append((var_name, "", 1))
             else:
@@ -279,7 +281,7 @@ class Update(object):
         memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
     ) -> None:
         self.variable_names = set()
-        parent_function_id = pet.get_parent_function(pet.node_at(self.synchronous_source_cu_id)).id
+        parent_function_id = get_parent_function(pet, pet.node_at(self.synchronous_source_cu_id)).id
 
         for mem_reg in self.memory_regions:
             if parent_function_id in memory_regions_to_functions_and_variables[mem_reg]:

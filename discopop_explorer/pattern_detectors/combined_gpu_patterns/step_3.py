@@ -13,6 +13,8 @@ from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import CombinedGPURegion
 
 global_write_unique_id = 0
@@ -52,7 +54,7 @@ def propagate_writes(
     Stop on the level of the base function"""
     parent_functions: List[NodeID] = []
     for region in comb_gpu_reg.contained_regions:
-        parent_functions.append(pet.get_parent_function(pet.node_at(region.node_id)).id)
+        parent_functions.append(get_parent_function(pet, pet.node_at(region.node_id)).id)
 
     modification_found = True
     while modification_found:
@@ -66,7 +68,7 @@ def propagate_writes(
                         # no write
                         continue
                     # propagate to parents
-                    for parent_id, _, _ in pet.in_edges(cu_id_1, EdgeType.CHILD):
+                    for parent_id, _, _ in in_edges(pet, cu_id_1, EdgeType.CHILD):
                         if parent_id in parent_functions:
                             # do not propagate above the function which contains the GPU Regions
                             continue
@@ -90,20 +92,20 @@ def propagate_writes(
                         # no write
                         continue
                     # propagate to successors
-                    for _, successor_id, _ in pet.out_edges(cu_id_1, EdgeType.SUCCESSOR):
+                    for _, successor_id, _ in out_edges(pet, cu_id_1, EdgeType.SUCCESSOR):
                         if (successor_id, write_identifier_1) not in writes[mem_reg]:
                             writes[mem_reg].add((successor_id, write_identifier_1))
                             modification_found = True
                             # propagated to successor
 
                             # propagate to children of successors
-                            for _, child_id, _ in pet.out_edges(successor_id, EdgeType.CHILD):
+                            for _, child_id, _ in out_edges(pet, successor_id, EdgeType.CHILD):
                                 if (child_id, write_identifier_1) not in writes[mem_reg]:
                                     writes[mem_reg].add((child_id, write_identifier_1))
                                     modification_found = True
                                     # propagated to children of successor
                             # propagate to called functions of successors
-                            for _, called_node_id, _ in pet.out_edges(successor_id, EdgeType.CALLSNODE):
+                            for _, called_node_id, _ in out_edges(pet, successor_id, EdgeType.CALLSNODE):
                                 if (called_node_id, write_identifier_1) not in writes[mem_reg]:
                                     writes[mem_reg].add((called_node_id, write_identifier_1))
                                     modification_found = True
@@ -125,8 +127,8 @@ def propagate_writes(
                         continue
                     if pet_node.return_instructions_count > 0:
                         # propagate write to calling cus
-                        parent_function = pet.get_parent_function(pet_node)
-                        callees = [s for s, t, d in pet.in_edges(parent_function.id, EdgeType.CALLSNODE)]
+                        parent_function = get_parent_function(pet, pet_node)
+                        callees = [s for s, t, d in in_edges(pet, parent_function.id, EdgeType.CALLSNODE)]
                         for callee_id in callees:
                             if (callee_id, write_identifier) not in writes[mem_reg]:
                                 writes[mem_reg].add((callee_id, write_identifier))

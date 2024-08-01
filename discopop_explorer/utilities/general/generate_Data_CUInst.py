@@ -20,6 +20,9 @@ from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children_or_called_nodes
 from discopop_explorer.utilities.PEGraphConstruction.parser import parse_inputs
 
 
@@ -30,7 +33,7 @@ def __collect_children_ids(pet: PEGraphX, parent_id: NodeID, children_ids: List[
     children_ids.append(parent_id)
     children_ids = list(set(children_ids))
     # collect all of its children
-    for child_node in pet.direct_children_or_called_nodes(pet.node_at(parent_id)):
+    for child_node in direct_children_or_called_nodes(pet, pet.node_at(parent_id)):
         children_ids += __collect_children_ids(pet, child_node.id, children_ids)
         children_ids = list(set(children_ids))
     return children_ids
@@ -41,7 +44,7 @@ def __recursive_call_inside_loop(pet: PEGraphX, recursive_function_call: str) ->
     :param pet: PET Graph
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
     :return: True, if recursive call inside any loop body. False otherwise."""
-    for tmp_cu in pet.all_nodes(LoopNode):
+    for tmp_cu in all_nodes(pet, LoopNode):
         if __line_contained_in_region(
             LineID(recursive_function_call.split(" ")[-1].replace(",", "")),
             tmp_cu.start_position(),
@@ -56,7 +59,7 @@ def __recursive_function_called_multiple_times_inside_function(pet: PEGraphX, re
     :param pet: PET Graph
     :param recursive_function_call: string representation of a recursive function call, extracted from cu-xml
     :return: True, if multiple calls exists. False otherwise."""
-    for tmp_func_cu in pet.all_nodes(FunctionNode):
+    for tmp_func_cu in all_nodes(pet, FunctionNode):
         # 1. get parent function of recursive function call
         if not __line_contained_in_region(
             LineID(recursive_function_call.split(" ")[-1].replace(",", "")),
@@ -81,7 +84,7 @@ def __recursive_function_called_multiple_times_inside_function(pet: PEGraphX, re
                 if cur_cu not in contained_cus:
                     contained_cus.append(cur_cu)
                 # append cur_cu children to queue
-                for child_edge in pet.out_edges(cur_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
+                for child_edge in out_edges(pet, cur_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
                     child_cu = pet.node_at(child_edge[1])
                     if child_cu not in queue and child_cu not in contained_cus:
                         queue.append(child_cu)
@@ -114,7 +117,7 @@ def __output_dependencies_of_type(
     :param dep_type: type of dependency to be handled
     :param dep_identifier: identifier corresponding to the given dep_type (|RAW|, |WAR|, |WAW|)
     """
-    for dep in pet.in_edges(child_id, EdgeType.DATA):
+    for dep in in_edges(pet, child_id, EdgeType.DATA):
         if dep[2].dtype is not dep_type:
             continue
         if dep[2].source_line is None or dep[2].var_name is None or dep[2].sink_line is None:
@@ -172,7 +175,9 @@ def cu_instantiation_input_cpp(pet: PEGraphX, output_file: str) -> None:
     :param pet: PET Graph
     :param output_file: Path to storage location of generated Data_CUInst.txt"""
     with open(output_file, "w+") as data_cu_inst_file:
-        for node in pet.all_nodes():
+        for node in all_nodes(
+            pet,
+        ):
             __search_recursive_calls(pet, data_cu_inst_file, node)
 
 

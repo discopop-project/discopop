@@ -21,6 +21,9 @@ from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.variable import Variable
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPUMemory import map_node
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
@@ -98,7 +101,7 @@ class GPURegionInfo(PatternInfo):
         entry_cus: List[str] = []
         for contained_cu_id in self.contained_cu_ids:
             # check if contained_cu has only predecessors inside the gpu region
-            for predecessor_id, _, _ in pet.in_edges(contained_cu_id, EdgeType.SUCCESSOR):
+            for predecessor_id, _, _ in in_edges(pet, contained_cu_id, EdgeType.SUCCESSOR):
                 if predecessor_id not in self.contained_cu_ids:
                     # found entry node
                     entry_cus.append(contained_cu_id)
@@ -114,7 +117,7 @@ class GPURegionInfo(PatternInfo):
         outside_cus: List[str] = []
         for contained_cu_id in self.contained_cu_ids:
             # check if contained_cu_id has only successors inside the gpu region
-            for _, successor_id, _ in pet.out_edges(contained_cu_id, EdgeType.SUCCESSOR):
+            for _, successor_id, _ in out_edges(pet, contained_cu_id, EdgeType.SUCCESSOR):
                 if successor_id not in self.contained_cu_ids:
                     # found exit node
                     contained_exit_cus.append(contained_cu_id)
@@ -182,11 +185,11 @@ class GPURegions:
         if nextLoop.type != 2:
             return False
 
-        loopFirstChild: Node = self.pet.direct_children(loop)[0]
-        CUIDsofLoop = self.pet.out_edges(loopFirstChild.id, EdgeType.SUCCESSOR)
+        loopFirstChild: Node = direct_children(self.pet, loop)[0]
+        CUIDsofLoop = out_edges(self.pet, loopFirstChild.id, EdgeType.SUCCESSOR)
         lastCUofLoop = map_node(self.pet, CUIDsofLoop[-1][1])
-        nextLoopFirstChild: Node = self.pet.direct_children(nextLoop)[0]
-        successors = self.pet.out_edges(lastCUofLoop.id, EdgeType.SUCCESSOR)
+        nextLoopFirstChild: Node = direct_children(self.pet, nextLoop)[0]
+        successors = out_edges(self.pet, lastCUofLoop.id, EdgeType.SUCCESSOR)
         if successors:
             if nextLoopFirstChild.id == successors[0][1]:
                 return True
@@ -239,10 +242,10 @@ class GPURegions:
                     loop_node: LoopNode = cast(LoopNode, self.pet.node_at(loop_id))
                     gpu_lp: GPULoopPattern = [p for p in self.gpu_loop_patterns if p.parentLoop == loop_id][0]
                     region_loop_patterns.append(gpu_lp)
-                    region_cus += [cu for cu in self.pet.subtree_of_type(loop_node) if cu not in region_cus]
+                    region_cus += [cu for cu in subtree_of_type(self.pet, loop_node) if cu not in region_cus]
                     # add loop initialization to region cus (predecessor of first child of loop, if positions are suitable)
-                    loop_entry_cu = self.pet.out_edges(loop_id, EdgeType.CHILD)[0][1]
-                    predecessors = [s for s, t, d in self.pet.in_edges(loop_entry_cu, EdgeType.SUCCESSOR)]
+                    loop_entry_cu = out_edges(self.pet, loop_id, EdgeType.CHILD)[0][1]
+                    predecessors = [s for s, t, d in in_edges(self.pet, loop_entry_cu, EdgeType.SUCCESSOR)]
                     for predecessor_id in predecessors:
                         predecessor_node = self.pet.node_at(predecessor_id)
                         if (
@@ -262,7 +265,7 @@ class GPURegions:
                 # determine variables which are written outside the region and read inside
                 consumed_vars: List[str] = []
                 for cu in region_cus:
-                    in_dep_edges = self.pet.out_edges(cu.id, EdgeType.DATA)
+                    in_dep_edges = out_edges(self.pet, cu.id, EdgeType.DATA)
 
                     # var is consumed, if incoming RAW dep exists
                     for sink_cu_id, source_cu_id, dep in in_dep_edges:
@@ -279,7 +282,7 @@ class GPURegions:
                 # determine variables which are read afterwards and written in the region
                 produced_vars: List[str] = []
                 for cu in region_cus:
-                    out_dep_edges = self.pet.in_edges(cu.id, EdgeType.DATA)
+                    out_dep_edges = in_edges(self.pet, cu.id, EdgeType.DATA)
                     # var is produced, if outgoing RAW or WAW dep exists
                     for sink_cu_id, source_cu_id, dep in out_dep_edges:
                         # unpack dep for sake of clarity
@@ -480,7 +483,7 @@ class GPURegions:
                 device_cu_ids = self.cu_ids_by_region[tuple(region)]
                 for loop in contained_loop_patterns:
                     for func_node_id in loop.called_functions:
-                        for child in pet.direct_children(pet.node_at(func_node_id)):
+                        for child in direct_children(pet, pet.node_at(func_node_id)):
                             device_cu_ids.append(child.id)
 
                 device_cu_ids = list(set(device_cu_ids))

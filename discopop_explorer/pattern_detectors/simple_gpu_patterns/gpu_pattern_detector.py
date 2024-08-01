@@ -14,6 +14,7 @@ from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
     GPURegions,
@@ -32,10 +33,10 @@ def run_detection(pet: PEGraphX, res: DetectionResult, project_folder_path: str)
     """
     gpu_patterns: List[GPULoopPattern] = []
 
-    loop_node_count = len(pet.all_nodes(type=LoopNode))
+    loop_node_count = len(all_nodes(pet, type=LoopNode))
     print("\tcreate gpu patterns...")
     with alive_bar(loop_node_count) as progress_bar:
-        for node in pet.all_nodes(type=LoopNode):
+        for node in all_nodes(pet, type=LoopNode):
             # check for lastprivates, since they are not supported by the suggested pragma:
             #  pragma omp target teams distribute
             # todo: instead of omitting, suggest #pragma omp target parallel for instead

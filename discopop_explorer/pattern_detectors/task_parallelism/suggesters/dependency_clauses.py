@@ -19,6 +19,12 @@ from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.traversal.children import (
+    direct_children_or_called_nodes,
+    direct_children_or_called_nodes_of_type,
+)
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.pattern_detectors.task_parallelism.alias_detection import (
     get_alias_information as get_alias_detection_result,
@@ -208,7 +214,7 @@ def get_alias_information(
                 if int(recursive_function_call_line.split(":")[1]) == int(ts.pragma_line):
                     # correct function call found
                     # find corresponding function CU
-                    for tmp_func_cu in pet.all_nodes(FunctionNode):
+                    for tmp_func_cu in all_nodes(pet, FunctionNode):
                         if tmp_func_cu.name == recursive_function_call_entry_split[0]:
                             called_function_cu_id = tmp_func_cu.id
             # get aliases for parameters
@@ -423,20 +429,20 @@ def __get_potential_parent_functions(pet: PEGraphX, sug: TaskParallelismInfo) ->
     :return: List of potential parents of sug (Function CU Nodes)"""
     potential_parent_functions = [
         pet.node_at(e[0])
-        for e in pet.in_edges(sug._node.id, EdgeType.CHILD)
+        for e in in_edges(pet, sug._node.id, EdgeType.CHILD)
         if isinstance(pet.node_at(e[0]), FunctionNode)
     ]
     if not potential_parent_functions:
         # perform BFS search on incoming CHILD edges to find closest parent function,
         # i.e. function which contains the CU.
-        queue = [pet.node_at(e[0]) for e in pet.in_edges(sug._node.id, EdgeType.CHILD)]
+        queue = [pet.node_at(e[0]) for e in in_edges(pet, sug._node.id, EdgeType.CHILD)]
         found_parent = None
         while len(queue) > 0 or not found_parent:
             current = queue.pop(0)
             if isinstance(current, FunctionNode):
                 found_parent = current
                 break
-            queue += [pet.node_at(e[0]) for e in pet.in_edges(current.id, EdgeType.CHILD)]
+            queue += [pet.node_at(e[0]) for e in in_edges(pet, current.id, EdgeType.CHILD)]
         potential_parent_functions = [found_parent]
     return potential_parent_functions
 
@@ -447,7 +453,7 @@ def __get_potential_children_of_function(pet: PEGraphX, parent_function: Node) -
     :param pet: PET Graph
     :param parent_function: function to be analyzed
     :return: List of CUNodes contained in functions body."""
-    queue = pet.direct_children_or_called_nodes(parent_function)
+    queue = direct_children_or_called_nodes(pet, parent_function)
     potential_children = []
     visited = []
     while queue:
@@ -464,7 +470,7 @@ def __get_potential_children_of_function(pet: PEGraphX, parent_function: Node) -
             parent_function.end_position(),
         ):
             potential_children.append(cur_potential_child)
-        for tmp_child in pet.direct_children_or_called_nodes(cur_potential_child):
+        for tmp_child in direct_children_or_called_nodes(pet, cur_potential_child):
             if tmp_child not in queue and tmp_child not in potential_children and tmp_child not in visited:
                 queue.append(tmp_child)
     return potential_children
@@ -718,7 +724,7 @@ def get_alias_for_parameter_at_position(
 
     # find function calls which use the parameter
     # iterate over CUs
-    for cu in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(function.id)]]:
+    for cu in [pet.node_at(cuid) for cuid in [e[1] for e in out_edges(pet, function.id)]]:
         # iterate over children of CU and retrieve called functions
         called_functions = get_called_functions_recursively(pet, cu, [], called_function_cache)
         called_functions = list(set(called_functions))
@@ -897,21 +903,21 @@ def get_function_call_parameter_rw_information(
             if int(call_position.split(":")[1]) == lower_line_num:
                 # correct function call found
                 # find corresponding function CU
-                for tmp_func_cu in pet.all_nodes(FunctionNode):
+                for tmp_func_cu in all_nodes(pet, FunctionNode):
                     if tmp_func_cu.name == called_function_name:
                         called_function_cu_id = tmp_func_cu.id
         elif not equal_lower_line_num and greater_lower_line_num:
             if int(call_position.split(":")[1]) > lower_line_num:
                 # correct function call found
                 # find corresponding function CU
-                for tmp_func_cu in pet.all_nodes(FunctionNode):
+                for tmp_func_cu in all_nodes(pet, FunctionNode):
                     if tmp_func_cu.name == called_function_name:
                         called_function_cu_id = tmp_func_cu.id
         else:
             if int(call_position.split(":")[1]) >= lower_line_num:
                 # correct function call found
                 # find corresponding function CU
-                for tmp_func_cu in pet.all_nodes(FunctionNode):
+                for tmp_func_cu in all_nodes(pet, FunctionNode):
                     if tmp_func_cu.name == called_function_name:
                         called_function_cu_id = tmp_func_cu.id
         if called_function_cu_id is None:
@@ -1059,7 +1065,7 @@ def get_function_call_parameter_rw_information_recursion_step(
 
     # get potential children of called function
     recursively_visited.append(called_function_cu)
-    queue_1 = pet.direct_children_or_called_nodes(called_function_cu)
+    queue_1 = direct_children_or_called_nodes(pet, called_function_cu)
     potential_children = []
     visited = []
     while queue_1:
@@ -1077,7 +1083,7 @@ def get_function_call_parameter_rw_information_recursion_step(
         ):
             if cur_potential_child not in potential_children:
                 potential_children.append(cur_potential_child)
-        for tmp_child in pet.direct_children_or_called_nodes(cur_potential_child):
+        for tmp_child in direct_children_or_called_nodes(pet, cur_potential_child):
             if tmp_child not in queue_1 and tmp_child not in potential_children and tmp_child not in visited:
                 queue_1.append(tmp_child)
 
@@ -1098,7 +1104,7 @@ def get_function_call_parameter_rw_information_recursion_step(
         )
     ]:
         # find called functions
-        for child_func in pet.direct_children_or_called_nodes_of_type(child, FunctionNode):
+        for child_func in direct_children_or_called_nodes_of_type(pet, child, FunctionNode):
             # apply __get_function_call_parameter_rw_information
             if child not in recursively_visited:
                 ret_val = get_function_call_parameter_rw_information(
@@ -1161,12 +1167,12 @@ def get_function_call_parameter_rw_information_recursion_step(
                 ):
                     function_internal_cu_nodes.append(cur)
                 # add children to queue
-                for cur_child in pet.direct_children_or_called_nodes(cur):
+                for cur_child in direct_children_or_called_nodes(pet, cur):
                     if cur_child not in function_internal_cu_nodes and cur_child not in queue:
                         queue.append(cur_child)
             for child_cu in function_internal_cu_nodes:
-                child_in_deps = pet.in_edges(child_cu.id, EdgeType.DATA)
-                child_out_deps = pet.out_edges(child_cu.id, EdgeType.DATA)
+                child_in_deps = in_edges(pet, child_cu.id, EdgeType.DATA)
+                child_out_deps = out_edges(pet, child_cu.id, EdgeType.DATA)
                 dep_var_names = [x[2].var_name for x in child_in_deps + child_out_deps]
                 dep_var_names_not_none = [x for x in dep_var_names if x is not None]
                 dep_var_names_not_none = [x.replace(".addr", "") for x in dep_var_names_not_none]

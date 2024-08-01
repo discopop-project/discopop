@@ -19,6 +19,7 @@ from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.classes.variable import Variable
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
 
 if TYPE_CHECKING:
     from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
@@ -42,8 +43,8 @@ class FunctionNode(Node):
         self.memory_accesses_present = False
 
     def get_entry_cu_id(self, pet: PEGraphX) -> NodeID:
-        for child_cu_id in [t for s, t, d in pet.out_edges(self.id, EdgeType.CHILD)]:
-            if len(pet.in_edges(child_cu_id, EdgeType.SUCCESSOR)) == 0:
+        for child_cu_id in [t for s, t, d in out_edges(pet, self.id, EdgeType.CHILD)]:
+            if len(in_edges(pet, child_cu_id, EdgeType.SUCCESSOR)) == 0:
                 return child_cu_id
         raise ValueError("Mal-formatted function: ", self.id, " - No entry CU found!")
 
@@ -52,8 +53,8 @@ class FunctionNode(Node):
         if self.children_cu_ids is not None:
             for child_cu_id in self.children_cu_ids:
                 if (
-                    len(pet.out_edges(child_cu_id, EdgeType.SUCCESSOR)) == 0
-                    and len(pet.in_edges(child_cu_id, EdgeType.SUCCESSOR)) != 0
+                    len(out_edges(pet, child_cu_id, EdgeType.SUCCESSOR)) == 0
+                    and len(in_edges(pet, child_cu_id, EdgeType.SUCCESSOR)) != 0
                 ):
                     exit_cu_ids.add(child_cu_id)
         return exit_cu_ids

@@ -9,6 +9,10 @@
 
 from typing import List, Optional, Tuple, Dict, cast
 
+from discopop_explorer.functions.PEGraph.properties.depends_ignore_readonly import depends_ignore_readonly
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
@@ -81,11 +85,11 @@ class PipelineInfo(PatternInfo):
         self._pet = pet
         self.coefficient = round(node.pipeline, 3)
 
-        children_start_lines = [v.start_position() for v in pet.subtree_of_type(node, LoopNode)]
+        children_start_lines = [v.start_position() for v in subtree_of_type(pet, node, LoopNode)]
 
         self._stages = [
             pet.node_at(t)
-            for s, t, d in pet.out_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+            for s, t, d in out_edges(pet, node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
             if is_pipeline_subnode(node, pet.node_at(t), children_start_lines)
         ]
 
@@ -93,23 +97,23 @@ class PipelineInfo(PatternInfo):
 
     def __in_dep(self, node: Node) -> List[Tuple[NodeID, NodeID, Dependency]]:
         raw: List[Tuple[NodeID, NodeID, Dependency]] = []
-        for n in self._pet.subtree_of_type(node, CUNode):
-            raw.extend((s, t, d) for s, t, d in self._pet.out_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
+        for n in subtree_of_type(self._pet, node, CUNode):
+            raw.extend((s, t, d) for s, t, d in out_edges(self._pet, n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_before = [node]
         for i in range(self._stages.index(node)):
-            nodes_before.extend(self._pet.subtree_of_type(self._stages[i], CUNode))
+            nodes_before.extend(subtree_of_type(self._pet, self._stages[i], CUNode))
 
         return [dep for dep in raw if dep[1] in [n.id for n in nodes_before]]
 
     def __out_dep(self, node: Node) -> List[Tuple[NodeID, NodeID, Dependency]]:
         raw: List[Tuple[NodeID, NodeID, Dependency]] = []
-        for n in self._pet.subtree_of_type(node, CUNode):
-            raw.extend((s, t, d) for s, t, d in self._pet.in_edges(n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
+        for n in subtree_of_type(self._pet, node, CUNode):
+            raw.extend((s, t, d) for s, t, d in in_edges(self._pet, n.id, EdgeType.DATA) if d.dtype == DepType.RAW)
 
         nodes_after = [node]
         for i in range(self._stages.index(node) + 1, len(self._stages)):
-            nodes_after.extend(self._pet.subtree_of_type(self._stages[i], CUNode))
+            nodes_after.extend(subtree_of_type(self._pet, self._stages[i], CUNode))
 
         return [dep for dep in raw if dep[0] in [n.id for n in nodes_after]]
 
@@ -171,7 +175,7 @@ def run_detection(
     global_pet = pet
 
     result: List[PipelineInfo] = []
-    nodes = pet.all_nodes(LoopNode)
+    nodes = all_nodes(pet, LoopNode)
 
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
@@ -217,11 +221,11 @@ def __detect_pipeline(pet: PEGraphX, root: Node) -> float:
     :return: Pipeline scalar value
     """
 
-    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, LoopNode)]
+    children_start_lines = [v.start_position() for v in subtree_of_type(pet, root, LoopNode)]
 
     loop_subnodes = [
         pet.node_at(t)
-        for s, t, d in pet.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+        for s, t, d in out_edges(pet, root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
         if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)
     ]
 
@@ -231,7 +235,7 @@ def __detect_pipeline(pet: PEGraphX, root: Node) -> float:
 
     graph_vector = []
     for i in range(0, len(loop_subnodes) - 1):
-        graph_vector.append(1.0 if pet.depends_ignore_readonly(loop_subnodes[i + 1], loop_subnodes[i], root) else 0.0)
+        graph_vector.append(1.0 if depends_ignore_readonly(pet, loop_subnodes[i + 1], loop_subnodes[i], root) else 0.0)
 
     pipeline_vector = []
     for i in range(0, len(loop_subnodes) - 1):
@@ -240,7 +244,7 @@ def __detect_pipeline(pet: PEGraphX, root: Node) -> float:
     min_weight = 1.0
     for i in range(0, len(loop_subnodes) - 1):
         for j in range(i + 1, len(loop_subnodes)):
-            if pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root):
+            if depends_ignore_readonly(pet, loop_subnodes[i], loop_subnodes[j], root):
                 # TODO whose corresponding entry in the graph matrix is nonzero?
                 node_weight = 1 - (j - i) / (len(loop_subnodes) - 1)
                 if min_weight > node_weight > 0:

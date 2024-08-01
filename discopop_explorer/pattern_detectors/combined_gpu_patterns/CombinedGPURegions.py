@@ -14,6 +14,9 @@ from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.properties.check_reachability import check_reachability
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children
+from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -448,13 +451,13 @@ def find_combinations_within_function_body(
             continue
         # check reachability in both directions via successor edges
         # consider children, as loop nodes do not have successors on their own
-        for region_1_child in pet.direct_children(pet.node_at(region_1.contained_regions[0].node_id)):
-            for region_2_child in pet.direct_children(pet.node_at(region_2.contained_regions[0].node_id)):
+        for region_1_child in direct_children(pet, pet.node_at(region_1.contained_regions[0].node_id)):
+            for region_2_child in direct_children(pet, pet.node_at(region_2.contained_regions[0].node_id)):
                 if region_1_child == region_2_child:
                     continue
-                if pet.check_reachability(region_2_child, region_1_child, [EdgeType.SUCCESSOR]):
+                if check_reachability(pet, region_2_child, region_1_child, [EdgeType.SUCCESSOR]):
                     result.append((region_1, region_2))
-                elif pet.check_reachability(region_1_child, region_2_child, [EdgeType.SUCCESSOR]):
+                elif check_reachability(pet, region_1_child, region_2_child, [EdgeType.SUCCESSOR]):
                     result.append((region_2, region_1))
     # remove duplicates (deterministic ordering not relevant, hence list(set(..)) is fine)
     result = list(set(result))
@@ -472,17 +475,17 @@ def find_true_successor_combinations(
     for region_1, region_2 in intra_function_combinations:
         true_successors = True
         queue: List[CUNode] = cast(
-            List[CUNode], pet.direct_children(pet.node_at(region_1.contained_regions[0].node_id))
+            List[CUNode], direct_children(pet, pet.node_at(region_1.contained_regions[0].node_id))
         )
         visited: List[CUNode] = []
         while queue:
             current_node: CUNode = queue.pop()
             visited.append(current_node)
-            if current_node in pet.direct_children(pet.node_at(region_2.contained_regions[0].node_id)):
+            if current_node in direct_children(pet, pet.node_at(region_2.contained_regions[0].node_id)):
                 # reached region_2
                 continue
             # region_2 not reached
-            successors = pet.direct_successors(current_node)
+            successors = direct_successors(pet, current_node)
             if len(successors) == 0:
                 # end of the function body reached, region_2 not reached
                 true_successors = False

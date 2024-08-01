@@ -12,6 +12,8 @@ from typing import Dict, List, Optional, Tuple, cast
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.PEGraph.DummyNode import DummyNode
 from discopop_explorer.enums.MWType import MWType
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children_or_called_nodes
 from discopop_explorer.utilities.PEGraphConstruction.parser import parse_inputs
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
@@ -150,10 +152,10 @@ def run_detection(
     """
     result: List[PatternInfo] = []
 
-    for node in pet.all_nodes():
+    for node in all_nodes(pet):
         if isinstance(node, DummyNode):
             continue
-        if pet.direct_children_or_called_nodes(node):
+        if direct_children_or_called_nodes(pet, node):
             detect_mw_types(pet, node)
 
         if node.mw_type == MWType.NONE:

@@ -14,6 +14,10 @@ from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.properties.depends_ignore_readonly import depends_ignore_readonly
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_explorer.utils import correlation_coefficient
 
 total = 0
@@ -26,7 +30,7 @@ def run_before(pet: PEGraphX) -> PEGraphX:
 
 
 def run_after(pet: PEGraphX) -> PEGraphX:
-    for node in pet.all_nodes(LoopNode):
+    for node in all_nodes(pet, LoopNode):
         check_pipeline(pet, node)
 
     print(f"Total: {total}")
@@ -48,11 +52,11 @@ def check_pipeline(pet: PEGraphX, root: Node) -> None:
     global before
     global after
 
-    children_start_lines = [v.start_position() for v in pet.subtree_of_type(root, LoopNode)]
+    children_start_lines = [v.start_position() for v in subtree_of_type(pet, root, LoopNode)]
 
     loop_subnodes = [
         pet.node_at(t)
-        for s, t, d in pet.out_edges(root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+        for s, t, d in out_edges(pet, root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
         if is_pipeline_subnode(root, pet.node_at(t), children_start_lines)
     ]
 
@@ -137,7 +141,7 @@ def get_matrix(pet: PEGraphX, root: Node, loop_subnodes: List[Node]) -> List[Lis
     for i in range(0, len(loop_subnodes)):
         res.append([])
         for j in range(0, len(loop_subnodes)):
-            res[i].append(int(pet.depends_ignore_readonly(loop_subnodes[i], loop_subnodes[j], root)))
+            res[i].append(int(depends_ignore_readonly(pet, loop_subnodes[i], loop_subnodes[j], root)))
     return res
 
 

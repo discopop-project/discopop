@@ -21,6 +21,14 @@ from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.properties.is_reduction_var_by_name import is_reduction_var_by_name
+from discopop_explorer.functions.PEGraph.queries.memory_regions import get_memory_regions
+from discopop_explorer.functions.PEGraph.queries.reductions import get_reduction_sign
+from discopop_explorer.functions.PEGraph.queries.subtree import get_left_right_subtree, subtree_of_type
+from discopop_explorer.functions.PEGraph.queries.variables import get_undefined_variables_inside_loop, get_variables
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
+from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_explorer.utils import (
     __get_dep_of_type as get_dep_of_type,
 )
@@ -284,11 +292,11 @@ class GPULoopPattern(PatternInfo):
         clauses: List[str] = []
         var_names: List[str] = []
         modified_var_names: List[str] = []
-        subnodes = pet.subtree_of_type(pet.node_at(self.node_id), CUNode)
+        subnodes = subtree_of_type(pet, pet.node_at(self.node_id), CUNode)
         if self.map_type_to:
             modified_var_names = []
             for var in self.map_type_to:
-                memory_regions = pet.get_memory_regions(subnodes, var.name)
+                memory_regions = get_memory_regions(pet, subnodes, var.name)
 
                 # get size of memory region
                 memory_region_sizes = get_sizes_of_memory_regions(
@@ -315,7 +323,7 @@ class GPULoopPattern(PatternInfo):
         if self.map_type_from:
             modified_var_names = []
             for var in self.map_type_from:
-                memory_regions = pet.get_memory_regions(subnodes, var.name)
+                memory_regions = get_memory_regions(pet, subnodes, var.name)
 
                 # get size of memory region
                 memory_region_sizes = get_sizes_of_memory_regions(
@@ -340,7 +348,7 @@ class GPULoopPattern(PatternInfo):
         if self.map_type_tofrom:
             modified_var_names = []
             for var in self.map_type_tofrom:
-                memory_regions = pet.get_memory_regions(subnodes, var.name)
+                memory_regions = get_memory_regions(pet, subnodes, var.name)
 
                 # get size of memory region
                 memory_region_sizes = get_sizes_of_memory_regions(
@@ -365,7 +373,7 @@ class GPULoopPattern(PatternInfo):
         if self.map_type_alloc:
             modified_var_names = []
             for var in self.map_type_alloc:
-                memory_regions = pet.get_memory_regions(subnodes, var.name)
+                memory_regions = get_memory_regions(pet, subnodes, var.name)
 
                 # get size of memory region
                 memory_region_sizes = get_sizes_of_memory_regions(
@@ -413,7 +421,7 @@ class GPULoopPattern(PatternInfo):
                 )
             )
             # get used global variables
-            cu_nodes: List[CUNode] = pet.subtree_of_type(fn_node, CUNode)
+            cu_nodes: List[CUNode] = subtree_of_type(pet, fn_node, CUNode)
             tmp_global_vars: Set[Variable] = set()
             for cu_node in cu_nodes:
                 tmp_global_vars.update(cu_node.global_vars)
@@ -480,7 +488,7 @@ class GPULoopPattern(PatternInfo):
         # loops including their iteration numbers.
         n: LoopNode = cast(LoopNode, map_node(pet, self.nodeID))
         total_i: int = n.loop_iterations
-        for cn_id in pet.direct_children(n):
+        for cn_id in direct_children(pet, n):
             if cn_id.type == 2:  # type loop
                 ss += self.__add_sub_loops_rec(pet, cn_id.id, total_i)
         return ss
@@ -492,9 +500,9 @@ class GPULoopPattern(PatternInfo):
         :return:
         """
         reduction = []
-        lst = pet.get_left_right_subtree(loop, False)
-        rst = pet.get_left_right_subtree(loop, True)
-        sub = pet.subtree_of_type(loop, CUNode)
+        lst = get_left_right_subtree(pet, loop, False)
+        rst = get_left_right_subtree(pet, loop, True)
+        sub = subtree_of_type(pet, loop, CUNode)
 
         raw = set()
         war = set()
@@ -511,7 +519,7 @@ class GPULoopPattern(PatternInfo):
             rev_raw.update(get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
         # global vars need to be considered as well since mapping / updates may be required
-        vars = pet.get_undefined_variables_inside_loop(loop, include_global_vars=True)
+        vars = get_undefined_variables_inside_loop(pet, loop, include_global_vars=True)
 
         _, private_vars, _, _, _ = classify_loop_variables(pet, loop)
 
@@ -529,8 +537,8 @@ class GPULoopPattern(PatternInfo):
                 continue
             if is_loop_index2(pet, loop, var.name):
                 continue
-            elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
-                var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
+            elif loop.reduction and is_reduction_var_by_name(pet, loop.start_position(), var.name):
+                var.operation = get_reduction_sign(pet, loop.start_position(), var.name)
                 reduction.append(var)
             # TODO grouping
 
@@ -541,7 +549,7 @@ class GPULoopPattern(PatternInfo):
                     # "manual" triggering of "map(to)" required for true global variables since initialization of global
                     # variables might not occur in dependencies since the initializations are not instrumented
                     is_global(var.name, sub)
-                    and not pet.get_parent_function(loop).contains_line(var.defLine)
+                    and not get_parent_function(pet, loop).contains_line(var.defLine)
                 )
             ):
                 if is_readonly(vars[var], war, waw, rev_raw):
@@ -563,8 +571,8 @@ class GPULoopPattern(PatternInfo):
                 pass
 
         # use known variables to reconstruct the correct variable names from the classified memory regions
-        left_subtree_without_called_nodes = pet.get_left_right_subtree(loop, False, ignore_called_nodes=True)
-        prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
+        left_subtree_without_called_nodes = get_left_right_subtree(pet, loop, False, ignore_called_nodes=True)
+        prior_known_vars = get_variables(pet, left_subtree_without_called_nodes)
         # get memory regions which are initialized in the loop and treat them like prior known vars wrt. de-aliasing
         initilized_in_loop = get_initialized_memory_regions_in(pet, sub)
         combined_know_vars: Dict[Variable, Set[MemoryRegion]] = dict()
@@ -619,7 +627,7 @@ class GPULoopPattern(PatternInfo):
 
         # extend the string stream with this information and scan all child nodes to
         # identify and process further nested loops
-        for cn_id in pet.direct_children(n):
+        for cn_id in direct_children(pet, n):
             if cn_id.type == 2:  # type loop
                 self.nestedLoops.add(cn_id.id)
                 self.getNestedLoops(pet, cn_id.id)
@@ -632,7 +640,7 @@ class GPULoopPattern(PatternInfo):
         """
         n = map_node(pet, node_id)
         endLine = 0
-        for children in pet.direct_children(n):
+        for children in direct_children(pet, n):
             if children.end_line > endLine:
                 endLine = children.end_line
 
@@ -649,9 +657,9 @@ class GPULoopPattern(PatternInfo):
 
         loop_entry_node = cast(LoopNode, pet.node_at(node_id)).get_entry_node(pet)
         if loop_entry_node is None:
-            loop_entry_node = pet.direct_children(pet.node_at(node_id))[0]
+            loop_entry_node = direct_children(pet, pet.node_at(node_id))[0]
 
-        for cn_id in pet.direct_children(n):
+        for cn_id in direct_children(pet, n):
             if cn_id.type == 2:  # check for loop node contained in the loop body
                 if cn_id.end_line <= n.end_line:  # todo not true if loop bodies are terminated by braces
                     # only consider child as collapsible, if it is a do-all loop
@@ -661,12 +669,12 @@ class GPULoopPattern(PatternInfo):
                         #  information from the LLVM debug information
                         # check if distance between first CU of node_id and cn_id is 2 steps on the successor graph
                         potentials: Set[Node] = set()
-                        for succ1 in pet.direct_successors(loop_entry_node):
-                            for succ2 in pet.direct_successors(succ1):
+                        for succ1 in direct_successors(pet, loop_entry_node):
+                            for succ2 in direct_successors(pet, succ1):
                                 potentials.add(succ2)
                         if cast(LoopNode, cn_id).get_entry_node(pet) in potentials:
                             # perfect nesting possible. allow collapsing the loops, if root loop has no other children
-                            if len(pet.direct_children(pet.node_at(node_id))) == 5:
+                            if len(direct_children(pet, pet.node_at(node_id))) == 5:
                                 # 2 children for loop condition and body
                                 # 1 child is the collapsible loop
                                 # 2 children for loop end and increment
@@ -738,7 +746,7 @@ class GPULoopPattern(PatternInfo):
         # extend the string stream with this information and scan all child nodes to
         # identify and process further nested loops
         ss: str = " " + str(ll) + "-" + str(i_cnt)
-        for cn_id in pet.direct_children(n):
+        for cn_id in direct_children(pet, n):
             if cn_id.type == 2:
                 ss += self.__add_sub_loops_rec(pet, cn_id.id, top_loop_iterations)
         return ss

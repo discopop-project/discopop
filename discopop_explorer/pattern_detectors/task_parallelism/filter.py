@@ -14,6 +14,8 @@ from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
     ParallelRegionInfo,
@@ -252,7 +254,7 @@ def __reverse_reachable_w_o_breaker(
         return False
     recursion_result = False
     # start recursion for each incoming edge
-    for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
+    for tmp_e in in_edges(pet, root.id, EdgeType.SUCCESSOR):
         recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
             pet, pet.node_at(tmp_e[0]), target, breaker_cu, visited
         )
@@ -341,7 +343,7 @@ def __filter_sharing_clause(
                 to_be_removed.append(var)
                 continue
             # 2. check if task suggestion is child of same nodes as var_def_cu
-            for in_child_edge in pet.in_edges(var_def_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
+            for in_child_edge in in_edges(pet, var_def_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
                 parent_cu = pet.node_at(in_child_edge[0])
                 # check if task suggestion cu is reachable from parent via child edges
                 if not check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):
@@ -457,7 +459,7 @@ def __filter_in_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(CUNode):
+                            for cu_node in all_nodes(pet, CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -522,7 +524,7 @@ def __filter_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(CUNode):
+                            for cu_node in all_nodes(pet, CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -593,7 +595,7 @@ def __filter_in_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(CUNode):
+                            for cu_node in all_nodes(pet, CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -617,7 +619,7 @@ def __filter_in_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(CUNode):
+                            for cu_node in all_nodes(pet, CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
