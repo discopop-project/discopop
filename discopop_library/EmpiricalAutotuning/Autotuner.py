@@ -12,6 +12,7 @@ from typing import List, Tuple, cast
 
 import jsonpickle  # type: ignore
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
@@ -87,7 +88,7 @@ def run(arguments: AutotunerArguments) -> None:
         else:
             # no hotspot information was found
             # get loop tuples from detection result
-            loop_nodes = detection_result.pet.all_nodes(type=LoopNode)
+            loop_nodes = all_nodes(detection_result.pet, type=LoopNode)
             loop_tuples = [(l.file_id, l.start_line, HotspotNodeType.LOOP, "", 0.0) for l in loop_nodes]
 
         sorted_loop_tuples = sorted(loop_tuples, key=lambda x: x[4], reverse=True)
