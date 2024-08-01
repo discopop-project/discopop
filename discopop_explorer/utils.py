@@ -12,6 +12,17 @@ from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Set, Dict,
 
 import numpy as np
 import warnings
+from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
+from discopop_explorer.functions.PEGraph.properties.is_reduction_var_by_name import is_reduction_var_by_name
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.reductions import get_reduction_sign
+from discopop_explorer.functions.PEGraph.queries.subtree import get_left_right_subtree, subtree_of_type
+from discopop_explorer.functions.PEGraph.queries.variables import get_undefined_variables_inside_loop, get_variables
+from discopop_explorer.functions.PEGraph.traversal.children import (
+    direct_children_or_called_nodes,
+    direct_children_or_called_nodes_of_type,
+)
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -64,7 +75,7 @@ def find_subnodes(pet: PEGraphX, node: Node, criteria: EdgeType) -> List[Node]:
     :param criteria: EdgeType, type of edges to traverse
     :return: list of children nodes
     """
-    return [pet.node_at(t) for s, t, d in pet.out_edges(node.id) if d.etype == criteria]
+    return [pet.node_at(t) for s, t, d in out_edges(pet, node.id) if d.etype == criteria]
 
 
 def depends(pet: PEGraphX, source: Node, target: Node) -> bool:
@@ -77,12 +88,12 @@ def depends(pet: PEGraphX, source: Node, target: Node) -> bool:
     """
     if source == target:
         return False
-    target_nodes = pet.subtree_of_type(target)
+    target_nodes = subtree_of_type(pet, target)
 
-    for node in pet.subtree_of_type(source, CUNode):
+    for node in subtree_of_type(pet, source, CUNode):
         for target in [
             pet.node_at(target_id)
-            for source_id, target_id, dependence in pet.out_edges(node.id, EdgeType.DATA)
+            for source_id, target_id, dependence in out_edges(pet, node.id, EdgeType.DATA)
             if dependence.dtype == DepType.RAW
         ]:
             if target in target_nodes:
@@ -98,8 +109,8 @@ def is_loop_index2(pet: PEGraphX, root_loop: Node, var_name: str) -> bool:
     :param var_name: name of the variable
     :return: true if variable is index of the loop
     """
-    loops_start_lines = [v.start_position() for v in pet.subtree_of_type(root_loop, LoopNode)]
-    return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, CUNode))
+    loops_start_lines = [v.start_position() for v in subtree_of_type(pet, root_loop, LoopNode)]
+    return is_loop_index(pet, var_name, loops_start_lines, subtree_of_type(pet, root_loop, CUNode))
 
 
 # NOTE: left old code as it may become relevant again in the near future
@@ -126,7 +137,7 @@ def calculate_workload(pet: PEGraphX, node: Node, ignore_function_calls_and_cach
         # note: recursive function calls are counted as a single instruction
         res += cast(CUNode, node).instructions_count
         if not ignore_function_calls_and_cached_values:
-            for calls_edge in pet.out_edges(cast(CUNode, node).id, EdgeType.CALLSNODE):
+            for calls_edge in out_edges(pet, cast(CUNode, node).id, EdgeType.CALLSNODE):
                 # add costs of the called function
                 res += calculate_workload(
                     pet,
@@ -246,7 +257,7 @@ def __get_dep_of_type(
     """
     return [
         e
-        for e in (pet.in_edges(node.id, EdgeType.DATA) if reversed else pet.out_edges(node.id, EdgeType.DATA))
+        for e in (in_edges(pet, node.id, EdgeType.DATA) if reversed else out_edges(pet, node.id, EdgeType.DATA))
         if e[2].dtype == dep_type
     ]
 
@@ -327,7 +338,7 @@ def is_func_arg(pet: PEGraphX, var: str, node: Node) -> bool:
         return False
     if "." not in var:
         return False
-    parents = [pet.node_at(edge[0]) for edge in pet.in_edges(node.id, EdgeType.CHILD)]
+    parents = [pet.node_at(edge[0]) for edge in in_edges(pet, node.id, EdgeType.CHILD)]
     # add current node to parents, if it is of type FUNC
     if isinstance(node, FunctionNode):
         parents.append(node)
@@ -602,14 +613,14 @@ def get_child_loops(pet: PEGraphX, node: Node) -> Tuple[List[Node], List[Node]]:
     do_all: List[Node] = []
     reduction: List[Node] = []
 
-    for loop_child in pet.subtree_of_type(node, LoopNode):
+    for loop_child in subtree_of_type(pet, node, LoopNode):
         if loop_child.do_all:
             do_all.append(loop_child)
         elif loop_child.reduction:
             reduction.append(loop_child)
 
-    for func_child in pet.direct_children_or_called_nodes_of_type(node, FunctionNode):
-        for child in pet.direct_children_or_called_nodes_of_type(func_child, CUNode):
+    for func_child in direct_children_or_called_nodes_of_type(pet, node, FunctionNode):
+        for child in direct_children_or_called_nodes_of_type(pet, func_child, CUNode):
             if child.do_all:
                 do_all.append(child)
             elif child.reduction:
@@ -621,8 +632,8 @@ def get_child_loops(pet: PEGraphX, node: Node) -> Tuple[List[Node], List[Node]]:
 def get_initialized_memory_regions_in(pet: PEGraphX, cu_nodes: List[CUNode]) -> Dict[Variable, Set[MemoryRegion]]:
     initialized_memory_regions: Dict[Variable, Set[MemoryRegion]] = dict()
     for cu in cu_nodes:
-        parent_function = pet.get_parent_function(cu)
-        for s, t, d in pet.out_edges(cu.id, EdgeType.DATA):
+        parent_function = get_parent_function(pet, cu)
+        for s, t, d in out_edges(pet, cu.id, EdgeType.DATA):
             if d.dtype == DepType.INIT and d.memory_region is not None:
                 # get variable object from cu
                 for var in cu.global_vars + cu.local_vars:
@@ -661,9 +672,9 @@ def classify_loop_variables(
     last_private = []
     shared = []
     reduction = []
-    lst = pet.get_left_right_subtree(loop, False)
-    rst = pet.get_left_right_subtree(loop, True)
-    sub: List[CUNode] = pet.subtree_of_type(loop, CUNode)
+    lst = get_left_right_subtree(pet, loop, False)
+    rst = get_left_right_subtree(pet, loop, True)
+    sub: List[CUNode] = subtree_of_type(pet, loop, CUNode)
 
     raw = set()
     war = set()
@@ -676,12 +687,12 @@ def classify_loop_variables(
         waw.update(__get_dep_of_type(pet, sub_node, DepType.WAW, False))
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
-    vars = pet.get_undefined_variables_inside_loop(loop)
+    vars = get_undefined_variables_inside_loop(pet, loop)
 
     # only consider memory regions which are know at the current code location.
     # ignore memory regions which stem from called functions.
-    left_subtree_without_called_nodes = pet.get_left_right_subtree(loop, False, ignore_called_nodes=True)
-    prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
+    left_subtree_without_called_nodes = get_left_right_subtree(pet, loop, False, ignore_called_nodes=True)
+    prior_known_vars = get_variables(pet, left_subtree_without_called_nodes)
     prior_known_mem_regs = set()
     for pkv in prior_known_vars:
         prior_known_mem_regs.update(prior_known_vars[pkv])
@@ -717,8 +728,8 @@ def classify_loop_variables(
                     last_private.append(var)
                 else:
                     private.append(var)
-            elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
-                var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
+            elif loop.reduction and is_reduction_var_by_name(pet, loop.start_position(), var.name):
+                var.operation = get_reduction_sign(pet, loop.start_position(), var.name)
                 reduction.append(var)
             elif (
                 is_written_in_subtree(mem_reg_subset, raw, waw, lst)
@@ -935,15 +946,15 @@ def classify_task_vars(
     depend_in_out: List[Tuple[Variable, Set[MemoryRegion]]] = []
     reduction_var_names: List[str] = []
 
-    left_sub_tree = pet.get_left_right_subtree(task, False)
+    left_sub_tree = get_left_right_subtree(pet, task, False)
 
-    right_sub_tree = pet.get_left_right_subtree(task, True)
-    subtree = pet.subtree_of_type(task, CUNode)
-    t_loop = pet.subtree_of_type(task, LoopNode)
+    right_sub_tree = get_left_right_subtree(pet, task, True)
+    subtree = subtree_of_type(pet, task, CUNode)
+    t_loop = subtree_of_type(pet, task, LoopNode)
 
     vars: Dict[Variable, Set[MemoryRegion]] = dict()
     if isinstance(task, FunctionNode):
-        tmp = pet.get_variables(subtree)
+        tmp = get_variables(pet, subtree)
         vars_strings = []
         for v in task.args:
             vars_strings.append(v.name)
@@ -960,7 +971,7 @@ def classify_task_vars(
             if name in vars_strings:
                 vars[v] = tmp[v]
     else:
-        vars = pet.get_variables(subtree)
+        vars = get_variables(pet, subtree)
 
     raw_deps_on = set()  # set<Dependence>
     war_deps_on = set()
@@ -994,14 +1005,14 @@ def classify_task_vars(
         loop_nodes.append(task)
 
     loops_start_lines = [n.start_position() for n in loop_nodes]
-    loop_children = [c for n in loop_nodes for c in pet.direct_children_or_called_nodes(n)]
+    loop_children = [c for n in loop_nodes for c in direct_children_or_called_nodes(pet, n)]
 
     for var in vars:
         var_is_loop_index = False
         # get RAW dependencies for var
         tmp_deps = [dep for dep in raw_deps_on if dep[2].memory_region in vars[var]]
         for edge in tmp_deps:
-            if pet.is_loop_index(edge[2].var_name, loops_start_lines, loop_children):
+            if is_loop_index(pet, edge[2].var_name, loops_start_lines, loop_children):
                 var_is_loop_index = True
                 break
         if var_is_loop_index:
@@ -1051,8 +1062,8 @@ def classify_task_vars(
                 shared.append((var, vars[var]))
 
     # use known variables to reconstruct the correct variable names from the classified memory regions
-    left_subtree_without_called_nodes = pet.get_left_right_subtree(task, False, ignore_called_nodes=True)
-    prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
+    left_subtree_without_called_nodes = get_left_right_subtree(pet, task, False, ignore_called_nodes=True)
+    prior_known_vars = get_variables(pet, left_subtree_without_called_nodes)
 
     return (
         sorted(__apply_dealiasing(first_private, prior_known_vars)),
@@ -1095,12 +1106,12 @@ def __is_written_prior_to_task(pet: PEGraphX, var: Variable, task: Node) -> bool
             predecessors.append(current)
         queue += [
             pet.node_at(edge[0])
-            for edge in pet.in_edges(current.id, EdgeType.SUCCESSOR)
+            for edge in in_edges(pet, current.id, EdgeType.SUCCESSOR)
             if pet.node_at(edge[0]) not in visited
         ]
 
     # check if raw-dependency on var to any predecessor exists)
-    for out_dep in pet.out_edges(task.id, EdgeType.DATA):
+    for out_dep in out_edges(pet, task.id, EdgeType.DATA):
         if out_dep[2].dtype != DepType.RAW:
             continue
         # check if out_dep.source in predecessors

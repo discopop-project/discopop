@@ -11,6 +11,13 @@ from multiprocessing import Pool
 from typing import Dict, List, Optional, cast, Set, Tuple
 import warnings
 
+from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
+from discopop_explorer.functions.PEGraph.properties.is_readonly_inside_loop_body import is_readonly_inside_loop_body
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
+from discopop_explorer.functions.PEGraph.queries.variables import get_variables
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
@@ -80,7 +87,7 @@ def run_detection(
     global global_pet
     global_pet = pet
     result: List[ReductionInfo] = []
-    nodes = pet.all_nodes(LoopNode)
+    nodes = all_nodes(pet, LoopNode)
 
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
@@ -126,13 +133,13 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
     :return: true if is reduction loop
     """
     all_vars = []
-    for node in pet.subtree_of_type(root, CUNode):
+    for node in subtree_of_type(pet, root, CUNode):
         all_vars.extend(node.local_vars)
         all_vars.extend(node.global_vars)
 
     # get required metadata
     loop_start_lines: List[LineID] = []
-    root_children = pet.subtree_of_type(root, (CUNode, LoopNode))
+    root_children = subtree_of_type(pet, root, (CUNode, LoopNode))
     root_children_cus: List[CUNode] = [cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU]
     root_children_loops: List[LoopNode] = [cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:
@@ -149,12 +156,12 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
 
     # get parents of loop
     parent_loops = __get_parent_loops(pet, root)
-    parent_function_lineid = pet.get_parent_function(root).start_position()
+    parent_function_lineid = get_parent_function(pet, root).start_position()
     called_functions_lineids = __get_called_functions(pet, root)
 
     # get variables which are defined inside the loop
     defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]] = []
-    tmp_loop_variables = pet.get_variables(root_children_cus)
+    tmp_loop_variables = get_variables(pet, root_children_cus)
     for var in tmp_loop_variables:
         if ":" in var.defLine:
             file_id = int(var.defLine.split(":")[0])
@@ -211,8 +218,8 @@ def __check_loop_dependencies(
     # get dependency edges between children nodes
     deps = set()
     for n in loop_children_ids:
-        deps.update([(s, t, d) for s, t, d in pet.in_edges(n, EdgeType.DATA) if s in loop_children_ids])
-        deps.update([(s, t, d) for s, t, d in pet.out_edges(n, EdgeType.DATA) if t in loop_children_ids])
+        deps.update([(s, t, d) for s, t, d in in_edges(pet, n, EdgeType.DATA) if s in loop_children_ids])
+        deps.update([(s, t, d) for s, t, d in out_edges(pet, n, EdgeType.DATA) if t in loop_children_ids])
 
     # get memory regions which are defined inside the loop
     memory_regions_defined_in_loop = set()
@@ -221,7 +228,8 @@ def __check_loop_dependencies(
 
     for source, target, dep in deps:
         # check if targeted variable is readonly inside loop
-        if pet.is_readonly_inside_loop_body(
+        if is_readonly_inside_loop_body(
+            pet,
             dep,
             root_loop,
             root_children_cus,
@@ -232,7 +240,7 @@ def __check_loop_dependencies(
             continue
 
         # check if targeted variable is loop index
-        if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
+        if is_loop_index(pet, dep.var_name, loop_start_lines, root_children_cus):
             continue
 
         # ignore dependencies where either source or sink do not lie within root_loop
@@ -320,11 +328,11 @@ def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
             parents.append(current)
 
         # process incoming child edges
-        for s, t, e in pet.in_edges(current, EdgeType.CHILD):
+        for s, t, e in in_edges(pet, current, EdgeType.CHILD):
             if s not in visited and s not in queue:
                 queue.append(s)
         # process incoming call edges
-        for s, t, e in pet.in_edges(current, EdgeType.CALLSNODE):
+        for s, t, e in in_edges(pet, current, EdgeType.CALLSNODE):
             if s not in visited and s not in queue:
                 queue.append(s)
 
@@ -341,10 +349,10 @@ def __get_called_functions(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
         current = queue.pop()
         visited.add(current)
         # get called functions
-        for s, t, e in pet.out_edges(current, EdgeType.CALLSNODE):
+        for s, t, e in out_edges(pet, current, EdgeType.CALLSNODE):
             called_functions.add(t)
         # add children to queue
-        for s, t, e in pet.out_edges(current, EdgeType.CHILD):
+        for s, t, e in out_edges(pet, current, EdgeType.CHILD):
             if t not in queue and t not in visited:
                 queue.append(t)
 
@@ -360,13 +368,13 @@ def __check_for_problematic_function_argument_access(
     # if so, return True. Else. return false
 
     # find accessed function argument for source
-    source_pf = pet.get_parent_function(pet.node_at(source))
+    source_pf = get_parent_function(pet, pet.node_at(source))
     source_accessed_pf_args = [a for a in source_pf.args if a.name == dep.var_name]
     if len(source_accessed_pf_args) == 0:
         return False
 
     # find accessed function argument for target
-    target_pf = pet.get_parent_function(pet.node_at(target))
+    target_pf = get_parent_function(pet, pet.node_at(target))
     target_accessed_pf_args = [a for a in target_pf.args if a.name == dep.var_name]
     if len(target_accessed_pf_args) == 0:
         return False

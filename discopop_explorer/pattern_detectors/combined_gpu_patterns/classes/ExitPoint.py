@@ -12,6 +12,7 @@ from typing import Set, List, Tuple
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.functions.PEGraph.queries.variables import get_variable
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -127,9 +128,9 @@ class ExitPoint(object):
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.var_names:
-            var_obj = pet.get_variable(self.sink_cu_id, var_name)
+            var_obj = get_variable(pet, self.sink_cu_id, var_name)
             if var_obj is None:
-                var_obj = pet.get_variable(self.source_cu_id, var_name)
+                var_obj = get_variable(pet, self.source_cu_id, var_name)
             if var_obj is None:
                 var_names_types_and_sizes.append((var_name, "", 1))
             else:

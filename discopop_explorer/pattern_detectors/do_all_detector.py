@@ -10,6 +10,14 @@ from multiprocessing import Pool
 from typing import List, Dict, Optional, Set, Tuple, cast
 import warnings
 
+from discopop_explorer.functions.PEGraph.properties.depends_ignore_readonly import depends_ignore_readonly
+from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
+from discopop_explorer.functions.PEGraph.properties.is_readonly_inside_loop_body import is_readonly_inside_loop_body
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
+from discopop_explorer.functions.PEGraph.queries.variables import get_variables
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
@@ -87,7 +95,7 @@ def run_detection(
     global global_pet
     global_pet = pet
     result: List[DoAllInfo] = []
-    nodes = pet.all_nodes(LoopNode)
+    nodes = all_nodes(pet, LoopNode)
 
     warnings.warn("DOALL DETECTION CURRENTLY ASSUMES THE EXISTENCE OF DEPENDENCY METADATA!")
 
@@ -146,11 +154,11 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
     :param root: root node
     :return: true if do-all
     """
-    subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
+    subnodes = [pet.node_at(t) for s, t, d in out_edges(pet, root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
 
     # get required metadata
     loop_start_lines: List[LineID] = []
-    root_children = pet.subtree_of_type(root_loop, (CUNode, LoopNode))
+    root_children = subtree_of_type(pet, root_loop, (CUNode, LoopNode))
     root_children_cus = [cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU]
     root_children_loops = [cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:
@@ -159,12 +167,12 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
 
     # get parents of root_loop
     parent_loops = __get_parent_loops(pet, root_loop)
-    parent_function_lineid = pet.get_parent_function(root_loop).start_position()
+    parent_function_lineid = get_parent_function(pet, root_loop).start_position()
     called_functions_lineids = __get_called_functions(pet, root_loop)
 
     # get variables which are defined inside the loop
     defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]] = []
-    tmp_loop_variables = pet.get_variables(root_children_cus)
+    tmp_loop_variables = get_variables(pet, root_children_cus)
     for var in tmp_loop_variables:
         if ":" in var.defLine:
             file_id = int(var.defLine.split(":")[0])
@@ -175,7 +183,7 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
 
     # check if all subnodes are parallelizable
     file_io_warnings = []
-    for node in pet.subtree_of_type(root_loop, CUNode):
+    for node in subtree_of_type(pet, root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
             file_io_warnings.append(node)
@@ -230,17 +238,21 @@ def __check_loop_dependencies(
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Do-All pattern."""
     # get recursive children of source and target
-    node_1_children_ids = [node.id for node in pet.subtree_of_type(node_1, CUNode)]
-    node_2_children_ids = [node.id for node in pet.subtree_of_type(node_2, CUNode)]
+    node_1_children_ids = [node.id for node in subtree_of_type(pet, node_1, CUNode)]
+    node_2_children_ids = [node.id for node in subtree_of_type(pet, node_2, CUNode)]
 
     # get dependency edges between children nodes
     deps = set()
     for n in node_1_children_ids + node_2_children_ids:
         deps.update(
-            [(s, t, d) for s, t, d in pet.in_edges(n, EdgeType.DATA) if s in node_1_children_ids + node_2_children_ids]
+            [(s, t, d) for s, t, d in in_edges(pet, n, EdgeType.DATA) if s in node_1_children_ids + node_2_children_ids]
         )
         deps.update(
-            [(s, t, d) for s, t, d in pet.out_edges(n, EdgeType.DATA) if t in node_1_children_ids + node_2_children_ids]
+            [
+                (s, t, d)
+                for s, t, d in out_edges(pet, n, EdgeType.DATA)
+                if t in node_1_children_ids + node_2_children_ids
+            ]
         )
 
     # get memory regions which are defined inside the loop
@@ -256,7 +268,8 @@ def __check_loop_dependencies(
         max_considered_intra_iteration_dep_level = max(dep_source_nesting_level, dep_target_nesting_level)
 
         # check if targeted variable is readonly inside loop
-        if pet.is_readonly_inside_loop_body(
+        if is_readonly_inside_loop_body(
+            pet,
             dep,
             root_loop,
             root_children_cus,
@@ -267,7 +280,7 @@ def __check_loop_dependencies(
             continue
 
         # check if targeted variable is loop index
-        if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
+        if is_loop_index(pet, dep.var_name, loop_start_lines, root_children_cus):
             continue
 
         # ignore dependencies where either source or sink do not lie within root_loop
@@ -363,10 +376,10 @@ def __old_detect_do_all(pet: PEGraphX, root_loop: CUNode) -> bool:
     :param root: root node
     :return: true if do-all
     """
-    subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
+    subnodes = [pet.node_at(t) for s, t, d in out_edges(pet, root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
 
     # check if all subnodes are parallelizable
-    for node in pet.subtree_of_type(root_loop, CUNode):
+    for node in subtree_of_type(pet, root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
             return False
@@ -375,7 +388,7 @@ def __old_detect_do_all(pet: PEGraphX, root_loop: CUNode) -> bool:
         children_cache: Dict[CUNode, List[CUNode]] = dict()
         dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
         for j in range(i, len(subnodes)):
-            if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
+            if depends_ignore_readonly(pet, subnodes[i], subnodes[j], root_loop):
                 return False
 
     return True
@@ -392,7 +405,7 @@ def __calculate_nesting_level(pet: PEGraphX, root_loop: LoopNode, cu_node_id: st
             # found
             return nesting_level
         # add new parents to the queue
-        for in_child_edge in pet.in_edges(cast(NodeID, current_node_id), EdgeType.CHILD):
+        for in_child_edge in in_edges(pet, cast(NodeID, current_node_id), EdgeType.CHILD):
             potential_parents.append((in_child_edge[0], nesting_level + 1))
 
 
@@ -408,11 +421,11 @@ def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
             parents.append(current)
 
         # process incoming child edges
-        for s, t, e in pet.in_edges(current, EdgeType.CHILD):
+        for s, t, e in in_edges(pet, current, EdgeType.CHILD):
             if s not in visited and s not in queue:
                 queue.append(s)
         # process incoming call edges
-        for s, t, e in pet.in_edges(current, EdgeType.CALLSNODE):
+        for s, t, e in in_edges(pet, current, EdgeType.CALLSNODE):
             if s not in visited and s not in queue:
                 queue.append(s)
 
@@ -429,10 +442,10 @@ def __get_called_functions(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
         current = queue.pop()
         visited.add(current)
         # get called functions
-        for s, t, e in pet.out_edges(current, EdgeType.CALLSNODE):
+        for s, t, e in out_edges(pet, current, EdgeType.CALLSNODE):
             called_functions.add(t)
         # add children to queue
-        for s, t, e in pet.out_edges(current, EdgeType.CHILD):
+        for s, t, e in out_edges(pet, current, EdgeType.CHILD):
             if t not in queue and t not in visited:
                 queue.append(t)
 
@@ -448,13 +461,13 @@ def __check_for_problematic_function_argument_access(
     # if so, return True. Else. return false
 
     # find accessed function argument for source
-    source_pf = pet.get_parent_function(pet.node_at(source))
+    source_pf = get_parent_function(pet, pet.node_at(source))
     source_accessed_pf_args = [a for a in source_pf.args if a.name == dep.var_name]
     if len(source_accessed_pf_args) == 0:
         return False
 
     # find accessed function argument for target
-    target_pf = pet.get_parent_function(pet.node_at(target))
+    target_pf = get_parent_function(pet, pet.node_at(target))
     target_accessed_pf_args = [a for a in target_pf.args if a.name == dep.var_name]
     if len(target_accessed_pf_args) == 0:
         return False

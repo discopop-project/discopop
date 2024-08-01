@@ -14,6 +14,8 @@ from lxml import objectify, etree  # type: ignore
 
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children_or_called_nodes
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
 
 
@@ -388,8 +390,8 @@ def check_loop_scopes(pet: PEGraphX) -> None:
     """Checks if the scope of loop CUs matches these of their children. Corrects the scope of the loop CU
     (expand only) if necessary
     :param pet: PET graph"""
-    for loop_cu in pet.all_nodes(LoopNode):
-        for child in pet.direct_children_or_called_nodes(loop_cu):
+    for loop_cu in all_nodes(pet, LoopNode):
+        for child in direct_children_or_called_nodes(pet, loop_cu):
             if not line_contained_in_region(child.start_position(), loop_cu.start_position(), loop_cu.end_position()):
                 # expand loop_cu start_position upwards
                 if child.start_line < loop_cu.start_line and loop_cu.file_id == child.file_id:

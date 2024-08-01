@@ -19,6 +19,10 @@ from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children_or_called_nodes
+from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
     TPIType,
@@ -50,7 +54,7 @@ def detect_task_suggestions(pet: PEGraphX) -> List[PatternInfo]:
 
     func_cus: List[Node] = []
 
-    for v in pet.all_nodes():
+    for v in all_nodes(pet):
         if v.mw_type == MWType.WORKER:
             worker_cus.append(v)
         if v.mw_type == MWType.BARRIER:
@@ -67,7 +71,7 @@ def detect_task_suggestions(pet: PEGraphX) -> List[PatternInfo]:
         # get line number of first dependency. suggest taskwait prior to that
         first_dependency_line = v.end_position()
         first_dependency_line_number = first_dependency_line[first_dependency_line.index(":") + 1 :]
-        for s, t, e in pet.out_edges(v.id):
+        for s, t, e in out_edges(pet, v.id):
             if e.etype == EdgeType.DATA:
                 dep_line = cast(LineID, e.sink_line)
                 dep_line_number = dep_line[dep_line.index(":") + 1 :]
@@ -83,7 +87,7 @@ def detect_task_suggestions(pet: PEGraphX) -> List[PatternInfo]:
             suggestions[v.start_position()].append(tmp_suggestion)
 
     # SUGGEST TASKS
-    for vx in pet.all_nodes():
+    for vx in all_nodes(pet):
         # iterate over all entries in recursiveFunctionCalls
         # in order to find task suggestions
         for i in range(0, len(vx.recursive_function_calls)):
@@ -156,7 +160,7 @@ def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[Patte
     for ts in task_suggestions:
         found_critical_cus: List[Node] = []
         found_atomic_cus: List[Node] = []
-        for loop_cu in pet.all_nodes(LoopNode):
+        for loop_cu in all_nodes(pet, LoopNode):
             # check if task suggestion inside do-all loop exists
             if line_contained_in_region(ts._node.start_position(), loop_cu.start_position(), loop_cu.end_position()):
 
@@ -167,7 +171,7 @@ def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[Patte
                     visited.append(cu_node)
                     for succ_cu_node in [
                         pet.node_at(t)
-                        for s, t, e in pet.out_edges(cu_node.id)
+                        for s, t, e in out_edges(pet, cu_node.id)
                         if e.etype == EdgeType.SUCCESSOR and pet.node_at(t) != cu_node
                     ]:
                         if succ_cu_node not in visited:
@@ -217,7 +221,7 @@ def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[Patte
                         # move pragma task line to beginning of loop body (i.e. make the entire loop body a task)
                         # set task region lines accordingly
                         # if ts._node is a direct child of loop_cu
-                        if loop_cu.id in [e[0] for e in pet.in_edges(ts._node.id, EdgeType.CHILD)]:
+                        if loop_cu.id in [e[0] for e in in_edges(pet, ts._node.id, EdgeType.CHILD)]:
                             print(
                                 "Moving Pragma from: ",
                                 ts.pragma_line,
@@ -233,9 +237,9 @@ def correct_task_suggestions_in_loop_body(pet: PEGraphX, suggestions: List[Patte
                             # protect RAW-Writes to shared variables with critical section
                             # i.e. find in-deps to shared variables and suggest critical section around CUs
                             # containing such cases
-                            for loop_cu_child in pet.direct_children_or_called_nodes(loop_cu):
+                            for loop_cu_child in direct_children_or_called_nodes(pet, loop_cu):
                                 for in_dep_var_name in list(
-                                    set([e[2].var_name for e in pet.in_edges(loop_cu_child.id, EdgeType.DATA)])
+                                    set([e[2].var_name for e in in_edges(pet, loop_cu_child.id, EdgeType.DATA)])
                                 ):
                                     if in_dep_var_name in ts.shared:
                                         # check if the found dependency occurs in the scope of the suggested task
@@ -346,7 +350,7 @@ def __identify_atomic_or_critical_sections(
                     break
                 if parent_idx == child_idx:
                     continue
-                if combinations[child_idx][0] in pet.direct_successors(combinations[parent_idx][-1]):
+                if combinations[child_idx][0] in direct_successors(pet, combinations[parent_idx][-1]):
                     combinations[parent_idx] += combinations[child_idx]
                     combinations.pop(child_idx)
                     found_combination = True

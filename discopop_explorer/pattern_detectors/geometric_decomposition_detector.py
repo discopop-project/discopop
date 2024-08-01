@@ -10,6 +10,10 @@
 import math
 from typing import Dict, List, Tuple, Optional, cast
 
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children_or_called_nodes_of_type
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
@@ -102,7 +106,7 @@ def run_detection(
     result: List[GDInfo] = []
     global __loop_iterations
     __loop_iterations = {}
-    nodes = pet.all_nodes(FunctionNode)
+    nodes = all_nodes(pet, FunctionNode)
 
     nodes = cast(List[FunctionNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
@@ -150,10 +154,10 @@ def __test_chunk_limit(pet: PEGraphX, node: Node) -> Tuple[bool, Optional[int]]:
     min_iterations_count = None
     inner_loop_iter = {}
 
-    children = pet.direct_children_or_called_nodes_of_type(node, LoopNode)
+    children = direct_children_or_called_nodes_of_type(pet, node, LoopNode)
 
-    for func_child in pet.direct_children_or_called_nodes_of_type(node, FunctionNode):
-        children.extend(pet.direct_children_or_called_nodes_of_type(func_child, LoopNode))
+    for func_child in direct_children_or_called_nodes_of_type(pet, node, FunctionNode):
+        children.extend(direct_children_or_called_nodes_of_type(pet, func_child, LoopNode))
 
     for child in children:
         inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
@@ -195,7 +199,7 @@ def __get_parent_iterations(pet: PEGraphX, node: Node) -> int:
     :param node: current node
     :return: number of iterations
     """
-    parent = pet.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+    parent = in_edges(pet, node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
     max_iter = 1
     visited = []  # used to prevent looping
@@ -208,7 +212,7 @@ def __get_parent_iterations(pet: PEGraphX, node: Node) -> int:
             max_iter = max(1, node.loop_iterations)
             break
         visited.append(node)
-        parent = pet.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+        parent = in_edges(pet, node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
     return max_iter
 
@@ -220,12 +224,12 @@ def __detect_geometric_decomposition(pet: PEGraphX, root: Node) -> bool:
     :param root: root node
     :return: true if GD pattern was discovered
     """
-    for loop_child in pet.subtree_of_type(root, LoopNode):
+    for loop_child in subtree_of_type(pet, root, LoopNode):
         if not (loop_child.reduction or loop_child.do_all):
             return False
 
-    for child in pet.direct_children_or_called_nodes_of_type(root, FunctionNode):
-        for child2 in pet.direct_children_or_called_nodes_of_type(child, LoopNode):
+    for child in direct_children_or_called_nodes_of_type(pet, root, FunctionNode):
+        for child2 in direct_children_or_called_nodes_of_type(pet, child, LoopNode):
             if not (child2.reduction or child2.do_all):
                 return False
 

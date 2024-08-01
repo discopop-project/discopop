@@ -15,6 +15,7 @@ from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 
 
 def get_contained_lines(start_line: str, end_line: str) -> List[str]:
@@ -28,7 +29,7 @@ def get_contained_lines(start_line: str, end_line: str) -> List[str]:
 
 
 def get_function_body_cus_without_called_functions(pet: PEGraphX, function_node: FunctionNode) -> List[NodeID]:
-    queue = [t for s, t, d in pet.out_edges(function_node.id, EdgeType.CHILD)]
+    queue = [t for s, t, d in out_edges(pet, function_node.id, EdgeType.CHILD)]
     visited: Set[NodeID] = set()
     while queue:
         current = queue.pop(0)
@@ -36,8 +37,8 @@ def get_function_body_cus_without_called_functions(pet: PEGraphX, function_node:
         current_node = pet.node_at(current)
 
         # add children if they do not result from a call
-        children = [t for s, t, d in pet.out_edges(current, EdgeType.CHILD)]
-        called = [t for s, t, d in pet.out_edges(current, EdgeType.CALLSNODE)]
+        children = [t for s, t, d in out_edges(pet, current, EdgeType.CHILD)]
+        called = [t for s, t, d in out_edges(pet, current, EdgeType.CALLSNODE)]
         queue += [c for c in children if c not in visited and c not in called]  # todo add check for call
     return list(visited)
 

@@ -12,6 +12,7 @@ from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
     TPIType,
@@ -34,7 +35,7 @@ def suggest_shared_clauses_for_all_tasks_in_function_body(
             # iterate over parent function(s)
             for parent_function in [
                 pet.node_at(e[0])
-                for e in pet.in_edges(ts._node.id, EdgeType.CHILD)
+                for e in in_edges(pet, ts._node.id, EdgeType.CHILD)
                 if isinstance(pet.node_at(e[0]), FunctionNode)
             ]:
                 # get task suggestions in parent functions scope

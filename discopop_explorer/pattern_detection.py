@@ -11,6 +11,8 @@ from typing import Dict, List, Optional, Tuple, cast
 
 from alive_progress import alive_bar  # type: ignore
 
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import (
     build_preprocessed_graph_and_run_detection as detect_tp,
@@ -48,11 +50,11 @@ class PatternDetectorX(object):
         :param remove_dummies: remove dummy nodes
         """
         dummies_to_remove = set()
-        for node in self.pet.all_nodes():
+        for node in all_nodes(self.pet):
             if not loop_type or isinstance(node, LoopNode):
                 if remove_dummies and isinstance(node, DummyNode):
                     continue
-                for s, t, e in self.pet.out_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
+                for s, t, e in out_edges(self.pet, node.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
                     if remove_dummies and isinstance(self.pet.node_at(t), DummyNode):
                         dummies_to_remove.add(t)
 

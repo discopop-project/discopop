@@ -12,6 +12,7 @@ from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
     ParallelRegionInfo,
@@ -41,16 +42,16 @@ def group_task_suggestions(pet: PEGraphX, suggestions: List[PatternInfo]) -> Lis
         # mark taskwait suggestion with own id
         tws.task_group.append(task_group_id)
         relatives: List[Node] = [tws._node]
-        queue: List[Node] = [pet.node_at(in_e[0]) for in_e in pet.in_edges(tws._node.id, EdgeType.SUCCESSOR)]
+        queue: List[Node] = [pet.node_at(in_e[0]) for in_e in in_edges(pet, tws._node.id, EdgeType.SUCCESSOR)]
         while len(queue) > 0:
             cur = queue.pop(0)
             if cur.tp_contains_taskwait:
                 continue
             relatives.append(cur)
-            for in_edge in pet.in_edges(cur.id, EdgeType.SUCCESSOR):
+            for in_edge in in_edges(pet, cur.id, EdgeType.SUCCESSOR):
                 if pet.node_at(in_edge[0]) not in relatives + queue:
                     queue.append(pet.node_at(in_edge[0]))
-            for out_edge in pet.out_edges(cur.id, EdgeType.SUCCESSOR):
+            for out_edge in out_edges(pet, cur.id, EdgeType.SUCCESSOR):
                 if pet.node_at(out_edge[1]) not in relatives + queue:
                     queue.append(pet.node_at(out_edge[1]))
 

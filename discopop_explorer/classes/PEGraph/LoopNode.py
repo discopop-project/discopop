@@ -14,6 +14,8 @@ from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children
 from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
 
 if TYPE_CHECKING:
@@ -46,7 +48,7 @@ class LoopNode(Node):
             }
         }
         """
-        parents = [s for s, t, d in pet.in_edges(self.id, EdgeType.CHILD)]
+        parents = [s for s, t, d in in_edges(pet, self.id, EdgeType.CHILD)]
 
         # count levels upwards
         parent_nesting_levels: List[int] = []
@@ -73,11 +75,11 @@ class LoopNode(Node):
 
     def get_entry_node(self, pet: PEGraphX) -> Optional[Node]:
         """returns the first CU Node contained in the loop (i.e. one without predecessor inside the loop)"""
-        for node in pet.direct_children(self):
+        for node in direct_children(pet, self):
             predecessors_outside_loop_body = [
                 s
-                for s, t, d in pet.in_edges(node.id, EdgeType.SUCCESSOR)
-                if pet.node_at(s) not in pet.direct_children(self)
+                for s, t, d in in_edges(pet, node.id, EdgeType.SUCCESSOR)
+                if pet.node_at(s) not in direct_children(pet, self)
             ]
             if len(predecessors_outside_loop_body) > 0:
                 return node
