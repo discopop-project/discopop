@@ -20,6 +20,7 @@ from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_explorer.utils import is_func_arg, is_global, __get_dep_of_type as get_dep_of_type
 from discopop_explorer.classes.variable import Variable
 
@@ -78,11 +79,11 @@ def getCalledFunctions(
     :param dummyFunctions:
     :return:
     """
-    sub_func = pet.subtree_of_type(node, FunctionNode)
+    sub_func = subtree_of_type(pet, node, FunctionNode)
     for f in sub_func:
         calledFunctions.add(f.id)
     # unnecessary in this i think
-    sub_dummy = pet.subtree_of_type(node, DummyNode)
+    sub_dummy = subtree_of_type(pet, node, DummyNode)
     for d in sub_dummy:
         dummyFunctions.add(d.id)
 

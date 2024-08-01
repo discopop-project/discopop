@@ -23,6 +23,11 @@ from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.properties.is_predecessor import is_predecessor
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
+from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.CombinedGPURegions import CombinedGPURegion
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import UpdateType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
@@ -125,7 +130,7 @@ class Context(object):
                 for ident, origin in missing_write_identifiers:
                     if last_write_location is None:
                         last_write_location = origin
-                    if pet.is_predecessor(cast(NodeID, last_write_location), cast(NodeID, origin)):
+                    if is_predecessor(pet, cast(NodeID, last_write_location), cast(NodeID, origin)):
                         last_write_location = origin
 
                 required_updates.add((mem_reg, device_id_1, device_id_2, cast(NodeID, last_write_location)))
@@ -170,7 +175,7 @@ class Context(object):
                     for ident, origin in missing_identifiers:
                         if last_write_location is None:
                             last_write_location = origin
-                        if pet.is_predecessor(cast(NodeID, last_write_location), cast(NodeID, origin)):
+                        if is_predecessor(pet, cast(NodeID, last_write_location), cast(NodeID, origin)):
                             last_write_location = origin
 
                     required_updates.add((mem_reg, other_device_id, new_device_id, cast(NodeID, last_write_location)))
@@ -306,7 +311,7 @@ def __identify_merge_node(pet: PEGraphX, successors: List[NodeID]) -> Optional[N
             return False
         if (
             "return" in str(potential_merge_node.basic_block_id)
-            and potential_merge_node.end_position() == pet.get_parent_function(potential_merge_node).end_position()
+            and potential_merge_node.end_position() == get_parent_function(pet, potential_merge_node).end_position()
         ):
             # do not consider return BB as merge node
             return False
@@ -315,7 +320,7 @@ def __identify_merge_node(pet: PEGraphX, successors: List[NodeID]) -> Optional[N
     if len(successors) == 0:
         raise ValueError("Empty list of successors!")
 
-    parent_function = pet.get_parent_function(pet.node_at(successors[0]))
+    parent_function = get_parent_function(pet, pet.node_at(successors[0]))
     post_dominators = parent_function.get_immediate_post_dominators(pet)
 
     # initialize lists of current post dominators
@@ -378,14 +383,14 @@ def identify_updates(
     # get parent functions
     parent_functions: Set[NodeID] = set()
     for region in comb_gpu_reg.contained_regions:
-        parent_functions.add(pet.get_parent_function(pet.node_at(region.node_id)).id)
+        parent_functions.add(get_parent_function(pet, pet.node_at(region.node_id)).id)
 
     for parent_function_id in parent_functions:
         print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
         # determine entry points
         entry_points: List[NodeID] = []
-        for function_child_id in [t for s, t, d in pet.out_edges(parent_function_id, EdgeType.CHILD)]:
-            in_successor_edges = pet.in_edges(function_child_id, EdgeType.SUCCESSOR)
+        for function_child_id in [t for s, t, d in out_edges(pet, parent_function_id, EdgeType.CHILD)]:
+            in_successor_edges = in_edges(pet, function_child_id, EdgeType.SUCCESSOR)
             if len(in_successor_edges) == 0 and pet.node_at(function_child_id).type == NodeType.CU:
                 entry_points.append(function_child_id)
 
@@ -458,7 +463,7 @@ def __calculate_updates(
         identified_updates.update(required_updates)
 
         # calculate successors of current node
-        # successors = [cast(NodeID, t) for s, t, d in pet.out_edges(cur_node_id, EdgeType.SUCCESSOR)]
+        # successors = [cast(NodeID, t) for s, t, d in out_edges(pet, cur_node_id, EdgeType.SUCCESSOR)]
         successors = [t for s, t, d in unrolled_function_graph.out_edges(cur_node_id, data="data")]
 
         if len(successors) == 0:
@@ -528,7 +533,7 @@ def create_circle_free_function_graphs(pet: PEGraphX, add_dummy_node: bool = Tru
     unrolled_function_graphs: Dict[FunctionNode, nx.MultiDiGraph] = dict()
 
     # initialize the function graphs
-    for function in pet.all_nodes(type=FunctionNode):
+    for function in all_nodes(pet, type=FunctionNode):
         # get subgraph for function
         function_subgraph = pet.g.subgraph(function.children_cu_ids).copy()
         # remove all but successor edges
@@ -572,7 +577,7 @@ def create_circle_free_function_graphs(pet: PEGraphX, add_dummy_node: bool = Tru
             # ==> Identify cycle entries
             entry_nodes: Set[NodeID] = set()
             for node_id, _, _ in cycle_edges:
-                predecessors = [s for s, t, d in pet.in_edges(node_id, EdgeType.SUCCESSOR)]
+                predecessors = [s for s, t, d in in_edges(pet, node_id, EdgeType.SUCCESSOR)]
                 if len(predecessors) == 0:
                     entry_nodes.add(node_id)
                     continue
@@ -585,28 +590,28 @@ def create_circle_free_function_graphs(pet: PEGraphX, add_dummy_node: bool = Tru
                 print("cyc: ", cycle_nodes)
                 print("exit: ", potential_exit_node)
                 potential_cycle_successor_nodes = [
-                    t for s, t, d in pet.out_edges(potential_exit_node, EdgeType.SUCCESSOR) if t not in cycle_nodes
+                    t for s, t, d in out_edges(pet, potential_exit_node, EdgeType.SUCCESSOR) if t not in cycle_nodes
                 ]
                 print("POT: ", potential_cycle_successor_nodes)
 
                 # only consider such cycle_successors which DO NOT share a direct parent with the potential_exit_node, except for functions
                 pen_parents = [
                     s
-                    for s, t, d in pet.in_edges(potential_exit_node, EdgeType.CHILD)
+                    for s, t, d in in_edges(pet, potential_exit_node, EdgeType.CHILD)
                     if type(pet.node_at(s)) != FunctionNode
                 ]
                 filtered_pcsn = []
                 for pcsn in potential_cycle_successor_nodes:
                     pcsn_parents = [
-                        s for s, t, d in pet.in_edges(pcsn, EdgeType.CHILD) if type(pet.node_at(s)) != FunctionNode
+                        s for s, t, d in in_edges(pet, pcsn, EdgeType.CHILD) if type(pet.node_at(s)) != FunctionNode
                     ]
                     if len([nid for nid in pen_parents if nid in pcsn_parents]) == 0:
                         # no shared parents
                         filtered_pcsn.append(pcsn)
                     # second chance: add pcsn, if it has a successor outside the given parent
-                    for successor in pet.direct_successors(pet.node_at(pcsn)):
+                    for successor in direct_successors(pet, pet.node_at(pcsn)):
                         valid = True
-                        for parent in [s for s, t, d in pet.in_edges(successor.id)]:
+                        for parent in [s for s, t, d in in_edges(pet, successor.id)]:
                             if parent in pcsn_parents:
                                 valid = False
                                 break
@@ -694,7 +699,7 @@ def add_accesses_from_called_functions(
     while values_propagated:
         cycles += 1
         values_propagated = False
-        for function in pet.all_nodes(type=FunctionNode):
+        for function in all_nodes(pet, type=FunctionNode):
             print("FUNCTION: ", function.name)
             memory_accesses = function.get_memory_accesses(writes_by_device)
             if force_called_functions_to_host:
@@ -709,7 +714,7 @@ def add_accesses_from_called_functions(
                     del memory_accesses[key]
 
             # add memory_accesses to calling CU's in writes_by_device
-            called_by = [s for s, t, d in pet.in_edges(function.id, EdgeType.CALLSNODE)]
+            called_by = [s for s, t, d in in_edges(pet, function.id, EdgeType.CALLSNODE)]
             print("\tcalled by: ", called_by)
             for device_id in memory_accesses:
                 if device_id not in writes_by_device:
@@ -740,14 +745,14 @@ def identify_updates_in_unrolled_function_graphs(
     # get parent functions
     parent_functions: Set[NodeID] = set()
     for region in comb_gpu_reg.contained_regions:
-        parent_functions.add(pet.get_parent_function(pet.node_at(region.node_id)).id)
+        parent_functions.add(get_parent_function(pet, pet.node_at(region.node_id)).id)
 
     for parent_function_id in parent_functions:
         print("IDENTIFY UPDATES FOR: ", pet.node_at(parent_function_id).name, file=sys.stderr)
         # determine entry points
         entry_points: List[NodeID] = []
-        for function_child_id in [t for s, t, d in pet.out_edges(parent_function_id, EdgeType.CHILD)]:
-            in_successor_edges = pet.in_edges(function_child_id, EdgeType.SUCCESSOR)
+        for function_child_id in [t for s, t, d in out_edges(pet, parent_function_id, EdgeType.CHILD)]:
+            in_successor_edges = in_edges(pet, function_child_id, EdgeType.SUCCESSOR)
             if len(in_successor_edges) == 0 and pet.node_at(function_child_id).type == NodeType.CU:
                 entry_points.append(function_child_id)
 

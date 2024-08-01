@@ -14,6 +14,7 @@ from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
     ParallelRegionInfo,
@@ -189,7 +190,7 @@ def combine_omittable_cus(pet: PEGraphX, suggestions: List[PatternInfo]) -> List
     # successor graph of a node containing a task suggestion
     useful_omittable_suggestions = []
     for oms in omittable_suggestions:
-        in_succ_edges = [(s, t, e) for s, t, e in pet.in_edges(oms._node.id) if e.etype == EdgeType.SUCCESSOR]
+        in_succ_edges = [(s, t, e) for s, t, e in in_edges(pet, oms._node.id) if e.etype == EdgeType.SUCCESSOR]
         parent_task_nodes = [pet.node_at(e[0]) for e in in_succ_edges if pet.node_at(e[0]).tp_contains_task is True]
         if len(parent_task_nodes) != 0:
             useful_omittable_suggestions.append(oms)

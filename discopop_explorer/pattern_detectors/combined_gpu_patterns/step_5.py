@@ -11,6 +11,7 @@ from typing import Dict, Set
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -28,7 +29,7 @@ def propagate_variable_name_associations(
             var_names = memory_regions_to_cus_and_variables[mem_reg][cu_id]
             cu_node = pet.node_at(cu_id)
             # get parent function
-            parent = pet.get_parent_function(cu_node)
+            parent = get_parent_function(pet, cu_node)
 
             # save variable name association for parent function
             if mem_reg not in updated_dict:

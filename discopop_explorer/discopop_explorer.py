@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 import pstats2  # type:ignore
 from pluginbase import PluginBase  # type: ignore
+from discopop_explorer.functions.PEGraph.output.json import dump_to_pickled_json
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments  # type: ignore
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
@@ -246,7 +247,7 @@ def run(arguments: ExplorerArguments) -> None:
 
         if arguments.enable_pet_dump_file is not None:
             with open(arguments.enable_pet_dump_file, "w+") as f:
-                f.write(res.pet.dump_to_pickled_json())
+                f.write(dump_to_pickled_json(res.pet))
                 f.flush()
                 f.close()
 

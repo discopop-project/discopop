@@ -15,6 +15,9 @@ from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     ParallelRegionInfo,
     OmittableCuInfo,
@@ -58,20 +61,20 @@ def detect_barrier_suggestions(pet: PEGraphX, suggestions: List[PatternInfo]) ->
 
     transformation_happened = True
     # let run until convergence
-    queue = list(pet.all_nodes())
+    queue = list(all_nodes(pet))
     while transformation_happened or len(queue) > 0:
         transformation_happened = False
         v = queue.pop(0)
         # check step 1
         out_dep_edges = [
-            (s, t, e) for s, t, e in pet.out_edges(v.id) if e.etype == EdgeType.DATA and pet.node_at(t) != v
+            (s, t, e) for s, t, e in out_edges(pet, v.id) if e.etype == EdgeType.DATA and pet.node_at(t) != v
         ]
         # ignore cyclic dependencies on the same variable
         to_remove = []
         for dep_edge in out_dep_edges:
             targets_cyclic_dep_edges = [
                 (s, t, e)
-                for s, t, e in pet.out_edges(dep_edge[1])
+                for s, t, e in out_edges(pet, dep_edge[1])
                 if e.etype == EdgeType.DATA and t == dep_edge[0] and e.var_name == dep_edge[2].var_name
             ]
             if len(targets_cyclic_dep_edges) != 0:
@@ -165,7 +168,7 @@ def detect_barrier_suggestions(pet: PEGraphX, suggestions: List[PatternInfo]) ->
         # append neighbors of modified node to queue
         if transformation_happened:
             in_dep_edges = [
-                (s, t, e) for s, t, e in pet.in_edges(v.id) if e.etype == EdgeType.DATA and pet.node_at(s) != v
+                (s, t, e) for s, t, e in in_edges(pet, v.id) if e.etype == EdgeType.DATA and pet.node_at(s) != v
             ]
             for e in out_dep_edges:
                 queue.append(pet.node_at(e[1]))
@@ -254,7 +257,7 @@ def __check_dependences_and_predecessors(
         else:
             violation = True
     # check if node is a direct successor of an omittable node or a task node
-    in_succ_edges = [(s, t, e) for (s, t, e) in pet.in_edges(cur_cu.id) if e.etype == EdgeType.SUCCESSOR]
+    in_succ_edges = [(s, t, e) for (s, t, e) in in_edges(pet, cur_cu.id) if e.etype == EdgeType.SUCCESSOR]
     is_successor = False
     for e in in_succ_edges:
         if pet.node_at(e[0]).tp_omittable is True:
@@ -330,7 +333,7 @@ def suggest_barriers_for_uncovered_tasks_before_return(
                 targets.append(current_node)
                 continue
             # append direct successors to targets, if not in visited
-            successors = pet.direct_successors(current_node)
+            successors = direct_successors(pet, current_node)
             successors = [ds for ds in successors if ds not in visited]
             queue = queue + successors
         # suggest taskwait prior to return if needed
@@ -385,7 +388,7 @@ def validate_barriers(pet: PEGraphX, suggestions: List[PatternInfo]) -> List[Pat
         # create "path lists" for each incoming successor edge
         in_succ_edges = [
             (s, t, e)
-            for s, t, e in pet.in_edges(bs._node.id)
+            for s, t, e in in_edges(pet, bs._node.id)
             if e.etype == EdgeType.SUCCESSOR and pet.node_at(s) != bs._node
         ]
         predecessors_dict = dict()
@@ -397,7 +400,7 @@ def validate_barriers(pet: PEGraphX, suggestions: List[PatternInfo]) -> List[Pat
         # for those paths that contain the dependence target CU
         out_dep_edges = [
             (s, t, e)
-            for s, t, e in pet.out_edges(bs._node.id)
+            for s, t, e in out_edges(pet, bs._node.id)
             if e.etype == EdgeType.DATA and pet.node_at(t) != bs._node
         ]
         dependence_count_dict = dict()
@@ -455,7 +458,7 @@ def suggest_missing_barriers_for_global_vars(pet: PEGraphX, suggestions: List[Pa
         visited_nodes = [task_sug._node]
         out_succ_edges = [
             (s, t, e)
-            for s, t, e in pet.out_edges(task_sug._node.id)
+            for s, t, e in out_edges(pet, task_sug._node.id)
             if e.etype == EdgeType.SUCCESSOR and pet.node_at(t) != task_sug._node
         ]
         queue = out_succ_edges
@@ -502,7 +505,7 @@ def suggest_missing_barriers_for_global_vars(pet: PEGraphX, suggestions: List[Pa
             # append current nodes outgoing successor edges to queue
             target_out_succ_edges = [
                 (s, t, e)
-                for s, t, e in pet.out_edges(pet.node_at(succ_edge[1]).id)
+                for s, t, e in out_edges(pet, pet.node_at(succ_edge[1]).id)
                 if e.etype == EdgeType.SUCCESSOR and pet.node_at(t) != pet.node_at(succ_edge[1])
             ]
             queue = list(set(queue + target_out_succ_edges))
