@@ -30,19 +30,28 @@ class MixedMicrobench(Microbench):
 
     def getMeasurements(
         self,
-    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],]:
+    ) -> Dict[
+        MicrobenchType,
+        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
+    ]:
         raise TypeError(
             "This MixedMicrobench might be based on two different sets of measurements. Use getInnerMeasurements() or getOuterMeasurements() instead."
         )
 
     def getInnerMeasurements(
         self,
-    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],]:
+    ) -> Dict[
+        MicrobenchType,
+        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
+    ]:
         return self.inner.getMeasurements()
 
     def getOuterMeasurements(
         self,
-    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],]:
+    ) -> Dict[
+        MicrobenchType,
+        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
+    ]:
         return self.outer.getMeasurements()
 
     def toJSON(self) -> str:
