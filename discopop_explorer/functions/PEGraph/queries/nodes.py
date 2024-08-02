@@ -16,13 +16,11 @@ if TYPE_CHECKING:
 
 
 @overload
-def all_nodes(pet: PEGraphX) -> List[Node]:
-    ...
+def all_nodes(pet: PEGraphX) -> List[Node]: ...
 
 
 @overload
-def all_nodes(pet: PEGraphX, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]:
-    ...
+def all_nodes(pet: PEGraphX, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
 
 
 def all_nodes(pet: PEGraphX, type: Any = Node) -> List[NodeT]:

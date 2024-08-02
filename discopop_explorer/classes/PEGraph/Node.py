@@ -27,9 +27,9 @@ class Node:
     end_line: int
     type: NodeType
     name: str
-    parent_function_id: Optional[
-        NodeID
-    ] = None  # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
+    parent_function_id: Optional[NodeID] = (
+        None  # metadata to speedup some calculations (TODO FunctionNodes have themselves as parent)
+    )
     workload: Optional[int] = None
 
     # properties of CU Nodes

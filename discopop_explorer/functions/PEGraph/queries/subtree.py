@@ -60,13 +60,11 @@ def get_left_right_subtree(
 
 
 @overload
-def subtree_of_type(pet: PEGraphX, root: Node) -> List[Node]:
-    ...
+def subtree_of_type(pet: PEGraphX, root: Node) -> List[Node]: ...
 
 
 @overload
-def subtree_of_type(pet: PEGraphX, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]:
-    ...
+def subtree_of_type(pet: PEGraphX, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
 
 
 def subtree_of_type(pet: PEGraphX, root: Node, type: Any = Node) -> List[NodeT]:
@@ -80,15 +78,13 @@ def subtree_of_type(pet: PEGraphX, root: Node, type: Any = Node) -> List[NodeT]:
 
 
 @overload
-def subtree_of_type_rec(pet: PEGraphX, root: Node, visited: Set[Node]) -> List[Node]:
-    ...
+def subtree_of_type_rec(pet: PEGraphX, root: Node, visited: Set[Node]) -> List[Node]: ...
 
 
 @overload
 def subtree_of_type_rec(
     pet: PEGraphX, root: Node, visited: Set[Node], type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]
-) -> List[NodeT]:
-    ...
+) -> List[NodeT]: ...
 
 
 def subtree_of_type_rec(pet: PEGraphX, root: Node, visited: Set[Node], type: Any = Node) -> List[NodeT]:
