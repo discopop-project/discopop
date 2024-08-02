@@ -77,7 +77,10 @@ class ExtrapInterpolatedMicrobench(Microbench):
 
     def getMeasurements(
         self,
-    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],]:
+    ) -> Dict[
+        MicrobenchType,
+        Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
+    ]:
         raise NotImplementedError("TODO")  # TODO
 
     def toJSON(self) -> str:
