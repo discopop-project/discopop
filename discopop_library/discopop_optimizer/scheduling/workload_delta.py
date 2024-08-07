@@ -34,27 +34,29 @@ class BranchCosts(RegularCosts):
 
 
 class WorkloadStack(object):
-    stack: List[Union[List[Any], RegularCosts]]  # List of WorkloadStacks or integer tuples (min_wl, max_wl)
+    stack: List[
+        Any
+    ]  # List[Union[List[Any], RegularCosts]]  # List of WorkloadStacks or integer tuples (min_wl, max_wl)
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.stack = []
 
-    def enter_new_branched_section(self):
+    def enter_new_branched_section(self) -> None:
         """add a new list to the end of self.stack"""
         innermost_stack, _ = self.__get_innermost_workload_stack()
         innermost_stack.append([])
 
-    def exit_branched_section(self):
+    def exit_branched_section(self) -> None:
         """aggregate the contained branches"""
         # do nothing, as the functionality is implemented in aggregate
         pass
 
-    def enter_new_branch(self):
+    def enter_new_branch(self) -> None:
         """same behavior as enter_branched_section"""
         innermost_stack, _ = self.__get_innermost_workload_stack()
         innermost_stack.append([])
 
-    def exit_branch(self):
+    def exit_branch(self) -> None:
         """Accumulates costs of the current branch, i.e. the innermost List"""
         # get innermost stack
         innermost_stack, indices = self.__get_innermost_workload_stack()
@@ -73,7 +75,7 @@ class WorkloadStack(object):
                 cur_elem = cur_elem[index]
             cur_elem[indices[-1]] = BranchCosts((min_wl, max_wl))
 
-    def aggregate(self):
+    def aggregate(self) -> None:
         # get innermost stack
         innermost_stack, indices = self.__get_innermost_workload_stack()
         min_wl = 0
@@ -104,8 +106,8 @@ class WorkloadStack(object):
                 max_branch_wl = max_costs
 
         # accumulate total costs for branched section
-        min_wl += 0 if min_branch_wl is None else cast(int, min_branch_wl)
-        max_wl += 0 if max_branch_wl is None else cast(int, max_branch_wl)
+        min_wl += 0 if min_branch_wl is None else min_branch_wl
+        max_wl += 0 if max_branch_wl is None else max_branch_wl
 
         # replace innermost stack with accumulated costs
         cur_elem = self.stack
@@ -114,7 +116,7 @@ class WorkloadStack(object):
                 cur_elem = cur_elem[index]
             cur_elem[indices[-1]] = RegularCosts((min_wl, max_wl))
 
-    def register_workload(self, min_wl: int, max_wl: int):
+    def register_workload(self, min_wl: int, max_wl: int) -> None:
         # get the innermost workload stack
         innermost_stack, _ = self.__get_innermost_workload_stack()
         innermost_stack.append(RegularCosts((min_wl, max_wl)))

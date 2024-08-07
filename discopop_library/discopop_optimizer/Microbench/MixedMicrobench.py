@@ -7,8 +7,12 @@
 # directory for details.
 from typing import Dict, List, Tuple, Union
 
-from .Microbench import Microbench
-from .Microbench import MicrobenchCoordinate, MicrobenchDimension, MicrobenchType
+from discopop_library.discopop_optimizer.Microbench.Microbench import (
+    Microbench,
+    MicrobenchCoordinate,
+    MicrobenchDimension,
+    MicrobenchType,
+)
 
 
 # This class can be used to mix two microbench models.

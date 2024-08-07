@@ -5,10 +5,16 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from __future__ import annotations
 import os
 from typing import Set, Dict, cast, Optional, List, Tuple
 
-from discopop_explorer.PEGraphX import PEGraphX, NodeID, MemoryRegion
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.functions.PEGraph.queries.variables import get_variable
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -81,7 +87,7 @@ class Update(object):
     #                        )
     #                    )
 
-    def __str__(self):
+    def __str__(self) -> str:
         result_str = ""
         result_str += (
             str(self.update_type)
@@ -101,7 +107,9 @@ class Update(object):
         )
         return result_str
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Update):
+            raise ValueError("other is not of correct type!")
         if (
             self.synchronous_source_cu_id,
             self.asynchronous_source_cu_id,
@@ -126,7 +134,7 @@ class Update(object):
             return True
         return False
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(
             (
                 self.synchronous_source_cu_id,
@@ -141,37 +149,41 @@ class Update(object):
             )
         )
 
-    def get_position_identifier(self):
+    def get_position_identifier(self) -> Tuple[NodeID, NodeID, UpdateType]:
         # used to join multiple elements
         if self.asynchronous_possible:
+            if self.asynchronous_source_cu_id is None:
+                raise ValueError("Asynchronous_source_cu_id is None")
             return (self.sink_cu_id, self.asynchronous_source_cu_id, self.update_type)
         else:
             return (self.sink_cu_id, self.synchronous_source_cu_id, self.update_type)
 
-    def join(self, other):
+    def join(self, other: Update) -> None:
         self.variable_names.update(other.variable_names)
         self.memory_regions.update(other.memory_regions)
         self.dependencies.update(other.dependencies)
 
-    def get_as_metadata_using_memory_regions(self, pet: PEGraphX):
-        return [
+    def get_as_metadata_using_memory_regions(self, pet: PEGraphX) -> Tuple[NodeID, NodeID, UpdateType, str, LineID]:
+        return (
             self.synchronous_source_cu_id,
             self.sink_cu_id,
             self.update_type,
             str(self.memory_regions),
             pet.node_at(self.synchronous_source_cu_id).end_position(),
-        ]
+        )
 
-    def get_as_metadata_using_variable_names(self, pet: PEGraphX, project_folder_path: str):
+    def get_as_metadata_using_variable_names(
+        self, pet: PEGraphX, project_folder_path: str
+    ) -> Tuple[NodeID, NodeID, UpdateType, str, LineID]:
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.variable_names:
-            var_obj = pet.get_variable(self.sink_cu_id, var_name)
+            var_obj = get_variable(pet, self.sink_cu_id, var_name)
             source_cu_id = (
                 self.asynchronous_source_cu_id if self.asynchronous_possible else self.synchronous_source_cu_id
             )
             if var_obj is None:
-                var_obj = pet.get_variable(cast(NodeID, source_cu_id), var_name)
+                var_obj = get_variable(pet, cast(NodeID, source_cu_id), var_name)
             if var_obj is None:
                 var_names_types_and_sizes.append((var_name, "", 1))
             else:
@@ -212,24 +224,26 @@ class Update(object):
             # updating inbetween both CUs should be a safe fallback
             update_position = pet.node_at(self.sink_cu_id).start_position()
 
-        return [
+        return (
             self.synchronous_source_cu_id,
             self.sink_cu_id,
             self.update_type,
             ",".join(modified_var_names),
             update_position,
-        ]
+        )
 
-    def get_as_metadata_using_variable_names_and_memory_regions(self, pet: PEGraphX, project_folder_path: str):
+    def get_as_metadata_using_variable_names_and_memory_regions(
+        self, pet: PEGraphX, project_folder_path: str
+    ) -> Tuple[NodeID, NodeID, UpdateType, str, LineID]:
         # get type of mapped variables
         var_names_types_and_sizes: List[Tuple[VarName, str, int]] = []
         for var_name in self.variable_names:
-            var_obj = pet.get_variable(self.sink_cu_id, var_name)
+            var_obj = get_variable(pet, self.sink_cu_id, var_name)
             source_cu_id = (
                 self.asynchronous_source_cu_id if self.asynchronous_possible else self.synchronous_source_cu_id
             )
             if var_obj is None:
-                var_obj = pet.get_variable(cast(NodeID, source_cu_id), var_name)
+                var_obj = get_variable(pet, cast(NodeID, source_cu_id), var_name)
             if var_obj is None:
                 var_names_types_and_sizes.append((var_name, "", 1))
             else:
@@ -253,21 +267,21 @@ class Update(object):
         else:
             modified_var_names = [(vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes]
 
-        return [
+        return (
             self.synchronous_source_cu_id,
             self.sink_cu_id,
             self.update_type,
             str(modified_var_names) + "/" + str(self.memory_regions),
             pet.node_at(self.synchronous_source_cu_id).end_position(),
-        ]
+        )
 
     def convert_memory_regions_to_variable_names(
         self,
         pet: PEGraphX,
         memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
-    ):
+    ) -> None:
         self.variable_names = set()
-        parent_function_id = pet.get_parent_function(pet.node_at(self.synchronous_source_cu_id)).id
+        parent_function_id = get_parent_function(pet, pet.node_at(self.synchronous_source_cu_id)).id
 
         for mem_reg in self.memory_regions:
             if parent_function_id in memory_regions_to_functions_and_variables[mem_reg]:
@@ -281,7 +295,7 @@ class Update(object):
             else:
                 self.variable_names.add(VarName("UNDETERMINED(" + mem_reg + ")"))
 
-    def remove_dummy_marks(self):
+    def remove_dummy_marks(self) -> None:
         if self.sink_cu_id.startswith("dummy:"):
             self.sink_cu_id = NodeID(self.sink_cu_id[6:])
         if self.synchronous_source_cu_id.startswith("dummy:"):

@@ -24,10 +24,10 @@ class PatchGeneratorArguments(GeneralArguments):
     only_optimizer_output_patterns: bool
     only_maximum_id_pattern: bool
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
+    def __validate(self) -> None:
         """Validate the arguments passed to the discopop_explorer, e.g check if given files exist"""
         if self.verbose:
             print("Configuration:")

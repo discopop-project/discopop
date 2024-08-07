@@ -16,7 +16,7 @@ from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 
-def calculate_data_movement(experiment: Experiment):
+def calculate_data_movement(experiment: Experiment) -> None:
     """Calculate the necessary data movement for each suggestion created by the optimizer"""
 
     for idx, suggestion in enumerate(experiment.detection_result.patterns.optimizer_output):

@@ -29,7 +29,7 @@ def from_optimizer_output(
     optimizer_output_json_str: str,
     arguments: PatchGeneratorArguments,
     patch_generator_dir: str,
-):
+) -> None:
     suggestion_strings_with_mapping: Dict[str, List[Tuple[str, DeviceID, Optional[DeviceTypeEnum]]]] = dict()
     if arguments.verbose:
         print("Loading optimizer output: ")

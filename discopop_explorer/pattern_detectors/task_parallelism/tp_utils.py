@@ -11,18 +11,21 @@ from typing import Union, cast, Dict, List, Tuple, Optional, Any
 
 from lxml import objectify  # type: ignore
 
-from discopop_explorer.PEGraphX import (
-    DummyNode,
-    FunctionNode,
-    CUNode,
-    Node,
-    NodeType,
-    EdgeType,
-    MWType,
-    DepType,
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
-    LineID,
 )
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.DummyNode import DummyNode
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.Node import Node
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.enums.MWType import MWType
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children_or_called_nodes
 from discopop_explorer.pattern_detectors.task_parallelism.classes import Task, TaskParallelismInfo
 from discopop_explorer.utils import depends
 
@@ -106,7 +109,9 @@ def get_parent_of_type(
         last_node = cur_node
         visited.append(cur_node)
         tmp_list = [
-            (s, t, e) for s, t, e in pet.in_edges(cur_node.id) if pet.node_at(s) not in visited and e.etype == edge_type
+            (s, t, e)
+            for s, t, e in in_edges(pet, cur_node.id)
+            if pet.node_at(s) not in visited and e.etype == edge_type
         ]
         for e in tmp_list:
             if pet.node_at(e[0]).type == parent_type:
@@ -133,7 +138,7 @@ def get_cus_inside_function(pet: PEGraphX, function_cu: Node) -> List[Node]:
         if cur_cu not in result_list:
             result_list.append(cur_cu)
         # append children to queue
-        for e in pet.out_edges(cur_cu.id, [EdgeType.CHILD]):
+        for e in out_edges(pet, cur_cu.id, [EdgeType.CHILD]):
             queue.append(pet.node_at(e[1]))
     return result_list
 
@@ -152,7 +157,7 @@ def check_reachability(pet: PEGraphX, target: Node, source: Node, edge_types: Li
     while len(queue) > 0:
         cur_node = queue.pop(0)
         visited.append(cur_node.id)
-        tmp_list = [(s, t, e) for s, t, e in pet.in_edges(cur_node.id) if s not in visited and e.etype in edge_types]
+        tmp_list = [(s, t, e) for s, t, e in in_edges(pet, cur_node.id) if s not in visited and e.etype in edge_types]
         for e in tmp_list:
             if pet.node_at(e[0]) == source:
                 return True
@@ -179,7 +184,7 @@ def get_predecessor_nodes(pet: PEGraphX, root: Node, visited_nodes: List[Node]) 
         return result, visited_nodes
     in_succ_edges = [
         (s, t, e)
-        for s, t, e in pet.in_edges(root.id)
+        for s, t, e in in_edges(pet, root.id)
         if e.etype == EdgeType.SUCCESSOR and pet.node_at(s) != root and pet.node_at(s) not in visited_nodes
     ]
     for e in in_succ_edges:
@@ -188,7 +193,7 @@ def get_predecessor_nodes(pet: PEGraphX, root: Node, visited_nodes: List[Node]) 
     return result, visited_nodes
 
 
-def check_neighbours(first: Task, second: Task):
+def check_neighbours(first: Task, second: Task) -> bool:
     """Checks if second task immediately follows first task
 
     :param first: predecessor task
@@ -241,7 +246,7 @@ def check_neighbours(first: Task, second: Task):
 #            pass
 
 
-def create_task_tree(pet: PEGraphX, root: Node):
+def create_task_tree(pet: PEGraphX, root: Node) -> None:
     """generates task tree data from root node
 
     :param pet: PET graph
@@ -252,7 +257,7 @@ def create_task_tree(pet: PEGraphX, root: Node):
     create_task_tree_helper(pet, root, root_task, [])
 
 
-def create_task_tree_helper(pet: PEGraphX, current: Node, root: Task, visited_func: List[Node]):
+def create_task_tree_helper(pet: PEGraphX, current: Node, root: Task, visited_func: List[Node]) -> None:
     """generates task tree data recursively
 
     :param pet: PET graph
@@ -266,7 +271,7 @@ def create_task_tree_helper(pet: PEGraphX, current: Node, root: Task, visited_fu
         else:
             visited_func.append(current)
 
-    for child in pet.direct_children_or_called_nodes(current):
+    for child in direct_children_or_called_nodes(pet, current):
         mw_type = child.mw_type
 
         if mw_type in [MWType.BARRIER, MWType.BARRIER_WORKER, MWType.WORKER]:
@@ -399,13 +404,13 @@ def get_function_call_from_source_code(
     if ")" in function_call_string and "(" not in function_call_string:
         function_call_string = function_call_string[function_call_string.index(")") + 1 :]
 
-    def __get_word_prior_to_bracket(string):
+    def __get_word_prior_to_bracket(string: str) -> Optional[str]:
         if "(" not in string:
             return None
         string = string[: string.index("(")]
-        string = string.split(" ")
-        string = [e for e in string if len(e) > 0]
-        string = string[-1]
+        split_string = string.split(" ")
+        split_string = [e for e in split_string if len(e) > 0]
+        string = split_string[-1]
         return string
 
     called_function_name_contained = called_function_name is None
@@ -521,7 +526,7 @@ def get_called_function_and_parameter_names_from_function_call(
     return cast(Optional[str], function_name), result_parameters
 
 
-def set_global_llvm_cxxfilt_path(value: str):
+def set_global_llvm_cxxfilt_path(value: str) -> None:
     """setter for __global_llvm_cxxfilt_path
     :param value: value to place in __global_llvm_cxxfilt_path"""
     global __global_llvm_cxxfilt_path
@@ -534,13 +539,13 @@ def get_called_functions_recursively(
     """returns a recursively generated list of called functions, started at root."""
     visited.append(root)
     called_functions: List[Union[FunctionNode, DummyNode]] = []
-    for child in [pet.node_at(cuid) for cuid in [e[1] for e in pet.out_edges(root.id)]]:
+    for child in [pet.node_at(cuid) for cuid in [e[1] for e in out_edges(pet, root.id)]]:
         # check if type is Func or Dummy
         if isinstance(child, (FunctionNode, DummyNode)):
             # CU contains a function call
             # if Dummy, map to Func
             if isinstance(child, DummyNode):
-                for function_cu in pet.all_nodes(FunctionNode):
+                for function_cu in all_nodes(pet, FunctionNode):
                     if child.name == function_cu.name:
                         child = function_cu
             called_functions.append(cast(Union[FunctionNode, DummyNode], child))
@@ -566,7 +571,7 @@ def contains_reduction(pet: PEGraphX, node: Node) -> bool:
     return False
 
 
-def detect_mw_types(pet: PEGraphX, main_node: Node):
+def detect_mw_types(pet: PEGraphX, main_node: Node) -> None:
     """The mainNode we want to compute the Task Parallelism Pattern for it
     use Breadth First Search (BFS) to detect all barriers and workers.
     1.) all child nodes become first worker if they are not marked as worker before
@@ -577,7 +582,7 @@ def detect_mw_types(pet: PEGraphX, main_node: Node):
     """
 
     # first insert all the direct children of main node in a queue to use it for the BFS
-    for node in pet.direct_children_or_called_nodes(main_node):
+    for node in direct_children_or_called_nodes(pet, main_node):
         # a child node can be set to NONE or ROOT due a former detectMWNode call where it was the mainNode
         if node.mw_type == MWType.NONE or node.mw_type == MWType.ROOT:
             node.mw_type = MWType.FORK
@@ -592,7 +597,7 @@ def detect_mw_types(pet: PEGraphX, main_node: Node):
         # the other node
 
         # create the copy vector so that it only contains the other nodes
-        other_nodes = pet.direct_children_or_called_nodes(main_node)
+        other_nodes = direct_children_or_called_nodes(pet, main_node)
         other_nodes.remove(node)
 
         for other_node in other_nodes:
@@ -606,7 +611,7 @@ def detect_mw_types(pet: PEGraphX, main_node: Node):
                     # -> not detected in previous step, since other_node is only
                     #    dependent of a single CU
                     raw_targets = []
-                    for s, t, d in pet.out_edges(other_node.id):
+                    for s, t, d in out_edges(pet, other_node.id):
                         if pet.node_at(t) == node:
                             if d.dtype == DepType.RAW:
                                 raw_targets.append(t)
@@ -622,13 +627,13 @@ def detect_mw_types(pet: PEGraphX, main_node: Node):
     # check for Barrier Worker pairs
     # if two barriers don't have any dependency to each other then they create a barrierWorker pair
     # so check every barrier pair that they don't have a dependency to each other -> barrierWorker
-    direct_subnodes = pet.direct_children_or_called_nodes(main_node)
+    direct_subnodes = direct_children_or_called_nodes(pet, main_node)
     for n1 in direct_subnodes:
         if n1.mw_type == MWType.BARRIER:
             for n2 in direct_subnodes:
                 if n2.mw_type == MWType.BARRIER and n1 != n2:
-                    if n2 in [pet.node_at(t) for s, t, d in pet.out_edges(n1.id)] or n2 in [
-                        pet.node_at(s) for s, t, d in pet.in_edges(n1.id)
+                    if n2 in [pet.node_at(t) for s, t, d in out_edges(pet, n1.id)] or n2 in [
+                        pet.node_at(s) for s, t, d in in_edges(pet, n1.id)
                     ]:
                         break
                     # so these two nodes are BarrierWorker, because there is no dependency between them

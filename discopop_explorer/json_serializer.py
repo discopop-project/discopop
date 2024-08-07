@@ -8,17 +8,16 @@
 
 from json import JSONEncoder
 from typing import Dict, Any
-from discopop_explorer.pattern_detectors.PatternBase import PatternBase
+from discopop_explorer.classes.patterns.PatternBase import PatternBase
 from discopop_library.discopop_optimizer.classes.context.Update import Update
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.result_classes.PatternStorage import PatternStorage
-from .PEGraphX import Node
-from .pattern_detectors.PatternInfo import PatternInfo
-from .pattern_detectors.pipeline_detector import PipelineStage
-from .pattern_detectors.task_parallelism.classes import TPIType
-from .variable import Variable
+from discopop_explorer.classes.PEGraph.Node import Node
+from discopop_explorer.pattern_detectors.pipeline_detector import PipelineStage
+from discopop_explorer.pattern_detectors.task_parallelism.classes import TPIType
+from discopop_explorer.classes.variable import Variable
 
 
 def filter_members(d: Dict[Any, Any]) -> Dict[Any, Any]:
@@ -37,7 +36,7 @@ def filter_members(d: Dict[Any, Any]) -> Dict[Any, Any]:
 class PatternBaseSerializer(JSONEncoder):
     """Json Encoder for Pattern Info"""
 
-    def default(self, o):
+    def default(self, o: Any) -> Any:
         try:
             iterable = iter(o)
         except TypeError:

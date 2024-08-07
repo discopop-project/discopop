@@ -9,7 +9,7 @@
 import logging
 from typing import Dict, List, Optional, Set, Tuple, cast
 import networkx as nx  # type: ignore
-from discopop_explorer.PEGraphX import MemoryRegion
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
@@ -178,12 +178,12 @@ class DeviceMemory(object):
 
         return updates
 
-    def perform_write(self, node_id: int, device_id: DeviceID, wda: WriteDataAccess):
+    def perform_write(self, node_id: int, device_id: DeviceID, wda: WriteDataAccess) -> None:
         if device_id not in self.memory:
             self.memory[device_id] = dict()
         self.memory[device_id][wda.memory_region] = wda
 
-    def log_state(self):
+    def log_state(self) -> None:
         logger.debug("Memory state:")
         for device_id in self.memory:
             logger.debug("-> Device: " + str(device_id))
@@ -195,10 +195,10 @@ class DeviceMemory(object):
 class DataFrame(object):
     entered_data_regions_by_device: Dict[DeviceID, List[WriteDataAccess]]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.entered_data_regions_by_device = dict()
 
-    def parse_update(self, update: Update):
+    def parse_update(self, update: Update) -> None:
         if update.is_first_data_occurrence:
             if update.target_device_id not in self.entered_data_regions_by_device:
                 self.entered_data_regions_by_device[update.target_device_id] = []
@@ -305,19 +305,19 @@ class DataFrame(object):
 
         return updates
 
-    def log_state(self):
+    def log_state(self) -> None:
         logger.debug("DataFrame:")
         for device_id in self.entered_data_regions_by_device:
             logger.debug("-> Device: " + str(device_id))
             for wda in self.entered_data_regions_by_device[device_id]:
-                logger.debug("\t-> " + str(wda.memory_region) + " : " + wda.var_name)
+                logger.debug("\t-> " + str(wda.memory_region) + " : " + str(wda.var_name))
         logger.debug("")
 
 
 def new_calculate_data_transfers(
     graph: nx.DiGraph,
     decisions: List[int],
-    experiment,
+    experiment: Experiment,
     targeted_functions: Optional[List[int]] = None,
     arguments: Optional[OptimizerArguments] = None,
 ) -> List[Update]:
@@ -491,7 +491,7 @@ def new_calculate_data_transfers(
 
 
 def calculate_data_transfers_by_models(
-    graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]], experiment
+    graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]], experiment: Experiment
 ) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     """Calculate data transfers for each performance model and append the respective ContextObject to the result."""
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()

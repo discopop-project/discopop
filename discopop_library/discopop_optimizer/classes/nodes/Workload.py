@@ -5,13 +5,22 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Optional, Set, List, cast
+from __future__ import annotations
+from typing import Optional, Set, List
 
 from sympy import Integer, Expr  # type: ignore
 
-from discopop_explorer.PEGraphX import NodeID, PEGraphX, EdgeType
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
+    from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
+from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
     WriteDataAccess,
     ReadDataAccess,
@@ -28,7 +37,7 @@ class Workload(GenericNode):
     def __init__(
         self,
         node_id: int,
-        experiment,
+        experiment: Experiment,
         cu_id: Optional[NodeID],
         sequential_workload: Optional[Expr],
         parallelizable_workload: Optional[Expr],
@@ -67,7 +76,9 @@ class Workload(GenericNode):
             "Device ID: " + str(self.device_id)
         )
 
-    def get_cost_model(self, experiment, all_function_nodes, current_device) -> CostModel:
+    def get_cost_model(
+        self, experiment: Experiment, all_function_nodes: List[FunctionRoot], current_device: Device
+    ) -> CostModel:
         """Performance model of a workload consists of the workload itself + the workload of called functions.
         Individual Workloads are assumed to be not parallelizable.
         Workloads of called functions are added as encountered.
@@ -103,16 +114,16 @@ class Workload(GenericNode):
 
         return cm
 
-    def __get_costs_of_function_call(self, experiment, all_function_nodes, current_device) -> CostModel:
+    def __get_costs_of_function_call(
+        self, experiment: Experiment, all_function_nodes: List[FunctionRoot], current_device: Device
+    ) -> CostModel:
         """Check if the node performs a function call and returns the total costs for these."""
         total_costs = CostModel(Integer(0), Integer(0))
         # get CUIDs of called functions
         if self.original_cu_id is not None:
             called_cu_ids: List[str] = [
                 str(t)
-                for s, t, d in cast(PEGraphX, experiment.detection_result.pet).out_edges(
-                    self.original_cu_id, EdgeType.CALLSNODE
-                )
+                for s, t, d in out_edges(experiment.detection_result.pet, self.original_cu_id, EdgeType.CALLSNODE)
             ]
             # filter for called FunctionRoots
             called_function_nodes = [fr for fr in all_function_nodes if str(fr.original_cu_id) in called_cu_ids]
@@ -126,13 +137,15 @@ class Workload(GenericNode):
 
         return total_costs
 
-    def register_child(self, other, experiment, all_function_nodes, current_device):
+    def register_child(
+        self, other: CostModel, experiment: Experiment, all_function_nodes: List[FunctionRoot], current_device: Device
+    ) -> CostModel:
         """Registers a child node for the given model.
         Does not modify the stored model in self or other."""
         # since workloads do not modify their children, the performance model of other is simply added to self.
         return self.performance_model.parallelizable_plus_combine(other)
 
-    def register_successor(self, other):
+    def register_successor(self, other: CostModel) -> CostModel:
         """Registers a successor node for the given model.
         Does not modify the stored model in self or other."""
         # sequential composition is depicted by simply adding the performance models

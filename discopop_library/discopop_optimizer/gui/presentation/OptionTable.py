@@ -12,7 +12,7 @@ from typing import List, Tuple, Dict, Optional, cast
 import networkx as nx  # type: ignore
 from sympy import Symbol
 
-from discopop_explorer.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
@@ -44,7 +44,7 @@ def show_options(
     function_root: FunctionRoot,
     parent_frame: tkinter.Frame,
     spawned_windows: List[tkinter.Toplevel],
-    window_title=None,
+    window_title: Optional[str] = None,
 ) -> List[Tuple[CostModel, ContextObject, str]]:
     """Shows a tkinter table to browse and plot models"""
     # root = tkinter.Toplevel()
@@ -210,7 +210,7 @@ def show_options(
         )
         export_code_button.grid(row=0, column=2)
 
-        def __update_selection(cm, ctx):
+        def __update_selection(cm: CostModel, ctx: ContextObject) -> None:
             experiment.selected_paths_per_function[function_root] = (cm, ctx)
             experiment.substitutions[cast(Symbol, function_root.sequential_costs)] = (
                 experiment.selected_paths_per_function[function_root][0].sequential_costs
@@ -240,7 +240,7 @@ def __save_models(
     experiment: Experiment,
     function_root: FunctionRoot,
     options: List[Tuple[CostModel, ContextObject, str]],
-):
+) -> None:
     print("SAVE: ", function_root)
     print("\ttype; ", type(function_root))
     experiment.function_models[function_root] = options
@@ -259,7 +259,7 @@ def add_random_models(
     function_root: FunctionRoot,
     parent_frame: Optional[tkinter.Frame],
     spawned_windows: List[tkinter.Toplevel],
-    window_title=None,
+    window_title: Optional[str] = None,
     show_results: bool = True,
 ) -> List[Tuple[CostModel, ContextObject, str]]:
     if root is not None:

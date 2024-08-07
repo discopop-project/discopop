@@ -102,7 +102,7 @@ def insert_device_switch_nodes(experiment: Experiment) -> nx.DiGraph:
     return experiment.optimization_graph
 
 
-def __set_read_and_write_information(experiment: Experiment, device_switch_nodes: List[int]):
+def __set_read_and_write_information(experiment: Experiment, device_switch_nodes: List[int]) -> None:
     """Collect and set read and write information for the device switch nodes"""
     for node in device_switch_nodes:
         # look ahead to next device switch along each path and collect the encountered reads and writes

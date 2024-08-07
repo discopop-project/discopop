@@ -24,10 +24,10 @@ class PatchApplicatorArguments(GeneralArguments):
     load: bool
     list: bool
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
+    def __validate(self) -> None:
         """Validate the arguments passed to the discopop_patch_applicator, e.g check if given files exist"""
         # check mutually exclusive arguments
         exit_required = False
