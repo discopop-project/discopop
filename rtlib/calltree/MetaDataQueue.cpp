@@ -80,7 +80,6 @@ void MetaDataQueue::blocking_finalize_queue() {
   }
 
   // output to file
-  std::cout << "Outputting dependency metadata... ";
   std::ifstream ifile;
   std::string line;
   std::ofstream ofile;

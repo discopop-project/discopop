@@ -160,7 +160,6 @@ void __dp_finalize(LID lid) {
   delete call_tree;
   // delete metadata_queue;
   //  output metadata to file
-  std::cout << "Outputting dependency metadata... ";
   std::ifstream ifile;
   std::string line;
   std::ofstream ofile;

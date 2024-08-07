@@ -30,8 +30,6 @@ void __dp_loop_output() {
     return;
   }
 
-  std::cout << "Outputting instrumentation results... ";
-
   std::ifstream ifile;
   std::string line;
   std::ofstream ofile;
@@ -64,8 +62,6 @@ void __dp_loop_output() {
     ofile << loop_counters[i] << "\n";
   }
   ofile.close();
-
-  std::cout << "done" << std::endl;
 
   loop_manager->set_done();
 }
