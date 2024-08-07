@@ -24,8 +24,6 @@ namespace __dp {
 extern "C" {
 
 void __dp_taken_branch_counter_output() {
-  std::cout << "Outputting instrumentation results (taken branches)... ";
-
   std::ofstream ofile;
 
   // output information about the loops
@@ -38,8 +36,6 @@ void __dp_taken_branch_counter_output() {
   }
 
   ofile.close();
-
-  std::cout << "done" << std::endl;
 }
 }
 
