@@ -280,14 +280,14 @@ bool DiscoPoP::runOnFunction(Function &F) {
     InstructionCFG CFG(VNF, F);
     InstructionDG DG(VNF, &CFG, fid);
 
-    // collect init instruction to prevent false-positive WAW Dependences due to allocations in loops, 
+    // collect init instruction to prevent false-positive WAW Dependences due to allocations in loops,
     // which will be moved to the function entry
     map<string, set<string>> lineToInitializedVarsMap;
     for (auto edge : DG.getEdges()){
       if(DG.edgeIsINIT(edge)){
         string initLine = DG.getInitEdgeInstructionLine(edge);
         string varIdentifier = DG.getValueNameAndMemRegIDFromEdge(edge, staticValueNameToMemRegIDMap);
-        
+
         if(lineToInitializedVarsMap.find(initLine) == lineToInitializedVarsMap.end()){
           set<string> tmp;
           lineToInitializedVarsMap[initLine] = tmp;
@@ -312,7 +312,14 @@ bool DiscoPoP::runOnFunction(Function &F) {
           set<string> tmp;
           conditionalBBDepMap[Src->getParent()] = tmp;
         }
+#if false
+// TODO insert a flag to toggle the instruction based dependency reporting
+// use regular version
         conditionalBBDepMap[Src->getParent()].insert(DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap));
+#else
+// instruction based dependency reporting
+        conditionalBBDepMap[Src->getParent()].insert(DG.edgeToInstructionBasedDPDep(edge, staticValueNameToMemRegIDMap));
+#endif
       } else {
         if (!conditionalBBPairDepMap.count(Dst->getParent())) {
           map<BasicBlock *, set<string>> tmp;
@@ -322,7 +329,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
           set<string> tmp;
           conditionalBBPairDepMap[Dst->getParent()][Src->getParent()] = tmp;
         }
-        // Prevent reporting of false-positive WAW Dependencies due to alloca movement from e.g. loops to function entry 
+        // Prevent reporting of false-positive WAW Dependencies due to alloca movement from e.g. loops to function entry
         bool insertDep = true;
         if(Dst == Src){ // check if instruciton are the same
           // check if initialization exists in the instruction line
@@ -337,8 +344,15 @@ bool DiscoPoP::runOnFunction(Function &F) {
         }
 
         if(insertDep){
+#if false
+// TODO insert a flag to toggle the instruction based dependency reporting
+// use regular version
           conditionalBBPairDepMap[Dst->getParent()][Src->getParent()].insert(
             DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap));
+#else
+          conditionalBBPairDepMap[Dst->getParent()][Src->getParent()].insert(
+            DG.edgeToInstructionBasedDPDep(edge, staticValueNameToMemRegIDMap));
+#endif
         }
       }
       omittableInstructions.insert(Src);
