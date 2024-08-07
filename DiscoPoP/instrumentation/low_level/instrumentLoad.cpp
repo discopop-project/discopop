@@ -12,7 +12,7 @@
 
 #include "../../DiscoPoP.hpp"
 
-void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
+void DiscoPoP::instrumentLoad(LoadInst *toInstrument, int32_t llvm_ir_instruction_id) {
 
   LID lid = getLID(toInstrument, fileID);
   if (lid == 0)
@@ -20,7 +20,10 @@ void DiscoPoP::instrumentLoad(LoadInst *toInstrument) {
 
   vector<Value *> args;
 
-  args.push_back(ConstantInt::get(Int32, lid));
+
+  // TODO ADD FLAG TO CHECK FOR PERFOGRAPH EXPORT
+  // replaced: args.push_back(ConstantInt::get(Int32, lid));
+  args.push_back(ConstantInt::get(Int32, llvm_ir_instruction_id));
 
   Value *memAddr = PtrToIntInst::CreatePointerCast(toInstrument->getPointerOperand(), Int64, "", toInstrument);
   args.push_back(memAddr);

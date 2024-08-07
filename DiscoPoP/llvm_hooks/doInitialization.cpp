@@ -101,6 +101,9 @@ bool DiscoPoP::doInitialization(Module &M) {
     } else {
       loopID = -1;
     }
+
+    // PerfoGraph compatibility
+    unique_llvm_ir_instruction_id = 1;
   }
   // DPInstrumentation end
 

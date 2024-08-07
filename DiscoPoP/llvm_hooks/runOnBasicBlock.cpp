@@ -51,6 +51,15 @@ A real case would be:
 // TODO: atomic variables
 void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
   for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
+    // TEST
+    // add identified to the llvm ir metadata if requested
+    // TODO: add preprocessor flag
+    LLVMContext& ctx = BI->getContext();
+    int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
+    MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+to_string(llvm_ir_instruction_id)));
+    BI->setMetadata("dp.md.instr.id", N);
+    // !TEST
+
     if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
       assert(DI->getOperand(0));
       if (AllocaInst *alloc = dyn_cast<AllocaInst>(DI->getOperand(0))) {
@@ -130,11 +139,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
     }
     // load instruction
     else if (isa<LoadInst>(BI)) {
-      instrumentLoad(cast<LoadInst>(BI));
+      instrumentLoad(cast<LoadInst>(BI), llvm_ir_instruction_id);
     }
     // // store instruction
     else if (isa<StoreInst>(BI)) {
-      instrumentStore(cast<StoreInst>(BI));
+      instrumentStore(cast<StoreInst>(BI), llvm_ir_instruction_id);
     }
     // call and invoke
     else if (isaCallOrInvoke(&*BI)) {
