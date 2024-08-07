@@ -122,6 +122,46 @@ string InstructionDG::edgeToDPDep(Edge<Instruction *> *e,
   }
 }
 
+string InstructionDG::edgeToInstructionBasedDPDep(Edge<Instruction *> *e,
+                                  unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap) {
+  // staticValueNameToMemRegIDMap maps: <SSA variable name> TO (original
+  // variable name, statically assigned MemReg ID)
+  Instruction *I = e->getSrc()->getItem();
+  Instruction *J = e->getDst()->getItem();
+
+  // get unique instruction ids from metadata
+  MDNode *N_I = I->getMetadata("dp.md.instr.id");
+  std::string unique_instruction_id_I = cast< MDString >(N_I->getOperand(0))->getString().str();
+  // cleanup metadata string to get the pure id
+  unique_instruction_id_I.replace(0, 15, "");  // replaces "dp.md.instr.id:" with ""
+
+  MDNode *N_J = J->getMetadata("dp.md.instr.id");
+  std::string unique_instruction_id_J = cast< MDString >(N_J->getOperand(0))->getString().str();
+  // cleanup metadata string to get the pure id
+  unique_instruction_id_J.replace(0, 15, "");  // replaces "dp.md.instr.id:" with ""
+
+  string depType;
+  if (isa<AllocaInst>(J)) {
+    depType = "INIT";
+    return unique_instruction_id_I + " " + "NOM" + " " + depType + " *|" +
+           staticValueNameToMemRegIDMap[VNF->getVarName(I)]
+               .first // use original variable name instead of LLVM IR SSA name
+           + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
+  } else if (DebugLoc dl = J->getDebugLoc()) {
+    depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
+    return unique_instruction_id_I + " " + "NOM" + " " + depType + " " + unique_instruction_id_J + "|" +
+           staticValueNameToMemRegIDMap[VNF->getVarName(I)]
+               .first // use original variable name instead of LLVM IR SSA name
+           + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
+  } else {
+    depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
+    return unique_instruction_id_I + " " + "NOM" + " " + depType + " " + unique_instruction_id_J + "|" +
+           staticValueNameToMemRegIDMap[VNF->getVarName(I)]
+               .first // use original variable name instead of LLVM IR SSA name
+           + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
+  }
+}
+
 void InstructionDG::dumpToDot(const string targetPath) {
   // Write the graph to a DOT file
   ofstream dotStream;
