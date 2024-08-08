@@ -46,6 +46,7 @@
 #include <set>
 #include <map>
 #include <cstdlib>
+#include <iostream>
 
 
 #include <sys/stat.h>
@@ -314,9 +315,26 @@ namespace
           mkdir(tmp3.data(), 0777);
       }
 
+      // prepare target directory if not present
+      char const *tmp4 = getenv("DP_PROJECT_ROOT_DIR");
+      if (tmp4 == NULL) {
+        // DP_PROJECT_ROOT_DIR needs to be initialized
+        std::cerr << "\nWARNING: No value for DP_PROJECT_ROOT_DIR found. \n";
+        std::cerr << "         As a result, library functions might be "
+                    "instrumented which can lead to\n";
+        std::cerr << "         increased profiling times and unexpected behavior.\n";
+        std::cerr << "         Please consider to specify the environment variable "
+                    "and rebuild.\n";
+        std::cerr << "         "
+                    "https://discopop-project.github.io/discopop/setup/"
+                    "environment_variables/\n\n";
+        // define fallback
+        setenv("DP_PROJECT_ROOT_DIR", "/", 1);
+      }
+
       
-      string tmp4 = tmp3 + "/temp.txt";
-      tempfile.open(tmp4.data(), ios::in);
+      string tmp5 = tmp3 + "/temp.txt";
+      tempfile.open(tmp5.data(), ios::in);
       if (tempfile.is_open())
       {
         errs() << "Temp file openned!\n";
@@ -340,6 +358,33 @@ namespace
     virtual bool runOnFunction(Function &F)
     {
       errs() << "In a function called " << F.getName() << "\n";
+
+      // avoid instrumenting functions which are defined outside the scope of the
+      // project
+      std::string dp_project_dir(getenv("DP_PROJECT_ROOT_DIR"));
+      SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
+      F.getAllMetadata(MDs);
+      bool funcDefinedInProject = false;
+      for (auto &MD : MDs) {
+        if (MDNode *N = MD.second) {
+          if (auto *subProgram = dyn_cast<DISubprogram>(N)) {
+            std::string fullFileName = "";
+            if (subProgram->getDirectory().str().length() > 0) {
+              fullFileName += subProgram->getDirectory().str();
+              fullFileName += "/";
+            }
+            fullFileName += subProgram->getFilename().str();
+            if (fullFileName.find(dp_project_dir) != string::npos) // function defined inside project
+            {
+              funcDefinedInProject = true;
+            }
+          }
+        }
+      }
+      if (!funcDefinedInProject) {
+        return false;
+      }
+
 
       LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
 
