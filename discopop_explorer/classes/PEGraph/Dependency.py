@@ -25,12 +25,12 @@ class Dependency:
     sink_line: Optional[LineID] = None
     intra_iteration: bool = False
     intra_iteration_level: int = -1
-    metadata_intra_iteration_dep: List[LineID]
-    metadata_inter_iteration_dep: List[LineID]
-    metadata_intra_call_dep: List[LineID]
-    metadata_inter_call_dep: List[LineID]
-    metadata_sink_ancestors: List[LineID]
-    metadata_source_ancestors: List[LineID]
+    metadata_intra_iteration_dep: Optional[List[LineID]]
+    metadata_inter_iteration_dep: Optional[List[LineID]]
+    metadata_intra_call_dep: Optional[List[LineID]]
+    metadata_inter_call_dep: Optional[List[LineID]]
+    metadata_sink_ancestors: Optional[List[LineID]]
+    metadata_source_ancestors: Optional[List[LineID]]
 
     def __init__(self, type: EdgeType):
         self.etype = type

@@ -99,10 +99,12 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
     loop_data_list: List[LoopData] = []
 
     # read dependency metadata
+    metadata_exists: bool = False
     dependency_metadata_lines = []
     if os.path.exists(os.path.join(output_path, "dependency_metadata.txt")):
         with open(os.path.join(output_path, "dependency_metadata.txt"), "r") as dep_metadata_fd:
             dependency_metadata_lines = dep_metadata_fd.readlines()
+        metadata_exists = True
     dependency_metadata: Dict[Tuple[Any, Any, Any, Any, Any], List[str]] = dict()
     for line in dependency_metadata_lines:
         line = line.replace("\n", "")
@@ -164,7 +166,7 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             var_str = "" if len(source_fields) == 1 else source_fields[1]
             var_name = ""
             aa_var_name = ""
-            metadata = []
+            metadata: Optional[List[str]] = [] if metadata_exists else None
             if len(var_str) > 0:
                 if "(" in var_str:
                     split_var_str = var_str.split("(")
@@ -187,6 +189,12 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
                 is_gep_result_dependency = True
 
             # register dependencies
+            if metadata is None:
+                dependencies_list.append(
+                    DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, is_gep_result_dependency, None)
+                )
+                continue
+
             if len(metadata) == 0:
                 dependencies_list.append(
                     DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, is_gep_result_dependency, "")
