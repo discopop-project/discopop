@@ -121,10 +121,7 @@ def run(arguments: AutotunerArguments) -> None:
                     continue
                 visited_configurations.append(current_config)
                 tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
-                try:
-                    tmp_config.apply_suggestions(arguments, current_config)
-                except ValueError:
-                    continue
+                tmp_config.apply_suggestions(arguments, current_config)
                 tmp_config.execute(timeout=timeout_after)
                 statistics_graph.add_child(
                     "step "

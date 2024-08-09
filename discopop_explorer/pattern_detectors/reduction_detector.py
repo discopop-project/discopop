@@ -286,6 +286,7 @@ def __check_loop_dependencies(
                     cond_3 = len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0
                     if cond_1 or cond_2 or cond_3:
                         return True
+        elif dep.dtype == DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
             if dep.metadata_intra_iteration_dep is None:

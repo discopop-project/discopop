@@ -340,6 +340,7 @@ def __check_loop_dependencies(
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
             if dep.metadata_intra_iteration_dep is None:
+                # no metadata created
                 if not dep.intra_iteration:
                     if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                         # check if variable is defined inside loop
@@ -349,7 +350,6 @@ def __check_loop_dependencies(
                 elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
                     return True
 
-            # no metadata created
             else:
                 # metadata exists
                 if (
