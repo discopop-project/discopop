@@ -45,7 +45,7 @@ from discopop_explorer.classes.variable import Variable
 class DoAllInfo(PatternInfo):
     """Class, that contains do-all detection result"""
 
-    def __init__(self, pet: PEGraphX, node: Node):
+    def __init__(self, pet: PEGraphX, node: Node, required_atomics: Set[LineID]):
         """
         :param pet: PET graph
         :param node: node, where do-all was detected
@@ -59,6 +59,7 @@ class DoAllInfo(PatternInfo):
         self.reduction = r
         self.scheduling_clause = "static"
         self.collapse_level = 1
+        self.required_atomics = required_atomics
 
     def __str__(self) -> str:
         return (
@@ -75,7 +76,8 @@ class DoAllInfo(PatternInfo):
             f"first private: {[v.name for v in self.first_private]}\n"
             f"reduction: {[v.name for v in self.reduction]}\n"
             f"last private: {[v.name for v in self.last_private]}\n"
-            f"scheduling clause: {self.scheduling_clause}"
+            f"scheduling clause: {self.scheduling_clause}\n"
+            f"required atomics: {self.required_atomics}"
         )
 
 
@@ -109,10 +111,15 @@ def run_detection(
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
-    with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
-        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
-    for local_result in tmp_result:
-        result += local_result
+    parallelize = True
+    if parallelize:
+        with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
+            tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
+        for local_result in tmp_result:
+            result += local_result
+    else:
+        for param_tuple in param_list:
+            result += __check_node(param_tuple)
     print("GLOBAL RES: ", [r.start_line for r in result])
 
     for pattern in result:
@@ -139,15 +146,16 @@ def __check_node(param_tuple: LoopNode) -> List[DoAllInfo]:
     if global_pet is None:
         raise ValueError("global_pet is None!")
 
-    if __detect_do_all(global_pet, node):
+    is_doall_parallelizable, required_atomics = __detect_do_all(global_pet, node)
+    if is_doall_parallelizable:
         node.do_all = True
         if not node.reduction and node.loop_iterations >= 0 and not node.contains_array_reduction:
-            local_result.append(DoAllInfo(global_pet, node))
+            local_result.append(DoAllInfo(global_pet, node, required_atomics))
 
     return local_result
 
 
-def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
+def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> Tuple[bool, Set[LineID]]:
     """Calculate do-all value for node
 
     :param pet: PET graph
@@ -170,6 +178,11 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
     parent_function_lineid = get_parent_function(pet, root_loop).start_position()
     called_functions_lineids = __get_called_functions_from_subtree(pet, root_children_cus)
     # called_functions_lineids = __get_called_functions(pet, root_loop)
+    if len(called_functions_lineids) > 0:
+        if root_loop.start_position() == "20:81":
+            print("root loop: ", root_loop.start_position())
+            for elem in called_functions_lineids:
+                print("  -> calls: ", elem)
 
     # get variables which are defined inside the loop
     defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]] = []
@@ -191,11 +204,13 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
             # return False  # too pessimistic
             # todo: issue critical around file_io
 
+    required_atomics: Set[LineID] = set()
+
     for i in range(0, len(subnodes)):
         children_cache: Dict[Node, List[Node]] = dict()
         dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
         for j in range(i, len(subnodes)):
-            if __check_loop_dependencies(
+            cld_res, tmp_required_atomics = __check_loop_dependencies(
                 pet,
                 subnodes[i],
                 subnodes[j],
@@ -211,14 +226,16 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
                 parent_loops,
                 parent_function_lineid,
                 called_functions_lineids,
-            ):
+            )
+            if cld_res:
                 # if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
-                return False
+                return False, set()
+            required_atomics.update(tmp_required_atomics)
 
     for fio in file_io_warnings:
         warnings.warn("FileIO performed inside DoAll @ " + str(node.start_position()))
 
-    return True
+    return True, required_atomics
 
 
 def __check_loop_dependencies(
@@ -237,9 +254,14 @@ def __check_loop_dependencies(
     parent_loops: List[LineID],
     parent_function_lineid: LineID,
     called_functions_lineids: List[LineID],
-) -> bool:
-    """Returns True, if dependencies between the respective subgraphs chave been found.
-    Returns False otherwise, which results in the potential suggestion of a Do-All pattern."""
+) -> Tuple[bool, Set[LineID]]:
+    """
+    Return:
+        First element:
+            True, if dependencies between the respective subgraphs chave been found.
+            False otherwise, which results in the potential suggestion of a Do-All pattern.
+        Second element:
+            LineIDs of atomic statements required to allow the identified Do-All pattern"""
     # get recursive children of source and target
     node_1_children_ids = [node.id for node in subtree_of_type(pet, node_1, CUNode)]
     node_2_children_ids = [node.id for node in subtree_of_type(pet, node_2, CUNode)]
@@ -263,7 +285,7 @@ def __check_loop_dependencies(
     for var, mem_regs in defined_inside_loop:
         memory_regions_defined_in_loop.update(mem_regs)
 
-    required_atomics: Set[str] = set()
+    required_atomics: Set[LineID] = set()
 
     for source, target, dep in deps:
         # todo: move this calculation to the innermost point possible to reduce computation costs
@@ -315,13 +337,13 @@ def __check_loop_dependencies(
             ):
                 # no metadata created
                 if not dep.intra_iteration:
-                    return True
+                    return True, required_atomics
                 else:
                     if dep.intra_iteration_level <= max_considered_intra_iteration_dep_level:
                         if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
                             pass
                         else:
-                            return True
+                            return True, required_atomics
             else:
                 # metadata exists
                 cond_1 = (len(dep.metadata_intra_iteration_dep) == 0) and parent_function_lineid in (
@@ -343,7 +365,9 @@ def __check_loop_dependencies(
                         saved_by_atomic = False
                         for cfl in cf_children_loops:
                             if is_reduction_var(cfl.start_position(), str(dep.var_name), pet.reduction_vars):
-                                required_atomics.add(
+                                if dep.source_line is not None:
+                                    required_atomics.add(dep.source_line)
+                                print(
                                     "ATOMIC @ "
                                     + str(dep.sink_line)
                                     + " "
@@ -356,9 +380,9 @@ def __check_loop_dependencies(
                         if not saved_by_atomic:
                             saved_by_atomics = False
                     if not saved_by_atomics:
-                        return True
+                        return True, required_atomics
                 if cond_1 or cond_3:
-                    return True
+                    return True, required_atomics
                 # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
                 else:
                     if dep.intra_iteration_level <= max_considered_intra_iteration_dep_level:
@@ -369,10 +393,10 @@ def __check_loop_dependencies(
                             if dep.metadata_intra_iteration_dep is not None:
                                 for t in dep.metadata_intra_iteration_dep:
                                     if t in parent_loops:
-                                        return True
-                                return False
+                                        return True, required_atomics
+                                return False, required_atomics
                             else:
-                                return True
+                                return True, required_atomics
 
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
@@ -383,10 +407,10 @@ def __check_loop_dependencies(
                     if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                         # check if variable is defined inside loop
                         if dep.memory_region not in memory_regions_defined_in_loop:
-                            return True
+                            return True, required_atomics
                 # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
                 elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
-                    return True
+                    return True, required_atomics
 
             else:
                 # metadata exists
@@ -410,10 +434,10 @@ def __check_loop_dependencies(
                     if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                         # check if variable is defined inside loop
                         if dep.memory_region not in memory_regions_defined_in_loop:
-                            return True
+                            return True, required_atomics
                         # check if the definitions of the accessed variable originates from a function call
                         if __check_for_problematic_function_argument_access(pet, source, target, dep):
-                            return True
+                            return True, required_atomics
                 # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
                 elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
                     tmp_nesting_level = root_loop.get_nesting_level(pet)
@@ -421,10 +445,10 @@ def __check_loop_dependencies(
                     if len(dep.metadata_intra_iteration_dep) != 0:
                         for t in dep.metadata_intra_iteration_dep:
                             if t in parent_loops:
-                                return True
-                        return False
+                                return True, required_atomics
+                        return False, required_atomics
                     else:
-                        return True
+                        return True, required_atomics
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
             # handled by variable classification
@@ -438,7 +462,7 @@ def __check_loop_dependencies(
             print("-> ", elem)
 
     # no problem found. Potentially suggest Do-All
-    return False
+    return False, required_atomics
 
 
 def __old_detect_do_all(pet: PEGraphX, root_loop: CUNode) -> bool:

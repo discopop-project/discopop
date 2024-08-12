@@ -245,7 +245,7 @@ class PatternDetectorX(object):
         # unpack do_all
         for pattern_json_str in pattern_contents["do_all"]:
             pattern_dict = json.loads(pattern_json_str)
-            pt = DoAllInfo(self.pet, self.pet.node_at(pattern_dict["node_id"]))
+            pt = DoAllInfo(self.pet, self.pet.node_at(pattern_dict["node_id"]), set(pattern_dict["required_atomics"]))
             # patternBase
             pt.pattern_id = pattern_dict["pattern_id"]
             pt.node_id = pattern_dict["node_id"]
@@ -273,7 +273,7 @@ class PatternDetectorX(object):
         # unpack reduction
         for pattern_json_str in pattern_contents["reduction"]:
             pattern_dict = json.loads(pattern_json_str)
-            pt = DoAllInfo(self.pet, self.pet.node_at(pattern_dict["node_id"]))
+            pt = DoAllInfo(self.pet, self.pet.node_at(pattern_dict["node_id"]), set())
             # patternBase
             pt.pattern_id = pattern_dict["pattern_id"]
             pt.node_id = pattern_dict["node_id"]
