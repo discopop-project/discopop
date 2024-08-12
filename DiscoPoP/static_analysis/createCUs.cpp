@@ -203,10 +203,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
                 cu->readPhaseLineNumbers.insert(lid);
             }
           }
-        } else if (isa<CallInst>(instruction)) {
+        } else if (isa<CallInst>(instruction) || isa<InvokeInst>(instruction)) {
           // get the name of the called function and check if a FileIO function
           // is called
-          CallInst *ci = cast<CallInst>(instruction);
           set<string> IOFunctions{
               "fopen",       "fopen_s",      "freopen",    "freopen_s",      "fclose",    "fflush",     "setbuf",
               "setvbuf",     "fwide",        "fread",      "fwrite",         "fgetc",     "getc",       "fgets",
@@ -223,6 +222,8 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
               "vswprintf_s", "vsnwprintf_s", "ftell",      "fgetpos",        "fseek",     "fsetpos",    "rewind",
               "clearerr",    "feof",         "ferror",     "perror",         "remove",    "rename",     "tmpfile",
               "tmpfile_s",   "tmpnam",       "tmpnam_s",   "__isoc99_fscanf"};
+
+          CallBase *ci = cast<CallBase>(instruction);
           if (ci) {
             if (ci->getCalledFunction()) {
               if (ci->getCalledFunction()->hasName()) {
@@ -255,10 +256,17 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
       // Note: Don't create nodes for library functions (c++/llvm).
       LID lid = getLID(&*instruction, fileID);
       if (lid > 0) {
-        if (isa<CallInst>(instruction)) {
-          CallInst *ci = cast<CallInst>(instruction);
-          Function *f = ci->getCalledFunction();
-          // TODO: DO the same for Invoke inst
+        if (isa<CallInst>(instruction) || isa<InvokeInst>(instruction)) {
+          Function *f;
+
+          if(isa<CallInst>(instruction)){
+            CallInst *ci = cast<CallInst>(instruction);
+            f = ci->getCalledFunction();
+          }
+          else if(isa<InvokeInst>(instruction)){
+            InvokeInst *ci = cast<InvokeInst>(instruction);
+            f = ci->getCalledFunction();
+          }
 
           string lid;
           if (f) {
