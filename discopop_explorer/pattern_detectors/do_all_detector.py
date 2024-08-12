@@ -10,6 +10,7 @@ from multiprocessing import Pool
 from typing import List, Dict, Optional, Set, Tuple, cast
 import warnings
 
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.functions.PEGraph.properties.depends_ignore_readonly import depends_ignore_readonly
 from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
 from discopop_explorer.functions.PEGraph.properties.is_readonly_inside_loop_body import is_readonly_inside_loop_body
@@ -17,6 +18,7 @@ from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edge
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_explorer.functions.PEGraph.queries.variables import get_variables
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children
 from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
@@ -36,7 +38,7 @@ from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
-from discopop_explorer.utils import classify_loop_variables, filter_for_hotspots
+from discopop_explorer.utils import classify_loop_variables, filter_for_hotspots, is_reduction_var
 from discopop_explorer.classes.variable import Variable
 
 
@@ -166,7 +168,8 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
     # get parents of root_loop
     parent_loops = __get_parent_loops(pet, root_loop)
     parent_function_lineid = get_parent_function(pet, root_loop).start_position()
-    called_functions_lineids = __get_called_functions(pet, root_loop)
+    called_functions_lineids = __get_called_functions_from_subtree(pet, root_children_cus)
+    # called_functions_lineids = __get_called_functions(pet, root_loop)
 
     # get variables which are defined inside the loop
     defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]] = []
@@ -203,6 +206,7 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
                 fp,
                 p,
                 lp,
+                r,
                 defined_inside_loop,
                 parent_loops,
                 parent_function_lineid,
@@ -228,6 +232,7 @@ def __check_loop_dependencies(
     first_privates: List[Variable],
     privates: List[Variable],
     last_privates: List[Variable],
+    reduction: List[Variable],
     defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]],
     parent_loops: List[LineID],
     parent_function_lineid: LineID,
@@ -257,6 +262,8 @@ def __check_loop_dependencies(
     memory_regions_defined_in_loop = set()
     for var, mem_regs in defined_inside_loop:
         memory_regions_defined_in_loop.update(mem_regs)
+
+    required_atomics: Set[str] = set()
 
     for source, target, dep in deps:
         # todo: move this calculation to the innermost point possible to reduce computation costs
@@ -291,6 +298,9 @@ def __check_loop_dependencies(
                     tmp = root_loop.start_position()
                     continue
 
+        if dep.sink_line == "12:158" and dep.source_line == "12:158" and dep.var_name == "row_coefs":
+            pass
+
         # targeted variable is not read-only
         if dep.dtype == DepType.INIT:
             continue
@@ -317,9 +327,37 @@ def __check_loop_dependencies(
                 cond_1 = (len(dep.metadata_intra_iteration_dep) == 0) and parent_function_lineid in (
                     dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else []
                 )
-                cond_2 = len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0
+                inter_call_cfs = [cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]
+                cond_2 = len(inter_call_cfs) > 0
                 cond_3 = len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0
-                if cond_1 or cond_2 or cond_3:
+                if cond_2 and not cond_1 and not cond_3:
+                    # inter-iteration dependency on a called function exists
+                    # this can be saved by a "atomic" clause, in case dep is caused by a reduction operation
+                    saved_by_atomics = True
+                    for called_function in [
+                        function_node
+                        for function_node in all_nodes(pet, FunctionNode)
+                        if function_node.start_position() in inter_call_cfs
+                    ]:
+                        cf_children_loops = [n for n in direct_children(pet, pet.node_at(called_function.id))]
+                        saved_by_atomic = False
+                        for cfl in cf_children_loops:
+                            if is_reduction_var(cfl.start_position(), str(dep.var_name), pet.reduction_vars):
+                                required_atomics.add(
+                                    "ATOMIC @ "
+                                    + str(dep.sink_line)
+                                    + " "
+                                    + str(dep.source_line)
+                                    + " var: "
+                                    + str(dep.var_name)
+                                )
+                                saved_by_atomic = True
+                                break
+                        if not saved_by_atomic:
+                            saved_by_atomics = False
+                    if not saved_by_atomics:
+                        return True
+                if cond_1 or cond_3:
                     return True
                 # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
                 else:
@@ -393,6 +431,11 @@ def __check_loop_dependencies(
             pass
         else:
             raise ValueError("Unsupported dependency type: ", dep.dtype)
+
+    if len(required_atomics) != 0:
+        print("REQUIRED ATOMICS:")
+        for elem in required_atomics:
+            print("-> ", elem)
 
     # no problem found. Potentially suggest Do-All
     return False
@@ -478,6 +521,16 @@ def __get_called_functions(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
             if t not in queue and t not in visited:
                 queue.append(t)
 
+    # convert node ids of called functions to line ids
+    return [pet.node_at(n).start_position() for n in called_functions]
+
+
+def __get_called_functions_from_subtree(pet: PEGraphX, subtree: List[CUNode]) -> List[LineID]:
+    """Create a list of called fucnctions within the subtree of a root loop"""
+    called_functions: Set[NodeID] = set()
+    for subtree_node in subtree:
+        for s, t, e in out_edges(pet, subtree_node.id, EdgeType.CALLSNODE):
+            called_functions.add(t)
     # convert node ids of called functions to line ids
     return [pet.node_at(n).start_position() for n in called_functions]
 
