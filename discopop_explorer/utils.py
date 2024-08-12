@@ -848,8 +848,9 @@ def no_inter_iteration_dependency_exists(
     for dep in raw.union(war):
         if dep[0] in [s.id for s in sub] and dep[1] in [s.id for s in sub]:
             if dep[2].memory_region in mem_regs:
-                if root_loop.start_position() in dep[2].metadata_inter_iteration_dep:
-                    return False
+                if dep[2].metadata_inter_iteration_dep is not None:
+                    if root_loop.start_position() in dep[2].metadata_inter_iteration_dep:
+                        return False
     return True
 
 
@@ -927,15 +928,7 @@ def classify_task_vars(
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
     out_deps: List[Tuple[NodeID, NodeID, Dependency]],
     used_in_task_parallelism_detection: bool = False,
-) -> Tuple[
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[str],
-]:
+) -> Tuple[List[Variable], List[Variable], List[Variable], List[Variable], List[Variable], List[Variable], List[str]]:
     """Classify task variables
 
     :param pet: CU graph

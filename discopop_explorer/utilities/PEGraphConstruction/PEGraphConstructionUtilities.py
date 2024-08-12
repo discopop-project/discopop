@@ -8,10 +8,11 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import List, Union, cast
 
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
+from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
@@ -41,7 +42,16 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
         d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
     d.memory_region = dep.memory_region
+
     # parse metadata
+    if dep.metadata is None:
+        d.metadata_intra_iteration_dep = None
+        d.metadata_inter_iteration_dep = None
+        d.metadata_intra_call_dep = None
+        d.metadata_inter_call_dep = None
+        d.metadata_sink_ancestors = None
+        d.metadata_source_ancestors = None
+        return d
     if len(dep.metadata) > 0:
         for md in dep.metadata.split(" "):
             if len(md) == 0:
@@ -50,6 +60,18 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
             md_type = md[: md.index("[")]
             md_raw_values = md[md.index("[") + 1 : -1]
             md_values = [tmp for tmp in md_raw_values.split(",") if len(tmp) > 0]
+
+            # ensure validity and type correctness
+            if (
+                d.metadata_intra_iteration_dep is None
+                or d.metadata_inter_iteration_dep is None
+                or d.metadata_intra_call_dep is None
+                or d.metadata_inter_call_dep is None
+                or d.metadata_sink_ancestors is None
+                or d.metadata_source_ancestors is None
+            ):
+                raise ValueError("Invalid data found!")
+
             # store metadata
             if md_type == "IAI":
                 d.metadata_intra_iteration_dep += md_values
