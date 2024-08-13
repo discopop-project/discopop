@@ -320,9 +320,6 @@ def __check_loop_dependencies(
                     tmp = root_loop.start_position()
                     continue
 
-        if dep.sink_line == "12:158" and dep.source_line == "12:158" and dep.var_name == "row_coefs":
-            pass
-
         # targeted variable is not read-only
         if dep.dtype == DepType.INIT:
             continue
@@ -337,12 +334,16 @@ def __check_loop_dependencies(
             ):
                 # no metadata created
                 if not dep.intra_iteration:
+                    if root_loop.start_position() == "20:81":
+                        pass
                     return True, required_atomics
                 else:
                     if dep.intra_iteration_level <= max_considered_intra_iteration_dep_level:
                         if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
                             pass
                         else:
+                            if root_loop.start_position() == "20:81":
+                                pass
                             return True, required_atomics
             else:
                 # metadata exists
@@ -352,7 +353,9 @@ def __check_loop_dependencies(
                 inter_call_cfs = [cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]
                 cond_2 = len(inter_call_cfs) > 0
                 cond_3 = len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0
-                if cond_2 and not cond_1 and not cond_3:
+                if cond_2 and cond_3:
+                    if root_loop.start_position() == "20:81":
+                        pass
                     # inter-iteration dependency on a called function exists
                     # this can be saved by a "atomic" clause, in case dep is caused by a reduction operation
                     saved_by_atomics = True
@@ -361,9 +364,26 @@ def __check_loop_dependencies(
                         for function_node in all_nodes(pet, FunctionNode)
                         if function_node.start_position() in inter_call_cfs
                     ]:
-                        cf_children_loops = [n for n in direct_children(pet, pet.node_at(called_function.id))]
-                        saved_by_atomic = False
+                        cf_children_loops = [
+                            n for n in direct_children(pet, pet.node_at(called_function.id)) if n.type == NodeType.LOOP
+                        ]
+                        saved_by_atomic = False if len(cf_children_loops) > 0 else True
                         for cfl in cf_children_loops:
+                            # check if dep belongs to the body of cfl
+                            dep_file_id = int(str(dep.source_line).split(":")[0])
+                            dep_source_line_int = int(str(dep.source_line).split(":")[1])
+                            if cfl.file_id != dep_file_id:
+                                if root_loop.start_position() == "20:81":
+                                    pass
+                                continue
+                            if cfl.start_line > dep_source_line_int or cfl.end_line < dep_source_line_int:
+                                if root_loop.start_position() == "20:81":
+                                    pass
+                                continue
+                            # dep belogs to body of cfl
+
+                            if root_loop.start_position() == "20:81":
+                                pass
                             if is_reduction_var(cfl.start_position(), str(dep.var_name), pet.reduction_vars):
                                 if dep.source_line is not None:
                                     required_atomics.add(dep.source_line)
@@ -377,11 +397,18 @@ def __check_loop_dependencies(
                                 )
                                 saved_by_atomic = True
                                 break
+                            else:
+                                if root_loop.start_position() == "20:81":
+                                    pass
                         if not saved_by_atomic:
                             saved_by_atomics = False
                     if not saved_by_atomics:
+                        if root_loop.start_position() == "20:81":
+                            pass
                         return True, required_atomics
-                if cond_1 or cond_3:
+                if cond_1 or cond_2 or cond_3:
+                    if root_loop.start_position() == "20:81":
+                        pass
                     return True, required_atomics
                 # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
                 else:
@@ -393,9 +420,13 @@ def __check_loop_dependencies(
                             if dep.metadata_intra_iteration_dep is not None:
                                 for t in dep.metadata_intra_iteration_dep:
                                     if t in parent_loops:
+                                        if root_loop.start_position() == "20:81":
+                                            pass
                                         return True, required_atomics
                                 return False, required_atomics
                             else:
+                                if root_loop.start_position() == "20:81":
+                                    pass
                                 return True, required_atomics
 
         elif dep.dtype == DepType.WAR:
@@ -407,9 +438,13 @@ def __check_loop_dependencies(
                     if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
                         # check if variable is defined inside loop
                         if dep.memory_region not in memory_regions_defined_in_loop:
+                            if root_loop.start_position() == "20:81":
+                                pass
                             return True, required_atomics
                 # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
                 elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
+                    if root_loop.start_position() == "20:81":
+                        pass
                     return True, required_atomics
 
             else:
@@ -445,9 +480,13 @@ def __check_loop_dependencies(
                     if len(dep.metadata_intra_iteration_dep) != 0:
                         for t in dep.metadata_intra_iteration_dep:
                             if t in parent_loops:
+                                if root_loop.start_position() == "20:81":
+                                    pass
                                 return True, required_atomics
                         return False, required_atomics
                     else:
+                        if root_loop.start_position() == "20:81":
+                            pass
                         return True, required_atomics
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
