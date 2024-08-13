@@ -200,6 +200,7 @@ def __collapse_loops_in_function(function_node_id: int) -> bool:
                 pattern_info = DoAllInfo(
                     global_experiment.detection_result.pet,
                     global_experiment.detection_result.pet.node_at(node_data_copy.original_cu_id),
+                    set(),
                 )
                 pattern_id = pattern_info.pattern_id
                 pattern_info.collapse_level = node_data_copy.collapse_level
