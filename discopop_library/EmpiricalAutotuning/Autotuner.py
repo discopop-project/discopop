@@ -16,7 +16,7 @@ from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
-from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeShape, StatisticsGraph
+from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor, NodeShape, StatisticsGraph
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
@@ -107,10 +107,20 @@ def run(arguments: AutotunerArguments) -> None:
                 + str(round(loop_tuple[4], 3))
                 + "s"
             )
-            statistics_graph.add_child(loop_str)
+            # check if the loop contributes more than 1% to the total runtime
+            loop_contributes_significantly = loop_tuple[4] > (
+                cast(ExecutionResult, reference_configuration.execution_result).runtime / 100
+            )
+            if not loop_contributes_significantly:
+                statistics_graph.add_child(loop_str, color=NodeColor.ORANGE)
+            else:
+                statistics_graph.add_child(loop_str)
             statistics_graph.update_current_node(loop_str)
             # identify all applicable suggestions for this loop
             logger.debug(str(hotspot_type) + " loop: " + str(loop_tuple))
+            if not loop_contributes_significantly:
+                logger.debug("--> Skipping loop due to runtime contribution < 1%")
+                continue
             # create code and execute for all applicable suggestions
             applicable_suggestions = get_applicable_suggestion_ids(loop_tuple[0], loop_tuple[1], detection_result)
             logger.debug("--> applicable suggestions: " + str(applicable_suggestions))
