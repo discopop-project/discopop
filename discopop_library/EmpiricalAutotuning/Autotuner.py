@@ -192,6 +192,13 @@ def run(arguments: AutotunerArguments) -> None:
                 + " stored at "
                 + best_suggestion_configuration[1].root_path
             )
+            # update the timeout according to the new time measurement
+            timeout_after = max(
+                3.0, cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime * 2
+            )
+            logger.debug("Updated timeout to: " + str(round(timeout_after, 3)))
+
+            # update the graph and store the current best configuration
             statistics_graph.add_child(
                 "step "
                 + str(statistics_step_num)
