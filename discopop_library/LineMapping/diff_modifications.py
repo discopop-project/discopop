@@ -50,7 +50,13 @@ def apply_line_mapping_modifications_from_diff(file_id: int, diff: str) -> None:
     # get cleaned diff
     cleaned_diff: List[str] = []
     for line in diff.split("\n"):
-        if line.startswith("<") or line.startswith(">") or line.startswith("-") or len(line) == 0:
+        if (
+            line.startswith("<")
+            or line.startswith(">")
+            or line.startswith("-")
+            or line.startswith("\\")
+            or len(line) == 0
+        ):
             continue
         line = line.replace("\n", "")
         cleaned_diff.append(line)
