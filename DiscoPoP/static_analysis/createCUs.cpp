@@ -322,7 +322,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
             }
           } else // get name of the indirect function which is called
           {
-            Value *v = (cast<CallInst>(instruction))->getCalledOperand();
+            Value* v = (cast<CallBase>(instruction))->getCalledOperand();
             Value *sv = v->stripPointerCasts();
             n->name = sv->getName().str();
           }
