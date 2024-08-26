@@ -74,6 +74,16 @@ def run(arguments: AutotunerArguments) -> None:
     detection_result: DetectionResult = jsonpickle.decode(tmp_str)
     logger.debug("loaded suggestions")
 
+    # get metadata: highest average runtime in hotspot information. Used to filter relevant loops (1% runtime contribution)
+    max_avg_runtime = 0.0
+    for hotspot_type in [HotspotType.YES, HotspotType.MAYBE, HotspotType.NO]:
+        if hotspot_information:
+            if hotspot_type not in hotspot_information:
+                continue
+            for info in hotspot_information[hotspot_type]:
+                if info[4] > max_avg_runtime:
+                    max_avg_runtime = info[4]
+
     # greedy search for best suggestion configuration:
     # for all hotspot types in descending importance:
     visited_configurations: List[List[SUGGESTION_ID]] = []
@@ -109,9 +119,7 @@ def run(arguments: AutotunerArguments) -> None:
                 + "s"
             )
             # check if the loop contributes more than 1% to the total runtime
-            loop_contributes_significantly = loop_tuple[4] > (
-                cast(ExecutionResult, reference_configuration.execution_result).runtime / 100
-            )
+            loop_contributes_significantly = loop_tuple[4] > (max_avg_runtime / 100)
             if not loop_contributes_significantly:
                 statistics_graph.add_child(loop_str, color=NodeColor.ORANGE)
             else:
