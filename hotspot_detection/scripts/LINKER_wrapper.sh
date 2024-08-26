@@ -23,9 +23,9 @@ LLVM_CLANGPP=$HSD_BUILD_LLVM_BIN_DIR/clang++
 
 
 # original arguments: "$@"
-echo "WRAPPED LINKING...."
-echo "ARGS: $@"
-
-echo "${LLVM_CLANGPP} ${@} -L${HSD_BUILD}/rtlib -lHotspotDetection_RT -lpthread -v"
+#echo "WRAPPED LINKING...."
+#echo "ARGS: $@"
+#
+#echo "${LLVM_CLANGPP} ${@} -L${HSD_BUILD}/rtlib -lHotspotDetection_RT -lpthread -v"
 
 ${LLVM_CLANGPP} "$@" -L${HSD_BUILD}/rtlib -lHotspotDetection_RT -lpthread -fPIC -v

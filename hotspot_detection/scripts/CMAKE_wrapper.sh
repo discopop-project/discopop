@@ -19,8 +19,8 @@ HSD_BUILD="$(dirname "$(dirname ${SCRIPT_PATH})")"
 HSD_SCRIPTS=${HSD_BUILD}/scripts
 
 # original arguments: "$@"
-echo "WRAPPED CMAKE BUILD..."
-echo "ARGS: ${@}"
+#echo "WRAPPED CMAKE BUILD..."
+#echo "ARGS: ${@}"
 
 # execute cmake using CC, CXX and LINKER wrappers
 # re-define structure of the link-executable to include the updated linker

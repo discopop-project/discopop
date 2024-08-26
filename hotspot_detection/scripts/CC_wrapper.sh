@@ -22,10 +22,10 @@ LLVM_CLANG=$HSD_BUILD_LLVM_BIN_DIR/clang
 LLVM_CLANGPP=$HSD_BUILD_LLVM_BIN_DIR/clang++
 
 # original arguments: "$@"
-echo "WRAPPED CC COMPILE..."
-echo "ARGS: ${@}"
-
-echo "${LLVM_CLANG} "$@" -g -O0 -Xclang -load -Xclang ${HSD_BUILD}/libi/LLVMHotspotDetection.so -Xclang -Xclang -HotspotDetection  -fPIC -Xlinker -L${HSD_BUILD}/rtlib -Xlinker -lHotspotDetection_RT -Xlinker -lpthread -Xlinker -v"
+#echo "WRAPPED CC COMPILE..."
+#echo "ARGS: ${@}"
+#
+#echo "${LLVM_CLANG} "$@" -g -O0 -Xclang -load -Xclang ${HSD_BUILD}/libi/LLVMHotspotDetection.so -Xclang -Xclang -HotspotDetection  -fPIC -Xlinker -L${HSD_BUILD}/rtlib -Xlinker -lHotspotDetection_RT -Xlinker -lpthread -Xlinker -v"
 ${LLVM_CLANG} "$@" -g -fno-discard-value-names -O0 -Xclang -load -Xclang ${HSD_BUILD}/libi/LLVMHotspotDetection.so -Xlinker -L${HSD_BUILD}/rtlib -Xlinker -lHotspotDetection_RT -Xlinker -lpthread -Xlinker -v
 
 # WARNING: OUTPUT IS A .ll FILE, ENDING IS .o
