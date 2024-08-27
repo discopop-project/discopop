@@ -33,7 +33,7 @@ private:
   dputil::VariableNameFinder *VNF;
   set<Instruction *> highlightedInstructionNodes;
 
-  void findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction *previousInstruction);
+  void findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction *previousInstruction, std::set<std::pair<BasicBlock*, Instruction*>> *visited);
 
 public:
   InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F);

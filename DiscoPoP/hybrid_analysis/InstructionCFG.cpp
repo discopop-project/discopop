@@ -30,10 +30,11 @@ InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F) : 
     }
     // Add edges from last instruction in current block to first instruction all
     // the successor blocks
-    if (previousInstruction != nullptr)
-      findAndAddFirstRelevantInstructionInSuccessorBlocks(&BB, previousInstruction);
+    if (previousInstruction != nullptr){
+      std::set<std::pair<BasicBlock*, Instruction*>> visited;
+      findAndAddFirstRelevantInstructionInSuccessorBlocks(&BB, previousInstruction, &visited);
+    }
   }
-
   // Conect entry/exit nodes
   for (auto instNode : Graph::getInstructionNodes()) {
     if (instNode != entry && instNode != exit) {
@@ -47,7 +48,17 @@ InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F) : 
 }
 
 void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB,
-                                                                         Instruction *previousInstruction) {
+                                                                         Instruction *previousInstruction,
+                                                                         std::set<std::pair<BasicBlock*, Instruction*>> *visited) {
+  // Check for and break out of cycles
+  std::pair<BasicBlock*, Instruction*> tmp_pair = std::make_pair(BB, previousInstruction);
+  const bool already_visited = visited->find(tmp_pair) != visited->end();
+  if(already_visited){
+    return;
+  }
+  // register visited node
+  visited->insert(tmp_pair);
+
   bool hasSuccessors = false;
   for (BasicBlock *S : successors(BB)) {
     hasSuccessors = true;
@@ -62,8 +73,9 @@ void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBl
         Graph::addEdge(Graph::getInstructionNode(previousInstruction), exit);
       }
     }
-    if (S != BB)
-      findAndAddFirstRelevantInstructionInSuccessorBlocks(S, previousInstruction);
+    if (S != BB){
+      findAndAddFirstRelevantInstructionInSuccessorBlocks(S, previousInstruction, visited);
+    }
   next:;
   }
 }
