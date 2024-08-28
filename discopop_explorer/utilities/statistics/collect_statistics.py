@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import logging
 
 from discopop_explorer.utilities.statistics.maximum_call_path_depth import get_maximum_call_path_depth
+from discopop_explorer.utilities.statistics.suggestion_call_path_depths import get_suggestion_call_path_depths
 
 if TYPE_CHECKING:
     from discopop_explorer.discopop_explorer import ExplorerArguments
@@ -23,4 +24,13 @@ def collect_statistics(arguments: ExplorerArguments, res: DetectionResult) -> No
     logger.info("Collecting code statistics...")
     maximum_call_path_depth = get_maximum_call_path_depth(res.pet)
     logger.debug("--> maximum_call_path_depth: " + str(maximum_call_path_depth))
-    pass
+    suggestion_call_path_depths = get_suggestion_call_path_depths(res)
+    logger.debug(
+        "--> suggestion_call_path_depths: "
+        + str(
+            [
+                res.pet.node_at(key).start_position() + " => " + str(suggestion_call_path_depths[key])
+                for key in suggestion_call_path_depths
+            ]
+        )
+    )
