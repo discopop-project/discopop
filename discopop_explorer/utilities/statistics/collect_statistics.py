@@ -13,6 +13,7 @@ import logging
 from discopop_explorer.utilities.statistics.maximum_call_path_depth import get_maximum_call_path_depth
 from discopop_explorer.utilities.statistics.num_function_calls import get_suggestion_num_function_calls
 from discopop_explorer.utilities.statistics.suggestion_call_path_depths import get_suggestion_call_path_depths
+from discopop_explorer.utilities.statistics.suggestion_lines_of_code import get_suggestion_immediate_lines_of_code
 
 if TYPE_CHECKING:
     from discopop_explorer.discopop_explorer import ExplorerArguments
@@ -42,6 +43,16 @@ def collect_statistics(arguments: ExplorerArguments, res: DetectionResult) -> No
             [
                 res.pet.node_at(key).start_position() + " => " + str(suggestion_num_function_calls[key])
                 for key in suggestion_num_function_calls
+            ]
+        )
+    )
+    suggestion_immediate_lines_of_code = get_suggestion_immediate_lines_of_code(res)
+    logger.debug(
+        "--> suggestion_immediate_lines_of_code: "
+        + str(
+            [
+                str(key) + " => " + str(suggestion_immediate_lines_of_code[key])
+                for key in suggestion_immediate_lines_of_code
             ]
         )
     )
