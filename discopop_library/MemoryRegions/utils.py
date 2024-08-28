@@ -10,7 +10,7 @@
 import os.path
 from typing import Dict, Set, cast
 
-from discopop_explorer.PEGraphX import MemoryRegion
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 
 
 def get_sizes_of_memory_regions(

@@ -10,12 +10,23 @@
 import math
 from typing import Dict, List, Tuple, Optional, cast
 
-from alive_progress import alive_bar  # type: ignore
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children_or_called_nodes_of_type
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
-from .PatternInfo import PatternInfo
-from ..PEGraphX import FunctionNode, LoopNode, NodeID, PEGraphX, Node, EdgeType
-from ..utils import classify_task_vars, filter_for_hotspots, get_child_loops
-from ..variable import Variable
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.Node import Node
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.utils import classify_task_vars, filter_for_hotspots, get_child_loops
+from discopop_explorer.classes.variable import Variable
 
 __loop_iterations: Dict[NodeID, int] = {}
 
@@ -49,7 +60,7 @@ class GDInfo(PatternInfo):
         self.pragma = "for (i = 0; i < num-tasks; i++) #pragma omp task"
         lp: List[Variable] = []
         fp, p, s, in_dep, out_dep, in_out_dep, r = classify_task_vars(pet, node, "GeometricDecomposition", [], [])
-        fp.append(Variable("int", "i", "", sizeInByte=4))
+        fp.append(Variable("int", VarName("i"), "", sizeInByte=4))
 
         self.first_private = fp
         self.private = p
@@ -57,7 +68,7 @@ class GDInfo(PatternInfo):
         self.shared = s
         self.reduction = r
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Geometric decomposition at: {self.node_id}\n"
             f"Start line: {self.start_line}\n"
@@ -78,7 +89,9 @@ class GDInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX, hotspots) -> List[GDInfo]:
+def run_detection(
+    pet: PEGraphX, hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]]
+) -> List[GDInfo]:
     """Detects geometric decomposition
 
     :param pet: PET graph
@@ -93,7 +106,7 @@ def run_detection(pet: PEGraphX, hotspots) -> List[GDInfo]:
     result: List[GDInfo] = []
     global __loop_iterations
     __loop_iterations = {}
-    nodes = pet.all_nodes(FunctionNode)
+    nodes = all_nodes(pet, FunctionNode)
 
     nodes = cast(List[FunctionNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
@@ -110,15 +123,17 @@ def run_detection(pet: PEGraphX, hotspots) -> List[GDInfo]:
     return result
 
 
-def __initialize_worker(pet):
+def __initialize_worker(pet: PEGraphX) -> None:
     global global_pet
     global_pet = pet
 
 
-def __check_node(param_tuple):
+def __check_node(param_tuple: Node) -> List[GDInfo]:
     global global_pet
-    local_result = []
+    local_result: List[GDInfo] = []
     node = param_tuple
+    if global_pet is None:
+        raise ValueError("global_pet is None!")
 
     if __detect_geometric_decomposition(global_pet, node):
         node.geometric_decomposition = True
@@ -139,10 +154,10 @@ def __test_chunk_limit(pet: PEGraphX, node: Node) -> Tuple[bool, Optional[int]]:
     min_iterations_count = None
     inner_loop_iter = {}
 
-    children = pet.direct_children_or_called_nodes_of_type(node, LoopNode)
+    children = direct_children_or_called_nodes_of_type(pet, node, LoopNode)
 
-    for func_child in pet.direct_children_or_called_nodes_of_type(node, FunctionNode):
-        children.extend(pet.direct_children_or_called_nodes_of_type(func_child, LoopNode))
+    for func_child in direct_children_or_called_nodes_of_type(pet, node, FunctionNode):
+        children.extend(direct_children_or_called_nodes_of_type(pet, func_child, LoopNode))
 
     for child in children:
         inner_loop_iter[child.start_position()] = __iterations_count(pet, child)
@@ -184,7 +199,7 @@ def __get_parent_iterations(pet: PEGraphX, node: Node) -> int:
     :param node: current node
     :return: number of iterations
     """
-    parent = pet.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+    parent = in_edges(pet, node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
     max_iter = 1
     visited = []  # used to prevent looping
@@ -197,7 +212,7 @@ def __get_parent_iterations(pet: PEGraphX, node: Node) -> int:
             max_iter = max(1, node.loop_iterations)
             break
         visited.append(node)
-        parent = pet.in_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
+        parent = in_edges(pet, node.id, [EdgeType.CHILD, EdgeType.CALLSNODE])
 
     return max_iter
 
@@ -209,12 +224,12 @@ def __detect_geometric_decomposition(pet: PEGraphX, root: Node) -> bool:
     :param root: root node
     :return: true if GD pattern was discovered
     """
-    for loop_child in pet.subtree_of_type(root, LoopNode):
+    for loop_child in subtree_of_type(pet, root, LoopNode):
         if not (loop_child.reduction or loop_child.do_all):
             return False
 
-    for child in pet.direct_children_or_called_nodes_of_type(root, FunctionNode):
-        for child2 in pet.direct_children_or_called_nodes_of_type(child, LoopNode):
+    for child in direct_children_or_called_nodes_of_type(pet, root, FunctionNode):
+        for child2 in direct_children_or_called_nodes_of_type(pet, child, LoopNode):
             if not (child2.reduction or child2.do_all):
                 return False
 

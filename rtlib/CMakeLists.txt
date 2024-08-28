@@ -17,6 +17,13 @@ set(DiscoPoP_SOURCES
                 
         memory/MemoryManager.cpp
         memory/Signature.cpp
+
+        calltree/CallTreeNode.cpp
+        calltree/CallTree.cpp
+        calltree/CallTreeGlobals.cpp
+        calltree/DependencyMetadata.cpp
+        calltree/MetaDataQueueElement.cpp
+        calltree/utils.cpp
 		
         injected_functions/dp_add_bb_deps.cpp
         injected_functions/dp_alloca.cpp
@@ -40,7 +47,7 @@ set(DiscoPoP_SOURCES
         )
 
 set(CMAKE_CXX_FLAGS
-        "-O2 -std=c++11 -pthread -fno-rtti -fPIE -fPIC -ffreestanding")
+        "-O2 -std=c++17 -pthread -fno-rtti -fPIE -fPIC -ffreestanding")
 
 # add_custom_target(DiscoPoP)
 
@@ -72,6 +79,31 @@ if(DEFINED DP_INTERNAL_TIMER)
         endif()
 endif()
 
+if(DEFINED DP_CALLTREE_PROFILING)
+        if(NOT ${DP_CALLTREE_PROFILING} EQUAL 0)
+                target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING=${DP_CALLTREE_PROFILING})
+                message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING enabled. Reduces profiling speed.")
+        endif()
+endif()
+
+if(DEFINED DP_CALLTREE_PROFILING_METADATA_CUTOFF)
+        target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING_METADATA_CUTOFF=${DP_CALLTREE_PROFILING_METADATA_CUTOFF})
+        message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF enabled. Incomplete dependency metadata possible.")
+else()
+        target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING_METADATA_CUTOFF=50)
+        message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF set to default value: 50.")
+endif()
+
+if(DEFINED DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY)
+        target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY=${DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY})
+        message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY set to ${DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY} * 0.1% .")
+else()
+        target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY=1)
+        message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY set to default value: 0.1%")
+endif()
+
+
+
 if(DEFINED DP_MEMORY_REGION_DEALIASING)
         if(NOT ${DP_MEMORY_REGION_DEALIASING} EQUAL 0)
                 target_compile_definitions(DiscoPoP_RT PUBLIC DP_MEMORY_REGION_DEALIASING=${DP_MEMORY_REGION_DEALIASING})
@@ -79,12 +111,6 @@ if(DEFINED DP_MEMORY_REGION_DEALIASING)
         endif()
 endif()
 
-if(DEFINED DP_STACK_ACCESS_DETECTION)
-        if(NOT ${DP_STACK_ACCESS_DETECTION} EQUAL 0)
-                target_compile_definitions(DiscoPoP_RT PUBLIC DP_STACK_ACCESS_DETECTION=${DP_STACK_ACCESS_DETECTION})
-                message(STATUS "WARNING: DiscoPoP configuration: DP_STACK_ACCESS_DETECTION enabled. Reduces profiling speed.")
-        endif()
-endif()
 
 # end of compiler flags
 

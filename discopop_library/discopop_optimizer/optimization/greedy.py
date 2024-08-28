@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Set, Tuple, cast
 
 from sympy import Expr
 import tqdm  # type: ignore
-from discopop_explorer.PEGraphX import NodeID  # type: ignore
+from discopop_explorer.aliases.NodeID import NodeID
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
@@ -157,7 +157,7 @@ def greedy_search(
     )
 
 
-def __get_dicision_list(decisions_dict):
+def __get_dicision_list(decisions_dict: Dict[int, List[List[int]]]) -> List[int]:
     """Converts a dictionary based description of a configuration into a list of integers"""
     res_list = []
     for function in decisions_dict:
@@ -169,14 +169,14 @@ def __get_dicision_list(decisions_dict):
 def __initialize_cost_caluclation_worker(
     experiment: Experiment,
     arguments: OptimizerArguments,
-):
+) -> None:
     global global_experiment
     global global_arguments
     global_experiment = experiment
     global_arguments = arguments
 
 
-def __get_score(param_tuple) -> Tuple[Dict[int, List[List[int]]], int, ContextObject]:
+def __get_score(param_tuple: Dict[int, List[List[int]]]) -> Tuple[Dict[int, List[List[int]]], int, ContextObject]:
     global global_experiment
     global global_arguments
     configuration = param_tuple

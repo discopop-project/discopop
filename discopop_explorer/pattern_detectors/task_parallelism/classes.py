@@ -9,12 +9,15 @@
 from enum import Enum
 from typing import List, Optional
 
-from discopop_explorer.PEGraphX import Node, MWType, PEGraphX
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.Node import Node
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.enums.MWType import MWType
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 
 
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-# from discopop_explorer.utils import total_instructions_count, calculate_workload
+# from discopop_explorer.utilities import total_instructions_count, calculate_workload
 
 
 class Task(object):
@@ -22,8 +25,8 @@ class Task(object):
 
     nodes: List[Node]
     child_tasks: List["Task"]
-    start_line: str
-    end_line: str
+    start_line: LineID
+    end_line: LineID
 
     def __init__(self, pet: PEGraphX, node: Node):
         self.node_id = node.id
@@ -47,7 +50,7 @@ class Task(object):
         self.workload = 0
         self.child_tasks = []
 
-    def aggregate(self, other: "Task"):
+    def aggregate(self, other: "Task") -> None:
         """Aggregates given task into current task
 
         :param other: task to aggregate
@@ -70,7 +73,16 @@ class TPIType(Enum):
 class TaskParallelismInfo(PatternInfo):
     """Class, that contains task parallelism detection result"""
 
-    def __init__(self, node: Node, type: TPIType, pragma, pragma_line, first_private, private, shared):
+    def __init__(
+        self,
+        node: Node,
+        type: TPIType,
+        pragma: List[str],
+        pragma_line: str,
+        first_private: List[str],
+        private: List[str],
+        shared: List[str],
+    ):
         """
         :param node: node, where task parallelism was detected
         :param type: type of the suggestion (task, taskwait, taskloop)
@@ -99,7 +111,7 @@ class TaskParallelismInfo(PatternInfo):
         self.atomic_sections: List[str] = []
         self.task_group: List[int] = []
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Task parallelism at CU: {self.node_id}\n"
             f"CU Start line: {self.start_line}\n"
@@ -123,14 +135,14 @@ class TaskParallelismInfo(PatternInfo):
 class ParallelRegionInfo(PatternInfo):
     """Class, that contains parallel region info."""
 
-    def __init__(self, node: Node, type: TPIType, region_start_line, region_end_line):
+    def __init__(self, node: Node, type: TPIType, region_start_line: LineID, region_end_line: LineID):
         PatternInfo.__init__(self, node)
         self.region_start_line = region_start_line
         self.region_end_line = region_end_line
         self.pragma = "#pragma omp parallel\n\t#pragma omp single"
         self.type = type
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Task Parallel Region at CU: {self.node_id}\n"
             f"CU Start line: {self.start_line}\n"
@@ -157,13 +169,13 @@ class OmittableCuInfo(PatternInfo):
         self.out_dep: List[Optional[str]] = []
         self.in_out_dep: List[Optional[str]] = []
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Omittable CU: {self.node_id}\n"
             f"CU Start line: {self.start_line}\n"
             f"CU End line: {self.end_line}\n"
             f"Combinable with: {self.cwn_id}\n"
-            f'in_dep: {" ".join(self.in_dep)}\n'
-            f'out_dep: {" ".join(self.out_dep)}\n'
-            f'in_out_dep: {" ".join(self.in_out_dep)}\n'
+            f'in_dep: {" ".join([str(s) for s in self.in_dep])}\n'
+            f'out_dep: {" ".join([str(s) for s in self.out_dep])}\n'
+            f'in_out_dep: {" ".join([str(s) for s in self.in_out_dep])}\n'
         )

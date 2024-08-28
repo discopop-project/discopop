@@ -6,11 +6,12 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
-from typing import Set, cast, Tuple, List, Dict
+from typing import Callable, Set, cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
 from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
 
+from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Microbench.utils import (
     convert_discopop_to_microbench_workload,
@@ -28,7 +29,10 @@ suggestion_device_types = [CPU, GPU]
 
 
 def import_suggestion(
-    graph: nx.DiGraph, suggestion, get_next_free_node_id_function, environment: Experiment
+    graph: nx.DiGraph,
+    suggestion: ReductionInfo,
+    get_next_free_node_id_function: Callable[[], int],
+    environment: Experiment,
 ) -> nx.DiGraph:
     # find a node which belongs to the suggestion
     buffer = [n for n in graph.nodes]

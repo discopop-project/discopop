@@ -92,7 +92,7 @@ def parse_args() -> OptimizerArguments:
     )
 
 
-def main():
+def main() -> None:
     arguments = parse_args()
 
     setup_logger(arguments)

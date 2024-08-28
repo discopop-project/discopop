@@ -6,6 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from typing import Dict
+
+from sympy import Integer
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 
@@ -13,8 +15,8 @@ from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum i
 class CPU(Device):
     def __init__(
         self,
-        frequency,
-        thread_count,
+        frequency: Integer,
+        thread_count: Integer,
         openmp_device_id: int,
         device_specific_compiler_flags: str,
         speedup: float,

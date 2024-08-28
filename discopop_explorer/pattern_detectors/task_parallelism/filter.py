@@ -8,8 +8,14 @@
 
 from typing import List, Dict, cast, Optional, Union
 
-from discopop_explorer.PEGraphX import CUNode, NodeType, EdgeType, Node, PEGraphX
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.Node import Node
+from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
     ParallelRegionInfo,
@@ -38,7 +44,9 @@ def filter_data_sharing_clauses(
     return suggestions
 
 
-def __filter_data_sharing_clauses_suppress_shared_loop_index(pet: PEGraphX, suggestions: List[PatternInfo]):
+def __filter_data_sharing_clauses_suppress_shared_loop_index(
+    pet: PEGraphX, suggestions: List[PatternInfo]
+) -> List[PatternInfo]:
     """Removes clauses for shared loop indices.
     :param pet: PET graph
     :param suggestions: List[PatternInfo]
@@ -120,7 +128,9 @@ def __filter_data_sharing_clauses_by_function(
     return suggestions
 
 
-def __filter_shared_clauses(suggestion: TaskParallelismInfo, parent_function, var_def_line_dict: Dict[str, List[str]]):
+def __filter_shared_clauses(
+    suggestion: TaskParallelismInfo, parent_function: Node, var_def_line_dict: Dict[str, List[str]]
+) -> None:
     """helper function for filter_data_sharing_clauses_by_function.
     Filters shared clauses.
     :param suggestion: Suggestion to be checked
@@ -153,7 +163,9 @@ def __filter_shared_clauses(suggestion: TaskParallelismInfo, parent_function, va
     suggestion.shared = [v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed]
 
 
-def __filter_private_clauses(suggestion: TaskParallelismInfo, parent_function, var_def_line_dict: Dict[str, List[str]]):
+def __filter_private_clauses(
+    suggestion: TaskParallelismInfo, parent_function: Node, var_def_line_dict: Dict[str, List[str]]
+) -> None:
     """helper function for filter_data_sharing_clauses_by_function.
     Filters private clauses.
     :param suggestion: Suggestion to be checked
@@ -191,8 +203,8 @@ def __filter_private_clauses(suggestion: TaskParallelismInfo, parent_function, v
 
 
 def __filter_firstprivate_clauses(
-    suggestion: TaskParallelismInfo, parent_function, var_def_line_dict: Dict[str, List[str]]
-):
+    suggestion: TaskParallelismInfo, parent_function: Node, var_def_line_dict: Dict[str, List[str]]
+) -> None:
     """helper function for filter_data_sharing_clauses_by_function.
     Filters firstprivate clauses.
     :param suggestion: Suggestion to be checked
@@ -221,7 +233,9 @@ def __filter_firstprivate_clauses(
     suggestion.first_private = [v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed]
 
 
-def __reverse_reachable_w_o_breaker(pet: PEGraphX, root: Node, target: Node, breaker_cu: Node, visited: List[Node]):
+def __reverse_reachable_w_o_breaker(
+    pet: PEGraphX, root: Node, target: Node, breaker_cu: Node, visited: List[Node]
+) -> bool:
     """Helper function for filter_data_sharing_clauses_by_scope.
     Checks if target is reachable by traversing the successor graph in reverse, starting from root,
     without visiting breaker_cu.
@@ -240,7 +254,7 @@ def __reverse_reachable_w_o_breaker(pet: PEGraphX, root: Node, target: Node, bre
         return False
     recursion_result = False
     # start recursion for each incoming edge
-    for tmp_e in pet.in_edges(root.id, EdgeType.SUCCESSOR):
+    for tmp_e in in_edges(pet, root.id, EdgeType.SUCCESSOR):
         recursion_result = recursion_result or __reverse_reachable_w_o_breaker(
             pet, pet.node_at(tmp_e[0]), target, breaker_cu, visited
         )
@@ -289,9 +303,9 @@ def __filter_sharing_clause(
     pet: PEGraphX,
     suggestion: TaskParallelismInfo,
     var_def_line_dict: Dict[str, List[str]],
-    parent_function_cu,
+    parent_function_cu: Node,
     target_clause_list: str,
-):
+) -> None:
     """Helper function for filter_data_sharing_clauses_by_scope.
     Filters a given suggestions private, firstprivate or shared variables list,
     depending on the specific value of target_clause_list.
@@ -329,7 +343,7 @@ def __filter_sharing_clause(
                 to_be_removed.append(var)
                 continue
             # 2. check if task suggestion is child of same nodes as var_def_cu
-            for in_child_edge in pet.in_edges(var_def_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
+            for in_child_edge in in_edges(pet, var_def_cu.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
                 parent_cu = pet.node_at(in_child_edge[0])
                 # check if task suggestion cu is reachable from parent via child edges
                 if not check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):
@@ -377,8 +391,8 @@ def remove_useless_barrier_suggestions(
     # remove suggested barriers which are no descendants of relevant functions
     result_suggestions += task_suggestions
     for tws in taskwait_suggestions:
-        tws_line_number = tws.pragma_line
-        tws_line_number = tws_line_number[tws_line_number.index(":") + 1 :]
+        tws_line_id = tws.pragma_line
+        tws_line_number = tws_line_id[tws_line_id.index(":") + 1 :]
         for rel_func_body in relevant_function_bodies.keys():
             if check_reachability(pet, tws._node, rel_func_body, [EdgeType.CHILD]):
                 # remove suggested barriers where line number smaller than
@@ -445,7 +459,7 @@ def __filter_in_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(CUNode):
+                            for cu_node in all_nodes(pet, CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -510,7 +524,7 @@ def __filter_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(CUNode):
+                            for cu_node in all_nodes(pet, CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -581,7 +595,7 @@ def __filter_in_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(CUNode):
+                            for cu_node in all_nodes(pet, CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node
@@ -605,7 +619,7 @@ def __filter_in_out_dependencies(
                             # successor + child graph
 
                             # get CU containing line_num
-                            for cu_node in pet.all_nodes(CUNode):
+                            for cu_node in all_nodes(pet, CUNode):
                                 file_id = suggestion._node.start_position().split(":")[0]
                                 test_line = file_id + ":" + line_num
                                 # check if line_num is contained in cu_node

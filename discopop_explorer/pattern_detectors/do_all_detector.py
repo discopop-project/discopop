@@ -7,27 +7,37 @@
 # directory for details.
 import sys
 from multiprocessing import Pool
-from typing import List, Dict, Set, Tuple, cast
+from typing import List, Dict, Optional, Set, Tuple, cast
 import warnings
 
-from alive_progress import alive_bar  # type: ignore
+from discopop_explorer.functions.PEGraph.properties.depends_ignore_readonly import depends_ignore_readonly
+from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
+from discopop_explorer.functions.PEGraph.properties.is_readonly_inside_loop_body import is_readonly_inside_loop_body
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
+from discopop_explorer.functions.PEGraph.queries.variables import get_variables
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
-from .PatternInfo import PatternInfo
-from .reduction_detector import ReductionInfo
-from ..PEGraphX import (
-    CUNode,
-    LoopNode,
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
-    Node,
-    NodeType,
-    EdgeType,
-    LineID,
-    MemoryRegion,
-    DepType,
-    NodeID,
 )
-from ..utils import classify_loop_variables, filter_for_hotspots
-from ..variable import Variable
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.Node import Node
+from discopop_explorer.classes.PEGraph.Dependency import Dependency
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.utils import classify_loop_variables, filter_for_hotspots
+from discopop_explorer.classes.variable import Variable
 
 
 class DoAllInfo(PatternInfo):
@@ -48,7 +58,7 @@ class DoAllInfo(PatternInfo):
         self.scheduling_clause = "static"
         self.collapse_level = 1
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             f"Do-all at: {self.node_id}\n"
             f"Start line: {self.start_line}\n"
@@ -70,7 +80,11 @@ class DoAllInfo(PatternInfo):
 global_pet = None
 
 
-def run_detection(pet: PEGraphX, hotspots, reduction_info: List[ReductionInfo]) -> List[DoAllInfo]:
+def run_detection(
+    pet: PEGraphX,
+    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
+    reduction_info: List[ReductionInfo],
+) -> List[DoAllInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph
@@ -81,7 +95,7 @@ def run_detection(pet: PEGraphX, hotspots, reduction_info: List[ReductionInfo]) 
     global global_pet
     global_pet = pet
     result: List[DoAllInfo] = []
-    nodes = pet.all_nodes(LoopNode)
+    nodes = all_nodes(pet, LoopNode)
 
     # remove reduction loops
     print("ASDF: ", [r.node_id for r in reduction_info])
@@ -111,15 +125,17 @@ def run_detection(pet: PEGraphX, hotspots, reduction_info: List[ReductionInfo]) 
     return result
 
 
-def __initialize_worker(pet):
+def __initialize_worker(pet: PEGraphX) -> None:
     global global_pet
     global_pet = pet
 
 
-def __check_node(param_tuple):
+def __check_node(param_tuple: LoopNode) -> List[DoAllInfo]:
     global global_pet
     local_result = []
     node = param_tuple
+    if global_pet is None:
+        raise ValueError("global_pet is None!")
 
     if __detect_do_all(global_pet, node):
         node.do_all = True
@@ -136,11 +152,11 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
     :param root: root node
     :return: true if do-all
     """
-    subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
+    subnodes = [pet.node_at(t) for s, t, d in out_edges(pet, root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
 
     # get required metadata
     loop_start_lines: List[LineID] = []
-    root_children = pet.subtree_of_type(root_loop, (CUNode, LoopNode))
+    root_children = subtree_of_type(pet, root_loop, (CUNode, LoopNode))
     root_children_cus = [cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU]
     root_children_loops = [cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:
@@ -149,12 +165,12 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
 
     # get parents of root_loop
     parent_loops = __get_parent_loops(pet, root_loop)
-    parent_function_lineid = pet.get_parent_function(root_loop).start_position()
+    parent_function_lineid = get_parent_function(pet, root_loop).start_position()
     called_functions_lineids = __get_called_functions(pet, root_loop)
 
     # get variables which are defined inside the loop
     defined_inside_loop: List[Tuple[Variable, Set[MemoryRegion]]] = []
-    tmp_loop_variables = pet.get_variables(root_children_cus)
+    tmp_loop_variables = get_variables(pet, root_children_cus)
     for var in tmp_loop_variables:
         if ":" in var.defLine:
             file_id = int(var.defLine.split(":")[0])
@@ -165,7 +181,7 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
 
     # check if all subnodes are parallelizable
     file_io_warnings = []
-    for node in pet.subtree_of_type(root_loop, CUNode):
+    for node in subtree_of_type(pet, root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
             file_io_warnings.append(node)
@@ -220,17 +236,21 @@ def __check_loop_dependencies(
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Do-All pattern."""
     # get recursive children of source and target
-    node_1_children_ids = [node.id for node in pet.subtree_of_type(node_1, CUNode)]
-    node_2_children_ids = [node.id for node in pet.subtree_of_type(node_2, CUNode)]
+    node_1_children_ids = [node.id for node in subtree_of_type(pet, node_1, CUNode)]
+    node_2_children_ids = [node.id for node in subtree_of_type(pet, node_2, CUNode)]
 
     # get dependency edges between children nodes
     deps = set()
     for n in node_1_children_ids + node_2_children_ids:
         deps.update(
-            [(s, t, d) for s, t, d in pet.in_edges(n, EdgeType.DATA) if s in node_1_children_ids + node_2_children_ids]
+            [(s, t, d) for s, t, d in in_edges(pet, n, EdgeType.DATA) if s in node_1_children_ids + node_2_children_ids]
         )
         deps.update(
-            [(s, t, d) for s, t, d in pet.out_edges(n, EdgeType.DATA) if t in node_1_children_ids + node_2_children_ids]
+            [
+                (s, t, d)
+                for s, t, d in out_edges(pet, n, EdgeType.DATA)
+                if t in node_1_children_ids + node_2_children_ids
+            ]
         )
 
     # get memory regions which are defined inside the loop
@@ -239,10 +259,6 @@ def __check_loop_dependencies(
         memory_regions_defined_in_loop.update(mem_regs)
 
     for source, target, dep in deps:
-
-        if root_loop.start_position() == "1:153":
-            pass
-
         # todo: move this calculation to the innermost point possible to reduce computation costs
         # get metadata for dependency
         dep_source_nesting_level = __calculate_nesting_level(pet, root_loop, source)
@@ -250,7 +266,8 @@ def __check_loop_dependencies(
         max_considered_intra_iteration_dep_level = max(dep_source_nesting_level, dep_target_nesting_level)
 
         # check if targeted variable is readonly inside loop
-        if pet.is_readonly_inside_loop_body(
+        if is_readonly_inside_loop_body(
+            pet,
             dep,
             root_loop,
             root_children_cus,
@@ -261,8 +278,18 @@ def __check_loop_dependencies(
             continue
 
         # check if targeted variable is loop index
-        if pet.is_loop_index(dep.var_name, loop_start_lines, root_children_cus):
+        if is_loop_index(pet, dep.var_name, loop_start_lines, root_children_cus):
             continue
+
+        # if metadata exists, ignore dependencies where either source or sink do not lie within root_loop
+        if dep.metadata_source_ancestors is not None and dep.metadata_sink_ancestors is not None:
+            if len(dep.metadata_source_ancestors) > 0 and len(dep.metadata_sink_ancestors) > 0:
+                if not (
+                    (root_loop.start_position() in dep.metadata_sink_ancestors)
+                    and root_loop.start_position() in dep.metadata_source_ancestors
+                ):
+                    tmp = root_loop.start_position()
+                    continue
 
         # targeted variable is not read-only
         if dep.dtype == DepType.INIT:
@@ -270,28 +297,98 @@ def __check_loop_dependencies(
         elif dep.dtype == DepType.RAW:
             # check RAW dependencies
             # RAW problematic, if it is not an intra-iteration RAW
-            if not dep.intra_iteration:
-                return True
-            # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
+            if (
+                dep.metadata_intra_iteration_dep is None
+                or dep.metadata_inter_iteration_dep is None
+                or dep.metadata_intra_call_dep is None
+                or dep.metadata_inter_call_dep is None
+            ):
+                # no metadata created
+                if not dep.intra_iteration:
+                    return True
+                else:
+                    if dep.intra_iteration_level <= max_considered_intra_iteration_dep_level:
+                        if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
+                            pass
+                        else:
+                            return True
             else:
-                if dep.intra_iteration_level <= max_considered_intra_iteration_dep_level:
-                    if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
-                        pass
-                    else:
-                        return True
+                # metadata exists
+                cond_1 = (len(dep.metadata_intra_iteration_dep) == 0) and parent_function_lineid in (
+                    dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else []
+                )
+                cond_2 = len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0
+                cond_3 = len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0
+                cond_4 = root_loop.start_position() in dep.metadata_inter_iteration_dep
+                # if cond_1 or cond_2 or cond_3:
+                if cond_2 or cond_4:
+                    return True
+                # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
+                else:
+                    if dep.intra_iteration_level <= max_considered_intra_iteration_dep_level:
+                        if pet.node_at(source) in root_children_cus and pet.node_at(target) in root_children_cus:
+                            pass
+                        else:
+                            # check if metadata exists
+                            if dep.metadata_intra_iteration_dep is not None:
+                                for t in dep.metadata_intra_iteration_dep:
+                                    if t in parent_loops:
+                                        return True
+                                return False
+                            else:
+                                return True
 
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
-            if not dep.intra_iteration:
-                if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
-                    # check if variable is defined inside loop
-                    if dep.memory_region not in memory_regions_defined_in_loop:
+            if dep.metadata_intra_iteration_dep is None:
+                # no metadata created
+                if not dep.intra_iteration:
+                    if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
+                        # check if variable is defined inside loop
+                        if dep.memory_region not in memory_regions_defined_in_loop:
+                            return True
+                # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
+                elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
+                    return True
+
+            else:
+                # metadata exists
+                if (
+                    not dep.intra_iteration
+                    and (dep.metadata_intra_iteration_dep is None or len(dep.metadata_intra_iteration_dep) == 0)
+                    and parent_function_lineid
+                    in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
+                ) or (
+                    (
+                        False
+                        if dep.metadata_inter_call_dep is None
+                        else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
+                    )
+                    and (
+                        False
+                        if dep.metadata_inter_iteration_dep is None
+                        else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
+                    )
+                ):
+                    if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
+                        # check if variable is defined inside loop
+                        if dep.memory_region not in memory_regions_defined_in_loop:
+                            return True
+                        # check if the definitions of the accessed variable originates from a function call
+                        if __check_for_problematic_function_argument_access(pet, source, target, dep):
+                            return True
+                # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
+                elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
+                    tmp_nesting_level = root_loop.get_nesting_level(pet)
+                    # check if metadata exists
+                    if len(dep.metadata_intra_iteration_dep) != 0:
+                        for t in dep.metadata_intra_iteration_dep:
+                            if t in parent_loops:
+                                return True
+                        return False
+                    else:
                         return True
-            # if it is an intra iteration dependency, it is problematic if it belongs to a parent loop
-            elif dep.intra_iteration_level > root_loop.get_nesting_level(pet):
-                tmp = root_loop.get_nesting_level(pet)
-                return True
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
             # handled by variable classification
@@ -310,10 +407,10 @@ def __old_detect_do_all(pet: PEGraphX, root_loop: CUNode) -> bool:
     :param root: root node
     :return: true if do-all
     """
-    subnodes = [pet.node_at(t) for s, t, d in pet.out_edges(root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
+    subnodes = [pet.node_at(t) for s, t, d in out_edges(pet, root_loop.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
 
     # check if all subnodes are parallelizable
-    for node in pet.subtree_of_type(root_loop, CUNode):
+    for node in subtree_of_type(pet, root_loop, CUNode):
         if node.performs_file_io:
             # node is not reliably parallelizable as some kind of file-io is performed.
             return False
@@ -322,13 +419,13 @@ def __old_detect_do_all(pet: PEGraphX, root_loop: CUNode) -> bool:
         children_cache: Dict[CUNode, List[CUNode]] = dict()
         dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
         for j in range(i, len(subnodes)):
-            if pet.depends_ignore_readonly(subnodes[i], subnodes[j], root_loop):
+            if depends_ignore_readonly(pet, subnodes[i], subnodes[j], root_loop):
                 return False
 
     return True
 
 
-def __calculate_nesting_level(pet: PEGraphX, root_loop: LoopNode, cu_node_id: str):
+def __calculate_nesting_level(pet: PEGraphX, root_loop: LoopNode, cu_node_id: str) -> int:
     potential_parents = [(cu_node_id, -1)]  # -1 to offset the initialization with cu_node_id
     while True:
         if len(potential_parents) == 0:
@@ -339,11 +436,11 @@ def __calculate_nesting_level(pet: PEGraphX, root_loop: LoopNode, cu_node_id: st
             # found
             return nesting_level
         # add new parents to the queue
-        for in_child_edge in pet.in_edges(cast(NodeID, current_node_id), EdgeType.CHILD):
+        for in_child_edge in in_edges(pet, cast(NodeID, current_node_id), EdgeType.CHILD):
             potential_parents.append((in_child_edge[0], nesting_level + 1))
 
 
-def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode):
+def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
     """duplicates exists: do_all_detector <-> reduction_detector !"""
     parents: List[NodeID] = []
     queue = [root_loop.id]
@@ -355,15 +452,14 @@ def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode):
             parents.append(current)
 
         # process incoming child edges
-        for s, t, e in pet.in_edges(current, EdgeType.CHILD):
+        for s, t, e in in_edges(pet, current, EdgeType.CHILD):
             if s not in visited and s not in queue:
                 queue.append(s)
         # process incoming call edges
-        for s, t, e in pet.in_edges(current, EdgeType.CALLSNODE):
+        for s, t, e in in_edges(pet, current, EdgeType.CALLSNODE):
             if s not in visited and s not in queue:
                 queue.append(s)
 
-    parents.remove(root_loop.id)
     return [pet.node_at(p).start_position() for p in parents]
 
 
@@ -377,12 +473,44 @@ def __get_called_functions(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
         current = queue.pop()
         visited.add(current)
         # get called functions
-        for s, t, e in pet.out_edges(current, EdgeType.CALLSNODE):
+        for s, t, e in out_edges(pet, current, EdgeType.CALLSNODE):
             called_functions.add(t)
         # add children to queue
-        for s, t, e in pet.out_edges(current, EdgeType.CHILD):
+        for s, t, e in out_edges(pet, current, EdgeType.CHILD):
             if t not in queue and t not in visited:
                 queue.append(t)
 
     # convert node ids of called functions to line ids
     return [pet.node_at(n).start_position() for n in called_functions]
+
+
+def __check_for_problematic_function_argument_access(
+    pet: PEGraphX, source: NodeID, target: NodeID, dep: Dependency
+) -> bool:
+    """duplicates exists: do_all_detector <-> reduction_detector !"""
+    # check if the "same" function argument is accessed and it is a pointer type.
+    # if so, return True. Else. return false
+
+    # find accessed function argument for source
+    source_pf = get_parent_function(pet, pet.node_at(source))
+    source_accessed_pf_args = [a for a in source_pf.args if a.name == dep.var_name]
+    if len(source_accessed_pf_args) == 0:
+        return False
+
+    # find accessed function argument for target
+    target_pf = get_parent_function(pet, pet.node_at(target))
+    target_accessed_pf_args = [a for a in target_pf.args if a.name == dep.var_name]
+    if len(target_accessed_pf_args) == 0:
+        return False
+
+    # check for overlap in accessed args
+
+    for source_a in source_accessed_pf_args:
+        for target_a in target_accessed_pf_args:
+            if source_a == target_a:
+                # found overlap
+                # check for pointer type
+                if "*" in source_a.type:
+                    return True
+    # not problematic
+    return False

@@ -20,5 +20,5 @@ class Pragma(object):
     parent_cu_id: str = ""
     children: List[Any] = []
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.children = []  # create individual list for each Pragma object to prevent bugs due to mutability

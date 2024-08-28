@@ -21,12 +21,15 @@ configure_file(MPI_LINKER_wrapper.sh MPI_LINKER_wrapper.sh COPYONLY)
 # create symlinks to files
 set(DP_LOCAL_BIN_DIR "$ENV{HOME}/.local/bin")
 if(EXISTS ${DP_LOCAL_BIN_DIR})
+    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_cc)
     message(STATUS "Creating symlink ${DP_LOCAL_BIN_DIR}/discopop_cc to ${CMAKE_CURRENT_BINARY_DIR}/CC_wrapper.sh")
     execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CC_wrapper.sh ${DP_LOCAL_BIN_DIR}/discopop_cc)
 
+    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_cxx)
     message(STATUS "Creating symlink ${DP_LOCAL_BIN_DIR}/discopop_cxx to ${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh")
     execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh ${DP_LOCAL_BIN_DIR}/discopop_cxx)
 
+    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_cmake)
     message(STATUS "Creating symlink ${DP_LOCAL_BIN_DIR}/discopop_cmake to ${CMAKE_CURRENT_BINARY_DIR}/CMAKE_wrapper.sh")
     execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CMAKE_wrapper.sh ${DP_LOCAL_BIN_DIR}/discopop_cmake)
 else()

@@ -8,9 +8,12 @@
 from typing import Dict, List, Optional, Set, Tuple, cast
 
 import networkx as nx  # type: ignore
-from discopop_explorer.PEGraphX import EdgeType, MemoryRegion
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.enums.EdgeType import EdgeType
 
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
+from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
 from discopop_library.discopop_optimizer.classes.nodes.DeviceSwitch import DeviceSwitch
@@ -30,7 +33,7 @@ from discopop_library.discopop_optimizer.utilities.simple_utilities import data_
 
 
 def calculate_data_transfers(
-    graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]], experiment
+    graph: nx.DiGraph, function_performance_models: Dict[FunctionRoot, List[CostModel]], experiment: Experiment
 ) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
     """Calculate data transfers for each performance model and append the respective ContextObject to the result."""
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
@@ -51,7 +54,7 @@ def get_path_context_iterative(
     graph: nx.DiGraph,
     model: CostModel,
     context: ContextObject,
-    experiment,
+    experiment: Experiment,
     top_level_call: bool = False,
 ) -> ContextObject:
     """passes the context Object along the path and returns the context once the end has been reached"""
@@ -154,13 +157,15 @@ def get_path_context_iterative(
             node_data = data_at(graph, node)
             if node_data.original_cu_id is None:
                 continue
-            for out_dep_edge in experiment.detection_result.pet.out_edges(
-                node_data.original_cu_id, etype=EdgeType.DATA
+            for out_dep_edge in out_edges(
+                experiment.detection_result.pet, node_data.original_cu_id, etype=EdgeType.DATA
             ):
                 target = out_dep_edge[1]
                 if target in cu_nodes_in_function:
                     continue
                 # target outside the function. MemoryRegions qualifies for synchronization at the end of the function
+                if out_dep_edge[2].memory_region is None:
+                    raise ValueError("Value is None!")
                 filter.add(out_dep_edge[2].memory_region)
 
         # collect all write data accesses which might need synchronization
@@ -193,7 +198,7 @@ def get_path_context_iterative(
 
 
 def get_path_context(
-    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment
+    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment: Experiment
 ) -> ContextObject:
     """passes the context Object along the path and returns the context once the end has been reached"""
     # push device id to stack if necessary
@@ -271,7 +276,7 @@ def get_path_context(
 
 
 def __check_current_node(
-    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment
+    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment: Experiment
 ) -> ContextObject:
     """Check if the given node results in modifications to the given context.
     Return a modified version of the context which contains the required updates."""
@@ -344,7 +349,7 @@ def __check_current_node(
 
 
 def __check_children(
-    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment
+    node_id: int, graph: nx.DiGraph, model: CostModel, context: ContextObject, experiment: Experiment
 ) -> ContextObject:
     # pass context to all children
     for child in get_children(graph, node_id):

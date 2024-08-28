@@ -274,7 +274,7 @@ def __get_function_information(cu_xml: str) -> List[Dict[str, Any]]:
     return function_information
 
 
-def __create_statements_file(file_mapping: str, output_file: str, application_path: str):
+def __create_statements_file(file_mapping: str, output_file: str, application_path: str) -> None:
     """Wrapper to start getStatements application for each source code file in file_mapping
     :param file_mapping: path to file_mapping file
     :param output_file: path to output file

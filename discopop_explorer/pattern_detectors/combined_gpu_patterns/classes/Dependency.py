@@ -8,7 +8,8 @@
 
 from typing import Set
 
-from discopop_explorer.PEGraphX import NodeID, MemoryRegion
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -32,7 +33,7 @@ class Dependency(object):
         self.var_names = var_names
         self.memory_regions = memory_regions
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             "Dependency("
             + self.source

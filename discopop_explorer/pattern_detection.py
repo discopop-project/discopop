@@ -7,29 +7,30 @@
 # directory for details.
 import json
 import os
-import sys
+from typing import Dict, List, Optional, Tuple, cast
 
 from alive_progress import alive_bar  # type: ignore
 
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import (
     build_preprocessed_graph_and_run_detection as detect_tp,
 )
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
-from discopop_library.discopop_optimizer.OptimizationGraph import OptimizationGraph
-from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.classes.system.System import System
-from discopop_library.discopop_optimizer.scheduling.workload_delta import (
-    get_workload_delta_for_cu_node,
-)
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import get_nodes_from_cu_id
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from .PEGraphX import DummyNode, LoopNode, NodeID, PEGraphX, EdgeType
-from .pattern_detectors.do_all_detector import DoAllInfo, run_detection as detect_do_all
-from .pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
-from .pattern_detectors.pipeline_detector import run_detection as detect_pipeline
-from .pattern_detectors.reduction_detector import run_detection as detect_reduction
-from .pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.DummyNode import DummyNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo, run_detection as detect_do_all
+from discopop_explorer.pattern_detectors.geometric_decomposition_detector import run_detection as detect_gd
+from discopop_explorer.pattern_detectors.pipeline_detector import run_detection as detect_pipeline
+from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo, run_detection as detect_reduction
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
 
 
 class PatternDetectorX(object):
@@ -42,18 +43,18 @@ class PatternDetectorX(object):
         """
         self.pet = pet_graph
 
-    def __merge(self, loop_type: bool, remove_dummies: bool):
+    def __merge(self, loop_type: bool, remove_dummies: bool) -> None:
         """Removes dummy nodes
 
         :param loop_type: loops only
         :param remove_dummies: remove dummy nodes
         """
         dummies_to_remove = set()
-        for node in self.pet.all_nodes():
+        for node in all_nodes(self.pet):
             if not loop_type or isinstance(node, LoopNode):
                 if remove_dummies and isinstance(node, DummyNode):
                     continue
-                for s, t, e in self.pet.out_edges(node.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
+                for s, t, e in out_edges(self.pet, node.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
                     if remove_dummies and isinstance(self.pet.node_at(t), DummyNode):
                         dummies_to_remove.add(t)
 
@@ -62,20 +63,20 @@ class PatternDetectorX(object):
 
     def detect_patterns(
         self,
-        project_path,
-        cu_dict,
-        dependencies,
-        loop_data,
-        reduction_vars,
-        file_mapping,
-        cu_inst_result_file,
-        llvm_cxxfilt_path,
-        discopop_build_path,
-        enable_patterns,
-        enable_task_pattern,
-        enable_detection_of_scheduling_clauses,
-        hotspots,
-    ):
+        project_path: str,
+        cu_dict: str,
+        dependencies: str,
+        loop_data: str,
+        reduction_vars: str,
+        file_mapping: Optional[str],
+        cu_inst_result_file: Optional[str],
+        llvm_cxxfilt_path: Optional[str],
+        discopop_build_path: Optional[str],
+        enable_patterns: str,
+        enable_task_pattern: bool,
+        enable_detection_of_scheduling_clauses: bool,
+        hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
+    ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()
@@ -104,6 +105,10 @@ class PatternDetectorX(object):
 
         # check if task pattern should be enabled
         if enable_task_pattern:
+            if cu_inst_result_file is None:
+                raise ValueError("cu_inst_result_file not specified.")
+            if file_mapping is None:
+                raise ValueError("file_mapping not specified.")
             res.patterns.task = detect_tp(
                 cu_dict,
                 dependencies,
@@ -187,20 +192,20 @@ class PatternDetectorX(object):
 
     def load_existing_doall_and_reduction_patterns(
         self,
-        project_path,
-        cu_dict,
-        dependencies,
-        loop_data,
-        reduction_vars,
-        file_mapping,
-        cu_inst_result_file,
-        llvm_cxxfilt_path,
-        discopop_build_path,
-        enable_patterns,
-        enable_task_pattern,
-        enable_detection_of_scheduling_clauses,
-        hotspots,
-    ):
+        project_path: str,
+        cu_dict: str,
+        dependencies: str,
+        loop_data: str,
+        reduction_vars: str,
+        file_mapping: Optional[str],
+        cu_inst_result_file: Optional[str],
+        llvm_cxxfilt_path: Optional[str],
+        discopop_build_path: Optional[str],
+        enable_patterns: str,
+        enable_task_pattern: bool,
+        enable_detection_of_scheduling_clauses: bool,
+        hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
+    ) -> DetectionResult:
         """skips the pattern discovery on the CU graph and loads a pre-existing pattern file"""
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()
@@ -228,12 +233,12 @@ class PatternDetectorX(object):
         print("PATTERNS:")
         print(pattern_contents)
 
-        def __get_var_obj_from_name(name):
-            return Variable(type="", name=name, defLine="", accessMode="", sizeInByte="0")
+        def __get_var_obj_from_name(name: VarName) -> Variable:
+            return Variable(type="", name=name, defLine="", accessMode="", sizeInByte=0)
 
-        def __get_red_var_obj_from_name(name):
+        def __get_red_var_obj_from_name(name: str) -> Variable:
             split_name = name.split(":")
-            v = Variable(type="", name=split_name[0], defLine="", accessMode="", sizeInByte="0")
+            v = Variable(type="", name=VarName(split_name[0]), defLine="", accessMode="", sizeInByte=0)
             v.operation = split_name[1]
             return v
 
@@ -289,6 +294,6 @@ class PatternDetectorX(object):
             pt.last_private = [__get_var_obj_from_name(v) for v in pattern_dict["last_private"]]
             pt.shared = [__get_var_obj_from_name(v) for v in pattern_dict["shared"]]
             pt.reduction = [__get_red_var_obj_from_name(v) for v in pattern_dict["reduction"]]
-            res.patterns.reduction.append(pt)
+            res.patterns.reduction.append(cast(ReductionInfo, pt))
 
         return res

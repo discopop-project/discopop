@@ -7,16 +7,10 @@
 # directory for details.
 
 
-import json
-from typing import Any, Dict, List
-from discopop_explorer.PEGraphX import Node
-from discopop_explorer.pattern_detectors.PatternBase import PatternBase
+from typing import List
+from discopop_explorer.classes.PEGraph.Node import Node
 
-from discopop_library.PatternIdManagement.unique_pattern_id import get_unique_pattern_id
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.classes.context.Update import Update, construct_update_from_dict
-from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
-from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 

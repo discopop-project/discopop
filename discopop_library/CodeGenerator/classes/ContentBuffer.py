@@ -27,7 +27,7 @@ class ContentBuffer(object):
     line_type: Any
     compile_result_buffer: str
 
-    def __init__(self, file_id: int, source_code_path: Path, tab_width: int = 4, line_type=Line):
+    def __init__(self, file_id: int, source_code_path: Path, tab_width: int = 4, line_type: Any = Line) -> None:
         self.line_type = line_type
         self.file_id = file_id
         self.lines = []
@@ -42,7 +42,7 @@ class ContentBuffer(object):
                 self.lines.append(line_obj)
         self.compile_result_buffer = ""
 
-    def print_lines(self):
+    def print_lines(self) -> None:
         for line in self.lines:
             print(line)
 
@@ -59,7 +59,7 @@ class ContentBuffer(object):
             result += line.content
         return result
 
-    def append_line_before(self, parent_line_num: int, line: Line, match_indentation: bool = True):
+    def append_line_before(self, parent_line_num: int, line: Line, match_indentation: bool = True) -> None:
         """Appends line before the specified parent_line_num"""
         for idx, potential_parent_line in enumerate(self.lines):
             if potential_parent_line.line_num == parent_line_num:
@@ -68,7 +68,7 @@ class ContentBuffer(object):
                 self.lines.insert(idx, line)
                 return
 
-    def append_line_after(self, parent_line_num: int, line: Line, match_indentation: bool = True):
+    def append_line_after(self, parent_line_num: int, line: Line, match_indentation: bool = True) -> None:
         """Appends line after the specified parent_line_num"""
         for idx, potential_parent_line in enumerate(self.lines):
             if potential_parent_line.line_num == parent_line_num:
@@ -88,8 +88,8 @@ class ContentBuffer(object):
         add_as_comment: bool = False,
         skip_compilation_check: bool = False,
         compile_check_command: Optional[str] = None,
-        CC="clang",
-        CXX="clang++",
+        CC: str = "clang",
+        CXX: str = "clang++",
         match_indentation: bool = True,
     ) -> bool:
         """insert pragma into the maintained list of source code lines.

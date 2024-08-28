@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from cProfile import Profile
 import os
 from pathlib import Path
 from typing import Dict, Tuple, Set, Optional, List, Any
@@ -12,18 +13,19 @@ from typing import Dict, Tuple, Set, Optional, List, Any
 import networkx as nx  # type: ignore
 from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
-from discopop_explorer.PEGraphX import MemoryRegion
-from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.PathManagement.PathManagement import load_file_mapping
-from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
-from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
+
+from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.classes.system.System import System
 from discopop_library.result_classes.DetectionResult import DetectionResult
+from discopop_library.discopop_optimizer.classes.system.System import System
 
 
 class Experiment(object):
@@ -76,8 +78,10 @@ class Experiment(object):
     node_id_to_suggestion_dict: Dict[int, int]
     pattern_id_to_decisions_dict: Dict[int, List[int]]
 
-    hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]
+    hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]
     hotspot_function_node_ids: List[int]
+
+    profile: Optional[Profile]
 
     def __init__(
         self,
@@ -86,7 +90,7 @@ class Experiment(object):
         detection_result: DetectionResult,
         profiler_dir: str,
         arguments: OptimizerArguments,
-        hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]],
+        hotspot_functions: Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]],
     ):
         self.__system = system
         self.detection_result = detection_result
@@ -128,12 +132,12 @@ class Experiment(object):
         else:
             return Integer(self.__memory_region_sizes[memory_region]), Integer(0)
 
-    def register_free_symbol(self, symbol: Symbol, value_suggestion: Optional[Expr] = None):
+    def register_free_symbol(self, symbol: Symbol, value_suggestion: Optional[Expr] = None) -> None:
         self.free_symbols.add(symbol)
         if value_suggestion is not None:
             self.suggested_values[symbol] = value_suggestion
 
-    def get_next_free_node_id(self):
+    def get_next_free_node_id(self) -> int:
         buffer = self.next_free_node_id
         self.next_free_node_id += 1
         return buffer

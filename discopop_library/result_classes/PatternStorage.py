@@ -8,8 +8,8 @@
 
 from typing import List, cast
 
-from discopop_explorer.pattern_detectors.PatternBase import PatternBase
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.patterns.PatternBase import PatternBase
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.geometric_decomposition_detector import GDInfo
 from discopop_explorer.pattern_detectors.pipeline_detector import PipelineInfo
@@ -27,7 +27,7 @@ class PatternStorage(object):
     optimizer_output: List[PatternBase]
     merged_pattern: List[PatternBase]
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.optimizer_output = []
         self.merged_pattern = []
 

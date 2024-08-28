@@ -7,19 +7,25 @@
 # directory for details.
 import copy
 import sys
-from typing import Set, Tuple, Dict, List, cast, Optional, Union
+from typing import Any, Set, Tuple, Dict, List, cast, Union
 
 from networkx import MultiDiGraph  # type: ignore
 
-from discopop_explorer.PEGraphX import (
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
-    EdgeType,
-    NodeID,
-    MemoryRegion,
-    DepType,
-    CUNode,
-    FunctionNode,
 )
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.properties.is_predecessor import is_predecessor
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.queries.paths import get_path_nodes_between
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
+from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
@@ -146,8 +152,8 @@ def add_aliases(
     memory_regions_to_functions_and_variables: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]],
 ) -> Set[Update]:
     for update in issued_updates:
-        source_parent_function_node = pet.get_parent_function(pet.node_at(update.synchronous_source_cu_id))
-        sink_parent_function_node = pet.get_parent_function(pet.node_at(update.sink_cu_id))
+        source_parent_function_node = get_parent_function(pet, pet.node_at(update.synchronous_source_cu_id))
+        sink_parent_function_node = get_parent_function(pet, pet.node_at(update.sink_cu_id))
         if source_parent_function_node == sink_parent_function_node:
             # add alias information from function level
             modification_found = True
@@ -218,7 +224,7 @@ def identify_end_of_life_points(
         for mem_reg in memory_region_liveness_by_device[device_id]:
             # check if mem_reg is live in all successors of all contained cu's
             for cu_id in memory_region_liveness_by_device[device_id][mem_reg]:
-                for successor_node in pet.direct_successors(pet.node_at(cu_id)):
+                for successor_node in direct_successors(pet, pet.node_at(cu_id)):
                     if successor_node.id not in memory_region_liveness_by_device[device_id][mem_reg]:
                         # mem_reg is not live anymore. create an EOL point
                         if mem_reg in mem_reg_aliases:
@@ -240,11 +246,11 @@ def identify_end_of_life_points(
             # in both cases, eol is covered by the exit_point and can be ignored
             if (
                 (
-                    pet.is_predecessor(exit_point.source_cu_id, eol[0])
-                    and pet.is_predecessor(exit_point.sink_cu_id, eol[1])
+                    is_predecessor(pet, exit_point.source_cu_id, eol[0])
+                    and is_predecessor(pet, exit_point.sink_cu_id, eol[1])
                 )
-                or pet.is_predecessor(eol[0], exit_point.source_cu_id)
-                and pet.is_predecessor(eol[1], exit_point.sink_cu_id)
+                or is_predecessor(pet, eol[0], exit_point.source_cu_id)
+                and is_predecessor(pet, eol[1], exit_point.sink_cu_id)
             ):
                 # check if memory regions overlap, i.e. if the exit_point covers eol
                 if len([mem_reg for mem_reg in exit_point.memory_regions if mem_reg in eol[2]]) > 0:
@@ -257,7 +263,7 @@ def identify_end_of_life_points(
 
     eol_exit_points: Set[ExitPoint] = set()
     for eol in eol_points:
-        parent_function_node_id = pet.get_parent_function(pet.node_at(eol[0])).id
+        parent_function_node_id = get_parent_function(pet, pet.node_at(eol[0])).id
         var_names: Set[VarName] = set()
         for mem_reg in eol[2]:
             if parent_function_node_id in memory_regions_to_functions_and_variables[mem_reg]:
@@ -265,7 +271,8 @@ def identify_end_of_life_points(
         memory_regions = set(eol[2])
         # check if the exited data is required by another function
         # if so, mark the exit point as ExitPointType.FROM
-        path_nodes = pet.get_path_nodes_between(
+        path_nodes = get_path_nodes_between(
+            pet,
             cast(CUNode, pet.node_at(eol[1])),
             cast(CUNode, pet.node_at(eol[0])),
             [EdgeType.SUCCESSOR, EdgeType.CHILD],
@@ -275,10 +282,10 @@ def identify_end_of_life_points(
         for path_node in path_nodes:
             in_raw_edges_from_outside += [
                 (s, t, d)
-                for s, t, d in pet.in_edges(path_node.id, EdgeType.DATA)
+                for s, t, d in in_edges(pet, path_node.id, EdgeType.DATA)
                 if d.dtype == DepType.RAW
                 and d.memory_region in memory_regions
-                and pet.get_parent_function(pet.node_at(s)) != pet.get_parent_function(pet.node_at(t))
+                and get_parent_function(pet, pet.node_at(s)) != get_parent_function(pet, pet.node_at(t))
             ]
         if len(in_raw_edges_from_outside) > 0:
             # value is read -> Copy back to the host so the value does not get discarded
@@ -300,7 +307,7 @@ def extend_region_liveness_using_unrolled_functions(
 ) -> Dict[MemoryRegion, List[NodeID]]:
     # TODO: potential optimization: invert the 'liveness' dict to allow faster membership check
 
-    for function in pet.all_nodes(FunctionNode):
+    for function in all_nodes(pet, FunctionNode):
         print("FUNCTION: ", function.name)
         unrolled_function_graph = unrolled_function_graphs[function]
         queue: List[Tuple[NodeID, MemoryRegion, List[NodeID]]] = []
@@ -337,7 +344,9 @@ def extend_region_liveness_using_unrolled_functions(
     return liveness
 
 
-def remove_duplicates(target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPoint]]):
+def remove_duplicates(
+    target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPoint]]
+) -> Union[Set[Update], Set[EntryPoint], Set[ExitPoint]]:
     to_be_removed = []
     for element_1 in target_set:
         for element_2 in target_set:
@@ -353,8 +362,8 @@ def remove_duplicates(target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPo
     return target_set
 
 
-def join_elements(target_set):
-    grouping_dict = dict()
+def join_update_elements(target_set: Set[Update]) -> Set[Update]:
+    grouping_dict: Dict[Any, List[Any]] = dict()
 
     for elem in target_set:
         if elem.get_position_identifier() not in grouping_dict:
@@ -365,11 +374,58 @@ def join_elements(target_set):
 
     for key in grouping_dict:
         # assemble a single EntryPoint
-        joined_entry_point: Optional[EntryPoint] = None
+        joined_entry_point = None
+        for elem in grouping_dict[key]:
+            if joined_entry_point is None:
+                joined_entry_point = elem
+            else:
+                joined_entry_point.join(elem)
+        result_set.add(cast(Update, joined_entry_point))
+
+    return result_set
+
+
+def join_entryPoint_elements(target_set: Set[EntryPoint]) -> Set[EntryPoint]:
+    grouping_dict: Dict[Any, List[Any]] = dict()
+
+    for elem in target_set:
+        if elem.get_position_identifier() not in grouping_dict:
+            grouping_dict[elem.get_position_identifier()] = []
+        grouping_dict[elem.get_position_identifier()].append(elem)
+
+    result_set = set()
+
+    for key in grouping_dict:
+        # assemble a single EntryPoint
+        joined_entry_point = None
         for elem in grouping_dict[key]:
             if joined_entry_point is None:
                 joined_entry_point = elem
             else:
                 joined_entry_point.join(elem)
         result_set.add(cast(EntryPoint, joined_entry_point))
+
+    return result_set
+
+
+def join_exitPoint_elements(target_set: Set[ExitPoint]) -> Set[ExitPoint]:
+    grouping_dict: Dict[Any, List[Any]] = dict()
+
+    for elem in target_set:
+        if elem.get_position_identifier() not in grouping_dict:
+            grouping_dict[elem.get_position_identifier()] = []
+        grouping_dict[elem.get_position_identifier()].append(elem)
+
+    result_set = set()
+
+    for key in grouping_dict:
+        # assemble a single EntryPoint
+        joined_entry_point = None
+        for elem in grouping_dict[key]:
+            if joined_entry_point is None:
+                joined_entry_point = elem
+            else:
+                joined_entry_point.join(elem)
+        result_set.add(cast(ExitPoint, joined_entry_point))
+
     return result_set

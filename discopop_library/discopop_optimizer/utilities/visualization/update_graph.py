@@ -29,7 +29,7 @@ from networkx.drawing.nx_pydot import graphviz_layout  # type: ignore
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
 
 
-def show_update_graph(graph, configuration: OptimizerOutputPattern, experiment: Experiment):
+def show_update_graph(graph: nx.DiGraph, configuration: OptimizerOutputPattern, experiment: Experiment) -> None:
     matplotlib.use("TkAgg")
     fig, ax = plt.subplots()
     try:
@@ -175,7 +175,7 @@ def show_update_graph(graph, configuration: OptimizerOutputPattern, experiment: 
     for idx, node in enumerate(graph.nodes):
         idx_to_node_dict[idx] = node
 
-    def update_annot(ind, node_ids_list):
+    def update_annot(ind: Any, node_ids_list: Any) -> None:
         node_idx = ind["ind"][0]
         node_id = node_ids_list[node_idx]
         xy = pos[node_id]
@@ -185,7 +185,7 @@ def show_update_graph(graph, configuration: OptimizerOutputPattern, experiment: 
         text = data_at(graph, node_id).get_hover_text()
         annot.set_text(text)
 
-    def hover(event):
+    def hover(event: Any) -> None:
         vis = annot.get_visible()
         if event.inaxes == ax:
             for node_type in node_insertion_sequence:
@@ -195,11 +195,11 @@ def show_update_graph(graph, configuration: OptimizerOutputPattern, experiment: 
                     if cont:
                         update_annot(ind, node_ids[node_type])
                         annot.set_visible(True)
-                        fig.canvas.draw_idle()
+                        fig.canvas.draw_idle()  # type: ignore
                     else:
                         if vis:
                             annot.set_visible(False)
-                            fig.canvas.draw_idle()
+                            fig.canvas.draw_idle()  # type: ignore
                 except TypeError:
                     pass
 

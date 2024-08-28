@@ -73,10 +73,10 @@ class Microbench(ABC):
         type: MicrobenchType,
         dim: MicrobenchDimension,
         iterations: int,
-        threads=range(1, 9),
-        workloads=range(0, 201),
+        threads: range = range(1, 9),
+        workloads: range = range(0, 201),
         file: Optional[Path] = None,
-    ):
+    ) -> None:
         logging.info("plotting interpolation to %s", str(file.absolute() if file else "<screen>"))
         # coords = list(self.getMeasurements()[type][dim].keys())
         # minWorkload = coords[0].workload

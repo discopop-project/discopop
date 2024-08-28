@@ -6,29 +6,38 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Tuple, Dict, Set, cast
+from typing import List, Tuple, Dict, Set, cast
 
-from discopop_explorer.PEGraphX import EdgeType, DepType, PEGraphX, NodeID, CUNode, MemoryRegion
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
+from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
 
 
 def get_written_and_read_memory_regions_by_cu(
-    contained_regions, pet: PEGraphX
+    contained_regions: List[GPURegionInfo], pet: PEGraphX
 ) -> Tuple[Dict[NodeID, Set[MemoryRegion]], Dict[NodeID, Set[MemoryRegion]]]:
     all_function_cu_ids: Set[NodeID] = set()
     for region in contained_regions:
-        parent_function = pet.get_parent_function(pet.node_at(region.node_id))
+        parent_function = get_parent_function(pet, pet.node_at(region.node_id))
 
-        subtree = pet.subtree_of_type(parent_function, CUNode)
+        subtree = subtree_of_type(pet, parent_function, CUNode)
         all_function_cu_ids.update([NodeID(n.id) for n in subtree])
 
     written_memory_regions_by_cu_id: Dict[NodeID, Set[MemoryRegion]] = dict()
     read_memory_regions_by_cu_id: Dict[NodeID, Set[MemoryRegion]] = dict()
     for cu_id in all_function_cu_ids:
-        in_dep_edges = pet.in_edges(cu_id, EdgeType.DATA)
-        out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
+        in_dep_edges = in_edges(pet, cu_id, EdgeType.DATA)
+        out_dep_edges = out_edges(pet, cu_id, EdgeType.DATA)
 
         written_memory_regions = [
             MemoryRegion(cast(str, d.memory_region))
@@ -67,16 +76,16 @@ def get_written_and_read_memory_regions_by_cu(
 
 
 def get_cu_and_varname_to_memory_regions(
-    contained_regions, pet: PEGraphX, written_memory_regions_by_cu: Dict[NodeID, Set[MemoryRegion]]
+    contained_regions: List[GPURegionInfo], pet: PEGraphX, written_memory_regions_by_cu: Dict[NodeID, Set[MemoryRegion]]
 ) -> Dict[NodeID, Dict[VarName, Set[MemoryRegion]]]:
     # dict -> {Cu_ID: {var_name: [memory regions]}}
     result_dict: Dict[NodeID, Dict[VarName, Set[MemoryRegion]]] = dict()
 
     all_function_cu_ids: Set[NodeID] = set()
     for region in contained_regions:
-        parent_function = pet.get_parent_function(pet.node_at(region.node_id))
+        parent_function = get_parent_function(pet, pet.node_at(region.node_id))
 
-        subtree = pet.subtree_of_type(parent_function, CUNode)
+        subtree = subtree_of_type(pet, parent_function, CUNode)
         all_function_cu_ids.update([NodeID(n.id) for n in subtree])
 
     for cu_id in all_function_cu_ids:
@@ -85,7 +94,7 @@ def get_cu_and_varname_to_memory_regions(
 
         # only out_deps considered, as in_deps might use variable names
         # which originate from different source code scopes
-        out_dep_edges = pet.out_edges(cu_id, EdgeType.DATA)
+        out_dep_edges = out_edges(pet, cu_id, EdgeType.DATA)
         for _, _, dep in out_dep_edges:
             if dep.var_name is None or dep.memory_region is None or len(dep.memory_region) == 0:
                 continue

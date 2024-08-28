@@ -18,36 +18,33 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType, get_HotspotT
 FILEID = int
 STARTLINE = int
 NAME = str
+AVERAGE_RUNTIME = float
 
 
-def run(arguments: HotspotLoaderArguments) -> Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME]]]:
+def run(
+    arguments: HotspotLoaderArguments,
+) -> Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME, AVERAGE_RUNTIME]]]:
     """Loads Hotspots for processing in other tools of the framework"""
-    if arguments.verbose:
-        print("HotspotLoader - Configuration:")
-        print(arguments)
 
     logger = logging.getLogger("HotspotLoader")
-    logger.info("LOADING HOTSPOTS")
 
-    result_dict: Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME]]] = dict()
+    dot_discopop_path = arguments.dot_discopop_path if len(arguments.dot_discopop_path) > 0 else os.getcwd()
 
-    if not os.path.exists(os.path.join(os.getcwd(), "hotspot_detection")):
+    result_dict: Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME, AVERAGE_RUNTIME]]] = dict()
+
+    if not os.path.exists(os.path.join(dot_discopop_path, "hotspot_detection")):
         return result_dict
-    if not os.path.exists(os.path.join(os.getcwd(), "hotspot_detection", "Hotspots.json")):
+    if not os.path.exists(os.path.join(dot_discopop_path, "hotspot_detection", "Hotspots.json")):
         return result_dict
-    with open(os.path.join(os.getcwd(), "hotspot_detection", "Hotspots.json"), "r") as f:
+    with open(os.path.join(dot_discopop_path, "hotspot_detection", "Hotspots.json"), "r") as f:
         hotspots = json.load(f)
 
-        print("HOTSPOTS: ")
         for key in hotspots:
-            print("->", key)
             for entry in hotspots[key]:
-                print("\t->", entry)
                 # check if hotness is considered
                 if entry["hotness"] in arguments.get_considered_hotness():
                     # check if type is considered
                     if entry["typ"] in arguments.get_considered_types():
-                        print("\tCONSIDER")
                         if get_HotspotType_from_string(entry["hotness"]) not in result_dict:
                             result_dict[get_HotspotType_from_string(entry["hotness"])] = []
 
@@ -57,8 +54,8 @@ def run(arguments: HotspotLoaderArguments) -> Dict[HotspotType, List[Tuple[FILEI
                                 int(entry["lineNum"]),
                                 get_HotspotNodeType_from_string(entry["typ"]),
                                 entry["name"],
+                                float(entry["avr"]),
                             )
                         )
-    print("LOADED: ")
-    print(result_dict)
+    logger.info("Loaded hotspots:\n" + str(result_dict))
     return result_dict

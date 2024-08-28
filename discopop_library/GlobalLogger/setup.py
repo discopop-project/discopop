@@ -11,7 +11,7 @@ import logging
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
 
 
-def setup_logger(arguments: GeneralArguments):
+def setup_logger(arguments: GeneralArguments) -> None:
     if arguments.write_log:
         logging.basicConfig(filename="log.txt", level=arguments.log_level)
     else:

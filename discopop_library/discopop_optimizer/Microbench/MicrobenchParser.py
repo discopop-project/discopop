@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-from .Microbench import (
+from discopop_library.discopop_optimizer.Microbench.Microbench import (
     MicrobenchType,
     MicrobenchCoordinate,
     MicrobenchDimension,

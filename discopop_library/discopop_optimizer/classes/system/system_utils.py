@@ -17,7 +17,7 @@ from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum i
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 
 
-def generate_default_system_configuration(file_path: str):
+def generate_default_system_configuration(file_path: str) -> None:
     """Generates a system configuration file using the default values if none exists so far."""
     if os.path.exists(file_path):
         return

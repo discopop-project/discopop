@@ -19,11 +19,11 @@ class CodeGeneratorArguments(object):
     skip_compilation_check: bool
     compile_check_command: str
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
+    def __validate(self) -> None:
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.__dict__)

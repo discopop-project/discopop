@@ -14,15 +14,20 @@ from typing import Dict, List, Optional, Tuple, Set, cast
 import networkx as nx  # type: ignore
 import warnings
 
-from discopop_explorer.PEGraphX import (
+from sympy import Integer
+
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
-    FunctionNode,
-    EdgeType,
-    LoopNode,
-    CUNode,
-    NodeID,
-    MemoryRegion,
 )
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_explorer.utils import calculate_workload
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.discopop_optimizer.PETParser.DataAccesses.FromCUs import (
@@ -37,7 +42,6 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshot import Co
 from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshotPop import ContextSnapshotPop
 from discopop_library.discopop_optimizer.classes.nodes.FunctionReturn import FunctionReturn
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.classes.nodes.GenericNode import GenericNode
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
@@ -48,8 +52,6 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_parents,
     get_nodes_by_functions,
     get_out_call_edges,
-    get_parent_function,
-    get_parents,
     get_path_entry,
     get_predecessors,
     get_successors,
@@ -62,7 +64,6 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_function_nodes,
     get_read_and_written_data_from_subgraph,
     remove_edge,
-    show,
     show_function,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
@@ -171,7 +172,7 @@ class PETParser(object):
         self.next_free_node_id += 1
         return buffer
 
-    def __pin_function_calls_to_host(self):
+    def __pin_function_calls_to_host(self) -> None:
         host_device_id = self.experiment.get_system().get_host_device_id()
         logger.info("Pinning functions and function calls to host device: " + str(host_device_id))
         for node in get_all_function_nodes(self.graph):
@@ -186,7 +187,7 @@ class PETParser(object):
                     logger.info("\tPinning calling node: " + str(node))
                     data_at(self.graph, node).device_id = host_device_id
 
-    def __add_calling_edges(self):
+    def __add_calling_edges(self) -> None:
         all_function_nodes = get_all_function_nodes(self.graph)
 
         for node in self.graph.nodes:
@@ -194,15 +195,17 @@ class PETParser(object):
             if type(node_data) != Workload:
                 continue
             # get functions called by the node
-            for out_call_edge in self.experiment.detection_result.pet.out_edges(
-                node_data.original_cu_id, etype=EdgeType.CALLSNODE
+            if node_data.original_cu_id is None:
+                raise ValueError("Node: " + str(node) + " has no original_cu_id")
+            for out_call_edge in out_edges(
+                self.experiment.detection_result.pet, node_data.original_cu_id, etype=EdgeType.CALLSNODE
             ):
                 # create a call edge to the function
                 for function in all_function_nodes:
                     if data_at(self.graph, function).original_cu_id == out_call_edge[1]:
                         add_call_edge(self.graph, node, function)
 
-    def __prune_branches(self):
+    def __prune_branches(self) -> None:
         """Prune branches based on the measured likelihood of execution"""
         # check if branch information exists. If not, skip this step.
         if self.experiment.arguments.pruning_level == 0:
@@ -282,10 +285,10 @@ class PETParser(object):
                 if valid_target:
                     current_node_cu_id = data_at(self.graph, current_node).original_cu_id
                     # calculate likelihood for current_node
-                    likelihood = 0
+                    likelihood = 0.0
                     for pred in predecessors:
                         pred_cu_id = data_at(self.graph, pred).original_cu_id
-                        edge_likelihood = 1  # fallback if no data exists or not a branching point
+                        edge_likelihood = 1.0  # fallback if no data exists or not a branching point
                         if len(get_successors(self.graph, pred)) > 1:
                             if pred_cu_id in branch_likelihood_dict:
                                 if current_node_cu_id in branch_likelihood_dict[pred_cu_id]:
@@ -407,7 +410,7 @@ class PETParser(object):
 
         return keep_nodes
 
-    def __flatten_function_graphs(self):
+    def __flatten_function_graphs(self) -> None:
         # TODO: remove deepcopies by storing data independently from the nodes
 
         for function in get_all_function_nodes(self.graph):
@@ -430,7 +433,7 @@ class PETParser(object):
                         # show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
 
                         ## dbg show profiling data
-                        if self.experiment.arguments.profiling:
+                        if self.experiment.arguments.profiling and self.experiment.profile is not None:
                             self.experiment.profile.disable()
                             if os.path.exists("optimizer_profile.txt"):
                                 os.remove("optimizer_profile.txt")
@@ -467,7 +470,7 @@ class PETParser(object):
                     iteration_time = int(time())
                     if iteration_time - start_time > timeout:
                         ## dbg show profiling data
-                        if self.experiment.arguments.profiling:
+                        if self.experiment.arguments.profiling and self.experiment.profile is not None:
                             self.experiment.profile.disable()
                             if os.path.exists("optimizer_profile.txt"):
                                 os.remove("optimizer_profile.txt")
@@ -491,7 +494,7 @@ class PETParser(object):
                 print("\tTimeout after: ", timeout, "s")
                 self.invalid_functions.add(function)
 
-    def __fix_too_many_successors(self, node, dbg_function_node=None) -> bool:
+    def __fix_too_many_successors(self, node: int, dbg_function_node: Optional[FunctionRoot] = None) -> bool:
         """Return True if a graph modification has been applied. False otherwise."""
         retval = False
 
@@ -576,7 +579,7 @@ class PETParser(object):
         retval = True
         return retval
 
-    def __fix_too_many_predecessors(self, node) -> Tuple[bool, List[int]]:
+    def __fix_too_many_predecessors(self, node: int) -> Tuple[bool, List[int]]:
         """Return True if a graph modification has been applied. False otherwise."""
         retval = False
         modified_nodes: List[int] = []
@@ -621,19 +624,23 @@ class PETParser(object):
         retval = True
         return retval, list(set(modified_nodes))
 
-    def __remove_non_hotspot_function_bodys(self):
+    def __remove_non_hotspot_function_bodys(self) -> None:
         if len(self.experiment.hotspot_functions) == 0:
             return
         all_hotspot_functions_raw: List[Tuple[int, str]] = []
         for key in self.experiment.hotspot_functions:
-            for file_id, line_num, hs_node_type, name in self.experiment.hotspot_functions[key]:
+            for file_id, line_num, hs_node_type, name, _ in self.experiment.hotspot_functions[key]:
                 if hs_node_type == HotspotNodeType.FUNCTION:
                     all_hotspot_functions_raw.append((file_id, name))
 
         # convert raw information to node ids
         for file_id, name in all_hotspot_functions_raw:
             for function in get_all_function_nodes(self.graph):
-                function_node = data_at(self.graph, function)
+                function_node = cast(FunctionRoot, data_at(self.graph, function))
+                if function_node is None:
+                    continue
+                if function_node.original_cu_id is None:
+                    continue
                 if int(function_node.original_cu_id.split(":")[0]) == file_id:
                     print("FID EQUAL")
                     print("CHECK NAME: ", function_node.name, name)
@@ -649,16 +656,16 @@ class PETParser(object):
                 function not in self.experiment.hotspot_function_node_ids
                 and len(self.experiment.hotspot_function_node_ids) > 0
             ):
-                print("DELETING FUNCTION BODY: ", data_at(self.graph, function).name)
+                print("DELETING FUNCTION BODY: ", cast(FunctionRoot, data_at(self.graph, function)).name)
                 # remove function body
                 for node in get_all_nodes_in_function(self.graph, function):
                     self.graph.remove_node(node)
                 # leave the function node
 
-    def __remove_invalid_functions(self):
+    def __remove_invalid_functions(self) -> None:
         for function in self.invalid_functions:
             if self.experiment.arguments.verbose:
-                print("Removing body of invalid function: ", data_at(self.graph, function).name)
+                print("Removing body of invalid function: ", cast(FunctionRoot, data_at(self.graph, function)).name)
             # delete all nodes in function body
             for node in get_all_nodes_in_function(self.graph, function):
                 self.graph.remove_node(node)
@@ -689,7 +696,7 @@ class PETParser(object):
     #    #                        if self.experiment.arguments.verbose:
     #    #                            print("ADDED DUMMY CONNECTION: ", node, function_return_nodes[parent_func])
 
-    def __add_function_return_node(self):
+    def __add_function_return_node(self) -> None:
         """Add a return node to each function as a location to force data updates"""
         for function in get_all_function_nodes(self.graph):
             queue = get_children(self.graph, function)
@@ -724,9 +731,9 @@ class PETParser(object):
                 else:
                     queue += [s for s in successors if s not in queue]
 
-    def __add_branch_return_node(self):
+    def __add_branch_return_node(self) -> None:
         """makes sure every branching section has a merge node"""
-        path_return_nodes: Dict[int, int] = dict()
+        path_return_nodes: Dict[List[int], int] = dict()
 
         for node in copy.deepcopy(self.graph.nodes()):
             if len(get_successors(self.graph, node)) == 0:
@@ -742,7 +749,7 @@ class PETParser(object):
                 add_successor_edge(self.graph, node, path_return_nodes[path_entry])
                 print("ADDED EDGE: ", node, "->", path_return_nodes[path_entry])
 
-    def __new_parse_branched_sections(self):
+    def __new_parse_branched_sections(self) -> None:
         """Branched sections in the CU Graph are represented by a serialized version in the MOG.
         To make this possible, Context Snapshot, Restore and Merge points are added to allow a synchronization
         'between' the different branches"""
@@ -754,13 +761,19 @@ class PETParser(object):
                 function not in self.experiment.hotspot_function_node_ids
                 and len(self.experiment.hotspot_function_node_ids) > 0
             ):
-                if data_at(self.graph, function).name == "main":
-                    print("SKIPPING NON HOTSPOT FUNCTION: ", data_at(self.graph, function).name)
+                if cast(FunctionRoot, data_at(self.graph, function)).name == "main":
+                    print("SKIPPING NON HOTSPOT FUNCTION: ", cast(FunctionRoot, data_at(self.graph, function)).name)
                 continue
             # try:
             if self.experiment.arguments.verbose:
-                if data_at(self.graph, function).name == "main":
-                    print("FUNCTION: ", data_at(self.graph, function).name, idx, "/", len(all_functions))
+                if cast(FunctionRoot, data_at(self.graph, function)).name == "main":
+                    print(
+                        "FUNCTION: ",
+                        cast(FunctionRoot, data_at(self.graph, function)).name,
+                        idx,
+                        "/",
+                        len(all_functions),
+                    )
             nodes_in_function = nodes_by_functions[function]
 
             post_dominators = self.__get_post_dominators(nodes_in_function)
@@ -768,15 +781,25 @@ class PETParser(object):
             path_splits = self.__get_path_splits(nodes_in_function)
             merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
-            if data_at(self.graph, function).name == "main":
+            if cast(FunctionRoot, data_at(self.graph, function)).name == "main":
                 print("showing..")
-                show_function(self.graph, data_at(self.graph, function), show_dataflow=False, show_mutex_edges=False)
+                show_function(
+                    self.graph,
+                    cast(FunctionRoot, data_at(self.graph, function)),
+                    show_dataflow=False,
+                    show_mutex_edges=False,
+                )
 
             added_node_ids = self.__fix_empty_branches(merge_nodes, post_dominators)
 
-            if data_at(self.graph, function).name == "main":
+            if cast(FunctionRoot, data_at(self.graph, function)).name == "main":
                 print("showing..")
-                show_function(self.graph, data_at(self.graph, function), show_dataflow=False, show_mutex_edges=False)
+                show_function(
+                    self.graph,
+                    cast(FunctionRoot, data_at(self.graph, function)),
+                    show_dataflow=False,
+                    show_mutex_edges=False,
+                )
             nodes_in_function = list(set(nodes_in_function).union(set(added_node_ids)))
 
             # re-calculate post_dominators and merge nodes
@@ -785,9 +808,14 @@ class PETParser(object):
             #            merge_nodes = self.__get_merge_nodes(path_splits, post_dominators)
 
             self.__insert_context_nodes(nodes_in_function)
-            if data_at(self.graph, function).name == "main":
+            if cast(FunctionRoot, data_at(self.graph, function)).name == "main":
                 print("showing..")
-                show_function(self.graph, data_at(self.graph, function), show_dataflow=False, show_mutex_edges=False)
+                show_function(
+                    self.graph,
+                    cast(FunctionRoot, data_at(self.graph, function)),
+                    show_dataflow=False,
+                    show_mutex_edges=False,
+                )
 
                 # sanity check
             #                fix_applied = True
@@ -828,7 +856,7 @@ class PETParser(object):
             added_node_ids.append(dummy_node_id)
         return added_node_ids
 
-    def __insert_context_nodes(self, node_list: List[int]):
+    def __insert_context_nodes(self, node_list: List[int]) -> None:
         """flattens the graph via inserting context nodes"""
         modification_found = True
         from time import time
@@ -955,11 +983,11 @@ class PETParser(object):
     ) -> Dict[int, Optional[int]]:
         """Calculates and returns the merge nodes for paths starting a the given node"""
 
-        def get_merge_nodes(node_list, initial_post_dominators=None):
-            candidates = initial_post_dominators
+        def get_merge_nodes(node_list: Set[int], initial_post_dominators: Optional[Set[int]] = None) -> Set[int]:
+            candidates: Set[int] = initial_post_dominators if initial_post_dominators is not None else set()
             for node in node_list:
                 for succ in get_successors(self.graph, node):
-                    if candidates is None:
+                    if len(candidates) == 0:
                         candidates = post_dominators[succ]
                     candidates = candidates.intersection(post_dominators[succ])
             modification_found = True
@@ -980,7 +1008,7 @@ class PETParser(object):
         merge_nodes: Dict[int, Optional[int]] = dict()
         for node in path_splits:
             # cleanup candidates to get the earliest merge
-            candidates = get_merge_nodes([node], post_dominators[node])
+            candidates = get_merge_nodes({node}, post_dominators[node])
 
             while len(candidates) > 1:
                 candidates = get_merge_nodes(candidates)
@@ -1026,13 +1054,13 @@ class PETParser(object):
             modified = new_modified
         return post_dominators
 
-    def __parse_branched_sections(self):
+    def __parse_branched_sections(self) -> None:
         """Branched sections in the CU Graph are represented by a serialized version in the MOG.
         To make this possible, Context Snapshot, Restore and Merge points are added to allow a synchronization
         'between' the different branches"""
         visited_nodes: Set[int] = set()
-        for idx, function_node in enumerate(self.pet.all_nodes(FunctionNode)):
-            print("parsing ", function_node.name, idx, "/", len(self.pet.all_nodes(FunctionNode)))
+        for idx, function_node in enumerate(all_nodes(self.pet, FunctionNode)):
+            print("parsing ", function_node.name, idx, "/", len(all_nodes(self.pet, FunctionNode)))
             _, _ = self.__parse_raw_node(self.cu_id_to_graph_node_id[function_node.id], visited_nodes)
 
         # remove visited nodes, since duplicates exist now
@@ -1153,10 +1181,10 @@ class PETParser(object):
 
         return duplicate_node_id, context_snapshot_pop_id
 
-    def __add_cu_nodes(self):
+    def __add_cu_nodes(self) -> None:
         """adds Workload nodes which represent the CU Nodes to the graph.
         The added nodes will not be connected in any way."""
-        for cu_node in self.pet.all_nodes(CUNode):
+        for cu_node in all_nodes(self.pet, CUNode):
             # create new node for CU
             new_node_id = self.get_new_node_id()
             self.cu_id_to_graph_node_id[cu_node.id] = new_node_id
@@ -1175,19 +1203,19 @@ class PETParser(object):
                     node_id=new_node_id,
                     experiment=self.experiment,
                     cu_id=cu_node.id,
-                    sequential_workload=0,
-                    parallelizable_workload=parallelizable_workload,
+                    sequential_workload=Integer(0),
+                    parallelizable_workload=Integer(parallelizable_workload),
                     written_memory_regions=written_memory_regions,
                     read_memory_regions=read_memory_regions,
                 ),
             )
 
-    def __add_loop_nodes(self):
+    def __add_loop_nodes(self) -> None:
         """adds Loop Nodes to the graph.
         connects contained nodes using Children edges"""
-        for loop_node in self.pet.all_nodes(LoopNode):
+        for loop_node in all_nodes(self.pet, LoopNode):
             # calculate metadata
-            loop_subtree = self.pet.subtree_of_type(loop_node, CUNode)
+            loop_subtree = subtree_of_type(self.pet, loop_node, CUNode)
 
             # get iteration count for loop
             if loop_node.loop_data is not None:
@@ -1219,11 +1247,14 @@ class PETParser(object):
                 ),
             )
             # connect loop node and entry node via a child edge
-            entry_node_cu_id = loop_node.get_entry_node(self.pet).id
+            tmp_entry_node = loop_node.get_entry_node(self.pet)
+            if tmp_entry_node is None:
+                raise ValueError("Loop: " + str(loop_node) + " has no entry node!")
+            entry_node_cu_id = tmp_entry_node.id
             add_child_edge(self.graph, new_node_id, self.cu_id_to_graph_node_id[entry_node_cu_id])
 
             # redirect edges from outside the loop to the entry node to the Loop node
-            for s, t, d in self.pet.in_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
+            for s, t, d in in_edges(self.pet, entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(s) not in loop_subtree:
                     try:
                         redirect_edge(
@@ -1238,7 +1269,7 @@ class PETParser(object):
                             print("ignoring redirect of edge due to KeyError: ", ke)
 
             # redirect edges to the outside of the loop
-            for s, t, d in self.pet.out_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
+            for s, t, d in out_edges(self.pet, entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(t) not in loop_subtree:
                     redirect_edge(
                         self.graph,
@@ -1255,7 +1286,7 @@ class PETParser(object):
             self.graph.add_node(copied_entry_node_id, data=entry_node_data)
 
             # redirect edges from inside the loop to the copy of the entry node
-            for s, t, d in self.pet.in_edges(entry_node_cu_id, EdgeType.SUCCESSOR):
+            for s, t, d in in_edges(self.pet, entry_node_cu_id, EdgeType.SUCCESSOR):
                 if self.pet.node_at(s) in loop_subtree:
                     redirect_edge(
                         self.graph,
@@ -1268,10 +1299,10 @@ class PETParser(object):
             # redirect accesses to the cu_id of the entry node to the newly created loop node
             self.cu_id_to_graph_node_id[entry_node_cu_id] = new_node_id
 
-    def __add_functions(self):
+    def __add_functions(self) -> None:
         """parse function nodes in the PET graph.
         Results in the creation of a forest of function graphs."""
-        for function_node in self.pet.all_nodes(FunctionNode):
+        for function_node in all_nodes(self.pet, FunctionNode):
             # create function root node and register it in the graph
             new_node_id = self.get_new_node_id()
             self.graph.add_node(
@@ -1292,20 +1323,20 @@ class PETParser(object):
             # save ID
             self.cu_id_to_graph_node_id[function_node.id] = new_node_id
 
-    def __add_pet_successor_edges(self):
-        for cu_node in self.pet.all_nodes(CUNode):
-            for successor_cu_id in [t for s, t, d in self.pet.out_edges(cu_node.id, EdgeType.SUCCESSOR)]:
+    def __add_pet_successor_edges(self) -> None:
+        for cu_node in all_nodes(self.pet, CUNode):
+            for successor_cu_id in [t for s, t, d in out_edges(self.pet, cu_node.id, EdgeType.SUCCESSOR)]:
                 add_successor_edge(
                     self.graph,
                     self.cu_id_to_graph_node_id[cu_node.id],
                     self.cu_id_to_graph_node_id[successor_cu_id],
                 )
 
-    def __mark_branch_affiliation(self):
+    def __mark_branch_affiliation(self) -> None:
         """Mark each nodes' branch affiliation to allow a simple check for 'on same branch' relation
         without considering the successor relation."""
 
-        def mark_branched_section(node, branch_stack):
+        def mark_branched_section(node: int, branch_stack: List[int]) -> None:
             node_data = data_at(self.graph, node)
             if isinstance(node_data, ContextSnapshot):
                 branch_stack.append(node)
@@ -1340,11 +1371,13 @@ class PETParser(object):
     #        for function in get_all_function_nodes(self.graph):
     #            logger.info("calculate data flow for function: " + data_at(self.graph, function).name)
 
-    def __calculate_data_flow(self):
+    def __calculate_data_flow(self) -> None:
         self.in_data_flow = dict()
         self.out_data_flow = dict()
 
-        def inlined_data_flow_calculation(current_node, current_last_writes):
+        def inlined_data_flow_calculation(
+            current_node: Optional[int], current_last_writes: Dict[MemoryRegion, int]
+        ) -> Dict[MemoryRegion, int]:
             # TODO add entering and exiting data frames to support resetting at end of a child section
             while current_node is not None:
                 # check if current_node uses written data
@@ -1390,7 +1423,7 @@ class PETParser(object):
             if self.experiment.arguments.verbose:
                 print(
                     "Calculating dataflow for function: ",
-                    data_at(self.graph, function_node).name,
+                    cast(FunctionRoot, data_at(self.graph, function_node)).name,
                     idx,
                     "/",
                     len(all_function_nodes),
@@ -1399,10 +1432,10 @@ class PETParser(object):
                 function_node not in self.experiment.hotspot_function_node_ids
                 and len(self.experiment.hotspot_function_node_ids) > 0
             ):
-                print("SKIPPING NON-HOTSPOT FUNCTION: ", data_at(self.graph, function_node).name)
+                print("SKIPPING NON-HOTSPOT FUNCTION: ", cast(FunctionRoot, data_at(self.graph, function_node)).name)
                 continue
             if function_node in self.invalid_functions:
-                print("SKIPPING INVALID FUNCTION: ", data_at(self.graph, function_node).name)
+                print("SKIPPING INVALID FUNCTION: ", cast(FunctionRoot, data_at(self.graph, function_node)).name)
                 continue
 
             try:
@@ -1412,7 +1445,7 @@ class PETParser(object):
                 if self.experiment.arguments.verbose:
                     print(
                         "CDF: Function:",
-                        data_at(self.graph, function_node).name,
+                        cast(FunctionRoot, data_at(self.graph, function_node)).name,
                         "invalid due to graph construction errors. Skipping.",
                     )
                     # show_function(self.graph, data_at(self.graph, function_node), show_dataflow=False, show_mutex_edges=False)
@@ -1420,7 +1453,9 @@ class PETParser(object):
             except IndexError:
                 # function has no child. ignore, but issue a warning
                 warnings.warn(
-                    "Skipping function: " + data_at(self.graph, function_node).name + " as it has no children nodes!"
+                    "Skipping function: "
+                    + cast(FunctionRoot, data_at(self.graph, function_node)).name
+                    + " as it has no children nodes!"
                 )
                 pass
 
@@ -1429,7 +1464,7 @@ class PETParser(object):
                 if not self.graph.has_edge(key, entry):
                     add_dataflow_edge(self.graph, key, entry)
 
-    def __propagate_reads_and_writes(self):
+    def __propagate_reads_and_writes(self) -> None:
         # initialize queue
         queue = [n for n in self.graph.nodes]
 
@@ -1442,7 +1477,7 @@ class PETParser(object):
                 data_at(self.graph, p).written_memory_regions.update(current_data.written_memory_regions)
                 data_at(self.graph, p).read_memory_regions.update(current_data.read_memory_regions)
 
-    def __inline_reads_and_writes_from_call(self):
+    def __inline_reads_and_writes_from_call(self) -> None:
         for node in self.graph.nodes:
             called = get_out_call_edges(self.graph, node)
             if len(called) == 0:
