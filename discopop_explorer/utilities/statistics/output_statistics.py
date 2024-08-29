@@ -5,3 +5,108 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+
+from __future__ import annotations
+import json
+import os
+from typing import TYPE_CHECKING, Dict
+
+from discopop_explorer.aliases.NodeID import NodeID
+
+if TYPE_CHECKING:
+    from discopop_explorer.discopop_explorer import ExplorerArguments
+
+
+def output_code_statistics(
+    arguments: ExplorerArguments,
+    maximum_call_path_depth: int,
+    summed_cyclomatic_complexity: int,
+    cc_min: int,
+    cc_max: int,
+    cc_avg: int,
+    cc_lower_quart: int,
+    cc_upper_quart: int,
+) -> None:
+    # create statistics directory
+    if not os.path.exists(os.path.join(arguments.project_path, "explorer", "statistics")):
+        os.mkdir(os.path.join(arguments.project_path, "explorer", "statistics"))
+    # clear existing result
+    statistics_file = os.path.join(arguments.project_path, "explorer", "statistics", "code_statistics.json")
+    if os.path.exists(statistics_file):
+        os.remove(statistics_file)
+
+    statistics_dict: Dict[str, int] = dict()
+    statistics_dict["maximum_call_path_depth"] = maximum_call_path_depth
+    statistics_dict["summed_cyclomatic_complexity"] = summed_cyclomatic_complexity
+    statistics_dict["cc_min"] = cc_min
+    statistics_dict["cc_max"] = cc_max
+    statistics_dict["cc_avg"] = cc_avg
+    statistics_dict["cc_lower_quart"] = cc_lower_quart
+    statistics_dict["cc_upper_quart"] = cc_upper_quart
+
+    with open(statistics_file, "w+") as f:
+        f.write(json.dumps(statistics_dict) + "\n")
+
+
+def output_suggestion_statistics(
+    arguments: ExplorerArguments,
+    suggestion_call_path_depths: Dict[NodeID, int],
+    suggestion_num_function_calls: Dict[NodeID, int],
+    suggestion_immediate_lines_of_code: Dict[int, int],
+    suggestion_lines_of_code_including_calls: Dict[int, int],
+    suggestion_summed_cyclomatic_complexity_from_calls: Dict[NodeID, int],
+) -> None:
+    # create statistics directory
+    if not os.path.exists(os.path.join(arguments.project_path, "explorer", "statistics")):
+        os.mkdir(os.path.join(arguments.project_path, "explorer", "statistics"))
+    # clear existing result
+    statistics_file_by_nodeID = os.path.join(
+        arguments.project_path, "explorer", "statistics", "suggestion_statistics_by_nodeID.json"
+    )
+    statistics_file_by_suggestionID = os.path.join(
+        arguments.project_path, "explorer", "statistics", "suggestion_statistics_by_suggestionID.json"
+    )
+    if os.path.exists(statistics_file_by_nodeID):
+        os.remove(statistics_file_by_nodeID)
+    if os.path.exists(statistics_file_by_suggestionID):
+        os.remove(statistics_file_by_suggestionID)
+
+    statistics_dict_by_nodeID: Dict[NodeID, Dict[str, int]] = dict()
+    statistics_dict_by_suggestionID: Dict[int, Dict[str, int]] = dict()
+
+    for node_id in suggestion_call_path_depths:
+        if node_id not in statistics_dict_by_nodeID:
+            statistics_dict_by_nodeID[node_id] = dict()
+        statistics_dict_by_nodeID[node_id]["suggestion_call_path_depth"] = suggestion_call_path_depths[node_id]
+
+    for node_id in suggestion_num_function_calls:
+        if node_id not in statistics_dict_by_nodeID:
+            statistics_dict_by_nodeID[node_id] = dict()
+        statistics_dict_by_nodeID[node_id]["suggestion_num_function_calls"] = suggestion_num_function_calls[node_id]
+
+    for node_id in suggestion_summed_cyclomatic_complexity_from_calls:
+        if node_id not in statistics_dict_by_nodeID:
+            statistics_dict_by_nodeID[node_id] = dict()
+        statistics_dict_by_nodeID[node_id][
+            "suggestion_summed_cyclomatic_complexity_from_calls"
+        ] = suggestion_summed_cyclomatic_complexity_from_calls[node_id]
+
+    for suggestion_id in suggestion_immediate_lines_of_code:
+        if suggestion_id not in statistics_dict_by_suggestionID:
+            statistics_dict_by_suggestionID[suggestion_id] = dict()
+        statistics_dict_by_suggestionID[suggestion_id][
+            "suggestion_immediate_lines_of_code"
+        ] = suggestion_immediate_lines_of_code[suggestion_id]
+
+    for suggestion_id in suggestion_lines_of_code_including_calls:
+        if suggestion_id not in statistics_dict_by_suggestionID:
+            statistics_dict_by_suggestionID[suggestion_id] = dict()
+        statistics_dict_by_suggestionID[suggestion_id][
+            "suggestion_lines_of_code_including_calls"
+        ] = suggestion_lines_of_code_including_calls[suggestion_id]
+
+    with open(statistics_file_by_nodeID, "w+") as f:
+        f.write(json.dumps(statistics_dict_by_nodeID) + "\n")
+
+    with open(statistics_file_by_suggestionID, "w+") as f:
+        f.write(json.dumps(statistics_dict_by_suggestionID) + "\n")
