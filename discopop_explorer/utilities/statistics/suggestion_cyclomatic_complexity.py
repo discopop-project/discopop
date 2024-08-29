@@ -25,17 +25,15 @@ if TYPE_CHECKING:
 
 def get_suggestion_summed_cyclomatic_complexity_from_calls(
     arguments: ExplorerArguments, res: DetectionResult
-) -> Dict[NodeID, int]:
-    res_dict: Dict[NodeID, int] = dict()
+) -> Dict[int, int]:
+    res_dict: Dict[int, int] = dict()
+    cc_dict = get_cyclomatic_complexity_dictionary(arguments, res)
 
     # collect NodeIDs where suggestions are located
-    node_ids: Set[NodeID] = set()
     for pattern_type in res.patterns.__dict__:
         for pattern in res.patterns.__dict__[pattern_type]:
-            node_ids.add(pattern.node_id)
+            res_dict[pattern.pattern_id] = get_subtree_cyclomatic_complexity_from_calls(
+                arguments, res, cc_dict, pattern.node_id
+            )
 
-    # calculate summed cyclomatic complexity for each root NodeID
-    cc_dict = get_cyclomatic_complexity_dictionary(arguments, res)
-    for node_id in node_ids:
-        res_dict[node_id] = get_subtree_cyclomatic_complexity_from_calls(arguments, res, cc_dict, node_id)
     return res_dict
