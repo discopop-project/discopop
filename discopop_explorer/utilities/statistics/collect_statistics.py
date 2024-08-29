@@ -14,6 +14,10 @@ from discopop_explorer.utilities.statistics.cyclomatic_complexity.boxplot import
 from discopop_explorer.utilities.statistics.cyclomatic_complexity.total import get_summed_cyclomatic_complexity
 from discopop_explorer.utilities.statistics.maximum_call_path_depth import get_maximum_call_path_depth
 from discopop_explorer.utilities.statistics.num_function_calls import get_suggestion_num_function_calls
+from discopop_explorer.utilities.statistics.output_statistics import (
+    output_code_statistics,
+    output_suggestion_statistics,
+)
 from discopop_explorer.utilities.statistics.suggestion_call_path_depths import get_suggestion_call_path_depths
 from discopop_explorer.utilities.statistics.suggestion_cyclomatic_complexity import (
     get_suggestion_summed_cyclomatic_complexity_from_calls,
@@ -97,4 +101,25 @@ def collect_statistics(arguments: ExplorerArguments, res: DetectionResult) -> No
                 for key in suggestion_summed_cyclomatic_complexity_from_calls
             ]
         )
+    )
+
+    # output statistics to file
+    output_code_statistics(
+        arguments,
+        maximum_call_path_depth,
+        summed_cyclomatic_complexity,
+        cc_min,
+        cc_max,
+        cc_avg,
+        cc_lower_quart,
+        cc_upper_quart,
+    )
+
+    output_suggestion_statistics(
+        arguments,
+        suggestion_call_path_depths,
+        suggestion_num_function_calls,
+        suggestion_immediate_lines_of_code,
+        suggestion_lines_of_code_including_calls,
+        suggestion_summed_cyclomatic_complexity_from_calls,
     )
