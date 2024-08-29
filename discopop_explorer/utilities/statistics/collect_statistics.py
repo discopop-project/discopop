@@ -15,6 +15,9 @@ from discopop_explorer.utilities.statistics.cyclomatic_complexity.total import g
 from discopop_explorer.utilities.statistics.maximum_call_path_depth import get_maximum_call_path_depth
 from discopop_explorer.utilities.statistics.num_function_calls import get_suggestion_num_function_calls
 from discopop_explorer.utilities.statistics.suggestion_call_path_depths import get_suggestion_call_path_depths
+from discopop_explorer.utilities.statistics.suggestion_cyclomatic_complexity import (
+    get_suggestion_summed_cyclomatic_complexity_from_calls,
+)
 from discopop_explorer.utilities.statistics.suggestion_lines_of_code import (
     get_suggestion_immediate_lines_of_code,
     get_suggestion_lines_of_code_including_calls,
@@ -82,3 +85,16 @@ def collect_statistics(arguments: ExplorerArguments, res: DetectionResult) -> No
     logger.debug("--> cc_avg: " + str(cc_avg))
     logger.debug("--> cc_lower_quart: " + str(cc_lower_quart))
     logger.debug("--> cc_upper_quart: " + str(cc_upper_quart))
+
+    suggestion_summed_cyclomatic_complexity_from_calls = get_suggestion_summed_cyclomatic_complexity_from_calls(
+        arguments, res
+    )
+    logger.debug(
+        "--> suggestion_summed_cyclomatic_complexity_from_calls: "
+        + str(
+            [
+                str(key) + " => " + str(suggestion_summed_cyclomatic_complexity_from_calls[key])
+                for key in suggestion_summed_cyclomatic_complexity_from_calls
+            ]
+        )
+    )
