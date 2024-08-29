@@ -22,7 +22,7 @@ def get_summed_cyclomatic_complexity(arguments: ExplorerArguments, res: Detectio
     """calculate the total cyclomatic complexity"""
     file_mapping = load_file_mapping(arguments.file_mapping_file)
     # get summed cyclomatic complexity for all functions in all files
-    cmd = ["pmccabe", "-t"]
+    cmd = ["pmccabe", "-T"]
     for file_id in file_mapping:
         file_path = file_mapping[file_id]
         cmd.append(str(file_path))

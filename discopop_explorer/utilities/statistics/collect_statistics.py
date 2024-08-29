@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import logging
 
+from discopop_explorer.utilities.statistics.cyclomatic_complexity.boxplot import get_cyclomatic_complexities_for_boxplot
 from discopop_explorer.utilities.statistics.cyclomatic_complexity.total import get_summed_cyclomatic_complexity
 from discopop_explorer.utilities.statistics.maximum_call_path_depth import get_maximum_call_path_depth
 from discopop_explorer.utilities.statistics.num_function_calls import get_suggestion_num_function_calls
@@ -74,3 +75,10 @@ def collect_statistics(arguments: ExplorerArguments, res: DetectionResult) -> No
 
     summed_cyclomatic_complexity = get_summed_cyclomatic_complexity(arguments, res)
     logger.debug("--> summed_cyclomatic_complexity = " + str(summed_cyclomatic_complexity))
+
+    cc_min, cc_max, cc_avg, cc_lower_quart, cc_upper_quart = get_cyclomatic_complexities_for_boxplot(arguments, res)
+    logger.debug("--> cc_min: " + str(cc_min))
+    logger.debug("--> cc_max: " + str(cc_max))
+    logger.debug("--> cc_avg: " + str(cc_avg))
+    logger.debug("--> cc_lower_quart: " + str(cc_lower_quart))
+    logger.debug("--> cc_upper_quart: " + str(cc_upper_quart))
