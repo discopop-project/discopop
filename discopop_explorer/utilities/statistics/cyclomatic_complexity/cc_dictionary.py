@@ -27,7 +27,6 @@ CC_DICT = Dict[FILE_ID, Dict[FUNC_NAME, CYC_COMP]]
 
 def get_cyclomatic_complexity_dictionary(arguments: ExplorerArguments, res: DetectionResult) -> CC_DICT:
     file_mapping = load_file_mapping(arguments.file_mapping_file)
-    print("FIle Mapping: ", file_mapping)
     # get summed cyclomatic complexity for all functions in all files
     cmd = ["pmccabe", "-C"]
     for file_id in file_mapping:
@@ -38,7 +37,6 @@ def get_cyclomatic_complexity_dictionary(arguments: ExplorerArguments, res: Dete
     # unpack and repack results
     cc_dict: Dict[FILE_ID, Dict[FUNC_NAME, CYC_COMP]] = dict()
     for line in out.split("\n"):
-        print(line)
         split_line = line.split("\t")
         if len(split_line) < 9:
             continue

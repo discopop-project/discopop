@@ -39,7 +39,6 @@ def get_cyclomatic_complexities_for_boxplot(
     # unpack and store results temporarily
     cyclomatic_complexities: List[int] = []
     for line in out.split("\n"):
-        print(line)
         split_line = line.split("\t")
         if len(split_line) < 9:
             continue
@@ -48,7 +47,6 @@ def get_cyclomatic_complexities_for_boxplot(
         # function_name = split_line[8]
 
         cyclomatic_complexities.append(int(cyclomatic_complexity))
-    print(cyclomatic_complexities)
 
     # calculate statistics
     cc_min: MIN = min(cyclomatic_complexities)
