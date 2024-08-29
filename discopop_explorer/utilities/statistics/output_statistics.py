@@ -9,7 +9,7 @@
 from __future__ import annotations
 import json
 import os
-from typing import TYPE_CHECKING, Dict
+from typing import TYPE_CHECKING, Dict, List
 
 from discopop_explorer.aliases.NodeID import NodeID
 
@@ -105,3 +105,110 @@ def output_suggestion_statistics(
 
     with open(statistics_file_by_suggestionID, "w+") as f:
         f.write(json.dumps(statistics_dict_by_suggestionID) + "\n")
+
+
+def output_aggregated_suggestion_statistics(
+    arguments: ExplorerArguments,
+    suggestion_call_path_depths: Dict[int, int],
+    suggestion_num_function_calls: Dict[int, int],
+    suggestion_immediate_lines_of_code: Dict[int, int],
+    suggestion_lines_of_code_including_calls: Dict[int, int],
+    suggestion_summed_cyclomatic_complexity_from_calls: Dict[int, int],
+) -> None:
+    res_dict: Dict[str, Dict[str, int]] = dict()  # {value_identifier : {value_descriptor: value}}
+    # create statistics directory
+    if not os.path.exists(os.path.join(arguments.project_path, "explorer", "statistics")):
+        os.mkdir(os.path.join(arguments.project_path, "explorer", "statistics"))
+    # clear existing result
+    statistics_file = os.path.join(arguments.project_path, "explorer", "statistics", "suggestion_statistics.json")
+    if os.path.exists(statistics_file):
+        os.remove(statistics_file)
+
+    values: List[int] = []
+    # suggestion_call_path_depths
+    values = list(suggestion_call_path_depths.values())
+    v_min = min(values)
+    v_max = max(values)
+    v_avg = int(sum(values) / len(values))
+    lower_quartile_idx = int((len(values) + 1) * 1 / 4)
+    upper_quartile_idx = int((len(values) + 1) * 3 / 4)
+    lower_quartile = sorted(values)[lower_quartile_idx]
+    upper_quartile = sorted(values)[upper_quartile_idx]
+    res_dict["suggestion_call_path_depths"] = {
+        "min": v_min,
+        "max": v_max,
+        "avg": v_avg,
+        "lower_quartile": lower_quartile,
+        "upper_quartile": upper_quartile,
+    }
+
+    # suggestion_num_function_calls
+    values = list(suggestion_num_function_calls.values())
+    v_min = min(values)
+    v_max = max(values)
+    v_avg = int(sum(values) / len(values))
+    lower_quartile_idx = int((len(values) + 1) * 1 / 4)
+    upper_quartile_idx = int((len(values) + 1) * 3 / 4)
+    lower_quartile = sorted(values)[lower_quartile_idx]
+    upper_quartile = sorted(values)[upper_quartile_idx]
+    res_dict["suggestion_num_function_calls"] = {
+        "min": v_min,
+        "max": v_max,
+        "avg": v_avg,
+        "lower_quartile": lower_quartile,
+        "upper_quartile": upper_quartile,
+    }
+
+    # suggestion_immediate_lines_of_code
+    values = list(suggestion_immediate_lines_of_code.values())
+    v_min = min(values)
+    v_max = max(values)
+    v_avg = int(sum(values) / len(values))
+    lower_quartile_idx = int((len(values) + 1) * 1 / 4)
+    upper_quartile_idx = int((len(values) + 1) * 3 / 4)
+    lower_quartile = sorted(values)[lower_quartile_idx]
+    upper_quartile = sorted(values)[upper_quartile_idx]
+    res_dict["suggestion_immediate_lines_of_code"] = {
+        "min": v_min,
+        "max": v_max,
+        "avg": v_avg,
+        "lower_quartile": lower_quartile,
+        "upper_quartile": upper_quartile,
+    }
+
+    # suggestion_lines_of_code_including_calls
+    values = list(suggestion_lines_of_code_including_calls.values())
+    v_min = min(values)
+    v_max = max(values)
+    v_avg = int(sum(values) / len(values))
+    lower_quartile_idx = int((len(values) + 1) * 1 / 4)
+    upper_quartile_idx = int((len(values) + 1) * 3 / 4)
+    lower_quartile = sorted(values)[lower_quartile_idx]
+    upper_quartile = sorted(values)[upper_quartile_idx]
+    res_dict["suggestion_lines_of_code_including_calls"] = {
+        "min": v_min,
+        "max": v_max,
+        "avg": v_avg,
+        "lower_quartile": lower_quartile,
+        "upper_quartile": upper_quartile,
+    }
+
+    # suggestion_summed_cyclomatic_complexity_from_calls
+    values = list(suggestion_summed_cyclomatic_complexity_from_calls.values())
+    v_min = min(values)
+    v_max = max(values)
+    v_avg = int(sum(values) / len(values))
+    lower_quartile_idx = int((len(values) + 1) * 1 / 4)
+    upper_quartile_idx = int((len(values) + 1) * 3 / 4)
+    lower_quartile = sorted(values)[lower_quartile_idx]
+    upper_quartile = sorted(values)[upper_quartile_idx]
+    res_dict["suggestion_summed_cyclomatic_complexity_from_calls"] = {
+        "min": v_min,
+        "max": v_max,
+        "avg": v_avg,
+        "lower_quartile": lower_quartile,
+        "upper_quartile": upper_quartile,
+    }
+
+    with open(statistics_file, "w+") as f:
+        f.write(json.dumps(res_dict) + "\n")

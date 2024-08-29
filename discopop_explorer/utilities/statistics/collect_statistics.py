@@ -15,6 +15,7 @@ from discopop_explorer.utilities.statistics.cyclomatic_complexity.total import g
 from discopop_explorer.utilities.statistics.maximum_call_path_depth import get_maximum_call_path_depth
 from discopop_explorer.utilities.statistics.num_function_calls import get_suggestion_num_function_calls
 from discopop_explorer.utilities.statistics.output_statistics import (
+    output_aggregated_suggestion_statistics,
     output_code_statistics,
     output_suggestion_statistics,
 )
@@ -106,6 +107,15 @@ def collect_statistics(arguments: ExplorerArguments, res: DetectionResult) -> No
     )
 
     output_suggestion_statistics(
+        arguments,
+        suggestion_call_path_depths,
+        suggestion_num_function_calls,
+        suggestion_immediate_lines_of_code,
+        suggestion_lines_of_code_including_calls,
+        suggestion_summed_cyclomatic_complexity_from_calls,
+    )
+
+    output_aggregated_suggestion_statistics(
         arguments,
         suggestion_call_path_depths,
         suggestion_num_function_calls,
