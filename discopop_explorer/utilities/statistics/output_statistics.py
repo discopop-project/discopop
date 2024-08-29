@@ -210,5 +210,15 @@ def output_aggregated_suggestion_statistics(
         "upper_quartile": upper_quartile,
     }
 
+    # suggestion_count
+    suggestion_count = max(
+        len(suggestion_call_path_depths),
+        len(suggestion_num_function_calls),
+        len(suggestion_immediate_lines_of_code),
+        len(suggestion_lines_of_code_including_calls),
+        len(suggestion_summed_cyclomatic_complexity_from_calls),
+    )
+    res_dict["suggestion_count"] = {"total": suggestion_count}
+
     with open(statistics_file, "w+") as f:
         f.write(json.dumps(res_dict) + "\n")
