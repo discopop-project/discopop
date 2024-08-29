@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import logging
 
+from discopop_explorer.utilities.statistics.cyclomatic_complexity.total import get_summed_cyclomatic_complexity
 from discopop_explorer.utilities.statistics.maximum_call_path_depth import get_maximum_call_path_depth
 from discopop_explorer.utilities.statistics.num_function_calls import get_suggestion_num_function_calls
 from discopop_explorer.utilities.statistics.suggestion_call_path_depths import get_suggestion_call_path_depths
@@ -70,3 +71,6 @@ def collect_statistics(arguments: ExplorerArguments, res: DetectionResult) -> No
             ]
         )
     )
+
+    summed_cyclomatic_complexity = get_summed_cyclomatic_complexity(arguments, res)
+    logger.debug("--> summed_cyclomatic_complexity = " + str(summed_cyclomatic_complexity))
