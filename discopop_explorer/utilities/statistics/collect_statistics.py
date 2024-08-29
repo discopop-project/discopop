@@ -41,22 +41,12 @@ def collect_statistics(arguments: ExplorerArguments, res: DetectionResult) -> No
     suggestion_call_path_depths = get_suggestion_call_path_depths(res)
     logger.debug(
         "--> suggestion_call_path_depths: "
-        + str(
-            [
-                res.pet.node_at(key).start_position() + " => " + str(suggestion_call_path_depths[key])
-                for key in suggestion_call_path_depths
-            ]
-        )
+        + str([str(key) + " => " + str(suggestion_call_path_depths[key]) for key in suggestion_call_path_depths])
     )
     suggestion_num_function_calls = get_suggestion_num_function_calls(res)
     logger.debug(
         "--> suggestion_num_function_calls: "
-        + str(
-            [
-                res.pet.node_at(key).start_position() + " => " + str(suggestion_num_function_calls[key])
-                for key in suggestion_num_function_calls
-            ]
-        )
+        + str([str(key) + " => " + str(suggestion_num_function_calls[key]) for key in suggestion_num_function_calls])
     )
     suggestion_immediate_lines_of_code = get_suggestion_immediate_lines_of_code(res)
     logger.debug(

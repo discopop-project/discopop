@@ -50,46 +50,44 @@ def output_code_statistics(
 
 def output_suggestion_statistics(
     arguments: ExplorerArguments,
-    suggestion_call_path_depths: Dict[NodeID, int],
-    suggestion_num_function_calls: Dict[NodeID, int],
+    suggestion_call_path_depths: Dict[int, int],
+    suggestion_num_function_calls: Dict[int, int],
     suggestion_immediate_lines_of_code: Dict[int, int],
     suggestion_lines_of_code_including_calls: Dict[int, int],
-    suggestion_summed_cyclomatic_complexity_from_calls: Dict[NodeID, int],
+    suggestion_summed_cyclomatic_complexity_from_calls: Dict[int, int],
 ) -> None:
     # create statistics directory
     if not os.path.exists(os.path.join(arguments.project_path, "explorer", "statistics")):
         os.mkdir(os.path.join(arguments.project_path, "explorer", "statistics"))
     # clear existing result
-    statistics_file_by_nodeID = os.path.join(
-        arguments.project_path, "explorer", "statistics", "suggestion_statistics_by_nodeID.json"
-    )
     statistics_file_by_suggestionID = os.path.join(
         arguments.project_path, "explorer", "statistics", "suggestion_statistics_by_suggestionID.json"
     )
-    if os.path.exists(statistics_file_by_nodeID):
-        os.remove(statistics_file_by_nodeID)
     if os.path.exists(statistics_file_by_suggestionID):
         os.remove(statistics_file_by_suggestionID)
 
-    statistics_dict_by_nodeID: Dict[NodeID, Dict[str, int]] = dict()
     statistics_dict_by_suggestionID: Dict[int, Dict[str, int]] = dict()
 
-    for node_id in suggestion_call_path_depths:
-        if node_id not in statistics_dict_by_nodeID:
-            statistics_dict_by_nodeID[node_id] = dict()
-        statistics_dict_by_nodeID[node_id]["suggestion_call_path_depth"] = suggestion_call_path_depths[node_id]
+    for suggestion_id in suggestion_call_path_depths:
+        if suggestion_id not in statistics_dict_by_suggestionID:
+            statistics_dict_by_suggestionID[suggestion_id] = dict()
+        statistics_dict_by_suggestionID[suggestion_id]["suggestion_call_path_depth"] = suggestion_call_path_depths[
+            suggestion_id
+        ]
 
-    for node_id in suggestion_num_function_calls:
-        if node_id not in statistics_dict_by_nodeID:
-            statistics_dict_by_nodeID[node_id] = dict()
-        statistics_dict_by_nodeID[node_id]["suggestion_num_function_calls"] = suggestion_num_function_calls[node_id]
+    for suggestion_id in suggestion_num_function_calls:
+        if suggestion_id not in statistics_dict_by_suggestionID:
+            statistics_dict_by_suggestionID[suggestion_id] = dict()
+        statistics_dict_by_suggestionID[suggestion_id]["suggestion_num_function_calls"] = suggestion_num_function_calls[
+            suggestion_id
+        ]
 
-    for node_id in suggestion_summed_cyclomatic_complexity_from_calls:
-        if node_id not in statistics_dict_by_nodeID:
-            statistics_dict_by_nodeID[node_id] = dict()
-        statistics_dict_by_nodeID[node_id][
+    for suggestion_id in suggestion_summed_cyclomatic_complexity_from_calls:
+        if suggestion_id not in statistics_dict_by_suggestionID:
+            statistics_dict_by_suggestionID[suggestion_id] = dict()
+        statistics_dict_by_suggestionID[suggestion_id][
             "suggestion_summed_cyclomatic_complexity_from_calls"
-        ] = suggestion_summed_cyclomatic_complexity_from_calls[node_id]
+        ] = suggestion_summed_cyclomatic_complexity_from_calls[suggestion_id]
 
     for suggestion_id in suggestion_immediate_lines_of_code:
         if suggestion_id not in statistics_dict_by_suggestionID:
@@ -104,9 +102,6 @@ def output_suggestion_statistics(
         statistics_dict_by_suggestionID[suggestion_id][
             "suggestion_lines_of_code_including_calls"
         ] = suggestion_lines_of_code_including_calls[suggestion_id]
-
-    with open(statistics_file_by_nodeID, "w+") as f:
-        f.write(json.dumps(statistics_dict_by_nodeID) + "\n")
 
     with open(statistics_file_by_suggestionID, "w+") as f:
         f.write(json.dumps(statistics_dict_by_suggestionID) + "\n")

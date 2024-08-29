@@ -13,16 +13,12 @@ from discopop_explorer.utilities.statistics.utilities.num_function_calls import 
 from discopop_library.result_classes.DetectionResult import DetectionResult
 
 
-def get_suggestion_num_function_calls(res: DetectionResult) -> Dict[NodeID, int]:
-    res_dict: Dict[NodeID, int] = dict()
-
-    # collect NodeIDs where suggestions are located
-    node_ids: Set[NodeID] = set()
-    for pattern_type in res.patterns.__dict__:
-        for pattern in res.patterns.__dict__[pattern_type]:
-            node_ids.add(pattern.node_id)
+def get_suggestion_num_function_calls(res: DetectionResult) -> Dict[int, int]:
+    res_dict: Dict[int, int] = dict()
 
     # collect number of function calls in entire subtree of a parallelization suggestion
-    for node_id in node_ids:
-        res_dict[node_id] = get_num_function_calls(res.pet, res.pet.node_at(node_id), [])
+    for pattern_type in res.patterns.__dict__:
+        for pattern in res.patterns.__dict__[pattern_type]:
+            res_dict[pattern.pattern_id] = get_num_function_calls(res.pet, res.pet.node_at(pattern.node_id), [])
+
     return res_dict
