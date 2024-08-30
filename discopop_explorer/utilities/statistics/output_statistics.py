@@ -131,7 +131,7 @@ def output_aggregated_suggestion_statistics(
     v_max = max(values)
     v_avg = int(sum(values) / len(values))
     lower_quartile_idx = int((len(values) + 1) * 1 / 4)
-    upper_quartile_idx = int((len(values) + 1) * 3 / 4)
+    upper_quartile_idx = min(len(values) - 1, int((len(values) + 1) * 3 / 4))
     lower_quartile = sorted(values)[lower_quartile_idx]
     upper_quartile = sorted(values)[upper_quartile_idx]
     res_dict["suggestion_call_path_depths"] = {
@@ -148,7 +148,7 @@ def output_aggregated_suggestion_statistics(
     v_max = max(values)
     v_avg = int(sum(values) / len(values))
     lower_quartile_idx = int((len(values) + 1) * 1 / 4)
-    upper_quartile_idx = int((len(values) + 1) * 3 / 4)
+    upper_quartile_idx = min(len(values) - 1, int((len(values) + 1) * 3 / 4))
     lower_quartile = sorted(values)[lower_quartile_idx]
     upper_quartile = sorted(values)[upper_quartile_idx]
     res_dict["suggestion_num_function_calls"] = {
@@ -165,7 +165,7 @@ def output_aggregated_suggestion_statistics(
     v_max = max(values)
     v_avg = int(sum(values) / len(values))
     lower_quartile_idx = int((len(values) + 1) * 1 / 4)
-    upper_quartile_idx = int((len(values) + 1) * 3 / 4)
+    upper_quartile_idx = min(len(values) - 1, int((len(values) + 1) * 3 / 4))
     lower_quartile = sorted(values)[lower_quartile_idx]
     upper_quartile = sorted(values)[upper_quartile_idx]
     res_dict["suggestion_immediate_lines_of_code"] = {
@@ -182,7 +182,7 @@ def output_aggregated_suggestion_statistics(
     v_max = max(values)
     v_avg = int(sum(values) / len(values))
     lower_quartile_idx = int((len(values) + 1) * 1 / 4)
-    upper_quartile_idx = int((len(values) + 1) * 3 / 4)
+    upper_quartile_idx = min(len(values) - 1, int((len(values) + 1) * 3 / 4))
     lower_quartile = sorted(values)[lower_quartile_idx]
     upper_quartile = sorted(values)[upper_quartile_idx]
     res_dict["suggestion_lines_of_code_including_calls"] = {
@@ -199,7 +199,7 @@ def output_aggregated_suggestion_statistics(
     v_max = max(values)
     v_avg = int(sum(values) / len(values))
     lower_quartile_idx = int((len(values) + 1) * 1 / 4)
-    upper_quartile_idx = int((len(values) + 1) * 3 / 4)
+    upper_quartile_idx = min(len(values) - 1, int((len(values) + 1) * 3 / 4))
     lower_quartile = sorted(values)[lower_quartile_idx]
     upper_quartile = sorted(values)[upper_quartile_idx]
     res_dict["suggestion_summed_cyclomatic_complexity_from_calls"] = {
