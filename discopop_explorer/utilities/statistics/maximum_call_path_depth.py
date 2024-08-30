@@ -17,5 +17,5 @@ def get_maximum_call_path_depth(pet: PEGraphX) -> int:
     for node in all_nodes(pet):
         if node.type != NodeType.FUNC:
             continue
-        res = max(res, get_outgoing_call_path_depth(pet, node, []))
+        res = max(res, get_outgoing_call_path_depth(pet, node))
     return res

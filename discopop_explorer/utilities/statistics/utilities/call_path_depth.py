@@ -15,18 +15,25 @@ from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.functions.PEGraph.traversal.children import direct_children
 
 
-def get_outgoing_call_path_depth(pet: PEGraphX, node: Node, visited: List[Node]) -> int:
+def get_outgoing_call_path_depth(pet: PEGraphX, node: Node) -> int:
+    visited: List[Node] = []
+    queue: List[tuple[Node, int]] = [(node, 0)]
     child_depths: List[int] = [0]
     visited.append(node)
 
-    for child in direct_children(pet, node):
-        out_call_edges = out_edges(pet, child.id, EdgeType.CALLSNODE)
-        if len(out_call_edges) > 0:
-            for _, t, _ in out_call_edges:
-                if t in visited:
-                    continue
-                child_depths.append(1 + get_outgoing_call_path_depth(pet, pet.node_at(t), copy.deepcopy(visited)))
-        else:
-            child_depths.append(get_outgoing_call_path_depth(pet, child, copy.deepcopy(visited)))
+    while queue:
+        cur_node, cur_call_depth = queue.pop()
+        visited.append(cur_node)
+
+        for child in direct_children(pet, cur_node):
+            out_call_edges = out_edges(pet, child.id, EdgeType.CALLSNODE)
+            if len(out_call_edges) > 0:
+                for _, t, _ in out_call_edges:
+                    if pet.node_at(t) in visited:
+                        continue
+                    child_depths.append(cur_call_depth + 1)
+                    queue.append((pet.node_at(t), cur_call_depth + 1))
+            if child not in visited:
+                queue.append((child, cur_call_depth))
 
     return max(child_depths)
