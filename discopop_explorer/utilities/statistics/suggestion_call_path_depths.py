@@ -18,6 +18,6 @@ def get_suggestion_call_path_depths(res: DetectionResult) -> Dict[int, int]:
     # collect NodeIDs where suggestions are located
     for pattern_type in res.patterns.__dict__:
         for pattern in res.patterns.__dict__[pattern_type]:
-            res_dict[pattern.pattern_id] = get_outgoing_call_path_depth(res.pet, res.pet.node_at(pattern.node_id), [])
+            res_dict[pattern.pattern_id] = get_outgoing_call_path_depth(res.pet, res.pet.node_at(pattern.node_id))
 
     return res_dict
