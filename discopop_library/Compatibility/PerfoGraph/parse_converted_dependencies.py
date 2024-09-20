@@ -1,3 +1,11 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 from typing import Dict, List, Tuple, Optional, cast
 import os
 
@@ -21,6 +29,10 @@ def get_edge_descriptions(
             # only consider dependency lines
             if not line.startswith("!"):
                 continue
+
+            # ensure compatibility between static and dynamic dependencies
+            if not " NOM  " in line:
+                line = line.replace(" NOM ", " NOM  ")
 
             split_line = line.split(" ")
             # get first entry in split_lines (sink)
