@@ -56,6 +56,8 @@ def get_cyclomatic_complexities_for_boxplot(
     lower_quartile_idx = int((len(sorted_cyclomatic_complexities) + 1) * 1 / 4)
     upper_quartile_idx = int((len(sorted_cyclomatic_complexities) + 1) * 3 / 4)
     lower_quartile = sorted_cyclomatic_complexities[lower_quartile_idx]
+    if len(sorted_cyclomatic_complexities) == 1:
+        upper_quartile_idx = 0
     upper_quartile = sorted_cyclomatic_complexities[upper_quartile_idx]
 
     return cc_min, cc_max, cc_avg, lower_quartile, upper_quartile
