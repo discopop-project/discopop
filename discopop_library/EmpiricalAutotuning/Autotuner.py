@@ -118,8 +118,8 @@ def run(arguments: AutotunerArguments) -> None:
                 + str(round(loop_tuple[4], 3))
                 + "s"
             )
-            # check if the loop contributes more than 1% to the total runtime
-            loop_contributes_significantly = loop_tuple[4] > (max_avg_runtime / 100)
+            # check if the loop contributes more than 1% to the total runtime, if hotspot information exists
+            loop_contributes_significantly = (loop_tuple[4] > (max_avg_runtime / 100)) or not hotspot_information
             if not loop_contributes_significantly:
                 statistics_graph.add_child(loop_str, color=NodeColor.ORANGE)
             else:
