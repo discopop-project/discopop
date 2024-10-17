@@ -15,7 +15,7 @@ import warnings
 
 from sympy import Expr
 import tqdm  # type: ignore
-from discopop_explorer.PEGraphX import NodeID  # type: ignore
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 
@@ -122,14 +122,14 @@ def __calculate_fitness(
 def __initialize_fitness_worker(
     experiment: Experiment,
     arguments: OptimizerArguments,
-):
+) -> None:
     global global_experiment
     global global_arguments
     global_experiment = experiment
     global_arguments = arguments
 
 
-def __get_score(param_tuple) -> Tuple[List[int], int, ContextObject]:
+def __get_score(param_tuple: List[int]) -> Tuple[List[int], int, ContextObject]:
     global global_experiment
     global global_arguments
     configuration = param_tuple
@@ -151,7 +151,7 @@ def __print_population(
     population: List[List[int]],
     fitness: List[int],
     arguments: OptimizerArguments,
-):
+) -> None:
     sorted_fitness = sorted(enumerate(fitness), key=lambda x: x[1], reverse=True)
     print("# POPULATION")
     for fitness_idx, fitness_value in sorted_fitness:
@@ -181,7 +181,7 @@ def __initialize_fill_worker(
     experiment: Experiment,
     available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
-):
+) -> None:
     global global_experiment
     global global_arguments
     global global_available_decisions
@@ -190,10 +190,16 @@ def __initialize_fill_worker(
     global_available_decisions = available_decisions
 
 
-def __parallel_get_random_configuration(param_tuple):
+def __parallel_get_random_configuration(param_tuple: None) -> List[int]:
     global global_experiment
     global global_arguments
     global global_available_decisions
+    if global_experiment is None:
+        raise ValueError("global_experiment is None!")
+    if global_arguments is None:
+        raise ValueError("global_arguments is None!")
+    if global_population is None:
+        raise ValueError("global_population is None!")
     return __get_random_configuration(global_experiment, global_available_decisions, global_arguments)
 
 
@@ -240,7 +246,7 @@ def __select(
     population: List[List[int]],
     fitness: List[int],
     new_population_size: int,
-):
+) -> List[List[int]]:
     """Performs a fitness-proportionate Selection"""
     # get Sum of scores
     score_sum = 0.0
@@ -270,7 +276,7 @@ def __crossover(
     arguments: OptimizerArguments,
     population: List[List[int]],
     crossovers: int,
-):
+) -> List[List[int]]:
     global global_experiment
     global global_arguments
     global global_population
@@ -299,7 +305,9 @@ def __crossover(
     return population
 
 
-def __initialize_crossover_worker(experiment: Experiment, arguments: OptimizerArguments, population: List[List[int]]):
+def __initialize_crossover_worker(
+    experiment: Experiment, arguments: OptimizerArguments, population: List[List[int]]
+) -> None:
     global global_experiment
     global global_arguments
     global global_population
@@ -308,10 +316,19 @@ def __initialize_crossover_worker(experiment: Experiment, arguments: OptimizerAr
     global_population = population
 
 
-def __parallel_crossover(param_tuple):
+def __parallel_crossover(
+    param_tuple: None,
+) -> Optional[Tuple[Tuple[List[int], List[int]], Tuple[List[int], List[int]]]]:
     global global_experiment
     global global_arguments
     global global_population
+
+    if global_experiment is None:
+        raise ValueError("global_experiment is None!")
+    if global_arguments is None:
+        raise ValueError("global_arguments is None!")
+    if global_population is None:
+        raise ValueError("global_population is None!")
 
     for i in range(0, 1000):
         # select two random elements
@@ -365,7 +382,9 @@ def __mutate(
     return population
 
 
-def __initialize_mutate_worker(experiment: Experiment, arguments: OptimizerArguments, population: List[List[int]]):
+def __initialize_mutate_worker(
+    experiment: Experiment, arguments: OptimizerArguments, population: List[List[int]]
+) -> None:
     global global_experiment
     global global_arguments
     global global_population
@@ -374,10 +393,16 @@ def __initialize_mutate_worker(experiment: Experiment, arguments: OptimizerArgum
     global_population = population
 
 
-def __parallel_mutate(param_tuple):
+def __parallel_mutate(param_tuple: None) -> Optional[Tuple[List[int], List[int]]]:
     global global_experiment
     global global_arguments
     global global_population
+    if global_experiment is None:
+        raise ValueError("global_experiment is None!")
+    if global_arguments is None:
+        raise ValueError("global_arguments is None!")
+    if global_population is None:
+        raise ValueError("global_population is None!")
 
     for i in range(0, 1000):
         # select random mutation target from population
@@ -471,7 +496,7 @@ def __get_random_configuration(
     experiment: Experiment,
     available_decisions: Dict[FunctionRoot, List[List[int]]],
     arguments: OptimizerArguments,
-):
+) -> List[int]:
     while True:
         random_configuration: List[int] = []
         # fill configuration

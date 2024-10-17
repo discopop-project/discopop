@@ -7,13 +7,13 @@
 # directory for details.
 from typing import Optional
 
-from .PatternInfo import PatternInfo
-from ..PEGraphX import (
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
-    Node,
-    LineID,
-    MemoryRegion,
 )
+from discopop_explorer.classes.PEGraph.Node import Node
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.LineID import LineID
 
 
 class DeviceUpdateInfo(PatternInfo):
@@ -53,7 +53,7 @@ class DeviceUpdateInfo(PatternInfo):
         self.openmp_source_device_id = openmp_source_device_id
         self.openmp_target_device_id = openmp_target_device_id
 
-    def __str__(self):
+    def __str__(self) -> str:
         return (
             # f"Device update at: {self.node_id}\n" # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
             f"Start line: {self.start_line}\n"

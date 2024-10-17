@@ -18,6 +18,7 @@ from typing import Dict, List, Optional, Tuple
 
 import pstats2  # type:ignore
 from pluginbase import PluginBase  # type: ignore
+from discopop_explorer.functions.PEGraph.output.json import dump_to_pickled_json
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments  # type: ignore
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
@@ -29,10 +30,10 @@ from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench
     ExtrapInterpolatedMicrobench,
 )
 from discopop_library.result_classes.DetectionResult import DetectionResult
-from .PEGraphX import PEGraphX
-from .json_serializer import PatternBaseSerializer
-from .parser import parse_inputs
-from .pattern_detection import PatternDetectorX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.json_serializer import PatternBaseSerializer
+from discopop_explorer.utilities.PEGraphConstruction.parser import parse_inputs
+from discopop_explorer.pattern_detection import PatternDetectorX
 
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 
@@ -65,10 +66,10 @@ class ExplorerArguments(GeneralArguments):
     microbench_file: Optional[str]
     load_existing_doall_and_reduction_patterns: bool
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
+    def __validate(self) -> None:
         """Validate the arguments passed to the discopop_explorer, e.g check if given files exist"""
         validation_failure = False
 
@@ -111,10 +112,10 @@ def __run(
     enable_patterns: str = "*",
     enable_task_pattern: bool = False,
     enable_detection_of_scheduling_clauses: bool = False,
-    hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]] = None,
+    hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]] = None,
     load_existing_doall_and_reduction_patterns: bool = False,
 ) -> DetectionResult:
-    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))
+    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))  # type: ignore
     print("PET CREATION FINISHED.")
     # pet.show()
     # TODO add visualization
@@ -171,7 +172,7 @@ def __run(
     return res
 
 
-def run(arguments: ExplorerArguments):
+def run(arguments: ExplorerArguments) -> None:
     """Run the discopop_explorer with the given arguments"""
     logger = logging.getLogger("Explorer")
 
@@ -190,101 +191,116 @@ def run(arguments: ExplorerArguments):
         profile = cProfile.Profile()
         profile.enable()
 
-    if arguments.generate_data_cu_inst is not None:
-        # start generation of Data_CUInst and stop execution afterwards
-        from .generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
+    try:
+        if arguments.generate_data_cu_inst is not None:
+            # start generation of Data_CUInst and stop execution afterwards
+            from discopop_explorer.utilities.general.generate_Data_CUInst import wrapper as generate_data_cuinst_wrapper
 
-        generate_data_cuinst_wrapper(
+            generate_data_cuinst_wrapper(
+                arguments.cu_xml_file,
+                arguments.dep_file,
+                arguments.loop_counter_file,
+                arguments.reduction_file,
+                arguments.generate_data_cu_inst,
+            )
+            sys.exit(0)
+
+        print("Loading Hotspots...")
+
+        hotspots = load_hotspots(
+            HotspotLoaderArguments(
+                verbose=True,
+                dot_discopop_path=os.getcwd(),
+                get_loops=True,
+                get_functions=True,
+                get_YES=True,
+                get_MAYBE=True,
+                get_NO=False,
+                log_level=arguments.log_level,
+                write_log=arguments.write_log,
+            )
+        )
+
+        print("Done.")
+
+        start = time.time()
+
+        res = __run(
+            arguments.project_path,
             arguments.cu_xml_file,
             arguments.dep_file,
             arguments.loop_counter_file,
             arguments.reduction_file,
-            arguments.generate_data_cu_inst,
+            arguments.plugins,
+            file_mapping=arguments.file_mapping_file,
+            cu_inst_result_file=arguments.cu_inst_result_file,
+            llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
+            discopop_build_path=arguments.discopop_build_path,
+            enable_patterns=arguments.enable_patterns,
+            enable_task_pattern=arguments.enable_task_pattern,
+            enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
+            hotspot_functions=hotspots,
+            load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
         )
-        sys.exit(0)
 
-    print("Loading Hotspots...")
+        end = time.time()
 
-    hotspots = load_hotspots(
-        HotspotLoaderArguments(
-            verbose=True,
-            get_loops=True,
-            get_functions=True,
-            get_YES=True,
-            get_MAYBE=True,
-            get_NO=False,
-            log_level=arguments.log_level,
-            write_log=arguments.write_log,
-        )
-    )
+        if arguments.enable_pet_dump_file is not None:
+            with open(arguments.enable_pet_dump_file, "w+") as f:
+                f.write(dump_to_pickled_json(res.pet))
+                f.flush()
+                f.close()
 
-    print("Done.")
+        if arguments.enable_detection_result_dump_file is not None:
+            with open(arguments.enable_detection_result_dump_file, "w+") as f:
+                f.write(res.dump_to_pickled_json())
+                f.flush()
+                f.close()
 
-    start = time.time()
+        if arguments.enable_json_file is None:
+            print(str(res))
+        else:
+            # todo re-enable?
+            # print(str(res))
+            # since PETGraphX is not JSON Serializable, delete the field prior to executing the serialization
+            del res.pet
+            with open(arguments.enable_json_file, "w+") as f:
+                json.dump(res, f, indent=2, cls=PatternBaseSerializer)
 
-    res = __run(
-        arguments.project_path,
-        arguments.cu_xml_file,
-        arguments.dep_file,
-        arguments.loop_counter_file,
-        arguments.reduction_file,
-        arguments.plugins,
-        file_mapping=arguments.file_mapping_file,
-        cu_inst_result_file=arguments.cu_inst_result_file,
-        llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
-        discopop_build_path=arguments.discopop_build_path,
-        enable_patterns=arguments.enable_patterns,
-        enable_task_pattern=arguments.enable_task_pattern,
-        enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
-        hotspot_functions=hotspots,
-        load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
-    )
+        # initialize the line_mapping.json
+        initialize_line_mapping(load_file_mapping(arguments.file_mapping_file), arguments.project_path)
 
-    end = time.time()
+        print("Time taken for pattern detection: {0}".format(end - start))
 
-    if arguments.enable_pet_dump_file is not None:
-        with open(arguments.enable_pet_dump_file, "w+") as f:
-            f.write(res.pet.dump_to_pickled_json())
-            f.flush()
-            f.close()
+        # demonstration of Microbenchmark possibilities
+        if arguments.microbench_file is not None:
+            microbench_file = get_path(
+                arguments.project_path, arguments.microbench_file
+            )  # NOTE: the json file is not usually located in the project, this is just for demonstration purposes
+            if not os.path.isfile(microbench_file):
+                raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
+            extrapBench = ExtrapInterpolatedMicrobench(microbench_file)
+            sympyExpr = extrapBench.getFunctionSympy()
+            print(sympyExpr)
+            print(sympyExpr.free_symbols)
 
-    if arguments.enable_detection_result_dump_file is not None:
-        with open(arguments.enable_detection_result_dump_file, "w+") as f:
-            f.write(res.dump_to_pickled_json())
-            f.flush()
-            f.close()
+        # print profiling results
+        if arguments.enable_profiling_dump_file is not None:
+            profile.disable()
+            if os.path.exists(arguments.enable_profiling_dump_file):
+                os.remove(arguments.enable_profiling_dump_file)
+            with open(arguments.enable_profiling_dump_file, "w+") as f:
+                stats = pstats2.Stats(profile, stream=f).sort_stats("tottime").reverse_order()
+                stats.print_stats()
 
-    if arguments.enable_json_file is None:
-        print(str(res))
-    else:
-        # todo re-enable?
-        # print(str(res))
-        # since PETGraphX is not JSON Serializable, delete the field prior to executing the serialization
-        del res.pet
-        with open(arguments.enable_json_file, "w+") as f:
-            json.dump(res, f, indent=2, cls=PatternBaseSerializer)
-
-    if arguments.enable_profiling_dump_file is not None:
-        profile.disable()
-        if os.path.exists(arguments.enable_profiling_dump_file):
-            os.remove(arguments.enable_profiling_dump_file)
-        with open(arguments.enable_profiling_dump_file, "w+") as f:
-            stats = pstats2.Stats(profile, stream=f).sort_stats("time").reverse_order()
-            stats.print_stats()
-
-    # initialize the line_mapping.json
-    initialize_line_mapping(load_file_mapping(arguments.file_mapping_file), arguments.project_path)
-
-    print("Time taken for pattern detection: {0}".format(end - start))
-
-    # demonstration of Microbenchmark possibilities
-    if arguments.microbench_file is not None:
-        microbench_file = get_path(
-            arguments.project_path, arguments.microbench_file
-        )  # NOTE: the json file is not usually located in the project, this is just for demonstration purposes
-        if not os.path.isfile(microbench_file):
-            raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
-        extrapBench = ExtrapInterpolatedMicrobench(microbench_file)
-        sympyExpr = extrapBench.getFunctionSympy()
-        print(sympyExpr)
-        print(sympyExpr.free_symbols)
+    except BaseException as be:
+        # required to correctly write profiling data if the program terminates
+        # print profiling results
+        if arguments.enable_profiling_dump_file is not None:
+            profile.disable()
+            if os.path.exists(arguments.enable_profiling_dump_file):
+                os.remove(arguments.enable_profiling_dump_file)
+            with open(arguments.enable_profiling_dump_file, "w+") as f:
+                stats = pstats2.Stats(profile, stream=f).sort_stats("tottime").reverse_order()
+                stats.print_stats()
+        raise be

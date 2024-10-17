@@ -16,7 +16,7 @@ class Line(object):
     belongs_to_regions: List[int]
     belongs_to_original_line: int
 
-    def __init__(self, parent_line_num: int, line_num=None, content=""):
+    def __init__(self, parent_line_num: int, line_num: Optional[int] = None, content: str = ""):
         self.line_num = line_num
         self.content = content
         self.owns_region = None

@@ -18,6 +18,10 @@
 #include "loop/LoopManager.hpp"
 #include "memory/MemoryManager.hpp"
 
+#if DP_CALLTREE_PROFILING
+#include "calltree/CallTreeNode.hpp"
+#endif
+
 #include <cstdint>
 #include <set>
 #include <string>
@@ -54,9 +58,19 @@ typedef enum {
 
 struct AccessInfo {
   AccessInfo(bool isRead, LID lid, char *var, std::string AAvar, ADDR addr, bool skip = false)
-      : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {}
+      : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {
+#if DP_CALLTREE_PROFILING
+    call_tree_node_ptr = nullptr;
+    calculate_dependency_metadata = true;
+#endif
+  }
 
-  AccessInfo() : isRead(false), lid(0), var(""), AAvar(""), addr(0), skip(false) {}
+  AccessInfo() : isRead(false), lid(0), var(""), AAvar(""), addr(0), skip(false) {
+#if DP_CALLTREE_PROFILING
+    call_tree_node_ptr = nullptr;
+    calculate_dependency_metadata = true;
+#endif
+  }
 
   bool isRead;
   // hybrid analysis
@@ -66,15 +80,15 @@ struct AccessInfo {
   const char *var;
   std::string AAvar; // name of allocated variable -> "Anti Aliased Variable"
   ADDR addr;
-  bool isStackAccess = false;
-  bool addrIsOwnedByScope = false;
-  bool positiveScopeChangeOccuredSinceLastAccess = false;
+#if DP_CALLTREE_PROFILING
+  shared_ptr<CallTreeNode> call_tree_node_ptr;
+  bool calculate_dependency_metadata;
+#endif
 };
 
 // For runtime dependency merging
 struct Dep {
-  Dep(depType T, LID dep, const char *var, std::string AAvar)
-      : type(T), depOn(dep), var(var), AAvar(AAvar) {}
+  Dep(depType T, LID dep, const char *var, std::string AAvar) : type(T), depOn(dep), var(var), AAvar(AAvar) {}
 
   depType type;
   LID depOn;

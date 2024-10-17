@@ -25,6 +25,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <chrono>
 
 using namespace std;
 
@@ -52,12 +53,19 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     // This part should be executed only once.
     readRuntimeInfo();
     timers = new Timers();
+    statistics_profiling_start_time = std::chrono::high_resolution_clock::now();
 #ifdef DP_INTERNAL_TIMER
     const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
 #endif
     function_manager = new FunctionManager();
     loop_manager = new LoopManager();
     memory_manager = new MemoryManager();
+#if DP_CALLTREE_PROFILING
+    call_tree = new CallTree();
+    // metadata_queue = new MetaDataQueue(6); // TODO: add Worker argument
+    dependency_metadata_results_mtx = new std::mutex();
+    dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
+#endif
 
     out = new ofstream();
 
@@ -124,6 +132,10 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 #if DP_STACK_ACCESS_DETECTION
   memory_manager->enter_new_function();
   memory_manager->enterScope("function", lid);
+#endif
+
+#ifdef DP_CALLTREE_PROFILING
+  call_tree->enter_function(lid);
 #endif
 
   if (isStart)

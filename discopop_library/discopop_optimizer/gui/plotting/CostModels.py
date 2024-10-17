@@ -21,14 +21,14 @@ from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 
 
 def plot_CostModels(
-    experiment,
+    experiment: Experiment,
     models: List[CostModel],
     sorted_free_symbols: List[Symbol],
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     labels: Optional[List[str]] = None,
     title: Optional[str] = None,
     super_title: Optional[str] = None,
-):
+) -> None:
     local_sorted_free_symbols = copy.deepcopy(sorted_free_symbols)
     local_free_symbol_ranges = copy.deepcopy(free_symbol_ranges)
     for symbol in experiment.substitutions:
@@ -112,7 +112,7 @@ def plot_CostModels_using_function_path_selections(
     labels: Optional[List[str]] = None,
     title: Optional[str] = None,
     super_title: Optional[str] = None,
-):
+) -> None:
     # apply selected substitutions
     # collect substitutions
     local_substitutions = copy.deepcopy(experiment.substitutions)
@@ -188,7 +188,7 @@ def plot_CostModels_using_function_path_selections(
         print("Plotiting not supported for", len(local_sorted_free_symbols), "free symbols!")
 
 
-def print_current_function_path_selections(experiment: Experiment):
+def print_current_function_path_selections(experiment: Experiment) -> None:
     """Prints an overview of the currently selected paths for each function to the console"""
     print("###")
     print("SELECTIONS:")
@@ -198,7 +198,7 @@ def print_current_function_path_selections(experiment: Experiment):
     print("###")
 
 
-def print_current_substitutions(experiment: Experiment):
+def print_current_substitutions(experiment: Experiment) -> None:
     """Prints an overview of the currently selected paths for each function to the console"""
     print("###")
     print("SUBSTITUTIONS:")
@@ -216,7 +216,7 @@ def print_simplified_function(
     labels: Optional[List[str]] = None,
     title: Optional[str] = None,
     super_title: Optional[str] = None,
-):
+) -> None:
     """Prints an simplified mathematical function based on the current set of selections"""
 
     # todo: NOTE: copied from plot_CostModels_using_function_path_selections
@@ -288,7 +288,7 @@ def __1d_plot(
     labels: Optional[List[str]] = None,
     title: Optional[str] = None,
     super_title: Optional[str] = None,
-):
+) -> None:
     global __unique_plot_id
     matplotlib.use("TkAgg")
     # Make a dataset from models:
@@ -329,7 +329,7 @@ def __2d_plot(
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     labels: Optional[List[str]] = None,
     title: Optional[str] = None,
-):
+) -> None:
     matplotlib.use("TkAgg")
     combined_plot = None
     for idx, model in enumerate(models):
@@ -375,7 +375,7 @@ def __3d_plot(
     free_symbol_ranges: Dict[Symbol, Tuple[float, float]],
     labels: Optional[List[str]] = None,
     title: Optional[str] = None,
-):
+) -> None:
     matplotlib.use("TkAgg")
     combined_plot = None
     for idx, model in enumerate(models):

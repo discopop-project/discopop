@@ -8,11 +8,14 @@
 
 import copy
 import os
-from typing import List
+from typing import Any, List
 
 from lxml import objectify, etree  # type: ignore
 
-from discopop_explorer.PEGraphX import LoopNode, PEGraphX
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children_or_called_nodes
 from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import line_contained_in_region
 
 
@@ -203,7 +206,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
     return modified_cu_xml
 
 
-def __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids):
+def __generate_new_cu_id(parent: Any, parent_copy: Any, used_node_ids: Any, self_added_node_ids: Any) -> None:
     """Generate the next free CU id and assign it to the parent CU.
     :param parent: parent CU, id will be updated
     :param parent_copy: copy of parent CU (newly created CU)
@@ -219,7 +222,7 @@ def __generate_new_cu_id(parent, parent_copy, used_node_ids, self_added_node_ids
     self_added_node_ids.append(incremented_id)
 
 
-def __set_parent_copy_childrennodes(parent_copy):
+def __set_parent_copy_childrennodes(parent_copy: Any) -> None:
     """Adds cu nodes called by parent_copy to the childrenNodes list of parent_copy, if not already contained.
     :param parent_copy: cu node to be updated"""
     parent_copy.childrenNodes._setText("")
@@ -242,7 +245,7 @@ def __set_parent_copy_childrennodes(parent_copy):
             continue
 
 
-def __remove_overlapping_start_and_end_lines(parent_copy, target_list):
+def __remove_overlapping_start_and_end_lines(parent_copy: Any, target_list: Any) -> None:
     """Removes the first line of parent_copy from parent´s readPhaseLines, writePhaseLines or instructionLines.
     As a result, start and end Lines of both nodes do not overlap anymore.
     :param parent_copy: copy of parent node (newly added node)
@@ -258,7 +261,7 @@ def __remove_overlapping_start_and_end_lines(parent_copy, target_list):
         target_list.set("count", "1")
 
 
-def __filter_rwi_lines(parent_copy, target_list):
+def __filter_rwi_lines(parent_copy: Any, target_list: Any) -> None:
     """Removes entries from instructionLines, readPhaseLines and writePhraseLines of parent_copy if their value is not
     between parent_copy.startsAtLine and parent_copy.endsAtLine.
     :param parent_copy: cu node to be filtered
@@ -275,7 +278,7 @@ def __filter_rwi_lines(parent_copy, target_list):
         pass
 
 
-def __insert_separator_line(parent_copy, target_list):
+def __insert_separator_line(parent_copy: Any, target_list: Any) -> None:
     """Insert separator line to parent_copys instruction, read and writePhaseLines if not already present
     :param parent_copy: cu node to be updated
     :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent_copy"""
@@ -291,7 +294,7 @@ def __insert_separator_line(parent_copy, target_list):
     target_list._setText(target_list.text.replace(",,", ","))
 
 
-def __insert_missing_rwi_lines(parent, target_list):
+def __insert_missing_rwi_lines(parent: Any, target_list: Any) -> None:
     """Insert all lines contained in parent to instruction, read and writePhaseLines
     :param parent: cu node to be updated
     :param target_list: eiter readPhaseLines, writePhaseLines or instructionLines of parent"""
@@ -308,7 +311,7 @@ def __insert_missing_rwi_lines(parent, target_list):
     target_list._setText(target_list.text.replace(",,", ","))
 
 
-def __remove_unnecessary_return_instructions(target):
+def __remove_unnecessary_return_instructions(target: Any) -> None:
     """Remove returnInstructions if they are not part of target cu anymore.
     :param target: cu to be checked"""
     if int(target.returnInstructions.get("count")) != 0:
@@ -321,7 +324,7 @@ def __remove_unnecessary_return_instructions(target):
         target.returnInstructions.set("count", str(len(new_entries)))
 
 
-def __add_parent_id_to_children(parsed_cu, parent):
+def __add_parent_id_to_children(parsed_cu: Any, parent: Any) -> None:
     """ "Add parent.id to parent_function.childrenNodes
     :param: parsed_cu: parsed contents of cu_xml file
     :param parent: cu node to be added to parent_function's children
@@ -347,7 +350,7 @@ def __add_parent_id_to_children(parsed_cu, parent):
             parent_function.childrenNodes._setText(parent_function.childrenNodes.text[1:])
 
 
-def __preprocessor_cu_contains_at_least_two_recursive_calls(node) -> bool:
+def __preprocessor_cu_contains_at_least_two_recursive_calls(node: Any) -> bool:
     """Check if >= 2 recursive function calls are contained in a cu's code region.
     Returns True, if so.
     Returns False, else.
@@ -383,12 +386,12 @@ def __preprocessor_cu_contains_at_least_two_recursive_calls(node) -> bool:
     return False
 
 
-def check_loop_scopes(pet: PEGraphX):
+def check_loop_scopes(pet: PEGraphX) -> None:
     """Checks if the scope of loop CUs matches these of their children. Corrects the scope of the loop CU
     (expand only) if necessary
     :param pet: PET graph"""
-    for loop_cu in pet.all_nodes(LoopNode):
-        for child in pet.direct_children_or_called_nodes(loop_cu):
+    for loop_cu in all_nodes(pet, LoopNode):
+        for child in direct_children_or_called_nodes(pet, loop_cu):
             if not line_contained_in_region(child.start_position(), loop_cu.start_position(), loop_cu.end_position()):
                 # expand loop_cu start_position upwards
                 if child.start_line < loop_cu.start_line and loop_cu.file_id == child.file_id:

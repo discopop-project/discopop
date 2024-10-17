@@ -7,11 +7,15 @@
 # directory for details.
 
 
-from typing import List, Optional, cast
+from typing import Dict, List, Optional, Tuple, cast
 
-from discopop_explorer.PEGraphX import DummyNode, PEGraphX, MWType
-from discopop_explorer.parser import parse_inputs
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.DummyNode import DummyNode
+from discopop_explorer.enums.MWType import MWType
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children_or_called_nodes
+from discopop_explorer.utilities.PEGraphConstruction.parser import parse_inputs
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.do_all_detector import run_detection as detect_do_all
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo, run_detection as detect_reduction
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
@@ -62,6 +66,8 @@ from discopop_explorer.pattern_detectors.task_parallelism.tp_utils import (
     detect_mw_types,
     get_var_definition_line_dict,
 )
+from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 __global_llvm_cxxfilt_path: str = ""
 
@@ -74,7 +80,7 @@ def build_preprocessed_graph_and_run_detection(
     cu_inst_result_file: str,
     llvm_cxxfilt_path: Optional[str],
     discopop_build_path: Optional[str],
-    hotspots,
+    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
     reduction_info: List[ReductionInfo],
 ) -> List[PatternInfo]:
     """execute preprocessing of given cu xml file and construct a new cu graph.
@@ -99,7 +105,7 @@ def build_preprocessed_graph_and_run_detection(
     set_global_llvm_cxxfilt_path(__global_llvm_cxxfilt_path)
     preprocessed_cu_xml = cu_xml_preprocessing(cu_xml)
     preprocessed_graph = PEGraphX.from_parsed_input(
-        *parse_inputs(preprocessed_cu_xml, dep_file, reduction_file, file_mapping)
+        *parse_inputs(preprocessed_cu_xml, dep_file, reduction_file, file_mapping)  # type: ignore
     )
 
     # execute reduction detector to enable taskloop-reduction-detection
@@ -146,10 +152,10 @@ def run_detection(
     """
     result: List[PatternInfo] = []
 
-    for node in pet.all_nodes():
+    for node in all_nodes(pet):
         if isinstance(node, DummyNode):
             continue
-        if pet.direct_children_or_called_nodes(node):
+        if direct_children_or_called_nodes(pet, node):
             detect_mw_types(pet, node)
 
         if node.mw_type == MWType.NONE:
@@ -162,7 +168,9 @@ def run_detection(
 
     for fork in fs:
         if fork.child_tasks:
-            result.append(TaskParallelismInfo(fork.nodes[0], TPIType.DUMMY, ["dummy_fork"], [], [], [], []))
+            result.append(
+                TaskParallelismInfo(fork.nodes[0], TPIType.DUMMY, ["dummy_fork"], fork.start_line, [], [], [])
+            )
     # Preprocessing
     check_loop_scopes(pet)
     # Suggestion generation

@@ -110,8 +110,7 @@ public:
     write_cache.reserve(1024);
   }
 
-  ~PerfectShadow2() {
-  }
+  ~PerfectShadow2() {}
 
   sigElement testInRead(const std::int64_t memAddr) noexcept { return read_cache[memAddr]; }
 

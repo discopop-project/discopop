@@ -10,9 +10,9 @@ from multiprocessing import Pool
 import os
 from typing import Dict, List, Optional, Set, Tuple, cast
 
-from sympy import Expr
+from sympy import Expr, re
 import tqdm  # type: ignore
-from discopop_explorer.PEGraphX import NodeID  # type: ignore
+from discopop_explorer.aliases.NodeID import NodeID
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
@@ -129,16 +129,20 @@ def evaluate_all_decision_combinations(
 def __initialize_worker(
     experiment: Experiment,
     arguments: OptimizerArguments,
-):
+) -> None:
     global global_experiment
     global global_arguments
     global_experiment = experiment
     global_arguments = arguments
 
 
-def __evaluate_configuration(param_tuple):
+def __evaluate_configuration(param_tuple: List[int]) -> Tuple[Tuple[int, ...], Expr, ContextObject]:
     global global_experiment
     global global_arguments
+    if global_experiment is None:
+        raise ValueError("global_experiment is None!")
+    if global_arguments is None:
+        raise ValueError("global_arguments is None!")
     decisions = param_tuple
     return evaluate_configuration(global_experiment, decisions, global_arguments)
 
@@ -159,7 +163,7 @@ def __dump_result_to_file_using_pattern_ids(
             for pattern_id in experiment.suggestion_to_node_ids_dict:
                 if entry in experiment.suggestion_to_node_ids_dict[pattern_id]:
                     new_key.append(str(pattern_id) + "@" + str(data_at(experiment.optimization_graph, entry).device_id))
-        dumpable_dict[str(new_key)] = str(int(float(str(costs_dict[key].evalf()))))
+        dumpable_dict[str(new_key)] = str(int(float(str(re(costs_dict[key].evalf())))))
 
     dump_path: str = os.path.join(optimizer_dir, "exhaustive_results.json")
     with open(dump_path, "w") as fp:

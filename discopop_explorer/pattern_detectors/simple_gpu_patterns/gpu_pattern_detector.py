@@ -10,17 +10,21 @@ from typing import List, cast
 
 from alive_progress import alive_bar  # type: ignore
 
-from discopop_explorer.PEGraphX import PEGraphX, LoopNode
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPULoop import GPULoopPattern
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import (
     GPURegions,
     GPURegionInfo,
 )
-from discopop_explorer.variable import Variable
+from discopop_explorer.classes.variable import Variable
+from discopop_library.result_classes.DetectionResult import DetectionResult
 
 
-def run_detection(pet: PEGraphX, res, project_folder_path: str) -> List[PatternInfo]:
+def run_detection(pet: PEGraphX, res: DetectionResult, project_folder_path: str) -> List[PatternInfo]:
     """Search for do-all loop pattern
 
     :param pet: PET graph
@@ -29,10 +33,10 @@ def run_detection(pet: PEGraphX, res, project_folder_path: str) -> List[PatternI
     """
     gpu_patterns: List[GPULoopPattern] = []
 
-    loop_node_count = len(pet.all_nodes(type=LoopNode))
+    loop_node_count = len(all_nodes(pet, type=LoopNode))
     print("\tcreate gpu patterns...")
     with alive_bar(loop_node_count) as progress_bar:
-        for node in pet.all_nodes(type=LoopNode):
+        for node in all_nodes(pet, type=LoopNode):
             # check for lastprivates, since they are not supported by the suggested pragma:
             #  pragma omp target teams distribute
             # todo: instead of omitting, suggest #pragma omp target parallel for instead
@@ -46,8 +50,8 @@ def run_detection(pet: PEGraphX, res, project_folder_path: str) -> List[PatternI
                 gpulp = GPULoopPattern(
                     pet,
                     node.id,
-                    node.start_line,
-                    node.end_line,
+                    LineID(str(node.file_id) + ":" + str(node.start_line)),
+                    LineID(str(node.file_id) + ":" + str(node.end_line)),
                     node.loop_iterations,
                     project_folder_path,
                     reduction_vars,

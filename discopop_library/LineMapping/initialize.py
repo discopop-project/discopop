@@ -18,7 +18,7 @@ from discopop_library.LineMapping.save import save_line_mapping
 def initialize_line_mapping(
     file_mapping: Dict[int, Path],
     discopop_path: str = ".discopop",
-):
+) -> None:
     """initializes the line mapping dictionary to track line shifts due to inserted pragmas.
     The Dictionary will be stored in .discopop/line_mapping.json.
     Line ids start with 1."""

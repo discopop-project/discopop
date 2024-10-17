@@ -32,6 +32,10 @@ std::mutex pthread_compatibility_mutex;
 FunctionManager *function_manager = nullptr;
 LoopManager *loop_manager = nullptr;
 MemoryManager *memory_manager = nullptr;
+CallTree *call_tree = nullptr;
+// MetaDataQueue *metadata_queue = nullptr;
+std::mutex *dependency_metadata_results_mtx = nullptr;
+std::unordered_set<DependencyMetadata> *dependency_metadata_results = nullptr;
 
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
@@ -62,14 +66,12 @@ pthread_t *workers = nullptr; // worker threads
 #define XSTR(x) STR(x)
 #define STR(x) #x
 #ifdef DP_NUM_WORKERS
-#pragma message "Profiler: set NUM_WORKERS to " XSTR(DP_NUM_WORKERS)
 int32_t NUM_WORKERS = DP_NUM_WORKERS;
 #else
 int32_t NUM_WORKERS = 3; // default number of worker threads (multiple workers
                          // can potentially lead to non-deterministic results)
 #endif
 
-#pragma message "Profiler: set NUM_WORKERS to " XSTR(NUM_WORKERS)
 AbstractShadow *singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
 
 int32_t CHUNK_SIZE = 500;                   // default number of addresses in each chunk
@@ -83,6 +85,9 @@ int32_t *tempAddrCount = nullptr;           // tempAddrCount[thread_id] denotes 
 bool stop = false;                          // ONLY set stop to true if no more accessed addresses will
                                             // be collected
 thread_local depMap *myMap = nullptr;
+
+// statistics
+std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 
 /******* END: parallelization section *******/
 

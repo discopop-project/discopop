@@ -28,7 +28,7 @@ from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutp
 logger = logging.getLogger("Optimizer").getChild("Interactive")
 
 
-def run_interactive_optimizer(arguments: OptimizerArguments):
+def run_interactive_optimizer(arguments: OptimizerArguments) -> None:
     logger.setLevel(arguments.log_level)
     logger.info("Starting..")
     # check prerequisites
@@ -62,7 +62,9 @@ def run_interactive_optimizer(arguments: OptimizerArguments):
         logger.info("Closing interactive optimizer..")
 
 
-def parse_interactive_export(experiment: Experiment, applied_suggestions: Set[int], arguments: OptimizerArguments):
+def parse_interactive_export(
+    experiment: Experiment, applied_suggestions: Set[int], arguments: OptimizerArguments
+) -> None:
     parse_input(
         input="add " + arguments.interactive_export.replace(",", " "),
         experiment=experiment,
@@ -72,7 +74,9 @@ def parse_interactive_export(experiment: Experiment, applied_suggestions: Set[in
     parse_input(input="export", experiment=experiment, applied_suggestions=applied_suggestions, arguments=arguments)
 
 
-def parse_input(input: str, experiment: Experiment, applied_suggestions: Set[int], arguments: OptimizerArguments):
+def parse_input(
+    input: str, experiment: Experiment, applied_suggestions: Set[int], arguments: OptimizerArguments
+) -> bool:
     """Return True if the interactive session should be kept alive.
     Return False if the main loop should be exited."""
     if input.startswith("list"):
@@ -115,12 +119,12 @@ def parse_input(input: str, experiment: Experiment, applied_suggestions: Set[int
     return True
 
 
-def show_configuration_diff(experiment: Experiment, applied_suggestions: Set[int]):
+def show_configuration_diff(experiment: Experiment, applied_suggestions: Set[int]) -> None:
     logger.info("Creating and showing the diff for the current configuration..")
     logger.info("Not yet implemented")
 
 
-def export_configuration(experiment: Experiment, applied_suggestions: Set[int], arguments: OptimizerArguments):
+def export_configuration(experiment: Experiment, applied_suggestions: Set[int], arguments: OptimizerArguments) -> None:
     logger.info("Exporting the current configuration..")
     configured_pattern = __create_optimizer_output_pattern(experiment, applied_suggestions)
     if configured_pattern is None:

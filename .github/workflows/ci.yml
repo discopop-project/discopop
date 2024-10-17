@@ -35,7 +35,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: '3.10'
           cache: 'pip' # uses requirements.txt
 
       - name: Install Python dependencies
@@ -47,11 +47,11 @@ jobs:
       - name: "Run MyPy Type Checker - DiscoPoP Library"
         run: python -m mypy --config-file=mypy.ini -p discopop_library
 
-      - name: "Run MyPy Type Checker - DiscoPoP Profiler - DEPRECATED"
-        run: python -m mypy --config-file=mypy.ini -p DEPRECATED_discopop_profiler
-
-      - name: "Run MyPy Type Checker - DiscoPoP Wizard - DEPRECATED"
-        run: python -m mypy --config-file=mypy.ini -p DEPRECATED_discopop_wizard
+#      - name: "Run MyPy Type Checker - DiscoPoP Profiler - DEPRECATED"
+#        run: python -m mypy --config-file=mypy.ini -p DEPRECATED_discopop_profiler
+#
+#      - name: "Run MyPy Type Checker - DiscoPoP Wizard - DEPRECATED"
+#        run: python -m mypy --config-file=mypy.ini -p DEPRECATED_discopop_wizard
 
       - name: "Check formatting of DiscoPoP Explorer"
         run: python -m black -l 120 --check discopop_explorer
@@ -59,11 +59,11 @@ jobs:
       - name: "Check formatting of DiscoPoP Library"
         run: python -m black -l 120 --check discopop_library
 
-      - name: "Check formatting of DiscoPoP Profiler - DEPRECATED"
-        run: python -m black -l 120 --check DEPRECATED_discopop_profiler
-
-      - name: "Check formatting of DiscoPoP Wizard - DEPRECATED"
-        run: python -m black -l 120 --check DEPRECATED_discopop_wizard
+#      - name: "Check formatting of DiscoPoP Profiler - DEPRECATED"
+#        run: python -m black -l 120 --check DEPRECATED_discopop_profiler
+#
+#      - name: "Check formatting of DiscoPoP Wizard - DEPRECATED"
+#        run: python -m black -l 120 --check DEPRECATED_discopop_wizard
 
   execute_cxx_unit_tests:
     runs-on: ubuntu-20.04
@@ -76,7 +76,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: '3.10'
           cache: 'pip' # uses requirements.txt
 
       - name: Install Python dependencies
@@ -95,13 +95,17 @@ jobs:
           sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
           sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
           sudo apt-get install -y python3-tk
+          sudo apt-get install -y libboost-all-dev
 
       - name: "Setup DiscoPoP Profiler - Build"
         run: |
           rm -rf build
           mkdir build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          cmake \
+           -DCMAKE_BUILD_TYPE=Debug \
+           -DDP_CALLTREE_PROFILING=1 \
+           ..
           make -j3
 
       - name: C++ unit tests
@@ -119,7 +123,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: '3.10'
           cache: 'pip' # uses requirements.txt
 
       - name: Install Python dependencies
@@ -138,13 +142,18 @@ jobs:
           sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
           sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
           sudo apt-get install -y python3-tk
+          sudo apt-get install -y libboost-all-dev
 
       - name: "Setup DiscoPoP Profiler - Build"
         run: |
           rm -rf build
           mkdir build
           cd build
-          cmake -DCMAKE_BUILD_TYPE=Debug ..
+          cmake \
+           -DCMAKE_BUILD_TYPE=Debug \
+           -DDP_CALLTREE_PROFILING=1 \
+           -DDP_CALLTREE_PROFILING_METADATA_CUTOFF=0 \
+           ..
           make -j3
 
       - name: Python end-to-end-tests

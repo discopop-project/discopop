@@ -25,6 +25,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <chrono>
 
 using namespace std;
 
@@ -156,11 +157,55 @@ void __dp_finalize(LID lid) {
   delete function_manager;
   delete loop_manager;
 
+#ifdef DP_CALLTREE_PROFILING
+  delete call_tree;
+  // delete metadata_queue;
+  //  output metadata to file
+  std::cout << "Outputting dependency metadata... ";
+  std::ifstream ifile;
+  std::string line;
+  std::ofstream ofile;
+  std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+  // output information about the loops
+  tmp += "/dependency_metadata.txt";
+  ofile.open(tmp.data());
+  ofile << "# IAC : intra-call-dependency \n";
+  ofile << "# IAI : intra-iteration-dependency \n";
+  ofile << "# IEC : inter-call-dependency \n";
+  ofile << "# IEI : inter-iteration-dependency \n";
+  ofile << "# SINK_ANC : entered functions and loops for sink location \n";
+  ofile << "# SOURCE_ANC : entered functions and loops for source location \n";
+  ofile << "# Format: <DepType> <sink> <source> <var> <AAvar> <IAC> <IAI> <IEC> <IEI> <SINK_ANC> <SOURCE_ANC>\n";
+  for (auto dmd : *dependency_metadata_results) {
+    ofile << dmd.toString() << "\n";
+  }
+  ofile.close();
+  delete dependency_metadata_results_mtx;
+  delete dependency_metadata_results;
+#endif
+
   *out << dputil::decodeLID(lid) << " END program" << endl;
   out->flush();
   out->close();
 
   delete out;
+
+  // output elapsed time for profiling
+  std::chrono::milliseconds time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - statistics_profiling_start_time);
+#ifdef __linux__
+  // try to get an output file name w.r.t. the target application
+  // if it is not available, fall back to "Output.txt"
+  char *selfPath = new char[PATH_MAX];
+  if (selfPath != nullptr) {
+    std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
+    tmp2 += "/statistics/profiling_time.txt";
+    std::ofstream stats_file;
+    stats_file.open(tmp2.data(), ios::out);
+    stats_file << std::to_string(time_elapsed.count()) << " ms\n";
+    stats_file.flush();
+    stats_file.close();
+  }
+#endif
 
   dpInited = false;
   targetTerminated = true; // mark the target program has returned from main()

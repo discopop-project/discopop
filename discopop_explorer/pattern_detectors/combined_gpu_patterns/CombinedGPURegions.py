@@ -6,14 +6,22 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import sys
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict, Set, cast
 
-from discopop_explorer.PEGraphX import EdgeType, CUNode, PEGraphX, NodeID, MemoryRegion
-from discopop_explorer.pattern_detectors.PatternInfo import PatternInfo
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.functions.PEGraph.properties.check_reachability import check_reachability
+from discopop_explorer.functions.PEGraph.traversal.children import direct_children
+from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import (
     VarName,
 )
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependency import Dependency
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.EntryPoint import EntryPoint
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     ExitPointPositioning,
     EntryPointPositioning,
@@ -21,6 +29,8 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums imp
     EntryPointType,
     UpdateType,
 )
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.ExitPoint import ExitPoint
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Update import Update
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.prepare_metadata import (
     get_dependencies_as_metadata,
 )
@@ -54,8 +64,10 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.step_6 import (
     identify_end_of_life_points,
     add_aliases,
     extend_region_liveness_using_unrolled_functions,
+    join_entryPoint_elements,
+    join_exitPoint_elements,
+    join_update_elements,
     remove_duplicates,
-    join_elements,
 )
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPURegions import GPURegionInfo
 
@@ -68,10 +80,10 @@ class CombinedGPURegion(PatternInfo):
     target_data_regions: Dict[str, List[Tuple[List[NodeID], NodeID, NodeID, str, str]]]
     # {var: ([contained cu_s], entry_cu, exit_after_cu, meta_entry_line_num, meta_exit_line_num)
     data_region_entry_points: List[
-        Tuple[VarName, NodeID, EntryPointType, str, EntryPointPositioning]
+        Tuple[str, NodeID, NodeID, EntryPointType, str, EntryPointPositioning]
     ]  # [(var, cu_id, entry_point_type, meta_line_num, positioning)]
     data_region_exit_points: List[
-        Tuple[VarName, NodeID, ExitPointType, str, ExitPointPositioning]
+        Tuple[str, NodeID, NodeID, ExitPointType, str, ExitPointPositioning]
     ]  # [(var, cu_id, exit_point_type, meta_line_num, positioning)]
     data_region_depend_in: List[Tuple[VarName, NodeID, str]]  # [(var, cu_id, meta_line_num)]
     data_region_depend_out: List[Tuple[VarName, NodeID, str]]  # [(var, cu_id, meta_line_num)]
@@ -302,14 +314,14 @@ class CombinedGPURegion(PatternInfo):
         )
 
         # remove duplicates
-        updates = remove_duplicates(updates)
-        entry_points = remove_duplicates(entry_points)
-        exit_points = remove_duplicates(exit_points)
+        updates = cast(Set[Update], remove_duplicates(updates))
+        entry_points = cast(Set[EntryPoint], remove_duplicates(entry_points))
+        exit_points = cast(Set[ExitPoint], remove_duplicates(exit_points))
 
         # join entries
-        updates = join_elements(updates)
-        entry_points = join_elements(entry_points)
-        exit_points = join_elements(exit_points)
+        updates = join_update_elements(updates)
+        entry_points = join_entryPoint_elements(entry_points)
+        exit_points = join_exitPoint_elements(exit_points)
 
         # ### PREPARE METADATA
         # prepare device liveness
@@ -351,10 +363,10 @@ class CombinedGPURegion(PatternInfo):
 
         self.data_region_depend_in, self.data_region_depend_out = get_dependencies_as_metadata(pet, all_dependencies)
 
-    def __str__(self):
+    def __str__(self) -> str:
         raise NotImplementedError()  # used to identify necessity to call to_string() instead
 
-    def to_string(self, pet: PEGraphX):
+    def to_string(self, pet: PEGraphX) -> str:
         contained_regions_str = "\n" if len(self.contained_regions) > 0 else ""
         for region in self.contained_regions:
             region_str = region.to_string(pet)
@@ -439,13 +451,13 @@ def find_combinations_within_function_body(
             continue
         # check reachability in both directions via successor edges
         # consider children, as loop nodes do not have successors on their own
-        for region_1_child in pet.direct_children(pet.node_at(region_1.contained_regions[0].node_id)):
-            for region_2_child in pet.direct_children(pet.node_at(region_2.contained_regions[0].node_id)):
+        for region_1_child in direct_children(pet, pet.node_at(region_1.contained_regions[0].node_id)):
+            for region_2_child in direct_children(pet, pet.node_at(region_2.contained_regions[0].node_id)):
                 if region_1_child == region_2_child:
                     continue
-                if pet.check_reachability(region_2_child, region_1_child, [EdgeType.SUCCESSOR]):
+                if check_reachability(pet, region_2_child, region_1_child, [EdgeType.SUCCESSOR]):
                     result.append((region_1, region_2))
-                elif pet.check_reachability(region_1_child, region_2_child, [EdgeType.SUCCESSOR]):
+                elif check_reachability(pet, region_1_child, region_2_child, [EdgeType.SUCCESSOR]):
                     result.append((region_2, region_1))
     # remove duplicates (deterministic ordering not relevant, hence list(set(..)) is fine)
     result = list(set(result))
@@ -453,7 +465,7 @@ def find_combinations_within_function_body(
 
 
 def find_true_successor_combinations(
-    pet, intra_function_combinations: List[Tuple[CombinedGPURegion, CombinedGPURegion]]
+    pet: PEGraphX, intra_function_combinations: List[Tuple[CombinedGPURegion, CombinedGPURegion]]
 ) -> List[Tuple[CombinedGPURegion, CombinedGPURegion]]:
     """Check for combinations options without branching inbetween.
     As a result, both regions will always be executed in succession."""
@@ -462,16 +474,18 @@ def find_true_successor_combinations(
     # a true successor relation exists, if every successor path outgoing from any child of region_1 arrives at region_2
     for region_1, region_2 in intra_function_combinations:
         true_successors = True
-        queue: List[CUNode] = pet.direct_children(pet.node_at(region_1.contained_regions[0].node_id))
+        queue: List[CUNode] = cast(
+            List[CUNode], direct_children(pet, pet.node_at(region_1.contained_regions[0].node_id))
+        )
         visited: List[CUNode] = []
         while queue:
             current_node: CUNode = queue.pop()
             visited.append(current_node)
-            if current_node in pet.direct_children(pet.node_at(region_2.contained_regions[0].node_id)):
+            if current_node in direct_children(pet, pet.node_at(region_2.contained_regions[0].node_id)):
                 # reached region_2
                 continue
             # region_2 not reached
-            successors = pet.direct_successors(current_node)
+            successors = direct_successors(pet, current_node)
             if len(successors) == 0:
                 # end of the function body reached, region_2 not reached
                 true_successors = False
@@ -479,7 +493,7 @@ def find_true_successor_combinations(
             else:
                 # end of the function's body not yet reached, continue searching
                 # add successors to queue
-                queue += [succ for succ in successors if succ not in visited]
+                queue += [cast(CUNode, succ) for succ in successors if succ not in visited]
         if true_successors:
             result.append((region_1, region_2))
     return result

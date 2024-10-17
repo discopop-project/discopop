@@ -67,7 +67,7 @@ class TestMethods(unittest.TestCase):
         for pattern_type in self.test_output.patterns.__dict__:
             amount_of_identified_patterns = len(self.test_output.patterns.__dict__[pattern_type])
             if pattern_type == "do_all":
-                expected_lines = ["1:22", "1:27"]
+                expected_lines = ["1:17", "1:22"]
                 with self.subTest("check for FP"):
                     res, msg = check_patterns_for_FP(self, pattern_type, copy.deepcopy(expected_lines), self.test_output.patterns.__dict__[pattern_type])
                     self.assertTrue(res, msg)

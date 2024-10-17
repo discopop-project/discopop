@@ -5,36 +5,51 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from __future__ import annotations
+
 import itertools
-from typing import List, Optional, Sequence, Set, Dict, Tuple, cast
+from typing import TYPE_CHECKING, Callable, List, Optional, Sequence, Set, Dict, Tuple, TypeVar, cast
 
 import numpy as np
 import warnings
+from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
+from discopop_explorer.functions.PEGraph.properties.is_reduction_var_by_name import is_reduction_var_by_name
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.reductions import get_reduction_sign
+from discopop_explorer.functions.PEGraph.queries.subtree import get_left_right_subtree, subtree_of_type
+from discopop_explorer.functions.PEGraph.queries.variables import get_undefined_variables_inside_loop, get_variables
+from discopop_explorer.functions.PEGraph.traversal.children import (
+    direct_children_or_called_nodes,
+    direct_children_or_called_nodes_of_type,
+)
+from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 
-from .PEGraphX import (
-    CUNode,
-    FunctionNode,
-    LineID,
-    LoopNode,
-    NodeID,
-    PEGraphX,
-    NodeType,
-    Node,
-    DepType,
-    EdgeType,
-    Dependency,
-    MemoryRegion,
-)
-from .parser import LoopData
-from .variable import Variable
+from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.Node import Node
+from discopop_explorer.classes.PEGraph.Dependency import Dependency
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
+from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
+from discopop_explorer.classes.variable import Variable
+
+if TYPE_CHECKING:
+    from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 
 loop_data: Dict[LineID, int] = {}
 
+T = TypeVar("T")
 
-def contains(list, filter):
+
+def contains(list: List[T], filter: Callable[[T], bool]) -> bool:
     for x in list:
         if filter(x):
             return True
@@ -60,7 +75,7 @@ def find_subnodes(pet: PEGraphX, node: Node, criteria: EdgeType) -> List[Node]:
     :param criteria: EdgeType, type of edges to traverse
     :return: list of children nodes
     """
-    return [pet.node_at(t) for s, t, d in pet.out_edges(node.id) if d.etype == criteria]
+    return [pet.node_at(t) for s, t, d in out_edges(pet, node.id) if d.etype == criteria]
 
 
 def depends(pet: PEGraphX, source: Node, target: Node) -> bool:
@@ -73,12 +88,12 @@ def depends(pet: PEGraphX, source: Node, target: Node) -> bool:
     """
     if source == target:
         return False
-    target_nodes = pet.subtree_of_type(target)
+    target_nodes = subtree_of_type(pet, target)
 
-    for node in pet.subtree_of_type(source, CUNode):
+    for node in subtree_of_type(pet, source, CUNode):
         for target in [
             pet.node_at(target_id)
-            for source_id, target_id, dependence in pet.out_edges(node.id, EdgeType.DATA)
+            for source_id, target_id, dependence in out_edges(pet, node.id, EdgeType.DATA)
             if dependence.dtype == DepType.RAW
         ]:
             if target in target_nodes:
@@ -94,8 +109,8 @@ def is_loop_index2(pet: PEGraphX, root_loop: Node, var_name: str) -> bool:
     :param var_name: name of the variable
     :return: true if variable is index of the loop
     """
-    loops_start_lines = [v.start_position() for v in pet.subtree_of_type(root_loop, LoopNode)]
-    return pet.is_loop_index(var_name, loops_start_lines, pet.subtree_of_type(root_loop, CUNode))
+    loops_start_lines = [v.start_position() for v in subtree_of_type(pet, root_loop, LoopNode)]
+    return is_loop_index(pet, var_name, loops_start_lines, subtree_of_type(pet, root_loop, CUNode))
 
 
 # NOTE: left old code as it may become relevant again in the near future
@@ -122,7 +137,7 @@ def calculate_workload(pet: PEGraphX, node: Node, ignore_function_calls_and_cach
         # note: recursive function calls are counted as a single instruction
         res += cast(CUNode, node).instructions_count
         if not ignore_function_calls_and_cached_values:
-            for calls_edge in pet.out_edges(cast(CUNode, node).id, EdgeType.CALLSNODE):
+            for calls_edge in out_edges(pet, cast(CUNode, node).id, EdgeType.CALLSNODE):
                 # add costs of the called function
                 res += calculate_workload(
                     pet,
@@ -242,7 +257,7 @@ def __get_dep_of_type(
     """
     return [
         e
-        for e in (pet.in_edges(node.id, EdgeType.DATA) if reversed else pet.out_edges(node.id, EdgeType.DATA))
+        for e in (in_edges(pet, node.id, EdgeType.DATA) if reversed else out_edges(pet, node.id, EdgeType.DATA))
         if e[2].dtype == dep_type
     ]
 
@@ -323,7 +338,7 @@ def is_func_arg(pet: PEGraphX, var: str, node: Node) -> bool:
         return False
     if "." not in var:
         return False
-    parents = [pet.node_at(edge[0]) for edge in pet.in_edges(node.id, EdgeType.CHILD)]
+    parents = [pet.node_at(edge[0]) for edge in in_edges(pet, node.id, EdgeType.CHILD)]
     # add current node to parents, if it is of type FUNC
     if isinstance(node, FunctionNode):
         parents.append(node)
@@ -335,13 +350,13 @@ def is_func_arg(pet: PEGraphX, var: str, node: Node) -> bool:
     return False
 
 
-def is_scalar_val(var) -> bool:
+def is_scalar_val(var: Variable) -> bool:
     """Checks if variable is a scalar value
 
     :param var: variable
     :return: true if scalar
     """
-    return not (var.type.endswith("**") or var.type.startswith("ARRAY" or var.type.startswith("[")))
+    return not (var.type.endswith("**") or var.type.startswith("ARRAY") or var.type.startswith("["))
 
 
 def is_readonly(
@@ -408,6 +423,13 @@ def is_first_written(
                     break
             if not res:
                 return False
+
+    # catch potential false-positives if len(war) == 0
+    if len(war) == 0:
+        for eraw in raw:
+            if eraw[2].memory_region in mem_regs and eraw[1] not in [n.id for n in sub]:
+                # value written prior to loop is read --> can not be first written
+                return False
     return True
 
 
@@ -419,7 +441,7 @@ def is_first_written_new(
     reverse_raw_deps: Set[Tuple[NodeID, NodeID, Dependency]],
     reverse_war_deps: Set[Tuple[NodeID, NodeID, Dependency]],
     tree: Sequence[Node],
-):
+) -> bool:
     """Checks whether a variable is first written inside the current node
 
     :param var:
@@ -591,14 +613,14 @@ def get_child_loops(pet: PEGraphX, node: Node) -> Tuple[List[Node], List[Node]]:
     do_all: List[Node] = []
     reduction: List[Node] = []
 
-    for loop_child in pet.subtree_of_type(node, LoopNode):
+    for loop_child in subtree_of_type(pet, node, LoopNode):
         if loop_child.do_all:
             do_all.append(loop_child)
         elif loop_child.reduction:
             reduction.append(loop_child)
 
-    for func_child in pet.direct_children_or_called_nodes_of_type(node, FunctionNode):
-        for child in pet.direct_children_or_called_nodes_of_type(func_child, CUNode):
+    for func_child in direct_children_or_called_nodes_of_type(pet, node, FunctionNode):
+        for child in direct_children_or_called_nodes_of_type(pet, func_child, CUNode):
             if child.do_all:
                 do_all.append(child)
             elif child.reduction:
@@ -610,11 +632,24 @@ def get_child_loops(pet: PEGraphX, node: Node) -> Tuple[List[Node], List[Node]]:
 def get_initialized_memory_regions_in(pet: PEGraphX, cu_nodes: List[CUNode]) -> Dict[Variable, Set[MemoryRegion]]:
     initialized_memory_regions: Dict[Variable, Set[MemoryRegion]] = dict()
     for cu in cu_nodes:
-        for s, t, d in pet.out_edges(cu.id, EdgeType.DATA):
+        parent_function = get_parent_function(pet, cu)
+        for s, t, d in out_edges(pet, cu.id, EdgeType.DATA):
             if d.dtype == DepType.INIT and d.memory_region is not None:
                 # get variable object from cu
                 for var in cu.global_vars + cu.local_vars:
                     if var.name == d.var_name:
+                        # ignore pass by value type function arguments
+                        is_passed_by_value = False
+                        if str(parent_function.start_position()) == var.defLine:
+                            for arg in parent_function.args:
+                                if arg.name == var.name:
+                                    if "*" not in arg.type:
+                                        # found pass by value argument
+                                        is_passed_by_value = True
+                                        break
+                        if is_passed_by_value:
+                            continue
+
                         if var not in initialized_memory_regions:
                             initialized_memory_regions[var] = set()
                         # create entry for initialized variable
@@ -637,9 +672,9 @@ def classify_loop_variables(
     last_private = []
     shared = []
     reduction = []
-    lst = pet.get_left_right_subtree(loop, False)
-    rst = pet.get_left_right_subtree(loop, True)
-    sub: List[CUNode] = pet.subtree_of_type(loop, CUNode)
+    lst = get_left_right_subtree(pet, loop, False)
+    rst = get_left_right_subtree(pet, loop, True)
+    sub: List[CUNode] = subtree_of_type(pet, loop, CUNode)
 
     raw = set()
     war = set()
@@ -652,12 +687,12 @@ def classify_loop_variables(
         waw.update(__get_dep_of_type(pet, sub_node, DepType.WAW, False))
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
-    vars = pet.get_undefined_variables_inside_loop(loop)
+    vars = get_undefined_variables_inside_loop(pet, loop)
 
     # only consider memory regions which are know at the current code location.
     # ignore memory regions which stem from called functions.
-    left_subtree_without_called_nodes = pet.get_left_right_subtree(loop, False, ignore_called_nodes=True)
-    prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
+    left_subtree_without_called_nodes = get_left_right_subtree(pet, loop, False, ignore_called_nodes=True)
+    prior_known_vars = get_variables(pet, left_subtree_without_called_nodes)
     prior_known_mem_regs = set()
     for pkv in prior_known_vars:
         prior_known_mem_regs.update(prior_known_vars[pkv])
@@ -676,44 +711,101 @@ def classify_loop_variables(
         )
 
     # vars = list(pet.get_variables(sub))
+    metadata_safe_index_accesses: List[Variable] = []
     for var in vars:
-        if is_loop_index2(pet, loop, var.name):
-            if is_read_in_subtree(vars[var], rev_raw, rst):
-                last_private.append(var)
-            else:
-                private.append(var)
-        elif loop.reduction and pet.is_reduction_var(loop.start_position(), var.name):
-            var.operation = pet.get_reduction_sign(loop.start_position(), var.name)
-            reduction.append(var)
-        elif is_written_in_subtree(vars[var], raw, waw, lst) or is_func_arg(pet, var.name, loop) and is_scalar_val(var):
-            if is_readonly(vars[var], war, waw, rev_raw):
-                if is_global(var.name, sub):
-                    shared.append(var)
-                else:
-                    first_private.append(var)
-            elif is_read_in_subtree(vars[var], rev_raw, rst):
-                if is_scalar_val(var):
-                    last_private.append(var)
-                else:
-                    shared.append(var)
-            else:
-                if not is_scalar_val(var):
-                    # array type variable is written
-                    shared.append(var)
-                else:
-                    private.append(var)
+        if loop.start_position() == "1:281" and (var.name == "d" or var.name == "d2"):
+            pass
+        # separate pointer and pointee dependencies for separated clasification
+        # classifications will be merged before returning
+        non_gep_mem_regs = set([mr for mr in vars[var] if not mr.startswith("GEPRESULT_")])
+        gep_mem_regs = set([mr for mr in vars[var] if mr.startswith("GEPRESULT_")])
 
-        elif is_first_written(vars[var], raw, war, sub):
-            if is_read_in_subtree(vars[var], rev_raw, rst):
-                if is_scalar_val(var):
+        for subset_idx, mem_reg_subset in enumerate([non_gep_mem_regs, gep_mem_regs]):
+            if subset_idx > 0 and len(mem_reg_subset) == 0:
+                continue
+            if is_loop_index2(pet, loop, var.name):
+                if is_read_in_subtree(mem_reg_subset, rev_raw, rst):
                     last_private.append(var)
                 else:
-                    shared.append(var)
-            else:
-                if is_scalar_val(var):
                     private.append(var)
+            elif loop.reduction and is_reduction_var_by_name(pet, loop.start_position(), var.name):
+                var.operation = get_reduction_sign(pet, loop.start_position(), var.name)
+                reduction.append(var)
+            elif (
+                is_written_in_subtree(mem_reg_subset, raw, waw, lst)
+                or is_func_arg(pet, var.name, loop)
+                and is_scalar_val(var)
+            ):
+                if is_readonly(mem_reg_subset, war, waw, rev_raw):
+                    if is_global(var.name, sub):
+                        shared.append(var)
+                    else:
+                        first_private.append(var)
+                elif is_read_in_subtree(mem_reg_subset, rev_raw, rst):
+                    if is_scalar_val(var):
+                        last_private.append(var)
+                    else:
+                        shared.append(var)
                 else:
-                    shared.append(var)
+                    if not is_scalar_val(var):
+                        # array type variable is written
+                        shared.append(var)
+                    else:
+                        if is_first_written(mem_reg_subset, raw, waw, sub):
+                            private.append(var)
+                        else:
+                            first_private.append(var)
+
+            elif is_first_written(mem_reg_subset, raw, war, sub):
+                if len(mem_reg_subset.intersection(initialized_memory_regions)) > 0 and subset_idx < 1:
+                    # subset_idx < 1 to ignore this check for gep memory regions, as they create additional INIT dependencies
+                    # variable is initialized in loop.
+
+                    # No data sharing clauses required, if the variable is declared inside the loop.
+                    if var_declared_in_subtree(var, sub):
+                        pass
+                    # Else, the variable requires a private clause
+                    else:
+                        private.append(var)
+                else:
+                    if is_read_in_subtree(mem_reg_subset, rev_raw, rst):
+                        if is_scalar_val(var):
+                            last_private.append(var)
+                        else:
+                            shared.append(var)
+                    else:
+                        # do not distinguish between scalar and structure types
+                        private.append(var)
+                        # keep old code until above replacement is proven to work
+                        # BEGIN: OLD CODE
+                        # if is_scalar_val(var):
+                        #    private.append(var)
+                        # else:
+                        #    shared.append(var)
+                        # END: OLD CODE
+            if subset_idx >= 1 and no_inter_iteration_dependency_exists(
+                mem_reg_subset, raw, war, sub, cast(LoopNode, loop)
+            ):
+                # check if metadata suggests, that index accesses are not problematic wrt. parallelization
+                metadata_safe_index_accesses.append(var)
+
+    # modify classifications
+    first_private, private, last_private, shared, reduction = __modify_classifications(
+        first_private, private, last_private, shared, reduction, metadata_safe_index_accesses
+    )
+
+    # merge classifications
+    first_private, private, last_private, shared, reduction = __merge_classifications(
+        first_private, private, last_private, shared, reduction
+    )
+
+    # remove duplicates
+    first_private = __remove_duplicate_variables(first_private)
+    private = __remove_duplicate_variables(private)
+    last_private = __remove_duplicate_variables(last_private)
+    shared = __remove_duplicate_variables(shared)
+    reduction = __remove_duplicate_variables(reduction)
+
     # return first_private, private, last_private, shared, reduction
     return (
         sorted(first_private),
@@ -724,22 +816,119 @@ def classify_loop_variables(
     )
 
 
+def __remove_duplicate_variables(vars: List[Variable]) -> List[Variable]:
+    buffer: List[str] = []
+    vars_wo_duplicates: List[Variable] = []
+    for var in vars:
+        if var.name + var.defLine not in buffer:
+            vars_wo_duplicates.append(var)
+            buffer.append(var.name + var.defLine)
+        else:
+            # duplicate found
+            continue
+    return vars_wo_duplicates
+
+
+def var_declared_in_subtree(var: Variable, sub: list[CUNode]) -> bool:
+    var_file_id = int(var.defLine.split(":")[0])
+    var_def_line = int(var.defLine.split(":")[1])
+    for node in sub:
+        if (node.file_id == var_file_id) and (node.start_line <= var_def_line) and (node.end_line >= var_def_line):
+            return True
+    return False
+
+
+def no_inter_iteration_dependency_exists(
+    mem_regs: Set[MemoryRegion],
+    raw: Set[Tuple[NodeID, NodeID, Dependency]],
+    war: Set[Tuple[NodeID, NodeID, Dependency]],
+    sub: List[CUNode],
+    root_loop: LoopNode,
+) -> bool:
+    for dep in raw.union(war):
+        if dep[0] in [s.id for s in sub] and dep[1] in [s.id for s in sub]:
+            if dep[2].memory_region in mem_regs:
+                if dep[2].metadata_inter_iteration_dep is not None:
+                    if root_loop.start_position() in dep[2].metadata_inter_iteration_dep:
+                        return False
+    return True
+
+
+def __modify_classifications(
+    first_private: list[Variable],
+    private: list[Variable],
+    last_private: list[Variable],
+    shared: list[Variable],
+    reduction: list[Variable],
+    metadata_safe_index_accesses: list[Variable],
+) -> Tuple[list[Variable], list[Variable], list[Variable], list[Variable], list[Variable]]:
+    # Rule 1: if structure index accesses suggest, that parallelizing is safe without data sharing clauses, loosen private clauses to shared.
+    # --> this rule does not affect first_ and last_private clauses, as they require a specific access / dependency pattern
+    move_to_shared: List[Variable] = []
+    for var in metadata_safe_index_accesses:
+        if var in private:
+            move_to_shared.append(var)
+    for var in move_to_shared:
+        if var in private:
+            private.remove(var)
+        if var not in shared:
+            shared.append(var)
+
+    return first_private, private, last_private, shared, reduction
+
+
+def __merge_classifications(
+    first_private: list[Variable],
+    private: list[Variable],
+    last_private: list[Variable],
+    shared: list[Variable],
+    reduction: list[Variable],
+) -> Tuple[list[Variable], list[Variable], list[Variable], list[Variable], list[Variable]]:
+    new_first_private: list[Variable] = []
+    new_private: list[Variable] = []
+    new_last_private: list[Variable] = []
+    new_shared: list[Variable] = []
+    new_reduction: list[Variable] = reduction
+
+    remove_from_private: Set[Variable] = set()
+    remove_from_first_private: Set[Variable] = set()
+    remove_from_last_private: Set[Variable] = set()
+    remove_from_shared: Set[Variable] = set()
+    remove_from_reduction: Set[Variable] = set()
+
+    # Rule 1: firstprivate is more restrictive than private
+    for var_1 in first_private:
+        for var_2 in private:
+            if var_1.name == var_2.name:
+                remove_from_private.add(var_2)
+    # Rule 2: lastprivate is more restrictive than private
+    for var_1 in last_private:
+        for var_2 in private:
+            if var_1.name == var_2.name:
+                remove_from_private.add(var_2)
+    # Rule 3: shared is less restrictive than any private
+    for var_1 in first_private + last_private + private:
+        for var_2 in shared:
+            if var_1.name == var_2.name:
+                remove_from_shared.add(var_2)
+
+    new_first_private = [v for v in first_private if v not in remove_from_first_private]
+    new_last_private = [v for v in last_private if v not in remove_from_last_private]
+    new_private = [v for v in private if v not in remove_from_private]
+    new_shared = [v for v in shared if v not in remove_from_shared]
+    new_reduction = [v for v in reduction if v not in remove_from_reduction]
+
+    return new_first_private, new_private, new_last_private, new_shared, new_reduction
+
+
 def classify_task_vars(
     pet: PEGraphX,
     task: Node,
     type: str,
     in_deps: List[Tuple[NodeID, NodeID, Dependency]],
     out_deps: List[Tuple[NodeID, NodeID, Dependency]],
-    used_in_task_parallelism_detection=False,
-) -> Tuple[
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[Variable],
-    List[str],
-]:
+    used_in_task_parallelism_detection: bool = False,
+) -> Tuple[List[Variable], List[Variable], List[Variable], List[Variable], List[Variable], List[Variable], List[str]]:
     """Classify task variables
 
     :param pet: CU graph
@@ -758,15 +947,15 @@ def classify_task_vars(
     depend_in_out: List[Tuple[Variable, Set[MemoryRegion]]] = []
     reduction_var_names: List[str] = []
 
-    left_sub_tree = pet.get_left_right_subtree(task, False)
+    left_sub_tree = get_left_right_subtree(pet, task, False)
 
-    right_sub_tree = pet.get_left_right_subtree(task, True)
-    subtree = pet.subtree_of_type(task, CUNode)
-    t_loop = pet.subtree_of_type(task, LoopNode)
+    right_sub_tree = get_left_right_subtree(pet, task, True)
+    subtree = subtree_of_type(pet, task, CUNode)
+    t_loop = subtree_of_type(pet, task, LoopNode)
 
     vars: Dict[Variable, Set[MemoryRegion]] = dict()
     if isinstance(task, FunctionNode):
-        tmp = pet.get_variables(subtree)
+        tmp = get_variables(pet, subtree)
         vars_strings = []
         for v in task.args:
             vars_strings.append(v.name)
@@ -783,7 +972,7 @@ def classify_task_vars(
             if name in vars_strings:
                 vars[v] = tmp[v]
     else:
-        vars = pet.get_variables(subtree)
+        vars = get_variables(pet, subtree)
 
     raw_deps_on = set()  # set<Dependence>
     war_deps_on = set()
@@ -817,14 +1006,14 @@ def classify_task_vars(
         loop_nodes.append(task)
 
     loops_start_lines = [n.start_position() for n in loop_nodes]
-    loop_children = [c for n in loop_nodes for c in pet.direct_children_or_called_nodes(n)]
+    loop_children = [c for n in loop_nodes for c in direct_children_or_called_nodes(pet, n)]
 
     for var in vars:
         var_is_loop_index = False
         # get RAW dependencies for var
         tmp_deps = [dep for dep in raw_deps_on if dep[2].memory_region in vars[var]]
         for edge in tmp_deps:
-            if pet.is_loop_index(edge[2].var_name, loops_start_lines, loop_children):
+            if is_loop_index(pet, edge[2].var_name, loops_start_lines, loop_children):
                 var_is_loop_index = True
                 break
         if var_is_loop_index:
@@ -874,8 +1063,8 @@ def classify_task_vars(
                 shared.append((var, vars[var]))
 
     # use known variables to reconstruct the correct variable names from the classified memory regions
-    left_subtree_without_called_nodes = pet.get_left_right_subtree(task, False, ignore_called_nodes=True)
-    prior_known_vars = pet.get_variables(left_subtree_without_called_nodes)
+    left_subtree_without_called_nodes = get_left_right_subtree(pet, task, False, ignore_called_nodes=True)
+    prior_known_vars = get_variables(pet, left_subtree_without_called_nodes)
 
     return (
         sorted(__apply_dealiasing(first_private, prior_known_vars)),
@@ -918,12 +1107,12 @@ def __is_written_prior_to_task(pet: PEGraphX, var: Variable, task: Node) -> bool
             predecessors.append(current)
         queue += [
             pet.node_at(edge[0])
-            for edge in pet.in_edges(current.id, EdgeType.SUCCESSOR)
+            for edge in in_edges(pet, current.id, EdgeType.SUCCESSOR)
             if pet.node_at(edge[0]) not in visited
         ]
 
     # check if raw-dependency on var to any predecessor exists)
-    for out_dep in pet.out_edges(task.id, EdgeType.DATA):
+    for out_dep in out_edges(pet, task.id, EdgeType.DATA):
         if out_dep[2].dtype != DepType.RAW:
             continue
         # check if out_dep.source in predecessors
@@ -935,7 +1124,7 @@ def __is_written_prior_to_task(pet: PEGraphX, var: Variable, task: Node) -> bool
 def filter_for_hotspots(
     pet: PEGraphX,
     nodes: List[Node],
-    hotspot_information: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str]]]],
+    hotspot_information: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
 ) -> List[Node]:
     """Removes such nodes from the list which are not identified as hotspots"""
     if hotspot_information is None:
@@ -943,7 +1132,7 @@ def filter_for_hotspots(
     if len(hotspot_information) == 0:
         return nodes
     # collect hotspot information
-    all_hotspot_descriptions: List[Tuple[int, int, HotspotNodeType, str]] = []
+    all_hotspot_descriptions: List[Tuple[int, int, HotspotNodeType, str, float]] = []
     for key in hotspot_information:
         for entry in hotspot_information[key]:
             all_hotspot_descriptions.append(entry)

@@ -10,13 +10,13 @@ from typing import Dict, List, Tuple, Union
 import numpy as np
 from scipy.interpolate import LinearNDInterpolator  # type: ignore
 
-from .Microbench import (
+from discopop_library.discopop_optimizer.Microbench.Microbench import (
     Microbench,
     MicrobenchType,
     MicrobenchDimension,
     MicrobenchCoordinate,
 )
-from .PureDataMicrobench import PureDataMicrobench
+from discopop_library.discopop_optimizer.Microbench.PureDataMicrobench import PureDataMicrobench
 
 
 # This class uses Delaunay Interpolation to create a microbench model from measurements. No extrapolation is possible
@@ -44,34 +44,36 @@ class DelaunayInterpolatedMicrobench(Microbench):
         if removeOutliers:
             self.data.removeOutliers()
 
-    def removeZeroParameters(self):
+    def removeZeroParameters(self) -> None:
         self.data.removeZeroParameters()
         self.__isInterpolated = False
 
-    def clampValues(self, min: float = 0.0, max: float = float("inf")):
+    def clampValues(self, min: float = 0.0, max: float = float("inf")) -> None:
         self.data.clampValues()
         self.__isInterpolated = False
 
-    def removeOutliers(self):
+    def removeOutliers(self) -> None:
         self.data.removeOutliers()
         self.__isInterpolated = False
 
-    def useMedian(self):
+    def useMedian(self) -> None:
         self.data.useMedian()
         self.__isInterpolated = False
 
-    def useMean(self):
+    def useMean(self) -> None:
         self.data.useMean()
         self.__isInterpolated = False
 
-    def __getTuples(self, benchType: MicrobenchType, benchDim: MicrobenchDimension):
+    def __getTuples(
+        self, benchType: MicrobenchType, benchDim: MicrobenchDimension
+    ) -> List[Tuple[int, Union[int, float], int, float]]:
         tuples: List[Tuple[int, Union[int, float], int, float]] = []
         for benchCoord, values in self.data[benchType][benchDim].items():
             tuples.append((*benchCoord, np.median(values).item()))
         return tuples
 
-    def __interpolate(self):
-        def __createInterpolator(tuples):
+    def __interpolate(self) -> None:
+        def __createInterpolator(tuples: List[Tuple[int, int | float, int, float]]) -> LinearNDInterpolator:
             coords = []
             values = []
             for t in tuples:
@@ -84,10 +86,12 @@ class DelaunayInterpolatedMicrobench(Microbench):
             for type, dimMap in self.data.getMeasurements().items()
         }
 
-    def getMeasurements(self):
+    def getMeasurements(
+        self,
+    ) -> Dict[MicrobenchType, Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]]]:
         return self.data.getMeasurements()
 
-    def toJSON(self):
+    def toJSON(self) -> str:
         return self.data.toJSON()
 
     def evaluateInterpolation(
@@ -95,8 +99,8 @@ class DelaunayInterpolatedMicrobench(Microbench):
         benchType: MicrobenchType,
         benchDim: MicrobenchDimension,
         benchCoord: Union[MicrobenchCoordinate, Tuple[int, float, float]],
-    ):
+    ) -> float:
         if not self.__isInterpolated:
             self.__interpolate()
             self.__isInterpolated = True
-        return self.interpolator[benchType][benchDim](benchCoord) / 1000000.0  # convert microseconds to seconds
+        return float(self.interpolator[benchType][benchDim](benchCoord) / 1000000.0)  # convert microseconds to seconds

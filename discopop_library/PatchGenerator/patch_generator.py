@@ -20,7 +20,7 @@ from discopop_library.PatchGenerator.from_json_patterns import from_json_pattern
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 
 
-def run(arguments: PatchGeneratorArguments):
+def run(arguments: PatchGeneratorArguments) -> None:
     logger = logging.getLogger("PatchGenerator")
 
     if arguments.verbose:

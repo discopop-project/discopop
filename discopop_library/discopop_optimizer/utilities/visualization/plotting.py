@@ -5,6 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from typing import Any, Dict, List
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
 
@@ -22,7 +23,7 @@ from discopop_library.discopop_optimizer.utilities.simple_utilities import data_
 from networkx.drawing.nx_pydot import graphviz_layout  # type: ignore
 
 
-def show(graph):
+def show(graph: nx.DiGraph) -> None:
     """Plots the graph
 
     :return:
@@ -39,9 +40,9 @@ def show(graph):
             pos = nx.random_layout(graph)
 
     drawn_nodes = set()
-    nodes_lists = dict()
-    node_ids = dict()
-    node_insertion_sequence = []
+    nodes_lists: Dict[Any, Any] = dict()
+    node_ids: Dict[Any, Any] = dict()
+    node_insertion_sequence: List[Any] = []
     # draw nodes
     node_insertion_sequence.append(FunctionRoot)
     nodes_lists[FunctionRoot] = nx.draw_networkx_nodes(
@@ -143,7 +144,7 @@ def show(graph):
 
     # define tool tip style when hovering
     # based on https://stackoverflow.com/questions/61604636/adding-tooltip-for-nodes-in-python-networkx-graph
-    annot = ax.annotate(
+    annot = ax.annotate(  # type: ignore
         "",
         xy=(0, 0),
         xytext=(20, 20),
@@ -157,7 +158,7 @@ def show(graph):
     for idx, node in enumerate(graph.nodes):
         idx_to_node_dict[idx] = node
 
-    def update_annot(ind, node_ids_list):
+    def update_annot(ind: Any, node_ids_list: Any) -> None:
         node_idx = ind["ind"][0]
         node_id = node_ids_list[node_idx]
         xy = pos[node_id]
@@ -167,7 +168,7 @@ def show(graph):
         text = data_at(graph, node_id).get_hover_text()
         annot.set_text(text)
 
-    def hover(event):
+    def hover(event: Any) -> None:
         vis = annot.get_visible()
         if event.inaxes == ax:
             for node_type in node_insertion_sequence:
@@ -177,13 +178,13 @@ def show(graph):
                     if cont:
                         update_annot(ind, node_ids[node_type])
                         annot.set_visible(True)
-                        fig.canvas.draw_idle()
+                        fig.canvas.draw_idle()  # type: ignore
                     else:
                         if vis:
                             annot.set_visible(False)
-                            fig.canvas.draw_idle()
+                            fig.canvas.draw_idle()  # type: ignore
                 except TypeError:
                     pass
 
-    fig.canvas.mpl_connect("motion_notify_event", hover)
+    fig.canvas.mpl_connect("motion_notify_event", hover)  # type: ignore
     plt.show()

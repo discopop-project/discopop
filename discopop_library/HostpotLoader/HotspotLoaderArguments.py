@@ -16,19 +16,20 @@ class HotspotLoaderArguments(GeneralArguments):
     """Container Class for the arguments passed to the hotspot loader"""
 
     verbose: bool
+    dot_discopop_path: str
     get_loops: bool
     get_functions: bool
     get_YES: bool
     get_NO: bool
     get_MAYBE: bool
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
+    def __validate(self) -> None:
         pass
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.__dict__)
 
     def get_considered_hotness(self) -> List[str]:

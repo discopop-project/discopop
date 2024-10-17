@@ -13,8 +13,10 @@
 #pragma once
 
 #include "../share/include/timer.hpp"
-#include "runtimeFunctionsTypes.hpp"
+#include "calltree/CallTree.hpp"
+#include "calltree/DependencyMetadata.hpp"
 #include "memory/AbstractShadow.hpp"
+#include "runtimeFunctionsTypes.hpp"
 
 #include <pthread.h>
 
@@ -28,6 +30,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <utility>
+#include <chrono>
 
 extern bool USE_PERFECT;
 
@@ -49,6 +52,10 @@ extern std::mutex pthread_compatibility_mutex;
 extern FunctionManager *function_manager;
 extern LoopManager *loop_manager;
 extern MemoryManager *memory_manager;
+extern CallTree *call_tree;
+// extern MetaDataQueue * metadata_queue;
+extern std::mutex *dependency_metadata_results_mtx;
+extern std::unordered_set<DependencyMetadata> *dependency_metadata_results;
 
 // hybrid analysis
 extern ReportedBBSet *bbList;
@@ -91,5 +98,8 @@ extern int32_t *tempAddrCount;      // tempAddrCount[thread_id] denotes the curr
 extern bool stop;                   // ONLY set stop to true if no more accessed addresses will
                                     // be collected
 extern thread_local depMap *myMap;
+
+// statistics
+extern std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 
 } // namespace __dp
