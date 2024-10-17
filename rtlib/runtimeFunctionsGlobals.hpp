@@ -30,6 +30,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <utility>
+#include <chrono>
 
 extern bool USE_PERFECT;
 
@@ -97,5 +98,8 @@ extern int32_t *tempAddrCount;      // tempAddrCount[thread_id] denotes the curr
 extern bool stop;                   // ONLY set stop to true if no more accessed addresses will
                                     // be collected
 extern thread_local depMap *myMap;
+
+// statistics
+extern std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 
 } // namespace __dp
