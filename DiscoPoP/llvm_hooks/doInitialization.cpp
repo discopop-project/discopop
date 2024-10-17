@@ -36,6 +36,13 @@ bool DiscoPoP::doInitialization(Module &M) {
   if (stat(getenv("DOT_DISCOPOP_PROFILER"), &st2) == -1) {
     mkdir(getenv("DOT_DISCOPOP_PROFILER"), 0777);
   }
+  // prepare statistics directory if not present
+  struct stat st3 = {0};
+  std::string tmp_str_2(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp_str_2 += "/statistics";
+  if (stat(tmp_str_2.data(), &st3) == -1) {
+    mkdir(tmp_str_2.data(), 0777);
+  }
 
   // prepare target directory if not present
   char const *tmp2 = getenv("DP_PROJECT_ROOT_DIR");

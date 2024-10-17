@@ -86,6 +86,9 @@ bool stop = false;                          // ONLY set stop to true if no more 
                                             // be collected
 thread_local depMap *myMap = nullptr;
 
+// statistics
+std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
+
 /******* END: parallelization section *******/
 
 } // namespace __dp

@@ -25,6 +25,7 @@
 #include <mutex>
 #include <set>
 #include <string>
+#include <chrono>
 
 using namespace std;
 
@@ -52,6 +53,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     // This part should be executed only once.
     readRuntimeInfo();
     timers = new Timers();
+    statistics_profiling_start_time = std::chrono::high_resolution_clock::now();
 #ifdef DP_INTERNAL_TIMER
     const auto timer = Timer(timers, TimerRegion::FUNC_ENTRY);
 #endif
