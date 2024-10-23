@@ -111,10 +111,9 @@ def run_detection(
     nodes = cast(List[FunctionNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
-    with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
-        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
-    for local_result in tmp_result:
-        result += local_result
+
+    for param_tpl in param_list:
+        result += __check_node(param_tpl)
     print("GLOBAL RES: ", result)
 
     for pattern in result:

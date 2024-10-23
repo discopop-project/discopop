@@ -75,7 +75,9 @@ global_pet = None
 
 
 def run_detection(
-    pet: PEGraphX, hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]]
+    pet: PEGraphX,
+    hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
+    jobs: Optional[int] = None,
 ) -> List[ReductionInfo]:
     """Search for reduction pattern
 
@@ -92,10 +94,14 @@ def run_detection(
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
-    with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
-        tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
-    for local_result in tmp_result:
-        result += local_result
+    if jobs is None or jobs > 1:
+        with Pool(processes=jobs, initializer=__initialize_worker, initargs=(pet,)) as pool:
+            tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
+        for local_result in tmp_result:
+            result += local_result
+    else:
+        for param_tpl in param_list:
+            result += __check_node(param_tpl)
     print("GLOBAL RES: ", [r.start_line for r in result])
 
     for pattern in result:

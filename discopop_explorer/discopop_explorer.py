@@ -58,6 +58,7 @@ class ExplorerArguments(GeneralArguments):
     reduction_file: str
     file_mapping_file: str
     plugins: List[str]
+    jobs: Optional[int]
     # output and formatting
     enable_json_file: Optional[str]
     enable_profiling_dump_file: Optional[str]  # None means no dump, otherwise the path
@@ -122,6 +123,7 @@ def __run(
     enable_detection_of_scheduling_clauses: bool = False,
     hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]] = None,
     load_existing_doall_and_reduction_patterns: bool = False,
+    jobs: Optional[int] = None,
 ) -> DetectionResult:
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))  # type: ignore
     print("PET CREATION FINISHED.")
@@ -170,6 +172,7 @@ def __run(
             enable_task_pattern,
             enable_detection_of_scheduling_clauses,
             hotspot_functions,
+            jobs,
         )
 
     for plugin_name in plugins:
@@ -240,6 +243,7 @@ def run(arguments: ExplorerArguments) -> None:
             enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
             hotspot_functions=hotspots,
             load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
+            jobs=arguments.jobs,
         )
 
         end = time.time()

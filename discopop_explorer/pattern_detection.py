@@ -76,6 +76,7 @@ class PatternDetectorX(object):
         enable_task_pattern: bool,
         enable_detection_of_scheduling_clauses: bool,
         hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
+        jobs: Optional[int],
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
@@ -88,11 +89,11 @@ class PatternDetectorX(object):
 
         if "*" in enable_patterns or "reduction" in enable_patterns:
             print("REDUCTIONS...")
-            res.patterns.reduction = detect_reduction(self.pet, hotspots)
+            res.patterns.reduction = detect_reduction(self.pet, hotspots, jobs)
             print("\tDONE.")
         if "*" in enable_patterns or "doall" in enable_patterns:
             print("DOALL...")
-            res.patterns.do_all = detect_do_all(self.pet, hotspots, res.patterns.reduction)
+            res.patterns.do_all = detect_do_all(self.pet, hotspots, res.patterns.reduction, jobs)
             print("\tDONE.")
         if "*" in enable_patterns or "pipeline" in enable_patterns:
             print("PIPELINE...")
