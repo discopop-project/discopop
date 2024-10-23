@@ -10,6 +10,7 @@ import cProfile
 import json
 import logging
 import os
+import shutil
 import sys
 import time
 from dataclasses import dataclass
@@ -26,6 +27,7 @@ from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
 
 from discopop_library.LineMapping.initialize import initialize_line_mapping
+from discopop_library.LineMapping.delete import delete_line_mapping
 from discopop_library.PathManagement.PathManagement import get_path, load_file_mapping
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
     ExtrapInterpolatedMicrobench,
@@ -178,6 +180,16 @@ def run(arguments: ExplorerArguments) -> None:
     """Run the discopop_explorer with the given arguments"""
     logger = logging.getLogger("Explorer")
 
+    # reset environment, if previous results existed
+    if os.path.exists(os.path.join(arguments.project_path, "explorer")):
+        shutil.rmtree(os.path.join(arguments.project_path, "explorer"))
+    # reset file lock in case of prior crashes
+    if os.path.exists("next_free_pattern_id.txt.lock"):
+        os.remove("next_free_pattern_id.txt.lock")
+    if os.path.exists("next_free_pattern_id.txt"):
+        os.remove("next_free_pattern_id.txt")
+    delete_line_mapping(arguments.project_path)
+
     # create explorer directory if not already present
     if not os.path.exists(os.path.join(arguments.project_path, "explorer")):
         os.mkdir(os.path.join(arguments.project_path, "explorer"))
@@ -185,9 +197,6 @@ def run(arguments: ExplorerArguments) -> None:
     if not os.path.exists("next_free_pattern_id.txt"):
         with open("next_free_pattern_id.txt", "w") as f:
             f.write(str(0))
-    # reset file lock in case of prior crashes
-    if os.path.exists("next_free_pattern_id.txt.lock"):
-        os.remove("next_free_pattern_id.txt.lock")
 
     if arguments.enable_profiling_dump_file is not None:
         profile = cProfile.Profile()
