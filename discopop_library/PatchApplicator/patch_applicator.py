@@ -8,6 +8,7 @@
 import json
 import os
 
+from discopop_library.FolderStructure.setup import setup_patch_applicator
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
 from discopop_library.PatchApplicator.apply import apply_patches
 from discopop_library.PatchApplicator.clear import clear_patches
@@ -30,20 +31,9 @@ def run(arguments: PatchApplicatorArguments) -> int:
         print("Working directory: ", os.getcwd())
         print(arguments)
 
-    # create a directory for the patch applicator
+    setup_patch_applicator(os.getcwd())
     patch_applicator_dir = os.path.join(os.getcwd(), "patch_applicator")
-    if not os.path.exists(patch_applicator_dir):
-        if arguments.verbose:
-            print("Creating patch_applicator directory...")
-        os.mkdir(patch_applicator_dir)
-
-    # create a file to store applied suggestions
     applied_suggestions_file = os.path.join(patch_applicator_dir, "applied_suggestions.json")
-    if not os.path.exists(applied_suggestions_file):
-        if arguments.verbose:
-            print("Creating applied_suggestions.json file...")
-        with open(applied_suggestions_file, "w+") as f:
-            f.write(json.dumps({"applied": []}))
 
     # load file mapping
     file_mapping_path = os.path.join(os.getcwd(), "FileMapping.txt")

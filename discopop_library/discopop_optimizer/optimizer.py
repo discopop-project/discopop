@@ -18,6 +18,7 @@ import jsonpickle  # type: ignore
 from sympy import Float, Symbol  # type: ignore
 
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
+from discopop_library.FolderStructure.setup import setup_optimizer
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
@@ -90,10 +91,10 @@ def run_passive_optimizer(arguments: OptimizerArguments) -> None:
     if arguments.verbose:
         print("Started DiscoPoP Optimizer...")
         print("Creating optimizer directory...")
-    optimizer_dir = os.path.join(os.getcwd(), "optimizer")
-    if not os.path.exists(optimizer_dir):
-        os.mkdir(optimizer_dir)
 
+    setup_optimizer(os.getcwd())
+
+    optimizer_dir = os.path.join(os.getcwd(), "optimizer")
     explorer_dir = os.path.join(os.getcwd(), "explorer")
     profiler_dir = os.path.join(os.getcwd(), "profiler")
     pattern_file_path = os.path.join(explorer_dir, "patterns.json")
