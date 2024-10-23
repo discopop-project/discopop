@@ -12,6 +12,7 @@ import shutil
 from typing import Dict
 
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
+from discopop_library.FolderStructure.setup import setup_patch_generator
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.from_optimizer_output import from_optimizer_output
@@ -25,26 +26,9 @@ def run(arguments: PatchGeneratorArguments) -> None:
 
     if arguments.verbose:
         print("Started DiscoPoP Patch Generator...")
-    if arguments.verbose:
-        print("Creating patch_generator directory...")
-    patch_generator_dir = os.path.join(os.getcwd(), "patch_generator")
-    if not os.path.exists(patch_generator_dir):
-        os.mkdir(patch_generator_dir)
 
-    # for compatibility reasons, initialize the file to store applied patches if it doesn't exist already
-    # create a directory for the patch applicator
-    patch_applicator_dir = os.path.join(os.getcwd(), "patch_applicator")
-    if not os.path.exists(patch_applicator_dir):
-        if arguments.verbose:
-            print("Creating patch_applicator directory...")
-        os.mkdir(patch_applicator_dir)
-    # create a file to store applied suggestions
-    applied_suggestions_file = os.path.join(patch_applicator_dir, "applied_suggestions.json")
-    if not os.path.exists(applied_suggestions_file):
-        if arguments.verbose:
-            print("Creating applied_suggestions.json file...")
-        with open(applied_suggestions_file, "w+") as f:
-            f.write(json.dumps({"applied": []}))
+    setup_patch_generator(os.getcwd())
+    patch_generator_dir = os.path.join(os.getcwd(), "patch_generator")
 
     # get pattern file to load
     if arguments.add_from_json != "None":

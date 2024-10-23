@@ -22,6 +22,8 @@ from pluginbase import PluginBase  # type: ignore
 from discopop_explorer.functions.PEGraph.output.json import dump_to_pickled_json
 from discopop_explorer.utilities.statistics.collect_statistics import collect_statistics
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments  # type: ignore
+from discopop_library.FolderStructure.setup import setup_explorer
+from discopop_library.FolderStructure.teardown import teardown_explorer
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
@@ -180,23 +182,7 @@ def run(arguments: ExplorerArguments) -> None:
     """Run the discopop_explorer with the given arguments"""
     logger = logging.getLogger("Explorer")
 
-    # reset environment, if previous results existed
-    if os.path.exists(os.path.join(arguments.project_path, "explorer")):
-        shutil.rmtree(os.path.join(arguments.project_path, "explorer"))
-    # reset file lock in case of prior crashes
-    if os.path.exists("next_free_pattern_id.txt.lock"):
-        os.remove("next_free_pattern_id.txt.lock")
-    if os.path.exists("next_free_pattern_id.txt"):
-        os.remove("next_free_pattern_id.txt")
-    delete_line_mapping(arguments.project_path)
-
-    # create explorer directory if not already present
-    if not os.path.exists(os.path.join(arguments.project_path, "explorer")):
-        os.mkdir(os.path.join(arguments.project_path, "explorer"))
-    # create file to store next free pattern ids if not already present
-    if not os.path.exists("next_free_pattern_id.txt"):
-        with open("next_free_pattern_id.txt", "w") as f:
-            f.write(str(0))
+    setup_explorer(arguments.project_path)
 
     if arguments.enable_profiling_dump_file is not None:
         profile = cProfile.Profile()
@@ -281,9 +267,6 @@ def run(arguments: ExplorerArguments) -> None:
             del res.pet
             with open(arguments.enable_json_file, "w+") as f:
                 json.dump(res, f, indent=2, cls=PatternBaseSerializer)
-
-        # initialize the line_mapping.json
-        initialize_line_mapping(load_file_mapping(arguments.file_mapping_file), arguments.project_path)
 
         print("Time taken for pattern detection: {0}".format(end - start))
 
