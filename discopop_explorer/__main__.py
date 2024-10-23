@@ -69,12 +69,13 @@ def parse_args() -> ExplorerArguments:
         help="Dump DetectionResult object to JSON file. If a path is given, the DetectionResult object is written to the given file, otherwise to detection_result_dump.json. Contents are equivalent to the json output. NOTE: This dump contains a dump of the PET Graph!",
     )
     parser.add_argument(
-        "--enable-patterns", type=str, nargs="?", default="reduction,doall,pipeline,geodec",
-        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,pipeline,geodec,simplegpu. Default: reduction,doall,pipeline,geodec",
+        "--enable-patterns", type=str, nargs="?", default="reduction,doall",
+        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,pipeline,geodec,simplegpu. Default: reduction,doall",
     )
     parser.add_argument("--load-existing-doall-and-reduction-patterns", action="store_true", help="Skip pattern detection and insert existing patterns.json contents into the created detection_result.json")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
+    parser.add_argument("-j", "--jobs", type=int, help="Allow the use of N threads. Use 0 or 1 to disable threading. Default: Unlimited", default=None)
 
     # EXPERIMENTAL FLAGS:
     # temporary flag for microbenchmark file
@@ -160,6 +161,7 @@ def parse_args() -> ExplorerArguments:
         write_log=arguments.write_log,
         load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
         collect_statistics=arguments.enable_statistics,
+        jobs=arguments.jobs,
     )
 
 
