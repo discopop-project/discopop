@@ -85,23 +85,23 @@ def output_suggestion_statistics(
     for suggestion_id in suggestion_summed_cyclomatic_complexity_from_calls:
         if suggestion_id not in statistics_dict_by_suggestionID:
             statistics_dict_by_suggestionID[suggestion_id] = dict()
-        statistics_dict_by_suggestionID[suggestion_id][
-            "suggestion_summed_cyclomatic_complexity_from_calls"
-        ] = suggestion_summed_cyclomatic_complexity_from_calls[suggestion_id]
+        statistics_dict_by_suggestionID[suggestion_id]["suggestion_summed_cyclomatic_complexity_from_calls"] = (
+            suggestion_summed_cyclomatic_complexity_from_calls[suggestion_id]
+        )
 
     for suggestion_id in suggestion_immediate_lines_of_code:
         if suggestion_id not in statistics_dict_by_suggestionID:
             statistics_dict_by_suggestionID[suggestion_id] = dict()
-        statistics_dict_by_suggestionID[suggestion_id][
-            "suggestion_immediate_lines_of_code"
-        ] = suggestion_immediate_lines_of_code[suggestion_id]
+        statistics_dict_by_suggestionID[suggestion_id]["suggestion_immediate_lines_of_code"] = (
+            suggestion_immediate_lines_of_code[suggestion_id]
+        )
 
     for suggestion_id in suggestion_lines_of_code_including_calls:
         if suggestion_id not in statistics_dict_by_suggestionID:
             statistics_dict_by_suggestionID[suggestion_id] = dict()
-        statistics_dict_by_suggestionID[suggestion_id][
-            "suggestion_lines_of_code_including_calls"
-        ] = suggestion_lines_of_code_including_calls[suggestion_id]
+        statistics_dict_by_suggestionID[suggestion_id]["suggestion_lines_of_code_including_calls"] = (
+            suggestion_lines_of_code_including_calls[suggestion_id]
+        )
 
     with open(statistics_file_by_suggestionID, "w+") as f:
         f.write(json.dumps(statistics_dict_by_suggestionID) + "\n")
