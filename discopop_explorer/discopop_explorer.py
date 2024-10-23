@@ -19,6 +19,7 @@ from typing import Dict, List, Optional, Tuple
 import pstats2  # type:ignore
 from pluginbase import PluginBase  # type: ignore
 from discopop_explorer.functions.PEGraph.output.json import dump_to_pickled_json
+from discopop_explorer.utilities.statistics.collect_statistics import collect_statistics
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments  # type: ignore
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
@@ -65,6 +66,7 @@ class ExplorerArguments(GeneralArguments):
     llvm_cxxfilt_path: Optional[str]
     microbench_file: Optional[str]
     load_existing_doall_and_reduction_patterns: bool
+    collect_statistics: bool
 
     def __post_init__(self) -> None:
         self.__validate()
@@ -244,6 +246,10 @@ def run(arguments: ExplorerArguments) -> None:
         )
 
         end = time.time()
+
+        # collect code and suggestions statistics, if requested
+        if arguments.collect_statistics:
+            collect_statistics(arguments, res)
 
         if arguments.enable_pet_dump_file is not None:
             with open(arguments.enable_pet_dump_file, "w+") as f:

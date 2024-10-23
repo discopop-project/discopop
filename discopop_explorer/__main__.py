@@ -104,6 +104,9 @@ def parse_args() -> ExplorerArguments:
         "--llvm-cxxfilt-path", type=str, default=None,
         help="Path to llvm-cxxfilt executable. Required for task pattern detector if non-standard path should be used.",
     )
+    experimental_parser.add_argument(
+        "--disable-statistics", action="store_false", help="Disable the calculation and storing of statistics for code and generated suggestions."
+    )
     # fmt: on
 
     arguments = parser.parse_args()
@@ -156,6 +159,7 @@ def parse_args() -> ExplorerArguments:
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
         load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
+        collect_statistics=arguments.disable_statistics,
     )
 
 
