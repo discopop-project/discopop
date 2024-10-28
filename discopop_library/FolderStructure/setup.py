@@ -74,3 +74,13 @@ def setup_optimizer(path: str = "") -> None:
         os.mkdir(optimizer_dir)
 
     tmp_logger.info("Done")
+
+
+def setup_sanity_checker(path: str = "") -> None:
+    tmp_logger = logger.getChild("sanity_checker")
+    tmp_logger.info("Start")
+    sanity_checker_dir = os.path.join(path, "sanity_checker")
+    if not os.path.exists(sanity_checker_dir):
+        os.mkdir(sanity_checker_dir)
+
+    tmp_logger.info("Done")
