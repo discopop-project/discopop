@@ -18,7 +18,7 @@ def parse_args() -> AutotunerArguments:
     parser = ArgumentParser(description="DiscoPoP Autotuner")
 
     # fmt: off
-    
+
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     parser.add_argument("--project-path", type=str, default=os.getcwd(), help="Root path of the project to be tuned. \
@@ -27,8 +27,9 @@ def parse_args() -> AutotunerArguments:
                         DP_EXECUTE.sh may return not 0, if either the execution or validation of the result failed. \
                         A third script DP_VALIDATE.sh might be added to add a validation step, where return code 0 is interpreted as a success, i.e. a valid result.")
     parser.add_argument("--dot-dp-path", type=str, default=os.path.join(os.getcwd(), ".discopop"), help="Path to the .discopop folder.")
-    parser.add_argument("--skip-cleanup", action="store_true", help="disable the deletion of created code variants. May require a lot of disk space." )
-    # fmt: on
+    parser.add_argument("--skip-cleanup", action="store_true", help="Disable the deletion of created code variants. May require a lot of disk space." )
+    parser.add_argument("--sanitize", action="store_true", help="Enable the invocation of ThreadSanitizer if DP_SANITIZE.sh is provided." )
+    # fmt:  is provided.
 
     arguments = parser.parse_args()
 
@@ -38,6 +39,7 @@ def parse_args() -> AutotunerArguments:
         project_path=arguments.project_path,
         dot_dp_path=arguments.dot_dp_path,
         skip_cleanup=arguments.skip_cleanup,
+        sanitize=arguments.sanitize,
     )
 
 

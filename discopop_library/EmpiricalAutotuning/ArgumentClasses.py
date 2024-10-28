@@ -21,6 +21,7 @@ class AutotunerArguments(GeneralArguments):
     project_path: str
     dot_dp_path: str
     skip_cleanup: bool
+    sanitize: bool
 
     def __post_init__(self) -> None:
         self.__validate()
