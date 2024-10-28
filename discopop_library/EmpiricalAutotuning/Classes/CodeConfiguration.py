@@ -79,10 +79,14 @@ class CodeConfiguration(object):
 
         # check for result validity using thread sanitizer
         thread_sanitizer_valid = True
-        if os.path.exists(os.path.join(self.root_path, "DP_SANITIZE.sh")) and arguments.sanitize:
+        if (
+            os.path.exists(os.path.join(self.root_path, "DP_COMPILE_SANITIZE.sh"))
+            and os.path.exists(os.path.join(self.root_path, "DP_EXECUTE_SANITIZE.sh"))
+            and arguments.sanitize
+        ):
             logger.info("Checking thread sanity: " + str(self))
             thread_sanitizer_result = subprocess.run(
-                "./DP_SANITIZE.sh && ./DP_EXECUTE.sh",
+                "./DP_COMPILE_SANITIZE.sh && ./DP_EXECUTE_SANITIZE.sh",
                 cwd=self.root_path,
                 executable="/bin/bash",
                 shell=True,

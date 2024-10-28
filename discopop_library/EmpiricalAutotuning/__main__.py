@@ -28,7 +28,7 @@ def parse_args() -> AutotunerArguments:
                         A third script DP_VALIDATE.sh might be added to add a validation step, where return code 0 is interpreted as a success, i.e. a valid result.")
     parser.add_argument("--dot-dp-path", type=str, default=os.path.join(os.getcwd(), ".discopop"), help="Path to the .discopop folder.")
     parser.add_argument("--skip-cleanup", action="store_true", help="Disable the deletion of created code variants. May require a lot of disk space." )
-    parser.add_argument("--sanitize", action="store_true", help="Enable the invocation of ThreadSanitizer if DP_SANITIZE.sh is provided." )
+    parser.add_argument("--sanitize", action="store_true", help="Enable the invocation of ThreadSanitizer if DP_COMPILE_SANITIZE.sh and DP_EXECUTE_SANITIZE.sh are provided." )
     # fmt:  is provided.
 
     arguments = parser.parse_args()
