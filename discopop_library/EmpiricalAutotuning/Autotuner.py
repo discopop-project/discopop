@@ -39,13 +39,13 @@ def get_unique_configuration_id() -> int:
 
 def run(arguments: AutotunerArguments) -> None:
     logger.info("Starting discopop autotuner.")
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, str]] = []
+    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]] = []
     statistics_graph = StatisticsGraph()
     statistics_step_num = 0
 
     # get untuned reference result
     reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path)
-    reference_configuration.execute(timeout=None, is_initial=True)
+    reference_configuration.execute(arguments, timeout=None, is_initial=True)
     statistics_graph.set_root(
         reference_configuration.get_statistics_graph_label(),
         color=reference_configuration.get_statistics_graph_color(),
@@ -58,6 +58,7 @@ def run(arguments: AutotunerArguments) -> None:
             cast(ExecutionResult, reference_configuration.execution_result).runtime,
             cast(ExecutionResult, reference_configuration.execution_result).return_code,
             cast(ExecutionResult, reference_configuration.execution_result).result_valid,
+            cast(ExecutionResult, reference_configuration.execution_result).thread_sanitizer,
             reference_configuration.root_path,
         )
     )
@@ -141,7 +142,7 @@ def run(arguments: AutotunerArguments) -> None:
                 visited_configurations.append(current_config)
                 tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
                 tmp_config.apply_suggestions(arguments, current_config)
-                tmp_config.execute(timeout=timeout_after)
+                tmp_config.execute(arguments, timeout=timeout_after)
                 statistics_graph.add_child(
                     "step "
                     + str(statistics_step_num)
@@ -159,6 +160,7 @@ def run(arguments: AutotunerArguments) -> None:
                         cast(ExecutionResult, tmp_config.execution_result).runtime,
                         cast(ExecutionResult, tmp_config.execution_result).return_code,
                         cast(ExecutionResult, tmp_config.execution_result).result_valid,
+                        cast(ExecutionResult, tmp_config.execution_result).thread_sanitizer,
                         tmp_config.root_path,
                     )
                 )
@@ -241,7 +243,7 @@ def run(arguments: AutotunerArguments) -> None:
 
     # show debug stats
     stats_str = "Configuration measurements:\n"
-    stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[path]\n"
+    stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[thread sanitizer]\t[path]\n"
     for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
         stats_str += (
             str(round(stats[1], 3))
@@ -254,6 +256,8 @@ def run(arguments: AutotunerArguments) -> None:
             + str(stats[3])
             + "\t"
             + str(stats[4])
+            + "\t"
+            + str(stats[5])
             + "\n"
         )
     logger.info(stats_str)
@@ -261,12 +265,12 @@ def run(arguments: AutotunerArguments) -> None:
     # export measurements for pdf creation
     if False:  # export all measurements
         with open("measurements.csv", "w+") as f:
-            f.write("ID; time; return_code;\n")
+            f.write("ID; time; return_code; thread_sanitizer\n")
             for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
                 f.write(str(stats[0]) + "; " + str(round(stats[1], 3)) + "; " + str(stats[2]) + ";" + "\n")
     else:  # export only sequential and best measurement
         with open("measurements.csv", "w+") as f:
-            f.write("ID; time; return_code;\n")
+            f.write("ID; time; return_code; thread_sanitizer\n")
             # write sequential measurement
             for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
                 if str(stats[0]) == "[]":
