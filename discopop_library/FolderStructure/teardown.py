@@ -62,3 +62,13 @@ def teardown_optimizer(path: str = "") -> None:
         shutil.rmtree(optimizer_dir)
 
     tmp_logger.info("Done")
+
+
+def teardown_sanity_checker(path: str = "") -> None:
+    tmp_logger = logger.getChild("sanity_checker")
+    tmp_logger.info("Start")
+    sanity_checker_dir = os.path.join(path, "sanity_checker")
+    if os.path.exists(sanity_checker_dir):
+        shutil.rmtree(sanity_checker_dir)
+
+    tmp_logger.info("Done")
