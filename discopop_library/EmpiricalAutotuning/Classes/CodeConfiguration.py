@@ -41,7 +41,7 @@ class CodeConfiguration(object):
     def __str__(self) -> str:
         return self.root_path
 
-    def execute(self, timeout: Optional[float], is_initial: bool = False) -> None:
+    def execute(self, arguments: AutotunerArguments, timeout: Optional[float], is_initial: bool = False) -> None:
         # create timeout string
         timeout_string = "" if timeout is None else "timeout " + str(timeout) + " "
         if is_initial:
@@ -77,12 +77,29 @@ class CodeConfiguration(object):
             if validity_check_result.returncode != 0:
                 result_valid = False
 
+        # check for result validity using thread sanitizer
+        thread_sanitizer_valid = True
+        if os.path.exists(os.path.join(self.root_path, "DP_SANITIZE.sh")) and arguments.sanitize:
+            logger.info("Checking thread sanity: " + str(self))
+            thread_sanitizer_result = subprocess.run(
+                "./DP_SANITIZE.sh && ./DP_EXECUTE.sh",
+                cwd=self.root_path,
+                executable="/bin/bash",
+                shell=True,
+                capture_output=True,
+            )
+            thread_sanitizer_output = str(thread_sanitizer_result.stdout.decode("utf-8"))
+            logger.getChild("ThreadSanitizerOutput").debug(thread_sanitizer_output)
+            if "WARNING: ThreadSanitizer: data race" in thread_sanitizer_output:
+                thread_sanitizer_valid = False
+
         # reporting
         logger.debug("Execution took " + str(round(required_time, 4)) + " s")
         logger.debug("Execution return code: " + str(result.returncode))
         logger.debug("Execution result valid: " + str(result_valid))
+        logger.debug("ThreadSanitizer valid: " + str(thread_sanitizer_valid))
 
-        self.execution_result = ExecutionResult(required_time, result.returncode, result_valid)
+        self.execution_result = ExecutionResult(required_time, result.returncode, result_valid, thread_sanitizer_valid)
 
     def create_copy(self, get_new_configuration_id: Callable[[], int]) -> CodeConfiguration:
         # create a copy of the project folder
