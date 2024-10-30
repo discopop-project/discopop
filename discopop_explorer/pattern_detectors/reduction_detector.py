@@ -56,6 +56,7 @@ class ReductionInfo(PatternInfo):
         self.last_private = lp
         self.shared = s
         self.reduction = r
+        self.pattern_tag = self.get_tag()
 
     def __str__(self) -> str:
         return (
@@ -69,6 +70,15 @@ class ReductionInfo(PatternInfo):
             f'reduction: {[str(v.operation) + ":" + v.name for v in self.reduction]}\n'
             f"last private: {[v.name for v in self.last_private]}"
         )
+
+    def get_tag(self) -> str:
+        result = super().get_tag() + "_"
+        result += f"p({[v.name for v in self.private]})_"
+        result += f"s({[v.name for v in self.shared]})_"
+        result += f"fp({[v.name for v in self.first_private]})_"
+        result += f'r({[str(v.operation) + ":" + v.name for v in self.reduction]})_'
+        result += f"lp({[v.name for v in self.last_private]})"
+        return result
 
 
 global_pet = None
