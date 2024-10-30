@@ -57,6 +57,7 @@ class DoAllInfo(PatternInfo):
         self.reduction = r
         self.scheduling_clause = "static"
         self.collapse_level = 1
+        self.pattern_tag = self.get_tag()
 
     def __str__(self) -> str:
         return (
@@ -75,6 +76,15 @@ class DoAllInfo(PatternInfo):
             f"last private: {[v.name for v in self.last_private]}\n"
             f"scheduling clause: {self.scheduling_clause}"
         )
+
+    def get_tag(self) -> str:
+        result = super().get_tag() + "_"
+        result += f"p({[v.name for v in self.private]})_"
+        result += f"s({[v.name for v in self.shared]})_"
+        result += f"fp({[v.name for v in self.first_private]})_"
+        result += f"r({[v.name for v in self.reduction]})_"
+        result += f"lp({[v.name for v in self.last_private]})"
+        return result
 
 
 global_pet = None

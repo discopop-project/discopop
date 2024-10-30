@@ -19,6 +19,7 @@ class PatternBase(object):
     """Base class for pattern info"""
 
     pattern_id: int
+    pattern_tag: str
     _node: Node
     node_id: NodeID
     start_line: LineID
@@ -45,6 +46,7 @@ class PatternBase(object):
         self.start_line = node.start_position()
         self.end_line = node.end_position()
         self.applicable_pattern = True
+        self.pattern_tag = ""
 
     def to_json(self) -> str:
         dic = self.__dict__
@@ -54,3 +56,8 @@ class PatternBase(object):
                 del dic[key]
 
         return json.dumps(dic, indent=2, default=lambda o: o.toJSON())  # , default=lambda o: "<not serializable>")
+
+    def get_tag(self) -> str:
+        result = "" + self.__class__.__name__
+        result += "@" + self.start_line + "-" + self.end_line
+        return result
