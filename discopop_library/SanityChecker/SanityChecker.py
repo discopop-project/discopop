@@ -18,7 +18,7 @@ from discopop_library.FolderStructure.setup import setup_sanity_checker
 from discopop_library.SanityChecker.ArgumentClasses import SanityCheckerArguments
 from discopop_library.SanityChecker.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.SanityChecker.Classes.ExecutionResult import ExecutionResult
-from discopop_library.SanityChecker.Types import RETURN_CODE, SUGGESTION_ID, TSAN_CODE
+from discopop_library.SanityChecker.Types import PATTERN_TAG, RETURN_CODE, SUGGESTION_ID, TSAN_CODE
 from discopop_library.SanityChecker.utils import get_applicable_suggestion_ids
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
@@ -40,7 +40,7 @@ def get_unique_configuration_id() -> int:
 
 def run(arguments: SanityCheckerArguments) -> None:
     logger.info("Starting.")
-    results: List[Dict[str, Union[List[SUGGESTION_ID], TSAN_CODE]]] = []
+    results: List[Dict[str, Union[List[SUGGESTION_ID], List[PATTERN_TAG], TSAN_CODE]]] = []
 
     debug_stats: List[Tuple[List[SUGGESTION_ID], RETURN_CODE, TSAN_CODE, str]] = []
 
@@ -51,7 +51,8 @@ def run(arguments: SanityCheckerArguments) -> None:
     reference_configuration.execute(arguments, timeout=None, is_initial=True)
     results.append(
         {
-            "applied_suggestions": [],
+            "applied_suggestions": cast(List[SUGGESTION_ID], []),
+            "applied_pattern_tags": cast(List[PATTERN_TAG], []),
             "TSAN_CODE": cast(ExecutionResult, reference_configuration.execution_result).thread_sanitizer,
         }
     )
@@ -80,7 +81,10 @@ def run(arguments: SanityCheckerArguments) -> None:
 
         results.append(
             {
-                "applied_suggestions": [pattern_id],
+                "applied_suggestions": cast(List[SUGGESTION_ID], [pattern_id]),
+                "applied_pattern_tags": cast(
+                    List[PATTERN_TAG], [detection_result.patterns.get_pattern_from_id(pattern_id).pattern_tag]
+                ),
                 "TSAN_CODE": cast(ExecutionResult, configuration.execution_result).thread_sanitizer,
             }
         )
