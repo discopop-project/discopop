@@ -9,3 +9,4 @@
 SUGGESTION_ID = int
 RETURN_CODE = int
 TSAN_CODE = bool
+PATTERN_TAG = str
