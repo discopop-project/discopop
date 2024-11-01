@@ -7,13 +7,26 @@
 # directory for details.
 
 
+from typing import Optional
+
+
 class ExecutionResult(object):
     return_code: int
     thread_sanitizer: bool
+    validation_result: Optional[bool]
 
-    def __init__(self, return_code: int, thread_sanitizer: bool):
+    def __init__(self, return_code: int, thread_sanitizer: bool, validation_result: Optional[bool]):
         self.return_code = return_code
         self.thread_sanitizer = thread_sanitizer
+        self.validation_result = validation_result
 
     def __str__(self) -> str:
-        return "" + " code: " + str(self.return_code) + " TSAN: " + str(self.thread_sanitizer)
+        return (
+            ""
+            + " code: "
+            + str(self.return_code)
+            + " TSAN: "
+            + str(self.thread_sanitizer)
+            + " VALIDATION: "
+            + str(self.validation_result)
+        )

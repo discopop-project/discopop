@@ -69,11 +69,26 @@ class CodeConfiguration(object):
         if "WARNING: ThreadSanitizer: data race" in thread_sanitizer_error:
             thread_sanitizer_valid = False
 
+        # check for regular result validity, if a data race was identified to reduce false positives
+        validation_result: Optional[bool] = None
+        if os.path.exists(os.path.join(self.root_path, "DP_VALIDATE.sh")) and not thread_sanitizer_valid:
+            logger.info("Data races found. Checking result validity: " + str(self))
+            validity_check_result = subprocess.run(
+                "./DP_VALIDATE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True
+            )
+            logger.getChild("validationOutput").debug(str(validity_check_result.stdout.decode("utf-8")))
+            if validity_check_result.returncode != 0:
+                validation_result = False
+            validation_result = True
+
         # reporting
         logger.debug("Execution return code: " + str(thread_sanitizer_result.returncode))
         logger.debug("ThreadSanitizer valid: " + str(thread_sanitizer_valid))
+        logger.debug("Validation result: " + str(validation_result))
 
-        self.execution_result = ExecutionResult(thread_sanitizer_result.returncode, thread_sanitizer_valid)
+        self.execution_result = ExecutionResult(
+            thread_sanitizer_result.returncode, thread_sanitizer_valid, validation_result
+        )
 
     def create_copy(self, get_new_configuration_id: Callable[[], int]) -> CodeConfiguration:
         # create a copy of the project folder
