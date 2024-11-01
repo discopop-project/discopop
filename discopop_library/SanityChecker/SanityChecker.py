@@ -9,7 +9,7 @@
 import json
 import logging
 import os
-from typing import Dict, List, Tuple, Union, cast
+from typing import Dict, List, Optional, Tuple, Union, cast
 
 import jsonpickle  # type: ignore
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
@@ -18,7 +18,7 @@ from discopop_library.FolderStructure.setup import setup_sanity_checker
 from discopop_library.SanityChecker.ArgumentClasses import SanityCheckerArguments
 from discopop_library.SanityChecker.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.SanityChecker.Classes.ExecutionResult import ExecutionResult
-from discopop_library.SanityChecker.Types import PATTERN_TAG, RETURN_CODE, SUGGESTION_ID, TSAN_CODE
+from discopop_library.SanityChecker.Types import PATTERN_TAG, RETURN_CODE, SUGGESTION_ID, TSAN_CODE, VALIDATION_CODE
 from discopop_library.SanityChecker.utils import get_applicable_suggestion_ids
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
@@ -40,9 +40,9 @@ def get_unique_configuration_id() -> int:
 
 def run(arguments: SanityCheckerArguments) -> None:
     logger.info("Starting.")
-    results: List[Dict[str, Union[List[SUGGESTION_ID], List[PATTERN_TAG], TSAN_CODE]]] = []
+    results: List[Dict[str, Union[List[SUGGESTION_ID], List[PATTERN_TAG], TSAN_CODE, Optional[bool]]]] = []
 
-    debug_stats: List[Tuple[List[SUGGESTION_ID], RETURN_CODE, TSAN_CODE, str]] = []
+    debug_stats: List[Tuple[List[SUGGESTION_ID], RETURN_CODE, TSAN_CODE, VALIDATION_CODE, str]] = []
 
     setup_sanity_checker(arguments.dot_dp_path)
 
@@ -54,6 +54,7 @@ def run(arguments: SanityCheckerArguments) -> None:
             "applied_suggestions": cast(List[SUGGESTION_ID], []),
             "applied_pattern_tags": cast(List[PATTERN_TAG], []),
             "TSAN_CODE": cast(ExecutionResult, reference_configuration.execution_result).thread_sanitizer,
+            "VALIDATION": cast(ExecutionResult, reference_configuration.execution_result).validation_result,
         }
     )
     debug_stats.append(
@@ -61,6 +62,7 @@ def run(arguments: SanityCheckerArguments) -> None:
             [],
             cast(ExecutionResult, reference_configuration.execution_result).return_code,
             cast(ExecutionResult, reference_configuration.execution_result).thread_sanitizer,
+            cast(ExecutionResult, reference_configuration.execution_result).validation_result,
             reference_configuration.root_path,
         )
     )
@@ -86,6 +88,7 @@ def run(arguments: SanityCheckerArguments) -> None:
                     List[PATTERN_TAG], [detection_result.patterns.get_pattern_from_id(pattern_id).pattern_tag]
                 ),
                 "TSAN_CODE": cast(ExecutionResult, configuration.execution_result).thread_sanitizer,
+                "VALIDATION": cast(ExecutionResult, configuration.execution_result).validation_result,
             }
         )
 
@@ -94,6 +97,7 @@ def run(arguments: SanityCheckerArguments) -> None:
                 [pattern_id],
                 cast(ExecutionResult, configuration.execution_result).return_code,
                 cast(ExecutionResult, configuration.execution_result).thread_sanitizer,
+                cast(ExecutionResult, configuration.execution_result).validation_result,
                 configuration.root_path,
             )
         )
@@ -101,9 +105,20 @@ def run(arguments: SanityCheckerArguments) -> None:
 
     # show debug stats
     stats_str = "Configuration results:\n"
-    stats_str += "[applied suggestions]\t[return code]\t[thread sanitizer]\t[path]\n"
+    stats_str += "[applied suggestions]\t[return code]\t[thread sanitizer]\t[validation]\t[path]\n"
     for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
-        stats_str += str(stats[0]) + "\t" + str(stats[1]) + "\t" + str(stats[2]) + "\t" + str(stats[3]) + "\n"
+        stats_str += (
+            str(stats[0])
+            + "\t"
+            + str(stats[1])
+            + "\t"
+            + str(stats[2])
+            + "\t"
+            + str(stats[3])
+            + "\t"
+            + str(stats[4])
+            + "\n"
+        )
     logger.info(stats_str)
 
     # output results
