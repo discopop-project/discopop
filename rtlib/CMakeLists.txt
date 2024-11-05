@@ -14,7 +14,7 @@
 set(DiscoPoP_SOURCES
         runtimeFunctions.cpp
         runtimeFunctionsGlobals.cpp
-                
+
         memory/MemoryManager.cpp
         memory/Signature.cpp
 
@@ -24,7 +24,7 @@ set(DiscoPoP_SOURCES
         calltree/DependencyMetadata.cpp
         calltree/MetaDataQueueElement.cpp
         calltree/utils.cpp
-		
+
         injected_functions/dp_add_bb_deps.cpp
         injected_functions/dp_alloca.cpp
         injected_functions/dp_call.cpp
@@ -47,7 +47,7 @@ set(DiscoPoP_SOURCES
         )
 
 set(CMAKE_CXX_FLAGS
-        "-O2 -std=c++17 -pthread -fno-rtti -fPIE -fPIC -ffreestanding")
+        "-O2 -std=c++17 -pthread -fno-rtti -fPIE -fPIC")
 
 # add_custom_target(DiscoPoP)
 
