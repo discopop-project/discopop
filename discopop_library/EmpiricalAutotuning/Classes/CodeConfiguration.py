@@ -56,13 +56,14 @@ class CodeConfiguration(object):
         logger.info("Executing configuration: " + str(self) + " with " + timeout_string)
         start_time = time.time()
         result = subprocess.run(
-            timeout_string + "./DP_EXECUTE.sh",
+            timeout_string + " ./DP_EXECUTE.sh",
             cwd=self.root_path,
             executable="/bin/bash",
             shell=True,
             capture_output=True,
         )
         logger.getChild("executionOutput").debug(str(result.stdout.decode("utf-8")))
+        logger.getChild("executionError").debug(str(result.stderr.decode("utf-8")))
         end_time = time.time()
         required_time = end_time - start_time
 
@@ -88,7 +89,7 @@ class CodeConfiguration(object):
         ):
             logger.info("Checking thread sanity: " + str(self))
             thread_sanitizer_result = subprocess.run(
-                "./DP_COMPILE_SANITIZE.sh && ./DP_EXECUTE_SANITIZE.sh",
+                "./DP_COMPILE_SANITIZE.sh && source ./DP_EXECUTE_SANITIZE.sh",
                 cwd=self.root_path,
                 executable="/bin/bash",
                 shell=True,
