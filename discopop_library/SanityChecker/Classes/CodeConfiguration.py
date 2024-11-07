@@ -56,7 +56,7 @@ class CodeConfiguration(object):
         thread_sanitizer_valid = True
         logger.info("Checking thread sanity: " + str(self))
         thread_sanitizer_result = subprocess.run(
-            "./DP_COMPILE_SANITIZE.sh && ./DP_EXECUTE_SANITIZE.sh",
+            "source ./DP_EXECUTE_SANITIZE.sh",
             cwd=self.root_path,
             executable="/bin/bash",
             shell=True,
