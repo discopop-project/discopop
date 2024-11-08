@@ -40,7 +40,7 @@ def get_unique_configuration_id() -> int:
 
 def run(arguments: SanityCheckerArguments) -> None:
     logger.info("Starting.")
-    results: List[Dict[str, Union[List[SUGGESTION_ID], List[PATTERN_TAG], TSAN_CODE, Optional[bool]]]] = []
+    results: List[Dict[str, Union[List[SUGGESTION_ID], List[PATTERN_TAG], TSAN_CODE, Optional[bool], RETURN_CODE]]] = []
 
     debug_stats: List[Tuple[List[SUGGESTION_ID], RETURN_CODE, TSAN_CODE, VALIDATION_CODE, str]] = []
 
@@ -55,6 +55,7 @@ def run(arguments: SanityCheckerArguments) -> None:
             "applied_pattern_tags": cast(List[PATTERN_TAG], []),
             "TSAN_CODE": cast(ExecutionResult, reference_configuration.execution_result).thread_sanitizer,
             "VALIDATION": cast(ExecutionResult, reference_configuration.execution_result).validation_result,
+            "RETURN_CODE": cast(ExecutionResult, reference_configuration.execution_result).return_code,
         }
     )
     debug_stats.append(
@@ -89,6 +90,7 @@ def run(arguments: SanityCheckerArguments) -> None:
                 ),
                 "TSAN_CODE": cast(ExecutionResult, configuration.execution_result).thread_sanitizer,
                 "VALIDATION": cast(ExecutionResult, configuration.execution_result).validation_result,
+                "RETURN_CODE": cast(ExecutionResult, configuration.execution_result).return_code,
             }
         )
 
