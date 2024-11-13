@@ -102,32 +102,36 @@ file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build
 file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_BRANCH_TRACKING=\"${DP_BRANCH_TRACKING}\"\n")
 
 
-# print DiscoPoP configuration
-file(READ ${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py DiscoPoP_CONFIGURATION)
-string(REGEX REPLACE "\n$" "" DiscoPoP_CONFIGURATION "${DiscoPoP_CONFIGURATION}")
-string(REGEX REPLACE "\n" "\n    " DiscoPoP_CONFIGURATION "${DiscoPoP_CONFIGURATION}")
-message(STATUS "DiscoPoP configuration:\n    ${DiscoPoP_CONFIGURATION}")
+if(NOT ${IS_DEB_INSTALL} STREQUAL "")
+    message(STATUS "performing installation from .deb package")
+else()
+    # print DiscoPoP configuration
+    file(READ ${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py DiscoPoP_CONFIGURATION)
+    string(REGEX REPLACE "\n$" "" DiscoPoP_CONFIGURATION "${DiscoPoP_CONFIGURATION}")
+    string(REGEX REPLACE "\n" "\n    " DiscoPoP_CONFIGURATION "${DiscoPoP_CONFIGURATION}")
+    message(STATUS "DiscoPoP configuration:\n    ${DiscoPoP_CONFIGURATION}")
 
-# install DiscoPoP python modules
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    # install DiscoPoP python modules
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
-# check if python tkinter module is available
-execute_process(
-    COMMAND ${Python3_EXECUTABLE} -c "import tkinter"
-    RESULT_VARIABLE TKINTER_AVAILABLE_EXIT_CODE
-)
-if(${TKINTER_AVAILABLE_EXIT_CODE})
-    message(FATAL_ERROR "Python module 'tkinter' not found. Please install the 'python3-tk' package via a package manager.")
-endif()
+    # check if python tkinter module is available
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE} -c "import tkinter"
+        RESULT_VARIABLE TKINTER_AVAILABLE_EXIT_CODE
+    )
+    if(${TKINTER_AVAILABLE_EXIT_CODE})
+        message(FATAL_ERROR "Python module 'tkinter' not found. Please install the 'python3-tk' package via a package manager.")
+    endif()
 
-# install DiscoPoP python modules
-message(STATUS "Installing DiscoPoP python modules")
-execute_process(
-        COMMAND ${Python3_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
-        RESULT_VARIABLE DP_INSTALLATION_EXIT_CODE
-        OUTPUT_VARIABLE DP_INSTALLATION_OUTPUT
-)
-# check if installation of DiscoPoP Modules was successful
-if(${DP_INSTALLATION_EXIT_CODE})
-    message(FATAL_ERROR "${DP_INSTALLATION_OUTPUT}")
+    # install DiscoPoP python modules
+    message(STATUS "Installing DiscoPoP python modules")
+    execute_process(
+            COMMAND ${Python3_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
+            RESULT_VARIABLE DP_INSTALLATION_EXIT_CODE
+            OUTPUT_VARIABLE DP_INSTALLATION_OUTPUT
+    )
+    # check if installation of DiscoPoP Modules was successful
+    if(${DP_INSTALLATION_EXIT_CODE})
+        message(FATAL_ERROR "${DP_INSTALLATION_OUTPUT}")
+    endif()
 endif()

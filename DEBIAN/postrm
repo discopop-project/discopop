@@ -1,0 +1,2 @@
+rm -rf /opt/DiscoPoP
+su ${SUDO_USER} -c "python3 -m pipx uninstall discopop"

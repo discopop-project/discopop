@@ -136,6 +136,9 @@ venv.bak/
 *.a
 *.lib
 
+# Packages
+packages/
+
 # Executables
 *.exe
 *.out

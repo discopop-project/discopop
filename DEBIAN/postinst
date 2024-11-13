@@ -1,0 +1,35 @@
+DP_DIR=/opt/DiscoPoP
+chmod 777 ${DP_DIR}
+DP_BUILD_DIR=/opt/DiscoPoP/build
+mkdir -p ${DP_BUILD_DIR}
+chmod 777 ${DP_BUILD_DIR}
+cd ${DP_BUILD_DIR}
+echo "Created DiscoPoP build dir: ${DP_BUILD_DIR}"
+
+echo "Downloading llvm 11.1.0"
+mkdir third_party
+cd third_party
+wget https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+tar -xvf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+mv clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10 llvm-11.1.0
+rm clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+LLVM_DIR=${DP_BUILD_DIR}/third_party/llvm-11.1.0
+
+echo "Building DiscoPoP"
+cd ${DP_BUILD_DIR}
+cmake -DLLVM_DIST_PATH=${LLVM_DIR} -DIS_DEB_INSTALL="TRUE" ..
+make -j
+
+chmod -R 777 ${DP_DIR}
+
+echo "Installing DiscoPoP python modules"
+cd ${DP_DIR}
+su ${SUDO_USER} -c "python3 -m pipx install ."
+
+echo "Creating symlinks"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/disocpop_cc"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/disocpop_cxx"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/disocpop_cmake"
+su ${SUDO_USER} -c "ln -sf ${DP_BUILD_DIR}/scripts/CC_wrapper.sh ~/.local/bin/discopop_cc"
+su ${SUDO_USER} -c "ln -sf ${DP_BUILD_DIR}/scripts/CXX_wrapper.sh ~/.local/bin/discopop_cxx"
+su ${SUDO_USER} -c "ln -sf ${DP_BUILD_DIR}/scripts/CMAKE_wrapper.sh ~/.local/bin/discopop_cmake"
