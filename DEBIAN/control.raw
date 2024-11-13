@@ -1,6 +1,6 @@
 Package: discopop
-Maintainer: Lukas Rothenberger <example@example.com>
-Depends: libc6,python3-tk,python3,pipx
-Architecture: amd64
-Homepage: http://example.com
-Description: A program that prints hello
+Maintainer: Lukas Rothenberger <lukas.rothenberger@tu-darmstadt.de>
+Depends: libc6,python3-tk,python3
+Architecture: all
+Homepage: https://github.com/discopop-project/discopop
+Description: DiscoPoP is an open-source tool that helps software developers parallelize their programs with threads. It is a joint project of the Laboratory for Parallel Programming @ TU Darmstadt and the Software Analytics and Pervasive Parallelism Lab at Iowa State University.
