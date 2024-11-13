@@ -47,6 +47,9 @@ for file in "$@"; do
     # third-party software
     [[ "$file" = *"third_party/"* ]] && continue
 
+    # DEBIAN files for .deb creation
+    [[ "$file" = *"DEBIAN/"* ]] && continue
+
 
     # check for the license tag in the first 20 lines of the file
     FILE_ERROR=""

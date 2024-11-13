@@ -17,19 +17,39 @@ LLVM_DIR=${DP_BUILD_DIR}/third_party/llvm-11.1.0
 
 echo "Building DiscoPoP"
 cd ${DP_BUILD_DIR}
-cmake -DLLVM_DIST_PATH=${LLVM_DIR} -DIS_DEB_INSTALL="TRUE" ..
+cmake .. -DLLVM_DIST_PATH=${LLVM_DIR} -DIS_DEB_INSTALL="TRUE" -DDP_PTHREAD_COMPATIBILITY_MODE=0 -DDP_NUM_WORKERS=8 -DDP_RTLIB_VERBOSE=0 -DDP_MEMORY_REGION_DEALIASING=0 -DDP_BRANCH_TRACKING=0 -DDP_CALLSTACK_PROFILING=0 -DDP_STACK_ACCESS_DETECTION=0 -DDP_CALLSTACK_PROFILING_ENABLE_CUTOFF=1 -DDP_INTERNAL_TIMER=0 -DDP_HYBRID_PROFILING=1 -DDP_HYBRID_PROFILING_CUTOFF=0 -DDP_HYBRID_PROFILING_CUTOFF_IGNORE_PROBABILITY=1 -DDP_PROFILING_SAMPLING_PROBABILITY=0 -DDP_CALLTREE_PROFILING=1 -DDP_CALLTREE_PROFILING_METADATA_CUTOFF=5 -DDP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY=1
 make -j
 
 chmod -R 777 ${DP_DIR}
 
-echo "Installing DiscoPoP python modules"
+echo "Setting up DiscoPoP python venv"
 cd ${DP_DIR}
-su ${SUDO_USER} -c "python3 -m pipx install ."
+su ${SUDO_USER} -c "python3 -m venv venv"
+VENV_PYTHON=${DP_DIR}/venv/bin/python3
 
-echo "Creating symlinks"
-su ${SUDO_USER} -c "rm -f ~/.local/bin/disocpop_cc"
-su ${SUDO_USER} -c "rm -f ~/.local/bin/disocpop_cxx"
-su ${SUDO_USER} -c "rm -f ~/.local/bin/disocpop_cmake"
+echo "Installing DiscoPoP python modules"
+su ${SUDO_USER} -c "${VENV_PYTHON} -m pip install . -v"
+
+#
+#echo "Creating symlinks"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_cc"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_cxx"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_cmake"
+
 su ${SUDO_USER} -c "ln -sf ${DP_BUILD_DIR}/scripts/CC_wrapper.sh ~/.local/bin/discopop_cc"
 su ${SUDO_USER} -c "ln -sf ${DP_BUILD_DIR}/scripts/CXX_wrapper.sh ~/.local/bin/discopop_cxx"
 su ${SUDO_USER} -c "ln -sf ${DP_BUILD_DIR}/scripts/CMAKE_wrapper.sh ~/.local/bin/discopop_cmake"
+
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_auto_tuner"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_config_provider"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_explorer"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_optimizer"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_patch_applicator"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_patch_generator"
+
+su ${SUDO_USER} -c "ln -sf ${DP_DIR}/venv/bin/discopop_auto_tuner ~/.local/bin/discopop_auto_tuner"
+su ${SUDO_USER} -c "ln -sf ${DP_DIR}/venv/bin/discopop_config_provider ~/.local/bin/discopop_config_provider"
+su ${SUDO_USER} -c "ln -sf ${DP_DIR}/venv/bin/discopop_explorer ~/.local/bin/discopop_explorer"
+su ${SUDO_USER} -c "ln -sf ${DP_DIR}/venv/bin/discopop_optimizer ~/.local/bin/discopop_optimizer"
+su ${SUDO_USER} -c "ln -sf ${DP_DIR}/venv/bin/discopop_patch_applicator ~/.local/bin/discopop_patch_applicator"
+su ${SUDO_USER} -c "ln -sf ${DP_DIR}/venv/bin/discopop_patch_generator ~/.local/bin/discopop_patch_generator"
