@@ -1,0 +1,6 @@
+Package: discopop
+Maintainer: Lukas Rothenberger <example@example.com>
+Depends: libc6,python3-tk,python3,pipx
+Architecture: amd64
+Homepage: http://example.com
+Description: A program that prints hello
