@@ -1,2 +1,12 @@
 rm -rf /opt/DiscoPoP
-su ${SUDO_USER} -c "python3 -m pipx uninstall discopop"
+
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_cc"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_cxx"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_cmake"
+
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_auto_tuner"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_config_provider"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_explorer"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_optimizer"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_patch_applicator"
+su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_patch_generator"
