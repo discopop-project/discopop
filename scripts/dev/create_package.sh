@@ -1,3 +1,11 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 # create a temporary copy of the code to build the package
 rm -rf tmp_package_build_dir
 mkdir -p tmp_package_build_dir
@@ -20,6 +28,8 @@ echo "" >> DEBIAN/control
 rm -rf opt/DiscoPoP/build
 # delete packages folder if exists
 rm -rf opt/DiscoPoP/packages
+# delete venv folder if exists
+rm -rf opt/DiscoPoP/venv
 # cleanup
 rm -rf opt/DiscoPoP/tmp_packages_build_dir
 
