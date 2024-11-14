@@ -5,7 +5,16 @@ parent: Setup
 nav_order: 1
 ---
 
-# DiscoPoP Setup
+# DiscoPoP Setup - Package
+- Proposed method of installation for `users` of DiscoPoP
+- Download the `.deb` package of choice from [releases](https://github.com/discopop-project/discopop/releases).
+    - Packages for different targets and configurations might become available in the future
+- Install via a package manager of choice (example: `sudo apt install ./<packagename>.deb`)
+- Uninstall via a package manager of choice (example: `sudo apt remove discopop`)
+
+
+# DiscoPoP Setup - Manual
+- Proposed method of installation for `developers` of DiscoPoP
 ## Prerequisites
 - LLVM/clang version 11
 - Python version 3.6 or greater
@@ -47,5 +56,6 @@ where `<CMAKE_FLAGS>` can consist of any combination of the following flags and 
 ## Testing the installation
 To test the installation, it is possible to execute the provided set of unit tests.
 ```
-python -m unittest -v
+cd <dp_source_dir>
+venv/bin/python -m unittest -v
 ```
