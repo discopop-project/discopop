@@ -34,25 +34,25 @@ For a brief introduction to the command line tools, please refer to the [tools o
 For detailed information on the gathered and stored data as well as the tools themselves, please refer to [data](https://discopop-project.github.io/discopop/Data) and the pages of the individual tools in the [tools overview](https://discopop-project.github.io/discopop/Tools).
 
 ## TL;DR
-This example installs DiscoPoP, instruments and builds the provided example, analyzes the results, and prints the identified parallelization suggestions to the console.
+If you are interested in installing DiscoPoP as a `developer`, please refer to the [DiscoPoP setup wiki page](https://discopop-project.github.io/discopop/setup/discopop/).
+
+The following example installs DiscoPoP for `users`, instruments and builds the provided example, analyzes the results, and prints the identified parallelization suggestions to the console.
 In case any issues arise during the process, please refer to the detailed [setup instructions](https://discopop-project.github.io/discopop/Setup), contact us via GitHub messages, or get in contact by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
+
+### Prerequisites
+- Download `.deb` package from [latest Release](https://github.com/discopop-project/discopop/releases/latest)
+### Example
 ```
-# setup DiscoPoP
-git clone git@github.com:discopop-project/discopop.git
-cd discopop
-mkdir build && cd build
-DP_BUILD=$(pwd)
-cmake .. && make
+# install package
+sudo apt install ./<packagename>.deb
 # instrument and build the example code
-cd ../example
-mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER=${DP_BUILD}/scripts/CXX_wrapper.sh .. && make
+cd /opt/DiscoPoP/example
+mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER=discopop_cxx .. && make
 # execute instrumented code
 ./cmake_example
 # identify parallel patterns
 cd .discopop
 discopop_explorer
-# create applicable patches from patterns
-discopop_patch_generator
 # print patches to the console
 for f in $(find patch_generator -maxdepth 1 -type d); do
     echo "SUGGESTION: $f"
