@@ -114,9 +114,17 @@ else()
     # install DiscoPoP python modules
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
+    # setup DiscoPoP venv
+    message(STATUS "Setting up DiscoPoP python venv: ${DiscoPoP_SOURCE_DIR}/venv")
+    execute_process(
+        COMMAND ${Python3_EXECUTABLE} -m venv ${DiscoPoP_SOURCE_DIR}/venv
+    )
+    set(Python3_VENV_EXECUTABLE ${DiscoPoP_SOURCE_DIR}/venv/bin/python3)
+
+
     # check if python tkinter module is available
     execute_process(
-        COMMAND ${Python3_EXECUTABLE} -c "import tkinter"
+        COMMAND ${Python3_VENV_EXECUTABLE} -c "import tkinter"
         RESULT_VARIABLE TKINTER_AVAILABLE_EXIT_CODE
     )
     if(${TKINTER_AVAILABLE_EXIT_CODE})
@@ -126,7 +134,7 @@ else()
     # install DiscoPoP python modules
     message(STATUS "Installing DiscoPoP python modules")
     execute_process(
-            COMMAND ${Python3_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
+            COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
             RESULT_VARIABLE DP_INSTALLATION_EXIT_CODE
             OUTPUT_VARIABLE DP_INSTALLATION_OUTPUT
     )
@@ -134,4 +142,27 @@ else()
     if(${DP_INSTALLATION_EXIT_CODE})
         message(FATAL_ERROR "${DP_INSTALLATION_OUTPUT}")
     endif()
+
+    # create symlinks for python executables
+    message(STATUS "Creating symlinks for DiscoPoP python executables")
+    set(DP_LOCAL_BIN_DIR "$ENV{HOME}/.local/bin")
+    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_auto_tuner)
+    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_config_provider)
+    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_explorer)
+    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_optimizer)
+    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_patch_applicator)
+    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_patch_generator)
+    message(STATUS "--> discopop_auto_tuner")
+    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_auto_tuner ${DP_LOCAL_BIN_DIR}/discopop_auto_tuner)
+    message(STATUS "--> discopop_config_provider")
+    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_config_provider ${DP_LOCAL_BIN_DIR}/discopop_config_provider)
+    message(STATUS "--> discopop_explorer")
+    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_explorer ${DP_LOCAL_BIN_DIR}/discopop_explorer)
+    message(STATUS "--> discopop_optimizer")
+    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_optimizer ${DP_LOCAL_BIN_DIR}/discopop_optimizer)
+    message(STATUS "--> discopop_patch_applicator")
+    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_patch_applicator ${DP_LOCAL_BIN_DIR}/discopop_patch_applicator)
+    message(STATUS "--> discopop_patch_generator")
+    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_patch_generator ${DP_LOCAL_BIN_DIR}/discopop_patch_generator)
+
 endif()
