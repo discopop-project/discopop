@@ -37,8 +37,10 @@ rm -rf opt/DiscoPoP/tmp_packages_build_dir
 cd ..
 mkdir -p packages
 # build package
-dpkg-deb --build tmp_package_build_dir packages/DiscoPoP.deb
-chmod 775 packages/DiscoPoP.deb
+VERSION=$(cat discopop_library/global_data/version/VERSION)
+PACKAGE_NAME="discopop-${VERSION}.deb"
+dpkg-deb --build tmp_package_build_dir packages/${PACKAGE_NAME}
+chmod 775 packages/${PACKAGE_NAME}
 
 # cleanup
 rm -rf tmp_package_build_dir
