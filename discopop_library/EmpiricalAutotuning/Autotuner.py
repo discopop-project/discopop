@@ -379,7 +379,7 @@ def run(arguments: AutotunerArguments) -> None:
                 if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
                     valid_non_trivial_config_found = True
 
-            if not valid_non_trivial_config_found:
+            if not valid_non_trivial_config_found and configuration_2 is None:
                 # second try with relaxed conditions
                 if configuration_2 is None:
                     for stat_entry in sorted_stats:
