@@ -94,7 +94,7 @@ def run(arguments: AutotunerArguments) -> None:
 
     greedy_search = False
     time_limited_prioritized_search = False
-    time_limit_s = 60  # seconds
+    time_limit_s = 600  # seconds
     if greedy_search:
         # greedy search for best suggestion configuration:
         # for all hotspot types in descending importance:
@@ -374,25 +374,31 @@ def run(arguments: AutotunerArguments) -> None:
                     if stat_entry[0] not in visited:
                         configuration_2 = stat_entry[0]
 
-            # second try with relaxed conditions
-            if configuration_2 is None:
-                for stat_entry in sorted_stats:
-                    if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[0] not in visited:
-                        configuration_2 = stat_entry[0]
-                        break
-                    else:
-                        if stat_entry[0] not in visited:
-                            configuration_2 = stat_entry[0]
+            valid_non_trivial_config_found = False
+            for stat_entry in sorted_stats:
+                if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
+                    valid_non_trivial_config_found = True
 
-            # third try with even more relaxed conditions
-            if configuration_2 is None:
-                for stat_entry in sorted_stats:
-                    if len(stat_entry[0]) != 0 and stat_entry[0] not in visited:
-                        configuration_2 = stat_entry[0]
-                        break
-                    else:
-                        if stat_entry[0] not in visited:
+            if not valid_non_trivial_config_found:
+                # second try with relaxed conditions
+                if configuration_2 is None:
+                    for stat_entry in sorted_stats:
+                        if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[0] not in visited:
                             configuration_2 = stat_entry[0]
+                            break
+                        else:
+                            if stat_entry[0] not in visited:
+                                configuration_2 = stat_entry[0]
+
+                # third try with even more relaxed conditions
+                if configuration_2 is None:
+                    for stat_entry in sorted_stats:
+                        if len(stat_entry[0]) != 0 and stat_entry[0] not in visited:
+                            configuration_2 = stat_entry[0]
+                            break
+                        else:
+                            if stat_entry[0] not in visited:
+                                configuration_2 = stat_entry[0]
 
             if configuration_2 is None:
                 logger.info("No further configuration found.")
