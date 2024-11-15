@@ -20,7 +20,7 @@ from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeC
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor, NodeShape, StatisticsGraph
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
-from discopop_library.EmpiricalAutotuning.priorities import get_prioritized_configurations
+from discopop_library.EmpiricalAutotuning.priorities import get_patterns_by_hotspot_type, get_prioritized_configurations
 from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
@@ -93,7 +93,8 @@ def run(arguments: AutotunerArguments) -> None:
     best_suggestion_configuration: Tuple[List[SUGGESTION_ID], CodeConfiguration] = ([], reference_configuration)
 
     greedy_search = False
-    time_limit_s = 3600  # seconds
+    time_limited_prioritized_search = False
+    time_limit_s = 60  # seconds
     if greedy_search:
         # greedy search for best suggestion configuration:
         # for all hotspot types in descending importance:
@@ -248,8 +249,8 @@ def run(arguments: AutotunerArguments) -> None:
                         config.deleteFolder()
 
                 # continue with the next loop
-    else:
-        # time limited, prioritized search
+    elif time_limited_prioritized_search:
+        # time limited, prioritized full search
         prioritized_configurations = get_prioritized_configurations(detection_result, hotspot_information)
         logger.debug("PRIORITIZED_CONFIGURATIONS:")
         for entry in prioritized_configurations:
@@ -308,6 +309,124 @@ def run(arguments: AutotunerArguments) -> None:
                     + "\n"
                 )
             logger.info(stats_str)
+    else:
+        # time limited reverse greedy search in hotspot parallelizations
+        patterns_by_hotspot_type = get_patterns_by_hotspot_type(detection_result, hotspot_information)
+        logger.debug("Patterns by hotspot type")
+        logger.debug(str(patterns_by_hotspot_type))
+
+        start_time = time.time()
+
+        # initialize with all YES and MAYBE hotspot suggestions
+        configuration = patterns_by_hotspot_type[HotspotType.YES] + patterns_by_hotspot_type[HotspotType.MAYBE]
+        tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
+        tmp_config.apply_suggestions(arguments, configuration)
+        tmp_config.execute(arguments, timeout=timeout_after)
+        debug_stats.append(
+            (
+                configuration,
+                cast(ExecutionResult, tmp_config.execution_result).runtime,
+                cast(ExecutionResult, tmp_config.execution_result).return_code,
+                cast(ExecutionResult, tmp_config.execution_result).result_valid,
+                cast(ExecutionResult, tmp_config.execution_result).thread_sanitizer,
+                tmp_config.root_path,
+            )
+        )
+
+        logger.debug("Config: " + str(configuration))
+        visited = []
+        while time.time() < (start_time + time_limit_s):
+            # show debug stats
+            stats_str = "Configuration measurements:\n"
+            stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[thread sanitizer]\t[path]\n"
+            for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
+                stats_str += (
+                    str(round(stats[1], 3))
+                    + "s"
+                    + "\t"
+                    + str(stats[0])
+                    + "\t"
+                    + str(stats[2])
+                    + "\t"
+                    + str(stats[3])
+                    + "\t"
+                    + str(stats[4])
+                    + "\t"
+                    + str(stats[5])
+                    + "\n"
+                )
+            logger.info(stats_str)
+
+            # select the best configuration and spawn it's siblings
+            sorted_stats = sorted(debug_stats, key=lambda x: (x[1]), reverse=False)
+            configuration_2 = None
+            for stat_entry in sorted_stats:
+                if (
+                    len(stat_entry[0]) != 0
+                    and stat_entry[2] == 0
+                    and stat_entry[3] == True
+                    and stat_entry[4] == True
+                    and stat_entry[0] not in visited
+                ):
+                    configuration_2 = stat_entry[0]
+                    break
+                else:
+                    if stat_entry[0] not in visited:
+                        configuration_2 = stat_entry[0]
+
+            # second try with relaxed conditions
+            if configuration_2 is None:
+                for stat_entry in sorted_stats:
+                    if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[0] not in visited:
+                        configuration_2 = stat_entry[0]
+                        break
+                    else:
+                        if stat_entry[0] not in visited:
+                            configuration_2 = stat_entry[0]
+
+            # third try with even more relaxed conditions
+            if configuration_2 is None:
+                for stat_entry in sorted_stats:
+                    if len(stat_entry[0]) != 0 and stat_entry[0] not in visited:
+                        configuration_2 = stat_entry[0]
+                        break
+                    else:
+                        if stat_entry[0] not in visited:
+                            configuration_2 = stat_entry[0]
+
+            if configuration_2 is None:
+                logger.info("No further configuration found.")
+                break
+            visited.append(configuration_2)
+            logger.debug("Selected: " + str(configuration_2))
+
+            # spawn siblings
+            siblings = []
+            for i in range(0, len(configuration_2)):
+                siblings.append(configuration_2[:i] + configuration_2[(i + 1) :])
+            logger.debug("Siblings: " + str(siblings))
+
+            time_limit_reached = False
+            for sibling in siblings:
+                if time.time() > (start_time + time_limit_s):
+                    logger.info("Reached time limit of " + str(time_limit_s) + "s")
+                    time_limit_reached = True
+                    break
+                sibling_config = reference_configuration.create_copy(get_unique_configuration_id)
+                sibling_config.apply_suggestions(arguments, sibling)
+                sibling_config.execute(arguments, timeout=timeout_after)
+                debug_stats.append(
+                    (
+                        sibling,
+                        cast(ExecutionResult, sibling_config.execution_result).runtime,
+                        cast(ExecutionResult, sibling_config.execution_result).return_code,
+                        cast(ExecutionResult, sibling_config.execution_result).result_valid,
+                        cast(ExecutionResult, sibling_config.execution_result).thread_sanitizer,
+                        sibling_config.root_path,
+                    )
+                )
+            if time_limit_reached:
+                break
 
     # show debug stats
     stats_str = "Configuration measurements:\n"
