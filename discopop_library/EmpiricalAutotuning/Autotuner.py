@@ -94,7 +94,7 @@ def run(arguments: AutotunerArguments) -> None:
 
     greedy_search = False
     time_limited_prioritized_search = False
-    time_limit_s = 600  # seconds
+    time_limit_s = 3600  # seconds
     if greedy_search:
         # greedy search for best suggestion configuration:
         # for all hotspot types in descending importance:
@@ -322,6 +322,7 @@ def run(arguments: AutotunerArguments) -> None:
         tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
         tmp_config.apply_suggestions(arguments, configuration)
         tmp_config.execute(arguments, timeout=timeout_after)
+        tmp_config.deleteFolder()
         debug_stats.append(
             (
                 configuration,
@@ -421,6 +422,7 @@ def run(arguments: AutotunerArguments) -> None:
                 sibling_config = reference_configuration.create_copy(get_unique_configuration_id)
                 sibling_config.apply_suggestions(arguments, sibling)
                 sibling_config.execute(arguments, timeout=timeout_after)
+                sibling_config.deleteFolder()
                 debug_stats.append(
                     (
                         sibling,
@@ -433,6 +435,12 @@ def run(arguments: AutotunerArguments) -> None:
                 )
             if time_limit_reached:
                 break
+
+    # select best option and create code folder
+    for stat_entry in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
+        if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
+            sibling_config = reference_configuration.create_copy(get_unique_configuration_id)
+            sibling_config.apply_suggestions(arguments, stat_entry[0])
 
     # show debug stats
     stats_str = "Configuration measurements:\n"
