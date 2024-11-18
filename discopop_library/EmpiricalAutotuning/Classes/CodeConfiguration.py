@@ -72,7 +72,11 @@ class CodeConfiguration(object):
         if os.path.exists(os.path.join(self.root_path, "DP_VALIDATE.sh")):
             logger.info("Checking result validity: " + str(self))
             validity_check_result = subprocess.run(
-                "source ./DP_VALIDATE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True
+                "timeout 300 ./DP_VALIDATE.sh",
+                cwd=self.root_path,
+                executable="/bin/bash",
+                shell=True,
+                capture_output=True,
             )
             logger.getChild("validationOutput").debug(str(validity_check_result.stdout.decode("utf-8")))
             logger.getChild("validationError").debug(str(validity_check_result.stderr.decode("utf-8")))
