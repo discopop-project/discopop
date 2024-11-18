@@ -10,7 +10,7 @@ import itertools
 import logging
 import os
 import time
-from typing import List, Tuple, cast
+from typing import List, Set, Tuple, cast
 
 import jsonpickle  # type: ignore
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
@@ -289,26 +289,7 @@ def run(arguments: AutotunerArguments) -> None:
                 # delete invalid code
                 tmp_config.deleteFolder()
 
-            # show debug stats
-            stats_str = "Configuration measurements:\n"
-            stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[thread sanitizer]\t[path]\n"
-            for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
-                stats_str += (
-                    str(round(stats[1], 3))
-                    + "s"
-                    + "\t"
-                    + str(stats[0])
-                    + "\t"
-                    + str(stats[2])
-                    + "\t"
-                    + str(stats[3])
-                    + "\t"
-                    + str(stats[4])
-                    + "\t"
-                    + str(stats[5])
-                    + "\n"
-                )
-            logger.info(stats_str)
+            show_debug_stats(debug_stats)
     else:
         # time limited reverse greedy search in hotspot parallelizations
         patterns_by_hotspot_type = get_patterns_by_hotspot_type(detection_result, hotspot_information)
@@ -334,29 +315,97 @@ def run(arguments: AutotunerArguments) -> None:
             )
         )
 
+        # step 1: identify valid suggestions using divide-and-conquer to check validity
+        valid: Set[int] = set()
+        queue: List[List[int]] = [configuration]
+        while queue:
+            logger.debug("Queue: ")
+            logger.debug(str(queue))
+            current = queue.pop()
+            # execute current and check validity
+            tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
+            tmp_config.apply_suggestions(arguments, current)
+            tmp_config.execute(arguments, timeout=timeout_after)
+            tmp_config.deleteFolder()
+            debug_stats.append(
+                (
+                    current,
+                    cast(ExecutionResult, tmp_config.execution_result).runtime,
+                    cast(ExecutionResult, tmp_config.execution_result).return_code,
+                    cast(ExecutionResult, tmp_config.execution_result).result_valid,
+                    cast(ExecutionResult, tmp_config.execution_result).thread_sanitizer,
+                    tmp_config.root_path,
+                )
+            )
+
+            # if invalid, split current into two parts and put into queue
+            exec_res = cast(ExecutionResult, tmp_config.execution_result)
+            if exec_res.return_code and (
+                (exec_res.thread_sanitizer and exec_res.result_valid)
+                or (not exec_res.thread_sanitizer and exec_res.result_valid)
+            ):
+                # result valid
+                valid = valid.union(current)
+            else:
+                # result invalid
+                if len(current) == 1:
+                    continue
+                # split current and add to queue
+                left = current[: int(len(current) / 2)]
+                right = current[int(len(current) / 2) :]
+                queue.append(left)
+                queue.append(right)
+
+            show_debug_stats(debug_stats)
+
+        # step 2 execute full configuration of valid suggestions
+        tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
+        tmp_config.apply_suggestions(arguments, list(valid))
+        tmp_config.execute(arguments, timeout=timeout_after)
+        tmp_config.deleteFolder()
+        debug_stats.append(
+            (
+                configuration,
+                cast(ExecutionResult, tmp_config.execution_result).runtime,
+                cast(ExecutionResult, tmp_config.execution_result).return_code,
+                cast(ExecutionResult, tmp_config.execution_result).result_valid,
+                cast(ExecutionResult, tmp_config.execution_result).thread_sanitizer,
+                tmp_config.root_path,
+            )
+        )
+
+        #        cfg_len = max(1, int(len(configuration) / 10))
+        #        sub_configs: List[List[int]] = []
+        #        for i in range(0, int(len(configuration)/cfg_len)):
+        #            # full
+        #            sub_configs.append(configuration[i*cfg_len:(i+1)*cfg_len])
+        #        # remainder
+        #        sub_configs.append(configuration[int(len(configuration)/cfg_len)*cfg_len:])
+        #        print("Subconfigs: ", sub_configs)
+        #
+        #        for sub_config in sub_configs:
+        #            tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
+        #            tmp_config.apply_suggestions(arguments, sub_config)
+        #            tmp_config.execute(arguments, timeout=timeout_after)
+        #            tmp_config.deleteFolder()
+        #            debug_stats.append(
+        #                (
+        #                    sub_config,
+        #                    cast(ExecutionResult, tmp_config.execution_result).runtime,
+        #                    cast(ExecutionResult, tmp_config.execution_result).return_code,
+        #                    cast(ExecutionResult, tmp_config.execution_result).result_valid,
+        #                    cast(ExecutionResult, tmp_config.execution_result).thread_sanitizer,
+        #                    tmp_config.root_path,
+        #                )
+        #            )
+        #
+        #            show_debug_stats(debug_stats)
+
+        # step 3: global optimization
         logger.debug("Config: " + str(configuration))
         visited = []
         while time.time() < (start_time + time_limit_s):
-            # show debug stats
-            stats_str = "Configuration measurements:\n"
-            stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[thread sanitizer]\t[path]\n"
-            for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
-                stats_str += (
-                    str(round(stats[1], 3))
-                    + "s"
-                    + "\t"
-                    + str(stats[0])
-                    + "\t"
-                    + str(stats[2])
-                    + "\t"
-                    + str(stats[3])
-                    + "\t"
-                    + str(stats[4])
-                    + "\t"
-                    + str(stats[5])
-                    + "\n"
-                )
-            logger.info(stats_str)
+            show_debug_stats(debug_stats)
 
             # select the best configuration and spawn it's siblings
             sorted_stats = sorted(debug_stats, key=lambda x: (x[1]), reverse=False)
@@ -433,6 +482,7 @@ def run(arguments: AutotunerArguments) -> None:
                         sibling_config.root_path,
                     )
                 )
+                show_debug_stats(debug_stats)
             if time_limit_reached:
                 break
 
@@ -442,26 +492,7 @@ def run(arguments: AutotunerArguments) -> None:
             sibling_config = reference_configuration.create_copy(get_unique_configuration_id)
             sibling_config.apply_suggestions(arguments, stat_entry[0])
 
-    # show debug stats
-    stats_str = "Configuration measurements:\n"
-    stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[thread sanitizer]\t[path]\n"
-    for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
-        stats_str += (
-            str(round(stats[1], 3))
-            + "s"
-            + "\t"
-            + str(stats[0])
-            + "\t"
-            + str(stats[2])
-            + "\t"
-            + str(stats[3])
-            + "\t"
-            + str(stats[4])
-            + "\t"
-            + str(stats[5])
-            + "\n"
-        )
-    logger.info(stats_str)
+    show_debug_stats(debug_stats)
 
     # export measurements for pdf creation
     if False:  # export all measurements
@@ -505,3 +536,27 @@ def run(arguments: AutotunerArguments) -> None:
 
     # output statistics graph
     statistics_graph.output()
+
+
+def show_debug_stats(debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]]) -> None:
+    print("SHOW DEBUG STATS")
+    # show debug stats
+    stats_str = "Configuration measurements:\n"
+    stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[thread sanitizer]\t[path]\n"
+    for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
+        stats_str += (
+            str(round(stats[1], 3))
+            + "s"
+            + "\t"
+            + str(stats[0])
+            + "\t"
+            + str(stats[2])
+            + "\t"
+            + str(stats[3])
+            + "\t"
+            + str(stats[4])
+            + "\t"
+            + str(stats[5])
+            + "\n"
+        )
+    logger.debug(stats_str)
