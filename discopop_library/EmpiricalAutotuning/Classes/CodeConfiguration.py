@@ -47,13 +47,13 @@ class CodeConfiguration(object):
         if is_initial:
             timeout_string += "source "
         # compile code
-        logger.info("Compiling configuration: " + str(self))
+        logger.debug("Compiling configuration: " + str(self))
         compile_result = subprocess.run(
             "./DP_COMPILE.sh", cwd=self.root_path, executable="/bin/bash", shell=True, capture_output=True
         )
         logger.getChild("compilationOutput").debug(str(compile_result.stdout.decode("utf-8")))
         # execute code
-        logger.info("Executing configuration: " + str(self) + " with " + timeout_string)
+        logger.debug("Executing configuration: " + str(self) + " with " + timeout_string)
         start_time = time.time()
         result = subprocess.run(
             timeout_string + " ./DP_EXECUTE.sh",
@@ -69,8 +69,8 @@ class CodeConfiguration(object):
 
         # check for result validity
         result_valid = True
-        if os.path.exists(os.path.join(self.root_path, "DP_VALIDATE.sh")):
-            logger.info("Checking result validity: " + str(self))
+        if os.path.exists(os.path.join(self.root_path, "DP_VALIDATE.sh")) and result.returncode == 0:
+            logger.debug("Checking result validity: " + str(self))
             validity_check_result = subprocess.run(
                 "timeout 300 ./DP_VALIDATE.sh",
                 cwd=self.root_path,
@@ -90,8 +90,9 @@ class CodeConfiguration(object):
             os.path.exists(os.path.join(self.root_path, "DP_COMPILE_SANITIZE.sh"))
             and os.path.exists(os.path.join(self.root_path, "DP_EXECUTE_SANITIZE.sh"))
             and arguments.sanitize
+            and result.returncode == 0
         ):
-            logger.info("Checking thread sanity: " + str(self))
+            logger.debug("Checking thread sanity: " + str(self))
             thread_sanitizer_result = subprocess.run(
                 "./DP_COMPILE_SANITIZE.sh && source ./DP_EXECUTE_SANITIZE.sh",
                 cwd=self.root_path,
@@ -156,7 +157,7 @@ class CodeConfiguration(object):
         try:
             ret_val = apply_patches(
                 PatchApplicatorArguments(
-                    arguments.log_level, arguments.write_log, False, suggestion_ids_str, [], False, False, False
+                    "WARNING", arguments.write_log, False, suggestion_ids_str, [], False, False, False
                 )
             )
             sub_logger.debug("Patch applicator return code: " + str(ret_val))

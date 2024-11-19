@@ -68,7 +68,7 @@ def run(arguments: AutotunerArguments) -> None:
 
     # load hotspots
     hsl_arguments = HotspotLoaderArguments(
-        arguments.log_level, arguments.write_log, False, arguments.dot_dp_path, True, False, True, True, True
+        "WARNING", arguments.write_log, False, arguments.dot_dp_path, True, False, True, True, True
     )
     hotspot_information = load_hotspots(hsl_arguments)
     logger.debug("loaded hotspots")
@@ -315,50 +315,50 @@ def run(arguments: AutotunerArguments) -> None:
             )
         )
 
-        # step 1: identify valid suggestions using divide-and-conquer to check validity
+        # step 1: identify valid suggestions
         valid: Set[int] = set()
-        queue: List[List[int]] = [configuration]
-        while queue:
-            logger.debug("Queue: ")
-            logger.debug(str(queue))
-            current = queue.pop()
-            # execute current and check validity
-            tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
-            tmp_config.apply_suggestions(arguments, current)
-            tmp_config.execute(arguments, timeout=timeout_after)
-            tmp_config.deleteFolder()
-            debug_stats.append(
-                (
-                    current,
-                    cast(ExecutionResult, tmp_config.execution_result).runtime,
-                    cast(ExecutionResult, tmp_config.execution_result).return_code,
-                    cast(ExecutionResult, tmp_config.execution_result).result_valid,
-                    cast(ExecutionResult, tmp_config.execution_result).thread_sanitizer,
-                    tmp_config.root_path,
+        queue: List[List[int]] = [[suggestion] for suggestion in configuration]  # [configuration]
+        logger.info("Identifying valid suggestions:")
+        logger.info("Press CTRL+C to manually stop the search.")
+        try:
+            dbg_initial_queue_len = len(queue)
+            while queue:
+                logger.info("--- " + str(len(queue)) + " / " + str(dbg_initial_queue_len))
+                current = queue.pop()
+                # execute current and check validity
+                tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
+                tmp_config.apply_suggestions(arguments, current)
+                tmp_config.execute(arguments, timeout=timeout_after)
+                tmp_config.deleteFolder()
+                debug_stats.append(
+                    (
+                        current,
+                        cast(ExecutionResult, tmp_config.execution_result).runtime,
+                        cast(ExecutionResult, tmp_config.execution_result).return_code,
+                        cast(ExecutionResult, tmp_config.execution_result).result_valid,
+                        cast(ExecutionResult, tmp_config.execution_result).thread_sanitizer,
+                        tmp_config.root_path,
+                    )
                 )
-            )
 
-            # if invalid, split current into two parts and put into queue
-            exec_res = cast(ExecutionResult, tmp_config.execution_result)
-            if exec_res.return_code and (
-                (exec_res.thread_sanitizer and exec_res.result_valid)
-                or (not exec_res.thread_sanitizer and exec_res.result_valid)
-            ):
-                # result valid
-                valid = valid.union(current)
-            else:
-                # result invalid
-                if len(current) == 1:
+                # if invalid, split current into two parts and put into queue
+                exec_res = cast(ExecutionResult, tmp_config.execution_result)
+                if exec_res.return_code and (
+                    (exec_res.thread_sanitizer and exec_res.result_valid)
+                    or (not exec_res.thread_sanitizer and exec_res.result_valid)
+                ):
+                    # result valid
+                    valid = valid.union(current)
+                    show_debug_stats(debug_stats)
+                else:
+                    # result invalid
                     continue
-                # split current and add to queue
-                left = current[: int(len(current) / 2)]
-                right = current[int(len(current) / 2) :]
-                queue.append(left)
-                queue.append(right)
+        except KeyboardInterrupt:
+            logger.info("Manually stoped search for valid suggestions.")
+            show_info_stats(debug_stats)
+            pass
 
-            show_debug_stats(debug_stats)
-
-        # step 2 execute full configuration of valid suggestions
+        # todo: export list of valid suggestions
         tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
         tmp_config.apply_suggestions(arguments, list(valid))
         tmp_config.execute(arguments, timeout=timeout_after)
@@ -402,89 +402,104 @@ def run(arguments: AutotunerArguments) -> None:
         #            show_debug_stats(debug_stats)
 
         # step 3: global optimization
-        logger.debug("Config: " + str(configuration))
-        visited = []
-        while time.time() < (start_time + time_limit_s):
-            show_debug_stats(debug_stats)
-
-            # select the best configuration and spawn it's siblings
-            sorted_stats = sorted(debug_stats, key=lambda x: (x[1]), reverse=False)
-            configuration_2 = None
-            for stat_entry in sorted_stats:
-                if (
-                    len(stat_entry[0]) != 0
-                    and stat_entry[2] == 0
-                    and stat_entry[3] == True
-                    and stat_entry[4] == True
-                    and stat_entry[0] not in visited
-                ):
-                    configuration_2 = stat_entry[0]
-                    break
-                else:
-                    if stat_entry[0] not in visited:
-                        configuration_2 = stat_entry[0]
-
-            valid_non_trivial_config_found = False
-            for stat_entry in sorted_stats:
-                if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
-                    valid_non_trivial_config_found = True
-
-            if not valid_non_trivial_config_found and configuration_2 is None:
-                # second try with relaxed conditions
-                if configuration_2 is None:
-                    for stat_entry in sorted_stats:
-                        if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[0] not in visited:
-                            configuration_2 = stat_entry[0]
-                            break
-                        else:
-                            if stat_entry[0] not in visited:
-                                configuration_2 = stat_entry[0]
-
-                # third try with even more relaxed conditions
-                if configuration_2 is None:
-                    for stat_entry in sorted_stats:
-                        if len(stat_entry[0]) != 0 and stat_entry[0] not in visited:
-                            configuration_2 = stat_entry[0]
-                            break
-                        else:
-                            if stat_entry[0] not in visited:
-                                configuration_2 = stat_entry[0]
-
-            if configuration_2 is None:
-                logger.info("No further configuration found.")
-                break
-            visited.append(configuration_2)
-            logger.debug("Selected: " + str(configuration_2))
-
-            # spawn siblings
-            siblings = []
-            for i in range(0, len(configuration_2)):
-                siblings.append(configuration_2[:i] + configuration_2[(i + 1) :])
-            logger.debug("Siblings: " + str(siblings))
-
-            time_limit_reached = False
-            for sibling in siblings:
-                if time.time() > (start_time + time_limit_s):
-                    logger.info("Reached time limit of " + str(time_limit_s) + "s")
-                    time_limit_reached = True
-                    break
-                sibling_config = reference_configuration.create_copy(get_unique_configuration_id)
-                sibling_config.apply_suggestions(arguments, sibling)
-                sibling_config.execute(arguments, timeout=timeout_after)
-                sibling_config.deleteFolder()
-                debug_stats.append(
-                    (
-                        sibling,
-                        cast(ExecutionResult, sibling_config.execution_result).runtime,
-                        cast(ExecutionResult, sibling_config.execution_result).return_code,
-                        cast(ExecutionResult, sibling_config.execution_result).result_valid,
-                        cast(ExecutionResult, sibling_config.execution_result).thread_sanitizer,
-                        sibling_config.root_path,
-                    )
-                )
+        try:
+            logger.info(
+                "Starting global optimization. Time remaining: "
+                + str((int((start_time + time_limit_s) - time.time())))
+                + "s"
+            )
+            logger.info("Press CTRL+C to stop the optimization manually.")
+            logger.debug("Config: " + str(configuration))
+            visited = []
+            while time.time() < (start_time + time_limit_s):
                 show_debug_stats(debug_stats)
-            if time_limit_reached:
-                break
+
+                # select the best configuration and spawn it's siblings
+                sorted_stats = sorted(debug_stats, key=lambda x: (x[1]), reverse=False)
+                configuration_2 = None
+                for stat_entry in sorted_stats:
+                    if (
+                        len(stat_entry[0]) != 0
+                        and stat_entry[2] == 0
+                        and stat_entry[3] == True
+                        and stat_entry[4] == True
+                        and stat_entry[0] not in visited
+                    ):
+                        configuration_2 = stat_entry[0]
+                        break
+                    else:
+                        if stat_entry[0] not in visited:
+                            configuration_2 = stat_entry[0]
+
+                valid_non_trivial_config_found = False
+                for stat_entry in sorted_stats:
+                    if (
+                        len(stat_entry[0]) != 0
+                        and stat_entry[2] == 0
+                        and stat_entry[3] == True
+                        and stat_entry[4] == True
+                    ):
+                        valid_non_trivial_config_found = True
+
+                if not valid_non_trivial_config_found and configuration_2 is None:
+                    # second try with relaxed conditions
+                    if configuration_2 is None:
+                        for stat_entry in sorted_stats:
+                            if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[0] not in visited:
+                                configuration_2 = stat_entry[0]
+                                break
+                            else:
+                                if stat_entry[0] not in visited:
+                                    configuration_2 = stat_entry[0]
+
+                    # third try with even more relaxed conditions
+                    if configuration_2 is None:
+                        for stat_entry in sorted_stats:
+                            if len(stat_entry[0]) != 0 and stat_entry[0] not in visited:
+                                configuration_2 = stat_entry[0]
+                                break
+                            else:
+                                if stat_entry[0] not in visited:
+                                    configuration_2 = stat_entry[0]
+
+                if configuration_2 is None:
+                    logger.info("No further configuration found.")
+                    break
+                visited.append(configuration_2)
+                logger.debug("Selected: " + str(configuration_2))
+
+                # spawn siblings
+                siblings = []
+                for i in range(0, len(configuration_2)):
+                    siblings.append(configuration_2[:i] + configuration_2[(i + 1) :])
+                logger.debug("Siblings: " + str(siblings))
+
+                time_limit_reached = False
+                for sibling in siblings:
+                    if time.time() > (start_time + time_limit_s):
+                        logger.info("Reached time limit of " + str(time_limit_s) + "s")
+                        time_limit_reached = True
+                        break
+                    sibling_config = reference_configuration.create_copy(get_unique_configuration_id)
+                    sibling_config.apply_suggestions(arguments, sibling)
+                    sibling_config.execute(arguments, timeout=timeout_after)
+                    sibling_config.deleteFolder()
+                    debug_stats.append(
+                        (
+                            sibling,
+                            cast(ExecutionResult, sibling_config.execution_result).runtime,
+                            cast(ExecutionResult, sibling_config.execution_result).return_code,
+                            cast(ExecutionResult, sibling_config.execution_result).result_valid,
+                            cast(ExecutionResult, sibling_config.execution_result).thread_sanitizer,
+                            sibling_config.root_path,
+                        )
+                    )
+                    show_debug_stats(debug_stats)
+                if time_limit_reached:
+                    break
+        except KeyboardInterrupt:
+            logger.info("Manually interupted the global optimization.")
+            pass
 
     # select best option and create code folder
     for stat_entry in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
@@ -492,7 +507,7 @@ def run(arguments: AutotunerArguments) -> None:
             sibling_config = reference_configuration.create_copy(get_unique_configuration_id)
             sibling_config.apply_suggestions(arguments, stat_entry[0])
 
-    show_debug_stats(debug_stats)
+    show_info_stats(debug_stats)
 
     # export measurements for pdf creation
     if False:  # export all measurements
@@ -539,7 +554,6 @@ def run(arguments: AutotunerArguments) -> None:
 
 
 def show_debug_stats(debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]]) -> None:
-    print("SHOW DEBUG STATS")
     # show debug stats
     stats_str = "Configuration measurements:\n"
     stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[thread sanitizer]\t[path]\n"
@@ -560,3 +574,24 @@ def show_debug_stats(debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bo
             + "\n"
         )
     logger.debug(stats_str)
+
+
+def show_info_stats(debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]]) -> None:
+    # show debug stats
+    stats_str = "Configuration measurements:\n"
+    stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[thread sanitizer]\n"
+    for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
+        stats_str += (
+            str(round(stats[1], 3))
+            + "s"
+            + "\t"
+            + str(stats[0])
+            + "\t"
+            + str(stats[2])
+            + "\t"
+            + str(stats[3])
+            + "\t"
+            + str(stats[4])
+            + "\n"
+        )
+    logger.info(stats_str)
