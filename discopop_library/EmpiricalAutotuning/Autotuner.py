@@ -284,6 +284,8 @@ def run(arguments: AutotunerArguments) -> None:
         if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
             sibling_config = reference_configuration.create_copy(get_unique_configuration_id)
             sibling_config.apply_suggestions(arguments, stat_entry[0])
+            sibling_config.execute(arguments, timeout=timeout_after)
+            best_suggestion_configuration = (stat_entry[0], sibling_config)
             break
 
     show_info_stats(debug_stats, logger)
