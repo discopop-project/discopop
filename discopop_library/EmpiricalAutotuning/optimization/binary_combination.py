@@ -123,6 +123,7 @@ def execute_binary_combination(
         combination_queue: List[List[SUGGESTION_ID]] = [[suggestion] for suggestion in valid]
         next_combination_queue: List[List[SUGGESTION_ID]] = []
         while time.time() < (start_time + time_limit_s):
+            show_debug_stats(debug_stats, logger)
             if len(combination_queue) > 1:
                 # get two suggestion configurations and and combine them
                 combination_part_1 = combination_queue.pop()
