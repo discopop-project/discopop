@@ -54,15 +54,18 @@ def get_patterns_by_hotspot_type(
     yes_hotspot_loops: List[Tuple[FILEID, STARTLINE]] = []
     no_hotspot_loops: List[Tuple[FILEID, STARTLINE]] = []
     maybe_hotspot_loops: List[Tuple[FILEID, STARTLINE]] = []
-    for entry in hotspot_information[HotspotType.YES]:
-        if entry[2] == HotspotNodeType.LOOP:
-            yes_hotspot_loops.append((entry[0], entry[1]))
-    for entry in hotspot_information[HotspotType.NO]:
-        if entry[2] == HotspotNodeType.LOOP:
-            no_hotspot_loops.append((entry[0], entry[1]))
-    for entry in hotspot_information[HotspotType.MAYBE]:
-        if entry[2] == HotspotNodeType.LOOP:
-            maybe_hotspot_loops.append((entry[0], entry[1]))
+    if HotspotType.YES in hotspot_information:
+        for entry in hotspot_information[HotspotType.YES]:
+            if entry[2] == HotspotNodeType.LOOP:
+                yes_hotspot_loops.append((entry[0], entry[1]))
+    if HotspotType.NO in hotspot_information:
+        for entry in hotspot_information[HotspotType.NO]:
+            if entry[2] == HotspotNodeType.LOOP:
+                no_hotspot_loops.append((entry[0], entry[1]))
+    if HotspotType.MAYBE in hotspot_information:
+        for entry in hotspot_information[HotspotType.MAYBE]:
+            if entry[2] == HotspotNodeType.LOOP:
+                maybe_hotspot_loops.append((entry[0], entry[1]))
 
     pattern_ids = detection_result.patterns.get_pattern_ids()
 
