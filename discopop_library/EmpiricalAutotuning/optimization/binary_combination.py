@@ -43,7 +43,7 @@ def execute_binary_combination(
     visited = []
 
     # initialize with all YES and MAYBE hotspot suggestions
-    configuration = patterns_by_hotspot_type[HotspotType.YES]  # + patterns_by_hotspot_type[HotspotType.MAYBE]
+    configuration = patterns_by_hotspot_type[HotspotType.YES] + patterns_by_hotspot_type[HotspotType.MAYBE]
 
     # step 1: identify valid suggestions
     valid: Set[int] = set()
@@ -59,7 +59,8 @@ def execute_binary_combination(
             tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
             tmp_config.apply_suggestions(arguments, current)
             tmp_config.execute(arguments, timeout=timeout_after)
-            tmp_config.deleteFolder()
+            if not arguments.skip_cleanup:
+                tmp_config.deleteFolder()
             debug_stats.append(
                 (
                     current,
@@ -95,12 +96,13 @@ def execute_binary_combination(
     # TODO: export list of valid suggestions
     # apply and test all valid suggesitons
     tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
-    tmp_config.apply_suggestions(arguments, list(valid))
+    tmp_config.apply_suggestions(arguments, sorted(list(valid)))
     tmp_config.execute(arguments, timeout=timeout_after)
-    tmp_config.deleteFolder()
+    if not arguments.skip_cleanup:
+        tmp_config.deleteFolder()
     debug_stats.append(
         (
-            list(valid),
+            sorted(list(valid)),
             cast(ExecutionResult, tmp_config.execution_result).runtime,
             cast(ExecutionResult, tmp_config.execution_result).return_code,
             cast(ExecutionResult, tmp_config.execution_result).result_valid,
@@ -108,7 +110,7 @@ def execute_binary_combination(
             tmp_config.root_path,
         )
     )
-    visited.append(list(valid))
+    visited.append(sorted(list(valid)))
 
     show_debug_stats(debug_stats, logger)
 
@@ -135,7 +137,8 @@ def execute_binary_combination(
                 tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
                 tmp_config.apply_suggestions(arguments, current_combination)
                 tmp_config.execute(arguments, timeout=timeout_after)
-                tmp_config.deleteFolder()
+                if not arguments.skip_cleanup:
+                    tmp_config.deleteFolder()
                 exec_res = cast(ExecutionResult, tmp_config.execution_result)
                 debug_stats.append(
                     (

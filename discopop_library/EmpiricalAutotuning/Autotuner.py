@@ -21,6 +21,7 @@ from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import Executi
 from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor, NodeShape, StatisticsGraph
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.optimization.binary_combination import execute_binary_combination
+from discopop_library.EmpiricalAutotuning.optimization.measure_only import execute_measure_only
 from discopop_library.EmpiricalAutotuning.optimization.time_limited_prioritized import (
     execute_time_limited_prioritized_search,
 )
@@ -100,6 +101,7 @@ def run(arguments: AutotunerArguments) -> None:
     greedy_search = False
     time_limited_prioritized_search = False
     time_limit_s = 3600  # seconds
+    binary_combination = True
     if greedy_search:
         # greedy search for best suggestion configuration:
         # for all hotspot types in descending importance:
@@ -266,8 +268,20 @@ def run(arguments: AutotunerArguments) -> None:
             debug_stats,
             get_unique_configuration_id,
         )
-    else:
+    elif binary_combination:
         execute_binary_combination(
+            detection_result,
+            hotspot_information,
+            logger,
+            time_limit_s,
+            reference_configuration,
+            arguments,
+            timeout_after,
+            debug_stats,
+            get_unique_configuration_id,
+        )
+    else:
+        execute_measure_only(
             detection_result,
             hotspot_information,
             logger,
@@ -280,7 +294,7 @@ def run(arguments: AutotunerArguments) -> None:
         )
 
     # select best option and create code folder
-    for stat_entry in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
+    for stat_entry in sorted(debug_stats, key=lambda x: (x[1])):
         if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
             sibling_config = reference_configuration.create_copy(get_unique_configuration_id)
             sibling_config.apply_suggestions(arguments, stat_entry[0])
