@@ -110,7 +110,7 @@ def parse_args() -> ExplorerArguments:
     )
     experimental_parser.add_argument(
         "--plot-pet", type=str, nargs="?", default=None, const="explorer/pet_plot.gexf",
-        help="Plot PET as GEXF file. If a path is given, the PET plot is written to the given file, otherwise to pet_plot.gexf"
+        help="Plots PET as a GEXF file. If a path is given, the PET plot is written to the given file, otherwise to pet_plot.gexf"
     )
     # fmt: on
 
@@ -167,6 +167,7 @@ def parse_args() -> ExplorerArguments:
         load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
         collect_statistics=arguments.enable_statistics,
         jobs=arguments.jobs,
+        enable_pet_plot_file=arguments.plot_pet,
     )
 
 
