@@ -75,7 +75,7 @@ class ExplorerArguments(GeneralArguments):
     microbench_file: Optional[str]
     load_existing_doall_and_reduction_patterns: bool
     collect_statistics: bool
-    enable_gephi_file: Optional[str]
+    #enable_gephi_file: Optional[str]
     enable_pet_plot_file: Optional[str] # None means no dump, otherwise the path 
 
     def __post_init__(self) -> None:
@@ -267,12 +267,6 @@ def run(arguments: ExplorerArguments) -> None:
                 f.flush()
                 f.close()
 
-        if arguments.enable_pet_plot_file is not None:
-            with open(arguments.enable_pet_plot_file, "w+") as f:
-                f.write(dump_to_gephi_file(res.pet))
-                f.flush()
-                f.close()
-
         if arguments.enable_json_file is None:
             print(str(res))
         else:
@@ -302,6 +296,12 @@ def run(arguments: ExplorerArguments) -> None:
             sympyExpr = extrapBench.getFunctionSympy()
             print(sympyExpr)
             print(sympyExpr.free_symbols)
+
+        if arguments.enable_pet_plot_file is not None:
+            with open(arguments.enable_pet_plot_file, "w+") as f:
+                f.write(dump_to_gephi_file(res.pet, "explorer/pet_plot.gexf"))
+                f.flush()
+                f.close()
 
         # print profiling results
         if arguments.enable_profiling_dump_file is not None:
