@@ -108,6 +108,10 @@ def parse_args() -> ExplorerArguments:
     experimental_parser.add_argument(
         "--enable-statistics", action="store_true", help="Disable the calculation and storing of statistics for code and generated suggestions."
     )
+    experimental_parser.add_argument(
+        "--plot-pet", type=str, nargs="?", default=None, const="explorer/pet_plot.gexf",
+        help="Plot PET as GEXF file. If a path is given, the PET plot is written to the given file, otherwise to pet_plot.gexf"
+    )
     # fmt: on
 
     arguments = parser.parse_args()
@@ -135,6 +139,7 @@ def parse_args() -> ExplorerArguments:
     arguments.dump_pet = get_path_or_none(arguments.path, arguments.dump_pet)
     arguments.dump_detection_result = get_path_or_none(arguments.path, arguments.dump_detection_result)
     arguments.microbench_file = get_path_or_none(arguments.path, arguments.microbench_file)
+    arguments.plot_pet = get_path_or_none(arguments.path, arguments.plot_pet)
 
     return ExplorerArguments(
         discopop_build_path=arguments.dp_build_path,
