@@ -29,4 +29,8 @@ def dump_to_gephi_file(pet: PEGraphX, name: str) -> None:
             if dep.dtype is None:
                 raise ValueError("dep.dtype has no type name!")
             pet.g.edges[edge]["dep_type"] = str(dep.dtype.name)
-    nx.write_gexf(pet.g, name)
+    # nx.write_gexf(pet.g, name)
+    with open("explorer/pet_plot.gexf", "w+") as f:
+                f.write(pet.g)
+                f.flush()
+                f.close()
