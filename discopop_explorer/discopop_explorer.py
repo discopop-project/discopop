@@ -261,6 +261,12 @@ def run(arguments: ExplorerArguments) -> None:
                 f.flush()
                 f.close()
 
+        if arguments.enable_pet_plot_file is not None:
+            with open(arguments.enable_pet_plot_file, "w+") as f:
+                f.write(dump_to_gephi_file(res.pet, "explorer/pet_plot.gexf"))
+                f.flush()
+                f.close()
+
         if arguments.enable_detection_result_dump_file is not None:
             with open(arguments.enable_detection_result_dump_file, "w+") as f:
                 f.write(res.dump_to_pickled_json())
@@ -296,12 +302,6 @@ def run(arguments: ExplorerArguments) -> None:
             sympyExpr = extrapBench.getFunctionSympy()
             print(sympyExpr)
             print(sympyExpr.free_symbols)
-
-        if arguments.enable_pet_plot_file is not None:
-            with open(arguments.enable_pet_plot_file, "w+") as f:
-                f.write(dump_to_gephi_file(res.pet, "explorer/pet_plot.gexf"))
-                f.flush()
-                f.close()
 
         # print profiling results
         if arguments.enable_profiling_dump_file is not None:
