@@ -15,6 +15,7 @@ import jsonpickle  # type: ignore
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_library.FolderStructure.setup import setup_sanity_checker
+from discopop_library.HostpotLoader.utilities import get_patterns_by_hotspot_type
 from discopop_library.SanityChecker.ArgumentClasses import SanityCheckerArguments
 from discopop_library.SanityChecker.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.SanityChecker.Classes.ExecutionResult import ExecutionResult
@@ -74,10 +75,25 @@ def run(arguments: SanityCheckerArguments) -> None:
     detection_result: DetectionResult = jsonpickle.decode(tmp_str)
     logger.debug("loaded suggestions")
 
-    # check every suggestion for sanity
+    # load hotspot information and classify suggestions
+    hsl_arguments = HotspotLoaderArguments(
+        "WARNING", arguments.write_log, False, arguments.dot_dp_path, True, False, True, True, True
+    )
+    hotspot_information = load_hotspots(hsl_arguments)
+    logger.debug("loaded hotspots")
+    patterns_by_hotspot_type = get_patterns_by_hotspot_type(detection_result, hotspot_information)
+    logger.debug("Patterns by hotspot type")
+    logger.debug(str(patterns_by_hotspot_type))
 
-    logger.debug("suggestions: " + str(detection_result.patterns.get_pattern_ids()))
-    for pattern_id in detection_result.patterns.get_pattern_ids():
+    # filter suggestions by requested hotspot categorization
+
+    filtered_suggestion_ids: List[int] = []
+    for hotspot_class in arguments.suggestion_classes:
+        filtered_suggestion_ids += patterns_by_hotspot_type[hotspot_class]
+
+    # check every filtered suggestion for sanity
+    logger.debug("suggestions: " + str(filtered_suggestion_ids))
+    for pattern_id in filtered_suggestion_ids:
         configuration = reference_configuration.create_copy(get_unique_configuration_id)
         configuration.apply_suggestions(arguments, [pattern_id])
         configuration.execute(arguments, timeout=None)

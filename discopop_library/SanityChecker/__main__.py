@@ -8,6 +8,8 @@
 
 from argparse import ArgumentParser
 import os
+from typing import List
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.SanityChecker.ArgumentClasses import SanityCheckerArguments
 from discopop_library.GlobalLogger.setup import setup_logger
 from discopop_library.SanityChecker.SanityChecker import run
@@ -25,16 +27,27 @@ def parse_args() -> SanityCheckerArguments:
                         Important: Project root will be copied multiple times! It has to contain the executable scripts DP_COMPILE_SANITIZE.sh and DP_EXECUTE_SANITIZE.sh! \
                         DP_COMPILE_SANITIZE.sh must allow the inclusion of OpenMP pragmas into the code and shall instrument the code using ThreadSanitizer.")
     parser.add_argument("--dot-dp-path", type=str, default=os.path.join(os.getcwd(), ".discopop"), help="Path to the .discopop folder.")
+    parser.add_argument("-sc", "--suggestion_classes", metavar="CLASSES", type=str, default="YES", help="Filter considered suggestion to the specified, comma-separated list of classes of HotspotTypes. Options: YES,NO,MAYBE. Default: YES.")
 
     # fmt:  is provided.
 
     arguments = parser.parse_args()
+
+    # prepare suggestion classification
+    parsed_suggestion_classes: List[HotspotType] = []
+    if "YES" in arguments.suggestion_classes.split(","):
+        parsed_suggestion_classes.append(HotspotType.YES)
+    if "NO" in arguments.suggestion_classes.split(","):
+        parsed_suggestion_classes.append(HotspotType.NO)
+    if "MAYBE" in arguments.suggestion_classes.split(","):
+        parsed_suggestion_classes.append(HotspotType.MAYBE)
 
     return SanityCheckerArguments(
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
         project_path=arguments.project_path,
         dot_dp_path=arguments.dot_dp_path,
+        suggestion_classes=parsed_suggestion_classes
     )
 
 
