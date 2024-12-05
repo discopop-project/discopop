@@ -9,7 +9,9 @@
 from dataclasses import dataclass
 import logging
 import os
+from typing import List
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
+from discopop_library.HostpotLoader.HotspotType import HotspotType
 
 logger = logging.getLogger("SanityCheckerArguments")
 
@@ -20,6 +22,7 @@ class SanityCheckerArguments(GeneralArguments):
 
     project_path: str
     dot_dp_path: str
+    suggestion_classes: List[HotspotType]
 
     def __post_init__(self) -> None:
         self.__validate()
@@ -42,6 +45,7 @@ class SanityCheckerArguments(GeneralArguments):
             os.path.join(self.dot_dp_path, "explorer"),
             os.path.join(self.dot_dp_path, "patch_generator"),
             os.path.join(self.dot_dp_path, "line_mapping.json"),
+            os.path.join(self.dot_dp_path, "hotspot_detection"),
         ]
         for file in required_files:
             if not os.path.exists(file):

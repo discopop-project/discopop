@@ -30,12 +30,13 @@ from discopop_library.EmpiricalAutotuning.optimization.time_limited_prioritized 
 )
 
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
-from discopop_library.EmpiricalAutotuning.priorities import get_patterns_by_hotspot_type, get_prioritized_configurations
+from discopop_library.EmpiricalAutotuning.priorities import get_prioritized_configurations
 from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
+from discopop_library.HostpotLoader.utilities import get_patterns_by_hotspot_type
 from discopop_library.result_classes.DetectionResult import DetectionResult
 
 logger = logging.getLogger("Autotuner")
