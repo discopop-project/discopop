@@ -109,7 +109,7 @@ def parse_args() -> ExplorerArguments:
         "--enable-statistics", action="store_true", help="Disable the calculation and storing of statistics for code and generated suggestions."
     )
     experimental_parser.add_argument(
-        "--plot-pet",
+        "--plot-pet", type=str, default="explorer/pet_plot.gexf",
         help="Plots PET as a GEXF file. The PET plot is written to pet_plot.gexf"
     )
     # fmt: on
