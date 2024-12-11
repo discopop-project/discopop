@@ -110,7 +110,7 @@ def parse_args() -> ExplorerArguments:
     )
     experimental_parser.add_argument(
         "--plot-pet", type=str, nargs="?", default=None, const="explorer/pet_plot.gexf",
-        help="Plots PET as a GEXF file. The PET plot is written to pet_plot.gexf"
+        help="Plots PET as a GEXF file. If a path is given (file extension has to be .gexf), the PET Graph is written to the given file, otherwise to pet_plot.gexf"
     )
     # fmt: on
 
