@@ -261,6 +261,8 @@ def run(arguments: ExplorerArguments) -> None:
                 f.flush()
                 f.close()
 
+        # experimental
+        # dumps gexf plot of pet
         if arguments.enable_pet_plot_file is not None:
             dump_to_gephi_file(res.pet, "explorer/pet_plot.gexf")
 
