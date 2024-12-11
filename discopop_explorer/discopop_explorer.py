@@ -264,7 +264,7 @@ def run(arguments: ExplorerArguments) -> None:
         # experimental
         # dumps gexf plot of pet
         if arguments.enable_pet_plot_file is not None:
-            dump_to_gephi_file(res.pet, "explorer/pet_plot.gexf")
+            dump_to_gephi_file(res.pet, arguments.enable_pet_plot_file)
 
         if arguments.enable_detection_result_dump_file is not None:
             with open(arguments.enable_detection_result_dump_file, "w+") as f:
