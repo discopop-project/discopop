@@ -75,8 +75,7 @@ class ExplorerArguments(GeneralArguments):
     microbench_file: Optional[str]
     load_existing_doall_and_reduction_patterns: bool
     collect_statistics: bool
-    #enable_gephi_file: Optional[str]
-    enable_pet_plot_file: Optional[str] # None means no dump, otherwise the path 
+    enable_pet_plot_file: Optional[str]  # None means no dump, otherwise the path
 
     def __post_init__(self) -> None:
         self.__validate()
