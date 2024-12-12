@@ -21,6 +21,7 @@ from typing import Dict, List, Optional, Tuple
 import pstats2  # type:ignore
 from pluginbase import PluginBase  # type: ignore
 from discopop_explorer.functions.PEGraph.output.json import dump_to_pickled_json
+from discopop_explorer.functions.PEGraph.output.gephi import dump_to_gephi_file
 from discopop_explorer.utilities.statistics.collect_statistics import collect_statistics
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments  # type: ignore
 from discopop_library.FolderStructure.setup import setup_explorer
@@ -74,6 +75,8 @@ class ExplorerArguments(GeneralArguments):
     microbench_file: Optional[str]
     load_existing_doall_and_reduction_patterns: bool
     collect_statistics: bool
+    #enable_gephi_file: Optional[str]
+    enable_pet_plot_file: Optional[str] # None means no dump, otherwise the path 
 
     def __post_init__(self) -> None:
         self.__validate()
@@ -257,6 +260,11 @@ def run(arguments: ExplorerArguments) -> None:
                 f.write(dump_to_pickled_json(res.pet))
                 f.flush()
                 f.close()
+
+        # experimental
+        # dumps gexf plot of pet
+        if arguments.enable_pet_plot_file is not None:
+            dump_to_gephi_file(res.pet, arguments.enable_pet_plot_file)
 
         if arguments.enable_detection_result_dump_file is not None:
             with open(arguments.enable_detection_result_dump_file, "w+") as f:
