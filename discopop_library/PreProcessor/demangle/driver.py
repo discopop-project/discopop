@@ -15,6 +15,7 @@ import logging
 from discopop_library.PreProcessor.demangle.data_xml import demangle_data_xml
 from discopop_library.PreProcessor.demangle.dependency_metadata import demangle_dependency_metadata
 from discopop_library.PreProcessor.demangle.dynamic_dependencies import demangle_dynamic_dependencies
+from discopop_library.PreProcessor.demangle.static_dependencies import demangle_static_dependencies
 
 
 def demangle(arguments: PreProcessorArguments, parent_logger: logging.Logger) -> None:
@@ -33,6 +34,7 @@ def demangle(arguments: PreProcessorArguments, parent_logger: logging.Logger) ->
     # dependency_metadata.txt
     # demangle_dependency_metadata(arguments, logger, cxxfilt_bin)
     # dynamic_dependencies.txt
-    demangle_dynamic_dependencies(arguments, logger, cxxfilt_bin)
+    # demangle_dynamic_dependencies(arguments, logger, cxxfilt_bin)
     # reduction.txt
     # static_dependencies.txt
+    demangle_static_dependencies(arguments, logger, cxxfilt_bin)
