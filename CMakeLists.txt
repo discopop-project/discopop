@@ -164,5 +164,7 @@ else()
     execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_patch_applicator ${DP_LOCAL_BIN_DIR}/discopop_patch_applicator)
     message(STATUS "--> discopop_patch_generator")
     execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_patch_generator ${DP_LOCAL_BIN_DIR}/discopop_patch_generator)
+    message(STATUS "--> discopop_preprocessor")
+    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_preprocessor ${DP_LOCAL_BIN_DIR}/discopop_preprocessor)
 
 endif()
