@@ -1,8 +1,11 @@
-#include <stdio.h>
 #include <stdlib.h>
 
+void not_prevent_doall(double* tmp, int i){
+    int z = i + tmp[i];
+}
+
 void prevent_doall(double* tmp, int i){
-    for(int j = 0; j < 10; j++){
+    for(int j = 0; j < 10; j++){  // wo w
         tmp[j] = i;
     }
 }
@@ -16,9 +19,13 @@ int main(int argc, const char* argv[]) {
     }
 
     // not parallelizable
-    int index;
     for(int i = 0; i < n; ++i){
         prevent_doall(x, i);
+    }
+
+    // parallelizable
+    for(int i = 0; i < n; ++i){
+        not_prevent_doall(x, i);
     }
     free(x);
 return 0;
