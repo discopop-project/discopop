@@ -12,8 +12,41 @@ import logging
 import os
 from typing import Dict, List
 
-from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
-from discopop_library.GlobalLogger.setup import setup_logger
+
+@dataclass
+class GeneralArguments(object):
+    """Container Class for the arguments passed to tools in the DiscoPoP framework"""
+
+    log_level: str
+    write_log: bool
+
+
+def setup_logger(arguments: GeneralArguments) -> None:
+    if arguments.write_log:
+        logging.basicConfig(filename="log.txt", level=arguments.log_level)
+    else:
+        logging.basicConfig(
+            level=arguments.log_level,
+            format="[DP][%(name)s] %(levelname)s: %(message)s",  # "[DiscoPoP][%(name)s] %(levelname)s: %(asctime)s: %(message)s"
+        )
+
+    logger = logging.getLogger("GlobalLogger")
+
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(logging.DEBUG)
+
+    # create formatter
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+    # add formatter to ch
+    ch.setFormatter(formatter)
+
+    # add ch to logger
+    logger.addHandler(ch)
+
+    logger.info("Logger configured")
+
 
 logger = logging.getLogger("PerfoGraphCompatProvider")
 
@@ -27,10 +60,10 @@ class PerfoGraphCompatibilityArguments(GeneralArguments):
     output_file: str
     force_output: bool
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
+    def __validate(self) -> None:
         """Validate the arguments passed to the discopop_explorer, e.g check if given files exist"""
         pass
         # check if input files exist
@@ -73,13 +106,13 @@ def parse_args() -> PerfoGraphCompatibilityArguments:
     )
 
 
-def main():
+def main() -> None:
     arguments = parse_args()
     setup_logger(arguments)
     run(arguments)
 
 
-def run(arguments: PerfoGraphCompatibilityArguments):
+def run(arguments: PerfoGraphCompatibilityArguments) -> None:
     logger.info("Configuration:")
     logger.info("\tLLVMIR: " + arguments.llvm_ir_file)
     logger.info("\tDYNDEP: " + arguments.dynamic_deps_file)
@@ -87,12 +120,12 @@ def run(arguments: PerfoGraphCompatibilityArguments):
     logger.info("\tforce : " + str(arguments.force_output))
 
     instruction_id_to_md_tag_dict = __get_instruction_id_to_md_tag_dict(arguments)
-    raw_dynamic_dependencies = __update_dynamic_dependencies(arguments, instruction_id_to_md_tag_dict)
+    __update_dynamic_dependencies(arguments, instruction_id_to_md_tag_dict)
 
 
 def __update_dynamic_dependencies(
     arguments: PerfoGraphCompatibilityArguments, instruction_id_to_md_tag_dict: Dict[str, str]
-):
+) -> None:
     """read dynamic dependencies file line by line, split its contents for further processing,
     replace instruction ids with metadata tags, and output to file"""
     sublogger = logger.getChild("__get_raw_dynamic_dependencies")
