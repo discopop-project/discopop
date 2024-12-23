@@ -139,12 +139,16 @@ def __update_dynamic_dependencies(
                 split_line = line.split(" ")
                 # update the line according to instruction_md_tag_to_id_dict
                 updated_line = ""
+                skip_line = False
                 for idx, substr in enumerate(split_line):
                     # identify candidates for substitution
                     if ":" in substr:
                         continue
-                    if substr in ["NOM", "INIT", "END", "BGN", "START"]:
+                    if substr in ["NOM", "INIT"]:
                         continue
+                    if substr in ["END", "BGN", "START"]:
+                        skip_line = True
+                        break
                     if substr.startswith("WAR") or substr.startswith("RAW") or substr.startswith("WAW"):
                         continue
                     if len(substr) == 0:
