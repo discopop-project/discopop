@@ -71,6 +71,7 @@ def from_json_strings(
         "pipeline",
         "simple_gpu",
         "combined_gpu",
+        "clang_vectorizable_loop",
     ]
     for type_str in pattern_precedence:
         if type_str not in pattern_json_strings_by_type:
@@ -145,6 +146,7 @@ def from_json_strings_with_mapping(
         "pipeline",
         "simple_gpu",
         "combined_gpu",
+        "clang_vectorizable_loop",
     ]
     for type_str in pattern_precedence:
         if type_str not in pattern_json_strings_with_mapping_by_type:

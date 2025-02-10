@@ -31,6 +31,9 @@ from discopop_explorer.pattern_detectors.geometric_decomposition_detector import
 from discopop_explorer.pattern_detectors.pipeline_detector import run_detection as detect_pipeline
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo, run_detection as detect_reduction
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
+from discopop_explorer.pattern_detectors.clang_loop_vectorization_detector import (
+    run_detection as detect_clang_vector_loops,
+)
 
 
 class PatternDetectorX(object):
@@ -136,6 +139,9 @@ class PatternDetectorX(object):
         #        if enable_detection_of_scheduling_clauses:
         # identify scheduling clauses
         #            return self.__identify_scheduling_clauses(res, project_path, file_mapping)
+
+        # detect vectorization
+        res.patterns.clang_vectorizable_loop = detect_clang_vector_loops(self.pet, res)
         return res
 
     # todo: re-enable identification of scheduling clauses

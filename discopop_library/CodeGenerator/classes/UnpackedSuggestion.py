@@ -205,6 +205,20 @@ class UnpackedSuggestion(object):
         pragmas.append(pragma)
         return pragmas
 
+    def __get_clang_vectorizable_loop_pragmas(self) -> List[Pragma]:
+        pragmas = []
+        pragma = Pragma()
+        pragma.pragma_str = self.values["pragma"]
+        pragma.pragma_str += " interleave_count(" + str(self.values["IF"]) + ")"
+        pragma.pragma_str += " vectorize_width(" + str(self.values["VF"]) + ")"
+
+        pragma.file_id = self.file_id
+        pragma.start_line = self.start_line
+        pragma.end_line = self.end_line
+
+        pragmas.append(pragma)
+        return pragmas
+
     def __get_pipeline_pragmas(self) -> List[Pragma]:
         pragmas = []
 
@@ -504,6 +518,8 @@ class UnpackedSuggestion(object):
             pragmas += self.__get_combined_gpu_pragmas()
         elif self.type == "device_update":
             pragmas += self.__get_device_update_pragmas()
+        elif self.type == "clang_vectorizable_loop":
+            pragmas += self.__get_clang_vectorizable_loop_pragmas()
         else:
             pragma = Pragma()
             pragma.file_id = self.file_id
