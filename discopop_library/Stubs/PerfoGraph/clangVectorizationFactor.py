@@ -12,4 +12,13 @@ from discopop_explorer.aliases.LineID import LineID
 
 def get_clang_vectorization_factor(loop_position: LineID) -> int:
     warnings.warn("STUB: get_clang_vectorization_factor not implemented!")
+    # TODO: switch loop_position to loop text + Path to .discopop-folder to extract File paths from FileMapping.txt (20.02.)
+    # TODO: define + implement API for pre-trained model (@20.02 if possible)
+
+    #    API:
+    #    -> path to .discopop folder
+    #    -> loop file id
+    #    -> loop start line
+    #    -> loop end line
+    #    -> loop source code
     return 42
