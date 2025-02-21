@@ -31,6 +31,9 @@ from discopop_explorer.pattern_detectors.geometric_decomposition_detector import
 from discopop_explorer.pattern_detectors.pipeline_detector import run_detection as detect_pipeline
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo, run_detection as detect_reduction
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.gpu_pattern_detector import run_detection as detect_gpu
+from discopop_explorer.pattern_detectors.inflated_parallel_region_pattern import (
+    run_detection as detect_inflated_parallel_regions,
+)
 
 
 class PatternDetectorX(object):
@@ -136,6 +139,12 @@ class PatternDetectorX(object):
         #        if enable_detection_of_scheduling_clauses:
         # identify scheduling clauses
         #            return self.__identify_scheduling_clauses(res, project_path, file_mapping)
+
+        pr, da, red = detect_inflated_parallel_regions(self.pet, res)
+        res.patterns.parallel_region = pr
+        res.patterns.do_all += da
+        res.patterns.reduction += red
+
         return res
 
     # todo: re-enable identification of scheduling clauses

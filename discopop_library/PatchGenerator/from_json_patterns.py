@@ -11,7 +11,7 @@ import logging
 import os.path
 from pathlib import Path
 import shutil
-from typing import Dict, List
+from typing import Dict, List, Tuple
 from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
@@ -27,14 +27,16 @@ def from_json_patterns(
     patch_generator_dir: str,
 ) -> None:
     # collect metadata
+    # collect patterns_by_id
     max_pattern_id = 0
+    patterns_by_id: Dict[int, Tuple[str, str]] = dict()
     for suggestion_type in patterns_by_type:
         for suggestion in patterns_by_type[suggestion_type]:
             suggestion_dict = json.loads(suggestion)
             suggestion_id = suggestion_dict["pattern_id"]
             if max_pattern_id < suggestion_id:
                 max_pattern_id = suggestion_id
-    logger.debug("max_pattern_id = " + str(max_pattern_id))
+            patterns_by_id[suggestion_id] = (suggestion_type, suggestion)
 
     # generate code modifications from each suggestion, create a patch and store the patch
     # using the suggestions unique id
@@ -66,12 +68,31 @@ def from_json_patterns(
 
             if arguments.verbose:
                 print("Suggestion: ", suggestion)
+            # collect patterns to be applied in case of "contains_patterns" relations
+            patterns_for_application: Dict[str, List[str]] = dict()
+            queue: List[str] = []
+            if "contains_patterns" in suggestion_dict:
+                for cpi in suggestion_dict["contains_patterns"]:
+                    queue.append(patterns_by_id[cpi][1])
+            while len(queue) > 0:
+                current = queue.pop()
+                current_dict = json.loads(current)
+                current_suggestion_type = patterns_by_id[current_dict["pattern_id"]][0]
+                if current_suggestion_type not in patterns_for_application:
+                    patterns_for_application[current_suggestion_type] = []
+                patterns_for_application[current_suggestion_type].insert(0, current)
+
+                if "contains_patterns" in current_dict:
+                    for contained_pattern_id in current_dict["contains_patterns"]:
+                        queue.append(patterns_by_id[contained_pattern_id][1])
+
             file_id_to_modified_code: Dict[int, str] = from_json_strings(
                 file_mapping,
                 {suggestion_type: [suggestion]},
                 CC=arguments.CC,
                 CXX=arguments.CXX,
                 skip_compilation_check=True,
+                contained_patterns=patterns_for_application,
             )
             # create patches from the modified codes
             file_id_to_patches: Dict[int, str] = get_diffs_from_modified_code(

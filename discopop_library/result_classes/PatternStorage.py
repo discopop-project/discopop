@@ -14,6 +14,7 @@ from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.geometric_decomposition_detector import GDInfo
 from discopop_explorer.pattern_detectors.pipeline_detector import PipelineInfo
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
+from discopop_explorer.pattern_detectors.inflated_parallel_region_pattern import ParallelRegionInfo
 from discopop_library.Aliases.aliases import PatternID
 
 
@@ -27,6 +28,7 @@ class PatternStorage(object):
     combined_gpu: List[PatternInfo]
     optimizer_output: List[PatternBase]
     merged_pattern: List[PatternBase]
+    parallel_region: List[ParallelRegionInfo]
 
     def __init__(self) -> None:
         self.optimizer_output = []
