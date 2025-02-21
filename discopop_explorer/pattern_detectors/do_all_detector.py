@@ -418,8 +418,25 @@ def __check_loop_dependencies(
                         return True
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
-            # handled by variable classification
-            pass
+            if (
+                dep.metadata_intra_iteration_dep is None
+                or dep.metadata_inter_iteration_dep is None
+                or dep.metadata_intra_call_dep is None
+                or dep.metadata_inter_call_dep is None
+            ):
+                # no metadata created
+                # handled by variable classification
+                pass
+            else:
+                # metadata exists
+
+                cond_2 = len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0
+                cond_4 = root_loop.start_position() in dep.metadata_inter_iteration_dep
+                # if cond_1 or cond_2 or cond_3:
+                if cond_2 or cond_4:
+                    return True
+                # handled by variable classification
+                pass
         else:
             raise ValueError("Unsupported dependency type: ", dep.dtype)
 
