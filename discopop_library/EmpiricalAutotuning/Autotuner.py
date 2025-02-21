@@ -28,8 +28,12 @@ from discopop_library.EmpiricalAutotuning.optimization.linear_hotspot_combinatio
 from discopop_library.EmpiricalAutotuning.optimization.linear_hotspot_combination_with_refinement import (
     execute_linear_hotspot_combination_with_refinement,
 )
+
 from discopop_library.EmpiricalAutotuning.optimization.measure_only import execute_measure_only
 
+from discopop_library.EmpiricalAutotuning.optimization.parallel_region_combination_with_refinement import (
+    execute_parallel_region_combination_with_refinement,
+)
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
 from discopop_library.EmpiricalAutotuning.priorities import get_prioritized_configurations
 from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
@@ -111,6 +115,7 @@ def run(arguments: AutotunerArguments) -> None:
     time_limit_s = 3600  # seconds
     linear_hotspot_combination = False
     linear_hotspot_combination_with_refinement = True
+    parallel_region_combination_with_refinement = False
 
     if arguments.suggestions is None:
         if linear_hotspot_combination:
@@ -127,6 +132,18 @@ def run(arguments: AutotunerArguments) -> None:
             )
         elif linear_hotspot_combination_with_refinement:
             execute_linear_hotspot_combination_with_refinement(
+                detection_result,
+                hotspot_information,
+                logger,
+                time_limit_s,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                debug_stats,
+                get_unique_configuration_id,
+            )
+        elif parallel_region_combination_with_refinement:
+            execute_parallel_region_combination_with_refinement(
                 detection_result,
                 hotspot_information,
                 logger,

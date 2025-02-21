@@ -49,6 +49,7 @@ class DoAllInfo(PatternInfo):
         :param node: node, where do-all was detected
         """
         PatternInfo.__init__(self, node)
+        self.pragma = "#pragma omp parallel for"
         fp, p, lp, s, r = classify_loop_variables(pet, node)
         self.first_private = fp
         self.private = p

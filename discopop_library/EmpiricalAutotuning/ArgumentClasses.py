@@ -29,6 +29,7 @@ class AutotunerArguments(GeneralArguments):
     thread_count: int
     project_path: str = ""
     configuration_path: str = ""
+    hotspot_types: str = ""
 
     def __post_init__(self) -> None:
         self.project_path = str(Path(self.dot_dp_path).parent.absolute())

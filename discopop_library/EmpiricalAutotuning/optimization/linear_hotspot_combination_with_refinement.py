@@ -44,7 +44,13 @@ def execute_linear_hotspot_combination_with_refinement(
     visited = []
 
     # initialize with all hotspot suggestions
-    configuration = patterns_by_hotspot_type[HotspotType.YES]  # + patterns_by_hotspot_type[HotspotType.MAYBE]
+    configuration: List[int] = []
+    if "yes" in arguments.hotspot_types:
+        configuration += patterns_by_hotspot_type[HotspotType.YES]
+    if "maybe" in arguments.hotspot_types:
+        configuration += patterns_by_hotspot_type[HotspotType.MAYBE]
+    if "no" in arguments.hotspot_types:
+        configuration += patterns_by_hotspot_type[HotspotType.NO]
 
     # step 1: identify valid suggestions
     valid: Set[int] = set()

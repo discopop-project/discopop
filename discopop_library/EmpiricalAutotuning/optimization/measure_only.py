@@ -43,7 +43,13 @@ def execute_measure_only(
     visited = []
 
     # initialize with all YES and MAYBE hotspot suggestions
-    configuration = patterns_by_hotspot_type[HotspotType.YES]  # + patterns_by_hotspot_type[HotspotType.MAYBE]
+    configuration: List[int] = []
+    if "yes" in arguments.hotspot_types:
+        configuration += patterns_by_hotspot_type[HotspotType.YES]
+    if "maybe" in arguments.hotspot_types:
+        configuration += patterns_by_hotspot_type[HotspotType.MAYBE]
+    if "no" in arguments.hotspot_types:
+        configuration += patterns_by_hotspot_type[HotspotType.NO]
 
     # step 1: identify valid suggestions
     valid: Set[int] = set()
