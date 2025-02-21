@@ -10,6 +10,7 @@ from logging import Logger
 import subprocess
 from typing import Callable, Dict, List, Set, Tuple, cast
 from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.pattern_detectors.clang_loop_vectorization_detector import ClangVectorizationInfo
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
@@ -49,40 +50,40 @@ def execute_perfograph_selection(
     considered_pattern_ids = detection_result.patterns.get_pattern_ids()
 
     # collect loops to be classified
-    loop_to_patterns_dict: Dict[LineID, List[int]] = dict()
+    loop_to_patterns_dict: Dict[Node, List[int]] = dict()
     for pattern_id in considered_pattern_ids:
-        loop_line = detection_result.patterns.get_pattern_from_id(pattern_id).start_line
-        if loop_line not in loop_to_patterns_dict:
-            loop_to_patterns_dict[loop_line] = []
-        loop_to_patterns_dict[loop_line].append(pattern_id)
+        loop_node = detection_result.patterns.get_pattern_from_id(pattern_id)._node
+        if loop_node not in loop_to_patterns_dict:
+            loop_to_patterns_dict[loop_node] = []
+        loop_to_patterns_dict[loop_node].append(pattern_id)
     print("Loop_to_patterns:", loop_to_patterns_dict)
 
     # get target selection from perfograph per loop
-    target_by_loop: Dict[LineID, PerfoGraphLoopTarget] = dict()
-    for loop_line in loop_to_patterns_dict:
+    target_by_loop: Dict[Node, PerfoGraphLoopTarget] = dict()
+    for loop_node in loop_to_patterns_dict:
         if len(loop_to_patterns_dict) > 1:
-            target_by_loop[loop_line] = select_loop_target(loop_line)
+            target_by_loop[loop_node] = select_loop_target(detection_result.pet, loop_node)
     print("target_by_loop: ", target_by_loop)
 
     # collect the suggestion for application
     configuration: List[int] = []
-    for loop_line in loop_to_patterns_dict:
-        if len(loop_to_patterns_dict[loop_line]) > 1:
+    for loop_node in loop_to_patterns_dict:
+        if len(loop_to_patterns_dict[loop_node]) > 1:
             # select pattern representing the determined target
             found_match = False
-            for pattern_id in loop_to_patterns_dict[loop_line]:
+            for pattern_id in loop_to_patterns_dict[loop_node]:
                 pattern = detection_result.patterns.get_pattern_from_id(pattern_id)
-                if target_by_loop[loop_line] == PerfoGraphLoopTarget.SEQUENTIAL:
+                if target_by_loop[loop_node] == PerfoGraphLoopTarget.SEQUENTIAL:
                     # select nothing
                     found_match = True
                     break
-                elif target_by_loop[loop_line] == PerfoGraphLoopTarget.OMP_FOR:
+                elif target_by_loop[loop_node] == PerfoGraphLoopTarget.OMP_FOR:
                     # select pattern of type doall or reduction
                     if type(pattern) == ReductionInfo or type(pattern) == DoAllInfo:
                         found_match = True
                         configuration.append(pattern_id)
                         break
-                elif target_by_loop[loop_line] == PerfoGraphLoopTarget.CLANG_VECTORIZE:
+                elif target_by_loop[loop_node] == PerfoGraphLoopTarget.CLANG_VECTORIZE:
                     # select pattern of type clang_vectorizable_loop
                     if type(pattern) == ClangVectorizationInfo:
                         found_match = True
@@ -91,14 +92,14 @@ def execute_perfograph_selection(
             if not found_match:
                 raise ValueError(
                     "Could not find a pattern to implement the perfograph target selection: "
-                    + str(target_by_loop[loop_line])
+                    + str(target_by_loop[loop_node])
                     + " for loop at line "
-                    + str(loop_line)
+                    + str(loop_node.start_position())
                 )
 
         else:
             # selection is trivial
-            configuration.append(loop_to_patterns_dict[loop_line][0])
+            configuration.append(loop_to_patterns_dict[loop_node][0])
 
     print("configuration:", configuration)
 

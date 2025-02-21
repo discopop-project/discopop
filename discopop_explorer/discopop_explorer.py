@@ -127,7 +127,7 @@ def __run(
     load_existing_doall_and_reduction_patterns: bool = False,
     jobs: Optional[int] = None,
 ) -> DetectionResult:
-    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))  # type: ignore
+    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping), project_path)  # type: ignore
     print("PET CREATION FINISHED.")
     # pet.show()
     # TODO add visualization

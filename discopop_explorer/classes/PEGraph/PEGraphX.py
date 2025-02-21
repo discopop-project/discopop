@@ -86,14 +86,18 @@ class PEGraphX(object):
     reduction_vars: List[Dict[str, str]]
     main: Node
     pos: Dict[Any, Any]
+    project_path: str
 
-    def __init__(self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos: Dict[Any, Any]):
+    def __init__(
+        self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos: Dict[Any, Any], project_path: str
+    ):
         self.g = g
         self.reduction_vars = reduction_vars
         for _, node in g.nodes(data="data"):
             if node.name == "main":
                 self.main = node
         self.pos = pos
+        self.project_path = project_path
 
     @classmethod
     def from_parsed_input(
@@ -102,6 +106,7 @@ class PEGraphX(object):
         dependencies_list: List[DependenceItem],
         loop_data: Dict[str, LoopData],
         reduction_vars: List[Dict[str, str]],
+        project_path: str,
     ) -> PEGraphX:
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
         g = nx.MultiDiGraph()
@@ -192,7 +197,7 @@ class PEGraphX(object):
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
         print("\tAdded dependencies...")
-        return cls(g, reduction_vars, pos)
+        return cls(g, reduction_vars, pos, project_path)
 
     def map_static_and_dynamic_dependencies(self) -> None:
         print("\tMapping static to dynamic dependencies...")

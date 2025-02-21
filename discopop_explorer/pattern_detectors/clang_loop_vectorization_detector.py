@@ -56,8 +56,8 @@ class ClangVectorizationInfo(PatternInfo):
         """
         PatternInfo.__init__(self, node)
         self.pragma = "#pragma clang loop vectorize(enable)"
-        self.VF = get_clang_vectorization_factor(node.start_position())
-        self.IF = get_clang_interleave_factor(node.start_position())
+        self.VF = get_clang_vectorization_factor(pet, node)
+        self.IF = get_clang_interleave_factor(pet, node)
 
     def __str__(self) -> str:
         return (
