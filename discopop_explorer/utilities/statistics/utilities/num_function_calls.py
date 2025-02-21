@@ -29,6 +29,8 @@ def get_num_function_calls(pet: PEGraphX, node: Node, visited: List[Node]) -> in
                     continue
                 function_calls += get_num_function_calls(pet, pet.node_at(t), copy.deepcopy(visited))
         else:
+            if child in visited:
+                continue
             function_calls += get_num_function_calls(pet, child, copy.deepcopy(visited))
 
     return function_calls

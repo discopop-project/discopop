@@ -820,9 +820,9 @@ def __remove_duplicate_variables(vars: List[Variable]) -> List[Variable]:
     buffer: List[str] = []
     vars_wo_duplicates: List[Variable] = []
     for var in vars:
-        if var.name + var.defLine not in buffer:
+        if str(var.name) + var.defLine not in buffer:
             vars_wo_duplicates.append(var)
-            buffer.append(var.name + var.defLine)
+            buffer.append(str(var.name) + var.defLine)
         else:
             # duplicate found
             continue

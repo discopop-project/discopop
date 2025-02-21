@@ -6,9 +6,12 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import itertools
+import json
 import logging
 import os
-from typing import List, Tuple, cast
+import time
+from typing import List, Set, Tuple, cast
 
 import jsonpickle  # type: ignore
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
@@ -18,11 +21,24 @@ from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeC
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor, NodeShape, StatisticsGraph
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
+from discopop_library.EmpiricalAutotuning.optimization.check_single_combination import check_single_combination
+from discopop_library.EmpiricalAutotuning.optimization.linear_hotspot_combination import (
+    execute_linear_hotspot_combination,
+)
+from discopop_library.EmpiricalAutotuning.optimization.linear_hotspot_combination_with_refinement import (
+    execute_linear_hotspot_combination_with_refinement,
+)
+from discopop_library.EmpiricalAutotuning.optimization.measure_only import execute_measure_only
+
+from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
+from discopop_library.EmpiricalAutotuning.priorities import get_prioritized_configurations
 from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
+from discopop_library.FolderStructure.setup import setup_auto_tuner
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
+from discopop_library.HostpotLoader.utilities import get_patterns_by_hotspot_type
 from discopop_library.result_classes.DetectionResult import DetectionResult
 
 logger = logging.getLogger("Autotuner")
@@ -39,13 +55,16 @@ def get_unique_configuration_id() -> int:
 
 def run(arguments: AutotunerArguments) -> None:
     logger.info("Starting discopop autotuner.")
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, str]] = []
+    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]] = []
     statistics_graph = StatisticsGraph()
     statistics_step_num = 0
 
+    setup_auto_tuner(os.getcwd())
+    auto_tuner_dir = os.path.join(os.getcwd(), "auto_tuner")
+
     # get untuned reference result
-    reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path)
-    reference_configuration.execute(timeout=None, is_initial=True)
+    reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path, "par_settings.json")
+    reference_configuration.execute(arguments, timeout=None, is_initial=True)
     statistics_graph.set_root(
         reference_configuration.get_statistics_graph_label(),
         color=reference_configuration.get_statistics_graph_color(),
@@ -58,13 +77,14 @@ def run(arguments: AutotunerArguments) -> None:
             cast(ExecutionResult, reference_configuration.execution_result).runtime,
             cast(ExecutionResult, reference_configuration.execution_result).return_code,
             cast(ExecutionResult, reference_configuration.execution_result).result_valid,
+            cast(ExecutionResult, reference_configuration.execution_result).thread_sanitizer,
             reference_configuration.root_path,
         )
     )
 
     # load hotspots
     hsl_arguments = HotspotLoaderArguments(
-        arguments.log_level, arguments.write_log, False, arguments.dot_dp_path, True, False, True, True, True
+        "WARNING", arguments.write_log, False, arguments.dot_dp_path, True, False, True, True, True
     )
     hotspot_information = load_hotspots(hsl_arguments)
     logger.debug("loaded hotspots")
@@ -84,189 +104,111 @@ def run(arguments: AutotunerArguments) -> None:
                 if info[4] > max_avg_runtime:
                     max_avg_runtime = info[4]
 
-    # greedy search for best suggestion configuration:
-    # for all hotspot types in descending importance:
+    # identify the best suggestion
     visited_configurations: List[List[SUGGESTION_ID]] = []
     best_suggestion_configuration: Tuple[List[SUGGESTION_ID], CodeConfiguration] = ([], reference_configuration)
-    for hotspot_type in [HotspotType.YES, HotspotType.MAYBE, HotspotType.NO]:
-        if hotspot_information:
-            # hotspot information exists
-            if hotspot_type not in hotspot_information:
-                continue
-            # for all loops in descending order by average execution time
-            loop_tuples = hotspot_information[hotspot_type]
-            sorted_loop_tuples = sorted(loop_tuples, key=lambda x: x[4], reverse=True)
+
+    time_limit_s = 3600  # seconds
+    linear_hotspot_combination = False
+    linear_hotspot_combination_with_refinement = True
+
+    if arguments.suggestions is None:
+        if linear_hotspot_combination:
+            execute_linear_hotspot_combination(
+                detection_result,
+                hotspot_information,
+                logger,
+                time_limit_s,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                debug_stats,
+                get_unique_configuration_id,
+            )
+        elif linear_hotspot_combination_with_refinement:
+            execute_linear_hotspot_combination_with_refinement(
+                detection_result,
+                hotspot_information,
+                logger,
+                time_limit_s,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                debug_stats,
+                get_unique_configuration_id,
+            )
         else:
-            # no hotspot information was found
-            # get loop tuples from detection result
-            loop_nodes = all_nodes(detection_result.pet, type=LoopNode)
-            loop_tuples = [(l.file_id, l.start_line, HotspotNodeType.LOOP, "", 0.0) for l in loop_nodes]
-
-        sorted_loop_tuples = sorted(loop_tuples, key=lambda x: x[4], reverse=True)
-
-        for loop_tuple in sorted_loop_tuples:
-            loop_str = (
-                ""
-                + str(loop_tuple[0])
-                + "@"
-                + str(loop_tuple[1])
-                + " - "
-                + str(loop_tuple[2])
-                + " "
-                + loop_tuple[3]
-                + " "
-                + str(round(loop_tuple[4], 3))
-                + "s"
+            execute_measure_only(
+                detection_result,
+                hotspot_information,
+                logger,
+                time_limit_s,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                debug_stats,
+                get_unique_configuration_id,
             )
-            # check if the loop contributes more than 1% to the total runtime, if hotspot information exists
-            loop_contributes_significantly = (loop_tuple[4] > (max_avg_runtime / 100)) or not hotspot_information
-            if not loop_contributes_significantly:
-                statistics_graph.add_child(loop_str, color=NodeColor.ORANGE)
-            else:
-                statistics_graph.add_child(loop_str)
-            statistics_graph.update_current_node(loop_str)
-            # identify all applicable suggestions for this loop
-            logger.debug(str(hotspot_type) + " loop: " + str(loop_tuple))
-            if not loop_contributes_significantly:
-                logger.debug("--> Skipping loop due to runtime contribution < 1%")
-                continue
-            # create code and execute for all applicable suggestions
-            applicable_suggestions = get_applicable_suggestion_ids(loop_tuple[0], loop_tuple[1], detection_result)
-            logger.debug("--> applicable suggestions: " + str(applicable_suggestions))
-            suggestion_effects: List[Tuple[List[SUGGESTION_ID], CodeConfiguration]] = []
-            for suggestion_id in applicable_suggestions:
-                current_config = best_suggestion_configuration[0] + [suggestion_id]
-                if current_config in visited_configurations:
-                    continue
-                visited_configurations.append(current_config)
-                tmp_config = reference_configuration.create_copy(get_unique_configuration_id)
-                tmp_config.apply_suggestions(arguments, current_config)
-                tmp_config.execute(timeout=timeout_after)
-                statistics_graph.add_child(
-                    "step "
-                    + str(statistics_step_num)
-                    + "\n"
-                    + str(current_config)
-                    + "\n"
-                    + tmp_config.get_statistics_graph_label(),
-                    shape=NodeShape.BOX,
-                    color=tmp_config.get_statistics_graph_color(),
-                )
-                # only consider valid code
-                debug_stats.append(
-                    (
-                        current_config,
-                        cast(ExecutionResult, tmp_config.execution_result).runtime,
-                        cast(ExecutionResult, tmp_config.execution_result).return_code,
-                        cast(ExecutionResult, tmp_config.execution_result).result_valid,
-                        tmp_config.root_path,
-                    )
-                )
-                if (
-                    cast(ExecutionResult, tmp_config.execution_result).result_valid
-                    and cast(ExecutionResult, tmp_config.execution_result).return_code == 0
-                ):
-                    suggestion_effects.append((current_config, tmp_config))
-                else:
-                    if arguments.skip_cleanup:
-                        continue
-                    # delete invalid code
-                    tmp_config.deleteFolder()
-            # add current best configuration for reference / to detect "no suggestions is beneficial"
-            suggestion_effects.append(best_suggestion_configuration)
-            statistics_graph.add_child(
-                "step "
-                + str(statistics_step_num)
-                + "\n"
-                + str(best_suggestion_configuration[0])
-                + "\n"
-                + best_suggestion_configuration[1].get_statistics_graph_label(),
-                shape=NodeShape.BOX,
-                color=best_suggestion_configuration[1].get_statistics_graph_color(),
-            )
-
-            logger.debug(
-                "Suggestion effects:\n" + str([(str(t[0]), str(t[1].execution_result)) for t in suggestion_effects])
-            )
-
-            # select the best option and save it in the current best_configuration
-            sorted_suggestion_effects = sorted(
-                suggestion_effects, key=lambda x: cast(ExecutionResult, x[1].execution_result).runtime
-            )
-            buffer = sorted_suggestion_effects[0]
-            best_suggestion_configuration = buffer
-            sorted_suggestion_effects = sorted_suggestion_effects[1:]  # in preparation of cleanup step
-            logger.debug(
-                "Current best configuration: "
-                + str(best_suggestion_configuration[0])
-                + " stored at "
-                + best_suggestion_configuration[1].root_path
-            )
-            # update the timeout according to the new time measurement
-            timeout_after = max(
-                3.0, cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime * 2
-            )
-            logger.debug("Updated timeout to: " + str(round(timeout_after, 3)))
-
-            # update the graph and store the current best configuration
-            statistics_graph.add_child(
-                "step "
-                + str(statistics_step_num)
-                + "\n"
-                + str(best_suggestion_configuration[0])
-                + "\n"
-                + best_suggestion_configuration[1].get_statistics_graph_label(),
-                shape=NodeShape.BOX,
-                color=best_suggestion_configuration[1].get_statistics_graph_color(),
-            )
-            statistics_graph.update_current_node(
-                "step "
-                + str(statistics_step_num)
-                + "\n"
-                + str(best_suggestion_configuration[0])
-                + "\n"
-                + best_suggestion_configuration[1].get_statistics_graph_label()
-            )
-            statistics_graph.output()
-            statistics_step_num += 1
-            # cleanup other configurations (excluding original version)
-            if not arguments.skip_cleanup:
-                logger.debug("Cleanup:")
-                for _, config in sorted_suggestion_effects:
-                    if config.root_path == reference_configuration.root_path:
-                        continue
-                    config.deleteFolder()
-
-            # continue with the next loop
-
-    # show debug stats
-    stats_str = "Configuration measurements:\n"
-    stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[path]\n"
-    for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
-        stats_str += (
-            str(round(stats[1], 3))
-            + "s"
-            + "\t"
-            + str(stats[0])
-            + "\t"
-            + str(stats[2])
-            + "\t"
-            + str(stats[3])
-            + "\t"
-            + str(stats[4])
-            + "\n"
+    else:
+        check_single_combination(
+            detection_result,
+            hotspot_information,
+            logger,
+            time_limit_s,
+            reference_configuration,
+            arguments,
+            timeout_after,
+            debug_stats,
+            get_unique_configuration_id,
+            [int(s) for s in arguments.suggestions.split(",")],
         )
-    logger.info(stats_str)
+
+    # select best option and create code folder
+    if linear_hotspot_combination:
+        for stat_entry in sorted(debug_stats, key=lambda x: len(x[0]), reverse=True):
+            if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
+                sibling_config = reference_configuration.create_copy(
+                    arguments, "par_settings.json", get_unique_configuration_id
+                )
+                sibling_config.apply_suggestions(arguments, stat_entry[0])
+                sibling_config.execute(arguments, timeout=timeout_after)
+                best_suggestion_configuration = (stat_entry[0], sibling_config)
+                if not arguments.skip_cleanup:
+                    sibling_config.deleteFolder()
+                break
+    elif linear_hotspot_combination_with_refinement:
+        sibling_config = reference_configuration.create_copy(
+            arguments, "par_settings.json", get_unique_configuration_id
+        )
+        sibling_config.apply_suggestions(arguments, debug_stats[-1][0])
+        sibling_config.execute(arguments, timeout=timeout_after)
+        best_suggestion_configuration = (debug_stats[-1][0], sibling_config)
+        if not arguments.skip_cleanup:
+            sibling_config.deleteFolder()
+    elif not linear_hotspot_combination_with_refinement:
+        for stat_entry in sorted(debug_stats, key=lambda x: (x[1])):
+            if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
+                sibling_config = reference_configuration.create_copy(
+                    arguments, "par_settings.json", get_unique_configuration_id
+                )
+                sibling_config.apply_suggestions(arguments, stat_entry[0])
+                sibling_config.execute(arguments, timeout=timeout_after)
+                best_suggestion_configuration = (stat_entry[0], sibling_config)
+                if not arguments.skip_cleanup:
+                    sibling_config.deleteFolder()
+                break
+
+    show_info_stats(debug_stats, logger)
 
     # export measurements for pdf creation
     if False:  # export all measurements
         with open("measurements.csv", "w+") as f:
-            f.write("ID; time; return_code;\n")
+            f.write("ID; time; return_code; thread_sanitizer\n")
             for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
                 f.write(str(stats[0]) + "; " + str(round(stats[1], 3)) + "; " + str(stats[2]) + ";" + "\n")
     else:  # export only sequential and best measurement
         with open("measurements.csv", "w+") as f:
-            f.write("ID; time; return_code;\n")
+            f.write("ID; time; return_code; thread_sanitizer\n")
             # write sequential measurement
             for stats in sorted(debug_stats, key=lambda x: x[1], reverse=True):
                 if str(stats[0]) == "[]":
@@ -297,6 +239,28 @@ def run(arguments: AutotunerArguments) -> None:
         print("Speedup: ", round(speedup, 3))
         print("Parallel efficiency: ", round(parallel_efficiency, 3))
         print("##############################")
+
+        # export results to result.json
+        results_json_path = os.path.join(auto_tuner_dir, "results.json")
+        if os.path.exists(results_json_path):
+            with open(results_json_path, "r") as f:
+                results_dict = json.load(f)
+        else:
+            results_dict = dict()
+
+        if arguments.configuration not in results_dict:
+            results_dict[arguments.configuration] = dict()
+        results_dict[arguments.configuration]["applied_suggestions"] = [
+            str(s) for s in best_suggestion_configuration[0]
+        ]
+        results_dict[arguments.configuration]["speedup"] = round(speedup, 3)
+        results_dict[arguments.configuration]["efficiency"] = round(parallel_efficiency, 3)
+        results_dict[arguments.configuration]["time"] = cast(
+            ExecutionResult, best_suggestion_configuration[1].execution_result
+        ).runtime
+
+        with open(results_json_path, "w+") as f:
+            json.dump(results_dict, f, sort_keys=True, indent=4)
 
     # output statistics graph
     statistics_graph.output()

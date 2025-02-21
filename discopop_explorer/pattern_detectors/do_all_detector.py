@@ -17,7 +17,7 @@ from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edge
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_explorer.functions.PEGraph.queries.variables import get_variables
-from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
+from discopop_explorer.functions.PEGraph.traversal.parent import get_all_parent_functions, get_parent_function
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
@@ -57,6 +57,19 @@ class DoAllInfo(PatternInfo):
         self.reduction = r
         self.scheduling_clause = "static"
         self.collapse_level = 1
+        self.pattern_tag = self.get_tag()
+
+        # determine affected cu and line ids
+        affected_cus = subtree_of_type(pet, node)
+        self.affected_cu_ids = [n.id for n in affected_cus]
+        self.affected_line_ids: List[LineID] = []
+        for node in affected_cus:
+            self.affected_line_ids += [
+                lid for lid in node.get_contained_line_ids() if lid not in self.affected_line_ids
+            ]
+        self.affected_functions = [
+            str(f.start_position()) + ":" + f.name for f in [get_parent_function(pet, node)]
+        ]  # get_all_parent_functions(pet, node)]
 
     def __str__(self) -> str:
         return (
@@ -75,6 +88,15 @@ class DoAllInfo(PatternInfo):
             f"last private: {[v.name for v in self.last_private]}\n"
             f"scheduling clause: {self.scheduling_clause}"
         )
+
+    def get_tag(self) -> str:
+        result = super().get_tag() + "_"
+        result += f"p({[v.name for v in self.private]})_"
+        result += f"s({[v.name for v in self.shared]})_"
+        result += f"fp({[v.name for v in self.first_private]})_"
+        result += f"r({[v.name for v in self.reduction]})_"
+        result += f"lp({[v.name for v in self.last_private]})"
+        return result
 
 
 global_pet = None

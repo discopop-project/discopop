@@ -19,7 +19,7 @@ logger = logging.getLogger("FolderStructure").getChild("Setup")
 
 def setup_explorer(path: str = "") -> None:
     tmp_logger = logger.getChild("explorer")
-    tmp_logger.info("Start")
+    tmp_logger.debug("Start")
 
     teardown_explorer(path)
 
@@ -34,24 +34,33 @@ def setup_explorer(path: str = "") -> None:
     # initialize the line_mapping.json
     initialize_line_mapping(load_file_mapping(os.path.join(path, "FileMapping.txt")), path)
 
-    tmp_logger.info("Done")
+    tmp_logger.debug("Done")
 
 
 def setup_patch_generator(path: str = "") -> None:
     tmp_logger = logger.getChild("patch_generator")
-    tmp_logger.info("Start")
+    tmp_logger.debug("Start")
     patch_generator_dir = os.path.join(path, "patch_generator")
     if not os.path.exists(patch_generator_dir):
         os.mkdir(patch_generator_dir)
 
     setup_patch_applicator()
 
-    tmp_logger.info("Done")
+    tmp_logger.debug("Done")
+
+
+def setup_auto_tuner(path: str = "") -> None:
+    tmp_logger = logger.getChild("auto_tuner")
+    tmp_logger.debug("Start")
+    auto_tuner_dir = os.path.join(path, "auto_tuner")
+    if not os.path.exists(auto_tuner_dir):
+        os.mkdir(auto_tuner_dir)
+    tmp_logger.debug("Done")
 
 
 def setup_patch_applicator(path: str = "") -> None:
     tmp_logger = logger.getChild("patch_applicator")
-    tmp_logger.info("Start")
+    tmp_logger.debug("Start")
     # create a directory for the patch applicator
     patch_applicator_dir = os.path.join(path, "patch_applicator")
     if not os.path.exists(patch_applicator_dir):
@@ -63,14 +72,24 @@ def setup_patch_applicator(path: str = "") -> None:
         with open(applied_suggestions_file, "w+") as f:
             f.write(json.dumps({"applied": []}))
 
-    tmp_logger.info("Done")
+    tmp_logger.debug("Done")
 
 
 def setup_optimizer(path: str = "") -> None:
     tmp_logger = logger.getChild("optimizer")
-    tmp_logger.info("Start")
+    tmp_logger.debug("Start")
     optimizer_dir = os.path.join(path, "optimizer")
     if not os.path.exists(optimizer_dir):
         os.mkdir(optimizer_dir)
 
-    tmp_logger.info("Done")
+    tmp_logger.debug("Done")
+
+
+def setup_sanity_checker(path: str = "") -> None:
+    tmp_logger = logger.getChild("sanity_checker")
+    tmp_logger.debug("Start")
+    sanity_checker_dir = os.path.join(path, "sanity_checker")
+    if not os.path.exists(sanity_checker_dir):
+        os.mkdir(sanity_checker_dir)
+
+    tmp_logger.debug("Done")
