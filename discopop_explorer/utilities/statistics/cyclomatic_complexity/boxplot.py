@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 # define aliases for readability
 from subprocess import check_output
 from discopop_library.PathManagement.PathManagement import load_file_mapping
-
+import logging
 
 MIN = int
 MAX = int
@@ -24,17 +24,23 @@ AVG = int
 LOWER_QUART = int
 UPPER_QUART = int
 
+logger = logging.getLogger("statistics").getChild("CC").getChild("boxplot")
+
 
 def get_cyclomatic_complexities_for_boxplot(
     arguments: ExplorerArguments, res: DetectionResult
 ) -> Tuple[MIN, MAX, AVG, LOWER_QUART, UPPER_QUART]:
     file_mapping = load_file_mapping(arguments.file_mapping_file)
     # get summed cyclomatic complexity for all functions in all files
-    cmd = ["pmccabe", "-C"]
-    for file_id in file_mapping:
-        file_path = file_mapping[file_id]
-        cmd.append(str(file_path))
-    out = check_output(cmd).decode("utf-8")
+    try:
+        cmd = ["pmccabe", "-C"]
+        for file_id in file_mapping:
+            file_path = file_mapping[file_id]
+            cmd.append(str(file_path))
+        out = check_output(cmd).decode("utf-8")
+    except FileNotFoundError as fnfe:
+        logger.error(str(fnfe))
+        return (0, 0, 0, 0, 0)
 
     # unpack and store results temporarily
     cyclomatic_complexities: List[int] = []

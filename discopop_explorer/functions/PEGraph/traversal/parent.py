@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, List, Optional, cast
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.classes.PEGraph.Node import Node
 
@@ -41,3 +41,19 @@ def get_parent_function(pet: PEGraphX, node: Node) -> FunctionNode:
 
     assert node.parent_function_id
     return cast(FunctionNode, pet.node_at(node.parent_function_id))
+
+
+def get_all_parent_functions(pet: PEGraphX, node: Node) -> List[FunctionNode]:
+    queue: List[Node] = [node]
+    result: set[FunctionNode] = set()
+    while queue:
+        current = queue.pop()
+        current_parent = get_parent_function(pet, current)
+        if current_parent not in queue and current_parent not in result:
+            queue.append(current_parent)
+        if current_parent not in result:
+            result.add(current_parent)
+        for in_edge in in_edges(pet, current.id, EdgeType.CALLSNODE):
+            queue.append(pet.node_at(in_edge[0]))
+
+    return list(result)

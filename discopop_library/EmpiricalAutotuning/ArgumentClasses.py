@@ -9,6 +9,8 @@
 from dataclasses import dataclass
 import logging
 import os
+from pathlib import Path
+from typing import Optional
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
 
 logger = logging.getLogger("AutotunerArguments")
@@ -18,11 +20,18 @@ logger = logging.getLogger("AutotunerArguments")
 class AutotunerArguments(GeneralArguments):
     """Container Class for the arguments passed to the discopop autotuner"""
 
-    project_path: str
     dot_dp_path: str
     skip_cleanup: bool
+    sanitize: bool
+    configuration: str
+    suggestions: Optional[str]
+    allow_plots: bool
+    project_path: str = ""
+    configuration_path: str = ""
 
     def __post_init__(self) -> None:
+        self.project_path = str(Path(self.dot_dp_path).parent.absolute())
+        self.configuration_path = os.path.join(self.dot_dp_path, "project", self.configuration)
         self.__validate()
 
     def log(self) -> None:
@@ -35,14 +44,18 @@ class AutotunerArguments(GeneralArguments):
 
         required_files = [
             self.project_path,
-            os.path.join(self.project_path, "DP_COMPILE.sh"),
-            os.path.join(self.project_path, "DP_EXECUTE.sh"),
             self.dot_dp_path,
             os.path.join(self.dot_dp_path, "FileMapping.txt"),
             os.path.join(self.dot_dp_path, "profiler"),
             os.path.join(self.dot_dp_path, "explorer"),
             os.path.join(self.dot_dp_path, "patch_generator"),
             os.path.join(self.dot_dp_path, "line_mapping.json"),
+            os.path.join(self.dot_dp_path, "project"),
+            os.path.join(self.dot_dp_path, "project", self.configuration),
+            os.path.join(self.dot_dp_path, "project", self.configuration, "par_settings.json"),
+            os.path.join(self.dot_dp_path, "project", self.configuration, "hd_settings.json"),
+            os.path.join(self.dot_dp_path, "project", self.configuration, "compile.sh"),
+            os.path.join(self.dot_dp_path, "project", self.configuration, "execute.sh"),
         ]
         for file in required_files:
             if not os.path.exists(file):
