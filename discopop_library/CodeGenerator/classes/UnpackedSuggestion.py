@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import json
 from typing import Dict, List, Any, Optional, Tuple
 
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
@@ -175,7 +176,7 @@ class UnpackedSuggestion(object):
             pragma.pragma_str = "#pragma omp target teams distribute parallel for "
             pragma.pragma_str += "device(" + str(device_id) + ") "
         else:
-            pragma.pragma_str = "#pragma omp parallel for "
+            pragma.pragma_str = self.values["pragma"] + " "
         if "collapse_level" in self.values:
             if self.values["collapse_level"] > 1:
                 pragma.pragma_str += "collapse(" + str(self.values["collapse_level"]) + ") "
@@ -477,7 +478,58 @@ class UnpackedSuggestion(object):
 
         return pragmas
 
-    def get_pragmas(self) -> List[Pragma]:
+    def __get_parallel_region_pragmas(self, contained_patterns: Optional[Dict[str, List[str]]]) -> List[Pragma]:
+        pragmas: List[Pragma] = []
+
+        # omp parallel pragma
+        pragma = Pragma()
+        pragma.file_id = self.file_id
+        pragma.start_line = self.start_line
+        pragma.end_line = self.end_line
+        pragma.pragma_position = PragmaPosition.BEFORE_START
+        pragma.pragma_str = self.values["pragma"]
+        if len(self.values["shared_vars"]) > 0:
+            pragma.pragma_str += " shared("
+            pragma.pragma_str += ",".join(self.values["shared_vars"])
+            pragma.pragma_str += ")"
+
+        # open bracket
+        pragma_open_bracket = Pragma()
+        pragma_open_bracket.file_id = self.file_id
+        pragma_open_bracket.start_line = self.start_line
+        pragma_open_bracket.end_line = self.end_line
+        pragma_open_bracket.pragma_position = PragmaPosition.BEFORE_START
+        pragma_open_bracket.pragma_str = "{"
+
+        # closed bracket
+        pragma_closing_bracket = Pragma()
+        pragma_closing_bracket.file_id = self.file_id
+        pragma_closing_bracket.start_line = self.start_line
+        pragma_closing_bracket.end_line = self.end_line
+        pragma_closing_bracket.pragma_position = PragmaPosition.BEFORE_END
+        pragma_closing_bracket.pragma_str = "}"
+
+        # add contained pragmas as children
+        child_pragmas: List[Pragma] = []
+        if contained_patterns is not None:
+            for contained_pattern_id in self.values["contains_patterns"]:
+                for pattern_type in contained_patterns:
+                    for pattern_str in contained_patterns[pattern_type]:
+                        pattern_dict = json.loads(pattern_str)
+                        if pattern_dict["pattern_id"] == contained_pattern_id:
+                            ups = UnpackedSuggestion(pattern_type, pattern_dict)
+                            child_pragmas += ups.get_pragmas(contained_patterns)
+
+        pragmas.append(pragma)
+        pragmas.append(pragma_open_bracket)
+        # due to positioning, child pragmas are added individually instead of via the pragma.children interface
+        for cp in child_pragmas:
+            pragmas.append(cp)
+        pragmas.append(pragma_closing_bracket)
+
+        return pragmas
+
+    def get_pragmas(self, contained_patterns: Optional[Dict[str, List[str]]]) -> List[Pragma]:
         """returns a list of source code lines and pragmas to be inserted into the code preview"""
         pragmas = []
 
@@ -504,6 +556,8 @@ class UnpackedSuggestion(object):
             pragmas += self.__get_combined_gpu_pragmas()
         elif self.type == "device_update":
             pragmas += self.__get_device_update_pragmas()
+        elif self.type == "parallel_region":
+            pragmas += self.__get_parallel_region_pragmas(contained_patterns=contained_patterns)
         else:
             pragma = Pragma()
             pragma.file_id = self.file_id

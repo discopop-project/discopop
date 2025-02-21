@@ -53,6 +53,7 @@ def from_json_strings(
     compile_check_command: Optional[str] = None,
     CC: str = "clang",
     CXX: str = "clang++",
+    contained_patterns: Optional[Dict[str, List[str]]] = None,
 ) -> Dict[int, str]:
     """Insert the parallel patterns described by the given json strings into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -71,6 +72,7 @@ def from_json_strings(
         "pipeline",
         "simple_gpu",
         "combined_gpu",
+        "parallel_region",
     ]
     for type_str in pattern_precedence:
         if type_str not in pattern_json_strings_by_type:
@@ -82,13 +84,14 @@ def from_json_strings(
     file_id_to_content_buffer: Dict[int, ContentBuffer] = dict()
     # iterate over UnpackedSuggestion objects
     for suggestion in unpacked_suggestions:
+
         # create new ContentBuffer if required
         if suggestion.file_id not in file_id_to_content_buffer:
             file_id_to_content_buffer[suggestion.file_id] = ContentBuffer(
                 suggestion.file_id, file_mapping[suggestion.file_id]
             )
         # get pragma objects represented by the UnpackedSuggestion
-        pragmas = suggestion.get_pragmas()
+        pragmas = suggestion.get_pragmas(contained_patterns=contained_patterns)
         # add pragmas to the ContentBuffer object which corresponds to the fileId specified in UnpackedSuggestions
         for pragma in pragmas:
             successful = file_id_to_content_buffer[suggestion.file_id].add_pragma(
@@ -127,6 +130,7 @@ def from_json_strings_with_mapping(
     CC: str = "clang",
     CXX: str = "clang++",
     host_device_id: int = 0,
+    contained_patterns: Optional[Dict[str, List[str]]] = None,
 ) -> Dict[int, str]:
     """Insert the parallel patterns described by the given json strings into the original source code.
     Returns a dictionary which maps the ID of every modified file to the updated contents of the file.
@@ -145,6 +149,7 @@ def from_json_strings_with_mapping(
         "pipeline",
         "simple_gpu",
         "combined_gpu",
+        "parallel_region",
     ]
     for type_str in pattern_precedence:
         if type_str not in pattern_json_strings_with_mapping_by_type:
@@ -170,7 +175,7 @@ def from_json_strings_with_mapping(
                 suggestion.file_id, file_mapping[suggestion.file_id]
             )
         # get pragma objects represented by the UnpackedSuggestion
-        pragmas = suggestion.get_pragmas()
+        pragmas = suggestion.get_pragmas(contained_patterns=contained_patterns)
         # add pragmas to the ContentBuffer object which corresponds to the fileId specified in UnpackedSuggestions
         for pragma in pragmas:
             successful = file_id_to_content_buffer[suggestion.file_id].add_pragma(

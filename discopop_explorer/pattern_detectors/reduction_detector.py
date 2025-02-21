@@ -57,6 +57,7 @@ class ReductionInfo(PatternInfo):
         self.shared = s
         self.reduction = r
         self.pattern_tag = self.get_tag()
+        self.collapse_level = 1
 
         # determine affected cu and line ids
         affected_cus = subtree_of_type(pet, node)
