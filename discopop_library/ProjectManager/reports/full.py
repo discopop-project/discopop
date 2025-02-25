@@ -13,11 +13,11 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 
 import logging
 
-from discopop_library.ProjectManager.reports.scaling import generate_scaling_report
+from discopop_library.ProjectManager.reports.execution_time import generate_execution_time_report
 
 logger = logging.getLogger("ConfigurationManager")
 
 
 def generate_full_report(arguments: ProjectManagerArguments) -> None:
 
-    generate_scaling_report(arguments)
+    generate_execution_time_report(arguments)
