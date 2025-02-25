@@ -20,6 +20,10 @@ def initialize_directories(arguments: ProjectManagerArguments) -> None:
         logger.info("Creating project directory: " + arguments.dot_dp)
         os.mkdir(arguments.dot_dp)
 
+    if not os.path.exists(arguments.project_dir):
+        logger.info("Creating directory: " + arguments.project_dir)
+        os.mkdir(arguments.project_dir)
+
     if not os.path.exists(arguments.project_config_dir):
         logger.info("Creating directory: " + arguments.project_config_dir)
         os.mkdir(arguments.project_config_dir)

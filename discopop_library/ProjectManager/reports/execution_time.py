@@ -21,7 +21,7 @@ logger = logging.getLogger("ConfigurationManager")
 
 
 def generate_execution_time_report(arguments: ProjectManagerArguments) -> None:
-    execution_results_path = os.path.join(arguments.project_config_dir, "execution_results.json")
+    execution_results_path = os.path.join(arguments.project_dir, "execution_results.json")
     if not os.path.exists(execution_results_path):
         print("No execution data available to report generation.")
         return
@@ -152,7 +152,7 @@ def __plot_output(execution_results: Dict[str, Any], arguments: ProjectManagerAr
     ax.legend(loc="upper left", ncols=3)
     ax.set_ylim(0, max_y_value + max_y_value * 0.15)
 
-    reports_dir = os.path.join(arguments.project_config_dir, "reports")
+    reports_dir = os.path.join(arguments.project_dir, "reports")
     if not os.path.exists(reports_dir):
         os.mkdir(reports_dir)
     plt.savefig(os.path.join(reports_dir, "execution_time.png"))
