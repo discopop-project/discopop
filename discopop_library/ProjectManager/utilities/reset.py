@@ -32,3 +32,7 @@ def reset_project(arguments: ProjectManagerArguments) -> None:
     per_path = os.path.join(arguments.dot_dp, "project", "execution_results.json")
     if os.path.exists(per_path):
         os.remove(per_path)
+    # manually delete project/reports if existent
+    per_path = os.path.join(arguments.dot_dp, "project", "reports")
+    if os.path.exists(per_path):
+        shutil.rmtree(per_path)

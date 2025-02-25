@@ -70,9 +70,9 @@ class CodeConfiguration(object):
         ret = execute_configuration(
             cm_args,
             self.root_path,
-            os.path.join(self.config_dot_dp_path, "project", arguments.configuration),
-            os.path.join(self.config_dot_dp_path, "project", arguments.configuration, self.settings_name),
-            os.path.join(self.config_dot_dp_path, "project", arguments.configuration, "compile.sh"),
+            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration),
+            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, self.settings_name),
+            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, "compile.sh"),
             timeout,
         )
 
@@ -85,9 +85,11 @@ class CodeConfiguration(object):
             ret = execute_configuration(
                 cm_args,
                 self.root_path,
-                os.path.join(self.config_dot_dp_path, "project", arguments.configuration),
-                os.path.join(self.config_dot_dp_path, "project", arguments.configuration, self.settings_name),
-                os.path.join(self.config_dot_dp_path, "project", arguments.configuration, "execute.sh"),
+                os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration),
+                os.path.join(
+                    self.config_dot_dp_path, "project", "configs", arguments.configuration, self.settings_name
+                ),
+                os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, "execute.sh"),
                 timeout,
             )
         else:
@@ -131,7 +133,7 @@ class CodeConfiguration(object):
         dest_path = copy_configuration(
             cm_args,
             arguments.configuration,
-            os.path.join(self.config_dot_dp_path, "project", arguments.configuration, settings_name),
+            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, settings_name),
             get_new_configuration_id(),
         )
         new_dot_discopop_path = os.path.join(dest_path, ".discopop")

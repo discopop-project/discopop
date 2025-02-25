@@ -116,7 +116,7 @@ def execute_configuration(
     logger.debug("-> elapsed time: " + str(elapsed) + "s")
 
     # save execution results
-    execution_results_path = os.path.join(arguments.project_config_dir, "execution_results.json")
+    execution_results_path = os.path.join(arguments.project_dir, "execution_results.json")
     execution_results = dict()
     if os.path.exists(execution_results_path):
         with open(execution_results_path, "r") as f:
