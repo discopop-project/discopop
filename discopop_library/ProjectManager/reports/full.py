@@ -6,9 +6,11 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import datetime
 import json
 import os
 import textwrap
+import time
 
 from matplotlib import pyplot as plt
 
@@ -28,6 +30,7 @@ logger = logging.getLogger("ProjectManager")
 
 
 def generate_full_report(arguments: ProjectManagerArguments) -> None:
+    timestamp = datetime.datetime.fromtimestamp(time.time()).strftime("%Y_%m_%d_%H-%M-%S")
     # create settings page
     settings_page = plt.figure()
     settings_page.clf()
@@ -39,14 +42,14 @@ def generate_full_report(arguments: ProjectManagerArguments) -> None:
     text_obj.set_fontsize("small")
 
     # create plots
-    print_console_report(arguments)
-    generate_csv_report(arguments)
-    generate_execution_time_report(arguments)
-    generate_speedup_report(arguments)
-    generate_efficiency_report(arguments)
+    print_console_report(arguments, timestamp)
+    generate_csv_report(arguments, timestamp)
+    generate_execution_time_report(arguments, timestamp)
+    generate_speedup_report(arguments, timestamp)
+    generate_efficiency_report(arguments, timestamp)
 
     # setup PDF creation
-    report_path = os.path.join(arguments.project_dir, "reports", "full_report.pdf")
+    report_path = os.path.join(arguments.project_dir, "reports", timestamp, "full_report.pdf")
     page = PdfPages(report_path)
 
     fig_nums = plt.get_fignums()  # type: ignore

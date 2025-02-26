@@ -15,7 +15,7 @@ from tabulate import tabulate  # type: ignore
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
 
 
-def print_console_report(arguments: ProjectManagerArguments) -> None:
+def print_console_report(arguments: ProjectManagerArguments, timestamp: str) -> None:
     execution_results_path = os.path.join(arguments.project_dir, "execution_results.json")
     if not os.path.exists(execution_results_path):
         print("No execution data available to report generation.")
@@ -23,12 +23,25 @@ def print_console_report(arguments: ProjectManagerArguments) -> None:
     with open(execution_results_path, "r") as f:
         execution_results = json.load(f)
 
-    __print_table(execution_results)
+    __print_table(execution_results, timestamp)
 
 
-def __print_table(execution_results: Dict[str, Any]) -> None:
+def __print_table(execution_results: Dict[str, Any], timestamp: str) -> None:
     # prepare table for display
-    table = [["Config", "Script", "Setting", "Applied Suggestions", "Threads", "Code", "Time", "Speedup", "Efficiency"]]
+    table = [
+        [
+            "Config",
+            "Script",
+            "Setting",
+            "Label",
+            "Applied Suggestions",
+            "Threads",
+            "Code",
+            "Time",
+            "Speedup",
+            "Efficiency",
+        ]
+    ]
     for configuration in execution_results:
         configuration_first_occurrence = True
         for script in execution_results[configuration]:
@@ -40,6 +53,7 @@ def __print_table(execution_results: Dict[str, Any]) -> None:
                 thread_counts_string = ""
                 speedup_string = ""
                 efficiency_string = ""
+                label_string = ""
 
                 # get sequential runtime for speedup calculation
                 seq_runtime: float = -1.0
@@ -59,6 +73,7 @@ def __print_table(execution_results: Dict[str, Any]) -> None:
                     speedup_string += str(round(speedup, 3)) + "\n"
                     efficiency = speedup / execution["thread_count"]
                     efficiency_string += str(round(efficiency, 3)) + "\n"
+                    label_string += (execution["label"] + "\n") if "label" in execution else "\n"
 
                 if configuration_first_occurrence:
                     clean_configuration_str = configuration
@@ -77,6 +92,7 @@ def __print_table(execution_results: Dict[str, Any]) -> None:
                     clean_configuration_str,
                     clean_script_str,
                     clean_setting_str,
+                    label_string,
                     applied_suggestions_string,
                     thread_counts_string,
                     return_codes_string,
@@ -87,4 +103,5 @@ def __print_table(execution_results: Dict[str, Any]) -> None:
                 table.append(table_row)
 
     #    # display
+    print("Timestamp:", timestamp)
     print(tabulate(table, tablefmt="grid"))
