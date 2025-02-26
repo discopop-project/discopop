@@ -132,6 +132,10 @@ def execute_configuration(
     if settings_name not in execution_results[config_name][script_name]:
         execution_results[config_name][script_name][settings_name] = []
 
+    label: str = ""
+    if arguments.apply_suggestions == "auto":
+        label += "auto"
+
     result_dict = {
         "applied_suggestions": applied_suggestions,
         "code": p.returncode,
@@ -140,6 +144,7 @@ def execute_configuration(
         "timeout_expired": timeout_expired,
         "time": elapsed,
         "thread_count": thread_count,
+        "label": label,
     }
     # check for duplicates and overwrite them
     to_be_removed: List[int] = []

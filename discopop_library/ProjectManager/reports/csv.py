@@ -15,7 +15,7 @@ from tabulate import tabulate  # type: ignore
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
 
 
-def generate_csv_report(arguments: ProjectManagerArguments) -> None:
+def generate_csv_report(arguments: ProjectManagerArguments, timestamp: str) -> None:
     execution_results_path = os.path.join(arguments.project_dir, "execution_results.json")
     if not os.path.exists(execution_results_path):
         print("No execution data available to report generation.")
@@ -23,15 +23,16 @@ def generate_csv_report(arguments: ProjectManagerArguments) -> None:
     with open(execution_results_path, "r") as f:
         execution_results = json.load(f)
 
-    __create_csv(arguments, execution_results)
+    __create_csv(arguments, execution_results, timestamp)
 
 
-def __create_csv(arguments: ProjectManagerArguments, execution_results: Dict[str, Any]) -> None:
+def __create_csv(arguments: ProjectManagerArguments, execution_results: Dict[str, Any], timestamp: str) -> None:
     # prepare table for display
     table_column_headers = [
         "Config",
         "Script",
         "Setting",
+        "Label",
         "Applied Suggestions",
         "Threads",
         "Code",
@@ -65,6 +66,7 @@ def __create_csv(arguments: ProjectManagerArguments, execution_results: Dict[str
                     speedup_string += str(round(speedup, 3)) + ";"
                     efficiency = speedup / execution["thread_count"]
                     efficiency_string += str(round(efficiency, 3)) + ";"
+                    label_string = (execution["label"] + ";") if "label" in execution else ";"
 
                     clean_setting_str = setting.replace("_settings.json", "") + ";"
                     clean_configuration_str = configuration + ";"
@@ -74,6 +76,7 @@ def __create_csv(arguments: ProjectManagerArguments, execution_results: Dict[str
                     table_row += clean_configuration_str
                     table_row += clean_script_str
                     table_row += clean_setting_str
+                    table_row += label_string
                     table_row += applied_suggestions_string
                     table_row += thread_counts_string
                     table_row += return_codes_string
@@ -86,7 +89,10 @@ def __create_csv(arguments: ProjectManagerArguments, execution_results: Dict[str
     reports_dir = os.path.join(arguments.project_dir, "reports")
     if not os.path.exists(reports_dir):
         os.mkdir(reports_dir)
-    with open(os.path.join(reports_dir, "report.csv"), "w+") as f:
+    timestamp_dir = os.path.join(reports_dir, timestamp)
+    if not os.path.exists(timestamp_dir):
+        os.mkdir(timestamp_dir)
+    with open(os.path.join(timestamp_dir, "report.csv"), "w+") as f:
         for line in table:
             f.write(line)
             f.write("\n")
