@@ -20,7 +20,7 @@ import numpy as np
 logger = logging.getLogger("ProjectManager")
 
 
-def generate_speedup_report(arguments: ProjectManagerArguments) -> None:
+def generate_speedup_report(arguments: ProjectManagerArguments, timestamp: str) -> None:
     execution_results_path = os.path.join(arguments.project_dir, "execution_results.json")
     if not os.path.exists(execution_results_path):
         print("No execution data available to report generation.")
@@ -28,10 +28,10 @@ def generate_speedup_report(arguments: ProjectManagerArguments) -> None:
     with open(execution_results_path, "r") as f:
         execution_results = json.load(f)
 
-    __plot_output(arguments, execution_results)
+    __plot_output(arguments, execution_results, timestamp)
 
 
-def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[str, Any]) -> None:
+def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[str, Any], timestamp: str) -> None:
     fig, ax = plt.subplots(layout="constrained")  # type: ignore
     configuration_names: List[str] = []
     tmp_values: Dict[str, Dict[int, Dict[str, float]]] = dict()
@@ -131,4 +131,7 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
     reports_dir = os.path.join(arguments.project_dir, "reports")
     if not os.path.exists(reports_dir):
         os.mkdir(reports_dir)
-    plt.savefig(os.path.join(reports_dir, "speedups.pdf"))
+    timestamp_dir = os.path.join(reports_dir, timestamp)
+    if not os.path.exists(timestamp_dir):
+        os.mkdir(timestamp_dir)
+    plt.savefig(os.path.join(timestamp_dir, "speedups.pdf"))
