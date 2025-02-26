@@ -33,8 +33,10 @@ def parse_args() -> ProjectManagerArguments:
     parser.add_argument('-l', '--list', action="store_true", help="Show a list of available configurations. If set, nothing else will be done.")
     parser.add_argument("-i", "--inplace", action="store_true", help="Prevents the creation of project copies when code configurations are executed. Instead, executes the configuration in the project root folder.")
     parser.add_argument("--skip-cleanup", action="store_true", help="Prevents the deletion of created project copies. May requires high amount of disk space.")
-    parser.add_argument("--report", action="store_true", help="Generate and show a report of the stored execution results.")
+    parser.add_argument("--report", action="store_true", help="Generate and a report of the stored execution results.")
+    parser.add_argument("--show-report", action="store_true", help="Show the generated report of the stored execution results.")
     parser.add_argument("-r", "--reset", action="store_true", help="Reset the .discopop folder except configurations in project subdirectory.")
+    parser.add_argument("-rx", "--reset-execution-results", action="store_true", help="Reset the observed execution results and generated reports.")
 
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
@@ -51,9 +53,11 @@ def parse_args() -> ProjectManagerArguments:
         execute_inplace=arguments.inplace,
         skip_cleanup=arguments.skip_cleanup,
         generate_report=arguments.report,
+        show_report=arguments.show_report,
         initialize_directory=arguments.init,
         apply_suggestions=arguments.apply_suggestions,
         reset=arguments.reset,
+        reset_execution_results=arguments.reset_execution_results,
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
     )
