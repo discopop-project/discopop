@@ -73,19 +73,28 @@ def show_configurations_with_execution(
     logger.info("listing configurations with validating execution ...")
     # prepare restrictions
     config_restrictions: Dict[NAME, List[str]] = dict()
+    config_thread_counts: Dict[NAME, Dict[str, int]] = dict()
 
     if restricted_configurations is not None:
         for entry in restricted_configurations:
             if ":" in entry:
                 config_name = entry.split(":")[0]
                 config_mode = entry.split(":")[1]
+                config_thread_count = int(entry.split(":")[2]) if entry.count(":") > 1 else __get_default_thread_count()
             else:
                 config_name = entry
                 config_mode = ""
+                config_thread_count = 1 if config_name == "seq" else __get_default_thread_count()
             if config_name not in config_restrictions:
                 config_restrictions[config_name] = []
             if len(config_mode) > 0:
                 config_restrictions[config_name].append(config_mode)
+            if config_name not in config_thread_counts:
+                config_thread_counts[config_name] = dict()
+            non_null_cfc = 1
+            if config_thread_count is not None:
+                non_null_cfc = config_thread_count
+            config_thread_counts[config_name][config_mode] = non_null_cfc
 
     # collect and restrict configurations if required
     configurations = [f.path for f in os.scandir(arguments.project_config_dir) if f.is_dir()]
@@ -123,12 +132,22 @@ def show_configurations_with_execution(
             )
 
             ret = execute_configuration(
-                arguments, dp_project_path, config, dp_settings, os.path.join(config, "compile.sh")
+                arguments,
+                dp_project_path,
+                config,
+                dp_settings,
+                os.path.join(config, "compile.sh"),
+                __get_thread_count(config, "dp", config_thread_counts),
             )
             dp_compile_successful = ret is not None and ret[0] == 0
 
             ret = execute_configuration(
-                arguments, dp_project_path, config, dp_settings, os.path.join(config, "execute.sh")
+                arguments,
+                dp_project_path,
+                config,
+                dp_settings,
+                os.path.join(config, "execute.sh"),
+                __get_thread_count(config, "dp", config_thread_counts),
             )
             dp_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
@@ -144,11 +163,21 @@ def show_configurations_with_execution(
             )
 
             ret = execute_configuration(
-                arguments, hd_project_path, config, hd_settings, os.path.join(config, "compile.sh")
+                arguments,
+                hd_project_path,
+                config,
+                hd_settings,
+                os.path.join(config, "compile.sh"),
+                __get_thread_count(config, "hd", config_thread_counts),
             )
             hd_compile_successful = ret is not None and ret[0] == 0
             ret = execute_configuration(
-                arguments, hd_project_path, config, hd_settings, os.path.join(config, "execute.sh")
+                arguments,
+                hd_project_path,
+                config,
+                hd_settings,
+                os.path.join(config, "execute.sh"),
+                __get_thread_count(config, "hd", config_thread_counts),
             )
             hd_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
@@ -163,11 +192,21 @@ def show_configurations_with_execution(
                 else copy_configuration(arguments, config, seq_settings)
             )
             ret = execute_configuration(
-                arguments, seq_project_path, config, seq_settings, os.path.join(config, "compile.sh")
+                arguments,
+                seq_project_path,
+                config,
+                seq_settings,
+                os.path.join(config, "compile.sh"),
+                __get_thread_count(config, "seq", config_thread_counts),
             )
             seq_compile_successful = ret is not None and ret[0] == 0
             ret = execute_configuration(
-                arguments, seq_project_path, config, seq_settings, os.path.join(config, "execute.sh")
+                arguments,
+                seq_project_path,
+                config,
+                seq_settings,
+                os.path.join(config, "execute.sh"),
+                __get_thread_count(config, "seq", config_thread_counts),
             )
             seq_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
@@ -182,11 +221,21 @@ def show_configurations_with_execution(
                 else copy_configuration(arguments, config, par_settings)
             )
             ret = execute_configuration(
-                arguments, par_project_path, config, par_settings, os.path.join(config, "compile.sh")
+                arguments,
+                par_project_path,
+                config,
+                par_settings,
+                os.path.join(config, "compile.sh"),
+                __get_thread_count(config, "par", config_thread_counts),
             )
             par_compile_successful = ret is not None and ret[0] == 0
             ret = execute_configuration(
-                arguments, par_project_path, config, par_settings, os.path.join(config, "execute.sh")
+                arguments,
+                par_project_path,
+                config,
+                par_settings,
+                os.path.join(config, "execute.sh"),
+                __get_thread_count(config, "par", config_thread_counts),
             )
             par_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
@@ -274,3 +323,22 @@ def __is_selected(config_restrictions: Dict[NAME, List[str]], config: str, mode:
             or mode in config_restrictions[os.path.basename(config)]
         )
     )
+
+
+def __get_thread_count(config: str, mode: str, config_thread_counts: dict[NAME, Dict[str, int]]) -> int:
+    config_name = os.path.basename(config)
+    if mode == "seq":
+        return 1
+    if config_name in config_thread_counts:
+        if mode in config_thread_counts[config_name]:
+            return config_thread_counts[config_name][mode]
+
+    return __get_default_thread_count()
+
+
+def __get_default_thread_count() -> int:
+    cpu_count = os.cpu_count()
+    if cpu_count is None:
+        return 4  # default if no value could be determined
+
+    return int(cpu_count / 2)  # account of hyperthreading typically encountered as a default

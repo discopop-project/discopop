@@ -28,7 +28,7 @@ logger = logging.getLogger("ProjectManager")
 def run(arguments: ProjectManagerArguments) -> None:
     arguments.log_config(logger, mode="debug")
 
-    if arguments.reset:
+    if arguments.reset or arguments.reset_execution_results:
         reset_project(arguments)
         return
 

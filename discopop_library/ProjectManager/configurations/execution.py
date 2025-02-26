@@ -28,6 +28,7 @@ def execute_configuration(
     config_path: PATH,
     settings_path: PATH,
     script_path: PATH,
+    thread_count: int,
     timeout: Optional[float] = None,
 ) -> Optional[Tuple[int, float, str, str]]:
     # check prerequisites
@@ -71,6 +72,7 @@ def execute_configuration(
         my_env[key] = settings[key]
     my_env["DP_PROJECT_ROOT_DIR"] = project_copy_root_path
     my_env["DOT_DISCOPOP"] = project_copy_dp_path
+    my_env["OMP_NUM_THREADS"] = str(thread_count)
 
     # print("MYENV:")
     # for key in my_env:
@@ -111,12 +113,13 @@ def execute_configuration(
 
     elapsed = round((time.time() - start), 3)
     logger.debug("-> return code: " + str(p.returncode))
+    logger.debug("-> thread count: " + str(thread_count))
     logger.debug("-> stdout:\n" + stdout.decode("utf-8") if not timeout_expired else "")
     logger.debug("-> stderr:\n" + stderr.decode("utf-8") if not timeout_expired else "")
     logger.debug("-> elapsed time: " + str(elapsed) + "s")
 
     # save execution results
-    execution_results_path = os.path.join(arguments.project_config_dir, "execution_results.json")
+    execution_results_path = os.path.join(arguments.project_dir, "execution_results.json")
     execution_results = dict()
     if os.path.exists(execution_results_path):
         with open(execution_results_path, "r") as f:
@@ -134,14 +137,16 @@ def execute_configuration(
         "code": p.returncode,
         "stdout": stdout.decode("utf-8") if not timeout_expired else "",
         "stderr": stderr.decode("utf-8") if not timeout_expired else "",
-        "timeout_epired": timeout_expired,
+        "timeout_expired": timeout_expired,
         "time": elapsed,
+        "thread_count": thread_count,
     }
     # check for duplicates and overwrite them
     to_be_removed: List[int] = []
     for idx, entry in enumerate(execution_results[config_name][script_name][settings_name]):
         if entry["applied_suggestions"] == applied_suggestions:
-            to_be_removed.append(idx)
+            if entry["thread_count"] == thread_count:
+                to_be_removed.append(idx)
     for idx in sorted(to_be_removed, reverse=True):
         del execution_results[config_name][script_name][settings_name][idx]
     execution_results[config_name][script_name][settings_name].append(result_dict)

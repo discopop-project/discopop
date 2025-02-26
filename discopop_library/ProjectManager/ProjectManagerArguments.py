@@ -28,11 +28,14 @@ class ProjectManagerArguments(GeneralArguments):
     execute_inplace: bool
     skip_cleanup: bool
     generate_report: bool
+    show_report: bool
     initialize_directory: bool
     apply_suggestions: Optional[str]
     reset: bool
+    reset_execution_results: bool
     # derived values
     dot_dp: str = ""
+    project_dir: str = ""
     project_config_dir: str = ""
 
     def __post_init__(self) -> None:
@@ -48,7 +51,9 @@ class ProjectManagerArguments(GeneralArguments):
             )
             self.project_root = str(Path(self.project_root).parent.absolute())
         self.dot_dp = os.path.join(self.project_root, ".discopop")
-        self.project_config_dir = os.path.join(self.dot_dp, "project")
+
+        self.project_dir = os.path.join(self.dot_dp, "project")
+        self.project_config_dir = os.path.join(self.project_dir, "configs")
         # validate arguments
         self.__validate()
 

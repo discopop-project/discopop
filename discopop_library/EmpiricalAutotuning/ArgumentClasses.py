@@ -26,12 +26,13 @@ class AutotunerArguments(GeneralArguments):
     configuration: str
     suggestions: Optional[str]
     allow_plots: bool
+    thread_count: int
     project_path: str = ""
     configuration_path: str = ""
 
     def __post_init__(self) -> None:
         self.project_path = str(Path(self.dot_dp_path).parent.absolute())
-        self.configuration_path = os.path.join(self.dot_dp_path, "project", self.configuration)
+        self.configuration_path = os.path.join(self.dot_dp_path, "project", "configs", self.configuration)
         self.__validate()
 
     def log(self) -> None:
@@ -51,11 +52,12 @@ class AutotunerArguments(GeneralArguments):
             os.path.join(self.dot_dp_path, "patch_generator"),
             os.path.join(self.dot_dp_path, "line_mapping.json"),
             os.path.join(self.dot_dp_path, "project"),
-            os.path.join(self.dot_dp_path, "project", self.configuration),
-            os.path.join(self.dot_dp_path, "project", self.configuration, "par_settings.json"),
-            os.path.join(self.dot_dp_path, "project", self.configuration, "hd_settings.json"),
-            os.path.join(self.dot_dp_path, "project", self.configuration, "compile.sh"),
-            os.path.join(self.dot_dp_path, "project", self.configuration, "execute.sh"),
+            os.path.join(self.dot_dp_path, "project", "configs"),
+            os.path.join(self.dot_dp_path, "project", "configs", self.configuration),
+            os.path.join(self.dot_dp_path, "project", "configs", self.configuration, "par_settings.json"),
+            os.path.join(self.dot_dp_path, "project", "configs", self.configuration, "hd_settings.json"),
+            os.path.join(self.dot_dp_path, "project", "configs", self.configuration, "compile.sh"),
+            os.path.join(self.dot_dp_path, "project", "configs", self.configuration, "execute.sh"),
         ]
         for file in required_files:
             if not os.path.exists(file):

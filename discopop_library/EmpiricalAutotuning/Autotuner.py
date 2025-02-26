@@ -64,7 +64,7 @@ def run(arguments: AutotunerArguments) -> None:
 
     # get untuned reference result
     reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path, "par_settings.json")
-    reference_configuration.execute(arguments, timeout=None, is_initial=True)
+    reference_configuration.execute(arguments, timeout=None, thread_count=arguments.thread_count, is_initial=True)
     statistics_graph.set_root(
         reference_configuration.get_statistics_graph_label(),
         color=reference_configuration.get_statistics_graph_color(),
@@ -171,7 +171,7 @@ def run(arguments: AutotunerArguments) -> None:
                     arguments, "par_settings.json", get_unique_configuration_id
                 )
                 sibling_config.apply_suggestions(arguments, stat_entry[0])
-                sibling_config.execute(arguments, timeout=timeout_after)
+                sibling_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
                 best_suggestion_configuration = (stat_entry[0], sibling_config)
                 if not arguments.skip_cleanup:
                     sibling_config.deleteFolder()
@@ -181,7 +181,7 @@ def run(arguments: AutotunerArguments) -> None:
             arguments, "par_settings.json", get_unique_configuration_id
         )
         sibling_config.apply_suggestions(arguments, debug_stats[-1][0])
-        sibling_config.execute(arguments, timeout=timeout_after)
+        sibling_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
         best_suggestion_configuration = (debug_stats[-1][0], sibling_config)
         if not arguments.skip_cleanup:
             sibling_config.deleteFolder()
@@ -192,7 +192,7 @@ def run(arguments: AutotunerArguments) -> None:
                     arguments, "par_settings.json", get_unique_configuration_id
                 )
                 sibling_config.apply_suggestions(arguments, stat_entry[0])
-                sibling_config.execute(arguments, timeout=timeout_after)
+                sibling_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
                 best_suggestion_configuration = (stat_entry[0], sibling_config)
                 if not arguments.skip_cleanup:
                     sibling_config.deleteFolder()
@@ -227,7 +227,7 @@ def run(arguments: AutotunerArguments) -> None:
         cast(ExecutionResult, reference_configuration.execution_result).runtime
         / cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime
     )
-    parallel_efficiency = speedup * (1 / cast(int, (0 if os.cpu_count() is None else os.cpu_count())))
+    parallel_efficiency = speedup * (1 / arguments.thread_count)
 
     # show result and statistics
     if best_suggestion_configuration[1] is None:
