@@ -28,9 +28,11 @@ class ProjectManagerArguments(GeneralArguments):
     execute_inplace: bool
     skip_cleanup: bool
     generate_report: bool
+    show_report: bool
     initialize_directory: bool
     apply_suggestions: Optional[str]
     reset: bool
+    reset_execution_results: bool
     # derived values
     dot_dp: str = ""
     project_dir: str = ""

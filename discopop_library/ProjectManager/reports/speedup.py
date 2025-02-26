@@ -20,7 +20,7 @@ import numpy as np
 logger = logging.getLogger("ProjectManager")
 
 
-def generate_execution_time_report(arguments: ProjectManagerArguments) -> None:
+def generate_speedup_report(arguments: ProjectManagerArguments) -> None:
     execution_results_path = os.path.join(arguments.project_dir, "execution_results.json")
     if not os.path.exists(execution_results_path):
         print("No execution data available to report generation.")
@@ -46,22 +46,31 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
                 applied_suggestions_string = ""
                 return_codes_string = ""
                 times_string = ""
-                best_execution_time: Optional[float] = None
+
+                # get sequential runtime for speedup calculation
+                seq_runtime: float = -1.0
+                if "seq_settings.json" in execution_results[configuration][script]:
+                    for execution in execution_results[configuration][script]["seq_settings.json"]:
+                        if execution["code"] == 0:
+                            seq_runtime = execution["time"]
+
+                best_speedup: Optional[float] = None
                 best_thread_count: int = 1
                 for execution in execution_results[configuration][script][setting]:
                     applied_suggestions_string += str(execution["applied_suggestions"]) + "\n"
                     return_codes_string += str(execution["code"]) + "\n"
                     times_string += str(execution["time"]) + "\n"
                     if execution["code"] == 0:
-                        if best_execution_time is None:
-                            best_execution_time = execution["time"]
+                        speedup = round(seq_runtime / execution["time"], 3)
+                        if best_speedup is None:
+                            best_speedup = speedup
                             best_thread_count = execution["thread_count"]
-                        if execution["time"] < best_execution_time:
-                            best_execution_time = execution["time"]
+                        if speedup > best_speedup:
+                            best_speedup = speedup
                             best_thread_count = execution["thread_count"]
 
-                if best_execution_time is None:
-                    best_execution_time = 0.0
+                if best_speedup is None:
+                    best_speedup = 0.0
 
                 clean_setting_str = setting.replace("_settings.json", "")
 
@@ -73,7 +82,7 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
                     tmp_values[clean_setting_str] = dict()
                 if best_thread_count not in tmp_values[clean_setting_str]:
                     tmp_values[clean_setting_str][best_thread_count] = dict()
-                tmp_values[clean_setting_str][best_thread_count][configuration] = best_execution_time
+                tmp_values[clean_setting_str][best_thread_count][configuration] = best_speedup
 
     # prepare values for plotting
     list_values: Dict[str, Dict[int, List[float]]] = dict()
@@ -113,8 +122,8 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
         multiplier += 1
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
-    ax.set_ylabel("Execution time [s]")
-    ax.set_title("Execution times of best valid configurations")
+    ax.set_ylabel("Speedup")
+    ax.set_title("Speedups of best valid configurations")
     ax.set_xticks(x + width, configuration_names)
     ax.legend(loc="upper left", ncols=3)
     ax.set_ylim(0, max_y_value + max_y_value * 0.15)
@@ -122,4 +131,4 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
     reports_dir = os.path.join(arguments.project_dir, "reports")
     if not os.path.exists(reports_dir):
         os.mkdir(reports_dir)
-    plt.savefig(os.path.join(reports_dir, "execution_time.pdf"))
+    plt.savefig(os.path.join(reports_dir, "speedups.pdf"))

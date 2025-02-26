@@ -17,10 +17,17 @@ def parse_args() -> AutotunerArguments:
     """Parse the arguments passed to the discopop autotuner"""
     parser = ArgumentParser(description="DiscoPoP Autotuner")
 
+    cpu_count = os.cpu_count()
+    if cpu_count is None:
+        non_null_default_core_count = 2
+    else:
+        non_null_default_core_count = int(cpu_count / 2)
+
     # fmt: off
     parser.add_argument("--dot-dp-path", type=str, default=os.getcwd(), help="Path to the .discopop folder. Default: $(cwd)")
     parser.add_argument("-c", "--config", default="tiny", help="Configurations to be used for the autotuning. Default: tiny")
     parser.add_argument("-s", "--suggestions", help="If specified, the comma separated list of suggestions will be applied and compared to the baseline.")
+    parser.add_argument("-t", "--threads", type=int, default=non_null_default_core_count, help="Value of OMP_NUM_THREADS used during execution. Default: os.cpu_count()/2 = " + str(non_null_default_core_count))
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     parser.add_argument("-p", "--plot", action="store_true", help="Allow the creation of interactive plots.")
@@ -43,7 +50,8 @@ def parse_args() -> AutotunerArguments:
         skip_cleanup=arguments.skip_cleanup,
         sanitize=arguments.sanitize,
         suggestions=arguments.suggestions,
-        allow_plots=arguments.plot
+        allow_plots=arguments.plot,
+        thread_count=arguments.threads
     )
 
 

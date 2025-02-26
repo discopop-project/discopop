@@ -53,7 +53,7 @@ def check_single_combination(
         # execute current and check validity
         tmp_config = reference_configuration.create_copy(arguments, "par_settings.json", get_unique_configuration_id)
         tmp_config.apply_suggestions(arguments, applied_suggestions)
-        tmp_config.execute(arguments, timeout=timeout_after)
+        tmp_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
         if not arguments.skip_cleanup:
             tmp_config.deleteFolder()
         debug_stats.append(
@@ -80,7 +80,7 @@ def check_single_combination(
     # get hotspot measurement of created configuration
     sibling_config = reference_configuration.create_copy(arguments, "hd_settings.json", get_unique_configuration_id)
     sibling_config.apply_suggestions(arguments, applied_suggestions)
-    sibling_config.execute(arguments, timeout=None)
+    sibling_config.execute(arguments, timeout=None, thread_count=arguments.thread_count)
 
     # prepare creation of cleaned results
     cleaned_config = reference_configuration.create_copy(arguments, "par_settings.json", get_unique_configuration_id)
@@ -89,7 +89,7 @@ def check_single_combination(
     baseline_configuration = reference_configuration.create_copy(
         arguments, "hd_settings.json", get_unique_configuration_id
     )
-    baseline_configuration.execute(arguments, timeout=None)
+    baseline_configuration.execute(arguments, timeout=None, thread_count=arguments.thread_count)
 
     # compare measurements and apply refinement
     cmd = (
@@ -116,7 +116,7 @@ def check_single_combination(
 
     # create cleaned configuration
     cleaned_config.apply_suggestions(arguments, [id for id in applied_suggestions if id not in slow_suggestions])
-    cleaned_config.execute(arguments, timeout=timeout_after)
+    cleaned_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
 
     debug_stats.append(
         (

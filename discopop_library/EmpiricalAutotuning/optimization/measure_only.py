@@ -60,7 +60,7 @@ def execute_measure_only(
                 arguments, "par_settings.json", get_unique_configuration_id
             )
             tmp_config.apply_suggestions(arguments, current)
-            tmp_config.execute(arguments, timeout=timeout_after)
+            tmp_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
             if not arguments.skip_cleanup:
                 tmp_config.deleteFolder()
             debug_stats.append(

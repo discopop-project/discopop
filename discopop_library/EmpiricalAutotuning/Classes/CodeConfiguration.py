@@ -15,15 +15,15 @@ import shutil
 import subprocess
 import time
 from typing import Callable, Dict, List, Optional
-from discopop_library.ConfigurationManager.ConfigurationManagerArguments import ConfigurationManagerArguments
-from discopop_library.ConfigurationManager.configurations.copying import copy_configuration
-from discopop_library.ConfigurationManager.configurations.execution import execute_configuration
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
 from discopop_library.PatchApplicator.patch_applicator import run as apply_patches
+from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.configurations.copying import copy_configuration
+from discopop_library.ProjectManager.configurations.execution import execute_configuration
 
 logger = logging.getLogger("CodeConfiguration")
 
@@ -49,9 +49,11 @@ class CodeConfiguration(object):
     def __str__(self) -> str:
         return self.root_path
 
-    def execute(self, arguments: AutotunerArguments, timeout: Optional[float], is_initial: bool = False) -> None:
+    def execute(
+        self, arguments: AutotunerArguments, timeout: Optional[float], thread_count: int, is_initial: bool = False
+    ) -> None:
 
-        cm_args = ConfigurationManagerArguments(
+        cm_args = ProjectManagerArguments(
             log_level=arguments.log_level,
             write_log=arguments.write_log,
             project_root=arguments.project_path,
@@ -61,9 +63,11 @@ class CodeConfiguration(object):
             execute_inplace=False,
             skip_cleanup=arguments.skip_cleanup,
             generate_report=False,
+            show_report=False,
             initialize_directory=False,
             apply_suggestions=None,
             reset=False,
+            reset_execution_results=False,
         )
 
         compilation_successful = True
@@ -73,6 +77,7 @@ class CodeConfiguration(object):
             os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration),
             os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, self.settings_name),
             os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, "compile.sh"),
+            thread_count,
             timeout,
         )
 
@@ -90,6 +95,7 @@ class CodeConfiguration(object):
                     self.config_dot_dp_path, "project", "configs", arguments.configuration, self.settings_name
                 ),
                 os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, "execute.sh"),
+                thread_count,
                 timeout,
             )
         else:
@@ -116,7 +122,7 @@ class CodeConfiguration(object):
         self, arguments: AutotunerArguments, settings_name: str, get_new_configuration_id: Callable[[], int]
     ) -> CodeConfiguration:
         # create a copy of the project folder
-        cm_args = ConfigurationManagerArguments(
+        cm_args = ProjectManagerArguments(
             log_level=arguments.log_level,
             write_log=arguments.write_log,
             project_root=arguments.project_path,
@@ -126,9 +132,11 @@ class CodeConfiguration(object):
             execute_inplace=False,
             skip_cleanup=arguments.skip_cleanup,
             generate_report=False,
+            show_report=False,
             initialize_directory=False,
             apply_suggestions=None,
             reset=False,
+            reset_execution_results=False,
         )
         dest_path = copy_configuration(
             cm_args,

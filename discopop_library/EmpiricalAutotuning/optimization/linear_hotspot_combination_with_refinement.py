@@ -61,7 +61,7 @@ def execute_linear_hotspot_combination_with_refinement(
                 arguments, "par_settings.json", get_unique_configuration_id
             )
             tmp_config.apply_suggestions(arguments, list(valid) + current)
-            tmp_config.execute(arguments, timeout=timeout_after)
+            tmp_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
             if not arguments.skip_cleanup:
                 tmp_config.deleteFolder()
             debug_stats.append(
@@ -107,7 +107,7 @@ def execute_linear_hotspot_combination_with_refinement(
     # get hotspot measurement of created configuration
     sibling_config = reference_configuration.create_copy(arguments, "hd_settings.json", get_unique_configuration_id)
     sibling_config.apply_suggestions(arguments, best_seen_configuration)
-    sibling_config.execute(arguments, timeout=None)
+    sibling_config.execute(arguments, timeout=None, thread_count=arguments.thread_count)
 
     # prepare creation of cleaned results
     cleaned_config = reference_configuration.create_copy(arguments, "par_settings.json", get_unique_configuration_id)
@@ -116,7 +116,7 @@ def execute_linear_hotspot_combination_with_refinement(
     baseline_configuration = reference_configuration.create_copy(
         arguments, "hd_settings.json", get_unique_configuration_id
     )
-    baseline_configuration.execute(arguments, timeout=None)
+    baseline_configuration.execute(arguments, timeout=None, thread_count=arguments.thread_count)
 
     # compare measurements and apply refinement
     cmd = (
@@ -143,7 +143,7 @@ def execute_linear_hotspot_combination_with_refinement(
 
     # create cleaned configuration
     cleaned_config.apply_suggestions(arguments, [id for id in best_seen_configuration if id not in slow_suggestions])
-    cleaned_config.execute(arguments, timeout=timeout_after)
+    cleaned_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
 
     debug_stats.append(
         (

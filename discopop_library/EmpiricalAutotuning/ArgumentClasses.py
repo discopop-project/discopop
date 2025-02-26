@@ -26,6 +26,7 @@ class AutotunerArguments(GeneralArguments):
     configuration: str
     suggestions: Optional[str]
     allow_plots: bool
+    thread_count: int
     project_path: str = ""
     configuration_path: str = ""
 
