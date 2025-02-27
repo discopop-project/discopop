@@ -155,6 +155,8 @@ else()
     execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_sanity_checker)
     execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_project_manager)
     execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_configuration_manager)
+    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_parallel_region_merger)
+
     message(STATUS "--> discopop_auto_tuner")
     execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_auto_tuner ${DP_LOCAL_BIN_DIR}/discopop_auto_tuner)
     message(STATUS "--> discopop_config_provider")
@@ -175,5 +177,8 @@ else()
     execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_project_manager ${DP_LOCAL_BIN_DIR}/discopop_project_manager)
     message(STATUS "--> discopop_configuration_manager")
     execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_configuration_manager ${DP_LOCAL_BIN_DIR}/discopop_configuration_manager)
+    message(STATUS "--> discopop_parallel_region_merger")
+    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_parallel_region_merger ${DP_LOCAL_BIN_DIR}/discopop_parallel_region_merger)
+
 
 endif()

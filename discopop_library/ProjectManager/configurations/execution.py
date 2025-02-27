@@ -135,6 +135,8 @@ def execute_configuration(
     label: str = ""
     if arguments.apply_suggestions == "auto":
         label += "auto"
+    if arguments.apply_suggestions == "prm":
+        label += "prm"
 
     result_dict = {
         "applied_suggestions": applied_suggestions,
@@ -151,7 +153,8 @@ def execute_configuration(
     for idx, entry in enumerate(execution_results[config_name][script_name][settings_name]):
         if entry["applied_suggestions"] == applied_suggestions:
             if entry["thread_count"] == thread_count:
-                to_be_removed.append(idx)
+                if entry["label"] == label:
+                    to_be_removed.append(idx)
     for idx in sorted(to_be_removed, reverse=True):
         del execution_results[config_name][script_name][settings_name][idx]
     execution_results[config_name][script_name][settings_name].append(result_dict)

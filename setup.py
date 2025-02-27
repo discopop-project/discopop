@@ -69,6 +69,7 @@ setup(
             "discopop_preprocessor=discopop_library.PreProcessor.__main__:main",
             "discopop_project_manager=discopop_library.ProjectManager.__main__:main",
             "discopop_configuration_manager=discopop_library.ConfigurationManager.__main__:main",
+            "discopop_parallel_region_merger=discopop_library.ParallelRegionMerger.__main__:main",
         ]
     },
     zip_safe=True,

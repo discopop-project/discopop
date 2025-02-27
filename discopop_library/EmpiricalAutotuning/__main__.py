@@ -53,8 +53,8 @@ def parse_args() -> AutotunerArguments:
         sanitize=arguments.sanitize,
         suggestions=arguments.suggestions,
         allow_plots=arguments.plot,
-        thread_count=arguments.threads
-        hotspot_types=arguments.hotspot_types
+        thread_count=arguments.threads,
+        hotspot_types=arguments.hotspot_types,
     )
 
 
