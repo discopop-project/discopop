@@ -7,6 +7,8 @@
 # directory for details.
 from __future__ import annotations
 import copy
+import json
+import os
 import sys
 from multiprocessing import Pool
 from typing import TYPE_CHECKING, List, Dict, Optional, Set, Tuple, cast
@@ -50,6 +52,8 @@ from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.utils import classify_loop_variables, filter_for_hotspots
 from discopop_explorer.classes.variable import Variable
+from discopop_library.ParallelRegionMerger.ArgumentClasses import ParallelRegionMergerArguments
+from discopop_library.ParallelRegionMerger.Types import SUGGESTION_ID
 
 if TYPE_CHECKING:
     from discopop_library.result_classes.DetectionResult import DetectionResult
@@ -93,6 +97,7 @@ class ParallelRegionInfo(PatternInfo):
 def run_detection(
     pet: PEGraphX,
     res: DetectionResult,
+    arguments: ParallelRegionMergerArguments,
     jobs: Optional[int] = None,
 ) -> Tuple[List[ParallelRegionInfo], List[DoAllInfo], List[ReductionInfo]]:
     """Search for InflatedParallelRegion pattern
@@ -107,7 +112,7 @@ def run_detection(
 
     # tg.show(dataflow=False)
 
-    __import_parallelization(pet, res, tg)
+    __import_parallelization(pet, res, tg, arguments)
 
     __add_cross_level_dataflow_edges(pet, tg)
 
@@ -117,7 +122,8 @@ def run_detection(
 
     tg.print_to_console()
 
-    tg.show(dataflow=False)
+    if arguments.allow_plots:
+        tg.show(dataflow=False)
 
     # NOTE: IEC/IAC can be used to determine, wheter a CU is task-friendly on a coarse-grain level
     # ------> by unpacking IEC/IAC, the innermost function call which the CU is still friendly towards can be determined
@@ -185,9 +191,16 @@ def __setup_task_graph(pet: PEGraphX, tg: TaskGraph) -> None:
     tg.replace_loops_with_single_tasks()
 
 
-def __import_parallelization(pet: PEGraphX, res: DetectionResult, tg: TaskGraph) -> None:
+def __import_parallelization(
+    pet: PEGraphX, res: DetectionResult, tg: TaskGraph, arguments: ParallelRegionMergerArguments
+) -> None:
+    considered_suggestions = __get_considered_suggestion_ids(arguments)
+
     # add identified loop parallelization to the task graph
     for reduction_pattern in res.patterns.reduction:
+        if len(considered_suggestions) > 0 and reduction_pattern.pattern_id not in considered_suggestions:
+            continue
+
         loop_node = tg.get_node(pet.node_at(reduction_pattern.node_id))
         if loop_node is None:
             continue
@@ -199,6 +212,8 @@ def __import_parallelization(pet: PEGraphX, res: DetectionResult, tg: TaskGraph)
             tg.add_parallel_region_around(parent, reduction_pattern.shared)
 
     for doall_pattern in res.patterns.do_all:
+        if len(considered_suggestions) > 0 and doall_pattern.pattern_id not in considered_suggestions:
+            continue
         loop_node = tg.get_node(pet.node_at(doall_pattern.node_id))
         if loop_node is None:
             continue
@@ -208,6 +223,25 @@ def __import_parallelization(pet: PEGraphX, res: DetectionResult, tg: TaskGraph)
         if parent is not None:
             # collect data sharing clauses from pattern
             tg.add_parallel_region_around(parent, doall_pattern.shared)
+
+
+def __get_considered_suggestion_ids(arguments: ParallelRegionMergerArguments) -> List[int]:
+    # get list of suggestions ids to be considered
+    considered_suggestions: List[SUGGESTION_ID] = []  # empty -> wildcard
+    if arguments.suggestions is not None:
+        if arguments.suggestions == "auto":
+            with open(os.path.join(arguments.dot_dp_path, "auto_tuner", "results.json"), "r") as f:
+                auto_tuner_results = json.load(f)
+                if arguments.auto_tuner_config in auto_tuner_results:
+                    considered_suggestions = [
+                        int(s) for s in auto_tuner_results[arguments.auto_tuner_config]["applied_suggestions"]
+                    ]
+                else:
+                    for config in auto_tuner_results:
+                        considered_suggestions += [int(s) for s in auto_tuner_results[config]["applied_suggestions"]]
+        else:
+            considered_suggestions = [int(s) for s in arguments.suggestions.split(",")]
+    return considered_suggestions
 
 
 def __add_cross_level_dataflow_edges(pet: PEGraphX, tg: TaskGraph) -> None:
