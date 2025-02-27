@@ -54,15 +54,24 @@ def copy_configuration(
 
     # apply the specified parallelization suggestions if requested
     if arguments.apply_suggestions is not None:
+        suggestions: List[str] = []
         dp_folder_path = os.path.join(project_copy_path, ".discopop")
         if arguments.apply_suggestions == "auto":
             auto_tuner_results_path = os.path.join(dp_folder_path, "auto_tuner", "results.json")
-            suggestions: List[str] = []
             if os.path.exists(auto_tuner_results_path):
                 with open(auto_tuner_results_path, "r") as f:
                     auto_tuner_results = json.load(f)
                 for configuration in auto_tuner_results:
                     for sugg in auto_tuner_results[configuration]["applied_suggestions"]:
+                        if sugg not in suggestions:
+                            suggestions.append(sugg)
+        elif arguments.apply_suggestions == "prm":
+            prm_results_path = os.path.join(dp_folder_path, "parallel_region_merger", "results.json")
+            if os.path.exists(prm_results_path):
+                with open(prm_results_path, "r") as f:
+                    prm_results = json.load(f)
+                for configuration in prm_results:
+                    for sugg in prm_results[configuration]["applied_suggestions"]:
                         if sugg not in suggestions:
                             suggestions.append(sugg)
         else:

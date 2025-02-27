@@ -58,6 +58,15 @@ def setup_auto_tuner(path: str = "") -> None:
     tmp_logger.debug("Done")
 
 
+def setup_parallel_region_merger(path: str = "") -> None:
+    tmp_logger = logger.getChild("parallel_region_merger")
+    tmp_logger.debug("Start")
+    prm_dir = os.path.join(path, "parallel_region_merger")
+    if not os.path.exists(prm_dir):
+        os.mkdir(prm_dir)
+    tmp_logger.debug("Done")
+
+
 def setup_patch_applicator(path: str = "") -> None:
     tmp_logger = logger.getChild("patch_applicator")
     tmp_logger.debug("Start")

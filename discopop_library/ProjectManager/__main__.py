@@ -29,7 +29,7 @@ def parse_args() -> ProjectManagerArguments:
     parser.add_argument("--init", action="store_true", help="Initialize the .discopop directory in the specified project path")
     parser.add_argument("-x", "--execute", default="tiny", help="Comma separated list of configurations to be executed. Format: <config_name>[:<mode>] . Modes: dp,hd,seq,par. Default: tiny")
     parser.add_argument("-xf", "--execute-full", action="store_true", help="Execute all configurations for validation purposes.")
-    parser.add_argument("-a", "--apply-suggestions", help="Comma separated list of suggestions ids to be applied before the specified execution. Use the keyword 'auto' to load the configuration determined by the autotuner (if multiple configurations exist, union will be considered).")
+    parser.add_argument("-a", "--apply-suggestions", help="Comma separated list of suggestions ids to be applied before the specified execution. Use the keyword 'auto' to load the configuration determined by the autotuner (if multiple configurations exist, union will be considered). Use the keyword 'prm' to load the configuration determined by the parallel region merger.")
     parser.add_argument('-l', '--list', action="store_true", help="Show a list of available configurations. If set, nothing else will be done.")
     parser.add_argument("-i", "--inplace", action="store_true", help="Prevents the creation of project copies when code configurations are executed. Instead, executes the configuration in the project root folder.")
     parser.add_argument("--skip-cleanup", action="store_true", help="Prevents the deletion of created project copies. May requires high amount of disk space.")

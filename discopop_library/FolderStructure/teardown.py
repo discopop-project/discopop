@@ -45,6 +45,15 @@ def teardown_patch_generator(path: str = "") -> None:
     tmp_logger.debug("Done")
 
 
+def teardown_parallel_region_merger(path: str = "") -> None:
+    tmp_logger = logger.getChild("parallel_region_merger")
+    tmp_logger.debug("Start")
+    prm_dir = os.path.join(path, "parallel_region_merger")
+    if os.path.exists(prm_dir):
+        shutil.rmtree(prm_dir)
+    tmp_logger.debug("Done")
+
+
 def teardown_patch_applicator(path: str = "") -> None:
     tmp_logger = logger.getChild("patch_applicator")
     tmp_logger.debug("Start")

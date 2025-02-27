@@ -14,7 +14,7 @@ from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.geometric_decomposition_detector import GDInfo
 from discopop_explorer.pattern_detectors.pipeline_detector import PipelineInfo
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
-from discopop_explorer.pattern_detectors.inflated_parallel_region_pattern import ParallelRegionInfo
+from discopop_library.ParallelRegionMerger.inflated_parallel_region_pattern import ParallelRegionInfo
 from discopop_library.Aliases.aliases import PatternID
 
 
