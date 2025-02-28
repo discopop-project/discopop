@@ -8,8 +8,8 @@
 from typing import List
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.Node import Node
-from discopop_explorer.classes.TaskGraph.TGFunctionNode import TGFunctionNode
-from discopop_explorer.classes.TaskGraph.TGNode import TGNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGFunctionNode import TGFunctionNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGNode import TGNode
 
 
 class TaskNode(TGNode):

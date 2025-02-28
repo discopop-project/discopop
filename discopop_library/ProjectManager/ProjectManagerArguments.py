@@ -33,6 +33,7 @@ class ProjectManagerArguments(GeneralArguments):
     apply_suggestions: Optional[str]
     reset: bool
     reset_execution_results: bool
+    label_prefix: str
     # derived values
     dot_dp: str = ""
     project_dir: str = ""

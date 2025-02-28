@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
-from discopop_explorer.classes.TaskGraph.TGNode import TGNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGNode import TGNode
 
 
 class TGFunctionNode(TGNode):

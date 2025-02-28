@@ -16,13 +16,13 @@ import warnings
 import networkx as nx
 
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
-from discopop_explorer.classes.TaskGraph.EnterParallelNode import EnterParallelNode
-from discopop_explorer.classes.TaskGraph.ExitParallelNode import ExitParallelNode
-from discopop_explorer.classes.TaskGraph.ReductionModifierNode import ReductionModifierNode
-from discopop_explorer.classes.TaskGraph.DoallModifierNode import DoAllModifierNode
-from discopop_explorer.classes.TaskGraph.TGFunctionNode import TGFunctionNode
-from discopop_explorer.classes.TaskGraph.TGNode import TGNode
-from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.EnterParallelNode import EnterParallelNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.ExitParallelNode import ExitParallelNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.ReductionModifierNode import ReductionModifierNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.DoallModifierNode import DoAllModifierNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGFunctionNode import TGFunctionNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGNode import TGNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.functions.PEGraph.properties.depends_ignore_readonly import depends_ignore_readonly
 from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
 from discopop_explorer.functions.PEGraph.properties.is_readonly_inside_loop_body import is_readonly_inside_loop_body

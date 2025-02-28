@@ -68,6 +68,7 @@ class CodeConfiguration(object):
             apply_suggestions=None,
             reset=False,
             reset_execution_results=False,
+            label_prefix="",
         )
 
         compilation_successful = True
@@ -137,6 +138,7 @@ class CodeConfiguration(object):
             apply_suggestions=None,
             reset=False,
             reset_execution_results=False,
+            label_prefix="",
         )
         dest_path = copy_configuration(
             cm_args,

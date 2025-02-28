@@ -37,6 +37,7 @@ def parse_args() -> ProjectManagerArguments:
     parser.add_argument("--show-report", action="store_true", help="Show the generated report of the stored execution results.")
     parser.add_argument("-r", "--reset", action="store_true", help="Reset the .discopop folder except configurations in project subdirectory.")
     parser.add_argument("-rx", "--reset-execution-results", action="store_true", help="Reset the observed execution results and generated reports.")
+    parser.add_argument("-lp", "--label-prefix", default="", help="Specify a prefix for execution measurement labels")
 
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
@@ -60,6 +61,7 @@ def parse_args() -> ProjectManagerArguments:
         reset_execution_results=arguments.reset_execution_results,
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
+        label_prefix=arguments.label_prefix,
     )
 
 
