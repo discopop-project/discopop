@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from discopop_explorer.classes.TaskGraph.Edge import Edge
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.Edge import Edge
 
 
 class IntermediateEdge(Edge):

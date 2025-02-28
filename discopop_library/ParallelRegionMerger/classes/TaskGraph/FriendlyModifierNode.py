@@ -5,13 +5,12 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import Optional
-from discopop_explorer.classes.TaskGraph.Edge import Edge
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.ModifierNode import ModifierNode
 
 
-class DataflowEdge(Edge):
-    var_name: Optional[str]
-
-    def __init__(self, var_name: Optional[str] = None) -> None:
+class FriendlyModifierNode(ModifierNode):
+    def __init__(self) -> None:
         super().__init__()
-        self.var_name = var_name
+
+    def get_label(self) -> str:
+        return "friendly"

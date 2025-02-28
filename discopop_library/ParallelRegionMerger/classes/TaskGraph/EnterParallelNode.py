@@ -6,8 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from typing import List
-from discopop_explorer.classes.TaskGraph.TGNode import TGNode
-from discopop_explorer.classes.TaskGraph.TaskNode import TaskNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGNode import TGNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TaskNode import TaskNode
 from discopop_explorer.classes.variable import Variable
 
 

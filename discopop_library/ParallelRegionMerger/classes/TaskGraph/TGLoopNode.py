@@ -8,9 +8,9 @@
 from typing import List
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
-from discopop_explorer.classes.TaskGraph.TGFunctionNode import TGFunctionNode
-from discopop_explorer.classes.TaskGraph.TGNode import TGNode
-from discopop_explorer.classes.TaskGraph.TaskNode import TaskNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGFunctionNode import TGFunctionNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGNode import TGNode
+from discopop_library.ParallelRegionMerger.classes.TaskGraph.TaskNode import TaskNode
 
 
 class TGLoopNode(TaskNode):

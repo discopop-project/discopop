@@ -132,7 +132,7 @@ def execute_configuration(
     if settings_name not in execution_results[config_name][script_name]:
         execution_results[config_name][script_name][settings_name] = []
 
-    label: str = ""
+    label: str = "" + arguments.label_prefix
     if arguments.apply_suggestions == "auto":
         label += "auto"
     if arguments.apply_suggestions == "prm":
