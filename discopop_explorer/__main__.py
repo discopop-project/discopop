@@ -106,7 +106,7 @@ def parse_args() -> ExplorerArguments:
         help="Path to llvm-cxxfilt executable. Required for task pattern detector if non-standard path should be used.",
     )
     experimental_parser.add_argument(
-        "--enable-statistics", action="store_true", help="Disable the calculation and storing of statistics for code and generated suggestions."
+        "--disable-statistics", action="store_false", help="Disable the calculation and storing of statistics for code and generated suggestions."
     )
     experimental_parser.add_argument(
         "--plot-pet", type=str, nargs="?", default=None, const="explorer/pet_plot.gexf",
@@ -165,7 +165,7 @@ def parse_args() -> ExplorerArguments:
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
         load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
-        collect_statistics=arguments.enable_statistics,
+        collect_statistics=arguments.disable_statistics,
         jobs=arguments.jobs,
         enable_pet_plot_file=arguments.plot_pet,
     )
