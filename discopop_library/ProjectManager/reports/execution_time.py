@@ -118,6 +118,8 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
         for thread_count in list_values[setting]:
             for label in list_values[setting][thread_count]:
                 for val in list_values[setting][thread_count][label]:
+                    if val is None:
+                        val = max_y_value
                     if val > max_y_value:
                         max_y_value = val
 
@@ -126,6 +128,8 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
     multiplier = 0
 
     for attribute, measurement in values.items():
+        if None in measurement:
+            continue
         offset = width * multiplier
         rects = ax.bar(x + offset, measurement, width, label=attribute)
         ax.bar_label(rects, padding=3)
