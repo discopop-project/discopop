@@ -73,9 +73,6 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
                             best_values_by_label[label]["best_execution_time"] = execution["time"]
                             best_values_by_label[label]["best_thread_count"] = execution["thread_count"]
 
-                if best_values_by_label[label]["best_execution_time"] is None:
-                    best_values_by_label[label]["best_execution_time"] = 0.0
-
                 clean_setting_str = setting.replace("_settings.json", "")
 
                 # collect, filter, and add values for plotting
@@ -90,9 +87,14 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
                         tmp_values[clean_setting_str][best_values_by_label[label]["best_thread_count"]] = dict()
                     if label not in tmp_values[clean_setting_str][best_values_by_label[label]["best_thread_count"]]:
                         tmp_values[clean_setting_str][best_values_by_label[label]["best_thread_count"]][label] = dict()
+
+                    if best_values_by_label[label]["best_execution_time"] is None:
+                        speedup = 0.0
+                    else:
+                        speedup = round(seq_runtime / best_values_by_label[label]["best_execution_time"], 3)
                     tmp_values[clean_setting_str][best_values_by_label[label]["best_thread_count"]][label][
                         configuration
-                    ] = round(seq_runtime / best_values_by_label[label]["best_execution_time"], 3)
+                    ] = speedup
 
     # prepare values for plotting
     list_values: Dict[str, Dict[int, Dict[str, List[float]]]] = dict()
@@ -126,6 +128,8 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
         for thread_count in list_values[setting]:
             for label in list_values[setting][thread_count]:
                 for val in list_values[setting][thread_count][label]:
+                    if val is None:
+                        val = max_y_value
                     if val > max_y_value:
                         max_y_value = val
 
@@ -134,6 +138,8 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
     multiplier = 0
 
     for attribute, measurement in values.items():
+        if None in measurement:
+            continue
         offset = width * multiplier
         rects = ax.bar(x + offset, measurement, width, label=attribute)
         ax.bar_label(rects, padding=3)
