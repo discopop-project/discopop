@@ -27,7 +27,7 @@ def parse_args() -> ProjectManagerArguments:
                         help="Enable verbose output.")
     parser.add_argument("-p", "--project", default=os.getcwd(), help="Path to the projects root folder. Important: it must be possible to create a copy of this folder and compile / execute the copy with the definitions from compile.sh, execute.sh, and settings.json. Please refer to the wiki pages (https://discopop-project.github.io/discopop/) for further details. Default: $(cwd)")
     parser.add_argument("--init", action="store_true", help="Initialize the .discopop directory in the specified project path")
-    parser.add_argument("-x", "--execute", default="tiny", help="Comma separated list of configurations to be executed. Format: <config_name>[:<mode>] . Modes: dp,hd,seq,par. Default: tiny")
+    parser.add_argument("-x", "--execute", default="tiny", help="Comma separated list of configurations to be executed. Format: <config_name>[:<mode>][:<thread_count>] . Modes: dp,hd,seq,par. Default: tiny")
     parser.add_argument("-xf", "--execute-full", action="store_true", help="Execute all configurations for validation purposes.")
     parser.add_argument("-a", "--apply-suggestions", help="Comma separated list of suggestions ids to be applied before the specified execution. Use the keyword 'auto' to load the configuration determined by the autotuner (if multiple configurations exist, union will be considered). Use the keyword 'prm' to load the configuration determined by the parallel region merger.")
     parser.add_argument('-l', '--list', action="store_true", help="Show a list of available configurations. If set, nothing else will be done.")
