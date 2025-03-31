@@ -26,7 +26,7 @@
 // #define SKIP_DUP_INSTR 1
 
 typedef std::int64_t LID;
-typedef std::int64_t ADDR;
+typedef std::uint64_t ADDR;
 typedef std::int64_t sigElement;
 
 // TODO(Lukas): Is this valid?

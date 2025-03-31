@@ -23,13 +23,13 @@ class AbstractShadow {
 public:
   virtual ~AbstractShadow() {}
 
-  virtual sigElement testInRead(std::int64_t memAddr) = 0;
+  virtual void testInRead(std::int64_t memAddr, sigElement& buffer_lastRead) = 0;
 
-  virtual sigElement testInWrite(std::int64_t memAddr) = 0;
+  virtual void testInWrite(std::int64_t memAddr, sigElement& buffer_lastWrite) = 0;
 
-  virtual sigElement insertToRead(std::int64_t memAddr, sigElement value) = 0;
+  virtual void insertToRead(std::int64_t memAddr, sigElement value, sigElement& buffer_lastRead) = 0;
 
-  virtual sigElement insertToWrite(std::int64_t memAddr, sigElement value) = 0;
+  virtual void insertToWrite(std::int64_t memAddr, sigElement value, sigElement& buffer_lastWrite) = 0;
 
   virtual void updateInRead(std::int64_t memAddr, sigElement newValue) = 0;
 
@@ -39,7 +39,7 @@ public:
 
   virtual void removeFromWrite(std::int64_t memAddr) = 0;
 
-  virtual std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr, std::int64_t endAddr) = 0;
+//  virtual std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr, std::int64_t endAddr) = 0;
 };
 
 } // namespace __dp

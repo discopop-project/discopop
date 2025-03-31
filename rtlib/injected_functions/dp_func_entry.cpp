@@ -15,6 +15,9 @@
 #include "../runtimeFunctions.hpp"
 #include "../runtimeFunctionsGlobals.hpp"
 
+#include "../memory/PerfectShadow.hpp"
+#include "../memory/ShadowMemory.hpp"
+
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 

@@ -86,6 +86,14 @@ bool stop = false;                          // ONLY set stop to true if no more 
                                             // be collected
 thread_local depMap *myMap = nullptr;
 
+// Data structures for PerfectShadow3
+ADDR stack_base_addr = 0;
+ADDR stack_top_addr = 0;
+ADDR heap_base_addr = 0;
+ADDR heap_top_addr = 0;
+ADDR globals_base_addr = 0;
+ADDR globals_top_addr = 0;
+
 // statistics
 std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 

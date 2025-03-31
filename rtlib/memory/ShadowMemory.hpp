@@ -34,13 +34,13 @@ public:
     delete sigWrite;
   }
 
-  inline sigElement testInRead(std::int64_t memAddr) { return sigRead->membershipCheck(memAddr); }
+  inline void testInRead(std::int64_t memAddr, sigElement& buffer_lastRead) { buffer_lastRead = sigRead->membershipCheck(memAddr); }
 
-  inline sigElement testInWrite(std::int64_t memAddr) { return sigWrite->membershipCheck(memAddr); }
+  inline void testInWrite(std::int64_t memAddr, sigElement& buffer_lastWrite) { buffer_lastWrite = sigWrite->membershipCheck(memAddr); }
 
-  inline sigElement insertToRead(std::int64_t memAddr, sigElement value) { return sigRead->insert(memAddr, value); }
+  inline void insertToRead(std::int64_t memAddr, sigElement value, sigElement& buffer_lastRead) { buffer_lastRead = sigRead->insert(memAddr, value); }
 
-  inline sigElement insertToWrite(std::int64_t memAddr, sigElement value) { return sigWrite->insert(memAddr, value); }
+  inline void insertToWrite(std::int64_t memAddr, sigElement value, sigElement& buffer_lastWrite) { buffer_lastWrite = sigWrite->insert(memAddr, value); }
 
   inline void updateInRead(std::int64_t memAddr, sigElement newValue) { sigRead->update(memAddr, newValue); }
 
@@ -50,11 +50,13 @@ public:
 
   inline void removeFromWrite(std::int64_t memAddr) { sigWrite->remove(memAddr); }
 
+  /*
   inline std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr, std::int64_t endAddr) {
     // not possible for Shadow, since not all addresses are kept
     std::unordered_set<ADDR> result;
     return result;
   }
+  */
 
 private:
   Signature *sigRead;

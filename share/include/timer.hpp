@@ -58,6 +58,16 @@ enum class TimerRegion : unsigned int {
   FINALIZE_PARALLELIZATION,
   CLEAR_STACK_ACCESSES,
 
+  // These are statistics regarding the shadow memory
+  SMEM_TEST_IN_READ,
+  SMEM_TEST_IN_WRITE,
+  SMEM_INSERT_TO_READ,
+  SMEM_INSERT_TO_WRITE,
+  SMEM_UPDATE_IN_READ,
+  SMEM_UPDATE_IN_WRITE,
+  SMEM_REMOVE_FROM_READ,
+  SMEM_REMOVE_FROM_WRITE,
+
   // These are statistics regarding stack access detection
   STACK_CHECK_READ_ACCESS,
   STACK_CHECK_WRITE_ACCESS,
@@ -148,7 +158,7 @@ public:
 
   /**
    * @brief Returns the elapsed time for the respective timer
-   * @param timer The timer for which to return the elapsed time
+   * @param timer The timer for which to return the elapsed timeSMEM_INSERT_TO_READ
    * @return The elapsed time
    */
   [[nodiscard]] std::chrono::nanoseconds get_elapsed(const TimerRegion timer) {
@@ -204,6 +214,16 @@ public:
     print(stream, " Get memory region by id from address            : ", TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
     print(stream, " Clear the stack accesses                        : ", TimerRegion::CLEAR_STACK_ACCESSES);
     stream << '\n';
+
+    stream << "\n========== DiscoPoP TIMERS: Shadow memory ==========\n";
+    print(stream, " SMem->testInRead                                : ", TimerRegion::SMEM_TEST_IN_READ);
+    print(stream, " SMem->testInWrite                               : ", TimerRegion::SMEM_TEST_IN_WRITE);
+    print(stream, " SMem->insertToRead                              : ", TimerRegion::SMEM_INSERT_TO_READ);
+    print(stream, " SMem->insertToWrite                             : ", TimerRegion::SMEM_INSERT_TO_WRITE);
+    print(stream, " SMem->updateInRead                              : ", TimerRegion::SMEM_UPDATE_IN_READ);
+    print(stream, " SMem->updateInWrite                             : ", TimerRegion::SMEM_UPDATE_IN_WRITE);
+    print(stream, " SMem->removeFromRead                            : ", TimerRegion::SMEM_REMOVE_FROM_READ);
+    print(stream, " SMem->removeFromWrite                           : ", TimerRegion::SMEM_REMOVE_FROM_WRITE);
 
     stream << "\n========== DiscoPoP TIMERS: stack access detection ==\n";
     stream << " NOTE: times to detect stack access in read and write contained "

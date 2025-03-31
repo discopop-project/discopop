@@ -99,6 +99,14 @@ extern bool stop;                   // ONLY set stop to true if no more accessed
                                     // be collected
 extern thread_local depMap *myMap;
 
+// Data structures for PerfectShadow3
+extern ADDR stack_base_addr;
+extern ADDR stack_top_addr;
+extern ADDR heap_base_addr;
+extern ADDR heap_top_addr;
+extern ADDR globals_base_addr;
+extern ADDR globals_top_addr;
+
 // statistics
 extern std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 

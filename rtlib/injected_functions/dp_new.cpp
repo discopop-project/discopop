@@ -45,6 +45,42 @@ void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
   const auto timer = Timer(timers, TimerRegion::NEW);
 #endif
 
+
+  //std::cout << "new: " << dputil::decodeLID(lid) << " : " << std::hex << startAddr << " - " << std::hex << endAddr << " num_bytes: " << numBytes << std::endl;
+/*
+  if(heap_top_addr){
+    if(startAddr > heap_top_addr){
+      // increase heap shadow memory size
+      heap_top_addr = startAddr + numBytes;
+      std::cout << "-> heap_base_addr: " << std::hex << heap_base_addr << std::endl;
+      std::cout << "-> heap_top_addr: " << std::hex << heap_top_addr << std::endl;
+      std::cout << "-> heap_size: " << ((heap_top_addr - heap_base_addr) >> 3) << std::endl;
+      heap_writes->resize(((heap_top_addr - heap_base_addr) >> 3));
+      heap_reads->resize(((heap_top_addr - heap_base_addr) >> 3));
+    }
+    else{
+      // clear affected heap shadow memory locations
+      std::cout << "-> heap_base_addr: " << std::hex << heap_base_addr << std::endl;
+      std::cout << "-> heap_top_addr: " << std::hex << heap_top_addr << std::endl;
+      std::cout << "-> heap_size: " << ((heap_top_addr - heap_base_addr) >> 3) << std::endl;
+      std::cout << "-> affected offsets: " << ((startAddr - heap_base_addr) >> 3)  << "  -  " << (((startAddr + numBytes) - heap_base_addr) >> 3) << std::endl;
+//      std::fill(stack_reads->begin() + ((startAddr - heap_base_addr) >> 3), stack_reads->begin() + (((startAddr + numBytes) - heap_base_addr) >> 3), 0);
+//    std::fill(stack_writes->begin() + ((startAddr - heap_base_addr) >> 3), stack_reads->begin() + (((startAddr + numBytes) - heap_base_addr) >> 3), 0);
+      std::cout << "-> reset affected locations" << std::endl;
+    }
+  }
+  else{
+    heap_base_addr = startAddr;
+    heap_top_addr = startAddr + numBytes;
+  }
+*/
+  if(! heap_base_addr){
+    heap_base_addr = startAddr;
+    //std::cout << "Set heap base addr: " << std::hex << heap_base_addr << std::endl;
+  }
+
+
+
 #if DP_MEMORY_REGION_DEALIASING
   // calculate endAddr of memory region
   endAddr = startAddr + numBytes;

@@ -46,6 +46,35 @@ void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBy
   const auto timer = Timer(timers, TimerRegion::ALLOCA);
 #endif
 
+/*  std::cout << "alloca: " << dputil::decodeLID(lid) << " : " << std::hex << startAddr << " - " << std::hex << endAddr << " num_bytes: " << numBytes << std::endl;
+  if(stack_top_addr){
+    if(startAddr < stack_top_addr){
+      // increase stack shadow memory size
+      stack_top_addr = startAddr;
+      std::cout << "-> stack_base_addr: " << std::hex <<  stack_base_addr << std::endl;
+      std::cout << "-> stack_top_addr: " << std::hex << stack_top_addr << std::endl;
+      std::cout << "-> stack_size: " << ((stack_base_addr - stack_top_addr) >> 3) << std::endl;
+      stack_writes->resize(((stack_base_addr - stack_top_addr) >> 3));
+      stack_reads->resize(((stack_base_addr - stack_top_addr) >> 3));
+    }
+    else{
+      // clear affected stack shadow memory locations
+      std::cout << "-> affected offsets: " << stack_base_addr - endAddr  << "  -  " << stack_base_addr - startAddr << std::endl;
+      std::fill(stack_reads->begin() + ((stack_base_addr - endAddr) >> 3), stack_reads->begin() + ((stack_base_addr - startAddr) >> 3), 0);
+      std::fill(stack_writes->begin() + ((stack_base_addr - endAddr) >> 3), stack_reads->begin() + ((stack_base_addr - startAddr) >> 3), 0);
+      std::cout << "-> reset affected locations" << std::endl;
+    }
+  }
+  else{
+    stack_base_addr = startAddr;
+    stack_top_addr = startAddr;
+  }
+*/
+  if(! stack_base_addr){
+    stack_base_addr = startAddr;
+    //std::cout << "Set stack base addr: " << std::hex << stack_base_addr << std::endl;
+  }
+
 #if DP_MEMORY_REGION_DEALIASING
 #if DP_STACK_ACCESS_DETECTION
   // create entry to list of allocatedMemoryRegions

@@ -57,10 +57,11 @@ static void benchmark_perfect_shadow_test(benchmark::State &state) {
   for (auto _ : state) {
     state.PauseTiming();
     auto shadow = __dp::PerfectShadow{};
+    sigElement buffer;
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      std::ignore = shadow.testInRead(addr);
+      shadow.testInRead(addr, buffer);
     }
 
     state.PauseTiming();
@@ -85,10 +86,11 @@ static void benchmark_perfect_shadow_insert(benchmark::State &state) {
   for (auto _ : state) {
     state.PauseTiming();
     auto shadow = __dp::PerfectShadow{};
+    sigElement buffer;
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      std::ignore = shadow.insertToRead(addr, 1);
+      shadow.insertToRead(addr, 1, buffer);
     }
 
     state.PauseTiming();
@@ -169,23 +171,24 @@ static void benchmark_perfect_shadow(benchmark::State &state) {
   for (auto _ : state) {
     state.PauseTiming();
     auto shadow = __dp::PerfectShadow{};
+    sigElement buffer;
     state.ResumeTiming();
 
     for (auto addr : addresses) {
       if (test_read_address(addr)) {
-        std::ignore = shadow.testInRead(addr);
+        shadow.testInRead(addr, buffer);
       }
 
       if (test_write_address(addr)) {
-        std::ignore = shadow.testInWrite(addr);
+        shadow.testInWrite(addr, buffer);
       }
 
       if (insert_read_address(addr)) {
-        std::ignore = shadow.insertToRead(addr, 1);
+        shadow.insertToRead(addr, 1, buffer);
       }
 
       if (insert_write_address(addr)) {
-        std::ignore = shadow.insertToWrite(addr, 2);
+        shadow.insertToWrite(addr, 2, buffer);
       }
 
       if (update_read_address(addr)) {
@@ -229,10 +232,11 @@ static void benchmark_perfect_shadow_2_test(benchmark::State &state) {
   for (auto _ : state) {
     state.PauseTiming();
     auto shadow = __dp::PerfectShadow2{};
+    sigElement buffer;
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      std::ignore = shadow.testInRead(addr);
+      shadow.testInRead(addr, buffer);
     }
 
     state.PauseTiming();
@@ -257,10 +261,11 @@ static void benchmark_perfect_shadow_2_insert(benchmark::State &state) {
   for (auto _ : state) {
     state.PauseTiming();
     auto shadow = __dp::PerfectShadow2{};
+    sigElement buffer;
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      std::ignore = shadow.insertToRead(addr, 1);
+      shadow.insertToRead(addr, 1, buffer);
     }
 
     state.PauseTiming();
@@ -341,23 +346,199 @@ static void benchmark_perfect_shadow_2(benchmark::State &state) {
   for (auto _ : state) {
     state.PauseTiming();
     auto shadow = __dp::PerfectShadow2{};
+    sigElement buffer;
     state.ResumeTiming();
 
     for (auto addr : addresses) {
       if (test_read_address(addr)) {
-        std::ignore = shadow.testInRead(addr);
+        shadow.testInRead(addr, buffer);
       }
 
       if (test_write_address(addr)) {
-        std::ignore = shadow.testInWrite(addr);
+        shadow.testInWrite(addr, buffer);
       }
 
       if (insert_read_address(addr)) {
-        std::ignore = shadow.insertToRead(addr, 1);
+        shadow.insertToRead(addr, 1, buffer);
       }
 
       if (insert_write_address(addr)) {
-        std::ignore = shadow.insertToWrite(addr, 2);
+        shadow.insertToWrite(addr, 2, buffer);
+      }
+
+      if (update_read_address(addr)) {
+        shadow.updateInRead(addr, 3);
+      }
+
+      if (update_write_address(addr)) {
+        shadow.updateInWrite(addr, 4);
+      }
+
+      if (remove_read_address(addr)) {
+        shadow.removeFromRead(addr);
+      }
+
+      if (remove_write_address(addr)) {
+        shadow.removeFromWrite(addr);
+      }
+    }
+
+    state.PauseTiming();
+    dumping_ground.emplace_back(std::move(shadow));
+    state.ResumeTiming();
+  }
+}
+
+// Benchmarks for newest version (i.e., hopefully beating the base line)
+
+static void benchmark_perfect_shadow_3_test(benchmark::State &state) {
+  const auto number_addresses = state.range(0);
+
+  auto addresses = std::vector<std::int64_t>{};
+  addresses.resize(number_addresses);
+
+  for (auto i = std::int64_t(0); i < number_addresses; i++) {
+    addresses[i] = convert_to_address(i);
+  }
+
+  // This exists so that the destructor call does not interfere with the timing
+  auto dumping_ground = std::vector<__dp::PerfectShadow3>{};
+
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto shadow = __dp::PerfectShadow3{};
+    sigElement buffer;
+    state.ResumeTiming();
+
+    for (auto addr : addresses) {
+      shadow.testInRead(addr, buffer);
+    }
+
+    state.PauseTiming();
+    dumping_ground.emplace_back(std::move(shadow));
+    state.ResumeTiming();
+  }
+}
+
+static void benchmark_perfect_shadow_3_insert(benchmark::State &state) {
+  const auto number_addresses = state.range(0);
+
+  auto addresses = std::vector<std::int64_t>{};
+  addresses.resize(number_addresses);
+
+  for (auto i = std::int64_t(0); i < number_addresses; i++) {
+    addresses[i] = convert_to_address(i);
+  }
+
+  // This exists so that the destructor call does not interfere with the timing
+  auto dumping_ground = std::vector<__dp::PerfectShadow3>{};
+
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto shadow = __dp::PerfectShadow3{};
+    sigElement buffer;
+    state.ResumeTiming();
+
+    for (auto addr : addresses) {
+      shadow.insertToRead(addr, 1, buffer);
+    }
+
+    state.PauseTiming();
+    dumping_ground.emplace_back(std::move(shadow));
+    state.ResumeTiming();
+  }
+}
+
+static void benchmark_perfect_shadow_3_update(benchmark::State &state) {
+  const auto number_addresses = state.range(0);
+
+  auto addresses = std::vector<std::int64_t>{};
+  addresses.resize(number_addresses);
+
+  for (auto i = std::int64_t(0); i < number_addresses; i++) {
+    addresses[i] = convert_to_address(i);
+  }
+
+  // This exists so that the destructor call does not interfere with the timing
+  auto dumping_ground = std::vector<__dp::PerfectShadow3>{};
+
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto shadow = __dp::PerfectShadow3{};
+    state.ResumeTiming();
+
+    for (auto addr : addresses) {
+      shadow.updateInRead(addr, 1);
+    }
+
+    state.PauseTiming();
+    dumping_ground.emplace_back(std::move(shadow));
+    state.ResumeTiming();
+  }
+}
+
+static void benchmark_perfect_shadow_3_remove(benchmark::State &state) {
+  const auto number_addresses = state.range(0);
+
+  auto addresses = std::vector<std::int64_t>{};
+  addresses.resize(number_addresses);
+
+  for (auto i = std::int64_t(0); i < number_addresses; i++) {
+    addresses[i] = convert_to_address(i);
+  }
+
+  // This exists so that the destructor call does not interfere with the timing
+  auto dumping_ground = std::vector<__dp::PerfectShadow3>{};
+
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto shadow = __dp::PerfectShadow3{};
+    state.ResumeTiming();
+
+    for (auto addr : addresses) {
+      shadow.removeFromRead(addr);
+    }
+
+    state.PauseTiming();
+    dumping_ground.emplace_back(std::move(shadow));
+    state.ResumeTiming();
+  }
+}
+
+static void benchmark_perfect_shadow_3(benchmark::State &state) {
+  const auto number_addresses = state.range(0);
+
+  auto addresses = std::vector<std::int64_t>{};
+  addresses.resize(number_addresses);
+
+  for (auto i = std::int64_t(0); i < number_addresses; i++) {
+    addresses[i] = convert_to_address(i);
+  }
+
+  // This exists so that the destructor call does not interfere with the timing
+  auto dumping_ground = std::vector<__dp::PerfectShadow3>{};
+
+  for (auto _ : state) {
+    state.PauseTiming();
+    auto shadow = __dp::PerfectShadow3{};
+    sigElement buffer;
+    state.ResumeTiming();
+
+    for (auto addr : addresses) {
+      if (test_read_address(addr)) {
+        shadow.testInRead(addr, buffer);
+      }
+
+      if (test_write_address(addr)) {
+        shadow.testInWrite(addr, buffer);
+      }
+
+      if (insert_read_address(addr)) {
+        shadow.insertToRead(addr, 1, buffer);
+      }
+
+      if (insert_write_address(addr)) {
+        shadow.insertToWrite(addr, 2, buffer);
       }
 
       if (update_read_address(addr)) {
@@ -388,25 +569,35 @@ static void benchmark_perfect_shadow_2(benchmark::State &state) {
 
 BENCHMARK(benchmark_perfect_shadow_test)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_2_test)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
+BENCHMARK(benchmark_perfect_shadow_3_test)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_test)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_2_test)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
+BENCHMARK(benchmark_perfect_shadow_3_test)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
 
 BENCHMARK(benchmark_perfect_shadow_insert)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_2_insert)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
+BENCHMARK(benchmark_perfect_shadow_3_insert)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_insert)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_2_insert)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
+BENCHMARK(benchmark_perfect_shadow_3_insert)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
 
 BENCHMARK(benchmark_perfect_shadow_update)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_2_update)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
+BENCHMARK(benchmark_perfect_shadow_3_update)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_update)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_2_update)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
+BENCHMARK(benchmark_perfect_shadow_3_update)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
 
 BENCHMARK(benchmark_perfect_shadow_remove)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_2_remove)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
+BENCHMARK(benchmark_perfect_shadow_3_remove)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_remove)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_2_remove)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
+BENCHMARK(benchmark_perfect_shadow_3_remove)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
 
 BENCHMARK(benchmark_perfect_shadow)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_2)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
+BENCHMARK(benchmark_perfect_shadow_3)->Unit(benchmark::kMillisecond)->Arg(1024)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
 BENCHMARK(benchmark_perfect_shadow_2)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);
+BENCHMARK(benchmark_perfect_shadow_3)->Unit(benchmark::kMillisecond)->Arg(1024 * 64)->Iterations(100);

@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
+#include "../runtimeFunctionsGlobals.hpp"
 
 namespace __dp {
 
@@ -53,20 +54,18 @@ public:
     delete sigWrite;
   }
 
-  inline sigElement testInRead(std::int64_t memAddr) { return (*sigRead)[memAddr]; }
+  inline void testInRead(std::int64_t memAddr, sigElement& buffer_lastRead) { buffer_lastRead = (*sigRead)[memAddr]; }
 
-  inline sigElement testInWrite(std::int64_t memAddr) { return (*sigWrite)[memAddr]; }
+  inline void testInWrite(std::int64_t memAddr, sigElement& buffer_lastWrite) { buffer_lastWrite = (*sigWrite)[memAddr]; }
 
-  inline sigElement insertToRead(std::int64_t memAddr, sigElement value) {
-    sigElement oldValue = testInRead(memAddr);
+  inline void insertToRead(std::int64_t memAddr, sigElement value, sigElement& buffer_lastRead) {
+    testInRead(memAddr, buffer_lastRead);
     (*sigRead)[memAddr] = value;
-    return oldValue;
   }
 
-  inline sigElement insertToWrite(std::int64_t memAddr, sigElement value) {
-    sigElement oldValue = testInWrite(memAddr);
+  inline void insertToWrite(std::int64_t memAddr, sigElement value, sigElement& buffer_lastWrite) {
+    testInWrite(memAddr, buffer_lastWrite);
     (*sigWrite)[memAddr] = value;
-    return oldValue;
   }
 
   inline void updateInRead(std::int64_t memAddr, sigElement newValue) { (*sigRead)[memAddr] = newValue; }
@@ -77,6 +76,7 @@ public:
 
   inline void removeFromWrite(std::int64_t memAddr) { (*sigWrite)[memAddr] = 0; }
 
+  /*
   inline std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr, std::int64_t endAddr) {
     std::unordered_set<ADDR> result;
     for (auto pair : (*sigWrite)) {
@@ -91,6 +91,7 @@ public:
     }
     return result;
   }
+  */
 
   const std::unordered_map<std::int64_t, sigElement> *getSigRead() const noexcept { return sigRead; }
 
@@ -112,34 +113,36 @@ public:
 
   ~PerfectShadow2() {}
 
-  sigElement testInRead(const std::int64_t memAddr) noexcept { return read_cache[memAddr]; }
+  void testInRead(const std::int64_t memAddr, sigElement& buffer_lastRead) noexcept { buffer_lastRead = read_cache[memAddr]; }
 
-  sigElement testInWrite(const std::int64_t memAddr) noexcept { return write_cache[memAddr]; }
+  void testInWrite(const std::int64_t memAddr, sigElement& buffer_lastWrite) noexcept { buffer_lastWrite = write_cache[memAddr]; }
 
-  sigElement insertToRead(const std::int64_t memAddr, const sigElement value) {
+  void insertToRead(const std::int64_t memAddr, const sigElement value, sigElement& buffer_lastRead) {
     const auto iterator = read_cache.find(memAddr);
 
     if (iterator == read_cache.end()) {
       read_cache[memAddr] = value;
-      return 0;
+      buffer_lastRead = 0;
+      return;
     }
 
-    const auto old_value = iterator->second;
+    buffer_lastRead = iterator->second;
     iterator->second = value;
-    return old_value;
+    return;
   }
 
-  sigElement insertToWrite(const std::int64_t memAddr, const sigElement value) {
+  void insertToWrite(const std::int64_t memAddr, const sigElement value, sigElement& buffer_lastWrite) {
     const auto iterator = write_cache.find(memAddr);
 
     if (iterator == write_cache.end()) {
       write_cache[memAddr] = value;
-      return 0;
+      buffer_lastWrite = 0;
+      return;
     }
 
-    const auto old_value = iterator->second;
+    buffer_lastWrite = iterator->second;
     iterator->second = value;
-    return old_value;
+    return;
   }
 
   void updateInRead(const std::int64_t memAddr, const sigElement newValue) noexcept { read_cache[memAddr] = newValue; }
@@ -152,6 +155,7 @@ public:
 
   void removeFromWrite(const std::int64_t memAddr) { write_cache[memAddr] = 0; }
 
+  /*
   std::unordered_set<ADDR> getAddrsInRange(const std::int64_t startAddr, const std::int64_t endAddr) noexcept {
     std::unordered_set<ADDR> result{};
     result.reserve(read_cache.size() + write_cache.size());
@@ -172,6 +176,7 @@ public:
 
     return result;
   }
+  */
 
   const hashmap<int64_t, sigElement> *getSigRead() const noexcept { return &read_cache; }
 
@@ -181,5 +186,355 @@ private:
   hashmap<int64_t, sigElement> read_cache{};
   hashmap<int64_t, sigElement> write_cache{};
 };
+
+// Hopefully even faster version
+
+#define GET_STACK_OFFSET(MEMADDR) ((stack_base_addr - MEMADDR) >> 3)
+#define MAX_DISTANCE 0x3B9ACA00
+
+class PerfectShadow3 : public AbstractShadow {
+  public:
+    PerfectShadow3(){
+        internal_global_reads.reserve(1024);
+        internal_global_writes.reserve(1024);
+        internal_stack_reads.resize(1);
+        internal_stack_writes.resize(1);
+        internal_heap_reads.resize(1);
+        internal_heap_writes.resize(1);
+    }
+
+    ~PerfectShadow3() {
+    }
+
+    void testInRead(const std::int64_t memAddr, sigElement& buffer_lastRead) noexcept {
+#ifdef DP_INTERNAL_TIMER
+      const auto timer = Timer(timers, TimerRegion::SMEM_TEST_IN_READ);
+#endif
+      auto stack_distance = stack_base_addr - memAddr;
+      auto heap_distance = memAddr - heap_base_addr;
+
+      if(stack_distance < heap_distance){
+        if (stack_distance < MAX_DISTANCE){
+          // stack access
+          // INCREASE STACK DATASTRUCTURE SIZE
+          if(stack_distance > internal_stack_reads.size()){
+            internal_stack_reads.resize(stack_distance+1);
+            internal_stack_writes.resize(stack_distance+1);
+          }
+          buffer_lastRead = internal_stack_reads[stack_distance];
+          return;
+        }
+      }
+      else{
+        if(heap_distance < MAX_DISTANCE){
+          // heap access
+          // INCREASE Heap DATASTRUCTURE SIZE
+          if(heap_distance > internal_heap_reads.size()){
+            internal_heap_reads.resize(heap_distance+1);
+            internal_heap_writes.resize(heap_distance+1);
+          }
+          buffer_lastRead = internal_heap_reads[heap_distance];
+          return;
+        }
+      }
+      // global access
+      buffer_lastRead = internal_global_reads[memAddr];
+      return;
+
+      // return read_cache[memAddr];
+    }
+
+    void testInWrite(const std::int64_t memAddr, sigElement& buffer_lastWrite) noexcept {
+#ifdef DP_INTERNAL_TIMER
+      const auto timer = Timer(timers, TimerRegion::SMEM_TEST_IN_WRITE);
+#endif
+      auto stack_distance = stack_base_addr - memAddr;
+      auto heap_distance = memAddr - heap_base_addr;
+
+      if(stack_distance < heap_distance){
+        if (stack_distance < MAX_DISTANCE){
+          // stack access
+          // INCREASE STACK DATASTRUCTURE SIZE
+          if(stack_distance > internal_stack_reads.size()){
+            internal_stack_reads.resize(stack_distance+1);
+            internal_stack_writes.resize(stack_distance+1);
+          }
+          buffer_lastWrite = internal_stack_writes[stack_distance];
+          return;
+        }
+      }
+      else{
+        if(heap_distance < MAX_DISTANCE){
+          // heap access
+          // INCREASE Heap DATASTRUCTURE SIZE
+          if(heap_distance > internal_heap_reads.size()){
+            internal_heap_reads.resize(heap_distance+1);
+            internal_heap_writes.resize(heap_distance+1);
+          }
+          buffer_lastWrite = internal_heap_writes[heap_distance];
+          return;
+        }
+      }
+      // global access
+      buffer_lastWrite = internal_global_writes[memAddr];
+      return;
+    }
+
+    void insertToRead(const std::int64_t memAddr, const sigElement value, sigElement& buffer_lastRead) {
+#ifdef DP_INTERNAL_TIMER
+        const auto timer = Timer(timers, TimerRegion::SMEM_INSERT_TO_READ);
+#endif
+      auto stack_distance = stack_base_addr - memAddr;
+      auto heap_distance = memAddr - heap_base_addr;
+
+      if(stack_distance < heap_distance){
+        if (stack_distance < MAX_DISTANCE){
+          // stack access
+          // INCREASE STACK DATASTRUCTURE SIZE
+          if(stack_distance > internal_stack_reads.size()){
+            internal_stack_reads.resize(stack_distance+1);
+            internal_stack_writes.resize(stack_distance+1);
+          }
+          buffer_lastRead = internal_stack_reads[stack_distance];
+          internal_stack_reads[stack_distance] = value;
+          return;
+        }
+      }
+      else{
+        if(heap_distance < MAX_DISTANCE){
+          // heap access
+          // INCREASE Heap DATASTRUCTURE SIZE
+          if(heap_distance > internal_heap_reads.size()){
+            internal_heap_reads.resize(heap_distance+1);
+            internal_heap_writes.resize(heap_distance+1);
+          }
+          buffer_lastRead = internal_heap_reads[heap_distance];
+          internal_heap_reads[heap_distance] = value;
+          return;
+        }
+      }
+      // global access
+      const auto iterator = internal_global_reads.find(memAddr);
+
+      if (iterator == internal_global_reads.end()) {
+        internal_global_reads[memAddr] = value;
+        buffer_lastRead = 0;
+        return;
+      }
+
+      buffer_lastRead = iterator->second;
+      iterator->second = value;
+      return;
+    }
+
+    void insertToWrite(const std::int64_t memAddr, const sigElement value, sigElement& buffer_lastWrite) {
+#ifdef DP_INTERNAL_TIMER
+      const auto timer = Timer(timers, TimerRegion::SMEM_INSERT_TO_WRITE);
+#endif
+      auto stack_distance = stack_base_addr - memAddr;
+      auto heap_distance = memAddr - heap_base_addr;
+
+      if(stack_distance < heap_distance){
+        if (stack_distance < MAX_DISTANCE){
+          // stack access
+          // INCREASE STACK DATASTRUCTURE SIZE
+          if(stack_distance > internal_stack_reads.size()){
+            internal_stack_reads.resize(stack_distance+1);
+            internal_stack_writes.resize(stack_distance+1);
+          }
+          buffer_lastWrite = internal_stack_writes[stack_distance];
+          internal_stack_writes[stack_distance] = value;
+          return;
+        }
+      }
+      else{
+        if(heap_distance < MAX_DISTANCE){
+          // heap access
+          // INCREASE Heap DATASTRUCTURE SIZE
+          if(heap_distance > internal_heap_reads.size()){
+            internal_heap_reads.resize(heap_distance+1);
+            internal_heap_writes.resize(heap_distance+1);
+          }
+          buffer_lastWrite = internal_heap_writes[heap_distance];
+          internal_heap_writes[heap_distance] = value;
+          return;
+        }
+      }
+      // global access
+      const auto iterator = internal_global_writes.find(memAddr);
+
+      if (iterator == internal_global_writes.end()) {
+        internal_global_writes[memAddr] = value;
+        buffer_lastWrite = 0;
+        return;
+      }
+
+      buffer_lastWrite = iterator->second;
+      iterator->second = value;
+      return;
+    }
+
+    void updateInRead(const std::int64_t memAddr, const sigElement newValue) noexcept {
+#ifdef DP_INTERNAL_TIMER
+      const auto timer = Timer(timers, TimerRegion::SMEM_UPDATE_IN_READ);
+#endif
+      auto stack_distance = stack_base_addr - memAddr;
+      auto heap_distance = memAddr - heap_base_addr;
+
+      if(stack_distance < heap_distance){
+        if (stack_distance < MAX_DISTANCE){
+          // stack access
+          // INCREASE STACK DATASTRUCTURE SIZE
+          if(stack_distance > internal_stack_reads.size()){
+            internal_stack_reads.resize(stack_distance+1);
+            internal_stack_writes.resize(stack_distance+1);
+          }
+          internal_stack_reads[stack_distance] = newValue;
+          return;
+        }
+      }
+      else{
+        if(heap_distance < MAX_DISTANCE){
+          // heap access
+          // INCREASE Heap DATASTRUCTURE SIZE
+          if(heap_distance > internal_heap_reads.size()){
+            internal_heap_reads.resize(heap_distance+1);
+            internal_heap_writes.resize(heap_distance+1);
+          }
+          internal_heap_reads[heap_distance] = newValue;
+          return;
+        }
+      }
+      // global access
+      internal_global_reads[memAddr] = newValue;
+      // read_cache[memAddr] = newValue;
+      }
+
+    void updateInWrite(const std::int64_t memAddr, const sigElement newValue) noexcept {
+#ifdef DP_INTERNAL_TIMER
+      const auto timer = Timer(timers, TimerRegion::SMEM_UPDATE_IN_WRITE);
+#endif
+      auto stack_distance = stack_base_addr - memAddr;
+      auto heap_distance = memAddr - heap_base_addr;
+
+      if(stack_distance < heap_distance){
+        if (stack_distance < MAX_DISTANCE){
+          // stack access
+          // INCREASE STACK DATASTRUCTURE SIZE
+          if(stack_distance > internal_stack_reads.size()){
+            internal_stack_reads.resize(stack_distance+1);
+            internal_stack_writes.resize(stack_distance+1);
+          }
+          internal_stack_writes[stack_distance] = newValue;
+          return;
+        }
+      }
+      else{
+        if(heap_distance < MAX_DISTANCE){
+          // heap access
+          // INCREASE Heap DATASTRUCTURE SIZE
+          if(heap_distance > internal_heap_reads.size()){
+            internal_heap_reads.resize(heap_distance+1);
+            internal_heap_writes.resize(heap_distance+1);
+          }
+          internal_heap_writes[heap_distance] = newValue;
+          return;
+        }
+      }
+      // global access
+      internal_global_writes[memAddr] = newValue;
+      //write_cache[memAddr] = newValue;
+    }
+
+    void removeFromRead(const std::int64_t memAddr) {
+#ifdef DP_INTERNAL_TIMER
+      const auto timer = Timer(timers, TimerRegion::SMEM_REMOVE_FROM_READ);
+#endif
+      auto stack_distance = stack_base_addr - memAddr;
+      auto heap_distance = memAddr - heap_base_addr;
+
+      if(stack_distance < heap_distance){
+        if (stack_distance < MAX_DISTANCE){
+          // stack access
+          // INCREASE STACK DATASTRUCTURE SIZE
+          if(stack_distance > internal_stack_reads.size()){
+            internal_stack_reads.resize(stack_distance+1);
+            internal_stack_writes.resize(stack_distance+1);
+          }
+          internal_stack_reads[stack_distance] = 0;
+          return;
+        }
+      }
+      else{
+        if(heap_distance < MAX_DISTANCE){
+          // heap access
+          // INCREASE Heap DATASTRUCTURE SIZE
+          if(heap_distance > internal_heap_reads.size()){
+            internal_heap_reads.resize(heap_distance+1);
+            internal_heap_writes.resize(heap_distance+1);
+          }
+          internal_heap_reads[heap_distance] = 0;
+          return;
+        }
+      }
+      // global access
+      internal_global_reads[memAddr] = 0;
+    }
+
+    void removeFromWrite(const std::int64_t memAddr) {
+#ifdef DP_INTERNAL_TIMER
+      const auto timer = Timer(timers, TimerRegion::SMEM_REMOVE_FROM_WRITE);
+#endif
+      auto stack_distance = stack_base_addr - memAddr;
+      auto heap_distance = memAddr - heap_base_addr;
+
+      if(stack_distance < heap_distance){
+        if (stack_distance < MAX_DISTANCE){
+          // stack access
+          // INCREASE STACK DATASTRUCTURE SIZE
+          if(stack_distance > internal_stack_reads.size()){
+            internal_stack_reads.resize(stack_distance+1);
+            internal_stack_writes.resize(stack_distance+1);
+          }
+          internal_stack_writes[stack_distance] = 0;
+          return;
+        }
+      }
+      else{
+        if(heap_distance < MAX_DISTANCE){
+          // heap access
+          // INCREASE Heap DATASTRUCTURE SIZE
+          if(heap_distance > internal_heap_reads.size()){
+            internal_heap_reads.resize(heap_distance+1);
+            internal_heap_writes.resize(heap_distance+1);
+          }
+          internal_heap_writes[heap_distance] = 0;
+          return;
+        }
+      }
+      // global access
+      internal_global_writes[memAddr] = 0;
+    }
+
+    const hashmap<int64_t, sigElement> *getSigRead() const noexcept {
+      std::cout << "GetSigRead" << std::endl;
+      //return &read_cache;
+    }
+
+    const hashmap<int64_t, sigElement> *getSigWrite() const noexcept {
+      std::cout << "GetSigWrite" << std::endl;
+      // return &write_cache;
+    }
+
+  private:
+
+    std::vector<sigElement> internal_stack_reads;
+    std::vector<sigElement> internal_stack_writes;
+    std::vector<sigElement> internal_heap_reads;
+    std::vector<sigElement> internal_heap_writes;
+    hashmap<int64_t, sigElement> internal_global_reads{};
+    hashmap<int64_t, sigElement> internal_global_writes{};
+
+  };
 
 } // namespace __dp
