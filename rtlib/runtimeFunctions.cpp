@@ -350,7 +350,7 @@ void initSingleThreadedExecution() {
 #endif
 
   if (USE_PERFECT) {
-    singleThreadedExecutionSMem = new PerfectShadow(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
+    singleThreadedExecutionSMem = new PerfectShadow2();
   } else {
     singleThreadedExecutionSMem = new ShadowMemory(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
   }
