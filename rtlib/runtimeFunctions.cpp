@@ -191,7 +191,7 @@ void generateStringDepMap() {
   for (auto &dline : *allDeps) {
     if (dline.first) {
       string lid = decodeLID(dline.first);
-      set<string> lineDeps;
+      unordered_set<string> lineDeps;
       for (auto &d : *(dline.second)) {
         string dep = "";
         switch (d.type) {

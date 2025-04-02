@@ -21,7 +21,7 @@
 #include <iostream>
 #include <mutex>
 #include <regex>
-#include <set>
+#include <unordered_set>
 #include <string>
 #include <boost/algorithm/string.hpp>
 
@@ -72,7 +72,7 @@ void __dp_add_bb_deps(char *depStringPtr) {
       regex_search(s, res3, r4);
       std::string v(res3[0]);
       if (outPutDeps->count(k) == 0) {
-        std::set<std::string> depSet;
+        std::unordered_set<std::string> depSet;
         (*outPutDeps)[k] = depSet;
       }
       (*outPutDeps)[k].insert(v);
