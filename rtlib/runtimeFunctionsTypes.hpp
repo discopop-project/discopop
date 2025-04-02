@@ -118,7 +118,7 @@ typedef std::unordered_map<LID, depSet *> depMap;
 
 // Hybrid anaysis
 typedef std::unordered_map<std::string, std::set<std::string>> stringDepMap;
-typedef std::set<std::uint32_t> ReportedBBSet;
+typedef std::unordered_set<std::uint32_t> ReportedBBSet;
 typedef std::set<std::string> ReportedBBPairSet;
 typedef std::set<std::string> ReportedBBPairSet;
 // End HA
