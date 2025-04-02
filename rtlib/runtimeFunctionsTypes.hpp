@@ -113,7 +113,34 @@ struct compDep {
   }
 };
 
-typedef std::set<Dep, compDep> depSet;
+struct eqDep {
+  bool operator()(const Dep &a, const Dep &b) const {
+    if (a.type != b.type) {
+      return false;
+    }
+    if (a.depOn != b.depOn) {
+      return false;
+    }
+    // comparison between string is very time-consuming. So just compare
+    // variable names according to address (we only need to distinguish them)
+    if (a.var != b.var) {
+      return false;
+    }
+    return true;
+  }
+};
+
+class DepHasher {
+  public:
+      size_t operator() (Dep const& key) const {     // the parameter type should be the same as the type of key of unordered_map
+          size_t hash = 0;
+          hash += std::hash<int64_t>{}(key.depOn);
+          hash += std::hash<int>{}((int)key.type);
+          return hash;
+      }
+  };
+
+typedef std::unordered_set<Dep, DepHasher, eqDep> depSet;
 typedef std::unordered_map<LID, depSet *> depMap;
 
 // Hybrid anaysis
