@@ -359,11 +359,10 @@ void initSingleThreadedExecution() {
 }
 
 string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
-#if DP_MEMORY_REGION_DEALIASING
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
 #endif
-
+#if DP_MEMORY_REGION_DEALIASING
   return fallback + '-' + memory_manager->get_memory_region_id(addr, fallback);
 #else
   return fallback;

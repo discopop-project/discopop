@@ -88,7 +88,9 @@ void __dp_read(LID lid, ADDR addr, const char *var) {
   current.isRead = true;
   current.lid = lid;
   current.var = var;
+#if DP_MEMORY_REGION_DEALIASING
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
+#endif
   current.addr = addr;
 #if DP_CALLTREE_PROFILING
   current.call_tree_node_ptr = call_tree->get_current_node_ptr();
