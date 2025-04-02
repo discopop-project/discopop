@@ -74,9 +74,6 @@ void addDep(depType type, LID curr, LID depOn, const char *var, string AAvar, AD
     type = INIT;
   // End HA
 
-  depType originalType = type;
-  int loopIterationOffset = 0;
-
   // Remove metadata to preserve result correctness and add metadata to `Dep`
   // object
 
