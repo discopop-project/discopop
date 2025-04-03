@@ -40,6 +40,11 @@ void __dp_read(LID lid, ADDR addr, const char *var) {
     return;
   }
 
+  // sampling
+  if(!sampling_enabled){
+    return;
+  }
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif

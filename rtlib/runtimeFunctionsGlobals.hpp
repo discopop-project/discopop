@@ -102,4 +102,9 @@ extern thread_local depMap *myMap;
 // statistics
 extern std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 
+// sampling
+extern bool sampling_enabled;
+extern bool sampling_stop;
+extern pthread_t *sampling_thread;
+
 } // namespace __dp

@@ -49,6 +49,10 @@
 #include <unistd.h>
 #endif
 
+#ifndef DP_SAMPLING_RATIO
+#define DP_SAMPLING_RATIO 0
+#endif
+
 using namespace std;
 using namespace dputil;
 
@@ -338,7 +342,15 @@ void initParallelization() {
     pthread_create(&workers[i], &attr, analyzeDeps, (void *)i);
   }
 
+  // create thread to manage the sampling activity
+  sampling_thread = new pthread_t();
+  pthread_attr_t sampling_attr;
+  pthread_attr_init(&sampling_attr);
+  pthread_attr_setdetachstate(&sampling_attr, PTHREAD_CREATE_JOINABLE);
+  pthread_create(sampling_thread, &sampling_attr, manageSampling, (void*) 0);
+
   pthread_attr_destroy(&attr);
+  pthread_attr_destroy(&sampling_attr);
 }
 
 void initSingleThreadedExecution() {
@@ -495,6 +507,25 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
   }
 }
 
+void *manageSampling(void *arg){
+  const std::uint64_t sampling_period_inactive_micro_seconds = DP_SAMPLING_RATIO;
+  const std::uint64_t sampling_period_active_micro_seconds = 1;
+  std::uint64_t toggle_point = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+
+  // sampling is disabled, if DP_SAMPLING_RATIO is left at 0
+  if(sampling_period_inactive_micro_seconds != 0){
+    while(!sampling_stop){
+      if(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() > toggle_point){
+        sampling_enabled = !sampling_enabled;
+        toggle_point = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count() + (sampling_enabled? sampling_period_active_micro_seconds : sampling_period_inactive_micro_seconds);
+      }
+    }
+  }
+
+  pthread_exit(NULL);
+  return nullptr;
+}
+
 void *analyzeDeps(void *arg) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
@@ -618,6 +649,10 @@ void finalizeParallelization() {
   // wait for worker threads
   for (int i = 0; i < NUM_WORKERS; ++i)
     pthread_join(workers[i], NULL);
+
+  // join thread which manages the sampling activity
+  sampling_stop = true;
+  pthread_join(*sampling_thread, NULL);
 
 #if DP_CALLTREE_PROFILING
     // metadata_queue->blocking_finalize_queue();

@@ -89,6 +89,11 @@ thread_local depMap *myMap = nullptr;
 // statistics
 std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 
+// sampling
+bool sampling_enabled = true;
+bool sampling_stop = false;
+pthread_t *sampling_thread = nullptr;
+
 /******* END: parallelization section *******/
 
 } // namespace __dp
