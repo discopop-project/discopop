@@ -47,6 +47,7 @@ where `<CMAKE_FLAGS>` can consist of any combination of the following flags and 
 - `-DDP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY=[0-1000]` &ndash; Enable or disable probablistic cutoff. Ignores cutoff with a configurable probability. Set `0` to disable probabilistic cutoff. Set `25` for a probability of 2.5% etc. Default: `1`.
 - `-DDP_MEMORY_REGION_DEALIASING=[0|1]`: Enable or disable the generation of dependency de-aliasing information. Reduces potential false positive parallelization suggestions, but increases the profiling overhead. Default: `0`.
 - `-DDP_BRANCH_TRACKING=[0|1]`: Toggles the creation of instrumentation calls for tracking taken branches. Required by the graph pruning step of the DiscoPoP optimizer. Default: `0`.
+- `-DDP_SAMPLING_RATIO=<int>`: Toggles the ratio of active vs. inactive periods for sampling of memory accesses during dependency profiling. `0` disables the sampling, thus resulting in complete sets of identified data dependencies. Warning: Enabling sampling reduces the profiling overhead, but can lead to incomplete sets of identified data dependencies and thus potentially incorrect parallelization suggestions. Default: `0`.
 
 #### Development and debugging
 - `-DDP_RTLIB_VERBOSE=[0|1]` &ndash; Enable verbose output during profiling.

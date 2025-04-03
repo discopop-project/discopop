@@ -35,6 +35,8 @@ void initSingleThreadedExecution();
 
 void mergeDeps();
 
+void *manageSampling(void *arg);
+
 void *analyzeDeps(void *arg);
 
 void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access);

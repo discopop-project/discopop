@@ -41,6 +41,11 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
     return;
   }
 
+  // sampling
+  if(!sampling_enabled){
+    return;
+  }
+
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::lock_guard<std::mutex> guard(pthread_compatibility_mutex);
 #endif
@@ -59,6 +64,7 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
     }
     return;
   }
+
   // For tracking function call or invoke
 #ifdef SKIP_DUP_INSTR
   if (lastaddr == addr && count >= 2) {

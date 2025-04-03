@@ -102,6 +102,16 @@ else()
         message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY set to default value: 0.1%")
 endif()
 
+if(DEFINED DP_SAMPLING_RATIO)
+        target_compile_definitions(DiscoPoP_RT PUBLIC DP_SAMPLING_RATIO=${DP_SAMPLING_RATIO})
+        if(NOT ${DP_SAMPLING_RATIO} EQUAL 0)
+                message(STATUS "WARNING: DiscoPoP configuration: Sampling of memory accessed during profiling enabled. DP_SAMPLING_RATIO set to ${DP_SAMPLING_RATIO}.")
+        endif()
+else()
+        target_compile_definitions(DiscoPoP_RT PUBLIC DP_SAMPLING_RATIO=0)
+        message(STATUS "WARNING: DiscoPoP configuration: DP_SAMPLING_RATIO set to default value: 0. Sampling disabled.")
+endif()
+
 
 
 if(DEFINED DP_MEMORY_REGION_DEALIASING)
