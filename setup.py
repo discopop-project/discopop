@@ -68,6 +68,7 @@ setup(
             "discopop_preprocessor=discopop_library.PreProcessor.__main__:main",
             "discopop_project_manager=discopop_library.ProjectManager.__main__:main",
             "discopop_configuration_manager=discopop_library.ConfigurationManager.__main__:main",
+            "discopop_dependency_comparator=discopop_library.DependencyComparator.__main__:main",
         ]
     },
     zip_safe=True,
