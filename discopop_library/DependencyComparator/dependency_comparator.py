@@ -40,6 +40,7 @@ def run(arguments: DependencyComparatorArguments) -> None:
     overlap = []
     missing = []
     additional = []
+    additional_init = []
 
     for dep in parsed_gold_standard:
         found = False
@@ -60,12 +61,25 @@ def run(arguments: DependencyComparatorArguments) -> None:
                 break
         if found:
             continue
-        additional.append(dep)
+        print("ADD: ", dep.type)
+        if dep.type == "INIT":
+            additional_init.append(dep)
+        else:
+            additional.append(dep)
 
     print("overlap: ", len(overlap))
     print("missing: ", len(missing))
+    print("additional init: ", len(additional_init))
     print("additional: ", len(additional))
-    result_dir = {"overlap": len(overlap), "missing": len(missing), "additional": len(additional)}
+    result_dir = {
+        "overlap": len(overlap),
+        "missing": len(missing),
+        "additional_init": len(additional_init),
+        "additional": len(additional),
+    }
+
+    for add in additional:
+        print("-> ", add)
 
     with open(arguments.output, "w+") as f:
         json.dump(result_dir, f)
