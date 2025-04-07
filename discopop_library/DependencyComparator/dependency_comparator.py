@@ -61,7 +61,6 @@ def run(arguments: DependencyComparatorArguments) -> None:
                 break
         if found:
             continue
-        print("ADD: ", dep.type)
         if dep.type == "INIT":
             additional_init.append(dep)
         else:
