@@ -66,10 +66,6 @@ def run(arguments: DependencyComparatorArguments) -> None:
         else:
             additional.append(dep)
 
-    print("overlap: ", len(overlap))
-    print("missing: ", len(missing))
-    print("additional init: ", len(additional_init))
-    print("additional: ", len(additional))
     result_dir = {
         "overlap": len(overlap),
         "missing": len(missing),
@@ -77,8 +73,15 @@ def run(arguments: DependencyComparatorArguments) -> None:
         "additional": len(additional),
     }
 
+    print("ADDITIONAL: ")
     for add in additional:
         print("-> ", add)
+    print()
+
+    print("overlap: ", len(overlap))
+    print("missing: ", len(missing))
+    print("additional init: ", len(additional_init))
+    print("additional: ", len(additional))
 
     with open(arguments.output, "w+") as f:
         json.dump(result_dir, f)
