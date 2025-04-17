@@ -43,6 +43,8 @@ void mergeDeps();
 
 void *processFirstAccessQueue(void *arg);
 
+void *processSecondAccessQueue(void *arg);
+
 void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access);
 
 std::string getMemoryRegionIdFromAddr(std::string fallback, ADDR addr);

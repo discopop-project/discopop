@@ -314,16 +314,14 @@ void initParallelization() {
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
-  // create worker threads and set default value for temp variables
+  // create worker threads to process the firstAccessQueue
   for (int64_t i = 0; i < NUM_WORKERS; ++i) {
-//    addrChunkPresent[i] = false;
-//    tempAddrCount[i] = 0;
-//    tempAddrChunks[i] = new AccessInfo[CHUNK_SIZE];
-//    pthread_mutex_init(&addrChunkMutexes[i], NULL);
-//    pthread_cond_init(&addrChunkPresentConds[i], NULL);
-//    pthread_create(&workers[i], &attr, analyzeDeps, (void *)i);
     pthread_create(&workers[i], &attr, processFirstAccessQueue, (void *)i);
   }
+
+  // create worker thread to process the secondAccessQueue
+  secondAccessQueue_worker_thread = new pthread_t();
+  pthread_create(secondAccessQueue_worker_thread, &attr, processSecondAccessQueue, (void *) NUM_WORKERS);
 
   pthread_attr_destroy(&attr);
 }
@@ -645,6 +643,67 @@ void *processFirstAccessQueue(void *arg) {
     return nullptr;
   }
 
+  void *processSecondAccessQueue(void *arg) {
+    #ifdef DP_INTERNAL_TIMER
+      const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
+    #endif
+
+      int64_t id = (int64_t)arg;
+      myMap = new depMap();
+
+      SecondAccessQueueElement* current = nullptr;
+      AbstractShadow *SMem = new PerfectShadow2();
+
+
+
+      while(true){
+        // get chunk from queue
+        current = secondAccessQueue.get();
+
+        // check if chunk aquired
+        if(current){
+          // check entry boundary conditions for data dependencies
+          auto promised_first_accesses_vector_ptr = current->entry_boundary_first_addr_accesses.get();
+          for(auto entry_accesses : *(promised_first_accesses_vector_ptr)){
+            analyzeSingleAccess(SMem, entry_accesses);
+          }
+
+          // update persistent SMem with exit boundary conditions (aka merge the local into the persistent shadow memories)
+          auto promised_last_smem_ptr = current->exit_boundary_SMem.get();
+          for(auto read_pair : promised_last_smem_ptr->getSigRead()){
+            SMem->updateInRead(read_pair.first, read_pair.second);
+          }
+          for(auto write_pair : promised_last_smem_ptr->getSigWrite()){
+            SMem->updateInWrite(write_pair.first, read_pair.second);
+          }
+
+          // cleanup promises
+          delete promised_first_accesses_vector_ptr;
+          delete promised_last_smem_ptr;
+
+        }
+        else{
+          if(finalizeParallelizationCalled){
+            // no chunks left to process. Let thread finish.
+            break;
+          }
+          else{
+            // let thread sleep and try fetching a chunk again
+            usleep(1000);
+          }
+        }
+      }
+
+      mergeDeps();
+
+      if (DP_DEBUG || true) {
+        cout << "thread " << id << " processing secondAccessQueue on core " << sched_getcpu() << " exits... \n";
+      }
+
+      pthread_exit(NULL);
+      return nullptr;
+    }
+
 
 void finalizeParallelization() {
 #ifdef DP_RTLIB_VERBOSE
@@ -670,12 +729,15 @@ void finalizeParallelization() {
   for (int i = 0; i < NUM_WORKERS; ++i)
     pthread_join(workers[i], NULL);
 
+  pthread_join(*secondAccessQueue_worker_thread, NULL);
+
 #if DP_CALLTREE_PROFILING
     // metadata_queue->blocking_finalize_queue();
 #endif
 
   // delete allocated memory
   delete[] workers;
+  delete secondAccessQueue_worker_thread;
 
   if (DP_DEBUG || true) {
     cout << "END: finalize parallelization... \n";
