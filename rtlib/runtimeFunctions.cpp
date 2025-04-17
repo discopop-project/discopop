@@ -273,8 +273,6 @@ void readRuntimeInfo() {
             SIG_NUM_HASH = intValue;
           } else if (variable.compare("NUM_WORKERS") == 0) {
             NUM_WORKERS = intValue;
-          } else if (variable.compare("CHUNK_SIZE") == 0) {
-            CHUNK_SIZE = intValue;
           } else if (variable.compare("USE_PERFECT") == 0) {
             USE_PERFECT = intValue != 0;
           }
@@ -289,7 +287,6 @@ void readRuntimeInfo() {
     cout << "sig_num_elem = " << SIG_NUM_ELEM << "\n";
     cout << "sig_num_hash = " << SIG_NUM_HASH << "\n";
     cout << "num_workers  = " << NUM_WORKERS << "\n";
-    cout << "chunk_size   = " << CHUNK_SIZE << "\n";
     sleep(2);
   }
 
@@ -307,13 +304,6 @@ void initParallelization() {
 #endif
 
   // initialize global variables
-  addrChunkPresentConds = new pthread_cond_t[NUM_WORKERS];
-  addrChunkMutexes = new pthread_mutex_t[NUM_WORKERS];
-
-  chunks = new queue<AccessInfo *>[NUM_WORKERS];
-  addrChunkPresent = new bool[NUM_WORKERS];
-  tempAddrChunks = new AccessInfo *[NUM_WORKERS];
-  tempAddrCount = new int32_t[NUM_WORKERS];
   workers = new pthread_t[NUM_WORKERS];
 
   // Initialize count of accesses
@@ -323,16 +313,16 @@ void initParallelization() {
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-  pthread_mutex_init(&allDepsLock, NULL);
 
   // create worker threads and set default value for temp variables
   for (int64_t i = 0; i < NUM_WORKERS; ++i) {
-    addrChunkPresent[i] = false;
-    tempAddrCount[i] = 0;
-    tempAddrChunks[i] = new AccessInfo[CHUNK_SIZE];
-    pthread_mutex_init(&addrChunkMutexes[i], NULL);
-    pthread_cond_init(&addrChunkPresentConds[i], NULL);
-    pthread_create(&workers[i], &attr, analyzeDeps, (void *)i);
+//    addrChunkPresent[i] = false;
+//    tempAddrCount[i] = 0;
+//    tempAddrChunks[i] = new AccessInfo[CHUNK_SIZE];
+//    pthread_mutex_init(&addrChunkMutexes[i], NULL);
+//    pthread_cond_init(&addrChunkPresentConds[i], NULL);
+//    pthread_create(&workers[i], &attr, analyzeDeps, (void *)i);
+    pthread_create(&workers[i], &attr, processFirstAccessQueue, (void *)i);
   }
 
   pthread_attr_destroy(&attr);
@@ -370,7 +360,7 @@ void mergeDeps() {
   depSet *tmp_depSet = nullptr; // pointer to the current processing set of dps
   depMap::iterator globalPos;   // position of the current processing lid in allDeps
 
-  pthread_mutex_lock(&allDepsLock);
+  allDepsLock.lock();
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::MERGE_DEPS);
 #endif
@@ -391,8 +381,7 @@ void mergeDeps() {
       tmp_depSet->insert(d);
     }
   }
-
-  pthread_mutex_unlock(&allDepsLock);
+  allDepsLock.unlock();
 }
 
 #if DP_CALLTREE_PROFILING
@@ -496,6 +485,7 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
   }
 }
 
+/*
 void *analyzeDeps(void *arg) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
@@ -515,6 +505,8 @@ void *analyzeDeps(void *arg) {
   std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_read_addr_to_call_tree_node_map =
       new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
 #endif
+
+
   bool isLocked = false;
   while (true) {
     if (!isLocked)
@@ -584,6 +576,35 @@ void *analyzeDeps(void *arg) {
   pthread_exit(NULL);
   return nullptr;
 }
+*/
+
+void *processFirstAccessQueue(void *arg) {
+  #ifdef DP_INTERNAL_TIMER
+    const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
+  #endif
+
+    int64_t id = (int64_t)arg;
+    myMap = new depMap();
+
+    std::cout << "TODO: processFirstAccessQueue: add actual check for queue size to loop break condition" << std::endl;
+
+    while(true){
+      if(finalizeParallelizationCalled){
+        break;
+      }
+
+    }
+
+    mergeDeps();
+
+    if (DP_DEBUG || true) {
+      cout << "thread " << id << " on core " << sched_getcpu() << " exits... \n";
+    }
+
+    pthread_exit(NULL);
+    return nullptr;
+  }
+
 
 void finalizeParallelization() {
 #ifdef DP_RTLIB_VERBOSE
@@ -593,28 +614,16 @@ void finalizeParallelization() {
   const auto timer = Timer(timers, TimerRegion::FINALIZE_PARALLELIZATION);
 #endif
 
-  if (DP_DEBUG) {
+  if (DP_DEBUG || true) {
     cout << "BEGIN: finalize parallelization... \n";
   }
 
   // fake signaling: just notify the workers that no more addresses will be
   // collected
-  for (int i = 0; i < NUM_WORKERS; ++i) {
-    pthread_mutex_lock(&addrChunkMutexes[i]);
-    stop = true;
-    addrChunkPresent[i] = true;
-    if (0 < tempAddrCount[i]) {
-      chunks[i].push(tempAddrChunks[i]);
-    }
-    pthread_cond_signal(&addrChunkPresentConds[i]);
-    pthread_mutex_unlock(&addrChunkMutexes[i]);
-  }
 
-  if (DP_DEBUG) {
-    for (int i = 0; i < NUM_WORKERS; ++i) {
-      cout << chunks[i].size() << "\n";
-    }
-  }
+  // TODO NOTIFY THREADS OF FINALIZE
+  cout << "TODO: finalizeParallelization: notify worker threads of finalize" << std::endl;
+  finalizeParallelizationCalled = true;
 
   // wait for worker threads
   for (int i = 0; i < NUM_WORKERS; ++i)
@@ -624,19 +633,10 @@ void finalizeParallelization() {
     // metadata_queue->blocking_finalize_queue();
 #endif
 
-  // destroy mutexes and condition variables
-  for (int i = 0; i < NUM_WORKERS; ++i) {
-    pthread_mutex_destroy(&addrChunkMutexes[i]);
-    pthread_cond_destroy(&addrChunkPresentConds[i]);
-  }
-
   // delete allocated memory
-  delete[] chunks;
-  delete[] tempAddrCount;
-  delete[] tempAddrChunks;
   delete[] workers;
 
-  if (DP_DEBUG) {
+  if (DP_DEBUG || true) {
     cout << "END: finalize parallelization... \n";
   }
 }

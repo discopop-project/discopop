@@ -87,6 +87,7 @@ void __dp_finalize(LID lid) {
   } else {
     finalizeSingleThreadedExecution();
   }
+  std::cout << "Returned from finalizeParallelization" << std::endl;
 
   const auto output_loops = []() {
 #ifdef DP_RTLIB_VERBOSE

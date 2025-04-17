@@ -58,10 +58,9 @@ depMap *allDeps = nullptr;
 std::ofstream *out = nullptr;
 
 /******* BEGIN: parallelization section *******/
-pthread_cond_t *addrChunkPresentConds = nullptr; // condition variables
-pthread_mutex_t *addrChunkMutexes = nullptr;     // associated mutexes
-pthread_mutex_t allDepsLock;
+std::mutex allDepsLock;
 pthread_t *workers = nullptr; // worker threads
+volatile bool finalizeParallelizationCalled = false;  // signals to worker threads that no further data access will be registered in the first queue
 
 #define XSTR(x) STR(x)
 #define STR(x) #x
@@ -74,20 +73,12 @@ int32_t NUM_WORKERS = 4; // default number of worker threads (multiple workers
 
 AbstractShadow *singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
 
-int32_t CHUNK_SIZE = 500;                   // default number of addresses in each chunk
-std::queue<AccessInfo *> *chunks = nullptr; // one queue of access info chunks for each worker thread
-bool *addrChunkPresent = nullptr;           // addrChunkPresent[thread_id] denotes whether or not a new chunk
-                                            // is available for the corresponding thread
-AccessInfo **tempAddrChunks = nullptr;      // tempAddrChunks[thread_id] is the temporary chunk to collect
-                                            // memory accesses for the corresponding thread
-int32_t *tempAddrCount = nullptr;           // tempAddrCount[thread_id] denotes the current number of accesses
-                                            // in the temporary chunk
-bool stop = false;                          // ONLY set stop to true if no more accessed addresses will
-                                            // be collected
 thread_local depMap *myMap = nullptr;
 
 // statistics
 std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
+
+
 
 /******* END: parallelization section *******/
 

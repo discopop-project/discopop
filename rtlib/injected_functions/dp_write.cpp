@@ -85,8 +85,9 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
   AccessInfo current;
 #else
 // shift 3 to enforce alignment
-int64_t workerID = (addr >> 3) & (((std::uint32_t) NUM_WORKERS)-1); // ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-  AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
+  int64_t workerID = (addr >> 3) & (((std::uint32_t) NUM_WORKERS)-1); // ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
+  std::cout << "TODO: dp_write select AccessInfo current in local buffer " << std::endl;
+  AccessInfo current;
 #endif
   current.isRead = false;
   current.lid = lid;
@@ -105,15 +106,7 @@ int64_t workerID = (addr >> 3) & (((std::uint32_t) NUM_WORKERS)-1); // ((addr - 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
   analyzeSingleAccess(singleThreadedExecutionSMem, current);
 #else
-  if (tempAddrCount[workerID] == CHUNK_SIZE) {
-    pthread_mutex_lock(&addrChunkMutexes[workerID]);
-    addrChunkPresent[workerID] = true;
-    chunks[workerID].push(tempAddrChunks[workerID]);
-    pthread_cond_signal(&addrChunkPresentConds[workerID]);
-    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-    tempAddrCount[workerID] = 0;
-  }
+  std::cout << "TODO: dp_write register access" << std::endl;
 #endif
 }
 }
