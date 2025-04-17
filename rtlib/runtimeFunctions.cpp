@@ -622,6 +622,9 @@ void *processFirstAccessQueue(void *arg) {
 
         mergeDeps();
         myMap->clear();
+
+        delete current;
+
       }
       else{
         if(finalizeParallelizationCalled){
@@ -679,6 +682,8 @@ void *processFirstAccessQueue(void *arg) {
           delete promised_first_accesses_vector_ptr;
           delete promised_last_smem_ptr;
 
+          delete current;
+
         }
         else{
           if(finalizeParallelizationCalled){
@@ -687,6 +692,7 @@ void *processFirstAccessQueue(void *arg) {
           }
           else{
             // let thread sleep and try fetching a chunk again
+            std::cout << "SAQ: idle" << std::endl;
             usleep(1000);
           }
         }
@@ -717,7 +723,7 @@ void finalizeParallelization() {
 
   // push last state of the mainThread_AccessInfoBuffer to the global FirstAccessQueue
   firstAccessQueue.push(mainThread_AccessInfoBuffer);
-  mainThread_AccessInfoBuffer = new FirstAccessQueueChunk(ACCESS_INFO_BUFFER_SIZE);
+  mainThread_AccessInfoBuffer = new FirstAccessQueueChunk(FIRST_ACCESS_QUEUE_SIZES);
 
   // fake signaling: just notify the workers that no more addresses will be
   // collected

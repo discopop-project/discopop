@@ -77,8 +77,12 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
 #else
   // check if buffer is full. Push it to firstAccessQueue if so, and create a new buffer
   if(mainThread_AccessInfoBuffer->is_full()){
+    // spin-lock to prevent endless queue growth
+    while(!firstAccessQueue.can_accept_entries()){
+      usleep(1000);
+    }
     firstAccessQueue.push(mainThread_AccessInfoBuffer);
-    mainThread_AccessInfoBuffer = new FirstAccessQueueChunk(ACCESS_INFO_BUFFER_SIZE);
+    mainThread_AccessInfoBuffer = new FirstAccessQueueChunk(FIRST_ACCESS_QUEUE_SIZES);
   }
   AccessInfo& current = *(mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer());
 #endif
