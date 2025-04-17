@@ -84,7 +84,8 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
   AccessInfo current;
 #else
-  int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
+// shift 3 to enforce alignment
+int64_t workerID = (addr >> 3) & (((std::uint32_t) NUM_WORKERS)-1); // ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
 #endif
   current.isRead = false;
