@@ -68,7 +68,7 @@ pthread_t *workers = nullptr; // worker threads
 #ifdef DP_NUM_WORKERS
 int32_t NUM_WORKERS = DP_NUM_WORKERS;
 #else
-int32_t NUM_WORKERS = 3; // default number of worker threads (multiple workers
+int32_t NUM_WORKERS = 4; // default number of worker threads (multiple workers
                          // can potentially lead to non-deterministic results)
 #endif
 

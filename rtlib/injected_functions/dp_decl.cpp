@@ -71,8 +71,8 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
     cout << "instStore at encoded LID " << std::dec << dputil::decodeLID(lid) << " and addr " << std::hex << addr
          << endl;
   }
-
-  int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
+  // shift 3 to enforce alignment
+  int64_t workerID = (addr >> 3) & (((std::uint32_t) NUM_WORKERS)-1); // ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
   AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
   current.isRead = false;
   current.lid = 0;

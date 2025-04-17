@@ -578,7 +578,7 @@ void *analyzeDeps(void *arg) {
   mergeDeps();
 
   if (DP_DEBUG) {
-    cout << "thread " << id << " exits... \n";
+    cout << "thread " << id << " on core " << sched_getcpu() << " exits... \n";
   }
 
   pthread_exit(NULL);
