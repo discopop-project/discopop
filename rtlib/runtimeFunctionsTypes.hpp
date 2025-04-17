@@ -199,8 +199,6 @@ class SecondAccessQueueElement{
       exit_boundary_SMem = std::move(fut_exit_smem);
     }
 
-
-  private:
     std::future<std::vector<AccessInfo>*> entry_boundary_first_addr_accesses;
     std::future<AbstractShadow*> exit_boundary_SMem;
 
@@ -208,6 +206,10 @@ class SecondAccessQueueElement{
 
 class SecondAccessQueue{
   public:
+    SecondAccessQueue(){
+      std::cout << "TODO: SAQ: insert a first dummy element with filled promises to allow the entry into the regular processing pipeline" << std::endl;
+    }
+
     void push(SecondAccessQueueElement* elem){
       const std::lock_guard<std::mutex> lock(internal_mtx);
       internal_queue.push(elem);

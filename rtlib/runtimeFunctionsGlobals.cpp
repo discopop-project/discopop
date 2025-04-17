@@ -64,6 +64,7 @@ volatile bool finalizeParallelizationCalled = false;  // signals to worker threa
 FirstAccessQueueChunk* mainThread_AccessInfoBuffer = nullptr;
 FirstAccessQueue firstAccessQueue;
 SecondAccessQueue secondAccessQueue;
+pthread_t* secondAccessQueue_worker_thread = nullptr;
 
 #define XSTR(x) STR(x)
 #define STR(x) #x

@@ -84,6 +84,7 @@ extern FirstAccessQueueChunk* mainThread_AccessInfoBuffer;
 #define ACCESS_INFO_BUFFER_SIZE 1000
 extern FirstAccessQueue firstAccessQueue;
 extern SecondAccessQueue secondAccessQueue;
+extern pthread_t* secondAccessQueue_worker_thread;
 
 extern AbstractShadow *singleThreadedExecutionSMem;
 
