@@ -96,6 +96,24 @@ public:
 
   const std::unordered_map<std::int64_t, sigElement> *getSigWrite() const noexcept { return sigWrite; }
 
+  std::vector<std::pair<std::int64_t, sigElement>> getReadKVPairs(){
+    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
+    kv_pairs.reserve(sigRead->size());
+    for(auto kv_pair : *sigRead){
+      kv_pairs.push_back(kv_pair);
+    }
+    return kv_pairs;
+  }
+
+  std::vector<std::pair<std::int64_t, sigElement>> getWriteKVPairs(){
+    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
+    kv_pairs.reserve(sigWrite->size());
+    for(auto kv_pair : *sigWrite){
+      kv_pairs.push_back(kv_pair);
+    }
+    return kv_pairs;
+  }
+
 private:
   std::unordered_map<std::int64_t, sigElement> *sigRead;
   std::unordered_map<std::int64_t, sigElement> *sigWrite;
@@ -176,6 +194,26 @@ public:
   const hashmap<int64_t, sigElement> *getSigRead() const noexcept { return &read_cache; }
 
   const hashmap<int64_t, sigElement> *getSigWrite() const noexcept { return &write_cache; }
+
+  std::vector<std::pair<std::int64_t, sigElement>> getReadKVPairs(){
+    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
+    kv_pairs.reserve(read_cache.size());
+    for(auto kv_pair : read_cache){
+      kv_pairs.emplace_back(kv_pair.first, kv_pair.second);
+    }
+    return kv_pairs;
+  }
+
+  std::vector<std::pair<std::int64_t, sigElement>> getWriteKVPairs(){
+    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
+    kv_pairs.reserve(write_cache.size());
+    for(auto kv_pair : write_cache){
+      kv_pairs.emplace_back(kv_pair.first, kv_pair.second);
+    }
+    return kv_pairs;
+  }
+
+
 
 private:
   hashmap<int64_t, sigElement> read_cache{};

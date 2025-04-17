@@ -40,6 +40,10 @@ public:
   virtual void removeFromWrite(std::int64_t memAddr) = 0;
 
   virtual std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr, std::int64_t endAddr) = 0;
+
+  virtual std::vector<std::pair<std::int64_t, sigElement>> getReadKVPairs() = 0;
+
+  virtual std::vector<std::pair<std::int64_t, sigElement>> getWriteKVPairs() = 0;
 };
 
 } // namespace __dp

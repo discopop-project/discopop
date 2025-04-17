@@ -654,8 +654,6 @@ void *processFirstAccessQueue(void *arg) {
       SecondAccessQueueElement* current = nullptr;
       AbstractShadow *SMem = new PerfectShadow2();
 
-
-
       while(true){
         // get chunk from queue
         current = secondAccessQueue.get();
@@ -669,12 +667,12 @@ void *processFirstAccessQueue(void *arg) {
           }
 
           // update persistent SMem with exit boundary conditions (aka merge the local into the persistent shadow memories)
-          auto promised_last_smem_ptr = current->exit_boundary_SMem.get();
-          for(auto read_pair : promised_last_smem_ptr->getSigRead()){
+          AbstractShadow* promised_last_smem_ptr = current->exit_boundary_SMem.get();
+          for(auto read_pair : promised_last_smem_ptr->getReadKVPairs()){
             SMem->updateInRead(read_pair.first, read_pair.second);
           }
-          for(auto write_pair : promised_last_smem_ptr->getSigWrite()){
-            SMem->updateInWrite(write_pair.first, read_pair.second);
+          for(auto write_pair : promised_last_smem_ptr->getWriteKVPairs()){
+            SMem->updateInWrite(write_pair.first, write_pair.second);
           }
 
           // cleanup promises
