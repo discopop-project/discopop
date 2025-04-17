@@ -206,14 +206,18 @@ class SecondAccessQueueElement{
 
 class SecondAccessQueue{
   public:
-    SecondAccessQueue(){
-      std::cout << "TODO: SAQ: insert a first dummy element with filled promises to allow the entry into the regular processing pipeline" << std::endl;
+    SecondAccessQueue(std::size_t arg_max_size): max_size(arg_max_size){
+
     }
 
     void push(SecondAccessQueueElement* elem){
+      // spin-lock to prevent endless queue growth
+      while(internal_queue.size() > max_size){
+        std::cout << "SAQ: push: sleep." << std::endl;
+        usleep(1000);
+      }
       const std::lock_guard<std::mutex> lock(internal_mtx);
       internal_queue.push(elem);
-      std::cout << "DBG: SAQ: Push size: " << internal_queue.size()  << std::endl;
     }
 
     SecondAccessQueueElement* get(){
@@ -222,7 +226,6 @@ class SecondAccessQueue{
       if(internal_queue.size() == 0){
         return nullptr;
       }
-      std::cout << "DBG: SAQ:pop" << std::endl;
       SecondAccessQueueElement* buffer = internal_queue.front();
       internal_queue.pop();
       return buffer;
@@ -231,11 +234,20 @@ class SecondAccessQueue{
   private:
     std::queue<SecondAccessQueueElement*> internal_queue;
     std::mutex internal_mtx;
+    const std::size_t max_size;
 
 };
 
 class FirstAccessQueue {
   public:
+    FirstAccessQueue(std::size_t arg_max_size) : max_size(arg_max_size){
+
+    }
+
+    bool can_accept_entries(){
+      return internal_queue.size() < max_size;
+    }
+
     void push(FirstAccessQueueChunk* elem){
       const std::lock_guard<std::mutex> lock(internal_mtx);
       internal_queue.push(elem);
@@ -247,7 +259,6 @@ class FirstAccessQueue {
       if(internal_queue.size() == 0){
         return nullptr;
       }
-      std::cout << "TODO: FAQ:pop: register future in secondaryAccessQueue" << std::endl;
       FirstAccessQueueChunk* buffer = internal_queue.front();
       internal_queue.pop();
 
@@ -261,6 +272,7 @@ class FirstAccessQueue {
   private:
     std::queue<FirstAccessQueueChunk*> internal_queue;
     std::mutex internal_mtx;
+    const std::size_t max_size;
 };
 
 
