@@ -73,7 +73,8 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   }
   // shift 3 to enforce alignment
   int64_t workerID = (addr >> 3) & (((std::uint32_t) NUM_WORKERS)-1); // ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-  AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
+  std::cout << "TODO: dp_decl select AccessInfo current in local buffer " << std::endl;
+  AccessInfo current;
   current.isRead = false;
   current.lid = 0;
   current.var = var;
@@ -81,15 +82,7 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   current.addr = addr;
   current.skip = true;
 
-  if (tempAddrCount[workerID] == CHUNK_SIZE) {
-    pthread_mutex_lock(&addrChunkMutexes[workerID]);
-    addrChunkPresent[workerID] = true;
-    chunks[workerID].push(tempAddrChunks[workerID]);
-    pthread_cond_signal(&addrChunkPresentConds[workerID]);
-    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-    tempAddrCount[workerID] = 0;
-  }
+  std::cout << "TODO: dp_decl register access" << std::endl;
 }
 }
 
