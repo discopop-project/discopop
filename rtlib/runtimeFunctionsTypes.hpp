@@ -27,6 +27,11 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <mutex>
+#include <queue>
+#include <future>
+
+#include "memory/ShadowMemory.hpp"
 
 namespace __dp {
 /******* Data structures *******/
@@ -147,5 +152,116 @@ typedef std::unordered_map<LID, depSet *> depMap;
 typedef std::unordered_map<std::string, std::unordered_set<std::string>> stringDepMap;
 typedef std::unordered_set<std::uint32_t> ReportedBBSet;
 // End HA
+
+class FirstAccessQueueChunk {
+  public:
+    FirstAccessQueueChunk(std::size_t chunk_size): buffer_size(chunk_size){
+      buffer.resize(chunk_size);
+    }
+
+    inline bool is_full(){
+      return element_count == (buffer_size - 1);
+    }
+
+    inline AccessInfo* get_next_AccessInfo_buffer(){
+      return &buffer[element_count++];
+    }
+
+    std::future<std::vector<AccessInfo>*> get_entry_future(){
+      return entry_boundary_first_addr_accesses.get_future();
+    }
+
+    std::future<AbstractShadow*> get_exit_future(){
+      return exit_boundary_SMem.get_future();
+    }
+
+    inline std::vector<AccessInfo>* get_buffer(){
+      return &buffer;
+    }
+
+
+    std::promise<std::vector<AccessInfo>*> entry_boundary_first_addr_accesses;
+    std::promise<AbstractShadow*> exit_boundary_SMem;
+
+  private:
+    std::vector<AccessInfo> buffer;
+    std::uint64_t element_count = 0;
+    const std::size_t buffer_size;
+
+
+
+};
+
+class SecondAccessQueueElement{
+  public:
+    SecondAccessQueueElement(std::future<std::vector<AccessInfo>*> fut_first_addr_accesses, std::future<AbstractShadow*> fut_exit_smem){
+      entry_boundary_first_addr_accesses = std::move(fut_first_addr_accesses);
+      exit_boundary_SMem = std::move(fut_exit_smem);
+    }
+
+
+  private:
+    std::future<std::vector<AccessInfo>*> entry_boundary_first_addr_accesses;
+    std::future<AbstractShadow*> exit_boundary_SMem;
+
+};
+
+class SecondAccessQueue{
+  public:
+    void push(SecondAccessQueueElement* elem){
+      const std::lock_guard<std::mutex> lock(internal_mtx);
+      internal_queue.push(elem);
+      std::cout << "DBG: SAQ: Push size: " << internal_queue.size()  << std::endl;
+    }
+
+    SecondAccessQueueElement* get(){
+      const std::lock_guard<std::mutex> lock(internal_mtx);
+      // return nullptr if empty
+      if(internal_queue.size() == 0){
+        return nullptr;
+      }
+      std::cout << "DBG: SAQ:pop" << std::endl;
+      SecondAccessQueueElement* buffer = internal_queue.front();
+      internal_queue.pop();
+      return buffer;
+    }
+
+  private:
+    std::queue<SecondAccessQueueElement*> internal_queue;
+    std::mutex internal_mtx;
+
+};
+
+class FirstAccessQueue {
+  public:
+    void push(FirstAccessQueueChunk* elem){
+      const std::lock_guard<std::mutex> lock(internal_mtx);
+      internal_queue.push(elem);
+    }
+
+    FirstAccessQueueChunk* get(SecondAccessQueue* secondAccessQueue_ptr){
+      const std::lock_guard<std::mutex> lock(internal_mtx);
+      // return nullptr if empty
+      if(internal_queue.size() == 0){
+        return nullptr;
+      }
+      std::cout << "TODO: FAQ:pop: register future in secondaryAccessQueue" << std::endl;
+      FirstAccessQueueChunk* buffer = internal_queue.front();
+      internal_queue.pop();
+
+      // register Futures in SecondAccessQueue
+      SecondAccessQueueElement* saqe = new SecondAccessQueueElement(std::move(buffer->get_entry_future()), std::move(buffer->get_exit_future()));
+      secondAccessQueue_ptr->push(saqe);
+
+      return buffer;
+    }
+
+  private:
+    std::queue<FirstAccessQueueChunk*> internal_queue;
+    std::mutex internal_mtx;
+};
+
+
+
 
 } // namespace __dp

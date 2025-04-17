@@ -61,6 +61,9 @@ std::ofstream *out = nullptr;
 std::mutex allDepsLock;
 pthread_t *workers = nullptr; // worker threads
 volatile bool finalizeParallelizationCalled = false;  // signals to worker threads that no further data access will be registered in the first queue
+FirstAccessQueueChunk* mainThread_AccessInfoBuffer = nullptr;
+FirstAccessQueue firstAccessQueue;
+SecondAccessQueue secondAccessQueue;
 
 #define XSTR(x) STR(x)
 #define STR(x) #x

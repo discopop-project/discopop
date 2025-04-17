@@ -71,10 +71,17 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
     cout << "instStore at encoded LID " << std::dec << dputil::decodeLID(lid) << " and addr " << std::hex << addr
          << endl;
   }
-  // shift 3 to enforce alignment
-  int64_t workerID = (addr >> 3) & (((std::uint32_t) NUM_WORKERS)-1); // ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-  std::cout << "TODO: dp_decl select AccessInfo current in local buffer " << std::endl;
+
+#if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
   AccessInfo current;
+#else
+  // check if buffer is full. Push it to firstAccessQueue if so, and create a new buffer
+  if(mainThread_AccessInfoBuffer->is_full()){
+    firstAccessQueue.push(mainThread_AccessInfoBuffer);
+    mainThread_AccessInfoBuffer = new FirstAccessQueueChunk(ACCESS_INFO_BUFFER_SIZE);
+  }
+  AccessInfo& current = *(mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer());
+#endif
   current.isRead = false;
   current.lid = 0;
   current.var = var;
@@ -82,7 +89,9 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   current.addr = addr;
   current.skip = true;
 
-  std::cout << "TODO: dp_decl register access" << std::endl;
+#if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
+  analyzeSingleAccess(singleThreadedExecutionSMem, current);
+#endif
 }
 }
 

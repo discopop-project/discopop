@@ -586,16 +586,56 @@ void *processFirstAccessQueue(void *arg) {
     int64_t id = (int64_t)arg;
     myMap = new depMap();
 
-    std::cout << "TODO: processFirstAccessQueue: add actual check for queue size to loop break condition" << std::endl;
+    FirstAccessQueueChunk* current = nullptr;
 
     while(true){
-      if(finalizeParallelizationCalled){
-        break;
+      // get chunk from queue
+      current = firstAccessQueue.get(&secondAccessQueue);
+
+      // check if chunk aquired
+      if(current){
+        // process chunk
+        AbstractShadow *SMem = new PerfectShadow2();
+        std::vector<AccessInfo>* entry_condition_accesses = new std::vector<AccessInfo>();
+
+        for(AccessInfo access : *(current->get_buffer())){
+          // check if access is the first access to a memory location in the current chunk
+          bool is_first_access = (SMem->testInRead(access.addr) == 0) && (SMem->testInWrite(access.addr) == 0);
+          if(is_first_access){
+            // register the access in the list of entry conditions
+            entry_condition_accesses->push_back(access);
+            // register the read / write represented by the access to allow the identification of correct dependencies for the rest of the chunk
+            if(access.isRead){
+              SMem->insertToRead(access.addr, access.lid);
+            }
+            else{
+              SMem->insertToWrite(access.addr, access.lid);
+            }
+          }
+          else{
+            // handle access as known from the legacy variant of the profiler
+            analyzeSingleAccess(SMem, access);
+          }
+        }
+
+        // publish the values of the promises in the current chunk
+        current->entry_boundary_first_addr_accesses.set_value(entry_condition_accesses);
+        current->exit_boundary_SMem.set_value(SMem);
+
+        mergeDeps();
+        myMap->clear();
       }
-
+      else{
+        if(finalizeParallelizationCalled){
+          // no chunks left to process. Let thread finish.
+          break;
+        }
+        else{
+          // let thread sleep and try fetching a chunk again
+          usleep(1000);
+        }
+      }
     }
-
-    mergeDeps();
 
     if (DP_DEBUG || true) {
       cout << "thread " << id << " on core " << sched_getcpu() << " exits... \n";
@@ -618,11 +658,12 @@ void finalizeParallelization() {
     cout << "BEGIN: finalize parallelization... \n";
   }
 
+  // push last state of the mainThread_AccessInfoBuffer to the global FirstAccessQueue
+  firstAccessQueue.push(mainThread_AccessInfoBuffer);
+  mainThread_AccessInfoBuffer = new FirstAccessQueueChunk(ACCESS_INFO_BUFFER_SIZE);
+
   // fake signaling: just notify the workers that no more addresses will be
   // collected
-
-  // TODO NOTIFY THREADS OF FINALIZE
-  cout << "TODO: finalizeParallelization: notify worker threads of finalize" << std::endl;
   finalizeParallelizationCalled = true;
 
   // wait for worker threads
