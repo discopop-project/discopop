@@ -87,6 +87,7 @@ extern FirstAccessQueueChunk* mainThread_AccessInfoBuffer;
 extern FirstAccessQueue firstAccessQueue;
 extern SecondAccessQueue secondAccessQueue;
 extern pthread_t* secondAccessQueue_worker_thread;
+extern FirstAccessQueueChunkBuffer firstAccessQueueChunkBuffer;
 
 extern AbstractShadow *singleThreadedExecutionSMem;
 
