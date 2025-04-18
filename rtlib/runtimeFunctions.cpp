@@ -632,7 +632,8 @@ void *processFirstAccessQueue(void *arg) {
           break;
         }
         else{
-          // let thread sleep and try fetching a chunk again
+          // let thread sleep and try fetching a chunk again after potentially preparing an new chunk
+          firstAccessQueueChunkBuffer.prepare_chunk_if_required(FIRST_ACCESS_QUEUE_SIZES);
           usleep(1000);
         }
       }
@@ -723,7 +724,7 @@ void finalizeParallelization() {
 
   // push last state of the mainThread_AccessInfoBuffer to the global FirstAccessQueue
   firstAccessQueue.push(mainThread_AccessInfoBuffer);
-  mainThread_AccessInfoBuffer = new FirstAccessQueueChunk(FIRST_ACCESS_QUEUE_SIZES);
+  mainThread_AccessInfoBuffer = firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_SIZES);
 
   // fake signaling: just notify the workers that no more addresses will be
   // collected

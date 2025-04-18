@@ -275,6 +275,52 @@ class FirstAccessQueue {
     const std::size_t max_size;
 };
 
+class FirstAccessQueueChunkBuffer{
+  // data structure to allow the allocation of chunks by worker threads, so the main thread registering the data accesses does not lose this time
+  public:
+    FirstAccessQueueChunkBuffer(std::size_t arg_size): size(arg_size){
+    }
+
+    inline void prepare_chunk_if_required(std::size_t chunk_size){
+      bool chunk_required = false;
+      {
+        const std::lock_guard<std::mutex> lock(internal_mtx);
+        if(internal_queue.size() < size ){
+          chunk_required = true;
+        }
+      }
+
+      if(chunk_required){
+        FirstAccessQueueChunk* new_chunk = new FirstAccessQueueChunk(chunk_size);
+        const std::lock_guard<std::mutex> lock(internal_mtx);
+        internal_queue.push(new_chunk);
+      }
+    }
+
+    FirstAccessQueueChunk* get_prepared_chunk(std::size_t chunk_size){
+      FirstAccessQueueChunk* buffer;
+      const std::lock_guard<std::mutex> lock(internal_mtx);
+      if(internal_queue.size() > 0){
+        // prepared chunk exists
+        std::cout << "Popping chunk" << std::endl;
+        buffer = internal_queue.front();
+        internal_queue.pop();
+        return buffer;
+      }
+      else{
+        // allocate a new chunk
+        std::cout << "Allocated self" << std::endl;
+        return new FirstAccessQueueChunk(chunk_size);
+      }
+    }
+
+
+  private:
+    std::queue<FirstAccessQueueChunk*> internal_queue;
+    std::mutex internal_mtx;
+    const std::size_t size;
+};
+
 
 
 

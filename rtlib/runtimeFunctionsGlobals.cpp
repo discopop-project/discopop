@@ -65,6 +65,7 @@ FirstAccessQueueChunk* mainThread_AccessInfoBuffer = nullptr;
 FirstAccessQueue firstAccessQueue(FIRST_ACCESS_QUEUE_SIZES);
 SecondAccessQueue secondAccessQueue(SECOND_ACCESS_QUEUE_SIZES);
 pthread_t* secondAccessQueue_worker_thread = nullptr;
+FirstAccessQueueChunkBuffer firstAccessQueueChunkBuffer(10);
 
 #define XSTR(x) STR(x)
 #define STR(x) #x
