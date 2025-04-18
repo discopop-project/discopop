@@ -302,14 +302,12 @@ class FirstAccessQueueChunkBuffer{
       const std::lock_guard<std::mutex> lock(internal_mtx);
       if(internal_queue.size() > 0){
         // prepared chunk exists
-        std::cout << "Popping chunk" << std::endl;
         buffer = internal_queue.front();
         internal_queue.pop();
         return buffer;
       }
       else{
         // allocate a new chunk
-        std::cout << "Allocated self" << std::endl;
         return new FirstAccessQueueChunk(chunk_size);
       }
     }

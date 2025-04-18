@@ -693,7 +693,6 @@ void *processFirstAccessQueue(void *arg) {
           }
           else{
             // let thread sleep and try fetching a chunk again
-            std::cout << "SAQ: idle" << std::endl;
             usleep(1000);
           }
         }
