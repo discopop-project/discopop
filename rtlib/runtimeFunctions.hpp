@@ -22,9 +22,9 @@ namespace __dp {
 
 /******* Helper functions *******/
 #if DP_CALLTREE_PROFILING
-void addDep(depType type, LID curr, LID depOn, const char *var, string AAvar, ADDR addr, shared_ptr<CallTreeNode> arg_write_ctn, shared_ptr<CallTreeNode> arg_read_ctn, bool calculate_dependency_metadata);
+void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAvar, ADDR addr, shared_ptr<CallTreeNode> arg_write_ctn, shared_ptr<CallTreeNode> arg_read_ctn, bool calculate_dependency_metadata);
 #else
-void addDep(depType type, LID curr, LID depOn, char *var, char *AAvar);
+void addDep(depType type, LID curr, LID depOn, char *var, std::int64_t AAvar);
 #endif
 
 void outputDeps();
