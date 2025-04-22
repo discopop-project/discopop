@@ -163,8 +163,8 @@ class FirstAccessQueueChunk {
       return element_count == (buffer_size - 1);
     }
 
-    inline AccessInfo* get_next_AccessInfo_buffer(){
-      return &buffer[element_count++];
+    inline AccessInfo& get_next_AccessInfo_buffer(){
+      return buffer[element_count++];
     }
 
     std::future<std::vector<AccessInfo>*> get_entry_future(){
@@ -213,7 +213,7 @@ class SecondAccessQueue{
     void push(SecondAccessQueueElement* elem){
       // spin-lock to prevent endless queue growth
       while(internal_queue.size() > max_size){
-        std::cout << "SAQ: push: sleep." << std::endl;
+        //std::cout << "SAQ: push: sleep." << std::endl;
         usleep(1000);
       }
       const std::lock_guard<std::mutex> lock(internal_mtx);
