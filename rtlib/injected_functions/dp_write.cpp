@@ -101,8 +101,9 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
   current.var = var;
 #if DP_MEMORY_REGION_DEALIASING
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
+#else
+  current.AAvar = var;
 #endif
-  current.AAvar = getMemoryRegionIdFromAddr(var, addr);
   current.addr = addr;
 
 #if DP_CALLTREE_PROFILING
