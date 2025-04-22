@@ -45,7 +45,14 @@ void *processFirstAccessQueue(void *arg);
 
 void *processSecondAccessQueue(void *arg);
 
+#if DP_CALLTREE_PROFILING
+void analyzeSingleAccess(
+    __dp::AbstractShadow *SMem, __dp::AccessInfo &access,
+    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_write_addr_to_call_tree_node_map,
+    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_read_addr_to_call_tree_node_map);
+#else
 void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access);
+#endif
 
 std::string getMemoryRegionIdFromAddr(std::string fallback, ADDR addr);
 

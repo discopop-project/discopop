@@ -14,7 +14,7 @@
 
 namespace __dp {
 MetaDataQueueElement::MetaDataQueueElement(depType arg_type, LID arg_sink, LID arg_source, const char *arg_var,
-                                           string arg_AAvar, shared_ptr<CallTreeNode> arg_sink_ctn,
+                                           std::int64_t arg_AAvar, shared_ptr<CallTreeNode> arg_sink_ctn,
                                            shared_ptr<CallTreeNode> arg_source_ctn)
     : type(arg_type), sink(arg_sink), source(arg_source), var(arg_var), AAvar(arg_AAvar), sink_ctn(arg_sink_ctn),
       source_ctn(arg_source_ctn) {}

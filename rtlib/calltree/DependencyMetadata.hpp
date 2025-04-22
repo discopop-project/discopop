@@ -31,7 +31,7 @@ public:
   LID sink;
   LID source;
   const char *var;
-  string AAvar;
+  std::int64_t AAvar;
   std::set<unsigned int> intra_call_dependencies;
   std::set<unsigned int> intra_iteration_dependencies;
   std::set<unsigned int> inter_call_dependencies;
