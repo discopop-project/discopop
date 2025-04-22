@@ -92,7 +92,7 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
 #if DP_MEMORY_REGION_DEALIASING
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
 #else
-  current.AAvar = var;
+  current.AAvar = (std::int64_t) var;
 #endif
   current.addr = addr;
   current.skip = true;

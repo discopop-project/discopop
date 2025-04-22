@@ -62,7 +62,7 @@ typedef enum {
 } depTypeModifier;
 
 struct AccessInfo {
-  AccessInfo(bool isRead, LID lid, char *var, std::string AAvar, ADDR addr, bool skip = false)
+  AccessInfo(bool isRead, LID lid, char *var, std::int64_t AAvar, ADDR addr, bool skip = false)
       : isRead(isRead), lid(lid), var(var), AAvar(AAvar), addr(addr), skip(skip) {
 #if DP_CALLTREE_PROFILING
     call_tree_node_ptr = nullptr;
@@ -70,7 +70,7 @@ struct AccessInfo {
 #endif
   }
 
-  AccessInfo() : isRead(false), lid(0), var(""), AAvar(""), addr(0), skip(false) {
+  AccessInfo() : isRead(false), lid(0), var(""), AAvar(0), addr(0), skip(false) {
 #if DP_CALLTREE_PROFILING
     call_tree_node_ptr = nullptr;
     calculate_dependency_metadata = true;
@@ -83,7 +83,7 @@ struct AccessInfo {
   // End HA
   LID lid;
   const char *var;
-  std::string AAvar; // name of allocated variable -> "Anti Aliased Variable"
+  std::int64_t AAvar; // memory region id; previously: name of allocated variable -> "Anti Aliased Variable"
   ADDR addr;
 #if DP_CALLTREE_PROFILING
   shared_ptr<CallTreeNode> call_tree_node_ptr;
@@ -93,12 +93,12 @@ struct AccessInfo {
 
 // For runtime dependency merging
 struct Dep {
-  Dep(depType T, LID dep, const char *var, std::string AAvar) : type(T), depOn(dep), var(var), AAvar(AAvar) {}
+  Dep(depType T, LID dep, const char *var, std::int64_t AAvar) : type(T), depOn(dep), var(var), AAvar(AAvar) {}
 
   depType type;
   LID depOn;
   const char *var;
-  std::string AAvar;
+  std::int64_t AAvar;
 };
 
 struct compDep {

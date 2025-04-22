@@ -102,7 +102,7 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 #if DP_MEMORY_REGION_DEALIASING
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
 #else
-  current.AAvar = var;
+  current.AAvar = (std::int64_t) var;
 #endif
   current.addr = addr;
 
