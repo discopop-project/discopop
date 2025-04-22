@@ -89,7 +89,11 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   current.isRead = false;
   current.lid = 0;
   current.var = var;
+#if DP_MEMORY_REGION_DEALIASING
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
+#else
+  current.AAvar = var;
+#endif
   current.addr = addr;
   current.skip = true;
 
