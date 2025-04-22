@@ -586,6 +586,13 @@ void *processFirstAccessQueue(void *arg) {
 
     FirstAccessQueueChunk* current = nullptr;
 
+#if DP_CALLTREE_PROFILING
+  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_write_addr_to_call_tree_node_map =
+      new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_read_addr_to_call_tree_node_map =
+      new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+#endif
+
     while(true){
       // get chunk from queue
       current = firstAccessQueue.get(&secondAccessQueue);
@@ -612,7 +619,12 @@ void *processFirstAccessQueue(void *arg) {
           }
           else{
             // handle access as known from the legacy variant of the profiler
+#if DP_CALLTREE_PROFILING
+            analyzeSingleAccess(SMem, access, thread_private_write_addr_to_call_tree_node_map,
+                                thread_private_read_addr_to_call_tree_node_map);
+#else
             analyzeSingleAccess(SMem, access);
+#endif
           }
         }
 
@@ -657,6 +669,12 @@ void *processFirstAccessQueue(void *arg) {
 
       SecondAccessQueueElement* current = nullptr;
       AbstractShadow *SMem = new PerfectShadow2();
+#if DP_CALLTREE_PROFILING
+      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_write_addr_to_call_tree_node_map =
+        new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_read_addr_to_call_tree_node_map =
+        new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+#endif
 
       while(true){
         // get chunk from queue
@@ -667,7 +685,12 @@ void *processFirstAccessQueue(void *arg) {
           // check entry boundary conditions for data dependencies
           auto promised_first_accesses_vector_ptr = current->entry_boundary_first_addr_accesses.get();
           for(auto entry_accesses : *(promised_first_accesses_vector_ptr)){
+#if DP_CALLTREE_PROFILING
+            analyzeSingleAccess(SMem, entry_accesses, thread_private_write_addr_to_call_tree_node_map,
+                                thread_private_read_addr_to_call_tree_node_map);
+#else
             analyzeSingleAccess(SMem, entry_accesses);
+#endif
           }
 
           // update persistent SMem with exit boundary conditions (aka merge the local into the persistent shadow memories)
