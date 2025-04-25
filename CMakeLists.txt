@@ -131,52 +131,64 @@ else()
         message(FATAL_ERROR "Python module 'tkinter' not found. Please install the 'python3-tk' package via a package manager.")
     endif()
 
-    # install DiscoPoP python modules
-    message(STATUS "Installing DiscoPoP python modules")
-    execute_process(
-            COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
-            RESULT_VARIABLE DP_INSTALLATION_EXIT_CODE
-            OUTPUT_VARIABLE DP_INSTALLATION_OUTPUT
-    )
-    # check if installation of DiscoPoP Modules was successful
-    if(${DP_INSTALLATION_EXIT_CODE})
-        message(FATAL_ERROR "${DP_INSTALLATION_OUTPUT}")
-    endif()
 
-    # create symlinks for python executables
-    message(STATUS "Creating symlinks for DiscoPoP python executables")
-    set(DP_LOCAL_BIN_DIR "$ENV{HOME}/.local/bin")
-    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_auto_tuner)
-    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_config_provider)
-    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_explorer)
-    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_optimizer)
-    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_patch_applicator)
-    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_patch_generator)
-    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_sanity_checker)
-    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_project_manager)
-    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_configuration_manager)
-    execute_process(COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_dependency_comparator)
-    message(STATUS "--> discopop_auto_tuner")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_auto_tuner ${DP_LOCAL_BIN_DIR}/discopop_auto_tuner)
-    message(STATUS "--> discopop_config_provider")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_config_provider ${DP_LOCAL_BIN_DIR}/discopop_config_provider)
-    message(STATUS "--> discopop_explorer")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_explorer ${DP_LOCAL_BIN_DIR}/discopop_explorer)
-    message(STATUS "--> discopop_optimizer")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_optimizer ${DP_LOCAL_BIN_DIR}/discopop_optimizer)
-    message(STATUS "--> discopop_patch_applicator")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_patch_applicator ${DP_LOCAL_BIN_DIR}/discopop_patch_applicator)
-    message(STATUS "--> discopop_patch_generator")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_patch_generator ${DP_LOCAL_BIN_DIR}/discopop_patch_generator)
-    message(STATUS "--> discopop_sanity_checker")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_sanity_checker ${DP_LOCAL_BIN_DIR}/discopop_sanity_checker)
-    message(STATUS "--> discopop_preprocessor")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_preprocessor ${DP_LOCAL_BIN_DIR}/discopop_preprocessor)
-    message(STATUS "--> discopop_project_manager")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_project_manager ${DP_LOCAL_BIN_DIR}/discopop_project_manager)
-    message(STATUS "--> discopop_configuration_manager")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_configuration_manager ${DP_LOCAL_BIN_DIR}/discopop_configuration_manager)
-    message(STATUS "--> discopop_dependency_comparator")
-    execute_process(COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_dependency_comparator ${DP_LOCAL_BIN_DIR}/discopop_dependency_comparator)
 
 endif()
+
+### SETUP PYTHON MODULES ####
+
+set(DP_LOCAL_BIN_DIR "$ENV{HOME}/.local/bin")
+
+add_custom_target(
+    python_modules
+    COMMENT "Installing DiscoPoP python modules"
+    DEPENDS install_python_requirements reset_symlinks setup_symlinks
+)
+
+add_custom_target(
+    install_python_requirements
+    COMMENT "Installing python modules and dependencies"
+    COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
+)
+
+add_custom_target(
+    reset_symlinks
+    COMMENT "Resetting existing DiscoPoP symlinks to python executables"
+    COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_auto_tuner
+    COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_config_provider
+    COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_explorer
+    COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_optimizer
+    COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_patch_applicator
+    COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_patch_generator
+    COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_sanity_checker
+    COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_project_manager
+    COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_configuration_manager
+    COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_dependency_comparator
+)
+
+add_custom_target(
+    setup_symlinks
+    COMMENT "Creating symlinks for DiscoPoP python executables"
+    COMMAND echo "--> discopop_auto_tuner"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_auto_tuner ${DP_LOCAL_BIN_DIR}/discopop_auto_tuner
+    COMMAND echo "--> discopop_config_provider"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_config_provider ${DP_LOCAL_BIN_DIR}/discopop_config_provider
+    COMMAND echo "--> discopop_explorer"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_explorer ${DP_LOCAL_BIN_DIR}/discopop_explorer
+    COMMAND echo "--> discopop_optimizer"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_optimizer ${DP_LOCAL_BIN_DIR}/discopop_optimizer
+    COMMAND echo "--> discopop_patch_applicator"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_patch_applicator ${DP_LOCAL_BIN_DIR}/discopop_patch_applicator
+    COMMAND echo "--> discopop_patch_generator"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_patch_generator ${DP_LOCAL_BIN_DIR}/discopop_patch_generator
+    COMMAND echo "--> discopop_sanity_checker"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_sanity_checker ${DP_LOCAL_BIN_DIR}/discopop_sanity_checker
+    COMMAND echo "--> discopop_preprocessor"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_preprocessor ${DP_LOCAL_BIN_DIR}/discopop_preprocessor
+    COMMAND echo "--> discopop_project_manager"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_project_manager ${DP_LOCAL_BIN_DIR}/discopop_project_manager
+    COMMAND echo "--> discopop_configuration_manager"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_configuration_manager ${DP_LOCAL_BIN_DIR}/discopop_configuration_manager
+    COMMAND echo "--> discopop_dependency_comparator"
+    COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_dependency_comparator ${DP_LOCAL_BIN_DIR}/discopop_dependency_comparator
+)
