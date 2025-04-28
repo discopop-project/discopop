@@ -158,7 +158,6 @@ jobs:
 
       - name: Python end-to-end-tests
         run: |
-          . venv/bin/activate
           python -m unittest -v -k *.end_to_end.*
   update_wiki-build:
     name: "Update Wiki - Build"
