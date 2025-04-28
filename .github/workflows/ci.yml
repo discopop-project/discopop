@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   execute_code_checks:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: Execute Code Checks
     steps:
       - name: Checkout Repository
@@ -66,7 +66,7 @@ jobs:
 #        run: python -m black -l 120 --check DEPRECATED_discopop_wizard
 
   execute_cxx_unit_tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: Execute C++ unit tests
     needs: execute_code_checks
     steps:
@@ -113,7 +113,7 @@ jobs:
           build/test/unit_tests/DiscoPoP_UT
 
   execute_end_to_end_tests:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     name: Execute end-to-end tests
     needs: execute_code_checks
     steps:
@@ -162,7 +162,7 @@ jobs:
           python -m unittest -v -k *.end_to_end.*
   update_wiki-build:
     name: "Update Wiki - Build"
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: execute_code_checks
     if: github.ref == 'refs/heads/master'
     steps:
@@ -176,17 +176,17 @@ jobs:
           source: ./docs/
           destination: ./_site
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v1
+        uses: actions/upload-pages-artifact@v3
 
   update_wiki-deploy:
     name: "Update Wiki - Deploy"
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: update_wiki-build
     if: github.ref == 'refs/heads/master'
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v1
+        uses: actions/deploy-pages@v4
