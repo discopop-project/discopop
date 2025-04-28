@@ -21,7 +21,7 @@ permissions:
 jobs:
   update_wiki-build:
     name: "Update Wiki - Build"
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: github.ref == 'refs/heads/update_wiki'
     steps:
       - name: Checkout
@@ -41,7 +41,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     needs: update_wiki-build
     if: github.ref == 'refs/heads/update_wiki'
     steps:
