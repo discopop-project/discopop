@@ -22,6 +22,66 @@ permissions:
   id-token: write
 
 jobs:
+  test_setup_dir:
+    runs-on: ubuntu-22.04
+    name: Execute Create Dir Checks
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: "Check all files for DiscoPoP License tag"
+        run: ./scripts/dev/check-license.sh $(find . -type f)
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip' # uses requirements.txt
+
+      - name: Show pwd
+        run: pwd
+
+      - name: Show ls
+        run: ls
+
+      - name: Create test directory
+        run: |
+          mkdir test_dir
+          echo "Hello World!" > test_dir/test.txt
+
+      - name: Show ls
+        run: ls
+
+  test_reuse_dir:
+    runs-on: ubuntu-22.04
+    name: Execute Create Dir Checks
+    needs: test_setup_dir
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: "Check all files for DiscoPoP License tag"
+        run: ./scripts/dev/check-license.sh $(find . -type f)
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip' # uses requirements.txt
+
+      - name: Show pwd
+        run: pwd
+
+      - name: Show ls
+        run: ls
+
+      - name: Read test.txt
+        run: cat test_dir/test.txt
+
+
+
+
+
   execute_code_checks:
     runs-on: ubuntu-22.04
     name: Execute Code Checks
