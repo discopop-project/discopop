@@ -43,6 +43,7 @@ for file in "$@"; do
     [[ "$file" = *"LICENSE" ]] && continue
     [[ "$file" = *"VERSION" ]] && continue
     [[ "$file" = *".clang-format" ]] && continue
+    [[ "$file" = *"requirements.txt" ]] && continue
 
     # third-party software
     [[ "$file" = *"third_party/"* ]] && continue
