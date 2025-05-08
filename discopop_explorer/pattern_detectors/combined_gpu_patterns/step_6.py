@@ -345,7 +345,7 @@ def extend_region_liveness_using_unrolled_functions(
 
 
 def remove_duplicates(
-    target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPoint]]
+    target_set: Union[Set[Update], Set[EntryPoint], Set[ExitPoint]],
 ) -> Union[Set[Update], Set[EntryPoint], Set[ExitPoint]]:
     to_be_removed = []
     for element_1 in target_set:

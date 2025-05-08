@@ -143,7 +143,7 @@ def propagate_writes(
 
 
 def cleanup_writes(
-    writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]
+    writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]],
 ) -> Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]:
     """remove entries from the Sets with an second-element entry of None,
     if it is overwritten by a different memory write."""
@@ -164,7 +164,7 @@ def cleanup_writes(
 
 
 def group_writes_by_cu(
-    writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]]
+    writes: Dict[MemoryRegion, Set[Tuple[NodeID, Optional[int]]]],
 ) -> Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]]:
     result_dict: Dict[NodeID, Dict[MemoryRegion, Set[Optional[int]]]] = dict()
 
