@@ -50,6 +50,7 @@ setup(
         "filelock",
         "pydot",
         "tabulate",
+        "mypy",
     ],
     extras_require={
         "dev": ["mypy", "black", "data-science-types", "pre-commit"],
