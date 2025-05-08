@@ -156,7 +156,7 @@ jobs:
            -DDP_CALLTREE_PROFILING=1 \
            -DDP_CALLTREE_PROFILING_METADATA_CUTOFF=0 \
            ..
-          make -j
+          make -j3
           cd ..
           pip install -r requirements.txt
           pip install .
