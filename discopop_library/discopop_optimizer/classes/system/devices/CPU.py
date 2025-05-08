@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Dict
 
-from sympy import Integer
+from sympy import Integer  # type: ignore
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 

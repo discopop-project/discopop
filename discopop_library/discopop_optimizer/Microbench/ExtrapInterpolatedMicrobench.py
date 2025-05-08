@@ -8,7 +8,7 @@
 from typing import Dict, List, Tuple, Union, cast
 
 
-import sympy
+import sympy  # type: ignore
 from extrap.entities.callpath import Callpath  # type: ignore
 from extrap.entities.metric import Metric  # type: ignore
 from extrap.entities.model import Model  # type: ignore

@@ -100,8 +100,8 @@ class Microbench(ABC):
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})  # type: ignore
         # ignored type due to incompatibilities between local mypy and GitHub ci
         surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, antialiased=False)  # type: ignore
-        ax.set_zlim(0, np.nanmax(z))
-        ax.zaxis.set_major_locator(LinearLocator(10))
+        ax.set_zlim(0, np.nanmax(z))  # type: ignore
+        ax.zaxis.set_major_locator(LinearLocator(10))  # type: ignore
         fig.colorbar(surf, shrink=0.5, aspect=5)
 
         plt.xlabel("Threads")

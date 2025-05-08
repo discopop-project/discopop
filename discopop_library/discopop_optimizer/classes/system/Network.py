@@ -8,7 +8,7 @@
 from typing import Dict, Tuple, List, Optional, cast
 import warnings
 
-from sympy import Expr, Symbol, Integer
+from sympy import Expr, Symbol, Integer  # type: ignore
 
 from discopop_library.discopop_optimizer.classes.system.devices.Device import Device
 

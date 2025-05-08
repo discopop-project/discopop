@@ -13,7 +13,7 @@ import os
 from typing import Dict, List, Optional, Set, Tuple, cast
 import warnings
 
-from sympy import Expr
+from sympy import Expr  # type: ignore
 import tqdm  # type: ignore
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel

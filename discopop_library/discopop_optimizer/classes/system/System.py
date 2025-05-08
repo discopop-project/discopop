@@ -11,7 +11,7 @@ import pathlib
 import warnings
 from typing import Any, Dict, List, Tuple, Optional, cast
 
-from sympy import Float, Symbol, Expr, Integer
+from sympy import Float, Symbol, Expr, Integer  # type: ignore
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 
 from discopop_library.discopop_optimizer.classes.system.Network import Network

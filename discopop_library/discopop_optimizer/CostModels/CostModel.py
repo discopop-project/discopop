@@ -11,7 +11,7 @@ import sys
 from typing import Any, List, Dict, TextIO, Tuple, Optional
 
 import numpy as np
-import sympy
+import sympy  # type: ignore
 from matplotlib import pyplot as plt  # type: ignore
 from sympy import Function, Symbol, init_printing, Expr, N, nsimplify, Integer  # type: ignore
 from typing import TYPE_CHECKING

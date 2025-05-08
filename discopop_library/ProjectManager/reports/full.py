@@ -55,7 +55,7 @@ def generate_full_report(arguments: ProjectManagerArguments) -> None:
     fig_nums = plt.get_fignums()  # type: ignore
     figs = [plt.figure(n) for n in fig_nums]
     for fig in figs:
-        fig.savefig(page, format="pdf")
+        fig.savefig(page, format="pdf")  # type: ignore
     page.close()
     logger.info("Created full report: " + str(report_path))
 
