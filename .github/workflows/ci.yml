@@ -39,7 +39,8 @@ jobs:
           cache: 'pip' # uses requirements.txt
 
       - name: Install Python dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
 
       - name: "Run MyPy Type Checker - DiscoPoP Explorer"
         run: python -m mypy --config-file=mypy.ini -p discopop_explorer
@@ -127,7 +128,8 @@ jobs:
           cache: 'pip' # uses requirements.txt
 
       - name: Install Python dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
 
       - name: Setup DiscoPoP Profiler - Install Dependencies
         run: |
@@ -155,10 +157,12 @@ jobs:
            -DDP_CALLTREE_PROFILING_METADATA_CUTOFF=0 \
            ..
           make -j3
+          cd ..
+          pip install -r requirements.txt
+          pip install .
 
       - name: Python end-to-end-tests
         run: |
-          . venv/bin/activate
           python -m unittest -v -k *.end_to_end.*
   update_wiki-build:
     name: "Update Wiki - Build"
