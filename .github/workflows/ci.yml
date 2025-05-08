@@ -22,6 +22,37 @@ permissions:
   id-token: write
 
 jobs:
+  test_install_dependencies:
+    runs-on: self-hosted
+    name: Test install dependencies
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: show pwd
+        run: pwd
+
+      - name: show ls
+        run: ls
+
+
+
+#      - name: Setup DiscoPoP Profiler - Install Dependencies
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get remove clang-8 clang-9 clang-10 clang-11 clang-12
+#          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+#          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
+#          sudo apt-get update
+#          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
+#          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
+#          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
+#          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
+#          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
+#          sudo apt-get install -y python3-tk
+#          sudo apt-get install -y libboost-all-dev
+
+
   execute_code_checks:
     runs-on: self-hosted
     name: Execute Code Checks
@@ -83,20 +114,20 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: Setup DiscoPoP Profiler - Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get remove clang-8 clang-9 clang-10 clang-11 clang-12
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
-          sudo apt-get update
-          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
-          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
-          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
-          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
-          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
-          sudo apt-get install -y python3-tk
-          sudo apt-get install -y libboost-all-dev
+#      - name: Setup DiscoPoP Profiler - Install Dependencies
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get remove clang-8 clang-9 clang-10 clang-11 clang-12
+#          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+#          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
+#          sudo apt-get update
+#          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
+#          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
+#          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
+#          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
+#          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
+#          sudo apt-get install -y python3-tk
+#          sudo apt-get install -y libboost-all-dev
 
       - name: "Setup DiscoPoP Profiler - Build"
         run: |
