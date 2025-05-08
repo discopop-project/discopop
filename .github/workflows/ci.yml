@@ -29,6 +29,8 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      - name: chdir ..
+        run: cd ..
 
       - name: show pwd
         run: pwd
@@ -45,11 +47,13 @@ jobs:
   test_install_dependencies_2:
     runs-on: self-hosted
     needs: test_install_dependencies
-    name: Test install dependencies
+    name: Test install dependencies_2
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+      - name: chdir ..
+        run: cd ..
 
       - name: show pwd
         run: pwd
