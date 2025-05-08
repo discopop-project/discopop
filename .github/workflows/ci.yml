@@ -29,11 +29,18 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
+
       - name: show pwd
         run: pwd
 
       - name: show ls
         run: ls
+
+      - name: echo 1
+        run: echo "1" >> test.txt
+
+      - name: read test.txt
+        run: cat test.txt
 
 
 
