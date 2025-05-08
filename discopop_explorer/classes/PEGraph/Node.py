@@ -87,6 +87,12 @@ class Node:
             return True
         return False
 
+    def get_contained_line_ids(self) -> List[LineID]:
+        result: List[LineID] = []
+        for i in range(self.start_line, self.end_line + 1):
+            result.append(LineID(str(self.file_id) + ":" + str(i)))
+        return result
+
     def __str__(self) -> str:
         return self.id
 

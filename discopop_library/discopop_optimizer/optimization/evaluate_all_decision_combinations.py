@@ -10,7 +10,7 @@ from multiprocessing import Pool
 import os
 from typing import Dict, List, Optional, Set, Tuple, cast
 
-from sympy import Expr, re
+from sympy import Expr, re  # type: ignore
 import tqdm  # type: ignore
 from discopop_explorer.aliases.NodeID import NodeID
 

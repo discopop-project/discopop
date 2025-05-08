@@ -10,7 +10,7 @@ import sys
 from typing import Dict, List, Tuple, Set, cast
 
 import networkx as nx  # type: ignore
-from sympy import Symbol, Expr
+from sympy import Symbol, Expr  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import (

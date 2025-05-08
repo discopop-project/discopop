@@ -14,6 +14,7 @@ from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.geometric_decomposition_detector import GDInfo
 from discopop_explorer.pattern_detectors.pipeline_detector import PipelineInfo
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
+from discopop_library.Aliases.aliases import PatternID
 
 
 class PatternStorage(object):
@@ -37,3 +38,10 @@ class PatternStorage(object):
                 if suggestion.pattern_id == pattern_id:
                     return cast(PatternBase, suggestion)
         raise ValueError("Pattern not found: " + str(pattern_id))
+
+    def get_pattern_ids(self) -> List[PatternID]:
+        result_list: List[PatternID] = []
+        for type in self.__dict__:
+            for suggestion in self.__dict__[type]:
+                result_list.append(suggestion.pattern_id)
+        return result_list

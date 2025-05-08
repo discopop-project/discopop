@@ -10,7 +10,7 @@ from typing import List, Dict, Tuple, Optional, cast
 
 import matplotlib  # type: ignore
 import numpy as np
-import sympy
+import sympy  # type: ignore
 from matplotlib import pyplot as plt  # type: ignore
 from spb import plot3d, MB, plot  # type: ignore
 from sympy import Integer

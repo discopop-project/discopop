@@ -10,7 +10,7 @@ import logging
 from typing import Callable, Set, cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
-from sympy import Expr, Integer, Symbol, log, Float, init_printing
+from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo  # type: ignore
 

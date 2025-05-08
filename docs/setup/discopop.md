@@ -31,6 +31,7 @@ mkdir build
 cd build
 cmake .. <CMAKE_FLAGS>
 make
+make python_modules
 cd ..
 ```
 

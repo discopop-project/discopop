@@ -12,7 +12,7 @@ from discopop_explorer.enums.EdgeType import EdgeType
 import networkx as nx  # type: ignore
 
 
-def dump_to_gephi_file(pet: PEGraphX, name: str = "pet.gexf") -> None:
+def dump_to_gephi_file(pet: PEGraphX, name: str) -> None:
     """Note: Destroys the PETGraph!"""
     # replace node data with label
     for node_id in pet.g.nodes:

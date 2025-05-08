@@ -10,7 +10,7 @@ import json
 import os
 from typing import Any, Dict, List, Union
 
-from sympy import Integer
+from sympy import Integer  # type: ignore
 
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum

@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Tuple, Set, cast
 import networkx as nx  # type: ignore
 import warnings
 
-from sympy import Integer
+from sympy import Integer  # type: ignore
 
 from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
@@ -564,6 +564,8 @@ class PETParser(object):
                     combined_branch_exit = context_save_id
                     # initialization with first branch completed
                     continue
+            if combined_branch_exit is None:
+                raise ValueError("combined_branch_exit must not be None")
             add_successor_edge(self.graph, combined_branch_exit, context_restore_id)
 
             # update combined_branch_exit

@@ -106,7 +106,7 @@ def get_cu_and_varname_to_memory_regions(
 
 
 def get_memory_region_to_cu_and_variables_dict(
-    cu_and_variable_to_memory_regions: Dict[NodeID, Dict[VarName, Set[MemoryRegion]]]
+    cu_and_variable_to_memory_regions: Dict[NodeID, Dict[VarName, Set[MemoryRegion]]],
 ) -> Dict[MemoryRegion, Dict[NodeID, Set[VarName]]]:
     # inverts the given cu_and_variable_to_memory_regions dictionary
     result_dict: Dict[MemoryRegion, Dict[NodeID, Set[VarName]]] = dict()

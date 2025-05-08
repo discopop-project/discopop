@@ -17,7 +17,7 @@ logger = logging.getLogger("FolderStructure").getChild("Teardown")
 
 def teardown_explorer(path: str = "") -> None:
     tmp_logger = logger.getChild("explorer")
-    tmp_logger.info("Start")
+    tmp_logger.debug("Start")
     # reset environment, if previous results existed
     if os.path.exists(os.path.join(path, "explorer")):
         shutil.rmtree(os.path.join(path, "explorer"))
@@ -32,33 +32,43 @@ def teardown_explorer(path: str = "") -> None:
     teardown_patch_applicator(path)
     teardown_optimizer(path)
 
-    tmp_logger.info("Done")
+    tmp_logger.debug("Done")
 
 
 def teardown_patch_generator(path: str = "") -> None:
     tmp_logger = logger.getChild("patch_generator")
-    tmp_logger.info("Start")
+    tmp_logger.debug("Start")
     patch_generator_dir = os.path.join(path, "patch_generator")
     if os.path.exists(patch_generator_dir):
         shutil.rmtree(patch_generator_dir)
     teardown_patch_applicator(path)
-    tmp_logger.info("Done")
+    tmp_logger.debug("Done")
 
 
 def teardown_patch_applicator(path: str = "") -> None:
     tmp_logger = logger.getChild("patch_applicator")
-    tmp_logger.info("Start")
+    tmp_logger.debug("Start")
     patch_applicator_dir = os.path.join(path, "patch_applicator")
     if os.path.exists(patch_applicator_dir):
         shutil.rmtree(patch_applicator_dir)
-    tmp_logger.info("Done")
+    tmp_logger.debug("Done")
 
 
 def teardown_optimizer(path: str = "") -> None:
     tmp_logger = logger.getChild("optimizer")
-    tmp_logger.info("Start")
+    tmp_logger.debug("Start")
     optimizer_dir = os.path.join(path, "optimizer")
     if os.path.exists(optimizer_dir):
         shutil.rmtree(optimizer_dir)
 
-    tmp_logger.info("Done")
+    tmp_logger.debug("Done")
+
+
+def teardown_sanity_checker(path: str = "") -> None:
+    tmp_logger = logger.getChild("sanity_checker")
+    tmp_logger.debug("Start")
+    sanity_checker_dir = os.path.join(path, "sanity_checker")
+    if os.path.exists(sanity_checker_dir):
+        shutil.rmtree(sanity_checker_dir)
+
+    tmp_logger.debug("Done")

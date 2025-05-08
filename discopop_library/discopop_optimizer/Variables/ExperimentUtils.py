@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple, cast
 
 import jsonpickle  # type: ignore
 import jsons  # type: ignore
-from sympy import Float, Symbol
+from sympy import Float, Symbol  # type: ignore
 from discopop_explorer.json_serializer import PatternBaseSerializer  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs

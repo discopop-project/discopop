@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Optional, Set
 
-from sympy import Function, Symbol, Integer, Expr
+from sympy import Function, Symbol, Integer, Expr  # type: ignore
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess  # type: ignore
 

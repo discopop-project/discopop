@@ -97,7 +97,7 @@ def add_memory_regions_to_device_liveness(
 
 
 def propagate_memory_regions(
-    device_liveness_plus_memory_regions: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]
+    device_liveness_plus_memory_regions: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]],
 ) -> Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]:
     """Propagate memory regions for variables"""
     result_dict: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]] = dict()
@@ -117,7 +117,7 @@ def propagate_memory_regions(
 
 
 def convert_liveness(
-    device_liveness_plus_memory_regions: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]]
+    device_liveness_plus_memory_regions: Dict[VarName, List[Tuple[NodeID, Set[MemoryRegion]]]],
 ) -> Dict[MemoryRegion, List[NodeID]]:
     result_dict: Dict[MemoryRegion, List[NodeID]] = dict()
 

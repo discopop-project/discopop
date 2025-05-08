@@ -7,7 +7,7 @@
 # directory for details.
 from typing import Dict, Tuple, List, Optional, cast
 
-from sympy import Expr, Float, Symbol
+from sympy import Expr, Float, Symbol  # type: ignore
 from sympy import Integer
 
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo

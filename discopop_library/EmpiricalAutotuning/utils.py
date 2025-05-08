@@ -5,14 +5,10 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-
-import logging
-from typing import List
+from typing import List, Tuple
 
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.result_classes.DetectionResult import DetectionResult
-
-logger = logging.getLogger("uitls")
 
 
 def get_applicable_suggestion_ids(file_id: int, start_line: int, dtres: DetectionResult) -> List[SUGGESTION_ID]:

@@ -10,7 +10,7 @@ import copy
 import logging
 from multiprocessing import Pool
 from typing import Dict, List, Set, Tuple, cast
-from sympy import Integer, Symbol
+from sympy import Integer, Symbol  # type: ignore
 
 import networkx as nx  # type: ignore
 

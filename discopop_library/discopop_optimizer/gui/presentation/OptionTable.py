@@ -10,7 +10,7 @@ from tkinter import *
 from typing import List, Tuple, Dict, Optional, cast
 
 import networkx as nx  # type: ignore
-from sympy import Symbol
+from sympy import Symbol  # type: ignore
 
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
