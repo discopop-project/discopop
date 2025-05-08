@@ -9,7 +9,7 @@ import tkinter as tk
 from tkinter import *
 from typing import Any, List, Tuple, Optional, Dict, cast, Union
 
-from sympy import Symbol, Expr
+from sympy import Symbol, Expr  # type: ignore
 
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget

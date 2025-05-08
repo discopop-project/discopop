@@ -7,7 +7,7 @@
 # directory for details.
 from typing import cast
 
-from sympy import Integer, Symbol
+from sympy import Integer, Symbol  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment

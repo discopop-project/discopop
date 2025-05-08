@@ -10,7 +10,7 @@ import copy
 from typing import Dict, List, Optional, Tuple, cast
 import warnings
 
-from sympy import Expr, Integer, Symbol
+from sympy import Expr, Integer, Symbol  # type: ignore
 import sympy
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs

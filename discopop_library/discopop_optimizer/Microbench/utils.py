@@ -7,7 +7,7 @@
 # directory for details.
 from typing import cast
 
-from sympy import Expr, Integer, Max
+from sympy import Expr, Integer, Max  # type: ignore
 
 
 def convert_discopop_to_microbench_workload(discopop_per_iteration_workload: Expr, iteration_count: Expr) -> Expr:
