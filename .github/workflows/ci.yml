@@ -83,17 +83,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-          cache: 'pip' # uses requirements.txt
-
       - name: extend PATH
         run: |
           echo $PATH
-          export PATH=$PATH:$(cat ../shared/PATH_extensions.txt)
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
           echo $PATH
+
+      - name: activate Python venv
+        run: source ../shared/venv/bin/activate
 
       - name: which pip
         run: which pip
