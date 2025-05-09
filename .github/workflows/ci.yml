@@ -22,9 +22,17 @@ permissions:
   id-token: write
 
 jobs:
+  wip_install_shared_dependencies:
+    runs-on: self-hosted
+    name: Test install dependencies
+    steps:
+      - name: show pwd
+        run: pwd
+
   test_install_dependencies:
     runs-on: self-hosted
     name: Test install dependencies
+    needs: wip_install_shared_dependencies
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -46,31 +54,6 @@ jobs:
 
       - name: overwrite shared
         run: echo " was here" >> ../shared_doc.txt
-
-  test_install_dependencies_2:
-    runs-on: self-hosted
-    needs: test_install_dependencies
-    name: Test install dependencies_2
-    steps:
-#      - name: Checkout Repository
-#        uses: actions/checkout@v3
-
-      - name: show pwd
-        run: pwd
-
-      - name: show ls
-        run: ls
-
-      - name: echo 1
-        run: echo "1" >> test.txt
-
-      - name: read test.txt
-        run: cat test.txt
-
-      - name: read shared_doc.txt
-        run: cat ../shared_doc.txt
-
-
 
 #      - name: Setup DiscoPoP Profiler - Install Dependencies
 #        run: |
