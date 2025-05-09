@@ -36,14 +36,18 @@ jobs:
         run: |
           CURDIR=$(pwd)
           echo "CURDIR: ${CURDIR}"
-          if [ ! -f "../shared/third_party/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz" ]; then
-            echo "download."
+          if [ ! -d "../shared/third_party/llvm-11.1.0" ]; then
+            echo "Downloading llvm 11.1.0"
+            cd ../shared/third_party
+            wget https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+            tar -xvf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+            mv clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10 llvm-11.1.0
+            rm clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+            cd ${CURDIR}
           fi
 
-          echo "Downloading llvm 11.1.0"
 
-      - name: echo pwd
-        run: pwd
+
 
 
 #cd third_party
