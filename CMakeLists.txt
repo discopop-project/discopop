@@ -128,7 +128,7 @@ else()
         RESULT_VARIABLE TKINTER_AVAILABLE_EXIT_CODE
     )
     if(${TKINTER_AVAILABLE_EXIT_CODE})
-        message(FATAL_ERROR "Python module 'tkinter' not found. Please install the 'python3-tk' package via a package manager.")
+        message(WARNING "Python module 'tkinter' not found. Please install the 'python3-tk' package via a package manager.")
     endif()
 
 
