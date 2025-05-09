@@ -30,7 +30,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.10'
           cache: 'pip' # uses requirements.txt
 
       - name: Setup shared directory
@@ -68,7 +68,6 @@ jobs:
           fi
 
           echo -n "$(pwd)/../shared/third_party/llvm-11.1.0/bin" >> ../shared/PATH_extensions.txt
-          echo -n ":$(pwd)/../shared/venv/bin" >> ../shared/PATH_extensions.txt
 
       - name: extend PATH
         run: |
@@ -79,6 +78,7 @@ jobs:
   execute_code_checks:
     runs-on: self-hosted
     name: Execute Code Checks
+    needs: setup_shared_dependencies
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
@@ -86,29 +86,35 @@ jobs:
       - name: "Check all files for DiscoPoP License tag"
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
           ./scripts/dev/check-license.sh $(find . -type f)
 
       - name: Install Python dependencies
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
           pip install -r requirements.txt
 
       - name: "Run MyPy Type Checker - DiscoPoP Explorer"
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
           python -m mypy --config-file=mypy.ini -p discopop_explorer
 
       - name: "Run MyPy Type Checker - DiscoPoP Library"
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
           python -m mypy --config-file=mypy.ini -p discopop_library
 
       - name: "Check formatting of DiscoPoP Explorer"
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
           python -m black -l 120 --check discopop_explorer
 
       - name: "Check formatting of DiscoPoP Library"
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
           python -m black -l 120 --check discopop_library
