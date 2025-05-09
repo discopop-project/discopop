@@ -195,5 +195,6 @@ jobs:
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
           . ../shared/venv/bin/activate
-          export PYTHONPATH="$(pwd)/../shared/venv/lib/python3.10/site-packages"
+          echo "PYTHONPATH: ${PYTHONPATH}"
+          export PYTHONPATH=$(pwd)/../shared/venv/lib/python3.10/site-packages
           python -m unittest -v -k *.end_to_end.*
