@@ -83,28 +83,32 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: extend PATH
-        run: |
-          echo $PATH
-          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
-          echo $PATH
-
       - name: "Check all files for DiscoPoP License tag"
-        run: ./scripts/dev/check-license.sh $(find . -type f)
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          ./scripts/dev/check-license.sh $(find . -type f)
 
       - name: Install Python dependencies
         run: |
-          echo $PATH
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
           pip install -r requirements.txt
 
       - name: "Run MyPy Type Checker - DiscoPoP Explorer"
-        run: python -m mypy --config-file=mypy.ini -p discopop_explorer
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          python -m mypy --config-file=mypy.ini -p discopop_explorer
 
       - name: "Run MyPy Type Checker - DiscoPoP Library"
-        run: python -m mypy --config-file=mypy.ini -p discopop_library
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          python -m mypy --config-file=mypy.ini -p discopop_library
 
       - name: "Check formatting of DiscoPoP Explorer"
-        run: python -m black -l 120 --check discopop_explorer
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          python -m black -l 120 --check discopop_explorer
 
       - name: "Check formatting of DiscoPoP Library"
-        run: python -m black -l 120 --check discopop_library
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          python -m black -l 120 --check discopop_library
