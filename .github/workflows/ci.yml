@@ -35,6 +35,9 @@ jobs:
       - name: modify PATH
         run: export PATH=$PATH:$(pwd)/../shared/bin
 
+      - name: test mkdir
+        run: mkdir ../test_dir
+
 # wip_setup_path
 
   test_install_dependencies:
