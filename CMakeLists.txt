@@ -146,11 +146,11 @@ set(DP_LOCAL_BIN_DIR "$ENV{HOME}/.local/bin")
 add_custom_target(
     python_modules
     COMMENT "Installing DiscoPoP python modules"
-    DEPENDS install_python_requirements reset_symlinks setup_symlinks
+    DEPENDS install_python_modules reset_symlinks setup_symlinks
 )
 
 add_custom_target(
-    install_python_requirements
+    install_python_modules
     COMMENT "Installing python modules and dependencies"
     COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
 )
