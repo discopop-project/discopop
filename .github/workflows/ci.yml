@@ -22,9 +22,9 @@ permissions:
   id-token: write
 
 jobs:
-  wip_install_shared_dependencies:
+  setup_shared_dependencies:
     runs-on: self-hosted
-    name: Test install dependencies
+    name: Setup shared dependencies
     steps:
 
       - name: Setup Python
@@ -33,12 +33,12 @@ jobs:
           python-version: '3.12'
           cache: 'pip' # uses requirements.txt
 
-      - name: setup shared directory
+      - name: Setup shared directory
         run: |
           mkdir -p ../shared/bin
           mkdir -p ../shared/third_party
 
-      - name: setup llvm 11.1.0
+      - name: Setup LLVM 11.1.0
         run: |
           CURDIR=$(pwd)
           echo "CURDIR: ${CURDIR}"
@@ -52,7 +52,7 @@ jobs:
             cd ${CURDIR}
           fi
 
-      - name: setup Python venv
+      - name: Setup Python venv
         run: |
           CURDIR=$(pwd)
           if [ ! -d "../shared/venv" ]; then
@@ -61,7 +61,7 @@ jobs:
             cd ${CURDIR}
           fi
 
-      - name: prepare PATH extension
+      - name: Prepare PATH extension
         run: |
           if [ ! -d "../shared/PATH_extensions.txt" ]; then
             rm -f ../shared/PATH_extensions.txt
@@ -75,13 +75,3 @@ jobs:
           echo $PATH
           export PATH=$PATH:$(cat ../shared/PATH_extensions.txt)
           echo $PATH
-
-
-
-
-#cd third_party
-#wget https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
-#tar -xvf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
-#mv clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10 llvm-11.1.0
-#rm clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
-#LLVM_DIR=${DP_BUILD_DIR}/third_party/llvm-11.1.0
