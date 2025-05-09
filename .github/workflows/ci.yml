@@ -26,45 +26,28 @@ jobs:
     runs-on: self-hosted
     name: Test install dependencies
     steps:
-      - name: show pwd
-        run: pwd
+      - name: setup shared directory
+        run: mkdir -p ../shared/bin
 
-      - name: echo PATH
-        run: echo $PATH
+      - name: setup llvm 11.1.0
+        run: |
+          mkdir -p ../shared/bin/third_party
 
-      - name: modify PATH
-        run: export PATH=$PATH:$(pwd)/../shared/bin
+          if [ ! -d "${pwd}/../shared/bin/third_party" ]; then
+            echo "${pwd}/../shared/bin/third_party does not exist."
+          fi
 
-      - name: test mkdir
-        run: mkdir ../test_dir
+          echo "Downloading llvm 11.1.0"
+
+
+#cd third_party
+#wget https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+#tar -xvf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+#mv clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10 llvm-11.1.0
+#rm clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+#LLVM_DIR=${DP_BUILD_DIR}/third_party/llvm-11.1.0
+
+
+
 
 # wip_setup_path
-
-  test_install_dependencies:
-    runs-on: self-hosted
-    name: Test install dependencies
-    needs: wip_install_shared_dependencies
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: show pwd
-        run: pwd
-
-      - name: show ls
-        run: ls
-
-      - name: echo path
-        run: echo $PATH
-
-      - name: echo 1
-        run: echo "1" >> test.txt
-
-      - name: read test.txt
-        run: cat test.txt
-
-      - name: read shared
-        run: cat ../shared_doc.txt
-
-      - name: overwrite shared
-        run: echo " was here" >> ../shared_doc.txt
