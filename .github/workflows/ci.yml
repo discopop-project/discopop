@@ -28,19 +28,16 @@ jobs:
     steps:
 
       - name: setup shared directory
-        run: mkdir -p ../shared/bin
+        run: |
+          mkdir -p ../shared/bin
+          mkdir -p ../shared/third_party
 
       - name: setup llvm 11.1.0
         run: |
-          mkdir -p ../shared/third_party
-
-          if [ ! -d "../shared/third_party" ]; then
-            echo "../shared/third_party does not exist."
-            mkdir -p ../shared/third_party
-          fi
-
-          if [ -d "../shared/third_party" ]; then
-            echo "../shared/third_party does exist now."
+          CURDIR=$(pwd)
+          echo "CURDIR: ${CURDIR}"
+          if [ ! -f "../shared/third_party/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz" ]; then
+            echo "download."
           fi
 
           echo "Downloading llvm 11.1.0"
