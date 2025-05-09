@@ -89,17 +89,12 @@ jobs:
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
           echo $PATH
 
-      - name: activate Python venv
-        run: source ../shared/venv/bin/activate
-
-      - name: which pip
-        run: which pip
-
       - name: "Check all files for DiscoPoP License tag"
         run: ./scripts/dev/check-license.sh $(find . -type f)
 
       - name: Install Python dependencies
         run: |
+          echo $PATH
           pip install -r requirements.txt
 
       - name: "Run MyPy Type Checker - DiscoPoP Explorer"
