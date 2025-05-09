@@ -46,6 +46,15 @@ jobs:
             cd ${CURDIR}
           fi
 
+      - name: prepare PATH extension
+        run: |
+          echo "$(pwd)/../shared/third_party/llvm-11.1.0/bin" > ../shared/PATH_extensions.txt
+
+      - name: extend PATH
+        run: |
+          echo $PATH
+          export PATH=$PATH:$(cat ../shared/PATH_extensions.txt)
+          echo $PATH
 
 
 
