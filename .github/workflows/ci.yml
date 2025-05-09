@@ -29,6 +29,16 @@ jobs:
       - name: show pwd
         run: pwd
 
+      - name: echo PATH
+        run: echo $PATH
+
+      - name: modify PATH
+        run: PATH=$PATH:$(pwd)/../shared/bin
+
+
+
+# wip_setup_path
+
   test_install_dependencies:
     runs-on: self-hosted
     name: Test install dependencies
@@ -42,6 +52,9 @@ jobs:
 
       - name: show ls
         run: ls
+
+      - name: echo path
+        run: echo $PATH
 
       - name: echo 1
         run: echo "1" >> test.txt
