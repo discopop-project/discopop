@@ -115,12 +115,16 @@ else()
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
     # setup DiscoPoP venv
-    message(STATUS "Setting up DiscoPoP python venv: ${DiscoPoP_SOURCE_DIR}/venv")
-    execute_process(
-        COMMAND ${Python3_EXECUTABLE} -m venv ${DiscoPoP_SOURCE_DIR}/venv
-    )
-    set(Python3_VENV_EXECUTABLE ${DiscoPoP_SOURCE_DIR}/venv/bin/python3)
-
+    if(NOT ${USE_VENV} STREQUAL "")
+        message(STATUS "Setting up existing python venv: ${USE_VENV}")
+        set(Python3_VENV_EXECUTABLE ${USE_VENV}/bin/python3)
+    else()
+        message(STATUS "Setting up default DiscoPoP python venv: ${DiscoPoP_SOURCE_DIR}/venv")
+        execute_process(
+            COMMAND ${Python3_EXECUTABLE} -m venv ${DiscoPoP_SOURCE_DIR}/venv
+        )
+        set(Python3_VENV_EXECUTABLE ${DiscoPoP_SOURCE_DIR}/venv/bin/python3)
+    endif()
 
     # check if python tkinter module is available
     execute_process(
