@@ -9,10 +9,8 @@
 import os
 from pathlib import Path
 from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProviderArguments
-
-# from discopop_library.ConfigProvider.assets.build_config import DP_BUILD, DP_SOURCE, LLVM_BIN_DIR  # type: ignore
+from discopop_library.ConfigProvider.assets.build_config import DP_BUILD, DP_SOURCE, LLVM_BIN_DIR  # type: ignore
 from discopop_library.global_data.version.utils import get_version
-from .assets.build_config import DP_BUILD, DP_SOURCE, LLVM_BIN_DIR
 
 
 def run(arguments: ConfigProviderArguments) -> str:
