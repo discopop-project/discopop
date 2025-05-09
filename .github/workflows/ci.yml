@@ -164,6 +164,7 @@ jobs:
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
           . ../shared/venv/bin/activate
           cd ../shared/build
+          pip uninstall discopop
           make install_python_modules
 
   execute_cxx_unit_tests:
