@@ -172,46 +172,19 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Install Python dependencies
-        run: |
-          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
-          . ../shared/venv/bin/activate
-          pip install -r requirements.txt
-
       - name: C++ unit tests
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
           . ../shared/venv/bin/activate
-          build/test/unit_tests/DiscoPoP_UT
+          ../shared/build/test/unit_tests/DiscoPoP_UT
 
   execute_end_to_end_tests:
     runs-on: self-hosted
     name: Execute end-to-end tests
-    needs: execute_code_checks
+    needs: build_discopop_profiler
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
-
-      - name: Install Python dependencies
-        run: |
-          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
-          . ../shared/venv/bin/activate
-          pip install -r requirements.txt
-
-      - name: "Setup DiscoPoP Profiler - Build"
-        run: |
-          rm -rf build
-          mkdir build
-          cd build
-          cmake \
-           -DCMAKE_BUILD_TYPE=Debug \
-           -DDP_CALLTREE_PROFILING=1 \
-           -DDP_CALLTREE_PROFILING_METADATA_CUTOFF=0 \
-           ..
-          make -j3
-          cd ..
-          pip install -r requirements.txt
-          pip install .
 
       - name: Python end-to-end-tests
         run: |
