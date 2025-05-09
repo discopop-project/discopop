@@ -174,9 +174,6 @@ jobs:
     name: Execute C++ unit tests
     needs: build_discopop_profiler
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
       - name: C++ unit tests
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
@@ -188,9 +185,6 @@ jobs:
     name: Execute end-to-end tests
     needs: build_discopop_profiler
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
       - name: Python end-to-end-tests
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
