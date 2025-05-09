@@ -124,7 +124,7 @@ jobs:
 
   build_discopop_profiler:
     runs-on: self-hosted
-    name: Build DiscoPoP profiler
+    name: Build DiscoPoP
     needs: execute_code_checks
     steps:
       - name: Checkout Repository
@@ -156,6 +156,12 @@ jobs:
           cd ../shared/build
           make -j24
 
+      - name: "Make DiscoPoP Python modules"
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          cd ../shared/build
+          make python modules
 
   execute_cxx_unit_tests:
     runs-on: self-hosted
