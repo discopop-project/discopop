@@ -26,15 +26,24 @@ jobs:
     runs-on: self-hosted
     name: Test install dependencies
     steps:
+
+      - name: cleanup
+        run: rm -r ../shared/bin/third_party
+
       - name: setup shared directory
         run: mkdir -p ../shared/bin
 
       - name: setup llvm 11.1.0
         run: |
-          mkdir -p ../shared/bin/third_party
+          mkdir -p ../shared/third_party
 
-          if [ ! -d "${pwd}/../shared/bin/third_party" ]; then
-            echo "${pwd}/../shared/bin/third_party does not exist."
+          if [ ! -d "../shared/third_party" ]; then
+            echo "../shared/third_party does not exist."
+            mkdir -p ../shared/third_party
+          fi
+
+          if [ -d "../shared/third_party" ]; then
+            echo "../shared/third_party does exist now."
           fi
 
           echo "Downloading llvm 11.1.0"
@@ -50,4 +59,12 @@ jobs:
 
 
 
-# wip_setup_path
+  wip_test:
+    runs-on: self-hosted
+    name: Test cd
+    needs: wip_install_shared_dependencies
+    steps:
+      - name: echo pwd
+        run: |
+          cd
+          pwd
