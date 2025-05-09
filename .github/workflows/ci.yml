@@ -35,10 +35,12 @@ jobs:
           python-version: '3.10'
           cache: 'pip' # uses requirements.txt
 
-      - name: Setup shared directory
+      - name: Clean and setup shared directory
         run: |
           mkdir -p ../shared/bin
           mkdir -p ../shared/third_party
+
+          rm -rf ../shared/build
           mkdir -p ../shared/build
 
       - name: Setup LLVM 11.1.0
