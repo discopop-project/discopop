@@ -43,6 +43,8 @@ jobs:
           rm -rf ../shared/build
           mkdir -p ../shared/build
 
+          rm -rf ../shared/venv
+
       - name: Setup LLVM 11.1.0
         run: |
           CURDIR=$(pwd)
