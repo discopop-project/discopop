@@ -141,9 +141,10 @@ jobs:
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
           . ../shared/venv/bin/activate
           LLVM_PATH=$(pwd)/../shared/third_party/llvm-11.1.0
+          VENV_PATH=$(pwd)/../shared/venv
           cd ../shared/build
           cmake \
-           -DUSE_VENV=$(pwd)/../shared/venv \
+           -DUSE_VENV=${VENV_PATH} \
            -DLLVM_DIST_PATH=${LLVM_PATH} \
            -DCMAKE_BUILD_TYPE=Debug \
            -DDP_CALLTREE_PROFILING=1 \
