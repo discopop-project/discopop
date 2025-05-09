@@ -27,6 +27,9 @@ jobs:
     name: Setup shared dependencies
     steps:
 
+      - name: cleanup
+        run: rm -rvf ../shared/venv
+
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
