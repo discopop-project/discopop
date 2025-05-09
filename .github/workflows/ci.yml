@@ -188,7 +188,6 @@ jobs:
       - name: Python end-to-end-tests
         run: |
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          export LD_LIBRARY_PATH=/lib/gcc/x86_64-linux-gnu/11/:${LD_LIBRARY_PATH}
           . ../shared/venv/bin/activate
-          echo "PYTHONPATH: ${PYTHONPATH}"
-          export PYTHONPATH=$(pwd)/../shared/venv/lib/python3.10/site-packages
           python -m unittest -v -k *.end_to_end.*
