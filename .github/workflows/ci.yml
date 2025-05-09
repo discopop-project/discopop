@@ -118,3 +118,53 @@ jobs:
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
           . ../shared/venv/bin/activate
           python -m black -l 120 --check discopop_library
+
+  execute_cxx_unit_tests:
+    runs-on: self-hosted
+    name: Execute C++ unit tests
+    needs: execute_code_checks
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install Python dependencies
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          pip install -r requirements.txt
+
+#      - name: Setup DiscoPoP Profiler - Install Dependencies
+#        run: |
+#          sudo apt-get update
+#          sudo apt-get remove clang-8 clang-9 clang-10 clang-11 clang-12
+#          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+#          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
+#          sudo apt-get update
+#          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
+#          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
+#          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
+#          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
+#          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
+#          sudo apt-get install -y python3-tk
+#          sudo apt-get install -y libboost-all-dev
+
+      - name: "Setup DiscoPoP Profiler - Build"
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          LLVM_PATH=$(pwd)/../shared/third_party/llvm-11.1.0
+          rm -rf build
+          mkdir build
+          cd build
+          cmake \
+           -DLLVM_DIST_PATH=${LLVM_PATH} \
+           -DCMAKE_BUILD_TYPE=Debug \
+           -DDP_CALLTREE_PROFILING=1 \
+           ..
+          make -j24
+
+      - name: C++ unit tests
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          build/test/unit_tests/DiscoPoP_UT
