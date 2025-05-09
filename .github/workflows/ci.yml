@@ -41,6 +41,12 @@ jobs:
       - name: read test.txt
         run: cat test.txt
 
+      - name: read shared
+        run: cat ../shared_doc.txt
+
+      - name: overwrite shared
+        run: echo " was here" >> ../shared_doc.txt
+
   test_install_dependencies_2:
     runs-on: self-hosted
     needs: test_install_dependencies
@@ -60,6 +66,9 @@ jobs:
 
       - name: read test.txt
         run: cat test.txt
+
+      - name: read shared_doc.txt
+        run: cat ../shared_doc.txt
 
 
 
