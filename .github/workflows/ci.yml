@@ -27,9 +27,6 @@ jobs:
     name: Test install dependencies
     steps:
 
-      - name: cleanup
-        run: rm -r ../shared/bin/third_party
-
       - name: setup shared directory
         run: mkdir -p ../shared/bin
 
@@ -48,6 +45,9 @@ jobs:
 
           echo "Downloading llvm 11.1.0"
 
+      - name: echo pwd
+        run: pwd
+
 
 #cd third_party
 #wget https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
@@ -55,16 +55,3 @@ jobs:
 #mv clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10 llvm-11.1.0
 #rm clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
 #LLVM_DIR=${DP_BUILD_DIR}/third_party/llvm-11.1.0
-
-
-
-
-  wip_test:
-    runs-on: self-hosted
-    name: Test cd
-    needs: wip_install_shared_dependencies
-    steps:
-      - name: echo pwd
-        run: |
-          cd
-          pwd
