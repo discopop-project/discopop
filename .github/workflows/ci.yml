@@ -26,9 +26,13 @@ jobs:
     runs-on: self-hosted
     name: Test Docker
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
       - name: run hello-world
         run: |
-          docker run hello-world
+          cd .github/workflows
+          docker build -t "discopop_ci" .
 
   setup_shared_dependencies:
     runs-on: self-hosted
