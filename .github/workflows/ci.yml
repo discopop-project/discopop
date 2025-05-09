@@ -75,3 +75,44 @@ jobs:
           echo $PATH
           export PATH=$PATH:$(cat ../shared/PATH_extensions.txt)
           echo $PATH
+
+  execute_code_checks:
+    runs-on: self-hosted
+    name: Execute Code Checks
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip' # uses requirements.txt
+
+      - name: extend PATH
+        run: |
+          echo $PATH
+          export PATH=$PATH:$(cat ../shared/PATH_extensions.txt)
+          echo $PATH
+
+      - name: which pip
+        run: which pip
+
+      - name: "Check all files for DiscoPoP License tag"
+        run: ./scripts/dev/check-license.sh $(find . -type f)
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: "Run MyPy Type Checker - DiscoPoP Explorer"
+        run: python -m mypy --config-file=mypy.ini -p discopop_explorer
+
+      - name: "Run MyPy Type Checker - DiscoPoP Library"
+        run: python -m mypy --config-file=mypy.ini -p discopop_library
+
+      - name: "Check formatting of DiscoPoP Explorer"
+        run: python -m black -l 120 --check discopop_explorer
+
+      - name: "Check formatting of DiscoPoP Library"
+        run: python -m black -l 120 --check discopop_library
