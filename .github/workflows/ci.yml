@@ -22,175 +22,184 @@ permissions:
   id-token: write
 
 jobs:
+  test_docker:
+    runs-on: self-hosted
+    name: Test Docker
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: run hello-world
+        run: |
+          cd .github/workflows
+          docker build -t "discopop_ci" .
+
+  setup_shared_dependencies:
+    runs-on: self-hosted
+    name: Setup shared dependencies
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip' # uses requirements.txt
+
+      - name: Clean and setup shared directory
+        run: |
+          mkdir -p ../shared/bin
+          mkdir -p ../shared/third_party
+
+          rm -rf ../shared/build
+          mkdir -p ../shared/build
+
+          rm -rf ../shared/venv
+
+      - name: Setup LLVM 11.1.0
+        run: |
+          CURDIR=$(pwd)
+          echo "CURDIR: ${CURDIR}"
+          if [ ! -d "../shared/third_party/llvm-11.1.0" ]; then
+            echo "Downloading llvm 11.1.0"
+            cd ../shared/third_party
+            wget https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+            tar -xvf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+            mv clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10 llvm-11.1.0
+            rm clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+            cd ${CURDIR}
+          fi
+
+      - name: Setup Python venv
+        run: |
+          CURDIR=$(pwd)
+          if [ ! -d "../shared/venv" ]; then
+            cd ../shared
+            python3 -m venv venv
+            cd ${CURDIR}
+          fi
+
+      - name: Prepare PATH extension
+        run: |
+          if [ ! -d "../shared/PATH_extensions.txt" ]; then
+            rm -f ../shared/PATH_extensions.txt
+          fi
+
+          echo -n "$(pwd)/../shared/third_party/llvm-11.1.0/bin" >> ../shared/PATH_extensions.txt
+
+      - name: extend PATH
+        run: |
+          echo $PATH
+          export PATH=$PATH:$(cat ../shared/PATH_extensions.txt)
+          echo $PATH
+
   execute_code_checks:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     name: Execute Code Checks
+    needs: setup_shared_dependencies
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
       - name: "Check all files for DiscoPoP License tag"
-        run: ./scripts/dev/check-license.sh $(find . -type f)
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-          cache: 'pip' # uses requirements.txt
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          ./scripts/dev/check-license.sh $(find . -type f)
 
       - name: Install Python dependencies
         run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
           pip install -r requirements.txt
 
       - name: "Run MyPy Type Checker - DiscoPoP Explorer"
-        run: python -m mypy --config-file=mypy.ini -p discopop_explorer
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          python -m mypy --config-file=mypy.ini -p discopop_explorer
 
       - name: "Run MyPy Type Checker - DiscoPoP Library"
-        run: python -m mypy --config-file=mypy.ini -p discopop_library
-
-#      - name: "Run MyPy Type Checker - DiscoPoP Profiler - DEPRECATED"
-#        run: python -m mypy --config-file=mypy.ini -p DEPRECATED_discopop_profiler
-#
-#      - name: "Run MyPy Type Checker - DiscoPoP Wizard - DEPRECATED"
-#        run: python -m mypy --config-file=mypy.ini -p DEPRECATED_discopop_wizard
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          python -m mypy --config-file=mypy.ini -p discopop_library
 
       - name: "Check formatting of DiscoPoP Explorer"
-        run: python -m black -l 120 --check discopop_explorer
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          python -m black -l 120 --check discopop_explorer
 
       - name: "Check formatting of DiscoPoP Library"
-        run: python -m black -l 120 --check discopop_library
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          python -m black -l 120 --check discopop_library
 
-#      - name: "Check formatting of DiscoPoP Profiler - DEPRECATED"
-#        run: python -m black -l 120 --check DEPRECATED_discopop_profiler
-#
-#      - name: "Check formatting of DiscoPoP Wizard - DEPRECATED"
-#        run: python -m black -l 120 --check DEPRECATED_discopop_wizard
+  build_discopop_profiler:
+    runs-on: self-hosted
+    name: Build DiscoPoP
+    needs: execute_code_checks
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Install Python dependencies
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          pip install -r requirements.txt
+
+      - name: "CMake DiscoPoP profiler"
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          LLVM_PATH=$(pwd)/../shared/third_party/llvm-11.1.0
+          VENV_PATH=$(pwd)/../shared/venv
+          cd ../shared/build
+          cmake \
+           -DUSE_VENV=${VENV_PATH} \
+           -DLLVM_DIST_PATH=${LLVM_PATH} \
+           -DCMAKE_BUILD_TYPE=Debug \
+           -DDP_CALLTREE_PROFILING=1 \
+           ../../discopop
+
+      - name: "Make DiscoPoP profiler"
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          cd ../shared/build
+          make -j24
+
+      - name: "Make DiscoPoP Python modules"
+        run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          cd ../shared/build
+          pip uninstall -y discopop
+          make install_python_modules
 
   execute_cxx_unit_tests:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     name: Execute C++ unit tests
-    needs: execute_code_checks
+    needs: build_discopop_profiler
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-          cache: 'pip' # uses requirements.txt
-
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt
-
-      - name: Setup DiscoPoP Profiler - Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get remove clang-8 clang-9 clang-10 clang-11 clang-12
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
-          sudo apt-get update
-          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
-          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
-          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
-          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
-          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
-          sudo apt-get install -y python3-tk
-          sudo apt-get install -y libboost-all-dev
-
-      - name: "Setup DiscoPoP Profiler - Build"
-        run: |
-          rm -rf build
-          mkdir build
-          cd build
-          cmake \
-           -DCMAKE_BUILD_TYPE=Debug \
-           -DDP_CALLTREE_PROFILING=1 \
-           ..
-          make -j3
-
       - name: C++ unit tests
         run: |
-          build/test/unit_tests/DiscoPoP_UT
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          . ../shared/venv/bin/activate
+          ../shared/build/test/unit_tests/DiscoPoP_UT
 
   execute_end_to_end_tests:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     name: Execute end-to-end tests
-    needs: execute_code_checks
+    needs: build_discopop_profiler
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-          cache: 'pip' # uses requirements.txt
-
-      - name: Install Python dependencies
-        run: |
-          pip install -r requirements.txt
-
-      - name: Setup DiscoPoP Profiler - Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get remove clang-8 clang-9 clang-10 clang-11 clang-12
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
-          sudo apt-get update
-          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
-          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
-          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
-          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
-          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
-          sudo apt-get install -y python3-tk
-          sudo apt-get install -y libboost-all-dev
-
-      - name: "Setup DiscoPoP Profiler - Build"
-        run: |
-          rm -rf build
-          mkdir build
-          cd build
-          cmake \
-           -DCMAKE_BUILD_TYPE=Debug \
-           -DDP_CALLTREE_PROFILING=1 \
-           -DDP_CALLTREE_PROFILING_METADATA_CUTOFF=0 \
-           ..
-          make -j3
-          cd ..
-          pip install -r requirements.txt
-          pip install .
-
       - name: Python end-to-end-tests
         run: |
+          export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
+          export LD_LIBRARY_PATH=/lib/gcc/x86_64-linux-gnu/11/:${LD_LIBRARY_PATH}
+          . ../shared/venv/bin/activate
           python -m unittest -v -k *.end_to_end.*
-  update_wiki-build:
-    name: "Update Wiki - Build"
-    runs-on: ubuntu-22.04
-    needs: execute_code_checks
-    if: github.ref == 'refs/heads/master'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Pages
-        uses: actions/configure-pages@v2
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./docs/
-          destination: ./_site
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-
-  update_wiki-deploy:
-    name: "Update Wiki - Deploy"
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-22.04
-    needs: update_wiki-build
-    if: github.ref == 'refs/heads/master'
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
