@@ -161,7 +161,7 @@ jobs:
           export PATH=$(cat ../shared/PATH_extensions.txt):$PATH
           . ../shared/venv/bin/activate
           cd ../shared/build
-          make python modules
+          make python_modules
 
   execute_cxx_unit_tests:
     runs-on: self-hosted
