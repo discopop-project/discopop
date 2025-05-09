@@ -22,6 +22,14 @@ permissions:
   id-token: write
 
 jobs:
+  test_docker:
+    runs-on: self-hosted
+    name: Test Docker
+    steps:
+      - name: run hello-world
+        run: |
+          docker run hello-world
+
   setup_shared_dependencies:
     runs-on: self-hosted
     name: Setup shared dependencies
