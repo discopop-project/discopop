@@ -27,6 +27,12 @@ jobs:
     name: Test install dependencies
     steps:
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip' # uses requirements.txt
+
       - name: setup shared directory
         run: |
           mkdir -p ../shared/bin
@@ -46,9 +52,23 @@ jobs:
             cd ${CURDIR}
           fi
 
+      - name: setup Python venv
+        run: |
+          CURDIR=$(pwd)
+          if [ ! -d "../shared/venv" ]; then
+            cd ../shared
+            python3 -m venv venv
+            cd ${CURDIR}
+          fi
+
       - name: prepare PATH extension
         run: |
-          echo "$(pwd)/../shared/third_party/llvm-11.1.0/bin" > ../shared/PATH_extensions.txt
+          if [ ! -d "../shared/PATH_extensions.txt" ]; then
+            rm -f ../shared/PATH_extensions.txt
+          fi
+
+          echo -n "$(pwd)/../shared/third_party/llvm-11.1.0/bin" >> ../shared/PATH_extensions.txt
+          echo -n ":$(pwd)/../shared/venv/bin" >> ../shared/PATH_extensions.txt
 
       - name: extend PATH
         run: |
