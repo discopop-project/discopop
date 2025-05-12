@@ -127,6 +127,15 @@ jobs:
         run: |
           docker run --rm discopop_ci_${{ github.sha }} python -m unittest -v -k *.end_to_end.*
 
+  checks_successful:
+    runs-on: self-hostd
+    name: Checks successful
+    needs: [execute_cxx_unit_tests, execute_end_to_end_tests]
+    steps:
+      - name: Report
+        run: |
+          echo "All checks successful!"
+
   cleanup:
     runs-on: self-hosted
     name: Cleanup
