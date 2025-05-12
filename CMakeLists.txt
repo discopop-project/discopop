@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-cmake_minimum_required(VERSION 3.4.3)
+cmake_minimum_required(VERSION 4.0.0)
 project(DiscoPoP)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -115,12 +115,16 @@ else()
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
 
     # setup DiscoPoP venv
-    message(STATUS "Setting up DiscoPoP python venv: ${DiscoPoP_SOURCE_DIR}/venv")
-    execute_process(
-        COMMAND ${Python3_EXECUTABLE} -m venv ${DiscoPoP_SOURCE_DIR}/venv
-    )
-    set(Python3_VENV_EXECUTABLE ${DiscoPoP_SOURCE_DIR}/venv/bin/python3)
-
+    if(NOT ${USE_VENV} STREQUAL "")
+        message(STATUS "Setting up existing python venv: ${USE_VENV}")
+        set(Python3_VENV_EXECUTABLE ${USE_VENV}/bin/python3)
+    else()
+        message(STATUS "Setting up default DiscoPoP python venv: ${DiscoPoP_SOURCE_DIR}/venv")
+        execute_process(
+            COMMAND ${Python3_EXECUTABLE} -m venv ${DiscoPoP_SOURCE_DIR}/venv
+        )
+        set(Python3_VENV_EXECUTABLE ${DiscoPoP_SOURCE_DIR}/venv/bin/python3)
+    endif()
 
     # check if python tkinter module is available
     execute_process(
@@ -128,7 +132,7 @@ else()
         RESULT_VARIABLE TKINTER_AVAILABLE_EXIT_CODE
     )
     if(${TKINTER_AVAILABLE_EXIT_CODE})
-        message(FATAL_ERROR "Python module 'tkinter' not found. Please install the 'python3-tk' package via a package manager.")
+        message(WARNING "Python module 'tkinter' not found. Please install the 'python3-tk' package via a package manager.")
     endif()
 
 
@@ -142,11 +146,11 @@ set(DP_LOCAL_BIN_DIR "$ENV{HOME}/.local/bin")
 add_custom_target(
     python_modules
     COMMENT "Installing DiscoPoP python modules"
-    DEPENDS install_python_requirements reset_symlinks setup_symlinks
+    DEPENDS install_python_modules reset_symlinks setup_symlinks
 )
 
 add_custom_target(
-    install_python_requirements
+    install_python_modules
     COMMENT "Installing python modules and dependencies"
     COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
 )
