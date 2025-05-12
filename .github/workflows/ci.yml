@@ -22,175 +22,119 @@ permissions:
   id-token: write
 
 jobs:
-  execute_code_checks:
-    runs-on: ubuntu-22.04
-    name: Execute Code Checks
+  execute_license_check:
+    runs-on: self-hosted
+    name: License check
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+
+      - name: "Github SHA"
+        run: |
+          echo "Hello from: ${{ github.sha }}"
 
       - name: "Check all files for DiscoPoP License tag"
-        run: ./scripts/dev/check-license.sh $(find . -type f)
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-          cache: 'pip' # uses requirements.txt
-
-      - name: Install Python dependencies
         run: |
-          pip install -r requirements.txt
+          ./scripts/dev/check-license.sh $(find . -type f)
+
+  prepare_ci_base:
+    runs-on: self-hosted
+    name: Build base container
+    needs: execute_license_check
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Build docker image discopop_ci_base
+        run: |
+          docker build -f .github/workflows/Dockerfile_ci_base -t discopop_ci_base .
+
+  prepare_ci_container:
+    runs-on: self-hosted
+    name: Build CI container
+    needs: prepare_ci_base
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Build docker image discopop_ci_${{ github.sha }}
+        run: |
+          docker build -f .github/workflows/Dockerfile_ci -t discopop_ci_${{ github.sha }} --no-cache .
+
+  code_check_mypy_explorer:
+    runs-on: self-hosted
+    name: "Type check: Explorer"
+    needs: prepare_ci_container
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
       - name: "Run MyPy Type Checker - DiscoPoP Explorer"
-        run: python -m mypy --config-file=mypy.ini -p discopop_explorer
+        run: |
+          docker run --rm discopop_ci_${{ github.sha }} python -m mypy --config-file=mypy.ini -p discopop_explorer
+
+  code_check_mypy_library:
+    runs-on: self-hosted
+    name: "Type check: Library"
+    needs: prepare_ci_container
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
       - name: "Run MyPy Type Checker - DiscoPoP Library"
-        run: python -m mypy --config-file=mypy.ini -p discopop_library
+        run: |
+          docker run --rm discopop_ci_${{ github.sha }} python -m mypy --config-file=mypy.ini -p discopop_library
 
-#      - name: "Run MyPy Type Checker - DiscoPoP Profiler - DEPRECATED"
-#        run: python -m mypy --config-file=mypy.ini -p DEPRECATED_discopop_profiler
-#
-#      - name: "Run MyPy Type Checker - DiscoPoP Wizard - DEPRECATED"
-#        run: python -m mypy --config-file=mypy.ini -p DEPRECATED_discopop_wizard
+  code_check_black_explorer:
+    runs-on: self-hosted
+    name: "Format check: Explorer"
+    needs: prepare_ci_container
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
       - name: "Check formatting of DiscoPoP Explorer"
-        run: python -m black -l 120 --check discopop_explorer
+        run: |
+          docker run --rm discopop_ci_${{ github.sha }} python -m black -l 120 --check discopop_explorer
+
+  code_check_black_library:
+    runs-on: self-hosted
+    name: "Format check: Library"
+    needs: prepare_ci_container
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
       - name: "Check formatting of DiscoPoP Library"
-        run: python -m black -l 120 --check discopop_library
-
-#      - name: "Check formatting of DiscoPoP Profiler - DEPRECATED"
-#        run: python -m black -l 120 --check DEPRECATED_discopop_profiler
-#
-#      - name: "Check formatting of DiscoPoP Wizard - DEPRECATED"
-#        run: python -m black -l 120 --check DEPRECATED_discopop_wizard
+        run: |
+          docker run --rm discopop_ci_${{ github.sha }} python -m black -l 120 --check discopop_library
 
   execute_cxx_unit_tests:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     name: Execute C++ unit tests
-    needs: execute_code_checks
+    needs: [code_check_mypy_explorer, code_check_mypy_library, code_check_black_explorer, code_check_black_library]
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-          cache: 'pip' # uses requirements.txt
-
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt
-
-      - name: Setup DiscoPoP Profiler - Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get remove clang-8 clang-9 clang-10 clang-11 clang-12
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
-          sudo apt-get update
-          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
-          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
-          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
-          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
-          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
-          sudo apt-get install -y python3-tk
-          sudo apt-get install -y libboost-all-dev
-
-      - name: "Setup DiscoPoP Profiler - Build"
-        run: |
-          rm -rf build
-          mkdir build
-          cd build
-          cmake \
-           -DCMAKE_BUILD_TYPE=Debug \
-           -DDP_CALLTREE_PROFILING=1 \
-           ..
-          make -j3
-
       - name: C++ unit tests
         run: |
-          build/test/unit_tests/DiscoPoP_UT
+          docker run --rm discopop_ci_${{ github.sha }} build/test/unit_tests/DiscoPoP_UT
 
   execute_end_to_end_tests:
-    runs-on: ubuntu-22.04
+    runs-on: self-hosted
     name: Execute end-to-end tests
-    needs: execute_code_checks
+    needs: [code_check_mypy_explorer, code_check_mypy_library, code_check_black_explorer, code_check_black_library]
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-          cache: 'pip' # uses requirements.txt
-
-      - name: Install Python dependencies
-        run: |
-          pip install -r requirements.txt
-
-      - name: Setup DiscoPoP Profiler - Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get remove clang-8 clang-9 clang-10 clang-11 clang-12
-          wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-11 main"
-          sudo apt-get update
-          sudo apt-get install -y cmake libclang-11-dev clang-11 llvm-11
-          sudo ln -s /usr/bin/clang-11 /usr/bin/clang || true
-          sudo ln -s /usr/bin/clang++-11 /usr/bin/clang++ || true
-          sudo ln -s /usr/bin/llvm-link-11 /usr/bin/llvm-link || true
-          sudo ln -s /usr/bin/opt-11 /usr/bin/opt || true
-          sudo apt-get install -y python3-tk
-          sudo apt-get install -y libboost-all-dev
-
-      - name: "Setup DiscoPoP Profiler - Build"
-        run: |
-          rm -rf build
-          mkdir build
-          cd build
-          cmake \
-           -DCMAKE_BUILD_TYPE=Debug \
-           -DDP_CALLTREE_PROFILING=1 \
-           -DDP_CALLTREE_PROFILING_METADATA_CUTOFF=0 \
-           ..
-          make -j3
-          cd ..
-          pip install -r requirements.txt
-          pip install .
-
       - name: Python end-to-end-tests
         run: |
-          python -m unittest -v -k *.end_to_end.*
-  update_wiki-build:
-    name: "Update Wiki - Build"
-    runs-on: ubuntu-22.04
-    needs: execute_code_checks
-    if: github.ref == 'refs/heads/master'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Pages
-        uses: actions/configure-pages@v2
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./docs/
-          destination: ./_site
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+          docker run --rm discopop_ci_${{ github.sha }} python -m unittest -v -k *.end_to_end.*
 
-  update_wiki-deploy:
-    name: "Update Wiki - Deploy"
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-22.04
-    needs: update_wiki-build
-    if: github.ref == 'refs/heads/master'
+  cleanup:
+    runs-on: self-hosted
+    name: Cleanup
+    if: always()
+    needs: [prepare_ci_base, prepare_ci_container, execute_cxx_unit_tests, execute_end_to_end_tests]
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Cleanup temporary docker image discopop_ci_${{ github.sha }}
+        run: |
+          if [ ! -z "$(docker images -q discopop_ci_${{ github.sha }} 2> /dev/null)" ]; then
+            docker image rm discopop_ci_${{ github.sha }}
+          fi
