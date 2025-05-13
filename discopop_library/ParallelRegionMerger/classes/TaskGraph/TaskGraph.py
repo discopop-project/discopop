@@ -8,7 +8,7 @@
 from typing import List, Optional, Tuple, Union, cast
 from matplotlib import pyplot as plt
 import matplotlib
-import networkx as nx
+import networkx as nx  # type: ignore
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
