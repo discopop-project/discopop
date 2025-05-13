@@ -62,15 +62,38 @@ include(AddLLVM)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 
+## check for internet connection
+message(CHECK_START "Checking internet connection")
+execute_process(
+    COMMAND ping www.google.com -c 2
+    ERROR_QUIET
+    OUTPUT_QUIET
+    RESULT_VARIABLE NO_CONNECTION
+)
+if(NOT NO_CONNECTION EQUAL 0)
+    set(INTERNET_CONNECTION FALSE)
+    message(CHECK_FAIL "Failed")
+else()
+    set(INTERNET_CONNECTION TRUE)
+    message(CHECK_PASS "Success")
+endif()
+
+
 add_subdirectory(DiscoPoP)
 
 add_subdirectory(rtlib)
 
 add_subdirectory(scripts)
 
-add_subdirectory(test/unit_tests)
 
-add_subdirectory(benchmark)
+# only build test suite if internet connection is available
+if(INTERNET_CONNECTION)
+    add_subdirectory(test/unit_tests)
+    add_subdirectory(benchmark)
+else()
+    message(STATUS "Skipping build of test/unit_tests. No internet access.")
+    message(STATUS "Skipping build of benchmark. No internet access.")
+endif()
 
 ##### DEPRECATED #####
 # save build configuration to build/build_config.txt
@@ -152,7 +175,8 @@ add_custom_target(
 add_custom_target(
     install_python_modules
     COMMENT "Installing python modules and dependencies"
-    COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
+    COMMAND echo "Checking internet connection.."
+    COMMAND nc -zw1 google.com 443 && ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR} || true
 )
 
 add_custom_target(
