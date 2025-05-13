@@ -13,7 +13,7 @@ import sys
 from multiprocessing import Pool
 from typing import TYPE_CHECKING, List, Dict, Optional, Set, Tuple, cast
 import warnings
-import networkx as nx
+import networkx as nx  # type: ignore
 
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.EnterParallelNode import EnterParallelNode
