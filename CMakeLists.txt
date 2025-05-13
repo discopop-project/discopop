@@ -158,6 +158,7 @@ add_custom_target(
 
 add_custom_target(
     reset_symlinks
+    DEPENDS install_python_modules
     COMMENT "Resetting existing DiscoPoP symlinks to python executables"
     COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_auto_tuner
     COMMAND rm -f ${DP_LOCAL_BIN_DIR}/discopop_config_provider
@@ -173,6 +174,7 @@ add_custom_target(
 
 add_custom_target(
     setup_symlinks
+    DEPENDS reset_symlinks
     COMMENT "Creating symlinks for DiscoPoP python executables"
     COMMAND echo "--> discopop_auto_tuner"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_auto_tuner ${DP_LOCAL_BIN_DIR}/discopop_auto_tuner
