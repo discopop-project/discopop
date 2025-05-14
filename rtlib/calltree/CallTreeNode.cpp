@@ -51,6 +51,14 @@ bool CallTreeNode::operator==(const CallTreeNode &other) const {
   }
 }
 
+void CallTreeNode::set(shared_ptr<CallTreeNode> arg_parent_ptr, CallTreeNodeType arg_type, unsigned int arg_loop_or_function_id,
+  unsigned int arg_iteration_id){
+    parent_ptr = arg_parent_ptr;
+    type = arg_type;
+    loop_or_function_id = arg_loop_or_function_id;
+    iteration_id = arg_iteration_id;
+  }
+
 shared_ptr<CallTreeNode> CallTreeNode::get_parent_ptr() { return parent_ptr; }
 
 CallTreeNodeType CallTreeNode::get_node_type() { return type; }

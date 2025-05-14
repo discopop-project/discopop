@@ -16,6 +16,7 @@
 
 #include "CallTreeGlobals.hpp"
 #include "CallTreeNode.hpp"
+#include "CallTreePreparedNodeBuffer.hpp"
 #include <atomic>
 #include <memory>
 
@@ -34,8 +35,14 @@ public:
   unsigned int get_node_count();
   std::shared_ptr<CallTreeNode> get_current_node_ptr();
 
+  CallTreeNodeQueueChunkBuffer ctnqcb;
+
 private:
   std::shared_ptr<CallTreeNode> current;
+  pthread_t calltree_thread;
+  CallTreeNodeQueueChunk* prepared_chunk;
 };
+
+void* manage_calltree(void* arg);
 
 } // namespace __dp

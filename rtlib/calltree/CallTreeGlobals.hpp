@@ -14,4 +14,9 @@
 
 #include <atomic>
 
+namespace __dp {
+
 extern std::atomic<unsigned int> call_tree_node_count;
+extern bool calltree_thread_stop;  // stop signal
+
+}
