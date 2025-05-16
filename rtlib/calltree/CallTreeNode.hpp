@@ -39,7 +39,7 @@ private:
   unsigned int loop_or_function_id; // id of the loop or function that is represented by the current node
   unsigned int iteration_id;
   shared_ptr<CallTreeNode> parent_ptr;
-  CallTreeNode* parent_ptr_raw;  // must not be used by threads other than the main!
+  CallTreeNode* parent_ptr_raw;  // must not be used by threads other than the main for dereferencing. Using for equality checks is fine!
   atomic<unsigned int> *node_count_ptr;
 };
 

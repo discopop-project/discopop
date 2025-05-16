@@ -40,8 +40,8 @@ CallTreeNode::~CallTreeNode() { call_tree_node_count -= 1; }
 bool CallTreeNode::operator==(const CallTreeNode &other) const {
   // && (iteration_id == other.iteration_id)  ignore loop id
   if ((type == other.type) && (loop_or_function_id == other.loop_or_function_id)) {
-    if (parent_ptr && other.parent_ptr) {
-      if (parent_ptr.get() == other.parent_ptr.get()) {
+    if (parent_ptr_raw && other.parent_ptr_raw) {
+      if (parent_ptr_raw == other.parent_ptr_raw) {
         return true;
       }
       return false;

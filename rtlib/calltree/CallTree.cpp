@@ -98,7 +98,8 @@ void CallTree::enter_function(unsigned int function_id) {
     prepared_chunk = ctnqcb.get_prepared_chunk();
   }
   std::shared_ptr<CallTreeNode> new_node = std::move(prepared_chunk->get_prepared_node());
-  new_node->set(std::move(current), current_raw, CallTreeNodeType::Function, function_id, 0);
+  CallTreeNode* new_node_raw = new_node.get();
+  new_node_raw->set(std::move(current), current_raw, CallTreeNodeType::Function, function_id, 0);
   current_raw = new_node.get();
   current = std::move(new_node);
 }
@@ -133,7 +134,7 @@ void CallTree::enter_iteration(unsigned int iteration_id) {
     }
     std::shared_ptr<CallTreeNode> new_node = std::move(prepared_chunk->get_prepared_node());
     CallTreeNode* new_node_raw = new_node.get();
-    new_node->set(std::move(current), current_raw, CallTreeNodeType::Iteration, loop_id, iteration_id);
+    new_node_raw->set(std::move(current), current_raw, CallTreeNodeType::Iteration, loop_id, iteration_id);
     current_raw = new_node.get();
     current = std::move(new_node);
     return;
@@ -158,7 +159,7 @@ void CallTree::enter_iteration(unsigned int iteration_id) {
   }
   std::shared_ptr<CallTreeNode> new_node = std::move(prepared_chunk->get_prepared_node());
   CallTreeNode* new_node_raw = new_node.get();
-  new_node->set(std::move(node_ptr_raw->get_parent_ptr()), parent_ptr_raw, CallTreeNodeType::Iteration, loop_id, iteration_id);
+  new_node_raw->set(std::move(node_ptr_raw->get_parent_ptr()), parent_ptr_raw, CallTreeNodeType::Iteration, loop_id, iteration_id);
   garbage_collection_chunk[garbage_collection_chunk_counter++] = std::move(current);
   offload_garbage_collection();
   current_raw = new_node.get();
