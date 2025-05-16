@@ -24,8 +24,8 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
 
   // collect ancestors of sink_ctn
   shared_ptr<CallTreeNode> curr_ctn_node = std::move(mdqe.sink_ctn);
-  std::set<shared_ptr<CallTreeNode>> sink_ctn_ancestors;
-  std::set<unsigned int> sink_ancestor_loops_and_functions;
+  hashset<shared_ptr<CallTreeNode>> sink_ctn_ancestors;
+  hashset<unsigned int> sink_ancestor_loops_and_functions;
   if (curr_ctn_node) {
     while (curr_ctn_node->get_node_type() != CallTreeNodeType::Root) {
       if (curr_ctn_node->get_node_type() == CallTreeNodeType::Loop) {
@@ -54,8 +54,8 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
 
   // collect ancestors of source_ctn
   curr_ctn_node = std::move(mdqe.source_ctn);
-  std::set<shared_ptr<CallTreeNode>> source_ctn_ancestors;
-  std::set<unsigned int> source_ancestor_loops_and_functions;
+  hashset<shared_ptr<CallTreeNode>> source_ctn_ancestors;
+  hashset<unsigned int> source_ancestor_loops_and_functions;
   if (curr_ctn_node) {
     while (curr_ctn_node->get_node_type() != CallTreeNodeType::Root) {
       if (curr_ctn_node->get_node_type() == CallTreeNodeType::Loop) {
@@ -77,7 +77,7 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
   }
 
   // determine common ancestors
-  std::set<shared_ptr<CallTreeNode>> common_ancestors;
+  hashset<shared_ptr<CallTreeNode>> common_ancestors;
   for (auto& sink_anc : sink_ctn_ancestors) {
     for (auto& source_anc : source_ctn_ancestors) {
       if (sink_anc == source_anc) {
@@ -87,8 +87,8 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
   }
 
   // determine disjoint ancestors
-  std::set<shared_ptr<CallTreeNode>> disjoint_sink_ancestors;
-  std::set<shared_ptr<CallTreeNode>> disjoint_source_ancestors;
+  hashset<shared_ptr<CallTreeNode>> disjoint_sink_ancestors;
+  hashset<shared_ptr<CallTreeNode>> disjoint_source_ancestors;
   for (auto& sink_anc : sink_ctn_ancestors) {
     bool contained = false;
     for (auto& source_anc : source_ctn_ancestors) {
@@ -117,8 +117,8 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
   // " << disjoint_source_ancestors.size() << "\n";
 
   // identify intra_call and intra_iteration dependencies
-  std::set<unsigned int> intra_call_dependencies;
-  std::set<unsigned int> intra_iteration_dependencies;
+  hashset<unsigned int> intra_call_dependencies;
+  hashset<unsigned int> intra_iteration_dependencies;
   for (auto& common_anc : common_ancestors) {
     if (common_anc->get_node_type() == CallTreeNodeType::Function) {
       intra_call_dependencies.insert(common_anc->get_loop_or_function_id());
@@ -130,8 +130,8 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
   // intra_iteration_dependencies.size() << "\n";
 
   // identify inter_call and inter_iteration dependencies
-  std::set<unsigned int> inter_call_dependencies;
-  std::set<unsigned int> inter_iteration_dependencies;
+  hashset<unsigned int> inter_call_dependencies;
+  hashset<unsigned int> inter_iteration_dependencies;
   for (auto& disjoint_sink_anc : disjoint_sink_ancestors) {
     for (auto& disjoint_source_anc : disjoint_source_ancestors) {
       // check for inter call dependencies

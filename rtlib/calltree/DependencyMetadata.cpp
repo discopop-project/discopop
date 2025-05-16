@@ -13,12 +13,12 @@
 #include "DependencyMetadata.hpp"
 
 namespace __dp {
-DependencyMetadata::DependencyMetadata(MetaDataQueueElement mdqe, std::set<unsigned int> arg_intra_call_dependencies,
-                                       std::set<unsigned int> arg_intra_iteration_dependencies,
-                                       std::set<unsigned int> arg_inter_call_dependencies,
-                                       std::set<unsigned int> arg_inter_iteration_dependencies,
-                                       std::set<unsigned int> arg_sink_ancestors,
-                                       std::set<unsigned int> arg_source_ancestors)
+DependencyMetadata::DependencyMetadata(MetaDataQueueElement mdqe, hashset<unsigned int> arg_intra_call_dependencies,
+                                       hashset<unsigned int> arg_intra_iteration_dependencies,
+                                       hashset<unsigned int> arg_inter_call_dependencies,
+                                       hashset<unsigned int> arg_inter_iteration_dependencies,
+                                       hashset<unsigned int> arg_sink_ancestors,
+                                       hashset<unsigned int> arg_source_ancestors)
     : type(mdqe.type), sink(mdqe.sink), source(mdqe.source), var(mdqe.var), AAvar(mdqe.AAvar),
       intra_call_dependencies(std::move(arg_intra_call_dependencies)),
       intra_iteration_dependencies(std::move(arg_intra_iteration_dependencies)),
