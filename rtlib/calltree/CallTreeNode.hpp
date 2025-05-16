@@ -32,7 +32,7 @@ public:
   CallTreeNodeType get_node_type();
   unsigned int get_loop_or_function_id();
   unsigned int get_iteration_id(); // only relevant for iteration type nodes, else always 0
-  void set(shared_ptr<CallTreeNode> arg_parent_ptr, CallTreeNode* arg_parent_ptr_raw, CallTreeNodeType arg_type, unsigned int arg_loop_or_function_id,
+  void set(shared_ptr<CallTreeNode>&& arg_parent_ptr, CallTreeNode* arg_parent_ptr_raw, CallTreeNodeType arg_type, unsigned int arg_loop_or_function_id,
     unsigned int arg_iteration_id);
 private:
   CallTreeNodeType type;
