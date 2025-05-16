@@ -52,9 +52,9 @@ bool CallTreeNode::operator==(const CallTreeNode &other) const {
   }
 }
 
-void CallTreeNode::set(shared_ptr<CallTreeNode> arg_parent_ptr, CallTreeNode* arg_parent_ptr_raw, CallTreeNodeType arg_type, unsigned int arg_loop_or_function_id,
+void CallTreeNode::set(shared_ptr<CallTreeNode>&& arg_parent_ptr, CallTreeNode* arg_parent_ptr_raw, CallTreeNodeType arg_type, unsigned int arg_loop_or_function_id,
   unsigned int arg_iteration_id){
-    parent_ptr = arg_parent_ptr;
+    parent_ptr = std::move(arg_parent_ptr);
     parent_ptr_raw = arg_parent_ptr_raw;
     type = arg_type;
     loop_or_function_id = arg_loop_or_function_id;
