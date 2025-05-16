@@ -12,7 +12,7 @@ class CallTreeTest : public ::testing::Test {};
 TEST_F(CallTreeTest, testConstructor) {
   auto ct = __dp::CallTree();
 
-  ASSERT_EQ(call_tree_node_count.load(), 1);
+  ASSERT_EQ(__dp::call_tree_node_count.load(), 1);
   ASSERT_EQ(ct.get_current_node_ptr()->get_node_type(), __dp::CallTreeNodeType::Root);
 }
 

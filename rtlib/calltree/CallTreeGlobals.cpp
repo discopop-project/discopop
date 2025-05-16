@@ -12,4 +12,10 @@
 
 #include "CallTreeGlobals.hpp"
 
+namespace __dp {
+
 std::atomic<unsigned int> call_tree_node_count{0};
+
+bool calltree_thread_stop = false;  // stop signal
+
+}

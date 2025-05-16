@@ -605,7 +605,7 @@ void *processFirstAccessQueue(void *arg) {
       if(current){
         // process chunk
         AbstractShadow *SMem = new PerfectShadow2();
-        hashset<ADDR> chunk_write_seen_addrs;
+//        hashset<ADDR> chunk_write_seen_addrs;
         std::vector<AccessInfo>* entry_condition_accesses = new std::vector<AccessInfo>();
 
 //        std::cout << "FAQ SMEM STATE: " << std::endl;
@@ -621,8 +621,9 @@ void *processFirstAccessQueue(void *arg) {
 
 
           // check if access is the first access to a memory location in the current chunk
-          //bool is_first_access = (SMem->testInRead(access.addr) == 0) && (SMem->testInWrite(access.addr) == 0);
-          bool is_entry_condition_access = !(chunk_write_seen_addrs.contains(access.addr));
+          bool is_entry_condition_access = (SMem->testInRead(access.addr) == 0) && (SMem->testInWrite(access.addr) == 0);
+//          bool is_entry_condition_access = SMem->testInWrite(access.addr) == 0;
+          //bool is_entry_condition_access = false; // !(chunk_write_seen_addrs.contains(access.addr));
           if(is_entry_condition_access){
 //            std::cout << "IS FIRST ACCESS" << std::endl;
             // register the access in the list of entry conditions
@@ -644,9 +645,9 @@ void *processFirstAccessQueue(void *arg) {
             analyzeSingleAccess(SMem, access);
 #endif
           }
-          if(is_entry_condition_access && !(access.isRead)){
-            chunk_write_seen_addrs.insert(access.addr);
-          }
+//          if(is_entry_condition_access && !(access.isRead)){
+//            chunk_write_seen_addrs.insert(access.addr);
+//          }
 
 //          std::cout << "FAQ SMEM STATE: " << std::endl;
 //          SMem->print();
@@ -714,7 +715,7 @@ void *processFirstAccessQueue(void *arg) {
 //          std::cout << "SAQ: Process new chunk" << std::endl;
           // check entry boundary conditions for data dependencies
           auto promised_first_accesses_vector_ptr = current->entry_boundary_first_addr_accesses.get();
-          for(auto entry_accesses : *(promised_first_accesses_vector_ptr)){
+          for(auto&  entry_accesses : *(promised_first_accesses_vector_ptr)){
             // ignore unused entries of the vector
             if(!(entry_accesses.addr || entry_accesses.lid)){
               continue;
@@ -729,10 +730,10 @@ void *processFirstAccessQueue(void *arg) {
 
           // update persistent SMem with exit boundary conditions (aka merge the local into the persistent shadow memories)
           AbstractShadow* promised_last_smem_ptr = current->exit_boundary_SMem.get();
-          for(auto read_pair : promised_last_smem_ptr->getReadKVPairs()){
+          for(auto& read_pair : promised_last_smem_ptr->getReadKVPairs()){
             SMem->updateInRead(read_pair.first, read_pair.second);
           }
-          for(auto write_pair : promised_last_smem_ptr->getWriteKVPairs()){
+          for(auto& write_pair : promised_last_smem_ptr->getWriteKVPairs()){
             SMem->updateInWrite(write_pair.first, write_pair.second);
           }
 
