@@ -25,13 +25,20 @@ CallTree::CallTree(): ctnqcb(CallTreeNodeQueueChunkBuffer(10)){
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
   pthread_create(&calltree_thread, &attr, manage_calltree, this);
   pthread_attr_destroy(&attr);
+
+  pthread_attr_t attr_2;
+  pthread_attr_init(&attr_2);
+  pthread_attr_setdetachstate(&attr_2, PTHREAD_CREATE_JOINABLE);
+  pthread_create(&calltree_thread_2, &attr_2, manage_calltree, this);
+  pthread_attr_destroy(&attr_2);
 }
 
 CallTree::~CallTree() {
   // join CallTree management thread
   calltree_thread_stop = true;
   pthread_join(calltree_thread, NULL);
-  std::cout << "Joined calltree_thread" << std::endl;
+  pthread_join(calltree_thread_2, NULL);
+  std::cout << "Joined calltree_threads" << std::endl;
 }
 
 unsigned int CallTree::get_node_count() { return call_tree_node_count.load(); }
