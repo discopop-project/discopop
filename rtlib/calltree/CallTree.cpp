@@ -16,7 +16,7 @@
 namespace __dp {
 CallTree::CallTree(): ctnqcb(CallTreeNodeQueueChunkBuffer(10)){
   current = make_shared<CallTreeNode>();
-  prepared_chunk = ctnqcb.get_prepared_chunk(100);
+  prepared_chunk = ctnqcb.get_prepared_chunk();
 
   // spawn CallTree management thread
   calltree_thread_stop = false;
@@ -41,7 +41,7 @@ std::shared_ptr<CallTreeNode> CallTree::get_current_node_ptr() { return current;
 void CallTree::enter_function(unsigned int function_id) {
   if (prepared_chunk->buffer_empty()){
     delete prepared_chunk;
-    prepared_chunk = ctnqcb.get_prepared_chunk(100);
+    prepared_chunk = ctnqcb.get_prepared_chunk();
   }
   std::shared_ptr<CallTreeNode> new_node = std::move(prepared_chunk->get_prepared_node());
   new_node->set(current, CallTreeNodeType::Function, function_id, 0);
@@ -51,7 +51,7 @@ void CallTree::enter_function(unsigned int function_id) {
 void CallTree::enter_loop(unsigned int loop_id) {
   if (prepared_chunk->buffer_empty()){
     delete prepared_chunk;
-    prepared_chunk = ctnqcb.get_prepared_chunk(100);
+    prepared_chunk = ctnqcb.get_prepared_chunk();
   }
   std::shared_ptr<CallTreeNode> new_node = std::move(prepared_chunk->get_prepared_node());
   new_node->set(current, CallTreeNodeType::Loop, loop_id, 0);
@@ -77,7 +77,7 @@ void CallTree::enter_iteration(unsigned int iteration_id) {
   // create iteration node
   if (prepared_chunk->buffer_empty()){
     delete prepared_chunk;
-    prepared_chunk = ctnqcb.get_prepared_chunk(100);
+    prepared_chunk = ctnqcb.get_prepared_chunk();
   }
   std::shared_ptr<CallTreeNode> new_node = std::move(prepared_chunk->get_prepared_node());
   new_node->set(std::move(node_ptr), CallTreeNodeType::Iteration, loop_id, iteration_id);
@@ -122,8 +122,7 @@ void* manage_calltree(void* arg){
   std::cout << "Hello world from CallTree manager thread!" << std::endl;
   CallTree* call_tree_ptr = (CallTree*) arg;
   while(! calltree_thread_stop){
-    call_tree_ptr->ctnqcb.prepare_chunk_if_required(10000);
-    usleep(500);  // todo: automatic tuning
+    call_tree_ptr->ctnqcb.prepare_chunk_if_required();
   }
   pthread_exit(NULL);
   return nullptr;

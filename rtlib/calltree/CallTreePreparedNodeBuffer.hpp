@@ -21,26 +21,36 @@
 
 namespace __dp {
 
+#define CTNQC_CHUNK_SIZE 10000
+
 class CallTreeNodeQueueChunk {
     public:
-        CallTreeNodeQueueChunk(std::size_t chunk_size){
-            for(std::size_t i = 0; i < chunk_size; ++i){
-                buffer.push_back(std::move(std::make_shared<CallTreeNode>()));
+        CallTreeNodeQueueChunk(): counter(CTNQC_CHUNK_SIZE){
+            //for(std::size_t i = 0; i < chunk_size; ++i){
+            //    buffer.push_back(std::move(std::make_shared<CallTreeNode>()));
+            //}
+            for(std::size_t i = 0; i < CTNQC_CHUNK_SIZE; ++i){
+              buffer[i] = std::make_shared<CallTreeNode>();
             }
         }
 
         inline bool buffer_empty(){
-            return buffer.empty();
+          return !(counter != 0);
+//            return buffer.empty();
         }
 
         inline std::shared_ptr<CallTreeNode> get_prepared_node(){
-        std::shared_ptr<CallTreeNode> tmp = std::move(buffer.back());
-        buffer.pop_back();
-        return std::move(tmp);
+          return std::move(buffer[--counter]);
+
+        //std::shared_ptr<CallTreeNode> tmp = std::move(buffer.back());
+        //buffer.pop_back();
+        //return std::move(tmp);
         }
 
     private:
-        std::vector<std::shared_ptr<CallTreeNode>> buffer;
+        //std::vector<std::shared_ptr<CallTreeNode>> buffer;
+        std::shared_ptr<CallTreeNode> buffer[CTNQC_CHUNK_SIZE];
+        std::size_t counter;
     };
 
 class CallTreeNodeQueueChunkBuffer{
@@ -49,7 +59,7 @@ class CallTreeNodeQueueChunkBuffer{
     CallTreeNodeQueueChunkBuffer(std::size_t arg_size): size(arg_size){
       }
 
-      inline void prepare_chunk_if_required(std::size_t chunk_size){
+      inline void prepare_chunk_if_required(){
         bool chunk_required = false;
         {
           const std::lock_guard<std::mutex> lock(internal_mtx);
@@ -59,13 +69,16 @@ class CallTreeNodeQueueChunkBuffer{
         }
 
         if(chunk_required){
-            CallTreeNodeQueueChunk* new_chunk = new CallTreeNodeQueueChunk(chunk_size);
+            CallTreeNodeQueueChunk* new_chunk = new CallTreeNodeQueueChunk();
             const std::lock_guard<std::mutex> lock(internal_mtx);
             internal_queue.push(new_chunk);
         }
+        else{
+          usleep(100);  // todo: automatic tuning
+        }
       }
 
-      CallTreeNodeQueueChunk* get_prepared_chunk(std::size_t chunk_size){
+      CallTreeNodeQueueChunk* get_prepared_chunk(){
         CallTreeNodeQueueChunk* buffer;
         const std::lock_guard<std::mutex> lock(internal_mtx);
         if(internal_queue.size() > 0){
@@ -77,7 +90,7 @@ class CallTreeNodeQueueChunkBuffer{
         else{
           // allocate a new chunk
           std::cout << "FETCH FAILED!" << std::endl;
-          return new CallTreeNodeQueueChunk(10);
+          return new CallTreeNodeQueueChunk();
         }
       }
 
