@@ -123,6 +123,7 @@ void* manage_calltree(void* arg){
   CallTree* call_tree_ptr = (CallTree*) arg;
   while(! calltree_thread_stop){
     call_tree_ptr->ctnqcb.prepare_chunk_if_required(10000);
+    usleep(500);  // todo: automatic tuning
   }
   pthread_exit(NULL);
   return nullptr;
