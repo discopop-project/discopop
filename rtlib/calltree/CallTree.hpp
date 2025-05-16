@@ -39,6 +39,7 @@ public:
 
 private:
   std::shared_ptr<CallTreeNode> current;
+  CallTreeNode* current_raw;
   pthread_t calltree_thread;
   pthread_t calltree_thread_2;
   CallTreeNodeQueueChunk* prepared_chunk;
