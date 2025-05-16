@@ -40,6 +40,7 @@ public:
 private:
   std::shared_ptr<CallTreeNode> current;
   pthread_t calltree_thread;
+  pthread_t calltree_thread_2;
   CallTreeNodeQueueChunk* prepared_chunk;
 };
 
