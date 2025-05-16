@@ -56,6 +56,7 @@ extern CallTree *call_tree;
 // extern MetaDataQueue * metadata_queue;
 extern std::mutex *dependency_metadata_results_mtx;
 extern std::unordered_set<DependencyMetadata> *dependency_metadata_results;
+extern thread_local std::unordered_set<DependencyMetadata> *local_dependency_metadata_results;
 
 // hybrid analysis
 extern ReportedBBSet *bbList;
