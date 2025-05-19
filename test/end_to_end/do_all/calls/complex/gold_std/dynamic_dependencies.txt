@@ -1,0 +1,27 @@
+START 1:10
+1:27 BGN loop 5000 1 5000 5000
+1:31 END loop
+1:22 BGN loop 5000 1 5000 5000
+1:27 END loop
+1:17 BGN loop 5000 1 5000 5000
+1:22 END loop
+1:8 BGN func 1:4
+1:28 BGN func 1:8
+1:6 BGN func 1:4
+1:23 BGN func 1:6
+1:4 END func
+1:6 END func
+1:8 END func
+1:31 NOM  RAW 1:13|x(S11)
+1:28 NOM  RAW 1:13|x(S11) RAW 1:27|i(S14)
+1:23 NOM  RAW 1:13|x(S11) RAW 1:22|i(S12)
+1:18 NOM  INIT *|GEPRESULT_x(GEPRESULT_x) RAW 1:13|x(S11) RAW 1:17|i(S13)
+1:17 NOM  INIT *|i(S13) RAW 1:17|i(S13) WAR 1:17|i(S13)
+1:13 NOM  INIT *|x(S11)
+1:10 NOM  INIT *|argc(S8) INIT *|argv(S9) INIT *|retval(S10)
+1:27 NOM  INIT *|i(S14) RAW 1:27|i(S14) WAR 1:27|i(S14)
+1:22 NOM  INIT *|i(S12) RAW 1:22|i(S12) WAR 1:22|i(S12)
+1:8 NOM  INIT *|base(S5) INIT *|index(S7) INIT *|n(S6) RAW 1:8|base(S5) RAW 1:8|index(S7) RAW 1:8|n(S6)
+1:6 NOM  INIT *|base(S3) INIT *|index(S4) RAW 1:6|base(S3) RAW 1:6|index(S4)
+1:4 NOM  INIT *|base(S2) INIT *|offset_1(S1) INIT *|offset_2(S0) RAW 1:18|GEPRESULT_base(GEPRESULT_base) RAW 1:4|GEPRESULT_base(GEPRESULT_base) RAW 1:4|base(S2) RAW 1:4|offset_1(S1) RAW 1:4|offset_2(S0) WAR 1:4|GEPRESULT_base(GEPRESULT_base) WAW 1:4|GEPRESULT_base(GEPRESULT_base)
+1:33 END program

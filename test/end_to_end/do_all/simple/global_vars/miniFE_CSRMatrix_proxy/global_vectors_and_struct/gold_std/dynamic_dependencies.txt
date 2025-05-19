@@ -1,0 +1,22 @@
+START 1:26
+1:17 BGN loop 1000 1 1000 1000
+1:21 END loop
+1:29 BGN func 1:13
+1:28 BGN func 1:9
+1:28 BGN func 1:11
+1:9 BGN func 1:26
+1:9 END func
+1:11 END func
+1:21 END func
+1:19 NOM  INIT *|call5(call5) RAW 1:17|i(S-4088)
+1:17 NOM  INIT *|i(S-4088) RAW 1:13|nrows(S-4089) RAW 1:17|i(S-4088) WAR 1:17|i(S-4088)
+1:15 NOM  RAW 1:13|nrows(S-4089)
+1:14 NOM  RAW 1:13|nrows(S-4089)
+1:13 NOM  INIT *|nrows(S-4089) INIT *|this(S-4090) RAW 1:13|this(S-4090)
+1:27 NOM  INIT *|n(S-4091)
+1:26 NOM  INIT *|argc(S-4094) INIT *|argv(S-4092) INIT *|retval(S-4093)
+1:11 NOM  INIT *|this(S-4095) RAW 1:11|this(S-4095)
+1:18 NOM  INIT *|call(call) RAW 1:17|i(S-4088)
+1:29 NOM  RAW 1:27|n(S-4091)
+1:9 NOM  INIT *|this(S-4096) RAW 1:9|this(S-4096)
+1:30 END program

@@ -1,0 +1,18 @@
+START 1:11
+1:16 BGN loop 999 1 999 999
+1:20 END loop
+1:9 BGN func 1:4
+1:18 BGN func 1:9
+1:7 END func
+1:9 END func
+1:16 NOM  INIT *|i(S9) RAW 1:16|i(S9) WAR 1:16|i(S9)
+1:13 NOM  INIT *|x(S6)
+1:20 NOM  RAW 1:13|x(S6)
+1:11 NOM  INIT *|argc(S5) INIT *|argv(S7) INIT *|retval(S8)
+1:17 NOM  INIT *|GEPRESULT_x(GEPRESULT_x) RAW 1:13|x(S6) RAW 1:16|i(S9)
+1:18 NOM  RAW 1:13|x(S6) RAW 1:16|i(S9)
+1:9 NOM  INIT *|i2(S4) INIT *|tmp2(S3) RAW 1:9|i2(S4) RAW 1:9|tmp2(S3)
+1:6 NOM  RAW 1:4|i(S1) RAW 1:4|tmp(S2) RAW 1:5|z(S0) WAW 1:17|GEPRESULT_tmp(GEPRESULT_tmp)
+1:5 NOM  INIT *|z(S0) RAW 1:4|i(S1) RAW 1:4|tmp(S2) RAW 1:6|GEPRESULT_tmp(GEPRESULT_tmp)
+1:4 NOM  INIT *|i(S1) INIT *|tmp(S2)
+1:21 END program

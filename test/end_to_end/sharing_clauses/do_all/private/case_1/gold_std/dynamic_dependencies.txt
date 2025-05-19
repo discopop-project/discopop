@@ -1,0 +1,11 @@
+START 1:4
+1:11 BGN loop 50000 1 50000 50000
+1:15 END loop
+1:13 NOM  INIT *|x(S6) RAW 1:12|z(S0)
+1:12 NOM  RAW 1:11|i(S5) RAW 1:7|y(S2) WAR 1:13|z(S0) WAW 1:8|z(S0)
+1:15 NOM  RAW 1:4|retval(S4)
+1:8 NOM  INIT *|z(S0)
+1:7 NOM  INIT *|y(S2)
+1:4 NOM  INIT *|argc(S1) INIT *|argv(S3) INIT *|retval(S4)
+1:11 NOM  INIT *|i(S5) RAW 1:11|i(S5) WAR 1:11|i(S5)
+1:15 END program
