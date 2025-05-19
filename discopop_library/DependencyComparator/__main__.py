@@ -7,12 +7,16 @@
 # directory for details.
 
 from argparse import ArgumentParser
+import sys
 from discopop_library.DependencyComparator.DependencyComparatorArguments import DependencyComparatorArguments
 from discopop_library.DependencyComparator.dependency_comparator import run
 
 
 def parse_args() -> DependencyComparatorArguments:
-    parser = ArgumentParser(description="DiscoPoP dependency comparator")
+    parser = ArgumentParser(
+        description="DiscoPoP dependency comparator.",
+        epilog="Return codes: 0 -> no difference. 1xx -> missing dependencies. x1x -> additional non-init dependencies. xx1 -> additional init dependencies.",
+    )
 
     # fmt: off
     parser.add_argument(
@@ -25,20 +29,27 @@ def parse_args() -> DependencyComparatorArguments:
     )
     parser.add_argument(
         "-o", "--output", type=str, default="None",
-        help="Path to output JSON file."
+        help="Enable saving the comparison results in JSON format to the given path."
+    )
+    parser.add_argument(
+        "-v", "--verbose", type=bool, default=False,
+        help="Enable verbose output."
     )
     # fmt: on
 
     arguments = parser.parse_args()
 
     return DependencyComparatorArguments(
-        gold_standard=arguments.gold_standard, test_set=arguments.test_set, output=arguments.output
+        gold_standard=arguments.gold_standard,
+        test_set=arguments.test_set,
+        output=arguments.output,
+        verbose=arguments.verbose,
     )
 
 
-def main() -> None:
+def main() -> int:
     arguments = parse_args()
-    run(arguments)
+    sys.exit(run(arguments))
 
 
 if __name__ == "__main__":

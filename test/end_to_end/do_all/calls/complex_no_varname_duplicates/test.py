@@ -1,3 +1,4 @@
+# type: ignore
 import os
 import pathlib
 import subprocess
@@ -11,6 +12,8 @@ from test.utils.validator_classes.DoAllInfoForValidation import DoAllInfoForVali
 from subprocess import DEVNULL
 from discopop_library.ConfigProvider.config_provider import run as run_config_provider
 from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProviderArguments
+from discopop_library.DependencyComparator.DependencyComparatorArguments import DependencyComparatorArguments
+from discopop_library.DependencyComparator.dependency_comparator import run as run_comparator
 
 
 class TestMethods(unittest.TestCase):
@@ -68,7 +71,19 @@ class TestMethods(unittest.TestCase):
             if pattern_type == "do_all":
                 expected = ["1:19", "1:24"]
                 for pattern in test_output.patterns.__dict__[pattern_type]:
-                    self.assertTrue(pattern.start_line in expected, "False positive: Pattern at " + pattern.start_line + " not in expected result: " + str(expected))
-                self.assertTrue(len(test_output.patterns.__dict__[pattern_type]) == 2, "False negative: Missed pattern. \nFound: " + " ".join([p.start_line for p in test_output.patterns.__dict__[pattern_type]])+"\nExpected: " + " ".join(expected))
+                    self.assertTrue(
+                        pattern.start_line in expected,
+                        "False positive: Pattern at "
+                        + pattern.start_line
+                        + " not in expected result: "
+                        + str(expected),
+                    )
+                self.assertTrue(
+                    len(test_output.patterns.__dict__[pattern_type]) == 2,
+                    "False negative: Missed pattern. \nFound: "
+                    + " ".join([p.start_line for p in test_output.patterns.__dict__[pattern_type]])
+                    + "\nExpected: "
+                    + " ".join(expected),
+                )
             else:
                 self.assertEqual(amount_of_identified_patterns, 0)

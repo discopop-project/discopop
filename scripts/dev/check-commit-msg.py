@@ -21,7 +21,7 @@ with open(path_to_commit_msg, "r") as f:
     commit_msg = commit_msg.replace("\n", "")
 
 pattern = re.compile(
-    "(^(feat|fix|test|chore|refactor|doc|docs|perf|wip|ci|build|style)(\(.+\))?(\[.+\])?:.+$)|(Merge branch '\S+' into \S+)"
+    "(^(feat|fix|test|chore|refactor|doc|docs|perf|wip|ci|build|style)(\(.+\))?(\[.+\])?:.+$)|(Merge \S* ?branch '\S+' into \S+)"
 )
 matches = bool(pattern.match(commit_msg))
 
