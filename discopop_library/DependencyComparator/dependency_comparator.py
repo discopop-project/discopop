@@ -17,14 +17,15 @@ from discopop_library.DependencyComparator.DependencyComparatorArguments import 
 from discopop_library.global_data.version.utils import get_version
 
 
-def run(arguments: DependencyComparatorArguments) -> None:
+def run(arguments: DependencyComparatorArguments) -> int:
 
     if not os.path.exists(arguments.gold_standard):
         raise FileNotFoundError(arguments.gold_standard)
     if not os.path.exists(arguments.test_set):
         raise FileNotFoundError(arguments.test_set)
+    output_results: bool = True
     if arguments.output == "None" or arguments.output is None:
-        raise ValueError("Argument output not specified.")
+        output_results = False
 
     if os.path.exists(arguments.output):
         os.remove(arguments.output)
@@ -80,11 +81,23 @@ def run(arguments: DependencyComparatorArguments) -> None:
 
     print("overlap: ", len(overlap))
     print("missing: ", len(missing))
-    print("additional init: ", len(additional_init))
     print("additional: ", len(additional))
+    print("additional init: ", len(additional_init))
 
-    with open(arguments.output, "w+") as f:
-        json.dump(result_dir, f)
+    if output_results:
+        with open(arguments.output, "w+") as f:
+            json.dump(result_dir, f)
+
+    # iidentify return value
+    return_code = 0
+    if len(missing) > 0:
+        return_code += 100
+    if len(additional) > 0:
+        return_code += 1
+    if len(additional_init) > 0:
+        return_code += 1
+
+    return return_code
 
 
 def dep_equal(a: DependenceItem, b: DependenceItem) -> bool:
