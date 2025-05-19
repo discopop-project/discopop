@@ -15,6 +15,7 @@ class DependencyComparatorArguments(object):
     gold_standard: str
     test_set: str
     output: str
+    verbose: bool
 
     def __str__(self) -> str:
         return str(self.__dict__)

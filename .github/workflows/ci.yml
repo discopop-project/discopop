@@ -118,10 +118,19 @@ jobs:
         run: |
           docker run --rm discopop_ci_${{ github.sha }} build/test/unit_tests/DiscoPoP_UT
 
+  execute_profiler_tests:
+    runs-on: self-hosted
+    name: Execute profiler tests
+    needs: [code_check_mypy_explorer, code_check_mypy_library, code_check_black_explorer, code_check_black_library]
+    steps:
+      - name: Profiler gold standard tests
+        run: |
+          docker run --rm discopop_ci_${{ github.sha }} python -m unittest -v -k *.profiler.*
+
   execute_end_to_end_tests:
     runs-on: self-hosted
     name: Execute end-to-end tests
-    needs: [code_check_mypy_explorer, code_check_mypy_library, code_check_black_explorer, code_check_black_library]
+    needs: [execute_profiler_tests, execute_cxx_unit_tests]
     steps:
       - name: Python end-to-end-tests
         run: |

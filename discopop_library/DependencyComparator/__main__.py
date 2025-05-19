@@ -31,12 +31,19 @@ def parse_args() -> DependencyComparatorArguments:
         "-o", "--output", type=str, default="None",
         help="Enable saving the comparison results in JSON format to the given path."
     )
+    parser.add_argument(
+        "-v", "--verbose", type=bool, default=False,
+        help="Enable verbose output."
+    )
     # fmt: on
 
     arguments = parser.parse_args()
 
     return DependencyComparatorArguments(
-        gold_standard=arguments.gold_standard, test_set=arguments.test_set, output=arguments.output
+        gold_standard=arguments.gold_standard,
+        test_set=arguments.test_set,
+        output=arguments.output,
+        verbose=arguments.verbose,
     )
 
 
