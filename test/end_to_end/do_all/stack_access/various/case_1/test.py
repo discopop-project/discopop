@@ -1,3 +1,4 @@
+# type: ignore
 import copy
 import os
 import pathlib
@@ -11,6 +12,8 @@ from test.utils.subprocess_wrapper.command_execution_wrapper import run_cmd
 from test.utils.validator_classes.DoAllInfoForValidation import DoAllInfoForValidation
 from discopop_library.ConfigProvider.config_provider import run as run_config_provider
 from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProviderArguments
+from discopop_library.DependencyComparator.DependencyComparatorArguments import DependencyComparatorArguments
+from discopop_library.DependencyComparator.dependency_comparator import run as run_comparator
 
 
 class TestMethods(unittest.TestCase):
@@ -68,18 +71,60 @@ class TestMethods(unittest.TestCase):
             if pattern_type == "do_all":
                 expected_lines = ["1:15"]
                 with self.subTest("check for FP"):
-                    res, msg = check_patterns_for_FP(self, pattern_type, copy.deepcopy(expected_lines), self.test_output.patterns.__dict__[pattern_type])
+                    res, msg = check_patterns_for_FP(
+                        self,
+                        pattern_type,
+                        copy.deepcopy(expected_lines),
+                        self.test_output.patterns.__dict__[pattern_type],
+                    )
                     self.assertTrue(res, msg)
                 with self.subTest("check for FN"):
-                    res, msg = check_patterns_for_FN(self, pattern_type, copy.deepcopy(expected_lines), self.test_output.patterns.__dict__[pattern_type])
+                    res, msg = check_patterns_for_FN(
+                        self,
+                        pattern_type,
+                        copy.deepcopy(expected_lines),
+                        self.test_output.patterns.__dict__[pattern_type],
+                    )
                     self.assertTrue(res, msg)
             elif pattern_type == "reduction":
                 expected_lines = []
                 with self.subTest("check for FP"):
-                    res, msg = check_patterns_for_FP(self, pattern_type, copy.deepcopy(expected_lines), self.test_output.patterns.__dict__[pattern_type])
+                    res, msg = check_patterns_for_FP(
+                        self,
+                        pattern_type,
+                        copy.deepcopy(expected_lines),
+                        self.test_output.patterns.__dict__[pattern_type],
+                    )
                     self.assertTrue(res, msg)
                 with self.subTest("check for FN"):
-                    res, msg = check_patterns_for_FN(self, pattern_type, copy.deepcopy(expected_lines), self.test_output.patterns.__dict__[pattern_type])
+                    res, msg = check_patterns_for_FN(
+                        self,
+                        pattern_type,
+                        copy.deepcopy(expected_lines),
+                        self.test_output.patterns.__dict__[pattern_type],
+                    )
                     self.assertTrue(res, msg)
             else:
                 self.assertEqual(amount_of_identified_patterns, 0)
+
+    def test_dynamic_deps(self) -> None:
+        # compare detected dependencies to gold standard
+        current_dir = pathlib.Path(__file__).parent.resolve()
+        gold_standard_dir = os.path.join(current_dir, "gold_std")
+        test_output_dir = os.path.join(self.src_dir, ".discopop", "profiler")
+        dynamic_gold_std = os.path.join(gold_standard_dir, "dynamic_dependencies.txt")
+        dynamic_test_result = os.path.join(test_output_dir, "dynamic_dependencies.txt")
+        self.assertEqual(
+            run_comparator(DependencyComparatorArguments(dynamic_gold_std, dynamic_test_result, "None", False)), 0
+        )
+
+    def test_static_deps(self) -> None:
+        # compare detected dependencies to gold standard
+        current_dir = pathlib.Path(__file__).parent.resolve()
+        gold_standard_dir = os.path.join(current_dir, "gold_std")
+        test_output_dir = os.path.join(self.src_dir, ".discopop", "profiler")
+        static_gold_std = os.path.join(gold_standard_dir, "static_dependencies.txt")
+        static_test_result = os.path.join(test_output_dir, "static_dependencies.txt")
+        self.assertEqual(
+            run_comparator(DependencyComparatorArguments(static_gold_std, static_test_result, "None", False)), 0
+        )
