@@ -57,7 +57,8 @@ string DependencyMetadata::toString() {
   result += dputil::decodeLID(source) + " ";
   result += var;
   result += " ";
-  result += AAvar + " ";
+  result += std::to_string(AAvar);
+  result += " ";
   result += "IAC[";
   for (auto iac : intra_call_dependencies) {
     result += dputil::decodeLID(iac) + ",";

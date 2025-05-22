@@ -617,7 +617,9 @@ void *processFirstAccessQueue(void *arg) {
             continue;
           }
           //DEBUG
-          //std::cout << "ACCESS: " << access.var << " " << access.addr << " " << access.lid << " " << access.isRead << std::endl;
+//          if(strcmp(access.var, "NPOINTS") == 0){
+//            std::cout << "ACCESS: " << access.var << " " << access.addr << " " << access.lid << " " << access.isRead << std::endl;
+//          }
           //!DEBUG
 
 

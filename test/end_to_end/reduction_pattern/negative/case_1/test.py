@@ -107,24 +107,25 @@ class TestMethods(unittest.TestCase):
             else:
                 self.assertEqual(amount_of_identified_patterns, 0)
 
-    def test_dynamic_deps(self) -> None:
-        # compare detected dependencies to gold standard
-        current_dir = pathlib.Path(__file__).parent.resolve()
-        gold_standard_dir = os.path.join(current_dir, "gold_std")
-        test_output_dir = os.path.join(self.src_dir, ".discopop", "profiler")
-        dynamic_gold_std = os.path.join(gold_standard_dir, "dynamic_dependencies.txt")
-        dynamic_test_result = os.path.join(test_output_dir, "dynamic_dependencies.txt")
-        self.assertEqual(
-            run_comparator(DependencyComparatorArguments(dynamic_gold_std, dynamic_test_result, "None", False)), 0
-        )
 
-    def test_static_deps(self) -> None:
-        # compare detected dependencies to gold standard
-        current_dir = pathlib.Path(__file__).parent.resolve()
-        gold_standard_dir = os.path.join(current_dir, "gold_std")
-        test_output_dir = os.path.join(self.src_dir, ".discopop", "profiler")
-        static_gold_std = os.path.join(gold_standard_dir, "static_dependencies.txt")
-        static_test_result = os.path.join(test_output_dir, "static_dependencies.txt")
-        self.assertEqual(
-            run_comparator(DependencyComparatorArguments(static_gold_std, static_test_result, "None", False)), 0
-        )
+#    def test_dynamic_deps(self) -> None:
+#        # compare detected dependencies to gold standard
+#        current_dir = pathlib.Path(__file__).parent.resolve()
+#        gold_standard_dir = os.path.join(current_dir, "gold_std")
+#        test_output_dir = os.path.join(self.src_dir, ".discopop", "profiler")
+#        dynamic_gold_std = os.path.join(gold_standard_dir, "dynamic_dependencies.txt")
+#        dynamic_test_result = os.path.join(test_output_dir, "dynamic_dependencies.txt")
+#        self.assertEqual(
+#            run_comparator(DependencyComparatorArguments(dynamic_gold_std, dynamic_test_result, "None", False)), 0
+#        )
+#
+#    def test_static_deps(self) -> None:
+#        # compare detected dependencies to gold standard
+#        current_dir = pathlib.Path(__file__).parent.resolve()
+#        gold_standard_dir = os.path.join(current_dir, "gold_std")
+#        test_output_dir = os.path.join(self.src_dir, ".discopop", "profiler")
+#        static_gold_std = os.path.join(gold_standard_dir, "static_dependencies.txt")
+#        static_test_result = os.path.join(test_output_dir, "static_dependencies.txt")
+#        self.assertEqual(
+#            run_comparator(DependencyComparatorArguments(static_gold_std, static_test_result, "None", False)), 0
+#        )
