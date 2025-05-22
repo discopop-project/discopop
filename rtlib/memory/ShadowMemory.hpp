@@ -64,6 +64,8 @@ public:
     throw new std::string("NOT IMPLEMENTED!");
   };
 
+  inline void print(){}
+
 private:
   Signature *sigRead;
   Signature *sigWrite;

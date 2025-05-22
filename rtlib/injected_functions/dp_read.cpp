@@ -113,7 +113,6 @@ void __dp_read(LID lid, ADDR addr, const char *var) {
   analyzeSingleAccess(singleThreadedExecutionSMem, current);
 #endif
 
-
 }
 }
 
