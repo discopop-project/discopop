@@ -160,7 +160,7 @@ class FirstAccessQueueChunk {
     }
 
     inline bool is_full(){
-      return element_count == (buffer_size - 1);
+      return element_count == buffer_size;
     }
 
     inline AccessInfo& get_next_AccessInfo_buffer(){
@@ -179,13 +179,17 @@ class FirstAccessQueueChunk {
       return &buffer;
     }
 
+    inline std::size_t get_element_count(){
+      return element_count;
+    }
+
 
     std::promise<std::vector<AccessInfo>*> entry_boundary_first_addr_accesses;
     std::promise<AbstractShadow*> exit_boundary_SMem;
 
   private:
     std::vector<AccessInfo> buffer;
-    std::uint64_t element_count = 0;
+    std::size_t element_count = 0;
     const std::size_t buffer_size;
 
 
@@ -231,6 +235,11 @@ class SecondAccessQueue{
       return buffer;
     }
 
+    bool empty(){
+      const std::lock_guard<std::mutex> lock(internal_mtx);
+      return internal_queue.empty();
+    }
+
   private:
     std::queue<SecondAccessQueueElement*> internal_queue;
     std::mutex internal_mtx;
@@ -267,6 +276,11 @@ class FirstAccessQueue {
       secondAccessQueue_ptr->push(saqe);
 
       return buffer;
+    }
+
+    bool empty(){
+      const std::lock_guard<std::mutex> lock(internal_mtx);
+      return internal_queue.empty();
     }
 
   private:
@@ -310,6 +324,11 @@ class FirstAccessQueueChunkBuffer{
         // allocate a new chunk
         return new FirstAccessQueueChunk(chunk_size);
       }
+    }
+
+    std::size_t get_queue_size(){
+      const std::lock_guard<std::mutex> lock(internal_mtx);
+      return internal_queue.size();
     }
 
 

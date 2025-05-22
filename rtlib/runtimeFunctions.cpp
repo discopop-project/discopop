@@ -310,6 +310,7 @@ void initParallelization() {
   numAccesses = new uint64_t[NUM_WORKERS]();
 
   // initialize and set thread detached attribute
+  finalizeParallelizationCalled=false;  // mostly for unit-tests.
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
@@ -442,6 +443,9 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
     write_ctn = access.call_tree_node_ptr;
     // cout << "Access write succ\n";
 #endif
+    if(access.skip){
+      return;
+    }
     if (lastWrite == 0) {
       // INIT
 #if DP_CALLTREE_PROFILING
@@ -601,12 +605,26 @@ void *processFirstAccessQueue(void *arg) {
       if(current){
         // process chunk
         AbstractShadow *SMem = new PerfectShadow2();
+        hashset<ADDR> chunk_write_seen_addrs;
         std::vector<AccessInfo>* entry_condition_accesses = new std::vector<AccessInfo>();
 
+//        std::cout << "FAQ SMEM STATE: " << std::endl;
+//        SMem->print();
+
         for(AccessInfo access : *(current->get_buffer())){
+          if(!(access.addr || access.lid)){
+            continue;
+          }
+          //DEBUG
+          //std::cout << "ACCESS: " << access.var << " " << access.addr << " " << access.lid << " " << access.isRead << std::endl;
+          //!DEBUG
+
+
           // check if access is the first access to a memory location in the current chunk
-          bool is_first_access = (SMem->testInRead(access.addr) == 0) && (SMem->testInWrite(access.addr) == 0);
-          if(is_first_access){
+          //bool is_first_access = (SMem->testInRead(access.addr) == 0) && (SMem->testInWrite(access.addr) == 0);
+          bool is_entry_condition_access = !(chunk_write_seen_addrs.contains(access.addr));
+          if(is_entry_condition_access){
+//            std::cout << "IS FIRST ACCESS" << std::endl;
             // register the access in the list of entry conditions
             entry_condition_accesses->push_back(access);
             // register the read / write represented by the access to allow the identification of correct dependencies for the rest of the chunk
@@ -626,7 +644,16 @@ void *processFirstAccessQueue(void *arg) {
             analyzeSingleAccess(SMem, access);
 #endif
           }
+          if(is_entry_condition_access && !(access.isRead)){
+            chunk_write_seen_addrs.insert(access.addr);
+          }
+
+//          std::cout << "FAQ SMEM STATE: " << std::endl;
+//          SMem->print();
         }
+
+//        std::cout << "FAQ FINAL SMEM STATE: " << std::endl;
+//        SMem->print();
 
         // publish the values of the promises in the current chunk
         current->entry_boundary_first_addr_accesses.set_value(entry_condition_accesses);
@@ -682,9 +709,16 @@ void *processFirstAccessQueue(void *arg) {
 
         // check if chunk aquired
         if(current){
+//          std::cout << "SAQ: ENTRY SMEM STATE" << std::endl;
+//          SMem->print();
+//          std::cout << "SAQ: Process new chunk" << std::endl;
           // check entry boundary conditions for data dependencies
           auto promised_first_accesses_vector_ptr = current->entry_boundary_first_addr_accesses.get();
           for(auto entry_accesses : *(promised_first_accesses_vector_ptr)){
+            // ignore unused entries of the vector
+            if(!(entry_accesses.addr || entry_accesses.lid)){
+              continue;
+            }
 #if DP_CALLTREE_PROFILING
             analyzeSingleAccess(SMem, entry_accesses, thread_private_write_addr_to_call_tree_node_map,
                                 thread_private_read_addr_to_call_tree_node_map);
@@ -708,11 +742,18 @@ void *processFirstAccessQueue(void *arg) {
 
           delete current;
 
+//          SMem->print();
+
         }
         else{
           if(finalizeParallelizationCalled){
-            // no chunks left to process. Let thread finish.
-            break;
+            if(firstAccessQueue.empty()){
+              // no chunks left to process. Let thread finish.
+              break;
+            }
+            else{
+              usleep(1000);
+            }
           }
           else{
             // let thread sleep and try fetching a chunk again
@@ -720,7 +761,6 @@ void *processFirstAccessQueue(void *arg) {
           }
         }
       }
-
       mergeDeps();
 
       if (DP_DEBUG || true) {
@@ -755,7 +795,6 @@ void finalizeParallelization() {
   // wait for worker threads
   for (int i = 0; i < NUM_WORKERS; ++i)
     pthread_join(workers[i], NULL);
-
   pthread_join(*secondAccessQueue_worker_thread, NULL);
 
 #if DP_CALLTREE_PROFILING

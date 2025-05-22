@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
+#include <iostream>
 
 namespace __dp {
 
@@ -112,6 +113,10 @@ public:
       kv_pairs.push_back(kv_pair);
     }
     return kv_pairs;
+  }
+
+  inline void print(){
+    std::cout << "Hello from PerfectShadow" << std::endl;
   }
 
 private:
@@ -211,6 +216,16 @@ public:
       kv_pairs.emplace_back(kv_pair.first, kv_pair.second);
     }
     return kv_pairs;
+  }
+
+  void print(){
+    std::cout << "ADDR \t READ \t WRITE\t\t// Shadow Memory" << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    for(auto pair: read_cache){
+      std::cout << "| " << pair.first << "\t| " << pair.second << "\t| " << write_cache[pair.first] << "\t|" <<  std::endl;
+    }
+    std::cout << "-------------------------" << std::endl;
+    std::cout << std::endl;
   }
 
 
