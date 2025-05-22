@@ -20,11 +20,11 @@ namespace __dp {
 
 class DependencyMetadata {
 public:
-  DependencyMetadata(MetaDataQueueElement mdqe, std::set<unsigned int> arg_intra_call_dependencies,
-                     std::set<unsigned int> arg_intra_iteration_dependencies,
-                     std::set<unsigned int> arg_inter_call_dependencies,
-                     std::set<unsigned int> arg_inter_iteration_dependencies, std::set<unsigned int> sink_ancestors,
-                     std::set<unsigned int> arg_source_ancestors);
+  DependencyMetadata(MetaDataQueueElement mdqe, hashset<unsigned int> arg_intra_call_dependencies,
+                     hashset<unsigned int> arg_intra_iteration_dependencies,
+                     hashset<unsigned int> arg_inter_call_dependencies,
+                     hashset<unsigned int> arg_inter_iteration_dependencies, hashset<unsigned int> sink_ancestors,
+                     hashset<unsigned int> arg_source_ancestors);
   DependencyMetadata() {}
   bool operator==(const DependencyMetadata &other) const;
   depType type;
@@ -32,12 +32,12 @@ public:
   LID source;
   const char *var;
   std::int64_t AAvar;
-  std::set<unsigned int> intra_call_dependencies;
-  std::set<unsigned int> intra_iteration_dependencies;
-  std::set<unsigned int> inter_call_dependencies;
-  std::set<unsigned int> inter_iteration_dependencies;
-  std::set<unsigned int> sink_ancestors;
-  std::set<unsigned int> source_ancestors;
+  hashset<unsigned int> intra_call_dependencies;
+  hashset<unsigned int> intra_iteration_dependencies;
+  hashset<unsigned int> inter_call_dependencies;
+  hashset<unsigned int> inter_iteration_dependencies;
+  hashset<unsigned int> sink_ancestors;
+  hashset<unsigned int> source_ancestors;
   string toString();
 };
 

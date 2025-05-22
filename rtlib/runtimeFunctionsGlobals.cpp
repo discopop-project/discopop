@@ -36,6 +36,7 @@ CallTree *call_tree = nullptr;
 // MetaDataQueue *metadata_queue = nullptr;
 std::mutex *dependency_metadata_results_mtx = nullptr;
 std::unordered_set<DependencyMetadata> *dependency_metadata_results = nullptr;
+thread_local std::unordered_set<DependencyMetadata> *local_dependency_metadata_results = nullptr;
 
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
