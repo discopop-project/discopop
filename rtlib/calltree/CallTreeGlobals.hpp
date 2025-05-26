@@ -14,4 +14,10 @@
 
 #include <atomic>
 
-extern std::atomic<unsigned int> call_tree_node_count;
+namespace __dp {
+
+extern std::atomic<unsigned int>* call_tree_node_count;  // nodes in use. deactivated by default setting nullptr
+extern std::atomic<unsigned int>* call_tree_total_living_node_count;  // nodes prepared. deactivated by default setting nullptr
+extern bool calltree_thread_stop;  // stop signal
+
+}

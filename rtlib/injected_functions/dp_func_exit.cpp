@@ -80,7 +80,7 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 #endif
 
 #ifdef DP_CALLTREE_PROFILING
-  call_tree->exit_function();
+  call_tree.exit_function();
 #endif
   // !TEST
 
