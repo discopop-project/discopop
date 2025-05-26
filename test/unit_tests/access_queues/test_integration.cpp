@@ -72,14 +72,14 @@ void clear(std::int64_t addr){
     AccessInfo& current = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
     current.addr = addr;
     current.isRead = true;
-    current.lid = 0;
+    current.lid = 1;
     current.skip = true;
     current.var = "dummy";
 
     AccessInfo& current_1 = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
     current_1.addr = addr;
     current_1.isRead = false;
-    current_1.lid = 0;
+    current_1.lid = 1;
     current_1.skip = true;
     current_1.var = "dummy";
 }

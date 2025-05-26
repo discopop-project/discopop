@@ -415,7 +415,7 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
     }
     // End HA
     sigElement lastWrite = SMem->testInWrite(access.addr);
-    if (lastWrite != 0) {
+    if (lastWrite != 0 && lastWrite != 1) {
       // RAW
       SMem->insertToRead(access.addr, access.lid);
 #if DP_CALLTREE_PROFILING
@@ -446,7 +446,7 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
     if(access.skip){
       return;
     }
-    if (lastWrite == 0) {
+    if (lastWrite == 0 || lastWrite == 1) {
       // INIT
 #if DP_CALLTREE_PROFILING
       addDep(INIT, access.lid, 0, access.var, access.AAvar, access.addr,
@@ -457,7 +457,7 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
 #endif
     } else {
       sigElement lastRead = SMem->testInRead(access.addr);
-      if (lastRead != 0) {
+      if (lastRead != 0 && lastRead != 1) {
         // WAR
 #if DP_CALLTREE_PROFILING
         addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.addr,
