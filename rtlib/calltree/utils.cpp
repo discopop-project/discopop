@@ -18,7 +18,10 @@
 namespace __dp {
 
 DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
+
+#ifdef DP_INTERNAL_TIMER
   const auto calltree_timer = Timer(timers, TimerRegion::PROCESSQUEUEELEMENT);
+#endif
 
   // cout << "processing " << mdqe.toString() << "\n";
 

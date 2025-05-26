@@ -52,11 +52,13 @@ extern std::mutex pthread_compatibility_mutex;
 extern FunctionManager *function_manager;
 extern LoopManager *loop_manager;
 extern MemoryManager *memory_manager;
-extern CallTree *call_tree;
-// extern MetaDataQueue * metadata_queue;
-extern std::mutex *dependency_metadata_results_mtx;
-extern std::unordered_set<DependencyMetadata> *dependency_metadata_results;
-extern thread_local std::unordered_set<DependencyMetadata> *local_dependency_metadata_results;
+
+#if DP_CALLTREE_PROFILING
+    extern CallTree call_tree;
+    extern std::mutex dependency_metadata_results_mtx;
+    extern std::unordered_set<DependencyMetadata> dependency_metadata_results;
+    extern thread_local std::unordered_set<DependencyMetadata> local_dependency_metadata_results;
+#endif
 
 // hybrid analysis
 extern ReportedBBSet *bbList;

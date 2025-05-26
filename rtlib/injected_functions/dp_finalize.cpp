@@ -159,7 +159,7 @@ void __dp_finalize(LID lid) {
   delete loop_manager;
 
 #ifdef DP_CALLTREE_PROFILING
-  delete call_tree;
+  //delete call_tree;
   // delete metadata_queue;
   //  output metadata to file
   std::cout << "Outputting dependency metadata... " << std::endl;
@@ -177,12 +177,12 @@ void __dp_finalize(LID lid) {
   ofile << "# SINK_ANC : entered functions and loops for sink location \n";
   ofile << "# SOURCE_ANC : entered functions and loops for source location \n";
   ofile << "# Format: <DepType> <sink> <source> <var> <AAvar> <IAC> <IAI> <IEC> <IEI> <SINK_ANC> <SOURCE_ANC>\n";
-  for (auto dmd : *dependency_metadata_results) {
+  for (auto dmd : dependency_metadata_results) {
     ofile << dmd.toString() << "\n";
   }
   ofile.close();
-  delete dependency_metadata_results_mtx;
-  delete dependency_metadata_results;
+//  delete dependency_metadata_results_mtx;
+//  delete dependency_metadata_results;
 #endif
 
   *out << dputil::decodeLID(lid) << " END program" << endl;

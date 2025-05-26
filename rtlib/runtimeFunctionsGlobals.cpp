@@ -32,11 +32,14 @@ std::mutex pthread_compatibility_mutex;
 FunctionManager *function_manager = nullptr;
 LoopManager *loop_manager = nullptr;
 MemoryManager *memory_manager = nullptr;
-CallTree *call_tree = nullptr;
-// MetaDataQueue *metadata_queue = nullptr;
-std::mutex *dependency_metadata_results_mtx = nullptr;
-std::unordered_set<DependencyMetadata> *dependency_metadata_results = nullptr;
-thread_local std::unordered_set<DependencyMetadata> *local_dependency_metadata_results = nullptr;
+
+#if DP_CALLTREE_PROFILING
+    CallTree call_tree;
+    std::mutex dependency_metadata_results_mtx;
+    std::unordered_set<DependencyMetadata> dependency_metadata_results;
+    thread_local std::unordered_set<DependencyMetadata> local_dependency_metadata_results;
+#endif
+
 
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;

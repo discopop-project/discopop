@@ -21,7 +21,9 @@ CallTreeNode::CallTreeNode() {
   type = CallTreeNodeType::Root;
   loop_or_function_id = 0;
   iteration_id = 0;
-  call_tree_node_count += 1;
+  if(call_tree_total_living_node_count){
+    *call_tree_total_living_node_count += 1;
+  }
 }
 
 CallTreeNode::CallTreeNode(shared_ptr<CallTreeNode> parent_ptr, CallTreeNode* parent_ptr_raw, CallTreeNodeType type, unsigned int loop_or_function_id,
@@ -32,10 +34,16 @@ CallTreeNode::CallTreeNode(shared_ptr<CallTreeNode> parent_ptr, CallTreeNode* pa
   } else {
     iteration_id = 0;
   }
-  call_tree_node_count += 1;
+  if(call_tree_total_living_node_count){
+    *call_tree_total_living_node_count += 1;
+  }
 }
 
-CallTreeNode::~CallTreeNode() { call_tree_node_count -= 1; }
+CallTreeNode::~CallTreeNode() {
+  if(call_tree_total_living_node_count){
+    *call_tree_total_living_node_count -= 1;
+  }
+}
 
 bool CallTreeNode::operator==(const CallTreeNode &other) const {
   // && (iteration_id == other.iteration_id)  ignore loop id

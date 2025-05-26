@@ -16,6 +16,9 @@
 namespace __dp {
 CallTree::CallTree(): ctnqcb(CallTreeNodeQueueChunkBuffer(10)), garbage_collection_chunk_counter(0){
   current = make_shared<CallTreeNode>();
+  if(call_tree_node_count){
+    *call_tree_node_count += 1;
+  }
   current_raw = current.get();
   prepared_chunk = ctnqcb.get_prepared_chunk();
 
@@ -52,7 +55,12 @@ CallTree::~CallTree() {
   std::cout << "Joined calltree_threads" << std::endl;
 }
 
-unsigned int CallTree::get_node_count() { return call_tree_node_count.load(); }
+unsigned int CallTree::get_node_count() {
+    if(call_tree_node_count){
+      return call_tree_node_count->load();
+    }
+    return 0;
+  }
 
 std::shared_ptr<CallTreeNode> CallTree::get_current_node_ptr() { return current; }
 
@@ -102,6 +110,10 @@ void CallTree::enter_function(unsigned int function_id) {
   new_node_raw->set(std::move(current), current_raw, CallTreeNodeType::Function, function_id, 0);
   current_raw = new_node.get();
   current = std::move(new_node);
+
+  if(call_tree_node_count){
+    *call_tree_node_count += 1;
+  }
 }
 
 void CallTree::enter_loop(unsigned int loop_id) {
@@ -113,6 +125,10 @@ void CallTree::enter_loop(unsigned int loop_id) {
   new_node->set(std::move(current), current_raw, CallTreeNodeType::Loop, loop_id, 0);
   current_raw = new_node.get();
   current = std::move(new_node);
+
+  if(call_tree_node_count){
+    *call_tree_node_count += 1;
+  }
 }
 
 void CallTree::enter_iteration(unsigned int iteration_id) {
@@ -137,12 +153,20 @@ void CallTree::enter_iteration(unsigned int iteration_id) {
     new_node_raw->set(std::move(current), current_raw, CallTreeNodeType::Iteration, loop_id, iteration_id);
     current_raw = new_node.get();
     current = std::move(new_node);
+
+    if(call_tree_node_count){
+      *call_tree_node_count += 1;
+    }
+
     return;
   }
 
   // check parents. look ahead to allow retrieving the shared_ptr to the loop node via get_parent_ptr() .
   CallTreeNode* parent_ptr_raw = node_ptr_raw->get_parent_ptr_raw();
   while (parent_ptr_raw->get_node_type() != CallTreeNodeType::Root) {
+    if(call_tree_node_count){
+      *call_tree_node_count -= 1;
+    }
     if (parent_ptr_raw->get_node_type() == CallTreeNodeType::Loop) {
       // found nearest loop node
       loop_id = parent_ptr_raw->get_loop_or_function_id();
@@ -164,6 +188,10 @@ void CallTree::enter_iteration(unsigned int iteration_id) {
   offload_garbage_collection();
   current_raw = new_node.get();
   current = std::move(new_node);
+
+  if(call_tree_node_count){
+    *call_tree_node_count += 1;
+  }
 }
 
 void CallTree::exit_function() {
@@ -173,6 +201,9 @@ void CallTree::exit_function() {
     return;
   }
   while (node_ptr_raw->get_node_type() != CallTreeNodeType::Root) {
+    if(call_tree_node_count){
+      *call_tree_node_count -= 1;
+    }
     if (node_ptr_raw->get_node_type() == CallTreeNodeType::Function) {
       // found closest function node
       break;
@@ -184,6 +215,7 @@ void CallTree::exit_function() {
   garbage_collection_chunk[garbage_collection_chunk_counter++] = std::move(current);
   offload_garbage_collection();
   current = std::move(node_ptr_raw->get_parent_ptr());
+
 }
 
 void CallTree::exit_loop() {
@@ -193,6 +225,9 @@ void CallTree::exit_loop() {
     return;
   }
   while (node_ptr_raw->get_node_type() != CallTreeNodeType::Root) {
+    if(call_tree_node_count){
+      *call_tree_node_count -= 1;
+    }
     if (node_ptr_raw->get_node_type() == CallTreeNodeType::Loop) {
       // found closest loop node
       break;

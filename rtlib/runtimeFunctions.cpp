@@ -106,7 +106,7 @@ void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAv
                                                      std::move(arg_read_ctn),
                                                      std::move(arg_write_ctn)));
 
-      local_dependency_metadata_results->insert(std::move(dmd));
+      local_dependency_metadata_results.insert(std::move(dmd));
 
 
       // metadata_queue->insert(); // optimization potential: do not use copies here!
@@ -125,7 +125,7 @@ void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAv
                                                      std::move(arg_write_ctn),
                                                      std::move(arg_read_ctn)));
 
-      local_dependency_metadata_results->insert(std::move(dmd));
+      local_dependency_metadata_results.insert(std::move(dmd));
 
       // metadata_queue->insert(); // optimization potential: do not use copies here!
       break;
@@ -141,7 +141,7 @@ void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAv
                                                      std::move(arg_write_ctn),
                                                      std::move(arg_write_ctn)));
 
-      local_dependency_metadata_results->insert(std::move(dmd));
+      local_dependency_metadata_results.insert(std::move(dmd));
 
       // metadata_queue->insert(); // optimization potential: do not use copies here!
       break;
@@ -386,8 +386,8 @@ void mergeDeps() {
 #if DP_CALLTREE_PROFILING
 void analyzeSingleAccess(
     __dp::AbstractShadow *SMem, __dp::AccessInfo &access,
-    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_write_addr_to_call_tree_node_map,
-    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_read_addr_to_call_tree_node_map) {
+    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>& thread_private_write_addr_to_call_tree_node_map,
+    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>& thread_private_read_addr_to_call_tree_node_map) {
 #else
 void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
 #endif
@@ -398,8 +398,8 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
 #endif
 
 #if DP_CALLTREE_PROFILING
-  std::shared_ptr<CallTreeNode>& read_ctn = (*thread_private_read_addr_to_call_tree_node_map)[access.addr];
-  std::shared_ptr<CallTreeNode>& write_ctn = (*thread_private_write_addr_to_call_tree_node_map)[access.addr];
+  std::shared_ptr<CallTreeNode>& read_ctn = thread_private_read_addr_to_call_tree_node_map[access.addr];
+  std::shared_ptr<CallTreeNode>& write_ctn = thread_private_write_addr_to_call_tree_node_map[access.addr];
 #endif
 
   if (access.isRead) {
@@ -591,11 +591,11 @@ void *processFirstAccessQueue(void *arg) {
     FirstAccessQueueChunk* current = nullptr;
 
 #if DP_CALLTREE_PROFILING
-  local_dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
-  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_write_addr_to_call_tree_node_map =
-      new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
-  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_read_addr_to_call_tree_node_map =
-      new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+  //local_dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
+  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> thread_private_write_addr_to_call_tree_node_map =
+      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> thread_private_read_addr_to_call_tree_node_map =
+      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
 #endif
 
     while(true){
@@ -685,13 +685,14 @@ void *processFirstAccessQueue(void *arg) {
 #if DP_CALLTREE_PROFILING
     // merge local results into global set
     {
-      std::lock_guard<std::mutex> my_guard(*dependency_metadata_results_mtx);
-      dependency_metadata_results->merge(*local_dependency_metadata_results);
+      std::lock_guard<std::mutex> my_guard(dependency_metadata_results_mtx);
+      dependency_metadata_results.merge(local_dependency_metadata_results);
     }
-    delete local_dependency_metadata_results;
+    local_dependency_metadata_results.clear();
+    //delete local_dependency_metadata_results;
 #endif
 
-    if (DP_DEBUG || true) {
+    if (DP_DEBUG) {
       cout << "thread " << id << " on core " << sched_getcpu() << " exits... \n";
     }
 
@@ -710,11 +711,11 @@ void *processFirstAccessQueue(void *arg) {
       SecondAccessQueueElement* current = nullptr;
       AbstractShadow *SMem = new PerfectShadow2();
 #if DP_CALLTREE_PROFILING
-      local_dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
-      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_write_addr_to_call_tree_node_map =
-        new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
-      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> *thread_private_read_addr_to_call_tree_node_map =
-        new std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+//      local_dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
+      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> thread_private_write_addr_to_call_tree_node_map =
+        std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
+      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> thread_private_read_addr_to_call_tree_node_map =
+        std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
 #endif
 
       while(true){
@@ -779,15 +780,16 @@ void *processFirstAccessQueue(void *arg) {
 #if DP_CALLTREE_PROFILING
     // merge local results into global set
     {
-      std::lock_guard<std::mutex> my_guard(*dependency_metadata_results_mtx);
-      dependency_metadata_results->merge(*local_dependency_metadata_results);
+      std::lock_guard<std::mutex> my_guard(dependency_metadata_results_mtx);
+      dependency_metadata_results.merge(local_dependency_metadata_results);
     }
-    delete local_dependency_metadata_results;
+    local_dependency_metadata_results.clear();
+    //delete local_dependency_metadata_results;
 #endif
 
       mergeDeps();
 
-      if (DP_DEBUG || true) {
+      if (DP_DEBUG) {
         cout << "thread " << id << " processing secondAccessQueue on core " << sched_getcpu() << " exits... \n";
       }
 
@@ -804,7 +806,7 @@ void finalizeParallelization() {
   const auto timer = Timer(timers, TimerRegion::FINALIZE_PARALLELIZATION);
 #endif
 
-  if (DP_DEBUG || true) {
+  if (DP_DEBUG) {
     cout << "BEGIN: finalize parallelization... \n";
   }
 
@@ -829,7 +831,7 @@ void finalizeParallelization() {
   delete[] workers;
   delete secondAccessQueue_worker_thread;
 
-  if (DP_DEBUG || true) {
+  if (DP_DEBUG) {
     cout << "END: finalize parallelization... \n";
   }
 }
