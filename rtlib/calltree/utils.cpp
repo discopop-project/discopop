@@ -25,62 +25,72 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
 
   // cout << "processing " << mdqe.toString() << "\n";
 
+  // Keep accessed nodes alive at least until this function is returning
+  // Since theo sink_ctn and source_ctn are kept alive until the function returns, we
+  // also know, that their ancestors will be kept alive. For this reason, we can use the
+  // regular CallTreeNode* in the following and prevent useless reference counter modifications
+  // of the shared_ptr.
+  shared_ptr<CallTreeNode> buffer_sink_ctn = std::move(mdqe.sink_ctn);
+  shared_ptr<CallTreeNode> buffer_source_ctn = std::move(mdqe.source_ctn);
+
+  CallTreeNode* curr_ctn_node_1 = buffer_sink_ctn.get();
+  CallTreeNode* curr_ctn_node_2 = buffer_source_ctn.get();
+
   // collect ancestors of sink_ctn
-  shared_ptr<CallTreeNode> curr_ctn_node = std::move(mdqe.sink_ctn);
-  hashset<shared_ptr<CallTreeNode>> sink_ctn_ancestors;
+
+  hashset<CallTreeNode*> sink_ctn_ancestors;
   hashset<unsigned int> sink_ancestor_loops_and_functions;
-  if (curr_ctn_node) {
-    while (curr_ctn_node->get_node_type() != CallTreeNodeType::Root) {
-      if (curr_ctn_node->get_node_type() == CallTreeNodeType::Loop) {
+  if (curr_ctn_node_1) {
+    while (curr_ctn_node_1->get_node_type() != CallTreeNodeType::Root) {
+      if (curr_ctn_node_1->get_node_type() == CallTreeNodeType::Loop) {
         // ignore for metadata calculation, but keep for ancestor reporting
-        sink_ancestor_loops_and_functions.insert(curr_ctn_node->get_loop_or_function_id());
-        curr_ctn_node = std::move(curr_ctn_node->get_parent_ptr());  // duplicate this to prevent jerking reference counters
+        sink_ancestor_loops_and_functions.insert(curr_ctn_node_1->get_loop_or_function_id());
+        curr_ctn_node_1 = curr_ctn_node_1->get_parent_ptr_raw();  // duplicate this to prevent jerking reference counters
 
       } else {
-        shared_ptr<CallTreeNode> parent_ptr = std::move(curr_ctn_node->get_parent_ptr());
+        CallTreeNode* parent_ptr = curr_ctn_node_1->get_parent_ptr_raw();
 
         // ancestor reporting
-        if (curr_ctn_node->get_node_type() == CallTreeNodeType::Function) {
-          sink_ancestor_loops_and_functions.insert(curr_ctn_node->get_loop_or_function_id());
+        if (curr_ctn_node_1->get_node_type() == CallTreeNodeType::Function) {
+          sink_ancestor_loops_and_functions.insert(curr_ctn_node_1->get_loop_or_function_id());
         }
 
-        sink_ctn_ancestors.insert(std::move(curr_ctn_node));
+        sink_ctn_ancestors.insert(curr_ctn_node_1);
 
-        curr_ctn_node = std::move(parent_ptr);
+        curr_ctn_node_1 = parent_ptr;
       }
 
-      if (!curr_ctn_node) {
+      if (!curr_ctn_node_1) {
         break;
       }
     }
   }
 
   // collect ancestors of source_ctn
-  curr_ctn_node = std::move(mdqe.source_ctn);
-  hashset<shared_ptr<CallTreeNode>> source_ctn_ancestors;
+  hashset<CallTreeNode*> source_ctn_ancestors;
   hashset<unsigned int> source_ancestor_loops_and_functions;
-  if (curr_ctn_node) {
-    while (curr_ctn_node->get_node_type() != CallTreeNodeType::Root) {
-      if (curr_ctn_node->get_node_type() == CallTreeNodeType::Loop) {
+  if (curr_ctn_node_2) {
+    while (curr_ctn_node_2->get_node_type() != CallTreeNodeType::Root) {
+      if (curr_ctn_node_2->get_node_type() == CallTreeNodeType::Loop) {
         // ignore for metadata calculation, but keep for ancestor reporting
-        source_ancestor_loops_and_functions.insert(curr_ctn_node->get_loop_or_function_id());
+        source_ancestor_loops_and_functions.insert(curr_ctn_node_2->get_loop_or_function_id());
       } else {
-        source_ctn_ancestors.insert(curr_ctn_node);
+        source_ctn_ancestors.insert(curr_ctn_node_2);
         // ancestor reporting
-        if (curr_ctn_node->get_node_type() == CallTreeNodeType::Function) {
-          source_ancestor_loops_and_functions.insert(curr_ctn_node->get_loop_or_function_id());
+        if (curr_ctn_node_2->get_node_type() == CallTreeNodeType::Function) {
+          source_ancestor_loops_and_functions.insert(curr_ctn_node_2->get_loop_or_function_id());
         }
       }
 
-      curr_ctn_node = std::move(curr_ctn_node->get_parent_ptr());
-      if (!curr_ctn_node) {
+      curr_ctn_node_2 = curr_ctn_node_2->get_parent_ptr_raw();
+      if (!curr_ctn_node_2) {
         break;
       }
     }
   }
 
   // determine common ancestors
-  hashset<shared_ptr<CallTreeNode>> common_ancestors;
+  hashset<CallTreeNode*> common_ancestors;
   for (auto& sink_anc : sink_ctn_ancestors) {
     for (auto& source_anc : source_ctn_ancestors) {
       if (sink_anc == source_anc) {
@@ -90,8 +100,8 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
   }
 
   // determine disjoint ancestors
-  hashset<shared_ptr<CallTreeNode>> disjoint_sink_ancestors;
-  hashset<shared_ptr<CallTreeNode>> disjoint_source_ancestors;
+  hashset<CallTreeNode*> disjoint_sink_ancestors;
+  hashset<CallTreeNode*> disjoint_source_ancestors;
   for (auto& sink_anc : sink_ctn_ancestors) {
     bool contained = false;
     for (auto& source_anc : source_ctn_ancestors) {
