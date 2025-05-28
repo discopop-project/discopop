@@ -724,9 +724,6 @@ void *processFirstAccessQueue(void *arg) {
 
         // check if chunk aquired
         if(current){
-//          std::cout << "SAQ: ENTRY SMEM STATE" << std::endl;
-//          SMem->print();
-//          std::cout << "SAQ: Process new chunk" << std::endl;
           // check entry boundary conditions for data dependencies
           auto promised_first_accesses_vector_ptr = current->entry_boundary_first_addr_accesses.get();
           for(auto&  entry_accesses : *(promised_first_accesses_vector_ptr)){
@@ -744,11 +741,15 @@ void *processFirstAccessQueue(void *arg) {
 
           // update persistent SMem with exit boundary conditions (aka merge the local into the persistent shadow memories)
           AbstractShadow* promised_last_smem_ptr = current->exit_boundary_SMem.get();
-          for(auto& read_pair : promised_last_smem_ptr->getReadKVPairs()){
-            SMem->updateInRead(read_pair.first, read_pair.second);
-          }
-          for(auto& write_pair : promised_last_smem_ptr->getWriteKVPairs()){
-            SMem->updateInWrite(write_pair.first, write_pair.second);
+
+          auto sigRead = ((PerfectShadow2*)promised_last_smem_ptr)->getSigRead();
+          auto sigWrite = ((PerfectShadow2*)promised_last_smem_ptr)->getSigWrite();
+
+          // identify required updates to SMem
+          // iterate over addresses to be merged
+          for(auto it = promised_first_accesses_vector_ptr->begin(); it < promised_first_accesses_vector_ptr->end(); ++it){
+            SMem->updateInRead(it->addr, sigRead->at(it->addr));
+            SMem->updateInWrite(it->addr, sigWrite->at(it->addr));
           }
 
           // cleanup promises
@@ -757,7 +758,6 @@ void *processFirstAccessQueue(void *arg) {
 
           delete current;
 
-//          SMem->print();
 
         }
         else{
