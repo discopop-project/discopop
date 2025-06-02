@@ -10,6 +10,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 import logging
 
+from discopop_explorer.utilities.statistics.CU_count import get_CU_count
+from discopop_explorer.utilities.statistics.DEP_count import get_DEP_count
+from discopop_explorer.utilities.statistics.FUNC_count import get_FUNC_count
+from discopop_explorer.utilities.statistics.LOOP_count import get_LOOP_count
 from discopop_explorer.utilities.statistics.cyclomatic_complexity.boxplot import get_cyclomatic_complexities_for_boxplot
 from discopop_explorer.utilities.statistics.cyclomatic_complexity.total import get_summed_cyclomatic_complexity
 from discopop_explorer.utilities.statistics.maximum_call_path_depth import get_maximum_call_path_depth
@@ -37,6 +41,18 @@ logger = logging.getLogger("statistics")
 
 def collect_statistics(arguments: ExplorerArguments, res: DetectionResult) -> None:
     logger.info("Collecting code statistics...")
+
+    cu_count = get_CU_count(res.pet)
+    logger.debug("--> CU count: " + str(cu_count))
+
+    func_count = get_FUNC_count(res.pet)
+    logger.debug("--> FUNC count: " + str(func_count))
+
+    loop_count = get_LOOP_count(res.pet)
+    logger.debug("--> LOOP count: " + str(loop_count))
+
+    dependency_count = get_DEP_count(res.pet)
+    logger.debug("--> DEP count: " + str(dependency_count))
 
     maximum_call_path_depth = get_maximum_call_path_depth(res.pet)
     logger.debug("--> maximum_call_path_depth: " + str(maximum_call_path_depth))
@@ -108,6 +124,10 @@ def collect_statistics(arguments: ExplorerArguments, res: DetectionResult) -> No
         cc_avg,
         cc_lower_quart,
         cc_upper_quart,
+        cu_count,
+        func_count,
+        loop_count,
+        dependency_count,
     )
 
     output_suggestion_statistics(
