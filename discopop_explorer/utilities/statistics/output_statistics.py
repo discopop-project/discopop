@@ -26,6 +26,10 @@ def output_code_statistics(
     cc_avg: int,
     cc_lower_quart: int,
     cc_upper_quart: int,
+    cu_count: int,
+    func_count: int,
+    loop_count: int,
+    dependency_count: int,
 ) -> None:
     # create statistics directory
     if not os.path.exists(os.path.join(arguments.project_path, "explorer", "statistics")):
@@ -43,6 +47,10 @@ def output_code_statistics(
     statistics_dict["cc_avg"] = cc_avg
     statistics_dict["cc_lower_quart"] = cc_lower_quart
     statistics_dict["cc_upper_quart"] = cc_upper_quart
+    statistics_dict["cu_count"] = cu_count
+    statistics_dict["func_count"] = func_count
+    statistics_dict["loop_count"] = loop_count
+    statistics_dict["dependency_count"] = dependency_count
 
     with open(statistics_file, "w+") as f:
         f.write(json.dumps(statistics_dict) + "\n")
