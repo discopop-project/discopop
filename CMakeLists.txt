@@ -68,9 +68,14 @@ add_subdirectory(rtlib)
 
 add_subdirectory(scripts)
 
-add_subdirectory(test/unit_tests)
-
-add_subdirectory(benchmark)
+# build unittests and performance benchmarks, if requested
+if( NOT DEFINED DP_BUILD_UNITTESTS)
+    set(DP_BUILD_UNITTESTS 0)
+endif()
+if(${DP_BUILD_UNITTESTS} STREQUAL "1")
+    add_subdirectory(test/unit_tests)
+    add_subdirectory(benchmark)
+endif()
 
 ##### DEPRECATED #####
 # save build configuration to build/build_config.txt
@@ -100,6 +105,7 @@ file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build
 file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY=\"${DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY}\"\n")
 file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_MEMORY_REGION_DEALIASING=\"${DP_MEMORY_REGION_DEALIASING}\"\n")
 file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_BRANCH_TRACKING=\"${DP_BRANCH_TRACKING}\"\n")
+file(APPEND "${DiscoPoP_SOURCE_DIR}/discopop_library/ConfigProvider/assets/build_config.py" "DP_BUILD_UNITTESTS=\"${DP_BUILD_UNITTESTS}\"\n")
 
 
 if(NOT ${IS_DEB_INSTALL} STREQUAL "")

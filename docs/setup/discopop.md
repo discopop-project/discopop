@@ -52,6 +52,8 @@ where `<CMAKE_FLAGS>` can consist of any combination of the following flags and 
 #### Development and debugging
 - `-DDP_RTLIB_VERBOSE=[0|1]` &ndash; Enable verbose output during profiling.
 - `-DDP_INTERNAL_TIMER=[0|1]`&ndash; Enable timing of runtime library functions.
+- `-DDP_BUILD_UNITTESTS=[0|1]`&ndash; Enable building unittests and performance benchmarks. Default: `0`.
+
 
 
 ## Testing the installation
