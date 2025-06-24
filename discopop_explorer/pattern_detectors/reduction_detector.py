@@ -302,6 +302,9 @@ def __check_loop_dependencies(
                     or dep.metadata_inter_iteration_dep is None
                     or dep.metadata_intra_call_dep is None
                     or dep.metadata_inter_call_dep is None
+                    or dep.metadata_sink_ancestors is None
+                    or dep.metadata_source_ancestors is None
+                    or (len(dep.metadata_sink_ancestors) == 0 and len(dep.metadata_source_ancestors) == 0)
                 ):
                     # no metadata generated
                     if not dep.intra_iteration:
