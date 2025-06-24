@@ -9,6 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, List, Optional, cast
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.classes.PEGraph.Node import Node
+from discopop_explorer.enums.NodeType import NodeType
 
 if TYPE_CHECKING:
     from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
@@ -55,5 +56,26 @@ def get_all_parent_functions(pet: PEGraphX, node: Node) -> List[FunctionNode]:
             result.add(current_parent)
         for in_edge in in_edges(pet, current.id, EdgeType.CALLSNODE):
             queue.append(pet.node_at(in_edge[0]))
+
+    return list(result)
+
+
+def get_all_parents_until_function(pet: PEGraphX, node: Node) -> List[Node]:
+    queue: List[Node] = [node]
+    result: set[Node] = set()
+    while queue:
+        current = queue.pop()
+
+        continue_search = True
+
+        if current.type == NodeType.LOOP:
+            result.add(current)
+        if current.type == NodeType.FUNC:
+            result.add(current)
+            continue_search = False
+
+        if continue_search:
+            parents = [pet.node_at(s) for s, t, d in in_edges(pet, current.id, EdgeType.CHILD)]
+            queue += [p for p in parents if p not in queue and p not in result]
 
     return list(result)

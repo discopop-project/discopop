@@ -26,7 +26,7 @@ from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_explorer.functions.PEGraph.queries.variables import get_variables
 from discopop_explorer.functions.PEGraph.traversal.children import direct_children, direct_children_or_called_nodes
-from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
+from discopop_explorer.functions.PEGraph.traversal.parent import get_all_parents_until_function, get_parent_function
 from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
@@ -240,6 +240,56 @@ class PEGraphX(object):
                             self.g.add_edge(s, t, data=edge_data)
 
         print("Done.")
+
+    def synthesize_static_dependency_metadata(self) -> None:
+        print("Synthesizing disambiguation metadata for static data dependencies.")
+        for edge in self.g.edges(data=True):
+            dep = cast(Dependency, edge[2]["data"])
+            if dep.etype != EdgeType.DATA:
+                continue
+            if dep.memory_region is None:
+                continue
+            if not dep.memory_region.startswith("S"):
+                continue
+            # dep is a static dependency
+            sink_parent_function = get_parent_function(self, self.node_at(edge[0]))
+            source_parent_function = get_parent_function(self, self.node_at(edge[1]))
+
+            synthesis_performed = False
+
+            if sink_parent_function == source_parent_function:
+                print("-> Synthesized: IAC[", sink_parent_function.start_position(), "]")
+                if dep.metadata_intra_call_dep is None:
+                    raise ValueError()
+                dep.metadata_intra_call_dep.append(sink_parent_function.start_position())
+                synthesis_performed = True
+
+            sink_immediate_parent_ids = [s for s, t, d in in_edges(self, edge[0], EdgeType.CHILD)]
+            sink_immediate_parents = [self.node_at(s) for s in sink_immediate_parent_ids]
+            sink_immediate_loop_parents = [p for p in sink_immediate_parents if p.type == NodeType.LOOP]
+            source_immediate_parent_ids = [s for s, t, d in in_edges(self, edge[1], EdgeType.CHILD)]
+            source_immediate_parents = [self.node_at(s) for s in source_immediate_parent_ids]
+            source_immediate_loop_parents = [p for p in source_immediate_parents if p.type == NodeType.LOOP]
+
+            for loop in sink_immediate_loop_parents:
+                if loop in source_immediate_loop_parents:
+                    print("-> Synthesized: IAI[", loop.start_position(), "]")
+                    if dep.metadata_intra_iteration_dep is None:
+                        raise ValueError()
+                    dep.metadata_intra_iteration_dep.append(loop.start_position())
+                    synthesis_performed = True
+
+            if synthesis_performed:
+                for sink_parent in get_all_parents_until_function(self, self.node_at(edge[0])):
+                    if dep.metadata_sink_ancestors is None:
+                        raise ValueError()
+                    dep.metadata_sink_ancestors.append(sink_parent.start_position())
+                    print("-> Synthesized: SINK_ANC[", sink_parent.start_position(), "]")
+                for source_parent in get_all_parents_until_function(self, self.node_at(edge[1])):
+                    if dep.metadata_source_ancestors is None:
+                        raise ValueError()
+                    dep.metadata_source_ancestors.append(source_parent.start_position())
+                    print("-> Synthesized: SOURCE_ANC[", source_parent.start_position(), "]")
 
     def calculateFunctionMetadata(
         self,
