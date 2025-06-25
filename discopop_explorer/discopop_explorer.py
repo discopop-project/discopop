@@ -10,6 +10,7 @@ import cProfile
 import json
 import logging
 import os
+from posixpath import abspath, dirname
 import shutil
 import subprocess
 import sys
@@ -129,6 +130,12 @@ def __run(
 ) -> DetectionResult:
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))  # type: ignore
     print("PET CREATION FINISHED.")
+
+    # synthesize disambiguation metadata for static dependencies
+    if os.path.exists(os.path.join(dirname(abspath(cu_xml)), "dependency_metadata.txt")):
+        print("Found disambiguation metadata.")
+        pet.synthesize_static_dependency_metadata()
+
     # pet.show()
     # TODO add visualization
 
