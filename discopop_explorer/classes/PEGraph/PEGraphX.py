@@ -48,6 +48,7 @@ from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import Loo
 from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
 from discopop_explorer.utilities.PEGraphConstruction.PEGraphConstructionUtilities import parse_dependency, parse_cu
 from discopop_explorer.classes.variable import Variable
+import logging
 
 global_pet = None
 
@@ -242,7 +243,8 @@ class PEGraphX(object):
         print("Done.")
 
     def synthesize_static_dependency_metadata(self) -> None:
-        print("Synthesizing disambiguation metadata for static data dependencies.")
+        logger = logging.getLogger("Explorer")
+        logger.info("Synthesizing disambiguation metadata for static data dependencies.")
         for edge in self.g.edges(data=True):
             dep = cast(Dependency, edge[2]["data"])
             if dep.etype != EdgeType.DATA:
@@ -258,7 +260,6 @@ class PEGraphX(object):
             synthesis_performed = False
 
             if sink_parent_function == source_parent_function:
-                print("-> Synthesized: IAC[", sink_parent_function.start_position(), "]")
                 if dep.metadata_intra_call_dep is None:
                     raise ValueError()
                 dep.metadata_intra_call_dep.append(sink_parent_function.start_position())
@@ -273,7 +274,6 @@ class PEGraphX(object):
 
             for loop in sink_immediate_loop_parents:
                 if loop in source_immediate_loop_parents:
-                    print("-> Synthesized: IAI[", loop.start_position(), "]")
                     if dep.metadata_intra_iteration_dep is None:
                         raise ValueError()
                     dep.metadata_intra_iteration_dep.append(loop.start_position())
@@ -284,12 +284,27 @@ class PEGraphX(object):
                     if dep.metadata_sink_ancestors is None:
                         raise ValueError()
                     dep.metadata_sink_ancestors.append(sink_parent.start_position())
-                    print("-> Synthesized: SINK_ANC[", sink_parent.start_position(), "]")
                 for source_parent in get_all_parents_until_function(self, self.node_at(edge[1])):
                     if dep.metadata_source_ancestors is None:
                         raise ValueError()
                     dep.metadata_source_ancestors.append(source_parent.start_position())
-                    print("-> Synthesized: SOURCE_ANC[", source_parent.start_position(), "]")
+
+            # logging
+            if synthesis_performed:
+                logger.debug(
+                    "Synthesized: "
+                    + str(dep.dtype)
+                    + " "
+                    + str(dep.sink_line)
+                    + " "
+                    + str(dep.source_line)
+                    + " "
+                    + str(dep.var_name)
+                )
+                logger.debug("--> IAI: " + str(dep.metadata_intra_iteration_dep))
+                logger.debug("--> IAC: " + str(dep.metadata_intra_call_dep))
+                logger.debug("--> SINK_ANC: " + str(dep.metadata_sink_ancestors))
+                logger.debug("--> SOURCE_ANC: " + str(dep.metadata_source_ancestors))
 
     def calculateFunctionMetadata(
         self,
