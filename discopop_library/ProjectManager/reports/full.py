@@ -24,6 +24,7 @@ from discopop_library.ProjectManager.reports.efficiency import generate_efficien
 from discopop_library.ProjectManager.reports.execution_time import generate_execution_time_report
 from matplotlib.backends.backend_pdf import PdfPages  # type: ignore
 
+from discopop_library.ProjectManager.reports.execution_time_full import generate_execution_time_report_full
 from discopop_library.ProjectManager.reports.speedup import generate_speedup_report
 
 logger = logging.getLogger("ProjectManager")
@@ -44,6 +45,7 @@ def generate_full_report(arguments: ProjectManagerArguments) -> None:
     # create plots
     print_console_report(arguments, timestamp)
     generate_csv_report(arguments, timestamp)
+    generate_execution_time_report_full(arguments, timestamp)
     generate_execution_time_report(arguments, timestamp)
     generate_speedup_report(arguments, timestamp)
     generate_efficiency_report(arguments, timestamp)
