@@ -52,8 +52,18 @@ add_subdirectory(scripts)
 # install Hotspot Analyzer python modules
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 message(STATUS "Installing Hotspot Analyzer python modules")
+
+# setup venv
+
+message(STATUS "Setting up default python venv: ${HotspotDetection_SOURCE_DIR}/venv")
 execute_process(
-        COMMAND ${Python3_EXECUTABLE} -m pip install ${HotspotDetection_SOURCE_DIR}
+    COMMAND ${Python3_EXECUTABLE} -m venv ${HotspotDetection_SOURCE_DIR}/venv
+)
+set(Python3_VENV_EXECUTABLE ${HotspotDetection_SOURCE_DIR}/venv/bin/python3)
+
+
+execute_process(
+        COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${HotspotDetection_SOURCE_DIR}
         RESULT_VARIABLE HD_INSTALLATION_EXIT_CODE
         OUTPUT_VARIABLE HD_INSTALLATION_OUTPUT
 )
@@ -61,6 +71,9 @@ execute_process(
 if(${HD_INSTALLATION_EXIT_CODE})
     message(FATAL_ERROR "${HD_INSTALLATION_OUTPUT}")
 endif()
+
+# create softlinks in venv/bin
+#COMMAND ln -sf ${DiscoPoP_SOHotspotDetection_SOURCE_DIRURCE_DIR}/venv/bin/discopop_optimizer ${DP_LOCAL_BIN_DIR}/discopop_optimizer
 
 
 # save build configuration to build/build_config.txt
