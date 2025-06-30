@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4.3)
+cmake_minimum_required(VERSION 4.0.0)
 project(HotspotDetection)
 
 # support C++14 features used by LLVM 10.0.0
