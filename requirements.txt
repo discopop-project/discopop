@@ -23,7 +23,7 @@ mypy-extensions==1.0.0
 networkx==3.4.2
 numpy==1.26.4
 packaging==25.0
-pillow==11.2.1
+pillow==11.3.0
 pluginbase==1.0.1
 pstats2==0.1.0
 pycubexr==2.0.1
