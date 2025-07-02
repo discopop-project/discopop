@@ -29,6 +29,7 @@ setup(
     # long_description=open(SRC / "README.md").read(),
     long_description_content_type="text/markdown",
     install_requires=[
+	"numpy",
     ],
     extras_require={
     },
