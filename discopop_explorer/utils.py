@@ -726,7 +726,7 @@ def classify_loop_variables(
     # vars = list(pet.get_variables(sub))
     metadata_safe_index_accesses: List[Variable] = []
     for var in vars:
-        if loop.start_position() == "9:122":  # (var.name == "d" or var.name == "d2"):
+        if loop.start_position() == "2:517" and var.name == "nidx":  # (var.name == "d" or var.name == "d2"):
             pass
         # separate pointer and pointee dependencies for separated clasification
         # classifications will be merged before returning
@@ -820,7 +820,7 @@ def classify_loop_variables(
     reduction = __remove_duplicate_variables(reduction)
 
     # return first_private, private, last_private, shared, reduction
-    if loop.start_position() == "9:122":
+    if loop.start_position() == "19:133":
         pass
     return (
         sorted(first_private),

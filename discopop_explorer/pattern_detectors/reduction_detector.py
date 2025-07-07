@@ -115,7 +115,7 @@ def run_detection(
     nodes = all_nodes(pet, LoopNode)
 
     ## DEBUG
-    #    nodes = [n for n in nodes if n.file_id == 9]
+    #    nodes = [n for n in nodes if n.file_id == 2]
     ## !DEBUG
 
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))

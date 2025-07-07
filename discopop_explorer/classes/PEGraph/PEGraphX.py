@@ -254,6 +254,8 @@ class PEGraphX(object):
             if not dep.memory_region.startswith("S"):
                 continue
             # dep is a static dependency
+            sink_node = self.node_at(edge[0])
+            source_node = self.node_at(edge[1])
             sink_parent_function = get_parent_function(self, self.node_at(edge[0]))
             source_parent_function = get_parent_function(self, self.node_at(edge[1]))
 
@@ -265,18 +267,38 @@ class PEGraphX(object):
                 dep.metadata_intra_call_dep.append(sink_parent_function.start_position())
                 synthesis_performed = True
 
+            sink_parents = get_all_parents_until_function(self, sink_node)
             sink_immediate_parent_ids = [s for s, t, d in in_edges(self, edge[0], EdgeType.CHILD)]
             sink_immediate_parents = [self.node_at(s) for s in sink_immediate_parent_ids]
             sink_immediate_loop_parents = [p for p in sink_immediate_parents if p.type == NodeType.LOOP]
+            sink_loop_parents = [
+                p for p in sink_parents if p.type == NodeType.LOOP if p not in sink_immediate_loop_parents
+            ]
+
+            source_parents = get_all_parents_until_function(self, source_node)
             source_immediate_parent_ids = [s for s, t, d in in_edges(self, edge[1], EdgeType.CHILD)]
             source_immediate_parents = [self.node_at(s) for s in source_immediate_parent_ids]
             source_immediate_loop_parents = [p for p in source_immediate_parents if p.type == NodeType.LOOP]
+            source_loop_parents = [
+                p for p in source_parents if p.type == NodeType.LOOP if p not in source_immediate_loop_parents
+            ]
+
+            common_loop_parents = list(set(sink_loop_parents + source_loop_parents))
 
             for loop in sink_immediate_loop_parents:
                 if loop in source_immediate_loop_parents:
                     if dep.metadata_intra_iteration_dep is None:
                         raise ValueError()
-                    dep.metadata_intra_iteration_dep.append(loop.start_position())
+                    if dep.metadata_inter_iteration_dep is None:
+                        raise ValueError()
+                    if sink_node.start_line < source_node.start_line:
+                        dep.metadata_inter_iteration_dep.append(loop.start_position())
+                        for parent_loop in common_loop_parents:
+                            dep.metadata_inter_iteration_dep.append(parent_loop.start_position())
+                    else:
+                        dep.metadata_intra_iteration_dep.append(loop.start_position())
+                        for parent_loop in common_loop_parents:
+                            dep.metadata_intra_iteration_dep.append(parent_loop.start_position())
                     synthesis_performed = True
 
             if synthesis_performed:

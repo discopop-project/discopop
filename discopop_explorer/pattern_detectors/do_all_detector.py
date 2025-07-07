@@ -122,7 +122,7 @@ def run_detection(
     nodes = all_nodes(pet, LoopNode)
 
     ## DEBUG
-    #    nodes = [n for n in nodes if n.file_id == 9]
+    #    nodes = [n for n in nodes if n.file_id == 2]
     ## !DEBUG
 
     # remove reduction loops
@@ -194,7 +194,7 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
     for v in root_children_loops:
         loop_start_lines.append(v.start_position())
     ## DEBUG
-    if root_loop.start_line == 122:
+    if root_loop.start_line == 517:
         pass
     ## !DEBUG
 
