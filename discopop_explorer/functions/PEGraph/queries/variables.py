@@ -70,10 +70,16 @@ def get_variables(pet: PEGraphX, nodes: Sequence[Node]) -> Dict[Variable, Set[Me
 
 
 def get_undefined_variables_inside_loop(
-    pet: PEGraphX, root_loop: Node, include_global_vars: bool = False
+    pet: PEGraphX,
+    root_loop: Node,
+    include_global_vars: bool = False,
+    include_called_functions: bool = False,
+    root: Optional[Node] = None,
 ) -> Dict[Variable, Set[MemoryRegion]]:
-    sub = subtree_of_type(pet, root_loop, CUNode)
+    sub = subtree_of_type(pet, root_loop, CUNode, ignore_called_functions=True)
     vars = get_variables(pet, sub)
+    if root_loop.start_line == 122 and root_loop.file_id == 9:
+        pass
     dummyVariables = []
     definedVarsInLoop = []
     definedVarsInCalledFunctions = []

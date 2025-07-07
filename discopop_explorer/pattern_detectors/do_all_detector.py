@@ -121,6 +121,10 @@ def run_detection(
     result: List[DoAllInfo] = []
     nodes = all_nodes(pet, LoopNode)
 
+    ## DEBUG
+    #    nodes = [n for n in nodes if n.file_id == 9]
+    ## !DEBUG
+
     # remove reduction loops
     print("ASDF: ", [r.node_id for r in reduction_info])
     print("Nodes: ", [n.start_position() for n in nodes])
@@ -189,6 +193,11 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
     root_children_loops = [cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:
         loop_start_lines.append(v.start_position())
+    ## DEBUG
+    if root_loop.start_line == 122:
+        pass
+    ## !DEBUG
+
     fp, p, lp, s, r = classify_loop_variables(pet, root_loop)
 
     # get parents of root_loop

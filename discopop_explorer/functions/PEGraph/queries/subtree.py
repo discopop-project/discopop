@@ -60,34 +60,44 @@ def get_left_right_subtree(
 
 
 @overload
-def subtree_of_type(pet: PEGraphX, root: Node) -> List[Node]: ...
+def subtree_of_type(pet: PEGraphX, root: Node, ignore_called_functions: bool = True) -> List[Node]: ...
 
 
 @overload
-def subtree_of_type(pet: PEGraphX, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]) -> List[NodeT]: ...
+def subtree_of_type(
+    pet: PEGraphX, root: Node, type: Union[Type[NodeT], Tuple[Type[NodeT], ...]], ignore_called_functions: bool = True
+) -> List[NodeT]: ...
 
 
-def subtree_of_type(pet: PEGraphX, root: Node, type: Any = Node) -> List[NodeT]:
+def subtree_of_type(pet: PEGraphX, root: Node, type: Any = Node, ignore_called_functions: bool = True) -> List[NodeT]:  # type: ignore
     """Gets all nodes in subtree of specified type including root
 
     :param root: root node
     :param type: type of children, None is equal to a wildcard
     :return: list of nodes in subtree
     """
-    return subtree_of_type_rec(pet, root, set(), type)
-
-
-@overload
-def subtree_of_type_rec(pet: PEGraphX, root: Node, visited: Set[Node]) -> List[Node]: ...
+    return subtree_of_type_rec(pet, root, set(), type, ignore_called_functions=ignore_called_functions)
 
 
 @overload
 def subtree_of_type_rec(
-    pet: PEGraphX, root: Node, visited: Set[Node], type: Union[Type[NodeT], Tuple[Type[NodeT], ...]]
+    pet: PEGraphX, root: Node, visited: Set[Node], ignore_called_functions: bool = True
+) -> List[Node]: ...
+
+
+@overload
+def subtree_of_type_rec(
+    pet: PEGraphX,
+    root: Node,
+    visited: Set[Node],
+    type: Union[Type[NodeT], Tuple[Type[NodeT], ...]],
+    ignore_called_functions: bool = True,
 ) -> List[NodeT]: ...
 
 
-def subtree_of_type_rec(pet: PEGraphX, root: Node, visited: Set[Node], type: Any = Node) -> List[NodeT]:
+def subtree_of_type_rec(  # type: ignore
+    pet: PEGraphX, root: Node, visited: Set[Node], type: Any = Node, ignore_called_functions: bool = True
+) -> List[NodeT]:
     """recursive helper function for subtree_of_type"""
     # check if root is of type target
     res = []
@@ -98,10 +108,13 @@ def subtree_of_type_rec(pet: PEGraphX, root: Node, visited: Set[Node], type: Any
     visited.add(root)
 
     # enter recursion
-    for _, target, _ in out_edges(pet, root.id, [EdgeType.CHILD, EdgeType.CALLSNODE]):
+    edge_types = [EdgeType.CHILD] if ignore_called_functions else [EdgeType.CHILD, EdgeType.CALLSNODE]
+    for _, target, _ in out_edges(pet, root.id, edge_types):
         # prevent cycles
         if pet.node_at(target) in visited:
             continue
-        res += subtree_of_type_rec(pet, pet.node_at(target), visited, type)
+        res += subtree_of_type_rec(
+            pet, pet.node_at(target), visited, type, ignore_called_functions=ignore_called_functions
+        )
 
     return res

@@ -114,6 +114,10 @@ def run_detection(
     result: List[ReductionInfo] = []
     nodes = all_nodes(pet, LoopNode)
 
+    ## DEBUG
+    #    nodes = [n for n in nodes if n.file_id == 9]
+    ## !DEBUG
+
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]

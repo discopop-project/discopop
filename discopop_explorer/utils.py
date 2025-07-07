@@ -629,10 +629,21 @@ def get_child_loops(pet: PEGraphX, node: Node) -> Tuple[List[Node], List[Node]]:
     return do_all, reduction
 
 
-def get_initialized_memory_regions_in(pet: PEGraphX, cu_nodes: List[CUNode]) -> Dict[Variable, Set[MemoryRegion]]:
+def get_initialized_memory_regions_in(
+    pet: PEGraphX, cu_nodes: List[CUNode], include_called_functions: bool = True, root: Optional[Node] = None
+) -> Dict[Variable, Set[MemoryRegion]]:
     initialized_memory_regions: Dict[Variable, Set[MemoryRegion]] = dict()
+    root_parent_function: Optional[Node] = None
+    if not include_called_functions:
+        root_parent_function = get_parent_function(pet, cast(Node, root))
     for cu in cu_nodes:
         parent_function = get_parent_function(pet, cu)
+        if not include_called_functions:
+            if root_parent_function is not None:
+                if parent_function != root_parent_function:
+                    print("ROOT PARENT FUNCTION: ", root_parent_function.name)
+                    print("---> SKIPPING CALLED FUNCTION: ", parent_function.name)
+                    continue
         for s, t, d in out_edges(pet, cu.id, EdgeType.DATA):
             if d.dtype == DepType.INIT and d.memory_region is not None:
                 # get variable object from cu
@@ -687,7 +698,7 @@ def classify_loop_variables(
         waw.update(__get_dep_of_type(pet, sub_node, DepType.WAW, False))
         rev_raw.update(__get_dep_of_type(pet, sub_node, DepType.RAW, True))
 
-    vars = get_undefined_variables_inside_loop(pet, loop)
+    vars = get_undefined_variables_inside_loop(pet, loop, include_called_functions=False, root=loop)
 
     # only consider memory regions which are know at the current code location.
     # ignore memory regions which stem from called functions.
@@ -696,7 +707,9 @@ def classify_loop_variables(
     prior_known_mem_regs = set()
     for pkv in prior_known_vars:
         prior_known_mem_regs.update(prior_known_vars[pkv])
-    initialized_in_loop = get_initialized_memory_regions_in(pet, sub)
+    initialized_in_loop = get_initialized_memory_regions_in(
+        pet, sub, include_called_functions=False, root=loop
+    )  # TODO: CHECK IF THESE SHOULD INCLUDE INITS FROM CALLED FUNCTIONS!
     initialized_memory_regions: Set[MemoryRegion] = set()
     for var in initialized_in_loop:
         initialized_memory_regions.update(initialized_in_loop[var])
@@ -713,7 +726,7 @@ def classify_loop_variables(
     # vars = list(pet.get_variables(sub))
     metadata_safe_index_accesses: List[Variable] = []
     for var in vars:
-        if loop.start_position() == "1:281" and (var.name == "d" or var.name == "d2"):
+        if loop.start_position() == "9:122":  # (var.name == "d" or var.name == "d2"):
             pass
         # separate pointer and pointee dependencies for separated clasification
         # classifications will be merged before returning
@@ -807,6 +820,8 @@ def classify_loop_variables(
     reduction = __remove_duplicate_variables(reduction)
 
     # return first_private, private, last_private, shared, reduction
+    if loop.start_position() == "9:122":
+        pass
     return (
         sorted(first_private),
         sorted(private),
