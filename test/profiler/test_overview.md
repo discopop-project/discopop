@@ -3,11 +3,11 @@
 ## RAW
 | test id |  source access description  | sink access description | implemented |
 | --- | -------- | --- | ---|
-| 0 | variable  | variable | |
-| 1 | variable | alias | |
-| 2 | alias | variable | |
-| 3 | variable | pointer | |
-| 4 | pointer | variable | |
+| 0 | variable  | variable | X |
+| 1 | variable | alias | X |
+| 2 | alias | variable | X |
+| 3 | variable | pointer | X |
+| 4 | pointer | variable | X|
 | 5 | static length array access | pointer | |
 | 6 | pointer | static length array access | |
 | 7 | static length array pointer arithmetics | pointer | |
