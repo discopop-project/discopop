@@ -50,6 +50,11 @@
 | 44 | W in nested called function | R in body | |
 | 45 | W in nested called function | R in called function | |
 | 46 | W in nested called function | R in nested called function | |
+| 47 | W is loop index increment | R is loop index read | |
+| 48 | W is loop index increment | R is loop index read in next iteration | |
+| 49 | W is loop index increment | R is loop index read as variable length array index | |
+| 50 | W is loop index increment | R is loop index read as static length array index | |
+
 
 
 
@@ -103,6 +108,11 @@
 | 44 | R in nested called function | W in body | |
 | 45 | R in nested called function | W in called function | |
 | 46 | R in nested called function | W in nested called function | |
+| 47 | R is loop index read | W is loop index increment | |
+| 48 | R is loop index read | W is loop index increment in next iteration | |
+| 49 | R is loop index read as variable length array index | W is loop index increment | |
+| 50 | R is loop index read as static length array index | W is loop index increment | |
+
 
 ## WAW
 | test id |  source access description  | sink access description | implemented |
@@ -154,3 +164,5 @@
 | 44 | W in nested called function | W in body | |
 | 45 | W in nested called function | W in called function | |
 | 46 | W in nested called function | W in nested called function | |
+| 47 | W is loop index increment | W is loop index increment | |
+| 47 | W is loop index increment | W is loop index increment in next iteration | |
