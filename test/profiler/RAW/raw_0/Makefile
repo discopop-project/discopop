@@ -1,15 +1,11 @@
 all: compile execute
 
-setup:
-	echo "Hello world!"
-
 compile:
-	echo "PWD: ${PWD}" && discopop_cxx test.cpp
+	. $(DP_TEST_PROFILER_VENV)/bin/activate && discopop_cxx test.cpp -o instrumented.exe
 
 execute:
-	./a.out
+	./instrumented.exe
 
 clean:
-	echo "Cleanup Makefile"
 	rm -rf .discopop
-	rm -f a.out
+	rm -f instrumented.exe
