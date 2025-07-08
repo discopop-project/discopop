@@ -16,13 +16,13 @@
 | 10_1 | variable length array access | pointer | X |
 | 11_1 | pointer | variable length array access | X |
 | 12_1 | variable length array pointer arithmetics | pointer | X |
-| 13_1 | variable length array access | variable length pointer arithmetics | |
-| 14_1 | variable length pointer arithmetics | alias | |
-| 10_2 | heap array access | pointer | |
-| 11_2 | pointer | heap array access | |
-| 12_2 | heap array pointer arithmetics | pointer | |
-| 13_2 | heap array access | heap pointer arithmetics | |
-| 14_2 | heap pointer arithmetics | alias | |
+| 13_1 | variable length array access | variable length pointer arithmetics | X |
+| 14_1 | variable length pointer arithmetics | alias | X |
+| 10_2 | heap array access | pointer | X |
+| 11_2 | pointer | heap array access | X |
+| 12_2 | heap array pointer arithmetics | pointer | X |
+| 13_2 | heap array access | heap pointer arithmetics | X |
+| 14_2 | heap pointer arithmetics | alias | X |
 | 16 | W before loop | R in loop initialization | |
 | 17 | W before loop | R in loop condition | |
 | 18 | W before loop | R in loop increment | |
