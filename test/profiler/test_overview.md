@@ -23,20 +23,20 @@
 | 12_2 | heap array pointer arithmetics | pointer | X |
 | 13_2 | heap array access | heap pointer arithmetics | X |
 | 14_2 | heap pointer arithmetics | alias | X |
-| 16 | W before loop | R in loop initialization | |
-| 17 | W before loop | R in loop condition | |
-| 18 | W before loop | R in loop increment | |
-| 19 | W before loop | R in loop | |
-| 20 | W before loop | R in nested loop | |
-| 21 | W before loop | R in function parameters | |
-| 22 | W before loop | R in called function | |
-| 23 | W before loop | R after loop
-| 24 | W in loop increment | R in loop condition | |
-| 25 | W in loop increment | R in loop | |
-| 26 | W in loop increment | R in nested loop | |
-| 27 | W in loop increment | R in function parameters | |
-| 28 | W in loop increment | R in called function | |
-| 29 | W in loop increment | R after loop | |
+| 16 | W before loop | R in loop initialization | X |
+| 17 | W before loop | R in loop condition | X |
+| 18 | W before loop | R in loop increment | X |
+| 19 | W before loop | R in loop | X |
+| 20 | W before loop | R in nested loop | X |
+| 21 | W before loop | R in function parameters | X |
+| 22 | W before loop | R in called function | X |
+| 23 | W before loop | R after loop | X |
+| 24 | W in loop increment | R in loop condition | X |
+| 25 | W in loop increment | R in loop | X |
+| 26 | W in loop increment | R in nested loop | X |
+| 27 | W in loop increment | R in function parameters | X |
+| 28 | W in loop increment | R in called function | X |
+| 29 | W in loop increment | R after loop | X |
 | 30 | W in loop body | R in loop body | |
 | 31 | W in loop body | R in nested loop | |
 | 32 | W in loop body | R in function parameters | |
