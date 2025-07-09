@@ -57,11 +57,11 @@
 | 41 | W in loop body | R in loop body (inter-iteration backwards arbitrary distance) | X |
 | 42 | W in called function | R in body | X |
 | 43 | W in called function | R in called function | X |
-| 43_2 | W in called function | R in different called function | |
-| 44 | W in called function | R in nested called function body | |
-| 45 | W in nested called function | R in body | |
-| 46 | W in nested called function | R in called function | |
-| 47 | W in nested called function | R in nested called function | |
+| 43_2 | W in called function | R in different called function | X |
+| 44 | W in called function | R in nested called function body | X |
+| 45 | W in nested called function | R in body | X |
+| 46 | W in nested called function | R in called function | X |
+| 47 | W in nested called function | R in nested called function | X |
 | 48 | W is loop index increment | R is loop index read | |
 | 49 | W is loop index increment | R is loop index read in next iteration | |
 | 50 | W is loop index increment | R is loop index read as variable length array index | |
