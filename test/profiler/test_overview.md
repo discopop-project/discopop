@@ -50,13 +50,14 @@
 | 34 | W in loop body | R after loop | X |
 | 35 | W in body | R in function parameters | X |
 | 36 | W in body | R in called function | X |
-| 37 | W in loop body | R in loop body (intra-iteration) | |
-| 38 | W in loop body | R in loop body (inter-iteration forward) | |
-| 39 | W in loop body | R in loop body (inter-iteration forward arbitrary distance) | |
-| 40 | W in loop body | R in loop body (inter-iteration backwards) | |
-| 41 | W in loop body | R in loop body (inter-iteration backwards arbitrary distance) | |
-| 42 | W in called function | R in body | |
-| 43 | W in called function | R in called function | |
+| 37 | W in loop body | R in loop body (intra-iteration) | X |
+| 38 | W in loop body | R in loop body (inter-iteration forward) | X |
+| 39 | W in loop body | R in loop body (inter-iteration forward arbitrary distance) | X |
+| 40 | W in loop body | R in loop body (inter-iteration backwards) | X |
+| 41 | W in loop body | R in loop body (inter-iteration backwards arbitrary distance) | X |
+| 42 | W in called function | R in body | X |
+| 43 | W in called function | R in called function | X |
+| 43_2 | W in called function | R in different called function | |
 | 44 | W in called function | R in nested called function body | |
 | 45 | W in nested called function | R in body | |
 | 46 | W in nested called function | R in called function | |
@@ -121,6 +122,7 @@
 | 40 | R in loop body | W in loop body (inter-iteration backwards arbitrary distance) | |
 | 41 | R in called function | W in body | |
 | 42 | R in called function | W in called function | |
+| 42_2 | R in called function | W in different called function | |
 | 43 | R in called function | W in nested called function body | |
 | 44 | R in nested called function | W in body | |
 | 45 | R in nested called function | W in called function | |
@@ -188,6 +190,7 @@
 | 40 | W in loop body | W in loop body (inter-iteration backwards arbitrary distance) | |
 | 41 | W in called function | W in body | |
 | 42 | W in called function | W in called function | |
+| 42_2 | W in called function | W in different called function | |
 | 43 | W in called function | W in nested called function body | |
 | 44 | W in nested called function | W in body | |
 | 45 | W in nested called function | W in called function | |
