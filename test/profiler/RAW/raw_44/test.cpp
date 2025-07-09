@@ -1,12 +1,12 @@
 #include <cstdlib>
 
+void bar(int &y){
+    int z = 32 + y;
+}
+
 void foo(int& x){
     x = 42 + (rand() % 100);
     bar(x);
-}
-
-void bar(int &y){
-    int z = 32 + y;
 }
 
 int main(){

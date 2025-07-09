@@ -11,7 +11,7 @@ void bar(int &y){
 
 int main(){
     int a = 42;
-    foo(a);
+    bar(a);
 
     return 0;
 }

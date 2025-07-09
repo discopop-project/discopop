@@ -62,10 +62,10 @@
 | 45 | W in nested called function | R in body | X |
 | 46 | W in nested called function | R in called function | X |
 | 47 | W in nested called function | R in nested called function | X |
-| 48 | W is loop index increment | R is loop index read | |
-| 49 | W is loop index increment | R is loop index read in next iteration | |
-| 50 | W is loop index increment | R is loop index read as variable length array index | |
-| 51 | W is loop index increment | R is loop index read as static length array index | |
+| 48 | W is loop index increment | R is loop index read | X |
+| 49 | W is loop index increment | R is loop index read in next iteration | X |
+| 50 | W is loop index increment | R is loop index read as variable length array index | X |
+| 51 | W is loop index increment | R is loop index read as static length array index | X |
 
 
 
