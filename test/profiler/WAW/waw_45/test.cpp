@@ -6,7 +6,7 @@ void bar_1(int& b){
 
 void foo_1(int& a){
     a = 12;
-    bar(a);
+    bar_1(a);
 }
 
 void foo_2(int& c){

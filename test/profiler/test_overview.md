@@ -180,22 +180,19 @@
 | 33 | W in loop body | W after loop | X |
 | 34 | W in body | W in function parameters | X |
 | 35 | W in body | W in called function | X |
-| 36 | W in loop body | W in loop body (intra-iteration) | |
-| 37 | W in loop body | W in loop body (inter-iteration forward) | |
-| 38 | W in loop body | W in loop body (inter-iteration forward arbitrary distance) | |
-| 39 | W in loop body | W in loop body (inter-iteration backwards) | |
-| 40 | W in loop body | W in loop body (inter-iteration backwards arbitrary distance) | |
-| 41 | W in called function | W in body | |
-| 42 | W in called function | W in called function | |
-| 42_2 | W in called function | W in different called function | |
-| 43 | W in called function | W in nested called function body | |
-| 44 | W in nested called function | W in body | |
-| 45 | W in nested called function | W in called function | |
-| 46 | W in nested called function | W in nested called function | |
+| 36 | W in loop body | W in loop body (intra-iteration) | X |
+| 37 | W in loop body | W in loop body (inter-iteration forward) | X |
+| 39 | W in loop body | W in loop body (inter-iteration backwards) | X |
+| 41 | W in called function | W in body | X |
+| 42 | W in called function | W in called function | X |
+| 42_2 | W in called function | W in different called function | X |
+| 43 | W in called function | W in nested called function body | X |
+| 44 | W in nested called function | W in body | X |
+| 45 | W in nested called function | W in called function | X |
+| 46 | W in nested called function | W in nested called function | X |
 | 47 | W is loop index increment | W is loop index increment | |
-| 48 | W is loop index increment | W is loop index increment in next iteration | |
-| 49 | heap array access | pointer | |
-| 50 | pointer | heap array access | |
-| 51 | heap array pointer arithmetics | pointer | |
-| 52 | heap array access | heap pointer arithmetics | |
-| 53 | heap pointer arithmetics | alias | |
+| 49 | heap array access | pointer | X |
+| 50 | pointer | heap array access | X |
+| 51 | heap array pointer arithmetics | pointer | X |
+| 52 | heap array access | heap pointer arithmetics | X |
+| 53 | heap pointer arithmetics | alias | X |
