@@ -117,13 +117,13 @@
 | 35 | R in body | W in called function | X |
 | 36 | R in loop body | W in loop body (intra-iteration) | X |
 | 37 | R in loop body | W in loop body (inter-iteration forward) | X |
-| 41 | R in called function | W in body | |
-| 42 | R in called function | W in called function | |
-| 42_2 | R in called function | W in different called function | |
-| 43 | R in called function | W in nested called function body | |
-| 44 | R in nested called function | W in body | |
-| 45 | R in nested called function | W in called function | |
-| 46 | R in nested called function | W in nested called function | |
+| 41 | R in called function | W in body | X |
+| 42 | R in called function | W in called function | X |
+| 42_2 | R in called function | W in different called function | X |
+| 43 | R in called function | W in nested called function body | X |
+| 44 | R in nested called function | W in body | X |
+| 45 | R in nested called function | W in called function | X |
+| 46 | R in nested called function | W in nested called function | X |
 | 47 | R is loop index read | W is loop index increment | |
 | 48 | R is loop index read | W is loop index increment in next iteration | |
 | 49 | R is loop index read as variable length array index | W is loop index increment | |
