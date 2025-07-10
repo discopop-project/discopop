@@ -153,14 +153,14 @@
 | 12 | variable length array pointer arithmetics | pointer | X |
 | 13 | variable length array access | variable length pointer arithmetics | X |
 | 14 | variable length pointer arithmetics | alias | X |
-| 15 | W before loop | W in loop initialization | |
-| 16 | W before loop | W in loop condition | |
-| 17 | W before loop | W in loop increment | |
-| 18 | W before loop | W in loop | |
-| 19 | W before loop | W in nested loop | |
-| 20 | W before loop | W in function parameters | |
-| 21 | W before loop | W in called function | |
-| 22 | W before loop | W after loop
+| 15 | W before loop | W in loop initialization | X |
+| 16 | W before loop | W in loop condition | X |
+| 17 | W before loop | W in loop increment | X |
+| 18 | W before loop | W in loop | X |
+| 19 | W before loop | W in nested loop | X |
+| 20 | W before loop | W in function parameters | X |
+| 21 | W before loop | W in called function | X |
+| 22 | W before loop | W after loop | X |
 | 23 | W in loop increment (array) | W in loop condition | |
 | 24 | W in loop increment (array) | W in loop | |
 | 25 | W in loop increment (array) | W in nested loop | |
