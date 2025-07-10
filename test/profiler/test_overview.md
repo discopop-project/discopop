@@ -143,16 +143,16 @@
 | 2 | alias | variable | X |
 | 3 | variable | pointer | X |
 | 4 | pointer | variable | X |
-| 5 | static length array access | pointer | |
-| 6 | pointer | static length array access | |
-| 7 | static length array pointer arithmetics | pointer | |
-| 8 | static length array access | static length pointer arithmetics | |
-| 9 | static length pointer arithmetics | alias | |
-| 10 | variable length array access | pointer | |
-| 11 | pointer | variable length array access | |
-| 12 | variable length array pointer arithmetics | pointer | |
-| 13 | variable length array access | variable length pointer arithmetics | |
-| 14 | variable length pointer arithmetics | alias | |
+| 5 | static length array access | pointer | X |
+| 6 | pointer | static length array access | X |
+| 7 | static length array pointer arithmetics | pointer | X |
+| 8 | static length array access | static length pointer arithmetics | X |
+| 9 | static length pointer arithmetics | alias | X |
+| 10 | variable length array access | pointer | X |
+| 11 | pointer | variable length array access | X |
+| 12 | variable length array pointer arithmetics | pointer | X |
+| 13 | variable length array access | variable length pointer arithmetics | X |
+| 14 | variable length pointer arithmetics | alias | X |
 | 15 | W before loop | W in loop initialization | |
 | 16 | W before loop | W in loop condition | |
 | 17 | W before loop | W in loop increment | |
