@@ -113,8 +113,8 @@
 | 31 | R in loop body | W in function parameters | X |
 | 32 | R in loop body | W in called function | X |
 | 33 | R in loop body | W after loop | X |
-| 34 | R in body | W in function parameters | |
-| 35 | R in body | W in called function | |
+| 34 | R in body | W in function parameters | X |
+| 35 | R in body | W in called function | X |
 | 36 | R in loop body | W in loop body (intra-iteration) | |
 | 37 | R in loop body | W in loop body (inter-iteration forward) | |
 | 38 | R in loop body | W in loop body (inter-iteration forward arbitrary distance) | |
