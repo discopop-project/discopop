@@ -161,18 +161,18 @@
 | 20 | W before loop | W in function parameters | X |
 | 21 | W before loop | W in called function | X |
 | 22 | W before loop | W after loop | X |
-| 23 | W in loop increment (array) | W in loop condition | |
-| 24 | W in loop increment (array) | W in loop | |
-| 25 | W in loop increment (array) | W in nested loop | |
-| 26 | W in loop increment (array) | W in function parameters | |
-| 27 | W in loop increment (array) | W in called function | |
-| 28 | W in loop increment (array) | W after loop | |
-| 23_2 | W in loop increment (var) | W in loop condition | |
-| 24_2 | W in loop increment (var) | W in loop | |
-| 25_2 | W in loop increment (var) | W in nested loop | |
-| 26_2 | W in loop increment (var) | W in function parameters | |
-| 27_2 | W in loop increment (var) | W in called function | |
-| 28 | W in loop increment | W after loop | |
+| 23 | W in loop increment (array) | W in loop condition | X |
+| 24 | W in loop increment (array) | W in loop | X |
+| 25 | W in loop increment (array) | W in nested loop | X |
+| 26 | W in loop increment (array) | W in function parameters | X |
+| 27 | W in loop increment (array) | W in called function | X |
+| 28 | W in loop increment (array) | W after loop | X |
+| 23_2 | W in loop increment (var) | W in loop condition | X |
+| 24_2 | W in loop increment (var) | W in loop | X |
+| 25_2 | W in loop increment (var) | W in nested loop | X |
+| 26_2 | W in loop increment (var) | W in function parameters | X |
+| 27_2 | W in loop increment (var) | W in called function | X |
+| 28_2 | W in loop increment | W after loop | X |
 | 29 | W in loop body | W in loop body | |
 | 30 | W in loop body | W in nested loop | |
 | 31 | W in loop body | W in function parameters | |
