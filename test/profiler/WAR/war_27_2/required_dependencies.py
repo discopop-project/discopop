@@ -2,5 +2,5 @@ from typing import List
 
 
 required_dependencies_list: List[str] = [
-    "1:13 WAR 1:12|GEPRESULT_arr",
+    "1:4 WAR 1:11|a",
 ]
