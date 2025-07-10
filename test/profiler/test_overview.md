@@ -124,15 +124,15 @@
 | 44 | R in nested called function | W in body | X |
 | 45 | R in nested called function | W in called function | X |
 | 46 | R in nested called function | W in nested called function | X |
-| 47 | R is loop index read | W is loop index increment | |
-| 48 | R is loop index read | W is loop index increment in next iteration | |
-| 49 | R is loop index read as variable length array index | W is loop index increment | |
+| 47 | R is loop index read | W is loop index increment | X |
+| 48 | R is loop index read | W is loop index increment in next iteration | X |
+| 49 | R is loop index read as variable length array index | W is loop index increment | X |
 | 50 | R is loop index read as static length array index | W is loop index increment | |
-| 51 | heap array access | pointer | |
-| 52 | pointer | heap array access | |
-| 53 | heap array pointer arithmetics | pointer | |
-| 54 | heap array access | heap pointer arithmetics | |
-| 55 | heap pointer arithmetics | alias | |
+| 51 | heap array access | pointer | X |
+| 52 | pointer | heap array access | X |
+| 53 | heap array pointer arithmetics | pointer | X |
+| 54 | heap array access | heap pointer arithmetics | X |
+| 55 | heap pointer arithmetics | alias | X |
 
 
 ## WAW
