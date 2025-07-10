@@ -173,13 +173,13 @@
 | 26_2 | W in loop increment (var) | W in function parameters | X |
 | 27_2 | W in loop increment (var) | W in called function | X |
 | 28_2 | W in loop increment | W after loop | X |
-| 29 | W in loop body | W in loop body | |
-| 30 | W in loop body | W in nested loop | |
-| 31 | W in loop body | W in function parameters | |
-| 32 | W in loop body | W in called function | |
-| 33 | W in loop body | W after loop | |
-| 34 | W in body | W in function parameters | |
-| 35 | W in body | W in called function | |
+| 29 | W in loop body | W in loop body | X |
+| 30 | W in loop body | W in nested loop | X |
+| 31 | W in loop body | W in function parameters | X |
+| 32 | W in loop body | W in called function | X |
+| 33 | W in loop body | W after loop | X |
+| 34 | W in body | W in function parameters | X |
+| 35 | W in body | W in called function | X |
 | 36 | W in loop body | W in loop body (intra-iteration) | |
 | 37 | W in loop body | W in loop body (inter-iteration forward) | |
 | 38 | W in loop body | W in loop body (inter-iteration forward arbitrary distance) | |
