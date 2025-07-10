@@ -108,11 +108,11 @@
 | 26_2 | R in loop increment (var) | W in function parameters | X |
 | 27_2 | R in loop increment (var) | W in called function | X |
 | 28_2 | R in loop increment (var) | W after loop | X |
-| 29 | R in loop body | W in loop body | |
-| 30 | R in loop body | W in nested loop | |
-| 31 | R in loop body | W in function parameters | |
-| 32 | R in loop body | W in called function | |
-| 33 | R in loop body | W after loop | |
+| 29 | R in loop body | W in loop body | X |
+| 30 | R in loop body | W in nested loop | X |
+| 31 | R in loop body | W in function parameters | X |
+| 32 | R in loop body | W in called function | X |
+| 33 | R in loop body | W after loop | X |
 | 34 | R in body | W in function parameters | |
 | 35 | R in body | W in called function | |
 | 36 | R in loop body | W in loop body (intra-iteration) | |
