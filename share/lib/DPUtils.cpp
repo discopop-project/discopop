@@ -371,10 +371,10 @@ string VariableNameFinder::getVarName(Value const *V) {
 
   if (V->hasName()) {
     string r = V->getName().str();
-    std::size_t found = r.find(".addr");
-    if (found != string::npos) {
-      return r.erase(found);
-    }
+//    std::size_t found = r.find(".addr");
+//    if (found != string::npos) {
+//      return r.erase(found);
+//    }
     return r;
   }
   return "!";
