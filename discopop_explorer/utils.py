@@ -734,7 +734,7 @@ def classify_loop_variables(
         gep_mem_regs = set([mr for mr in vars[var] if mr.startswith("GEPRESULT_")])
 
         for subset_idx, mem_reg_subset in enumerate([non_gep_mem_regs, gep_mem_regs]):
-            if subset_idx > 0 and len(mem_reg_subset) == 0:
+            if subset_idx >= 0 and len(mem_reg_subset) == 0:
                 continue
             if is_loop_index2(pet, loop, var.name):
                 if is_read_in_subtree(mem_reg_subset, rev_raw, rst):
