@@ -141,15 +141,16 @@ def show_configurations_with_execution(
             )
             dp_compile_successful = ret is not None and ret[0] == 0
 
-            ret = execute_configuration(
-                arguments,
-                dp_project_path,
-                config,
-                dp_settings,
-                os.path.join(config, "execute.sh"),
-                __get_thread_count(config, "dp", config_thread_counts),
-            )
-            dp_execute_successful = ret is not None and ret[0] == 0
+            if dp_compile_successful:
+                ret = execute_configuration(
+                    arguments,
+                    dp_project_path,
+                    config,
+                    dp_settings,
+                    os.path.join(config, "execute.sh"),
+                    __get_thread_count(config, "dp", config_thread_counts),
+                )
+                dp_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, dp_project_path)
         # --> hd
@@ -171,15 +172,17 @@ def show_configurations_with_execution(
                 __get_thread_count(config, "hd", config_thread_counts),
             )
             hd_compile_successful = ret is not None and ret[0] == 0
-            ret = execute_configuration(
-                arguments,
-                hd_project_path,
-                config,
-                hd_settings,
-                os.path.join(config, "execute.sh"),
-                __get_thread_count(config, "hd", config_thread_counts),
-            )
-            hd_execute_successful = ret is not None and ret[0] == 0
+
+            if hd_compile_successful:
+                ret = execute_configuration(
+                    arguments,
+                    hd_project_path,
+                    config,
+                    hd_settings,
+                    os.path.join(config, "execute.sh"),
+                    __get_thread_count(config, "hd", config_thread_counts),
+                )
+                hd_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, hd_project_path)
         # --> seq
@@ -200,15 +203,17 @@ def show_configurations_with_execution(
                 __get_thread_count(config, "seq", config_thread_counts),
             )
             seq_compile_successful = ret is not None and ret[0] == 0
-            ret = execute_configuration(
-                arguments,
-                seq_project_path,
-                config,
-                seq_settings,
-                os.path.join(config, "execute.sh"),
-                __get_thread_count(config, "seq", config_thread_counts),
-            )
-            seq_execute_successful = ret is not None and ret[0] == 0
+
+            if seq_compile_successful:
+                ret = execute_configuration(
+                    arguments,
+                    seq_project_path,
+                    config,
+                    seq_settings,
+                    os.path.join(config, "execute.sh"),
+                    __get_thread_count(config, "seq", config_thread_counts),
+                )
+                seq_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, seq_project_path)
         # --> par
@@ -229,15 +234,17 @@ def show_configurations_with_execution(
                 __get_thread_count(config, "par", config_thread_counts),
             )
             par_compile_successful = ret is not None and ret[0] == 0
-            ret = execute_configuration(
-                arguments,
-                par_project_path,
-                config,
-                par_settings,
-                os.path.join(config, "execute.sh"),
-                __get_thread_count(config, "par", config_thread_counts),
-            )
-            par_execute_successful = ret is not None and ret[0] == 0
+
+            if par_compile_successful:
+                ret = execute_configuration(
+                    arguments,
+                    par_project_path,
+                    config,
+                    par_settings,
+                    os.path.join(config, "execute.sh"),
+                    __get_thread_count(config, "par", config_thread_counts),
+                )
+                par_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, par_project_path)
 
