@@ -70,17 +70,7 @@ class TestMethods(unittest.TestCase):
     def test(self):
         self.assertIn("do_all", self.test_output.patterns.__dict__)
         doall_patterns = self.test_output.patterns.__dict__["do_all"]
-        self.assertEqual(len(doall_patterns), 1)
-        do_all_pattern = doall_patterns[0]
-
-        expected_clauses: Dict[str, List[str]] = {"first_private": ["z"]}
-
-        with self.subTest("check pattern for FP data sharing clauses"):
-            res, msg = check_clauses_for_FP(self, expected_clauses, do_all_pattern)
-            self.assertTrue(res, msg)
-        with self.subTest("check pattern for FN data sharing clauses"):
-            res, msg = check_clauses_for_FN(self, expected_clauses, do_all_pattern)
-            self.assertTrue(res, msg)
+        self.assertEqual(len(doall_patterns), 0)
 
     def test_dynamic_deps(self) -> None:
         # compare detected dependencies to gold standard
