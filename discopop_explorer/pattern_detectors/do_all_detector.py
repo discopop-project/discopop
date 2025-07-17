@@ -273,8 +273,8 @@ def __check_loop_dependencies(
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Do-All pattern."""
     # get recursive children of source and target
-    node_1_children_ids = [node.id for node in subtree_of_type(pet, node_1, CUNode)]
-    node_2_children_ids = [node.id for node in subtree_of_type(pet, node_2, CUNode)]
+    node_1_children_ids = [node.id for node in subtree_of_type(pet, node_1, CUNode, ignore_called_functions=False)]
+    node_2_children_ids = [node.id for node in subtree_of_type(pet, node_2, CUNode, ignore_called_functions=False)]
 
     # get dependency edges between children nodes
     deps = set()
@@ -501,7 +501,7 @@ def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
             if s not in visited and s not in queue:
                 queue.append(s)
 
-    return [pet.node_at(p).start_position() for p in parents]
+    return [pet.node_at(p).start_position() for p in parents if p != root_loop.id]
 
 
 def __get_called_functions(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:

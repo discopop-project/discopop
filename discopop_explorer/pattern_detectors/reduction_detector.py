@@ -170,7 +170,7 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
 
     # get required metadata
     loop_start_lines: List[LineID] = []
-    root_children = subtree_of_type(pet, root, (CUNode, LoopNode))
+    root_children = subtree_of_type(pet, root, (CUNode, LoopNode), ignore_called_functions=False)
     root_children_cus: List[CUNode] = [cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU]
     root_children_loops: List[LoopNode] = [cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:
