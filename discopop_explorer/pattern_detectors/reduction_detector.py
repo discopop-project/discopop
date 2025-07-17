@@ -114,6 +114,10 @@ def run_detection(
     result: List[ReductionInfo] = []
     nodes = all_nodes(pet, LoopNode)
 
+    ## DEBUG
+    #    nodes = [n for n in nodes if n.file_id == 2]
+    ## !DEBUG
+
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
@@ -166,7 +170,7 @@ def __detect_reduction(pet: PEGraphX, root: LoopNode) -> bool:
 
     # get required metadata
     loop_start_lines: List[LineID] = []
-    root_children = subtree_of_type(pet, root, (CUNode, LoopNode))
+    root_children = subtree_of_type(pet, root, (CUNode, LoopNode), ignore_called_functions=False)
     root_children_cus: List[CUNode] = [cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU]
     root_children_loops: List[LoopNode] = [cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:

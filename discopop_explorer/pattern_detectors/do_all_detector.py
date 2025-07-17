@@ -121,6 +121,10 @@ def run_detection(
     result: List[DoAllInfo] = []
     nodes = all_nodes(pet, LoopNode)
 
+    ## DEBUG
+    #    nodes = [n for n in nodes if n.file_id == 2]
+    ## !DEBUG
+
     # remove reduction loops
     print("ASDF: ", [r.node_id for r in reduction_info])
     print("Nodes: ", [n.start_position() for n in nodes])
@@ -184,11 +188,16 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
 
     # get required metadata
     loop_start_lines: List[LineID] = []
-    root_children = subtree_of_type(pet, root_loop, (CUNode, LoopNode))
+    root_children = subtree_of_type(pet, root_loop, (CUNode, LoopNode), ignore_called_functions=False)
     root_children_cus = [cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU]
     root_children_loops = [cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:
         loop_start_lines.append(v.start_position())
+    ## DEBUG
+    if root_loop.start_line == 517:
+        pass
+    ## !DEBUG
+
     fp, p, lp, s, r = classify_loop_variables(pet, root_loop)
 
     # get parents of root_loop
@@ -264,8 +273,8 @@ def __check_loop_dependencies(
     """Returns True, if dependencies between the respective subgraphs chave been found.
     Returns False otherwise, which results in the potential suggestion of a Do-All pattern."""
     # get recursive children of source and target
-    node_1_children_ids = [node.id for node in subtree_of_type(pet, node_1, CUNode)]
-    node_2_children_ids = [node.id for node in subtree_of_type(pet, node_2, CUNode)]
+    node_1_children_ids = [node.id for node in subtree_of_type(pet, node_1, CUNode, ignore_called_functions=False)]
+    node_2_children_ids = [node.id for node in subtree_of_type(pet, node_2, CUNode, ignore_called_functions=False)]
 
     # get dependency edges between children nodes
     deps = set()
@@ -286,7 +295,11 @@ def __check_loop_dependencies(
     for var, mem_regs in defined_inside_loop:
         memory_regions_defined_in_loop.update(mem_regs)
 
+    pass
+
     for source, target, dep in deps:
+        if root_loop.start_position() == "1:27":
+            pass
         # todo: move this calculation to the innermost point possible to reduce computation costs
         # get metadata for dependency
         dep_source_nesting_level = __calculate_nesting_level(pet, root_loop, source)
@@ -492,7 +505,7 @@ def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
             if s not in visited and s not in queue:
                 queue.append(s)
 
-    return [pet.node_at(p).start_position() for p in parents]
+    return [pet.node_at(p).start_position() for p in parents if p != root_loop.id]
 
 
 def __get_called_functions(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
