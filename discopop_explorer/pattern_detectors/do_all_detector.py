@@ -188,7 +188,7 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
 
     # get required metadata
     loop_start_lines: List[LineID] = []
-    root_children = subtree_of_type(pet, root_loop, (CUNode, LoopNode))
+    root_children = subtree_of_type(pet, root_loop, (CUNode, LoopNode), ignore_called_functions=False)
     root_children_cus = [cast(CUNode, cu) for cu in root_children if cu.type == NodeType.CU]
     root_children_loops = [cast(LoopNode, cu) for cu in root_children if cu.type == NodeType.LOOP]
     for v in root_children_loops:
@@ -295,7 +295,11 @@ def __check_loop_dependencies(
     for var, mem_regs in defined_inside_loop:
         memory_regions_defined_in_loop.update(mem_regs)
 
+    pass
+
     for source, target, dep in deps:
+        if root_loop.start_position() == "1:27":
+            pass
         # todo: move this calculation to the innermost point possible to reduce computation costs
         # get metadata for dependency
         dep_source_nesting_level = __calculate_nesting_level(pet, root_loop, source)
