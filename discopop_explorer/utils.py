@@ -713,13 +713,32 @@ def classify_loop_variables(
     initialized_memory_regions: Set[MemoryRegion] = set()
     for var in initialized_in_loop:
         initialized_memory_regions.update(initialized_in_loop[var])
+    uninitialized_vars: Dict[Variable, Set[MemoryRegion]] = dict()
+    for var in vars:
+        if var in prior_known_vars or var in initialized_in_loop:
+            continue
+        require_continue = False
+        for entry in vars[var]:
+            if entry in prior_known_mem_regs or entry in initialized_memory_regions:
+                require_continue = True
+                break
+        if require_continue:
+            continue
+
+        uninitialized_vars[var] = vars[var]
+    uninitialized_memregs: Set[MemoryRegion] = set()
+    for var in uninitialized_vars:
+        for mem_reg in uninitialized_vars[var]:
+            uninitialized_memregs.add(mem_reg)
 
     for var in vars:
         vars[var] = set(
             [
                 mem_reg
                 for mem_reg in vars[var]
-                if mem_reg in prior_known_mem_regs or mem_reg in initialized_memory_regions
+                if mem_reg in prior_known_mem_regs
+                or mem_reg in initialized_memory_regions
+                or mem_reg in uninitialized_memregs
             ]
         )
 
@@ -770,7 +789,9 @@ def classify_loop_variables(
                             first_private.append(var)
 
             elif is_first_written(mem_reg_subset, raw, war, sub):
-                if len(mem_reg_subset.intersection(initialized_memory_regions)) > 0 and subset_idx < 1:
+                if (len(mem_reg_subset.intersection(initialized_memory_regions)) > 0 and subset_idx < 1) or len(
+                    mem_reg_subset.intersection(uninitialized_memregs)
+                ) > 0:
                     # subset_idx < 1 to ignore this check for gep memory regions, as they create additional INIT dependencies
                     # variable is initialized in loop.
 
@@ -803,9 +824,10 @@ def classify_loop_variables(
                 metadata_safe_index_accesses.append(var)
 
     # modify classifications
-    first_private, private, last_private, shared, reduction = __modify_classifications(
-        first_private, private, last_private, shared, reduction, metadata_safe_index_accesses
-    )
+    # note: 23.07.25: disabled, since private is a more performant alternative to shared in most cases
+    #    first_private, private, last_private, shared, reduction = __modify_classifications(
+    #        first_private, private, last_private, shared, reduction, metadata_safe_index_accesses
+    #    )
 
     # merge classifications
     first_private, private, last_private, shared, reduction = __merge_classifications(
