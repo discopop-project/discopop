@@ -8,7 +8,7 @@ int main(int argc, const char *argv[]) {
 
   int z = 0;
 
-  // DO-ALL shared(Arr)
+  // DO-ALL private(Arr)
   for (int i = 0; i < n; i++) {
     Arr[i] = i;
     int x = Arr[i];
