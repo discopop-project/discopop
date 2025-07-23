@@ -113,8 +113,8 @@ def run(arguments: AutotunerArguments) -> None:
     best_suggestion_configuration: Tuple[List[SUGGESTION_ID], CodeConfiguration] = ([], reference_configuration)
 
     time_limit_s = 3600  # seconds
-    linear_hotspot_combination = False
-    linear_hotspot_combination_with_refinement = True
+    linear_hotspot_combination = True
+    linear_hotspot_combination_with_refinement = False
     parallel_region_combination_with_refinement = False
 
     if arguments.suggestions is None:
