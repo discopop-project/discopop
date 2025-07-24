@@ -46,33 +46,37 @@ def get_patterns_by_hotspot_type(
         end_line = int(pattern.end_line.split(":")[1])
         file_id = int(pattern.start_line.split(":")[0])
 
-        # check for type
-        found_type = False
-        for entry_2 in yes_hotspot_loops:
-            if file_id == entry_2[0]:
-                if start_line <= entry_2[1] and entry_2[1] <= end_line:
-                    result_dict[HotspotType.YES].append(pattern_id)
-                    found_type = True
-                    break
-        if found_type:
-            continue
+        if hotspot_information:
+            # check for hotspot type if hotspot information exists
+            found_type = False
+            for entry_2 in yes_hotspot_loops:
+                if file_id == entry_2[0]:
+                    if start_line <= entry_2[1] and entry_2[1] <= end_line:
+                        result_dict[HotspotType.YES].append(pattern_id)
+                        found_type = True
+                        break
+            if found_type:
+                continue
 
-        for entry_2 in no_hotspot_loops:
-            if file_id == entry_2[0]:
-                if start_line <= entry_2[1] and entry_2[1] <= end_line:
-                    result_dict[HotspotType.NO].append(pattern_id)
-                    found_type = True
-                    break
-        if found_type:
-            continue
+            for entry_2 in no_hotspot_loops:
+                if file_id == entry_2[0]:
+                    if start_line <= entry_2[1] and entry_2[1] <= end_line:
+                        result_dict[HotspotType.NO].append(pattern_id)
+                        found_type = True
+                        break
+            if found_type:
+                continue
 
-        for entry_2 in maybe_hotspot_loops:
-            if file_id == entry_2[0]:
-                if start_line <= entry_2[1] and entry_2[1] <= end_line:
-                    result_dict[HotspotType.MAYBE].append(pattern_id)
-                    found_type = True
-                    break
-        if found_type:
-            continue
+            for entry_2 in maybe_hotspot_loops:
+                if file_id == entry_2[0]:
+                    if start_line <= entry_2[1] and entry_2[1] <= end_line:
+                        result_dict[HotspotType.MAYBE].append(pattern_id)
+                        found_type = True
+                        break
+            if found_type:
+                continue
+        else:
+            # fallback, consider all suggestions
+            result_dict[HotspotType.YES].append(pattern_id)
 
     return result_dict

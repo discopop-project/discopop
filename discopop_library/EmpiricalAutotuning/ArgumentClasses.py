@@ -30,6 +30,7 @@ class AutotunerArguments(GeneralArguments):
     project_path: str = ""
     configuration_path: str = ""
     hotspot_types: str = ""
+    algorithm: int = 0
 
     def __post_init__(self) -> None:
         self.project_path = str(Path(self.dot_dp_path).parent.absolute())
