@@ -943,11 +943,16 @@ def __merge_classifications(
         for var_2 in private:
             if var_1.name == var_2.name:
                 remove_from_private.add(var_2)
-    # Rule 3: shared is less restrictive than any private
-    for var_1 in first_private + last_private + private:
+    # Rule 3: shared is less restrictive than first_private or last_private
+    for var_1 in first_private + last_private:
         for var_2 in shared:
             if var_1.name == var_2.name:
                 remove_from_shared.add(var_2)
+    # Rule 4: if a variable is classifyable as shared and private, select shared.
+    for var_1 in shared:
+        for var_2 in private:
+            if var_1.name == var_2.name:
+                remove_from_private.add(var_2)
 
     new_first_private = [v for v in first_private if v not in remove_from_first_private]
     new_last_private = [v for v in last_private if v not in remove_from_last_private]
