@@ -73,7 +73,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(len(doall_patterns), 1)
         do_all_pattern = doall_patterns[0]
 
-        expected_clauses: Dict[str, List[str]] = {"private": ["Arr"]}
+        expected_clauses: Dict[str, List[str]] = {"shared": ["Arr"]}
 
         with self.subTest("check pattern for FP data sharing clauses"):
             res, msg = check_clauses_for_FP(self, expected_clauses, do_all_pattern)
