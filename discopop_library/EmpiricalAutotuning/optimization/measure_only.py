@@ -8,6 +8,8 @@
 
 from logging import Logger
 from typing import Callable, Dict, List, Set, Tuple, cast
+
+from tqdm import tqdm
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
@@ -54,13 +56,10 @@ def execute_measure_only(
     # step 1: identify valid suggestions
     valid: Set[int] = set()
     queue: List[List[int]] = [[suggestion] for suggestion in configuration]
-    logger.info("Identifying valid suggestions:")
+    logger.info("Measuring individual suggestions:")
     logger.info("Press CTRL+C to manually stop the search.")
     try:
-        dbg_initial_queue_len = len(queue)
-        while queue:
-            logger.info("--- " + str(len(queue)) + " / " + str(dbg_initial_queue_len))
-            current = queue.pop()
+        for current in tqdm(queue):
             # execute current and check validity
             tmp_config = reference_configuration.create_copy(
                 arguments, "par_settings.json", get_unique_configuration_id
