@@ -196,26 +196,35 @@ def perform_evolutionary_search(
     time_series_convergence_threshold: List[float] = [time_series_max[-1] * convergence_factor]
     plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
 
-    while not converged:
-        logger.info("\nGeneration: " + str(generation_counter))
+    try:
+        while not converged:
+            logger.info("\nGeneration: " + str(generation_counter))
 
-        population, unused_maybes = __fill_population(logger, population, population_size, unused_maybes)
-        population = __crossover(logger, population, max(1, int(selection_size * crossover_factor)))
-        population = __mutate(logger, population, max(1, int(selection_size * mutations_factor)))
-        generation_counter += 1
-        __calculate_fitness(
-            logger, population, reference_configuration, arguments, timeout_after, get_unique_configuration_id
-        )
-        population = __select(logger, population, selection_size)
+            population, unused_maybes = __fill_population(logger, population, population_size, unused_maybes)
+            population = __crossover(logger, population, max(1, int(selection_size * crossover_factor)))
+            population = __mutate(logger, population, max(1, int(selection_size * mutations_factor)))
+            generation_counter += 1
+            __calculate_fitness(
+                logger, population, reference_configuration, arguments, timeout_after, get_unique_configuration_id
+            )
+            population = __select(logger, population, selection_size)
+            # update time series
+            time_series_x_values.append(generation_counter)
+            time_series_max.append(get_maximum_fitness())
+            time_series_avg.append(get_average_fitness(population))
+            time_series_convergence_threshold.append(time_series_max[-1] * convergence_factor)
+            plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
+            # check convergence
+            if time_series_avg[-1] >= (time_series_max[-1] * convergence_factor) and generation_counter > 2:
+                converged = True
+    except KeyboardInterrupt:
+        logger.info("Manually stopped search.")
         # update time series
         time_series_x_values.append(generation_counter)
         time_series_max.append(get_maximum_fitness())
         time_series_avg.append(get_average_fitness(population))
         time_series_convergence_threshold.append(time_series_max[-1] * convergence_factor)
         plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
-        # check convergence
-        if time_series_avg[-1] >= (time_series_max[-1] * convergence_factor) and generation_counter > 2:
-            converged = True
 
     population = __select(logger, population, selection_size)
     logger.info("Final population:\n" + __population_to_string(population))
@@ -263,9 +272,13 @@ def get_maximum_fitness() -> float:
 def get_average_fitness(population: List[CHROMOSOME]) -> float:
     global fitness_cache
     sum = 0.0
+    element_count = 0
     for key in population:
+        if key not in fitness_cache:
+            continue
         sum += fitness_cache[key]
-    return sum / len(population)
+        element_count += 1
+    return sum / max(1, element_count)
 
 
 def __mutate(logger: Logger, population: List[CHROMOSOME], mutations_count: int) -> List[CHROMOSOME]:
