@@ -9,7 +9,7 @@
 from logging import Logger
 from typing import Callable, Dict, List, Set, Tuple, cast
 
-from tqdm import tqdm
+from tqdm import tqdm  # type: ignore
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration

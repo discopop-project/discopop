@@ -28,7 +28,7 @@ from discopop_library.HostpotLoader.hostpot_loader import AVERAGE_RUNTIME, FILEI
 from discopop_library.result_classes.DetectionResult import DetectionResult
 
 import time
-import plotille
+import plotille  # type: ignore
 
 FITNESS = float
 CHROMOSOME = Tuple[int, ...]
