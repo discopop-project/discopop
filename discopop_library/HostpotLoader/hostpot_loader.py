@@ -57,5 +57,4 @@ def run(
                                 float(entry["avr"]),
                             )
                         )
-    logger.info("Loaded hotspots:\n" + str(result_dict))
     return result_dict

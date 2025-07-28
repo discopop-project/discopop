@@ -214,7 +214,7 @@ def perform_evolutionary_search(
         time_series_convergence_threshold.append(time_series_max[-1] * convergence_factor)
         plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
         # check convergence
-        if time_series_avg[-1] >= (time_series_max[-1] * convergence_factor):
+        if time_series_avg[-1] >= (time_series_max[-1] * convergence_factor) and generation_counter > 2:
             converged = True
 
     population = __select(logger, population, selection_size)
@@ -378,7 +378,7 @@ def __select(logger: Logger, population: List[CHROMOSOME], selection_size: int) 
             break
         selection.append(key)
 
-    logger.info("SELECTED: " + str(len(selection)))
+    logger.info("Selected:\n " + __population_to_string(selection))
 
     return selection
 
@@ -416,9 +416,7 @@ def __calculate_fitness(
     )
 
     logger.info("--- Executing population")
-    for entry in tqdm(population):
-        if entry in fitness_cache:
-            continue
+    for entry in tqdm([p for p in population if p not in fitness_cache]):
         if entry not in compilation_successful or not compilation_successful[entry]:
             continue
 
