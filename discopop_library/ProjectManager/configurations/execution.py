@@ -15,6 +15,8 @@ import subprocess
 import time
 from typing import Dict, List, Optional, Tuple
 
+from filelock import FileLock
+
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
 
 PATH = str
@@ -119,49 +121,52 @@ def execute_configuration(
     logger.debug("-> elapsed time: " + str(elapsed) + "s")
 
     # save execution results
-    execution_results_path = os.path.join(arguments.project_dir, "execution_results.json")
-    execution_results = dict()
-    if os.path.exists(execution_results_path):
-        with open(execution_results_path, "r") as f:
-            execution_results = json.load(f)
+    lock = FileLock(os.path.join(arguments.project_dir, "execution_results.json.lock"))
+    with lock:
 
-    if config_name not in execution_results:
-        execution_results[config_name] = dict()
-    if script_name not in execution_results[config_name]:
-        execution_results[config_name][script_name] = dict()
-    if settings_name not in execution_results[config_name][script_name]:
-        execution_results[config_name][script_name][settings_name] = []
+        execution_results_path = os.path.join(arguments.project_dir, "execution_results.json")
+        execution_results = dict()
+        if os.path.exists(execution_results_path):
+            with open(execution_results_path, "r") as f:
+                execution_results = json.load(f)
 
-    label: str = "" + arguments.label_prefix
-    if arguments.apply_suggestions == "auto":
-        label += "auto"
-    if arguments.apply_suggestions == "prm":
-        label += "prm"
+        if config_name not in execution_results:
+            execution_results[config_name] = dict()
+        if script_name not in execution_results[config_name]:
+            execution_results[config_name][script_name] = dict()
+        if settings_name not in execution_results[config_name][script_name]:
+            execution_results[config_name][script_name][settings_name] = []
 
-    result_dict = {
-        "applied_suggestions": applied_suggestions,
-        "code": p.returncode,
-        "stdout": stdout.decode("utf-8") if not timeout_expired else "",
-        "stderr": stderr.decode("utf-8") if not timeout_expired else "",
-        "timeout_expired": timeout_expired,
-        "time": elapsed,
-        "thread_count": thread_count,
-        "label": label,
-    }
-    # check for duplicates and overwrite them
-    to_be_removed: List[int] = []
-    for idx, entry in enumerate(execution_results[config_name][script_name][settings_name]):
-        if entry["applied_suggestions"] == applied_suggestions:
-            if entry["thread_count"] == thread_count:
-                if entry["label"] == label:
-                    to_be_removed.append(idx)
-    for idx in sorted(to_be_removed, reverse=True):
-        del execution_results[config_name][script_name][settings_name][idx]
-    execution_results[config_name][script_name][settings_name].append(result_dict)
+        label: str = "" + arguments.label_prefix
+        if arguments.apply_suggestions == "auto":
+            label += "auto"
+        if arguments.apply_suggestions == "prm":
+            label += "prm"
 
-    # overwrite execution results file
-    with open(execution_results_path, "w+") as f:
-        json.dump(execution_results, f, sort_keys=True, indent=4)
+        result_dict = {
+            "applied_suggestions": applied_suggestions,
+            "code": p.returncode,
+            "stdout": stdout.decode("utf-8") if not timeout_expired else "",
+            "stderr": stderr.decode("utf-8") if not timeout_expired else "",
+            "timeout_expired": timeout_expired,
+            "time": elapsed,
+            "thread_count": thread_count,
+            "label": label,
+        }
+        # check for duplicates and overwrite them
+        to_be_removed: List[int] = []
+        for idx, entry in enumerate(execution_results[config_name][script_name][settings_name]):
+            if entry["applied_suggestions"] == applied_suggestions:
+                if entry["thread_count"] == thread_count:
+                    if entry["label"] == label:
+                        to_be_removed.append(idx)
+        for idx in sorted(to_be_removed, reverse=True):
+            del execution_results[config_name][script_name][settings_name][idx]
+        execution_results[config_name][script_name][settings_name].append(result_dict)
+
+        # overwrite execution results file
+        with open(execution_results_path, "w+") as f:
+            json.dump(execution_results, f, sort_keys=True, indent=4)
 
     os.chdir(home_dir)
 

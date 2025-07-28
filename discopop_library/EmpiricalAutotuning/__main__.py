@@ -32,7 +32,7 @@ def parse_args() -> AutotunerArguments:
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     parser.add_argument("-p", "--plot", action="store_true", help="Allow the creation of interactive plots.")
-    parser.add_argument("-A", "--algorithm", type=int, default=0, help="Optimization algorithm. Values: 0: no combination of suggestions. 1: linear combination, 2: linear combination with refinement. Default: 0.")
+    parser.add_argument("-A", "--algorithm", type=int, default=0, help="Optimization algorithm. Values: 0: no combination of suggestions. 1: linear combination, 2: linear combination with refinement. 3: evolutionary combination. Default: 0.")
 #    parser.add_argument("--project-path", type=str, default=os.getcwd(), help="Root path of the project to be tuned. \
 #                        Important: Project root will be copied multiple times! It has to contain the executable scripts DP_COMPILER.sh and DP_EXECUTE.sh! \
 #                        DP_COMPILER.sh must allow the inclusion of OpenMP pragmas into the code. \

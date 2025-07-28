@@ -52,7 +52,13 @@ class CodeConfiguration(object):
     def execute(
         self, arguments: AutotunerArguments, timeout: Optional[float], thread_count: int, is_initial: bool = False
     ) -> None:
+        compilation_successful = self.compile_only(arguments, timeout, thread_count, is_initial)
+        if compilation_successful:
+            self.execute_only(arguments, timeout, thread_count, is_initial)
 
+    def compile_only(
+        self, arguments: AutotunerArguments, timeout: Optional[float], thread_count: int, is_initial: bool = False
+    ) -> bool:
         cm_args = ProjectManagerArguments(
             log_level=arguments.log_level,
             write_log=arguments.write_log,
@@ -86,21 +92,38 @@ class CodeConfiguration(object):
             print("Error during compilation!\n" + "" if ret is None else ("STDERR: " + ret[3]))
             self.execution_result = ExecutionResult(0.1, 1, False, False)
             compilation_successful = False
+        return compilation_successful
 
-        if compilation_successful:
-            ret = execute_configuration(
-                cm_args,
-                self.root_path,
-                os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration),
-                os.path.join(
-                    self.config_dot_dp_path, "project", "configs", arguments.configuration, self.settings_name
-                ),
-                os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, "execute.sh"),
-                thread_count,
-                timeout,
-            )
-        else:
-            ret = None
+    def execute_only(
+        self, arguments: AutotunerArguments, timeout: Optional[float], thread_count: int, is_initial: bool = False
+    ) -> None:
+        cm_args = ProjectManagerArguments(
+            log_level=arguments.log_level,
+            write_log=arguments.write_log,
+            project_root=arguments.project_path,
+            full_execute=False,
+            list=False,
+            execute_configurations=arguments.configuration,
+            execute_inplace=False,
+            skip_cleanup=arguments.skip_cleanup,
+            generate_report=False,
+            show_report=False,
+            initialize_directory=False,
+            apply_suggestions=None,
+            reset=False,
+            reset_execution_results=False,
+            label_prefix="",
+        )
+
+        ret = execute_configuration(
+            cm_args,
+            self.root_path,
+            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration),
+            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, self.settings_name),
+            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, "execute.sh"),
+            thread_count,
+            timeout,
+        )
         if ret is None:
             result_returncode = 1
             required_time = 1.0
