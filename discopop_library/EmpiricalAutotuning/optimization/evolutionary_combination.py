@@ -6,7 +6,9 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import copy
 from logging import Logger
+from multiprocessing.pool import Pool
 import random
 import sys
 from typing import Callable, Dict, List, Set, Tuple, cast
@@ -176,6 +178,7 @@ def perform_evolutionary_search(
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
     crossover_factor = 0.4
     mutations_factor = 0.5
+    convergence_factor = 0.9  # 0.9 --> average fitnes of the reached 90% of the best specimen
     ### END SETTINGS
 
     population, unused_maybes = __initialize(logger, population_size, patterns_by_hotspot_type)
@@ -184,17 +187,17 @@ def perform_evolutionary_search(
     )
     selection_size = max(1, int(len(population) * 0.85))
 
-    # TODO REMOVE
-    generations = 25
     generation_counter = 0
+    converged = False
 
     time_series_x_values: List[int] = [generation_counter]
     time_series_max: List[float] = [get_maximum_fitness()]
     time_series_avg: List[float] = [get_average_fitness(population)]
-    plot_time_series(time_series_x_values, time_series_max, time_series_avg)
+    time_series_convergence_threshold: List[float] = [time_series_max[-1] * convergence_factor]
+    plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
 
-    while generation_counter < generations:
-        print("\nGeneration", generation_counter, "/", generations)
+    while not converged:
+        logger.info("\nGeneration: " + str(generation_counter))
 
         population, unused_maybes = __fill_population(logger, population, population_size, unused_maybes)
         population = __crossover(logger, population, max(1, int(selection_size * crossover_factor)))
@@ -208,12 +211,16 @@ def perform_evolutionary_search(
         time_series_x_values.append(generation_counter)
         time_series_max.append(get_maximum_fitness())
         time_series_avg.append(get_average_fitness(population))
-        plot_time_series(time_series_x_values, time_series_max, time_series_avg)
+        time_series_convergence_threshold.append(time_series_max[-1] * convergence_factor)
+        plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
+        # check convergence
+        if time_series_avg[-1] >= (time_series_max[-1] * convergence_factor):
+            converged = True
 
     population = __select(logger, population, selection_size)
     logger.info("Final population:\n" + __population_to_string(population))
+    logger.info("Generations: " + str(generation_counter))
 
-    print("--> ", sorted(fitness_cache.items(), key=lambda item: item[1], reverse=True))
     for key in {k: v for k, v in sorted(fitness_cache.items(), key=lambda item: item[1], reverse=True)}:
         best_combination = key
         break
@@ -223,15 +230,25 @@ def perform_evolutionary_search(
 
 
 def plot_time_series(
-    time_series_x_values: List[int], time_series_max: List[float], time_series_avg: List[float]
+    time_series_x_values: List[int],
+    time_series_max: List[float],
+    time_series_avg: List[float],
+    time_series_convergence_threshold: List[float],
 ) -> None:
     fig = plotille.Figure()
     fig.height = 30
     fig.width = 60
     fig.x_label = "Generation"
     fig.y_label = "Fitness (speedup)"
-    fig.plot(time_series_x_values, time_series_max, interp="linear", lc="red", label="Maximum fitness")
+    fig.plot(time_series_x_values, time_series_max, interp="linear", lc="green", label="Maximum fitness")
     fig.plot(time_series_x_values, time_series_avg, interp="linear", lc="cyan", label="Average fitness")
+    fig.plot(
+        time_series_x_values,
+        time_series_convergence_threshold,
+        interp="linear",
+        lc="yellow",
+        label="Convergence threshold",
+    )
     print(fig.show(legend=True))
 
 
@@ -366,6 +383,9 @@ def __select(logger: Logger, population: List[CHROMOSOME], selection_size: int) 
     return selection
 
 
+entry_to_configuration: Dict[CHROMOSOME, CodeConfiguration] = dict()
+
+
 def __calculate_fitness(
     logger: Logger,
     population: List[CHROMOSOME],
@@ -378,26 +398,53 @@ def __calculate_fitness(
     global runtime_cache
     global best_execution_time
     global worst_execution_time
+    global entry_to_configuration
     logger.info("Calculating fitness...")
+    logger.info("--- Removing duplicates")
+    population = list(set(population))
+
+    compilation_successful: Dict[CHROMOSOME, bool] = dict()
+
+    compilation_successful, entry_to_configuration = __compile_population(
+        logger,
+        population,
+        reference_configuration,
+        arguments,
+        timeout_after,
+        get_unique_configuration_id,
+        compilation_successful,
+    )
+
+    logger.info("--- Executing population")
     for entry in tqdm(population):
         if entry in fitness_cache:
             continue
+        if entry not in compilation_successful or not compilation_successful[entry]:
+            continue
 
-        tmp_config = reference_configuration.create_copy(arguments, "par_settings.json", get_unique_configuration_id)
-        tmp_config.apply_suggestions(arguments, list(entry))
-        tmp_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
-        if not arguments.skip_cleanup:
-            tmp_config.deleteFolder()
+        entry_to_configuration[entry].execute_only(
+            arguments, timeout=timeout_after, thread_count=arguments.thread_count
+        )
 
-        return_code_cache[entry] = cast(ExecutionResult, tmp_config.execution_result).return_code
+        return_code_cache[entry] = cast(ExecutionResult, entry_to_configuration[entry].execution_result).return_code
         if (
-            cast(ExecutionResult, tmp_config.execution_result).return_code != 0
-            or not cast(ExecutionResult, tmp_config.execution_result).result_valid
-            or not cast(ExecutionResult, tmp_config.execution_result).thread_sanitizer
+            cast(ExecutionResult, entry_to_configuration[entry].execution_result).return_code != 0
+            or not cast(ExecutionResult, entry_to_configuration[entry].execution_result).result_valid
+            or not cast(ExecutionResult, entry_to_configuration[entry].execution_result).thread_sanitizer
         ):
             fitness_cache[entry] = 0.0
-        runtime = cast(ExecutionResult, tmp_config.execution_result).runtime
+        runtime = cast(ExecutionResult, entry_to_configuration[entry].execution_result).runtime
         runtime_cache[entry] = runtime
+
+        if not arguments.skip_cleanup:
+            entry_to_configuration[entry].deleteFolder()
+            del entry_to_configuration[entry]
+
+    logger.info("--- Cleanup ")
+    for entry in tqdm(entry_to_configuration):
+        if not arguments.skip_cleanup:
+            entry_to_configuration[entry].deleteFolder()
+    entry_to_configuration.clear()
 
     # find new best and worst runtime
     for key in population:
@@ -410,13 +457,63 @@ def __calculate_fitness(
 
     # update fitness
     for key in population:
-        if return_code_cache[key] == 0:
-            fitness_cache[key] = (
-                cast(ExecutionResult, reference_configuration.execution_result).runtime / runtime_cache[key]
-            )
+        if key in return_code_cache:
+            if return_code_cache[key] == 0:
+                fitness_cache[key] = (
+                    cast(ExecutionResult, reference_configuration.execution_result).runtime / runtime_cache[key]
+                )
+            else:
+                fitness_cache[key] = 0.0
         else:
             fitness_cache[key] = 0.0
     logger.info("Calculated fitness:\n" + __population_to_string(population))
+
+
+def __compile_population(
+    logger: Logger,
+    population: List[CHROMOSOME],
+    reference_configuration: CodeConfiguration,
+    arguments: AutotunerArguments,
+    timeout_after: float,
+    get_unique_configuration_id: Callable[[], int],
+    compilation_successful: Dict[CHROMOSOME, bool],
+) -> Tuple[Dict[CHROMOSOME, bool], Dict[CHROMOSOME, CodeConfiguration]]:
+    global entry_to_configuration
+    logger.info("--- Compiling population")
+
+    logger.info("----- Prepare code")
+    for entry in tqdm(population):
+        if entry in fitness_cache:
+            continue
+        entry_to_configuration[entry] = reference_configuration.create_copy(
+            arguments, "par_settings.json", get_unique_configuration_id
+        )
+        entry_to_configuration[entry].apply_suggestions(arguments, list(entry))
+    logger.info("----- Compiling")
+    local_results: List[Tuple[CHROMOSOME, bool]] = []
+    param_list: List[Tuple[CHROMOSOME, AutotunerArguments, float]] = []
+    for entry in population:
+        if entry in fitness_cache:
+            continue
+        param_list.append((entry, copy.deepcopy(arguments), timeout_after))
+    with Pool() as pool:
+        # local_results = list(tqdm(pool.imap_unordered(__compile_configuration, param_list), total=len(param_list)))
+        local_results = list(tqdm(pool.imap_unordered(__compile_configuration, param_list), total=len(param_list)))
+
+    # merge local into global result
+    for local in local_results:
+        compilation_successful[local[0]] = local[1]
+    return compilation_successful, entry_to_configuration
+
+
+def __compile_configuration(args: Tuple[CHROMOSOME, AutotunerArguments, float]) -> Tuple[CHROMOSOME, bool]:
+    global entry_to_configuration
+    configuration, arguments, timeout_after = args
+    compilation_successful = entry_to_configuration[configuration].compile_only(
+        arguments, timeout=timeout_after, thread_count=arguments.thread_count
+    )
+    compilation_successful = True
+    return configuration, compilation_successful
 
 
 def __initialize(
