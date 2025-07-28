@@ -28,10 +28,11 @@ def parse_args() -> AutotunerArguments:
     parser.add_argument("-c", "--config", default="tiny", help="Configurations to be used for the autotuning. Default: tiny")
     parser.add_argument("-s", "--suggestions", help="If specified, the comma separated list of suggestions will be applied and compared to the baseline.")
     parser.add_argument("-t", "--threads", type=int, default=non_null_default_core_count, help="Value of OMP_NUM_THREADS used during execution. Default: os.cpu_count()/2 = " + str(non_null_default_core_count))
-    parser.add_argument("-ht", "--hotspot-types", type=str, default="yes", help="Hotspot types to be considered. Options: yes,no,maybe. Default: yes")
+    parser.add_argument("-ht", "--hotspot-types", type=str, default="yes,maybe", help="Hotspot types to be considered. If no hotspot information exists, all suggestions will be classified as 'yes'. Options: yes,no,maybe. Default: yes,maybe")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     parser.add_argument("-p", "--plot", action="store_true", help="Allow the creation of interactive plots.")
+    parser.add_argument("-A", "--algorithm", type=int, default=0, help="Optimization algorithm. Values: 0: no combination of suggestions. 1: linear combination, 2: linear combination with refinement. 3: evolutionary combination. Default: 0.")
 #    parser.add_argument("--project-path", type=str, default=os.getcwd(), help="Root path of the project to be tuned. \
 #                        Important: Project root will be copied multiple times! It has to contain the executable scripts DP_COMPILER.sh and DP_EXECUTE.sh! \
 #                        DP_COMPILER.sh must allow the inclusion of OpenMP pragmas into the code. \
@@ -55,6 +56,7 @@ def parse_args() -> AutotunerArguments:
         allow_plots=arguments.plot,
         thread_count=arguments.threads,
         hotspot_types=arguments.hotspot_types,
+        algorithm=arguments.algorithm,
     )
 
 

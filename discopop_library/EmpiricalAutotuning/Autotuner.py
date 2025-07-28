@@ -22,6 +22,7 @@ from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import Executi
 from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor, NodeShape, StatisticsGraph
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.optimization.check_single_combination import check_single_combination
+from discopop_library.EmpiricalAutotuning.optimization.evolutionary_combination import execute_evolutionary_combination
 from discopop_library.EmpiricalAutotuning.optimization.linear_hotspot_combination import (
     execute_linear_hotspot_combination,
 )
@@ -113,12 +114,9 @@ def run(arguments: AutotunerArguments) -> None:
     best_suggestion_configuration: Tuple[List[SUGGESTION_ID], CodeConfiguration] = ([], reference_configuration)
 
     time_limit_s = 3600  # seconds
-    linear_hotspot_combination = True
-    linear_hotspot_combination_with_refinement = False
-    parallel_region_combination_with_refinement = False
 
     if arguments.suggestions is None:
-        if linear_hotspot_combination:
+        if arguments.algorithm == 1:
             execute_linear_hotspot_combination(
                 detection_result,
                 hotspot_information,
@@ -130,7 +128,7 @@ def run(arguments: AutotunerArguments) -> None:
                 debug_stats,
                 get_unique_configuration_id,
             )
-        elif linear_hotspot_combination_with_refinement:
+        elif arguments.algorithm == 2:
             execute_linear_hotspot_combination_with_refinement(
                 detection_result,
                 hotspot_information,
@@ -142,8 +140,20 @@ def run(arguments: AutotunerArguments) -> None:
                 debug_stats,
                 get_unique_configuration_id,
             )
-        elif parallel_region_combination_with_refinement:
-            execute_parallel_region_combination_with_refinement(
+        #        elif parallel_region_combination_with_refinement:
+        #            execute_parallel_region_combination_with_refinement(
+        #                detection_result,
+        #                hotspot_information,
+        #                logger,
+        #                time_limit_s,
+        #                reference_configuration,
+        #                arguments,
+        #                timeout_after,
+        #                debug_stats,
+        #                get_unique_configuration_id,
+        #            )
+        elif arguments.algorithm == 3:
+            execute_evolutionary_combination(
                 detection_result,
                 hotspot_information,
                 logger,
@@ -181,7 +191,7 @@ def run(arguments: AutotunerArguments) -> None:
         )
 
     # select best option and create code folder
-    if linear_hotspot_combination:
+    if arguments.algorithm == 1:
         for stat_entry in sorted(debug_stats, key=lambda x: len(x[0]), reverse=True):
             if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
                 sibling_config = reference_configuration.create_copy(
@@ -193,7 +203,7 @@ def run(arguments: AutotunerArguments) -> None:
                 if not arguments.skip_cleanup:
                     sibling_config.deleteFolder()
                 break
-    elif linear_hotspot_combination_with_refinement:
+    elif arguments.algorithm == 2:
         sibling_config = reference_configuration.create_copy(
             arguments, "par_settings.json", get_unique_configuration_id
         )
@@ -202,7 +212,7 @@ def run(arguments: AutotunerArguments) -> None:
         best_suggestion_configuration = (debug_stats[-1][0], sibling_config)
         if not arguments.skip_cleanup:
             sibling_config.deleteFolder()
-    elif not linear_hotspot_combination_with_refinement:
+    else:
         for stat_entry in sorted(debug_stats, key=lambda x: (x[1])):
             if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
                 sibling_config = reference_configuration.create_copy(

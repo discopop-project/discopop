@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from tabulate import tabulate  # type: ignore
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 
 
@@ -17,45 +18,34 @@ def show_debug_stats(
     debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]], logger: logging.Logger
 ) -> None:
     # show debug stats
-    stats_str = "Configuration measurements:\n"
-    stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[thread sanitizer]\t[path]\n"
+    table = []
+    headers = ["time (s)", "applied suggestions", "return code", "result valid", "TSAN", "path"]
+
     for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
-        stats_str += (
-            str(round(stats[1], 3))
-            + "s"
-            + "\t"
-            + str(stats[0])
-            + "\t"
-            + str(stats[2])
-            + "\t"
-            + str(stats[3])
-            + "\t"
-            + str(stats[4])
-            + "\t"
-            + str(stats[5])
-            + "\n"
-        )
-    logger.debug(stats_str)
+        row = []
+        row.append(str(round(stats[1], 5)))
+        row.append(str(stats[0]))
+        row.append(str(stats[2]))
+        row.append(str(stats[3]))
+        row.append(str(stats[4]))
+        row.append(str(stats[5]))
+        table.append(row)
+    logger.debug("Configuration measurements:\n" + tabulate(table, headers, tablefmt="github"))
 
 
 def show_info_stats(
     debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]], logger: logging.Logger
 ) -> None:
     # show debug stats
-    stats_str = "Configuration measurements:\n"
-    stats_str += "[time]\t[applied suggestions]\t[return code]\t[result valid]\t[thread sanitizer]\n"
+    table = []
+    headers = ["time (s)", "applied suggestions", "return code", "result valid", "TSAN"]
+
     for stats in sorted(debug_stats, key=lambda x: (x[1]), reverse=True):
-        stats_str += (
-            str(round(stats[1], 3))
-            + "s"
-            + "\t"
-            + str(stats[0])
-            + "\t"
-            + str(stats[2])
-            + "\t"
-            + str(stats[3])
-            + "\t"
-            + str(stats[4])
-            + "\n"
-        )
-    logger.info(stats_str)
+        row = []
+        row.append(str(round(stats[1], 5)))
+        row.append(str(stats[0]))
+        row.append(str(stats[2]))
+        row.append(str(stats[3]))
+        row.append(str(stats[4]))
+        table.append(row)
+    logger.info("Configuration measurements:\n" + tabulate(table, headers, tablefmt="github"))
