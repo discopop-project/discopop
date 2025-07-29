@@ -174,7 +174,7 @@ def perform_evolutionary_search(
     get_unique_configuration_id: Callable[[], int],
 ) -> Tuple[int, ...]:
     ### SETTINGS
-    population_size = max(5, len(patterns_by_hotspot_type[HotspotType.YES]) * 2)
+    population_size = max(10, len(patterns_by_hotspot_type[HotspotType.YES]) * 2)
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
     crossover_factor = 0.4
     mutations_factor = 0.5
@@ -193,7 +193,7 @@ def perform_evolutionary_search(
     __calculate_fitness(
         logger, population, reference_configuration, arguments, timeout_after, get_unique_configuration_id
     )
-    selection_size = max(1, int(len(population) * 0.85))
+    selection_size = min(population_size, max(1, int(len(population) * 0.85)))
 
     generation_counter = 0
     converged = False
