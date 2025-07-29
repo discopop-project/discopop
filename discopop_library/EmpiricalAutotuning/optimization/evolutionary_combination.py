@@ -178,8 +178,16 @@ def perform_evolutionary_search(
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
     crossover_factor = 0.4
     mutations_factor = 0.5
-    convergence_factor = 0.9  # 0.9 --> average fitnes of the reached 90% of the best specimen
+    setting_convergence_factor = 0.9  # 0.9 --> average fitnes of the reached 90% of the best specimen
+    convergence_generation_threshold = 2  # 2 -> average has to be greater than threshold for 3 generations
     ### END SETTINGS
+
+    ## statistics
+    current_convergence_factor = setting_convergence_factor
+    generations_max_not_changed = 0
+    generations_avg_not_changed = 0
+    generations_threshold_not_reached = 0
+    ## end statistics
 
     population, unused_maybes = __initialize(logger, population_size, patterns_by_hotspot_type)
     __calculate_fitness(
@@ -189,11 +197,12 @@ def perform_evolutionary_search(
 
     generation_counter = 0
     converged = False
+    convergence_threshold_reached = 0
 
     time_series_x_values: List[int] = [generation_counter]
     time_series_max: List[float] = [get_maximum_fitness()]
     time_series_avg: List[float] = [get_average_fitness(population)]
-    time_series_convergence_threshold: List[float] = [time_series_max[-1] * convergence_factor]
+    time_series_convergence_threshold: List[float] = [time_series_max[-1] * current_convergence_factor]
     plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
 
     try:
@@ -212,18 +221,54 @@ def perform_evolutionary_search(
             time_series_x_values.append(generation_counter)
             time_series_max.append(get_maximum_fitness())
             time_series_avg.append(get_average_fitness(population))
-            time_series_convergence_threshold.append(time_series_max[-1] * convergence_factor)
+
+            # update statistics
+
+            if time_series_avg[-1] >= (time_series_max[-1] * current_convergence_factor):
+                generations_threshold_not_reached = 0
+            else:
+                generations_threshold_not_reached += 1
+
+            if time_series_max[-1] > time_series_max[-2]:
+                generations_max_not_changed = 0
+                generations_threshold_not_reached = 0
+                # if new max found, reset threshold and convergence factor
+                current_convergence_factor = setting_convergence_factor
+            else:
+                generations_max_not_changed += 1
+
+            if time_series_avg[-1] >= time_series_avg[-2]:
+                generations_avg_not_changed = 0
+            else:
+                generations_avg_not_changed += 1
+
+            # reduce threshold in 5% steps if required
+            if (
+                generations_max_not_changed > convergence_generation_threshold
+                and generations_threshold_not_reached > convergence_generation_threshold
+                and generations_avg_not_changed > convergence_generation_threshold
+            ):
+                current_convergence_factor -= setting_convergence_factor * 0.05
+                generations_threshold_not_reached = 0
+
+            # update and plot time series
+            time_series_convergence_threshold.append(time_series_max[-1] * current_convergence_factor)
             plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
+
             # check convergence
-            if time_series_avg[-1] >= (time_series_max[-1] * convergence_factor) and generation_counter > 2:
-                converged = True
+            if time_series_avg[-1] >= (time_series_max[-1] * current_convergence_factor) and generation_counter > 2:
+                convergence_threshold_reached += 1
+                if convergence_threshold_reached > convergence_generation_threshold:
+                    converged = True
+            else:
+                convergence_threshold_reached = 0
     except KeyboardInterrupt:
         logger.info("Manually stopped search.")
         # update time series
         time_series_x_values.append(generation_counter)
         time_series_max.append(get_maximum_fitness())
         time_series_avg.append(get_average_fitness(population))
-        time_series_convergence_threshold.append(time_series_max[-1] * convergence_factor)
+        time_series_convergence_threshold.append(time_series_max[-1] * current_convergence_factor)
         plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
 
     population = __select(logger, population, selection_size)
@@ -414,13 +459,13 @@ def __calculate_fitness(
     global entry_to_configuration
     logger.info("Calculating fitness...")
     logger.info("--- Removing duplicates")
-    population = list(set(population))
+    population_wo_duplicates = list(set(population))
 
     compilation_successful: Dict[CHROMOSOME, bool] = dict()
 
     compilation_successful, entry_to_configuration = __compile_population(
         logger,
-        population,
+        population_wo_duplicates,
         reference_configuration,
         arguments,
         timeout_after,
@@ -429,7 +474,7 @@ def __calculate_fitness(
     )
 
     logger.info("--- Executing population")
-    for entry in tqdm([p for p in population if p not in fitness_cache]):
+    for entry in tqdm([p for p in population_wo_duplicates if p not in fitness_cache]):
         if entry not in compilation_successful or not compilation_successful[entry]:
             continue
 
@@ -458,7 +503,7 @@ def __calculate_fitness(
     entry_to_configuration.clear()
 
     # find new best and worst runtime
-    for key in population:
+    for key in population_wo_duplicates:
         if key not in runtime_cache:
             continue
         if runtime_cache[key] < best_execution_time:
@@ -467,7 +512,7 @@ def __calculate_fitness(
             worst_execution_time = runtime_cache[key]
 
     # update fitness
-    for key in population:
+    for key in population_wo_duplicates:
         if key in return_code_cache:
             if return_code_cache[key] == 0:
                 fitness_cache[key] = (
