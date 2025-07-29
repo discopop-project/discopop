@@ -178,7 +178,7 @@ def perform_evolutionary_search(
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
     crossover_factor = 0.4
     mutations_factor = 0.5
-    setting_convergence_factor = 0.9  # 0.9 --> average fitnes of the reached 90% of the best specimen
+    setting_convergence_factor = 1.0  # 0.9 --> average fitnes of the reached 90% of the best specimen
     convergence_generation_threshold = 2  # 2 -> average has to be greater than threshold for 3 generations
     ### END SETTINGS
 
@@ -237,8 +237,10 @@ def perform_evolutionary_search(
             else:
                 generations_max_not_changed += 1
 
-            if time_series_avg[-1] >= time_series_avg[-2]:
+            if time_series_avg[-1] > time_series_avg[-2]:
                 generations_avg_not_changed = 0
+                generations_threshold_not_reached = 0
+                current_convergence_factor = setting_convergence_factor
             else:
                 generations_avg_not_changed += 1
 
