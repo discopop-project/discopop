@@ -258,7 +258,10 @@ def perform_evolutionary_search(
             plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
 
             # check convergence
-            if time_series_avg[-1] >= (time_series_max[-1] * current_convergence_factor) and generation_counter > 2:
+            if (
+                round(time_series_avg[-1], 2) >= round((time_series_max[-1] * current_convergence_factor), 2)
+                and generation_counter > 2
+            ):
                 convergence_threshold_reached += 1
                 if convergence_threshold_reached > convergence_generation_threshold:
                     converged = True
