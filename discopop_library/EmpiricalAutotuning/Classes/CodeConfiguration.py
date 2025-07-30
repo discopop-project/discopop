@@ -75,6 +75,8 @@ class CodeConfiguration(object):
             reset=False,
             reset_execution_results=False,
             label_prefix="",
+            timeout_compilation=timeout,
+            timeout_execution=timeout,
         )
 
         compilation_successful = True
@@ -113,6 +115,8 @@ class CodeConfiguration(object):
             reset=False,
             reset_execution_results=False,
             label_prefix="",
+            timeout_compilation=timeout,
+            timeout_execution=timeout,
         )
 
         ret = execute_configuration(
@@ -162,6 +166,8 @@ class CodeConfiguration(object):
             reset=False,
             reset_execution_results=False,
             label_prefix="",
+            timeout_compilation=None,
+            timeout_execution=None,
         )
         dest_path = copy_configuration(
             cm_args,
