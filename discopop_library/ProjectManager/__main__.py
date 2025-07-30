@@ -38,6 +38,8 @@ def parse_args() -> ProjectManagerArguments:
     parser.add_argument("-r", "--reset", action="store_true", help="Reset the .discopop folder except configurations in project subdirectory.")
     parser.add_argument("-rx", "--reset-execution-results", action="store_true", help="Reset the observed execution results and generated reports.")
     parser.add_argument("-lp", "--label-prefix", default="", help="Specify a prefix for execution measurement labels")
+    parser.add_argument("-tox", "--timeout-execution", type=int, default=3600, help="Timeout in seconds for each individual code execution. Use 0 to disable timeout. Default: 3600.")
+    parser.add_argument("-toc", "--timeout-compilation", type=int, default=3600, help="Timeout in seconds for each individual code compilation. Use 0 to disable timeout. Default: 3600.")
 
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
@@ -62,6 +64,8 @@ def parse_args() -> ProjectManagerArguments:
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
         label_prefix=arguments.label_prefix,
+        timeout_execution=None if arguments.timeout_execution == 0 else float(arguments.timeout_execution),
+        timeout_compilation=None if arguments.timeout_execution == 0 else float(arguments.timeout_execution),
     )
 
 

@@ -34,6 +34,8 @@ class ProjectManagerArguments(GeneralArguments):
     reset: bool
     reset_execution_results: bool
     label_prefix: str
+    timeout_execution: Optional[float]
+    timeout_compilation: Optional[float]
     # derived values
     dot_dp: str = ""
     project_dir: str = ""

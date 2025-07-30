@@ -138,6 +138,7 @@ def show_configurations_with_execution(
                 dp_settings,
                 os.path.join(config, "compile.sh"),
                 __get_thread_count(config, "dp", config_thread_counts),
+                arguments.timeout_compilation,
             )
             dp_compile_successful = ret is not None and ret[0] == 0
 
@@ -149,6 +150,7 @@ def show_configurations_with_execution(
                     dp_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "dp", config_thread_counts),
+                    arguments.timeout_execution,
                 )
                 dp_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
@@ -170,6 +172,7 @@ def show_configurations_with_execution(
                 hd_settings,
                 os.path.join(config, "compile.sh"),
                 __get_thread_count(config, "hd", config_thread_counts),
+                arguments.timeout_compilation,
             )
             hd_compile_successful = ret is not None and ret[0] == 0
 
@@ -181,6 +184,7 @@ def show_configurations_with_execution(
                     hd_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "hd", config_thread_counts),
+                    arguments.timeout_execution,
                 )
                 hd_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
@@ -201,6 +205,7 @@ def show_configurations_with_execution(
                 seq_settings,
                 os.path.join(config, "compile.sh"),
                 __get_thread_count(config, "seq", config_thread_counts),
+                arguments.timeout_compilation,
             )
             seq_compile_successful = ret is not None and ret[0] == 0
 
@@ -212,6 +217,7 @@ def show_configurations_with_execution(
                     seq_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "seq", config_thread_counts),
+                    arguments.timeout_execution,
                 )
                 seq_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
@@ -232,6 +238,7 @@ def show_configurations_with_execution(
                 par_settings,
                 os.path.join(config, "compile.sh"),
                 __get_thread_count(config, "par", config_thread_counts),
+                arguments.timeout_compilation,
             )
             par_compile_successful = ret is not None and ret[0] == 0
 
@@ -243,6 +250,7 @@ def show_configurations_with_execution(
                     par_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "par", config_thread_counts),
+                    arguments.timeout_execution,
                 )
                 par_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
