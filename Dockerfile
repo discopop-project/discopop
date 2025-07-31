@@ -1,0 +1,54 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+FROM ubuntu:latest
+WORKDIR /usr/local/ci
+
+# update container
+RUN apt-get update && apt-get install -y build-essential wget
+
+# setup folder structure
+RUN mkdir software
+RUN mkdir venv
+
+# Install the application dependencies
+## LLVM 11.1.0
+WORKDIR /usr/local/ci/software
+RUN wget https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz && tar -xvf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz && mv clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10 llvm-11.1.0 && rm clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
+WORKDIR /usr/local/ci/
+
+## CMake 4.0.2
+WORKDIR /usr/local/ci/software
+RUN wget https://github.com/Kitware/CMake/releases/download/v4.0.2/cmake-4.0.2-linux-x86_64.tar.gz && tar -xvf cmake-4.0.2-linux-x86_64.tar.gz && mv cmake-4.0.2-linux-x86_64 cmake-4.0.2 && rm cmake-4.0.2-linux-x86_64.tar.gz
+WORKDIR /usr/local/ci/
+
+# install further dependencies (might change, last for caching purposes)
+RUN apt-get install -y libboost-all-dev git python3-venv python3-tk
+
+## prepare venv (might need updates once in a while)
+RUN python3 -m venv /usr/local/ci/venv
+RUN /usr/local/ci/venv/bin/pip install about-time==4.2.1 alive-progress==3.2.0 appdirs==1.4.4 black==25.1.0 contextlib2==21.6.0 contourpy==1.3.2 cycler==0.12.1 extrap==4.2.3 filelock==3.18.0 fonttools==4.57.0 grapheme==0.6.0 joblib==1.4.2 jsonpickle==4.0.5 jsons==1.6.3 kiwisolver==1.4.8 lxml==5.4.0 marshmallow==3.26.1 matplotlib==3.10.1 mergedeep==1.3.4 mpmath==1.3.0 mypy==1.15.0 mypy-extensions==1.0.0 networkx==3.4.2 numpy==1.26.4 packaging==25.0 pillow==11.2.1 pluginbase==1.0.1 pstats2==0.1.0 pycubexr==2.0.1 pydot==3.0.4 pyparsing==3.2.3 python-dateutil==2.9.0.post0 recordtype==1.4 schema==0.7.7 scikit-learn==1.6.1 scipy==1.15.2 setuptools==79.0.1 shiboken6==6.9.0 six==1.17.0 sympy==1.13.3 sympy_plot_backends==3.4.2 tabulate==0.9.0 threadpoolctl==3.6.0 tqdm==4.67.1 typish==1.9.3
+
+## update PATH
+ENV PATH=$PATH:/usr/local/ci/software/llvm-11.1.0/bin:/usr/local/ci/software/cmake-4.0.2/bin:/usr/local/ci/venv/bin
+
+WORKDIR /usr/local/ci
+
+# import repository to /usr/local/ci/discopop
+# Dockerfile located in discopop/.github/workflows, hence the ../..
+ADD . /usr/local/ci/discopop
+
+# build discopop
+RUN cmake -S discopop -B discopop/build -DCMAKE_BUILD_TYPE=Debug -DLLVM_DIST_PATH=/usr/local/ci/software/llvm-11.1.0 -DUSE_VENV=/usr/local/ci/venv -DDP_CALLTREE_PROFILING=0 -DDP_BUILD_UNITTESTS=0 && make --directory=discopop/build -j && make --directory=discopop/build install_python_modules
+
+WORKDIR /usr/local/ci/discopop
+
+RUN /usr/local/ci/venv/bin/pip install -r requirements.txt
+
+RUN . /usr/local/ci/venv/bin/activate
+
+CMD ["bash"]

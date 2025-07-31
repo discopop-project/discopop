@@ -33,6 +33,15 @@ For a brief introduction to the command line tools, please refer to the [tools o
 
 For detailed information on the gathered and stored data as well as the tools themselves, please refer to [data](https://discopop-project.github.io/discopop/Data) and the pages of the individual tools in the [tools overview](https://discopop-project.github.io/discopop/Tools).
 
+## Docker image
+To simplify the setup, we provide and maintain a pre-built Docker image. The image can be obtained via the command below:
+```
+docker pull lukasrothenbergertuda/discopop:latest
+```
+
+## Debian Package
+To simplify the setup in cases where Docker is not wanted, we provide a Debian package via the `Release Assets`.
+
 ## TL;DR
 If you are interested in installing DiscoPoP as a `developer`, please refer to the [DiscoPoP setup wiki page](https://discopop-project.github.io/discopop/setup/discopop/).
 
