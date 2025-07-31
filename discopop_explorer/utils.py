@@ -867,8 +867,11 @@ def __remove_duplicate_variables(vars: List[Variable]) -> List[Variable]:
 
 
 def var_declared_in_subtree(var: Variable, sub: list[CUNode]) -> bool:
-    var_file_id = int(var.defLine.split(":")[0])
-    var_def_line = int(var.defLine.split(":")[1])
+    try:
+        var_file_id = int(var.defLine.split(":")[0])
+        var_def_line = int(var.defLine.split(":")[1])
+    except ValueError:
+        return False
     for node in sub:
         if (node.file_id == var_file_id) and (node.start_line <= var_def_line) and (node.end_line >= var_def_line):
             return True
