@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, List, Type
 
 from discopop_explorer.classes.PEGraph.NodeT import NodeT
 from discopop_explorer.enums.EdgeType import EdgeType
-from discopop_explorer.functions.PEGraph.queries.edges import out_edges
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
 
 if TYPE_CHECKING:
     from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
@@ -46,3 +46,16 @@ def direct_children_or_called_nodes_of_type(pet: PEGraphX, root: Node, type: Typ
     nodes = [pet.node_at(t) for s, t, d in out_edges(pet, root.id, [EdgeType.CHILD, EdgeType.CALLSNODE])]
 
     return [t for t in nodes if isinstance(t, type)]
+
+
+def get_entry_child(pet: PEGraphX, root: Node) -> List[Node]:
+    """Gets direct children of any type with no incoming successor edge without considering called nodes
+
+    :param root: root node
+    :return: list of direct children
+    """
+    return [
+        pet.node_at(t)
+        for s, t, d in out_edges(pet, root.id, EdgeType.CHILD)
+        if len(in_edges(pet, t, EdgeType.SUCCESSOR)) == 0
+    ]

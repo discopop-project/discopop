@@ -469,6 +469,30 @@ class PEGraphX(object):
 
         print("Calculating loop metadata done.")
 
+    def enforce_single_function_exit_node(self) -> None:
+        for func in all_nodes(self, FunctionNode):
+            print("FUNCTION: ", func)
+            # define exit node
+            file_id = func.file_id
+            max_node_id_in_file = 0
+            for node in all_nodes(self):
+                if node.file_id != file_id:
+                    continue
+                if ":" in node.id:
+                    id_int = int(node.id.split(":")[1])
+                    if id_int > max_node_id_in_file:
+                        max_node_id_in_file = id_int
+            exit_id = NodeID(str(file_id) + ":" + str(max_node_id_in_file + 1))
+            exit_node = Node(exit_id)
+            exit_node.type = NodeType.CU
+            self.g.add_node(exit_id, data=exit_node)
+            # find exit points
+            subtree = subtree_of_type(self, func, CUNode, True)
+            for node in subtree:
+                if len(out_edges(self, node.id, EdgeType.SUCCESSOR)) == 0:
+                    print("--> exit: ", node.id)
+                    self.g.add_edge(node.id, exit_id, data=Dependency(EdgeType.SUCCESSOR))
+
     def show(self) -> None:
         """Plots the graph
 
