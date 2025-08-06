@@ -8,17 +8,22 @@
 
 import signal
 import logging
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
 
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchContext
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Functions.TGEndFunctionNode import TGEndFunctionNode
 from discopop_explorer.classes.TaskGraph.Functions.TGStartFunctionNode import TGStartFunctionNode
+from discopop_explorer.classes.TaskGraph.Loops.TGEndLoopNode import TGEndLoopNode
+from discopop_explorer.classes.TaskGraph.Loops.TGEndtIterationNode import TGEndIterationNode
+from discopop_explorer.classes.TaskGraph.Loops.TGStartIterationNode import TGStartIterationNode
+from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
 from discopop_explorer.classes.TaskGraph.RootNode import RootNode
 from discopop_explorer.classes.TaskGraph.TGFunctionNode import TGFunctionNode
 from discopop_explorer.classes.TaskGraph.VisitorMarker import EndFunctionMarker, VisitorMarker
@@ -84,6 +89,8 @@ class TaskGraph(object):
         # prepare function graphs without calling
         self.__visit_pet(pet)
         self.__assign_contexts()
+        self.__break_cycles()
+        self.__validate_graph_structure()
 
     def add_node(self, node: TGNode) -> None:
         self.graph.add_node(node)
@@ -93,6 +100,15 @@ class TaskGraph(object):
 
     def add_edge(self, source: Optional[TGNode], target: Optional[TGNode]) -> None:
         if source is None or target is None:
+            return
+        # disallow duplicate edges
+        if self.graph.has_edge(source, target):
+            warnings.warn(
+                "Attempted creation of a duplicate edge. Prevented. Source: "
+                + (source.get_label() if source is not None else "None")
+                + " Target: "
+                + (target.get_label() if target is not None else "None")
+            )
             return
         self.graph.add_edge(source, target)
 
@@ -111,15 +127,17 @@ class TaskGraph(object):
         return buffer
 
     def plot(self) -> None:
+        logger.info("Plotting...")
         signal.signal(signal.SIGINT, signal.SIG_DFL)
-        logger.info("Nodes: \n" + str(self.graph.nodes()))
         f, ax = plt.subplots(1, 1, figsize=(8, 5))
         # get node positions
         #        positions: Dict[TGNode, Tuple[LevelIndex, PositionIndex]] = dict()
         #        for node in self.graph.nodes():
         #            positions[node] = (node.position, -node.level)  # (x, y),
         # top left is 0,0
+        logger.info("---> generating layout...")
         positions = nx.nx_pydot.graphviz_layout(self.graph, prog="dot")
+        logger.info("--->    Done.")
 
         # draw context patches
         min_patch_width = 0.1
@@ -146,6 +164,7 @@ class TaskGraph(object):
         for node in self.graph.nodes():
             labels[node] = node.get_label()
         nx.draw_networkx_labels(self.graph, positions, labels, font_size=7)
+        logger.info("---> showing...")
         plt.show()
 
     def __get_or_insert_TGNode(self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex) -> TGNode:
@@ -333,3 +352,174 @@ class TaskGraph(object):
     ) -> List[TGConstructionQueueElement]:
         warnings.warn("Not implemented!")
         return queue
+
+    def __break_cycles(self) -> None:
+        # search for cycles in each function and replace them with two distinct iteraions
+        logger.info("Breaking cycles...")
+        for function_node in self.TGFunctionNode_pet_node_id_to_tg_node.values():
+            logger.info("--> " + function_node.get_label())
+            # progress search if cycle can not be broken
+            search_source: TGNode = function_node
+            search_source_queue = self.get_descendants(function_node)
+
+            while True:
+                # find cycle
+                try:
+                    cycle = nx.find_cycle(self.graph, source=search_source)
+                except nx.NetworkXNoCycle:
+                    # no further cycles in function
+                    break
+                cycle_nodes: Set[TGNode] = set()
+                for tpl in cycle:
+                    cycle_nodes.add(tpl[0])
+                    cycle_nodes.add(tpl[1])
+
+                # find entry node and exit node
+                entry_node: Optional[TGNode] = None
+                exit_node: Optional[TGNode] = None
+                iteration_entry_points: List[TGNode] = []
+                queue: List[TGNode] = [function_node]
+                visited: Set[TGNode] = set()
+                while len(queue) > 0:
+                    exit_node = None
+                    current = queue.pop(0)
+                    visited.add(current)
+                    #                    print("\nCurrent: ", current)
+                    #                    print("Cycle nodes: ", cycle_nodes)
+                    successors = self.get_successors(current)
+                    #                    print("IN CYCLE: ", current in cycle_nodes)
+                    #                    print("SUCC: ", len(successors))
+                    #                    print("---> ", successors)
+
+                    if len(successors) > 1:
+                        if current in cycle_nodes:
+
+                            found_successor_in_cycle = False
+                            for succ in successors:
+                                if succ in cycle_nodes:
+                                    found_successor_in_cycle = True
+                                if succ not in cycle_nodes:
+                                    exit_node = succ
+                                if exit_node is not None and found_successor_in_cycle:
+                                    break
+                            if exit_node is not None and found_successor_in_cycle:
+                                entry_node = current
+                                iteration_entry_points = [n for n in successors if n in cycle_nodes]
+                                break
+                        else:
+                            for succ in successors:
+                                if succ not in visited and succ not in queue:
+                                    queue.append(succ)
+                    elif len(successors) == 1:
+                        if successors[0] not in visited and successors[0] not in queue:
+                            queue.append(successors[0])
+                    else:
+                        continue
+
+                iteration_exit_points: List[TGNode] = [p for p in self.get_predecessors(entry_node) if p in cycle_nodes]
+
+                #                print("Found entry node: ", entry_node.get_label() if entry_node is not None else "NONE")
+                #                print("Found exit node: ", exit_node.get_label() if exit_node is not None else "NONE")
+                #                print("Found iteration entry points: ", [n.get_label() for n in iteration_entry_points])
+                #                print("Found iteration exit points: ", [n.get_label() for n in iteration_exit_points])
+
+                if entry_node is not None and exit_node is not None:
+                    # cycle can be broken. Reset search point for cycle search
+                    search_source_queue = self.get_descendants(function_node)
+                    search_source = function_node
+
+                    print("ITENP: ", [n.get_label() for n in iteration_entry_points])
+                    print("ITEXP: ", [n.get_label() for n in iteration_exit_points])
+                    print("ENTRY: ", entry_node.get_label())
+                    print("EXIT: ", exit_node.get_label())
+
+                    # break cycle
+                    print(
+                        "EDGES PRE BREAK: ",
+                        [(s.get_label(), t.get_label()) for s, t in self.graph.in_edges(entry_node)],
+                    )
+                    for itexp in iteration_exit_points:
+                        self.graph.remove_edge(itexp, entry_node)
+                        logger.info("  --> Removed edge " + itexp.get_label() + " --> " + entry_node.get_label())
+
+                    # add loop start marking between entry_node and its predecessors
+                    lsm = TGStartLoopNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
+                    self.add_node(lsm)
+                    print("PREDS: ", [s.get_label() for s in self.get_predecessors(entry_node)])
+                    print("EDGES: ", [(s.get_label(), t.get_label()) for s, t in self.graph.in_edges(entry_node)])
+                    for pred in self.get_predecessors(entry_node):
+                        self.graph.remove_edge(pred, entry_node)
+                        self.add_edge(pred, lsm)
+                    self.add_edge(lsm, entry_node)
+
+                    # add loop end marking between entry_node and exit_node
+                    lem = TGEndLoopNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
+                    self.add_node(lem)
+                    self.graph.remove_edge(entry_node, exit_node)
+                    self.add_edge(entry_node, lem)
+                    self.add_edge(lem, exit_node)
+
+                    # add iteration entry markings between entry_node and iteration_entry_points
+                    ism_list: List[TGStartIterationNode] = []
+                    for itenp in iteration_entry_points:
+                        self.graph.remove_edge(entry_node, itenp)
+                        ism = TGStartIterationNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
+                        ism_list.append(ism)
+                        self.add_node(ism)
+                        self.add_edge(entry_node, ism)
+                        self.add_edge(ism, itenp)
+
+                    # add iteration exit markings after iteration_exit_points
+                    iem_list: List[TGEndIterationNode] = []
+                    for itexp in iteration_exit_points:
+                        iem = TGEndIterationNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
+                        iem_list.append(iem)
+                        self.add_node(iem)
+                        self.add_edge(itexp, iem)
+
+                    # redirect edge from entry -> end_loop to iteration_exit markers -> end_loop
+                    self.graph.remove_edge(entry_node, lem)
+                    for iem in iem_list:
+                        self.add_edge(iem, lem)
+
+                #                    # TODO add second iteration body
+                #                    # -> find all simple paths between every combination of ism and iem, and copy the subgraph
+                #                    for ism in ism_list:
+                #                        print("\nISM : ", ism.get_label())
+                #                        for iem in iem_list:
+                #                            print("IEM: ", iem.get_label())
+                #                            paths = nx.all_simple_paths(self.graph, ism, iem)
+                #                            print("PATHS: ", [[n.get_label() for n in p] for p in paths])
+
+                else:
+                    # progress search
+                    if len(search_source_queue) > 0:
+                        search_source = search_source_queue.pop(0)
+                    else:
+                        break
+
+    def __validate_graph_structure(self) -> None:
+        warnings.warn("Not yet implemented!")
+
+    def get_successors(self, node: Optional[TGNode]) -> List[TGNode]:
+        if node is None:
+            return []
+        successors = list(set([t for s, t in self.graph.out_edges(node)]))
+        return successors
+
+    def get_predecessors(self, node: Optional[TGNode]) -> List[TGNode]:
+        if node is None:
+            return []
+        predecessors = list(set([s for s, t in self.graph.in_edges(node)]))
+        return predecessors
+
+    def get_descendants(self, node: TGNode) -> List[TGNode]:
+        return list(nx.descendants(self.graph, node))
+
+    def __copy_iteration_subgraph(
+        self, original_entry_nodes: List[TGNode], nodes: List[TGNode]
+    ) -> Tuple[List[TGNode], List[TGNode]]:  # (entry nodes, exit nodes)
+        entry_nodes: List[TGNode] = []  # entry nodes of the copied subgraph
+        exit_nodes: List[TGNode] = []  # exit nodes of the copied subgraph
+        warnings.warn("Not yet implemented!")
+        return entry_nodes, exit_nodes
