@@ -116,12 +116,6 @@ class TaskGraph(object):
             return
         # disallow duplicate edges
         if self.graph.has_edge(source, target):
-            #            warnings.warn(
-            #                "Attempted creation of a duplicate edge. Prevented. Source: "
-            #                + (source.get_label() if source is not None else "None")
-            #                + " Target: "
-            #                + (target.get_label() if target is not None else "None")
-            #            )
             return
         self.graph.add_edge(source, target)
 
@@ -587,7 +581,9 @@ class TaskGraph(object):
                             continue
                         # validate the identified path by checking, if no other start / end iteration with the same pet_node_id is contained in the path,
                         # i.e., make sure that each considered path is restrained to a single iteration
-                        paths = nx.all_simple_paths(self.graph, sin, ein)
+                        paths = nx.all_simple_paths(
+                            self.graph, sin, ein
+                        )  # Note: This operation can be very costly (e.g. for LULESH)! TODO: find a more scalable alternative
                         valid_paths: List[List[TGNode]] = []
                         print("PATHS: ", [[n.get_label() for n in p] for p in paths])
                         for path in paths:
