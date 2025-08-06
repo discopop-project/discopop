@@ -15,8 +15,6 @@ import networkx as nx  # type: ignore
 import matplotlib
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
-from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchContext
-from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Functions.TGEndFunctionNode import TGEndFunctionNode
@@ -241,13 +239,9 @@ class TaskGraph(object):
             else:
                 queue = self.__visit_node(predecessor, current, queue)
 
-        # TODO: replace PETnodes in BranchContext with TGNodes
-        warnings.warn("Not implemented: replace PETnodes in BranchContext with TGNodes")
-
     def __visit_node(
         self, predecessor: Optional[TGNode], pet_node: PETNode, queue: List[TGConstructionQueueElement]
     ) -> List[TGConstructionQueueElement]:
-        logger.info("visiting: " + str(pet_node) + " type: " + str(pet_node.type))
         if pet_node.type == NodeType.CU:
             queue = self.__visit_CUNode(predecessor, pet_node, queue)
         elif pet_node.type == NodeType.FUNC:
@@ -261,7 +255,6 @@ class TaskGraph(object):
     def __visit_marker(
         self, predecessor: Optional[TGNode], marker: VisitorMarker, queue: List[TGConstructionQueueElement]
     ) -> List[TGConstructionQueueElement]:
-        logger.info("visiting marker: " + str(marker))
         if isinstance(marker, EndFunctionMarker):
             queue = self.__visit_EndFunctionMarker(predecessor, marker, queue)
         return queue
@@ -269,7 +262,6 @@ class TaskGraph(object):
     def __visit_EndFunctionMarker(
         self, predecessor: Optional[TGNode], marker: EndFunctionMarker, queue: List[TGConstructionQueueElement]
     ) -> List[TGConstructionQueueElement]:
-        logger.info("End Function marker: " + str(marker.function_node))
         #        self.context_stack.remove(marker.context)
         node = self.__get_or_insert_TGEndFunctionNode(
             marker.function_node, self.__get_next_level(), self.__get_next_position(self.__get_current_level())
@@ -316,7 +308,6 @@ class TaskGraph(object):
     def __visit_branching(
         self, predecessor: Optional[TGNode], pet_node: PETNode, queue: List[TGConstructionQueueElement]
     ) -> List[TGConstructionQueueElement]:
-        warnings.warn("Not implemented!")
         node = self.__get_or_insert_TGNode(
             pet_node.id, self.__get_next_level(), self.__get_next_position(self.__get_current_level())
         )
