@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
+from networkx import Graph
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
@@ -48,6 +49,7 @@ from discopop_explorer.classes.TaskGraph.Aliases import (
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 logger = logging.getLogger("Explorer")
 
@@ -69,12 +71,21 @@ class TaskGraph(object):
     visited_contexts: List[Context] = []
     current_level: LevelIndex = 0
     current_position: Dict[LevelIndex, PositionIndex] = {0: 0}
+    plotting_axis = None  # type: ignore
+    plotting_graph_buffer = None
+    plotting_postions_buffer = None
 
     def __init__(self, pet: PEGraphX) -> None:
         self.pet = pet
         self.graph = nx.MultiDiGraph()
+        # define updating plot window
+        fig1 = plt.figure(1)
+        self.plotting_axis = fig1.add_subplot(1, 1, 1)
+        # start processing
         self.__assign_function_ids(pet)
         self.__construct_from_pet(pet)
+        print("Waiting for user to close the Window...")
+        plt.show(block=True)
 
     def __assign_function_ids(self, pet: PEGraphX) -> None:
         id = 0
@@ -103,12 +114,12 @@ class TaskGraph(object):
             return
         # disallow duplicate edges
         if self.graph.has_edge(source, target):
-            warnings.warn(
-                "Attempted creation of a duplicate edge. Prevented. Source: "
-                + (source.get_label() if source is not None else "None")
-                + " Target: "
-                + (target.get_label() if target is not None else "None")
-            )
+            #            warnings.warn(
+            #                "Attempted creation of a duplicate edge. Prevented. Source: "
+            #                + (source.get_label() if source is not None else "None")
+            #                + " Target: "
+            #                + (target.get_label() if target is not None else "None")
+            #            )
             return
         self.graph.add_edge(source, target)
 
@@ -127,16 +138,26 @@ class TaskGraph(object):
         return buffer
 
     def plot(self) -> None:
+        self.update_plot(self.graph)
+        print("Waiting for user to close the Window...")
+        plt.show()
+
+    def update_plot(self, subgraph: Optional[Graph] = None, highlight_nodes: Optional[List[TGNode]] = None) -> None:
         logger.info("Plotting...")
-        signal.signal(signal.SIGINT, signal.SIG_DFL)
-        f, ax = plt.subplots(1, 1, figsize=(8, 5))
+        plt.clf()
+        if subgraph is None:
+            graph = self.graph
+        else:
+            graph = subgraph
+        #         signal.signal(signal.SIGINT, signal.SIG_DFL)
+
         # get node positions
         #        positions: Dict[TGNode, Tuple[LevelIndex, PositionIndex]] = dict()
         #        for node in self.graph.nodes():
         #            positions[node] = (node.position, -node.level)  # (x, y),
         # top left is 0,0
         logger.info("---> generating layout...")
-        positions = nx.nx_pydot.graphviz_layout(self.graph, prog="dot")
+        positions = nx.nx_pydot.graphviz_layout(graph, prog="dot")
         logger.info("--->    Done.")
 
         # draw context patches
@@ -148,7 +169,7 @@ class TaskGraph(object):
                 continue
             level_span = level_max - level_min
             position_span = max(0.1, position_max - position_min)
-            ax.add_patch(
+            self.plotting_axis.add_patch(  # type: ignore
                 Rectangle(
                     (position_min - (min_patch_width / 2), -level_min + (min_patch_height / 2)),
                     position_span + min_patch_width,
@@ -158,14 +179,34 @@ class TaskGraph(object):
                     facecolor=ctx.get_plot_face_color(),
                 )
             )
-        nx.draw(self.graph, positions, with_labels=False)
+        # draw regular nodes
+        if highlight_nodes is None:
+            nx.draw_networkx_nodes(graph, positions)
+        else:
+            nx.draw_networkx_nodes(graph, positions, nodelist=[n for n in graph.nodes() if n not in highlight_nodes])
+        # draw highlighted nodes
+        if highlight_nodes is not None:
+            nx.draw_networkx_nodes(graph, positions, nodelist=highlight_nodes, node_color="red")
+
+        # draw edges
+        nx.draw_networkx_edges(graph, positions)
+
         # get node labels
         labels = {}
-        for node in self.graph.nodes():
+        for node in graph.nodes():
             labels[node] = node.get_label()
-        nx.draw_networkx_labels(self.graph, positions, labels, font_size=7)
+        nx.draw_networkx_labels(graph, positions, labels, font_size=7)
         logger.info("---> showing...")
-        plt.show()
+
+        self.plotting_graph_buffer = graph
+        self.plotting_postions_buffer = positions
+
+        plt.pause(0.01)
+
+    def update_plot_node_color(self, nodes: List[TGNode], color: str) -> None:
+        nx.draw_networkx_nodes(
+            self.plotting_graph_buffer, self.plotting_postions_buffer, nodelist=nodes, node_color=color
+        )
 
     def __get_or_insert_TGNode(self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex) -> TGNode:
         if pet_node_id is not None:
@@ -474,15 +515,31 @@ class TaskGraph(object):
     def __duplicate_loop_iterations(self) -> None:
         logger.info("Duplicating loop iterations...")
         for function_node in self.TGFunctionNode_pet_node_id_to_tg_node.values():
+            logger.info("--> " + function_node.get_label())
             added_copies: Set[TGNode] = set()  # do not allow the re-copying of copies
             already_considered: Set[TGNode] = set()  # do not allo the re-copying of nodes
             modification_found = True
+            # plotting progress
+            original_descendants = self.get_descendants(function_node)
+            self.update_plot(self.graph.subgraph(original_descendants))
+            original_start_iteration_nodes = [
+                cast(TGNode, d) for d in original_descendants if isinstance(d, TGStartIterationNode)
+            ]
+            original_end_iteration_nodes = [
+                cast(TGNode, d) for d in original_descendants if isinstance(d, TGEndIterationNode)
+            ]
+            self.update_plot_node_color(original_start_iteration_nodes, color="orange")
+            self.update_plot_node_color(original_end_iteration_nodes, color="orange")
+            #
+
             # retry duplication of loop iterations until each iteration in the function is followied by a duplicate
             # multiple tries are necessary, as every occurence of a loop needs to be duplicated
             while modification_found:
                 modification_found = False
                 logger.info("--> " + function_node.get_label())
                 descendants = self.get_descendants(function_node)
+                self.update_plot_node_color([n for n in original_descendants if n in already_considered], "green")
+
                 start_iteration_nodes = [
                     d
                     for d in descendants
@@ -493,8 +550,7 @@ class TaskGraph(object):
                     for d in descendants
                     if isinstance(d, TGEndIterationNode) and d not in added_copies and d not in already_considered
                 ]
-                print("  --> SIN: ", [n.get_label() for n in start_iteration_nodes])
-                print("  --> EIN: ", [n.get_label() for n in end_iteration_nodes])
+
                 # filter start_iteration_nodes to those, which have not already been duplicated
                 filtered_start_iteration_nodes: List[TGStartIterationNode] = []
                 for sin in start_iteration_nodes:
@@ -509,21 +565,21 @@ class TaskGraph(object):
                 filtered_end_iteration_nodes: List[TGEndIterationNode] = []
                 for ein in end_iteration_nodes:
                     already_duplicated = False
-                    print("EIN: ", ein.get_label(), ein)
-                    print("EIN SUCC: ", [n.get_label() for n in self.get_successors(ein)])
+                    #                    print("EIN: ", ein.get_label(), ein)
+                    #                    print("EIN SUCC: ", [n.get_label() for n in self.get_successors(ein)])
                     for succ in self.get_successors(ein):
                         if isinstance(succ, TGStartFunctionNode) and succ.pet_node_id == ein.pet_node_id:
                             already_duplicated = True
-                            print("--> Already duplicated")
+                            #                            print("--> Already duplicated")
                             break
                     if not already_duplicated:
                         filtered_end_iteration_nodes.append(ein)
 
                 # find corresponding end iteration node for each start
                 for sin in filtered_start_iteration_nodes:
-                    print("SIN: ", sin.get_label())
+                    #                    print("SIN: ", sin.get_label())
                     for ein in filtered_end_iteration_nodes:
-                        print("EIN: ", ein.get_label())
+                        #                        print("EIN: ", ein.get_label())
                         # only consider pairs with equal corresponding pet_node_id's
                         if sin.pet_node_id != ein.pet_node_id:
                             continue
@@ -531,6 +587,7 @@ class TaskGraph(object):
                         # i.e., make sure that each considered path is restrained to a single iteration
                         paths = nx.all_simple_paths(self.graph, sin, ein)
                         valid_paths: List[List[TGNode]] = []
+                        print("PATHS: ", [[n.get_label() for n in p] for p in paths])
                         for path in paths:
                             start_count = len(
                                 [
@@ -548,7 +605,7 @@ class TaskGraph(object):
                             )
                             if start_count == 1 and end_count == 1:
                                 valid_paths.append(path)
-                        print("VALID PATHS: ", [[n.get_label() for n in p] for p in valid_paths])
+                        #                        print("VALID PATHS: ", [[n.get_label() for n in p] for p in valid_paths])
                         if len(valid_paths) == 0:
                             continue
                         # TODO copy the validated paths and connect them to the original iteration
@@ -558,7 +615,7 @@ class TaskGraph(object):
                         copied_nodes: Dict[TGNode, TGNode] = dict()
                         for path in valid_paths:
                             copied_nodes, copied_path = self.__copy_iteration_subgraph(copied_nodes, path)
-                            print("COPIED PATH: ", [n.get_label() for n in copied_path])
+                            #                            print("COPIED PATH: ", [n.get_label() for n in copied_path])
                             self.add_edge(ein, copied_path[0])
                             for succ in ein_successors:
                                 self.add_edge(copied_path[-1], succ)
