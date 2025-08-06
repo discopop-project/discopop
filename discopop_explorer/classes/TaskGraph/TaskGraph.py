@@ -90,6 +90,7 @@ class TaskGraph(object):
         self.__visit_pet(pet)
         self.__assign_contexts()
         self.__break_cycles()
+        self.__duplicate_loop_iterations()
         self.__validate_graph_structure()
 
     def add_node(self, node: TGNode) -> None:
@@ -428,16 +429,7 @@ class TaskGraph(object):
                     search_source_queue = self.get_descendants(function_node)
                     search_source = function_node
 
-                    print("ITENP: ", [n.get_label() for n in iteration_entry_points])
-                    print("ITEXP: ", [n.get_label() for n in iteration_exit_points])
-                    print("ENTRY: ", entry_node.get_label())
-                    print("EXIT: ", exit_node.get_label())
-
                     # break cycle
-                    print(
-                        "EDGES PRE BREAK: ",
-                        [(s.get_label(), t.get_label()) for s, t in self.graph.in_edges(entry_node)],
-                    )
                     for itexp in iteration_exit_points:
                         self.graph.remove_edge(itexp, entry_node)
                         logger.info("  --> Removed edge " + itexp.get_label() + " --> " + entry_node.get_label())
@@ -445,8 +437,6 @@ class TaskGraph(object):
                     # add loop start marking between entry_node and its predecessors
                     lsm = TGStartLoopNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
                     self.add_node(lsm)
-                    print("PREDS: ", [s.get_label() for s in self.get_predecessors(entry_node)])
-                    print("EDGES: ", [(s.get_label(), t.get_label()) for s, t in self.graph.in_edges(entry_node)])
                     for pred in self.get_predecessors(entry_node):
                         self.graph.remove_edge(pred, entry_node)
                         self.add_edge(pred, lsm)
@@ -482,21 +472,15 @@ class TaskGraph(object):
                     for iem in iem_list:
                         self.add_edge(iem, lem)
 
-                #                    # TODO add second iteration body
-                #                    # -> find all simple paths between every combination of ism and iem, and copy the subgraph
-                #                    for ism in ism_list:
-                #                        print("\nISM : ", ism.get_label())
-                #                        for iem in iem_list:
-                #                            print("IEM: ", iem.get_label())
-                #                            paths = nx.all_simple_paths(self.graph, ism, iem)
-                #                            print("PATHS: ", [[n.get_label() for n in p] for p in paths])
-
                 else:
                     # progress search
                     if len(search_source_queue) > 0:
                         search_source = search_source_queue.pop(0)
                     else:
                         break
+
+    def __duplicate_loop_iterations(self) -> None:
+        warnings.warn("Not yet implemented!")
 
     def __validate_graph_structure(self) -> None:
         warnings.warn("Not yet implemented!")
