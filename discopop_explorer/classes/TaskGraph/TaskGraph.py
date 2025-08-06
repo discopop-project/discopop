@@ -81,11 +81,13 @@ class TaskGraph(object):
         # define updating plot window
         fig1 = plt.figure(1)
         self.plotting_axis = fig1.add_subplot(1, 1, 1)
+        plt.ion()
         # start processing
         self.__assign_function_ids(pet)
         self.__construct_from_pet(pet)
         print("Waiting for user to close the Window...")
-        plt.show(block=True)
+        # plt.show(block=True)
+        plt.ioff()
 
     def __assign_function_ids(self, pet: PEGraphX) -> None:
         id = 0

@@ -92,7 +92,7 @@ class PatternDetectorX(object):
 
         # create TaskGraph from pet
         task_graph = TaskGraph(self.pet)
-        # task_graph.plot()
+        task_graph.plot()
 
         # reduction before doall!
 
