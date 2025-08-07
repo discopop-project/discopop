@@ -21,6 +21,8 @@ from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchCon
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
+from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
+from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
 from discopop_explorer.classes.TaskGraph.Functions.TGEndFunctionNode import TGEndFunctionNode
 from discopop_explorer.classes.TaskGraph.Functions.TGStartFunctionNode import TGStartFunctionNode
 from discopop_explorer.classes.TaskGraph.Loops.TGEndLoopNode import TGEndLoopNode
@@ -690,7 +692,6 @@ class TaskGraph(object):
                 ]
                 self.update_plot_node_color(original_start_iteration_nodes, color="orange")
                 self.update_plot_node_color(original_end_iteration_nodes, color="orange")
-            #
 
             # retry duplication of loop iterations until each iteration in the function is followied by a duplicate
             # multiple tries are necessary, as every occurence of a loop needs to be duplicated
@@ -775,6 +776,7 @@ class TaskGraph(object):
         logger.info("Assigning contexts...")
         self.__assign_function_contexts()
         self.__assign_branching_contexts()
+        self.__assign_loop_contexts()
 
     def __assign_function_contexts(self) -> None:
         logger.info("Assigning function contexts...")
@@ -821,10 +823,6 @@ class TaskGraph(object):
                 # no merge node found
                 continue
             merge_node = pot_1[0]
-            plt.ioff()
-            self.update_plot(
-                self.graph.subgraph(self.get_descendants(node) + [node]), highlight_nodes=[node, merge_node]
-            )
 
             # collect nodes for each branch
             branches: List[List[TGNode]] = []
@@ -844,9 +842,127 @@ class TaskGraph(object):
                 branch_context = BranchContext(branching_parent_context)
                 for branch_node in branch:
                     branch_context.add_node(branch_node)
-                branching_parent_context.add_contained_context(branch_context)
                 self.contexts.append(branch_context)
+                branching_parent_context.add_contained_context(branch_context)
             self.contexts.append(branching_parent_context)
+
+    def __assign_loop_contexts(self) -> None:
+        logger.info("Assigning branching contexts...")
+        for node in tqdm(self.graph.nodes):
+            if not isinstance(node, TGStartLoopNode):
+                continue
+
+            # search corresponding loop end node
+            loop_end_node: Optional[TGNode] = None
+            for reachable_node in list(nx.dfs_preorder_nodes(self.graph, node)):
+                if isinstance(reachable_node, TGEndLoopNode) and (node.pet_node_id == reachable_node.pet_node_id):
+                    # validate the pair
+                    shortest_path = nx.shortest_path(self.graph, node, reachable_node)
+                    if (
+                        len(
+                            [
+                                n
+                                for n in shortest_path
+                                if isinstance(n, TGStartLoopNode) and (n.pet_node_id == node.pet_node_id)
+                            ]
+                        )
+                        > 1
+                    ):
+                        # path invalid
+                        continue
+                    if (
+                        len(
+                            [
+                                n
+                                for n in shortest_path
+                                if isinstance(n, TGEndLoopNode) and (n.pet_node_id == reachable_node.pet_node_id)
+                            ]
+                        )
+                        > 1
+                    ):
+                        # path invalid
+                        continue
+                    loop_end_node = reachable_node
+                    break
+
+            # search general loop nodes
+            general_loop_nodes: List[TGNode] = [cast(TGNode, node), cast(TGNode, loop_end_node)]
+            for d in self.get_descendants(node):
+                if nx.has_path(self.graph, d, loop_end_node):
+                    general_loop_nodes.append(d)
+
+            # search loop iteration starts
+            iteration_starts: List[TGNode] = []
+            for n in general_loop_nodes:
+                if isinstance(n, TGStartIterationNode) and (n.pet_node_id == node.pet_node_id):
+                    iteration_starts.append(n)
+
+            # search iteration_ends
+            iteration_ends: List[TGNode] = []
+            for n in general_loop_nodes:
+                if isinstance(n, TGEndIterationNode) and (n.pet_node_id == node.pet_node_id):
+                    iteration_ends.append(n)
+
+            # establish pairs between iteration start and end points
+            valid_pairs: List[Tuple[TGStartIterationNode, TGEndIterationNode]] = []
+            for it_start in iteration_starts:
+                for it_end in iteration_ends:
+                    if not nx.has_path(self.graph, it_start, it_end):
+                        continue
+                    shortest_path = nx.shortest_path(self.graph, it_start, it_end)
+                    if (
+                        len(
+                            [
+                                n
+                                for n in shortest_path
+                                if isinstance(n, TGStartLoopNode) and (n.pet_node_id == node.pet_node_id)
+                            ]
+                        )
+                        > 1
+                    ):
+                        # path invalid
+                        continue
+                    if (
+                        len(
+                            [
+                                n
+                                for n in shortest_path
+                                if isinstance(n, TGEndLoopNode) and (n.pet_node_id == reachable_node.pet_node_id)
+                            ]
+                        )
+                        > 1
+                    ):
+                        # path invalid
+                        continue
+                    valid_pairs.append((cast(TGStartIterationNode, it_start), cast(TGEndIterationNode, it_end)))
+
+            # get iteration nodes for each pair
+            pair_iteration_nodes: Dict[Tuple[TGStartIterationNode, TGEndIterationNode], List[TGNode]] = dict()
+            for it_start, it_end in valid_pairs:
+                pair_iteration_nodes[(it_start, it_end)] = list(self.__get_iteration_nodes(it_start, it_end)) + [
+                    it_start,
+                    it_end,
+                ]
+
+            # create loop context
+            loop_context = LoopParentContext()
+            for loop_node in general_loop_nodes:
+                is_regular_loop_node = True
+                for iteration_nodes in pair_iteration_nodes.values():
+                    if loop_node in iteration_nodes:
+                        is_regular_loop_node = False
+                        break
+                if is_regular_loop_node:
+                    loop_context.add_node(loop_node)
+            self.contexts.append(loop_context)
+
+            # create iteration contexts
+            for pair in pair_iteration_nodes:
+                iteration_context = IterationContext(loop_context)
+                for iteration_node in pair_iteration_nodes[pair]:
+                    iteration_context.add_node(iteration_node)
+                loop_context.add_contained_context(iteration_context)
+                self.contexts.append(iteration_context)
 
     def __calculate_context_nesting(self) -> None:
         warnings.warn("Not yet implemented!")
