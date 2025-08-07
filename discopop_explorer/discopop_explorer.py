@@ -79,6 +79,7 @@ class ExplorerArguments(GeneralArguments):
     load_existing_doall_and_reduction_patterns: bool
     collect_statistics: bool
     enable_pet_plot_file: Optional[str]  # None means no dump, otherwise the path
+    enable_task_graph_plot: bool
 
     def __post_init__(self) -> None:
         self.__validate()
@@ -129,6 +130,7 @@ def __run(
     hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]] = None,
     load_existing_doall_and_reduction_patterns: bool = False,
     jobs: Optional[int] = None,
+    enable_task_graph_plot: bool = False,
 ) -> DetectionResult:
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))  # type: ignore
     print("PET CREATION FINISHED.")
@@ -184,6 +186,7 @@ def __run(
             enable_detection_of_scheduling_clauses,
             hotspot_functions,
             jobs,
+            enable_task_graph_plot,
         )
 
     for plugin_name in plugins:
@@ -255,6 +258,7 @@ def run(arguments: ExplorerArguments) -> None:
             hotspot_functions=hotspots,
             load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
             jobs=arguments.jobs,
+            enable_task_graph_plot=arguments.enable_task_graph_plot,
         )
 
         end = time.time()
