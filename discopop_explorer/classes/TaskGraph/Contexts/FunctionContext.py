@@ -16,3 +16,9 @@ class FunctionContext(Context):
     def __init__(self, parent_function: PETNodeID):
         self.parent_function = parent_function
         super().__init__()
+
+    def get_plot_border_color(self) -> str:
+        return "b"
+
+    def get_plot_face_color(self) -> str:
+        return "lightgrey"

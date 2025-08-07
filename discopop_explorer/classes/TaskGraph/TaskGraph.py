@@ -17,6 +17,8 @@ from networkx import Graph
 from tqdm import tqdm
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchContext
+from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Functions.TGEndFunctionNode import TGEndFunctionNode
@@ -68,8 +70,7 @@ class TaskGraph(object):
     TGFunctionNode_pet_node_id_to_tg_node: Dict[PETNodeID, TGFunctionNode] = dict()
     TGStartFunctionNode_pet_node_id_to_tg_node: Dict[PETNodeID, TGStartFunctionNode] = dict()
     TGEndFunctionNode_pet_node_id_to_tg_node: Dict[PETNodeID, TGEndFunctionNode] = dict()
-    context_stack: List[Context] = []
-    visited_contexts: List[Context] = []
+    contexts: List[Context] = []
     current_level: LevelIndex = 0
     current_position: Dict[LevelIndex, PositionIndex] = {0: 0}
     plotting_axis = None  # type: ignore
@@ -105,15 +106,13 @@ class TaskGraph(object):
         self.__fix_loop_structures()
         self.__duplicate_loop_iterations()
         self.__validate_graph_structure()
-        self.__inline_function_calls()
         self.__assign_contexts()
+        self.__inline_function_calls()
+        self.__calculate_context_nesting()
         self.__insert_data_dependencies()
 
     def add_node(self, node: TGNode) -> None:
         self.graph.add_node(node)
-
-    #        for ctx in self.context_stack:
-    #            ctx.add_node(node)
 
     def add_edge(self, source: Optional[TGNode], target: Optional[TGNode]) -> None:
         if source is None or target is None:
@@ -162,24 +161,72 @@ class TaskGraph(object):
         logger.info("--->    Done.")
 
         # draw context patches
-        min_patch_width = 0.1
-        min_patch_height = 0.2
-        for ctx in self.visited_contexts:
-            contained_nodes_count, level_min, level_max, position_min, position_max = ctx.get_plot_bounding_box()
-            if contained_nodes_count <= 0:
+        min_patch_width = 10.0
+        ax = plt.gca()
+        for ctx in self.contexts:
+            # calculate bounding box
+            x_min = None
+            x_max = None
+            y_min = None
+            y_max = None
+            for ctx_node in ctx.get_contained_nodes(inclusive=True):
+                if not graph.has_node(ctx_node):  # in case subgraphs are plotted
+                    continue
+                x, y = positions[ctx_node]
+                if x_min is None:
+                    x_min = x
+                else:
+                    x_min = min(x_min, x)
+                if x_max is None:
+                    x_max = x
+                else:
+                    x_max = max(x_max, x)
+                if y_min is None:
+                    y_min = y
+                else:
+                    y_min = min(y_min, y)
+                if y_max is None:
+                    y_max = y
+                else:
+                    y_max = max(y_max, y)
+
+            if x_min is None:
                 continue
-            level_span = level_max - level_min
-            position_span = max(0.1, position_max - position_min)
-            self.plotting_axis.add_patch(  # type: ignore
+            if x_max is None:
+                continue
+            if y_min is None:
+                continue
+            if y_max is None:
+                continue
+
+            # draw bounding box
+            x_span = x_max - x_min
+            y_span = y_max - y_min
+
+            # force minimum x_span
+            if x_span < min_patch_width:
+                difference = min_patch_width - x_span
+                x_span = min_patch_width
+                x_min = x_min - (difference / 2)
+
+            ax.add_patch(  # type: ignore
                 Rectangle(
-                    (position_min - (min_patch_width / 2), -level_min + (min_patch_height / 2)),
-                    position_span + min_patch_width,
-                    -(level_span - min_patch_height),
+                    (x_min, y_min),
+                    width=x_span,
+                    height=y_span,
                     linewidth=1,
                     edgecolor=ctx.get_plot_border_color(),
                     facecolor=ctx.get_plot_face_color(),
+                    alpha=ctx.get_plot_face_alpha(),
                 )
             )
+
+        #            contained_nodes_count, level_min, level_max, position_min, position_max = ctx.get_plot_bounding_box()
+        #            if contained_nodes_count <= 0:
+        #                continue
+        #            level_span = level_max - level_min
+        #            position_span = max(0.1, position_max - position_min)
+
         # draw regular nodes
         if highlight_nodes is None:
             nx.draw_networkx_nodes(graph, positions)
@@ -254,20 +301,8 @@ class TaskGraph(object):
     def node_registered(self, pet_node_id: PETNodeID) -> bool:
         return pet_node_id in self.TGNode_pet_node_id_to_tg_node
 
-    def __assign_contexts(self) -> None:
-        warnings.warn("Not yet implemented!")
-
-    def __inline_function_calls(self) -> None:
-        warnings.warn("Not yet implemented!")
-
-    def __insert_data_dependencies(self) -> None:
-        warnings.warn("Not yet implemented!")
-
     def __visit_pet(self, pet: PEGraphX) -> None:
         # construct Taskgraph by visiting the PET Graph
-        general_context = Context()
-        self.context_stack.append(general_context)
-        self.visited_contexts.append(general_context)
         root = RootNode(None, self.__get_next_level(), self.__get_next_position(self.__get_current_level()))
         self.add_node(root)
 
@@ -735,6 +770,92 @@ class TaskGraph(object):
                         for iteration_node in iteration_nodes:
                             already_considered.add(iteration_node)
                         modification_found = True
+
+    def __assign_contexts(self) -> None:
+        logger.info("Assigning contexts...")
+        self.__assign_function_contexts()
+        self.__assign_branching_contexts()
+
+    def __assign_function_contexts(self) -> None:
+        logger.info("Assigning function contexts...")
+        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+            logger.info("--> " + function_node.get_label())
+            descendants = self.get_descendants(function_node)
+            function_start_nodes = [n for n in descendants if isinstance(n, TGStartFunctionNode)]
+            for fsn in function_start_nodes:
+                function_context = FunctionContext(fsn.pet_node_id)
+                function_context.add_node(fsn)
+                for fsn_descendant in self.get_descendants(fsn):
+                    function_context.add_node(fsn_descendant)
+                self.contexts.append(function_context)
+
+    def __assign_branching_contexts(self) -> None:
+        logger.info("Assigning branching contexts...")
+        for node in tqdm(self.graph.nodes):
+            successors = self.get_successors(node)
+            if len(successors) <= 1:
+                continue
+            # identify merge node
+            pre_order_traversals: List[List[TGNode]] = []
+            for succ in successors:
+                pre_order_traversals.append(list(nx.dfs_preorder_nodes(self.graph, succ)))
+
+            pot_1 = pre_order_traversals.pop(0)
+            invalid_candidate_indices: List[int] = []
+            for pot_other in pre_order_traversals:
+                # check remaining candidates
+                for idx, candidate in enumerate(pot_1):
+                    if candidate not in pot_other:
+                        invalid_candidate_indices.append(idx)
+
+                # remove invalid candidates from pot_1
+                for invalid_index in sorted(invalid_candidate_indices, reverse=True):
+                    pot_1.pop(invalid_index)
+                invalid_candidate_indices = []
+
+                if len(pot_1) == 0:
+                    break
+
+            # if list of candidates is not empty, choose the first entry as the merge node.
+            if len(pot_1) == 0:
+                # no merge node found
+                continue
+            merge_node = pot_1[0]
+            plt.ioff()
+            self.update_plot(
+                self.graph.subgraph(self.get_descendants(node) + [node]), highlight_nodes=[node, merge_node]
+            )
+
+            # collect nodes for each branch
+            branches: List[List[TGNode]] = []
+            for succ in successors:
+                succ_descendants = self.get_descendants(succ)
+                succ_branch: List[TGNode] = []
+                for sd in succ_descendants + [succ]:
+                    if nx.has_path(self.graph, sd, merge_node):
+                        succ_branch.append(sd)
+                branches.append(succ_branch)
+
+            # create branching parent context
+            branching_parent_context = BranchingParentContext()
+            branching_parent_context.add_node(node)
+            # create branch context for each branch
+            for branch in branches:
+                branch_context = BranchContext(branching_parent_context)
+                for branch_node in branch:
+                    branch_context.add_node(branch_node)
+                branching_parent_context.add_contained_context(branch_context)
+                self.contexts.append(branch_context)
+            self.contexts.append(branching_parent_context)
+
+    def __calculate_context_nesting(self) -> None:
+        warnings.warn("Not yet implemented!")
+
+    def __inline_function_calls(self) -> None:
+        warnings.warn("Not yet implemented!")
+
+    def __insert_data_dependencies(self) -> None:
+        warnings.warn("Not yet implemented!")
 
     def __get_iteration_nodes(
         self, iteration_entry: TGStartIterationNode, iteration_exit: TGEndIterationNode
