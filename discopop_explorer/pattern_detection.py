@@ -81,6 +81,7 @@ class PatternDetectorX(object):
         enable_detection_of_scheduling_clauses: bool,
         hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
         jobs: Optional[int],
+        enable_task_graph_plot: bool,
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
@@ -92,7 +93,8 @@ class PatternDetectorX(object):
 
         # create TaskGraph from pet
         task_graph = TaskGraph(self.pet)
-        task_graph.plot()
+        if enable_task_graph_plot:
+            task_graph.plot()
 
         # reduction before doall!
 
