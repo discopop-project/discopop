@@ -12,3 +12,9 @@ from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 
 class BranchingParentContext(Context):
     pass
+
+    def get_plot_border_color(self) -> str:
+        return "b"
+
+    def get_plot_face_color(self) -> str:
+        return "yellow"
