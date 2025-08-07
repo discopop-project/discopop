@@ -103,7 +103,8 @@ class TaskGraph(object):
         self.__visit_pet(pet)
         self.__assign_contexts()
         self.__break_cycles()
-        self.__duplicate_loop_iterations()
+        self.__fix_loop_structures()
+        # self.__duplicate_loop_iterations()
         self.__validate_graph_structure()
 
     def add_node(self, node: TGNode) -> None:
@@ -509,6 +510,75 @@ class TaskGraph(object):
                     else:
                         break
 
+    def __fix_loop_structures(self) -> None:
+        # in case a loop contains a branch to a non-iteration node (e.g. via "break"- statement), delete this edge and cleanup the graph
+        logger.info("Fixing loop structures...")
+        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+            logger.info("--> " + function_node.get_label())
+            modification_found = True
+            while modification_found:
+                modification_found = False
+                descendants = self.get_descendants(function_node)
+                # find problematic loops
+                start_iteration_nodes = [d for d in descendants if isinstance(d, TGStartIterationNode)]
+                end_iteration_nodes = [d for d in descendants if isinstance(d, TGEndIterationNode)]
+                for sin in start_iteration_nodes:
+                    for ein in end_iteration_nodes:
+                        if sin.pet_node_id != ein.pet_node_id:
+                            continue
+                        # filter corresponding start and end iteration nodes
+                        if not nx.has_path(self.graph, sin, ein):
+                            continue
+                        shortest_path = nx.shortest_path(self.graph, sin, ein)
+                        if (
+                            len(
+                                [
+                                    n
+                                    for n in shortest_path
+                                    if (n.pet_node_id == sin.pet_node_id) and isinstance(n, TGStartIterationNode)
+                                ]
+                            )
+                            > 1
+                        ):
+                            # more than one iteration start node found
+                            continue
+                        if (
+                            len(
+                                [
+                                    n
+                                    for n in shortest_path
+                                    if (n.pet_node_id == ein.pet_node_id) and isinstance(n, TGEndIterationNode)
+                                ]
+                            )
+                            > 1
+                        ):
+                            # more than one iteration end node found
+                            continue
+
+                        iteration_nodes = self.__get_iteration_nodes(sin, ein)
+                        # check iteration nodes for branches to outside the iteration
+                        invalid_edges: List[(Tuple[TGNode, TGNode])] = []
+                        for itn in iteration_nodes:
+                            if itn == ein:
+                                continue
+                            for succ in self.get_successors(itn):
+                                if succ not in iteration_nodes:
+                                    invalid_edges.append((itn, succ))
+
+                        if len(invalid_edges) == 0:
+                            continue
+                        # found problematic loop
+                        print("Invalid edges: ", [(e[0].get_label(), e[1].get_label()) for e in invalid_edges])
+
+                        # show problematic loop
+                        self.update_plot(
+                            subgraph=nx.subgraph(self.graph, descendants), highlight_nodes=[e[1] for e in invalid_edges]
+                        )
+
+                        # delete problematic edge
+
+                        # cleanup the graph by deleting nodes with no incoming edges
+
     def __duplicate_loop_iterations(self, plot_progress: bool = False) -> None:
         logger.info("Duplicating loop iterations...")
         for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
@@ -585,39 +655,46 @@ class TaskGraph(object):
                             continue
                         # validate the identified path by checking, if no other start / end iteration with the same pet_node_id is contained in the path,
                         # i.e., make sure that each considered path is restrained to a single iteration
-                        paths = nx.all_simple_paths(
-                            self.graph, sin, ein
-                        )  # Note: This operation can be very costly (e.g. for LULESH)! TODO: find a more scalable alternative
-                        valid_paths: List[List[TGNode]] = []
-                        print("PATHS: ", [[n.get_label() for n in p] for p in paths])
-                        for path in paths:
-                            start_count = len(
-                                [
-                                    n
-                                    for n in path
-                                    if (n.pet_node_id == sin.pet_node_id) and isinstance(n, TGStartIterationNode)
-                                ]
-                            )
-                            end_count = len(
-                                [
-                                    n
-                                    for n in path
-                                    if (n.pet_node_id == sin.pet_node_id) and isinstance(n, TGEndIterationNode)
-                                ]
-                            )
-                            if start_count == 1 and end_count == 1:
-                                valid_paths.append(path)
-                        #                        print("VALID PATHS: ", [[n.get_label() for n in p] for p in valid_paths])
-                        if len(valid_paths) == 0:
-                            continue
-                        # TODO copy the validated paths and connect them to the original iteration
+                        #                        paths = nx.all_simple_paths(
+                        #                            self.graph, sin, ein
+                        #                        )  # Note: This operation can be very costly (e.g. for LULESH)! TODO: find a more scalable alternative
+                        #                        valid_paths: List[List[TGNode]] = []
+                        #                        print("PATHS: ", [[n.get_label() for n in p] for p in paths])
+                        #                        for path in paths:
+                        #                            start_count = len(
+                        #                                [
+                        #                                    n
+                        #                                    for n in path
+                        #                                    if (n.pet_node_id == sin.pet_node_id) and isinstance(n, TGStartIterationNode)
+                        #                                ]
+                        #                            )
+                        #                            end_count = len(
+                        #                                [
+                        #                                    n
+                        #                                    for n in path
+                        #                                    if (n.pet_node_id == sin.pet_node_id) and isinstance(n, TGEndIterationNode)
+                        #                                ]
+                        #                            )
+                        #                            if start_count == 1 and end_count == 1:
+                        #                                valid_paths.append(path)
+                        #                        #                        print("VALID PATHS: ", [[n.get_label() for n in p] for p in valid_paths])
+                        #                        if len(valid_paths) == 0:
+                        #                            continue
+                        #                        # TODO copy the validated paths and connect them to the original iteration
+                        #
+                        #                        ## DUMMY
+                        #                        iteration_nodes: Set[TGNode] = set()
+                        #                        for path in valid_paths:
+                        #                            for node in path:
+                        #                                iteration_nodes.add(node)
+                        #                        ## END DUMMY
 
-                        ## DUMMY
-                        iteration_nodes: Set[TGNode] = set()
-                        for path in valid_paths:
-                            for node in path:
-                                iteration_nodes.add(node)
-                        ## END DUMMY
+                        # get iteration nodes
+                        iteration_nodes = self.__get_iteration_nodes(sin, ein)
+
+                        print("Iteration nodes: ", [n.get_label() for n in iteration_nodes])
+                        if len(iteration_nodes) == 0:
+                            continue
 
                         # copy the iteration nodes and connect them to the original iteration
                         ein_successors = self.get_successors(ein)
@@ -629,9 +706,9 @@ class TaskGraph(object):
                             self.__copy_iteration_subgraph(copied_nodes, iteration_nodes, sin, ein)
                         )
                         #                            print("COPIED PATH: ", [n.get_label() for n in copied_path])
-                        self.add_edge(ein, copied_path[0])
+                        self.add_edge(ein, copied_iteration_entry)
                         for succ in ein_successors:
-                            self.add_edge(copied_path[-1], succ)
+                            self.add_edge(copied_iteration_exit, succ)
                         for copied_node in copied_nodes.values():
                             added_copies.add(copied_node)
 
@@ -639,6 +716,28 @@ class TaskGraph(object):
                             already_considered.add(iteration_node)
                         # self.plot()
                         modification_found = True
+
+    def __get_iteration_nodes(
+        self, iteration_entry: TGStartIterationNode, iteration_exit: TGEndIterationNode
+    ) -> Set[TGNode]:
+        queue: List[TGNode] = [iteration_entry]
+        visited: Set[TGNode] = set()
+        iteration_nodes: Set[TGNode] = set()
+        while len(queue) > 0:
+            current_source = queue.pop(0)
+            visited.add(current_source)
+            if nx.has_path(self.graph, current_source, iteration_exit):
+                iteration_nodes.add(current_source)
+
+            # do not consider successors of iteration end node
+            if current_source == iteration_exit:
+                continue
+            # add successors of regular iteration nodes to the queue
+            for succ in self.get_successors(current_source):
+                if succ in queue or succ in visited:
+                    continue
+                queue.append(succ)
+        return iteration_nodes
 
     def __validate_graph_structure(self) -> None:
         warnings.warn("Not yet implemented!")
@@ -665,6 +764,8 @@ class TaskGraph(object):
         iteration_entry: TGNode,
         iteration_exit: TGNode,
     ) -> Tuple[Dict[TGNode, TGNode], List[TGNode], TGNode, TGNode]:
+        if len(iteration_nodes) == 0:
+            raise ValueError("Empty set of iteration nodes not supported as an argument!")
         copied_iteration_nodes: List[TGNode] = []
         # copy nodes
         for node in iteration_nodes:
@@ -673,10 +774,20 @@ class TaskGraph(object):
                 self.add_node(node_copy)
                 copied_nodes[node] = node_copy
             copied_iteration_nodes.append(copied_nodes[node])
+        print("COPIED_NDES: ", copied_nodes)
+        print("ITERATION NODES: ", iteration_nodes)
+        print("IT ENTRY: ", iteration_entry)
+        print("IT EXIT: ", iteration_exit)
         # copy edges
-        for source in [
-            n for n in iteration_nodes if n != iteration_exit
-        ]:  # do not copy outgoing edges of the path exit
-            for succ in self.get_successors(source):
-                self.add_edge(copied_nodes[source], copied_nodes[succ])
+        try:
+            for source in [
+                n for n in iteration_nodes if n != iteration_exit
+            ]:  # do not copy outgoing edges of the path exit
+                for succ in self.get_successors(source):
+                    self.add_edge(copied_nodes[source], copied_nodes[succ])
+        except KeyError:
+            print("ERROR AT: source: ", source.get_label(), "  succ: ", succ.get_label())
+            plt.ioff()
+            self.plot()
+
         return copied_nodes, copied_iteration_nodes, copied_nodes[iteration_entry], copied_nodes[iteration_exit]
