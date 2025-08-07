@@ -611,21 +611,32 @@ class TaskGraph(object):
                         if len(valid_paths) == 0:
                             continue
                         # TODO copy the validated paths and connect them to the original iteration
+
+                        ## DUMMY
+                        iteration_nodes: Set[TGNode] = set()
+                        for path in valid_paths:
+                            for node in path:
+                                iteration_nodes.add(node)
+                        ## END DUMMY
+
+                        # copy the iteration nodes and connect them to the original iteration
                         ein_successors = self.get_successors(ein)
                         for succ in ein_successors:
                             self.graph.remove_edge(ein, succ)
                         copied_nodes: Dict[TGNode, TGNode] = dict()
-                        for path in valid_paths:
-                            copied_nodes, copied_path = self.__copy_iteration_subgraph(copied_nodes, path)
-                            #                            print("COPIED PATH: ", [n.get_label() for n in copied_path])
-                            self.add_edge(ein, copied_path[0])
-                            for succ in ein_successors:
-                                self.add_edge(copied_path[-1], succ)
+
+                        copied_nodes, copied_path, copied_iteration_entry, copied_iteration_exit = (
+                            self.__copy_iteration_subgraph(copied_nodes, iteration_nodes, sin, ein)
+                        )
+                        #                            print("COPIED PATH: ", [n.get_label() for n in copied_path])
+                        self.add_edge(ein, copied_path[0])
+                        for succ in ein_successors:
+                            self.add_edge(copied_path[-1], succ)
                         for copied_node in copied_nodes.values():
                             added_copies.add(copied_node)
-                        for path in valid_paths:
-                            for path_node in path:
-                                already_considered.add(path_node)
+
+                        for iteration_node in iteration_nodes:
+                            already_considered.add(iteration_node)
                         # self.plot()
                         modification_found = True
 
@@ -648,18 +659,24 @@ class TaskGraph(object):
         return list(nx.descendants(self.graph, node))
 
     def __copy_iteration_subgraph(
-        self, copied_nodes: Dict[TGNode, TGNode], path: List[TGNode]
-    ) -> Tuple[Dict[TGNode, TGNode], List[TGNode]]:
-        warnings.warn("Not yet implemented!")
-        copied_path: List[TGNode] = []
+        self,
+        copied_nodes: Dict[TGNode, TGNode],
+        iteration_nodes: Set[TGNode],
+        iteration_entry: TGNode,
+        iteration_exit: TGNode,
+    ) -> Tuple[Dict[TGNode, TGNode], List[TGNode], TGNode, TGNode]:
+        copied_iteration_nodes: List[TGNode] = []
         # copy nodes
-        for node in path:
+        for node in iteration_nodes:
             if node not in copied_nodes:
                 node_copy = copy.deepcopy(node)
                 self.add_node(node_copy)
                 copied_nodes[node] = node_copy
-            copied_path.append(copied_nodes[node])
+            copied_iteration_nodes.append(copied_nodes[node])
         # copy edges
-        for idx in range(0, len(copied_path[:-1])):  # do not copy outgoing edges of the path exit
-            self.add_edge(copied_path[idx], copied_path[idx + 1])
-        return copied_nodes, copied_path
+        for source in [
+            n for n in iteration_nodes if n != iteration_exit
+        ]:  # do not copy outgoing edges of the path exit
+            for succ in self.get_successors(source):
+                self.add_edge(copied_nodes[source], copied_nodes[succ])
+        return copied_nodes, copied_iteration_nodes, copied_nodes[iteration_entry], copied_nodes[iteration_exit]
