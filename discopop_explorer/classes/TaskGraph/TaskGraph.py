@@ -14,6 +14,7 @@ import warnings
 import networkx as nx  # type: ignore
 import matplotlib
 from networkx import Graph
+from tqdm import tqdm
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
@@ -508,24 +509,25 @@ class TaskGraph(object):
                     else:
                         break
 
-    def __duplicate_loop_iterations(self) -> None:
+    def __duplicate_loop_iterations(self, plot_progress: bool = False) -> None:
         logger.info("Duplicating loop iterations...")
-        for function_node in self.TGFunctionNode_pet_node_id_to_tg_node.values():
+        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             logger.info("--> " + function_node.get_label())
             added_copies: Set[TGNode] = set()  # do not allow the re-copying of copies
             already_considered: Set[TGNode] = set()  # do not allo the re-copying of nodes
             modification_found = True
             # plotting progress
-            original_descendants = self.get_descendants(function_node)
-            self.update_plot(self.graph.subgraph(original_descendants))
-            original_start_iteration_nodes = [
-                cast(TGNode, d) for d in original_descendants if isinstance(d, TGStartIterationNode)
-            ]
-            original_end_iteration_nodes = [
-                cast(TGNode, d) for d in original_descendants if isinstance(d, TGEndIterationNode)
-            ]
-            self.update_plot_node_color(original_start_iteration_nodes, color="orange")
-            self.update_plot_node_color(original_end_iteration_nodes, color="orange")
+            if plot_progress:
+                original_descendants = self.get_descendants(function_node)
+                self.update_plot(self.graph.subgraph(original_descendants))
+                original_start_iteration_nodes = [
+                    cast(TGNode, d) for d in original_descendants if isinstance(d, TGStartIterationNode)
+                ]
+                original_end_iteration_nodes = [
+                    cast(TGNode, d) for d in original_descendants if isinstance(d, TGEndIterationNode)
+                ]
+                self.update_plot_node_color(original_start_iteration_nodes, color="orange")
+                self.update_plot_node_color(original_end_iteration_nodes, color="orange")
             #
 
             # retry duplication of loop iterations until each iteration in the function is followied by a duplicate
@@ -534,7 +536,9 @@ class TaskGraph(object):
                 modification_found = False
                 logger.info("--> " + function_node.get_label())
                 descendants = self.get_descendants(function_node)
-                self.update_plot_node_color([n for n in original_descendants if n in already_considered], "green")
+                # plotting progress
+                if plot_progress:
+                    self.update_plot_node_color([n for n in original_descendants if n in already_considered], "green")
 
                 start_iteration_nodes = [
                     d
