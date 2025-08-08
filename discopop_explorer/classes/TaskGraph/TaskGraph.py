@@ -110,7 +110,9 @@ class TaskGraph(object):
         self.__validate_graph_structure()
         self.__assign_contexts()
         self.__inline_function_calls()
-        self.__calculate_context_nesting()
+        self.__assign_node_levels()
+        # self.__calculate_context_successions()
+        # self.__calculate_context_nesting()
         self.__insert_data_dependencies()
 
     def add_node(self, node: TGNode) -> None:
@@ -152,13 +154,8 @@ class TaskGraph(object):
             graph = subgraph
         #         signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-        # get node positions
-        #        positions: Dict[TGNode, Tuple[LevelIndex, PositionIndex]] = dict()
-        #        for node in self.graph.nodes():
-        #            positions[node] = (node.position, -node.level)  # (x, y),
-        # top left is 0,0
+        # TODO implement custon positioning for cases where only contexts are printed
         logger.info("---> generating layout...")
-        # positions = nx.nx_pydot.graphviz_layout(graph, prog="dot")
         positions = nx.nx_pydot.pydot_layout(graph, prog="dot")
         logger.info("--->    Done.")
 
@@ -223,12 +220,7 @@ class TaskGraph(object):
                 )
             )
 
-        #            contained_nodes_count, level_min, level_max, position_min, position_max = ctx.get_plot_bounding_box()
-        #            if contained_nodes_count <= 0:
-        #                continue
-        #            level_span = level_max - level_min
-        #            position_span = max(0.1, position_max - position_min)
-
+        # TODO add option to show contexts only
         # draw regular nodes
         if highlight_nodes is None:
             nx.draw_networkx_nodes(graph, positions)
@@ -777,6 +769,7 @@ class TaskGraph(object):
         self.__assign_function_contexts()
         self.__assign_branching_contexts()
         self.__assign_loop_contexts()
+        self.__assign_parent_contexts_to_nodes()
 
     def __assign_function_contexts(self) -> None:
         logger.info("Assigning function contexts...")
@@ -963,6 +956,21 @@ class TaskGraph(object):
                     iteration_context.add_node(iteration_node)
                 loop_context.add_contained_context(iteration_context)
                 self.contexts.append(iteration_context)
+
+    def __assign_parent_contexts_to_nodes(self) -> None:
+        # assigns each node the innermost context containing the node
+        logger.info("Assigning parent contexts to nodes...")
+        for ctx in tqdm(self.contexts):
+            for node in ctx.get_contained_nodes(inclusive=False):
+                node.set_parent_context(ctx)
+
+    def __assign_node_levels(self) -> None:
+        # assings levels to each node starting from the outer most context
+        # this should allow a cheap check for "incoming" and "outgoing" dependencies
+        warnings.warn("Not yet implemented!")
+
+    def __calculate_context_successions(self) -> None:
+        warnings.warn("Not yet implemented!")
 
     def __calculate_context_nesting(self) -> None:
         warnings.warn("Not yet implemented!")
