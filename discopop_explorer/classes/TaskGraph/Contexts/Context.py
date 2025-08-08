@@ -7,10 +7,12 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import List, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 
 from discopop_explorer.classes.TaskGraph.Aliases import LevelIndex, PositionIndex
-from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 
 
 class Context(object):
