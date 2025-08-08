@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import itertools
+import random
 from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload, Any
 
 import jsonpickle  # type:ignore
@@ -485,13 +486,18 @@ class PEGraphX(object):
             exit_id = NodeID(str(file_id) + ":" + str(max_node_id_in_file + 1))
             exit_node = Node(exit_id)
             exit_node.type = NodeType.CU
+            exit_node.name = "FuncExit_" + func.name
             self.g.add_node(exit_id, data=exit_node)
             # find exit points
             subtree = subtree_of_type(self, func, CUNode, True)
+            max_end_line = 0
             for node in subtree:
                 if len(out_edges(self, node.id, EdgeType.SUCCESSOR)) == 0:
                     print("--> exit: ", node.id)
                     self.g.add_edge(node.id, exit_id, data=Dependency(EdgeType.SUCCESSOR))
+                    max_end_line = max(max_end_line, node.end_line)
+            exit_node.start_line = max_end_line
+            exit_node.end_line = max_end_line
 
     def show(self) -> None:
         """Plots the graph
@@ -547,6 +553,17 @@ class PEGraphX(object):
         labels = {}
         for n in self.g.nodes:
             labels[n] = str(self.g.nodes[n]["data"])
+        # fix missing positions
+        x_min: float = min([pos[n][0] for n in self.g.nodes if n in pos])
+        x_max: float = max([pos[n][0] for n in self.g.nodes if n in pos])
+        y_min: float = min([pos[n][1] for n in self.g.nodes if n in pos])
+        y_max: float = max([pos[n][1] for n in self.g.nodes if n in pos])
+        for n in self.g.nodes:
+            if n not in pos:
+                rand_x = random.uniform(x_min, x_max)
+                rand_y = random.uniform(y_min, y_max)
+                pos[n] = (rand_x, rand_y)
+
         nx.draw_networkx_labels(self.g, pos, labels, font_size=7)
 
         nx.draw_networkx_edges(

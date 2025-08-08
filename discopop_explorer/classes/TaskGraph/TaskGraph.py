@@ -24,7 +24,9 @@ from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import Functio
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
 from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
 from discopop_explorer.classes.TaskGraph.Functions.TGEndFunctionNode import TGEndFunctionNode
+from discopop_explorer.classes.TaskGraph.Functions.TGEndInlinedFunctionNode import TGEndInlinedFunctionNode
 from discopop_explorer.classes.TaskGraph.Functions.TGStartFunctionNode import TGStartFunctionNode
+from discopop_explorer.classes.TaskGraph.Functions.TGStartInlinedFunctionNode import TGStartInlinedFunctionNode
 from discopop_explorer.classes.TaskGraph.Loops.TGEndLoopNode import TGEndLoopNode
 from discopop_explorer.classes.TaskGraph.Loops.TGEndtIterationNode import TGEndIterationNode
 from discopop_explorer.classes.TaskGraph.Loops.TGStartIterationNode import TGStartIterationNode
@@ -32,6 +34,7 @@ from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoo
 from discopop_explorer.classes.TaskGraph.RootNode import RootNode
 from discopop_explorer.classes.TaskGraph.TGFunctionNode import TGFunctionNode
 from discopop_explorer.classes.TaskGraph.VisitorMarker import EndFunctionMarker, VisitorMarker
+from discopop_explorer.functions.PEGraph.traversal.called_functions import get_called_nodes
 from discopop_explorer.functions.PEGraph.traversal.children import get_entry_child
 from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.functions.PEGraph.traversal.predecessors import direct_predecessors
@@ -108,8 +111,8 @@ class TaskGraph(object):
         self.__fix_loop_structures()
         self.__duplicate_loop_iterations()
         self.__validate_graph_structure()
-        self.__assign_contexts()
         self.__inline_function_calls()
+        self.__assign_contexts()
         self.__assign_node_levels()
         # self.__calculate_context_successions()
         # self.__calculate_context_nesting()
@@ -299,6 +302,7 @@ class TaskGraph(object):
         # construct Taskgraph by visiting the PET Graph
         root = RootNode(None, self.__get_next_level(), self.__get_next_position(self.__get_current_level()))
         self.add_node(root)
+        self.root = root
 
         pet_root = pet.main
         pet_root_node = self.__get_or_insert_TGFunctionNode(
@@ -774,7 +778,6 @@ class TaskGraph(object):
     def __assign_function_contexts(self) -> None:
         logger.info("Assigning function contexts...")
         for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
-            logger.info("--> " + function_node.get_label())
             descendants = self.get_descendants(function_node)
             function_start_nodes = [n for n in descendants if isinstance(n, TGStartFunctionNode)]
             for fsn in function_start_nodes:
@@ -840,7 +843,7 @@ class TaskGraph(object):
             self.contexts.append(branching_parent_context)
 
     def __assign_loop_contexts(self) -> None:
-        logger.info("Assigning branching contexts...")
+        logger.info("Assigning loop contexts...")
         for node in tqdm(self.graph.nodes):
             if not isinstance(node, TGStartLoopNode):
                 continue
@@ -977,6 +980,97 @@ class TaskGraph(object):
 
     def __inline_function_calls(self) -> None:
         warnings.warn("Not yet implemented!")
+        logger.info("Inlining function calls...")
+        self.print_graph_statistics(self.graph, "pre inlining")
+        # determine calling nodes
+        calling_pet_nodes = [n.id for n in all_nodes(self.pet) if len(get_called_nodes(self.pet, n)) > 0]
+
+        # inline functions calls starting from the root node
+        # repeat the process until no modification is found anymore, i.e. no further functions calls need to be inlined
+        # Tracking of the call path depth for "early termination", i.e. supporting recursion and cyclic calls
+        call_path_limit = 100
+        call_path_depth = 0
+        modification_found = True
+        with tqdm(total=call_path_limit, desc="Callpath depth") as progress_bar:
+            while modification_found:
+                call_path_depth += 1
+                if call_path_depth >= call_path_limit:
+                    logger.info("Maximum call path depth of " + str(call_path_limit) + " reached.")
+                    break
+                modification_found = False
+                descendants = self.get_descendants(self.root)
+                calling_nodes: List[TGNode] = []
+                for node in descendants:
+                    if (
+                        node.pet_node_id in calling_pet_nodes and type(node) == TGNode
+                    ):  # check for type TGNode to exclude function calls etc.
+                        calling_nodes.append(node)
+                # filter calling nodes to such, which have not been inlined already
+                filtered_calling_nodes: List[TGNode] = []
+                for cn in calling_nodes:
+                    already_inlined = False
+                    for succ in self.get_successors(cn):
+                        if isinstance(succ, TGStartInlinedFunctionNode):
+                            # call already inlined
+                            already_inlined = True
+                            break
+                    if not already_inlined:
+                        filtered_calling_nodes.append(cn)
+
+                for fcn in tqdm(filtered_calling_nodes, desc="Open calls"):
+                    if fcn.pet_node_id is None:
+                        continue
+                    # duplicate inlined function body and insert it after the caller
+                    called_functions_pet_nodes = get_called_nodes(self.pet, self.pet.node_at(fcn.pet_node_id))
+                    for cf_pet_node in called_functions_pet_nodes:
+                        function_entry = self.TGFunctionNode_pet_node_id_to_tg_node[cf_pet_node.id]
+                        #                        logger.info("--> function entry: " + function_entry.get_label())
+                        inlined_entry, inlined_exit = self.__duplicate_inlined_function(function_entry, fcn.pet_node_id)
+                        # connect edges
+                        for succ in self.get_successors(fcn):
+                            self.graph.remove_edge(fcn, succ)
+                            self.add_edge(fcn, inlined_entry)
+                            self.add_edge(inlined_exit, succ)
+                        modification_found = True
+
+                # self.update_plot(self.graph)
+                # plt.pause(10)
+
+                progress_bar.update()
+
+                self.print_graph_statistics(self.graph, "post inlining")
+
+    def __duplicate_inlined_function(
+        self, inlined_function: TGFunctionNode, inlining_pet_node_id: PETNodeID
+    ) -> Tuple[TGStartInlinedFunctionNode, TGEndInlinedFunctionNode]:
+
+        # initialize entry and exit nodes
+        entry = TGStartInlinedFunctionNode(inlining_pet_node_id, 0, 0)
+        exit = TGEndInlinedFunctionNode(inlining_pet_node_id, 0, 0)
+        self.add_node(entry)
+        self.add_node(exit)
+
+        copied_nodes: Dict[TGNode, TGNode] = dict()
+        function_body_nodes = self.get_descendants(inlined_function) + [inlined_function]
+        # copy function body nodes
+        for fbn in function_body_nodes:
+            fbn_copy = copy.deepcopy(fbn)
+            copied_nodes[fbn] = fbn_copy
+            self.graph.add_node(fbn_copy)
+        # copy function body edges
+        for fbn in function_body_nodes:
+            for succ in self.get_successors(fbn):
+                self.graph.add_edge(copied_nodes[fbn], copied_nodes[succ])
+
+        # copy contexts  - might not be necessary, actually
+
+        # connect function body to entry and exit nodes
+        self.add_edge(entry, copied_nodes[inlined_function])
+        for fbn in function_body_nodes:
+            if isinstance(fbn, TGEndFunctionNode) and fbn.pet_node_id == inlined_function.pet_node_id:
+                self.add_edge(copied_nodes[fbn], exit)
+
+        return entry, exit
 
     def __insert_data_dependencies(self) -> None:
         warnings.warn("Not yet implemented!")
@@ -1020,6 +1114,14 @@ class TaskGraph(object):
 
     def get_descendants(self, node: TGNode) -> List[TGNode]:
         return list(nx.descendants(self.graph, node))
+
+    def print_graph_statistics(self, graph: Graph, label: str = "") -> None:
+        cleaned_label = "" if len(label) == 0 else "(" + label + ")"
+        logger.info("### Graph Statisticts " + cleaned_label + " ###")
+        logger.info("--> Nodes: " + str(len(graph.nodes)))
+        logger.info("--> Edges: " + str(len(graph.edges)))
+        # logger.info("--> longest path length: " + str(nx.dag_longest_path_length(graph)))
+        logger.info("#########################")
 
     def __copy_iteration_subgraph(
         self,
