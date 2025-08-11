@@ -111,8 +111,8 @@ class TaskGraph(object):
         self.__fix_loop_structures()
         self.__duplicate_loop_iterations()
         self.__validate_graph_structure()
+        self.__assign_contexts()  # assign contexts before inlining to keep runtime of branching context detection in check
         self.__inline_function_calls()
-        self.__assign_contexts()
         self.__assign_node_levels()
         # self.__calculate_context_successions()
         # self.__calculate_context_nesting()
@@ -768,7 +768,7 @@ class TaskGraph(object):
                             already_considered.add(iteration_node)
                         modification_found = True
 
-    def __assign_contexts(self) -> None:
+    def __assign_contexts(self) -> None:  # TODO: make the used graph parametric
         logger.info("Assigning contexts...")
         self.__assign_function_contexts()
         self.__assign_branching_contexts()
@@ -1062,7 +1062,78 @@ class TaskGraph(object):
             for succ in self.get_successors(fbn):
                 self.graph.add_edge(copied_nodes[fbn], copied_nodes[succ])
 
-        # copy contexts  - might not be necessary, actually
+        # TODO copy contexts
+        copied_contexts: Dict[Context, Context] = dict()
+        for fbn in function_body_nodes:
+            if fbn.parent_context is None:
+                continue
+            if fbn.parent_context not in copied_contexts:
+                ctx_copy = copy.deepcopy(fbn.parent_context)
+                copied_contexts[fbn.parent_context] = ctx_copy
+
+        # copy contained contexts:
+        modification_found = True
+        while modification_found:
+            modification_found = False
+            copied_contexts_updates: Dict[Context, Context] = dict()
+            for copied_ctx in copied_contexts.values():
+                for contained_ctx in copied_ctx.contained_contexts:
+                    if contained_ctx not in copied_contexts:
+                        ctx_copy = copy.deepcopy(contained_ctx)
+                        copied_contexts_updates[contained_ctx] = ctx_copy
+            for key in copied_contexts_updates:
+                copied_contexts[key] = copied_contexts_updates[key]
+
+        # copy contained nodes, if they were missed by copying function body nodes:
+        for copied_ctx in copied_contexts.values():
+            for contained_node in copied_ctx.contained_nodes:
+                if contained_node not in copied_nodes:
+                    node_copy = copy.deepcopy(contained_node)
+                    copied_nodes[contained_node] = node_copy
+                    self.graph.add_node(node_copy)
+
+        # perform type-specific copy operations if required
+        for original in copied_contexts:
+            if type(original) is BranchContext:
+                if original.parent_context is not None:
+                    if original.parent_context not in copied_contexts:
+                        ctx_copy = copy.deepcopy(original.parent_context)
+                        copied_contexts[original.parent_context] = ctx_copy
+                    cast(BranchContext, copied_contexts[original]).parent_context = copied_contexts[
+                        original.parent_context
+                    ]
+            if type(original) is IterationContext:
+                if original.parent_context is not None:
+                    if original.parent_context not in copied_contexts:
+                        ctx_copy = copy.deepcopy(original.parent_context)
+                        copied_contexts[original.parent_context] = ctx_copy
+                    cast(IterationContext, copied_contexts[original]).parent_context = copied_contexts[
+                        original.parent_context
+                    ]
+
+        # correct the context nesting properties
+        for copied_ctx in copied_contexts.values():
+            updated_contained_contexts: List[Context] = []
+            for contained_ctx in copied_ctx.contained_contexts:
+                updated_contained_contexts.append(copied_contexts[contained_ctx])
+            copied_ctx.contained_contexts = updated_contained_contexts
+
+        # correct the parent context in copied nodes
+        for node in copied_nodes:
+            if node.parent_context is None:
+                continue
+            node.parent_context = copied_contexts[node.parent_context]
+
+        # correct the contained nodes in the copied contexts
+        for copied_ctx in copied_contexts.values():
+            updated_contained_nodes: List[TGNode] = []
+            for contained_node in copied_ctx.contained_nodes:
+                updated_contained_nodes.append(copied_nodes[contained_node])
+            copied_ctx.contained_nodes = updated_contained_nodes
+
+        # register the copied contexts
+        for copied_ctx in copied_contexts.values():
+            self.contexts.append(copied_ctx)
 
         # connect function body to entry and exit nodes
         self.add_edge(entry, copied_nodes[inlined_function])
