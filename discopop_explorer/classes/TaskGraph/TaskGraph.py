@@ -143,8 +143,8 @@ class TaskGraph(object):
         self.current_position[self.current_level] += 1
         return buffer
 
-    def plot(self) -> None:
-        self.update_plot(self.graph)
+    def plot(self, highlight_nodes: Optional[List[TGNode]] = None) -> None:
+        self.update_plot(self.graph, highlight_nodes=highlight_nodes)
         print("Waiting for user to close the Window...")
         plt.show()
 
@@ -815,6 +815,7 @@ class TaskGraph(object):
         logger.info("Assigning contexts...")
         self.__assign_function_contexts()
         self.__assign_branching_contexts()
+        self.__assign_parent_contexts_to_nodes()
         self.__assign_loop_contexts()
         self.__assign_parent_contexts_to_nodes()
 
@@ -915,108 +916,50 @@ class TaskGraph(object):
                 branching_parent_context.add_contained_context(branch_context)
             self.contexts.append(branching_parent_context)
 
-    def __unused_old_assign_branching_contexts(self) -> None:
-        logger.info("Assigning branching contexts...")
-        plt.ioff()
-        self.plot()
-        plt.pause(10)
-        for node in tqdm(self.graph.nodes):
-            successors = self.get_successors(node)
-            if len(successors) <= 1:
-                continue
-            # identify merge node
-            pre_order_traversals: List[List[TGNode]] = []
-            for succ in successors:
-                pre_order_traversals.append(list(nx.dfs_preorder_nodes(self.graph, succ)))
-
-            pot_1 = pre_order_traversals.pop(0)
-            invalid_candidate_indices: List[int] = []
-            for pot_other in pre_order_traversals:
-                # check remaining candidates
-                for idx, candidate in enumerate(pot_1):
-                    if candidate not in pot_other:
-                        invalid_candidate_indices.append(idx)
-
-                # remove invalid candidates from pot_1
-                for invalid_index in sorted(invalid_candidate_indices, reverse=True):
-                    pot_1.pop(invalid_index)
-                invalid_candidate_indices = []
-
-                if len(pot_1) == 0:
-                    break
-
-            # if list of candidates is not empty, choose the first entry as the merge node.
-            if len(pot_1) == 0:
-                # no merge node found
-                continue
-            merge_node = pot_1[0]
-
-            # collect nodes for each branch
-            branches: List[List[TGNode]] = []
-            for succ in successors:
-                succ_descendants = self.get_descendants(succ)
-                succ_branch: List[TGNode] = []
-                for sd in succ_descendants + [succ]:
-                    if nx.has_path(self.graph, sd, merge_node):
-                        succ_branch.append(sd)
-                branches.append(succ_branch)
-
-            # create branching parent context
-            branching_parent_context = BranchingParentContext()
-            branching_parent_context.add_node(node)
-            # create branch context for each branch
-            for branch in branches:
-                branch_context = BranchContext(branching_parent_context)
-                for branch_node in branch:
-                    branch_context.add_node(branch_node)
-                self.contexts.append(branch_context)
-                branching_parent_context.add_contained_context(branch_context)
-            self.contexts.append(branching_parent_context)
-
     def __assign_loop_contexts(self) -> None:
         logger.info("Assigning loop contexts...")
+
         for node in tqdm(self.graph.nodes):
             if not isinstance(node, TGStartLoopNode):
                 continue
 
             # search corresponding loop end node
             loop_end_node: Optional[TGNode] = None
-            for reachable_node in list(nx.dfs_preorder_nodes(self.graph, node)):
-                if isinstance(reachable_node, TGEndLoopNode) and (node.pet_node_id == reachable_node.pet_node_id):
-                    # validate the pair
-                    shortest_path = nx.shortest_path(self.graph, node, reachable_node)
-                    if (
-                        len(
-                            [
-                                n
-                                for n in shortest_path
-                                if isinstance(n, TGStartLoopNode) and (n.pet_node_id == node.pet_node_id)
-                            ]
-                        )
-                        > 1
-                    ):
-                        # path invalid
-                        continue
-                    if (
-                        len(
-                            [
-                                n
-                                for n in shortest_path
-                                if isinstance(n, TGEndLoopNode) and (n.pet_node_id == reachable_node.pet_node_id)
-                            ]
-                        )
-                        > 1
-                    ):
-                        # path invalid
-                        continue
-                    loop_end_node = reachable_node
-                    break
+            queue: List[Tuple[TGNode, int]] = [(node, -1)]  # integer counts entered equivalent loops due to inlining
+            visited: Set[TGNode] = {node}
+            while len(queue) > 0:
+                current, entered_equivalent_loops = queue.pop(0)
+                if isinstance(current, TGEndLoopNode) and (node.pet_node_id == current.pet_node_id):
+                    if entered_equivalent_loops == 0:
+                        loop_end_node = current
+                        break
+                    else:
+                        entered_equivalent_loops -= 1
+                if isinstance(current, TGStartLoopNode) and (node.pet_node_id == current.pet_node_id):
+                    entered_equivalent_loops += 1
+                for succ in self.get_successors(current):
+                    if succ not in visited:
+                        queue.append((succ, entered_equivalent_loops))
+                        visited.add(succ)
+
+            if loop_end_node is None:
+                logger.warning("Could not determine loop end node for loop: " + node.get_label())
+                plt.ioff()
+                self.plot(highlight_nodes=[node])
+                plt.pause(1)
+                raise ValueError("Could not determine loop end node for loop: " + node.get_label())
 
             # search general loop nodes
-            general_loop_nodes: List[TGNode] = [cast(TGNode, node), cast(TGNode, loop_end_node)]
-            for d in self.get_descendants(node):
-                if nx.has_path(self.graph, d, loop_end_node):
-                    general_loop_nodes.append(d)
+            general_loop_nodes: set[TGNode] = {node, loop_end_node}
+            shortest_loop_path = nx.shortest_path(self.graph, source=node, target=loop_end_node)
+            for path_node in shortest_loop_path:
+                general_loop_nodes.add(path_node)
+                # add nodes from parent contexts to find nodes in branches within the loop body as well
+                if len(path_node.parent_context) > 0:
+                    for parent_ctx in path_node.parent_context:
+                        if isinstance(parent_ctx, BranchingParentContext):
+                            for n in parent_ctx.get_contained_nodes(inclusive=True):
+                                general_loop_nodes.add(n)
 
             # search loop iteration starts
             iteration_starts: List[TGNode] = []
@@ -1024,52 +967,56 @@ class TaskGraph(object):
                 if isinstance(n, TGStartIterationNode) and (n.pet_node_id == node.pet_node_id):
                     iteration_starts.append(n)
 
-            # search iteration_ends
-            iteration_ends: List[TGNode] = []
-            for n in general_loop_nodes:
-                if isinstance(n, TGEndIterationNode) and (n.pet_node_id == node.pet_node_id):
-                    iteration_ends.append(n)
-
             # establish pairs between iteration start and end points
             valid_pairs: List[Tuple[TGStartIterationNode, TGEndIterationNode]] = []
             for it_start in iteration_starts:
-                for it_end in iteration_ends:
-                    if not nx.has_path(self.graph, it_start, it_end):
-                        continue
-                    shortest_path = nx.shortest_path(self.graph, it_start, it_end)
-                    if (
-                        len(
-                            [
-                                n
-                                for n in shortest_path
-                                if isinstance(n, TGStartLoopNode) and (n.pet_node_id == node.pet_node_id)
-                            ]
-                        )
-                        > 1
-                    ):
-                        # path invalid
-                        continue
-                    if (
-                        len(
-                            [
-                                n
-                                for n in shortest_path
-                                if isinstance(n, TGEndLoopNode) and (n.pet_node_id == reachable_node.pet_node_id)
-                            ]
-                        )
-                        > 1
-                    ):
-                        # path invalid
-                        continue
+                it_end: Optional[TGNode] = None
+                it_queue: List[Tuple[TGNode, int]] = [
+                    (it_start, -1)
+                ]  # integer counts entered equivalent loops due to inlining
+                it_visited: Set[TGNode] = {it_start}
+                while len(it_queue) > 0:
+                    current, entered_equivalent_iterations = it_queue.pop(0)
+                    if isinstance(current, TGEndIterationNode) and (it_start.pet_node_id == current.pet_node_id):
+                        if entered_equivalent_iterations == 0:
+                            it_end = current
+                            break
+                        else:
+                            entered_equivalent_iterations -= 1
+                    if isinstance(current, TGStartIterationNode) and (it_start.pet_node_id == current.pet_node_id):
+                        if entered_equivalent_iterations == -1:
+                            entered_equivalent_iterations += 1
+                        else:
+                            raise ValueError("Invalid iteration structure found at node: " + current.get_label())
+                    for succ in self.get_successors(current):
+                        if succ not in it_visited:
+                            it_queue.append((succ, entered_equivalent_iterations))
+                            it_visited.add(succ)
+                if it_end is not None:
                     valid_pairs.append((cast(TGStartIterationNode, it_start), cast(TGEndIterationNode, it_end)))
 
             # get iteration nodes for each pair
             pair_iteration_nodes: Dict[Tuple[TGStartIterationNode, TGEndIterationNode], List[TGNode]] = dict()
             for it_start, it_end in valid_pairs:
-                pair_iteration_nodes[(it_start, it_end)] = list(self.__get_iteration_nodes(it_start, it_end)) + [
-                    it_start,
-                    it_end,
-                ]
+                tmp_iteration_nodes: set[TGNode] = {it_start, it_end}
+                try:
+                    shortest_iteration_path = nx.shortest_path(self.graph, source=it_start, target=it_end)
+                except nx.NetworkXNoPath:
+                    plt.ioff()
+                    self.plot(highlight_nodes=[it_start, it_end])
+                    plt.pause(1)
+
+                for path_node in shortest_iteration_path:
+                    tmp_iteration_nodes.add(path_node)
+                    # add nodes from parent contexts to find nodes in branches within the loop iteration as well
+                    if len(path_node.parent_context) > 0:  # ignore cases where only the function-context is set
+                        for parent_ctx in path_node.parent_context:
+                            if isinstance(parent_ctx, BranchingParentContext):
+                                for n in parent_ctx.get_contained_nodes(inclusive=True):
+                                    tmp_iteration_nodes.add(n)
+                    # add it_end to tmp_iteration_nodes
+                    tmp_iteration_nodes.add(it_end)
+                pair_iteration_nodes[(it_start, it_end)] = list(tmp_iteration_nodes)
 
             # create loop context
             loop_context = LoopParentContext()
@@ -1096,7 +1043,7 @@ class TaskGraph(object):
         logger.info("Assigning parent contexts to nodes...")
         for ctx in tqdm(self.contexts):
             for node in ctx.get_contained_nodes(inclusive=False):
-                node.set_parent_context(ctx)
+                node.add_parent_context(ctx)
 
     def __assign_node_levels(self) -> None:
         # assings levels to each node starting from the outer most context
@@ -1164,9 +1111,6 @@ class TaskGraph(object):
                             self.add_edge(inlined_exit, succ)
                         modification_found = True
 
-                # self.update_plot(self.graph)
-                # plt.pause(10)
-
                 progress_bar.update()
 
                 self.print_graph_statistics(self.graph, "post inlining")
@@ -1192,100 +1136,6 @@ class TaskGraph(object):
         for fbn in function_body_nodes:
             for succ in self.get_successors(fbn):
                 self.graph.add_edge(copied_nodes[fbn], copied_nodes[succ])
-
-        #        # TODO copy contexts
-        #        copied_contexts: Dict[Context, Context] = dict()
-        #        for fbn in function_body_nodes:
-        #            if fbn.parent_context is None:
-        #                continue
-        #            if fbn.parent_context not in copied_contexts:
-        #                ctx_copy = copy.deepcopy(fbn.parent_context)
-        #                copied_contexts[fbn.parent_context] = ctx_copy
-
-        #        # copy contained contexts:
-        #        modification_found = True
-        #        while modification_found:
-        #            modification_found = False
-        #            copied_contexts_updates: Dict[Context, Context] = dict()
-        #            print("LEN COPIED CONTEXTS: ", len(copied_contexts))
-        #            print("LEN COPIED CONTEXTS UPDATES: ", len(copied_contexts_updates))
-        #            for copied_ctx in copied_contexts.values():
-        #                for contained_ctx in copied_ctx.contained_contexts:
-        #                    print("Contained CTX: ", contained_ctx)
-        #                    if contained_ctx not in copied_contexts and contained_ctx not in copied_contexts_updates:
-        #                        print("FOUND MODIFICATION!")
-        #                        ctx_copy = copy.deepcopy(contained_ctx)
-        #                        copied_contexts_updates[contained_ctx] = ctx_copy
-        #                        modification_found = True
-        #            for key in copied_contexts_updates:
-        #                copied_contexts[key] = copied_contexts_updates[key]
-
-        #            print("---> LEN COPIED CONTEXTS: ", len(copied_contexts))
-        #            print("---> LEN COPIED CONTEXTS UPDATES: ", len(copied_contexts_updates))
-
-        #        # copy contained nodes, if they were missed by copying function body nodes:
-        #        for copied_ctx in copied_contexts.values():
-        #            for contained_node in copied_ctx.contained_nodes:
-        #                if contained_node not in copied_nodes:
-        #                    node_copy = copy.deepcopy(contained_node)
-        #                    copied_nodes[contained_node] = node_copy
-        #                    self.graph.add_node(node_copy)
-
-        #        # prepare type-specific copy operations
-        #        update: Dict[Context, Context] = dict()
-        #        for original in copied_contexts:
-        #            if type(original) is BranchContext or type(original) is IterationContext:
-        #                if original.parent_context is not None:
-        #                    if original.parent_context not in copied_contexts:
-        #                        ctx_copy = copy.deepcopy(original.parent_context)
-        #                        update[original.parent_context] = ctx_copy
-        #        for key in update:
-        #            copied_contexts[key] = update[key]
-
-        #        # perform type-specific copy operations if required
-        #        for original in copied_contexts:
-        #            if type(original) is BranchContext:
-        #                if original.parent_context is not None:
-        #                    cast(BranchContext, copied_contexts[original]).parent_context = copied_contexts[
-        #                        original.parent_context
-        #                    ]
-        #            if type(original) is IterationContext:
-        #                if original.parent_context is not None:
-        #                    cast(IterationContext, copied_contexts[original]).parent_context = copied_contexts[
-        #                        original.parent_context
-        #                    ]
-
-        #        # correct the context nesting properties
-        #        print("Copied context: ", copied_contexts)
-        #        for copied_ctx in copied_contexts.values():
-        #            updated_contained_contexts: List[Context] = []
-        #            for contained_ctx in copied_ctx.contained_contexts:
-        #                if contained_ctx not in copied_contexts:
-        #                    print("FOUND ALREADY MODIFIED CONTAINED CONTEXT!")
-        #
-        #                updated_contained_contexts.append(copied_contexts[contained_ctx])
-        #            copied_ctx.contained_contexts = updated_contained_contexts
-
-        #        # correct the parent context in copied nodes
-        #        for node in copied_nodes:
-        #            if node.parent_context is None:
-        #                continue
-        #            if node.parent_context in copied_contexts.values():
-        #                # found already modified parent
-        #                continue
-
-        #            node.parent_context = copied_contexts[node.parent_context]
-        #
-        #        # correct the contained nodes in the copied contexts
-        #        for copied_ctx in copied_contexts.values():
-        #            updated_contained_nodes: List[TGNode] = []
-        #            for contained_node in copied_ctx.contained_nodes:
-        #                updated_contained_nodes.append(copied_nodes[contained_node])
-        #            copied_ctx.contained_nodes = updated_contained_nodes
-
-        #        # register the copied contexts
-        #        for copied_ctx in copied_contexts.values():
-        #            self.contexts.append(copied_ctx)
 
         # connect function body to entry and exit nodes
         self.add_edge(entry, copied_nodes[inlined_function])
