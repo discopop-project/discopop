@@ -430,6 +430,7 @@ class TaskGraph(object):
     def __break_cycles(self) -> None:
         # search for cycles in each function and replace them with two distinct iteraions
         logger.info("Breaking cycles...")
+
         for function_node in self.TGFunctionNode_pet_node_id_to_tg_node.values():
             logger.info("--> " + function_node.get_label())
             # progress search if cycle can not be broken
@@ -546,6 +547,48 @@ class TaskGraph(object):
                         self.add_edge(iem, lem)
 
                 else:
+                    logger.warning(
+                        "NO entry_node and exit_node found for cycle: "
+                        + str([(t[0].get_label(), t[1].get_label()) for t in cycle])
+                    )
+                    # crudely break the cycle by removing the edge back to the first encountered node
+                    logger.warning(
+                        "--> crudely broken cycle by removing edge: "
+                        + str((cycle[-1][0].get_label(), cycle[-1][1].get_label()))
+                    )
+                    self.graph.remove_edge(cycle[-1][0], cycle[-1][1])
+                    # try to minimize the "error" by connecting the end of the cycle to a successor of the "entry" node, if it is outside the cycle
+                    outside_successor = None
+                    for succ in self.get_successors(cycle[-1][0]):
+                        if succ not in cycle_nodes:
+                            outside_successor = succ
+                            break
+                    if outside_successor is not None:
+                        self.add_edge(cycle[-1][1], outside_successor)
+                        logger.warning(
+                            "----> added new edge to outside successor: "
+                            + str((cycle[-1][1].get_label(), outside_successor.get_label()))
+                        )
+                    else:
+                        # if this is not possible, connect the exit to the function exit node to preserve the correct graph structure
+                        descendants = self.get_descendants(function_node)
+                        function_exit_nodes = [
+                            d
+                            for d in descendants
+                            if type(d) is TGEndFunctionNode and d.pet_node_id == function_node.pet_node_id
+                        ]
+                        if len(function_exit_nodes) > 0:
+                            self.add_edge(cycle[-1][1], function_exit_nodes[0])
+                            logger.warning(
+                                "----> added new edge to function exit node: "
+                                + str((cycle[-1][1].get_label(), function_exit_nodes[0].get_label()))
+                            )
+                        else:
+                            raise ValueError(
+                                "Could neither determine outside loop successor nor function exit node for broken cycle: "
+                                + str([(t[0].get_label(), t[1].get_label()) for t in cycle])
+                            )
+
                     # progress search
                     if len(search_source_queue) > 0:
                         search_source = search_source_queue.pop(0)
@@ -789,6 +832,9 @@ class TaskGraph(object):
 
     def __assign_branching_contexts(self) -> None:
         logger.info("Assigning branching contexts...")
+        plt.ioff()
+        self.plot()
+        plt.pause(10)
         for node in tqdm(self.graph.nodes):
             successors = self.get_successors(node)
             if len(successors) <= 1:
