@@ -148,6 +148,45 @@ class TaskGraph(object):
         print("Waiting for user to close the Window...")
         plt.show()
 
+    def quick_layout(self, subgraph: Optional[Graph] = None) -> Dict[TGNode, Tuple[float, float]]:
+        logger.info("----> generating quick layout...")
+        if subgraph is None:
+            graph = self.graph
+        else:
+            graph = subgraph
+        positions: Dict[TGNode, Tuple[float, float]] = dict()
+        entries: List[TGNode] = []
+        for node in graph.nodes:
+            if graph.in_degree(node) > 0:
+                continue
+            entries.append(node)
+
+        # assign positions by dfs-traversing
+        occupied_positions: Dict[int, int] = dict()
+        current_x_offset = 0
+        for entry in entries:
+            # get x offset of the current tree and reset the occupied positions
+            current_x_offset = max(occupied_positions.values()) if len(occupied_positions.values()) > 0 else 0
+            occupied_positions.clear()
+            # assign positions
+            queue: List[Tuple[TGNode, int]] = [(entry, 0)]
+            while len(queue) > 0:
+                current_node, current_level = queue.pop()
+                if current_node in positions:
+                    continue
+
+                if current_level not in occupied_positions:
+                    occupied_positions[current_level] = current_x_offset
+                occupied_positions[current_level] += 1
+                current_position = occupied_positions[current_level]
+                positions[current_node] = (float(current_position), float(-current_level))
+
+                out_edges = graph.out_edges(current_node)
+
+                for _, target in out_edges:
+                    queue.append((target, current_level + 1))
+        return positions
+
     def update_plot(self, subgraph: Optional[Graph] = None, highlight_nodes: Optional[List[TGNode]] = None) -> None:
         logger.info("Plotting...")
         plt.clf()
@@ -159,11 +198,12 @@ class TaskGraph(object):
 
         # TODO implement custon positioning for cases where only contexts are printed
         logger.info("---> generating layout...")
-        positions = nx.nx_pydot.pydot_layout(graph, prog="dot")
+        # positions = nx.nx_pydot.pydot_layout(graph, prog="dot")
+        positions = self.quick_layout(graph)
         logger.info("--->    Done.")
 
         # draw context patches
-        min_patch_width = 10.0
+        min_patch_width = 1.0
         ax = plt.gca()
         for ctx in self.contexts:
             # calculate bounding box
