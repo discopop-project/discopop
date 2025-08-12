@@ -7,7 +7,7 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional, TYPE_CHECKING, Set
 
 if TYPE_CHECKING:
     from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
@@ -19,15 +19,16 @@ class TGNode(object):
     pet_node_id: PETNodeID
     level: LevelIndex  # for plotting and predecessor / successor detection
     position: PositionIndex  # for plotting
-    parent_context: Optional[Context] = None
+    parent_context: Set[Context]
 
     def __init__(self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex):
         self.pet_node_id = pet_node_id
         self.level = level
         self.position = position
+        self.parent_context = set()
 
     def get_label(self) -> str:
         return str(self.pet_node_id)
 
-    def set_parent_context(self, parent_context: Context) -> None:
-        self.parent_context = parent_context
+    def add_parent_context(self, parent_context: Context) -> None:
+        self.parent_context.add(parent_context)
