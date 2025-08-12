@@ -832,6 +832,91 @@ class TaskGraph(object):
 
     def __assign_branching_contexts(self) -> None:
         logger.info("Assigning branching contexts...")
+        logger.info("--> determine set of merge nodes")
+        merge_nodes: List[TGNode] = []
+        for node in tqdm(self.graph.nodes):
+            if len(self.get_predecessors(node)) > 1:
+                merge_nodes.append(node)
+        logger.info("--> calculate merge and branch node pairs")
+        branch_and_merge_node_pairs: Dict[TGNode, TGNode] = dict()
+        for merge_node in tqdm(merge_nodes):
+            predecessors = self.get_predecessors(merge_node)
+            if len(predecessors) == 2:
+                branch_node = nx.lowest_common_ancestor(self.graph, predecessors[0], predecessors[1])
+                if branch_node is None:
+                    logger.warning(
+                        "No common ancestor found for: "
+                        + str(predecessors[0].get_label())
+                        + " and "
+                        + str(predecessors[1].get_label())
+                    )
+                    continue
+                branch_and_merge_node_pairs[branch_node] = merge_node
+            else:
+                # more than two predecessors found
+                candidates: List[TGNode] = []
+                for idx in range(0, len(predecessors) - 1):
+                    invalid = False
+                    p_1 = predecessors[idx]
+                    p_2 = predecessors[idx + 1]
+                    branch_node = nx.lowest_common_ancestor(self.graph, p_1, p_2)
+                    if branch_node is None:
+                        logger.warning(
+                            "No common ancestor found for: " + str(p_1.get_label()) + " and " + str(p_2.get_label())
+                        )
+                        invalid = True
+                        break
+                    if branch_node not in candidates:
+                        candidates.append(branch_node)
+                while len(candidates) > 1:
+                    c_1 = candidates.pop()
+                    c_2 = candidates.pop()
+                    branch_node = nx.lowest_common_ancestor(self.graph, c_1, c_2)
+                    if branch_node is None:
+                        logger.warning(
+                            "No common ancestor found for: " + str(c_1.get_label()) + " and " + str(c_2.get_label())
+                        )
+                        invalid = True
+                        break
+                    candidates.append(branch_node)
+                if invalid:
+                    continue
+
+        logger.info("--> registering branches")
+        for branch_node in tqdm(branch_and_merge_node_pairs):
+            merge_node = branch_and_merge_node_pairs[branch_node]
+            # collect path nodes
+            paths: List[List[TGNode]] = []
+            for pred in self.get_predecessors(merge_node):
+                queue: List[TGNode] = [pred]
+                visited: Set[TGNode] = {pred}
+                while len(queue) > 0:
+                    current = queue.pop()
+                    if current == branch_node:
+                        continue
+                    for p in self.get_predecessors(current):
+                        if p in visited:
+                            continue
+                        visited.add(p)
+                        queue.append(p)
+                # add merge node to the paths
+                visited.add(merge_node)
+                paths.append(list(visited))
+
+            # create branching parent context
+            branching_parent_context = BranchingParentContext()
+            branching_parent_context.add_node(branch_node)
+            # create branch context for each branch
+            for branch in paths:
+                branch_context = BranchContext(branching_parent_context)
+                for branch_node in branch:
+                    branch_context.add_node(branch_node)
+                self.contexts.append(branch_context)
+                branching_parent_context.add_contained_context(branch_context)
+            self.contexts.append(branching_parent_context)
+
+    def __unused_old_assign_branching_contexts(self) -> None:
+        logger.info("Assigning branching contexts...")
         plt.ioff()
         self.plot()
         plt.pause(10)
