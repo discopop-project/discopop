@@ -10,7 +10,7 @@ import copy
 import random
 import signal
 import logging
-from typing import Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
@@ -120,8 +120,8 @@ class TaskGraph(object):
         self.__add_branching_nodes()
         self.__assign_contexts()  # assign contexts before inlining to keep runtime of branching context detection in check
         self.__assign_node_levels()
-        # self.__calculate_context_successions()
         self.__calculate_context_nesting()
+        self.__calculate_context_successions()
         self.__insert_data_dependencies()
 
     def add_node(self, node: TGNode) -> None:
@@ -204,8 +204,8 @@ class TaskGraph(object):
 
         # TODO implement custon positioning for cases where only contexts are printed
         logger.info("---> generating layout...")
-        positions = nx.nx_pydot.pydot_layout(graph, prog="dot")
-        # positions = self.quick_layout(graph)
+        # positions = nx.nx_pydot.pydot_layout(graph, prog="dot")
+        positions = self.quick_layout(graph)
         logger.info("--->    Done.")
 
         # draw context patches
@@ -305,13 +305,37 @@ class TaskGraph(object):
         ctx_graph = nx.MultiDiGraph()
         for ctx in self.contexts:
             ctx_graph.add_node(ctx)
+        # add contained edges for positioning
         for ctx in self.contexts:
             for contained_ctx in ctx.contained_contexts:
                 ctx_graph.add_edge(ctx, contained_ctx)
+        # add successor edges for positioning
+        for ctx in self.contexts:
+            if ctx.successor is not None:
+                ctx_graph.add_edge(ctx, ctx.successor)
+        # calculate layout
         positions = nx.nx_pydot.pydot_layout(ctx_graph, prog="dot")
+        # remove successor edges for plotting contained edges
+        for ctx in self.contexts:
+            if ctx.successor is not None:
+                ctx_graph.remove_edge(ctx, ctx.successor)
+        # draw nodes
         node_colors = [ctx.get_plot_face_color() for ctx in self.contexts]
         nx.draw_networkx_nodes(ctx_graph, positions, nodelist=self.contexts, node_color=node_colors)
+        # draw contained edges
         nx.draw_networkx_edges(ctx_graph, positions)
+        # remove contained edges
+        to_be_removed: List[Tuple[Any, Any]] = []
+        for edge in ctx_graph.edges:
+            to_be_removed.append(edge)
+        for tbr in to_be_removed:
+            ctx_graph.remove_edge(tbr[0], tbr[1])
+        # draw successor edges
+        for ctx in self.contexts:
+            if ctx.successor is not None:
+                ctx_graph.add_edge(ctx, ctx.successor)
+        nx.draw_networkx_edges(ctx_graph, positions, edge_color="green")
+        # draw labels
         labels = {}
         for ctx in self.contexts:
             labels[ctx] = ctx.get_label()
@@ -1112,7 +1136,68 @@ class TaskGraph(object):
         warnings.warn("Not yet implemented!")
 
     def __calculate_context_successions(self) -> None:
-        warnings.warn("Not yet implemented!")
+        logger.info("Assigning context successions...")
+        logger.info("--> classify entry points...")
+        entry_points: List[TGNode] = []
+        for node in tqdm(self.graph.nodes):
+            if len(self.get_predecessors(node)) == 0:
+                entry_points.append(node)
+
+        logger.info("--> DFS parsing entry points...")
+        for entry_point in tqdm(entry_points):
+            # initialize succession calculation
+            queue: List[Tuple[TGNode, int, Tuple[Optional[Context], ...]]] = [
+                (entry_point, 0, (None,))
+            ]  # each position in the list corresponds to one level. Last position is always the last level
+            already_enqueued: Set[Tuple[TGNode, int]] = set()
+            while len(queue) > 0:
+                current_node, current_level, current_predecessor_contexts_tuple = queue.pop(0)
+                current_predecessor_contexts = list(current_predecessor_contexts_tuple)
+                # check for entering new context level
+                entered_context: Optional[Context] = None
+                if (
+                    isinstance(current_node, TGStartFunctionNode)
+                    or isinstance(current_node, TGStartLoopNode)
+                    or isinstance(current_node, TGStartIterationNode)
+                    or isinstance(current_node, TGStartBranchParentNode)
+                    or isinstance(current_node, TGStartBranchNode)
+                ):
+                    entered_context = current_node.created_context
+                if entered_context is not None:
+                    # connect previous context to entered context as successor
+                    if current_predecessor_contexts[-1] is not None:
+                        current_predecessor_contexts[-1].register_successor_context(entered_context)
+                    # update the dictionary of contexts
+                    current_predecessor_contexts[-1] = entered_context
+                    # update current context level
+                    current_level += 1
+                    current_predecessor_contexts.append(None)
+
+                # check for exiting context level
+                exited_context: bool = False
+                if (
+                    isinstance(current_node, TGEndFunctionNode)
+                    or isinstance(current_node, TGEndLoopNode)
+                    or isinstance(current_node, TGEndIterationNode)
+                    or isinstance(current_node, TGEndBranchParentNode)
+                    or isinstance(current_node, TGEndBranchNode)
+                ):
+                    exited_context = True
+                if exited_context:
+                    # update current context level
+                    current_level -= 1
+                    current_predecessor_contexts = current_predecessor_contexts[:-1]
+
+                # add successors to the queue
+                for succ in self.get_successors(current_node):
+                    queue_element = (succ, current_level, tuple(current_predecessor_contexts))
+                    if (queue_element[0], queue_element[1]) not in already_enqueued:
+                        queue.append(queue_element)
+                        already_enqueued.add((queue_element[0], queue_element[1]))
+
+        plt.ioff()
+        self.plot_context_graph()
+        plt.pause(1)
 
     def __calculate_context_nesting(self) -> None:
         logger.info("Assigning context nestings...")
@@ -1125,19 +1210,6 @@ class TaskGraph(object):
 
         logger.info("--> DFS parsing entry points...")
         for entry_point in tqdm(entry_points):
-            # find outermost context
-            #            outermost_context: Optional[Context] = None
-            #            omc_queue: List[TGNode] = [entry_point]
-            #            while len(omc_queue) > 0:
-            #                omc_current = omc_queue.pop(0)
-            #                if omc_current.created_context is not None:
-            #                    outermost_context = omc_current.created_context
-            #                    break
-            #                for succ in self.get_successors(omc_current):
-            #                    if succ not in omc_queue:
-            #                        omc_queue.append(succ)
-            #            if outermost_context is None:
-            #                continue
 
             # initialize the nesting calculation
             queue: List[Tuple[TGNode, Optional[Context]]] = [(entry_point, None)]
@@ -1166,12 +1238,6 @@ class TaskGraph(object):
                     or isinstance(current_node, TGEndBranchNode)
                 ):
                     exited_context = True
-                    print(
-                        "Node: "
-                        + current_node.get_label()
-                        + " --> exits: "
-                        + (current_context.get_label() if current_context is not None else "None")
-                    )
 
                 # assert validity of the results
                 if entered_context is not None and exited_context:
@@ -1188,6 +1254,7 @@ class TaskGraph(object):
                 elif exited_context:
                     # update the current context
                     if current_context is None:
+                        logger.error("Current context must not be None during processing!")
                         plt.ioff()
                         self.plot(highlight_nodes=[current_node])
                         plt.pause(10)
@@ -1204,9 +1271,11 @@ class TaskGraph(object):
                         queue.append(queue_element)
                         already_enqueued.add(queue_element)
 
-        plt.ioff()
-        self.plot_context_graph()
-        plt.pause(1)
+    ### DEBGU
+    #        plt.ioff()
+    #        self.plot_context_graph()
+    #        plt.pause(1)
+    ### !DEBUG
 
     def __inline_function_calls(self) -> None:
         warnings.warn("Not yet implemented!")
