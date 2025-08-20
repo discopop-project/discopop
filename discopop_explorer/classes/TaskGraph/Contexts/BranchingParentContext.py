@@ -18,3 +18,6 @@ class BranchingParentContext(Context):
 
     def get_plot_face_color(self) -> str:
         return "yellow"
+
+    def get_label(self) -> str:
+        return "BranchParent"

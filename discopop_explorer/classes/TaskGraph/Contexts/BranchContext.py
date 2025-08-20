@@ -13,19 +13,15 @@ from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 
 
 class BranchContext(Context):
-    parent_context: Context
-    contained_pet_nodes: Set[PETNode]
 
-    def __init__(self, parent_context: Context):
-        self.parent_context = parent_context
-        self.contained_pet_nodes = set()
+    def __init__(self) -> None:
         super().__init__()
-
-    def add_pet_node(self, pet_node: PETNode) -> None:
-        self.contained_pet_nodes.add(pet_node)
 
     def get_plot_border_color(self) -> str:
         return "b"
 
     def get_plot_face_color(self) -> str:
         return "orange"
+
+    def get_label(self) -> str:
+        return "Branch"

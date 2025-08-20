@@ -20,15 +20,20 @@ class TGNode(object):
     level: LevelIndex  # for plotting and predecessor / successor detection
     position: PositionIndex  # for plotting
     parent_context: Set[Context]
+    created_context: Optional[Context]
 
     def __init__(self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex):
         self.pet_node_id = pet_node_id
         self.level = level
         self.position = position
         self.parent_context = set()
+        self.created_context = None
 
     def get_label(self) -> str:
         return str(self.pet_node_id)
 
     def add_parent_context(self, parent_context: Context) -> None:
         self.parent_context.add(parent_context)
+
+    def register_created_context(self, context: Context) -> None:
+        self.created_context = context

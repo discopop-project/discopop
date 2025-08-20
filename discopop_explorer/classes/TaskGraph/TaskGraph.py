@@ -7,6 +7,7 @@
 # directory for details.
 
 import copy
+import random
 import signal
 import logging
 from typing import Dict, List, Optional, Set, Tuple, Union, cast
@@ -17,6 +18,10 @@ from networkx import Graph
 from tqdm import tqdm
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.classes.TaskGraph.Branching.TGEndBranchNode import TGEndBranchNode
+from discopop_explorer.classes.TaskGraph.Branching.TGEndBranchParentNode import TGEndBranchParentNode
+from discopop_explorer.classes.TaskGraph.Branching.TGStartBranchNode import TGStartBranchNode
+from discopop_explorer.classes.TaskGraph.Branching.TGStartBranchParentNode import TGStartBranchParentNode
 from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchContext
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
@@ -112,10 +117,11 @@ class TaskGraph(object):
         self.__duplicate_loop_iterations()
         self.__validate_graph_structure()
         self.__inline_function_calls()
+        self.__add_branching_nodes()
         self.__assign_contexts()  # assign contexts before inlining to keep runtime of branching context detection in check
         self.__assign_node_levels()
         # self.__calculate_context_successions()
-        # self.__calculate_context_nesting()
+        self.__calculate_context_nesting()
         self.__insert_data_dependencies()
 
     def add_node(self, node: TGNode) -> None:
@@ -198,8 +204,8 @@ class TaskGraph(object):
 
         # TODO implement custon positioning for cases where only contexts are printed
         logger.info("---> generating layout...")
-        # positions = nx.nx_pydot.pydot_layout(graph, prog="dot")
-        positions = self.quick_layout(graph)
+        positions = nx.nx_pydot.pydot_layout(graph, prog="dot")
+        # positions = self.quick_layout(graph)
         logger.info("--->    Done.")
 
         # draw context patches
@@ -292,6 +298,27 @@ class TaskGraph(object):
         nx.draw_networkx_nodes(
             self.plotting_graph_buffer, self.plotting_postions_buffer, nodelist=nodes, node_color=color
         )
+
+    def plot_context_graph(self) -> None:
+        logger.info("Plotting context graph...")
+
+        ctx_graph = nx.MultiDiGraph()
+        for ctx in self.contexts:
+            ctx_graph.add_node(ctx)
+        for ctx in self.contexts:
+            for contained_ctx in ctx.contained_contexts:
+                ctx_graph.add_edge(ctx, contained_ctx)
+        positions = nx.nx_pydot.pydot_layout(ctx_graph, prog="dot")
+        node_colors = [ctx.get_plot_face_color() for ctx in self.contexts]
+        nx.draw_networkx_nodes(ctx_graph, positions, nodelist=self.contexts, node_color=node_colors)
+        nx.draw_networkx_edges(ctx_graph, positions)
+        labels = {}
+        for ctx in self.contexts:
+            labels[ctx] = ctx.get_label()
+        nx.draw_networkx_labels(ctx_graph, positions, labels, font_size=7)
+        logger.info("---> showing...")
+        print("Waiting for user to close the Window...")
+        plt.show()
 
     def __get_or_insert_TGNode(self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex) -> TGNode:
         if pet_node_id is not None:
@@ -867,94 +894,86 @@ class TaskGraph(object):
             for fsn in function_start_nodes:
                 function_context = FunctionContext(fsn.pet_node_id)
                 function_context.add_node(fsn)
+                fsn.register_created_context(function_context)
                 for fsn_descendant in self.get_descendants(fsn):
                     function_context.add_node(fsn_descendant)
                 self.contexts.append(function_context)
 
     def __assign_branching_contexts(self) -> None:
         logger.info("Assigning branching contexts...")
-        logger.info("--> determine set of merge nodes")
-        merge_nodes: List[TGNode] = []
+        # preparation
+        logger.info("--> Selecting entry points...")
+        start_branch_nodes: List[TGNode] = []
+        start_branch_parent_nodes: List[TGNode] = []
         for node in tqdm(self.graph.nodes):
-            if len(self.get_predecessors(node)) > 1:
-                merge_nodes.append(node)
-        logger.info("--> calculate merge and branch node pairs")
-        branch_and_merge_node_pairs: Dict[TGNode, TGNode] = dict()
-        for merge_node in tqdm(merge_nodes):
-            predecessors = self.get_predecessors(merge_node)
-            if len(predecessors) == 2:
-                branch_node = nx.lowest_common_ancestor(self.graph, predecessors[0], predecessors[1])
-                if branch_node is None:
-                    logger.warning(
-                        "No common ancestor found for: "
-                        + str(predecessors[0].get_label())
-                        + " and "
-                        + str(predecessors[1].get_label())
-                    )
-                    continue
-                branch_and_merge_node_pairs[branch_node] = merge_node
-            else:
-                # more than two predecessors found
-                candidates: List[TGNode] = []
-                for idx in range(0, len(predecessors) - 1):
-                    invalid = False
-                    p_1 = predecessors[idx]
-                    p_2 = predecessors[idx + 1]
-                    branch_node = nx.lowest_common_ancestor(self.graph, p_1, p_2)
-                    if branch_node is None:
-                        logger.warning(
-                            "No common ancestor found for: " + str(p_1.get_label()) + " and " + str(p_2.get_label())
-                        )
-                        invalid = True
-                        break
-                    if branch_node not in candidates:
-                        candidates.append(branch_node)
-                while len(candidates) > 1:
-                    c_1 = candidates.pop()
-                    c_2 = candidates.pop()
-                    branch_node = nx.lowest_common_ancestor(self.graph, c_1, c_2)
-                    if branch_node is None:
-                        logger.warning(
-                            "No common ancestor found for: " + str(c_1.get_label()) + " and " + str(c_2.get_label())
-                        )
-                        invalid = True
-                        break
-                    candidates.append(branch_node)
-                if invalid:
-                    continue
+            if isinstance(node, TGStartBranchNode):
+                start_branch_nodes.append(node)
+            if isinstance(node, TGStartBranchParentNode):
+                start_branch_parent_nodes.append(node)
 
-        logger.info("--> registering branches")
-        for branch_node in tqdm(branch_and_merge_node_pairs):
-            merge_node = branch_and_merge_node_pairs[branch_node]
-            # collect path nodes
-            paths: List[List[TGNode]] = []
-            for pred in self.get_predecessors(merge_node):
-                queue: List[TGNode] = [pred]
-                visited: Set[TGNode] = {pred}
-                while len(queue) > 0:
-                    current = queue.pop()
-                    if current == branch_node:
+        # create individual branch context
+        logger.info("--> Create branch contexts")
+        for sbn in tqdm(start_branch_nodes):
+            # create Context
+            branch_context = BranchContext()
+            sbn.register_created_context(branch_context)
+            self.contexts.append(branch_context)
+            # DFS find nodes contained in the context
+            queue: List[Tuple[TGNode, int]] = [(succ, 0) for succ in self.get_successors(sbn)]
+            visited: Set[Tuple[TGNode, int]] = set()
+            contained_nodes: Set[TGNode] = set()
+            while len(queue) > 0:
+                current_node, current_level = queue.pop()
+                # stop search on this path, if a EndBranchNode is found and level is 0
+                if isinstance(current_node, TGEndBranchNode):
+                    if current_level == 0:
+                        # stop search along this path
                         continue
-                    for p in self.get_predecessors(current):
-                        if p in visited:
-                            continue
-                        visited.add(p)
-                        queue.append(p)
-                # add merge node to the paths
-                visited.add(merge_node)
-                paths.append(list(visited))
+                    else:
+                        # decrease level
+                        current_level -= 1
+                # increase the level, if a StartBranchNode is encountered
+                if isinstance(current_node, TGStartBranchNode):
+                    current_level += 1
+                # mark the node on the path as contained in the branch
+                contained_nodes.add(current_node)
+                # enqueue successors
+                for succ in self.get_successors(current_node):
+                    queue_element = (succ, current_level)
+                    if queue_element not in visited:
+                        queue.append(queue_element)
+                        visited.add(queue_element)
+            # register contained nodes in the context
+            for contained_node in contained_nodes:
+                branch_context.add_node(contained_node)
 
-            # create branching parent context
-            branching_parent_context = BranchingParentContext()
-            branching_parent_context.add_node(branch_node)
-            # create branch context for each branch
-            for branch in paths:
-                branch_context = BranchContext(branching_parent_context)
-                for branch_node in branch:
-                    branch_context.add_node(branch_node)
-                self.contexts.append(branch_context)
-                branching_parent_context.add_contained_context(branch_context)
-            self.contexts.append(branching_parent_context)
+        # create branching parent contexts
+        logger.info("--> Create branch parent contexts...")
+        for sbpn in tqdm(start_branch_parent_nodes):
+            branch_parent_context = BranchingParentContext()
+            self.contexts.append(branch_parent_context)
+            sbpn.created_context = branch_parent_context
+            # get and register contained branch contexts
+            for succ in self.get_successors(sbpn):
+                # ensure correct structure
+                if not isinstance(succ, TGStartBranchNode):
+                    raise ValueError(
+                        "InvalidGraphStructure: incorrect node type: "
+                        + str(type(succ))
+                        + " following a node of type "
+                        + str(type(sbpn))
+                        + " !"
+                    )
+                if succ.created_context is None:
+                    raise ValueError(
+                        "Field invalid: created_context of "
+                        + str(type(succ))
+                        + " node "
+                        + succ.get_label()
+                        + " is None!"
+                    )
+                succ.created_context.register_parent_context(branch_parent_context)
+                branch_parent_context.add_contained_context(succ.created_context)
 
     def __assign_loop_contexts(self) -> None:
         logger.info("Assigning loop contexts...")
@@ -1060,6 +1079,7 @@ class TaskGraph(object):
 
             # create loop context
             loop_context = LoopParentContext()
+            node.register_created_context(loop_context)
             for loop_node in general_loop_nodes:
                 is_regular_loop_node = True
                 for iteration_nodes in pair_iteration_nodes.values():
@@ -1073,6 +1093,7 @@ class TaskGraph(object):
             # create iteration contexts
             for pair in pair_iteration_nodes:
                 iteration_context = IterationContext(loop_context)
+                pair[0].register_created_context(iteration_context)
                 for iteration_node in pair_iteration_nodes[pair]:
                     iteration_context.add_node(iteration_node)
                 loop_context.add_contained_context(iteration_context)
@@ -1094,7 +1115,98 @@ class TaskGraph(object):
         warnings.warn("Not yet implemented!")
 
     def __calculate_context_nesting(self) -> None:
-        warnings.warn("Not yet implemented!")
+        logger.info("Assigning context nestings...")
+        logger.info("--> classify entry points...")
+
+        entry_points: List[TGNode] = []
+        for node in tqdm(self.graph.nodes):
+            if len(self.get_predecessors(node)) == 0:
+                entry_points.append(node)
+
+        logger.info("--> DFS parsing entry points...")
+        for entry_point in tqdm(entry_points):
+            # find outermost context
+            #            outermost_context: Optional[Context] = None
+            #            omc_queue: List[TGNode] = [entry_point]
+            #            while len(omc_queue) > 0:
+            #                omc_current = omc_queue.pop(0)
+            #                if omc_current.created_context is not None:
+            #                    outermost_context = omc_current.created_context
+            #                    break
+            #                for succ in self.get_successors(omc_current):
+            #                    if succ not in omc_queue:
+            #                        omc_queue.append(succ)
+            #            if outermost_context is None:
+            #                continue
+
+            # initialize the nesting calculation
+            queue: List[Tuple[TGNode, Optional[Context]]] = [(entry_point, None)]
+            already_enqueued: Set[Tuple[TGNode, Optional[Context]]] = {(entry_point, None)}
+            while len(queue) > 0:
+                current_node, current_context = queue.pop(0)
+
+                # check for entering a new contexts
+                entered_context: Optional[Context] = None
+                if (
+                    isinstance(current_node, TGStartFunctionNode)
+                    or isinstance(current_node, TGStartLoopNode)
+                    or isinstance(current_node, TGStartIterationNode)
+                    or isinstance(current_node, TGStartBranchParentNode)
+                    or isinstance(current_node, TGStartBranchNode)
+                ):
+                    entered_context = current_node.created_context
+
+                # check for exiting a context
+                exited_context: bool = False
+                if (
+                    isinstance(current_node, TGEndFunctionNode)
+                    or isinstance(current_node, TGEndLoopNode)
+                    or isinstance(current_node, TGEndIterationNode)
+                    or isinstance(current_node, TGEndBranchParentNode)
+                    or isinstance(current_node, TGEndBranchNode)
+                ):
+                    exited_context = True
+                    print(
+                        "Node: "
+                        + current_node.get_label()
+                        + " --> exits: "
+                        + (current_context.get_label() if current_context is not None else "None")
+                    )
+
+                # assert validity of the results
+                if entered_context is not None and exited_context:
+                    raise ValueError("Impossible result")
+
+                # handle entering a context
+                if entered_context is not None:
+                    # register current_context as a parent of the entered context
+                    if current_context is not None:
+                        current_context.add_contained_context(entered_context)
+                        entered_context.register_parent_context(current_context)
+                    # update the current context
+                    current_context = entered_context
+                elif exited_context:
+                    # update the current context
+                    if current_context is None:
+                        plt.ioff()
+                        self.plot(highlight_nodes=[current_node])
+                        plt.pause(10)
+                        raise ValueError("Current context must not be None during processing!")
+                    # if current_context.parent_context is None:
+                    #    raise ValueError("Parent context is unspecified. Exiting a context thus not possible!")
+                    else:
+                        current_context = current_context.parent_context
+
+                # add successors to the queue
+                for succ in self.get_successors(current_node):
+                    queue_element = (succ, current_context)
+                    if queue_element not in already_enqueued:
+                        queue.append(queue_element)
+                        already_enqueued.add(queue_element)
+
+        plt.ioff()
+        self.plot_context_graph()
+        plt.pause(1)
 
     def __inline_function_calls(self) -> None:
         warnings.warn("Not yet implemented!")
@@ -1154,6 +1266,71 @@ class TaskGraph(object):
                 progress_bar.update()
 
                 self.print_graph_statistics(self.graph, "post inlining")
+
+    def __add_branching_nodes(self) -> None:
+        logger.info("Adding branching nodes...")
+        # select branch parent nodes
+        branch_parent_nodes = [n for n in self.graph.nodes if len(self.get_successors(n)) > 1]
+        # select merge nodes
+        merge_nodes = [n for n in self.graph.nodes if len(self.get_predecessors(n)) > 1]
+        # add StartBranchParent nodes
+        start_branch_parent_nodes: List[TGNode] = []
+        for bpn in branch_parent_nodes:
+            start_branch_parent_node = TGStartBranchParentNode(bpn.pet_node_id, level=bpn.level, position=bpn.position)
+            start_branch_parent_nodes.append(start_branch_parent_node)
+            self.add_node(start_branch_parent_node)
+            for succ in self.get_successors(bpn):
+                self.graph.remove_edge(bpn, succ)
+                self.add_edge(start_branch_parent_node, succ)
+            self.add_edge(bpn, start_branch_parent_node)
+
+        # add EndBranchParent nodes
+        end_branch_parent_nodes: List[TGNode] = []
+        for mn in merge_nodes:
+            end_branch_parent_node = TGEndBranchParentNode(mn.pet_node_id, level=mn.level, position=mn.position)
+            end_branch_parent_nodes.append(end_branch_parent_node)
+            self.add_node(end_branch_parent_node)
+            for pred in self.get_predecessors(mn):
+                self.graph.remove_edge(pred, mn)
+                self.add_edge(pred, end_branch_parent_node)
+            self.add_edge(end_branch_parent_node, mn)
+
+        # add StartBranch nodes
+        for sbpn in start_branch_parent_nodes:
+            for succ in self.get_successors(sbpn):
+                start_branch_node = TGStartBranchNode(sbpn.pet_node_id, level=sbpn.level, position=sbpn.position)
+                self.add_node(start_branch_node)
+                self.graph.remove_edge(sbpn, succ)
+                self.add_edge(sbpn, start_branch_node)
+                self.add_edge(start_branch_node, succ)
+
+        # add EndBranch nodes
+        for ebpn in end_branch_parent_nodes:
+            for pred in self.get_predecessors(ebpn):
+                end_branch_node = TGEndBranchNode(ebpn.pet_node_id, level=ebpn.level, position=ebpn.position)
+                self.add_node(end_branch_node)
+                self.graph.remove_edge(pred, ebpn)
+                self.add_edge(pred, end_branch_node)
+                self.add_edge(end_branch_node, ebpn)
+
+        logger.info("--> validating amounts of node successors and predecessors...")
+        for node in tqdm(self.graph.nodes):
+            succ_count = len(self.get_successors(node))
+            pred_count = len(self.get_predecessors(node))
+            if succ_count < 2 and pred_count < 2:
+                continue
+            if (succ_count >= 2) and (not isinstance(node, TGStartBranchParentNode)):
+                logger.error("Invalid node type: " + str(type(node)) + " with " + str(succ_count) + " successors!")
+                plt.ioff()
+                self.plot(highlight_nodes=[node])
+                plt.pause(1)
+                raise ValueError("Invalid graph structure!")
+            if (pred_count >= 2) and (not isinstance(node, TGEndBranchParentNode)):
+                logger.error("Invalid node type: " + str(type(node)) + " with " + str(pred_count) + " predecessors!")
+                plt.ioff()
+                self.plot(highlight_nodes=[node])
+                plt.pause(1)
+                raise ValueError("Invalid graph structure!")
 
     def __duplicate_inlined_function(
         self, inlined_function: TGFunctionNode, inlining_pet_node_id: PETNodeID
@@ -1217,12 +1394,26 @@ class TaskGraph(object):
         if node is None:
             return []
         successors = list(set([t for s, t in self.graph.out_edges(node)]))
+        ## DEBUG
+        #        if node.get_label() == "3:34" and len(successors) > 1:
+        #            print("SUCCESSORS: ", str([c.get_label() for c in successors]))
+        #            plt.ioff()
+        #            self.plot(highlight_nodes=[node] + successors)
+        #            plt.pause(1)
+        ## !DEBUG
         return successors
 
     def get_predecessors(self, node: Optional[TGNode]) -> List[TGNode]:
         if node is None:
             return []
         predecessors = list(set([s for s, t in self.graph.in_edges(node)]))
+        ## DEBUG
+        #        if node.get_label() == "3:34" and len(predecessors) > 1:
+        #            print("PREDECESSORS: ", str([c.get_label() for c in predecessors]))
+        #            plt.ioff()
+        #            self.plot(highlight_nodes=[node] + predecessors)
+        #            plt.pause(1)
+        ## !DEBUG
         return predecessors
 
     def get_descendants(self, node: TGNode) -> List[TGNode]:

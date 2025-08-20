@@ -5,19 +5,11 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-
-from discopop_explorer.classes.TaskGraph.Aliases import PETNodeID
-from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
+from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 
 
-class LoopParentContext(Context):
+class TGStartBranchNode(TGNode):
     pass
 
-    def get_plot_border_color(self) -> str:
-        return "b"
-
-    def get_plot_face_color(self) -> str:
-        return "cyan"
-
     def get_label(self) -> str:
-        return "LoopParent"
+        return "Start Branch"
