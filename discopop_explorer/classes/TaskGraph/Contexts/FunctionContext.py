@@ -22,3 +22,6 @@ class FunctionContext(Context):
 
     def get_plot_face_color(self) -> str:
         return "lightgrey"
+
+    def get_label(self) -> str:
+        return "Function"

@@ -13,11 +13,11 @@ from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 
 
 class IterationContext(Context):
-    parent_context: Context
+    belongs_to_context: Context
     contained_pet_nodes: Set[PETNode]
 
     def __init__(self, parent_context: Context):
-        self.parent_context = parent_context
+        self.belongs_to_context = parent_context
         self.contained_pet_nodes = set()
         super().__init__()
 
@@ -29,3 +29,6 @@ class IterationContext(Context):
 
     def get_plot_face_color(self) -> str:
         return "green"
+
+    def get_label(self) -> str:
+        return "Iteration"
