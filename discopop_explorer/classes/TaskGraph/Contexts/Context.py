@@ -18,12 +18,14 @@ from discopop_explorer.classes.TaskGraph.Aliases import LevelIndex, PositionInde
 class Context(object):
     contained_nodes: List[TGNode]
     contained_contexts: Set[Context]
+    successor: Optional[Context]
     parent_context: Optional[Context]
 
     def __init__(self) -> None:
         self.contained_nodes = []
         self.contained_contexts = set()
         self.parent_context = None
+        self.successor = None
 
     def get_contained_nodes(self, inclusive: bool = False) -> List[TGNode]:
         """
@@ -52,6 +54,12 @@ class Context(object):
             # do not allow the creation of self-parenting relations
             return
         self.parent_context = context
+
+    def register_successor_context(self, context: Context) -> None:
+        if context == self:
+            # do not allow the creation of self-succession relations
+            return
+        self.successor = context
 
     def get_plot_bounding_box(self) -> Tuple[int, LevelIndex, LevelIndex, PositionIndex, PositionIndex]:
         if len(self.contained_nodes) == 0:
