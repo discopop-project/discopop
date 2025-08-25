@@ -82,6 +82,7 @@ class PatternDetectorX(object):
         hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
         jobs: Optional[int],
         enable_task_graph_plot: bool,
+        enable_context_graph_plot: bool,
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
@@ -95,6 +96,8 @@ class PatternDetectorX(object):
         task_graph = TaskGraph(self.pet)
         if enable_task_graph_plot:
             task_graph.plot()
+        if enable_context_graph_plot:
+            task_graph.plot_context_graph()
 
         # reduction before doall!
 

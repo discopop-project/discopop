@@ -115,6 +115,9 @@ def parse_args() -> ExplorerArguments:
     experimental_parser.add_argument(
         "--plot-task-graph", action="store_true", help="Enables interactive plotting of the task graph."
     )
+    experimental_parser.add_argument(
+        "--plot-context-graph", action="store_true", help="Enables interactive plotting of the context graph."
+    )
     # fmt: on
 
     arguments = parser.parse_args()
@@ -172,6 +175,7 @@ def parse_args() -> ExplorerArguments:
         jobs=arguments.jobs,
         enable_pet_plot_file=arguments.plot_pet,
         enable_task_graph_plot=arguments.plot_task_graph,
+        enable_context_graph_plot=arguments.plot_context_graph,
     )
 
 
