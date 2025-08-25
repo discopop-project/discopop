@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 if TYPE_CHECKING:
     from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 
+from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.TaskGraph.Aliases import LevelIndex, PositionIndex
 
 
@@ -20,12 +21,14 @@ class Context(object):
     contained_contexts: Set[Context]
     successor: Optional[Context]
     parent_context: Optional[Context]
+    outgoing_dependencies: Set[Tuple[Context, Dependency]]
 
     def __init__(self) -> None:
         self.contained_nodes = []
         self.contained_contexts = set()
         self.parent_context = None
         self.successor = None
+        self.outgoing_dependencies = set()
 
     def get_contained_nodes(self, inclusive: bool = False) -> List[TGNode]:
         """
@@ -60,6 +63,12 @@ class Context(object):
             # do not allow the creation of self-succession relations
             return
         self.successor = context
+
+    def register_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
+        self.outgoing_dependencies.add((target_context, dependency))
+
+    def get_outgoing_dependency_targets(self) -> Set[Context]:
+        return set([outgoing_dependency[0] for outgoing_dependency in self.outgoing_dependencies])
 
     def get_plot_bounding_box(self) -> Tuple[int, LevelIndex, LevelIndex, PositionIndex, PositionIndex]:
         if len(self.contained_nodes) == 0:

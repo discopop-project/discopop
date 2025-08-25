@@ -18,6 +18,7 @@ from networkx import Graph
 from tqdm import tqdm
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
+from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.TaskGraph.Branching.TGEndBranchNode import TGEndBranchNode
 from discopop_explorer.classes.TaskGraph.Branching.TGEndBranchParentNode import TGEndBranchParentNode
 from discopop_explorer.classes.TaskGraph.Branching.TGStartBranchNode import TGStartBranchNode
@@ -39,6 +40,9 @@ from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoo
 from discopop_explorer.classes.TaskGraph.RootNode import RootNode
 from discopop_explorer.classes.TaskGraph.TGFunctionNode import TGFunctionNode
 from discopop_explorer.classes.TaskGraph.VisitorMarker import EndFunctionMarker, VisitorMarker
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
 from discopop_explorer.functions.PEGraph.traversal.called_functions import get_called_nodes
 from discopop_explorer.functions.PEGraph.traversal.children import get_entry_child
 from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
@@ -335,10 +339,67 @@ class TaskGraph(object):
             if ctx.successor is not None:
                 ctx_graph.add_edge(ctx, ctx.successor)
         nx.draw_networkx_edges(ctx_graph, positions, edge_color="green")
+        # remove successor edges
+        to_be_removed = []
+        for edge in ctx_graph.edges:
+            to_be_removed.append(edge)
+        for tbr in to_be_removed:
+            ctx_graph.remove_edge(tbr[0], tbr[1])
+        # draw dependency edges
+        for ctx in self.contexts:
+            targets: Set[Any] = set()
+            for outgoing_dependency in ctx.outgoing_dependencies:
+                targets.add(outgoing_dependency[0])
+            for target in targets:
+                ctx_graph.add_edge(ctx, target)
+        nx.draw_networkx_edges(ctx_graph, positions, edge_color="red")
+
         # draw labels
         labels = {}
         for ctx in self.contexts:
             labels[ctx] = ctx.get_label()
+        nx.draw_networkx_labels(ctx_graph, positions, labels, font_size=7)
+        logger.info("---> showing...")
+        print("Waiting for user to close the Window...")
+        plt.show()
+
+    def plot_context_debug_graph(self) -> None:
+        logger.info("Plotting context debug graph...")
+
+        ctx_graph = nx.MultiDiGraph()
+        for ctx in self.contexts:
+            ctx_graph.add_node(ctx)
+            for ctx_cont_node in ctx.contained_nodes:
+                ctx_graph.add_node(ctx_cont_node)
+        # add contained edges for positioning
+        for ctx in self.contexts:
+            for contained_ctx in ctx.contained_contexts:
+                ctx_graph.add_edge(ctx, contained_ctx)
+            for ctx_cont_node in ctx.contained_nodes:
+                ctx_graph.add_edge(ctx, ctx_cont_node)
+        # calculate layout
+        positions = nx.nx_pydot.pydot_layout(ctx_graph, prog="dot")
+        # draw nodes
+        nx.draw_networkx_nodes(ctx_graph, positions, nodelist=self.contexts, node_color="orange")
+        nx.draw_networkx_nodes(
+            ctx_graph, positions, nodelist=[n for n in ctx_graph.nodes if n not in self.contexts], node_color="cyan"
+        )
+        # draw contained edges
+        nx.draw_networkx_edges(ctx_graph, positions)
+        # draw dependency edges
+        tbr = []
+        for edge in ctx_graph.edges:
+            tbr.append(edge)
+        for edge in tbr:
+            ctx_graph.remove_edge(edge[0], edge[1])
+        for ctx in self.contexts:
+            for deps in ctx.outgoing_dependencies:
+                ctx_graph.add_edge(ctx, deps[0])
+        nx.draw_networkx_edges(ctx_graph, positions, edge_color="red")
+        # draw labels
+        labels = {}
+        for node in ctx_graph.nodes:
+            labels[node] = node.get_label()
         nx.draw_networkx_labels(ctx_graph, positions, labels, font_size=7)
         logger.info("---> showing...")
         print("Waiting for user to close the Window...")
@@ -618,7 +679,9 @@ class TaskGraph(object):
                     ism_list: List[TGStartIterationNode] = []
                     for itenp in iteration_entry_points:
                         self.graph.remove_edge(entry_node, itenp)
-                        ism = TGStartIterationNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
+                        ism = TGStartIterationNode(
+                            itenp.pet_node_id, itenp.level, itenp.position, entry_node.pet_node_id
+                        )
                         ism_list.append(ism)
                         self.add_node(ism)
                         self.add_edge(entry_node, ism)
@@ -627,7 +690,7 @@ class TaskGraph(object):
                     # add iteration exit markings after iteration_exit_points
                     iem_list: List[TGEndIterationNode] = []
                     for itexp in iteration_exit_points:
-                        iem = TGEndIterationNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
+                        iem = TGEndIterationNode(itexp.pet_node_id, itexp.level, itexp.position, entry_node.pet_node_id)
                         iem_list.append(iem)
                         self.add_node(iem)
                         self.add_edge(itexp, iem)
@@ -849,7 +912,10 @@ class TaskGraph(object):
                 for sin in start_iteration_nodes:
                     already_duplicated = False
                     for pred in self.get_predecessors(sin):
-                        if isinstance(pred, TGEndIterationNode) and pred.pet_node_id == sin.pet_node_id:
+                        if (
+                            isinstance(pred, TGEndIterationNode)
+                            and pred.parent_loop_pet_node_id == sin.parent_loop_pet_node_id
+                        ):
                             already_duplicated = True
                             break
                     if not already_duplicated:
@@ -861,7 +927,10 @@ class TaskGraph(object):
                     #                    print("EIN: ", ein.get_label(), ein)
                     #                    print("EIN SUCC: ", [n.get_label() for n in self.get_successors(ein)])
                     for succ in self.get_successors(ein):
-                        if isinstance(succ, TGStartFunctionNode) and succ.pet_node_id == ein.pet_node_id:
+                        if (
+                            isinstance(succ, TGStartIterationNode)
+                            and succ.parent_loop_pet_node_id == ein.parent_loop_pet_node_id
+                        ):
                             already_duplicated = True
                             #                            print("--> Already duplicated")
                             break
@@ -874,7 +943,7 @@ class TaskGraph(object):
                     for ein in filtered_end_iteration_nodes:
                         #                        print("EIN: ", ein.get_label())
                         # only consider pairs with equal corresponding pet_node_id's
-                        if sin.pet_node_id != ein.pet_node_id:
+                        if sin.parent_loop_pet_node_id != ein.parent_loop_pet_node_id:
                             continue
 
                         # get iteration nodes
@@ -906,7 +975,7 @@ class TaskGraph(object):
         logger.info("Assigning contexts...")
         self.__assign_function_contexts()
         self.__assign_branching_contexts()
-        self.__assign_parent_contexts_to_nodes()
+        #        self.__assign_parent_contexts_to_nodes()
         self.__assign_loop_contexts()
         self.__assign_parent_contexts_to_nodes()
 
@@ -919,8 +988,8 @@ class TaskGraph(object):
                 function_context = FunctionContext(fsn.pet_node_id)
                 function_context.add_node(fsn)
                 fsn.register_created_context(function_context)
-                for fsn_descendant in self.get_descendants(fsn):
-                    function_context.add_node(fsn_descendant)
+                #                for fsn_descendant in self.get_descendants(fsn):
+                #                    function_context.add_node(fsn_descendant)
                 self.contexts.append(function_context)
 
     def __assign_branching_contexts(self) -> None:
@@ -968,8 +1037,8 @@ class TaskGraph(object):
                         queue.append(queue_element)
                         visited.add(queue_element)
             # register contained nodes in the context
-            for contained_node in contained_nodes:
-                branch_context.add_node(contained_node)
+        #            for contained_node in contained_nodes:
+        #                branch_context.add_node(contained_node)
 
         # create branching parent contexts
         logger.info("--> Create branch parent contexts...")
@@ -1047,7 +1116,7 @@ class TaskGraph(object):
             # search loop iteration starts
             iteration_starts: List[TGNode] = []
             for n in general_loop_nodes:
-                if isinstance(n, TGStartIterationNode) and (n.pet_node_id == node.pet_node_id):
+                if isinstance(n, TGStartIterationNode) and (n.parent_loop_pet_node_id == node.pet_node_id):
                     iteration_starts.append(n)
 
             # establish pairs between iteration start and end points
@@ -1060,13 +1129,17 @@ class TaskGraph(object):
                 it_visited: Set[TGNode] = {it_start}
                 while len(it_queue) > 0:
                     current, entered_equivalent_iterations = it_queue.pop(0)
-                    if isinstance(current, TGEndIterationNode) and (it_start.pet_node_id == current.pet_node_id):
+                    if isinstance(current, TGEndIterationNode) and (
+                        cast(TGStartIterationNode, it_start).parent_loop_pet_node_id == current.parent_loop_pet_node_id
+                    ):
                         if entered_equivalent_iterations == 0:
                             it_end = current
                             break
                         else:
                             entered_equivalent_iterations -= 1
-                    if isinstance(current, TGStartIterationNode) and (it_start.pet_node_id == current.pet_node_id):
+                    if isinstance(current, TGStartIterationNode) and (
+                        cast(TGStartIterationNode, it_start).parent_loop_pet_node_id == current.parent_loop_pet_node_id
+                    ):
                         if entered_equivalent_iterations == -1:
                             entered_equivalent_iterations += 1
                         else:
@@ -1104,31 +1177,88 @@ class TaskGraph(object):
             # create loop context
             loop_context = LoopParentContext()
             node.register_created_context(loop_context)
-            for loop_node in general_loop_nodes:
-                is_regular_loop_node = True
-                for iteration_nodes in pair_iteration_nodes.values():
-                    if loop_node in iteration_nodes:
-                        is_regular_loop_node = False
-                        break
-                if is_regular_loop_node:
-                    loop_context.add_node(loop_node)
+            #            for loop_node in general_loop_nodes:
+            #                is_regular_loop_node = True
+            #                for iteration_nodes in pair_iteration_nodes.values():
+            #                    if loop_node in iteration_nodes:
+            #                        is_regular_loop_node = False
+            #                        break
+            #                if is_regular_loop_node:
+            #                    loop_context.add_node(loop_node)
             self.contexts.append(loop_context)
 
             # create iteration contexts
             for pair in pair_iteration_nodes:
                 iteration_context = IterationContext(loop_context)
                 pair[0].register_created_context(iteration_context)
-                for iteration_node in pair_iteration_nodes[pair]:
-                    iteration_context.add_node(iteration_node)
+                #                for iteration_node in pair_iteration_nodes[pair]:
+                #                    iteration_context.add_node(iteration_node)
                 loop_context.add_contained_context(iteration_context)
                 self.contexts.append(iteration_context)
 
     def __assign_parent_contexts_to_nodes(self) -> None:
         # assigns each node the innermost context containing the node
         logger.info("Assigning parent contexts to nodes...")
-        for ctx in tqdm(self.contexts):
-            for node in ctx.get_contained_nodes(inclusive=False):
-                node.add_parent_context(ctx)
+        #        for ctx in tqdm(self.contexts):
+        #            for node in ctx.get_contained_nodes(inclusive=False):
+        #                node.add_parent_context(ctx)
+        logger.info("--> classify entry points...")
+        entry_points: List[TGNode] = []
+        for node in tqdm(self.graph.nodes):
+            if len(self.get_predecessors(node)) == 0:
+                entry_points.append(node)
+        logger.info("DFS parsing entry points...")
+        for entry_point in tqdm(entry_points):
+            queue: List[Tuple[TGNode, Optional[Context]]] = []
+            # skip root node when initializing the queue
+            if isinstance(entry_point, RootNode):
+                for succ in self.get_successors(entry_point):
+                    queue.append((succ, None))
+            else:
+                queue = [(entry_point, None)]
+            already_enqueued: Set[Tuple[TGNode, Optional[Context]]] = set()
+            while len(queue) > 0:
+                current_node, current_parent_context = queue.pop(0)
+                # check if a new context is entered
+                entered_context: Optional[Context] = None
+                if (
+                    isinstance(current_node, TGStartFunctionNode)
+                    or isinstance(current_node, TGStartLoopNode)
+                    or isinstance(current_node, TGStartIterationNode)
+                    or isinstance(current_node, TGStartBranchParentNode)
+                    or isinstance(current_node, TGStartBranchNode)
+                ):
+                    entered_context = current_node.created_context
+
+                # check if a context is exited
+                exited_context: bool = False
+                if (
+                    isinstance(current_node, TGEndFunctionNode)
+                    or isinstance(current_node, TGEndLoopNode)
+                    or isinstance(current_node, TGEndIterationNode)
+                    or isinstance(current_node, TGEndBranchParentNode)
+                    or isinstance(current_node, TGEndBranchNode)
+                ):
+                    exited_context = True
+
+                if entered_context is not None:
+                    current_parent_context = entered_context
+                elif exited_context:
+                    if current_parent_context is not None:
+                        current_parent_context = current_parent_context.parent_context
+                    else:
+                        pass
+                else:
+                    # regular node found
+                    if current_parent_context is not None:
+                        current_parent_context.add_node(current_node)
+                        current_node.add_parent_context(current_parent_context)
+                # add successors to the queue
+                for succ in self.get_successors(current_node):
+                    queue_element = (succ, current_parent_context)
+                    if queue_element not in already_enqueued:
+                        queue.append(queue_element)
+                        already_enqueued.add(queue_element)
 
     def __assign_node_levels(self) -> None:
         # assings levels to each node starting from the outer most context
@@ -1195,9 +1325,11 @@ class TaskGraph(object):
                         queue.append(queue_element)
                         already_enqueued.add((queue_element[0], queue_element[1]))
 
-        plt.ioff()
-        self.plot_context_graph()
-        plt.pause(1)
+    ## DEBUG
+    #       plt.ioff()
+    #       self.plot_context_graph()
+    #       plt.pause(1)
+    ## !DEBUG
 
     def __calculate_context_nesting(self) -> None:
         logger.info("Assigning context nestings...")
@@ -1275,6 +1407,10 @@ class TaskGraph(object):
     #        plt.ioff()
     #        self.plot_context_graph()
     #        plt.pause(1)
+    #        for ctx in self.contexts:
+    #            print("parents: ", str([c.get_label() for c in ctx.parent_context]))
+    #        import sys
+    #        sys.exit(0)
     ### !DEBUG
 
     def __inline_function_calls(self) -> None:
@@ -1433,6 +1569,74 @@ class TaskGraph(object):
 
     def __insert_data_dependencies(self) -> None:
         warnings.warn("Not yet implemented!")
+        logger.info("Inserting data dependencies...")
+
+        ### DEBUG
+        #        plt.ioff()
+        #        self.plot_context_debug_graph()
+        #        plt.pause(1)
+        ### !DEBUG
+
+        # iterate over all edges in PET Graph
+        for source, target, dependency_dict in tqdm(self.pet.g.edges(data=True)):
+            dependency = cast(Dependency, dependency_dict["data"])
+            # only consider DATA edges
+            if dependency.etype != EdgeType.DATA:
+                continue
+            # ignore INIT edges
+            if dependency.dtype == DepType.INIT:
+                continue
+
+            #            print(
+            #                "--> ",
+            #                source,
+            #                target,
+            #                dependency.etype,
+            #                dependency.dtype,
+            #                dependency.var_name,
+            #                dependency.metadata_inter_call_dep,
+            #                dependency.metadata_inter_iteration_dep,
+            #                dependency.metadata_intra_call_dep,
+            #                dependency.metadata_intra_iteration_dep,
+            #            )
+            #            print("----> ", type(source), type(target))
+
+            # find all pairs of TGNodes which qualify as source and / or targets of the dependency (Note: due to the duplication of iterations and function inlining, multiple occurrences are possible!)
+            source_tg_nodes: List[TGNode] = []
+            for node in self.graph.nodes:
+                # search for regular nodes (i.e. CU nodes) with the given PET node id
+                if type(node) == TGNode and node.pet_node_id is not None:
+                    if node.pet_node_id == source:
+                        source_tg_nodes.append(node)
+
+            for source_tg in source_tg_nodes:
+                # find target nodes for the dependency
+                target_tg_nodes: List[TGNode] = list(
+                    self.get_all_closest_predecessors_with_pet_node_id(source_tg, target)
+                )
+
+                # register dependency between each pair of source and target nodes
+                for target_tg in target_tg_nodes:
+                    # ignore dependencies within a single context
+                    if source_tg.parent_context == target_tg.parent_context:
+                        #                        print("IGNORING... : " + str(dependency))
+                        continue
+
+                    # TODO: filter dependencies according to the attached disambiguation metadata
+
+                    # register dependencies between parent contexts of source_tg and target_tg (Note: both sets should have a length or 1 in regular cases)
+                    #                    print("SourceParents: ", str([c.get_label() for c in source_tg.parent_context]))
+                    #                    print("TargetParents: ", str([c.get_label() for c in target_tg.parent_context]))
+                    #                    print("Source: ", source_tg.pet_node_id, " target:", target_tg.pet_node_id)
+                    for source_parent_ctx in source_tg.parent_context:
+                        for target_parent_ctx in target_tg.parent_context:
+                            source_parent_ctx.register_outgoing_dependency(target_parent_ctx, dependency)
+
+    ### DEBUG
+    #        plt.ioff()
+    #        self.plot_context_debug_graph()
+    #        plt.pause(1)
+    ### !DEBUG
 
     def __get_iteration_nodes(
         self, iteration_entry: TGStartIterationNode, iteration_exit: TGEndIterationNode
@@ -1484,6 +1688,27 @@ class TaskGraph(object):
         #            plt.pause(1)
         ## !DEBUG
         return predecessors
+
+    def get_all_closest_predecessors_with_pet_node_id(
+        self, node: Optional[TGNode], pet_node_id: PETNodeID
+    ) -> Set[TGNode]:
+        """returns the closest reachable predecessor with pet_node_id for each path starting from node in a set."""
+        if node is None:
+            return set()
+        queue: List[TGNode] = self.get_predecessors(node)
+        visited: Set[TGNode] = set(queue)
+        result: Set[TGNode] = set()
+        while len(queue) > 0:
+            current_node = queue.pop()
+            if current_node.pet_node_id == pet_node_id:
+                # found first matching predecessor along current path. Stop search on this path.
+                result.add(current_node)
+                continue
+            for pred in self.get_predecessors(current_node):
+                if pred not in visited:
+                    visited.add(pred)
+                    queue.append(pred)
+        return result
 
     def get_descendants(self, node: TGNode) -> List[TGNode]:
         return list(nx.descendants(self.graph, node))
