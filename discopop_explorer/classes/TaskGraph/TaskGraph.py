@@ -1571,12 +1571,6 @@ class TaskGraph(object):
         warnings.warn("Not yet implemented!")
         logger.info("Inserting data dependencies...")
 
-        ### DEBUG
-        #        plt.ioff()
-        #        self.plot_context_debug_graph()
-        #        plt.pause(1)
-        ### !DEBUG
-
         # iterate over all edges in PET Graph
         for source, target, dependency_dict in tqdm(self.pet.g.edges(data=True)):
             dependency = cast(Dependency, dependency_dict["data"])
@@ -1586,20 +1580,6 @@ class TaskGraph(object):
             # ignore INIT edges
             if dependency.dtype == DepType.INIT:
                 continue
-
-            #            print(
-            #                "--> ",
-            #                source,
-            #                target,
-            #                dependency.etype,
-            #                dependency.dtype,
-            #                dependency.var_name,
-            #                dependency.metadata_inter_call_dep,
-            #                dependency.metadata_inter_iteration_dep,
-            #                dependency.metadata_intra_call_dep,
-            #                dependency.metadata_intra_iteration_dep,
-            #            )
-            #            print("----> ", type(source), type(target))
 
             # find all pairs of TGNodes which qualify as source and / or targets of the dependency (Note: due to the duplication of iterations and function inlining, multiple occurrences are possible!)
             source_tg_nodes: List[TGNode] = []
@@ -1619,24 +1599,13 @@ class TaskGraph(object):
                 for target_tg in target_tg_nodes:
                     # ignore dependencies within a single context
                     if source_tg.parent_context == target_tg.parent_context:
-                        #                        print("IGNORING... : " + str(dependency))
                         continue
 
                     # TODO: filter dependencies according to the attached disambiguation metadata
 
-                    # register dependencies between parent contexts of source_tg and target_tg (Note: both sets should have a length or 1 in regular cases)
-                    #                    print("SourceParents: ", str([c.get_label() for c in source_tg.parent_context]))
-                    #                    print("TargetParents: ", str([c.get_label() for c in target_tg.parent_context]))
-                    #                    print("Source: ", source_tg.pet_node_id, " target:", target_tg.pet_node_id)
                     for source_parent_ctx in source_tg.parent_context:
                         for target_parent_ctx in target_tg.parent_context:
                             source_parent_ctx.register_outgoing_dependency(target_parent_ctx, dependency)
-
-    ### DEBUG
-    #        plt.ioff()
-    #        self.plot_context_debug_graph()
-    #        plt.pause(1)
-    ### !DEBUG
 
     def __get_iteration_nodes(
         self, iteration_entry: TGStartIterationNode, iteration_exit: TGEndIterationNode
@@ -1680,19 +1649,12 @@ class TaskGraph(object):
         if node is None:
             return []
         predecessors = list(set([s for s, t in self.graph.in_edges(node)]))
-        ## DEBUG
-        #        if node.get_label() == "3:34" and len(predecessors) > 1:
-        #            print("PREDECESSORS: ", str([c.get_label() for c in predecessors]))
-        #            plt.ioff()
-        #            self.plot(highlight_nodes=[node] + predecessors)
-        #            plt.pause(1)
-        ## !DEBUG
         return predecessors
 
     def get_all_closest_predecessors_with_pet_node_id(
         self, node: Optional[TGNode], pet_node_id: PETNodeID
     ) -> Set[TGNode]:
-        """returns the closest reachable predecessor with pet_node_id for each path starting from node in a set."""
+        """Returns the closest reachable predecessor with pet_node_id for each path starting from node in a set."""
         if node is None:
             return set()
         queue: List[TGNode] = self.get_predecessors(node)
