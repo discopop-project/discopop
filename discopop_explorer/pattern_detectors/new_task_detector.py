@@ -33,7 +33,6 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[PatternInfo]:
 
     logger.info("--> Constructing context task graph...")
     context_task_graph = ContextTaskGraph(task_graph)
-    context_task_graph.plot()
 
     # result += identify_simple_taskloop(pet, task_graph)
     result += identify_simple_tasking(context_task_graph)
@@ -104,11 +103,13 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
         print("----> Found clean JOIN node: " + str(clean_join_node))
         fork_join_pairs.append((node, clean_join_node))
 
+    # DEBUG
     if len(fork_join_pairs) > 0:
         highlight_nodes: Set[Context] = set()
         for tpl in fork_join_pairs:
             highlight_nodes.add(tpl[0])
             highlight_nodes.add(tpl[1])
         context_task_graph.plot(highlight_nodes=list(highlight_nodes))
+    # !DEBUG
 
     return patterns
