@@ -11,7 +11,12 @@ from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 
 
 class LoopParentContext(Context):
+    parent_loop: PETNodeID
     pass
+
+    def __init__(self, parent_loop: PETNodeID):
+        self.parent_loop = parent_loop
+        super().__init__()
 
     def get_plot_border_color(self) -> str:
         return "b"
@@ -20,4 +25,4 @@ class LoopParentContext(Context):
         return "cyan"
 
     def get_label(self) -> str:
-        return "LoopParent"
+        return "LoopParent " + str(self.parent_loop)
