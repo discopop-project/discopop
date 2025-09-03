@@ -2002,7 +2002,9 @@ class TaskGraph(object):
                 if len(current_node.parent_context.intersection(disallow_target_contexts)) == 0:
                     # no overlap with disallowed contexts
                     result.add(current_node)
-                    continue
+
+                    # do not stop search upon first encounter
+                    # continue
             for pred in self.get_predecessors(current_node):
                 if pred not in visited:
                     visited.add(pred)
