@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import logging
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 from tqdm import tqdm
 
@@ -33,7 +33,7 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[PatternInfo]:
 
     logger.info("--> Constructing context task graph...")
     context_task_graph = ContextTaskGraph(task_graph)
-    context_task_graph.plot()
+    # context_task_graph.plot()
 
     # result += identify_simple_taskloop(pet, task_graph)
     result += identify_simple_tasking(context_task_graph)
@@ -50,6 +50,65 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[PatternInfo]:
 
 
 def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskParallelismInfo]:
-    logger.info("--> Identifying simple tasking...")
+    logger.info("Identifying tasking potential...")
     patterns: List[TaskParallelismInfo] = []
+    fork_join_pairs: List[Tuple[Context, Context]] = []
+    logger.info("--> checking nodes")
+    for node in tqdm(context_task_graph.graph.nodes):
+        # identify fork nodes
+        successors = context_task_graph.get_successors(node)
+        if len(successors) < 2:
+            continue
+        # node is a fork
+        # check if a clean join node exists, i.e., if all branches arrive at the same node without crossing each other
+        frontiers: List[Tuple[Context, int]] = [(succ, 1) for succ in successors]
+        visited: Set[Context] = set(successors)
+        join_nodes: List[Context] = []
+
+        while len(frontiers) > 0:
+            current_frontier, counter = frontiers.pop()
+            successors = context_task_graph.get_successors(current_frontier)
+            predecessors = context_task_graph.get_predecessors(current_frontier)
+            # check if the end of the path is reached
+            if len(successors) == 0:
+                join_nodes.append(current_frontier)
+                continue
+            # decrease the counter, if a join node is encountered
+            if len(predecessors) > 1:
+                counter -= 1
+
+            # if the counter falls to zero, the join node that should belong to the original, outer fork node should be encountered
+            # -> stop the search on this path.
+            if counter == 0:
+                join_nodes.append(current_frontier)
+                continue
+
+            # increase the counter, if a fork node is encountered. After checking for counter=0 to allow join-fork-nodes
+            if len(successors) > 1:
+                counter += 1
+
+            for succ in successors:
+                if succ not in visited:
+                    frontiers.append((succ, counter))
+                    visited.add(succ)
+
+        # check if a clean join node has been found
+        # -> clean, if exactly one join node is identified along every branch
+        join_nodes = list(set(join_nodes))
+        clean_join_node: Optional[Context] = None if len(join_nodes) != 1 else join_nodes[0]
+
+        if clean_join_node is None:
+            continue
+
+        # tasking possible, if a clean join node has been found
+        print("----> Found clean JOIN node: " + str(clean_join_node))
+        fork_join_pairs.append((node, clean_join_node))
+
+    if len(fork_join_pairs) > 0:
+        highlight_nodes: Set[Context] = set()
+        for tpl in fork_join_pairs:
+            highlight_nodes.add(tpl[0])
+            highlight_nodes.add(tpl[1])
+        context_task_graph.plot(highlight_nodes=list(highlight_nodes))
+
     return patterns
