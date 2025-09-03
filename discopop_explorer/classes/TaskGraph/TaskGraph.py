@@ -31,6 +31,7 @@ from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
 from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
+from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.Contexts.utils import (
     CallStackElementType,
     convert_callstacks_to_lineIDs,
@@ -47,6 +48,8 @@ from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoo
 from discopop_explorer.classes.TaskGraph.RootNode import RootNode
 from discopop_explorer.classes.TaskGraph.TGFunctionNode import TGFunctionNode
 from discopop_explorer.classes.TaskGraph.VisitorMarker import EndFunctionMarker, VisitorMarker
+from discopop_explorer.classes.TaskGraph.Work.TGEndWorkNode import TGEndWorkNode
+from discopop_explorer.classes.TaskGraph.Work.TGStartWorkNode import TGStartWorkNode
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
@@ -129,6 +132,7 @@ class TaskGraph(object):
         self.__validate_graph_structure()
         self.__inline_function_calls()
         self.__add_branching_nodes()
+        self.__add_work_nodes()
         self.__assign_contexts()  # assign contexts before inlining to keep runtime of branching context detection in check
         self.__assign_node_levels()
         self.__calculate_context_nesting()
@@ -985,6 +989,8 @@ class TaskGraph(object):
         self.__assign_branching_contexts()
         #        self.__assign_parent_contexts_to_nodes()
         self.__assign_loop_contexts()
+        #         self.__assign_regular_contexts()
+
         self.__assign_parent_contexts_to_nodes()
 
     def __assign_function_contexts(self) -> None:
@@ -1203,6 +1209,19 @@ class TaskGraph(object):
                 #                    iteration_context.add_node(iteration_node)
                 loop_context.add_contained_context(iteration_context)
                 self.contexts.append(iteration_context)
+
+    def __assign_work_contexts(self) -> None:
+        logger.info("Assigning work contexts to nodes...")
+
+    #        for node in tqdm(context_entry_nodes):
+    # create a new work context
+    #            work_context = WorkContext()
+    #            node.register_created_context(work_context)
+    #            self.contexts.append(work_context)
+
+    # collect nodes in the context
+    # create context start node
+    # create context end node
 
     def __assign_parent_contexts_to_nodes(self) -> None:
         # assigns each node the innermost context containing the node
@@ -1553,6 +1572,57 @@ class TaskGraph(object):
                 self.plot(highlight_nodes=[node])
                 plt.pause(1)
                 raise ValueError("Invalid graph structure!")
+
+    def __add_work_nodes(self) -> None:
+        logger.info("Adding work nodes...")
+        work_nodes: List[TGNode] = []
+        for node in tqdm(self.graph.nodes):
+            if type(node) == TGNode:
+                work_nodes.append(node)
+
+        logger.info("--> classify context entry nodes")
+        visited: Set[TGNode] = set()
+        context_entry_nodes: Set[TGNode] = set()
+        for node in tqdm(work_nodes):
+            if node in visited:
+                continue
+            # create a new context, if the predecessor of node is not a regular work node
+            preds = self.get_predecessors(node)
+            create_new_context = False
+            if len(preds) > 1 or len(preds) == 0 or type(preds[0]) != TGNode:
+                create_new_context = True
+
+            if not create_new_context:
+                # node will be handled as part of another context
+                visited.add(node)
+                continue
+            context_entry_nodes.add(node)
+
+        logger.info("--> inserting work start and end nodes...")
+        for node in tqdm(context_entry_nodes):
+            # adding work start node
+            start_work_node = TGStartWorkNode(node.pet_node_id, node.level, node.position)
+            self.add_node(start_work_node)
+            for pred in self.get_predecessors(node):
+                self.graph.remove_edge(pred, node)
+                self.add_edge(pred, start_work_node)
+            self.add_edge(start_work_node, node)
+            # find work exit
+            last_work_node = node
+            while True:
+                successors = self.get_successors(last_work_node)
+                if len(successors) == 0 or len(successors) > 1 or type(successors[0]) != TGNode:
+                    break
+                last_work_node = successors[0]
+            # insert work end node after last_work_node
+            successors = self.get_successors(last_work_node)
+            for succ in successors:
+                self.graph.remove_edge(last_work_node, succ)
+            end_work_node = TGEndWorkNode(last_work_node.pet_node_id, last_work_node.level, last_work_node.position)
+            self.add_node(end_work_node)
+            self.add_edge(last_work_node, end_work_node)
+            for succ in successors:
+                self.add_edge(end_work_node, succ)
 
     def __duplicate_inlined_function(
         self, inlined_function: TGFunctionNode, inlining_pet_node_id: PETNodeID
