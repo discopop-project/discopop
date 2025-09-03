@@ -18,6 +18,7 @@ from networkx import Graph
 from tqdm import tqdm
 
 from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
@@ -53,6 +54,7 @@ from discopop_explorer.classes.TaskGraph.Work.TGStartWorkNode import TGStartWork
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
+from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
 from discopop_explorer.functions.PEGraph.traversal.called_functions import get_called_nodes
 from discopop_explorer.functions.PEGraph.traversal.children import get_entry_child
 from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
@@ -1699,6 +1701,59 @@ class TaskGraph(object):
                             source_parent_ctx.register_outgoing_dependency(target_parent_ctx, dependency)
 
     def __validate_data_dependencies(self) -> None:
+        self.__validate_data_dependencies_using_initializations()
+        self.__validate_data_dependencies_using_metadata()
+
+    def __validate_data_dependencies_using_initializations(self) -> None:
+        logger.info("Validating data dependencies using initializations...")
+        invalid_deps: List[Tuple[Context, Context, Dependency]] = []
+
+        self.__print_context_statistics("Pre validation")
+
+        logger.info("--> checking contexts...")
+        for ctx in tqdm(self.contexts):
+            # calculate initialized variables per context
+            initialized_vars: Set[Tuple[str, Optional[MemoryRegion]]] = set()
+            for node in ctx.get_contained_nodes():
+                if node.pet_node_id is None:
+                    continue
+                pet_node = self.pet.node_at(node.pet_node_id)
+                in_data_edges = in_edges(self.pet, node.pet_node_id, EdgeType.DATA)
+                incoming_init_deps = [e[2] for e in in_data_edges if e[2].dtype == DepType.INIT]
+                for dep in incoming_init_deps:
+                    if dep.var_name is None:
+                        continue
+                    initialized_vars.add((dep.var_name, dep.memory_region))
+
+            print("CTX: ", ctx)
+            print("--> inits: ", [str(t) for t in initialized_vars])
+            print()
+            initialized_var_names = [v[0] for v in initialized_vars]
+            initialized_var_memregs = [v[1] for v in initialized_vars]
+
+            # check outgoing dependencies to predecessors against inits
+            preceeding_contexts = ctx.get_preceeding_contexts()
+            for target_ctx, dep in ctx.outgoing_dependencies:
+                if target_ctx not in preceeding_contexts:
+                    continue
+                # target_ctx is preceeding ctx
+                # check if dep is covered by a initialization. If so, the dependency can be ignored as it is a hallucination
+                if dep.memory_region is not None and dep.memory_region in initialized_var_memregs:
+                    invalid_deps.append((ctx, target_ctx, dep))
+                    continue
+                if dep.var_name in initialized_var_names:
+                    invalid_deps.append((ctx, target_ctx, dep))
+                    continue
+
+        for source_ctx, target_ctx, dep in invalid_deps:
+            tpl = (target_ctx, dep)
+            if tpl in source_ctx.outgoing_dependencies:
+                print("REMOVING: ", dep.var_name, dep.sink_line, dep.source_line)
+                source_ctx.outgoing_dependencies.remove(tpl)
+
+        self.__print_context_statistics("Post validation")
+
+    def __validate_data_dependencies_using_metadata(self) -> None:
         logger.info("Validating data dependencies using existing metadata...")
         invalid_deps: List[Tuple[Context, Context, Dependency]] = []
         valid_deps: Set[Tuple[Context, Context, Dependency]] = set()
