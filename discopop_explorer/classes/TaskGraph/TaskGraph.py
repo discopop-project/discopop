@@ -989,7 +989,7 @@ class TaskGraph(object):
         self.__assign_branching_contexts()
         #        self.__assign_parent_contexts_to_nodes()
         self.__assign_loop_contexts()
-        #         self.__assign_regular_contexts()
+        self.__assign_work_contexts()
 
         self.__assign_parent_contexts_to_nodes()
 
@@ -1213,15 +1213,13 @@ class TaskGraph(object):
     def __assign_work_contexts(self) -> None:
         logger.info("Assigning work contexts to nodes...")
 
-    #        for node in tqdm(context_entry_nodes):
-    # create a new work context
-    #            work_context = WorkContext()
-    #            node.register_created_context(work_context)
-    #            self.contexts.append(work_context)
-
-    # collect nodes in the context
-    # create context start node
-    # create context end node
+        for node in tqdm(self.graph.nodes):
+            if not isinstance(node, TGStartWorkNode):
+                continue
+            # create a new work context
+            work_context = WorkContext()
+            node.register_created_context(work_context)
+            self.contexts.append(work_context)
 
     def __assign_parent_contexts_to_nodes(self) -> None:
         # assigns each node the innermost context containing the node
@@ -1255,6 +1253,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGStartIterationNode)
                     or isinstance(current_node, TGStartBranchParentNode)
                     or isinstance(current_node, TGStartBranchNode)
+                    or isinstance(current_node, TGStartWorkNode)
                 ):
                     entered_context = current_node.created_context
 
@@ -1266,6 +1265,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGEndIterationNode)
                     or isinstance(current_node, TGEndBranchParentNode)
                     or isinstance(current_node, TGEndBranchNode)
+                    or isinstance(current_node, TGEndWorkNode)
                 ):
                     exited_context = True
 
@@ -1327,6 +1327,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGStartIterationNode)
                     or isinstance(current_node, TGStartBranchParentNode)
                     or isinstance(current_node, TGStartBranchNode)
+                    or isinstance(current_node, TGStartWorkNode)
                 ):
                     entered_context = current_node.created_context
                 if entered_context is not None:
@@ -1347,6 +1348,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGEndIterationNode)
                     or isinstance(current_node, TGEndBranchParentNode)
                     or isinstance(current_node, TGEndBranchNode)
+                    or isinstance(current_node, TGEndWorkNode)
                 ):
                     exited_context = True
                 if exited_context:
@@ -1393,6 +1395,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGStartIterationNode)
                     or isinstance(current_node, TGStartBranchParentNode)
                     or isinstance(current_node, TGStartBranchNode)
+                    or isinstance(current_node, TGStartWorkNode)
                 ):
                     entered_context = current_node.created_context
 
@@ -1404,6 +1407,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGEndIterationNode)
                     or isinstance(current_node, TGEndBranchParentNode)
                     or isinstance(current_node, TGEndBranchNode)
+                    or isinstance(current_node, TGEndWorkNode)
                 ):
                     exited_context = True
 

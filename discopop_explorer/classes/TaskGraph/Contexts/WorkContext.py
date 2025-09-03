@@ -16,7 +16,7 @@ class WorkContext(Context):
         return "b"
 
     def get_plot_face_color(self) -> str:
-        return "cyan"
+        return "red"
 
     def get_label(self) -> str:
         return "Work"
