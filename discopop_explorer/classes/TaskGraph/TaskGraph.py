@@ -1685,6 +1685,7 @@ class TaskGraph(object):
                     source_tg,
                     target,
                     disallow_target_contexts=set(),
+                    results_per_path=2,
                     # disallow_target_contexts=source_tg.parent_context
                 )
 
@@ -1704,17 +1705,17 @@ class TaskGraph(object):
         for source_ctx in tqdm(self.contexts):
             source_call_stack: Optional[List[Context]] = None  # only calculate, if it is required
             for target_ctx, dep in source_ctx.outgoing_dependencies:
-                print()
-                print(
-                    "PARSING: "
-                    + str(dep.source_line)
-                    + " "
-                    + str(dep.sink_line)
-                    + " "
-                    + str(dep.dtype)
-                    + " "
-                    + str(dep.var_name)
-                )
+                #                print()
+                #                print(
+                #                    "PARSING: "
+                #                    + str(dep.source_line)
+                #                    + " "
+                #                    + str(dep.sink_line)
+                #                    + " "
+                #                    + str(dep.dtype)
+                #                    + " "
+                #                    + str(dep.var_name)
+                #                )
                 # check if metadata exists
                 if (
                     dep.metadata_inter_call_dep is None
@@ -1739,15 +1740,15 @@ class TaskGraph(object):
                 if source_call_stack is None:
                     source_call_stack = get_context_call_stack(source_ctx)
                 target_call_stack = get_context_call_stack(target_ctx)
-                print("Source CS: " + str(source_call_stack))
-                print("Target CTX: " + target_ctx.get_label())
-                print("Target CS: " + str(target_call_stack))
+                #                print("Source CS: " + str(source_call_stack))
+                #                print("Target CTX: " + target_ctx.get_label())
+                #                print("Target CS: " + str(target_call_stack))
                 # get LineIDs from callstacks
                 converted_source_call_stack = convert_callstacks_to_lineIDs(self.pet, source_call_stack)
                 converted_target_call_stack = convert_callstacks_to_lineIDs(self.pet, target_call_stack)
 
-                print("Conv. Source.CS: " + str(converted_source_call_stack))
-                print("Conv. Target.CS: " + str(converted_target_call_stack))
+                #                print("Conv. Source.CS: " + str(converted_source_call_stack))
+                #                print("Conv. Target.CS: " + str(converted_target_call_stack))
 
                 skip_further_checks = False
 
@@ -1756,8 +1757,8 @@ class TaskGraph(object):
                     filtered_source_call_stack = [
                         elem[1] for elem in converted_source_call_stack if elem[0] != CallStackElementType.ITERATION
                     ]
-                    print("FSCS: " + str(filtered_source_call_stack))
-                    print("SANC: " + str(dep.metadata_sink_ancestors))
+                    #                    print("FSCS: " + str(filtered_source_call_stack))
+                    #                    print("SANC: " + str(dep.metadata_sink_ancestors))
 
                     for entry in dep.metadata_sink_ancestors:
                         if entry not in filtered_source_call_stack:
@@ -1775,8 +1776,8 @@ class TaskGraph(object):
                     filtered_target_call_stack = [
                         elem[1] for elem in converted_target_call_stack if elem[0] != CallStackElementType.ITERATION
                     ]
-                    print("FTCS: " + str(filtered_target_call_stack))
-                    print("TANC: " + str(dep.metadata_source_ancestors))
+                    #                    print("FTCS: " + str(filtered_target_call_stack))
+                    #                    print("TANC: " + str(dep.metadata_source_ancestors))
                     for entry in dep.metadata_source_ancestors:
                         if entry not in filtered_target_call_stack:
                             logger.warning(
@@ -1803,8 +1804,8 @@ class TaskGraph(object):
                         for elem in converted_overlapping_stack_elements
                         if elem[0] == CallStackElementType.FUNCTION
                     ]
-                    print("IAC-FCOSE: " + str(filtered_conv_ov_stack_elements))
-                    print("IAC-MICD: " + str(dep.metadata_intra_call_dep))
+                    #                    print("IAC-FCOSE: " + str(filtered_conv_ov_stack_elements))
+                    #                    print("IAC-MICD: " + str(dep.metadata_intra_call_dep))
                     for entry in dep.metadata_intra_call_dep:
                         if entry not in filtered_conv_ov_stack_elements:
                             logger.warning("found intra-call mismatch: " + entry)
@@ -1829,7 +1830,7 @@ class TaskGraph(object):
                         self.pet, cast(List[Context], disjoint_function_nodes)
                     )
                     unpacked_converted_disjoint_function_nodes = [elem[1] for elem in converted_disjoint_function_nodes]
-                    print("CDFN: ", str(converted_disjoint_function_nodes))
+                    #                    print("CDFN: ", str(converted_disjoint_function_nodes))
                     for entry in dep.metadata_inter_call_dep:
                         if entry not in unpacked_converted_disjoint_function_nodes:
                             logger.warning("found inter-call mismatch: " + entry)
@@ -1851,8 +1852,8 @@ class TaskGraph(object):
                     loop_filtered_conv_ov_stack_elements = [
                         elem[1] for elem in converted_overlapping_stack_elements if elem[0] == CallStackElementType.LOOP
                     ]
-                    print("IAI-IFCOSE: " + str(iteration_filtered_conv_ov_stack_elements))
-                    print("IAI-MIID: " + str(dep.metadata_intra_iteration_dep))
+                    #                    print("IAI-IFCOSE: " + str(iteration_filtered_conv_ov_stack_elements))
+                    #                    print("IAI-MIID: " + str(dep.metadata_intra_iteration_dep))
                     for entry in dep.metadata_intra_iteration_dep:
                         if entry not in loop_filtered_conv_ov_stack_elements:
                             # source and target not in the same loop.
@@ -1895,8 +1896,8 @@ class TaskGraph(object):
                     ]
                     converted_overlapping_loop_nodes = convert_callstacks_to_lineIDs(self.pet, overlapping_parent_loops)
                     filtered_conv_ov_loop_nodes = [elem[1] for elem in converted_overlapping_loop_nodes]
-                    print("FCOLN: " + str(filtered_conv_ov_loop_nodes))
-                    print("MIEID: " + str(dep.metadata_inter_iteration_dep))
+                    #                    print("FCOLN: " + str(filtered_conv_ov_loop_nodes))
+                    #                    print("MIEID: " + str(dep.metadata_inter_iteration_dep))
                     for entry in dep.metadata_inter_iteration_dep:
                         if entry not in filtered_conv_ov_loop_nodes:
                             logger.warning("found inter-iteration mismatch: " + entry)
@@ -1912,9 +1913,9 @@ class TaskGraph(object):
         self.__print_context_statistics("Pre validation")
 
         # remove invalid dependencies
-        print("LEN INVALID PRE: ", len(invalid_deps))
+        #        print("LEN INVALID PRE: ", len(invalid_deps))
         invalid_deps = [entry for entry in invalid_deps if entry not in valid_deps]
-        print("LEN INVALID PRE: ", len(invalid_deps))
+        #        print("LEN INVALID PRE: ", len(invalid_deps))
         for source_ctx, target_ctx, dep in invalid_deps:
             tpl = (target_ctx, dep)
             if tpl in source_ctx.outgoing_dependencies:
@@ -1988,27 +1989,32 @@ class TaskGraph(object):
         return predecessors
 
     def get_closest_predecessors_with_matching_pet_node_id(
-        self, node: Optional[TGNode], pet_node_id: PETNodeID, disallow_target_contexts: Set[Context]
+        self,
+        node: Optional[TGNode],
+        pet_node_id: PETNodeID,
+        disallow_target_contexts: Set[Context],
+        results_per_path: int = 1,
     ) -> Set[TGNode]:
         """Returns the predecessors with pet_node_id for each path starting from node in a set."""
         if node is None:
             return set()
-        queue: List[TGNode] = self.get_predecessors(node)
-        visited: Set[TGNode] = set(queue)
+        queue: List[Tuple[TGNode, int]] = [(n, results_per_path) for n in self.get_predecessors(node)]
+        visited: Set[TGNode] = set(self.get_predecessors(node))
         result: Set[TGNode] = set()
         while len(queue) > 0:
-            current_node = queue.pop()
+            current_node, remaining_results_on_path = queue.pop()
             if current_node.pet_node_id == pet_node_id and type(current_node) == TGNode:
                 if len(current_node.parent_context.intersection(disallow_target_contexts)) == 0:
                     # no overlap with disallowed contexts
                     result.add(current_node)
-
-                    # do not stop search upon first encounter
-                    # continue
+                    remaining_results_on_path -= 1
+                    if remaining_results_on_path == 0:
+                        # stop search on this path
+                        continue
             for pred in self.get_predecessors(current_node):
                 if pred not in visited:
                     visited.add(pred)
-                    queue.append(pred)
+                    queue.append((pred, remaining_results_on_path))
         return result
 
     def get_descendants(self, node: TGNode) -> List[TGNode]:
