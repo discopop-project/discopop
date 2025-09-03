@@ -30,6 +30,7 @@ from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchCon
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
+from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
 from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
@@ -106,6 +107,42 @@ class TaskGraph(object):
     def __init__(self, pet: PEGraphX) -> None:
         self.pet = pet
         self.graph = nx.MultiDiGraph()
+
+        # DEBUG
+        for cu in all_nodes(self.pet, CUNode):
+            print("CU: ", cu.id, cu.start_line, "-", cu.end_line)
+            print("--> Out deps:")
+            for edge in out_edges(self.pet, cu.id, EdgeType.DATA):
+                print(
+                    "--> ",
+                    edge[0],
+                    edge[1],
+                    "(",
+                    edge[2].dtype,
+                    edge[2].var_name,
+                    edge[2].sink_line,
+                    edge[2].source_line,
+                    ")",
+                )
+            print("--> In deps:")
+            for edge in in_edges(self.pet, cu.id, EdgeType.DATA):
+                print(
+                    "--> ",
+                    edge[0],
+                    edge[1],
+                    "(",
+                    edge[2].dtype,
+                    edge[2].var_name,
+                    edge[2].sink_line,
+                    edge[2].source_line,
+                    ")",
+                )
+
+        # import sys
+        # sys.exit(0)
+
+        # !DEBUG
+
         # define updating plot window
         fig1 = plt.figure(1)
         self.plotting_axis = fig1.add_subplot(1, 1, 1)
@@ -132,9 +169,10 @@ class TaskGraph(object):
         self.__fix_loop_structures()
         self.__duplicate_loop_iterations()
         self.__validate_graph_structure()
+        self.__add_work_nodes()
         self.__inline_function_calls()
         self.__add_branching_nodes()
-        self.__add_work_nodes()
+
         self.__assign_contexts()  # assign contexts before inlining to keep runtime of branching context detection in check
         self.__assign_node_levels()
         self.__calculate_context_nesting()
@@ -992,6 +1030,7 @@ class TaskGraph(object):
         #        self.__assign_parent_contexts_to_nodes()
         self.__assign_loop_contexts()
         self.__assign_work_contexts()
+        self.__assign_inlined_function_contexts()
 
         self.__assign_parent_contexts_to_nodes()
 
@@ -1223,6 +1262,17 @@ class TaskGraph(object):
             node.register_created_context(work_context)
             self.contexts.append(work_context)
 
+    def __assign_inlined_function_contexts(self) -> None:
+        logger.info("Assigning inlined function contexts to nodes...")
+
+        for node in tqdm(self.graph.nodes):
+            if not isinstance(node, TGStartInlinedFunctionNode):
+                continue
+            # create a new inlined function context
+            inlined_function_context = InlinedFunctionContext()
+            node.register_created_context(inlined_function_context)
+            self.contexts.append(inlined_function_context)
+
     def __assign_parent_contexts_to_nodes(self) -> None:
         # assigns each node the innermost context containing the node
         logger.info("Assigning parent contexts to nodes...")
@@ -1256,6 +1306,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGStartBranchParentNode)
                     or isinstance(current_node, TGStartBranchNode)
                     or isinstance(current_node, TGStartWorkNode)
+                    or isinstance(current_node, TGStartInlinedFunctionNode)
                 ):
                     entered_context = current_node.created_context
 
@@ -1268,6 +1319,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGEndBranchParentNode)
                     or isinstance(current_node, TGEndBranchNode)
                     or isinstance(current_node, TGEndWorkNode)
+                    or isinstance(current_node, TGEndInlinedFunctionNode)
                 ):
                     exited_context = True
 
@@ -1330,6 +1382,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGStartBranchParentNode)
                     or isinstance(current_node, TGStartBranchNode)
                     or isinstance(current_node, TGStartWorkNode)
+                    or isinstance(current_node, TGStartInlinedFunctionNode)
                 ):
                     entered_context = current_node.created_context
                 if entered_context is not None:
@@ -1351,6 +1404,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGEndBranchParentNode)
                     or isinstance(current_node, TGEndBranchNode)
                     or isinstance(current_node, TGEndWorkNode)
+                    or isinstance(current_node, TGEndInlinedFunctionNode)
                 ):
                     exited_context = True
                 if exited_context:
@@ -1398,6 +1452,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGStartBranchParentNode)
                     or isinstance(current_node, TGStartBranchNode)
                     or isinstance(current_node, TGStartWorkNode)
+                    or isinstance(current_node, TGStartInlinedFunctionNode)
                 ):
                     entered_context = current_node.created_context
 
@@ -1410,6 +1465,7 @@ class TaskGraph(object):
                     or isinstance(current_node, TGEndBranchParentNode)
                     or isinstance(current_node, TGEndBranchNode)
                     or isinstance(current_node, TGEndWorkNode)
+                    or isinstance(current_node, TGEndInlinedFunctionNode)
                 ):
                     exited_context = True
 
@@ -1592,11 +1648,28 @@ class TaskGraph(object):
         for node in tqdm(work_nodes):
             if node in visited:
                 continue
+
+            print("NODE: ", node.pet_node_id)
+
             # create a new context, if the predecessor of node is not a regular work node
             preds = self.get_predecessors(node)
             create_new_context = False
             if len(preds) > 1 or len(preds) == 0 or type(preds[0]) != TGNode:
                 create_new_context = True
+
+            # create a new context if the node contains a function call
+            if node.pet_node_id is not None:
+                if len(out_edges(self.pet, node.pet_node_id, EdgeType.CALLSNODE)) > 0:
+                    create_new_context = True
+
+            # create a new context if a preceeding node contains a function call
+            for pred in preds:
+                print("-> PRED: ", pred.pet_node_id)
+                if pred.pet_node_id is not None:
+                    if len(out_edges(self.pet, pred.pet_node_id, EdgeType.CALLSNODE)) > 0:
+                        print("---> HAS CALL")
+                        create_new_context = True
+                        break
 
             if not create_new_context:
                 # node will be handled as part of another context
@@ -1617,7 +1690,12 @@ class TaskGraph(object):
             last_work_node = node
             while True:
                 successors = self.get_successors(last_work_node)
-                if len(successors) == 0 or len(successors) > 1 or type(successors[0]) != TGNode:
+                if (
+                    len(successors) == 0
+                    or len(successors) > 1
+                    or type(successors[0]) != TGNode
+                    or successors[0] in context_entry_nodes
+                ):
                     break
                 last_work_node = successors[0]
             # insert work end node after last_work_node
@@ -1687,7 +1765,7 @@ class TaskGraph(object):
                     source_tg,
                     target,
                     disallow_target_contexts=set(),
-                    results_per_path=2,
+                    results_per_path=10,
                     # disallow_target_contexts=source_tg.parent_context
                 )
 
