@@ -33,7 +33,7 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[PatternInfo]:
 
     logger.info("--> Constructing context task graph...")
     context_task_graph = ContextTaskGraph(task_graph)
-    # context_task_graph.plot()
+    context_task_graph.plot()
 
     # result += identify_simple_taskloop(pet, task_graph)
     result += identify_simple_tasking(context_task_graph)

@@ -74,6 +74,12 @@ class ContextTaskGraph(object):
         for ctx in tqdm(self.task_graph.contexts):
             for sink_ctx, dep in ctx.outgoing_dependencies:
                 self.add_edge(sink_ctx, ctx)
+        logger.info("--> Add contained edges...")
+        for ctx in tqdm(self.task_graph.contexts):
+            for sink_ctx in ctx.get_contained_contexts():
+                # check if sink_ctx is an entry to a successor sequence
+                if sink_ctx.predecessor is None:
+                    self.add_edge(ctx, sink_ctx)
 
     def __simplify_graph(self) -> None:
         """Replace triangles in the graph with a CombinedContext node. Loop until no further triangles exist."""
