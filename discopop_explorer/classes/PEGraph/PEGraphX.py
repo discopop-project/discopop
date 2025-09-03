@@ -196,6 +196,25 @@ class PEGraphX(object):
         print("\tAdded dependencies...")
         return cls(g, reduction_vars, pos)
 
+    def validate(self) -> None:
+        print("\tValidating pet...")
+        print("\t\tValidating function scopes...")
+        for func_node in [n for n in all_nodes(self, FunctionNode)]:
+            print("\t\t\t Func: " + func_node.name)
+            min_start_line = func_node.start_line
+            max_end_line = func_node.end_line
+            for child in direct_children(self, func_node):
+                if child.start_line < min_start_line:
+                    min_start_line = child.start_line
+                if child.end_line > max_end_line:
+                    max_end_line = child.end_line
+            if min_start_line != func_node.start_line:
+                print("\t\t\t --> Found fix for start line. Replacing: ", func_node.start_line, "with", min_start_line)
+                func_node.start_line = min_start_line
+            if max_end_line != func_node.end_line:
+                print("\t\t\t --> Found fix for end line. Replacing: ", func_node.end_line, "with", max_end_line)
+                func_node.end_line = max_end_line
+
     def map_static_and_dynamic_dependencies(self) -> None:
         print("\tMapping static to dynamic dependencies...")
         print("\t\tIdentifying mappings between static and dynamic memory regions...", end=" ")

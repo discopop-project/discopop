@@ -24,4 +24,4 @@ class FunctionContext(Context):
         return "lightgrey"
 
     def get_label(self) -> str:
-        return "Function"
+        return "Function " + str(self.parent_function)

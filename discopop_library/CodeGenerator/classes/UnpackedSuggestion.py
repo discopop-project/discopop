@@ -206,6 +206,21 @@ class UnpackedSuggestion(object):
         pragmas.append(pragma)
         return pragmas
 
+    def __get_task_pragmas(self) -> List[Pragma]:
+        pragmas: List[Pragma] = []
+        if self.values["type"] == "TASKLOOP":
+            pragma = Pragma()
+            pragma.file_id = self.file_id
+            pragma.start_line = self.start_line
+            pragma.end_line = self.end_line
+            pragma.pragma_str = " ".join(self.values["pragma"])
+            print("--> Pragma STR: ", pragma.pragma_str)
+            pragmas.append(pragma)
+        else:
+            raise ValueError("Unknown task type: " + self.values["type"])
+
+        return pragmas
+
     def __get_pipeline_pragmas(self) -> List[Pragma]:
         pragmas = []
 
@@ -537,6 +552,8 @@ class UnpackedSuggestion(object):
             execute_on_gpu = "gpu_" in self.type or self.device_type == DeviceTypeEnum.GPU
             pragmas += self.__get_do_all_and_reduction_pragmas(execute_on_gpu)
             return pragmas
+        elif self.type == "task":
+            pragmas += self.__get_task_pragmas()
         elif self.type == "pipeline":
             pragmas += self.__get_pipeline_pragmas()
         elif self.type == "simple_gpu":

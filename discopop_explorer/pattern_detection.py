@@ -35,6 +35,7 @@ from discopop_explorer.pattern_detectors.simple_gpu_patterns.gpu_pattern_detecto
 from discopop_library.ParallelRegionMerger.inflated_parallel_region_pattern import (
     run_detection as detect_inflated_parallel_regions,
 )
+from discopop_explorer.pattern_detectors.new_task_detector import run_detection as detect_tasking
 
 
 class PatternDetectorX(object):
@@ -98,6 +99,9 @@ class PatternDetectorX(object):
             task_graph.plot()
         if enable_context_graph_plot:
             task_graph.plot_context_graph()
+
+        # detect parallel tasks
+        res.patterns.task = detect_tasking(self.pet, task_graph)
 
         # reduction before doall!
 

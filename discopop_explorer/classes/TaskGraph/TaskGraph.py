@@ -17,6 +17,8 @@ import matplotlib
 from networkx import Graph
 from tqdm import tqdm
 
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.TaskGraph.Branching.TGEndBranchNode import TGEndBranchNode
@@ -29,6 +31,11 @@ from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
 from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
+from discopop_explorer.classes.TaskGraph.Contexts.utils import (
+    CallStackElementType,
+    convert_callstacks_to_lineIDs,
+    get_context_call_stack,
+)
 from discopop_explorer.classes.TaskGraph.Functions.TGEndFunctionNode import TGEndFunctionNode
 from discopop_explorer.classes.TaskGraph.Functions.TGEndInlinedFunctionNode import TGEndInlinedFunctionNode
 from discopop_explorer.classes.TaskGraph.Functions.TGStartFunctionNode import TGStartFunctionNode
@@ -127,6 +134,7 @@ class TaskGraph(object):
         self.__calculate_context_nesting()
         self.__calculate_context_successions()
         self.__insert_data_dependencies()
+        self.__validate_data_dependencies()
 
     def add_node(self, node: TGNode) -> None:
         self.graph.add_node(node)
@@ -1175,7 +1183,7 @@ class TaskGraph(object):
                 pair_iteration_nodes[(it_start, it_end)] = list(tmp_iteration_nodes)
 
             # create loop context
-            loop_context = LoopParentContext()
+            loop_context = LoopParentContext(node.pet_node_id)
             node.register_created_context(loop_context)
             #            for loop_node in general_loop_nodes:
             #                is_regular_loop_node = True
@@ -1210,12 +1218,13 @@ class TaskGraph(object):
         logger.info("DFS parsing entry points...")
         for entry_point in tqdm(entry_points):
             queue: List[Tuple[TGNode, Optional[Context]]] = []
+            root_context = Context()
             # skip root node when initializing the queue
             if isinstance(entry_point, RootNode):
                 for succ in self.get_successors(entry_point):
-                    queue.append((succ, None))
+                    queue.append((succ, root_context))
             else:
-                queue = [(entry_point, None)]
+                queue = [(entry_point, root_context)]
             already_enqueued: Set[Tuple[TGNode, Optional[Context]]] = set()
             while len(queue) > 0:
                 current_node, current_parent_context = queue.pop(0)
@@ -1242,9 +1251,15 @@ class TaskGraph(object):
                     exited_context = True
 
                 if entered_context is not None:
+                    if current_parent_context is not None:
+                        entered_context.register_parent_context(current_parent_context)
                     current_parent_context = entered_context
+                    current_parent_context.add_node(current_node)
+                    current_node.add_parent_context(current_parent_context)
                 elif exited_context:
                     if current_parent_context is not None:
+                        current_parent_context.add_node(current_node)
+                        current_node.add_parent_context(current_parent_context)
                         current_parent_context = current_parent_context.parent_context
                     else:
                         pass
@@ -1253,6 +1268,8 @@ class TaskGraph(object):
                     if current_parent_context is not None:
                         current_parent_context.add_node(current_node)
                         current_node.add_parent_context(current_parent_context)
+                    else:
+                        pass
                 # add successors to the queue
                 for succ in self.get_successors(current_node):
                     queue_element = (succ, current_parent_context)
@@ -1568,7 +1585,6 @@ class TaskGraph(object):
         return entry, exit
 
     def __insert_data_dependencies(self) -> None:
-        warnings.warn("Not yet implemented!")
         logger.info("Inserting data dependencies...")
 
         # iterate over all edges in PET Graph
@@ -1591,21 +1607,267 @@ class TaskGraph(object):
 
             for source_tg in source_tg_nodes:
                 # find target nodes for the dependency
-                target_tg_nodes: List[TGNode] = list(
-                    self.get_all_closest_predecessors_with_pet_node_id(source_tg, target)
+                target_tg_nodes: Set[TGNode] = self.get_closest_predecessors_with_matching_pet_node_id(
+                    source_tg,
+                    target,
+                    disallow_target_contexts=set(),
+                    # disallow_target_contexts=source_tg.parent_context
                 )
 
                 # register dependency between each pair of source and target nodes
-                for target_tg in target_tg_nodes:
+                for target_tg in list(target_tg_nodes):
                     # ignore dependencies within a single context
                     if source_tg.parent_context == target_tg.parent_context:
                         continue
-
-                    # TODO: filter dependencies according to the attached disambiguation metadata
-
                     for source_parent_ctx in source_tg.parent_context:
                         for target_parent_ctx in target_tg.parent_context:
                             source_parent_ctx.register_outgoing_dependency(target_parent_ctx, dependency)
+
+    def __validate_data_dependencies(self) -> None:
+        logger.info("Validating data dependencies using existing metadata...")
+        invalid_deps: List[Tuple[Context, Context, Dependency]] = []
+        valid_deps: Set[Tuple[Context, Context, Dependency]] = set()
+        for source_ctx in tqdm(self.contexts):
+            source_call_stack: Optional[List[Context]] = None  # only calculate, if it is required
+            for target_ctx, dep in source_ctx.outgoing_dependencies:
+                print()
+                print(
+                    "PARSING: "
+                    + str(dep.source_line)
+                    + " "
+                    + str(dep.sink_line)
+                    + " "
+                    + str(dep.dtype)
+                    + " "
+                    + str(dep.var_name)
+                )
+                # check if metadata exists
+                if (
+                    dep.metadata_inter_call_dep is None
+                    or dep.metadata_intra_call_dep is None
+                    or dep.metadata_inter_iteration_dep is None
+                    or dep.metadata_intra_iteration_dep is None
+                ):
+                    # no metadata exists
+                    continue
+                # check if any list is non-empty, i.e., if a check is actually required
+                if (
+                    len(dep.metadata_source_ancestors) == 0
+                    and len(dep.metadata_sink_ancestors) == 0
+                    and len(dep.metadata_inter_call_dep) == 0
+                    and len(dep.metadata_intra_call_dep) == 0
+                    and len(dep.metadata_inter_iteration_dep) == 0
+                    and len(dep.metadata_intra_iteration_dep) == 0
+                ):
+                    # all lists are empty. no check required.
+                    continue
+                # calculate callstacks for validation
+                if source_call_stack is None:
+                    source_call_stack = get_context_call_stack(source_ctx)
+                target_call_stack = get_context_call_stack(target_ctx)
+                print("Source CS: " + str(source_call_stack))
+                print("Target CTX: " + target_ctx.get_label())
+                print("Target CS: " + str(target_call_stack))
+                # get LineIDs from callstacks
+                converted_source_call_stack = convert_callstacks_to_lineIDs(self.pet, source_call_stack)
+                converted_target_call_stack = convert_callstacks_to_lineIDs(self.pet, target_call_stack)
+
+                print("Conv. Source.CS: " + str(converted_source_call_stack))
+                print("Conv. Target.CS: " + str(converted_target_call_stack))
+
+                skip_further_checks = False
+
+                # validate source ancestors
+                if (not skip_further_checks) and len(dep.metadata_sink_ancestors) > 0:
+                    filtered_source_call_stack = [
+                        elem[1] for elem in converted_source_call_stack if elem[0] != CallStackElementType.ITERATION
+                    ]
+                    print("FSCS: " + str(filtered_source_call_stack))
+                    print("SANC: " + str(dep.metadata_sink_ancestors))
+
+                    for entry in dep.metadata_sink_ancestors:
+                        if entry not in filtered_source_call_stack:
+                            logger.warning(
+                                "found source-ancestor mismatch: "
+                                + entry
+                                + ". Keep dependency to err on the safe side."
+                            )
+                            # following checks would not target the current dependency. Keep the dependency to err on the safe side.
+                            skip_further_checks = True
+                            break
+
+                # validate sink ancestors
+                if (not skip_further_checks) and len(dep.metadata_source_ancestors) > 0:
+                    filtered_target_call_stack = [
+                        elem[1] for elem in converted_target_call_stack if elem[0] != CallStackElementType.ITERATION
+                    ]
+                    print("FTCS: " + str(filtered_target_call_stack))
+                    print("TANC: " + str(dep.metadata_source_ancestors))
+                    for entry in dep.metadata_source_ancestors:
+                        if entry not in filtered_target_call_stack:
+                            logger.warning(
+                                "found sink-ancestor mismatch: " + entry + ". Keep dependency to err on the safe side."
+                            )
+                            # following checks would not target the current dependency. Keep the dependency to err on the safe side.
+                            skip_further_checks = True
+                            break
+
+                if skip_further_checks:
+                    continue
+
+                dependency_valid = True
+
+                # validate intra-call relation
+                if dependency_valid and len(dep.metadata_intra_call_dep) > 0:
+                    # check for exact same parent function
+                    overlapping_stack_elements = [elem for elem in source_call_stack if elem in target_call_stack]
+                    converted_overlapping_stack_elements = convert_callstacks_to_lineIDs(
+                        self.pet, overlapping_stack_elements
+                    )
+                    filtered_conv_ov_stack_elements = [
+                        elem[1]
+                        for elem in converted_overlapping_stack_elements
+                        if elem[0] == CallStackElementType.FUNCTION
+                    ]
+                    print("IAC-FCOSE: " + str(filtered_conv_ov_stack_elements))
+                    print("IAC-MICD: " + str(dep.metadata_intra_call_dep))
+                    for entry in dep.metadata_intra_call_dep:
+                        if entry not in filtered_conv_ov_stack_elements:
+                            logger.warning("found intra-call mismatch: " + entry)
+                            dependency_valid = False
+                            break
+
+                # validate inter-call relation
+                if dependency_valid and len(dep.metadata_inter_call_dep) > 0:
+                    # check for differenct parent nodes of the same function
+                    source_call_stack_function_filtered = [
+                        elem for elem in source_call_stack if isinstance(elem, FunctionContext)
+                    ]
+                    target_call_stack_function_filtered = [
+                        elem for elem in target_call_stack if isinstance(elem, FunctionContext)
+                    ]
+                    disjoint_function_nodes = [
+                        elem
+                        for elem in source_call_stack_function_filtered
+                        if elem not in target_call_stack_function_filtered
+                    ]
+                    converted_disjoint_function_nodes = convert_callstacks_to_lineIDs(
+                        self.pet, cast(List[Context], disjoint_function_nodes)
+                    )
+                    unpacked_converted_disjoint_function_nodes = [elem[1] for elem in converted_disjoint_function_nodes]
+                    print("CDFN: ", str(converted_disjoint_function_nodes))
+                    for entry in dep.metadata_inter_call_dep:
+                        if entry not in unpacked_converted_disjoint_function_nodes:
+                            logger.warning("found inter-call mismatch: " + entry)
+                            dependency_valid = False
+                            break
+
+                # validate intra-iteration relation
+                if dependency_valid and len(dep.metadata_intra_iteration_dep) > 0:
+                    # check for equal iteration node
+                    overlapping_stack_elements = [elem for elem in source_call_stack if elem in target_call_stack]
+                    converted_overlapping_stack_elements = convert_callstacks_to_lineIDs(
+                        self.pet, overlapping_stack_elements
+                    )
+                    iteration_filtered_conv_ov_stack_elements = [
+                        elem[1]
+                        for elem in converted_overlapping_stack_elements
+                        if elem[0] == CallStackElementType.ITERATION
+                    ]
+                    loop_filtered_conv_ov_stack_elements = [
+                        elem[1] for elem in converted_overlapping_stack_elements if elem[0] == CallStackElementType.LOOP
+                    ]
+                    print("IAI-IFCOSE: " + str(iteration_filtered_conv_ov_stack_elements))
+                    print("IAI-MIID: " + str(dep.metadata_intra_iteration_dep))
+                    for entry in dep.metadata_intra_iteration_dep:
+                        if entry not in loop_filtered_conv_ov_stack_elements:
+                            # source and target not in the same loop.
+                            continue
+                        if entry not in iteration_filtered_conv_ov_stack_elements:
+                            logger.warning("found intra-iteration mismatch: " + entry)
+                            dependency_valid = False
+                            break
+
+                # validate inter-iteration relation
+                if dependency_valid and len(dep.metadata_inter_iteration_dep) > 0:
+                    # check for differing iteration node
+                    source_call_stack_iteration_filtered = [
+                        elem for elem in source_call_stack if isinstance(elem, IterationContext)
+                    ]
+                    target_call_stack_iteration_filtered = [
+                        elem for elem in target_call_stack if isinstance(elem, IterationContext)
+                    ]
+                    source_disjoint_iteration_nodes = [
+                        elem
+                        for elem in source_call_stack_iteration_filtered
+                        if elem not in target_call_stack_iteration_filtered
+                    ]
+                    target_disjoint_iteration_nodes = [
+                        elem
+                        for elem in target_call_stack_iteration_filtered
+                        if elem not in source_call_stack_iteration_filtered
+                    ]
+
+                    source_disjoint_iteration_parent_loops = [
+                        elem.belongs_to_context for elem in source_disjoint_iteration_nodes
+                    ]
+                    target_disjoint_iteration_parent_loops = [
+                        elem.belongs_to_context for elem in target_disjoint_iteration_nodes
+                    ]
+                    overlapping_parent_loops = [
+                        elem
+                        for elem in source_disjoint_iteration_parent_loops
+                        if elem in target_disjoint_iteration_parent_loops
+                    ]
+                    converted_overlapping_loop_nodes = convert_callstacks_to_lineIDs(self.pet, overlapping_parent_loops)
+                    filtered_conv_ov_loop_nodes = [elem[1] for elem in converted_overlapping_loop_nodes]
+                    print("FCOLN: " + str(filtered_conv_ov_loop_nodes))
+                    print("MIEID: " + str(dep.metadata_inter_iteration_dep))
+                    for entry in dep.metadata_inter_iteration_dep:
+                        if entry not in filtered_conv_ov_loop_nodes:
+                            logger.warning("found inter-iteration mismatch: " + entry)
+                            dependency_valid = False
+                            break
+
+                # mark dependency invalid, if required
+                if not dependency_valid:
+                    invalid_deps.append((source_ctx, target_ctx, dep))
+                else:
+                    valid_deps.add((source_ctx, target_ctx, dep))
+
+        self.__print_context_statistics("Pre validation")
+
+        # remove invalid dependencies
+        print("LEN INVALID PRE: ", len(invalid_deps))
+        invalid_deps = [entry for entry in invalid_deps if entry not in valid_deps]
+        print("LEN INVALID PRE: ", len(invalid_deps))
+        for source_ctx, target_ctx, dep in invalid_deps:
+            tpl = (target_ctx, dep)
+            if tpl in source_ctx.outgoing_dependencies:
+                source_ctx.outgoing_dependencies.remove(tpl)
+
+        self.__print_context_statistics("Post validation")
+
+    #        ## DEBUG
+    #        # print remaining dependencies
+    #        print("REMAINING DEPS: ")
+    #        for ctx in self.contexts:
+    #            print("CTX: " + ctx.get_label())
+    #            for target_ctx, dep in ctx.outgoing_dependencies:
+    #                print("--> " + str(dep.source_line) + " " + str(dep.sink_line) + " " + str(dep.dtype) + " " + str(dep.var_name))
+    #       ## !DEBUG
+
+    def __print_context_statistics(self, label: str = "") -> None:
+        # prepare context dependency count
+        ctx_dep_count = 0
+        for ctx in self.contexts:
+            ctx_dep_count += len(ctx.outgoing_dependencies)
+        # print to console
+        logger.info("####################")
+        logger.info("# Context statistics: " + label)
+        logger.info("# Context count: " + str(len(self.contexts)))
+        logger.info("# Context deps:  " + str(ctx_dep_count))
+        logger.info("####################")
 
     def __get_iteration_nodes(
         self, iteration_entry: TGStartIterationNode, iteration_exit: TGEndIterationNode
@@ -1651,10 +1913,10 @@ class TaskGraph(object):
         predecessors = list(set([s for s, t in self.graph.in_edges(node)]))
         return predecessors
 
-    def get_all_closest_predecessors_with_pet_node_id(
-        self, node: Optional[TGNode], pet_node_id: PETNodeID
+    def get_closest_predecessors_with_matching_pet_node_id(
+        self, node: Optional[TGNode], pet_node_id: PETNodeID, disallow_target_contexts: Set[Context]
     ) -> Set[TGNode]:
-        """Returns the closest reachable predecessor with pet_node_id for each path starting from node in a set."""
+        """Returns the predecessors with pet_node_id for each path starting from node in a set."""
         if node is None:
             return set()
         queue: List[TGNode] = self.get_predecessors(node)
@@ -1662,10 +1924,11 @@ class TaskGraph(object):
         result: Set[TGNode] = set()
         while len(queue) > 0:
             current_node = queue.pop()
-            if current_node.pet_node_id == pet_node_id:
-                # found first matching predecessor along current path. Stop search on this path.
-                result.add(current_node)
-                continue
+            if current_node.pet_node_id == pet_node_id and type(current_node) == TGNode:
+                if len(current_node.parent_context.intersection(disallow_target_contexts)) == 0:
+                    # no overlap with disallowed contexts
+                    result.add(current_node)
+                    continue
             for pred in self.get_predecessors(current_node):
                 if pred not in visited:
                     visited.add(pred)
