@@ -7,7 +7,7 @@
 # directory for details.
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from matplotlib import pyplot as plt
 import networkx as nx
 from networkx import Graph
@@ -41,8 +41,24 @@ class ContextTaskGraph(object):
         # start processing
         self.__construct_from_task_graph()
         self.__print_graph_statistics("Pre simplification")
-        self.__simplify_graph()
+        try:
+            print(nx.find_cycle(self.graph))
+        except:
+            print("NO CYCLE")
+        # self.__simplify_graph()
         self.__print_graph_statistics("Post simplification")
+        try:
+            cycle = nx.find_cycle(self.graph)
+            print("Cycle: ", cycle)
+            cycle_nodes: Set[Context] = set()
+            for tpl in cycle:
+                cycle_nodes.add(tpl[0])
+                cycle_nodes.add(tpl[1])
+            plt.ioff()
+            self.plot(highlight_nodes=list(cycle_nodes))
+            plt.pause(1)
+        except:
+            print("NO CYCLE")
 
         print("Waiting for user to close the Window...")
         # plt.show(block=True)
@@ -195,12 +211,12 @@ class ContextTaskGraph(object):
         successors = list(set([t for s, t in self.graph.out_edges(node)]))
         return successors
 
-    def plot(self) -> None:
-        self.update_plot()
+    def plot(self, highlight_nodes: Optional[List[Context]] = None) -> None:
+        self.update_plot(highlight_nodes)
         print("Waiting for user to close the Window...")
         plt.show()
 
-    def update_plot(self) -> None:
+    def update_plot(self, highlight_nodes: Optional[List[Context]] = None) -> None:
         logger.info("Plotting...")
         plt.clf()
 
@@ -209,7 +225,15 @@ class ContextTaskGraph(object):
         logger.info("--->    Done.")
 
         # draw regular nodes
-        nx.draw_networkx_nodes(self.graph, positions)
+        if highlight_nodes is None:
+            nx.draw_networkx_nodes(self.graph, positions)
+        else:
+            nx.draw_networkx_nodes(
+                self.graph, positions, nodelist=[n for n in self.graph.nodes() if n not in highlight_nodes]
+            )
+        # draw highlighted nodes
+        if highlight_nodes is not None:
+            nx.draw_networkx_nodes(self.graph, positions, nodelist=highlight_nodes, node_color="red")
         # draw edges
         nx.draw_networkx_edges(self.graph, positions)
 
