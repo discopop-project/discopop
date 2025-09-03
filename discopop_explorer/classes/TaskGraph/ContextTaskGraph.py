@@ -14,6 +14,8 @@ from networkx import Graph
 from tqdm import tqdm
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
+from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
+from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 
@@ -80,6 +82,35 @@ class ContextTaskGraph(object):
                 # check if sink_ctx is an entry to a successor sequence
                 if sink_ctx.predecessor is None:
                     self.add_edge(ctx, sink_ctx)
+        logger.info("--> Add dependencies on called functions...")
+        for ctx in tqdm(self.task_graph.contexts):
+            for sink_ctx in ctx.get_contained_contexts():
+                if isinstance(sink_ctx, InlinedFunctionContext):
+                    self.add_edge(ctx, sink_ctx)
+        logger.info("--> Add dependencies to force synchronization at exit nodes via synthetic landing pads...")
+        required_synthetic_landing_pads: List[List[Context]] = []
+        for ctx in tqdm(self.graph.nodes):
+            # filter for entry nodes
+            if len(self.get_predecessors(ctx)) != 0:
+                continue
+            # found entry node
+            # get descendants without successors, aka leaf nodes
+            leaf_nodes: List[Context] = []
+            for desc in nx.descendants(self.graph, ctx):
+                if len(self.get_successors(desc)) != 0:
+                    continue
+                # found leaf node
+                leaf_nodes.append(desc)
+            # register a synthetic landing pad for later creation
+            if len(leaf_nodes) > 1:
+                required_synthetic_landing_pads.append(leaf_nodes)
+        # create synthetic landing pads
+        for leaf_nodes in required_synthetic_landing_pads:
+            landing_pad = WorkContext()
+            self.add_node(landing_pad)
+            for leaf in leaf_nodes:
+                self.add_edge(leaf, landing_pad)
+            logger.info("----> Added synthetic landing pad")
 
     def __simplify_graph(self) -> None:
         """Replace triangles in the graph with a CombinedContext node. Loop until no further triangles exist."""
