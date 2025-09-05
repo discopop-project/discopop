@@ -1521,7 +1521,7 @@ class TaskGraph(object):
         # inline functions calls starting from the root node
         # repeat the process until no modification is found anymore, i.e. no further functions calls need to be inlined
         # Tracking of the call path depth for "early termination", i.e. supporting recursion and cyclic calls
-        call_path_limit = 100
+        call_path_limit = 4
         call_path_depth = 0
         modification_found = True
         with tqdm(total=call_path_limit, desc="Callpath depth") as progress_bar:
@@ -1654,7 +1654,7 @@ class TaskGraph(object):
             # create a new context, if the predecessor of node is not a regular work node
             preds = self.get_predecessors(node)
             create_new_context = False
-            if len(preds) > 1 or len(preds) == 0 or type(preds[0]) != TGNode:
+            if len(preds) > 1 or len(preds) == 0 or type(preds[0]) != TGNode or len(self.get_successors(preds[0])) > 1:
                 create_new_context = True
 
             # create a new context if the node contains a function call

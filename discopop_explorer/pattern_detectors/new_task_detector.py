@@ -19,6 +19,7 @@ from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
 from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
+from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
@@ -56,7 +57,7 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
     for node in tqdm(context_task_graph.graph.nodes):
         # identify fork nodes
         successors = context_task_graph.get_successors(node)
-        if len(successors) < 2:
+        if len(successors) < 2 or not isinstance(node, WorkContext):
             continue
         # node is a fork
         # check if a clean join node exists, i.e., if all branches arrive at the same node without crossing each other
@@ -104,12 +105,11 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
         fork_join_pairs.append((node, clean_join_node))
 
     # DEBUG
-    if len(fork_join_pairs) > 0:
-        highlight_nodes: Set[Context] = set()
-        for tpl in fork_join_pairs:
-            highlight_nodes.add(tpl[0])
-            highlight_nodes.add(tpl[1])
-        context_task_graph.plot(highlight_nodes=list(highlight_nodes))
+    highlight_nodes: Set[Context] = set()
+    for tpl in fork_join_pairs:
+        highlight_nodes.add(tpl[0])
+        highlight_nodes.add(tpl[1])
+    context_task_graph.plot(highlight_nodes=list(highlight_nodes))
     # !DEBUG
 
     return patterns
