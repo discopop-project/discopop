@@ -13,7 +13,9 @@ import networkx as nx
 from networkx import Graph
 from tqdm import tqdm
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
+from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
@@ -31,6 +33,7 @@ class ContextTaskGraph(object):
     pet: PEGraphX
     task_graph: TaskGraph
     graph: nx.MultiDiGraph
+    imaginary_replacement_edges: Dict[Context, List[Context]] = dict()
 
     def __init__(self, task_graph: TaskGraph) -> None:
         self.pet = task_graph.pet
@@ -72,10 +75,87 @@ class ContextTaskGraph(object):
         logger.info("--> Add context nodes...")
         for ctx in tqdm(self.task_graph.contexts):
             self.add_node(ctx)
-        logger.info("--> Add dependency edges...")
-        for ctx in tqdm(self.task_graph.contexts):
-            for sink_ctx, dep in ctx.outgoing_dependencies:
-                self.add_edge(sink_ctx, ctx)
+
+        # add edges based on task graph
+        for tg_node in self.task_graph.graph.nodes:
+            if tg_node.created_context is None:
+                continue
+            successor_contexts: List[Context] = []
+            queue = self.task_graph.get_successors(tg_node)
+            while len(queue) > 0:
+                current = queue.pop()
+                if current.created_context is not None:
+                    successor_contexts.append(current.created_context)
+                    continue
+                queue += [nd for nd in self.task_graph.get_successors(current) if nd not in queue]
+            for succ_ctx in successor_contexts:
+                self.add_edge(tg_node.created_context, succ_ctx)
+
+        # Extract branched sections
+        raw_branching_contexts: List[Context] = []
+        for node in self.graph.nodes():
+            if isinstance(node, BranchingParentContext):
+                raw_branching_contexts.append(node)
+
+        finished_branching_context: List[Context] = []
+        while len(raw_branching_contexts) > 0:
+            print("LEN: ", len(raw_branching_contexts))
+            current_branching_context = raw_branching_contexts.pop(0)
+            # skip, if current_branching_context contains branching contexts
+            contained_contexts = current_branching_context.get_contained_contexts(inclusive=True)
+            contains_branched_section = (
+                len(
+                    [
+                        ctx
+                        for ctx in contained_contexts
+                        if isinstance(ctx, BranchingParentContext) and (ctx not in finished_branching_context)
+                    ]
+                )
+                > 0
+            )
+            if contains_branched_section:
+                raw_branching_contexts.append(current_branching_context)
+                continue
+            # found trivial branching context
+            replacement_node = WorkContext()
+            self.add_node(replacement_node)
+            if current_branching_context.parent_context is not None:
+                replacement_node.parent_context = current_branching_context.parent_context
+                replacement_node.parent_context.add_contained_context(replacement_node)
+
+            #            plt.ioff()
+            #            self.plot(highlight_nodes=list(contained_contexts) + [replacement_node])
+            #            plt.pause(0.01)
+
+            # redirect edges to replacement_node
+            outside_predecessors = self.get_predecessors(current_branching_context)
+            for pred in outside_predecessors:
+                self.graph.remove_edge(pred, current_branching_context)
+                self.add_edge(pred, replacement_node)
+            # outside_successors: Set[Context] = set()
+            for node in contained_contexts:
+                for succ in self.get_successors(node):
+                    if succ not in contained_contexts:
+                        #            outside_successors.add(succ)
+                        self.graph.remove_edge(node, succ)
+                        self.add_edge(replacement_node, succ)
+
+            finished_branching_context.append(current_branching_context)
+            # register non-existing dashed edge for plotting purposes only
+            if replacement_node not in self.imaginary_replacement_edges:
+                self.imaginary_replacement_edges[replacement_node] = []
+            self.imaginary_replacement_edges[replacement_node].append(current_branching_context)
+
+        #            plt.ioff()
+        #            self.plot(highlight_nodes=list(contained_contexts) + [replacement_node])
+        #            plt.pause(0.01)
+
+        #        logger.info("--> Add dependency edges...")
+        #        for ctx in tqdm(self.task_graph.contexts):
+        #            for sink_ctx, dep in ctx.outgoing_dependencies:
+        #                self.add_edge(sink_ctx, ctx)
+
+        return
 
         logger.info("--> Add dependencies on called functions...")
         for ctx in tqdm(self.task_graph.contexts):
@@ -91,14 +171,14 @@ class ContextTaskGraph(object):
                     self.add_edge(ctx, sink_ctx)
 
         # TODO Branching durch WORK knoten ersetzen. Branches individuell analysieren
-
-        return
-
         logger.info("--> Add dependencies to force synchronization at exit nodes via synthetic landing pads...")
         required_synthetic_landing_pads: List[List[Context]] = []
         for ctx in tqdm(self.graph.nodes):
             # filter for entry nodes
-            if len(self.get_predecessors(ctx)) != 0:
+            ## TODO: REMOVE THE INSTANCE CHECKS, make sure the graph structure is correct!
+            if len(self.get_predecessors(ctx)) != 0 or not (
+                isinstance(ctx, WorkContext) or isinstance(ctx, FunctionContext)
+            ):
                 continue
             # found entry node
             # get descendants without successors, aka leaf nodes
@@ -118,6 +198,17 @@ class ContextTaskGraph(object):
             for leaf in leaf_nodes:
                 self.add_edge(leaf, landing_pad)
             logger.info("----> Added synthetic landing pad")
+
+    #        # DEBUG - TO BE REMOVED
+    #        cleaning_found = True
+    #        while cleaning_found:
+    #            cleaning_found = False
+    #            for node in self.graph.nodes:
+    #                if len(self.get_predecessors(node)) == 0 and not (isinstance(node, WorkContext) or isinstance(node, FunctionContext)):
+    #                    self.graph.remove_node(node)
+    #                    cleaning_found = True
+    #                    break
+    #        # !DEBUG
 
     def __simplify_graph(self) -> None:
         """Replace triangles in the graph with a CombinedContext node. Loop until no further triangles exist."""
@@ -281,6 +372,17 @@ class ContextTaskGraph(object):
             nx.draw_networkx_nodes(self.graph, positions, nodelist=highlight_nodes, node_color="red")
         # draw edges
         nx.draw_networkx_edges(self.graph, positions)
+        # draw imaginary edges
+        tmp_graph = self.graph
+        edgelist: List[Tuple[Context, Context]] = []
+        for source in self.imaginary_replacement_edges:
+            for target in self.imaginary_replacement_edges[source]:
+                tmp_graph.add_edge(source, target)
+                edgelist.append((source, target))
+        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="red")
+        for source in self.imaginary_replacement_edges:
+            for target in self.imaginary_replacement_edges[source]:
+                tmp_graph.remove_edge(source, target)
 
         # get node labels
         labels = {}
