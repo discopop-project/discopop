@@ -99,7 +99,6 @@ class ContextTaskGraph(object):
 
         finished_branching_context: List[Context] = []
         while len(raw_branching_contexts) > 0:
-            print("LEN: ", len(raw_branching_contexts))
             current_branching_context = raw_branching_contexts.pop(0)
             # skip, if current_branching_context contains branching contexts
             contained_contexts = current_branching_context.get_contained_contexts(inclusive=True)
@@ -123,10 +122,6 @@ class ContextTaskGraph(object):
                 replacement_node.parent_context = current_branching_context.parent_context
                 replacement_node.parent_context.add_contained_context(replacement_node)
 
-            #            plt.ioff()
-            #            self.plot(highlight_nodes=list(contained_contexts) + [replacement_node])
-            #            plt.pause(0.01)
-
             # redirect edges to replacement_node
             outside_predecessors = self.get_predecessors(current_branching_context)
             for pred in outside_predecessors:
@@ -145,10 +140,6 @@ class ContextTaskGraph(object):
             if replacement_node not in self.imaginary_replacement_edges:
                 self.imaginary_replacement_edges[replacement_node] = []
             self.imaginary_replacement_edges[replacement_node].append(current_branching_context)
-
-        #            plt.ioff()
-        #            self.plot(highlight_nodes=list(contained_contexts) + [replacement_node])
-        #            plt.pause(0.01)
 
         #        logger.info("--> Add dependency edges...")
         #        for ctx in tqdm(self.task_graph.contexts):
