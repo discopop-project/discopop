@@ -204,6 +204,91 @@ class ContextTaskGraph(object):
                 for exit in exit_points:
                     self.graph.add_edge(exit, landing_pad)
 
+        # TEST
+        #  - calculate connected components
+        # Note: connected_components is a generator!
+        connected_components = nx.weakly_connected_components(self.graph)
+        print("Connected components: ")
+
+        #  - find entry point for each component
+        component_entry_points: Dict[Tuple[Context, ...], Context] = dict()
+        for comp in connected_components:
+            print("--> ", comp)
+            for ctx in comp:
+                print("Checking ctx: ", ctx)
+                print("--> len: ", len(self.get_predecessors(ctx)))
+                if len(self.get_predecessors(ctx)) == 0:
+                    component_entry_points[tuple(comp)] = ctx
+                    break
+        print("Component entry points: ", component_entry_points)
+        #  - find replacement nodes for each component
+        component_replacements_dict: Dict[Tuple[Context, ...], List[Context]] = dict()
+        for comp in component_entry_points:
+            entry_point = component_entry_points[comp]
+            component_replacements: List[Context] = []
+            replacement_candidates: List[Context] = [entry_point]
+            visited: List[Context] = []
+            while len(replacement_candidates) > 0:
+                candidate = replacement_candidates.pop(0)
+                visited.append(candidate)
+
+                # check if candidate is instance of WorkNode and not a trivial solution
+                if isinstance(candidate, WorkContext):
+                    if candidate == entry_point:
+                        # trivial solution, ignore, if another solution is possible
+                        if candidate in self.inverse_imaginary_replacement_edges:
+                            replacement_candidates += [
+                                c
+                                for c in self.inverse_imaginary_replacement_edges[candidate]
+                                if c not in replacement_candidates and c not in visited
+                            ]
+                    else:
+                        # found replacement node
+                        component_replacements.append(candidate)
+                else:
+                    # continue searching for replacement node if possible
+                    if candidate in self.inverse_imaginary_replacement_edges:
+
+                        replacement_candidates += [
+                            c
+                            for c in self.inverse_imaginary_replacement_edges[candidate]
+                            if c not in replacement_candidates and c not in visited
+                        ]
+                    else:
+                        # no further step upwards possible. Use the current solution
+                        pass
+            component_replacements_dict[comp] = list(set(component_replacements))
+        print("Component replacements dict: ")
+        for c in component_replacements_dict:
+            print("--> ", c)
+            print("===> ", component_replacements_dict[c])
+
+        # calculate inverse component dictionary
+        inverse_component_dict: Dict[Context, Tuple[Context, ...]] = dict()
+        for comp in component_replacements_dict:
+            for ctx in comp:
+                inverse_component_dict[ctx] = comp
+        print("Inverse component dict:")
+        for ctx in inverse_component_dict:
+            print("-> ", ctx)
+            print("====> ", inverse_component_dict[ctx])
+
+        #  - add intra-component dependency edges
+        logger.info("--> Add intra-component dependency edges")
+        for ctx in tqdm(self.graph.nodes):
+            ctx_parent_component = inverse_component_dict[ctx]
+            for sink_ctx, dep in ctx.outgoing_dependencies:
+                sink_ctx_parent_component = inverse_component_dict[sink_ctx]
+                if ctx_parent_component != sink_ctx_parent_component:
+                    # not an intra-component dependency
+                    continue
+                # intra-component dependency
+                self.add_edge(sink_ctx, ctx)
+
+        #  - add inter-component dependency edges (to and from replacement nodes)
+
+        return
+
         # add dependency edges
         #        logger.info("--> Add dependency edges...")
         #        for ctx in tqdm(self.task_graph.contexts):
@@ -217,8 +302,6 @@ class ContextTaskGraph(object):
         #            self.add_edge(replacements[sink_ctx], target_ctx)
         #        else:
         #            self.add_edge(sink_ctx, target_ctx)
-
-        return
 
         # filling the structure with successor edges
         targets: Set[Context] = set()

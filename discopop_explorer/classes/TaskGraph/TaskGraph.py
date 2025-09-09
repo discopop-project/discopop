@@ -1521,7 +1521,7 @@ class TaskGraph(object):
         # inline functions calls starting from the root node
         # repeat the process until no modification is found anymore, i.e. no further functions calls need to be inlined
         # Tracking of the call path depth for "early termination", i.e. supporting recursion and cyclic calls
-        call_path_limit = 4
+        call_path_limit = 6
         call_path_depth = 0
         modification_found = True
         with tqdm(total=call_path_limit, desc="Callpath depth") as progress_bar:
