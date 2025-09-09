@@ -34,6 +34,7 @@ class ContextTaskGraph(object):
     task_graph: TaskGraph
     graph: nx.MultiDiGraph
     imaginary_replacement_edges: Dict[Context, List[Context]] = dict()
+    inverse_imaginary_replacement_edges: Dict[Context, List[Context]] = dict()
 
     def __init__(self, task_graph: TaskGraph) -> None:
         self.pet = task_graph.pet
@@ -142,14 +143,23 @@ class ContextTaskGraph(object):
             # register non-existing dashed edge for plotting purposes only
             if replacement_node not in self.imaginary_replacement_edges:
                 self.imaginary_replacement_edges[replacement_node] = []
+            if current_branching_context not in self.inverse_imaginary_replacement_edges:
+                self.inverse_imaginary_replacement_edges[current_branching_context] = []
             self.imaginary_replacement_edges[replacement_node].append(current_branching_context)
+            self.inverse_imaginary_replacement_edges[current_branching_context].append(replacement_node)
 
         # reconnect graph by:
         #  - removing successor edges
         #  - add contains edges ignoring BranchParents as targets
         #  - removing outgoing edges from BranchParents, saving imaginary connection
         #  - enforce a single landing pad per entry point
-        #  - add dependency edges
+
+        # TEST
+        #  - calculate connected components
+        #  - find entry point for each component
+        #  - find replacement node for each component
+        #  - add intra-component dependency edges
+        #  - add inter-component dependency edges (to and from replacement nodes)
 
         # Save successor edges
         saved_successors: Dict[Context, List[Context]] = dict()
@@ -173,7 +183,10 @@ class ContextTaskGraph(object):
                     self.graph.remove_edge(node, succ)
                     if node not in self.imaginary_replacement_edges:
                         self.imaginary_replacement_edges[node] = []
+                    if succ not in self.inverse_imaginary_replacement_edges:
+                        self.inverse_imaginary_replacement_edges[succ] = []
                     self.imaginary_replacement_edges[node].append(succ)
+                    self.inverse_imaginary_replacement_edges[succ].append(node)
 
         # enforce a single landing pad per entry point
         entry_points: List[Context] = []
@@ -191,8 +204,6 @@ class ContextTaskGraph(object):
                 for exit in exit_points:
                     self.graph.add_edge(exit, landing_pad)
 
-        return
-
         # add dependency edges
         #        logger.info("--> Add dependency edges...")
         #        for ctx in tqdm(self.task_graph.contexts):
@@ -202,10 +213,12 @@ class ContextTaskGraph(object):
         #                target_ctx = ctx
         #            for sink_ctx, dep in ctx.outgoing_dependencies:
         #                self.add_edge(sink_ctx, ctx)  # TEST
-        # if sink_ctx in replacements:
-        #    self.add_edge(replacements[sink_ctx], target_ctx)
-        # else:
-        #    self.add_edge(sink_ctx, target_ctx)
+        #        if sink_ctx in replacements:
+        #            self.add_edge(replacements[sink_ctx], target_ctx)
+        #        else:
+        #            self.add_edge(sink_ctx, target_ctx)
+
+        return
 
         # filling the structure with successor edges
         targets: Set[Context] = set()
