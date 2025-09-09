@@ -57,7 +57,7 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
     for node in tqdm(context_task_graph.graph.nodes):
         # identify fork nodes
         successors = context_task_graph.get_successors(node)
-        if len(successors) < 2 or not isinstance(node, WorkContext):
+        if len(successors) < 2:
             continue
         # node is a fork
         # check if a clean join node exists, i.e., if all branches arrive at the same node without crossing each other

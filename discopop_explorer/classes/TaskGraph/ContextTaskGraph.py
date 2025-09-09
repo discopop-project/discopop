@@ -284,8 +284,67 @@ class ContextTaskGraph(object):
                     continue
                 # intra-component dependency
                 self.add_edge(sink_ctx, ctx)
+                print("ADDED Intra component dependency: ", dep.sink_line, dep.source_line, dep.dtype, dep.var_name)
+
+        #        return
 
         #  - add inter-component dependency edges (to and from replacement nodes)
+        logger.info("--> Add inter-component dependency edges (inward)")
+        for ctx in tqdm(self.graph.nodes):
+            ctx_parent_component = inverse_component_dict[ctx]
+            for sink_ctx, dep in ctx.outgoing_dependencies:
+                sink_ctx_parent_component = inverse_component_dict[sink_ctx]
+                if sink_ctx_parent_component == ctx_parent_component:
+                    # intra-component dependency
+                    continue
+                # inter-component dependency
+                # check if sink_ctx_parent_component is a parent of ctx_parent_component
+                sink_is_parent_of: Optional[Context] = None
+                candidates = component_replacements_dict[ctx_parent_component]
+                while len(candidates) > 0:
+                    current_candidate = candidates.pop(0)
+                    if inverse_component_dict[current_candidate] == sink_ctx_parent_component:
+                        # sink_ctx_parent_component is a parent of ctx_parent_component
+                        sink_is_parent_of = current_candidate
+                        break
+                    candidates += [
+                        c
+                        for c in component_replacements_dict[inverse_component_dict[current_candidate]]
+                        if c not in candidates
+                    ]
+
+                if sink_is_parent_of is not None:
+                    # inward dependency found
+                    self.add_edge(sink_ctx, sink_is_parent_of)
+
+        logger.info("--> Add inter-component dependency edges (outward)")
+        for ctx in tqdm(self.graph.nodes):
+            ctx_parent_component = inverse_component_dict[ctx]
+            for sink_ctx, dep in ctx.outgoing_dependencies:
+                sink_ctx_parent_component = inverse_component_dict[sink_ctx]
+                if sink_ctx_parent_component == ctx_parent_component:
+                    # intra-component dependency
+                    continue
+                # inter-component dependency
+                # check if ctx_parent_component is a parent of sink_ctx_parent_component
+                source_is_parent_of: Optional[Context] = None
+                candidates = component_replacements_dict[sink_ctx_parent_component]
+                while len(candidates) > 0:
+                    current_candidate = candidates.pop(0)
+                    if inverse_component_dict[current_candidate] == ctx_parent_component:
+                        # ctx_parent_component is a parent of sink_ctx_parent_component
+                        source_is_parent_of = current_candidate
+                        break
+                    candidates += [
+                        c
+                        for c in component_replacements_dict[inverse_component_dict[current_candidate]]
+                        if c not in candidates
+                    ]
+
+                if source_is_parent_of is not None:
+                    # outward dependency found
+                    self.add_edge(sink_is_parent_of, sink_ctx)  # TODO CHECK!
+                    print("ADDED OUTWARD DEPENDENCY")
 
         return
 
