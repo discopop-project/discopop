@@ -12,7 +12,9 @@ from typing import Dict, List, Optional, TYPE_CHECKING, Set
 if TYPE_CHECKING:
     from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 
-from discopop_explorer.classes.TaskGraph.Aliases import LevelIndex, PETNodeID, TGNodeID, PositionIndex
+from discopop_explorer.aliases.LineID import LineID
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.TaskGraph.Aliases import LevelIndex, PETNode, PETNodeID, TGNodeID, PositionIndex
 
 
 class TGNode(object):
@@ -37,3 +39,8 @@ class TGNode(object):
 
     def register_created_context(self, context: Context) -> None:
         self.created_context = context
+
+    def get_pet_node(self, pet: PEGraphX) -> Optional[PETNode]:
+        if self.pet_node_id is None:
+            return None
+        return pet.node_at(self.pet_node_id)

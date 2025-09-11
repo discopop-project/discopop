@@ -216,6 +216,13 @@ class UnpackedSuggestion(object):
             pragma.pragma_str = " ".join(self.values["pragma"])
             print("--> Pragma STR: ", pragma.pragma_str)
             pragmas.append(pragma)
+        elif self.values["type"] == "TASK":
+            pragma = Pragma()
+            pragma.file_id = self.file_id
+            pragma.start_line = self.start_line
+            pragma.end_line = self.end_line
+            pragma.pragma_str = " ".join(self.values["pragma"])
+            pragmas.append(pragma)
         else:
             raise ValueError("Unknown task type: " + self.values["type"])
 

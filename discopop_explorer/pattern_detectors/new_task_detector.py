@@ -39,6 +39,7 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[PatternInfo]:
     result += identify_simple_tasking(context_task_graph)
 
     # identify immediate successive contexts with no dependencies between them
+    logger.info("--> Identify tasking with data sharing clauses ... TODO")
     logger.info("--> Identifying simple asynchronous tasking ... TODO")
     # identify non-immediate successive contexts with no dependencies between them, such that asynchronous execution is possible
     logger.info("--> Identifying dependent tasking... TODO")
@@ -50,7 +51,7 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[PatternInfo]:
 
 
 def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskParallelismInfo]:
-    logger.info("Identifying tasking potential...")
+    logger.info("Identifying trivial tasking potential...")
     patterns: List[TaskParallelismInfo] = []
     fork_join_pairs: List[Tuple[Context, Context]] = []
     logger.info("--> checking nodes")
@@ -108,8 +109,22 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
     highlight_nodes: Set[Context] = set()
     for tpl in fork_join_pairs:
         highlight_nodes.add(tpl[0])
+        for succ in context_task_graph.get_successors(tpl[0]):
+            highlight_nodes.add(succ)
         highlight_nodes.add(tpl[1])
     context_task_graph.plot(highlight_nodes=list(highlight_nodes))
     # !DEBUG
+
+    for tpl in fork_join_pairs:
+        tmp_patterns: List[TaskParallelismInfo] = []
+        # create task pattern for each entry
+        for entry in context_task_graph.get_successors(tpl[0]):
+            pet_node = entry.get_first_pet_node(context_task_graph.pet)
+        #        tmp_patterns.append(TaskParallelismInfo(pet_node, type=TPIType.TASK, pragma=["#pragma omp task"], pragma_line=pet_node.start_position(), first_private=[], private=[], shared=[]))
+
+        # create a barrier pattern for the join
+        # link the patterns together
+
+        patterns += tmp_patterns
 
     return patterns

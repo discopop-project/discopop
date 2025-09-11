@@ -9,11 +9,14 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+
 if TYPE_CHECKING:
     from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 
+from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
-from discopop_explorer.classes.TaskGraph.Aliases import LevelIndex, PositionIndex
+from discopop_explorer.classes.TaskGraph.Aliases import LevelIndex, PETNode, PositionIndex
 
 
 class Context(object):
@@ -156,3 +159,10 @@ class Context(object):
 
     def get_label(self) -> str:
         return "CTX"
+
+    def get_first_pet_node(self, pet: PEGraphX) -> Optional[PETNode]:
+        for node in self.contained_nodes:
+            pet_node = node.get_pet_node(pet)
+            if pet_node is not None:
+                return pet_node
+        return None
