@@ -1779,7 +1779,7 @@ class TaskGraph(object):
                             source_parent_ctx.register_outgoing_dependency(target_parent_ctx, dependency)
 
     def __validate_data_dependencies(self) -> None:
-        # self.__validate_data_dependencies_using_initializations()
+        self.__validate_data_dependencies_using_initializations()
         self.__validate_data_dependencies_using_metadata()
 
     def __validate_data_dependencies_using_initializations(self) -> None:
