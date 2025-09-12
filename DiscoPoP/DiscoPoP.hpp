@@ -59,6 +59,7 @@
 
 #include "DPUtils.hpp"
 #include "hybrid_analysis/InstructionDG.hpp"
+#include "static_analysis/StaticCalltree.hpp"
 
 #include "Structs.hpp"
 
@@ -265,6 +266,8 @@ public:
                  map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI, ModuleAnalysisManager &MAM);
 
   void createTakenBranchInstrumentation(Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap);
+
+  void buildStaticCalltree(Module &M);
 
   void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
                        map<string, vector<CU *>> &BBIDToCUIDsMap);

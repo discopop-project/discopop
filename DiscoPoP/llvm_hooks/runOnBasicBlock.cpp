@@ -226,7 +226,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       if (lid > 0) // calls on non-user code are not instrumented
       {
         IRBuilder<> IRBCall(&*BI);
-        IRBCall.CreateCall(DpCallOrInvoke, ConstantInt::get(Int32, lid));
+        IRBCall.CreateCall(DpCallOrInvoke, ConstantInt::get(Int32, llvm_ir_instruction_id));
         if (DP_DEBUG) {
           if (isa<CallInst>(BI)) {
             if (!(fn.str() == ""))

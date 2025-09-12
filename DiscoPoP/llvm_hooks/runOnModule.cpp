@@ -40,6 +40,13 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
     runOnFunction(F, MAM);
   }
 
+  // prepare information for call state transitioning and instruction mapping during dynamic analysis.
+  // -> build static calltree for state transition and instruction mapping preparation
+  buildStaticCalltree(M);
+  // -> assign unique stateIDs to all possible call states
+  // -> prepare state transition lookup tables
+  // -> prepare instruction mapping lookup tables
+
   // DPReduction
 
   reduction_file = new std::ofstream();
