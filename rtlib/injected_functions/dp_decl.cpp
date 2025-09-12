@@ -72,24 +72,34 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
          << endl;
   }
 
-  int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-  AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
+#if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
+  AccessInfo current;
+#else
+  // check if buffer is full. Push it to firstAccessQueue if so, and create a new buffer
+  if(mainThread_AccessInfoBuffer->is_full()){
+    // spin-lock to prevent endless queue growth
+    while(!firstAccessQueue.can_accept_entries()){
+      usleep(1000);
+    }
+    firstAccessQueue.push(mainThread_AccessInfoBuffer);
+    mainThread_AccessInfoBuffer = firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_SIZES);
+  }
+  AccessInfo& current = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
+#endif
   current.isRead = false;
   current.lid = 0;
   current.var = var;
+#if DP_MEMORY_REGION_DEALIASING
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
+#else
+  current.AAvar = (std::int64_t) var;
+#endif
   current.addr = addr;
   current.skip = true;
 
-  if (tempAddrCount[workerID] == CHUNK_SIZE) {
-    pthread_mutex_lock(&addrChunkMutexes[workerID]);
-    addrChunkPresent[workerID] = true;
-    chunks[workerID].push(tempAddrChunks[workerID]);
-    pthread_cond_signal(&addrChunkPresentConds[workerID]);
-    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-    tempAddrCount[workerID] = 0;
-  }
+#if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
+  analyzeSingleAccess(singleThreadedExecutionSMem, current);
+#endif
 }
 }
 

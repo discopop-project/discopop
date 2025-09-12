@@ -74,7 +74,7 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
 #endif
 
 #ifdef DP_CALLTREE_PROFILING
-  call_tree->exit_loop();
+  call_tree.exit_loop();
 #endif
 }
 }

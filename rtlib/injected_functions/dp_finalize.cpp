@@ -87,6 +87,7 @@ void __dp_finalize(LID lid) {
   } else {
     finalizeSingleThreadedExecution();
   }
+  std::cout << "Returned from finalizeParallelization" << std::endl;
 
   const auto output_loops = []() {
 #ifdef DP_RTLIB_VERBOSE
@@ -158,10 +159,10 @@ void __dp_finalize(LID lid) {
   delete loop_manager;
 
 #ifdef DP_CALLTREE_PROFILING
-  delete call_tree;
+  //delete call_tree;
   // delete metadata_queue;
   //  output metadata to file
-  std::cout << "Outputting dependency metadata... ";
+  std::cout << "Outputting dependency metadata... " << std::endl;
   std::ifstream ifile;
   std::string line;
   std::ofstream ofile;
@@ -176,12 +177,12 @@ void __dp_finalize(LID lid) {
   ofile << "# SINK_ANC : entered functions and loops for sink location \n";
   ofile << "# SOURCE_ANC : entered functions and loops for source location \n";
   ofile << "# Format: <DepType> <sink> <source> <var> <AAvar> <IAC> <IAI> <IEC> <IEI> <SINK_ANC> <SOURCE_ANC>\n";
-  for (auto dmd : *dependency_metadata_results) {
+  for (auto dmd : dependency_metadata_results) {
     ofile << dmd.toString() << "\n";
   }
   ofile.close();
-  delete dependency_metadata_results_mtx;
-  delete dependency_metadata_results;
+//  delete dependency_metadata_results_mtx;
+//  delete dependency_metadata_results;
 #endif
 
   *out << dputil::decodeLID(lid) << " END program" << endl;

@@ -52,10 +52,13 @@ extern std::mutex pthread_compatibility_mutex;
 extern FunctionManager *function_manager;
 extern LoopManager *loop_manager;
 extern MemoryManager *memory_manager;
-extern CallTree *call_tree;
-// extern MetaDataQueue * metadata_queue;
-extern std::mutex *dependency_metadata_results_mtx;
-extern std::unordered_set<DependencyMetadata> *dependency_metadata_results;
+
+#if DP_CALLTREE_PROFILING
+    extern CallTree call_tree;
+    extern std::mutex dependency_metadata_results_mtx;
+    extern std::unordered_set<DependencyMetadata> dependency_metadata_results;
+    extern thread_local std::unordered_set<DependencyMetadata> local_dependency_metadata_results;
+#endif
 
 // hybrid analysis
 extern ReportedBBSet *bbList;
@@ -77,26 +80,22 @@ extern depMap *allDeps;
 
 extern std::ofstream *out;
 
-extern pthread_cond_t *addrChunkPresentConds; // condition variables
-extern pthread_mutex_t *addrChunkMutexes;     // associated mutexes
-extern pthread_mutex_t allDepsLock;
+extern std::mutex allDepsLock;
 extern pthread_t *workers; // worker threads
+extern volatile bool finalizeParallelizationCalled;  // signals to worker threads that no further data access will be registered in the first queue
+extern FirstAccessQueueChunk* mainThread_AccessInfoBuffer;
+#define FIRST_ACCESS_QUEUE_SIZES 100000
+#define SECOND_ACCESS_QUEUE_SIZES 1000
+
+extern FirstAccessQueue firstAccessQueue;
+extern SecondAccessQueue secondAccessQueue;
+extern pthread_t* secondAccessQueue_worker_thread;
+extern FirstAccessQueueChunkBuffer firstAccessQueueChunkBuffer;
 
 extern AbstractShadow *singleThreadedExecutionSMem;
 
 extern int32_t NUM_WORKERS;
 
-extern int32_t CHUNK_SIZE;               // default number of addresses in each chunk
-extern std::queue<AccessInfo *> *chunks; // one queue of access info chunks for each worker thread
-extern bool *addrChunkPresent;           // addrChunkPresent[thread_id] denotes whether or not a
-                                         // new chunk is available for the corresponding thread
-
-extern AccessInfo **tempAddrChunks; // tempAddrChunks[thread_id] is the temporary chunk to
-                                    // collect memory accesses for the corresponding thread
-extern int32_t *tempAddrCount;      // tempAddrCount[thread_id] denotes the current
-                                    // number of accesses in the temporary chunk
-extern bool stop;                   // ONLY set stop to true if no more accessed addresses will
-                                    // be collected
 extern thread_local depMap *myMap;
 
 // statistics
