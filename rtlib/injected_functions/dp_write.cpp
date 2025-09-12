@@ -84,33 +84,37 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
   AccessInfo current;
 #else
-  int64_t workerID = ((addr - (addr % 4)) % (NUM_WORKERS * 4)) / 4; // implicit "floor"
-  AccessInfo &current = tempAddrChunks[workerID][tempAddrCount[workerID]++];
+  // check if buffer is full. Push it to firstAccessQueue if so, and create a new buffer
+  if(mainThread_AccessInfoBuffer->is_full()){
+    // spin-lock to prevent endless queue growth
+    while(!firstAccessQueue.can_accept_entries()){
+      usleep(1000);
+    }
+    firstAccessQueue.push(mainThread_AccessInfoBuffer);
+    mainThread_AccessInfoBuffer = firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_SIZES);
+  }
+  AccessInfo& current = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
+
 #endif
   current.isRead = false;
   current.lid = lid;
   current.var = var;
+#if DP_MEMORY_REGION_DEALIASING
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
+#else
+  current.AAvar = (std::int64_t) var;
+#endif
   current.addr = addr;
 
 #if DP_CALLTREE_PROFILING
-  current.call_tree_node_ptr = call_tree->get_current_node_ptr();
+  current.call_tree_node_ptr = std::move(call_tree.get_current_node_ptr());
   current.calculate_dependency_metadata = loop_manager->enable_calculate_dependency_metadata();
 #endif
 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
   analyzeSingleAccess(singleThreadedExecutionSMem, current);
-#else
-  if (tempAddrCount[workerID] == CHUNK_SIZE) {
-    pthread_mutex_lock(&addrChunkMutexes[workerID]);
-    addrChunkPresent[workerID] = true;
-    chunks[workerID].push(tempAddrChunks[workerID]);
-    pthread_cond_signal(&addrChunkPresentConds[workerID]);
-    pthread_mutex_unlock(&addrChunkMutexes[workerID]);
-    tempAddrChunks[workerID] = new AccessInfo[CHUNK_SIZE];
-    tempAddrCount[workerID] = 0;
-  }
 #endif
+
 }
 }
 

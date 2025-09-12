@@ -75,10 +75,23 @@ def run(arguments: DependencyComparatorArguments) -> int:
     }
 
     if arguments.verbose:
-        print("ADDITIONAL: ")
-        for add in additional:
-            print("-> ", add)
-        print()
+        if len(missing) > 0:
+            print("MISSING: ")
+            for miss in missing:
+                print("-> ", miss)
+            print()
+
+        if len(additional) > 0:
+            print("ADDITIONAL: ")
+            for add in additional:
+                print("-> ", add)
+            print()
+
+        if len(additional_init) > 0:
+            print("ADDITIONAL INIT: ")
+            for addi in additional_init:
+                print("-> ", addi)
+            print()
 
         print("overlap: ", len(overlap))
         print("missing: ", len(missing))
