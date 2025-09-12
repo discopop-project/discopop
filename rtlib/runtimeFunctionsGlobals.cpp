@@ -32,10 +32,14 @@ std::mutex pthread_compatibility_mutex;
 FunctionManager *function_manager = nullptr;
 LoopManager *loop_manager = nullptr;
 MemoryManager *memory_manager = nullptr;
-CallTree *call_tree = nullptr;
-// MetaDataQueue *metadata_queue = nullptr;
-std::mutex *dependency_metadata_results_mtx = nullptr;
-std::unordered_set<DependencyMetadata> *dependency_metadata_results = nullptr;
+
+#if DP_CALLTREE_PROFILING
+    CallTree call_tree;
+    std::mutex dependency_metadata_results_mtx;
+    std::unordered_set<DependencyMetadata> dependency_metadata_results;
+    thread_local std::unordered_set<DependencyMetadata> local_dependency_metadata_results;
+#endif
+
 
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
@@ -58,36 +62,31 @@ depMap *allDeps = nullptr;
 std::ofstream *out = nullptr;
 
 /******* BEGIN: parallelization section *******/
-pthread_cond_t *addrChunkPresentConds = nullptr; // condition variables
-pthread_mutex_t *addrChunkMutexes = nullptr;     // associated mutexes
-pthread_mutex_t allDepsLock;
+std::mutex allDepsLock;
 pthread_t *workers = nullptr; // worker threads
+volatile bool finalizeParallelizationCalled = false;  // signals to worker threads that no further data access will be registered in the first queue
+FirstAccessQueueChunk* mainThread_AccessInfoBuffer = nullptr;
+FirstAccessQueue firstAccessQueue(FIRST_ACCESS_QUEUE_SIZES);
+SecondAccessQueue secondAccessQueue(SECOND_ACCESS_QUEUE_SIZES);
+pthread_t* secondAccessQueue_worker_thread = nullptr;
+FirstAccessQueueChunkBuffer firstAccessQueueChunkBuffer(10);
 
 #define XSTR(x) STR(x)
 #define STR(x) #x
 #ifdef DP_NUM_WORKERS
 int32_t NUM_WORKERS = DP_NUM_WORKERS;
 #else
-int32_t NUM_WORKERS = 3; // default number of worker threads (multiple workers
+int32_t NUM_WORKERS = 4; // default number of worker threads (multiple workers
                          // can potentially lead to non-deterministic results)
 #endif
 
 AbstractShadow *singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
 
-int32_t CHUNK_SIZE = 500;                   // default number of addresses in each chunk
-std::queue<AccessInfo *> *chunks = nullptr; // one queue of access info chunks for each worker thread
-bool *addrChunkPresent = nullptr;           // addrChunkPresent[thread_id] denotes whether or not a new chunk
-                                            // is available for the corresponding thread
-AccessInfo **tempAddrChunks = nullptr;      // tempAddrChunks[thread_id] is the temporary chunk to collect
-                                            // memory accesses for the corresponding thread
-int32_t *tempAddrCount = nullptr;           // tempAddrCount[thread_id] denotes the current number of accesses
-                                            // in the temporary chunk
-bool stop = false;                          // ONLY set stop to true if no more accessed addresses will
-                                            // be collected
 thread_local depMap *myMap = nullptr;
 
 // statistics
 std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
+
 
 /******* END: parallelization section *******/
 

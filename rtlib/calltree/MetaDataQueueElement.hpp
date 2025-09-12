@@ -22,7 +22,7 @@ namespace __dp {
 
 class MetaDataQueueElement {
 public:
-  MetaDataQueueElement(depType arg_type, LID arg_sink, LID arg_source, const char *arg_var, string arg_AAvar,
+  MetaDataQueueElement(depType arg_type, LID arg_sink, LID arg_source, const char *arg_var, std::int64_t arg_AAvar,
                        shared_ptr<CallTreeNode> arg_sink_ctn, shared_ptr<CallTreeNode> arg_source_ctn);
   bool operator==(const MetaDataQueueElement &other) const;
   string toString();
@@ -30,7 +30,7 @@ public:
   LID sink;
   LID source;
   const char *var;
-  string AAvar;
+  std::int64_t AAvar;
   shared_ptr<CallTreeNode> sink_ctn;
   shared_ptr<CallTreeNode> source_ctn;
 };

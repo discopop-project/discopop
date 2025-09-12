@@ -61,11 +61,13 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     loop_manager = new LoopManager();
     memory_manager = new MemoryManager();
 #if DP_CALLTREE_PROFILING
-    call_tree = new CallTree();
+//    call_tree = new CallTree();
     // metadata_queue = new MetaDataQueue(6); // TODO: add Worker argument
-    dependency_metadata_results_mtx = new std::mutex();
-    dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
+//    dependency_metadata_results_mtx = new std::mutex();
+//    dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
 #endif
+
+    mainThread_AccessInfoBuffer = firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_SIZES);
 
     out = new ofstream();
 
@@ -135,7 +137,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
 #endif
 
 #ifdef DP_CALLTREE_PROFILING
-  call_tree->enter_function(lid);
+  call_tree.enter_function(lid);
 #endif
 
   if (isStart)
