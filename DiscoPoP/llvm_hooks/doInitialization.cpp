@@ -61,6 +61,15 @@ bool DiscoPoP::doInitialization(Module &M) {
     setenv("DP_PROJECT_ROOT_DIR", "/", 1);
   }
 
+  // InstructionID assignment
+  {
+    // required for consecutive and unique assignment of instructionIDs across multiple modules.
+    InstructionIDCounter = 0;
+    initializeInstructionIDCounter();
+    // instructionID assignment
+    unique_llvm_ir_instruction_id = InstructionIDCounter + 1;
+  }
+
   // CUGeneration
   {
     CUIDCounter = 0;
@@ -109,8 +118,6 @@ bool DiscoPoP::doInitialization(Module &M) {
       loopID = -1;
     }
 
-    // instructionID assignment
-    unique_llvm_ir_instruction_id = 1;
   }
   // DPInstrumentation end
 

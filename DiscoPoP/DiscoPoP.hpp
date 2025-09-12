@@ -106,6 +106,7 @@ private:
   ofstream *outOriginalVariables;
   ofstream *outCUIDCounter;
   ofstream *outBBDepCounter;
+  ofstream *outInstructionIDCounter;
   // Mohammad 23.12.2020
   map<string, string> loopStartLines;
 
@@ -275,6 +276,7 @@ public:
   // Output function
   void initializeCUIDCounter();
   void initializeBBDepCounter();
+  void initializeInstructionIDCounter();
 
   string xmlEscape(string data);
 
@@ -328,6 +330,7 @@ public:
   llvm::Module *module_;
   std::ofstream *reduction_file;
   std::ofstream *loop_counter_file;
+  std::ofstream *instructionID_to_lineID_file;
   std::vector<loop_info_t> loops_;
   std::vector<instr_info_t> instructions_;
   std::map<std::string, int> path_to_id_;
