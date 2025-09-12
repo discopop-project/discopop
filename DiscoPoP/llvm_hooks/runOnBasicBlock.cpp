@@ -51,11 +51,13 @@ A real case would be:
 // TODO: atomic variables
 void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
   for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
-    // assigne unique instruction ids
+    // assign unique instruction ids
     LLVMContext& ctx = BI->getContext();
     int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
     MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+to_string(llvm_ir_instruction_id)));
     BI->setMetadata("dp.md.instr.id", N);
+    // fill instructionID to lineID mapping file
+    *instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << decodeLID(getLID(&*BI, fileID)) << "\n";
 
     if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
       assert(DI->getOperand(0));

@@ -15,5 +15,6 @@
 
 extern unsigned int CUIDCounter;
 extern unsigned int bbDepCount;
+extern unsigned int InstructionIDCounter;
 extern bool defaultIsGlobalVariableValue;
 extern std::int32_t fileID;

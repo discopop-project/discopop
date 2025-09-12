@@ -20,6 +20,13 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   module_ = &M;
   ctx_ = &module_->getContext();
 
+  // prepare saving the mapping from instructionID to lineID for backwards compatibility
+  instructionID_to_lineID_file = new std::ofstream();
+  std::string tmp0(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp0 += "/instructionID_to_lineID_mapping.txt";
+  instructionID_to_lineID_file->open(tmp0.data(), std::ios_base::app);
+
+  long counter = 0;
   // cout << "\tFUNCTION:\n";
   for (Function &F : M) {
     /*
@@ -55,6 +62,14 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   instrument_module(&M, &trueVarNamesFromMetadataMap, MAM);
 
   dp_reduction_insert_functions();
+
+  // save current instructionID for continuation in the next Module
+  InstructionIDCounter = unique_llvm_ir_instruction_id;
+
+  if (instructionID_to_lineID_file != NULL && instructionID_to_lineID_file->is_open()) {
+    instructionID_to_lineID_file->flush();
+    instructionID_to_lineID_file->close();
+  }
 
   if (reduction_file != NULL && reduction_file->is_open()) {
     reduction_file->flush();

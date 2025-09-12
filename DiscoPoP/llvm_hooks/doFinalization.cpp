@@ -13,8 +13,20 @@
 #include "../DiscoPoP.hpp"
 
 bool DiscoPoP::doFinalization(Module &M) {
-  // CUGeneration
+  // unique InstructionID assignment
+  // write the current count of unique instructions to a file to avoid duplication between modules.
+  outInstructionIDCounter = new std::ofstream();
+  std::string tmp0(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp0 += "/DP_InstructionIDCounter.txt";
+  outInstructionIDCounter->open(tmp0.data(), std::ios_base::out);
+  if (outInstructionIDCounter && outInstructionIDCounter->is_open()) {
+    *outInstructionIDCounter << InstructionIDCounter;
+    outInstructionIDCounter->flush();
+    outInstructionIDCounter->close();
+  }
+  // unique InstructionID assignment end
 
+  // CUGeneration
   // write the current count of CUs to a file to avoid duplicate CUs.
   outCUIDCounter = new std::ofstream();
   std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));

@@ -14,5 +14,6 @@
 
 unsigned int CUIDCounter;
 unsigned int bbDepCount;
+unsigned int InstructionIDCounter;
 bool defaultIsGlobalVariableValue;
 std::int32_t fileID;
