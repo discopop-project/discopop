@@ -37,6 +37,7 @@ void StaticCalltreeNode::register_successor(StaticCalltreeNode* succ){
     else{
         // register successor
         successors.push_back(succ);
+        succ->predecessors.push_back(this);
     }
 }
 

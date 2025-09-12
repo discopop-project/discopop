@@ -70,6 +70,14 @@ bool DiscoPoP::doInitialization(Module &M) {
     unique_llvm_ir_instruction_id = InstructionIDCounter + 1;
   }
 
+  // CallpathStateID assignment
+  {
+    CallpathStateIDCounter = 0;
+    initializeCallpathStateIDCounter();
+    unique_callpath_state_id = CallpathStateIDCounter + 1;
+  }
+
+
   // CUGeneration
   {
     CUIDCounter = 0;

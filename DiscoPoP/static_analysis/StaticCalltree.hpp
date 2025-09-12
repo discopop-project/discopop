@@ -28,6 +28,7 @@ class StaticCalltreeNode {
 
     public:
         std::vector<StaticCalltreeNode*> successors;
+        std::vector<StaticCalltreeNode*> predecessors;
         StaticCalltreeNode(uint32_t node_id_arg, bool type_arg, std::string functionName_arg, int32_t instructionID_arg):node_id(node_id_arg),type(type_arg),functionName(functionName_arg),instructionID(instructionID_arg){};
         void print();
         std::string get_label();
@@ -37,10 +38,11 @@ class StaticCalltreeNode {
 class StaticCalltree {
     private:
         uint32_t node_count = 0;
-        std::unordered_map<std::string, StaticCalltreeNode*> function_map;
-        std::unordered_map<int32_t, StaticCalltreeNode*> instruction_map;
 
     public:
+
+        std::unordered_map<std::string, StaticCalltreeNode*> function_map;
+        std::unordered_map<int32_t, StaticCalltreeNode*> instruction_map;
         StaticCalltree();
         ~StaticCalltree();
         StaticCalltreeNode* get_or_insert_function_node(std::string function_name);

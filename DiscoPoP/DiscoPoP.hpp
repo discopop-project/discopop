@@ -108,6 +108,7 @@ private:
   ofstream *outCUIDCounter;
   ofstream *outBBDepCounter;
   ofstream *outInstructionIDCounter;
+  ofstream *outCallpathStateIDCounter;
   // Mohammad 23.12.2020
   map<string, string> loopStartLines;
 
@@ -222,6 +223,7 @@ private:
 
   // InstructionID assignment
   uint32_t unique_llvm_ir_instruction_id;
+  uint32_t unique_callpath_state_id;
 
 public:
   DiscoPoP() : uniqueNum(1){}; // : ModulePass(ID), uniqueNum(1){};
@@ -267,7 +269,9 @@ public:
 
   void createTakenBranchInstrumentation(Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap);
 
-  void buildStaticCalltree(Module &M);
+  StaticCalltree buildStaticCalltree(Module &M);
+  std::vector<std::vector<StaticCalltreeNode*>> enumerate_paths(StaticCalltree& calltree);
+  void save_enumerated_paths(std::vector<std::vector<StaticCalltreeNode*>> paths);
 
   void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
                        map<string, vector<CU *>> &BBIDToCUIDsMap);
@@ -280,6 +284,7 @@ public:
   void initializeCUIDCounter();
   void initializeBBDepCounter();
   void initializeInstructionIDCounter();
+  void initializeCallpathStateIDCounter();
 
   string xmlEscape(string data);
 
@@ -334,6 +339,7 @@ public:
   std::ofstream *reduction_file;
   std::ofstream *loop_counter_file;
   std::ofstream *instructionID_to_lineID_file;
+  std::ofstream *stateID_to_callpath_file;
   std::vector<loop_info_t> loops_;
   std::vector<instr_info_t> instructions_;
   std::map<std::string, int> path_to_id_;

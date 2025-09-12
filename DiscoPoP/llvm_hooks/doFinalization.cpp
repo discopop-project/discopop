@@ -26,6 +26,19 @@ bool DiscoPoP::doFinalization(Module &M) {
   }
   // unique InstructionID assignment end
 
+  // unique CallpathStateID assignment
+  // write the current count of unique callpath states to a file to avoid duplication between modules.
+  outCallpathStateIDCounter = new std::ofstream();
+  std::string tmp01(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp01 += "/DP_CallpathStateIDCounter.txt";
+  outCallpathStateIDCounter->open(tmp01.data(), std::ios_base::out);
+  if (outCallpathStateIDCounter && outCallpathStateIDCounter->is_open()) {
+    *outCallpathStateIDCounter << CallpathStateIDCounter;
+    outCallpathStateIDCounter->flush();
+    outCallpathStateIDCounter->close();
+  }
+  // unique CallpathStateID assignment end
+
   // CUGeneration
   // write the current count of CUs to a file to avoid duplicate CUs.
   outCUIDCounter = new std::ofstream();

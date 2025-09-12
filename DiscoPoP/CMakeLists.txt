@@ -39,6 +39,7 @@ add_llvm_library(LLVMDiscoPoP MODULE
         initialization/initializeCUIDCounter.cpp
         initialization/initializeBBDepCounter.cpp
         initialization/initializeInstructionIDCounter.cpp
+        initialization/initializeCallpathStateIDCounter.cpp
 
         llvm_hooks/doInitialization.cpp
         llvm_hooks/doFinalization.cpp
