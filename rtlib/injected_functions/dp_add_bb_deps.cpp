@@ -46,7 +46,8 @@ void __dp_add_bb_deps(char *depStringPtr) {
 #endif
 
   std::string depString(depStringPtr);
-  std::regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r3("[0-9]+:[0-9]+"), r4("(INIT|(R|W)A(R|W)).*");
+  std::regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r4("(INIT|(R|W)A(R|W)).*");
+  std::regex r3("[0-9]+");  // use instructionID based regex, instead of old r3("[0-9]+:[0-9]+") for lineID
   std::smatch res1, res2, res3;
 
   std::vector<std::string> strs;
