@@ -187,7 +187,8 @@ void generateStringDepMap() {
 
   for (auto &dline : *allDeps) {
     if (dline.first) {
-      string lid = decodeLID(dline.first);
+      //string lid = decodeLID(dline.first);
+      string lid = to_string(dline.first);  // use instructionID instead of lineID
       unordered_set<string> lineDeps;
       for (auto &d : *(dline.second)) {
         string dep = "";
@@ -208,7 +209,8 @@ void generateStringDepMap() {
           break;
         }
 
-        dep += ' ' + decodeLID(d.depOn);
+        //dep += ' ' + decodeLID(d.depOn);
+        dep += ' ' + to_string(d.depOn);  // use instructionID instead of lineID
         dep += "|" + string(d.var);
         dep += "(" + std::to_string(d.AAvar) + ")";
 
