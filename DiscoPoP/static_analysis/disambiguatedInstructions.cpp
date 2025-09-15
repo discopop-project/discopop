@@ -446,7 +446,7 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
     }
     cerr << "Done Iter func...\n";
   }
-  calltree.printToDOT();
+//  calltree.printToDOT();
   return calltree;
 }
 
@@ -495,7 +495,9 @@ std::vector<std::vector<StaticCalltreeNode*>> DiscoPoP::enumerate_paths(StaticCa
     }
   }
 
+  // DEBUG
   // print paths
+/*
   std::cout << "PATH lengths:\n";
   for(auto p: paths){
     std::string path_str = "";
@@ -504,6 +506,8 @@ std::vector<std::vector<StaticCalltreeNode*>> DiscoPoP::enumerate_paths(StaticCa
     }
     std::cout << path_str << "\n";
   }
+*/
+  // !DEBUG
 
 
   return paths;
