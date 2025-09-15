@@ -46,6 +46,7 @@ class StaticCalltree {
         StaticCalltree();
         ~StaticCalltree();
         StaticCalltreeNode* get_or_insert_function_node(std::string function_name);
+        StaticCalltreeNode* get_or_insert_function_node(std::string function_nam, std::vector<int32_t> loop_iteration_instance);
         StaticCalltreeNode* get_or_insert_instruction_node(int32_t instructionID);
         void print();
         void printToDOT();

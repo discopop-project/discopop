@@ -58,26 +58,43 @@ StaticCalltree::~StaticCalltree(){
 
 StaticCalltreeNode* StaticCalltree::get_or_insert_function_node(std::string function_name){
     if(function_map.count(function_name) == 0){
-        std::cout << "first encountered function name: " << function_name << "\n";
+//        std::cout << "first encountered function name: " << function_name << "\n";
         StaticCalltreeNode* node_ptr = new StaticCalltreeNode(node_count++, 0, function_name, 0);
         function_map[function_name] = node_ptr;
         return node_ptr;
     }
     else{
-        std::cout << "Retrieve function name: " << function_name << "\n";
+//        std::cout << "Retrieve function name: " << function_name << "\n";
+        return function_map[function_name];
+    }
+}
+
+StaticCalltreeNode* StaticCalltree::get_or_insert_function_node(std::string function_name, std::vector<int32_t> loop_iteration_instance){
+    for(auto iteration_count: loop_iteration_instance){
+        function_name = function_name + "_it" + std::to_string(iteration_count);
+    }
+
+    if(function_map.count(function_name) == 0){
+//        std::cout << "first encountered function name: " << function_name << "\n";
+        StaticCalltreeNode* node_ptr = new StaticCalltreeNode(node_count++, 0, function_name, 0);
+        function_map[function_name] = node_ptr;
+        return node_ptr;
+    }
+    else{
+//        std::cout << "Retrieve function name: " << function_name << "\n";
         return function_map[function_name];
     }
 }
 
 StaticCalltreeNode* StaticCalltree::get_or_insert_instruction_node(int32_t instructionID){
     if(instruction_map.count(instructionID) == 0){
-        std::cout << "first encountered instruction id: " << instructionID << "\n";
+//        std::cout << "first encountered instruction id: " << instructionID << "\n";
         StaticCalltreeNode* node_ptr = new StaticCalltreeNode(node_count++, 1, "", instructionID);
         instruction_map[instructionID] = node_ptr;
         return node_ptr;
     }
     else{
-        std::cout << "Retrieve instruction id: " << instructionID << "\n";
+//        std::cout << "Retrieve instruction id: " << instructionID << "\n";
         return instruction_map[instructionID];
     }
 }
