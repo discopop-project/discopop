@@ -13,10 +13,50 @@
 #include "../DiscoPoP.hpp"
 
 
+// collect loops in the given function and return the listof loop ids
+// Ignores nesting
+std::vector<int32_t> get_loopIDs_in_function_body(Function &F){
+  std::vector<int32_t> loop_ids;
+  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
+    BasicBlock &BB = *FI;
+    for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
+      auto instruction = &*BI;
+      if(isa<CallInst>(instruction)){
+        auto ci = cast<CallInst>(BI);
+        Function* F = ci->getCalledFunction();
+        if(F){
+          auto fn = F->getName();
+          if (fn.find("__dp_loop_entry") != string::npos) // avoid instrumentation calls
+          {
+            // get id of entered loop
+            if (llvm::ConstantInt* CI = dyn_cast<llvm::ConstantInt>(ci->getArgOperand(1))) {
+              // operand is a ConstantInt, we can use CI here
+              int32_t loop_id;
+              if (CI->getBitWidth() <= 32) {
+                loop_id = CI->getSExtValue();
+              }
+              loop_ids.push_back(loop_id);
+            }
+            else {
+              // operand was not a ConstantInt
+            }
+
+          }
+        }
+      }
+    }
+  }
+  return loop_ids;
+}
+
 // builds a call tree for the given Module on the basis of the statically available information
 StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
   StaticCalltree calltree;
   for (Function &F : M) {
+    // DEBUG
+    cout << "DBG: Function: " << F.getName().str() << " Loops: " << get_loopIDs_in_function_body(F).size() << "\n";
+    // !DEBUG
+
     StaticCalltreeNode* function_node_ptr = calltree.get_or_insert_function_node(F.getName().str());
     for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
       BasicBlock &BB = *FI;
@@ -64,6 +104,7 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
   calltree.printToDOT();
   return calltree;
 }
+
 
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
