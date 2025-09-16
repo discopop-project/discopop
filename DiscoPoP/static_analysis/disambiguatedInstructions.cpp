@@ -13,6 +13,35 @@
 #include "../DiscoPoP.hpp"
 
 
+void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
+  for (Function &F : M) {
+    for(BasicBlock &BB: F){
+      for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
+        auto instruction = &*BI;
+        if(isa<CallInst>(instruction)){
+          auto ci = cast<CallInst>(BI);
+          Function* F = ci->getCalledFunction();
+          if(F){
+            auto fn = F->getName();
+            if (fn.find("__dp_loop_incr") != string::npos)
+            {
+              // assign missing unique instruction id
+              LLVMContext& ctx = BI->getContext();
+              int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
+              MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+to_string(llvm_ir_instruction_id)));
+              BI->setMetadata("dp.md.instr.id", N);
+              // fill instructionID to lineID mapping file
+              *instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << decodeLID(getLID(&*BI, fileID)) << "\n";
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// collect loop ids and
+
 // collect loops in the given function and return the listof loop ids
 // Encodes nesting via inner vectors
 std::vector<std::vector<int32_t>> get_loopIDs_in_function_body(Function &F){
@@ -369,6 +398,7 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
 
 
     std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> loop_activity_map;
+    std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> loop_entry_nodes_map;
     for(auto instance: iteration_instances){
       StaticCalltreeNode* function_node_ptr = calltree.get_or_insert_function_node(F.getName().str(), instance);
       function_node_instances.push_back(function_node_ptr);
@@ -384,7 +414,14 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
             loop_activity_map[active_loop_id] = tmp;
           }
           loop_activity_map[active_loop_id].push_back(function_node_ptr);
+
+          // check if the current instance is an entry node to the loop, i.e., if the iteration count is 0
+          if(instance[idx] == 0){
+            loop_entry_nodes_map[active_loop_id].push_back(function_node_ptr);
+          }
+
         }
+
       }
     }
     cerr << "Done\n";
@@ -431,11 +468,12 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
             int32_t callInstructionID = stoi(callInstructionID_str);
             StaticCalltreeNode* callInstructionNode_ptr = calltree.get_or_insert_instruction_node(callInstructionID);
             calltree.addEdge(original_function_node_ptr, callInstructionNode_ptr, callInstructionID);
-            // connect to nodes if the loop contains the call and the loop is "active"
+            // connect to nodes if the loop contains the call and the loop is "active" and node is an entry node to the loop, i.e. iteration count is 0
             auto parent_loops = inverted_loop_call_affectance[callInstructionID];
             for(auto parent_loop_id : parent_loops){
-              for(auto node_ptr: loop_activity_map[parent_loop_id]){
-                calltree.addEdge(node_ptr, callInstructionNode_ptr, 0);
+              //for(auto node_ptr: loop_activity_map[parent_loop_id]){
+              for(auto node_ptr: loop_entry_nodes_map[parent_loop_id]){
+                calltree.addEdge(node_ptr, callInstructionNode_ptr, callInstructionID);
               }
             }
             StaticCalltreeNode* calleeNode_ptr = calltree.get_or_insert_function_node(F->getName().str());

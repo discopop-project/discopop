@@ -46,16 +46,6 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
     runOnFunction(F, MAM);
   }
 
-  // prepare information for call state transitioning and instruction mapping during dynamic analysis.
-  // -> build static calltree for state transition and instruction mapping preparation
-  StaticCalltree static_calltree = buildStaticCalltree(M);
-  // -> assign unique stateIDs to all possible call states
-  auto enumerated_paths = enumerate_paths(static_calltree);
-  save_enumerated_paths(enumerated_paths);
-  // -> prepare state transition lookup tables
-  static_calltree.printToDOT();
-
-
   // DPReduction
 
   reduction_file = new std::ofstream();
@@ -78,6 +68,17 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   instrument_module(&M, &trueVarNamesFromMetadataMap, MAM);
 
   dp_reduction_insert_functions();
+
+  // disambiguating instructions
+  assign_instruction_ids_to_dp_reduction_functions(M);
+  // prepare information for call state transitioning and instruction mapping during dynamic analysis.
+  // -> build static calltree for state transition and instruction mapping preparation
+  StaticCalltree static_calltree = buildStaticCalltree(M);
+  // -> assign unique stateIDs to all possible call states
+  auto enumerated_paths = enumerate_paths(static_calltree);
+  save_enumerated_paths(enumerated_paths);
+  // -> prepare state transition lookup tables
+  static_calltree.printToDOT();
 
   // save current instructionID for continuation in the next Module
   InstructionIDCounter = unique_llvm_ir_instruction_id;

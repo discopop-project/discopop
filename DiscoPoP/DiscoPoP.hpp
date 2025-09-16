@@ -272,6 +272,7 @@ public:
   StaticCalltree buildStaticCalltree(Module &M);
   std::vector<std::vector<StaticCalltreeNode*>> enumerate_paths(StaticCalltree& calltree);
   void save_enumerated_paths(std::vector<std::vector<StaticCalltreeNode*>> paths);
+  void assign_instruction_ids_to_dp_reduction_functions(Module &M);
 
   void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
                        map<string, vector<CU *>> &BBIDToCUIDsMap);
