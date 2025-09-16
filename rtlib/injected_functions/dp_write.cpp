@@ -97,7 +97,8 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 
 #endif
   current.isRead = false;
-  current.lid = lid;
+  // add current call path state identifier to lid for later retrieval
+  current.lid = lid | (((uint64_t) current_callpath_state) << 32);
   current.var = var;
 #if DP_MEMORY_REGION_DEALIASING
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);

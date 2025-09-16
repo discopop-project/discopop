@@ -98,6 +98,8 @@ extern int32_t NUM_WORKERS;
 
 extern thread_local depMap *myMap;
 
+extern uint32_t current_callpath_state;
+
 // statistics
 extern std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 

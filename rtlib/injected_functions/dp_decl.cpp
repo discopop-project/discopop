@@ -87,7 +87,8 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   AccessInfo& current = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
 #endif
   current.isRead = false;
-  current.lid = 0;
+  // add current call path state identifier to lid for later retrieval
+  current.lid = lid | (((uint64_t) current_callpath_state) << 32);
   current.var = var;
 #if DP_MEMORY_REGION_DEALIASING
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);

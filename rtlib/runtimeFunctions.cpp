@@ -82,7 +82,7 @@ void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAv
   if (posInDeps == myMap->end()) {
     depSet *tmp_depSet = new depSet();
     tmp_depSet->insert(Dep(type, depOn, var, AAvar));
-    myMap->insert(std::pair<int32_t, depSet *>(curr, tmp_depSet));
+    myMap->insert(std::pair<LID, depSet *>(curr, tmp_depSet));
   } else {
     posInDeps->second->insert(Dep(type, depOn, var, AAvar));
   }
@@ -188,7 +188,10 @@ void generateStringDepMap() {
   for (auto &dline : *allDeps) {
     if (dline.first) {
       //string lid = decodeLID(dline.first);
-      string lid = to_string(dline.first);  // use instructionID instead of lineID
+      // unpack dline.first (lid) to instructionID and callpathStateID
+      uint32_t dline_first_instID = (dline.first & 0xFFFFFFFF);
+      uint32_t dline_first_callpathStateID = ((dline.first & 0xFFFFFFFF00000000) >> 32);
+      string unpacked_lid = to_string(dline_first_instID) + "@" + to_string(dline_first_callpathStateID);  // use instructionID instead of lineID
       unordered_set<string> lineDeps;
       for (auto &d : *(dline.second)) {
         string dep = "";
@@ -209,18 +212,21 @@ void generateStringDepMap() {
           break;
         }
 
-        //dep += ' ' + decodeLID(d.depOn);
-        dep += ' ' + to_string(d.depOn);  // use instructionID instead of lineID
+        // unpack d.depOn to instructionID and callpathStateID
+        uint32_t d_depOn_instID = (d.depOn & 0xFFFFFFFF);
+        uint32_t d_depOn_callpathStateID = ((d.depOn & 0xFFFFFFFF00000000) >> 32);
+        dep += ' ' + to_string(d_depOn_instID) + "@" + to_string(d_depOn_callpathStateID);  // use unpacked information instead of lineID
+
         dep += "|" + string(d.var);
         dep += "(" + std::to_string(d.AAvar) + ")";
 
         lineDeps.insert(dep);
       }
 
-      if (outPutDeps->count(lid) == 0) {
-        (*outPutDeps)[lid] = lineDeps;
+      if (outPutDeps->count(unpacked_lid) == 0) {
+        (*outPutDeps)[unpacked_lid] = lineDeps;
       } else {
-        (*outPutDeps)[lid].insert(lineDeps.begin(), lineDeps.end());
+        (*outPutDeps)[unpacked_lid].insert(lineDeps.begin(), lineDeps.end());
       }
       delete dline.second;
     }

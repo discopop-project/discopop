@@ -84,6 +84,8 @@ AbstractShadow *singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
 
 thread_local depMap *myMap = nullptr;
 
+uint32_t current_callpath_state = 42;
+
 // statistics
 std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 
