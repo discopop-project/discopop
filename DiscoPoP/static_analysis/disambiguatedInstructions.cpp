@@ -372,7 +372,7 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
     for(auto instance: iteration_instances){
       StaticCalltreeNode* function_node_ptr = calltree.get_or_insert_function_node(F.getName().str(), instance);
       function_node_instances.push_back(function_node_ptr);
-      calltree.addEdge(original_function_node_ptr, function_node_ptr);
+      calltree.addEdge(original_function_node_ptr, function_node_ptr, 0);
 
       // register loop activity for later use (loop active, if iteration count != 3 (i.e. don't care))
       for(int idx = 0; idx < instance.size(); ++idx){
@@ -430,16 +430,16 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
             callInstructionID_str.erase(0, 15);
             int32_t callInstructionID = stoi(callInstructionID_str);
             StaticCalltreeNode* callInstructionNode_ptr = calltree.get_or_insert_instruction_node(callInstructionID);
-            calltree.addEdge(original_function_node_ptr, callInstructionNode_ptr);
+            calltree.addEdge(original_function_node_ptr, callInstructionNode_ptr, callInstructionID);
             // connect to nodes if the loop contains the call and the loop is "active"
             auto parent_loops = inverted_loop_call_affectance[callInstructionID];
             for(auto parent_loop_id : parent_loops){
               for(auto node_ptr: loop_activity_map[parent_loop_id]){
-                calltree.addEdge(node_ptr, callInstructionNode_ptr);
+                calltree.addEdge(node_ptr, callInstructionNode_ptr, 0);
               }
             }
             StaticCalltreeNode* calleeNode_ptr = calltree.get_or_insert_function_node(F->getName().str());
-            calltree.addEdge(callInstructionNode_ptr, calleeNode_ptr);
+            calltree.addEdge(callInstructionNode_ptr, calleeNode_ptr, 0);
           }
         }
       }
@@ -482,16 +482,19 @@ std::vector<std::vector<StaticCalltreeNode*>> DiscoPoP::enumerate_paths(StaticCa
     auto current_path = stack.top();
     stack.pop();
     paths.push_back(current_path);
-    for(auto succ: current_path.back()->successors){
-      // check for cycles
-      if(std::find(current_path.begin(), current_path.end(), succ) != current_path.end()){
-        // already contained in current_path
-        std::cout << "FOUND CYCLE!\n";
-        continue;
+    for(auto succ_pair: current_path.back()->successors){
+      int32_t trigger_instructionID = succ_pair.first;  // currently unused!
+      for(auto succ: succ_pair.second){
+        // check for cycles
+        if(std::find(current_path.begin(), current_path.end(), succ) != current_path.end()){
+          // already contained in current_path
+          std::cout << "FOUND CYCLE!\n";
+          continue;
+        }
+        auto tmp_path = current_path;
+        tmp_path.push_back(succ);
+        stack.push(tmp_path);
       }
-      auto tmp_path = current_path;
-      tmp_path.push_back(succ);
-      stack.push(tmp_path);
     }
   }
 

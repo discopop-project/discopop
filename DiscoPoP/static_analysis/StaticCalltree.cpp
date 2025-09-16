@@ -130,7 +130,11 @@ void StaticCalltree::printToDOT(){
         for(auto succ_pair: node_ptr->successors){
             int32_t trigger_instructionID = succ_pair.first;
             for (auto succ :succ_pair.second){
-                std::cout << "  " << node_ptr->get_label() << " -> " << succ->get_label() << ";\n";
+                std::cout << "  " << node_ptr->get_label() << " -> " << succ->get_label();
+                if(trigger_instructionID != 0){
+                    std::cout << " [label = " << std::to_string(trigger_instructionID) << "]";
+                }
+                std::cout << ";\n";
             }
         }
     }
@@ -140,7 +144,11 @@ void StaticCalltree::printToDOT(){
         for(auto succ_pair: node_ptr->successors){
             int32_t trigger_instructionID = succ_pair.first;
             for(auto succ: succ_pair.second){
-                std::cout << "  " << node_ptr->get_label() << " -> " << succ->get_label() << ";\n";
+                std::cout << "  " << node_ptr->get_label() << " -> " << succ->get_label();
+                if(trigger_instructionID != 0){
+                    std::cout << " [label = " << std::to_string(trigger_instructionID) << "]";
+                }
+                std::cout << ";\n";
             }
         }
     }
