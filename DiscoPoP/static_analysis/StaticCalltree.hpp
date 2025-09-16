@@ -27,12 +27,12 @@ class StaticCalltreeNode {
         int32_t instructionID;
 
     public:
-        std::vector<StaticCalltreeNode*> successors;
+        std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> successors;  // first element of the pairs is the trigger instructionID for the transition
         std::vector<StaticCalltreeNode*> predecessors;
         StaticCalltreeNode(uint32_t node_id_arg, bool type_arg, std::string functionName_arg, int32_t instructionID_arg):node_id(node_id_arg),type(type_arg),functionName(functionName_arg),instructionID(instructionID_arg){};
         void print();
         std::string get_label();
-        void register_successor(StaticCalltreeNode* succ);
+        void register_successor(StaticCalltreeNode* succ, int32_t trigger_instructionID);
 };
 
 class StaticCalltree {
@@ -50,5 +50,5 @@ class StaticCalltree {
         StaticCalltreeNode* get_or_insert_instruction_node(int32_t instructionID);
         void print();
         void printToDOT();
-        void addEdge(StaticCalltreeNode* source, StaticCalltreeNode* target);
+        void addEdge(StaticCalltreeNode* source, StaticCalltreeNode* target, int32_t trigger_instructionID);
 };

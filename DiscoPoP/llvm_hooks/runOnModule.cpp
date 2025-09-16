@@ -53,7 +53,8 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   auto enumerated_paths = enumerate_paths(static_calltree);
   save_enumerated_paths(enumerated_paths);
   // -> prepare state transition lookup tables
-  // -> prepare instruction mapping lookup tables
+  static_calltree.printToDOT();
+
 
   // DPReduction
 

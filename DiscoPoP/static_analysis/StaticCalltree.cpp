@@ -28,15 +28,25 @@ std::string StaticCalltreeNode::get_label(){
     }
 }
 
-void StaticCalltreeNode::register_successor(StaticCalltreeNode* succ){
+void StaticCalltreeNode::register_successor(StaticCalltreeNode* succ, int32_t trigger_instructionID){
+    // check if trigger is already registered
+    if(successors.find(trigger_instructionID) != successors.end()){
+        // already registered
+    }
+    else{
+        // register trigger
+        std::vector<StaticCalltreeNode*> tmp;
+        successors[trigger_instructionID] = tmp;
+    }
+
     // check if succ is already registered
-    if(std::find(successors.begin(), successors.end(), succ) != successors.end()){
+    if(std::find(successors[trigger_instructionID].begin(), successors[trigger_instructionID].end(), succ) != successors[trigger_instructionID].end()){
         // already registered
         return;
     }
     else{
         // register successor
-        successors.push_back(succ);
+        successors[trigger_instructionID].push_back(succ);
         succ->predecessors.push_back(this);
     }
 }
@@ -99,8 +109,9 @@ StaticCalltreeNode* StaticCalltree::get_or_insert_instruction_node(int32_t instr
     }
 }
 
-void StaticCalltree::addEdge(StaticCalltreeNode* source, StaticCalltreeNode* target){
-    source->register_successor(target);
+// trigger_instructionID = 0 -> no trigger required
+void StaticCalltree::addEdge(StaticCalltreeNode* source, StaticCalltreeNode* target, int32_t trigger_instructionID){
+    source->register_successor(target, trigger_instructionID);
 }
 
 void StaticCalltree::print(){
@@ -116,15 +127,21 @@ void StaticCalltree::printToDOT(){
     // add function nodes and successors
     for(auto pair: function_map){
         auto node_ptr = pair.second;
-        for(auto succ: node_ptr->successors){
-            std::cout << "  " << node_ptr->get_label() << " -> " << succ->get_label() << ";\n";
+        for(auto succ_pair: node_ptr->successors){
+            int32_t trigger_instructionID = succ_pair.first;
+            for (auto succ :succ_pair.second){
+                std::cout << "  " << node_ptr->get_label() << " -> " << succ->get_label() << ";\n";
+            }
         }
     }
     // add call instruction nodes and successors
     for(auto pair: instruction_map){
         auto node_ptr = pair.second;
-        for(auto succ: node_ptr->successors){
-            std::cout << "  " << node_ptr->get_label() << " -> " << succ->get_label() << ";\n";
+        for(auto succ_pair: node_ptr->successors){
+            int32_t trigger_instructionID = succ_pair.first;
+            for(auto succ: succ_pair.second){
+                std::cout << "  " << node_ptr->get_label() << " -> " << succ->get_label() << ";\n";
+            }
         }
     }
     std::cout << "}\n";

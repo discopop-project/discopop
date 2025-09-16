@@ -428,7 +428,7 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
             // Metadata exists
             std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
             callInstructionID_str.erase(0, 15);
-            int callInstructionID = stoi(callInstructionID_str);
+            int32_t callInstructionID = stoi(callInstructionID_str);
             StaticCalltreeNode* callInstructionNode_ptr = calltree.get_or_insert_instruction_node(callInstructionID);
             calltree.addEdge(original_function_node_ptr, callInstructionNode_ptr);
             // connect to nodes if the loop contains the call and the loop is "active"
