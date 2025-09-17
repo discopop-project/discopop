@@ -26,18 +26,6 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   tmp0 += "/instructionID_to_lineID_mapping.txt";
   instructionID_to_lineID_file->open(tmp0.data(), std::ios_base::app);
 
-  // prepare saving the mapping from callpath to callpathStateID for reference
-  stateID_to_callpath_file = new std::ofstream();
-  std::string tmp01(getenv("DOT_DISCOPOP_PROFILER"));
-  tmp01 += "/stateID_to_callpath_mapping.txt";
-  stateID_to_callpath_file->open(tmp01.data(), std::ios_base::app);
-
-  // prepare saving the callpathState transitions
-  callpath_state_transitions_file = new std::ofstream();
-  std::string tmp02(getenv("DOT_DISCOPOP_PROFILER"));
-  tmp02 += "/callpath_state_transitions.txt";
-  callpath_state_transitions_file->open(tmp02.data(), std::ios_base::app);
-
   long counter = 0;
   // cout << "\tFUNCTION:\n";
   for (Function &F : M) {
@@ -100,16 +88,6 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   if (instructionID_to_lineID_file != NULL && instructionID_to_lineID_file->is_open()) {
     instructionID_to_lineID_file->flush();
     instructionID_to_lineID_file->close();
-  }
-
-  if (stateID_to_callpath_file != NULL && stateID_to_callpath_file->is_open()) {
-    stateID_to_callpath_file->flush();
-    stateID_to_callpath_file->close();
-  }
-
-  if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
-    callpath_state_transitions_file->flush();
-    callpath_state_transitions_file->close();
   }
 
   if (reduction_file != NULL && reduction_file->is_open()) {

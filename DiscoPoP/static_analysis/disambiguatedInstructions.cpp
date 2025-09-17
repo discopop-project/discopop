@@ -940,6 +940,12 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
 }
 
 void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
+  // prepare saving the mapping from callpath to callpathStateID for reference
+  stateID_to_callpath_file = new std::ofstream();
+  std::string tmp01(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp01 += "/stateID_to_callpath_mapping.txt";
+  stateID_to_callpath_file->open(tmp01.data(), std::ios_base::app);
+  // write file
   for(auto pair: paths){
     // construct path string
     std::string path_str = "";
@@ -949,14 +955,30 @@ void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<Sta
     // save path string to file
     *stateID_to_callpath_file << to_string(pair.first) << " " << path_str << "\n";
   }
+  // close file handle
+  if (stateID_to_callpath_file != NULL && stateID_to_callpath_file->is_open()) {
+    stateID_to_callpath_file->flush();
+    stateID_to_callpath_file->close();
+  }
 }
 
 void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> transitions){
+  // prepare saving the callpathState transitions
+  callpath_state_transitions_file = new std::ofstream();
+  std::string tmp02(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp02 += "/callpath_state_transitions.txt";
+  callpath_state_transitions_file->open(tmp02.data(), std::ios_base::app);
+  // write file
   *callpath_state_transitions_file << "# Format: <source_state_id> <instruction_id> <target_state_id>\n";
   for(auto pair_1: transitions){
     for(auto pair_2: pair_1.second){
       *callpath_state_transitions_file << "" << pair_1.first << " " << pair_2.first << " " << pair_2.second << "\n";
     }
+  }
+  // close file handle
+  if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
+    callpath_state_transitions_file->flush();
+    callpath_state_transitions_file->close();
   }
 }
 
