@@ -923,19 +923,6 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
     }
   }
 
-  // DEBUG
-  cerr << "State transitions:\n";
-  cerr << "########## START DOT ######\n";
-  cerr << "diGraph G {\n";
-  for(auto pair_1: state_transitions){
-    for(auto pair_2: pair_1.second){
-      cerr <<"  " << pair_1.first << " -> " << pair_2.second << " [label = " << pair_2.first << "];\n";
-    }
-  }
-  cerr << "}\n";
-  cerr << "########## END DOT ######\n";
-  // !DEBUG
-
   return std::make_pair(paths, state_transitions);
 }
 
