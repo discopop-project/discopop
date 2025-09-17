@@ -118,21 +118,20 @@ void StaticCalltree::print(){
     std::cout << "Calltree end.\n";
 }
 
-void StaticCalltree::printToDOT(){
-    std::cout << "Calltree: \n";
-    std::cout << "########## START DOT ###### \n";
-    std::cout << "diGraph G {\n";
+std::string StaticCalltree::to_dot_string(){
+    std::string result = "";
+    result += "diGraph G {\n";
     // add function nodes and successors
     for(auto pair: function_map){
         auto node_ptr = pair.second;
         for(auto succ_pair: node_ptr->successors){
             int32_t trigger_instructionID = succ_pair.first;
             for (auto succ :succ_pair.second){
-                std::cout << "  " << node_ptr->get_label() << " -> " << succ->get_label();
+                result += "  "  + node_ptr->get_label() + " -> " + succ->get_label();
                 if(trigger_instructionID != 0){
-                    std::cout << " [label = " << std::to_string(trigger_instructionID) << "]";
+                    result += " [label = " + std::to_string(trigger_instructionID) + "]";
                 }
-                std::cout << ";\n";
+                result += ";\n";
             }
         }
     }
@@ -142,15 +141,14 @@ void StaticCalltree::printToDOT(){
         for(auto succ_pair: node_ptr->successors){
             int32_t trigger_instructionID = succ_pair.first;
             for(auto succ: succ_pair.second){
-                std::cout << "  " << node_ptr->get_label() << " -> " << succ->get_label();
+                result += "  " + node_ptr->get_label() + " -> " + succ->get_label();
                 if(trigger_instructionID != 0){
-                    std::cout << " [label = " << std::to_string(trigger_instructionID) << "]";
+                    result += " [label = " + std::to_string(trigger_instructionID) + "]";
                 }
-                std::cout << ";\n";
+                result += ";\n";
             }
         }
     }
-    std::cout << "}\n";
-    std::cout << "########## END DOT ###### \n";
-    std::cout << "Calltree end.\n";
+    result += "}\n";
+    return result;
 }

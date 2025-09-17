@@ -50,6 +50,6 @@ class StaticCalltree {
         StaticCalltreeNode* get_or_insert_function_node(std::string function_nam, std::string loop_iteration_instance);
         StaticCalltreeNode* get_or_insert_instruction_node(int32_t instructionID);
         void print();
-        void printToDOT();
+        std::string to_dot_string();
         void addEdge(StaticCalltreeNode* source, StaticCalltreeNode* target, int32_t trigger_instructionID);
 };

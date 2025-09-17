@@ -988,6 +988,22 @@ void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unor
   }
 }
 
+void DiscoPoP::save_static_calltree_to_dot(StaticCalltree& calltree){
+  std::ofstream *calltree_dot_file;
+  // prepare saving the calltree as DOT file
+  calltree_dot_file = new std::ofstream();
+  std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp += "/static_calltree.dot";
+  calltree_dot_file->open(tmp.data(), std::ios_base::app);
+  // write file
+  *calltree_dot_file << calltree.to_dot_string() << "\n";
+
+  // close file handle
+  if (calltree_dot_file != NULL && calltree_dot_file->is_open()) {
+    calltree_dot_file->flush();
+    calltree_dot_file->close();
+  }
+}
 
 // prepare a lookup table for every state in the static call tree to allow transitions between states in constant time
 // Keys of the lookup tables should be the instructionIDs of call instructions.

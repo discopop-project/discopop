@@ -77,7 +77,7 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   save_path_state_transitions(state_transitions);
 //  TODO: Calculate state transitions based on prefix relations and lookup in calltree
   // -> prepare state transition lookup tables
-  static_calltree.printToDOT();
+  save_static_calltree_to_dot(static_calltree);
 
   // save current instructionID for continuation in the next Module
   InstructionIDCounter = unique_llvm_ir_instruction_id;
