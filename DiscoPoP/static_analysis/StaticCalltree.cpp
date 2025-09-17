@@ -79,10 +79,8 @@ StaticCalltreeNode* StaticCalltree::get_or_insert_function_node(std::string func
     }
 }
 
-StaticCalltreeNode* StaticCalltree::get_or_insert_function_node(std::string function_name, std::vector<int32_t> loop_iteration_instance){
-    for(auto iteration_count: loop_iteration_instance){
-        function_name = function_name + "_it" + std::to_string(iteration_count);
-    }
+StaticCalltreeNode* StaticCalltree::get_or_insert_function_node(std::string function_name, std::string loop_iteration_instance){
+    function_name = function_name + "_loopstate" + loop_iteration_instance;
 
     if(function_map.count(function_name) == 0){
 //        std::cout << "first encountered function name: " << function_name << "\n";
