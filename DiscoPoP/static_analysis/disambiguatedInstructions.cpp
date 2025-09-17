@@ -965,9 +965,9 @@ void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<Sta
 void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> transitions){
   // prepare saving the callpathState transitions
   callpath_state_transitions_file = new std::ofstream();
-  std::string tmp02(getenv("DOT_DISCOPOP_PROFILER"));
-  tmp02 += "/callpath_state_transitions.txt";
-  callpath_state_transitions_file->open(tmp02.data(), std::ios_base::app);
+  std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp += "/callpath_state_transitions.txt";
+  callpath_state_transitions_file->open(tmp.data(), std::ios_base::app);
   // write file
   *callpath_state_transitions_file << "# Format: <source_state_id> <instruction_id> <target_state_id>\n";
   for(auto pair_1: transitions){
@@ -975,6 +975,25 @@ void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unor
       *callpath_state_transitions_file << "" << pair_1.first << " " << pair_2.first << " " << pair_2.second << "\n";
     }
   }
+  // close file handle
+  if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
+    callpath_state_transitions_file->flush();
+    callpath_state_transitions_file->close();
+  }
+
+  // prepare saving the callpathState transitions as DOT file
+  callpath_state_transitions_file = new std::ofstream();
+  std::string tmp02(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp02 += "/callpath_state_transitions.dot";
+  callpath_state_transitions_file->open(tmp02.data(), std::ios_base::app);
+  // write file
+  *callpath_state_transitions_file << "diGraph G {\n";
+  for(auto pair_1: transitions){
+    for(auto pair_2: pair_1.second){
+      *callpath_state_transitions_file <<"  " << pair_1.first << " -> " << pair_2.second << " [label = " << pair_2.first << "];\n";
+    }
+  }
+  *callpath_state_transitions_file << "}\n";
   // close file handle
   if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
     callpath_state_transitions_file->flush();
