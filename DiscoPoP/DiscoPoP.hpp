@@ -270,8 +270,8 @@ public:
   void createTakenBranchInstrumentation(Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap);
 
   StaticCalltree buildStaticCalltree(Module &M);
-  std::vector<std::vector<StaticCalltreeNode*>> enumerate_paths(StaticCalltree& calltree);
-  void save_enumerated_paths(std::vector<std::vector<StaticCalltreeNode*>> paths);
+  std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> enumerate_paths(StaticCalltree& calltree);
+  void save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
   void assign_instruction_ids_to_dp_reduction_functions(Module &M);
 
   void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,

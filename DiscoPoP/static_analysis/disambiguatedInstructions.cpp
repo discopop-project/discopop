@@ -864,9 +864,10 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
-std::vector<std::vector<StaticCalltreeNode*>> DiscoPoP::enumerate_paths(StaticCalltree& calltree){
+std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> DiscoPoP::enumerate_paths(StaticCalltree& calltree){
   std::cout << "Enumerating Paths...\n";
-  std::vector<std::vector<StaticCalltreeNode*>> paths;
+  std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths;
+  // path id 0 is reserved for debugging and initialization purposes
   // select entry nodes
   std::vector<StaticCalltreeNode*> entry_nodes;
   for(auto pair: calltree.function_map){
@@ -891,14 +892,13 @@ std::vector<std::vector<StaticCalltreeNode*>> DiscoPoP::enumerate_paths(StaticCa
   while(!stack.empty()){
     auto current_path = stack.top();
     stack.pop();
-    paths.push_back(current_path);
+    paths[unique_callpath_state_id++] = current_path;
     for(auto succ_pair: current_path.back()->successors){
       int32_t trigger_instructionID = succ_pair.first;  // currently unused!
       for(auto succ: succ_pair.second){
         // check for cycles
         if(std::find(current_path.begin(), current_path.end(), succ) != current_path.end()){
           // already contained in current_path
-          std::cout << "FOUND CYCLE!\n";
           continue;
         }
         auto tmp_path = current_path;
@@ -908,33 +908,18 @@ std::vector<std::vector<StaticCalltreeNode*>> DiscoPoP::enumerate_paths(StaticCa
     }
   }
 
-  // DEBUG
-  // print paths
-/*
-  std::cout << "PATH lengths:\n";
-  for(auto p: paths){
-    std::string path_str = "";
-    for(auto node_ptr: p){
-      path_str += node_ptr->get_label() + "-->";
-    }
-    std::cout << path_str << "\n";
-  }
-*/
-  // !DEBUG
-
-
   return paths;
 }
 
-void DiscoPoP::save_enumerated_paths(std::vector<std::vector<StaticCalltreeNode*>> paths){
-  for(auto path: paths){
+void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
+  for(auto pair: paths){
     // construct path string
     std::string path_str = "";
-    for(auto node_ptr: path){
+    for(auto node_ptr: pair.second){
       path_str += node_ptr->get_label() + "-->";
     }
     // save path string to file
-    *stateID_to_callpath_file << to_string(unique_callpath_state_id++) << " " << path_str << "\n";
+    *stateID_to_callpath_file << to_string(pair.first) << " " << path_str << "\n";
   }
 }
 
