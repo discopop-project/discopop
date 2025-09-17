@@ -861,8 +861,34 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
 }
 
 
+
+
 typedef int32_t CALLPATH_STATE_ID;
 typedef int32_t INSTRUCTION_ID;
+
+// retrieve the CallpathStateId of the given path.
+CALLPATH_STATE_ID get_id_from_callpath(std::vector<StaticCalltreeNode*>& target_path, std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths){
+  CALLPATH_STATE_ID fallback = 0;
+  int target_path_length = target_path.size();
+  for(auto pair: paths){
+    if(pair.second.size() != target_path_length){
+      continue;
+    }
+    // compare target path and the candidate element-wise
+    bool valid = true;
+    for(int idx = 0; idx < target_path_length; ++idx){
+      if (target_path[idx] != pair.second[idx]){
+        valid = false;
+        break;
+      }
+    }
+    // return the id, if a match was found
+    if(valid){
+      return pair.first;
+    }
+  }
+  return fallback;
+}
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
@@ -870,6 +896,7 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
   std::cout << "Enumerating Paths...\n";
   std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>> paths;
   std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> state_transitions;
+  std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> inverse_state_transitions;
   // path id 0 is reserved for debugging and initialization purposes
   // select entry nodes
   std::vector<StaticCalltreeNode*> entry_nodes;
@@ -901,19 +928,67 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
     // register current path
     auto current_state_id = unique_callpath_state_id++;
     paths[current_state_id] = current_path;
+    // register transition
     if(state_transitions.find(predecessor_state_id) == state_transitions.end()){
       std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
       state_transitions[predecessor_state_id] = tmp;
     }
     state_transitions[predecessor_state_id][transition_instruction] = current_state_id;
+    // register inverse transition
+    if(inverse_state_transitions.find(current_state_id) == inverse_state_transitions.end()){
+      std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
+      inverse_state_transitions[current_state_id] = tmp;
+    }
+    inverse_state_transitions[current_state_id][transition_instruction] = predecessor_state_id;
 
     // enqueue successors
     for(auto succ_pair: current_path.back()->successors){
       int32_t trigger_instructionID = succ_pair.first;  // currently unused!
       for(auto succ: succ_pair.second){
         // check for cycles
-        if(std::find(current_path.begin(), current_path.end(), succ) != current_path.end()){
+        auto cycle_pos = std::find(current_path.begin(), current_path.end(), succ);
+        if(cycle_pos != current_path.end()){
           // already contained in current_path
+          cout << "Found loop. Ignoring successor transition: " << current_state_id << " " << current_path.back()->get_label() << " -> " << succ->get_label() << " Inst: " << trigger_instructionID << "\n";
+
+
+
+          // get prefix path of the cycle
+          std::vector<StaticCalltreeNode*> cycle_prefix_path;
+          for(auto elem_it = current_path.begin(); elem_it <= cycle_pos; ++elem_it){
+            cycle_prefix_path.push_back(*elem_it);
+          }
+
+          // DEBUG
+          string current_path_str = "";
+          for(auto elem: current_path){
+            current_path_str += elem->get_label() + "-->";
+          }
+          cout << "Current_path: " << current_path_str << "\n";
+
+          string cycle_prefix_path_str = "";
+          for(auto elem: cycle_prefix_path){
+            cycle_prefix_path_str += elem->get_label() + "-->";
+          }
+          cout << "CYCLE PREFIX: " << cycle_prefix_path_str << "\n";
+          // !DEBUG
+
+          // get id of the target path
+          auto cycle_prefix_path_stateID = get_id_from_callpath(cycle_prefix_path, paths);
+          cout << "RETRIEVED ID: " << cycle_prefix_path_stateID << "\n";;
+          // register transition
+          if(state_transitions.find(current_state_id) == state_transitions.end()){
+            std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
+            state_transitions[current_state_id] = tmp;
+          }
+          // check for potential overwrites
+          if(state_transitions[current_state_id].find(trigger_instructionID) != state_transitions[current_state_id].end()){
+            cout << "  TRANSITION EXISTS: " << state_transitions[current_state_id][trigger_instructionID] << "\n";
+            cout << "  NEW / ALTERNATIVE TARGET: " << cycle_prefix_path_stateID << "\n";
+          }
+          state_transitions[current_state_id][trigger_instructionID] = cycle_prefix_path_stateID;
+          cout << "  ADDED TRANSITION: " << current_state_id << " " << trigger_instructionID << " " << cycle_prefix_path_stateID << "\n";
+
           continue;
         }
         auto tmp_path = current_path;

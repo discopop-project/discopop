@@ -73,7 +73,6 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   auto enumerated_paths = enumerated_paths_result.first;
   auto state_transitions = enumerated_paths_result.second;
   save_enumerated_paths(enumerated_paths);
-//  TODO: Save state prefix relations during path creation
   save_path_state_transitions(state_transitions);
 //  TODO: Calculate state transitions based on prefix relations and lookup in calltree
   // -> prepare state transition lookup tables
