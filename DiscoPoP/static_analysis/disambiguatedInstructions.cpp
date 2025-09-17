@@ -861,12 +861,15 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
 }
 
 
+typedef int32_t CALLPATH_STATE_ID;
+typedef int32_t INSTRUCTION_ID;
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
-std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> DiscoPoP::enumerate_paths(StaticCalltree& calltree){
+std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>, std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>>> DiscoPoP::enumerate_paths(StaticCalltree& calltree){
   std::cout << "Enumerating Paths...\n";
-  std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths;
+  std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>> paths;
+  std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> state_transitions;
   // path id 0 is reserved for debugging and initialization purposes
   // select entry nodes
   std::vector<StaticCalltreeNode*> entry_nodes;
@@ -881,18 +884,30 @@ std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> DiscoPoP::enumerat
     std::cout << "--> " << node_ptr->get_label() << "\n";
   }
   // traverse the static calltree to build the paths
-  std::stack<std::vector<StaticCalltreeNode*>> stack;
+  std::stack<std::tuple<CALLPATH_STATE_ID, INSTRUCTION_ID, std::vector<StaticCalltreeNode*>>> stack;
   // -> initialize
   for(auto node_ptr: entry_nodes){
     std::vector<StaticCalltreeNode*> v;
     v.push_back(node_ptr);
-    stack.push(v);
+    stack.push(std::make_tuple(0, 0, v));
   }
   // -> process stack
   while(!stack.empty()){
-    auto current_path = stack.top();
+    auto current_tuple = stack.top();
+    auto predecessor_state_id = std::get<0>(current_tuple);
+    auto transition_instruction = std::get<1>(current_tuple);
+    auto current_path = std::get<2>(current_tuple);
     stack.pop();
-    paths[unique_callpath_state_id++] = current_path;
+    // register current path
+    auto current_state_id = unique_callpath_state_id++;
+    paths[current_state_id] = current_path;
+    if(state_transitions.find(predecessor_state_id) == state_transitions.end()){
+      std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
+      state_transitions[predecessor_state_id] = tmp;
+    }
+    state_transitions[predecessor_state_id][transition_instruction] = current_state_id;
+
+    // enqueue successors
     for(auto succ_pair: current_path.back()->successors){
       int32_t trigger_instructionID = succ_pair.first;  // currently unused!
       for(auto succ: succ_pair.second){
@@ -903,12 +918,25 @@ std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> DiscoPoP::enumerat
         }
         auto tmp_path = current_path;
         tmp_path.push_back(succ);
-        stack.push(tmp_path);
+        stack.push(std::make_tuple(current_state_id, trigger_instructionID, tmp_path));
       }
     }
   }
 
-  return paths;
+  // DEBUG
+  cerr << "State transitions:\n";
+  cerr << "########## START DOT ######\n";
+  cerr << "diGraph G {\n";
+  for(auto pair_1: state_transitions){
+    for(auto pair_2: pair_1.second){
+      cerr <<"  " << pair_1.first << " -> " << pair_2.second << " [label = " << pair_2.first << "];\n";
+    }
+  }
+  cerr << "}\n";
+  cerr << "########## END DOT ######\n";
+  // !DEBUG
+
+  return std::make_pair(paths, state_transitions);
 }
 
 void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
@@ -920,6 +948,15 @@ void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<Sta
     }
     // save path string to file
     *stateID_to_callpath_file << to_string(pair.first) << " " << path_str << "\n";
+  }
+}
+
+void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> transitions){
+  *callpath_state_transitions_file << "# Format: <source_state_id> <instruction_id> <target_state_id>\n";
+  for(auto pair_1: transitions){
+    for(auto pair_2: pair_1.second){
+      *callpath_state_transitions_file << "" << pair_1.first << " " << pair_2.first << " " << pair_2.second << "\n";
+    }
   }
 }
 

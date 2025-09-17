@@ -32,6 +32,12 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   tmp01 += "/stateID_to_callpath_mapping.txt";
   stateID_to_callpath_file->open(tmp01.data(), std::ios_base::app);
 
+  // prepare saving the callpathState transitions
+  callpath_state_transitions_file = new std::ofstream();
+  std::string tmp02(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp02 += "/callpath_state_transitions.txt";
+  callpath_state_transitions_file->open(tmp02.data(), std::ios_base::app);
+
   long counter = 0;
   // cout << "\tFUNCTION:\n";
   for (Function &F : M) {
@@ -75,8 +81,13 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   // -> build static calltree for state transition and instruction mapping preparation
   StaticCalltree static_calltree = buildStaticCalltree(M);
   // -> assign unique stateIDs to all possible call states
-  auto enumerated_paths = enumerate_paths(static_calltree);
+  auto enumerated_paths_result = enumerate_paths(static_calltree);
+  auto enumerated_paths = enumerated_paths_result.first;
+  auto state_transitions = enumerated_paths_result.second;
   save_enumerated_paths(enumerated_paths);
+//  TODO: Save state prefix relations during path creation
+  save_path_state_transitions(state_transitions);
+//  TODO: Calculate state transitions based on prefix relations and lookup in calltree
   // -> prepare state transition lookup tables
   static_calltree.printToDOT();
 
@@ -94,6 +105,11 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   if (stateID_to_callpath_file != NULL && stateID_to_callpath_file->is_open()) {
     stateID_to_callpath_file->flush();
     stateID_to_callpath_file->close();
+  }
+
+  if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
+    callpath_state_transitions_file->flush();
+    callpath_state_transitions_file->close();
   }
 
   if (reduction_file != NULL && reduction_file->is_open()) {
