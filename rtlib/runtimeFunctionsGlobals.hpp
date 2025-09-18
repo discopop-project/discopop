@@ -99,6 +99,10 @@ extern int32_t NUM_WORKERS;
 extern thread_local depMap *myMap;
 
 extern uint32_t current_callpath_state;
+// TODO: keep track of function calls without executed transition to allow recursion and circular calls (not possible in the graph due to non-circular states)
+// if a function is left, but the current counter in calls_without_executed_transitions is not 0, decrease the counter instead of transitioning the state.
+extern std::vector<uint32_t> calls_without_executed_transitions;
+extern CallStateGraph* call_state_graph;
 
 // statistics
 extern std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
