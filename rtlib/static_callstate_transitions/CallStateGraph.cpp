@@ -11,8 +11,40 @@
  */
 
  #include "CallStateGraph.hpp"
+ #include <string>
+ #include <fstream>
 
-CallStateGraph::~CallStateGraph(){
+CallStateGraph::CallStateGraph(){
+    // open input file
+    std::string tmp_2(getenv("DOT_DISCOPOP_PROFILER"));
+    tmp_2 += "/callpath_state_transitions.txt";
+    // create graph by parsing the file line by line
+    std::ifstream file(tmp_2);
+    std::string line;
+    while (std::getline(file, line))
+    {
+        // process line
+        if(line[0] == '#'){
+            // ignore comment lines
+            continue;
+        }
+        // get source id
+        std::size_t pos = line.find(' ');
+        std::string source_callstate_id_str = line.substr (0, pos);
+        line = line.substr(pos + 1 );
+        // get trigger instruction
+        pos = line.find(' ');
+        std::string trigger_instruction_id_str = line.substr (0, pos);
+        line = line.substr(pos + 1 );
+        // get target id
+        std::string target_callstate_id_str = line;
+        // register transition in CallStateGraph
+        register_transition(std::stoi(source_callstate_id_str), std::stoi(trigger_instruction_id_str), std::stoi(target_callstate_id_str));
+    }
+
+}
+
+ CallStateGraph::~CallStateGraph(){
     // delete nodes
     for(auto pair: node_map){
         delete pair.second;
