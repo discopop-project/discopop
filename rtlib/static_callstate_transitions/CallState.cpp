@@ -12,7 +12,7 @@
 
  #include "CallState.hpp"
 
- void CallState::register_transition(int32_t trigger_instruction, CallState* target_state){
+ void CallState::register_transition(std::int32_t trigger_instruction, CallState* target_state){
     transitions[trigger_instruction] = target_state;
  }
 

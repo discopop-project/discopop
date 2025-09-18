@@ -17,6 +17,7 @@
 #include "calltree/DependencyMetadata.hpp"
 #include "memory/AbstractShadow.hpp"
 #include "runtimeFunctionsTypes.hpp"
+#include "static_callstate_transitions/CallStateGraph.hpp"
 
 #include <pthread.h>
 

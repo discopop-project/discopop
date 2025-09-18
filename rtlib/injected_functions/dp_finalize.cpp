@@ -157,6 +157,7 @@ void __dp_finalize(LID lid) {
 
   delete function_manager;
   delete loop_manager;
+  delete call_state_graph;
 
 #ifdef DP_CALLTREE_PROFILING
   //delete call_tree;

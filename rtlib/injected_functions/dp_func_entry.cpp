@@ -60,6 +60,9 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     function_manager = new FunctionManager();
     loop_manager = new LoopManager();
     memory_manager = new MemoryManager();
+    // Static callPath tracing
+    call_state_graph = new CallStateGraph();
+    //
 #if DP_CALLTREE_PROFILING
 //    call_tree = new CallTree();
     // metadata_queue = new MetaDataQueue(6); // TODO: add Worker argument

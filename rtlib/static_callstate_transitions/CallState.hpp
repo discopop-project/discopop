@@ -12,10 +12,12 @@
 
  #pragma once
  #include <unordered_map>
+ #include <cstdint>
+ #include <iostream>
 
  class CallState{
     private:
-        int32_t id;
+        std::int32_t id;
         std::unordered_map<int32_t, CallState*> transitions;
     public:
         CallState(int32_t id_arg):id(id_arg){}
