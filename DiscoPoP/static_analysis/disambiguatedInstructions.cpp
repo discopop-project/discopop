@@ -1085,3 +1085,64 @@ void DiscoPoP::save_static_calltree_to_dot(StaticCalltree& calltree){
 
 // prepare a lookup table to map from a unique instructionID and the current state pointer to the disambiguatedInstructionID, i.e.
 // the instruction indentifier, that also encodes the call path taken to execute the instruction
+
+string path_to_string(std::vector<StaticCalltreeNode*>& path){
+  string path_str = "";
+  for(auto elem: path){
+    path_str += elem->get_label() + "-->";
+  }
+  return path_str;
+}
+
+// adds the state transition edges corresponding to returning from a function.
+// for completeness and fail-safety, this edge is added to every state in a function, i.e., returning is possible from every state
+void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
+  TODO:
+  // for each path in paths
+    // rfind first call instruction
+    // create prefix path, ending just before found call instruction
+    // find state id for the prefix path
+    // register edge transition from path to prefix path with trigger instruction "1" (i.e. leaving function)
+  for(auto path: paths){
+    auto path_id = path.first;
+    // rfind first call instruction
+    int last_call_idx = -1;
+    for(int idx = path.second.size() - 1 ; idx >= 0; --idx ){
+      auto path_node = path.second[idx];
+      if(path_node->get_type() == true){
+        // path node is a call instruction
+        last_call_idx = idx;
+        break;
+      }
+    }
+    if(last_call_idx == -1){
+      // no call found
+      continue;
+    }
+
+    // create prefix path
+    std::vector<StaticCalltreeNode*> prefix_path;
+    for(int i = 0; i < last_call_idx; i++){
+      prefix_path.push_back(path.second[i]);
+    }
+
+    // DEBUG
+    string prefix_path_str = path_to_string(prefix_path);
+    string path_str = path_to_string(path.second);
+    cout << "Path: " << path_str << "\n";
+    cout << "Prefix path: " << prefix_path_str << "\n";
+    // !DEBUG
+
+    // find state id for prefix path
+    auto prefix_path_stateID = get_id_from_callpath(prefix_path, paths);
+    cout << "--> PathID: " << prefix_path_stateID << "\n";
+
+    // register transition edge from path to prefix path with trigger instruction "1" (i.e. leaving function)
+    if(state_transitions.find(path_id) == state_transitions.end()){
+      std::unordered_map<int32_t, int32_t> tmp;
+      state_transitions[path_id] = tmp;
+    }
+    state_transitions[path_id][1] = prefix_path_stateID;
+    cout << "--> Registered transition: " << path_id << " " << 1 << " --> " << prefix_path_stateID << "\n";
+  }
+}

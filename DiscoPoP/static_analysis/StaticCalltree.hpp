@@ -33,6 +33,7 @@ class StaticCalltreeNode {
         StaticCalltreeNode(uint32_t node_id_arg, bool type_arg, std::string functionName_arg, int32_t instructionID_arg):node_id(node_id_arg),type(type_arg),functionName(functionName_arg),instructionID(instructionID_arg){};
         void print();
         std::string get_label();
+        bool get_type();
         void register_successor(StaticCalltreeNode* succ, int32_t trigger_instructionID);
 };
 

@@ -28,6 +28,10 @@ std::string StaticCalltreeNode::get_label(){
     }
 }
 
+bool StaticCalltreeNode::get_type(){
+    return type;
+}
+
 void StaticCalltreeNode::register_successor(StaticCalltreeNode* succ, int32_t trigger_instructionID){
     // check if trigger is already registered
     if(successors.find(trigger_instructionID) != successors.end()){
