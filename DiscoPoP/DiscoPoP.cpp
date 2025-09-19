@@ -70,7 +70,7 @@ void DiscoPoP::setupCallbacks() {
 
   DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit", Void, Int32, Int32);
 
-  DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry", Void, Int32, Int32);
+  DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry", Void, Int32, Int32, Int32);
 
   DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit", Void, Int32, Int32);
 

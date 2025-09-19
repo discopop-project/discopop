@@ -40,6 +40,40 @@ void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
   }
 }
 
+void DiscoPoP::update_argument_instruction_ids(Module &M){
+  cout << "Updating argument instruction ids...\n";
+  for (Function &F : M) {
+    for(BasicBlock &BB: F){
+      for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
+        auto instruction = &*BI;
+        if(isa<CallInst>(instruction)){
+          auto ci = cast<CallInst>(BI);
+          Function* F = ci->getCalledFunction();
+          if(F){
+            auto fn = F->getName();
+            if (fn.find("__dp_loop_entry") != string::npos)
+            {
+              // Get InstructionID of callinstruction
+              MDNode* md = BI->getMetadata("dp.md.instr.id");
+              int32_t callInstructionID = 0;
+              if(md){
+                // Metadata exists
+                std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
+                callInstructionID_str.erase(0, 15);
+                callInstructionID = stoi(callInstructionID_str);
+              }
+              // update the function argument
+              if(callInstructionID != 0){
+                ci->setArgOperand(2, ConstantInt::get(Int32, callInstructionID));
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 // returns a mapping from loop id to the instruction id of the loop entry call
 std::unordered_map<int32_t, int32_t> get_loop_entry_instructionIDs(Function &F){
   std::unordered_map<int32_t, int32_t> loop_entry_instruction_ids;

@@ -65,6 +65,8 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
 
   // disambiguating instructions
   assign_instruction_ids_to_dp_reduction_functions(M);
+  // update argument instruction ids
+  update_argument_instruction_ids(M);
   // prepare information for call state transitioning and instruction mapping during dynamic analysis.
   // -> build static calltree for state transition and instruction mapping preparation
   StaticCalltree static_calltree = buildStaticCalltree(M);
