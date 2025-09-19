@@ -47,6 +47,7 @@ set(DiscoPoP_SOURCES
 
         static_callstate_transitions/CallState.cpp
         static_callstate_transitions/CallStateGraph.cpp
+        static_callstate_transitions/utils.cpp
         )
 
 set(CMAKE_CXX_FLAGS

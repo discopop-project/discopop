@@ -16,6 +16,7 @@
 
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
+#include "../static_callstate_transitions/utils.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -30,7 +31,7 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_call(LID lid) {
+void __dp_call(LID instructionID) {
   if (!dpInited || targetTerminated) {
     return;
   }
@@ -45,7 +46,9 @@ void __dp_call(LID lid) {
   const auto timer = Timer(timers, TimerRegion::CALL);
 #endif
 
-  function_manager->log_call(lid);
+  function_manager->log_call(instructionID);
+
+  update_callstate(instructionID);
 }
 }
 

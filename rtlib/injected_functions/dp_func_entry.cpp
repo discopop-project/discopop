@@ -18,6 +18,8 @@
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
+#include "../static_callstate_transitions/utils.hpp"
+
 #include <linux/limits.h>
 
 #include <cstdint>
@@ -106,7 +108,9 @@ void __dp_func_entry(LID lid, int32_t isStart) {
       out->open(tmp2.data(), ios::out);
 
       // Static callPath tracing
+      initialize_current_callpath_state();
       call_state_graph = new CallStateGraph();
+
     }
 #else
     out->open("Output.txt", ios::out);
