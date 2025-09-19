@@ -37,7 +37,7 @@ void update_callstate_from_call(int32_t instructionID){
                 if(fallthrough_transition_target){
                         // overwrite transition target with the fallthrough
                         // TODO: this fallthrough could be implemented statically by redirecting the edges accordingly
-                        cout << "Found fallthrough: " << transition_target << " -> " << fallthrough_transition_target << "\n";
+                        cout << "Found call fallthrough: " << transition_target << " -> " << fallthrough_transition_target << "\n";
                         transition_target = fallthrough_transition_target;
                 }
 
@@ -103,7 +103,7 @@ void update_callstate(int32_t instructionID){
                 if(fallthrough_transition_target){
                         // overwrite transition target with the fallthrough
                         // TODO: this fallthrough could be implemented statically by redirecting the edges accordingly
-                        cout << "Found fallthrough: " << transition_target << " -> " << fallthrough_transition_target << "\n";
+                        cout << "Found update fallthrough: " << transition_target << " -> " << fallthrough_transition_target << "\n";
                         transition_target = fallthrough_transition_target;
                 }
 
