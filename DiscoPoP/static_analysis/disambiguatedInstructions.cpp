@@ -1001,6 +1001,36 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
   return std::make_pair(paths, state_transitions);
 }
 
+// save the id of the initial state id to file
+void DiscoPoP::save_initial_path(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
+  // prepare saving the initial callpathStateID
+  std::ofstream *file;
+  file = new std::ofstream();
+  std::string tmp01(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp01 += "/initial_stateID.txt";
+  file->open(tmp01.data(), std::ios_base::trunc);
+  // write file
+  for(auto pair: paths){
+    // select path for main file
+    if(pair.second.size() != 1){
+      continue;
+    }
+
+    if (pair.second[0]->get_label() == "main") // avoid instrumentation calls
+    {
+      cout << "FOUND MAIN PATH\n";
+      // save path id to file
+      *file << to_string(pair.first) << "\n";
+      break;
+    }
+  }
+  // close file handle
+  if (file != NULL && file->is_open()) {
+    file->flush();
+    file->close();
+  }
+}
+
 void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
   // prepare saving the mapping from callpath to callpathStateID for reference
   stateID_to_callpath_file = new std::ofstream();
