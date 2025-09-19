@@ -18,6 +18,8 @@
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
+#include "../static_callstate_transitions/utils.hpp"
+
 #include <cstdint>
 #include <iostream>
 #include <mutex>
@@ -95,6 +97,8 @@ void __dp_func_exit(LID lid, int32_t isExit) {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   pthread_compatibility_mutex.unlock();
 #endif
+
+  update_callstate_from_func_exit(1);  // 1 is the dummy instruction id for leaving a function
 }
 }
 

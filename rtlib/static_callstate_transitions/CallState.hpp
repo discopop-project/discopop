@@ -23,4 +23,5 @@
         CallState(int32_t id_arg):id(id_arg){}
         void register_transition(int32_t trigger_instruction, CallState* target_state);
         int32_t get_id();
+        CallState* get_transition_target(int32_t trigger_instruction);
  };

@@ -19,3 +19,11 @@
  int32_t CallState::get_id(){
     return id;
  }
+
+ CallState* CallState::get_transition_target(int32_t trigger_instruction){
+   auto pos = transitions.find(trigger_instruction);
+   if(pos == transitions.end()){
+      return nullptr;
+   }
+   return pos->second;
+ }

@@ -48,7 +48,7 @@ void __dp_call(LID instructionID) {
 
   function_manager->log_call(instructionID);
 
-  update_callstate(instructionID);
+  update_callstate_from_call(instructionID);
 }
 }
 

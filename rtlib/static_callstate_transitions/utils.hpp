@@ -14,6 +14,8 @@
 #include "../runtimeFunctionsGlobals.hpp"
 
 namespace __dp{
+void update_callstate_from_call(int32_t instructionID);
+void update_callstate_from_func_exit(int32_t instructionID);
 void update_callstate(int32_t instructionID);
 void initialize_current_callpath_state();
 } // namespace __dp
