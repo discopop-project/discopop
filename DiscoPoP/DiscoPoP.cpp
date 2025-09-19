@@ -72,7 +72,7 @@ void DiscoPoP::setupCallbacks() {
 
   DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry", Void, Int32, Int32, Int32);
 
-  DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit", Void, Int32, Int32);
+  DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit", Void, Int32, Int32, Int32);
 
   DpTakenBranchCounterIncr =
       ThisModule->getOrInsertFunction("__dp_incr_taken_branch_counter", Void, CharPtr, Int32, Int32);

@@ -14,12 +14,14 @@
 
 #include "../runtimeFunctionsGlobals.hpp"
 
+#include "../static_callstate_transitions/utils.hpp"
+
 namespace __dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_loop_incr(const int loop_id) {
+void __dp_loop_incr(const int loop_id, int32_t instruction_id) {
   if (!dpInited || targetTerminated) {
     return;
   }
@@ -29,6 +31,10 @@ void __dp_loop_incr(const int loop_id) {
   }
 
   loop_manager->incr_loop_counter(loop_id);
+
+  cout << "DP LOOP INCR: \n";
+  update_callstate(instruction_id);
+
 }
 }
 

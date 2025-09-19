@@ -17,6 +17,8 @@
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
+#include "../static_callstate_transitions/utils.hpp"
+
 #include <cstdint>
 #include <iostream>
 #include <mutex>
@@ -30,7 +32,7 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_loop_exit(LID lid, int32_t loopID) {
+void __dp_loop_exit(LID lid, int32_t loopID, int32_t instruction_id) {
   if (!dpInited || targetTerminated) {
     return;
   }
@@ -76,6 +78,10 @@ void __dp_loop_exit(LID lid, int32_t loopID) {
 #ifdef DP_CALLTREE_PROFILING
   call_tree.exit_loop();
 #endif
+
+  cout << "DP LOOP EXIT: \n";
+  update_callstate(instruction_id);
+
 }
 }
 
