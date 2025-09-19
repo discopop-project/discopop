@@ -16,14 +16,10 @@
 namespace __dp{
 
 void update_callstate_from_call(int32_t instructionID){
-        cout << "Updating callstate from call: " << "\n";
-        cout << "  -> current: " << current_callpath_state->get_id() << "\n";
-        cout << "  -> inst:    " << instructionID << "\n";
         // check if callstate update is currently disabled
         if(calls_without_executed_transitions.back() != 0){
                 // disabled, increment counter
                 calls_without_executed_transitions[calls_without_executed_transitions.size()-1] += 1;
-                cout << "disabled: counter: " << calls_without_executed_transitions.back() << "\n";
                 return;
         }
 
@@ -37,7 +33,6 @@ void update_callstate_from_call(int32_t instructionID){
                 if(fallthrough_transition_target){
                         // overwrite transition target with the fallthrough
                         // TODO: this fallthrough could be implemented statically by redirecting the edges accordingly
-                        cout << "Found call fallthrough: " << transition_target << " -> " << fallthrough_transition_target << "\n";
                         transition_target = fallthrough_transition_target;
                 }
 
@@ -49,20 +44,14 @@ void update_callstate_from_call(int32_t instructionID){
                 // no transition found
                 // increment the current counter in calls_without_executed_transitions, thereby temporarily disabling the state transitioning
                 calls_without_executed_transitions[calls_without_executed_transitions.size()-1] += 1;
-                cout << "disabling: counter: " << calls_without_executed_transitions.back() << "\n";
         }
-        cout << "  -> current: " << current_callpath_state->get_id() << "\n";
 }
 
 void update_callstate_from_func_exit(int32_t instructionID){
-        cout << "Updating callstate from func exit: " << "\n";
-        cout << "  -> current: " << current_callpath_state->get_id() << "\n";
-        cout << "  -> inst:    " << instructionID << "\n";
         // check if callstate update is currently disabled
         if(calls_without_executed_transitions.back() > 0){
                 // disabled, decrease counter
                 calls_without_executed_transitions[calls_without_executed_transitions.size()-1] -= 1;
-                cout << "decreased: counter: " << calls_without_executed_transitions.back() << "\n";
                 return;
         }
 
@@ -80,17 +69,12 @@ void update_callstate_from_func_exit(int32_t instructionID){
                 cerr << "No transition found from state " << current_callpath_state->get_id() << " via instruction " << instructionID << "!\n";
                 cerr << "State might be incorrect from here on!\n";
         }
-        cout << "  -> current: " << current_callpath_state->get_id() << "\n";
 }
 
 void update_callstate(int32_t instructionID){
-        cout << "Updating callstate: " << "\n";
-        cout << "  -> current: " << current_callpath_state->get_id() << "\n";
-        cout << "  -> inst:    " << instructionID << "\n";
         // check if callstate update is currently disabled
         if(calls_without_executed_transitions.back() != 0){
                 // disabled
-                cout << "disabled\n";
                 return;
         }
         // check if a transition exists
@@ -103,7 +87,6 @@ void update_callstate(int32_t instructionID){
                 if(fallthrough_transition_target){
                         // overwrite transition target with the fallthrough
                         // TODO: this fallthrough could be implemented statically by redirecting the edges accordingly
-                        cout << "Found update fallthrough: " << transition_target << " -> " << fallthrough_transition_target << "\n";
                         transition_target = fallthrough_transition_target;
                 }
 
@@ -111,7 +94,6 @@ void update_callstate(int32_t instructionID){
                 current_callpath_state = transition_target;
         }
         // update current callstate
-        cout << "  -> current: " << current_callpath_state->get_id() << "\n";
 }
 
 void initialize_current_callpath_state(){
@@ -124,7 +106,6 @@ void initialize_current_callpath_state(){
     int32_t current_callpath_state_id;
     while (std::getline(file, line))
     {
-        cout << "INITIAL_STATE: " << line << "\n";
         current_callpath_state_id = stoi(line);
     }
     current_callpath_state = call_state_graph->get_or_register_node(current_callpath_state_id);

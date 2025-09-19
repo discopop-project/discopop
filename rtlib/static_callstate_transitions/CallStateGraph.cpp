@@ -49,7 +49,6 @@ CallStateGraph::CallStateGraph(){
     for(auto pair: node_map){
         delete pair.second;
     }
-    std::cout << "DELETED CALLSTATE GRAPH\n";
 }
 
 CallState* CallStateGraph::get_or_register_node(std::int32_t call_state_id){
@@ -65,5 +64,4 @@ void CallStateGraph::register_transition(std::int32_t source_call_state_id, std:
     CallState* source = get_or_register_node(source_call_state_id);
     CallState* target = get_or_register_node(target_call_state_id);
     source->register_transition(trigger_instruction, target);
-    std::cout << "registered transition: " << source->get_id() << " (" << trigger_instruction << ") -> " << target->get_id() << "\n";
 }

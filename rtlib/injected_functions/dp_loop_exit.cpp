@@ -79,7 +79,6 @@ void __dp_loop_exit(LID lid, int32_t loopID, int32_t instruction_id) {
   call_tree.exit_loop();
 #endif
 
-  cout << "DP LOOP EXIT: \n";
   update_callstate(instruction_id);
 
 }

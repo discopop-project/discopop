@@ -32,7 +32,6 @@ void __dp_loop_incr(const int loop_id, int32_t instruction_id) {
 
   loop_manager->incr_loop_counter(loop_id);
 
-  cout << "DP LOOP INCR: \n";
   update_callstate(instruction_id);
 
 }
