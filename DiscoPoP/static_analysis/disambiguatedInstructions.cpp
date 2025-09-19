@@ -147,12 +147,14 @@ std::unordered_map<int32_t, int32_t> get_loop_entry_instructionIDs(Function &F){
     }
   }
 
+/*
   // DEBUG
   cout << "Loop entry instruction ids:\n";
   for(auto pair: loop_entry_instruction_ids){
     cout << "  " << to_string(pair.first) << " -> " << pair.second << "\n";
   }
   // !DEBUG
+*/
 
   return loop_entry_instruction_ids;
 }
@@ -198,12 +200,14 @@ std::unordered_map<int32_t, int32_t> get_loop_exit_instructionIDs(Function &F){
     }
   }
 
+/*
   // DEBUG
   cout << "Loop exit instruction ids:\n";
   for(auto pair: loop_exit_instruction_ids){
     cout << "  " << to_string(pair.first) << " -> " << pair.second << "\n";
   }
   // !DEBUG
+*/
 
   return loop_exit_instruction_ids;
 }
@@ -249,12 +253,14 @@ std::unordered_map<int32_t, int32_t> get_loop_increment_instructionIDs(Function 
     }
   }
 
+/*
   // DEBUG
   cout << "Loop increment instruction ids:\n";
   for(auto pair: loop_increment_instruction_ids){
     cout << "  " << to_string(pair.first) << " -> " << pair.second << "\n";
   }
   // !DEBUG
+*/
 
   return loop_increment_instruction_ids;
 }
@@ -308,6 +314,7 @@ std::vector<std::vector<int32_t>> get_loopIDs_in_function_body(Function &F){
     }
   }
 
+/*
   // DEBUG
   cout << "Nested loop ids:\n";
   for(auto entry: nested_loop_ids){
@@ -317,8 +324,8 @@ std::vector<std::vector<int32_t>> get_loopIDs_in_function_body(Function &F){
     }
     cout << "\n";
   }
-
   // !DEBUG
+*/
 
   return nested_loop_ids;
 }
@@ -503,6 +510,7 @@ typedef std::vector<int32_t> ITERATION_INSTANCE;
     }
   }
 
+/*
   // DEBUG
   cerr << "States: " << "\n";
   for(auto outer_entry: loop_iteration_instances){
@@ -533,8 +541,9 @@ typedef std::vector<int32_t> ITERATION_INSTANCE;
       }
     }
   }
-
   // !DEBUG
+*/
+
   return loop_iteration_instance_transitions;
 }
 
@@ -565,12 +574,14 @@ std::unordered_map<int32_t, std::vector<int32_t>> get_loop_callInstruction_affec
                 loop_id = CI->getSExtValue();
               }
               entered_loops.push_back(loop_id);
+              /*
               // DEBUG
               cout << "entered_loops:\n";
               for(auto elem: entered_loops){
                 cout << "--> " << elem << "\n";
               }
               // !DEBUG
+              */
             }
             else {
               // operand was not a ConstantInt
@@ -648,6 +659,7 @@ std::unordered_map<int32_t, std::vector<int32_t>> get_loop_callInstruction_affec
     }
   }
 
+/*
   // DEBUG
   cout << "Loop->CallInst affectance:\n";
   for(auto pair: result_map){
@@ -657,6 +669,7 @@ std::unordered_map<int32_t, std::vector<int32_t>> get_loop_callInstruction_affec
     }
   }
   // !DEBUG
+*/
 
   return result_map;
 }
@@ -675,6 +688,7 @@ std::unordered_map<int32_t, std::vector<int32_t>> get_inverted_loop_callInstruct
     }
   }
 
+/*
   // DEBUG
   cout << "CallInst->Loop affectance:\n";
   for(auto pair: result_map){
@@ -684,6 +698,7 @@ std::unordered_map<int32_t, std::vector<int32_t>> get_inverted_loop_callInstruct
     }
   }
   // !DEBUG
+*/
 
   return result_map;
 }
@@ -704,16 +719,14 @@ std::vector<LOOP_ID> sequentialize_contained_loops(std::vector<std::vector<int32
 StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
   StaticCalltree calltree;
   for (Function &F : M) {
-    cerr << "Iter FUNC..." << F.getName().str() << "\n";
     // get loops contained in F
-    cerr << "DBG: Function: " << F.getName().str() << " getting loop ids..." << "\n";
     auto contained_loops = get_loopIDs_in_function_body(F);
     auto sequentialized_contained_loops = sequentialize_contained_loops(contained_loops);
     auto loop_entry_instructionIDs = get_loop_entry_instructionIDs(F);
     auto loop_exit_instructionIDs = get_loop_exit_instructionIDs(F);
     auto loop_increment_instructionIDs = get_loop_increment_instructionIDs(F);
     // DEBUG
-    cerr << "DBG: Function: " << F.getName().str() << " Loops: " << contained_loops.size() << "\n";
+    //cerr << "DBG: Function: " << F.getName().str() << " Loops: " << contained_loops.size() << "\n";
     // !DEBUG
 
     // for each loop, allow 3 values to represent the currently executed iteration
@@ -723,11 +736,9 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
     // intra- and inter-iteration dependencies with a comparatively high probability.
     // Valid Iteration counters are 0, 1, and 2. A value of 3 acts as a "dont care" symbol.
     // --> calculate iteration instances and thus the amount of states
-    cerr << "DBG: " << "getting loop iteration instances... contained loops: " << contained_loops.size() << "\n";
     //auto iteration_instances = get_loop_iteration_instances(contained_loops, sequentialized_contained_loops);
     auto iteration_instances_and_transitions = get_loop_iteration_instances_and_transitions(contained_loops, sequentialized_contained_loops);
 //    auto loop_entry_instances = get_loop_entry_instances(iteration_instances, contained_loops);
-    cerr << "DBG: " << "Done..." << "\n";
 
     // create StaticCalltreeNode instances for function F
     std::vector<StaticCalltreeNode*> function_node_instances;
@@ -778,8 +789,6 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
               // entry point for loop is registered
               if(iteration_instances_and_transitions["entry_points"][TRANSITION_TYPE_ENTERLOOP][active_loop_id] == instance){
                 // instance is an entry point to the loop
-                cout << "ENTRY POINT FOUND: " << instance << "\n";
-                //
                 if(loop_entry_nodes_map.find(active_loop_id) == loop_entry_nodes_map.end()){
                   std::vector<StaticCalltreeNode*> tmp;
                   loop_entry_nodes_map[active_loop_id] = tmp;
@@ -788,20 +797,13 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
               }
             }
           }
-
-//          if(iteration_counter == 0){
-//            loop_entry_nodes_map[active_loop_id].push_back(function_node_ptr);
-//          }
-
         }
 
       }
     }
-    cerr << "Done\n";
 
 
     // add entry edges into the loops
-    cerr << "Add entry edges into the loops...\n";
     if (iteration_instances_and_transitions.find("entry_points") != iteration_instances_and_transitions.end())
     {
       for(auto pair: iteration_instances_and_transitions["entry_points"][TRANSITION_TYPE_ENTERLOOP]){
@@ -812,37 +814,28 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
     }
 
     // add transition edges between loop iteration nodes
-    cerr << "Add transition edges between loop iterations...\n";
     for(auto pair_0: iteration_instances_and_transitions){
       auto source_instance = pair_0.first;
       if (source_instance.find("entry_points") != string::npos){
         // ignore the "entry_points" key in the transition map
         continue;
       }
-      cerr << "--> source: " << source_instance << "\n";
       for(auto pair_1: pair_0.second){
         auto transition_type = pair_1.first;
         for(auto pair_2: pair_1.second){
           auto loop_id = pair_2.first;
-          cerr << "----> loop_id: " << loop_id << "\n";
           auto target_instance = pair_2.second;
-          cerr << "----> target_instance: " << target_instance << "\n";
           // determine nodes
           auto source_node = instance_to_node_map[source_instance];
-          cerr << "----> source_node: " << source_node << "\n";
           StaticCalltreeNode* target_node = nullptr;
           if (target_instance.find("exit_points") != string::npos){
             // target is leaving a function scope, i.e. goes back to the function node
             target_node = original_function_node_ptr;
-            if(transition_type == TRANSITION_TYPE_EXITLOOP){
-              cerr << "FOUND TYPE EXIT!\n";
-            }
           }
           else{
             target_node = instance_to_node_map[target_instance];
           }
 
-          cerr << "----> target_node: " << target_node << "\n";
           // determine trigger instruction
           int32_t trigger_instruction = 0;
           if(transition_type == TRANSITION_TYPE_ENTERLOOP){
@@ -855,9 +848,7 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
             trigger_instruction = loop_increment_instructionIDs[loop_id];
           }
           // create edge
-          cerr << "----> creating edge.. \n";
           calltree.addEdge(source_node, target_node, trigger_instruction);
-          cerr << "----> Done.\n";
         }
       }
     }
@@ -866,10 +857,8 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
 
 
     // get connection between loops and called functions inside the loops
-    cerr << "Get loop call affectance..\n";
     auto loop_call_affectance = get_loop_callInstruction_affectance(F);
     auto inverted_loop_call_affectance = get_inverted_loop_callInstruction_affectance(loop_call_affectance);
-
 
     for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
       BasicBlock &BB = *FI;
@@ -920,9 +909,7 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
         }
       }
     }
-    cerr << "Done Iter func...\n";
   }
-//  calltree.printToDOT();
   return calltree;
 }
 
@@ -959,7 +946,6 @@ CALLPATH_STATE_ID get_id_from_callpath(std::vector<StaticCalltreeNode*>& target_
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
 std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>, std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>>> DiscoPoP::enumerate_paths(StaticCalltree& calltree){
-  std::cout << "Enumerating Paths...\n";
   std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>> paths;
   std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> state_transitions;
   std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> inverse_state_transitions;
@@ -971,11 +957,15 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
       entry_nodes.push_back(pair.second);
     }
   }
+/*
+  // DEBUG
   // show entry nodes
   std::cout << "Entry nodes:\n";
   for(auto node_ptr: entry_nodes){
     std::cout << "--> " << node_ptr->get_label() << "\n";
   }
+  // !DEBUG
+*/
   // traverse the static calltree to build the paths
   std::stack<std::tuple<CALLPATH_STATE_ID, INSTRUCTION_ID, std::vector<StaticCalltreeNode*>>> stack;
   // -> initialize
@@ -1015,7 +1005,7 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
         auto cycle_pos = std::find(current_path.begin(), current_path.end(), succ);
         if(cycle_pos != current_path.end()){
           // already contained in current_path
-          cout << "Found loop. Ignoring successor transition: " << current_state_id << " " << current_path.back()->get_label() << " -> " << succ->get_label() << " Inst: " << trigger_instructionID << "\n";
+          //cout << "Found loop. Ignoring successor transition: " << current_state_id << " " << current_path.back()->get_label() << " -> " << succ->get_label() << " Inst: " << trigger_instructionID << "\n";
 
 
 
@@ -1025,6 +1015,7 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
             cycle_prefix_path.push_back(*elem_it);
           }
 
+/*
           // DEBUG
           string current_path_str = "";
           for(auto elem: current_path){
@@ -1038,22 +1029,25 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
           }
           cout << "CYCLE PREFIX: " << cycle_prefix_path_str << "\n";
           // !DEBUG
+*/
 
           // get id of the target path
           auto cycle_prefix_path_stateID = get_id_from_callpath(cycle_prefix_path, paths);
-          cout << "RETRIEVED ID: " << cycle_prefix_path_stateID << "\n";;
           // register transition
           if(state_transitions.find(current_state_id) == state_transitions.end()){
             std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
             state_transitions[current_state_id] = tmp;
           }
+/*
+          // DEBUG
           // check for potential overwrites
           if(state_transitions[current_state_id].find(trigger_instructionID) != state_transitions[current_state_id].end()){
             cout << "  TRANSITION EXISTS: " << state_transitions[current_state_id][trigger_instructionID] << "\n";
             cout << "  NEW / ALTERNATIVE TARGET: " << cycle_prefix_path_stateID << "\n";
           }
+          // !DEBUG
+*/
           state_transitions[current_state_id][trigger_instructionID] = cycle_prefix_path_stateID;
-          cout << "  ADDED TRANSITION: " << current_state_id << " " << trigger_instructionID << " " << cycle_prefix_path_stateID << "\n";
 
           continue;
         }
@@ -1084,7 +1078,6 @@ void DiscoPoP::save_initial_path(std::unordered_map<int32_t, std::vector<StaticC
 
     if (pair.second[0]->get_label() == "main") // avoid instrumentation calls
     {
-      cout << "FOUND MAIN PATH\n";
       // save path id to file
       *file << to_string(pair.first) << "\n";
       break;
@@ -1193,7 +1186,6 @@ string path_to_string(std::vector<StaticCalltreeNode*>& path){
 // adds the state transition edges corresponding to returning from a function.
 // for completeness and fail-safety, this edge is added to every state in a function, i.e., returning is possible from every state
 void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
-  TODO:
   // for each path in paths
     // rfind first call instruction
     // create prefix path, ending just before found call instruction
@@ -1222,16 +1214,17 @@ void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t
       prefix_path.push_back(path.second[i]);
     }
 
+/*
     // DEBUG
     string prefix_path_str = path_to_string(prefix_path);
     string path_str = path_to_string(path.second);
     cout << "Path: " << path_str << "\n";
     cout << "Prefix path: " << prefix_path_str << "\n";
     // !DEBUG
+*/
 
     // find state id for prefix path
     auto prefix_path_stateID = get_id_from_callpath(prefix_path, paths);
-    cout << "--> PathID: " << prefix_path_stateID << "\n";
 
     // register transition edge from path to prefix path with trigger instruction "1" (i.e. leaving function)
     if(state_transitions.find(path_id) == state_transitions.end()){
@@ -1239,6 +1232,6 @@ void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t
       state_transitions[path_id] = tmp;
     }
     state_transitions[path_id][1] = prefix_path_stateID;
-    cout << "--> Registered transition: " << path_id << " " << 1 << " --> " << prefix_path_stateID << "\n";
+    // cout << "--> Registered transition: " << path_id << " " << 1 << " --> " << prefix_path_stateID << "\n";
   }
 }
