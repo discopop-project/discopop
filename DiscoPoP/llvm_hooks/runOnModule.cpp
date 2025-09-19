@@ -72,10 +72,17 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   StaticCalltree static_calltree = buildStaticCalltree(M);
   // -> assign unique stateIDs to all possible call states
   auto enumerated_paths_result = enumerate_paths(static_calltree);
+  cout << "Done enumerating paths..\n";
   auto enumerated_paths = enumerated_paths_result.first;
   auto state_transitions = enumerated_paths_result.second;
+  // prepare quicker search
+  cout << "START prepare CIM..\n";
+  auto contained_in_map = get_contained_in_map(enumerated_paths);
+  cout << "DONE prepare CIM..\n";
   // add fucntion exit edges to state_transitions
-  add_function_exit_edges_to_transitions(state_transitions, enumerated_paths);
+  cout << "START AFEETT..\n";
+  add_function_exit_edges_to_transitions(state_transitions, enumerated_paths, contained_in_map);
+  cout << "Done AFEETT..\n";
   // save the generated paths and transitions to disk
   save_initial_path(enumerated_paths);
   save_enumerated_paths(enumerated_paths);

@@ -11,6 +11,7 @@
  */
 
 #include "../DiscoPoP.hpp"
+#include <unordered_set>
 
 
 void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
@@ -719,6 +720,7 @@ std::vector<LOOP_ID> sequentialize_contained_loops(std::vector<std::vector<int32
 StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
   StaticCalltree calltree;
   for (Function &F : M) {
+    cout << "BUILDING FUNCTION: " << F.getName().str() << "\n";
     // get loops contained in F
     auto contained_loops = get_loopIDs_in_function_body(F);
     auto sequentialized_contained_loops = sequentialize_contained_loops(contained_loops);
@@ -914,15 +916,31 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
 }
 
 
-
-
 typedef int32_t CALLPATH_STATE_ID;
 typedef int32_t INSTRUCTION_ID;
+
+std::unordered_map<StaticCalltreeNode*, std::unordered_set<CALLPATH_STATE_ID>> DiscoPoP::get_contained_in_map(std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths){
+  std::unordered_map<StaticCalltreeNode*, std::unordered_set<CALLPATH_STATE_ID>> contained_in_map;
+  for(auto pair: paths){
+    for(auto node_ptr : pair.second){
+      if(contained_in_map.find(node_ptr) == contained_in_map.end()){
+        std::unordered_set<CALLPATH_STATE_ID> tmp;
+        contained_in_map[node_ptr] = tmp;
+      }
+      contained_in_map[node_ptr].insert(pair.first);
+    }
+  }
+  return contained_in_map;
+}
+
+
+
 
 // retrieve the CallpathStateId of the given path.
 CALLPATH_STATE_ID get_id_from_callpath(std::vector<StaticCalltreeNode*>& target_path, std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths){
   CALLPATH_STATE_ID fallback = 0;
   int target_path_length = target_path.size();
+  // fallback: search through all states
   for(auto pair: paths){
     if(pair.second.size() != target_path_length){
       continue;
@@ -943,6 +961,62 @@ CALLPATH_STATE_ID get_id_from_callpath(std::vector<StaticCalltreeNode*>& target_
   return fallback;
 }
 
+// retrieve the CallpathStateId of the given path.
+CALLPATH_STATE_ID get_id_from_callpath_fast(std::vector<StaticCalltreeNode*>& target_path, std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths, std::unordered_map<StaticCalltreeNode*, std::unordered_set<int32_t>>& contained_in_map){
+  CALLPATH_STATE_ID fallback = 0;
+  int target_path_length = target_path.size();
+
+  // try quicker search based on contained_in_map
+  std::unordered_set<int32_t> candidates;
+  bool candidates_initialized = false;
+  if(target_path_length>0){
+    for(auto node_ptr: target_path){
+      if(!candidates_initialized){
+        candidates = contained_in_map[node_ptr];
+        candidates_initialized = true;
+        continue;
+      }
+      // remove non-overlapping entries from candidates
+      std::unordered_set<int32_t>& current_set = contained_in_map[node_ptr];
+      std::vector<int32_t> to_be_removed;
+      for(auto state_id: candidates){
+        if (auto iter = current_set.find(state_id); iter == current_set.end())
+        // state_id not contained in currrent set, thus the candidate is invalid
+          to_be_removed.push_back(state_id);
+      }
+      for(auto entry : to_be_removed){
+        candidates.erase(entry);
+      }
+    }
+    if(candidates.size() > 0){
+      // check candidates
+      cout << "FOUND CANDIDATES: " << candidates.size() << "\n";
+      for(auto candidate_id: candidates){
+        auto candidate_path = paths[candidate_id];
+        bool valid = true;
+        for(int idx = 0; idx < target_path_length; ++idx){
+          if (target_path[idx] != candidate_path[idx]){
+            valid = false;
+            break;
+          }
+        }
+        // return the id, if a match was found
+        if(valid){
+          return candidate_id;
+        }
+      }
+    }
+    else{
+      cout << "NO CANDIDATES\n";
+    }
+
+
+  }
+
+    // fallback, regular search
+  return get_id_from_callpath(target_path, paths);
+}
+
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
 std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>, std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>>> DiscoPoP::enumerate_paths(StaticCalltree& calltree){
@@ -955,6 +1029,12 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
   for(auto pair: calltree.function_map){
     if(pair.second->predecessors.size() == 0){
       entry_nodes.push_back(pair.second);
+    }
+    else{
+      // ensure, that main is always an entry state
+      if(pair.first == "main"){
+        entry_nodes.push_back(pair.second);
+      }
     }
   }
 /*
@@ -1005,7 +1085,7 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
         auto cycle_pos = std::find(current_path.begin(), current_path.end(), succ);
         if(cycle_pos != current_path.end()){
           // already contained in current_path
-          //cout << "Found loop. Ignoring successor transition: " << current_state_id << " " << current_path.back()->get_label() << " -> " << succ->get_label() << " Inst: " << trigger_instructionID << "\n";
+          cout << "Found loop. Ignoring successor transition: " << current_state_id << " " << current_path.back()->get_label() << " -> " << succ->get_label() << " Inst: " << trigger_instructionID << "\n";
 
 
 
@@ -1057,7 +1137,7 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
       }
     }
   }
-
+  cout << "DONE enum\n";
   return std::make_pair(paths, state_transitions);
 }
 
@@ -1068,7 +1148,7 @@ void DiscoPoP::save_initial_path(std::unordered_map<int32_t, std::vector<StaticC
   file = new std::ofstream();
   std::string tmp01(getenv("DOT_DISCOPOP_PROFILER"));
   tmp01 += "/initial_stateID.txt";
-  file->open(tmp01.data(), std::ios_base::trunc);
+  file->open(tmp01.data(), std::ios_base::app);
   // write file
   for(auto pair: paths){
     // select path for main file
@@ -1076,10 +1156,13 @@ void DiscoPoP::save_initial_path(std::unordered_map<int32_t, std::vector<StaticC
       continue;
     }
 
-    if (pair.second[0]->get_label() == "main") // avoid instrumentation calls
+    auto label = pair.second[0]->get_label();
+    if (label.find("main") != std::string::npos) // avoid instrumentation calls
     {
+      cout << "CANDIDATE: " << label << "\n";
       // save path id to file
       *file << to_string(pair.first) << "\n";
+      cout << "FOUND A MAIN PATH!\n";
       break;
     }
   }
@@ -1185,7 +1268,7 @@ string path_to_string(std::vector<StaticCalltreeNode*>& path){
 
 // adds the state transition edges corresponding to returning from a function.
 // for completeness and fail-safety, this edge is added to every state in a function, i.e., returning is possible from every state
-void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
+void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths, std::unordered_map<StaticCalltreeNode*, std::unordered_set<int32_t>> &contained_in_map){
   // for each path in paths
     // rfind first call instruction
     // create prefix path, ending just before found call instruction
@@ -1224,7 +1307,7 @@ void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t
 */
 
     // find state id for prefix path
-    auto prefix_path_stateID = get_id_from_callpath(prefix_path, paths);
+    auto prefix_path_stateID = get_id_from_callpath_fast(prefix_path, paths, contained_in_map);
 
     // register transition edge from path to prefix path with trigger instruction "1" (i.e. leaving function)
     if(state_transitions.find(path_id) == state_transitions.end()){

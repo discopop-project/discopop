@@ -71,6 +71,8 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     return false;
   }
 
+
+
   vector<CU *> CUVector;
   set<string> globalVariablesSet; // list of variables which appear in more than
   // one basic block
