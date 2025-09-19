@@ -990,7 +990,7 @@ CALLPATH_STATE_ID get_id_from_callpath_fast(std::vector<StaticCalltreeNode*>& ta
     }
     if(candidates.size() > 0){
       // check candidates
-      cout << "FOUND CANDIDATES: " << candidates.size() << "\n";
+      //cout << "FOUND CANDIDATES: " << candidates.size() << "\n";
       for(auto candidate_id: candidates){
         auto candidate_path = paths[candidate_id];
         bool valid = true;
