@@ -83,6 +83,22 @@ void DiscoPoP::update_argument_instruction_ids(Module &M){
                 ci->setArgOperand(1, ConstantInt::get(Int32, callInstructionID));
               }
             }
+            if (fn.find("__dp_loop_exit") != string::npos)
+            {
+              // Get InstructionID of callinstruction
+              MDNode* md = BI->getMetadata("dp.md.instr.id");
+              int32_t callInstructionID = 0;
+              if(md){
+                // Metadata exists
+                std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
+                callInstructionID_str.erase(0, 15);
+                callInstructionID = stoi(callInstructionID_str);
+              }
+              // update the function argument
+              if(callInstructionID != 0){
+                ci->setArgOperand(2, ConstantInt::get(Int32, callInstructionID));
+              }
+            }
           }
         }
       }
