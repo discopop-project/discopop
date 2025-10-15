@@ -78,11 +78,11 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   // prepare quicker search
   cout << "START prepare PITIM..\n";
   //auto contained_in_map = get_contained_in_map(enumerated_paths);
-  auto path_string_to_id_map = get_path_string_to_id_map(enumerated_paths);
+  auto path_to_id_map = get_path_to_id_map(enumerated_paths);
   cout << "DONE prepare PITIM..\n";
   // add fucntion exit edges to state_transitions
   cout << "START AFEETT..\n";
-  add_function_exit_edges_to_transitions(state_transitions, enumerated_paths, path_string_to_id_map);
+  add_function_exit_edges_to_transitions(state_transitions, enumerated_paths, path_to_id_map);
   cout << "Done AFEETT..\n";
   // save the generated paths and transitions to disk
   save_initial_path(enumerated_paths);

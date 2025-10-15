@@ -14,6 +14,7 @@
 #include <unordered_set>
 
 
+
 void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
   for (Function &F : M) {
     for(BasicBlock &BB: F){
@@ -1036,23 +1037,23 @@ CALLPATH_STATE_ID get_id_from_callpath_fast_old(std::vector<StaticCalltreeNode*>
   return get_id_from_callpath(target_path, paths);
 }
 
-std::unordered_map<std::string, CALLPATH_STATE_ID> DiscoPoP::get_path_string_to_id_map(std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths){
-  std::unordered_map<std::string, CALLPATH_STATE_ID> map;
+
+
+std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, DiscoPoP::container_hash<std::vector<StaticCalltreeNode*>>> DiscoPoP::get_path_to_id_map(std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths){
+  std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, DiscoPoP::container_hash<std::vector<StaticCalltreeNode*>>> map;
   for(auto pair: paths){
-    map[path_to_string(pair.second)] = pair.first;
+    map[pair.second] = pair.first;
   }
   return map;
 }
 
 
-CALLPATH_STATE_ID get_id_from_callpath_fast(std::vector<StaticCalltreeNode*>& target_path, std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths, std::unordered_map<std::string, int32_t> path_string_to_id_map){
+CALLPATH_STATE_ID get_id_from_callpath_fast(std::vector<StaticCalltreeNode*>& target_path, std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths, std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, DiscoPoP::container_hash<std::vector<StaticCalltreeNode*>>>& path_to_id_map){
   CALLPATH_STATE_ID fallback = 0;
   int target_path_length = target_path.size();
 
-  std::string target_path_str = path_to_string(target_path);
-
-  auto pos = path_string_to_id_map.find(target_path_str);
-  if(pos != path_string_to_id_map.end()){
+  auto pos = path_to_id_map.find(target_path);
+  if(pos != path_to_id_map.end()){
     return pos->second;
   }
 
@@ -1305,26 +1306,18 @@ void DiscoPoP::save_static_calltree_to_dot(StaticCalltree& calltree){
 
 // adds the state transition edges corresponding to returning from a function.
 // for completeness and fail-safety, this edge is added to every state in a function, i.e., returning is possible from every state
-void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths, std::unordered_map<std::string, CALLPATH_STATE_ID> path_str_to_id_map){
+void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths, std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, DiscoPoP::container_hash<std::vector<StaticCalltreeNode*>>> path_to_id_map){
   // for each path in paths
     // rfind first call instruction
     // create prefix path, ending just before found call instruction
     // find state id for the prefix path
     // register edge transition from path to prefix path with trigger instruction "1" (i.e. leaving function)
-  cout << "PATH LEN: " << paths.size() << "\n";
-  long remaining_paths = paths.size();
   for(auto path: paths){
-    cout << "Rem: " << remaining_paths << "\n";
-    remaining_paths--;
     auto path_id = path.first;
     // rfind first call instruction
     int last_call_idx = -1;
-    cout << "\t\tsec_size: " << path.second.size() << "\n";
-    int iter = 0;
     for(int idx = path.second.size() - 1 ; idx >= 0; --idx ){
       auto path_node = path.second[idx];
-      cout << "ITER: " << iter << "\n";
-      iter++;
       if(path_node->get_type() == true){
         // path node is a call instruction
         last_call_idx = idx;
@@ -1340,7 +1333,6 @@ void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t
     // create prefix path
     std::vector<StaticCalltreeNode*> prefix_path;
 
-    cout << "\tLCI: " << last_call_idx << "\n";
     for(int i = 0; i < last_call_idx; i++){
       prefix_path.push_back(path.second[i]);
     }
@@ -1355,9 +1347,7 @@ void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t
 */
 
     // find state id for prefix path
-    auto prefix_path_stateID = get_id_from_callpath_fast(prefix_path, paths, path_str_to_id_map);
-
-
+    auto prefix_path_stateID = get_id_from_callpath_fast(prefix_path, paths, path_to_id_map);
 
     // register transition edge from path to prefix path with trigger instruction "1" (i.e. leaving function)
     if(state_transitions.find(path_id) == state_transitions.end()){

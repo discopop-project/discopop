@@ -72,6 +72,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <boost/container_hash/hash.hpp>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -278,9 +279,16 @@ public:
   void save_static_calltree_to_dot(StaticCalltree& calltree);
   void assign_instruction_ids_to_dp_reduction_functions(Module &M);
   void update_argument_instruction_ids(Module &M);
-  void add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths, std::unordered_map<std::string, int32_t> path_str_to_id_map);
+// hasher used for std::vector<StaticCalltreeNode*>
+template <typename Container>
+struct container_hash {
+    std::size_t operator()(Container const& c) const {
+        return boost::hash_range(c.begin(), c.end());
+    }
+};
+  void add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths, std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, container_hash<std::vector<StaticCalltreeNode*>>> path_to_id_map);
   std::unordered_map<StaticCalltreeNode*, std::unordered_set<int32_t>> get_contained_in_map(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>& paths);
-  std::unordered_map<std::string, int32_t> get_path_string_to_id_map(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>& paths);
+  std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, container_hash<std::vector<StaticCalltreeNode*>>> get_path_to_id_map(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>& paths);
 
   void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
                        map<string, vector<CU *>> &BBIDToCUIDsMap);
