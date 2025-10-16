@@ -1129,7 +1129,7 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>
         auto cycle_pos = std::find(current_path.begin(), current_path.end(), succ);
         if(cycle_pos != current_path.end()){
           // already contained in current_path
-          cout << "Found loop. Ignoring successor transition: " << current_state_id << " " << current_path.back()->get_label() << " -> " << succ->get_label() << " Inst: " << trigger_instructionID << "\n";
+          // cout << "Found loop. Ignoring successor transition: " << current_state_id << " " << current_path.back()->get_label() << " -> " << succ->get_label() << " Inst: " << trigger_instructionID << "\n";
 
 
 
