@@ -1225,11 +1225,18 @@ void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<Sta
   stateID_to_callpath_file->open(tmp01.data(), std::ios_base::app);
   // write file
   for(auto pair: paths){
+    // filter out paths ending with call instructions
+    if(pair.second.back()->get_type() == 1){
+      // type is call instruction
+      continue;
+    }
+
     // construct path string
     std::string path_str = "";
     for(auto node_ptr: pair.second){
       path_str += node_ptr->get_label() + "-->";
     }
+
     // save path string to file
     *stateID_to_callpath_file << to_string(pair.first) << " " << path_str << "\n";
   }
