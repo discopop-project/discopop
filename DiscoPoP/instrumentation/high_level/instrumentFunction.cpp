@@ -14,7 +14,7 @@
 
 // iterates over all loops in a function and calls 'instrument_loop' for each
 // one
-void DiscoPoP::instrument_function(llvm::Function *function, map<string, string> *trueVarNamesFromMetadataMap) {
+void DiscoPoP::instrument_function(llvm::Function *function, map<string, string> *trueVarNamesFromMetadataMap, llvm::LoopInfo &loop_info) {
 
   // get the corresponding file id
   int32_t tmp_file_id;
@@ -23,7 +23,7 @@ void DiscoPoP::instrument_function(llvm::Function *function, map<string, string>
     return;
   }
 
-  llvm::LoopInfo &loop_info = getAnalysis<llvm::LoopInfoWrapperPass>(*function).getLoopInfo();
+  //llvm::LoopInfo &loop_info = getAnalysis<llvm::LoopInfoWrapperPass>(*function).getLoopInfo();
 
   for (auto loop_it = loop_info.begin(); loop_it != loop_info.end(); ++loop_it) {
     instrument_loop(*function, tmp_file_id, *loop_it, loop_info, trueVarNamesFromMetadataMap);

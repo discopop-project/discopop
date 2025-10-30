@@ -44,8 +44,18 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/Transforms/Instrumentation.h"
+
+#if __has_include(<llvm/Transforms/IPO/PassManagerBuilder.h>)
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#endif
+
+#if __has_include(<llvm/Transforms/Instrumentation.h>)
+#include <llvm/Transforms/Instrumentation.h>
+#endif
+
+#if __has_include(<llvm/Passes/PassBuilder.h>)
+#include <llvm/Passes/PassBuilder.h>
+#endif
 
 #include "DPUtils.hpp"
 #include "hybrid_analysis/InstructionDG.hpp"
@@ -88,7 +98,7 @@ static cl::opt<bool> DumpToDot("dp-omissions-dump-dot", cl::init(false),
                                cl::desc("Generate a .dot representation of the CFG and DG"), cl::Hidden);
 */
 
-class DiscoPoP : public ModulePass {
+class DiscoPoP { // : public ModulePass, public PassInfoMixin<DiscoPoP> {
 private:
   // CUGeneration
 
@@ -104,8 +114,6 @@ private:
   // structures to get actual variable names from llvm replacements
   map<string, string> trueVarNamesFromMetadataMap;
 
-  RegionInfoPass *RIpass;
-  RegionInfo *RI;
   // CUGeneration end
 
   // DPInstrumentation
@@ -211,15 +219,15 @@ private:
   // DPInstrumentationOmission end
 
 public:
-  DiscoPoP() : ModulePass(ID), uniqueNum(1){};
+  DiscoPoP() : uniqueNum(1){}; // : ModulePass(ID), uniqueNum(1){};
 
   ~DiscoPoP();
 
   StringRef getPassName() const;
 
-  bool runOnModule(Module &M);
+  bool runOnModule(Module &M, ModuleAnalysisManager &MAM);
 
-  bool runOnFunction(Function &F);
+  bool runOnFunction(Function &F, ModuleAnalysisManager &MAM);
 
   void runOnBasicBlock(BasicBlock &BB);
 
@@ -250,7 +258,7 @@ public:
   void populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet);
 
   void createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
-                 map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI);
+                 map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI, ModuleAnalysisManager &MAM);
 
   void createTakenBranchInstrumentation(Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap);
 
@@ -285,9 +293,9 @@ public:
 
   // DPReduction
 
-  void instrument_module(llvm::Module *module, map<string, string> *trueVarNamesFromMetadataMap);
+  void instrument_module(llvm::Module *module, map<string, string> *trueVarNamesFromMetadataMap, llvm::ModuleAnalysisManager &mam);
   bool inlinedFunction(Function *F);
-  void instrument_function(llvm::Function *function, map<string, string> *trueVarNamesFromMetadataMap);
+  void instrument_function(llvm::Function *function, map<string, string> *trueVarNamesFromMetadataMap, llvm::LoopInfo &loop_info);
   void instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI,
                        map<string, string> *trueVarNamesFromMetadataMap);
   std::string dp_reduction_CFA(Function &F, llvm::Loop *loop, int file_id);

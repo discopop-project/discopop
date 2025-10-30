@@ -27,22 +27,20 @@ string DiscoPoP::dp_reduction_determineVariableType(Instruction *I) {
       Value *ptrOperand = gep->getPointerOperand();
       PointerType *PTy = cast<PointerType>(ptrOperand->getType());
       // we've found a struct/class
-      Type *structType = dp_reduction_pointsToStruct(PTy);
-      if (structType && gep->getNumOperands() > 2) {
+      // (2025-10-30) check of struct type omitted for LLVM 19 compatibility
+      //Type *structType = dp_reduction_pointsToStruct(PTy);
+      //if (structType && gep->getNumOperands() > 2) {
+      if (gep->getNumOperands() > 2) {
         s = "STRUCT,";
       }
       // we've found an array
-      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID) {
+      // check if previous instruction is a GEP aswell. If so, an Array has
+      // been found (e.g. double**)
+      Value *prevInst = cast<Instruction>(gep)->getOperand(0);
+      if (isa<GetElementPtrInst>(prevInst)) {
         s = "ARRAY,";
-      } else {
-        // check if previous instruction is a GEP aswell. If so, an Array has
-        // been found (e.g. double**)
-        Value *prevInst = cast<Instruction>(gep)->getOperand(0);
-        if (isa<GetElementPtrInst>(prevInst)) {
-          s = "ARRAY,";
-        } else if (prevInst->getType()->isPointerTy()) {
-          s = "ARRAY,";
-        }
+      } else if (prevInst->getType()->isPointerTy()) {
+        s = "ARRAY,";
       }
     }
   }

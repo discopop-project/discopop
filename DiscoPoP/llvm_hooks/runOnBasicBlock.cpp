@@ -53,13 +53,15 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
   for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
     if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
       assert(DI->getOperand(0));
+#if false  // NOTE (25-10-30) DISABLED FOR LLVM 19 COMPATIBILITY REASONS
       if (AllocaInst *alloc = dyn_cast<AllocaInst>(DI->getOperand(0))) {
         Type *type = alloc->getAllocatedType();
         Type *structType = type;
+
         unsigned depth = 0;
         if (type->getTypeID() == Type::PointerTyID) {
           while (structType->getTypeID() == Type::PointerTyID) {
-            structType = cast<PointerType>(structType)->getElementType();
+            structType = cast<PointerType>(structType)->getPointeeType();
             ++depth;
           }
         }
@@ -105,6 +107,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           }
         }
       }
+#endif
     }
     // alloca instruction
     else if (isa<AllocaInst>(BI)) {
@@ -160,7 +163,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
         {
           continue;
         }
-        if (fn.equals("pthread_exit")) {
+        if (fn.str() == "pthread_exit") {
           // pthread_exit does not return to its caller.
           // Therefore, we insert DpFuncExit before pthread_exit
           IRBuilder<> IRBRet(&*BI);
@@ -168,13 +171,13 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           IRBRet.CreateCall(DpFuncExit, arguments);
           continue;
         }
-        if (fn.equals("exit") || F->doesNotReturn()) // using exit() to terminate program
+        if ((fn.str() == "exit") || F->doesNotReturn()) // using exit() to terminate program
         {
           // only insert DpFinalize right before the main program exits
           insertDpFinalize(&*BI);
           continue;
         }
-        if (fn.equals("_Znam") || fn.equals("_Znwm") || fn.equals("malloc")) {
+        if ((fn.str() == "_Znam") || (fn.str() == "_Znwm") || (fn.str() == "malloc")) {
           if (isa<CallInst>(BI)) {
             instrumentNewOrMalloc(cast<CallInst>(BI));
           } else if (isa<InvokeInst>(BI)) {
@@ -182,7 +185,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           }
           continue;
         }
-        if (fn.equals("realloc")) {
+        if (fn.str() == "realloc") {
           if (isa<CallInst>(BI)) {
             instrumentRealloc(cast<CallInst>(BI));
           } else if (isa<InvokeInst>(BI)) {
@@ -190,7 +193,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           }
           continue;
         }
-        if (fn.equals("calloc")) {
+        if (fn.str() == "calloc") {
           if (isa<CallInst>(BI)) {
             instrumentCalloc(cast<CallInst>(BI));
           } else if (isa<InvokeInst>(BI)) {
@@ -198,7 +201,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           }
         }
 
-        if (fn.equals("posix_memalign")) {
+        if (fn.str() == "posix_memalign") {
           if (isa<CallInst>(BI)) {
             instrumentPosixMemalign(cast<CallInst>(BI));
           } else if (isa<InvokeInst>(BI)) {
@@ -206,7 +209,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           }
           continue;
         }
-        if (fn.equals("_ZdlPv") || fn.equals("free")) {
+        if ((fn.str() == "_ZdlPv") || (fn.str() == "free")) {
           instrumentDeleteOrFree(cast<CallBase>(BI));
           continue;
         }
@@ -218,12 +221,12 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
         IRBCall.CreateCall(DpCallOrInvoke, ConstantInt::get(Int32, lid));
         if (DP_DEBUG) {
           if (isa<CallInst>(BI)) {
-            if (!fn.equals(""))
+            if (!(fn.str() == ""))
               errs() << "calling " << fn << " on " << lid << "\n";
             else
               errs() << "calling unknown function on " << lid << "\n";
           } else {
-            if (!fn.equals(""))
+            if (!(fn.str() == ""))
               errs() << "invoking " << fn << " on " << lid << "\n";
             else
               errs() << "invoking unknown function on " << lid << "\n";
@@ -240,7 +243,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       assert(parent != NULL);
       StringRef fn = parent->getName();
 
-      if (fn.equals("main")) // returning from main
+      if (fn.str() == "main") // returning from main
       {
         insertDpFinalize(&*BI);
       } else {

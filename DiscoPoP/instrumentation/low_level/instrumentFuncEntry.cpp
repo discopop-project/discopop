@@ -18,16 +18,16 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
   int32_t isStart = 0;
 
   StringRef fn = F.getName();
-  if (fn.equals("main")) {
+  if (fn.str() == "main"){
     isStart = 1;
 
     // insert 'allocations' of global variables
     Instruction *insertBefore = &*entryBB.begin();
 
-    auto tmp_end = F.getParent()->getGlobalList().end();
+    auto tmp_end = F.getParent()->global_end();
     tmp_end--; // necessary, since the list of Globals is modified when e.g. new
                // strings are created.
-    for (auto Global_it = F.getParent()->getGlobalList().begin(); Global_it != tmp_end; Global_it++) {
+    for (auto Global_it = F.getParent()->global_begin(); Global_it != tmp_end; Global_it++) {
       // ignore globals which make use of "Appending Linkage", since they are
       // system internal and do not behave like regular values. An example for
       // such a value is @llvm.global_ctors
