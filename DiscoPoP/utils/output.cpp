@@ -124,7 +124,6 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
       for (auto ai : root->argumentsList) {
         *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
                 << " defLine=\"" << xmlEscape(ai.defLine) << "\""
-                << " sizeInByte=\"" << ai.sizeInBytes << "\""
                 << " accessMode=\"" << (ai.readAccess ? "R" : "") << (ai.writeAccess ? "W" : "") << "\">"
                 << xmlEscape(ai.name) << "</arg>" << endl;
       }
@@ -163,7 +162,6 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
       for (auto lvi : cu->localVariableNames) {
         *outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\""
                 << " defLine=\"" << xmlEscape(lvi.defLine) << "\""
-                << " sizeInByte=\"" << lvi.sizeInBytes << "\""
                 << " accessMode=\"" << (lvi.readAccess ? "R" : "") << (lvi.writeAccess ? "W" : "") << "\">"
                 << xmlEscape(lvi.name) << "</local>" << endl;
       }
@@ -173,7 +171,6 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
       for (auto gvi : cu->globalVariableNames) {
         *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\""
                 << " defLine=\"" << xmlEscape(gvi.defLine) << "\""
-                << " sizeInByte=\"" << gvi.sizeInBytes << "\""
                 << " accessMode=\"" << (gvi.readAccess ? "R" : "") << (gvi.writeAccess ? "W" : "") << "\">"
                 << xmlEscape(gvi.name) << "</global>" << endl;
       }

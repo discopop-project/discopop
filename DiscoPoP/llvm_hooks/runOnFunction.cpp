@@ -12,14 +12,16 @@
 
 #include "../DiscoPoP.hpp"
 
-bool DiscoPoP::runOnFunction(Function &F) {
+bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
   if (DP_DEBUG) {
     errs() << "pass DiscoPoP: run pass on function " << F.getName().str() << "\n";
   }
 
   // avoid instrumenting functions which are defined outside the scope of the
   // project
+
   std::string dp_project_dir(getenv("DP_PROJECT_ROOT_DIR"));
+
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   F.getAllMetadata(MDs);
   bool funcDefinedInProject = false;
@@ -80,7 +82,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
   if (!fileID)
     return false;
 
-  // CUGeneration
+  // CUGenerationgetAna
   {
     /********************* Initialize root values ***************************/
     Node *root = new Node;
@@ -102,22 +104,25 @@ bool DiscoPoP::runOnFunction(Function &F) {
       string type_str;
       raw_string_ostream rso(type_str);
       (it->getType())->print(rso);
-      Type *variableType = it->getType();
-      while (variableType->isPointerTy()) {
-        variableType = variableType->getPointerElementType();
-      }
-      Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true,
-                 to_string(variableType->getScalarSizeInBits() / 8));
+      Variable v(it->getName().str(), rso.str(), to_string(fileID) + ":" + lid, true, true);
       root->argumentsList.push_back(v);
     }
     /********************* End of initialize root values
      * ***************************/
-    LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+
+    llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*module_).getManager();
+    llvm::LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
+    //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+
 
     // get the top level region
-    RIpass = &getAnalysis<RegionInfoPass>(F);
-    RI = &(RIpass->getRegionInfo());
-    Region *TopRegion = RI->getTopLevelRegion();
+
+    //RIpass = &getAnalysis<RegionInfoPass>(F);
+    //RI = &(RIpass->getRegionInfo());
+    //RegionInfoPass *RIpass;
+    llvm::RegionInfo &RI = fam.getResult<llvm::RegionInfoAnalysis>(F);
+
+    Region *TopRegion = RI.getTopLevelRegion();
 
     getTrueVarNamesFromMetadata(TopRegion, root, &trueVarNamesFromMetadataMap);
 
@@ -125,7 +130,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
 
     populateGlobalVariablesSet(TopRegion, globalVariablesSet);
 
-    createCUs(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, root, LI);
+    createCUs(TopRegion, globalVariablesSet, CUVector, BBIDToCUIDsMap, root, LI, MAM);
 
     if (DP_BRANCH_TRACKING) {
       createTakenBranchInstrumentation(TopRegion, BBIDToCUIDsMap);
@@ -151,7 +156,9 @@ bool DiscoPoP::runOnFunction(Function &F) {
   {
     // Check loop parallelism?
     if (ClCheckLoopPar) {
-      LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
+      llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*module_).getManager();
+      llvm::LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
+      //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
       CFA(F, LI);
     }
 
@@ -276,18 +283,22 @@ bool DiscoPoP::runOnFunction(Function &F) {
     map<BasicBlock *, set<string>> conditionalBBDepMap;
     map<BasicBlock *, map<BasicBlock *, set<string>>> conditionalBBPairDepMap;
 
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+    //auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
+    llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*module_).getManager();
+    //llvm::LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
+    llvm::DominatorTree &DT= fam.getResult<llvm::DominatorTreeAnalysis>(F);
+
     InstructionCFG CFG(VNF, F);
     InstructionDG DG(VNF, &CFG, fid);
 
-    // collect init instruction to prevent false-positive WAW Dependences due to allocations in loops, 
+    // collect init instruction to prevent false-positive WAW Dependences due to allocations in loops,
     // which will be moved to the function entry
     map<string, set<string>> lineToInitializedVarsMap;
     for (auto edge : DG.getEdges()){
       if(DG.edgeIsINIT(edge)){
         string initLine = DG.getInitEdgeInstructionLine(edge);
         string varIdentifier = DG.getValueNameAndMemRegIDFromEdge(edge, staticValueNameToMemRegIDMap);
-        
+
         if(lineToInitializedVarsMap.find(initLine) == lineToInitializedVarsMap.end()){
           set<string> tmp;
           lineToInitializedVarsMap[initLine] = tmp;
@@ -322,7 +333,7 @@ bool DiscoPoP::runOnFunction(Function &F) {
           set<string> tmp;
           conditionalBBPairDepMap[Dst->getParent()][Src->getParent()] = tmp;
         }
-        // Prevent reporting of false-positive WAW Dependencies due to alloca movement from e.g. loops to function entry 
+        // Prevent reporting of false-positive WAW Dependencies due to alloca movement from e.g. loops to function entry
         bool insertDep = true;
         if(Dst == Src){ // check if instruciton are the same
           // check if initialization exists in the instruction line

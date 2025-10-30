@@ -129,7 +129,9 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
       }
 
       // we've found an array
-      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
+      // NOTE (25-10-30) simplified for LLVM 19 compatibility
+      // OLD: if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
+      if (isa<GetElementPtrInst>(*ptrOperand)) {
         return determineVariableName_static((Instruction *)ptrOperand, isGlobalVariable, false, prefix);
       }
       return determineVariableName_static((Instruction *)gep, isGlobalVariable, false, "GEPRESULT_" + prefix);
@@ -196,7 +198,9 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I, string pref
       }
 
       // we've found an array
-      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
+      // (2025-10-30) Simplified check for array type for llvm 19 compatibility
+      //if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
+      if (isa<GetElementPtrInst>(*ptrOperand)) {
         return determineVariableName_dynamic((Instruction *)ptrOperand, prefix);
       }
       return determineVariableName_dynamic((Instruction *)gep, "GEPRESULT_"+prefix);

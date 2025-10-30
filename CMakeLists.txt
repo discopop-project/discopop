@@ -31,14 +31,14 @@ elseif(NOT ${USE_LLVM_VERSION} STREQUAL "")
     # search for specified llvm version
     find_package(LLVM ${USE_LLVM_VERSION} REQUIRED)
 else()
-    # search for llvm 11 installations
-    find_package(LLVM 11.0 CONFIG QUIET)
+    # search for llvm 19 installations
+    find_package(LLVM 19.0 CONFIG QUIET)
     if(NOT LLVM_FOUND)
-        find_package(LLVM 11.1 CONFIG QUIET)
+        find_package(LLVM 19.1 CONFIG QUIET)
         if(NOT LLVM_FOUND)
             message(FATAL_ERROR "\
 No supported LLVM Version found. \
-Version 11.0 or 11.1 required! \
+Version 19.0 or 19.1 required! \
 If a supported LLVM Version is installed, consider specifying the -DLLVM_DIST_PATH flag. \
 For more information, please refer to https://discopop-project.github.io/discopop/setup/discopop. \
 ")

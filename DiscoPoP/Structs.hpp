@@ -22,14 +22,13 @@ typedef struct Variable_struct {
   string isArray;
   bool readAccess;
   bool writeAccess;
-  string sizeInBytes;
 
   Variable_struct(const Variable_struct &other)
       : name(other.name), type(other.type), defLine(other.defLine), readAccess(other.readAccess),
-        writeAccess(other.writeAccess), sizeInBytes(other.sizeInBytes) {}
+        writeAccess(other.writeAccess) {}
 
-  Variable_struct(string n, string t, string d, bool readAccess, bool writeAccess, string sizeInBytes)
-      : name(n), type(t), defLine(d), readAccess(readAccess), writeAccess(writeAccess), sizeInBytes(sizeInBytes) {}
+  Variable_struct(string n, string t, string d, bool readAccess, bool writeAccess)
+      : name(n), type(t), defLine(d), readAccess(readAccess), writeAccess(writeAccess) {}
 
   // We have a set of this struct. The set doesn't know how to order the
   // elements.

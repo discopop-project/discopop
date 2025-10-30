@@ -10,6 +10,9 @@
  *
  */
 
+
+/*
+
 extern RegisterPass<DiscoPoP> X("DiscoPoP", "DiscoPoP: finding potential parallelism.", false, false);
 
 void loadPass(const PassManagerBuilder &Builder, legacy::PassManagerBase &PM);
@@ -18,3 +21,5 @@ static RegisterStandardPasses DiscoPoPLoader_Ox(PassManagerBuilder::EP_Optimizer
 static RegisterStandardPasses DiscoPoPLoader_O0(PassManagerBuilder::EP_EnabledOnOptLevel0, loadPass);
 
 ModulePass *createDiscoPoPPass();
+
+*/

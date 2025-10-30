@@ -13,8 +13,12 @@
 #include "../DiscoPoP.hpp"
 
 // pass get invoked here
-bool DiscoPoP::runOnModule(Module &M) {
-  // cout << "MODULE " << M.getName().str() << "\n";
+bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
+  cout << "MODULE " << M.getName().str() << "\n";
+
+  doInitialization(M);
+  module_ = &M;
+  ctx_ = &module_->getContext();
 
   long counter = 0;
   // cout << "\tFUNCTION:\n";
@@ -27,12 +31,10 @@ bool DiscoPoP::runOnModule(Module &M) {
         }
         cout << to_be_printed + "\r";
     */
-    runOnFunction(F);
+    runOnFunction(F, MAM);
   }
 
   // DPReduction
-  module_ = &M;
-  ctx_ = &module_->getContext();
 
   reduction_file = new std::ofstream();
   std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
@@ -51,7 +53,7 @@ bool DiscoPoP::runOnModule(Module &M) {
   << "\n"; return false;
   }
   */
-  instrument_module(&M, &trueVarNamesFromMetadataMap);
+  instrument_module(&M, &trueVarNamesFromMetadataMap, MAM);
 
   dp_reduction_insert_functions();
 
@@ -65,5 +67,8 @@ bool DiscoPoP::runOnModule(Module &M) {
     loop_counter_file->close();
   }
   // End DPReduction
+
+  doFinalization(M);
+
   return true;
 }

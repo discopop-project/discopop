@@ -44,20 +44,23 @@ void DiscoPoP::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSe
         varName = determineVariableName_static(&*instruction, isGlobalVar, false, "");
         varType = determineVariableType(&*instruction);
 
+        // (2025-10-30) removed due to llvm 19 compatibility
+        /*
         int index = isa<StoreInst>(&*instruction) ? 1 : 0;
+
         Type *variableType = (&*instruction)->getOperand(index)->getType();
         while (variableType->isPointerTy()) {
           variableType = variableType->getPointerElementType();
         }
-
         string varSizeInBytes = to_string(variableType->getScalarSizeInBits() / 8);
+        */
 
         varDefLine = determineVariableDefLine(&*instruction);
 
         bool readAccess = isa<LoadInst>(instruction);
         bool writeAccess = isa<StoreInst>(instruction);
 
-        Variable v(varName, varType, varDefLine, readAccess, writeAccess, varSizeInBytes);
+        Variable v(varName, varType, varDefLine, readAccess, writeAccess);
 
         if (lid > (*bbCU)->endLine) {
           bbCU = next(bbCU, 1);

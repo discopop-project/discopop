@@ -27,7 +27,7 @@ void DiscoPoP::setupDataTypes() {
   Void = const_cast<Type *>(Type::getVoidTy(*ThisModuleContext));
   Int32 = const_cast<IntegerType *>(IntegerType::getInt32Ty(*ThisModuleContext));
   Int64 = const_cast<IntegerType *>(IntegerType::getInt64Ty(*ThisModuleContext));
-  CharPtr = const_cast<PointerType *>(Type::getInt8PtrTy(*ThisModuleContext));
+  CharPtr = PointerType::getUnqual(Type::getInt8Ty(*ThisModuleContext));
 }
 
 void DiscoPoP::setupCallbacks() {
@@ -98,6 +98,7 @@ void DiscoPoP::getAnalysisUsage(AnalysisUsage &AU) const {
 
 // DPReduction end
 
+#if false  // NOTE (25-10-30) DISABLED FOR LLVM 19 COMPATIBILITY REASONS
 void DiscoPoP::processStructTypes(string const &fullStructName, MDNode *structNode) {
   assert(structNode && "structNode cannot be NULL");
   DIType *strDes = cast<DIType>(structNode);
@@ -139,3 +140,4 @@ void DiscoPoP::processStructTypes(string const &fullStructName, MDNode *structNo
     }
   }
 }
+#endif

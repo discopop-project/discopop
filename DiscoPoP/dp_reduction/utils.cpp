@@ -88,12 +88,14 @@ int DiscoPoP::dp_reduction_get_op_order(char c) {
 
 Type *DiscoPoP::dp_reduction_pointsToStruct(PointerType *PTy) {
   assert(PTy);
+  // (2025-10-30) Omitted check for struct type for llvm 19 compatibility
   Type *structType = PTy;
-  if (PTy->getTypeID() == Type::PointerTyID) {
+/*  if (PTy->getTypeID() == Type::PointerTyID) {
     while (structType->getTypeID() == Type::PointerTyID) {
       structType = cast<PointerType>(structType)->getPointerElementType();
     }
   }
+*/
   return structType->getTypeID() == Type::StructTyID ? structType : NULL;
 }
 
