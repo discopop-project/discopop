@@ -100,24 +100,12 @@ def parse_cu(node: ObjectifiedElement) -> Node:
         n = CUNode(node_id)
         if hasattr(node.localVariables, "local"):
             n.local_vars = [
-                Variable(
-                    v.get("type"),
-                    v.text,
-                    v.get("defLine"),
-                    v.get("accessMode"),
-                    int(v.get("sizeInByte")) if v.get("sizeInByte") is not None else 0,
-                )
+                Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"), 0)
                 for v in node.localVariables.local
             ]
         if hasattr(node.globalVariables, "global"):
             n.global_vars = [
-                Variable(
-                    v.get("type"),
-                    v.text,
-                    v.get("defLine"),
-                    v.get("accessMode"),
-                    int(v.get("sizeInByte")) if v.get("sizeInByte") is not None else 0,
-                )
+                Variable(v.get("type"), v.text, v.get("defLine"), v.get("accessMode"), 0)
                 for v in getattr(node.globalVariables, "global")
             ]
         if hasattr(node, "BasicBlockID"):
@@ -145,13 +133,7 @@ def parse_cu(node: ObjectifiedElement) -> Node:
             dummy_or_func = FunctionNode(node_id)
         if hasattr(node, "funcArguments") and hasattr(node.funcArguments, "arg"):
             dummy_or_func.args = [
-                Variable(
-                    v.get("type"),
-                    v.text,
-                    v.get("defLine"),
-                    sizeInByte=int(v.get("sizeInByte")) if v.get("sizeInByte") is not None else 0,
-                )
-                for v in node.funcArguments.arg
+                Variable(v.get("type"), v.text, v.get("defLine"), "", 0) for v in node.funcArguments.arg
             ]
         n = dummy_or_func
 
