@@ -25,3 +25,10 @@ RUN /usr/local/ci/venv/bin/pip install -r requirements.txt
 
 RUN ln -s /usr/local/ci/discopop/build/scripts/CC_wrapper.sh /usr/local/bin/discopop_cc
 RUN ln -s /usr/local/ci/discopop/build/scripts/CXX_wrapper.sh /usr/local/bin/discopop_cxx
+
+# build test profilers
+WORKDIR /usr/local/ci/discopop/test/profiler
+RUN make all
+
+# set entry directory for the container
+WORKDIR /usr/local/ci/discopop
