@@ -1,4 +1,4 @@
-rm -rf /opt/DiscoPoP
+su ${SUDO_USER} -c "rm -rf /opt/DiscoPoP"
 
 su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_cc"
 su ${SUDO_USER} -c "rm -f ~/.local/bin/discopop_cxx"

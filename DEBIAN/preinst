@@ -1,0 +1,3 @@
+su ${SUDO_USER} -c "mkdir /opt/DiscoPoP"
+su ${SUDO_USER} -c "chmod 777 /opt/DiscoPoP"
+cd /opt/DiscoPoP
