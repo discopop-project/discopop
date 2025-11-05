@@ -102,4 +102,10 @@ def run(arguments: DependencyComparatorArguments) -> int:
 
 
 def dep_equal(a: DependenceItem, b: DependenceItem) -> bool:
-    return cast(bool, a.sink == b.sink and a.source == b.source and a.type == b.type and a.var_name == b.var_name)
+    result: bool = a.sink == b.sink
+    result = result and a.source == b.source
+    result = result and a.type == b.type
+    result = result and (
+        (a.var_name == b.var_name) or ((a.var_name + ".addr") == b.var_name) or (a.var_name == (b.var_name + ".addr"))
+    )
+    return result
