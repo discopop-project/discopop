@@ -66,4 +66,4 @@ ${VENV_PYTHON} -m pip install . -v
 
 
 # reset folder permissions
-su ${SUDO_USER} -c "chmod 755 /opt/DiscoPoP"
+su ${SUDO_USER} -c "chmod -R 755 /opt/DiscoPoP"
