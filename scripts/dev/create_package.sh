@@ -16,8 +16,16 @@ cd tmp_package_build_dir
 mkdir opt
 mkdir opt/DiscoPoP
 
+# specify files to be included in the package
 mv * opt/DiscoPoP
 mv opt/DiscoPoP/DEBIAN .
+
+# specify files to be removed from the package
+find opt/DiscoPoP -path */__pycache__* -delete
+find opt/DiscoPoP -path */.pytest_cache* -delete
+find opt/DiscoPoP -path */.mypy_cache* -delete
+find opt/DiscoPoP -path */.idea* -delete
+find opt/DiscoPoP -path */.vscode* -delete
 
 # add the Version tag to DEBIAN/control.raw to create DEBIAN/control
 echo "$(cat DEBIAN/control.raw)" > DEBIAN/control
