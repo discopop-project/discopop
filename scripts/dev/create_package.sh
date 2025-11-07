@@ -6,6 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+rm -rvf packages
+
 # create a temporary copy of the code to build the package
 rm -rf tmp_package_build_dir
 mkdir -p tmp_package_build_dir
