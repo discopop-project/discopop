@@ -48,7 +48,8 @@ cd ..
 mkdir -p packages
 # build package
 VERSION=$(cat discopop_library/global_data/version/VERSION)
-PACKAGE_NAME="discopop-${VERSION}-$(uname --hardware-platform)-$(uname --kernel-name).deb"
+#PACKAGE_NAME="discopop-${VERSION}-$(uname --hardware-platform)-$(uname --kernel-name).deb"
+PACKAGE_NAME="discopop-${VERSION}_all.deb"
 dpkg-deb --build tmp_package_build_dir packages/${PACKAGE_NAME}
 chmod 775 packages/${PACKAGE_NAME}
 
