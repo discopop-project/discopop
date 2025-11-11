@@ -13,7 +13,7 @@
 #include "../DiscoPoP.hpp"
 
 void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
-                         map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI) {
+                         map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI, ModuleAnalysisManager &MAM) {
   const DataLayout *DL = &ThisModule->getDataLayout(); // used to get data size of variables,
   // pointers, structs etc.
   Node *currentNode = root;
@@ -312,12 +312,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
               string type_str;
               raw_string_ostream rso(type_str);
               (it->getType())->print(rso);
-              Type *variableType = it->getType();
-              while (variableType->isPointerTy()) {
-                variableType = variableType->getPointerElementType();
-              }
-              Variable v(string(it->getName()), rso.str(), lid, true, true,
-                         to_string(variableType->getScalarSizeInBits() / 8));
+              Variable v(string(it->getName()), rso.str(), lid, true, true);
               n->argumentsList.push_back(v);
             }
           } else // get name of the indirect function which is called
@@ -328,8 +323,12 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
           }
 
           // Recursive functions
-          CallGraphWrapperPass *CGWP = &(getAnalysis<CallGraphWrapperPass>());
-          if (isRecursive(*f, CGWP->getCallGraph())) {
+          //CallGraphWrapperPass *CGWP = &(getAnalysis<CallGraphWrapperPass>());
+
+          llvm::CallGraph &CG = MAM.getResult<llvm::CallGraphAnalysis>(*module_);
+
+          //if (isRecursive(*f, CGWP->getCallGraph())) {
+          if (isRecursive(*f, CG)) {
             int lid = getLID(&*instruction, fileID);
             n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
           }

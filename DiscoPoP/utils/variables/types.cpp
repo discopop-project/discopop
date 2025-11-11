@@ -33,9 +33,10 @@ string DiscoPoP::determineVariableType(Instruction *I) {
       }
 
       // we've found an array
-      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID) {
-        s = "ARRAY,";
-      } else {
+      // Note (25-10-30) Simplified for LLVM19 compatibility
+      //if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID) {
+      //  s = "ARRAY,";
+      //} else {
         // check if previous instruction is a GEP as well. If so, an Array has
         // been found (e.g. double**)
         Value *prevInst = cast<Instruction>(gep)->getOperand(0);
@@ -44,7 +45,7 @@ string DiscoPoP::determineVariableType(Instruction *I) {
         } else if (prevInst->getType()->isPointerTy()) {
           s = "ARRAY,";
         }
-      }
+      //}
     }
   }
 

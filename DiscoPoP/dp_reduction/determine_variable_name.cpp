@@ -45,6 +45,7 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
       PointerType *PTy = cast<PointerType>(ptrOperand->getType());
 
       // we've found a struct/class
+      // (2025-10-30) Simplified unpacking of structs for llvm 19 compatibility inside dp_reduction_pointsToStruct
       Type *structType = dp_reduction_pointsToStruct(PTy);
       if (structType && gep->getNumOperands() > 2) {
         Value *constValue = gep->getOperand(2);
@@ -77,7 +78,9 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
       }
 
       // we've found an array
-      if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
+      // (25-10-30) Note: replaced for LLVM19 compatibility
+      // OLD: if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
+      if (Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
         return dp_reduction_determineVariableName((Instruction *)ptrOperand, trueVarNamesFromMetadataMap);
       }
       return dp_reduction_determineVariableName((Instruction *)gep, trueVarNamesFromMetadataMap);

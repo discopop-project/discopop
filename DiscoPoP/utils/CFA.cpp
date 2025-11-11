@@ -55,7 +55,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
       }
       for (SmallVectorImpl<BasicBlock *>::iterator EI = ExitBlocks.begin(), END = ExitBlocks.end(); EI != END; ++EI) {
         StringRef exitType = (*EI)->getName().split('.').first;
-        if (exitType.equals(loopType) && ((*EI)->getName().find("end") != string::npos) &&
+        if ((exitType.str() == loopType.str()) && ((*EI)->getName().find("end") != string::npos) &&
             (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), *EI) == RealExitBlocks.end())) {
           RealExitBlocks.push_back(*EI);
           if (DP_DEBUG) {
@@ -69,7 +69,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
           for (unsigned int i = 0; i < numSucc; ++i) {
             BasicBlock *succ = TI->getSuccessor(i);
             exitType = succ->getName().split('.').first;
-            if (exitType.equals(loopType) && (succ->getName().find("end") != string::npos) &&
+            if ((exitType.str() == loopType.str()) && (succ->getName().find("end") != string::npos) &&
                 (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), succ) == RealExitBlocks.end())) {
               RealExitBlocks.push_back(succ);
               if (DP_DEBUG) {

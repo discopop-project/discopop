@@ -15,7 +15,7 @@ WORKDIR /usr/local/ci
 ADD ../.. /usr/local/ci/discopop
 
 # build discopop
-RUN cmake -S discopop -B discopop/build -DCMAKE_BUILD_TYPE=Debug -DLLVM_DIST_PATH=/usr/local/ci/software/llvm-11.1.0 -DUSE_VENV=/usr/local/ci/venv -DDP_CALLTREE_PROFILING=1 -DDP_BUILD_UNITTESTS=1
+RUN cmake -S discopop -B discopop/build -DCMAKE_BUILD_TYPE=Debug -DUSE_VENV=/usr/local/ci/venv -DDP_CALLTREE_PROFILING=1 -DDP_BUILD_UNITTESTS=1
 RUN make --directory=discopop/build -j
 RUN make --directory=discopop/build install_python_modules
 
@@ -25,3 +25,10 @@ RUN /usr/local/ci/venv/bin/pip install -r requirements.txt
 
 RUN ln -s /usr/local/ci/discopop/build/scripts/CC_wrapper.sh /usr/local/bin/discopop_cc
 RUN ln -s /usr/local/ci/discopop/build/scripts/CXX_wrapper.sh /usr/local/bin/discopop_cxx
+
+# build test profilers
+WORKDIR /usr/local/ci/discopop/test/profiler
+RUN make all
+
+# set entry directory for the container
+WORKDIR /usr/local/ci/discopop

@@ -123,9 +123,12 @@ jobs:
     name: Execute profiler tests
     needs: [code_check_mypy_explorer, code_check_mypy_library, code_check_black_explorer, code_check_black_library]
     steps:
-      - name: Profiler gold standard tests
+      - name: Profiler gold standard tests (regular)
         run: |
-          docker run --rm discopop_ci_${{ github.sha }} python -m unittest -v -k *.profiler.*
+          docker run -e DP_TEST_PROFILER_CONFIG="build_regular" --rm discopop_ci_${{ github.sha }} python -m unittest -v -k *test.profiler.*
+      - name: Profiler gold standard tests (hybrid)
+        run: |
+          docker run -e DP_TEST_PROFILER_CONFIG="build_hybrid" --rm discopop_ci_${{ github.sha }} python -m unittest -v -k *test.profiler.*
 
   execute_end_to_end_tests:
     runs-on: self-hosted

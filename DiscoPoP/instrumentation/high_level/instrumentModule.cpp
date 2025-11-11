@@ -14,7 +14,7 @@
 
 // iterates over all functions in the module and calls 'instrument_function'
 // on suitable ones
-void DiscoPoP::instrument_module(llvm::Module *module, map<string, string> *trueVarNamesFromMetadataMap) {
+void DiscoPoP::instrument_module(llvm::Module *module, map<string, string> *trueVarNamesFromMetadataMap, llvm::ModuleAnalysisManager &mam) {
   for (llvm::Module::iterator func_it = module->begin(); func_it != module->end(); ++func_it) {
     llvm::Function *func = &(*func_it);
     std::string fn_name = func->getName().str();
@@ -22,6 +22,10 @@ void DiscoPoP::instrument_module(llvm::Module *module, map<string, string> *true
         inlinedFunction(func)) {
       continue;
     }
-    instrument_function(func, trueVarNamesFromMetadataMap);
+
+    llvm::FunctionAnalysisManager &fam = mam.getResult<FunctionAnalysisManagerModuleProxy>(*module).getManager();
+    llvm::LoopInfo &loop_info = fam.getResult<llvm::LoopAnalysis>(*func);
+
+    instrument_function(func, trueVarNamesFromMetadataMap, loop_info);
   }
 }

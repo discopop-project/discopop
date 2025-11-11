@@ -48,8 +48,19 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
-#include "llvm/Transforms/Instrumentation.h"
+
+// Guard legacy LLVM includes (may be missing in newer LLVM versions)
+#if __has_include(<llvm/Transforms/IPO/PassManagerBuilder.h>)
+#include <llvm/Transforms/IPO/PassManagerBuilder.h>
+#endif
+
+#if __has_include(<llvm/Transforms/Instrumentation.h>)
+#include <llvm/Transforms/Instrumentation.h>
+#endif
+
+#if __has_include(<llvm/Passes/PassBuilder.h>)
+#include <llvm/Passes/PassBuilder.h>
+#endif
 
 #include <assert.h>
 #include <fstream>

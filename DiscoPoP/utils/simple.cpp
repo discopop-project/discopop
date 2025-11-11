@@ -15,11 +15,14 @@
 Type *DiscoPoP::pointsToStruct(PointerType *PTy) {
   assert(PTy);
   Type *structType = PTy;
+  // (2025-10-30) Simplified for llvm 19 compatibility
+  /*
   if (PTy->getTypeID() == Type::PointerTyID) {
     while (structType->getTypeID() == Type::PointerTyID) {
       structType = cast<PointerType>(structType)->getElementType();
     }
   }
+  */
   return structType->getTypeID() == Type::StructTyID ? structType : NULL;
 }
 

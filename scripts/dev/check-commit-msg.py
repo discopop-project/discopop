@@ -21,7 +21,7 @@ with open(path_to_commit_msg, "r") as f:
     commit_msg = commit_msg.replace("\n", "")
 
 pattern = re.compile(
-    "(^(feat|fix|test|chore|refactor|doc|docs|perf|wip|ci|build|style)(\(.+\))?(\[.+\])?:.+$)|(Merge \S* ?branch '\S+' into \S+)"
+    "(^(feat|fix|test|chore|update|refactor|doc|docs|perf|wip|ci|build|style)(\(.+\))?(\[.+\])?:.+$)|(Merge \S* ?branch '\S+' into \S+)"
 )
 matches = bool(pattern.match(commit_msg))
 
@@ -33,5 +33,5 @@ else:
     print("\t", commit_msg)
     print("Please use the following format:")
     print("\t<type>(scope)[optional info]: commit message")
-    print("where `<type>` can be any of `feat,fix,test,chore,wip,refactor,doc,docs,perf,ci,build,style`.")
+    print("where `<type>` can be any of `feat,fix,test,chore,update,wip,refactor,doc,docs,perf,ci,build,style`.")
     sys.exit(1)
