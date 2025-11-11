@@ -46,6 +46,7 @@ cp ../build/rtlib/libDiscoPoP_RT.a opt/DiscoPoP/build/rtlib
 cp ../build/scripts/CC_wrapper.sh opt/DiscoPoP/build/scripts
 cp ../build/scripts/CXX_wrapper.sh opt/DiscoPoP/build/scripts
 cp ../build/scripts/CMAKE_wrapper.sh opt/DiscoPoP/build/scripts
+cp -r ../example opt/DiscoPoP
 
 # specify files to be removed from the package
 #find opt/DiscoPoP -path */__pycache__* -delete
@@ -59,7 +60,6 @@ echo "$(cat DEBIAN/control.raw)" > DEBIAN/control
 echo "Version: $(cat ../discopop_library/global_data/version/VERSION)" >> DEBIAN/control
 echo "Architecture: $(dpkg --print-architecture)" >> DEBIAN/control
 echo "" >> DEBIAN/control
-
 
 # create packages folder
 cd ..
