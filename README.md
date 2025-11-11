@@ -33,14 +33,8 @@ For a brief introduction to the command line tools, please refer to the [tools o
 
 For detailed information on the gathered and stored data as well as the tools themselves, please refer to [data](https://discopop-project.github.io/discopop/Data) and the pages of the individual tools in the [tools overview](https://discopop-project.github.io/discopop/Tools).
 
-## Docker image
-To simplify the setup, we provide and maintain a pre-built Docker image. The image can be obtained via the command below:
-```
-docker pull lukasrothenbergertuda/discopop:latest
-```
-
-## Debian Package
-To simplify the setup in cases where Docker is not wanted, we provide a Debian package via the `Release Assets`.
+## Installation
+To simplify the setup we provide a Debian package via the [Release Assets](https://github.com/discopop-project/discopop/releases/latest).
 
 ## TL;DR
 If you are interested in installing DiscoPoP as a `developer`, please refer to the [DiscoPoP setup wiki page](https://discopop-project.github.io/discopop/setup/discopop/).
@@ -49,16 +43,19 @@ The following example installs DiscoPoP for `users`, instruments and builds the 
 In case any issues arise during the process, please refer to the detailed [setup instructions](https://discopop-project.github.io/discopop/Setup), contact us via GitHub messages, or get in contact by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
 
 ### Prerequisites
-- Download `.deb` package from [latest Release](https://github.com/discopop-project/discopop/releases/latest)
+- Download and install `.deb` package from [latest Release](https://github.com/discopop-project/discopop/releases/latest).
 ### Example
 ```
-# install package
-sudo apt install ./<packagename>.deb
+# create a copy of the example code
+cp -r /opt/DiscoPoP/example discopop_example
+cd discopop_example
+
 # instrument and build the example code
-cd /opt/DiscoPoP/example
-mkdir build && cd build && cmake -DCMAKE_CXX_COMPILER=discopop_cxx .. && make
+discopop_cxx example.cpp -o cmake_example
+
 # execute instrumented code
 ./cmake_example
+
 # identify parallel patterns
 cd .discopop
 discopop_explorer
