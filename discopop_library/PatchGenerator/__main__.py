@@ -50,7 +50,6 @@ def parse_args() -> PatchGeneratorArguments:
     arguments.dp_build_path = run_config_provider(
         ConfigProviderArguments(
             return_dp_build_dir=True,
-            return_dp_source_dir=False,
             return_llvm_bin_dir=False,
             return_full_config=False,
             return_version_string=False,
@@ -61,7 +60,6 @@ def parse_args() -> PatchGeneratorArguments:
     llvm_bin_dir = run_config_provider(
         ConfigProviderArguments(
             return_dp_build_dir=False,
-            return_dp_source_dir=False,
             return_llvm_bin_dir=True,
             return_full_config=False,
             return_version_string=False,
@@ -70,16 +68,16 @@ def parse_args() -> PatchGeneratorArguments:
     # determine CC
     if os.path.exists(os.path.join(llvm_bin_dir, "clang")):
         arguments.cc = os.path.join(llvm_bin_dir, "clang")
-    elif os.path.exists(os.path.join(llvm_bin_dir, "clang-11")):
-        arguments.cc = os.path.join(llvm_bin_dir, "clang-11")
+    elif os.path.exists(os.path.join(llvm_bin_dir, "clang-19")):
+        arguments.cc = os.path.join(llvm_bin_dir, "clang-19")
     else:
         raise ValueError("Could not determine CC from LLVM_BIN_DIR: ", llvm_bin_dir)
 
     # determine CXX
     if os.path.exists(os.path.join(llvm_bin_dir, "clang++")):
         arguments.cxx = os.path.join(llvm_bin_dir, "clang++")
-    elif os.path.exists(os.path.join(llvm_bin_dir, "clang++-11")):
-        arguments.cxx = os.path.join(llvm_bin_dir, "clang++-11")
+    elif os.path.exists(os.path.join(llvm_bin_dir, "clang++-19")):
+        arguments.cxx = os.path.join(llvm_bin_dir, "clang++-19")
     else:
         raise ValueError("Could not determine CXX from LLVM_BIN_DIR: ", llvm_bin_dir)
 

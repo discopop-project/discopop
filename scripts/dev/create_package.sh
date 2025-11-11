@@ -6,7 +6,11 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-rm -rvf packages
+VERSION=$(cat discopop_library/global_data/version/VERSION)
+#PACKAGE_NAME="discopop-${VERSION}-$(uname --hardware-platform)-$(uname --kernel-name).deb"
+PACKAGE_NAME="discopop-${VERSION}-all-Linux.deb"
+
+rm -vf packages/${PACKAGE_NAME}
 
 # create a temporary copy of the code to build the package
 rm -rf tmp_package_build_dir
@@ -20,7 +24,7 @@ mkdir opt/DiscoPoP
 
 # specify files to be included in the package
 mv * opt/DiscoPoP
-mv opt/DiscoPoP/DEBIAN .
+mv opt/DiscoPoP/DEBIAN/all_targets DEBIAN
 
 # specify files to be removed from the package
 find opt/DiscoPoP -path */__pycache__* -delete
@@ -40,6 +44,10 @@ rm -rf opt/DiscoPoP/build
 rm -rf opt/DiscoPoP/packages
 # delete venv folder if exists
 rm -rf opt/DiscoPoP/venv
+# delete test folder if exists
+rm -rf opt/DiscoPoP/test
+# delete docs folder if exists
+rm -rf opt/DiscoPoP/docs
 # cleanup
 rm -rf opt/DiscoPoP/tmp_packages_build_dir
 
@@ -47,9 +55,7 @@ rm -rf opt/DiscoPoP/tmp_packages_build_dir
 cd ..
 mkdir -p packages
 # build package
-VERSION=$(cat discopop_library/global_data/version/VERSION)
-#PACKAGE_NAME="discopop-${VERSION}-$(uname --hardware-platform)-$(uname --kernel-name).deb"
-PACKAGE_NAME="discopop-${VERSION}_all.deb"
+
 dpkg-deb --build tmp_package_build_dir packages/${PACKAGE_NAME}
 chmod 775 packages/${PACKAGE_NAME}
 
