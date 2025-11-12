@@ -236,7 +236,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
               to_be_removed.insert(V);
             }
           }
-          for(Value* _: to_be_removed){
+          for(Value* w: to_be_removed){
             staticallyPredictableValues.erase(V);
           }
         }
