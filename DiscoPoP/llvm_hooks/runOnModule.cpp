@@ -26,7 +26,6 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   tmp0 += "/instructionID_to_lineID_mapping.txt";
   instructionID_to_lineID_file->open(tmp0.data(), std::ios_base::app);
 
-  long counter = 0;
   // cout << "\tFUNCTION:\n";
   for (Function &F : M) {
     /*

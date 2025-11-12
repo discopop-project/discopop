@@ -771,7 +771,7 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
       //calltree.addEdge(original_function_node_ptr, function_node_ptr, 0);
 
       // register loop activity for later use (loop active, if iteration count != 3 (i.e. don't care))
-      for(int idx = 0; idx < instance.size(); ++idx){
+      for(std::size_t idx = 0; idx < instance.size(); ++idx){
         int iteration_counter = instance[idx] - '0';
         if(iteration_counter != 3){
           // get loop id from position via lookup in sequentialized_contained_loops
@@ -866,7 +866,6 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
     for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
       BasicBlock &BB = *FI;
       for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
-        auto instruction = &*BI;
         Function *F = nullptr;
         if(isa<CallInst>(BI)){
           F = (cast<CallInst>(BI))->getCalledFunction();
@@ -947,7 +946,7 @@ string path_to_string(std::vector<StaticCalltreeNode*>& path){
 // retrieve the CallpathStateId of the given path.
 CALLPATH_STATE_ID get_id_from_callpath(std::vector<StaticCalltreeNode*>& target_path, std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths){
   CALLPATH_STATE_ID fallback = 0;
-  int target_path_length = target_path.size();
+  std::size_t target_path_length = target_path.size();
   // fallback: search through all states
   for(auto pair: paths){
     if(pair.second.size() != target_path_length){
@@ -955,7 +954,7 @@ CALLPATH_STATE_ID get_id_from_callpath(std::vector<StaticCalltreeNode*>& target_
     }
     // compare target path and the candidate element-wise
     bool valid = true;
-    for(int idx = 0; idx < target_path_length; ++idx){
+    for(std::size_t idx = 0; idx < target_path_length; ++idx){
       if (target_path[idx] != pair.second[idx]){
         valid = false;
         break;
@@ -971,8 +970,7 @@ CALLPATH_STATE_ID get_id_from_callpath(std::vector<StaticCalltreeNode*>& target_
 
 // retrieve the CallpathStateId of the given path.
 CALLPATH_STATE_ID get_id_from_callpath_fast_old(std::vector<StaticCalltreeNode*>& target_path, std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths, std::unordered_map<StaticCalltreeNode*, std::unordered_set<int32_t>>& contained_in_map){
-  CALLPATH_STATE_ID fallback = 0;
-  int target_path_length = target_path.size();
+  std::size_t target_path_length = target_path.size();
 
   // try quicker search based on contained_in_map
   std::unordered_set<int32_t> candidates;
@@ -1013,7 +1011,7 @@ CALLPATH_STATE_ID get_id_from_callpath_fast_old(std::vector<StaticCalltreeNode*>
         }
 
         bool valid = true;
-        for(int idx = 0; idx < target_path_length; ++idx){
+        for(std::size_t idx = 0; idx < target_path_length; ++idx){
           if (target_path[idx] != candidate_path[idx]){
             valid = false;
             break;
@@ -1049,9 +1047,6 @@ std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, DiscoPoP
 
 
 CALLPATH_STATE_ID get_id_from_callpath_fast(std::vector<StaticCalltreeNode*>& target_path, std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths, std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, DiscoPoP::container_hash<std::vector<StaticCalltreeNode*>>>& path_to_id_map){
-  CALLPATH_STATE_ID fallback = 0;
-  int target_path_length = target_path.size();
-
   auto pos = path_to_id_map.find(target_path);
   if(pos != path_to_id_map.end()){
     return pos->second;
