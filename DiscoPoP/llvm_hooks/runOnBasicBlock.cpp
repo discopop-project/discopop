@@ -141,7 +141,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
     }
     // call and invoke
     else if (isaCallOrInvoke(&*BI)) {
-      Function *F;
+      Function *F = nullptr;
       if (isa<CallInst>(BI))
         F = (cast<CallInst>(BI))->getCalledFunction();
       else if (isa<InvokeInst>(BI))

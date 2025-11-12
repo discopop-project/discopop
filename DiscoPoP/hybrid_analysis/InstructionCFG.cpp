@@ -59,9 +59,7 @@ void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBl
   // register visited node
   visited->insert(tmp_pair);
 
-  bool hasSuccessors = false;
   for (BasicBlock *S : successors(BB)) {
-    hasSuccessors = true;
     for (Instruction &I : *S) {
       if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
         Graph::addEdge(previousInstruction, &I);
@@ -80,7 +78,6 @@ void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBl
   }
 }
 
-set<Instruction *> InstructionCFG::findBoundaryInstructions(uint startLine, uint endLine) {}
 
 void InstructionCFG::highlightInstructionNode(Instruction *instr) { highlightedInstructionNodes.insert(instr); }
 

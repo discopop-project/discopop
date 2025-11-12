@@ -215,8 +215,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
         // Remove from staticallyPredictableValues those which are passed to
         // other functions (by ref/ptr)
         if (CallInst *call_inst = dyn_cast<CallInst>(&I)) {
-          if (Function *Fun = call_inst->getCalledFunction()) {
-
+          if (call_inst->getCalledFunction()) {
             for (uint i = 0; i < call_inst->getNumOperands() - 1; ++i) {
               V = call_inst->getArgOperand(i);
               std::set<Value *>::iterator it = staticallyPredictableValues.find(V);
@@ -237,7 +236,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
               to_be_removed.insert(V);
             }
           }
-          for(Value* w: to_be_removed){
+          for(Value* _: to_be_removed){
             staticallyPredictableValues.erase(V);
           }
         }
@@ -248,7 +247,6 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     // dependencies
     unordered_map<string, pair<string, string>> staticValueNameToMemRegIDMap; // <SSA variable name>: (original variable
                                                                               // name, statically assigned MemReg ID)
-    bool tmpIsGlobal;
     long next_id;
     string llvmIRVarName;
     string originalVarName;
@@ -373,7 +371,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
       if (isa<ReturnInst>(pair.first->getTerminator())) {
         insertionPoint = insertionPoint->getPrevNonDebugInstruction();
       }
-      auto CI = CallInst::Create(ReportBB, ConstantInt::get(Int32, bbDepCount), "", insertionPoint);
+      CallInst::Create(ReportBB, ConstantInt::get(Int32, bbDepCount), "", insertionPoint);
 
       // ---- Insert deps into string ----
       if (bbDepCount)
@@ -457,7 +455,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
           if (!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I))
             continue;
           errs() << "\t" << (isa<StoreInst>(I) ? "Write " : (isa<AllocaInst>(I) ? "Alloca " : "Read ")) << " | ";
-          if (dl = I.getDebugLoc()) {
+          if ((dl = I.getDebugLoc())) {
             errs() << dl.getLine() << "," << dl.getCol();
           } else {
             errs() << F.getSubprogram()->getLine() << ",*";

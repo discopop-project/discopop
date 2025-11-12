@@ -41,7 +41,6 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
       args.push_back(ConstantInt::get(Int32, lid));
       args.push_back(getOrInsertVarName_dynamic(Global_it->getName().str(), IRB));
 
-      bool isGlobal;
       // Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64,
       // "", toInstrument->getNextNonDebugInstruction());
       Value *startAddr = IRB.CreatePtrToInt(cast<Value>(&*Global_it), Int64, "");

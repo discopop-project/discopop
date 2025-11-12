@@ -80,7 +80,7 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
       // we've found an array
       // (25-10-30) Note: replaced for LLVM19 compatibility
       // OLD: if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
-      if (Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
+      if (isa<GetElementPtrInst>(*ptrOperand)) {
         return dp_reduction_determineVariableName((Instruction *)ptrOperand, trueVarNamesFromMetadataMap);
       }
       return dp_reduction_determineVariableName((Instruction *)gep, trueVarNamesFromMetadataMap);

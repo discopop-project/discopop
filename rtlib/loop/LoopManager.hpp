@@ -66,7 +66,7 @@ public:
   void iterate_loop(const std::int32_t function_level) {
     loopStack.increment_top_count();
 #if DP_CALLTREE_PROFILING
-    if (!DP_CALLTREE_PROFILING_METADATA_CUTOFF == 0) {
+    if (!(DP_CALLTREE_PROFILING_METADATA_CUTOFF == 0)) {
 #if DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY
       loopStack.non_const_top().set_dependency_metadata_calculation_enabled(
           (loopStack.top().get_dependency_metadata_calculation_enabled() &&
