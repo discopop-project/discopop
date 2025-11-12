@@ -46,6 +46,7 @@ cp ../build/rtlib/libDiscoPoP_RT.a opt/DiscoPoP/build/rtlib
 cp ../build/scripts/CC_wrapper.sh opt/DiscoPoP/build/scripts
 cp ../build/scripts/CXX_wrapper.sh opt/DiscoPoP/build/scripts
 cp ../build/scripts/CMAKE_wrapper.sh opt/DiscoPoP/build/scripts
+cp ../build/scripts/dp-fmap opt/DiscoPoP/build/scripts
 cp -r ../example opt/DiscoPoP
 
 # specify files to be removed from the package
