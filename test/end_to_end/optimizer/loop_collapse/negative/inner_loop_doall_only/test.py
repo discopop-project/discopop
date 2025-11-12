@@ -21,7 +21,6 @@ class TestMethods(unittest.TestCase):
         dp_build_dir = run_config_provider(
             ConfigProviderArguments(
                 return_dp_build_dir=True,
-                return_dp_source_dir=False,
                 return_llvm_bin_dir=False,
                 return_version_string=False,
             )
