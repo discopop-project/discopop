@@ -19,8 +19,6 @@ def parse_args() -> ConfigProviderArguments:
     mutually_exclusive = parser.add_mutually_exclusive_group()
     mutually_exclusive.add_argument("-b", "--dp-build-dir", action="store_true",
                         help="Return the path to the DiscoPoP build directory")
-    mutually_exclusive.add_argument("-s", "--dp-source-dir", action="store_true",
-                        help="Return the path to the DiscoPoP source directory")
     mutually_exclusive.add_argument("--llvm-bin-dir", action="store_true",
                         help="Return the path to the LLVM bin directory")
     mutually_exclusive.add_argument("-f", "--full", action="store_true",
@@ -34,7 +32,6 @@ def parse_args() -> ConfigProviderArguments:
 
     return ConfigProviderArguments(
         return_dp_build_dir=arguments.dp_build_dir,
-        return_dp_source_dir=arguments.dp_source_dir,
         return_llvm_bin_dir=arguments.llvm_bin_dir,
         return_full_config=arguments.full,
         return_version_string=arguments.version,
