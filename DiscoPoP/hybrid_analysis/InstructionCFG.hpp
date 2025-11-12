@@ -38,8 +38,6 @@ private:
 public:
   InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F);
 
-  set<Instruction *> findBoundaryInstructions(uint startLine, uint endLine);
-
   InstructionNode<Instruction *> *getEntry() { return entry; }
 
   InstructionNode<Instruction *> *getExit() { return exit; }

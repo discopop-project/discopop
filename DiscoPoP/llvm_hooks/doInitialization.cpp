@@ -27,17 +27,17 @@ bool DiscoPoP::doInitialization(Module &M) {
   setenv("DOT_DISCOPOP_PROFILER", (tmp_str + "/profiler").data(), 1);
 
   // prepare .discopop directory if not present
-  struct stat st1 = {0};
+  struct stat st1;
   if (stat(getenv("DOT_DISCOPOP"), &st1) == -1) {
     mkdir(getenv("DOT_DISCOPOP"), 0777);
   }
   // prepare profiler directory if not present
-  struct stat st2 = {0};
+  struct stat st2;
   if (stat(getenv("DOT_DISCOPOP_PROFILER"), &st2) == -1) {
     mkdir(getenv("DOT_DISCOPOP_PROFILER"), 0777);
   }
   // prepare statistics directory if not present
-  struct stat st3 = {0};
+  struct stat st3;
   std::string tmp_str_2(getenv("DOT_DISCOPOP_PROFILER"));
   tmp_str_2 += "/statistics";
   if (stat(tmp_str_2.data(), &st3) == -1) {
@@ -120,7 +120,6 @@ bool DiscoPoP::doInitialization(Module &M) {
     ReportBB = M.getOrInsertFunction("__dp_report_bb", Void, Int32);
     ReportBBPair = M.getOrInsertFunction("__dp_report_bb_pair", Void, Int32, Int32);
     VNF = new dputil::VariableNameFinder(M);
-    int nextFreeStaticMemoryRegionID = 0;
   }
   // DPInstrumentationOmission end
 

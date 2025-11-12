@@ -51,7 +51,6 @@ llvm::Instruction *DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val, 
     }
   }
 
-  unsigned opcode = cur_instr->getOpcode();
   char c = dp_reduction_get_char_for_opcode(cur_instr);
   if (c != ' ') {
     reduction_operations.push_back(c);

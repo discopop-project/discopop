@@ -100,7 +100,7 @@ bool DiscoPoP::check_value_usage(llvm::Value *parentValue, llvm::Value *searched
   }
 
   llvm::Instruction *parentInstruction = cast<Instruction>(parentValue);
-  for (int idx = 0; idx < parentInstruction->getNumOperands(); idx++) {
+  for (unsigned int idx = 0; idx < parentInstruction->getNumOperands(); idx++) {
     if (check_value_usage(parentInstruction->getOperand(idx), searchedValue)) {
       return true;
     }

@@ -24,10 +24,10 @@ string DiscoPoP::dp_reduction_determineVariableType(Instruction *I) {
   if (operand->hasName()) {
     if (isa<GetElementPtrInst>(*operand)) {
       GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
-      Value *ptrOperand = gep->getPointerOperand();
-      PointerType *PTy = cast<PointerType>(ptrOperand->getType());
       // we've found a struct/class
       // (2025-10-30) check of struct type omitted for LLVM 19 compatibility
+      //Value *ptrOperand = gep->getPointerOperand();
+      //PointerType *PTy = cast<PointerType>(ptrOperand->getType());
       //Type *structType = dp_reduction_pointsToStruct(PTy);
       //if (structType && gep->getNumOperands() > 2) {
       if (gep->getNumOperands() > 2) {
