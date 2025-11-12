@@ -17,7 +17,7 @@ def run(arguments: ConfigProviderArguments) -> str:
     """Returns the contents of the written build_config.txt"""
 
     if arguments.return_dp_build_dir:
-        return "/opt/DiscoPoP/build/"  # type: ignore
+        return str(Path(str(os.readlink(str(shutil.which("discopop_cc"))))).parent.parent.absolute())
     elif arguments.return_llvm_bin_dir:
         return str(Path(str(shutil.which("clang-19"))).parent.absolute())
     elif arguments.return_full_config:
