@@ -1,0 +1,35 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+DP_DIR=/opt/DiscoPoP
+DP_BUILD_DIR=/opt/DiscoPoP/build
+
+# build directory is created post install, thus needs to be removed manually
+echo "Deleting build directory: ${DP_BUILD_DIR}"
+rm -rf ${DP_BUILD_DIR}
+
+# venv directory is created post install, thus needs to be removed manually
+echo "Deleting venv directory: ${DP_DIR}/venv"
+rm -rf ${DP_DIR}/venv
+
+# cleanup .local/bin links
+rm -f /usr/bin/discopop_cc
+rm -f /usr/bin/discopop_cxx
+rm -f /usr/bin/discopop_cmake
+rm -f /usr/bin/discopop_explorer
+rm -f /usr/bin/discopop_project_manager
+rm -f /usr/bin/discopop_preprocessor
+rm -f /usr/bin/discopop_optimizer
+rm -f /usr/bin/discopop_patch_generator
+rm -f /usr/bin/discopop_patch_applicator
+rm -f /usr/bin/discopop_config_provider
+rm -f /usr/bin/discopop_auto_tuner
+rm -f /usr/bin/discopop_sanity_checker
+rm -f /usr/bin/discopop_configuration_manager
+rm -f /usr/bin/discopop_dependency_comparator
+rm -f /usr/bin/discopop_parallel_region_merger

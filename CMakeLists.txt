@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-cmake_minimum_required(VERSION 4.0.0)
+cmake_minimum_required(VERSION 3.28.0)
 project(DiscoPoP)
 
 set(CMAKE_CXX_STANDARD 17)

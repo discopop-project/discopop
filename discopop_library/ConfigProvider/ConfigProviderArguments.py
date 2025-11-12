@@ -13,7 +13,6 @@ class ConfigProviderArguments(object):
     """Container Class for the arguments passed to the discopop_config_provider"""
 
     return_dp_build_dir: bool
-    return_dp_source_dir: bool
     return_llvm_bin_dir: bool
     return_full_config: bool
     return_version_string: bool

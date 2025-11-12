@@ -28,10 +28,9 @@ fi
 
 # SETTINGS
 DP_BUILD="$(dirname "$(dirname ${SCRIPT_PATH})")"
-DP_BUILD_LLVM_BIN_DIR="$(cat ${DP_BUILD}/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*")"
 DP_SCRIPTS=${DP_BUILD}/scripts
-LLVM_CLANG=$DP_BUILD_LLVM_BIN_DIR/clang
-LLVM_CLANGPP=$DP_BUILD_LLVM_BIN_DIR/clang++
+LLVM_CLANG=$(which clang-19)
+LLVM_CLANGPP=$(which clang++-19)
 MPI_INCLUDES="$(mpic++ -showme:link)"
 
 

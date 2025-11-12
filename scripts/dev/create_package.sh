@@ -6,6 +6,12 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+VERSION=$(cat discopop_library/global_data/version/VERSION)
+#PACKAGE_NAME="discopop-${VERSION}-$(uname --hardware-platform)-$(uname --kernel-name).deb"
+PACKAGE_NAME="discopop-${VERSION}-all-Linux.deb"
+
+rm -vf packages/${PACKAGE_NAME}
+
 # create a temporary copy of the code to build the package
 rm -rf tmp_package_build_dir
 mkdir -p tmp_package_build_dir
@@ -16,8 +22,16 @@ cd tmp_package_build_dir
 mkdir opt
 mkdir opt/DiscoPoP
 
+# specify files to be included in the package
 mv * opt/DiscoPoP
-mv opt/DiscoPoP/DEBIAN .
+mv opt/DiscoPoP/DEBIAN/all_targets DEBIAN
+
+# specify files to be removed from the package
+find opt/DiscoPoP -path */__pycache__* -delete
+find opt/DiscoPoP -path */.pytest_cache* -delete
+find opt/DiscoPoP -path */.mypy_cache* -delete
+find opt/DiscoPoP -path */.idea* -delete
+find opt/DiscoPoP -path */.vscode* -delete
 
 # add the Version tag to DEBIAN/control.raw to create DEBIAN/control
 echo "$(cat DEBIAN/control.raw)" > DEBIAN/control
@@ -30,6 +44,10 @@ rm -rf opt/DiscoPoP/build
 rm -rf opt/DiscoPoP/packages
 # delete venv folder if exists
 rm -rf opt/DiscoPoP/venv
+# delete test folder if exists
+rm -rf opt/DiscoPoP/test
+# delete docs folder if exists
+rm -rf opt/DiscoPoP/docs
 # cleanup
 rm -rf opt/DiscoPoP/tmp_packages_build_dir
 
@@ -37,8 +55,7 @@ rm -rf opt/DiscoPoP/tmp_packages_build_dir
 cd ..
 mkdir -p packages
 # build package
-VERSION=$(cat discopop_library/global_data/version/VERSION)
-PACKAGE_NAME="discopop-${VERSION}.deb"
+
 dpkg-deb --build tmp_package_build_dir packages/${PACKAGE_NAME}
 chmod 775 packages/${PACKAGE_NAME}
 
