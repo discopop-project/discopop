@@ -28,7 +28,7 @@ void DiscoPoP::createTakenBranchInstrumentation(Region *TopRegion, map<string, v
           string source_BBID = bb->getName().str();
           for (auto source_cu : BBIDToCUIDsMap[source_BBID]) {
             // get BBIds of all targets
-            for (int i = 0; i < branchInst->getNumSuccessors(); i++) {
+            for (unsigned int i = 0; i < branchInst->getNumSuccessors(); i++) {
               string successor_BBID = branchInst->getSuccessor(i)->getName().str();
               // get CUs of all targets
               for (auto target_cu : BBIDToCUIDsMap[successor_BBID]) {

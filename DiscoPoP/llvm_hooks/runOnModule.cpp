@@ -20,7 +20,6 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   module_ = &M;
   ctx_ = &module_->getContext();
 
-  long counter = 0;
   // cout << "\tFUNCTION:\n";
   for (Function &F : M) {
     /*

@@ -73,7 +73,6 @@ string InstructionDG::getInstructionLine(Instruction *I) {
 }
 
 bool InstructionDG::edgeIsINIT(Edge<Instruction *> *e){
-  Instruction *I = e->getSrc()->getItem();
   Instruction *J = e->getDst()->getItem();
 
   if(isa<AllocaInst>(J)){
@@ -149,14 +148,13 @@ void InstructionDG::dumpToDot(const string targetPath) {
       label += ", ";
       label += to_string(dl.getCol());
     } else if (isa<StoreInst>(instr)) {
-      label += instr->getFunction()->getSubprogram()->getLine() + "\n";
+      label += std::to_string(instr->getFunction()->getSubprogram()->getLine()) + "\n";
     }
     label += "\"";
     if (highlightedInstructionNodes.find(instr) != highlightedInstructionNodes.end()) {
       label += ",fillcolor=cyan,style=filled";
     }
 
-  printInstructionNode:
     dotStream << "\t\"" << getInstructionNodeIndex(instNode) << "\" [" << label << "];\n";
   }
   dotStream << "\n\n";

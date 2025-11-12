@@ -257,7 +257,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
       LID lid = getLID(&*instruction, fileID);
       if (lid > 0) {
         if (isa<CallInst>(instruction) || isa<InvokeInst>(instruction)) {
-          Function *f;
+          Function *f = nullptr;
 
           if(isa<CallInst>(instruction)){
             CallInst *ci = cast<CallInst>(instruction);
@@ -270,7 +270,6 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
 
           string lid;
           if (f) {
-            Function::iterator FI = f->begin();
             bool externalFunction = true;
             for (Function::iterator FI = f->begin(), FE = f->end(); FI != FE; ++FI) {
               externalFunction = false;

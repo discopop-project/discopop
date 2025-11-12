@@ -19,7 +19,7 @@ void DiscoPoP::instrumentCalloc(CallBase *toInstrument) {
     return;
 
   // Determine correct placement for the call to __dp_new
-  Instruction *nextInst;
+  Instruction *nextInst = nullptr;
   if (isa<CallInst>(toInstrument)) {
     nextInst = toInstrument->getNextNonDebugInstruction();
   } else if (isa<InvokeInst>(toInstrument)) {
