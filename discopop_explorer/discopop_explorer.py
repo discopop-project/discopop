@@ -35,6 +35,8 @@ from discopop_library.LineMapping.initialize import initialize_line_mapping
 from discopop_library.LineMapping.delete import delete_line_mapping
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PathManagement.PathManagement import get_path, load_file_mapping
+from discopop_library.Viewer.ViewerArguments import ViewerArguments
+from discopop_library.Viewer.suggestions_view import print_suggestions_overview
 from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
     ExtrapInterpolatedMicrobench,
 )
@@ -288,13 +290,22 @@ def run(arguments: ExplorerArguments) -> None:
             with open(arguments.enable_json_file, "w+") as f:
                 json.dump(res, f, indent=2, cls=PatternBaseSerializer)
 
-        print("Time taken for pattern detection: {0}".format(end - start))
-
         # create applicable patch files from the found suggestions
         logger.info("executing discopop_patch_generator")
         out = subprocess.check_output(["discopop_patch_generator"], cwd=arguments.project_path).decode("utf-8")
         logger.debug("\t Out:\n" + out)
         logger.info("\tDone.")
+
+        # print suggestions overview for users
+        logger.info("printing suggestions overview")
+        print_suggestions_overview(
+            ViewerArguments(
+                log_level="WARNING", write_log=False, path=arguments.project_path, print_suggestions_overview=True
+            )
+        )
+        logger.info("\tDone.")
+
+        print("Time taken for pattern detection: {0}".format(end - start))
 
         # demonstration of Microbenchmark possibilities
         if arguments.microbench_file is not None:
