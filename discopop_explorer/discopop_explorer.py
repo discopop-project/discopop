@@ -305,6 +305,21 @@ def run(arguments: ExplorerArguments) -> None:
         )
         logger.info("\tDone.")
 
+        print(
+            """
+To browse the created parallelization suggestions:
+- Open the DiscoPoP VSCode extension tab in VSCode
+- Configurations -> '+' -> ViewOnly
+- Select a name for the Configuration
+- Provide the following path to the .discopop folder
+    ========\n"""
+            + "    "
+            + arguments.project_path
+            + """\n    ========
+- Load results (clock-like icon)
+"""
+        )
+
         print("Time taken for pattern detection: {0}".format(end - start))
 
         # demonstration of Microbenchmark possibilities
