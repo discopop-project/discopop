@@ -16,7 +16,7 @@ nav_order: 1
 # DiscoPoP Setup - Manual
 - Proposed method of installation for `developers` of DiscoPoP
 ## Prerequisites
-- LLVM/clang version 11
+- LLVM/clang version 19
 - Python version 3.6 or greater
 
 ## Setup
