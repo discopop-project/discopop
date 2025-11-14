@@ -72,7 +72,6 @@ setup(
             "discopop_configuration_manager=discopop_library.ConfigurationManager.__main__:main",
             "discopop_dependency_comparator=discopop_library.DependencyComparator.__main__:main",
             "discopop_parallel_region_merger=discopop_library.ParallelRegionMerger.__main__:main",
-            "discopop_viewer=discopop_library.Viewer.__main__:main",
         ]
     },
     zip_safe=True,
