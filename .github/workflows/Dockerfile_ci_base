@@ -19,7 +19,7 @@ RUN mkdir venv
 
 # Install the application dependencies
 ## LLVM 19
-RUN apt-get install -y llvm-19-dev clang-19
+RUN apt-get install -y llvm-19-dev clang-19 libomp-19-dev
 #WORKDIR /usr/local/ci/software
 #RUN wget https://github.com/llvm/llvm-project/releases/download/llvmorg-11.1.0/clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
 #RUN tar -xvf clang+llvm-11.1.0-x86_64-linux-gnu-ubuntu-20.10.tar.xz
