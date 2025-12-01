@@ -194,7 +194,7 @@ private:
 
   // Basic types
   Type *Void;
-  IntegerType *Int32, *Int64;
+  IntegerType *Int8, *Int32, *Int64;
   PointerType *CharPtr;
 
   // Control flow analysis

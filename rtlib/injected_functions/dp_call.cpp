@@ -31,7 +31,7 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_call(LID instructionID) {
+void __dp_call(LID instructionID, int8_t isLibraryFunction) {
   if (!dpInited || targetTerminated) {
     return;
   }
@@ -48,7 +48,11 @@ void __dp_call(LID instructionID) {
 
   function_manager->log_call(instructionID);
 
-  update_callstate_from_call(instructionID);
+  // exclude library functions from callstate updates due to the missing instrumented function exit
+  // and the resulting inconsistent callstate after returning
+  if(!isLibraryFunction){
+    update_callstate_from_call(instructionID);
+  }
 }
 }
 
