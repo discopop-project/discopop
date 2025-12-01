@@ -12,6 +12,7 @@
 
 
 #include "StaticCalltree.hpp"
+#include <algorithm>
 
 void StaticCalltreeNode::print(){
     std::cout << "Node: ID: " << node_id << " Type: " << type << " Name: " << functionName << " instructionID: " << instructionID << "\n";
@@ -130,8 +131,14 @@ std::string StaticCalltree::to_dot_string(){
         auto node_ptr = pair.second;
         for(auto succ_pair: node_ptr->successors){
             int32_t trigger_instructionID = succ_pair.first;
+            auto node_label = node_ptr->get_label();
+            // remove . from label for .dot compatibility
+            std::replace( node_label.begin(), node_label.end(), '.', '_');
+
             for (auto succ :succ_pair.second){
-                result += "  "  + node_ptr->get_label() + " -> " + succ->get_label();
+                auto succ_label = succ->get_label();
+                std::replace( succ_label.begin(), succ_label.end(), '.', '_');
+                result += "  "  + node_label + " -> " + succ_label;
                 if(trigger_instructionID != 0){
                     result += " [label = " + std::to_string(trigger_instructionID) + "]";
                 }
@@ -144,8 +151,15 @@ std::string StaticCalltree::to_dot_string(){
         auto node_ptr = pair.second;
         for(auto succ_pair: node_ptr->successors){
             int32_t trigger_instructionID = succ_pair.first;
+            auto node_label = node_ptr->get_label();
+
+            // remove . from label for .dot compatibility
+            std::replace( node_label.begin(), node_label.end(), '.', '_');
+
             for(auto succ: succ_pair.second){
-                result += "  " + node_ptr->get_label() + " -> " + succ->get_label();
+                auto succ_label = succ->get_label();
+                std::replace( succ_label.begin(), succ_label.end(), '.', '_');
+                result += "  " + node_label + " -> " + succ_label;
                 if(trigger_instructionID != 0){
                     result += " [label = " + std::to_string(trigger_instructionID) + "]";
                 }
