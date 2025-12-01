@@ -91,7 +91,7 @@ void update_callstate(int32_t instructionID){
                 }
 
                 //update current callstate
-                cout << "Updated callstate: " << current_callpath_state->get_id() << " -> " << transition_target->get_id() << "\n";
+                //cout << "Updated callstate: " << current_callpath_state->get_id() << " -> " << transition_target->get_id() << "\n";
                 current_callpath_state = transition_target;
 
         }
