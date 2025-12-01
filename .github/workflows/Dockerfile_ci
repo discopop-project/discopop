@@ -16,7 +16,7 @@ ADD ../.. /usr/local/ci/discopop
 
 # build discopop
 RUN cmake -S discopop -B discopop/build -DCMAKE_BUILD_TYPE=Debug -DUSE_VENV=/usr/local/ci/venv -DDP_CALLTREE_PROFILING=1 -DDP_BUILD_UNITTESTS=1
-RUN make --directory=discopop/build -j
+RUN make --directory=discopop/build -j4
 RUN make --directory=discopop/build install_python_modules
 
 WORKDIR /usr/local/ci/discopop
