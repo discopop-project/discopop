@@ -66,10 +66,10 @@ cd .discopop
 discopop_explorer
 ```
 
-Navigate to the `DiscoPoP` extension tab in Visual Studio Code to browse the created parallelization suggestions.<br>
-Analyzing new projects, like the example code will lead to the automatic creation of a project configuration in the `Configurations` view.<br>
-By default, the current timestamp will be used (in the following screenshots, `03_12_2025-16_27_15`).<br>
-Click the clock-like `Load Results` button next to the configuration name to load the identified parallelization suggestions.<br>
+Navigate to the `DiscoPoP` extension tab in Visual Studio Code to browse the created parallelization suggestions.
+Analyzing new projects, like the example code will lead to the automatic creation of a project configuration in the `Configurations` view.
+By default, the current timestamp will be used (in the following screenshots, `03_12_2025-16_27_15`).
+Click the clock-like `Load Results` button next to the configuration name to load the identified parallelization suggestions.
 Suggestions can be browsed, previewed, and applied via the `Suggestions` view, or the added annotations (`Potential Parallelism(count)`) in the analyzed source code.
 
 ![Screenshot of the DiscoPoP VSCode Extension](docs/assets/README/Screenshot_1.png)
