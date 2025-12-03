@@ -36,7 +36,7 @@ For detailed information on the gathered and stored data as well as the tools th
 ## Installation
 To simplify the setup we provide a Debian package via the [Release Assets](https://github.com/discopop-project/discopop/releases/latest).
 
-## TL;DR
+## TL;DR - Example
 If you are interested in installing DiscoPoP as a `developer`, please refer to the [DiscoPoP setup wiki page](https://discopop-project.github.io/discopop/setup/discopop/).
 
 The following example installs DiscoPoP for `users`, instruments and builds the provided example, analyzes the results, and prints the identified parallelization suggestions to the console.
