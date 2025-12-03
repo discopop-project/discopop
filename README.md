@@ -71,11 +71,14 @@ Analyzing new projects, like the example code will lead to the automatic creatio
 By default, the current timestamp will be used (in the following screenshots, `03_12_2025-16_27_15`).
 Click the clock-like `Load Results` button next to the configuration name to load the identified parallelization suggestions.
 Suggestions can be browsed, previewed, and applied via the `Suggestions` view, or the added annotations (`Potential Parallelism(count)`) in the analyzed source code.
-
+<br />
+<br />
 ![Screenshot of the DiscoPoP VSCode Extension](docs/assets/README/Screenshot_1.png)
-
+<br />
+<br />
 The following screenshot shows an exemplary suggestion preview.
-
+<br />
+<br />
 ![Screenshot of the suggestion preview in the DiscoPoP VSCode Extension](docs/assets/README/Screenshot_2.png)
 
 
