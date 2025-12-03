@@ -11,6 +11,7 @@
  */
 
 #include "../DiscoPoP.hpp"
+#include <filesystem>
 
 bool DiscoPoP::doInitialization(Module &M) {
   if (DP_DEBUG) {
@@ -30,6 +31,21 @@ bool DiscoPoP::doInitialization(Module &M) {
   struct stat st1;
   if (stat(getenv("DOT_DISCOPOP"), &st1) == -1) {
     mkdir(getenv("DOT_DISCOPOP"), 0777);
+
+    // check if HOME/.discopop directory in user folder exists
+    std::string user_home_dp_dir = (std::string(getenv("HOME")) + std::string("/.discopop"));
+    struct stat st_dp_user;
+    if (stat(user_home_dp_dir.c_str() , &st_dp_user) == -1) {
+      // create .discopop folder in user directory to save overview of project .discopop folders
+      mkdir(user_home_dp_dir.c_str(), 0777);
+    }
+    // create entry in HOME/.discopop/locations.txt
+    std::ofstream project_overview_file;
+    project_overview_file.open(user_home_dp_dir + std::string("/locations.txt"), std::ios_base::app);
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+    project_overview_file << std::put_time(&tm, "%d_%m_%Y-%H_%M_%S") << " " << std::filesystem::absolute(std::string(getenv("DOT_DISCOPOP"))).string() << "\n";
+    project_overview_file.close();
   }
   // prepare profiler directory if not present
   struct stat st2;

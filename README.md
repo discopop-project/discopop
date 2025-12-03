@@ -36,7 +36,7 @@ For detailed information on the gathered and stored data as well as the tools th
 ## Installation
 To simplify the setup we provide a Debian package via the [Release Assets](https://github.com/discopop-project/discopop/releases/latest).
 
-## TL;DR
+## TL;DR - Example
 If you are interested in installing DiscoPoP as a `developer`, please refer to the [DiscoPoP setup wiki page](https://discopop-project.github.io/discopop/setup/discopop/).
 
 The following example installs DiscoPoP for `users`, instruments and builds the provided example, analyzes the results, and prints the identified parallelization suggestions to the console.
@@ -44,48 +44,43 @@ In case any issues arise during the process, please refer to the detailed [setup
 
 ### Prerequisites
 - Download and install `.deb` package from [latest Release](https://github.com/discopop-project/discopop/releases/latest).
+- Install the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop)
 ### Example
+Instrument and execute the code.
 ```
 # create a copy of the example code
 cp -r /opt/DiscoPoP/example discopop_example
 cd discopop_example
 
 # instrument and build the example code
-discopop_cxx example.cpp -o cmake_example
+discopop_cxx example.cpp -o example
 
 # execute instrumented code
-./cmake_example
+./example
+```
 
+Execute the pattern analysis on the gathered data.
+```
 # identify parallel patterns
 cd .discopop
 discopop_explorer
-# print patches to the console
-for f in $(find patch_generator -maxdepth 1 -type d); do
-    echo "SUGGESTION: $f"
-    cat $f/1.patch
-    echo ""
-done
-# apply patch with id 1
-discopop_patch_applicator -a 1
-# reset code to the original state
-discopop_patch_applicator -C
 ```
 
+Navigate to the `DiscoPoP` extension tab in Visual Studio Code to browse the created parallelization suggestions.
+Analyzing new projects, like the example code will lead to the automatic creation of a project configuration in the `Configurations` view.
+By default, the current timestamp will be used as the configuration label (in the following screenshots, `03_12_2025-16_27_15`).
+Click the clock-like `Load Results` button next to the configuration name to load the identified parallelization suggestions.
+Suggestions can be browsed, previewed, and applied via the `Suggestions` view, or the added annotations (`Potential Parallelism(count)`) in the analyzed source code.
+<br />
+<br />
+![Screenshot of the DiscoPoP VSCode Extension](docs/assets/README/Screenshot_1.png)
+<br />
+<br />
+The following screenshot shows an exemplary suggestion preview.
+<br />
+<br />
+![Screenshot of the suggestion preview in the DiscoPoP VSCode Extension](docs/assets/README/Screenshot_2.png)
 
-## Exemplary output
-The following is an automatically generated, exemplary output patch file generated and applicable as shown in the provided [examples](https://discopop-project.github.io/discopop/Examples).
-```
- --- /home/lukas/temp/discopop_tmp/discopop/example/example.cpp	2024-01-09 10:11:50.369555235 +0100
-+++ /home/lukas/temp/discopop_tmp/discopop/example/example.cpp.discopop_patch_generator.temp	2024-01-09 11:14:20.904823624 +0100
-@@ -20,6 +20,7 @@
-         Arr[i] = i % 13;
-     }
-
-+    #pragma omp parallel for shared(Arr,N) reduction(+:sum)
-     for(int i = 0; i < N; i++){
-         sum += Arr[i];
-     }
-```
 
 ## License
 © DiscoPoP is available under the terms of the BSD-3-Clause license, as specified in the LICENSE file.
