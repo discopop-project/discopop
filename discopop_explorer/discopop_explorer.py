@@ -308,15 +308,19 @@ def run(arguments: ExplorerArguments) -> None:
         print(
             """
 To browse the created parallelization suggestions:
-- Open the DiscoPoP VSCode extension tab in VSCode
-- Configurations -> '+' -> ViewOnly
-- Select a name for the Configuration
-- Provide the following path to the .discopop folder
+1. Open the DiscoPoP VSCode extension tab in VSCode
+2. Open the project configuration
+  - A new Configuration should have been created automatically,
+    if the .discopop folder was newly created.
+  - You can add a configuration manually via the following steps:
+    - Configurations -> '+' -> ViewOnly
+    - Select a name for the Configuration
+    - Provide the following path to the .discopop folder
     ========\n"""
             + "    "
             + arguments.project_path
             + """\n    ========
-- Load results (clock-like icon)
+3. Load results (clock-like icon)
 """
         )
 
