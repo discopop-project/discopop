@@ -13,8 +13,10 @@
  #include "CallStateGraph.hpp"
  #include <string>
  #include <fstream>
+ #include <chrono>
 
 CallStateGraph::CallStateGraph(){
+    auto start_time = std::chrono::high_resolution_clock::now();
     // open input file
     std::string tmp_2(getenv("DOT_DISCOPOP_PROFILER"));
     tmp_2 += "/callpath_state_transitions.txt";
@@ -41,14 +43,20 @@ CallStateGraph::CallStateGraph(){
         // register transition in CallStateGraph
         register_transition(std::stoi(source_callstate_id_str), std::stoi(trigger_instruction_id_str), std::stoi(target_callstate_id_str));
     }
-
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    std::cout << "[CallStateGraph()]: " << ((double) duration.count()/1000.0) << "s" << std::endl;
 }
 
  CallStateGraph::~CallStateGraph(){
+    auto start_time = std::chrono::high_resolution_clock::now();
     // delete nodes
     for(auto pair: node_map){
         delete pair.second;
     }
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    std::cout << "[~CallStateGraph()]: " << ((double) duration.count()/1000.0) << "s" << std::endl;
 }
 
 CallState* CallStateGraph::get_or_register_node(std::int32_t call_state_id){
