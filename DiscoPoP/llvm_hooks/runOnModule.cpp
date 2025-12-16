@@ -68,8 +68,11 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   update_argument_instruction_ids(M);
   // prepare information for call state transitioning and instruction mapping during dynamic analysis.
   // -> build static calltree for state transition and instruction mapping preparation
+  cout << "Building static calltree..\n";
   StaticCalltree static_calltree = buildStaticCalltree(M);
+  cout << "Done building static calltree..\n";
   // -> assign unique stateIDs to all possible call states
+  cout << "Enumerating paths..\n";
   auto enumerated_paths_result = enumerate_paths(static_calltree);
   cout << "Done enumerating paths..\n";
   auto enumerated_paths = enumerated_paths_result.first;
