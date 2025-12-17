@@ -73,9 +73,9 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   cout << "Done building static calltree..\n";
   // -> assign unique stateIDs to all possible call states
   cout << "Enumerating paths..\n";
-  auto enumerate_paths_result_pair = enumerate_paths(static_calltree);
-  auto state_transitions = enumerate_paths_result_pair.first;
-  auto call_path_tree_ptr = enumerate_paths_result_pair.second;
+  std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> state_transitions;
+  std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> inverse_state_transitions;
+  auto call_path_tree_ptr = enumerate_paths(static_calltree, &state_transitions, &inverse_state_transitions);
   cout << "Done enumerating paths..\n";
 
   // DEBUG
