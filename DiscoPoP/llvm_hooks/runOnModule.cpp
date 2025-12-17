@@ -79,9 +79,9 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   cout << "Done enumerating paths..\n";
 
   // DEBUG
-  std::cout << "CallPathTree: " << std::endl;
-  std::cout << call_path_tree_ptr->to_dot_string();
-  std::cout << "! CallPathTree " << std::endl;
+  //std::cout << "CallPathTree: " << std::endl;
+  //std::cout << call_path_tree_ptr->to_dot_string();
+  //std::cout << "! CallPathTree " << std::endl;
   // !DEBUG
 
 
