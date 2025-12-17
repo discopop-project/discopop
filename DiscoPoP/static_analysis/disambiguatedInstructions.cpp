@@ -1084,7 +1084,6 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_I
   for(auto node_ptr: entry_nodes){
     // new stack
     new_stack.push(std::make_tuple(0, 0, call_path_tree->root->get_or_register_successor(call_path_tree, node_ptr)));
-    std::cout << "entry node" << std::endl;
   }
   // -> process stack
   while(!new_stack.empty()){
