@@ -1150,26 +1150,28 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_I
 }
 
 // save the id of the initial state id to file
-void DiscoPoP::save_initial_path(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
+//void DiscoPoP::save_initial_path(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
+void DiscoPoP::save_initial_path(StaticCallPathTree* call_path_tree_ptr){
+
   // prepare saving the initial callpathStateID
   std::ofstream *file;
   file = new std::ofstream();
   std::string tmp01(getenv("DOT_DISCOPOP_PROFILER"));
   tmp01 += "/initial_stateID.txt";
   file->open(tmp01.data(), std::ios_base::app);
-  // write file
-  for(auto pair: paths){
-    // select path for main file
-    if(pair.second.size() != 1){
-      continue;
-    }
 
-    auto label = pair.second[0]->get_label();
+  // find candidates for initial path
+  std::vector<StaticCallPathTreeNode*> candidates = call_path_tree_ptr->root->successors;
+
+  // write file
+  for(auto candidate: candidates){
+
+    auto label = candidate->base_node->get_label();
     if (label.find("main") != std::string::npos) // avoid instrumentation calls
     {
       cout << "CANDIDATE: " << label << "\n";
       // save path id to file
-      *file << to_string(pair.first) << "\n";
+      *file << to_string(candidate->path_id) << "\n";
       cout << "FOUND A MAIN PATH!\n";
       break;
     }
@@ -1181,28 +1183,26 @@ void DiscoPoP::save_initial_path(std::unordered_map<int32_t, std::vector<StaticC
   }
 }
 
-void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
+//void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
+void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
   // prepare saving the mapping from callpath to callpathStateID for reference
   stateID_to_callpath_file = new std::ofstream();
   std::string tmp01(getenv("DOT_DISCOPOP_PROFILER"));
   tmp01 += "/stateID_to_callpath_mapping.txt";
   stateID_to_callpath_file->open(tmp01.data(), std::ios_base::app);
   // write file
-  for(auto pair: paths){
-    // filter out paths ending with call instructions
-    if(pair.second.back()->get_type() == 1){
-      // type is call instruction
-      continue;
-    }
+  for(auto path: call_path_tree_ptr->all_nodes){
 
-    // construct path string
-    std::string path_str = "";
-    for(auto node_ptr: pair.second){
-      path_str += node_ptr->get_label() + "-->";
+    // filter out paths ending with call instructions
+    if(path->base_node != nullptr){
+      if(path->base_node->get_type() == 1){
+        // type is call instruction
+        continue;
+      }
     }
 
     // save path string to file
-    *stateID_to_callpath_file << to_string(pair.first) << " " << path_str << "\n";
+    *stateID_to_callpath_file << to_string(path->path_id) << " " << path->get_path_string() << "\n";
   }
   // close file handle
   if (stateID_to_callpath_file != NULL && stateID_to_callpath_file->is_open()) {
@@ -1308,10 +1308,14 @@ void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t
 */
     StaticCallPathTreeNode* last_call_prefix = nullptr;
     auto current = path;
-    while(current != nullptr){
+    while(current->base_node != nullptr){
       if(current->base_node->get_type() == true){
         // base node is a call instruction
         last_call_prefix = current;
+        break;
+      }
+      else{
+        current = current->prefix;
       }
     }
     if(last_call_prefix == nullptr){

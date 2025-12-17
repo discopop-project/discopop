@@ -99,8 +99,8 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   add_function_exit_edges_to_transitions(state_transitions, call_path_tree_ptr); // enumerated_paths, path_to_id_map);
   cout << "Done AFEETT..\n";
   // save the generated paths and transitions to disk
-  save_initial_path(enumerated_paths);
-  save_enumerated_paths(enumerated_paths);
+  save_initial_path(call_path_tree_ptr);
+  save_enumerated_paths(call_path_tree_ptr);
   save_path_state_transitions(state_transitions);
 //  TODO: Calculate state transitions based on prefix relations and lookup in calltree
   // -> prepare state transition lookup tables

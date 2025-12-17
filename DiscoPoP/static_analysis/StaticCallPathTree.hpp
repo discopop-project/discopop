@@ -33,7 +33,8 @@ class StaticCallPathTreeNode {
 
         StaticCallPathTreeNode* get_or_register_successor(StaticCallPathTree* tree, StaticCalltreeNode* successor_node);
 
-        std::string to_dot_string();
+        [[nodiscard]] std::string to_dot_string();
+        [[nodiscard]] std::string get_path_string();
 };
 
 

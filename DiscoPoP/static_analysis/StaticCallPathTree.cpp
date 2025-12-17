@@ -14,11 +14,9 @@
 
 StaticCallPathTreeNode* StaticCallPathTreeNode::get_or_register_successor(StaticCallPathTree* tree, StaticCalltreeNode* successor_node){
     std::lock_guard<std::mutex> lg(mtx);
-    std::cout << "Registering SCPTN succ: " << std::to_string(path_id) << std::endl;
     // search for successor
     for(auto succ: successors){
         if(succ->base_node == successor_node){
-            std::cout << "\tfound successor" << std::endl;
             return succ;
         }
     }
@@ -43,6 +41,19 @@ std::string StaticCallPathTreeNode::to_dot_string(){
         result += succ->to_dot_string();
     }
     return result;
+}
+
+std::string StaticCallPathTreeNode::get_path_string(){
+    if(this->base_node == nullptr){
+        return "";
+    }
+    std::string path_str = this->base_node->get_label();
+    auto current = this->prefix;
+    while(current->base_node != nullptr){
+        path_str = current->base_node->get_label() + "-->" + path_str;
+        current = current->prefix;
+    }
+    return path_str;
 }
 
 StaticCallPathTree::StaticCallPathTree(){
