@@ -1103,18 +1103,18 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
       auto current_state_id = new_current_path->path_id;
       // register transition
       {
+        std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
         std::lock_guard<std::mutex> lg(*state_transitions_mtx);
         if(state_transitions->find(predecessor_state_id) == state_transitions->end()){
-          std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
           (*state_transitions)[predecessor_state_id] = tmp;
         }
         (*state_transitions)[predecessor_state_id][transition_instruction] = current_state_id;
       }
       // register inverse transition
       {
+        std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
         std::lock_guard<std::mutex> lg(*inverse_state_transitions_mtx);
         if(inverse_state_transitions->find(current_state_id) == inverse_state_transitions->end()){
-          std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
           (*inverse_state_transitions)[current_state_id] = tmp;
         }
         (*inverse_state_transitions)[current_state_id][transition_instruction] = predecessor_state_id;
@@ -1122,6 +1122,7 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
       // enqueue successors
       std::vector<std::tuple<std::uint32_t, int32_t, StaticCallPathTreeNode*>> new_elements_buffer;
+      std::vector<std::tuple<uint32_t, int32_t, uint32_t>> new_transitions_buffer;
       for(auto succ_pair: new_current_path->base_node->successors){
         int32_t trigger_instructionID = succ_pair.first;  // currently unused!
         for(auto succ: succ_pair.second){
@@ -1144,14 +1145,7 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
           if(cycle_prefix_path){
             // register transition
-            std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
-            {
-              std::lock_guard<std::mutex> lg(*state_transitions_mtx);
-              if(state_transitions->find(current_state_id) == state_transitions->end()){
-                (*state_transitions)[current_state_id] = tmp;
-              }
-              (*state_transitions)[current_state_id][trigger_instructionID] = cycle_prefix_path->path_id;
-            }
+            new_transitions_buffer.push_back(std::make_tuple(current_state_id, trigger_instructionID, cycle_prefix_path->path_id));
             continue;
           }
           // new stack element
@@ -1165,6 +1159,17 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
         std::lock_guard<std::mutex> lg(*new_stack_mtx);
         for(auto elem : new_elements_buffer){
           new_stack->push(elem);
+        }
+      }
+      // push new transitions
+      {
+        std::lock_guard<std::mutex> lg(*state_transitions_mtx);
+        for(auto elem: new_transitions_buffer){
+          if(state_transitions->find(std::get<0>(elem)) == state_transitions->end()){
+              std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
+              (*state_transitions)[std::get<0>(elem)] = tmp;
+          }
+          (*state_transitions)[std::get<0>(elem)][std::get<1>(elem)] = std::get<2>(elem);
         }
       }
     }
