@@ -60,6 +60,7 @@
 #include "DPUtils.hpp"
 #include "hybrid_analysis/InstructionDG.hpp"
 #include "static_analysis/StaticCalltree.hpp"
+#include "static_analysis/StaticCallPathTree.hpp"
 
 #include "Structs.hpp"
 
@@ -272,7 +273,8 @@ public:
   void createTakenBranchInstrumentation(Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap);
 
   StaticCalltree buildStaticCalltree(Module &M);
-  std::pair<std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>> enumerate_paths(StaticCalltree& calltree);
+  //std::pair<std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>> enumerate_paths(StaticCalltree& calltree);
+  std::pair<std::pair<std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>>, StaticCallPathTree*> enumerate_paths(StaticCalltree& calltree);
   void save_initial_path(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
   void save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
   void save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> transitions);

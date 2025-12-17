@@ -73,8 +73,18 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   cout << "Done building static calltree..\n";
   // -> assign unique stateIDs to all possible call states
   cout << "Enumerating paths..\n";
-  auto enumerated_paths_result = enumerate_paths(static_calltree);
+  auto enumerate_paths_result_pair = enumerate_paths(static_calltree);
+  auto enumerated_paths_result = enumerate_paths_result_pair.first;
+  auto call_path_tree_ptr = enumerate_paths_result_pair.second;
   cout << "Done enumerating paths..\n";
+
+  // DEBUG
+  std::cout << "CallPathTree: " << std::endl;
+  std::cout << call_path_tree_ptr->to_dot_string();
+  std::cout << "! CallPathTree " << std::endl;
+  // !DEBUG
+
+
   auto enumerated_paths = enumerated_paths_result.first;
   auto state_transitions = enumerated_paths_result.second;
   // prepare quicker search
@@ -117,6 +127,8 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   // End DPReduction
 
   doFinalization(M);
+
+  delete call_path_tree_ptr;
 
   return true;
 }

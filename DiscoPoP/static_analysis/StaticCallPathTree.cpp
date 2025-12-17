@@ -12,16 +12,21 @@
 
 #include "StaticCallPathTree.hpp"
 
-StaticCallPathTreeNode* StaticCallPathTreeNode::get_or_register_successor(StaticCalltreeNode* successor_node){
+StaticCallPathTreeNode* StaticCallPathTreeNode::get_or_register_successor(StaticCallPathTree* tree, StaticCalltreeNode* successor_node){
     std::lock_guard<std::mutex> lg(mtx);
+    std::cout << "Registering SCPTN succ: " << std::to_string(path_id) << std::endl;
     // search for successor
     for(auto succ: successors){
         if(succ->base_node == successor_node){
+            std::cout << "\tfound successor" << std::endl;
             return succ;
         }
     }
     // register successor
-    StaticCallPathTreeNode* new_node = new StaticCallPathTreeNode(get_next_free_path_id(), successor_node, this);
+
+    StaticCallPathTreeNode* new_node = new StaticCallPathTreeNode(tree->get_next_free_path_id(), successor_node, this);
+    std::cout << "\tregistered successor " << std::to_string(new_node->path_id) << std::endl;
+    successors.push_back(new_node);
     return new_node;
 }
 
@@ -55,4 +60,15 @@ std::string StaticCallPathTree::to_dot_string(){
     result += root->to_dot_string();
     result += "}\n";
     return result;
+}
+
+
+ std::uint32_t StaticCallPathTree::get_next_free_path_id(){
+    std::uint32_t buffer;
+    {
+        std::lock_guard<std::mutex> lg(next_free_path_id_mtx);
+        buffer = next_free_path_id;
+        ++next_free_path_id;
+    }
+    return buffer;
 }
