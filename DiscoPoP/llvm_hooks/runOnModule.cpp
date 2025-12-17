@@ -99,12 +99,20 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   add_function_exit_edges_to_transitions(state_transitions, call_path_tree_ptr); // enumerated_paths, path_to_id_map);
   cout << "Done AFEETT..\n";
   // save the generated paths and transitions to disk
+  cout << "saving initial path..\n";
   save_initial_path(call_path_tree_ptr);
+  cout << "Done saving initial path..\n";
+  cout << "saving enumerated paths..\n";
   save_enumerated_paths(call_path_tree_ptr);
+  cout << "Done saving enumerated path..\n";
+  cout << "saving path state transitions..\n";
   save_path_state_transitions(state_transitions);
+  cout << "Done saving path state transitions..\n";
 //  TODO: Calculate state transitions based on prefix relations and lookup in calltree
   // -> prepare state transition lookup tables
+  cout << "saving path state transitions to dot..\n";
   save_static_calltree_to_dot(static_calltree);
+  cout << "Done saving path state transitions to dot..\n";
 
   // save current instructionID for continuation in the next Module
   InstructionIDCounter = unique_llvm_ir_instruction_id;
