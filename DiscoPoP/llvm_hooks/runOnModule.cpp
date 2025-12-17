@@ -11,6 +11,7 @@
  */
 
 #include "../DiscoPoP.hpp"
+#include <thread>
 
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
@@ -75,6 +76,9 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   cout << "Enumerating paths..\n";
   std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> state_transitions;
   std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> inverse_state_transitions;
+  auto state_transitions_ptr = &state_transitions;
+  auto inverset_state_transitions_ptr = &inverse_state_transitions;
+  auto static_calltree_ptr = &static_calltree;
   auto call_path_tree_ptr = enumerate_paths(static_calltree, &state_transitions, &inverse_state_transitions);
   cout << "Done enumerating paths..\n";
 
@@ -98,21 +102,19 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   cout << "START AFEETT..\n";
   add_function_exit_edges_to_transitions(state_transitions, call_path_tree_ptr); // enumerated_paths, path_to_id_map);
   cout << "Done AFEETT..\n";
+
+
   // save the generated paths and transitions to disk
-  cout << "saving initial path..\n";
-  save_initial_path(call_path_tree_ptr);
-  cout << "Done saving initial path..\n";
-  cout << "saving enumerated paths..\n";
-  save_enumerated_paths(call_path_tree_ptr);
-  cout << "Done saving enumerated path..\n";
-  cout << "saving path state transitions..\n";
-  save_path_state_transitions(state_transitions);
-  cout << "Done saving path state transitions..\n";
-//  TODO: Calculate state transitions based on prefix relations and lookup in calltree
-  // -> prepare state transition lookup tables
-  cout << "saving path state transitions to dot..\n";
-  save_static_calltree_to_dot(static_calltree);
-  cout << "Done saving path state transitions to dot..\n";
+  std::thread t1([this, call_path_tree_ptr](){this->save_initial_path(call_path_tree_ptr);});
+  std::thread t2([this, call_path_tree_ptr](){this->save_enumerated_paths(call_path_tree_ptr);});
+  std::thread t3([this, state_transitions_ptr](){this->save_path_state_transitions(state_transitions_ptr);});
+  std::thread t4([this, static_calltree_ptr](){this->save_static_calltree_to_dot(static_calltree_ptr);});
+
+  t1.join();
+  t2.join();
+  t3.join();
+  t4.join();
+
 
   // save current instructionID for continuation in the next Module
   InstructionIDCounter = unique_llvm_ir_instruction_id;

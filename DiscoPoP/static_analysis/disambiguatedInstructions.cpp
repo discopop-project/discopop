@@ -1233,6 +1233,7 @@ StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::uno
 // save the id of the initial state id to file
 //void DiscoPoP::save_initial_path(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
 void DiscoPoP::save_initial_path(StaticCallPathTree* call_path_tree_ptr){
+  cout << "saving initial path..\n";
 
   // prepare saving the initial callpathStateID
   std::ofstream *file;
@@ -1262,12 +1263,14 @@ void DiscoPoP::save_initial_path(StaticCallPathTree* call_path_tree_ptr){
     file->flush();
     file->close();
   }
+  cout << "Done saving initial path..\n";
 }
 
 //void DiscoPoP::save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths){
 void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
+  cout << "saving enumerated paths..\n";
   // prepare saving the mapping from callpath to callpathStateID for reference
-  stateID_to_callpath_file = new std::ofstream();
+  auto stateID_to_callpath_file = new std::ofstream();
   std::string tmp01(getenv("DOT_DISCOPOP_PROFILER"));
   tmp01 += "/stateID_to_callpath_mapping.txt";
   stateID_to_callpath_file->open(tmp01.data(), std::ios_base::app);
@@ -1290,9 +1293,11 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
     stateID_to_callpath_file->flush();
     stateID_to_callpath_file->close();
   }
+  cout << "Done saving enumerated path..\n";
 }
 
-void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> transitions){
+void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *transitions){
+  cout << "saving path state transitions..\n";
   // prepare saving the callpathState transitions
   callpath_state_transitions_file = new std::ofstream();
   std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
@@ -1300,8 +1305,8 @@ void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unor
   callpath_state_transitions_file->open(tmp.data(), std::ios_base::app);
   // write file
   *callpath_state_transitions_file << "# Format: <source_state_id> <instruction_id> <target_state_id>\n";
-  for(auto pair_1: transitions){
-    for(auto pair_2: pair_1.second){
+  for(auto &pair_1: *transitions){
+    for(auto &pair_2: pair_1.second){
       *callpath_state_transitions_file << "" << pair_1.first << " " << pair_2.first << " " << pair_2.second << "\n";
     }
   }
@@ -1318,8 +1323,8 @@ void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unor
   callpath_state_transitions_file->open(tmp02.data(), std::ios_base::app);
   // write file
   *callpath_state_transitions_file << "diGraph G {\n";
-  for(auto pair_1: transitions){
-    for(auto pair_2: pair_1.second){
+  for(auto &pair_1: *transitions){
+    for(auto &pair_2: pair_1.second){
       *callpath_state_transitions_file <<"  " << pair_1.first << " -> " << pair_2.second << " [label = " << pair_2.first << "];\n";
     }
   }
@@ -1329,9 +1334,11 @@ void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unor
     callpath_state_transitions_file->flush();
     callpath_state_transitions_file->close();
   }
+  cout << "Done saving path state transitions..\n";
 }
 
-void DiscoPoP::save_static_calltree_to_dot(StaticCalltree& calltree){
+void DiscoPoP::save_static_calltree_to_dot(StaticCalltree *calltree){
+  cout << "saving path state transitions to dot..\n";
   std::ofstream *calltree_dot_file;
   // prepare saving the calltree as DOT file
   calltree_dot_file = new std::ofstream();
@@ -1339,13 +1346,14 @@ void DiscoPoP::save_static_calltree_to_dot(StaticCalltree& calltree){
   tmp += "/static_calltree.dot";
   calltree_dot_file->open(tmp.data(), std::ios_base::app);
   // write file
-  *calltree_dot_file << calltree.to_dot_string() << "\n";
+  *calltree_dot_file << calltree->to_dot_string() << "\n";
 
   // close file handle
   if (calltree_dot_file != NULL && calltree_dot_file->is_open()) {
     calltree_dot_file->flush();
     calltree_dot_file->close();
   }
+  cout << "Done saving path state transitions to dot..\n";
 }
 
 // prepare a lookup table for every state in the static call tree to allow transitions between states in constant time

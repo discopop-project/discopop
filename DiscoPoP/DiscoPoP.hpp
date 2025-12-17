@@ -280,8 +280,8 @@ public:
   void save_initial_path(StaticCallPathTree* call_path_tree_ptr);
   //void save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
   void save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr);
-  void save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> transitions);
-  void save_static_calltree_to_dot(StaticCalltree& calltree);
+  void save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *transitions);
+  void save_static_calltree_to_dot(StaticCalltree* calltree);
   void assign_instruction_ids_to_dp_reduction_functions(Module &M);
   void update_argument_instruction_ids(Module &M);
 // hasher used for std::vector<StaticCalltreeNode*>
