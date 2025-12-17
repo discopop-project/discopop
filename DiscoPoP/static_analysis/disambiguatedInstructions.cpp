@@ -13,6 +13,7 @@
 #include "../DiscoPoP.hpp"
 #include <unordered_set>
 #include "StaticCallPathTree.hpp"
+#include <thread>
 
 
 
@@ -1064,12 +1065,12 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
     if(initial_iteration){
       // thread is already active
+      initial_iteration = false;
     }
     else{
       // mark this thread as active
       active_threads++;
     }
-
 
     while(!new_stack->empty()){
       // try fetch tuple
@@ -1118,6 +1119,7 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
       }
 
       // enqueue successors
+      std::vector<std::tuple<std::uint32_t, int32_t, StaticCallPathTreeNode*>> new_elements_buffer;
       for(auto succ_pair: new_current_path->base_node->successors){
         int32_t trigger_instructionID = succ_pair.first;  // currently unused!
         for(auto succ: succ_pair.second){
@@ -1152,10 +1154,15 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
           }
           // new stack element
           auto new_path = new_current_path->get_or_register_successor(call_path_tree, succ);
-          {
-            std::lock_guard<std::mutex> lg(*new_stack_mtx);
-            new_stack->push(std::make_tuple(current_state_id, trigger_instructionID, new_path));
-          }
+          new_elements_buffer.push_back(std::make_tuple(current_state_id, trigger_instructionID, new_path));
+
+        }
+      }
+      // push prepared elements to stack
+      {
+        std::lock_guard<std::mutex> lg(*new_stack_mtx);
+        for(auto elem : new_elements_buffer){
+          new_stack->push(elem);
         }
       }
     }
@@ -1200,7 +1207,10 @@ std::pair<std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_I
   std::mutex state_transitions_mtx;
   std::mutex inverse_state_transitions_mtx;
 
+  //process_enumerate_paths_stack(&active_threads, call_path_tree, &new_stack, &new_stack_mtx, &state_transitions, &state_transitions_mtx, &inverse_state_transitions, &inverse_state_transitions_mtx);
+
   process_enumerate_paths_stack(&active_threads, call_path_tree, &new_stack, &new_stack_mtx, &state_transitions, &state_transitions_mtx, &inverse_state_transitions, &inverse_state_transitions_mtx);
+
 
   return std::make_pair(state_transitions, call_path_tree);
 }
