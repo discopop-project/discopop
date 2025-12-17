@@ -1089,35 +1089,37 @@ std::pair<std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCall
   // !DEBUG
 */
   // traverse the static calltree to build the paths
-  std::stack<std::tuple<CALLPATH_STATE_ID, INSTRUCTION_ID, std::vector<StaticCalltreeNode*>>> stack;
+//  std::stack<std::tuple<CALLPATH_STATE_ID, INSTRUCTION_ID, std::vector<StaticCalltreeNode*>>> stack;
   std::stack<std::tuple<CALLPATH_STATE_ID, INSTRUCTION_ID, StaticCallPathTreeNode*>> new_stack;
   // -> initialize
   for(auto node_ptr: entry_nodes){
-    std::vector<StaticCalltreeNode*> v;
-    v.push_back(node_ptr);
-    stack.push(std::make_tuple(0, 0, v));
+    // old stack
+//    std::vector<StaticCalltreeNode*> v;
+//    v.push_back(node_ptr);
+//    stack.push(std::make_tuple(0, 0, v));
+    // new stack
     new_stack.push(std::make_tuple(0, 0, call_path_tree->root->get_or_register_successor(call_path_tree, node_ptr)));
     std::cout << "entry node" << std::endl;
   }
   // -> process stack
-  while(!stack.empty()){
+  while(!new_stack.empty()){
     // old stack
-    auto current_tuple = stack.top();
-    auto predecessor_state_id = std::get<0>(current_tuple);
-    auto transition_instruction = std::get<1>(current_tuple);
-    auto current_path = std::get<2>(current_tuple);
-    stack.pop();
+//    auto current_tuple = stack.top();
+//    auto predecessor_state_id = std::get<0>(current_tuple);
+//    auto transition_instruction = std::get<1>(current_tuple);
+//    auto current_path = std::get<2>(current_tuple);
+//    stack.pop();
     // new stack
     auto new_current_tuple = new_stack.top();
-    auto new_predecessor_state_id = std::get<0>(new_current_tuple);
-    auto new_transition_instruction = std::get<1>(new_current_tuple);
+    auto predecessor_state_id = std::get<0>(new_current_tuple);
+    auto transition_instruction = std::get<1>(new_current_tuple);
     auto new_current_path = std::get<2>(new_current_tuple);
     new_stack.pop();
 
     // register current path
     //auto current_state_id = unique_callpath_state_id++;
     auto current_state_id = new_current_path->path_id;
-    paths[current_state_id] = current_path;
+//    paths[current_state_id] = current_path;
     // register transition
     if(state_transitions.find(predecessor_state_id) == state_transitions.end()){
       std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
@@ -1188,9 +1190,9 @@ std::pair<std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCall
         }
 */
         // old stack
-        auto tmp_path = current_path;
-        tmp_path.push_back(succ);
-        stack.push(std::make_tuple(current_state_id, trigger_instructionID, tmp_path));
+//        auto tmp_path = current_path;
+//        tmp_path.push_back(succ);
+//        stack.push(std::make_tuple(current_state_id, trigger_instructionID, tmp_path));
         // new stack
         auto new_path = new_current_path->get_or_register_successor(call_path_tree, succ);
         new_stack.push(std::make_tuple(current_state_id, trigger_instructionID, new_path));
