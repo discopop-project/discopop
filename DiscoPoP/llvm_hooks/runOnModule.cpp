@@ -74,7 +74,7 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   // -> assign unique stateIDs to all possible call states
   cout << "Enumerating paths..\n";
   auto enumerate_paths_result_pair = enumerate_paths(static_calltree);
-  auto enumerated_paths_result = enumerate_paths_result_pair.first;
+  auto state_transitions = enumerate_paths_result_pair.first;
   auto call_path_tree_ptr = enumerate_paths_result_pair.second;
   cout << "Done enumerating paths..\n";
 
@@ -85,8 +85,6 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   // !DEBUG
 
 
-  auto enumerated_paths = enumerated_paths_result.first;
-  auto state_transitions = enumerated_paths_result.second;
   // prepare quicker search
   cout << "START prepare PITIM..\n";
   //auto contained_in_map = get_contained_in_map(enumerated_paths);

@@ -274,7 +274,7 @@ public:
 
   StaticCalltree buildStaticCalltree(Module &M);
   //std::pair<std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>> enumerate_paths(StaticCalltree& calltree);
-  std::pair<std::pair<std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>>, StaticCallPathTree*> enumerate_paths(StaticCalltree& calltree);
+  std::pair<std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>, StaticCallPathTree*> enumerate_paths(StaticCalltree& calltree);
   void save_initial_path(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
   void save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
   void save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> transitions);

@@ -1059,10 +1059,9 @@ CALLPATH_STATE_ID get_id_from_callpath_fast(std::vector<StaticCalltreeNode*>& ta
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
-std::pair<std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>, std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>>>, StaticCallPathTree*> DiscoPoP::enumerate_paths(StaticCalltree& calltree){
+std::pair<std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>>, StaticCallPathTree*> DiscoPoP::enumerate_paths(StaticCalltree& calltree){
   StaticCallPathTree* call_path_tree = new StaticCallPathTree();
 
-  std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>> paths;
   std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> state_transitions;
   std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> inverse_state_transitions;
   // path id 0 is reserved for debugging and initialization purposes
@@ -1147,7 +1146,7 @@ std::pair<std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCall
       }
     }
   }
-  return std::make_pair(std::make_pair(paths, state_transitions), call_path_tree);
+  return std::make_pair(state_transitions, call_path_tree);
 }
 
 // save the id of the initial state id to file
