@@ -1079,36 +1079,16 @@ std::pair<std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCall
       }
     }
   }
-/*
-  // DEBUG
-  // show entry nodes
-  std::cout << "Entry nodes:\n";
-  for(auto node_ptr: entry_nodes){
-    std::cout << "--> " << node_ptr->get_label() << "\n";
-  }
-  // !DEBUG
-*/
   // traverse the static calltree to build the paths
-//  std::stack<std::tuple<CALLPATH_STATE_ID, INSTRUCTION_ID, std::vector<StaticCalltreeNode*>>> stack;
   std::stack<std::tuple<CALLPATH_STATE_ID, INSTRUCTION_ID, StaticCallPathTreeNode*>> new_stack;
   // -> initialize
   for(auto node_ptr: entry_nodes){
-    // old stack
-//    std::vector<StaticCalltreeNode*> v;
-//    v.push_back(node_ptr);
-//    stack.push(std::make_tuple(0, 0, v));
     // new stack
     new_stack.push(std::make_tuple(0, 0, call_path_tree->root->get_or_register_successor(call_path_tree, node_ptr)));
     std::cout << "entry node" << std::endl;
   }
   // -> process stack
   while(!new_stack.empty()){
-    // old stack
-//    auto current_tuple = stack.top();
-//    auto predecessor_state_id = std::get<0>(current_tuple);
-//    auto transition_instruction = std::get<1>(current_tuple);
-//    auto current_path = std::get<2>(current_tuple);
-//    stack.pop();
     // new stack
     auto new_current_tuple = new_stack.top();
     auto predecessor_state_id = std::get<0>(new_current_tuple);
@@ -1117,9 +1097,7 @@ std::pair<std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCall
     new_stack.pop();
 
     // register current path
-    //auto current_state_id = unique_callpath_state_id++;
     auto current_state_id = new_current_path->path_id;
-//    paths[current_state_id] = current_path;
     // register transition
     if(state_transitions.find(predecessor_state_id) == state_transitions.end()){
       std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
@@ -1134,7 +1112,6 @@ std::pair<std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCall
     inverse_state_transitions[current_state_id][transition_instruction] = predecessor_state_id;
 
     // enqueue successors
-    //for(auto succ_pair: current_path.back()->successors){
     for(auto succ_pair: new_current_path->base_node->successors){
       int32_t trigger_instructionID = succ_pair.first;  // currently unused!
       for(auto succ: succ_pair.second){
@@ -1164,42 +1141,12 @@ std::pair<std::pair<std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCall
           state_transitions[current_state_id][trigger_instructionID] = cycle_prefix_path->path_id;
           continue;
         }
-
-/*        //
-        auto cycle_pos = std::find(current_path.begin(), current_path.end(), succ);
-        if(cycle_pos != current_path.end()){
-          // already contained in current_path
-          // cout << "Found loop. Ignoring successor transition: " << current_state_id << " " << current_path.back()->get_label() << " -> " << succ->get_label() << " Inst: " << trigger_instructionID << "\n";
-
-          // get prefix path of the cycle
-          std::vector<StaticCalltreeNode*> cycle_prefix_path;
-          for(auto elem_it = current_path.begin(); elem_it <= cycle_pos; ++elem_it){
-            cycle_prefix_path.push_back(*elem_it);
-          }
-
-          // get id of the target path
-          auto cycle_prefix_path_stateID = get_id_from_callpath(cycle_prefix_path, paths);
-          // register transition
-          if(state_transitions.find(current_state_id) == state_transitions.end()){
-            std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
-            state_transitions[current_state_id] = tmp;
-          }
-          state_transitions[current_state_id][trigger_instructionID] = cycle_prefix_path_stateID;
-
-          continue;
-        }
-*/
-        // old stack
-//        auto tmp_path = current_path;
-//        tmp_path.push_back(succ);
-//        stack.push(std::make_tuple(current_state_id, trigger_instructionID, tmp_path));
         // new stack
         auto new_path = new_current_path->get_or_register_successor(call_path_tree, succ);
         new_stack.push(std::make_tuple(current_state_id, trigger_instructionID, new_path));
       }
     }
   }
-  cout << "DONE enum\n";
   return std::make_pair(std::make_pair(paths, state_transitions), call_path_tree);
 }
 
