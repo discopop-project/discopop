@@ -12,6 +12,7 @@
 #pragma once
 #include "StaticCalltree.hpp"
 #include <mutex>
+#include <atomic>
 
 
 class StaticCallPathTree; // forward declaration
@@ -44,8 +45,8 @@ class StaticCallPathTreeNode {
 class StaticCallPathTree {
     private:
 
-        std::uint32_t next_free_path_id = 0;
-        std::mutex next_free_path_id_mtx;
+        std::atomic<std::uint32_t> next_free_path_id{0};
+        //std::mutex next_free_path_id_mtx;
 
 
 

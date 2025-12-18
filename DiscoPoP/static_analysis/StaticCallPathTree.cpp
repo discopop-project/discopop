@@ -84,13 +84,15 @@ std::string StaticCallPathTree::to_dot_string(){
 
 
  std::uint32_t StaticCallPathTree::get_next_free_path_id(){
-    std::uint32_t buffer;
+    /*std::uint32_t buffer;
     {
-        std::lock_guard<std::mutex> lg(next_free_path_id_mtx);
+        //std::lock_guard<std::mutex> lg(next_free_path_id_mtx);
         buffer = next_free_path_id;
         ++next_free_path_id;
     }
     return buffer;
+    */
+    return next_free_path_id.fetch_add(1);
 }
 
 void StaticCallPathTree::register_node_in_all_nodes(StaticCallPathTreeNode* node_ptr){
