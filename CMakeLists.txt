@@ -74,6 +74,8 @@ include(AddLLVM)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 
+set(CMAKE_CXX_FLAGS "-fopenmp -pthread")
+
 add_subdirectory(DiscoPoP)
 
 add_subdirectory(rtlib)

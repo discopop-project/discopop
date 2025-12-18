@@ -103,14 +103,16 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
 
   // add fucntion exit edges to state_transitions
   cout << "START AFEETT..\n";
-  add_function_exit_edges_to_transitions(state_transitions, call_path_tree_ptr); // enumerated_paths, path_to_id_map);
+  //add_function_exit_edges_to_transitions(state_transitions, call_path_tree_ptr); // enumerated_paths, path_to_id_map);
+  add_function_exit_edges_to_transitions(call_path_tree_ptr); // enumerated_paths, path_to_id_map);
   cout << "Done AFEETT..\n";
 
 
   // save the generated paths and transitions to disk
   std::thread t1([this, call_path_tree_ptr](){this->save_initial_path(call_path_tree_ptr);});
   std::thread t2([this, call_path_tree_ptr](){this->save_enumerated_paths(call_path_tree_ptr);});
-  std::thread t3([this, state_transitions_ptr](){this->save_path_state_transitions(state_transitions_ptr);});
+  //std::thread t3([this, state_transitions_ptr](){this->save_path_state_transitions(state_transitions_ptr);});
+  std::thread t3([this, call_path_tree_ptr](){this->save_path_state_transitions(call_path_tree_ptr);});
   std::thread t4([this, static_calltree_ptr](){this->save_static_calltree_to_dot(static_calltree_ptr);});
 
   t1.join();

@@ -14,6 +14,7 @@
 #include <unordered_set>
 #include "StaticCallPathTree.hpp"
 #include <thread>
+#include <omp.h>
 
 
 
@@ -1058,7 +1059,8 @@ CALLPATH_STATE_ID get_id_from_callpath_fast(std::vector<StaticCalltreeNode*>& ta
   return get_id_from_callpath(target_path, paths);
 }
 
-void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threads, StaticCallPathTree* call_path_tree, std::stack<std::tuple<CALLPATH_STATE_ID, INSTRUCTION_ID, StaticCallPathTreeNode*>> *new_stack, std::mutex *new_stack_mtx, std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> *state_transitions, std::mutex *state_transitions_mtx, std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> *inverse_state_transitions, std::mutex *inverse_state_transitions_mtx){
+//void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threads, StaticCallPathTree* call_path_tree, std::stack<std::tuple<StaticCallPathTreeNode*, INSTRUCTION_ID, StaticCallPathTreeNode*>> *new_stack, std::mutex *new_stack_mtx, std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> *state_transitions, std::mutex *state_transitions_mtx, std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> *inverse_state_transitions, std::mutex *inverse_state_transitions_mtx){
+void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threads, StaticCallPathTree* call_path_tree, std::stack<std::tuple<StaticCallPathTreeNode*, INSTRUCTION_ID, StaticCallPathTreeNode*>> *new_stack, std::mutex *new_stack_mtx){
   bool initial_iteration = true;
   while(active_threads->load() != 0){
     // at least one thread is not finished
@@ -1072,12 +1074,9 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
       active_threads->fetch_add(1);
     }
 
-    //std::cout << "active_threads: " << active_threads->load() << std::endl;
-    //std::cout << "stack size: " << new_stack->size() << std::endl;
-
     while(!new_stack->empty()){
       // try fetch tuple
-      std::tuple<CALLPATH_STATE_ID, INSTRUCTION_ID, StaticCallPathTreeNode*> new_current_tuple;
+      std::tuple<StaticCallPathTreeNode*, INSTRUCTION_ID, StaticCallPathTreeNode*> new_current_tuple;
       bool fetched_element = false;
       {
         std::lock_guard<std::mutex> lg(*new_stack_mtx);
@@ -1095,33 +1094,18 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
       // successfully fetched element. process.
 
-      auto predecessor_state_id = std::get<0>(new_current_tuple);
+      //auto predecessor_state_id = std::get<0>(new_current_tuple);
+      auto predecessor_path = std::get<0>(new_current_tuple);
       auto transition_instruction = std::get<1>(new_current_tuple);
       auto new_current_path = std::get<2>(new_current_tuple);
 
       // register current path
       auto current_state_id = new_current_path->path_id;
       // register transition
-      {
-        std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
-        std::lock_guard<std::mutex> lg(*state_transitions_mtx);
-        if(state_transitions->find(predecessor_state_id) == state_transitions->end()){
-          (*state_transitions)[predecessor_state_id] = tmp;
-        }
-        (*state_transitions)[predecessor_state_id][transition_instruction] = current_state_id;
-      }
-      // register inverse transition
-      {
-        std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
-        std::lock_guard<std::mutex> lg(*inverse_state_transitions_mtx);
-        if(inverse_state_transitions->find(current_state_id) == inverse_state_transitions->end()){
-          (*inverse_state_transitions)[current_state_id] = tmp;
-        }
-        (*inverse_state_transitions)[current_state_id][transition_instruction] = predecessor_state_id;
-      }
+      predecessor_path->register_transition(transition_instruction, current_state_id);
 
       // enqueue successors
-      std::vector<std::tuple<std::uint32_t, int32_t, StaticCallPathTreeNode*>> new_elements_buffer;
+      std::vector<std::tuple<StaticCallPathTreeNode*, int32_t, StaticCallPathTreeNode*>> new_elements_buffer;
       std::vector<std::tuple<uint32_t, int32_t, uint32_t>> new_transitions_buffer;
       for(auto succ_pair: new_current_path->base_node->successors){
         int32_t trigger_instructionID = succ_pair.first;  // currently unused!
@@ -1145,12 +1129,14 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
           if(cycle_prefix_path){
             // register transition
-            new_transitions_buffer.push_back(std::make_tuple(current_state_id, trigger_instructionID, cycle_prefix_path->path_id));
+            new_current_path->register_transition(trigger_instructionID, cycle_prefix_path->path_id);
+            //new_transitions_buffer.push_back(std::make_tuple(current_state_id, trigger_instructionID, cycle_prefix_path->path_id));
             continue;
           }
           // new stack element
           auto new_path = new_current_path->get_or_register_successor(call_path_tree, succ);
-          new_elements_buffer.push_back(std::make_tuple(current_state_id, trigger_instructionID, new_path));
+          //new_elements_buffer.push_back(std::make_tuple(current_state_id, trigger_instructionID, new_path));
+          new_elements_buffer.push_back(std::make_tuple(new_current_path, trigger_instructionID, new_path));
 
         }
       }
@@ -1159,17 +1145,6 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
         std::lock_guard<std::mutex> lg(*new_stack_mtx);
         for(auto elem : new_elements_buffer){
           new_stack->push(elem);
-        }
-      }
-      // push new transitions
-      {
-        std::lock_guard<std::mutex> lg(*state_transitions_mtx);
-        for(auto elem: new_transitions_buffer){
-          if(state_transitions->find(std::get<0>(elem)) == state_transitions->end()){
-              std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID> tmp;
-              (*state_transitions)[std::get<0>(elem)] = tmp;
-          }
-          (*state_transitions)[std::get<0>(elem)][std::get<1>(elem)] = std::get<2>(elem);
         }
       }
     }
@@ -1184,7 +1159,6 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 // and assign unique identifiers to every state
 StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions){
   StaticCallPathTree* call_path_tree = new StaticCallPathTree();
-
 
   // path id 0 is reserved for debugging and initialization purposes
   // select entry nodes
@@ -1201,11 +1175,11 @@ StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::uno
     }
   }
   // traverse the static calltree to build the paths
-  std::stack<std::tuple<CALLPATH_STATE_ID, INSTRUCTION_ID, StaticCallPathTreeNode*>> new_stack;
+  std::stack<std::tuple<StaticCallPathTreeNode*, INSTRUCTION_ID, StaticCallPathTreeNode*>> new_stack;
   // -> initialize
   for(auto node_ptr: entry_nodes){
     // new stack
-    new_stack.push(std::make_tuple(0, 0, call_path_tree->root->get_or_register_successor(call_path_tree, node_ptr)));
+    new_stack.push(std::make_tuple(call_path_tree->root, 0, call_path_tree->root->get_or_register_successor(call_path_tree, node_ptr)));
   }
   // -> process stack concurrently
 
@@ -1224,7 +1198,8 @@ StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::uno
   //process_enumerate_paths_stack(&active_threads, call_path_tree, &new_stack, &new_stack_mtx, &state_transitions, &state_transitions_mtx, &inverse_state_transitions, &inverse_state_transitions_mtx);
   std::vector<std::thread> workers;
   for(unsigned int i = 0; i < worker_count; ++i){
-    workers.push_back(std::thread(process_enumerate_paths_stack, &active_threads, call_path_tree, &new_stack, &new_stack_mtx, state_transitions, &state_transitions_mtx, inverse_state_transitions, &inverse_state_transitions_mtx));
+    //workers.push_back(std::thread(process_enumerate_paths_stack, &active_threads, call_path_tree, &new_stack, &new_stack_mtx, state_transitions, &state_transitions_mtx, inverse_state_transitions, &inverse_state_transitions_mtx));
+    workers.push_back(std::thread(process_enumerate_paths_stack, &active_threads, call_path_tree, &new_stack, &new_stack_mtx));
   }
 
   // join workers, wait for enumeration to be finished
@@ -1280,8 +1255,9 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
   tmp01 += "/stateID_to_callpath_mapping.txt";
   stateID_to_callpath_file->open(tmp01.data(), std::ios_base::app);
   // write file
+  std::string global_buffer = "";
+  #pragma omp parallel for reduction(+:global_buffer)
   for(auto path: call_path_tree_ptr->all_nodes){
-
     // filter out paths ending with call instructions
     if(path->base_node != nullptr){
       if(path->base_node->get_type() == 1){
@@ -1289,10 +1265,11 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
         continue;
       }
     }
-
-    // save path string to file
-    *stateID_to_callpath_file << to_string(path->path_id) << " " << path->get_path_string() << "\n";
+    // save path string to buffer
+    std::string path_buffer = to_string(path->path_id) + " " + path->get_path_string() + "\n";
+    global_buffer += path_buffer;
   }
+  *stateID_to_callpath_file << global_buffer;
   // close file handle
   if (stateID_to_callpath_file != NULL && stateID_to_callpath_file->is_open()) {
     stateID_to_callpath_file->flush();
@@ -1301,7 +1278,8 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
   cout << "Done saving enumerated path..\n";
 }
 
-void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *transitions){
+//void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *transitions){
+void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr){
   cout << "saving path state transitions..\n";
   // prepare saving the callpathState transitions
   callpath_state_transitions_file = new std::ofstream();
@@ -1310,11 +1288,17 @@ void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unor
   callpath_state_transitions_file->open(tmp.data(), std::ios_base::app);
   // write file
   *callpath_state_transitions_file << "# Format: <source_state_id> <instruction_id> <target_state_id>\n";
-  for(auto &pair_1: *transitions){
-    for(auto &pair_2: pair_1.second){
-      *callpath_state_transitions_file << "" << pair_1.first << " " << pair_2.first << " " << pair_2.second << "\n";
+  //#pragma omp parallel shared(callpath_state_transitions_file) firstprivate(call_path_tree_ptr)
+
+  std::string global_buffer = "";
+  #pragma omp parallel for reduction(+:global_buffer)
+  for(auto path: call_path_tree_ptr->all_nodes){
+    for(auto transition_pair: path->state_transitions){
+        std::string transition_buffer = "" + std::to_string(path->path_id) + " " + std::to_string(transition_pair.first) + " " + std::to_string(transition_pair.second) + "\n";
+        global_buffer += transition_buffer;
     }
   }
+  *callpath_state_transitions_file << global_buffer;
   // close file handle
   if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
     callpath_state_transitions_file->flush();
@@ -1328,11 +1312,17 @@ void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unor
   callpath_state_transitions_file->open(tmp02.data(), std::ios_base::app);
   // write file
   *callpath_state_transitions_file << "diGraph G {\n";
-  for(auto &pair_1: *transitions){
-    for(auto &pair_2: pair_1.second){
-      *callpath_state_transitions_file <<"  " << pair_1.first << " -> " << pair_2.second << " [label = " << pair_2.first << "];\n";
+
+  global_buffer = "";  // reuse old global buffer
+  #pragma omp parallel for reduction(+:global_buffer)
+  for(auto path : call_path_tree_ptr->all_nodes){
+    for(auto transition_pair: path->state_transitions){
+        std::string transition_buffer = "  " + std::to_string(path->path_id) + " -> " + std::to_string(transition_pair.second) + " [label = " + std::to_string(transition_pair.first) + "];\n";
+        global_buffer += transition_buffer;
     }
   }
+  *callpath_state_transitions_file << global_buffer;
+
   *callpath_state_transitions_file << "}\n";
   // close file handle
   if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
@@ -1372,7 +1362,8 @@ void DiscoPoP::save_static_calltree_to_dot(StaticCalltree *calltree){
 // adds the state transition edges corresponding to returning from a function.
 // for completeness and fail-safety, this edge is added to every state in a function, i.e., returning is possible from every state
 //void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths, std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, DiscoPoP::container_hash<std::vector<StaticCalltreeNode*>>> path_to_id_map){
-void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, StaticCallPathTree* call_path_tree_ptr){
+//void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, StaticCallPathTree* call_path_tree_ptr){
+void DiscoPoP::add_function_exit_edges_to_transitions(StaticCallPathTree* call_path_tree_ptr){
 
   // for each path in paths
     // rfind first call instruction
@@ -1385,21 +1376,6 @@ void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t
     auto path_id = path->path_id;
     // rfind first call instruction
 
-/*  OLD VERSION
-    int last_call_idx = -1;
-    for(int idx = path.second.size() - 1 ; idx >= 0; --idx ){
-      auto path_node = path.second[idx];
-      if(path_node->get_type() == true){
-        // path node is a call instruction
-        last_call_idx = idx;
-        break;
-      }
-    }
-    if(last_call_idx == -1){
-      // no call found
-      continue;
-    }
-*/
     StaticCallPathTreeNode* last_call_prefix = nullptr;
     auto current = path;
     while(current->base_node != nullptr){
@@ -1417,34 +1393,11 @@ void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t
       continue;
     }
 
-/*  NOT REQUIRED ANYMORE DUE TO StaticCAllPathTree
-    // create prefix path
-    std::vector<StaticCalltreeNode*> prefix_path;
-
-    for(int i = 0; i < last_call_idx; i++){
-      prefix_path.push_back(path.second[i]);
-    }
-*/
-
-/*
-    // DEBUG
-    string prefix_path_str = path_to_string(prefix_path);
-    string path_str = path_to_string(path.second);
-    cout << "Path: " << path_str << "\n";
-    cout << "Prefix path: " << prefix_path_str << "\n";
-    // !DEBUG
-*/
-
     // find state id for prefix path
     //auto prefix_path_stateID = get_id_from_callpath_fast(prefix_path, paths, path_to_id_map);
     auto prefix_path_stateID = last_call_prefix->path_id;
 
     // register transition edge from path to prefix path with trigger instruction "1" (i.e. leaving function)
-    if(state_transitions.find(path_id) == state_transitions.end()){
-      std::unordered_map<int32_t, int32_t> tmp;
-      state_transitions[path_id] = tmp;
-    }
-    state_transitions[path_id][1] = prefix_path_stateID;
-    // cout << "--> Registered transition: " << path_id << " " << 1 << " --> " << prefix_path_stateID << "\n";
+    path->register_transition(1, prefix_path_stateID);
   }
 }
