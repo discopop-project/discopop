@@ -46,13 +46,14 @@ class StaticCallPathTree {
 
         std::uint32_t next_free_path_id = 0;
         std::mutex next_free_path_id_mtx;
-        std::mutex all_nodes_mtx;
+
 
 
 
     public:
         StaticCallPathTreeNode* root = nullptr;
         std::vector<StaticCallPathTreeNode*> all_nodes;
+        std::mutex all_nodes_mtx;
 
         StaticCallPathTree();
         ~StaticCallPathTree();

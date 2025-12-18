@@ -1062,6 +1062,7 @@ CALLPATH_STATE_ID get_id_from_callpath_fast(std::vector<StaticCalltreeNode*>& ta
 //void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threads, StaticCallPathTree* call_path_tree, std::stack<std::tuple<StaticCallPathTreeNode*, INSTRUCTION_ID, StaticCallPathTreeNode*>> *new_stack, std::mutex *new_stack_mtx, std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> *state_transitions, std::mutex *state_transitions_mtx, std::unordered_map<CALLPATH_STATE_ID, std::unordered_map<INSTRUCTION_ID, CALLPATH_STATE_ID>> *inverse_state_transitions, std::mutex *inverse_state_transitions_mtx){
 void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threads, StaticCallPathTree* call_path_tree, std::stack<std::tuple<StaticCallPathTreeNode*, INSTRUCTION_ID, StaticCallPathTreeNode*>> *new_stack, std::mutex *new_stack_mtx){
   bool initial_iteration = true;
+  std::vector<StaticCallPathTreeNode*> nodes_added_by_thread;
   while(active_threads->load() != 0){
     // at least one thread is not finished
 
@@ -1135,6 +1136,7 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
           }
           // new stack element
           auto new_path = new_current_path->get_or_register_successor(call_path_tree, succ);
+          nodes_added_by_thread.push_back(new_path);
           //new_elements_buffer.push_back(std::make_tuple(current_state_id, trigger_instructionID, new_path));
           new_elements_buffer.push_back(std::make_tuple(new_current_path, trigger_instructionID, new_path));
 
@@ -1153,6 +1155,15 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
     active_threads->fetch_sub(1);
     usleep(100);
   }
+
+  // register nodes added by the thread for later use
+  {
+    std::lock_guard<std::mutex> lg(call_path_tree->all_nodes_mtx);
+    for(auto elem : nodes_added_by_thread){
+      call_path_tree->register_node_in_all_nodes(elem);
+    }
+  }
+
 }
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
@@ -1179,7 +1190,9 @@ StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::uno
   // -> initialize
   for(auto node_ptr: entry_nodes){
     // new stack
-    new_stack.push(std::make_tuple(call_path_tree->root, 0, call_path_tree->root->get_or_register_successor(call_path_tree, node_ptr)));
+    auto new_node = call_path_tree->root->get_or_register_successor(call_path_tree, node_ptr);
+    new_stack.push(std::make_tuple(call_path_tree->root, 0, new_node));
+    call_path_tree->register_node_in_all_nodes(new_node);
   }
   // -> process stack concurrently
 

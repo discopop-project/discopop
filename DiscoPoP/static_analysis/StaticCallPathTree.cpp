@@ -22,7 +22,6 @@ StaticCallPathTreeNode* StaticCallPathTreeNode::get_or_register_successor(Static
     }
     // register successor
     StaticCallPathTreeNode* new_node = new StaticCallPathTreeNode(tree->get_next_free_path_id(), successor_node, this);
-    tree->register_node_in_all_nodes(new_node);
     successors.push_back(new_node);
     return new_node;
 }
@@ -95,6 +94,5 @@ std::string StaticCallPathTree::to_dot_string(){
 }
 
 void StaticCallPathTree::register_node_in_all_nodes(StaticCallPathTreeNode* node_ptr){
-    std::lock_guard<std::mutex> lg(all_nodes_mtx);
     all_nodes.push_back(node_ptr);
 }
