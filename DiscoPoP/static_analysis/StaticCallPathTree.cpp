@@ -56,6 +56,16 @@ std::string StaticCallPathTreeNode::get_path_string(){
     return path_str;
 }
 
+void StaticCallPathTreeNode::register_transition(int32_t trigger_instruction_id, const std::uint32_t target_path_id){
+    std::lock_guard<std::mutex> lg(mtx);
+    state_transitions[trigger_instruction_id] = target_path_id;
+}
+
+
+
+
+
+
 StaticCallPathTree::StaticCallPathTree(){
     root = new StaticCallPathTreeNode(get_next_free_path_id(), nullptr);
     register_node_in_all_nodes(root);

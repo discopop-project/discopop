@@ -21,6 +21,7 @@ class StaticCallPathTreeNode {
         StaticCalltreeNode* base_node;
         const std::uint32_t path_id;
         std::mutex mtx;
+        std::unordered_map<int32_t, std::uint32_t> state_transitions;
 
         std::vector<StaticCallPathTreeNode*> successors;  // use vectors due to the assumption, that a single path generally has only a small number of successors. Save time and space for creating and managing a hashset or similar.
         StaticCallPathTreeNode* prefix;
@@ -32,6 +33,8 @@ class StaticCallPathTreeNode {
         ~StaticCallPathTreeNode();
 
         StaticCallPathTreeNode* get_or_register_successor(StaticCallPathTree* tree, StaticCalltreeNode* successor_node);
+
+        void register_transition(int32_t trigger_instruction_id, std::uint32_t target_path_id);
 
         [[nodiscard]] std::string to_dot_string();
         [[nodiscard]] std::string get_path_string();
