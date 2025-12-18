@@ -14,6 +14,7 @@
 #include <unordered_set>
 #include "StaticCallPathTree.hpp"
 #include <thread>
+#include <omp.h>
 
 
 
@@ -1287,8 +1288,9 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
   tmp01 += "/stateID_to_callpath_mapping.txt";
   stateID_to_callpath_file->open(tmp01.data(), std::ios_base::app);
   // write file
+  std::string global_buffer = "";
+  #pragma omp parallel for reduction(+:global_buffer)
   for(auto path: call_path_tree_ptr->all_nodes){
-
     // filter out paths ending with call instructions
     if(path->base_node != nullptr){
       if(path->base_node->get_type() == 1){
@@ -1296,10 +1298,11 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
         continue;
       }
     }
-
-    // save path string to file
-    *stateID_to_callpath_file << to_string(path->path_id) << " " << path->get_path_string() << "\n";
+    // save path string to buffer
+    std::string path_buffer = to_string(path->path_id) + " " + path->get_path_string() + "\n";
+    global_buffer += path_buffer;
   }
+  *stateID_to_callpath_file << global_buffer;
   // close file handle
   if (stateID_to_callpath_file != NULL && stateID_to_callpath_file->is_open()) {
     stateID_to_callpath_file->flush();
@@ -1308,7 +1311,8 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
   cout << "Done saving enumerated path..\n";
 }
 
-void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *transitions){
+//void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *transitions){
+void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr){
   cout << "saving path state transitions..\n";
   // prepare saving the callpathState transitions
   callpath_state_transitions_file = new std::ofstream();
@@ -1317,11 +1321,28 @@ void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unor
   callpath_state_transitions_file->open(tmp.data(), std::ios_base::app);
   // write file
   *callpath_state_transitions_file << "# Format: <source_state_id> <instruction_id> <target_state_id>\n";
-  for(auto &pair_1: *transitions){
+  //#pragma omp parallel shared(callpath_state_transitions_file) firstprivate(call_path_tree_ptr)
+  {
+    std::string global_buffer = "";
+    #pragma omp parallel for reduction(+:global_buffer)
+    for(auto path: call_path_tree_ptr->all_nodes){
+      for(auto transition_pair: path->state_transitions){
+         std::string transition_buffer = "" + std::to_string(path->path_id) + " " + std::to_string(transition_pair.first) + " " + std::to_string(transition_pair.second) + "\n";
+         global_buffer += transition_buffer;
+      }
+    }
+
+    //#pragma omp critical
+    {
+      *callpath_state_transitions_file << global_buffer;
+    }
+  }
+/*for(auto &pair_1: *transitions){
     for(auto &pair_2: pair_1.second){
       *callpath_state_transitions_file << "" << pair_1.first << " " << pair_2.first << " " << pair_2.second << "\n";
     }
   }
+*/
   // close file handle
   if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
     callpath_state_transitions_file->flush();
@@ -1335,11 +1356,30 @@ void DiscoPoP::save_path_state_transitions(std::unordered_map<int32_t, std::unor
   callpath_state_transitions_file->open(tmp02.data(), std::ios_base::app);
   // write file
   *callpath_state_transitions_file << "diGraph G {\n";
+  //#pragma omp parallel shared(callpath_state_transitions_file) firstprivate(call_path_tree_ptr)
+  {
+    std::string global_buffer = "";
+    #pragma omp parallel for reduction(+:global_buffer)
+    for(auto path : call_path_tree_ptr->all_nodes){
+      for(auto transition_pair: path->state_transitions){
+          std::string transition_buffer = "  " + std::to_string(path->path_id) + " -> " + std::to_string(transition_pair.second) + " [label = " + std::to_string(transition_pair.first) + "];\n";
+          global_buffer += transition_buffer;
+      }
+    }
+
+    //#pragma omp critical
+    {
+      *callpath_state_transitions_file << global_buffer;
+    }
+  }
+
+/*
   for(auto &pair_1: *transitions){
     for(auto &pair_2: pair_1.second){
       *callpath_state_transitions_file <<"  " << pair_1.first << " -> " << pair_2.second << " [label = " << pair_2.first << "];\n";
     }
   }
+*/
   *callpath_state_transitions_file << "}\n";
   // close file handle
   if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
@@ -1379,7 +1419,8 @@ void DiscoPoP::save_static_calltree_to_dot(StaticCalltree *calltree){
 // adds the state transition edges corresponding to returning from a function.
 // for completeness and fail-safety, this edge is added to every state in a function, i.e., returning is possible from every state
 //void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths, std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, DiscoPoP::container_hash<std::vector<StaticCalltreeNode*>>> path_to_id_map){
-void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, StaticCallPathTree* call_path_tree_ptr){
+//void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, StaticCallPathTree* call_path_tree_ptr){
+void DiscoPoP::add_function_exit_edges_to_transitions(StaticCallPathTree* call_path_tree_ptr){
 
   // for each path in paths
     // rfind first call instruction
@@ -1447,11 +1488,13 @@ void DiscoPoP::add_function_exit_edges_to_transitions(std::unordered_map<int32_t
     auto prefix_path_stateID = last_call_prefix->path_id;
 
     // register transition edge from path to prefix path with trigger instruction "1" (i.e. leaving function)
-    if(state_transitions.find(path_id) == state_transitions.end()){
+    path->register_transition(1, prefix_path_stateID);
+/*    if(state_transitions.find(path_id) == state_transitions.end()){
       std::unordered_map<int32_t, int32_t> tmp;
       state_transitions[path_id] = tmp;
     }
     state_transitions[path_id][1] = prefix_path_stateID;
+*/
     // cout << "--> Registered transition: " << path_id << " " << 1 << " --> " << prefix_path_stateID << "\n";
   }
 }

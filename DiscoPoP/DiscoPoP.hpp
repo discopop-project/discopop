@@ -280,7 +280,8 @@ public:
   void save_initial_path(StaticCallPathTree* call_path_tree_ptr);
   //void save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
   void save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr);
-  void save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *transitions);
+  // void save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *transitions);
+  void save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr);
   void save_static_calltree_to_dot(StaticCalltree* calltree);
   void assign_instruction_ids_to_dp_reduction_functions(Module &M);
   void update_argument_instruction_ids(Module &M);
@@ -292,7 +293,8 @@ struct container_hash {
     }
 };
   // void add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths, std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, container_hash<std::vector<StaticCalltreeNode*>>> path_to_id_map);
-  void add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, StaticCallPathTree* call_path_tree_ptr);
+  //void add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, StaticCallPathTree* call_path_tree_ptr);
+  void add_function_exit_edges_to_transitions(StaticCallPathTree* call_path_tree_ptr);
 
   std::unordered_map<StaticCalltreeNode*, std::unordered_set<int32_t>> get_contained_in_map(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>& paths);
   std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, container_hash<std::vector<StaticCalltreeNode*>>> get_path_to_id_map(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>& paths);
