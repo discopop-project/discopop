@@ -19,7 +19,7 @@ if sys.version_info < (3, 6):
 
 setup(
     name="hotspot analyzer",
-    version="0.1",
+    version="0.1.0",
     packages=find_packages(),
     url="https://www.discopop.tu-darmstadt.de/",
     author="TU Darmstadt and Iowa State University",
@@ -29,7 +29,10 @@ setup(
     # long_description=open(SRC / "README.md").read(),
     long_description_content_type="text/markdown",
     install_requires=[
+    "setuptools",
 	"numpy",
+    "packaging",
+    "requests",
     ],
     extras_require={
     },
@@ -37,6 +40,7 @@ setup(
     entry_points={
         "console_scripts": [
             "hotspot_analyzer=hotspot_analyzer.__main__:main",
+            "discopop_hotspot_updater=tools.auto_updater.__main__:main",
         ]
     },
     zip_safe=True,
