@@ -5,6 +5,7 @@ import sys
 from typing import List, Optional
 from enum import Enum
 from dataclasses import dataclass
+from tools.auto_updater.auto_updater import run as check_for_updates
 
 inf = float("inf")
 
@@ -118,6 +119,7 @@ def __print_cs_list(list: List[cs]):
 
 
 def run(arguments: HotspotAnalyzerArguments):
+    check_for_updates()
     ## TO BE USED FROM WITHIN THE .discopop directory!
     discopop_dir = os.getcwd()
     print("DiscoPoP Dir: ", discopop_dir)
