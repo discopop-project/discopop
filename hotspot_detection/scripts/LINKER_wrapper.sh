@@ -16,10 +16,10 @@ fi
 
 # SETTINGS
 HSD_BUILD="$(dirname "$(dirname ${SCRIPT_PATH})")"
-HSD_BUILD_LLVM_BIN_DIR="$(cat ${HSD_BUILD}/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*")"
+#HSD_BUILD_LLVM_BIN_DIR="$(cat ${HSD_BUILD}/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*")"
 HSD_SCRIPTS=${HSD_BUILD}/scripts
-LLVM_CLANG=$HSD_BUILD_LLVM_BIN_DIR/clang
-LLVM_CLANGPP=$HSD_BUILD_LLVM_BIN_DIR/clang++
+LLVM_CLANG=$(which clang-19)
+LLVM_CLANGPP=$(which clang++-19)
 
 
 # original arguments: "$@"

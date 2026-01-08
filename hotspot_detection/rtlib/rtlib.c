@@ -142,7 +142,6 @@ void __hotspot_detection_printOut()
     // printf("%d", num);
     // printf("%s", buffer);
     fclose(filePointer);
-    printf("rtl.c printOut \n");
     FILE *fptr;
 
     // determine filename for result storage

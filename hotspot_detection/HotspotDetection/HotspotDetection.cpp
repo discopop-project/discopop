@@ -10,7 +10,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+//#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/Transforms/Instrumentation.h"
@@ -35,7 +35,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Pass.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+//#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -43,6 +43,10 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/IR/CFG.h"
+// llvm 19 compatibility
+#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Passes/PassBuilder.h"
+
 #include <set>
 #include <map>
 #include <cstdlib>
@@ -275,12 +279,13 @@ long int UID = 0;
 namespace
 {
 
-  struct HotspotPass : public FunctionPass
+  class HotspotPass // : public FunctionPass
   {
+  public:
     static char ID;
-    HotspotPass() : FunctionPass(ID) {}
+    HotspotPass(){} // : FunctionPass(ID) {}
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override
+    void getAnalysisUsage(AnalysisUsage &AU) const
     {
       AU.addRequired<LoopInfoWrapperPass>();
       AU.addRequired<ScalarEvolutionWrapperPass>();
@@ -337,7 +342,7 @@ namespace
       tempfile.open(tmp5.data(), ios::in);
       if (tempfile.is_open())
       {
-        errs() << "Temp file openned!\n";
+        errs() << "Temp file opened!\n";
         string tpp;
         string lastid;
         while (getline(tempfile, tpp))
@@ -355,7 +360,16 @@ namespace
       return false;
     }
 
-    virtual bool runOnFunction(Function &F)
+    virtual bool runOnModule(Module &M, ModuleAnalysisManager &MAM){
+      doInitialization(M);
+      for( Function &F: M){
+        runOnFunction(F, M, MAM);
+      }
+      doFinalization(M);
+      return true;
+    }
+
+    virtual bool runOnFunction(Function &F, Module &M, ModuleAnalysisManager &MAM)
     {
       errs() << "In a function called " << F.getName() << "\n";
 
@@ -386,7 +400,10 @@ namespace
       }
 
 
-      LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+      
+      //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+      FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+      LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
 
       Type *Void;
       IntegerType *Int32, *Int64;
@@ -571,7 +588,7 @@ namespace
                  EI != END; ++EI)
             {
               StringRef exitType = (*EI)->getName().split('.').first;
-              if (exitType.equals(loopType) && ((*EI)->getName().find("end") != string::npos) &&
+              if ((exitType.str() == loopType) && ((*EI)->getName().find("end") != string::npos) &&
                   (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), *EI) == RealExitBlocks.end()))
               {
                 RealExitBlocks.push_back(*EI);
@@ -590,7 +607,7 @@ namespace
                 {
                   BasicBlock *succ = TI->getSuccessor(i);
                   exitType = succ->getName().split('.').first;
-                  if (exitType.equals(loopType) && (succ->getName().find("end") != string::npos) &&
+                  if ((exitType.str() == loopType) && (succ->getName().find("end") != string::npos) &&
                       (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), succ) == RealExitBlocks.end()))
                   {
                     RealExitBlocks.push_back(succ);
@@ -723,7 +740,7 @@ namespace
             BasicBlock *tmpBB = &*BB;
 
             
-            if (fn.equals("main")) // inside main function
+            if (fn.str() == "main") // inside main function
             {
               if (isa<ReturnInst>(I)) // returning from main
               {
@@ -771,12 +788,68 @@ static RegisterStandardPasses
 
 */
 
-static RegisterPass<HotspotPass> X("HotspotDetection", "Records runtimes of loops and functions",
-                                    false /* Only looks at CFG */,
-                                    false /* Analysis Pass */);
-
+// old LLVM pass manager
+//static RegisterPass<HotspotPass> X("HotspotDetection", "Records runtimes of loops and functions",
+//                                    false /* Only looks at CFG */,
+//                                    false /* Analysis Pass */);
+                              
+/* old LLVM pass manager
 static RegisterStandardPasses Y(
     PassManagerBuilder::EP_EarlyAsPossible,
     [](const PassManagerBuilder &Builder,
        legacy::PassManagerBase &PM)
     { PM.add(new HotspotPass()); });
+*/
+  
+// compatibility with new LLVM pass manager
+struct HotspotDetection_new_PM_adaptor : public PassInfoMixin<HotspotDetection_new_PM_adaptor> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
+    errs() << "Running HotspotDetection pass on Function: " + F.getName().str()  + " \n";
+    //const ModuleAnalysisManager &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+    return PreservedAnalyses::all();
+  }
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    errs() << "Running HotspotDetection pass on Module: \n";
+    //const ModuleAnalysisManager &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+    HotspotPass().runOnModule(M, MAM);
+    return PreservedAnalyses::all();
+  }
+};
+
+PassPluginLibraryInfo getPassPluginInfo() {
+  /*
+  const auto callback = [](PassBuilder &PB) {
+    
+    PB.registerPipelineEarlySimplificationEPCallback(
+        [&](ModulePassManager &MPM, auto) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(DiscoPoP_new_PM_adaptor()));
+          MPM.addPass(DiscoPoP_new_PM_adaptor());
+          return true;
+        });
+    
+    PB.registerPipelineEarlySimplificationEPCallback(
+        [&](FunctionPassManager &FPM, auto) {
+          FPM.addPass(HotspotDetection_new_PM_adaptor());
+          return true;
+        });
+  };
+  */
+
+  const auto callback = [](PassBuilder &PB) {
+    PB.registerPipelineEarlySimplificationEPCallback(
+        [&](ModulePassManager &MPM, auto) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(HotspotDetection_new_PM_adaptor()));
+          MPM.addPass(HotspotDetection_new_PM_adaptor());
+          return true;
+        });
+  };
+
+
+  return {LLVM_PLUGIN_API_VERSION, "hotspotdetection_new_pm_adaptor", "0.0.1", callback};
+
+};
+
+extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
+  return getPassPluginInfo();
+}

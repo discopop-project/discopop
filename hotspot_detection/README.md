@@ -17,7 +17,7 @@ B) the runtime of the code region increases a lot when using different program p
 Install the requirements:
 
 ```
-sudo apt install git build-essential cmake libclang-11-dev clang-11 llvm-11 python3
+sudo apt install git build-essential cmake python3 llvm-19-dev clang-19 libclang-19-dev
 ```
 
 Install the Hotspot-Detection:
