@@ -19,10 +19,12 @@ os.chdir(Path(__file__).parent)
 if sys.version_info < (3, 6):
     raise SystemExit("Discopop explorer requires Python >= 3.6.")
 
+submodules = ["tools.submodules.update_notifications"]
+
 setup(
     name="discopop",
     version=get_version(),
-    packages=find_packages(),
+    packages=find_packages() + submodules,
     url="https://www.discopop.tu-darmstadt.de/",
     author="TU Darmstadt and Iowa State University",
     author_email="discopop@lists.parallel.informatik.tu-darmstadt.de",
