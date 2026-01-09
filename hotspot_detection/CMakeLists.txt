@@ -48,6 +48,9 @@ add_subdirectory(rtlib)
 
 add_subdirectory(scripts)
 
+# update or initialize git submodules
+execute_process(COMMAND git submodule update --init --recursive --remote)
+
 # install Hotspot Analyzer python modules
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 message(STATUS "Installing Hotspot Analyzer python modules")

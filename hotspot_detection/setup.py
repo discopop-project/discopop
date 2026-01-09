@@ -31,8 +31,6 @@ setup(
     install_requires=[
     "setuptools",
 	"numpy",
-    "packaging",
-    "requests",
     ],
     extras_require={
     },
@@ -40,7 +38,6 @@ setup(
     entry_points={
         "console_scripts": [
             "hotspot_analyzer=hotspot_analyzer.__main__:main",
-            "discopop_hotspot_updater=tools.auto_updater.__main__:main",
         ]
     },
     zip_safe=True,

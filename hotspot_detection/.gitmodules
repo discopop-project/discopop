@@ -1,0 +1,3 @@
+[submodule "tools/submodules/update_notifications"]
+	path = tools/submodules/update_notifications
+	url = https://github.com/discopop-project/update_notifications

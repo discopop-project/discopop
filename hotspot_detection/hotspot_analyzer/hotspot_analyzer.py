@@ -5,7 +5,7 @@ import sys
 from typing import List, Optional
 from enum import Enum
 from dataclasses import dataclass
-from tools.auto_updater.auto_updater import run as check_for_updates
+from tools.submodules.update_notifications.update_notifier import run as check_for_updates
 
 inf = float("inf")
 
@@ -119,7 +119,12 @@ def __print_cs_list(list: List[cs]):
 
 
 def run(arguments: HotspotAnalyzerArguments):
-    check_for_updates()
+    # check for updates
+    module_name = "hotspot_analyzer"
+    module_api_url = "https://api.github.com/repos/discopop-project/Hotspot-Detection/releases/latest"
+    module_release_url = "https://github.com/discopop-project/Hotspot-Detection/releases"
+    check_for_updates(module_name, module_api_url, module_release_url)
+
     ## TO BE USED FROM WITHIN THE .discopop directory!
     discopop_dir = os.getcwd()
     print("DiscoPoP Dir: ", discopop_dir)
