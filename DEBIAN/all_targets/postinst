@@ -36,6 +36,9 @@ VENV_PYTHON=${VENV_BIN}/python3
 echo "Installing DiscoPoP python modules"
 ${VENV_PYTHON} -m pip install . -v
 
+echo "Installing DiscoPoP submodules"
+${VENV_PYTHON} -m pip install tools/submodules/update_notifications
+
 echo "Creating symlinks"
 ln -sf ${DP_BUILD_DIR}/scripts/CC_wrapper.sh ${VENV_BIN}/discopop_cc
 ln -sf ${DP_BUILD_DIR}/scripts/CXX_wrapper.sh ${VENV_BIN}/discopop_cxx
