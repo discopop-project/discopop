@@ -32,14 +32,14 @@ bool DiscoPoP::doInitialization(Module &M) {
   if (stat(getenv("DOT_DISCOPOP"), &st1) == -1) {
     mkdir(getenv("DOT_DISCOPOP"), 0777);
 
-    // check if HOME/.discopop directory in user folder exists
-    std::string user_home_dp_dir = (std::string(getenv("HOME")) + std::string("/.discopop"));
+    // check if HOME/.discopop_config directory in user folder exists
+    std::string user_home_dp_dir = (std::string(getenv("HOME")) + std::string("/.discopop_config"));
     struct stat st_dp_user;
     if (stat(user_home_dp_dir.c_str() , &st_dp_user) == -1) {
-      // create .discopop folder in user directory to save overview of project .discopop folders
+      // create .discopop_config folder in user directory to save overview of project .discopop folders
       mkdir(user_home_dp_dir.c_str(), 0777);
     }
-    // create entry in HOME/.discopop/locations.txt
+    // create entry in HOME/.discopop_config/locations.txt
     std::ofstream project_overview_file;
     project_overview_file.open(user_home_dp_dir + std::string("/locations.txt"), std::ios_base::app);
     auto t = std::time(nullptr);

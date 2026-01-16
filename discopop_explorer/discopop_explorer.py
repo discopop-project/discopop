@@ -47,6 +47,7 @@ from discopop_explorer.utilities.PEGraphConstruction.parser import parse_inputs
 from discopop_explorer.pattern_detection import PatternDetectorX
 
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
+from tools.submodules.update_notifications.update_notifier import run as check_for_updates
 
 
 @dataclass
@@ -130,6 +131,12 @@ def __run(
     load_existing_doall_and_reduction_patterns: bool = False,
     jobs: Optional[int] = None,
 ) -> DetectionResult:
+    # check for updates
+    module_name = "discopop"
+    module_api_url = "https://api.github.com/repos/discopop-project/DiscoPoP/releases/latest"
+    module_release_url = "https://github.com/discopop-project/DiscoPoP/releases"
+    check_for_updates(module_name, module_api_url, module_release_url)
+
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))  # type: ignore
     print("PET CREATION FINISHED.")
 
