@@ -171,9 +171,20 @@ class PEGraphX(object):
                     for s in sink:
                         g.add_edge(s, s, data=parse_dependency(dep))
                 continue
+            elif dep.type == "RAW" or dep.type == "WAR":
+                sink_cu_ids = readlineToCUIdMap[dep.sink]
+                source_cu_ids = writelineToCUIdMap[dep.source]
+            elif dep.type == "WAW":
+                sink_cu_ids = writelineToCUIdMap[dep.sink]
+                source_cu_ids = writelineToCUIdMap[dep.source]
+            else:
+                raise ValueError("Unknown dep.type: " + dep.type + " for dependency: " + str(dep))
 
-            sink_cu_ids = readlineToCUIdMap[dep.sink]
-            source_cu_ids = writelineToCUIdMap[dep.source]
+            print("dep: sink: " + dep.sink + " source: " + dep.source + " type: " + dep.type + " var: " + dep.var_name)
+            print("--> sinks: " + str(sink_cu_ids))
+            print("--> sources: " + str(source_cu_ids))
+            print("--> readlines: " + str(readlineToCUIdMap))
+            print("--> writelines: " + str(writelineToCUIdMap))
 
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):
