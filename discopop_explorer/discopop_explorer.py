@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-import pstats2  # type:ignore
+import pstats2  # type: ignore
 from pluginbase import PluginBase  # type: ignore
 from discopop_explorer.functions.PEGraph.output.json import dump_to_pickled_json
 from discopop_explorer.functions.PEGraph.output.gephi import dump_to_gephi_file
@@ -29,7 +29,7 @@ from discopop_library.FolderStructure.setup import setup_explorer
 from discopop_library.FolderStructure.teardown import teardown_explorer
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
 from discopop_library.LineMapping.initialize import initialize_line_mapping
 from discopop_library.LineMapping.delete import delete_line_mapping

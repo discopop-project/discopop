@@ -63,8 +63,8 @@ def correlation_coefficient(v1: List[float], v2: List[float]) -> float:
     :param v2: second vector
     :return: correlation coefficient, 0 if one of the norms is 0
     """
-    norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)  # type:ignore
-    return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product  # type:ignore
+    norm_product = np.linalg.norm(v1) * np.linalg.norm(v2)  # type: ignore
+    return 0 if norm_product == 0 else np.dot(v1, v2) / norm_product  # type: ignore
 
 
 def find_subnodes(pet: PEGraphX, node: Node, criteria: EdgeType) -> List[Node]:

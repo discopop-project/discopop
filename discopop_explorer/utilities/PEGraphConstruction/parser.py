@@ -14,7 +14,7 @@ from collections import defaultdict
 from os.path import abspath, dirname
 from typing import Any, Dict, List, Optional, Tuple
 
-from lxml import objectify  # type:ignore
+from lxml import objectify  # type: ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
 from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem

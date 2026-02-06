@@ -12,9 +12,9 @@ import copy
 import itertools
 from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload, Any
 
-import jsonpickle  # type:ignore
-import matplotlib.pyplot as plt  # type:ignore
-import networkx as nx  # type:ignore
+import jsonpickle  # type: ignore
+import matplotlib.pyplot as plt  # type: ignore
+import networkx as nx  # type: ignore
 from alive_progress import alive_bar  # type: ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
@@ -29,7 +29,7 @@ from discopop_explorer.functions.PEGraph.traversal.children import direct_childr
 from discopop_explorer.functions.PEGraph.traversal.parent import get_all_parents_until_function, get_parent_function
 from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType  # type:ignore
+from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
@@ -179,7 +179,6 @@ class PEGraphX(object):
                 source_cu_ids = writelineToCUIdMap[dep.source]
             else:
                 raise ValueError("Unknown dep.type: " + dep.type + " for dependency: " + str(dep))
-
 
             for idx_1, sink_cu_id in enumerate(sink_cu_ids):
                 for idx_2, source_cu_id in enumerate(source_cu_ids):

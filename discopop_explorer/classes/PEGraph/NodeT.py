@@ -11,5 +11,4 @@ from typing import TypeVar
 
 from discopop_explorer.classes.PEGraph.Node import Node
 
-
 NodeT = TypeVar("NodeT", bound=Node)

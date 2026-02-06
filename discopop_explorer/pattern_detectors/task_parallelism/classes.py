@@ -15,7 +15,6 @@ from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 
-
 # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
 # from discopop_explorer.utilities import total_instructions_count, calculate_workload
 

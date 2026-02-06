@@ -105,7 +105,7 @@ def get_parent_of_type(
     res: List[Tuple[Node, Optional[Node]]] = []
     while len(queue) > 0:
         tmp = queue.pop(0)
-        (cur_node, last_node) = tmp
+        cur_node, last_node = tmp
         last_node = cur_node
         visited.append(cur_node)
         tmp_list = [
