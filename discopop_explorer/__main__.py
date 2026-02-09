@@ -112,6 +112,12 @@ def parse_args() -> ExplorerArguments:
         "--plot-pet", type=str, nargs="?", default=None, const="explorer/pet_plot.gexf",
         help="Plots PET as a GEXF file. If a path is given (file extension has to be .gexf), the PET Graph is written to the given file, otherwise to pet_plot.gexf"
     )
+    experimental_parser.add_argument(
+        "--plot-task-graph", action="store_true", help="Enables interactive plotting of the task graph."
+    )
+    experimental_parser.add_argument(
+        "--plot-context-graph", action="store_true", help="Enables interactive plotting of the context graph."
+    )
     # fmt: on
 
     arguments = parser.parse_args()
@@ -168,6 +174,8 @@ def parse_args() -> ExplorerArguments:
         collect_statistics=arguments.disable_statistics,
         jobs=arguments.jobs,
         enable_pet_plot_file=arguments.plot_pet,
+        enable_task_graph_plot=arguments.plot_task_graph,
+        enable_context_graph_plot=arguments.plot_context_graph,
     )
 
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import itertools
+import random
 from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload, Any
 
 import jsonpickle  # type: ignore
@@ -199,6 +200,25 @@ class PEGraphX(object):
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
         print("\tAdded dependencies...")
         return cls(g, reduction_vars, pos)
+
+    def validate(self) -> None:
+        print("\tValidating pet...")
+        print("\t\tValidating function scopes...")
+        for func_node in [n for n in all_nodes(self, FunctionNode)]:
+            print("\t\t\t Func: " + func_node.name)
+            min_start_line = func_node.start_line
+            max_end_line = func_node.end_line
+            for child in direct_children(self, func_node):
+                if child.start_line < min_start_line:
+                    min_start_line = child.start_line
+                if child.end_line > max_end_line:
+                    max_end_line = child.end_line
+            if min_start_line != func_node.start_line:
+                print("\t\t\t --> Found fix for start line. Replacing: ", func_node.start_line, "with", min_start_line)
+                func_node.start_line = min_start_line
+            if max_end_line != func_node.end_line:
+                print("\t\t\t --> Found fix for end line. Replacing: ", func_node.end_line, "with", max_end_line)
+                func_node.end_line = max_end_line
 
     def map_static_and_dynamic_dependencies(self) -> None:
         print("\tMapping static to dynamic dependencies...")
@@ -474,6 +494,35 @@ class PEGraphX(object):
 
         print("Calculating loop metadata done.")
 
+    def enforce_single_function_exit_node(self) -> None:
+        for func in all_nodes(self, FunctionNode):
+            print("FUNCTION: ", func)
+            # define exit node
+            file_id = func.file_id
+            max_node_id_in_file = 0
+            for node in all_nodes(self):
+                if node.file_id != file_id:
+                    continue
+                if ":" in node.id:
+                    id_int = int(node.id.split(":")[1])
+                    if id_int > max_node_id_in_file:
+                        max_node_id_in_file = id_int
+            exit_id = NodeID(str(file_id) + ":" + str(max_node_id_in_file + 1))
+            exit_node = Node(exit_id)
+            exit_node.type = NodeType.CU
+            exit_node.name = "FuncExit_" + func.name
+            self.g.add_node(exit_id, data=exit_node)
+            # find exit points
+            subtree = subtree_of_type(self, func, CUNode, True)
+            max_end_line = 0
+            for node in subtree:
+                if len(out_edges(self, node.id, EdgeType.SUCCESSOR)) == 0:
+                    print("--> exit: ", node.id)
+                    self.g.add_edge(node.id, exit_id, data=Dependency(EdgeType.SUCCESSOR))
+                    max_end_line = max(max_end_line, node.end_line)
+            exit_node.start_line = max_end_line
+            exit_node.end_line = max_end_line
+
     def show(self) -> None:
         """Plots the graph
 
@@ -528,6 +577,17 @@ class PEGraphX(object):
         labels = {}
         for n in self.g.nodes:
             labels[n] = str(self.g.nodes[n]["data"])
+        # fix missing positions
+        x_min: float = min([pos[n][0] for n in self.g.nodes if n in pos])
+        x_max: float = max([pos[n][0] for n in self.g.nodes if n in pos])
+        y_min: float = min([pos[n][1] for n in self.g.nodes if n in pos])
+        y_max: float = max([pos[n][1] for n in self.g.nodes if n in pos])
+        for n in self.g.nodes:
+            if n not in pos:
+                rand_x = random.uniform(x_min, x_max)
+                rand_y = random.uniform(y_min, y_max)
+                pos[n] = (rand_x, rand_y)
+
         nx.draw_networkx_labels(self.g, pos, labels, font_size=7)
 
         nx.draw_networkx_edges(
