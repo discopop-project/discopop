@@ -38,6 +38,8 @@ add_llvm_library(LLVMDiscoPoP MODULE
 
         initialization/initializeCUIDCounter.cpp
         initialization/initializeBBDepCounter.cpp
+        initialization/initializeInstructionIDCounter.cpp
+        initialization/initializeCallpathStateIDCounter.cpp
 
         llvm_hooks/doInitialization.cpp
         llvm_hooks/doFinalization.cpp
@@ -65,6 +67,9 @@ add_llvm_library(LLVMDiscoPoP MODULE
         static_analysis/createCUs.cpp
         static_analysis/fillCUVariables.cpp
         static_analysis/populateGlobalVariablesSet.cpp
+        static_analysis/disambiguatedInstructions.cpp
+        static_analysis/StaticCalltree.cpp
+        static_analysis/StaticCallPathTree.cpp
 
         hybrid_analysis/InstructionCFG.cpp
         hybrid_analysis/InstructionDG.cpp

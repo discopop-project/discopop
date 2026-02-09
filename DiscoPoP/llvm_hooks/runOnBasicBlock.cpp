@@ -51,6 +51,14 @@ A real case would be:
 // TODO: atomic variables
 void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
   for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
+    // assign unique instruction ids
+    LLVMContext& ctx = BI->getContext();
+    int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
+    MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+to_string(llvm_ir_instruction_id)));
+    BI->setMetadata("dp.md.instr.id", N);
+    // fill instructionID to lineID mapping file
+    *instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << decodeLID(getLID(&*BI, fileID)) << "\n";
+
     if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
       assert(DI->getOperand(0));
 #if false  // NOTE (25-10-30) DISABLED FOR LLVM 19 COMPATIBILITY REASONS
@@ -133,11 +141,11 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
     }
     // load instruction
     else if (isa<LoadInst>(BI)) {
-      instrumentLoad(cast<LoadInst>(BI));
+      instrumentLoad(cast<LoadInst>(BI), llvm_ir_instruction_id);
     }
     // // store instruction
     else if (isa<StoreInst>(BI)) {
-      instrumentStore(cast<StoreInst>(BI));
+      instrumentStore(cast<StoreInst>(BI), llvm_ir_instruction_id);
     }
     // call and invoke
     else if (isaCallOrInvoke(&*BI)) {
@@ -218,7 +226,12 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       if (lid > 0) // calls on non-user code are not instrumented
       {
         IRBuilder<> IRBCall(&*BI);
-        IRBCall.CreateCall(DpCallOrInvoke, ConstantInt::get(Int32, lid));
+        int8_t F_is_library_function = 0;
+        if(F){
+          F_is_library_function = (int8_t) F->isDeclaration();
+        }
+        ArrayRef<Value *> arguments({ConstantInt::get(Int32, llvm_ir_instruction_id), ConstantInt::get(Int8, F_is_library_function)});
+        IRBCall.CreateCall(DpCallOrInvoke, arguments);
         if (DP_DEBUG) {
           if (isa<CallInst>(BI)) {
             if (!(fn.str() == ""))

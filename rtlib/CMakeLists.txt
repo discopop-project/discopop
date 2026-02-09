@@ -44,6 +44,10 @@ set(DiscoPoP_SOURCES
         injected_functions/dp_report_bb_pair.cpp
         injected_functions/dp_taken_branch_counter_output.cpp
         injected_functions/dp_write.cpp
+
+        static_callstate_transitions/CallState.cpp
+        static_callstate_transitions/CallStateGraph.cpp
+        static_callstate_transitions/utils.cpp
         )
 
 set(CMAKE_CXX_FLAGS

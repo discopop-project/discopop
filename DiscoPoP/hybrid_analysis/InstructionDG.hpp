@@ -35,13 +35,14 @@ public:
   bool edgeIsINIT(Edge<Instruction *> *e);
 
   string edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap);
+  string edgeToInstructionBasedDPDep(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap);
 
   void highlightInstructionNode(Instruction *instr);
 
   void dumpToDot(const string targetPath);
-  
+
   string getInstructionLine(Instruction *I);
-  
+
   string getInitEdgeInstructionLine(Edge<Instruction *> *e);
 
   string getValueNameAndMemRegIDFromEdge(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap);

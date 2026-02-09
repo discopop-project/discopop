@@ -25,6 +25,7 @@ StringRef DiscoPoP::getPassName() const { return "DiscoPoP"; }
 // Initializations
 void DiscoPoP::setupDataTypes() {
   Void = const_cast<Type *>(Type::getVoidTy(*ThisModuleContext));
+  Int8 = const_cast<IntegerType *>(IntegerType::getInt8Ty(*ThisModuleContext));
   Int32 = const_cast<IntegerType *>(IntegerType::getInt32Ty(*ThisModuleContext));
   Int64 = const_cast<IntegerType *>(IntegerType::getInt64Ty(*ThisModuleContext));
   CharPtr = PointerType::getUnqual(Type::getInt8Ty(*ThisModuleContext));
@@ -64,15 +65,15 @@ void DiscoPoP::setupCallbacks() {
 
   DpDelete = ThisModule->getOrInsertFunction("__dp_delete", Void, Int32, Int64);
 
-  DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call", Void, Int32);
+  DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call", Void, Int32, Int8);
 
   DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry", Void, Int32, Int32);
 
   DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit", Void, Int32, Int32);
 
-  DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry", Void, Int32, Int32);
+  DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry", Void, Int32, Int32, Int32);
 
-  DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit", Void, Int32, Int32);
+  DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit", Void, Int32, Int32, Int32);
 
   DpTakenBranchCounterIncr =
       ThisModule->getOrInsertFunction("__dp_incr_taken_branch_counter", Void, CharPtr, Int32, Int32);
