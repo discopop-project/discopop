@@ -45,6 +45,14 @@ def __parse_xml_input(xml_fd: TextIOWrapper) -> Dict[str, ObjectifiedElement]:
                 writelineToCUIdMap[instruction_id].add(node.get("id"))
             for instruction_id in str(node.readPhaseLines).split(","):
                 readlineToCUIdMap[instruction_id].add(node.get("id"))
+            # add call lines to read lines for cases where reads happen inside the function arguments
+            if "callsNode" in dir(node):
+                if "nodeCalled" in dir(node.callsNode):
+                    for idx, i in enumerate(node.callsNode.nodeCalled):
+                        call_at_line = node.callsNode.nodeCalled[idx].get("atLine")
+                        if call_at_line not in readlineToCUIdMap:
+                            readlineToCUIdMap[call_at_line] = set()
+                        readlineToCUIdMap[call_at_line].add(node.get("id"))
 
         if node.get("id") in cu_dict:
             # entry exists already! merge the two entries

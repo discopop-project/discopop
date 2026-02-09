@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Tuple, cast
 
 from alive_progress import alive_bar  # type: ignore
 
+from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
@@ -34,6 +35,7 @@ from discopop_explorer.pattern_detectors.simple_gpu_patterns.gpu_pattern_detecto
 from discopop_library.ParallelRegionMerger.inflated_parallel_region_pattern import (
     run_detection as detect_inflated_parallel_regions,
 )
+from discopop_explorer.pattern_detectors.new_task_detector import run_detection as detect_tasking
 
 
 class PatternDetectorX(object):
@@ -80,57 +82,70 @@ class PatternDetectorX(object):
         enable_detection_of_scheduling_clauses: bool,
         hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
         jobs: Optional[int],
+        enable_task_graph_plot: bool,
+        enable_context_graph_plot: bool,
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()
         self.pet.calculateFunctionMetadata(hotspots)
         self.pet.calculateLoopMetadata()
+        self.pet.enforce_single_function_exit_node()
         res = DetectionResult(self.pet)
+
+        # create TaskGraph from pet
+        task_graph = TaskGraph(self.pet)
+        if enable_task_graph_plot:
+            task_graph.plot()
+        #        if enable_context_graph_plot:
+        #            task_graph.plot_context_graph(plt.gca())
+
+        # detect parallel tasks
+        res.patterns.task = detect_tasking(self.pet, task_graph)
 
         # reduction before doall!
 
-        if "*" in enable_patterns or "reduction" in enable_patterns:
-            print("REDUCTIONS...")
-            res.patterns.reduction = detect_reduction(self.pet, hotspots, jobs)
-            print("\tDONE.")
-        if "*" in enable_patterns or "doall" in enable_patterns:
-            print("DOALL...")
-            res.patterns.do_all = detect_do_all(self.pet, hotspots, res.patterns.reduction, jobs)
-            print("\tDONE.")
-        if "*" in enable_patterns or "pipeline" in enable_patterns:
-            print("PIPELINE...")
-            res.patterns.pipeline = detect_pipeline(self.pet, hotspots)
-            print("\tDONE.")
-        if "*" in enable_patterns or "geodec" in enable_patterns:
-            print("GEO. DEC...")
-            res.patterns.geometric_decomposition = detect_gd(self.pet, hotspots)
-            print("\tDONE.")
+        #        if "*" in enable_patterns or "reduction" in enable_patterns:
+        #            print("REDUCTIONS...")
+        #            res.patterns.reduction = detect_reduction(self.pet, hotspots, jobs)
+        #            print("\tDONE.")
+        #        if "*" in enable_patterns or "doall" in enable_patterns:
+        #            print("DOALL...")
+        #            res.patterns.do_all = detect_do_all(self.pet, hotspots, res.patterns.reduction, jobs)
+        #            print("\tDONE.")
+        #        if "*" in enable_patterns or "pipeline" in enable_patterns:
+        #            print("PIPELINE...")
+        #            res.patterns.pipeline = detect_pipeline(self.pet, hotspots)
+        #            print("\tDONE.")
+        #        if "*" in enable_patterns or "geodec" in enable_patterns:
+        #            print("GEO. DEC...")
+        #            res.patterns.geometric_decomposition = detect_gd(self.pet, hotspots)
+        #            print("\tDONE.")
 
         # check if task pattern should be enabled
-        if enable_task_pattern:
-            if cu_inst_result_file is None:
-                raise ValueError("cu_inst_result_file not specified.")
-            if file_mapping is None:
-                raise ValueError("file_mapping not specified.")
-            res.patterns.task = detect_tp(
-                cu_dict,
-                dependencies,
-                reduction_vars,
-                file_mapping,
-                cu_inst_result_file,
-                llvm_cxxfilt_path,
-                discopop_build_path,
-                hotspots,
-                res.patterns.reduction,
-            )
-
-        # detect GPU patterns based on previously identified patterns
-        if "*" in enable_patterns or "simplegpu" in enable_patterns:
-            print("SIMPLE GPU...")
-            res.patterns.simple_gpu = detect_gpu(self.pet, res, project_path)
-            print("\tDONE.")
-
+        #        if enable_task_pattern:
+        #            if cu_inst_result_file is None:
+        #                raise ValueError("cu_inst_result_file not specified.")
+        #            if file_mapping is None:
+        #                raise ValueError("file_mapping not specified.")
+        #            res.patterns.task = detect_tp(
+        #                cu_dict,
+        #                dependencies,
+        #                reduction_vars,
+        #                file_mapping,
+        #                cu_inst_result_file,
+        #                llvm_cxxfilt_path,
+        #                discopop_build_path,
+        #                hotspots,
+        #                res.patterns.reduction,
+        #            )
+        #
+        #       # detect GPU patterns based on previously identified patterns
+        #       if "*" in enable_patterns or "simplegpu" in enable_patterns:
+        #           print("SIMPLE GPU...")
+        #           res.patterns.simple_gpu = detect_gpu(self.pet, res, project_path)
+        #           print("\tDONE.")
+        #
         # detect combined GPU patterns
         # disabled currently due to high additional overhead.
         # will be moved and calculated based on the optimization graph

@@ -70,6 +70,7 @@ def from_json_strings(
         "gpu_do_all",
         "gpu_reduction",
         "pipeline",
+        "task",
         "simple_gpu",
         "combined_gpu",
         "parallel_region",
