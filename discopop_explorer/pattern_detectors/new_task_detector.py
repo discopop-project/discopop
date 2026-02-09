@@ -18,6 +18,7 @@ from discopop_explorer.classes.TaskGraph.ContextTaskGraph import ContextTaskGrap
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
+from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
 from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
@@ -165,6 +166,16 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
         successors = context_task_graph.get_successors(node)
         if len(successors) < 2:
             continue
+
+        # restrict search space. Require at least one inlined function as a child of the fork node
+        has_inlined_function = False
+        for succ in successors:
+            if isinstance(succ, InlinedFunctionContext):
+                has_inlined_function = True
+                break
+        if not has_inlined_function:
+            continue
+
         # node is a fork
         # check if a clean join node exists, i.e., if all branches arrive at the same node without crossing each other
         frontiers: List[Tuple[Context, int]] = [(succ, 1) for succ in successors]
