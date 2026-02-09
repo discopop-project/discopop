@@ -14,5 +14,7 @@
 
 unsigned int CUIDCounter;
 unsigned int bbDepCount;
+unsigned int InstructionIDCounter;
+unsigned int CallpathStateIDCounter;
 bool defaultIsGlobalVariableValue;
 std::int32_t fileID;

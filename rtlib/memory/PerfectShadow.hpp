@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
+#include <iostream>
 
 namespace __dp {
 
@@ -95,6 +96,28 @@ public:
   const std::unordered_map<std::int64_t, sigElement> *getSigRead() const noexcept { return sigRead; }
 
   const std::unordered_map<std::int64_t, sigElement> *getSigWrite() const noexcept { return sigWrite; }
+
+  std::vector<std::pair<std::int64_t, sigElement>> getReadKVPairs(){
+    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
+    kv_pairs.reserve(sigRead->size());
+    for(auto kv_pair : *sigRead){
+      kv_pairs.push_back(kv_pair);
+    }
+    return kv_pairs;
+  }
+
+  std::vector<std::pair<std::int64_t, sigElement>> getWriteKVPairs(){
+    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
+    kv_pairs.reserve(sigWrite->size());
+    for(auto kv_pair : *sigWrite){
+      kv_pairs.push_back(kv_pair);
+    }
+    return kv_pairs;
+  }
+
+  inline void print(){
+    std::cout << "Hello from PerfectShadow" << std::endl;
+  }
 
 private:
   std::unordered_map<std::int64_t, sigElement> *sigRead;
@@ -176,6 +199,36 @@ public:
   const hashmap<int64_t, sigElement> *getSigRead() const noexcept { return &read_cache; }
 
   const hashmap<int64_t, sigElement> *getSigWrite() const noexcept { return &write_cache; }
+
+  std::vector<std::pair<std::int64_t, sigElement>> getReadKVPairs(){
+    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
+    kv_pairs.reserve(read_cache.size());
+    for(auto kv_pair : read_cache){
+      kv_pairs.emplace_back(kv_pair.first, kv_pair.second);
+    }
+    return kv_pairs;
+  }
+
+  std::vector<std::pair<std::int64_t, sigElement>> getWriteKVPairs(){
+    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
+    kv_pairs.reserve(write_cache.size());
+    for(auto kv_pair : write_cache){
+      kv_pairs.emplace_back(kv_pair.first, kv_pair.second);
+    }
+    return kv_pairs;
+  }
+
+  void print(){
+    std::cout << "ADDR \t READ \t WRITE\t\t// Shadow Memory" << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    for(auto pair: read_cache){
+      std::cout << "| " << pair.first << "\t| " << pair.second << "\t| " << write_cache[pair.first] << "\t|" <<  std::endl;
+    }
+    std::cout << "-------------------------" << std::endl;
+    std::cout << std::endl;
+  }
+
+
 
 private:
   hashmap<int64_t, sigElement> read_cache{};

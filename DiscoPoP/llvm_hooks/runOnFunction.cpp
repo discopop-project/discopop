@@ -71,6 +71,8 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     return false;
   }
 
+
+
   vector<CU *> CUVector;
   set<string> globalVariablesSet; // list of variables which appear in more than
   // one basic block
@@ -321,7 +323,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
           set<string> tmp;
           conditionalBBDepMap[Src->getParent()] = tmp;
         }
-        conditionalBBDepMap[Src->getParent()].insert(DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap));
+        conditionalBBDepMap[Src->getParent()].insert(DG.edgeToInstructionBasedDPDep(edge, staticValueNameToMemRegIDMap));
       } else {
         if (!conditionalBBPairDepMap.count(Dst->getParent())) {
           map<BasicBlock *, set<string>> tmp;
@@ -347,7 +349,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
 
         if(insertDep){
           conditionalBBPairDepMap[Dst->getParent()][Src->getParent()].insert(
-            DG.edgeToDPDep(edge, staticValueNameToMemRegIDMap));
+            DG.edgeToInstructionBasedDPDep(edge, staticValueNameToMemRegIDMap));
         }
       }
       omittableInstructions.insert(Src);

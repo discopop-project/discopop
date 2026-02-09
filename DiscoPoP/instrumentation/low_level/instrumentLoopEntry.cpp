@@ -33,6 +33,7 @@ void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
     if (lid > 0 && !isa<PHINode>(BI)) {
       args.push_back(ConstantInt::get(Int32, lid));
       args.push_back(ConstantInt::get(Int32, id));
+      args.push_back(ConstantInt::get(Int32, 0));  // instruction id will be replaced after the assignment of unique instruction ids
       CallInst::Create(DpLoopEntry, args, "", &*BI);
       break;
     }

@@ -59,6 +59,8 @@
 
 #include "DPUtils.hpp"
 #include "hybrid_analysis/InstructionDG.hpp"
+#include "static_analysis/StaticCalltree.hpp"
+#include "static_analysis/StaticCallPathTree.hpp"
 
 #include "Structs.hpp"
 
@@ -69,7 +71,9 @@
 #include <set>
 #include <string.h>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
+#include <boost/container_hash/hash.hpp>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -106,6 +110,8 @@ private:
   ofstream *outOriginalVariables;
   ofstream *outCUIDCounter;
   ofstream *outBBDepCounter;
+  ofstream *outInstructionIDCounter;
+  ofstream *outCallpathStateIDCounter;
   // Mohammad 23.12.2020
   map<string, string> loopStartLines;
 
@@ -164,9 +170,9 @@ private:
 
   void instrumentDeleteOrFree(CallBase *toInstrument);
 
-  void instrumentStore(StoreInst *toInstrument);
+  void instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruction_id);
 
-  void instrumentLoad(LoadInst *toInstrument);
+  void instrumentLoad(LoadInst *toInstrument, int32_t llvm_ir_instruction_id);
 
   void insertDpFinalize(Instruction *before);
 
@@ -189,7 +195,7 @@ private:
 
   // Basic types
   Type *Void;
-  IntegerType *Int32, *Int64;
+  IntegerType *Int8, *Int32, *Int64;
   PointerType *CharPtr;
 
   // Control flow analysis
@@ -217,6 +223,10 @@ private:
   int nextFreeStaticMemoryRegionID;
 
   // DPInstrumentationOmission end
+
+  // InstructionID assignment
+  uint32_t unique_llvm_ir_instruction_id;
+  uint32_t unique_callpath_state_id;
 
 public:
   DiscoPoP() : uniqueNum(1){}; // : ModulePass(ID), uniqueNum(1){};
@@ -262,6 +272,33 @@ public:
 
   void createTakenBranchInstrumentation(Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap);
 
+  StaticCalltree buildStaticCalltree(Module &M);
+  //std::pair<std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>> enumerate_paths(StaticCalltree& calltree);
+  StaticCallPathTree* enumerate_paths(StaticCalltree& calltree, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions,
+  std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions);
+  //void save_initial_path(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
+  void save_initial_path(StaticCallPathTree* call_path_tree_ptr);
+  //void save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
+  void save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr);
+  // void save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *transitions);
+  void save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr);
+  void save_static_calltree_to_dot(StaticCalltree* calltree);
+  void assign_instruction_ids_to_dp_reduction_functions(Module &M);
+  void update_argument_instruction_ids(Module &M);
+// hasher used for std::vector<StaticCalltreeNode*>
+template <typename Container>
+struct container_hash {
+    std::size_t operator()(Container const& c) const {
+        return boost::hash_range(c.begin(), c.end());
+    }
+};
+  // void add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths, std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, container_hash<std::vector<StaticCalltreeNode*>>> path_to_id_map);
+  //void add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, StaticCallPathTree* call_path_tree_ptr);
+  void add_function_exit_edges_to_transitions(StaticCallPathTree* call_path_tree_ptr);
+
+  std::unordered_map<StaticCalltreeNode*, std::unordered_set<int32_t>> get_contained_in_map(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>& paths);
+  std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, container_hash<std::vector<StaticCalltreeNode*>>> get_path_to_id_map(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>& paths);
+
   void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
                        map<string, vector<CU *>> &BBIDToCUIDsMap);
 
@@ -272,6 +309,8 @@ public:
   // Output function
   void initializeCUIDCounter();
   void initializeBBDepCounter();
+  void initializeInstructionIDCounter();
+  void initializeCallpathStateIDCounter();
 
   string xmlEscape(string data);
 
@@ -325,6 +364,9 @@ public:
   llvm::Module *module_;
   std::ofstream *reduction_file;
   std::ofstream *loop_counter_file;
+  std::ofstream *instructionID_to_lineID_file;
+  std::ofstream *stateID_to_callpath_file;
+  std::ofstream *callpath_state_transitions_file;
   std::vector<loop_info_t> loops_;
   std::vector<instr_info_t> instructions_;
   std::map<std::string, int> path_to_id_;

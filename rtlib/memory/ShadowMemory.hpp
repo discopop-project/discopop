@@ -56,6 +56,16 @@ public:
     return result;
   }
 
+  inline std::vector<std::pair<std::int64_t, sigElement>> getReadKVPairs(){
+    throw new std::string("NOT IMPLEMENTED!");
+  }
+
+  inline std::vector<std::pair<std::int64_t, sigElement>> getWriteKVPairs(){
+    throw new std::string("NOT IMPLEMENTED!");
+  };
+
+  inline void print(){}
+
 private:
   Signature *sigRead;
   Signature *sigWrite;

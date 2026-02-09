@@ -13,18 +13,18 @@
 #include "DependencyMetadata.hpp"
 
 namespace __dp {
-DependencyMetadata::DependencyMetadata(MetaDataQueueElement mdqe, std::set<unsigned int> arg_intra_call_dependencies,
-                                       std::set<unsigned int> arg_intra_iteration_dependencies,
-                                       std::set<unsigned int> arg_inter_call_dependencies,
-                                       std::set<unsigned int> arg_inter_iteration_dependencies,
-                                       std::set<unsigned int> arg_sink_ancestors,
-                                       std::set<unsigned int> arg_source_ancestors)
+DependencyMetadata::DependencyMetadata(MetaDataQueueElement mdqe, hashset<unsigned int> arg_intra_call_dependencies,
+                                       hashset<unsigned int> arg_intra_iteration_dependencies,
+                                       hashset<unsigned int> arg_inter_call_dependencies,
+                                       hashset<unsigned int> arg_inter_iteration_dependencies,
+                                       hashset<unsigned int> arg_sink_ancestors,
+                                       hashset<unsigned int> arg_source_ancestors)
     : type(mdqe.type), sink(mdqe.sink), source(mdqe.source), var(mdqe.var), AAvar(mdqe.AAvar),
-      intra_call_dependencies(arg_intra_call_dependencies),
-      intra_iteration_dependencies(arg_intra_iteration_dependencies),
-      inter_call_dependencies(arg_inter_call_dependencies),
-      inter_iteration_dependencies(arg_inter_iteration_dependencies), sink_ancestors(arg_sink_ancestors),
-      source_ancestors(arg_source_ancestors) {}
+      intra_call_dependencies(std::move(arg_intra_call_dependencies)),
+      intra_iteration_dependencies(std::move(arg_intra_iteration_dependencies)),
+      inter_call_dependencies(std::move(arg_inter_call_dependencies)),
+      inter_iteration_dependencies(std::move(arg_inter_iteration_dependencies)), sink_ancestors(std::move(arg_sink_ancestors)),
+      source_ancestors(std::move(arg_source_ancestors)) {}
 
 bool DependencyMetadata::operator==(const DependencyMetadata &other) const {
   return (type == other.type) && (sink == other.sink) && (source == other.source) && (var == other.var) &&
@@ -57,7 +57,8 @@ string DependencyMetadata::toString() {
   result += dputil::decodeLID(source) + " ";
   result += var;
   result += " ";
-  result += AAvar + " ";
+  result += std::to_string(AAvar);
+  result += " ";
   result += "IAC[";
   for (auto iac : intra_call_dependencies) {
     result += dputil::decodeLID(iac) + ",";

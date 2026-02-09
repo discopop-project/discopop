@@ -66,6 +66,8 @@ include_directories(${LLVM_INCLUDE_DIRS})
 message(STATUS "Updating git submodules")
 execute_process(COMMAND git submodule update --init --recursive --remote)
 
+set(CMAKE_CXX_FLAGS "-fopenmp -pthread")
+
 add_subdirectory(DiscoPoP)
 
 add_subdirectory(rtlib)

@@ -16,6 +16,7 @@
 
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
+#include "../static_callstate_transitions/utils.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -30,7 +31,7 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_call(LID lid) {
+void __dp_call(LID instructionID, int8_t isLibraryFunction) {
   if (!dpInited || targetTerminated) {
     return;
   }
@@ -45,7 +46,13 @@ void __dp_call(LID lid) {
   const auto timer = Timer(timers, TimerRegion::CALL);
 #endif
 
-  function_manager->log_call(lid);
+  function_manager->log_call(instructionID);
+
+  // exclude library functions from callstate updates due to the missing instrumented function exit
+  // and the resulting inconsistent callstate after returning
+  if(!isLibraryFunction){
+    update_callstate_from_call(instructionID);
+  }
 }
 }
 
