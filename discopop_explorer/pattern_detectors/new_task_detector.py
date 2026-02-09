@@ -62,10 +62,9 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
     root.title("Context Task Graph")
 
     def close_window() -> None:
-        print("Closing window...")
+        root.quit()
         root.destroy()
 
-    root.protocol("WM_DELETE_WINDOW", close_window)
     root.grid_rowconfigure(0, weight=20)
     root.grid_rowconfigure(1, weight=1)
     root.grid_rowconfigure(2, weight=20)
@@ -150,6 +149,7 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
     context_task_graph.update_plot(ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None)
 
     # ---- start main loop
+    root.protocol("WM_DELETE_WINDOW", close_window)
     root.mainloop()
 
 
@@ -217,7 +217,7 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
         task_entry_points: List[Context] = context_task_graph.get_successors(tpl[0])
         task_entry_barrier_pairs.append((task_entry_points, tpl[1]))
 
-    # DEBUG
+    #    # DEBUG
     highlight_nodes: Set[Context] = set()
     for tpl in fork_join_pairs:
         highlight_nodes.add(tpl[0])
@@ -228,11 +228,12 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
     show_all_plots(context_task_graph, highlight_nodes=highlight_nodes)
     # !DEBUG
 
-    for tpl in fork_join_pairs:
-        print("FJP: ", tpl)
+    for tpl2 in task_entry_barrier_pairs:
+        print("FJP: ", tpl2)
         tmp_patterns: List[TaskParallelismInfo] = []
         # create task pattern for each entry
-        for entry in context_task_graph.get_successors(tpl[0]):
+        last_pet_node = None
+        for entry in tpl2[0]:
             pet_node = entry.get_first_pet_node(context_task_graph.pet)
             if pet_node is not None:
                 tmp_patterns.append(
@@ -246,9 +247,35 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
                         shared=[],
                     )
                 )
+                last_pet_node = pet_node
 
         # create a barrier pattern for the join
         # link the patterns together
+        barrier_location = tpl2[1].get_first_pet_node(context_task_graph.pet)
+        if barrier_location is not None:
+            tmp_patterns.append(
+                TaskParallelismInfo(
+                    barrier_location,
+                    type=TPIType.TASKWAIT,
+                    pragma=["#pragma omp taskwait"],
+                    pragma_line=barrier_location.start_position(),
+                    first_private=[],
+                    private=[],
+                    shared=[],
+                )
+            )
+        elif last_pet_node is not None:
+            tmp_patterns.append(
+                TaskParallelismInfo(
+                    last_pet_node,
+                    type=TPIType.TASKWAIT,
+                    pragma=["#pragma omp taskwait"],
+                    pragma_line=last_pet_node.start_position(),
+                    first_private=[],
+                    private=[],
+                    shared=[],
+                )
+            )
 
         patterns += tmp_patterns
 

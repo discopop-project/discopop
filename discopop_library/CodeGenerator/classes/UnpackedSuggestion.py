@@ -223,6 +223,14 @@ class UnpackedSuggestion(object):
             pragma.end_line = self.end_line
             pragma.pragma_str = " ".join(self.values["pragma"])
             pragmas.append(pragma)
+        elif self.values["type"] == "TASKWAIT":
+            pragma = Pragma()
+            pragma.file_id = self.file_id
+            pragma.start_line = self.start_line
+            pragma.end_line = self.end_line
+            pragma.pragma_str = " ".join(self.values["pragma"])
+            pragma.pragma_position = PragmaPosition.AFTER_START
+            pragmas.append(pragma)
         else:
             raise ValueError("Unknown task type: " + self.values["type"])
 
