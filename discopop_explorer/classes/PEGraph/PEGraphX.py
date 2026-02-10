@@ -194,8 +194,9 @@ class PEGraphX(object):
                         for var in itertools.chain(source_node.local_vars, source_node.global_vars):
                             vars_in_source_node.add(var.name)
 
-                    if dep.var_name not in vars_in_sink_node and dep.var_name not in vars_in_source_node:
-                        continue
+                    # Note: consider all dependencies, independent of the variable names
+                    #                    if dep.var_name not in vars_in_sink_node and dep.var_name not in vars_in_source_node:
+                    #                        continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
         print("\tAdded dependencies...")

@@ -105,7 +105,7 @@ class TaskGraph(object):
     plotting_graph_buffer = None
     plotting_postions_buffer = None
 
-    def __init__(self, pet: PEGraphX) -> None:
+    def __init__(self, pet: PEGraphX, dependency_files: Optional[List[str]] = None) -> None:
         self.pet = pet
         self.graph = nx.MultiDiGraph()
 
@@ -151,6 +151,8 @@ class TaskGraph(object):
         # start processing
         self.__assign_function_ids(pet)
         self.__construct_from_pet(pet)
+        for file in dependency_files if dependency_files is not None else []:
+            self.__insert_data_dependencies_from_file(file)
         print("Waiting for user to close the Window...")
         # plt.show(block=True)
         plt.ioff()
@@ -178,7 +180,7 @@ class TaskGraph(object):
         self.__assign_node_levels()
         self.__calculate_context_nesting()
         self.__calculate_context_successions()
-        self.__insert_pessimistic_data_dependencies()
+        # self.__insert_pessimistic_data_dependencies()
         # self.__insert_data_dependencies()
         # self.__validate_data_dependencies()
 
@@ -1821,6 +1823,9 @@ class TaskGraph(object):
                     for source_parent_ctx in source_tg.parent_context:
                         for target_parent_ctx in target_tg.parent_context:
                             source_parent_ctx.register_outgoing_dependency(target_parent_ctx, dependency)
+
+    def __insert_data_dependencies_from_file(self, dependency_file: str) -> None:
+        logger.info("Inserting data dependencies from file: " + dependency_file)
 
     def __validate_data_dependencies(self) -> None:
         self.__validate_data_dependencies_using_initializations()
