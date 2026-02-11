@@ -1271,6 +1271,10 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
   std::string global_buffer = "";
   #pragma omp parallel for reduction(+:global_buffer)
   for(auto path: call_path_tree_ptr->all_nodes){
+/*
+    Note: 12.02.2026: removing the states leads to holes in the data dependency information.
+    These states could allow the detection of dependencies originating from the function argument initialization.
+
     // filter out paths ending with call instructions
     if(path->base_node != nullptr){
       if(path->base_node->get_type() == 1){
@@ -1278,6 +1282,7 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
         continue;
       }
     }
+*/
     // save path string to buffer
     std::string path_buffer = to_string(path->path_id) + " " + path->get_path_string() + "\n";
     global_buffer += path_buffer;
