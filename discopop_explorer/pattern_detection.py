@@ -7,6 +7,7 @@
 # directory for details.
 import json
 import os
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple, cast
 
 from alive_progress import alive_bar  # type: ignore
@@ -94,7 +95,9 @@ class PatternDetectorX(object):
         res = DetectionResult(self.pet)
 
         # create TaskGraph from pet
-        task_graph = TaskGraph(self.pet)
+        dynamic_deps_file = dependencies
+        static_deps_file = os.path.join(Path(dependencies).parent, "static_dependencies.txt")
+        task_graph = TaskGraph(self.pet, dynamic_deps_file, static_deps_file)
         if enable_task_graph_plot:
             task_graph.plot()
         #        if enable_context_graph_plot:

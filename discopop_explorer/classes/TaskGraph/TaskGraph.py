@@ -105,7 +105,9 @@ class TaskGraph(object):
     plotting_graph_buffer = None
     plotting_postions_buffer = None
 
-    def __init__(self, pet: PEGraphX, dependency_files: Optional[List[str]] = None) -> None:
+    def __init__(
+        self, pet: PEGraphX, dynamic_dependency_file: Optional[str] = None, static_dependency_file: Optional[str] = None
+    ) -> None:
         self.pet = pet
         self.graph = nx.MultiDiGraph()
 
@@ -151,13 +153,7 @@ class TaskGraph(object):
         # start processing
         self.__assign_function_ids(pet)
         self.__construct_from_pet(pet)
-        self.__insert_data_dependencies_from_files(
-            [
-                "/home/lukas/Schreibtisch/Example_Code/trivial_tasking/.discopop/profiler/static_dependencies.txt",
-                "/home/lukas/Schreibtisch/Example_Code/trivial_tasking/.discopop/profiler/dynamic_dependencies.txt",
-            ]
-        )
-        warnings.warn("DATA DEPENDENCY FILES HARD-CODED!")
+        self.__insert_data_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
         print("Waiting for user to close the Window...")
         # plt.show(block=True)
         plt.ioff()
@@ -421,9 +417,12 @@ class TaskGraph(object):
         nx.draw_networkx_edges(ctx_graph, positions, edge_color="red", ax=axis)
 
         # draw labels
-        labels = {}
+        labels: Dict[Any, str] = {}
         for ctx in self.contexts:
-            labels[ctx] = ctx.get_label()
+            if isinstance(ctx, WorkContext):
+                labels[ctx] = ctx.get_label_with_defined_vars(self.pet)
+            else:
+                labels[ctx] = ctx.get_label()
         nx.draw_networkx_labels(ctx_graph, positions, labels, font_size=7, ax=axis)
 
     def plot_context_debug_graph(self, axis: Axes) -> None:
@@ -1830,7 +1829,7 @@ class TaskGraph(object):
                             source_parent_ctx.register_outgoing_dependency(target_parent_ctx, dependency)
 
     def __read_dependencies_from_files(
-        self, dependency_files: List[str]
+        self, dynamic_dependency_file: Optional[str], static_dependency_file: Optional[str]
     ) -> Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]]:
         """Reads data dependencies from files and returns them in a structured format.
         Format: {dep_type: {source_location: {source_state_id: {sink_location: {sink_state_id:  [var_info]}}}}}
@@ -1839,7 +1838,11 @@ class TaskGraph(object):
         deps: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]] = (
             dict()
         )  # {dep_type: {source_location: {source_state_id: {sink_location: {sink_state_id:  [var_info]}}}}}
-        for dependency_file in dependency_files:
+
+        for idx, dependency_file in enumerate([dynamic_dependency_file, static_dependency_file]):
+            print("DEP FILE: ", dependency_file)
+            if dependency_file is None:
+                continue
             with open(dependency_file, "r") as f:
                 for line in f:
                     line = line.strip()
@@ -1871,6 +1874,12 @@ class TaskGraph(object):
                             continue
                         # current is a dependency type
                         dep_type = current
+                        # prepend DYN or STAT to the dependency type to distinguish between dynamic and static dependencies
+                        if idx == 0:
+                            dep_type = "DYN_" + dep_type
+                        else:
+                            dep_type = "STAT_" + dep_type
+
                         # read dependency contents
                         dep_contents = line_split[0]
                         del line_split[0]
@@ -2138,15 +2147,18 @@ class TaskGraph(object):
                     del dependencies[dep_type]
         return dependencies
 
-    def __get_contexts_by_location_and_state_id(self, location: str, state_id: str) -> Set[Context]:
-        contexts = set()
+    def __get_work_contexts_by_location_and_state_id(self, location: str, state_id: str) -> Set[Context]:
+        contexts: Set[Context] = set()
         if ":" in location:
             # location is in format "file:line".
             location_split = location.split(":")
             file_id = location_split[0]
             line_num = location_split[1]
             location_lineid = LineID(file_id + ":" + line_num)
+
             for context in self.contexts:
+                if not isinstance(context, WorkContext):
+                    continue
                 context_code_scope = context.get_code_scope(self.pet)
                 # DEBUG
                 print("context locs: ", str(context_code_scope))
@@ -2162,7 +2174,9 @@ class TaskGraph(object):
             warnings.warn("Not yet implemented: filtering contexts by state id. State ID: " + state_id)
         return contexts
 
-    def __insert_data_dependencies_from_files(self, dependency_files: List[str]) -> None:
+    def __insert_data_dependencies_from_files(
+        self, dynamic_dependency_file: Optional[str], static_dependency_file: Optional[str]
+    ) -> None:
 
         def debug_print_deps(
             deps: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]], indent: int = 0
@@ -2181,7 +2195,7 @@ class TaskGraph(object):
                                     print("-----> VAR INFO: ", var_info)
 
         # collect data dependencies
-        dependencies = self.__read_dependencies_from_files(dependency_files)
+        dependencies = self.__read_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
         print("ORIGINAL DEPS:")
         debug_print_deps(dependencies)
         dependencies = self.__apply_dependency_overwrites(dependencies)
@@ -2191,44 +2205,105 @@ class TaskGraph(object):
         debug_print_deps(dependencies)
 
         # insert data dependencies into graph
+        # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
         for dep_type, dep_type_deps in dependencies.items():
             for source_location, source_location_deps in dep_type_deps.items():
                 for source_state_id, source_state_deps in source_location_deps.items():
                     for sink_location, sink_location_deps in source_state_deps.items():
                         for sink_state_id, var_infos in sink_location_deps.items():
                             # find source and target contexts based on locations and state ids
-                            source_contexts = self.__get_contexts_by_location_and_state_id(
+                            # only work contexts can be source or target of data dependencies
+                            source_contexts = self.__get_work_contexts_by_location_and_state_id(
                                 source_location, source_state_id
                             )
-                            target_contexts = self.__get_contexts_by_location_and_state_id(sink_location, sink_state_id)
-                            # register dependencies between all pairs of source and target contexts
-                            for source_ctx in source_contexts:
-                                for target_ctx in target_contexts:
-                                    if source_ctx == target_ctx:
-                                        continue
-                                    for var_info in var_infos:
-                                        var_name = var_info if "(" not in var_info else var_info.split("(")[0]
-                                        memory_region = (
-                                            None
-                                            if "(" not in var_info
-                                            else MemoryRegion(var_info.split("(")[1].strip(")"))
-                                        )
-                                        dep_type_enum_obj = (
-                                            DepType[dep_type] if dep_type in DepType.__members__ else None
-                                        )
-                                        dependency = Dependency(type=EdgeType.DATA)
+                            target_contexts = self.__get_work_contexts_by_location_and_state_id(
+                                sink_location, sink_state_id
+                            )
 
-                                        dependency.dtype = dep_type_enum_obj
-                                        dependency.var_name = var_name
-                                        dependency.memory_region = memory_region
+                            # handle static and dynamic dependencies separately
+                            if dep_type.startswith("STAT_"):
+                                # static dependencies must not consider other branches or leave the current function scope
+                                for source_ctx in source_contexts:
+                                    for target_ctx in target_contexts:
+                                        if source_ctx == target_ctx:
+                                            continue
+                                        warnings.warn("Not yet implemented: adding static dependencies to the graph.")
+                                        # source and target have to share a parent function context.
 
-                                        source_ctx.register_outgoing_dependency(target_ctx, dependency)
+                                        # if source and target are both located in the same loop, they have to be located in the same loop iteration.,
+                                        # if only one of them is located in a loop, the other one must be located in the
+                                        #
+
+                            #                                        if source_ctx.get_enclosing_function() != target_ctx.get_enclosing_function():
+                            #                                            # skip dependency as it leaves the current function
+                            #                                            continue
+
+                            # for var_info in var_infos:
+                            #     var_name = var_info if "(" not in var_info else var_info.split("(")[0]
+                            #     memory_region = (
+                            #         None
+                            #         if "(" not in var_info
+                            #         else MemoryRegion(var_info.split("(")[1].strip(")"))
+                            #     )
+                            #     # remove STAT_ prefix from dep_type to get the actual dependency type
+                            #     clean_dep_type = dep_type.replace("STAT_", "")
+                            #     dep_type_enum_obj = (
+                            #         DepType[clean_dep_type] if clean_dep_type in DepType.__members__ else None
+                            #     )
+                            #     dependency = Dependency(type=EdgeType.DATA)
+                            #
+                            #                                            dependency.dtype = dep_type_enum_obj
+                            #                                            dependency.var_name = var_name
+                            #                                            dependency.memory_region = memory_region
+                            #
+                            #                                            source_ctx.register_outgoing_dependency(target_ctx, dependency)
+                            else:
+                                # dynamic dependencies are allowed to leave the current function
+                                # register dependencies between all pairs of source and target contexts
+                                for source_ctx in source_contexts:
+                                    for target_ctx in target_contexts:
+                                        if source_ctx == target_ctx:
+                                            continue
+                                        for var_info in var_infos:
+                                            var_name = var_info if "(" not in var_info else var_info.split("(")[0]
+                                            memory_region = (
+                                                None
+                                                if "(" not in var_info
+                                                else MemoryRegion(var_info.split("(")[1].strip(")"))
+                                            )
+                                            # remove DYN_ or STAT_ prefix from dep_type to get the actual dependency type
+                                            clean_dep_type = dep_type.replace("DYN_", "")
+                                            dep_type_enum_obj = (
+                                                DepType[clean_dep_type]
+                                                if clean_dep_type in DepType.__members__
+                                                else None
+                                            )
+                                            dependency = Dependency(type=EdgeType.DATA)
+
+                                            dependency.dtype = dep_type_enum_obj
+                                            dependency.var_name = var_name
+                                            dependency.memory_region = memory_region
+
+                                            # ignore WAW, as there is no data flow
+                                            if dependency.dtype == DepType.WAW:
+                                                continue
+                                            # ignore INIT as there is no data flow
+                                            if dependency.dtype == DepType.INIT:
+                                                continue
+
+                                            source_ctx.register_outgoing_dependency(target_ctx, dependency)
 
         # plt.ioff()
         # self.plot_context_debug_graph(plt.gca())
         # plt.pause(5)
 
-        logger.info("Inserting data dependencies from files: " + str(dependency_files))
+        logger.info(
+            "Inserting data dependencies from files: "
+            + str(dynamic_dependency_file)
+            + ", "
+            + str(static_dependency_file)
+            + " completed."
+        )
 
         # import sys
 
