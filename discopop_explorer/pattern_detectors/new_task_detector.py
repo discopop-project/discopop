@@ -153,8 +153,6 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
     root.protocol("WM_DELETE_WINDOW", close_window)
     root.mainloop()
 
-    context_task_graph.task_graph.pet.show()
-
 
 def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskParallelismInfo]:
     logger.info("Identifying trivial tasking potential...")
