@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 
+from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 
 if TYPE_CHECKING:
@@ -178,3 +179,22 @@ class Context(object):
                 scope.append(LineID(str(pet_node.file_id) + ":" + str(i)))
         # remove duplicates
         return list(set(scope))
+
+    def get_defined_variables(self, pet: PEGraphX) -> List[Tuple[str, LineID]]:
+        """returns a list of defined variables in the context as tuples of (variable name, lineID)."""
+        defined_vars: List[Tuple[str, LineID]] = []
+        code_scope = self.get_code_scope(pet)
+        for node in self.contained_nodes:
+            pet_node = node.get_pet_node(pet)
+            if pet_node is None:
+                continue
+            if isinstance(pet_node, CUNode):
+                for var in pet_node.local_vars + pet_node.global_vars:
+                    var_def_line = var.defLine
+                    if var_def_line in code_scope:  # implicitly ignore definition line "LineNotFound"
+                        print("Definition of variable " + var.name + " at line " + var_def_line)
+                        defined_vars.append((str(var.name), LineID(var_def_line)))
+
+        # remove duplicates
+        defined_vars = list(set(defined_vars))
+        return defined_vars
