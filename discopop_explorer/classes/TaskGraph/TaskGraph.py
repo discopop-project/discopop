@@ -1831,6 +1831,10 @@ class TaskGraph(object):
     def __read_dependencies_from_files(
         self, dependency_files: List[str]
     ) -> Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]]:
+        """Reads data dependencies from files and returns them in a structured format.
+        Format: {dep_type: {source_location: {source_state_id: {sink_location: {sink_state_id:  [var_info]}}}}}
+        """
+
         deps: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]] = (
             dict()
         )  # {dep_type: {source_location: {source_state_id: {sink_location: {sink_state_id:  [var_info]}}}}}
@@ -1904,25 +1908,260 @@ class TaskGraph(object):
                             )
         return deps
 
+    def __apply_dependency_overwrites(
+        self, dependencies: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]]
+    ) -> Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]]:
+        """Checks for more and less specific information in the dependencies.
+        Applies overwrites if more specific information is found,
+        E.g., if a dependency with a specific source state id exists in addition to one with no source state id.
+        In such cases, it is assumed that the dependency with the specific source state id is more accurate and
+        thus the dependency with no source state id is removed.
+        The same applies for other, but similar cases.
+        In step 1, unspecified cases are overwritten by fully and partially specified cases.
+        In step 2, partially specified cases are overwritten by fully specified cases.
+        Diffrent partially specified cases do not overwrite each other.
+        Returns the updated dependencies.
+        """
+
+        # step 1: remove unspecified cases if more specific cases exist
+        to_be_removed = []
+        for dep_type, dep_type_deps in dependencies.items():
+            for source_location, source_location_deps in dep_type_deps.items():
+                for source_state_id, source_state_deps in source_location_deps.items():
+                    for sink_location, sink_location_deps in source_state_deps.items():
+                        for sink_state_id, var_infos in sink_location_deps.items():
+                            # if the current dependency is at least partially specified, it will not be overwritten in step 1.
+                            if source_state_id != "NO_STATE" or sink_state_id != "NO_STATE":
+                                # at least partially specified
+                                continue
+                            # unspecified
+                            # check for more specific source_state_id
+                            if source_state_id == "NO_STATE":
+                                for check_source_state_id, check_source_state_deps in source_location_deps.items():
+                                    if check_source_state_id != "NO_STATE":
+                                        # check if an entry for sink_state_id exists
+                                        for (
+                                            check_sink_location,
+                                            check_sink_location_deps,
+                                        ) in check_source_state_deps.items():
+                                            if check_sink_location == sink_location:
+                                                for (
+                                                    check_sink_state_id,
+                                                    check_var_infos,
+                                                ) in check_sink_location_deps.items():
+                                                    if (
+                                                        sink_state_id == "NO_STATE"
+                                                        and check_sink_state_id != "NO_STATE"
+                                                    ) or (sink_state_id == check_sink_state_id):
+                                                        # more specific sink_state_id exists. Mark current dependency for removal and skip to next dependency.
+                                                        # DEBUG
+                                                        print("step 1 overwrites: ")
+                                                        print(
+                                                            "-> original: ",
+                                                            dep_type,
+                                                            source_location,
+                                                            source_state_id,
+                                                            sink_location,
+                                                            sink_state_id,
+                                                        )
+                                                        print(
+                                                            "-> override: ",
+                                                            dep_type,
+                                                            source_location,
+                                                            check_source_state_id,
+                                                            sink_location,
+                                                            check_sink_state_id,
+                                                        )
+                                                        # ! DEBUG
+                                                        to_be_removed.append(
+                                                            (
+                                                                dep_type,
+                                                                source_location,
+                                                                source_state_id,
+                                                                sink_location,
+                                                                sink_state_id,
+                                                            )
+                                                        )
+                                                        continue
+                            # check for more specific sink_state_id
+                            if sink_state_id == "NO_STATE":
+                                for check_sink_state_id, check_var_infos in sink_location_deps.items():
+                                    if check_sink_state_id != "NO_STATE":
+                                        # more specific sink_state_id exists. Mark current dependency for removal and skip to next dependency.
+                                        # DEBUG
+                                        print("step 1 overwrites: ")
+                                        print(
+                                            "-> original: ",
+                                            dep_type,
+                                            source_location,
+                                            source_state_id,
+                                            sink_location,
+                                            sink_state_id,
+                                        )
+                                        print(
+                                            "-> override: ",
+                                            dep_type,
+                                            source_location,
+                                            check_source_state_id,
+                                            sink_location,
+                                            check_sink_state_id,
+                                        )
+                                        # ! DEBUG
+                                        to_be_removed.append(
+                                            (dep_type, source_location, source_state_id, sink_location, sink_state_id)
+                                        )
+                                        continue
+        # remove overwritten less specific dependencies
+        for dep_type, source_location, source_state_id, sink_location, sink_state_id in to_be_removed:
+            if (
+                dep_type in dependencies
+                and source_location in dependencies[dep_type]
+                and source_state_id in dependencies[dep_type][source_location]
+                and sink_location in dependencies[dep_type][source_location][source_state_id]
+                and sink_state_id in dependencies[dep_type][source_location][source_state_id][sink_location]
+            ):
+                del dependencies[dep_type][source_location][source_state_id][sink_location][sink_state_id]
+                # clean up empty dictionaries
+                if len(dependencies[dep_type][source_location][source_state_id][sink_location]) == 0:
+                    del dependencies[dep_type][source_location][source_state_id][sink_location]
+                if len(dependencies[dep_type][source_location][source_state_id]) == 0:
+                    del dependencies[dep_type][source_location][source_state_id]
+                if len(dependencies[dep_type][source_location]) == 0:
+                    del dependencies[dep_type][source_location]
+                if len(dependencies[dep_type]) == 0:
+                    del dependencies[dep_type]
+
+        # step 2: remove partially specified cases if fully specified cases exist
+        to_be_removed.clear()
+        for dep_type, dep_type_deps in dependencies.items():
+            for source_location, source_location_deps in dep_type_deps.items():
+                for source_state_id, source_state_deps in source_location_deps.items():
+                    for sink_location, sink_location_deps in source_state_deps.items():
+                        for sink_state_id, var_infos in sink_location_deps.items():
+                            # if the current dependency is fully specified, it will not be overwritten.
+                            if source_state_id != "NO_STATE" and sink_state_id != "NO_STATE":
+                                # fully specified
+                                continue
+                            # partially specified
+                            # check for more specific source_state_id
+                            if source_state_id == "NO_STATE":
+                                for check_source_state_id, check_source_state_deps in source_location_deps.items():
+                                    if check_source_state_id != "NO_STATE":
+                                        # check if an entry for sink_state_id exists
+                                        for (
+                                            check_sink_location,
+                                            check_sink_location_deps,
+                                        ) in check_source_state_deps.items():
+                                            if check_sink_location == sink_location:
+                                                for (
+                                                    check_sink_state_id,
+                                                    check_var_infos,
+                                                ) in check_sink_location_deps.items():
+                                                    if sink_state_id == check_sink_state_id:
+                                                        # more specific sink_state_id exists. Mark current dependency for removal and skip to next dependency.
+                                                        # DEBUG
+                                                        print("step 2 overwrites: ")
+                                                        print(
+                                                            "-> original: ",
+                                                            dep_type,
+                                                            source_location,
+                                                            source_state_id,
+                                                            sink_location,
+                                                            sink_state_id,
+                                                        )
+                                                        print(
+                                                            "-> override: ",
+                                                            dep_type,
+                                                            source_location,
+                                                            check_source_state_id,
+                                                            sink_location,
+                                                            check_sink_state_id,
+                                                        )
+                                                        # ! DEBUG
+                                                        to_be_removed.append(
+                                                            (
+                                                                dep_type,
+                                                                source_location,
+                                                                source_state_id,
+                                                                sink_location,
+                                                                sink_state_id,
+                                                            )
+                                                        )
+                                                        continue
+                            # check for more specific sink_state_id
+                            if sink_state_id == "NO_STATE" and source_state_id != "NO_STATE":
+                                for check_sink_state_id, check_var_infos in sink_location_deps.items():
+                                    if check_sink_state_id != "NO_STATE":
+                                        # more specific sink_state_id exists. Mark current dependency for removal and skip to next dependency.
+                                        # DEBUG
+                                        print("step 2 overwrites: ")
+                                        print(
+                                            "-> original: ",
+                                            dep_type,
+                                            source_location,
+                                            source_state_id,
+                                            sink_location,
+                                            sink_state_id,
+                                        )
+                                        print(
+                                            "-> override: ",
+                                            dep_type,
+                                            source_location,
+                                            check_source_state_id,
+                                            sink_location,
+                                            check_sink_state_id,
+                                        )
+                                        # ! DEBUG
+                                        to_be_removed.append(
+                                            (dep_type, source_location, source_state_id, sink_location, sink_state_id)
+                                        )
+                                        continue
+        # remove overwritten less specific dependencies
+        for dep_type, source_location, source_state_id, sink_location, sink_state_id in to_be_removed:
+            if (
+                dep_type in dependencies
+                and source_location in dependencies[dep_type]
+                and source_state_id in dependencies[dep_type][source_location]
+                and sink_location in dependencies[dep_type][source_location][source_state_id]
+                and sink_state_id in dependencies[dep_type][source_location][source_state_id][sink_location]
+            ):
+                del dependencies[dep_type][source_location][source_state_id][sink_location][sink_state_id]
+                # clean up empty dictionaries
+                if len(dependencies[dep_type][source_location][source_state_id][sink_location]) == 0:
+                    del dependencies[dep_type][source_location][source_state_id][sink_location]
+                if len(dependencies[dep_type][source_location][source_state_id]) == 0:
+                    del dependencies[dep_type][source_location][source_state_id]
+                if len(dependencies[dep_type][source_location]) == 0:
+                    del dependencies[dep_type][source_location]
+                if len(dependencies[dep_type]) == 0:
+                    del dependencies[dep_type]
+        return dependencies
+
     def __insert_data_dependencies_from_files(self, dependency_files: List[str]) -> None:
 
-        # collect data dependencies
-        deps = self.__read_dependencies_from_files(dependency_files)
+        def print_deps(deps: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]], indent: int = 0) -> None:
+            for dep_type, dep_type_deps in deps.items():
+                print("DEP_TYPE: ", dep_type)
+                for source_location, source_location_deps in dep_type_deps.items():
+                    print("-> SOURCE LOCATION: ", source_location)
+                    for source_state_id, source_state_deps in source_location_deps.items():
+                        print("--> SOURCE STATE ID: ", source_state_id)
+                        for sink_location, sink_location_deps in source_state_deps.items():
+                            print("---> SINK LOCATION: ", sink_location)
+                            for sink_state_id, var_infos in sink_location_deps.items():
+                                print("----> SINK STATE ID: ", sink_state_id)
+                                for var_info in var_infos:
+                                    print("-----> VAR INFO: ", var_info)
 
-        # print deps
-        print("DEPS:")
-        for dep_type, dep_type_deps in deps.items():
-            print("DEP_TYPE: ", dep_type)
-            for source_location, source_location_deps in dep_type_deps.items():
-                print("-> SOURCE LOCATION: ", source_location)
-                for source_state_id, source_state_deps in source_location_deps.items():
-                    print("--> SOURCE STATE ID: ", source_state_id)
-                    for sink_location, sink_location_deps in source_state_deps.items():
-                        print("---> SINK LOCATION: ", sink_location)
-                        for sink_state_id, var_infos in sink_location_deps.items():
-                            print("----> SINK STATE ID: ", sink_state_id)
-                            for var_info in var_infos:
-                                print("-----> VAR INFO: ", var_info)
+        # collect data dependencies
+        dependencies = self.__read_dependencies_from_files(dependency_files)
+        print("ORIGINAL DEPS:")
+        print_deps(dependencies)
+        dependencies = self.__apply_dependency_overwrites(dependencies)
+        print()
+        print()
+        print("FILTERED DEPS:")
+        print_deps(dependencies)
 
         logger.info("Inserting data dependencies from files: " + str(dependency_files))
 
