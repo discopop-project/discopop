@@ -7,6 +7,8 @@
 # directory for details.
 
 import copy
+import os
+from pathlib import Path
 import random
 import signal
 import logging
@@ -2147,8 +2149,18 @@ class TaskGraph(object):
                     del dependencies[dep_type]
         return dependencies
 
-    def __get_work_contexts_by_location_and_state_id(self, location: str, state_id: str) -> Set[Context]:
+    def __get_work_contexts_by_location_and_state_id(
+        self, location: str, state_id: str, mappings_dict: Dict[str, str]
+    ) -> Set[Context]:
+        """mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs."""
         contexts: Set[Context] = set()
+        # check if location is an instructionID. If so, convert it to a lineID using the mappings_dict.
+        if ":" not in location:
+            # location is an instruction id or something unspecified (e.g. '*').
+            if location in mappings_dict:
+                location = mappings_dict[location]
+
+        # handle location, if it is a regular lineID in the format "file:line".
         if ":" in location:
             # location is in format "file:line".
             location_split = location.split(":")
@@ -2161,13 +2173,10 @@ class TaskGraph(object):
                     continue
                 context_code_scope = context.get_code_scope(self.pet)
                 # DEBUG
-                print("context locs: ", str(context_code_scope))
+                # print("context locs: ", str(context_code_scope))
                 # !DEBUG
                 if location_lineid in context_code_scope:
                     contexts.add(context)
-        else:
-            # location is an instruction id.
-            warnings.warn("Not yet implemented: getting contexts by instruction id. Location: " + location)
 
         # filter contexts for state_id compatibility
         if state_id != "NO_STATE":
@@ -2204,6 +2213,21 @@ class TaskGraph(object):
         print("FILTERED DEPS:")
         debug_print_deps(dependencies)
 
+        # read instructionID to lineID mapping.
+        warnings.warn("TODO: update available data to use instructionIDs instead of lineIDs as the default.")
+        mappings_dict: Dict[str, str] = dict()  # {instructionID: lineID}}
+        mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "instructionID_to_lineID_mapping.txt")
+        if os.path.exists(mappings_file):
+            with open(mappings_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("#") or len(line) == 0:
+                        continue
+                    line_split = [elem for elem in line.split(" ") if len(elem) > 0]
+                    instruction_id = line_split[0]
+                    line_id = line_split[1]
+                    mappings_dict[instruction_id] = line_id
+
         # insert data dependencies into graph
         # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
         for dep_type, dep_type_deps in dependencies.items():
@@ -2214,10 +2238,10 @@ class TaskGraph(object):
                             # find source and target contexts based on locations and state ids
                             # only work contexts can be source or target of data dependencies
                             source_contexts = self.__get_work_contexts_by_location_and_state_id(
-                                source_location, source_state_id
+                                source_location, source_state_id, mappings_dict
                             )
                             target_contexts = self.__get_work_contexts_by_location_and_state_id(
-                                sink_location, sink_state_id
+                                sink_location, sink_state_id, mappings_dict
                             )
 
                             # handle static and dynamic dependencies separately
