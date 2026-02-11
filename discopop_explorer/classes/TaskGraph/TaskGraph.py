@@ -157,6 +157,7 @@ class TaskGraph(object):
                 "/home/lukas/Schreibtisch/Example_Code/trivial_tasking/.discopop/profiler/dynamic_dependencies.txt",
             ]
         )
+        warnings.warn("DATA DEPENDENCY FILES HARD-CODED!")
         print("Waiting for user to close the Window...")
         # plt.show(block=True)
         plt.ioff()
@@ -2137,9 +2138,35 @@ class TaskGraph(object):
                     del dependencies[dep_type]
         return dependencies
 
+    def __get_contexts_by_location_and_state_id(self, location: str, state_id: str) -> Set[Context]:
+        contexts = set()
+        if ":" in location:
+            # location is in format "file:line".
+            location_split = location.split(":")
+            file_id = location_split[0]
+            line_num = location_split[1]
+            location_lineid = LineID(file_id + ":" + line_num)
+            for context in self.contexts:
+                context_code_scope = context.get_code_scope(self.pet)
+                # DEBUG
+                print("context locs: ", str(context_code_scope))
+                # !DEBUG
+                if location_lineid in context_code_scope:
+                    contexts.add(context)
+        else:
+            # location is an instruction id.
+            warnings.warn("Not yet implemented: getting contexts by instruction id. Location: " + location)
+
+        # filter contexts for state_id compatibility
+        if state_id != "NO_STATE":
+            warnings.warn("Not yet implemented: filtering contexts by state id. State ID: " + state_id)
+        return contexts
+
     def __insert_data_dependencies_from_files(self, dependency_files: List[str]) -> None:
 
-        def print_deps(deps: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]], indent: int = 0) -> None:
+        def debug_print_deps(
+            deps: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]], indent: int = 0
+        ) -> None:
             for dep_type, dep_type_deps in deps.items():
                 print("DEP_TYPE: ", dep_type)
                 for source_location, source_location_deps in dep_type_deps.items():
@@ -2156,18 +2183,56 @@ class TaskGraph(object):
         # collect data dependencies
         dependencies = self.__read_dependencies_from_files(dependency_files)
         print("ORIGINAL DEPS:")
-        print_deps(dependencies)
+        debug_print_deps(dependencies)
         dependencies = self.__apply_dependency_overwrites(dependencies)
         print()
         print()
         print("FILTERED DEPS:")
-        print_deps(dependencies)
+        debug_print_deps(dependencies)
+
+        # insert data dependencies into graph
+        for dep_type, dep_type_deps in dependencies.items():
+            for source_location, source_location_deps in dep_type_deps.items():
+                for source_state_id, source_state_deps in source_location_deps.items():
+                    for sink_location, sink_location_deps in source_state_deps.items():
+                        for sink_state_id, var_infos in sink_location_deps.items():
+                            # find source and target contexts based on locations and state ids
+                            source_contexts = self.__get_contexts_by_location_and_state_id(
+                                source_location, source_state_id
+                            )
+                            target_contexts = self.__get_contexts_by_location_and_state_id(sink_location, sink_state_id)
+                            # register dependencies between all pairs of source and target contexts
+                            for source_ctx in source_contexts:
+                                for target_ctx in target_contexts:
+                                    if source_ctx == target_ctx:
+                                        continue
+                                    for var_info in var_infos:
+                                        var_name = var_info if "(" not in var_info else var_info.split("(")[0]
+                                        memory_region = (
+                                            None
+                                            if "(" not in var_info
+                                            else MemoryRegion(var_info.split("(")[1].strip(")"))
+                                        )
+                                        dep_type_enum_obj = (
+                                            DepType[dep_type] if dep_type in DepType.__members__ else None
+                                        )
+                                        dependency = Dependency(type=EdgeType.DATA)
+
+                                        dependency.dtype = dep_type_enum_obj
+                                        dependency.var_name = var_name
+                                        dependency.memory_region = memory_region
+
+                                        source_ctx.register_outgoing_dependency(target_ctx, dependency)
+
+        # plt.ioff()
+        # self.plot_context_debug_graph(plt.gca())
+        # plt.pause(5)
 
         logger.info("Inserting data dependencies from files: " + str(dependency_files))
 
-        import sys
+        # import sys
 
-        sys.exit(0)
+        # sys.exit(0)
 
     def __validate_data_dependencies(self) -> None:
         self.__validate_data_dependencies_using_initializations()
