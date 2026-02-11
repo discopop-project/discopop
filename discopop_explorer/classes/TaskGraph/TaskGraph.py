@@ -151,8 +151,12 @@ class TaskGraph(object):
         # start processing
         self.__assign_function_ids(pet)
         self.__construct_from_pet(pet)
-        for file in dependency_files if dependency_files is not None else []:
-            self.__insert_data_dependencies_from_file(file)
+        self.__insert_data_dependencies_from_files(
+            [
+                "/home/lukas/Schreibtisch/Example_Code/trivial_tasking/.discopop/profiler/static_dependencies.txt",
+                "/home/lukas/Schreibtisch/Example_Code/trivial_tasking/.discopop/profiler/dynamic_dependencies.txt",
+            ]
+        )
         print("Waiting for user to close the Window...")
         # plt.show(block=True)
         plt.ioff()
@@ -1824,8 +1828,107 @@ class TaskGraph(object):
                         for target_parent_ctx in target_tg.parent_context:
                             source_parent_ctx.register_outgoing_dependency(target_parent_ctx, dependency)
 
-    def __insert_data_dependencies_from_file(self, dependency_file: str) -> None:
-        logger.info("Inserting data dependencies from file: " + dependency_file)
+    def __read_dependencies_from_files(
+        self, dependency_files: List[str]
+    ) -> Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]]:
+        deps: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]] = (
+            dict()
+        )  # {dep_type: {source_location: {source_state_id: {sink_location: {sink_state_id:  [var_info]}}}}}
+        for dependency_file in dependency_files:
+            with open(dependency_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("#") or len(line) == 0:
+                        continue
+                    # split and sanitize line
+                    line_split = [elem for elem in line.split(" ") if len(elem) > 0]
+
+                    source_location = line_split[0]
+                    del line_split[0]
+                    # unpack source
+                    if "@" in source_location:
+                        source_split = source_location.split("@")
+                        source_location = source_split[0]
+                        source_state_id = source_split[1]
+                    else:
+                        source_state_id = "NO_STATE"
+
+                    # unpack lines
+                    while len(line_split) >= 2:
+                        current = line_split[0]
+                        del line_split[0]
+
+                        if current in ["BGN", "END"]:
+                            # skip line
+                            break
+                        if current == "NOM":
+                            # skip token
+                            continue
+                        # current is a dependency type
+                        dep_type = current
+                        # read dependency contents
+                        dep_contents = line_split[0]
+                        del line_split[0]
+
+                        # unpack dep_contents
+                        dep_contents_split = dep_contents.split("|")
+                        sink_location = dep_contents_split[0]
+                        var_info = dep_contents_split[1]
+
+                        # unpack sink_location
+                        if "@" in sink_location:
+                            sink_location_split = sink_location.split("@")
+                            sink_location = sink_location_split[0]
+                            sink_state_id = sink_location_split[1]
+                        else:
+                            sink_state_id = "NO_STATE"
+
+                        # register dependency
+                        if dep_type not in deps:
+                            deps[dep_type] = dict()
+                        if source_location not in deps[dep_type]:
+                            deps[dep_type][source_location] = dict()
+                        if source_state_id not in deps[dep_type][source_location]:
+                            deps[dep_type][source_location][source_state_id] = dict()
+                        if sink_location not in deps[dep_type][source_location][source_state_id]:
+                            deps[dep_type][source_location][source_state_id][sink_location] = dict()
+                        if sink_state_id not in deps[dep_type][source_location][source_state_id][sink_location]:
+                            deps[dep_type][source_location][source_state_id][sink_location][sink_state_id] = list()
+                        # prevent duplicates
+                        if (
+                            var_info
+                            not in deps[dep_type][source_location][source_state_id][sink_location][sink_state_id]
+                        ):
+                            deps[dep_type][source_location][source_state_id][sink_location][sink_state_id].append(
+                                var_info
+                            )
+        return deps
+
+    def __insert_data_dependencies_from_files(self, dependency_files: List[str]) -> None:
+
+        # collect data dependencies
+        deps = self.__read_dependencies_from_files(dependency_files)
+
+        # print deps
+        print("DEPS:")
+        for dep_type, dep_type_deps in deps.items():
+            print("DEP_TYPE: ", dep_type)
+            for source_location, source_location_deps in dep_type_deps.items():
+                print("-> SOURCE LOCATION: ", source_location)
+                for source_state_id, source_state_deps in source_location_deps.items():
+                    print("--> SOURCE STATE ID: ", source_state_id)
+                    for sink_location, sink_location_deps in source_state_deps.items():
+                        print("---> SINK LOCATION: ", sink_location)
+                        for sink_state_id, var_infos in sink_location_deps.items():
+                            print("----> SINK STATE ID: ", sink_state_id)
+                            for var_info in var_infos:
+                                print("-----> VAR INFO: ", var_info)
+
+        logger.info("Inserting data dependencies from files: " + str(dependency_files))
+
+        import sys
+
+        sys.exit(0)
 
     def __validate_data_dependencies(self) -> None:
         self.__validate_data_dependencies_using_initializations()
