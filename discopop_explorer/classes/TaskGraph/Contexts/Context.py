@@ -166,3 +166,15 @@ class Context(object):
             if pet_node is not None:
                 return pet_node
         return None
+
+    def get_code_scope(self, pet: PEGraphX) -> List[LineID]:
+        """returns a list of code scopes contained in the context."""
+        scope: List[LineID] = []
+        for node in self.contained_nodes:
+            pet_node = node.get_pet_node(pet)
+            if pet_node is None:
+                continue
+            for i in range(pet_node.start_line, pet_node.end_line + 1):
+                scope.append(LineID(str(pet_node.file_id) + ":" + str(i)))
+        # remove duplicates
+        return list(set(scope))
