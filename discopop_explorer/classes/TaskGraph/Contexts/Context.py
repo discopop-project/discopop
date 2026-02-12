@@ -136,6 +136,15 @@ class Context(object):
                         parent_queue.append(current_parent.parent_context)
         return successive_contexts
 
+    def get_ancestor_contexts(self) -> List[Context]:
+        """return the ancestor contexts of the current context, starting with the direct parent context and ending with the root context."""
+        ancestors: List[Context] = []
+        current_context = self.parent_context
+        while current_context is not None:
+            ancestors.append(current_context)
+            current_context = current_context.parent_context
+        return ancestors
+
     def register_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
         self.outgoing_dependencies.add((target_context, dependency))
 
