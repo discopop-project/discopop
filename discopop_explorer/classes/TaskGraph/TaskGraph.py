@@ -2150,15 +2150,22 @@ class TaskGraph(object):
         return dependencies
 
     def __get_work_contexts_by_location_and_state_id(
-        self, location: str, state_id: str, mappings_dict: Dict[str, str]
+        self,
+        pet: PEGraphX,
+        location: str,
+        state_id: str,
+        instructionID_mappings_dict: Dict[str, str],
+        state_mappings_dict: Dict[str, List[str]],
     ) -> Set[Context]:
-        """mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs."""
+        """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs.
+        state_mappings_dict is a mapping from stateIDs to callpaths."""
+
         contexts: Set[Context] = set()
         # check if location is an instructionID. If so, convert it to a lineID using the mappings_dict.
         if ":" not in location:
             # location is an instruction id or something unspecified (e.g. '*').
-            if location in mappings_dict:
-                location = mappings_dict[location]
+            if location in instructionID_mappings_dict:
+                location = instructionID_mappings_dict[location]
 
         # handle location, if it is a regular lineID in the format "file:line".
         if ":" in location:
@@ -2180,12 +2187,88 @@ class TaskGraph(object):
 
         # filter contexts for state_id compatibility
         if state_id != "NO_STATE":
+
             warnings.warn("Not yet implemented: filtering contexts by state id. State ID: " + state_id)
+
+            print("Filtering contexts for state id: " + state_id)
+            if state_id in state_mappings_dict:
+                callpath = state_mappings_dict[state_id]
+                print("--> Mapped state id: " + str(callpath))
+
+                filtered_contexts: Set[Context] = set()
+
+                for ctx in contexts:
+                    # determine ancestors
+                    ancestors = ctx.get_ancestor_contexts()
+                    print("CTX: ", ctx.get_label())
+                    print("ANCESTORS: ", str([ancestor.get_label() for ancestor in ancestors]))
+                    # traverse ancestors and convert them into a callpath compatible representation.
+                    ctx_callpath: List[str] = []
+                    last_ancestor_was_inlined_function_marker = False
+                    last_called_function = None
+                    for ancestor in ancestors:
+                        if isinstance(ancestor, FunctionContext):
+                            last_ancestor_was_inlined_function_marker = False
+                            if ancestor.parent_function is not None:
+                                ctx_callpath.insert(0, pet.node_at(ancestor.parent_function).name)
+                                last_called_function = ancestor.parent_function
+                            continue
+                        if isinstance(ancestor, InlinedFunctionContext):
+                            last_ancestor_was_inlined_function_marker = True
+                            continue
+                        if isinstance(ancestor, WorkContext):
+                            if last_ancestor_was_inlined_function_marker:
+                                # get the lineID from the call
+                                potential_contained_calls = ancestor.get_contained_calls(self.pet)
+                                potential_contained_calls = [
+                                    call for call in potential_contained_calls if call[0] == last_called_function
+                                ]
+                                # get candidate calls from callpath
+                                candidate_calls = [entry for entry in callpath if entry.startswith("call_")]
+                                for candidate_call in candidate_calls:
+                                    # get instruction id
+                                    instruction_id = candidate_call[5:]
+                                    if not instruction_id.isnumeric():
+                                        continue
+                                    # get lineID from instruction id
+                                    if instruction_id in instructionID_mappings_dict:
+                                        line_id = instructionID_mappings_dict[instruction_id]
+                                        if line_id in [call[1] for call in potential_contained_calls]:
+                                            ctx_callpath.insert(0, candidate_call)
+                                            break
+                            else:
+                                # unspecific, skip
+                                continue
+
+                        if isinstance(ancestor, Context):
+                            # unspecific, skip
+                            last_ancestor_was_inlined_function_marker = False
+                            continue
+                        else:
+                            warnings.warn("Not yet implemented: unknown ancestor context type: " + str(type(ancestor)))
+                            last_ancestor_was_inlined_function_marker = False
+
+                    for ctx_cp in ctx_callpath:
+                        print("--> CTX CP: ", ctx_cp)
+
+                    # check equality of callpath and ctx_callpath
+                    if len(callpath) != len(ctx_callpath):
+                        continue
+                    equal = True
+                    for i in range(0, len(callpath)):
+                        if callpath[i] != ctx_callpath[i]:
+                            equal = False
+                            break
+                    if equal:
+                        filtered_contexts.add(ctx)
+                return filtered_contexts
+
         return contexts
 
     def __insert_data_dependencies_from_files(
         self, dynamic_dependency_file: Optional[str], static_dependency_file: Optional[str]
     ) -> None:
+        """Load data dependencies from profiler output files and insert them into the graph."""
 
         def debug_print_deps(
             deps: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]], indent: int = 0
@@ -2213,7 +2296,7 @@ class TaskGraph(object):
         print("FILTERED DEPS:")
         debug_print_deps(dependencies)
 
-        # read instructionID to lineID mapping.
+        # read instructionID to lineID mapping
         warnings.warn("TODO: update available data to use instructionIDs instead of lineIDs as the default.")
         mappings_dict: Dict[str, str] = dict()  # {instructionID: lineID}}
         mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "instructionID_to_lineID_mapping.txt")
@@ -2228,6 +2311,29 @@ class TaskGraph(object):
                     line_id = line_split[1]
                     mappings_dict[instruction_id] = line_id
 
+        # read stateID to callpath mapping
+        warnings.warn(
+            "TODO: stateID to callpath mapping might get really big. Implement this more scalable / resilient."
+        )
+        state_mappings_dict: Dict[str, List[str]] = dict()  # {stateID: callpath}
+        state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
+        if os.path.exists(state_mappings_file):
+            with open(state_mappings_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("#") or len(line) == 0:
+                        continue
+                    line_split = [elem for elem in line.split(" ") if len(elem) > 0]
+                    if len(line_split) < 2:
+                        continue
+                    state_id = line_split[0]
+                    raw_callpath = line_split[1]
+                    if "-->" in raw_callpath:
+                        callpath = raw_callpath.split("-->")
+                    else:
+                        callpath = [raw_callpath]
+                    state_mappings_dict[state_id] = callpath
+
         # insert data dependencies into graph
         # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
         for dep_type, dep_type_deps in dependencies.items():
@@ -2238,10 +2344,10 @@ class TaskGraph(object):
                             # find source and target contexts based on locations and state ids
                             # only work contexts can be source or target of data dependencies
                             source_contexts = self.__get_work_contexts_by_location_and_state_id(
-                                source_location, source_state_id, mappings_dict
+                                self.pet, source_location, source_state_id, mappings_dict, state_mappings_dict
                             )
                             target_contexts = self.__get_work_contexts_by_location_and_state_id(
-                                sink_location, sink_state_id, mappings_dict
+                                self.pet, sink_location, sink_state_id, mappings_dict, state_mappings_dict
                             )
 
                             # handle static and dynamic dependencies separately
@@ -2315,6 +2421,9 @@ class TaskGraph(object):
                                             if dependency.dtype == DepType.INIT:
                                                 continue
 
+                                            # DEBUG
+                                            print("Registering dependency: ", dependency)
+                                            # !DEBUG
                                             source_ctx.register_outgoing_dependency(target_ctx, dependency)
 
         # plt.ioff()
