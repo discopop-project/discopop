@@ -37,9 +37,9 @@ from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGenerat
 from discopop_library.PathManagement.PathManagement import get_path, load_file_mapping
 from discopop_library.Viewer.ViewerArguments import ViewerArguments
 from discopop_library.Viewer.suggestions_view import print_suggestions_overview
-from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
-    ExtrapInterpolatedMicrobench,
-)
+#from discopop_library.discopop_optimizer.Microbench.ExtrapInterpolatedMicrobench import (
+#    ExtrapInterpolatedMicrobench,
+#)
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.json_serializer import PatternBaseSerializer
@@ -342,17 +342,17 @@ To browse the created parallelization suggestions:
 
         print("Time taken for pattern detection: {0}".format(end - start))
 
-        # demonstration of Microbenchmark possibilities
-        if arguments.microbench_file is not None:
-            microbench_file = get_path(
-                arguments.project_path, arguments.microbench_file
-            )  # NOTE: the json file is not usually located in the project, this is just for demonstration purposes
-            if not os.path.isfile(microbench_file):
-                raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
-            extrapBench = ExtrapInterpolatedMicrobench(microbench_file)
-            sympyExpr = extrapBench.getFunctionSympy()
-            print(sympyExpr)
-            print(sympyExpr.free_symbols)
+#        # demonstration of Microbenchmark possibilities
+#        if arguments.microbench_file is not None:
+#            microbench_file = get_path(
+#                arguments.project_path, arguments.microbench_file
+#            )  # NOTE: the json file is not usually located in the project, this is just for demonstration purposes
+#            if not os.path.isfile(microbench_file):
+#                raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
+#            extrapBench = ExtrapInterpolatedMicrobench(microbench_file)
+#            sympyExpr = extrapBench.getFunctionSympy()
+#            print(sympyExpr)
+#            print(sympyExpr.free_symbols)
 
         # print profiling results
         if arguments.enable_profiling_dump_file is not None:
