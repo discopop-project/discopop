@@ -1399,7 +1399,7 @@ void DiscoPoP::add_function_exit_edges_to_transitions(StaticCallPathTree* call_p
     while(current->base_node != nullptr){
       if(current->base_node->get_type() == true){
         // base node is a call instruction
-        last_call_prefix = current;
+        last_call_prefix = current->prefix;
         break;
       }
       else{
