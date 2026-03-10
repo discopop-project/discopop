@@ -16,9 +16,11 @@
 namespace __dp{
 
 void update_callstate_from_call(int32_t instructionID){
+        std::cout << "executed callInst: " << instructionID << std::endl;
         // check if callstate update is currently disabled
         if(calls_without_executed_transitions.back() != 0){
                 // disabled, increment counter
+                std::cout << "--> early leave" << std::endl;
                 calls_without_executed_transitions[calls_without_executed_transitions.size()-1] += 1;
                 return;
         }
@@ -45,9 +47,11 @@ void update_callstate_from_call(int32_t instructionID){
                 // increment the current counter in calls_without_executed_transitions, thereby temporarily disabling the state transitioning
                 calls_without_executed_transitions[calls_without_executed_transitions.size()-1] += 1;
         }
+        std::cout << "current state: " << current_callpath_state->get_id() << std::endl;
 }
 
 void update_callstate_from_func_exit(int32_t instructionID){
+        std::cout << "func_exit: " << instructionID << std::endl;
         // check if callstate update is currently disabled
         if(calls_without_executed_transitions.back() > 0){
                 // disabled, decrease counter
@@ -69,9 +73,11 @@ void update_callstate_from_func_exit(int32_t instructionID){
                 cerr << "No transition found from state " << current_callpath_state->get_id() << " via instruction " << instructionID << "!\n";
                 cerr << "State might be incorrect from here on!\n";
         }
+        std::cout << "current state: " << current_callpath_state->get_id() << std::endl;
 }
 
 void update_callstate(int32_t instructionID){
+        std::cout << "executing instruction: " << instructionID << std::endl;
         // check if callstate update is currently disabled
         if(calls_without_executed_transitions.back() != 0){
                 // disabled
@@ -96,6 +102,7 @@ void update_callstate(int32_t instructionID){
 
         }
         // update current callstate
+        std::cout << "current state: " << current_callpath_state->get_id() << std::endl;
 }
 
 void initialize_current_callpath_state(){
