@@ -204,6 +204,27 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
             }
           }
         } else if (isa<CallInst>(instruction) || isa<InvokeInst>(instruction)) {
+          // allow only a single function call per CU
+          // create new CU if the old one contains any instruction
+          if ((!cu->readPhaseLineNumbers.empty()) || (!cu->writePhaseLineNumbers.empty()) ||
+              (!cu->returnInstructions.empty())) {
+            cu->startLine = *(cu->instructionsLineNumbers.begin());
+            cu->endLine = *(cu->instructionsLineNumbers.rbegin());
+
+            cu->basicBlockName = basicBlockName;
+            CUVector.push_back(cu);
+            suspiciousVariables.clear();
+            CU *temp = cu; // keep current CU to make a reference to the successor CU
+            cu = new CU;
+
+            cu->BBID = bb->getName().str();
+            cu->BB = *bb;
+
+            currentNode->childrenNodes.push_back(cu);
+            temp->successorCUs.push_back(cu->ID);
+            BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
+          }
+
           // get the name of the called function and check if a FileIO function
           // is called
           set<string> IOFunctions{
