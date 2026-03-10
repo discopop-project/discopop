@@ -1843,7 +1843,7 @@ class TaskGraph(object):
 
         for idx, dependency_file in enumerate([dynamic_dependency_file, static_dependency_file]):
             print("DEP FILE: ", dependency_file)
-            if dependency_file is None:
+            if dependency_file is None or not os.path.exists(dependency_file):
                 continue
             with open(dependency_file, "r") as f:
                 for line in f:
