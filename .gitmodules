@@ -6,6 +6,3 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-[submodule "tools/submodules/update_notifications"]
-	path = tools/submodules/update_notifications
-	url = https://github.com/discopop-project/update_notifications
