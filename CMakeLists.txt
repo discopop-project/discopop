@@ -62,10 +62,6 @@ include(AddLLVM)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 
-# update or initialize git submodules
-message(STATUS "Updating git submodules")
-execute_process(COMMAND git submodule update --init --recursive --remote)
-
 add_subdirectory(DiscoPoP)
 
 add_subdirectory(rtlib)
@@ -162,24 +158,11 @@ add_custom_target(
     DEPENDS install_python_modules reset_symlinks setup_symlinks
 )
 
-add_custom_target(
-    update_submodules
-    COMMENT "Updating git submodules"
-    COMMAND git submodule update --init --recursive --remote
-)
-
-add_custom_target(
-    install_submodules
-    COMMENT "Installing git submodules"
-    COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}/tools/submodules/update_notifications
-    DEPENDS update_submodules
-)
 
 add_custom_target(
     install_python_modules
     COMMENT "Installing python modules and dependencies"
     COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
-    DEPENDS update_submodules install_submodules
 )
 
 add_custom_target(
