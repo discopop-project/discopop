@@ -87,6 +87,7 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
                 d.metadata_source_ancestors += md_values
             else:
                 raise ValueError("Unknown metadata type: ", md_type)
+
     return d
 
 

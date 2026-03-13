@@ -1855,11 +1855,15 @@ class TaskGraph(object):
 
                     source_location = line_split[0]
                     del line_split[0]
+
+                    dep_is_dynamic_based_on_source = False
+
                     # unpack source
                     if "@" in source_location:
                         source_split = source_location.split("@")
                         source_location = source_split[0]
                         source_state_id = source_split[1]
+                        dep_is_dynamic_based_on_source = True
                     else:
                         source_state_id = "NO_STATE"
 
@@ -1876,11 +1880,6 @@ class TaskGraph(object):
                             continue
                         # current is a dependency type
                         dep_type = current
-                        # prepend DYN or STAT to the dependency type to distinguish between dynamic and static dependencies
-                        if idx == 0:
-                            dep_type = "DYN_" + dep_type
-                        else:
-                            dep_type = "STAT_" + dep_type
 
                         # read dependency contents
                         dep_contents = line_split[0]
@@ -1891,13 +1890,23 @@ class TaskGraph(object):
                         sink_location = dep_contents_split[0]
                         var_info = dep_contents_split[1]
 
+                        
                         # unpack sink_location
+                        dep_is_dynamic_based_on_sink = False
                         if "@" in sink_location:
                             sink_location_split = sink_location.split("@")
                             sink_location = sink_location_split[0]
                             sink_state_id = sink_location_split[1]
+                            dep_is_dynamic_based_on_sink = True
                         else:
                             sink_state_id = "NO_STATE"
+
+                        # prepend DYN or STAT to the dependency type to distinguish between dynamic and static dependencies
+                        if dep_is_dynamic_based_on_source or dep_is_dynamic_based_on_sink:
+                            dep_type = "DYN_" + dep_type
+                        else:
+                            dep_type = "STAT_" + dep_type
+
 
                         # register dependency
                         if dep_type not in deps:
