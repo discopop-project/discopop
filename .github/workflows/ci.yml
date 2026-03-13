@@ -37,20 +37,40 @@ jobs:
         run: |
           ./scripts/dev/check-license.sh $(find . -type f)
 
+  create_matrix:
+    runs-on: self-hosted
+    name: Select matrix
+    outputs:
+      matrix: ${{ steps.set_matrix.outputs.matrix }}
+    steps:
+      - name: Select build matrix
+        id: set_matrix
+        shell: bash
+        run: |
+          matrix='{"include":[
+            {"id":"ubuntu-24-04", "base_image":"ubuntu:24.04"},
+            {"id":"debian-12", "base_image":"debian:12"}
+          ]}'
+
+          if [[ "${{ github.event_name }}" = "pull_request" && "${{ github.base_ref }}" != "master" ]]; then
+            matrix='{"include":[
+              {"id":"ubuntu-24-04", "base_image":"ubuntu:24.04"}
+            ]}'          
+          fi
+
+          {
+            echo "matrix<<END"
+            echo "$matrix"
+            echo "END"
+          } >> "$GITHUB_OUTPUT"
+
   build_and_test_matrix:
     runs-on: self-hosted
-    name: "Build & test (${{ matrix.id }})"
-    needs: execute_license_check
+    name: "Build & test (${{ matrix.id }}) with image: (${{ matrix.base_image }}) "
+    needs: [execute_license_check, create_matrix]
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - id: ubuntu-24-04
-            base_image: ubuntu:24.04
-          # - id: ubuntu-22-04
-          #   base_image: ubuntu:22.04
-          # - id: debian-12
-          #   base_image: debian:12
+      matrix: ${{ fromJson(needs.create_matrix.outputs.matrix) }}
 
     steps:
       - name: Checkout Repository
@@ -124,16 +144,12 @@ jobs:
 
   cleanup:
     runs-on: self-hosted
-    name: Cleanup
+    name: "Cleanup (${{ matrix.id }})"
     if: always()
-    needs: build_and_test_matrix
+    needs: [create_matrix, build_and_test_matrix]
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - id: ubuntu-24-04
-          - id: ubuntu-22-04
-          - id: debian-12
+      matrix: ${{ fromJson(needs.create_matrix.outputs.matrix) }}
     steps:
       - name: Cleanup temporary docker images
         run: |
@@ -141,3 +157,9 @@ jobs:
           if [ ! -z "$(docker images -q discopop_ci_${{ github.sha }}-${{ matrix.id }} 2> /dev/null)" ]; then
             docker image rm discopop_ci_${{ github.sha }}-${{ matrix.id }}
           fi
+
+          # CI base image
+          # Commented for efficiency in ci running by caching the base images
+          # if [ ! -z "$(docker images -q discopop_ci_base-${{ matrix.id }} 2> /dev/null)" ]; then
+          #   docker image rm discopop_ci_base-${{ matrix.id }}
+          # fi
