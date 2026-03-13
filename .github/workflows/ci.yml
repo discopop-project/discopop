@@ -39,12 +39,12 @@ jobs:
 
   create_matrix:
     runs-on: self-hosted
-    name: Select matrix
+    name: Create matrix
     outputs:
-      matrix: ${{ steps.set_matrix.outputs.matrix }}
+      matrix: ${{ steps.create_matrix.outputs.matrix }}
     steps:
-      - name: Select build matrix
-        id: set_matrix
+      - name: Create build matrix
+        id: create_matrix
         shell: bash
         run: |
           matrix='{"include":[
