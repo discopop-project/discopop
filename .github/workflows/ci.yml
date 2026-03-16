@@ -13,7 +13,7 @@ on:
       - master
   pull_request:
     branches:
-      - '**'
+      - "**"
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -37,112 +37,106 @@ jobs:
         run: |
           ./scripts/dev/check-license.sh $(find . -type f)
 
-  prepare_ci_base:
+  create_matrix:
     runs-on: self-hosted
-    name: Build base container
-    needs: execute_license_check
+    name: Create matrix
+    outputs:
+      matrix: ${{ steps.create_matrix.outputs.matrix }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-
-      - name: Build docker image discopop_ci_base
+      - name: Create build matrix
+        id: create_matrix
+        shell: bash
         run: |
-          docker build -f .github/workflows/Dockerfile_ci_base -t discopop_ci_base .
+          matrix='{"include":[
+            {"id":"ubuntu-24-04", "base_image":"ubuntu:24.04"},
+            {"id":"debian-12", "base_image":"debian:12"}
+          ]}'
 
-  prepare_ci_container:
+          if [[ "${{ github.event_name }}" = "pull_request" && "${{ github.base_ref }}" != "master" ]]; then
+            matrix='{"include":[
+              {"id":"ubuntu-24-04", "base_image":"ubuntu:24.04"}
+            ]}'          
+          fi
+
+          {
+            echo "matrix<<END"
+            echo "$matrix"
+            echo "END"
+          } >> "$GITHUB_OUTPUT"
+
+  build_and_test_matrix:
     runs-on: self-hosted
-    name: Build CI container
-    needs: prepare_ci_base
+    name: "Build & test (${{ matrix.id }}) with image: (${{ matrix.base_image }}) "
+    needs: [execute_license_check, create_matrix]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.create_matrix.outputs.matrix) }}
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Build docker image discopop_ci_${{ github.sha }}
+      - name: Build docker image discopop_ci_base-${{ matrix.id }}
         run: |
-          docker build -f .github/workflows/Dockerfile_ci -t discopop_ci_${{ github.sha }} --no-cache .
+          docker build \
+            -f .github/workflows/Dockerfile_ci_base \
+            -t discopop_ci_base-${{ matrix.id }} \
+            --build-arg BASE_IMAGE=${{ matrix.base_image }} \
+            .
 
-  code_check_mypy_explorer:
-    runs-on: self-hosted
-    name: "Type check: Explorer"
-    needs: prepare_ci_container
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - name: Build docker image discopop_ci_${{ github.sha }}-${{ matrix.id }}
+        run: |
+          docker build \
+            -f .github/workflows/Dockerfile_ci \
+            -t discopop_ci_${{ github.sha }}-${{ matrix.id }} \
+            --build-arg BASE_IMAGE_TAG=-${{ matrix.id }} \
+            --no-cache \
+            .
 
       - name: "Run MyPy Type Checker - DiscoPoP Explorer"
         run: |
-          docker run --rm discopop_ci_${{ github.sha }} python -m mypy --config-file=mypy.ini -p discopop_explorer
-
-  code_check_mypy_library:
-    runs-on: self-hosted
-    name: "Type check: Library"
-    needs: prepare_ci_container
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+          docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
+            python -m mypy --config-file=mypy.ini -p discopop_explorer
 
       - name: "Run MyPy Type Checker - DiscoPoP Library"
         run: |
-          docker run --rm discopop_ci_${{ github.sha }} python -m mypy --config-file=mypy.ini -p discopop_library
-
-  code_check_black_explorer:
-    runs-on: self-hosted
-    name: "Format check: Explorer"
-    needs: prepare_ci_container
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+          docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
+            python -m mypy --config-file=mypy.ini -p discopop_library
 
       - name: "Check formatting of DiscoPoP Explorer"
         run: |
-          docker run --rm discopop_ci_${{ github.sha }} python -m black -l 120 --check discopop_explorer
-
-  code_check_black_library:
-    runs-on: self-hosted
-    name: "Format check: Library"
-    needs: prepare_ci_container
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+          docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
+            python -m black -l 120 --check discopop_explorer
 
       - name: "Check formatting of DiscoPoP Library"
         run: |
-          docker run --rm discopop_ci_${{ github.sha }} python -m black -l 120 --check discopop_library
+          docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
+            python -m black -l 120 --check discopop_library
 
-  execute_cxx_unit_tests:
-    runs-on: self-hosted
-    name: Execute C++ unit tests
-    needs: [code_check_mypy_explorer, code_check_mypy_library, code_check_black_explorer, code_check_black_library]
-    steps:
-      - name: C++ unit tests
+      - name: Execute C++ unit tests
         run: |
-          docker run --rm discopop_ci_${{ github.sha }} build/test/unit_tests/DiscoPoP_UT
+          docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
+            build/test/unit_tests/DiscoPoP_UT
 
-  execute_profiler_tests:
-    runs-on: self-hosted
-    name: Execute profiler tests
-    needs: [code_check_mypy_explorer, code_check_mypy_library, code_check_black_explorer, code_check_black_library]
-    steps:
       - name: Profiler gold standard tests (regular)
         run: |
-          docker run -e DP_TEST_PROFILER_CONFIG="build_regular" --rm discopop_ci_${{ github.sha }} python -m unittest -v -k *test.profiler.*
+          docker run -e DP_TEST_PROFILER_CONFIG="build_regular" --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
+            python -m unittest -v -k *test.profiler.*
+
       - name: Profiler gold standard tests (hybrid)
         run: |
-          docker run -e DP_TEST_PROFILER_CONFIG="build_hybrid" --rm discopop_ci_${{ github.sha }} python -m unittest -v -k *test.profiler.*
+          docker run -e DP_TEST_PROFILER_CONFIG="build_hybrid" --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
+            python -m unittest -v -k *test.profiler.*
 
-  execute_end_to_end_tests:
-    runs-on: self-hosted
-    name: Execute end-to-end tests
-    needs: [execute_profiler_tests, execute_cxx_unit_tests]
-    steps:
       - name: Python end-to-end-tests
         run: |
-          docker run --rm discopop_ci_${{ github.sha }} python -m unittest -v -k *.end_to_end.*
+          docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
+            python -m unittest -v -k *.end_to_end.*
 
   checks_successful:
     runs-on: self-hosted
     name: Checks successful
-    needs: [execute_cxx_unit_tests, execute_end_to_end_tests]
+    needs: build_and_test_matrix
     steps:
       - name: Report
         run: |
@@ -150,12 +144,22 @@ jobs:
 
   cleanup:
     runs-on: self-hosted
-    name: Cleanup
+    name: "Cleanup (${{ matrix.id }})"
     if: always()
-    needs: [prepare_ci_base, prepare_ci_container, execute_cxx_unit_tests, execute_end_to_end_tests]
+    needs: [create_matrix, build_and_test_matrix]
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.create_matrix.outputs.matrix) }}
     steps:
-      - name: Cleanup temporary docker image discopop_ci_${{ github.sha }}
+      - name: Cleanup temporary docker images
         run: |
-          if [ ! -z "$(docker images -q discopop_ci_${{ github.sha }} 2> /dev/null)" ]; then
-            docker image rm discopop_ci_${{ github.sha }}
+          # CI image
+          if [ ! -z "$(docker images -q discopop_ci_${{ github.sha }}-${{ matrix.id }} 2> /dev/null)" ]; then
+            docker image rm discopop_ci_${{ github.sha }}-${{ matrix.id }}
           fi
+
+          # CI base image
+          # Commented for efficiency in ci running by caching the base images
+          # if [ ! -z "$(docker images -q discopop_ci_base-${{ matrix.id }} 2> /dev/null)" ]; then
+          #   docker image rm discopop_ci_base-${{ matrix.id }}
+          # fi
