@@ -217,6 +217,10 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
         if clean_join_node is None:
             continue
 
+        # ignore cases where the join node is a direct successor of the branch node, i.e., nothing happens in one branch
+        if clean_join_node in context_task_graph.get_successors(node):
+            continue
+
         # tasking possible, if a clean join node has been found
         print("----> Found clean JOIN node: " + str(clean_join_node))
         fork_join_pairs.append((node, clean_join_node))

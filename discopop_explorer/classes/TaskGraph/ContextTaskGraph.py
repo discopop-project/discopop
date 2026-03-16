@@ -21,13 +21,14 @@ from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import 
 from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
+from termcolor import cprint
 
 logger = logging.getLogger("Explorer")
 
 
 class CombinedContext(Context):
     def get_label(self) -> str:
-        return "CombinedCTX"
+        return "CombinedCTX\nsize: " + str(len(self.contained_contexts))
 
 
 class ContextTaskGraph(object):
@@ -47,13 +48,13 @@ class ContextTaskGraph(object):
         plt.ion()
         # start processing
         self.__construct_from_task_graph()
-        self.__print_graph_statistics("Pre simplification")
+        self.__print_graph_statistics("Pre simplification", color="yellow")
         try:
             print(nx.find_cycle(self.graph))
         except:
             print("NO CYCLE")
-        # self.__simplify_graph()
-        self.__print_graph_statistics("Post simplification")
+        #self.__simplify_graph()
+        self.__print_graph_statistics("Post simplification", color="yellow")
         try:
             cycle = nx.find_cycle(self.graph)
             print("Cycle: ", cycle)
@@ -209,19 +210,14 @@ class ContextTaskGraph(object):
         #  - calculate connected components
         # Note: connected_components is a generator!
         connected_components = nx.weakly_connected_components(self.graph)
-        print("Connected components: ")
 
         #  - find entry point for each component
         component_entry_points: Dict[Tuple[Context, ...], Context] = dict()
         for comp in connected_components:
-            print("--> ", comp)
             for ctx in comp:
-                print("Checking ctx: ", ctx)
-                print("--> len: ", len(self.get_predecessors(ctx)))
                 if len(self.get_predecessors(ctx)) == 0:
                     component_entry_points[tuple(comp)] = ctx
                     break
-        print("Component entry points: ", component_entry_points)
         #  - find replacement nodes for each component
         component_replacements_dict: Dict[Tuple[Context, ...], List[Context]] = dict()
         for comp in component_entry_points:
@@ -259,23 +255,14 @@ class ContextTaskGraph(object):
                         # no further step upwards possible. Use the current solution
                         pass
             component_replacements_dict[comp] = list(set(component_replacements))
-        print("Component replacements dict: ")
-        for c in component_replacements_dict:
-            print("--> ", c)
-            print("===> ", component_replacements_dict[c])
 
         # calculate inverse component dictionary
         inverse_component_dict: Dict[Context, Tuple[Context, ...]] = dict()
         for comp in component_replacements_dict:
             for ctx in comp:
                 inverse_component_dict[ctx] = comp
-        print("Inverse component dict:")
-        for ctx in inverse_component_dict:
-            print("-> ", ctx)
-            print("====> ", inverse_component_dict[ctx])
 
         #  - add intra-component dependency edges
-        logger.info("--> Add intra-component dependency edges")
         for ctx in tqdm(self.graph.nodes):
             ctx_parent_component = inverse_component_dict[ctx]
             for sink_ctx, dep in ctx.outgoing_dependencies:
@@ -285,12 +272,10 @@ class ContextTaskGraph(object):
                     continue
                 # intra-component dependency
                 self.add_edge(sink_ctx, ctx)
-                print("ADDED Intra component dependency: ", dep.sink_line, dep.source_line, dep.dtype, dep.var_name)
-
-        #        return
+                # print("ADDED Intra component dependency: ", dep.sink_line, dep.source_line, dep.dtype, dep.var_name)
 
         #  - add inter-component dependency edges (to and from replacement nodes)
-        logger.info("--> Add inter-component dependency edges (inward)")
+        logger.debug("--> Add inter-component dependency edges (inward)")
         for ctx in tqdm(self.graph.nodes):
             ctx_parent_component = inverse_component_dict[ctx]
             for sink_ctx, dep in ctx.outgoing_dependencies:
@@ -318,7 +303,7 @@ class ContextTaskGraph(object):
                     # inward dependency found
                     self.add_edge(sink_ctx, sink_is_parent_of)
 
-        logger.info("--> Add inter-component dependency edges (outward)")
+        logger.debug("--> Add inter-component dependency edges (outward)")
         for ctx in tqdm(self.graph.nodes):
             ctx_parent_component = inverse_component_dict[ctx]
             for sink_ctx, dep in ctx.outgoing_dependencies:
@@ -345,23 +330,9 @@ class ContextTaskGraph(object):
                 if source_is_parent_of is not None:
                     # outward dependency found
                     self.add_edge(sink_is_parent_of, sink_ctx)  # TODO CHECK!
-                    print("ADDED OUTWARD DEPENDENCY")
+                    logger.debug("ADDED OUTWARD DEPENDENCY")
 
         return
-
-        # add dependency edges
-        #        logger.info("--> Add dependency edges...")
-        #        for ctx in tqdm(self.task_graph.contexts):
-        #            if ctx in replacements:
-        #                target_ctx  = replacements[ctx]
-        #            else:
-        #                target_ctx = ctx
-        #            for sink_ctx, dep in ctx.outgoing_dependencies:
-        #                self.add_edge(sink_ctx, ctx)  # TEST
-        #        if sink_ctx in replacements:
-        #            self.add_edge(replacements[sink_ctx], target_ctx)
-        #        else:
-        #            self.add_edge(sink_ctx, target_ctx)
 
         # filling the structure with successor edges
         targets: Set[Context] = set()
@@ -548,12 +519,17 @@ class ContextTaskGraph(object):
         for node in to_be_removed:
             self.graph.remove_node(node)
 
-    def __print_graph_statistics(self, label: str = "") -> None:
-        logger.info("####################")
-        logger.info("# Graph statistics: " + label)
-        logger.info("# Node count: " + str(len(self.graph.nodes)))
-        logger.info("# Edge count:  " + str(len(self.graph.edges)))
-        logger.info("####################")
+    def __print_graph_statistics(self, label: str = "", color="yellow") -> None:
+        #logger.info("####################")
+        #logger.info("# Graph statistics: " + label)
+        #logger.info("# Node count: " + str(len(self.graph.nodes)))
+        #logger.info("# Edge count:  " + str(len(self.graph.edges)))
+        #logger.info("####################")
+        cprint("####################", color)
+        cprint("# Graph statistics: " + label, color)
+        cprint("# Node count: " + str(len(self.graph.nodes)), color)
+        cprint("# Edge count:  " + str(len(self.graph.edges)), color)
+        cprint("####################", color)
 
     def get_predecessors(self, node: Optional[Context]) -> List[Context]:
         if node is None:
@@ -576,7 +552,8 @@ class ContextTaskGraph(object):
         logger.info("Plotting...")
 
         logger.info("---> generating layout...")
-        positions = nx.nx_pydot.pydot_layout(self.graph, prog="sfdp")  # prog="dot")
+        # positions = nx.nx_pydot.pydot_layout(self.graph, prog="sfdp")  # prog="dot")
+        positions = nx.nx_pydot.pydot_layout(self.graph, prog="dot")
         # positions = self.quick_layout(self.graph)
         logger.info("--->    Done.")
 
