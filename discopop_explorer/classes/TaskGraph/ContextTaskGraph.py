@@ -22,6 +22,7 @@ from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from termcolor import cprint
+from enum import IntEnum
 
 logger = logging.getLogger("Explorer")
 
@@ -31,10 +32,25 @@ class CombinedContext(Context):
         return "CombinedCTX\nsize: " + str(len(self.contained_contexts))
 
 
+class CTGEdgeType(IntEnum):
+    CONTROL = 1
+    DATA = 2
+
+class CTGEdgeInfo(object):
+    type: CTGEdgeType
+    dep_obj: Optional[Dependency]
+
+    def __init__(self, type: CTGEdgeType, dep_obj: Optional[Dependency] = None):
+        self.type = type
+        self.dep_obj = dep_obj
+
+
+
 class ContextTaskGraph(object):
     pet: PEGraphX
     task_graph: TaskGraph
-    graph: nx.MultiDiGraph
+    graph: nx.DiGraph
+    edge_information: Dict[Context, Dict[Context, List[CTGEdgeInfo]]] = dict()
     imaginary_replacement_edges: Dict[Context, List[Context]] = dict()
     inverse_imaginary_replacement_edges: Dict[Context, List[Context]] = dict()
 
@@ -92,7 +108,7 @@ class ContextTaskGraph(object):
                     continue
                 queue += [nd for nd in self.task_graph.get_successors(current) if nd not in queue]
             for succ_ctx in successor_contexts:
-                self.add_edge(tg_node.created_context, succ_ctx)
+                self.add_edge(tg_node.created_context, succ_ctx, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
 
         # Extract branched sections
         raw_branching_contexts: List[Context] = []
@@ -130,13 +146,13 @@ class ContextTaskGraph(object):
             outside_predecessors = self.get_predecessors(current_branching_context)
             for pred in outside_predecessors:
                 self.graph.remove_edge(pred, current_branching_context)
-                self.add_edge(pred, replacement_node)
+                self.add_edge(pred, replacement_node, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
             for node in contained_contexts:
                 for succ in self.get_successors(node):
                     if succ not in contained_contexts:
                         #            outside_successors.add(succ)
                         self.graph.remove_edge(node, succ)
-                        self.add_edge(replacement_node, succ)
+                        self.add_edge(replacement_node, succ, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
             # register replacements
             for node in contained_contexts:
                 replacements[node] = replacement_node
@@ -176,7 +192,7 @@ class ContextTaskGraph(object):
             for contained_ctx in cast(Context, ctx).get_contained_contexts(inclusive=False):
                 if isinstance(contained_ctx, BranchingParentContext):
                     continue
-                self.add_edge(ctx, contained_ctx)
+                self.add_edge(ctx, contained_ctx, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
 
         # remove outgoing edges from BranchParent, saving imaginary connection
         for node in self.graph.nodes:
@@ -271,7 +287,7 @@ class ContextTaskGraph(object):
                     # not an intra-component dependency
                     continue
                 # intra-component dependency
-                self.add_edge(sink_ctx, ctx)
+                self.add_edge(sink_ctx, ctx, edge_info=CTGEdgeInfo(CTGEdgeType.DATA, dep_obj=dep))
                 # print("ADDED Intra component dependency: ", dep.sink_line, dep.source_line, dep.dtype, dep.var_name)
 
         #  - add inter-component dependency edges (to and from replacement nodes)
@@ -301,7 +317,7 @@ class ContextTaskGraph(object):
 
                 if sink_is_parent_of is not None:
                     # inward dependency found
-                    self.add_edge(sink_ctx, sink_is_parent_of)
+                    self.add_edge(sink_ctx, sink_is_parent_of, edge_info=CTGEdgeInfo(CTGEdgeType.DATA, dep_obj=dep))
 
         logger.debug("--> Add inter-component dependency edges (outward)")
         for ctx in tqdm(self.graph.nodes):
@@ -329,7 +345,7 @@ class ContextTaskGraph(object):
 
                 if source_is_parent_of is not None:
                     # outward dependency found
-                    self.add_edge(sink_is_parent_of, sink_ctx)  # TODO CHECK!
+                    self.add_edge(sink_is_parent_of, sink_ctx, edge_info=CTGEdgeInfo(CTGEdgeType.DATA, dep_obj=dep))  # TODO CHECK!
                     logger.debug("ADDED OUTWARD DEPENDENCY")
 
         return
@@ -345,7 +361,7 @@ class ContextTaskGraph(object):
             for target in saved_successors[source]:
                 if target not in targets:
                     continue
-                self.add_edge(source, target)
+                self.add_edge(source, target, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
 
         return
 
@@ -353,14 +369,14 @@ class ContextTaskGraph(object):
         for ctx in tqdm(self.task_graph.contexts):
             for sink_ctx in ctx.get_contained_contexts():
                 if isinstance(sink_ctx, InlinedFunctionContext):
-                    self.add_edge(ctx, sink_ctx)
+                    self.add_edge(ctx, sink_ctx, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
 
         logger.info("--> Add contained edges...")
         for ctx in tqdm(self.task_graph.contexts):
             for sink_ctx in ctx.get_contained_contexts():
                 # check if sink_ctx is an entry to a successor sequence
                 if sink_ctx.predecessor is None:
-                    self.add_edge(ctx, sink_ctx)
+                    self.add_edge(ctx, sink_ctx, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
 
         # TODO Branching durch WORK knoten ersetzen. Branches individuell analysieren
         logger.info("--> Add dependencies to force synchronization at exit nodes via synthetic landing pads...")
@@ -388,7 +404,7 @@ class ContextTaskGraph(object):
             landing_pad = WorkContext()
             self.add_node(landing_pad)
             for leaf in leaf_nodes:
-                self.add_edge(leaf, landing_pad)
+                self.add_edge(leaf, landing_pad, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
             logger.info("----> Added synthetic landing pad")
 
     #        # DEBUG - TO BE REMOVED
@@ -493,11 +509,11 @@ class ContextTaskGraph(object):
 
                 # redirect incoming edges
                 for pred in outside_predecessors:
-                    self.add_edge(pred, combined_context_node)
+                    self.add_edge(pred, combined_context_node, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
 
                 # redirect outgoing edges
                 for succ in outside_successors:
-                    self.add_edge(combined_context_node, succ)
+                    self.add_edge(combined_context_node, succ, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
 
                 # remove triangle nodes from queue
                 if triangle_nodes[0] in queue:
@@ -629,10 +645,24 @@ class ContextTaskGraph(object):
     def add_node(self, node: Context) -> None:
         self.graph.add_node(node)
 
-    def add_edge(self, source: Optional[Context], target: Optional[Context]) -> None:
+    def add_edge(self, source: Optional[Context], target: Optional[Context], edge_info: CTGEdgeInfo) -> None:
         if source is None or target is None:
             return
         # disallow duplicate edges
-        if self.graph.has_edge(source, target):
-            return
-        self.graph.add_edge(source, target)
+        if not self.graph.has_edge(source, target):
+            self.graph.add_edge(source, target)
+            
+        # attach edge_info to the edge
+        if source not in self.edge_information:
+            self.edge_information[source] = dict()
+        if target not in self.edge_information[source]:
+            self.edge_information[source][target] = []
+        if edge_info not in self.edge_information[source][target]:
+            self.edge_information[source][target].append(edge_info)
+    
+    def get_edge_info(self, source: Context, target: Context) -> List[CTGEdgeInfo]:
+        if source not in self.edge_information:
+            return []
+        if target not in self.edge_information[source]:
+            return []
+        return self.edge_information[source][target]
