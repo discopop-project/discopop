@@ -23,6 +23,7 @@ from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from termcolor import cprint
 from enum import IntEnum
+import matplotlib.lines as mlines
 
 logger = logging.getLogger("Explorer")
 
@@ -583,16 +584,51 @@ class ContextTaskGraph(object):
         # draw highlighted nodes
         if highlight_nodes is not None:
             nx.draw_networkx_nodes(self.graph, positions, nodelist=highlight_nodes, node_color="red", ax=axis)
-        # draw edges
-        nx.draw_networkx_edges(self.graph, positions, ax=axis)
-        # draw imaginary edges
+        # draw control edges
         tmp_graph = self.graph
         edgelist: List[Tuple[Context, Context]] = []
+        for source, target in [(s, t) for s, t in self.graph.edges()]:
+            edge_info = self.get_edge_info(source, target)            
+            is_control_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.CONTROL]) > 0 else False
+            is_data_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.DATA]) > 0 else False
+            if is_control_edge and not is_data_edge:
+                tmp_graph.add_edge(source, target)
+                edgelist.append((source, target))
+        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="black", ax=axis)
+        for tpl in edgelist:
+            tmp_graph.remove_edge(tpl[0], tpl[1])
+        # draw data edges
+        edgelist.clear()
+        for source, target in [(s, t) for s, t in self.graph.edges()]:
+            edge_info = self.get_edge_info(source, target)            
+            is_control_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.CONTROL]) > 0 else False
+            is_data_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.DATA]) > 0 else False
+            if is_data_edge and not is_control_edge:
+                tmp_graph.add_edge(source, target)
+                edgelist.append((source, target))
+        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="red", ax=axis)
+        for tpl in edgelist:
+            tmp_graph.remove_edge(tpl[0], tpl[1])
+        # draw combined control and data edges
+        edgelist.clear()
+        for source, target in [(s, t) for s, t in self.graph.edges()]:
+            edge_info = self.get_edge_info(source, target)            
+            is_control_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.CONTROL]) > 0 else False
+            is_data_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.DATA]) > 0 else False
+            if is_data_edge and is_control_edge:
+                tmp_graph.add_edge(source, target)
+                edgelist.append((source, target))
+        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="blue", ax=axis)
+        for tpl in edgelist:
+            tmp_graph.remove_edge(tpl[0], tpl[1])
+
+        # draw imaginary edges
+        edgelist.clear()
         for source in self.imaginary_replacement_edges:
             for target in self.imaginary_replacement_edges[source]:
                 tmp_graph.add_edge(source, target)
                 edgelist.append((source, target))
-        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="red", ax=axis)
+        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="green", ax=axis)
         for source in self.imaginary_replacement_edges:
             for target in self.imaginary_replacement_edges[source]:
                 tmp_graph.remove_edge(source, target)
@@ -602,6 +638,18 @@ class ContextTaskGraph(object):
         for node in self.graph.nodes():
             labels[node] = node.get_label()
         nx.draw_networkx_labels(self.graph, positions, labels, font_size=7, ax=axis)
+        
+        # define legend
+        black_line = mlines.Line2D([], [], color='black', # marker='*',
+                          markersize=15, label='control')
+        red_line = mlines.Line2D([], [], color='red', # marker='*',
+                          markersize=15, label='data')
+        blue_line = mlines.Line2D([], [], color='blue', # marker='*',
+                          markersize=15, label='control + data')
+        green_line = mlines.Line2D([], [], color='green', # marker='*',
+                          markersize=15, label='imaginary')
+
+        axis.legend(loc="upper left", handles=[black_line, red_line, blue_line, green_line] ) # labels=["control", "data", "control + data", "imaginary"], labelcolor=["black", "red", "blue", "green"], )
 
     def quick_layout(self, subgraph: Optional[Graph] = None) -> Dict[TGNode, Tuple[float, float]]:
         logger.info("----> generating quick layout...")
