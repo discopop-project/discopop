@@ -70,7 +70,7 @@ class ContextTaskGraph(object):
             print(nx.find_cycle(self.graph))
         except:
             print("NO CYCLE")
-        #self.__simplify_graph()
+        self.__simplify_graph()
         self.__print_graph_statistics("Post simplification", color="yellow")
         try:
             cycle = nx.find_cycle(self.graph)
@@ -419,7 +419,85 @@ class ContextTaskGraph(object):
     #                    break
     #        # !DEBUG
 
-    def __simplify_graph(self) -> None:
+    def __simplify_graph(self) -> bool:
+        """Execute the simplification pipeline."""
+
+        self.__control_sequence_simplification()
+        # self.__replace_triangles()
+    
+    def __control_sequence_simplification(self) -> None:
+        """Replace trivial, linear control sequences with a CombinedContext node. Loop until no further linear sequences exist."""
+        sequences_replaced = True
+        while sequences_replaced:
+            sequences_replaced = False
+            queue: List[Context] = list(self.graph.nodes())
+            while len(queue) > 0:
+                node = queue.pop()
+                # check if node is a valid sequence entry
+                predecessors = self.get_predecessors(node)
+                successors = self.get_successors(node)
+                if len(successors) != 1 or len(predecessors) != 1:
+                    continue
+                # ensure existing control edge to successor
+                if len([info for info in self.get_edge_info(node, successors[0]) if info.type == CTGEdgeType.CONTROL]) < 1:
+                    continue
+
+                sequence: List[Context] = []
+                # construct the longest possible sequence
+                current: Optional[Context] = node
+                while current is not None:
+                    # check if node is a valid sequence member
+                    predecessors = self.get_predecessors(current)
+                    successors = self.get_successors(current)
+                    if len(predecessors) != 1:
+                        # not a valid sequence member
+                        break
+                    if len(successors) != 1:
+                        # end of the current sequence, but a valid member
+                        sequence.append(current)
+                        break
+                    
+                    # valid sequence member
+                    sequence.append(current)              
+
+                    # ensure existing control edge to successor
+                    if len([info for info in self.get_edge_info(current, successors[0]) if info.type == CTGEdgeType.CONTROL]) < 1:
+                        # end of the sequence
+                        current = None
+                        break
+                    # check successor
+                    current = successors[0]
+                # combine sequence into CombinedContext node
+                if len(sequence) < 2:
+                    continue
+                combined_context_node = CombinedContext()
+                for seq_elem in sequence:
+                    if isinstance(seq_elem, CombinedContext):
+                        combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
+                            seq_elem.contained_contexts
+                        )
+                    else:
+                        combined_context_node.contained_contexts.add(seq_elem)
+                # redirect incoming edges                
+                in_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(pred, self.get_edge_info(pred, sequence[0])) for pred in self.get_predecessors(sequence[0])]
+                for pred, info in in_edges_with_info:
+                    for info_elem in info:
+                        self.add_edge(pred, combined_context_node, info_elem)
+                # redirect outgoing edges
+                out_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(succ, self.get_edge_info(sequence[-1], succ )) for succ in self.get_successors(sequence[-1])]
+                print("OEWI: ", out_edges_with_info)
+                for succ, info in out_edges_with_info:
+                    for info_elem in info:
+                        self.add_edge(combined_context_node, succ, info_elem)
+                # delete sequence nodes
+                for seq_elem in sequence:
+                    if seq_elem in queue:
+                        queue.remove(seq_elem)
+                    self.graph.remove_node(seq_elem)
+                sequences_replaced = True
+
+
+    def __replace_triangles(self) -> None:
         """Replace triangles in the graph with a CombinedContext node. Loop until no further triangles exist."""
         logger.info("Simplifying graph...")
         triangles_replaced = True
@@ -606,7 +684,7 @@ class ContextTaskGraph(object):
             if is_data_edge and not is_control_edge:
                 tmp_graph.add_edge(source, target)
                 edgelist.append((source, target))
-        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="red", ax=axis)
+        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="red", ax=axis, connectionstyle="arc3,rad=0.2")
         for tpl in edgelist:
             tmp_graph.remove_edge(tpl[0], tpl[1])
         # draw combined control and data edges
@@ -618,7 +696,7 @@ class ContextTaskGraph(object):
             if is_data_edge and is_control_edge:
                 tmp_graph.add_edge(source, target)
                 edgelist.append((source, target))
-        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="blue", ax=axis)
+        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="blue", ax=axis, connectionstyle="arc3,rad=0.2")
         for tpl in edgelist:
             tmp_graph.remove_edge(tpl[0], tpl[1])
 
