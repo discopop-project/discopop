@@ -65,13 +65,13 @@ class ContextTaskGraph(object):
         plt.ion()
         # start processing
         self.__construct_from_task_graph()
-        self.__print_graph_statistics("Pre simplification", color="yellow")
         try:
             print(nx.find_cycle(self.graph))
         except:
             print("NO CYCLE")
+        
         self.__simplify_graph()
-        self.__print_graph_statistics("Post simplification", color="yellow")
+        
         try:
             cycle = nx.find_cycle(self.graph)
             print("Cycle: ", cycle)
@@ -186,7 +186,7 @@ class ContextTaskGraph(object):
             saved_successors[node] = self.get_successors(node)
 
         # remove successor edges
-        self.graph.clear_edges()
+        # self.graph.clear_edges()
 
         # add contains edges ignoring BranchParents as targets
         for ctx in self.graph.nodes:
@@ -349,7 +349,7 @@ class ContextTaskGraph(object):
                     self.add_edge(sink_is_parent_of, sink_ctx, edge_info=CTGEdgeInfo(CTGEdgeType.DATA, dep_obj=dep))  # TODO CHECK!
                     logger.debug("ADDED OUTWARD DEPENDENCY")
 
-        return
+        # return
 
         # filling the structure with successor edges
         targets: Set[Context] = set()
@@ -421,13 +421,32 @@ class ContextTaskGraph(object):
 
     def __simplify_graph(self) -> bool:
         """Execute the simplification pipeline."""
+        self.__print_graph_statistics("Pre simplification", color="yellow")
+        modification_applied = True
+        while modification_applied:
+            modification_applied = False
+            css_res = self.__control_sequence_simplification()
+            if css_res:
+                self.__print_graph_statistics("Post control sequence simplification", color="yellow")
+            modification_applied = modification_applied or css_res
+            
+            bt_res = self.__break_triangles()
+            if bt_res:
+                self.__print_graph_statistics("Post break triangles", color="yellow")
+            modification_applied = modification_applied or bt_res
+            
+            #if modification_applied:
+            #    self.plot(  )
 
-        self.__control_sequence_simplification()
-        # self.__replace_triangles()
+        self.__print_graph_statistics("Post simplification", color="yellow")
+
+        #self.__replace_triangles()
     
-    def __control_sequence_simplification(self) -> None:
-        """Replace trivial, linear control sequences with a CombinedContext node. Loop until no further linear sequences exist."""
+    def __control_sequence_simplification(self) -> bool:
+        """Replace trivial, linear control sequences with a CombinedContext node. Loop until no further linear sequences exist.
+        Returns True, if a modification was applied."""
         sequences_replaced = True
+        modification_applied = False
         while sequences_replaced:
             sequences_replaced = False
             queue: List[Context] = list(self.graph.nodes())
@@ -495,11 +514,54 @@ class ContextTaskGraph(object):
                         queue.remove(seq_elem)
                     self.graph.remove_node(seq_elem)
                 sequences_replaced = True
+                modification_applied = True
+        return modification_applied
+
+
+    def __break_triangles(self) -> bool:
+        """search for triangles. If a triangle is found, delete the direct edge between triangle entry and exit node. 
+        As a result, the __control_sequence_simplification can combine the triangle into one CombinedContext node.
+        Returns True, if a modification was applied."""
+        logger.info("Breaking triangles...")
+        triangles_broken = True
+        modification_applied = False
+        while triangles_broken:
+            logger.info("--> iterating...")
+            triangles_broken = False
+            queue: List[Context] = list(self.graph.nodes())
+            while len(queue) > 0:
+                node = queue.pop()
+                predecessors = self.get_predecessors(node)
+                if len(predecessors) < 2:
+                    continue
+                # check all combinations of predecessors for triangles
+                triangle_nodes: Optional[Tuple[Context, Context]] = None
+                for pred_1 in predecessors:
+                    for pred_2 in predecessors:
+                        if pred_1 == pred_2:
+                            continue
+                        # triangle exists, if pred_1 is a predecessor of pred_2 or vice versa
+                        if pred_1 in self.get_predecessors(pred_2):
+                            triangle_nodes = (pred_1, pred_2)
+                            break
+                        if pred_2 in self.get_predecessors(pred_1):
+                            triangle_nodes = (pred_2, pred_1)
+                if triangle_nodes is None:
+                    # did not find a triangle
+                    continue
+                # delete the short triangle edge
+                self.graph.remove_edge(triangle_nodes[0], node)
+                triangles_broken = True
+                modification_applied = True
+        return modification_applied
+
+
+
 
 
     def __replace_triangles(self) -> None:
         """Replace triangles in the graph with a CombinedContext node. Loop until no further triangles exist."""
-        logger.info("Simplifying graph...")
+        logger.info("Replacing triangles...")
         triangles_replaced = True
         while triangles_replaced:
             logger.info("--> iterating...")
@@ -638,10 +700,36 @@ class ContextTaskGraph(object):
         successors = list(set([t for s, t in self.graph.out_edges(node)]))
         return successors
 
-    def plot(self, axis: Axes, highlight_nodes: Optional[List[Context]] = None) -> None:
-        self.update_plot(axis, highlight_nodes)
+    def plot(self, highlight_nodes: Optional[List[Context]] = None) -> None:
+        import tkinter as tk
+        import numpy as np
+        from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
+        from matplotlib.figure import Figure
+        root = tk.Tk()
+        root.title("Context Task Graph")
+        def close_window() -> None:
+            root.quit()
+            root.destroy()
+
+        frame1 = tk.Frame(root)
+        fig1 = Figure()  # Figure(figsize=(5, 4))
+        
+        ax1 = fig1.add_subplot(111)
+        ax1.set_title("Context Task Graph")
+        canvas1 = FigureCanvasTkAgg(fig1, master=frame1)
+        canvas1.draw()
+        canvas1.get_tk_widget().grid(row=0, sticky="nsew")
+        toolbar1 = NavigationToolbar2Tk(canvas1, pack_toolbar=False)  # , root)
+        toolbar1.update()
+        toolbar1.grid(row=1)
+        frame1.grid(column=0, row=0, sticky="nswe")
+        
+        self.update_plot(ax1, highlight_nodes)
         print("Waiting for user to close the Window...")
-        plt.show()
+        # ---- start main loop
+        root.protocol("WM_DELETE_WINDOW", close_window)
+        root.mainloop()
+        # plt.show()
 
     def update_plot(self, axis: Axes, highlight_nodes: Optional[List[Context]] = None) -> None:
         logger.info("Plotting...")
