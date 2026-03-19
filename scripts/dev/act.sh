@@ -9,6 +9,14 @@
 
 set -euo pipefail
 
+# check if act is installed
+if ! [ -x "$(command -v act)" ]; then
+  echo 'Error: act is not installed.' >&2
+  echo 'Visit https://github.com/nektos/act for more details'
+  exit 1
+fi
+
+
 workflow=()
 hasW=false
 
