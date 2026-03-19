@@ -141,11 +141,14 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
 
     # ---- Render contents
     print("Plotting task graph...")
-    context_task_graph.task_graph.update_plot(ax1)
+    if(len(context_task_graph.task_graph.graph.nodes()) < 500):
+        context_task_graph.task_graph.update_plot(ax1)
     print("Plotting task graph (context graph)...")
-    context_task_graph.task_graph.plot_context_graph(ax2)
+    if(len(context_task_graph.task_graph.graph.nodes()) < 500):
+        context_task_graph.task_graph.plot_context_graph(ax2)
     print("Plotting task graph (context debug graph)...")
-    context_task_graph.task_graph.plot_context_debug_graph(ax3)
+    if(len(context_task_graph.task_graph.graph.nodes()) < 500):
+        context_task_graph.task_graph.plot_context_debug_graph(ax3)
     print("Plotting context task graph...")
     context_task_graph.update_plot(ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None)
 
@@ -155,6 +158,7 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
 
 
 def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskParallelismInfo]:
+    """NOTE: THIS SHOULD BE REMOVED / DISABLED, AS IT IS COVERED BY THE TASK DETECTION DURING GRAPH SIMPLIFICATION."""
     logger.info("Identifying trivial tasking potential...")
     patterns: List[TaskParallelismInfo] = []
     fork_join_pairs: List[Tuple[Context, Context]] = []

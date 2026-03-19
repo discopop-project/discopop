@@ -24,6 +24,17 @@ class WorkContext(Context):
 
     def get_label(self) -> str:
         label = "Work"
+        # DEBUG add contained node ids
+        contained_node_ids: Set[str] = set()
+        for node in self.contained_nodes:
+            contained_node_ids.add(str(node.pet_node_id))
+
+        if len(contained_node_ids) > 0:
+            label += "\n"
+            for node_id_str in contained_node_ids:
+                label += " " + str(node_id_str)
+        # END DEBUG
+
         return label
 
     def get_label_with_defined_vars(self, pet: PEGraphX) -> str:
@@ -32,6 +43,21 @@ class WorkContext(Context):
 
         for tpl in defines_vars:
             label += " " + str(tpl[0]) + "@" + str(tpl[1])
+        
+        # DEBUG add contained node ids
+        contained_node_ids: Set[str] = set()
+        for node in self.contained_nodes:
+            # filter out function return nodes, as their ids might overlap with dummy nodes and may result in hard-to-interpret visualizations
+            if node.get_pet_node(pet).name.startswith("FuncExit_"):
+                contained_node_ids.add("FuncExit_" + str(node.pet_node_id))
+            else:
+                contained_node_ids.add(str(node.pet_node_id))
+
+        if len(contained_node_ids) > 0:
+            label += "\n"
+            for node_id_str in contained_node_ids:
+                label += " " + str(node_id_str)
+        
         return label
 
     def get_contained_calls(self, pet: PEGraphX) -> List[Tuple[PETNodeID, LineID]]:
