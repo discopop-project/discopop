@@ -437,12 +437,6 @@ class ContextTaskGraph(object):
         modification_applied = True
         while modification_applied:
             modification_applied = False
-            
-            if True:
-                css_res = self.__trivial_control_sequence_simplification()
-                if css_res:
-                    self.__print_graph_statistics("Post trivial_control sequence simplification", color="yellow")
-                modification_applied = modification_applied or css_res
 
             if True:
                 # note: THIS IS A WORK IN PROGRESS, NOT SURE IT IS BENEFICIAL!
@@ -450,27 +444,115 @@ class ContextTaskGraph(object):
                 stcs_res = self.__split_taskable_control_sequence()
                 if stcs_res:
                     self.__print_graph_statistics("Post split taskable work sequence", color="yellow")
+                else:
+                    cprint("-> No effect: split taskable work sequence", "yellow")
                 modification_applied = modification_applied or stcs_res
-                
-                # merge task parents if possible
-                if False:
-                    mstpn_res = self.__INVALID_merge_successive_TaskParentContext_nodes()
-                    if mstpn_res:
-                        self.__print_graph_statistics("INVALID: Post merge successive TaskParentContext nodes", color="yellow")
-                    modification_applied = modification_applied or mstpn_res
+
+            # todo: replace task region with CombinedContext
+
+            # todo: replace "trivial" BranchParent with CombinedContext (trivial: both branches consist of exaclty one node)
+
+            # todo: merge only-childs with parents
+            if True:
+                moc_res = self.__merge_only_childs_with_parents()
+                if moc_res:
+                    self.__print_graph_statistics("Post merge only-childs with parents", color="yellow")
+                else:
+                    cprint("-> No effect: merge only-childs with parents", "yellow")
+                modification_applied = modification_applied or moc_res
+
+            # todo: non-trivial sequence combination (latter node has incoming dependencies)
+
+
+            if True:
+                css_res = self.__trivial_control_sequence_simplification()
+                if css_res:
+                    self.__print_graph_statistics("Post trivial_control sequence simplification", color="yellow")
+                else:
+                    cprint("-> No effect: trivial_control sequence simplification", "yellow")
+                modification_applied = modification_applied or css_res
 
             
             if True:
                 bt_res = self.__break_triangles()
                 if bt_res:
                     self.__print_graph_statistics("Post break triangles", color="yellow")
+                else:
+                    cprint("-> No effect: break triangles", "yellow")
                 modification_applied = modification_applied or bt_res
+
+            # collapse inlined functions from bottom up (bottom up to save computing time for subgraphs)
+
 
         self.__print_graph_statistics("Post simplification", color="yellow")
 
         # OLD IMPLEMENTATION. BREAK TRIANGLES IS SIMPLER AND MORE ELEGANT
         #self.__replace_triangles()
     
+    def __merge_only_childs_with_parents(self) -> bool:
+        """Merges two successive nodes, if the first node is the parent node of the second, successive node.
+        The seconde node must be of type WorkContext or CombinedContext, so that it contains at least some work.
+        Returns true, if a modification was applied."""
+        modification_applied = False
+        nodes_merged = True
+        while nodes_merged:
+            nodes_merged = False
+            queue: List[Context] = list(self.graph.nodes())
+            while len(queue) > 0:
+                node = queue.pop()
+                # ensure node is of allowed type
+                if not (isinstance(node, WorkContext) or isinstance(node, CombinedContext)):
+                    continue
+                # check if node has exactly one CONTROL predecessor
+                control_edge_predecessors = [ctx for ctx in self.get_predecessors(node) if (len([info for info in self.get_edge_info(ctx, node) if info.type == CTGEdgeType.CONTROL])>0)]
+                if len(control_edge_predecessors) != 1:
+                    continue
+                predecessor = control_edge_predecessors[0]
+                # check if predecessor has exactly one successor
+                pred_control_edge_successors = [ctx for ctx in self.get_successors(predecessor) if len([info for info in self.get_edge_info(predecessor, ctx) if info.type == CTGEdgeType.CONTROL])>0]
+                if len(pred_control_edge_successors) != 1:
+                    continue
+
+                # check if predecessor is the parent of node
+                if node.parent_context != predecessor:
+                    continue
+                                
+                # combine both nodes into CombinedContext node 
+                combined_context_node = CombinedContext()
+                combined_context_node.register_parent_context(predecessor.parent_context)
+                if isinstance(predecessor, CombinedContext):
+                    combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
+                        predecessor.contained_contexts
+                    )
+                else:
+                    combined_context_node.contained_contexts.add(predecessor)
+                if isinstance(node, CombinedContext):
+                    combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
+                        node.contained_contexts
+                    )
+                else:
+                    combined_context_node.contained_contexts.add(node)
+                # redirect incoming edges                
+                in_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(pred, self.get_edge_info(pred, predecessor)) for pred in self.get_predecessors(predecessor)]
+                for pred, info in in_edges_with_info:
+                    for info_elem in info:
+                        self.add_edge(pred, combined_context_node, info_elem)
+                # redirect outgoing edges
+                out_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(succ, self.get_edge_info(node, succ )) for succ in self.get_successors(node)]
+                for succ, info in out_edges_with_info:
+                    for info_elem in info:
+                        self.add_edge(combined_context_node, succ, info_elem)
+                # delete original nodes
+                self.graph.remove_node(predecessor)
+                self.graph.remove_node(node)
+                
+                nodes_merged = True
+                modification_applied = True
+                break  # break, so that queue will be newly constructed as it might contain deleted nodes.
+
+        return modification_applied
+
+
     def __INVALID_merge_successive_TaskParentContext_nodes(self) -> bool:
         """Merges two TaskParentContext nodes, if one is a direct control edge successor of another.
         Iterates until no further optimizations could be found.
@@ -549,6 +631,11 @@ class ContextTaskGraph(object):
                     # check if a data dependency between both nodes exist, i.e., whether both can be executed in parallel or not
                     if len([info for info in self.get_edge_info(node, successor) if info.type == CTGEdgeType.DATA]) > 0:
                         continue
+                    # check that both nodes share the same parent
+                    if node.parent_context != successor.parent_context:
+                        continue
+                    print(" === FOUND TASK ===")
+
                     # both can be executed in parallel. Create a TaskParent node and connect. 
                     task_parent_node = TaskParentContext()
                     task_end_node = TaskEndContext()
@@ -582,8 +669,9 @@ class ContextTaskGraph(object):
 
     def __trivial_control_sequence_simplification(self) -> bool:
         """Replace trivial, linear control sequences with a CombinedContext node. Loop until no further linear sequences exist.
-        Trivial sequences can consist of WorkContext, CombinedContext, IterationContext, InlinedFunctionContext and FunctionContext nodes only.
+        Trivial sequences can consist of WorkContext and CombinedContext nodes only.
         Trivial sequences must contain at least some work. 
+        trivial sequences must share a common parent.
         This is enforced by requiring, that either a WorkContext or a CombinedContext are contained.
         CombinedContexts themselves have the same requirement.
         Returns True, if a modification was applied."""
@@ -622,9 +710,12 @@ class ContextTaskGraph(object):
                         # end of the current sequence, but a valid member
                         sequence.append(current)
                         break
+                    # ensure sequence members share a common parent
+                    if node.parent_context != current.parent_context:
+                        break
                     
                     # valid sequence member
-                    sequence.append(current)              
+                    sequence.append(current)
 
                     # ensure existing control edge to successor
                     if len([info for info in self.get_edge_info(current, successors[0]) if info.type == CTGEdgeType.CONTROL]) < 1:
@@ -642,6 +733,7 @@ class ContextTaskGraph(object):
                     continue
                 # combine sequence into CombinedContext node 
                 combined_context_node = CombinedContext()
+                combined_context_node.register_parent_context(sequence[0].parent_context)
                 for seq_elem in sequence:
                     if isinstance(seq_elem, CombinedContext):
                         combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
@@ -731,14 +823,18 @@ class ContextTaskGraph(object):
                         if pred_1 == pred_2:
                             continue
                         # triangle exists, if pred_1 is a predecessor of pred_2 or vice versa
-                        if pred_1 in self.get_predecessors(pred_2) or pred_2 in self.get_predecessors(pred_1):
+                        if pred_1 in self.get_predecessors(pred_2) :
                             triangle_nodes = (pred_1, pred_2)
+                            break
+                        if pred_2 in self.get_predecessors(pred_1):
+                            triangle_nodes = (pred_2, pred_1)
                             break
                 if triangle_nodes is None:
                     # did not find a triangle
                     continue
                 # replace triangle with CombinedContext
                 combined_context_node = CombinedContext()
+                combined_context_node.register_parent_context(triangle_nodes[0].parent_context)
                 self.add_node(combined_context_node)
                 # register contained contexts
                 if isinstance(node, CombinedContext):

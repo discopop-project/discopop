@@ -25,6 +25,7 @@ from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
+
 from discopop_explorer.classes.TaskGraph.Branching.TGEndBranchNode import TGEndBranchNode
 from discopop_explorer.classes.TaskGraph.Branching.TGEndBranchParentNode import TGEndBranchParentNode
 from discopop_explorer.classes.TaskGraph.Branching.TGStartBranchNode import TGStartBranchNode
@@ -70,6 +71,7 @@ import matplotlib.pyplot as plt  # type:ignore
 from matplotlib.patches import Rectangle
 
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.Aliases import (
     FunctionID,
@@ -547,7 +549,7 @@ class TaskGraph(object):
         elif pet_node.type == NodeType.LOOP:
             queue = self.__visit_LoopNode(predecessor, pet_node, queue)
         else:
-            warnings.warn("Unsupported node type encountered: " + str(pet_node.type))
+            warnings.warn("Unsupported node type encountered: " + str(type(pet_node)) + " NodeID: " + str(pet_node.id))
         return queue
 
     def __visit_marker(
