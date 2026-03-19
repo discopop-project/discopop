@@ -448,11 +448,19 @@ class ContextTaskGraph(object):
                     cprint("-> No effect: split taskable work sequence", "yellow")
                 modification_applied = modification_applied or stcs_res
 
-            # todo: replace task region with CombinedContext
+            # todo: replace trivial task region with CombinedContext
+            if True:
+                rttr_res = self.__replace_trivial_task_region()
+                if rttr_res:
+                    self.__print_graph_statistics("Post replace trivial task region", color="yellow")
+                else:
+                    cprint("-> No effect: replace trivial task region", "yellow")
+                modification_applied = modification_applied or rttr_res
+            
 
             # todo: replace "trivial" BranchParent with CombinedContext (trivial: both branches consist of exaclty one node)
 
-            # todo: merge only-childs with parents
+            # merge only-childs with parents
             if True:
                 moc_res = self.__merge_only_childs_with_parents()
                 if moc_res:
@@ -471,7 +479,6 @@ class ContextTaskGraph(object):
                 else:
                     cprint("-> No effect: trivial_control sequence simplification", "yellow")
                 modification_applied = modification_applied or css_res
-
             
             if True:
                 bt_res = self.__break_triangles()
@@ -481,14 +488,96 @@ class ContextTaskGraph(object):
                     cprint("-> No effect: break triangles", "yellow")
                 modification_applied = modification_applied or bt_res
 
-            # collapse inlined functions from bottom up (bottom up to save computing time for subgraphs)
-
-
         self.__print_graph_statistics("Post simplification", color="yellow")
 
         # OLD IMPLEMENTATION. BREAK TRIANGLES IS SIMPLER AND MORE ELEGANT
         #self.__replace_triangles()
     
+    def __replace_trivial_task_region(self) -> bool:
+        """Replaces a trivial tasking region (TaskParent + exactly two children + TaskEnd) with a CombinedContext node.
+        Returns True, if a modification was applied."""
+        modification_applied = False
+        nodes_merged = True
+        while nodes_merged:
+            nodes_merged = False
+            queue: List[Context] = list(self.graph.nodes())
+            while len(queue) > 0:
+                node = queue.pop()
+                # check if node is of type TaskParent
+                if not isinstance(node, TaskParentContext):
+                    continue
+                # check if exactly two CONTROL successors exist
+                control_edge_successors = [ctx for ctx in self.get_successors(node) if len([info for info in self.get_edge_info(node, ctx) if info.type == CTGEdgeType.CONTROL])>0]
+                if len(control_edge_successors) != 2:
+                    continue
+                # check if both successor have onyl a single predecessor (i.e., the taskParentContext node)
+                successors_preceeding_nodes_valid = True
+                for succ in control_edge_successors:
+                    succ_control_edge_predecessors = [ctx for ctx in self.get_predecessors(succ) if (len([info for info in self.get_edge_info(ctx, succ) if info.type == CTGEdgeType.CONTROL])>0)]
+                    if len(succ_control_edge_predecessors) != 1:
+                        successors_preceeding_nodes_valid = False
+                        break
+                if not successors_preceeding_nodes_valid:
+                    continue
+                # check if both successors are immediately followed by the TaskEnd node and have only a single successor
+                successors_immediately_followed_by_TaskEnd = True
+                for succ in control_edge_successors:
+                    succ_control_edge_successors = [ctx for ctx in self.get_successors(succ) if len([info for info in self.get_edge_info(succ, ctx) if info.type == CTGEdgeType.CONTROL])>0]
+                    if len(succ_control_edge_successors) != 1:
+                        successors_immediately_followed_by_TaskEnd = False
+                        break
+                    if succ_control_edge_successors[0] != cast(TaskParentContext, node).task_end_context:
+                        successors_immediately_followed_by_TaskEnd = False
+                        break
+                if not successors_immediately_followed_by_TaskEnd:
+                    continue
+                # combine nodes into CombinedContext node
+                combined_context_node = CombinedContext()
+                combined_context_node.register_parent_context(node.parent_context)
+                for n in [node, node.task_end_context] + control_edge_successors:
+                    if isinstance(n, CombinedContext):
+                        combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
+                            n.contained_contexts
+                        )
+                    else:
+                        combined_context_node.contained_contexts.add(n)
+                # redirect incoming edges                
+                in_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(pred, self.get_edge_info(pred, node)) for pred in self.get_predecessors(node)]
+                for pred, info in in_edges_with_info:
+                    for info_elem in info:
+                        self.add_edge(pred, combined_context_node, info_elem)
+                # redirect outgoing edges
+                out_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(succ, self.get_edge_info(node.task_end_context, succ )) for succ in self.get_successors(node.task_end_context)]
+                for succ, info in out_edges_with_info:
+                    for info_elem in info:
+                        self.add_edge(combined_context_node, succ, info_elem)
+                # redirect dependencies
+                for task_node in control_edge_successors:
+                    # redirect incoming dependencies
+                    in_data_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(pred, self.get_edge_info(pred, task_node)) for pred in self.get_predecessors(task_node)]
+                    for pred, info in in_data_edges_with_info:
+                        for info_elem in info:
+                            if info_elem.type == CTGEdgeType.DATA:
+                                self.add_edge(pred, combined_context_node, info_elem)
+                    # redirect outgoing dependencies
+                    out_data_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(succ, self.get_edge_info(task_node, succ)) for succ in self.get_successors(task_node)]
+                    for succ, info in out_data_edges_with_info:
+                        for info_elem in info:
+                            if info_elem.type == CTGEdgeType.DATA:
+                                self.add_edge(combined_context_node, succ, info_elem)
+
+                # delete original nodes
+                for task_node in control_edge_successors:
+                    self.graph.remove_node(task_node)
+                self.graph.remove_node(node.task_end_context)
+                self.graph.remove_node(node)
+                
+                nodes_merged = True
+                modification_applied = True
+                break  # break, so that queue will be newly constructed as it might contain deleted nodes.
+
+        return modification_applied
+
     def __merge_only_childs_with_parents(self) -> bool:
         """Merges two successive nodes, if the first node is the parent node of the second, successive node.
         The seconde node must be of type WorkContext or CombinedContext, so that it contains at least some work.
@@ -638,6 +727,7 @@ class ContextTaskGraph(object):
 
                     # both can be executed in parallel. Create a TaskParent node and connect. 
                     task_parent_node = TaskParentContext()
+                    task_parent_node.register_parent_context(node.parent_context)
                     task_end_node = TaskEndContext()
                     task_parent_node.set_task_end(task_end_node)
                     task_end_node.set_task_parent(task_parent_node)
