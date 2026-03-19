@@ -471,6 +471,8 @@ class ContextTaskGraph(object):
 
             # todo: non-trivial sequence combination (latter node has incoming dependencies)
 
+            # todo: redirect incoming CONTROL edges of tasks to taskParent? CHECK THIS
+
 
             if True:
                 css_res = self.__trivial_control_sequence_simplification()
