@@ -79,7 +79,7 @@ class ContextTaskGraph(object):
         except:
             print("NO CYCLE")
         
-        # self.__simplify_graph()
+        self.__simplify_graph()
         
         try:
             cycle = nx.find_cycle(self.graph)
@@ -491,6 +491,10 @@ class ContextTaskGraph(object):
                 else:
                     cprint("-> No effect: break triangles", "yellow")
                 modification_applied = modification_applied or bt_res
+
+            # todo: implement removal of all redundant edges. This is mainly for evaluation purposes.
+            # Not sure if it will stay active, maybe as a step after stalled iterations.
+            
         
         self.__print_graph_statistics("Post simplification", color="yellow")
 
@@ -779,27 +783,29 @@ class ContextTaskGraph(object):
                         else:
                             parent_is_same_loop = False
                             break
-                    if parent_is_same_loop:
-                        print(" === FOUND TASK LOOP ===")
-                    else:
-                        print(" === FOUND TASK ===")
-                    print(" == Scope1: ")
-                    print("    == root node: ", node)
-                    scope_1: List[LineID] = node.get_code_scope(self.pet)
-                    for ctx in node.get_contained_contexts(inclusive=True):
-                        print("--> ctx: ", ctx)
-                        scope_1 += ctx.get_code_scope(self.pet)
-                    scope_1 = list(set(scope_1))
-                    print("    == scope: ", scope_1)
+                    
+                    if False:  # disable task reporting for debug purposes
+                        if parent_is_same_loop:
+                            print(" === FOUND TASK LOOP ===")
+                        else:
+                            print(" === FOUND TASK ===")
+                        print(" == Scope1: ")
+                        print("    == root node: ", node)
+                        scope_1: List[LineID] = node.get_code_scope(self.pet)
+                        for ctx in node.get_contained_contexts(inclusive=True):
+                            print("--> ctx: ", ctx)
+                            scope_1 += ctx.get_code_scope(self.pet)
+                        scope_1 = list(set(scope_1))
+                        print("    == scope: ", scope_1)
 
-                    print(" == Scope2: ", successor)
-                    print("    == root node: ", successor)
-                    scope_2: List[LineID] = successor.get_code_scope(self.pet)
-                    for ctx in successor.get_contained_contexts(inclusive=True):
-                        print("--> ctx: ", ctx)
-                        scope_2 += ctx.get_code_scope(self.pet)
-                    scope_2 = list(set(scope_2))
-                    print("    == scope: ", scope_2)
+                        print(" == Scope2: ", successor)
+                        print("    == root node: ", successor)
+                        scope_2: List[LineID] = successor.get_code_scope(self.pet)
+                        for ctx in successor.get_contained_contexts(inclusive=True):
+                            print("--> ctx: ", ctx)
+                            scope_2 += ctx.get_code_scope(self.pet)
+                        scope_2 = list(set(scope_2))
+                        print("    == scope: ", scope_2)
 
                     sequences_split = True   
                     modification_applied = True           
