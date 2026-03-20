@@ -439,6 +439,13 @@ class ContextTaskGraph(object):
         Inner iteration are cheap, local analysis steps.
         Outer iterations are expensive, path based analysis steps.
         """
+
+        # TODO: measure execution time and size differences per executed simplification step. Plot both in the Terminal.
+        # TODO: plot total time impact of each applied simplification step as well as average.
+        # TODO: consider adding plot of graph statistics over time (nodes, edges, depth?)
+        # TODO: Consider adding a plot for the distrbution of found patterns over time / simplification step.
+        # TODO: Consider plotting online statistics (especially interesting for larger software)
+
         self.__print_graph_statistics("Pre simplification", color="yellow")
 
         outer_modification_applied = True
