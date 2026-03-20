@@ -435,72 +435,141 @@ class ContextTaskGraph(object):
     #        # !DEBUG
 
     def __simplify_graph(self) -> bool:
-        """Execute the simplification pipeline."""
+        """Execute the simplification pipeline.
+        Inner iteration are cheap, local analysis steps.
+        Outer iterations are expensive, path based analysis steps.
+        """
         self.__print_graph_statistics("Pre simplification", color="yellow")
 
-        modification_applied = True
-        while modification_applied:
-            modification_applied = False
+        outer_modification_applied = True
+        while outer_modification_applied: 
+            outer_modification_applied = False
 
-            if True:
-                # note: THIS IS A WORK IN PROGRESS, NOT SURE IT IS BENEFICIAL!
-                # split control sequences into tasks
-                stcs_res = self.__split_taskable_control_sequence()
-                if stcs_res:
-                    self.__print_graph_statistics("Post split taskable work sequence", color="yellow")
-                else:
-                    cprint("-> No effect: split taskable work sequence", "yellow")
-                modification_applied = modification_applied or stcs_res
+            inner_modification_applied = True
+            while inner_modification_applied:
+                inner_modification_applied = False
 
-                # todo: replace trivial task region with CombinedContext
                 if True:
-                    rttr_res = self.__replace_trivial_task_region()
-                    if rttr_res:
-                        self.__print_graph_statistics("Post replace trivial task region", color="yellow")
+                    # note: THIS IS A WORK IN PROGRESS, NOT SURE IT IS BENEFICIAL!
+                    # split control sequences into tasks
+                    stcs_res = self.__split_taskable_control_sequence()
+                    if stcs_res:
+                        self.__print_graph_statistics("Post split taskable work sequence", color="yellow")
                     else:
-                        cprint("-> No effect: replace trivial task region", "yellow")
-                    modification_applied = modification_applied or rttr_res
+                        cprint("-> No effect: split taskable work sequence", "yellow")
+                    inner_modification_applied = inner_modification_applied or stcs_res
 
-            # todo: replace "trivial" BranchParent with CombinedContext (trivial: both branches consist of exaclty one node)
+                    # todo: replace trivial task region with CombinedContext
+                    if True:
+                        rttr_res = self.__replace_trivial_task_region()
+                        if rttr_res:
+                            self.__print_graph_statistics("Post replace trivial task region", color="yellow")
+                        else:
+                            cprint("-> No effect: replace trivial task region", "yellow")
+                        inner_modification_applied = inner_modification_applied or rttr_res
 
-            # merge only-childs with parents
-            if True:
-                moc_res = self.__merge_only_childs_with_parents()
-                if moc_res:
-                    self.__print_graph_statistics("Post merge only-childs with parents", color="yellow")
-                else:
-                    cprint("-> No effect: merge only-childs with parents", "yellow")
-                modification_applied = modification_applied or moc_res
+                # todo: replace "trivial" BranchParent with CombinedContext (trivial: both branches consist of exaclty one node)
 
-            # todo: non-trivial sequence combination (latter node has incoming dependencies)
+                # merge only-childs with parents
+                if True:
+                    moc_res = self.__merge_only_childs_with_parents()
+                    if moc_res:
+                        self.__print_graph_statistics("Post merge only-childs with parents", color="yellow")
+                    else:
+                        cprint("-> No effect: merge only-childs with parents", "yellow")
+                    inner_modification_applied = inner_modification_applied or moc_res
 
-            # todo: redirect incoming CONTROL edges of tasks to taskParent? CHECK THIS
+                # todo: non-trivial sequence combination (latter node has incoming dependencies)
 
-            if True:
-                css_res = self.__trivial_control_sequence_simplification()
-                if css_res:
-                    self.__print_graph_statistics("Post trivial_control sequence simplification", color="yellow")
-                else:
-                    cprint("-> No effect: trivial_control sequence simplification", "yellow")
-                modification_applied = modification_applied or css_res
+                # todo: redirect incoming CONTROL edges of tasks to taskParent? CHECK THIS
 
-            if True:
-                bt_res = self.__break_triangles()
-                if bt_res:
-                    self.__print_graph_statistics("Post break triangles", color="yellow")
-                else:
-                    cprint("-> No effect: break triangles", "yellow")
-                modification_applied = modification_applied or bt_res
+                if True:
+                    css_res = self.__trivial_control_sequence_simplification()
+                    if css_res:
+                        self.__print_graph_statistics("Post trivial_control sequence simplification", color="yellow")
+                    else:
+                        cprint("-> No effect: trivial_control sequence simplification", "yellow")
+                    inner_modification_applied = inner_modification_applied or css_res
 
+                if True:
+                    bt_res = self.__break_triangles()
+                    if bt_res:
+                        self.__print_graph_statistics("Post break triangles", color="yellow")
+                    else:
+                        cprint("-> No effect: break triangles", "yellow")
+                    inner_modification_applied = inner_modification_applied or bt_res
+
+            if inner_modification_applied:
+                outer_modification_applied = True
+            
             # todo: implement removal of all redundant edges. This is mainly for evaluation purposes.
             # Not sure if it will stay active, maybe as a step after stalled iterations.
-            
+            if True:
+                rre_res = self.__remove_redundant_edges()
+                if rre_res:
+                    self.__print_graph_statistics("Post remove redundant edges", color="yellow")
+                else:
+                    cprint("-> No effect: remove redundant edges", "yellow")
+                outer_modification_applied = outer_modification_applied or rre_res            
         
         self.__print_graph_statistics("Post simplification", color="yellow")
 
         # OLD IMPLEMENTATION. BREAK TRIANGLES IS SIMPLER AND MORE ELEGANT
         #self.__replace_triangles()
     
+    def __remove_redundant_edges(self) -> bool:
+        """Removes redundant CONTROL edges. Redundant edges are always the shorter ones, if two or more exist.
+        Returns True, if a modification was applied."""
+        modification_applied = False
+        edges_removed = True
+        while edges_removed:
+            edges_removed = False
+            queue: List[Tuple[Context, Context]] = list(self.graph.edges())
+            while len(queue) > 0:
+                edge = queue.pop()
+                # check if edge is of type control
+                if len([info for info in self.get_edge_info(edge[0], edge[1]) if info.type == CTGEdgeType.CONTROL]) < 1:
+                    continue
+                # calculate alternative paths from source to target
+                paths = nx.all_simple_paths(self.graph, edge[0], edge[1])
+                # filter paths for use of CONTROL edges on every step
+                filtered_paths: List[List[Context]] = []
+                for p in paths:
+                    p_valid = True
+                    # check every step for edge type
+                    for idx in range(0, len(p) - 1):
+                        if len([info for info in self.get_edge_info(edge[0], edge[1]) if info.type == CTGEdgeType.CONTROL]) < 1:
+                            p_valid = False
+                            break
+                    if p_valid:
+                        filtered_paths.append(p)
+                
+                # check if a path with a length > 2 exist, i.e., one which is longer than the direct edge.
+                remove_edge = False
+                for p in filtered_paths:
+                    if len(p) > 2:
+                        remove_edge = True
+                        break
+                # remove CONTROL edge between source and target. Preserve DATA edge, if it exists
+                if remove_edge:
+                    to_be_removed: List[CTGEdgeInfo] = []
+                    for info in self.get_edge_info(edge[0], edge[1]):
+                        if info.type == CTGEdgeType.CONTROL:
+                            to_be_removed.append(info)
+
+                    for info in to_be_removed:
+                        if info in self.edge_information[edge[0]][edge[1]]:
+                            self.edge_information[edge[0]][edge[1]].remove(info)
+                    # delete edge, if no DATA edge remains
+                    if len(self.edge_information[edge[0]][edge[1]]) == 0:
+                        self.graph.remove_edge(edge[0], edge[1])
+                    
+                    edges_removed = True
+                    modification_applied = True  
+
+        return modification_applied
+
+
     def __replace_trivial_task_region(self) -> bool:
         """Replaces a trivial tasking region (TaskParent + exactly two children + TaskEnd) with a CombinedContext node.
         Returns True, if a modification was applied."""
