@@ -155,6 +155,7 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
 
 
 def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskParallelismInfo]:
+    """NOTE: THIS SHOULD BE REMOVED / DISABLED, AS IT IS COVERED BY THE TASK DETECTION DURING GRAPH SIMPLIFICATION."""
     logger.info("Identifying trivial tasking potential...")
     patterns: List[TaskParallelismInfo] = []
     fork_join_pairs: List[Tuple[Context, Context]] = []
@@ -240,7 +241,7 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
             highlight_nodes.add(succ)
         highlight_nodes.add(tpl[1])
 
-    show_all_plots(context_task_graph, highlight_nodes=highlight_nodes)
+    # show_all_plots(context_task_graph, highlight_nodes=highlight_nodes)
     # !DEBUG
 
     for tpl2 in task_entry_barrier_pairs:

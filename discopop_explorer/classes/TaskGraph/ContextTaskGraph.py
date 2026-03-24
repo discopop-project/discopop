@@ -29,6 +29,7 @@ from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from termcolor import cprint
 from enum import IntEnum
 import matplotlib.lines as mlines
+import plotille
 
 logger = logging.getLogger("Explorer")
 
@@ -439,10 +440,16 @@ class ContextTaskGraph(object):
         Inner iteration are cheap, local analysis steps.
         Outer iterations are expensive, path based analysis steps.
         """
+        statistics_current_step = 0
+        statistics_time_series_x_values: List[int] = []
+        statistics_time_series_node_count: List[int] = []
+        statistics_time_series_edge_count: List[int] = []
+        statistics_time_series_outer_epoch_markers: List[int] = []
+        statistics_time_series_inner_epoch_markers: List[int] = []
 
         # TODO: measure execution time and size differences per executed simplification step. Plot both in the Terminal.
         # TODO: plot total time impact of each applied simplification step as well as average.
-        # TODO: consider adding plot of graph statistics over time (nodes, edges, depth?)
+        # TODO: consider     plot of graph statistics over time (nodes, edges, depth?)
         # TODO: Consider adding a plot for the distrbution of found patterns over time / simplification step.
         # TODO: Consider plotting online statistics (especially interesting for larger software)
 
@@ -465,6 +472,11 @@ class ContextTaskGraph(object):
                     else:
                         cprint("-> No effect: split taskable work sequence", "yellow")
                     inner_modification_applied = inner_modification_applied or stcs_res
+                    statistics_time_series_x_values.append(statistics_current_step)
+                    statistics_current_step += 1
+                    statistics_time_series_node_count.append(len(self.graph.nodes))
+                    statistics_time_series_edge_count.append(len(self.graph.edges))
+                    
 
                     # todo: replace trivial task region with CombinedContext
                     if True:
@@ -474,6 +486,10 @@ class ContextTaskGraph(object):
                         else:
                             cprint("-> No effect: replace trivial task region", "yellow")
                         inner_modification_applied = inner_modification_applied or rttr_res
+                        statistics_time_series_x_values.append(statistics_current_step)
+                        statistics_current_step += 1
+                        statistics_time_series_node_count.append(len(self.graph.nodes))
+                        statistics_time_series_edge_count.append(len(self.graph.edges))
 
                 # todo: replace "trivial" BranchParent with CombinedContext (trivial: both branches consist of exaclty one node)
 
@@ -485,6 +501,10 @@ class ContextTaskGraph(object):
                     else:
                         cprint("-> No effect: merge only-childs with parents", "yellow")
                     inner_modification_applied = inner_modification_applied or moc_res
+                    statistics_time_series_x_values.append(statistics_current_step)
+                    statistics_current_step += 1
+                    statistics_time_series_node_count.append(len(self.graph.nodes))
+                    statistics_time_series_edge_count.append(len(self.graph.edges))
 
                 # todo: non-trivial sequence combination (latter node has incoming dependencies)
 
@@ -497,6 +517,10 @@ class ContextTaskGraph(object):
                     else:
                         cprint("-> No effect: trivial_control sequence simplification", "yellow")
                     inner_modification_applied = inner_modification_applied or css_res
+                    statistics_time_series_x_values.append(statistics_current_step)
+                    statistics_current_step += 1
+                    statistics_time_series_node_count.append(len(self.graph.nodes))
+                    statistics_time_series_edge_count.append(len(self.graph.edges))
 
                 if True:
                     bt_res = self.__break_triangles()
@@ -505,6 +529,13 @@ class ContextTaskGraph(object):
                     else:
                         cprint("-> No effect: break triangles", "yellow")
                     inner_modification_applied = inner_modification_applied or bt_res
+                    statistics_time_series_x_values.append(statistics_current_step)
+                    statistics_current_step += 1
+                    statistics_time_series_node_count.append(len(self.graph.nodes))
+                    statistics_time_series_edge_count.append(len(self.graph.edges))
+                
+                # add inner epoch marker to plot
+                statistics_time_series_inner_epoch_markers.append(statistics_current_step)
 
             if inner_modification_applied:
                 outer_modification_applied = True
@@ -517,12 +548,51 @@ class ContextTaskGraph(object):
                     self.__print_graph_statistics("Post remove redundant edges", color="yellow")
                 else:
                     cprint("-> No effect: remove redundant edges", "yellow")
-                outer_modification_applied = outer_modification_applied or rre_res            
+                outer_modification_applied = outer_modification_applied or rre_res           
+                statistics_time_series_x_values.append(statistics_current_step)
+                statistics_current_step += 1
+                statistics_time_series_node_count.append(len(self.graph.nodes))
+                statistics_time_series_edge_count.append(len(self.graph.edges))
+        
+            # add epoch marker to plot
+            statistics_time_series_outer_epoch_markers.append(statistics_current_step)
         
         self.__print_graph_statistics("Post simplification", color="yellow")
 
         # OLD IMPLEMENTATION. BREAK TRIANGLES IS SIMPLER AND MORE ELEGANT
         #self.__replace_triangles()
+
+        self.__plot_time_series(statistics_time_series_x_values, statistics_time_series_node_count, statistics_time_series_edge_count, statistics_time_series_outer_epoch_markers, statistics_time_series_inner_epoch_markers)
+
+    
+    def __plot_time_series(
+        self,
+        time_series_x_values: List[int],
+        time_series_node_counts: List[int],
+        time_series_edge_counts: List[int],
+        time_series_outer_epoch_markers: List[int],
+        time_series_inner_epoch_markers: List[int],
+    ) -> None:
+        fig = plotille.Figure()
+        fig.height = 30
+        fig.width = 60
+        fig.x_label = "Simplification step"
+        fig.y_label = "Count"
+        # add time series
+        fig.plot(time_series_x_values, time_series_node_counts, interp="linear", lc="green", label="Nodes")
+        fig.plot(time_series_x_values, time_series_edge_counts, interp="linear", lc="yellow", label="Edges")
+        # add outer epoch markers
+        max_x_val = max(time_series_x_values)
+        for outer_epoch_marker in time_series_outer_epoch_markers:
+            if outer_epoch_marker > max_x_val:
+                outer_epoch_marker = max_x_val
+            fig.axvline(x=outer_epoch_marker/max_x_val, ymin=0, ymax=1, lc="blue")  
+        # add inner epoch markers
+        for inner_epoch_marker in time_series_inner_epoch_markers:
+            if inner_epoch_marker > max_x_val:
+                inner_epoch_marker = max_x_val
+            fig.axvline(x=inner_epoch_marker/max_x_val, ymin=0, ymax=1)  
+        print(fig.show(legend=True))
     
     def __remove_redundant_edges(self) -> bool:
         """Removes redundant CONTROL edges. Redundant edges are always the shorter ones, if two or more exist.
