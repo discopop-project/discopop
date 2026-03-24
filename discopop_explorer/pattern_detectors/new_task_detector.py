@@ -141,11 +141,11 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
 
     # ---- Render contents
     print("Plotting task graph...")
-    #context_task_graph.task_graph.update_plot(ax1)
+    context_task_graph.task_graph.update_plot(ax1)
     print("Plotting task graph (context graph)...")
-    #context_task_graph.task_graph.plot_context_graph(ax2)
+    context_task_graph.task_graph.plot_context_graph(ax2)
     print("Plotting task graph (context debug graph)...")
-    #context_task_graph.task_graph.plot_context_debug_graph(ax3)
+    context_task_graph.task_graph.plot_context_debug_graph(ax3)
     print("Plotting context task graph...")
     context_task_graph.update_plot(ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None)
 
@@ -241,7 +241,7 @@ def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskPa
             highlight_nodes.add(succ)
         highlight_nodes.add(tpl[1])
 
-    # show_all_plots(context_task_graph, highlight_nodes=highlight_nodes)
+    show_all_plots(context_task_graph, highlight_nodes=highlight_nodes)
     # !DEBUG
 
     for tpl2 in task_entry_barrier_pairs:

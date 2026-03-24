@@ -542,7 +542,7 @@ class ContextTaskGraph(object):
             
             # todo: implement removal of all redundant edges. This is mainly for evaluation purposes.
             # Not sure if it will stay active, maybe as a step after stalled iterations.
-            if True:
+            if False:
                 rre_res = self.__remove_redundant_edges()
                 if rre_res:
                     self.__print_graph_statistics("Post remove redundant edges", color="yellow")
