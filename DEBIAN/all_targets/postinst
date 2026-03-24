@@ -69,8 +69,9 @@ fi
 echo "Installing DiscoPoP python modules"
 "${VENV_PYTHON}" -m pip install "." -v
 
-echo "Installing DiscoPoP submodules"
-"${VENV_PYTHON}" -m pip install "./tools/submodules/update_notifications"
+# echo "Installing DiscoPoP submodules"
+# submodule was deleted
+# "${VENV_PYTHON}" -m pip install "./tools/submodules/update_notifications"
 
 echo "Creating symlinks"
 ln -sf "${DP_BUILD_DIR}/scripts/CC_wrapper.sh" "${VENV_BIN}/discopop_cc"
