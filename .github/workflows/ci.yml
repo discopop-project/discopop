@@ -117,7 +117,7 @@ jobs:
 
       - name: Show package
         run: |
-          ls -lah packgaes
+          ls -lah packages
           test -f "packages/${{ needs.build_debian_package.outputs.package_name }}"
 
       - name: Build docker image discopop_ci_${{ github.sha }}-${{ matrix.id }}
