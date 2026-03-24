@@ -28,6 +28,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Github SHA
         run: |
@@ -75,6 +77,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Build package
         run: |
@@ -108,6 +112,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Get package
         uses: actions/download-artifact@v4
@@ -182,6 +188,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
+        with:
+          submodules: recursive
 
       - name: Build package
         shell: bash
