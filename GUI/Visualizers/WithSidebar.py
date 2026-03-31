@@ -7,7 +7,6 @@
 # directory for details.
 
 import tkinter as tk
-from tkinter import ttk
 from typing import Dict
 
 
@@ -15,6 +14,7 @@ class WithSidebar:
     def __init__(self) -> None:
         self._root = tk.Tk()
         self._root.title("Discopop explorer")
+        self._root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         # Root layout: sidebar | content
         self._root.grid_rowconfigure(0, weight=1)
@@ -22,18 +22,18 @@ class WithSidebar:
         self._root.grid_columnconfigure(1, weight=1)
 
         # Sidebar
-        self._sidebar_container = ttk.Frame(self._root)
+        self._sidebar_container = tk.Frame(self._root)
         self._sidebar_container.grid(row=0, column=0, sticky="ns")
 
         self._sidebar_canvas = tk.Canvas(self._sidebar_container, highlightthickness=0, width=220)
 
-        self._sidebar_scrollbar = ttk.Scrollbar(
+        self._sidebar_scrollbar = tk.Scrollbar(
             self._sidebar_container,
             orient="vertical",
             command=self._sidebar_canvas.yview
         )
 
-        self._sidebar = ttk.Frame(self._sidebar_canvas)
+        self._sidebar = tk.Frame(self._sidebar_canvas)
 
         self._sidebar_window = self._sidebar_canvas.create_window(
             (0, 0),
@@ -53,15 +53,19 @@ class WithSidebar:
         self._sidebar_canvas.bind("<Configure>", self._on_canvas_configure)
 
         # Frame
-        self._frame_container = ttk.Frame(self._root)
+        self._frame_container = tk.Frame(self._root)
         self._frame_container.grid(row=0, column=1, sticky="nsew")
 
         self._frame_container.grid_rowconfigure(0, weight=1)
         self._frame_container.grid_columnconfigure(0, weight=1)
 
-        self._frames: Dict[str, ttk.Frame] = {}
-        self._frame_selectors: Dict[str, ttk.Button] = {}
+        self._frames: Dict[str, tk.Frame] = {}
+        self._frame_selectors: Dict[str, tk.Button] = {}
         self._current_frame_name: str | None = None
+
+    def _on_close(self) -> None:
+        self._root.quit()
+        self._root.destroy()
 
     def _on_sidebar_configure(self, _: tk.Event) -> None:
         self._sidebar_canvas.configure(scrollregion=self._sidebar_canvas.bbox("all"))
@@ -73,15 +77,16 @@ class WithSidebar:
         for row_index, frame_name in enumerate(self._frame_selectors):
             self._frame_selectors[frame_name].grid_configure(row=row_index)
 
-    def create_frame(self, name: str) -> ttk.Frame:
+    def create_frame(self, name: str) -> tk.Frame:
         if name in self._frames:
             raise ValueError(f"Frame '{name}' already exists.")
 
-        frame = ttk.Frame(self._frame_container)
+        frame = tk.Frame(self._frame_container, background="red")
+
         self._frames[name] = frame
         frame.grid(row=0, column=0, sticky="nsew")
 
-        frame_selector = ttk.Button(
+        frame_selector = tk.Button(
             self._sidebar,
             text=name,
             command=lambda frame_name=name: self.show_frame(frame_name)
@@ -101,16 +106,18 @@ class WithSidebar:
 
         if self._current_frame_name is None:
             self.show_frame(name)
+        else:
+            self.show_frame(self._current_frame_name)
 
         return frame
 
-    def get_frame(self, name: str) -> ttk.Frame:
+    def get_frame(self, name: str) -> tk.Frame:
         try:
             return self._frames[name]
         except KeyError as e:
             raise KeyError(f"No frame named '{name}'.") from e
 
-    def get_frame_selector(self, name: str) -> ttk.Button:
+    def get_frame_selector(self, name: str) -> tk.Button:
         try:
             return self._frame_selectors[name]
         except KeyError as e:

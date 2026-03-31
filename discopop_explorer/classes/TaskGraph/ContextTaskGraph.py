@@ -14,6 +14,7 @@ from matplotlib.axes import Axes
 from networkx import Graph
 from tqdm import tqdm  # type: ignore
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
