@@ -44,7 +44,7 @@ CallStateGraph::CallStateGraph(){
         register_transition(std::stoi(source_callstate_id_str), std::stoi(trigger_instruction_id_str), std::stoi(target_callstate_id_str));
     }
     auto end_time = std::chrono::high_resolution_clock::now();
-    auto duration = duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
     std::cout << "[CallStateGraph()]: " << ((double) duration.count()/1000.0) << "s" << std::endl;
 }
 
@@ -55,7 +55,7 @@ CallStateGraph::CallStateGraph(){
         delete pair.second;
     }
     auto end_time = std::chrono::high_resolution_clock::now();
-    auto duration = duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
     std::cout << "[~CallStateGraph()]: " << ((double) duration.count()/1000.0) << "s" << std::endl;
 }
 
