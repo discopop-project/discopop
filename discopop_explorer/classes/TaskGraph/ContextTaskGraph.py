@@ -602,19 +602,25 @@ class ContextTaskGraph(object):
         while edges_removed:
             edges_removed = False
             queue: List[Tuple[Context, Context]] = list(self.graph.edges())
+            print("outer")
             while len(queue) > 0:
+                print("queue: ", len(queue))
                 edge = queue.pop()
                 # check if edge is of type control
                 if len([info for info in self.get_edge_info(edge[0], edge[1]) if info.type == CTGEdgeType.CONTROL]) < 1:
                     continue
                 # calculate alternative paths from source to target
-                paths = nx.all_simple_paths(self.graph, edge[0], edge[1])
+                print("pre-call")
+                paths = nx.all_simple_paths(self.graph, edge[0], edge[1], cutoff=25)
+                print("post-call")
                 # filter paths for use of CONTROL edges on every step
                 filtered_paths: List[List[Context]] = []
                 for p in paths:
+                    print("p")
                     p_valid = True
                     # check every step for edge type
                     for idx in range(0, len(p) - 1):
+                        print("idx")
                         if len([info for info in self.get_edge_info(edge[0], edge[1]) if info.type == CTGEdgeType.CONTROL]) < 1:
                             p_valid = False
                             break
@@ -624,17 +630,21 @@ class ContextTaskGraph(object):
                 # check if a path with a length > 2 exist, i.e., one which is longer than the direct edge.
                 remove_edge = False
                 for p in filtered_paths:
+                    print("fp")
                     if len(p) > 2:
                         remove_edge = True
                         break
                 # remove CONTROL edge between source and target. Preserve DATA edge, if it exists
                 if remove_edge:
+                    
                     to_be_removed: List[CTGEdgeInfo] = []
                     for info in self.get_edge_info(edge[0], edge[1]):
+                        print("re")
                         if info.type == CTGEdgeType.CONTROL:
                             to_be_removed.append(info)
 
                     for info in to_be_removed:
+                        print("tre")
                         if info in self.edge_information[edge[0]][edge[1]]:
                             self.edge_information[edge[0]][edge[1]].remove(info)
                     # delete edge, if no DATA edge remains
@@ -643,6 +653,9 @@ class ContextTaskGraph(object):
                     
                     edges_removed = True
                     modification_applied = True  
+                
+                if edges_removed:
+                    break
 
         return modification_applied
 
