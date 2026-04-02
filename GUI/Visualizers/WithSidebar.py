@@ -8,9 +8,10 @@
 
 import tkinter as tk
 from typing import Dict
+from GUI.Visualizers.Base import Base
 
 
-class WithSidebar:
+class WithSidebar(Base):
     def __init__(self) -> None:
         self._root = tk.Tk()
         self._root.title("Discopop explorer")
