@@ -36,6 +36,7 @@ for file in "$@"; do
     #[[ "$file" = *".egg-info/"* ]] && continue
 
     # other
+    [[ "$file" = *".git" ]] && continue
     [[ "$file" = *".git/"* ]] && continue
     [[ "$file" = *"test/"* ]] && continue
     [[ "$file" = *"docs/"* ]] && continue
