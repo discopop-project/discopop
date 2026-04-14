@@ -50,6 +50,8 @@ from discopop_explorer.pattern_detection import PatternDetectorX
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 from discopop_library.tools.update_notifications.update_notifier import run as check_for_updates
 
+from GUI.Visualizers.WithSidebar import WithSidebar as Visualizer
+
 
 @dataclass
 class ExplorerArguments(GeneralArguments):
@@ -83,6 +85,7 @@ class ExplorerArguments(GeneralArguments):
     enable_pet_plot_file: Optional[str]  # None means no dump, otherwise the path
     enable_task_graph_plot: bool
     enable_context_graph_plot: bool
+    enable_visualizer: bool
 
     def __post_init__(self) -> None:
         self.__validate()
@@ -135,14 +138,20 @@ def __run(
     jobs: Optional[int] = None,
     enable_task_graph_plot: bool = False,
     enable_context_graph_plot: bool = False,
+    enable_visualizer: bool = False
 ) -> DetectionResult:
     # check for updates
     module_name = "discopop"
     module_api_url = "https://api.github.com/repos/discopop-project/DiscoPoP/releases/latest"
     module_release_url = "https://github.com/discopop-project/DiscoPoP/releases"
     check_for_updates(module_name, module_api_url, module_release_url)
+    
+    visualizer = None
 
-    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping))  # type: ignore
+    if (enable_visualizer == True):
+        visualizer = Visualizer()
+
+    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping), visualizer = visualizer)  # type: ignore
     pet.validate()
     print("PET CREATION FINISHED.")
 
@@ -199,6 +208,7 @@ def __run(
             jobs,
             enable_task_graph_plot,
             enable_context_graph_plot,
+            visualizer
         )
 
     for plugin_name in plugins:
@@ -272,6 +282,7 @@ def run(arguments: ExplorerArguments) -> None:
             jobs=arguments.jobs,
             enable_task_graph_plot=arguments.enable_task_graph_plot,
             enable_context_graph_plot=arguments.enable_context_graph_plot,
+            enable_visualizer=arguments.enable_visualizer
         )
 
         end = time.time()

@@ -118,6 +118,7 @@ def parse_args() -> ExplorerArguments:
     experimental_parser.add_argument(
         "--plot-context-graph", action="store_true", help="Enables interactive plotting of the context graph."
     )
+    parser.add_argument("--visualize", action="store_true", help="Enable the visualizer.")
     # fmt: on
 
     arguments = parser.parse_args()
@@ -176,6 +177,7 @@ def parse_args() -> ExplorerArguments:
         enable_pet_plot_file=arguments.plot_pet,
         enable_task_graph_plot=arguments.plot_task_graph,
         enable_context_graph_plot=arguments.plot_context_graph,
+        enable_visualizer=arguments.visualize
     )
 
 

@@ -44,6 +44,9 @@ from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 
+from GUI.Extendables.Plottable import Plottable
+from GUI.Visualizers.Base import Base as Visualizer
+
 from discopop_explorer.utilities.PEGraphConstruction.parser import readlineToCUIdMap, writelineToCUIdMap
 from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
 from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
@@ -83,13 +86,14 @@ global_pet = None
 #            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
 
 
-class PEGraphX(object):
+class PEGraphX(Plottable, object):
     g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
     main: Node
     pos: Dict[Any, Any]
 
-    def __init__(self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos: Dict[Any, Any]):
+    def __init__(self, g: nx.MultiDiGraph, reduction_vars: List[Dict[str, str]], pos: Dict[Any, Any], visualizer: Visualizer | None = None):
+        super().__init__(visualizer)
         self.g = g
         self.reduction_vars = reduction_vars
         for _, node in g.nodes(data="data"):
@@ -104,6 +108,7 @@ class PEGraphX(object):
         dependencies_list: List[DependenceItem],
         loop_data: Dict[str, LoopData],
         reduction_vars: List[Dict[str, str]],
+        visualizer: Visualizer | None = None
     ) -> PEGraphX:
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
         g = nx.MultiDiGraph()
@@ -200,7 +205,7 @@ class PEGraphX(object):
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
         print("\tAdded dependencies...")
-        return cls(g, reduction_vars, pos)
+        return cls(g, reduction_vars, pos, visualizer)
 
     def validate(self) -> None:
         print("\tValidating pet...")

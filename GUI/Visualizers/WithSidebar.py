@@ -1,32 +1,29 @@
-# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
-#
-# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
-#
-# This software may be modified and distributed under the terms of
-# the 3-Clause BSD License.  See the LICENSE file in the package base
-# directory for details.
-
 import tkinter as tk
 from typing import Dict
 from GUI.Visualizers.Base import Base
-
+from GUI.Objects.Frames.MultiFrame import MultiFrame
 
 class WithSidebar(Base):
     def __init__(self) -> None:
-        self._root = tk.Tk()
-        self._root.title("Discopop explorer")
-        self._root.protocol("WM_DELETE_WINDOW", self._on_close)
+        super().__init__()
 
-        # Root layout: sidebar | content
         self._root.grid_rowconfigure(0, weight=1)
-        self._root.grid_columnconfigure(0, weight=0)
-        self._root.grid_columnconfigure(1, weight=1)
+        self._root.grid_columnconfigure(0, weight=1)
+
+        # Draggable split: sidebar | content
+        self._paned = tk.PanedWindow(self._root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, opaqueresize=False)
+        self._paned.grid(row=0, column=0, sticky="nsew")
 
         # Sidebar
-        self._sidebar_container = tk.Frame(self._root)
-        self._sidebar_container.grid(row=0, column=0, sticky="ns")
+        self._sidebar_container = tk.Frame(self._paned)
+        self._sidebar_container.grid_rowconfigure(0, weight=1)
+        self._sidebar_container.grid_columnconfigure(0, weight=1)
 
-        self._sidebar_canvas = tk.Canvas(self._sidebar_container, highlightthickness=0, width=220)
+        self._sidebar_canvas = tk.Canvas(
+            self._sidebar_container,
+            highlightthickness=0,
+            width=220
+        )
 
         self._sidebar_scrollbar = tk.Scrollbar(
             self._sidebar_container,
@@ -34,7 +31,11 @@ class WithSidebar(Base):
             command=self._sidebar_canvas.yview
         )
 
+        self._sidebar_canvas.grid(row=0, column=0, sticky="nsew")
+        self._sidebar_scrollbar.grid(row=0, column=1, sticky="ns")
+
         self._sidebar = tk.Frame(self._sidebar_canvas)
+        self._sidebar.grid_columnconfigure(0, weight=1)
 
         self._sidebar_window = self._sidebar_canvas.create_window(
             (0, 0),
@@ -44,29 +45,19 @@ class WithSidebar(Base):
 
         self._sidebar_canvas.configure(yscrollcommand=self._sidebar_scrollbar.set)
 
-        self._sidebar_canvas.grid(row=0, column=0, sticky="ns")
-        self._sidebar_scrollbar.grid(row=0, column=1, sticky="ns")
-
-        self._sidebar_container.grid_rowconfigure(0, weight=1)
-        self._sidebar_container.grid_columnconfigure(0, weight=1)
-
         self._sidebar.bind("<Configure>", self._on_sidebar_configure)
         self._sidebar_canvas.bind("<Configure>", self._on_canvas_configure)
 
-        # Frame
-        self._frame_container = tk.Frame(self._root)
-        self._frame_container.grid(row=0, column=1, sticky="nsew")
-
+        # Content area
+        self._frame_container = tk.Frame(self._paned)
         self._frame_container.grid_rowconfigure(0, weight=1)
         self._frame_container.grid_columnconfigure(0, weight=1)
 
-        self._frames: Dict[str, tk.Frame] = {}
-        self._frame_selectors: Dict[str, tk.Button] = {}
-        self._current_frame_name: str | None = None
+        # Add both panes to the PanedWindow
+        self._paned.add(self._sidebar_container, minsize=150, width=220)
+        self._paned.add(self._frame_container, minsize=300)
 
-    def _on_close(self) -> None:
-        self._root.quit()
-        self._root.destroy()
+        self._frame_selectors: Dict[str, tk.Button] = {}
 
     def _on_sidebar_configure(self, _: tk.Event) -> None:
         self._sidebar_canvas.configure(scrollregion=self._sidebar_canvas.bbox("all"))
@@ -83,7 +74,6 @@ class WithSidebar(Base):
             raise ValueError(f"Frame '{name}' already exists.")
 
         frame = tk.Frame(self._frame_container, background="red")
-
         self._frames[name] = frame
         frame.grid(row=0, column=0, sticky="nsew")
 
@@ -103,7 +93,71 @@ class WithSidebar(Base):
             pady=2
         )
 
-        self._sidebar.grid_columnconfigure(0, weight=1)
+        if self._current_frame_name is None:
+            self.show_frame(name)
+        else:
+            self.show_frame(self._current_frame_name)
+
+        return frame
+    
+    def create_multi_frame(self, name: str, rows: int, columns: int) -> MultiFrame:
+        if name in self._frames:
+            raise ValueError(f"Frame '{name}' already exists.")
+        
+        if rows < 1 or columns < 1:
+            raise ValueError("Rows and columns must be >= 1")
+
+        total_cells = rows * columns
+
+        frame = MultiFrame(self._frame_container)
+        self._frames[name] = frame
+        frame.grid(row=0, column=0, sticky="nsew")
+
+        for r in range(rows):
+            frame.grid_rowconfigure(r, weight=1)
+
+        for c in range(columns):
+            frame.grid_columnconfigure(c, weight=1)
+
+        inner_frames = []
+
+        for i in range(total_cells):
+            row = i // columns
+            column = i % columns
+
+            inner_frame = tk.Frame(
+                frame,
+                borderwidth=1,
+                relief="solid"
+            )
+
+            inner_frame.grid(
+                row=row,
+                column=column,
+                sticky="nsew",
+                padx=5,
+                pady=5
+            )
+
+            inner_frames.append(inner_frame)
+
+        frame.initialize_inner_frames(inner_frames)
+
+        frame_selector = tk.Button(
+            self._sidebar,
+            text=name,
+            command=lambda frame_name=name: self.show_frame(frame_name)
+        )
+
+        self._frame_selectors[name] = frame_selector
+
+        frame_selector.grid(
+            row=len(self._frame_selectors) - 1,
+            column=0,
+            sticky="ew",
+            padx=5,
+            pady=2
+        )
 
         if self._current_frame_name is None:
             self.show_frame(name)
@@ -112,41 +166,18 @@ class WithSidebar(Base):
 
         return frame
 
-    def get_frame(self, name: str) -> tk.Frame:
-        try:
-            return self._frames[name]
-        except KeyError as e:
-            raise KeyError(f"No frame named '{name}'.") from e
-
     def get_frame_selector(self, name: str) -> tk.Button:
         try:
             return self._frame_selectors[name]
         except KeyError as e:
             raise KeyError(f"No selector button for frame '{name}'.") from e
 
-    def show_frame(self, name: str) -> None:
-        frame = self.get_frame(name)
-        frame.tkraise()
-        self._current_frame_name = name
-
     def delete_frame(self, name: str) -> None:
-        frame = self.get_frame(name)
+        super().delete_frame(name)
+        
         selector = self.get_frame_selector(name)
 
-        frame.destroy()
         selector.destroy()
-
-        del self._frames[name]
         del self._frame_selectors[name]
 
         self._rebuild_selector_layout()
-
-        if self._current_frame_name == name:
-            self._current_frame_name = None
-
-            if self._frames:
-                first_name = next(iter(self._frames))
-                self.show_frame(first_name)
-
-    def run(self) -> None:
-        self._root.mainloop()
