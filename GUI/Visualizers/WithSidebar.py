@@ -1,7 +1,8 @@
 import tkinter as tk
-from typing import Dict
+from typing import Dict, Type
 from GUI.Visualizers.Base import Base
 from GUI.Objects.Frames.MultiFrame import MultiFrame
+from GUI.Types.FrameT import FrameT
 
 class WithSidebar(Base):
     def __init__(self) -> None:
@@ -11,7 +12,7 @@ class WithSidebar(Base):
         self._root.grid_columnconfigure(0, weight=1)
 
         # Draggable split: sidebar | content
-        self._paned = tk.PanedWindow(self._root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, opaqueresize=False)
+        self._paned = tk.PanedWindow(self._root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, opaqueresize=False, bg="black")
         self._paned.grid(row=0, column=0, sticky="nsew")
 
         # Sidebar
@@ -69,79 +70,13 @@ class WithSidebar(Base):
         for row_index, frame_name in enumerate(self._frame_selectors):
             self._frame_selectors[frame_name].grid_configure(row=row_index)
 
-    def create_frame(self, name: str) -> tk.Frame:
+    def create_frame(self, name: str, frame_type: Type[FrameT] = tk.Frame) -> FrameT:
         if name in self._frames:
             raise ValueError(f"Frame '{name}' already exists.")
 
-        frame = tk.Frame(self._frame_container, background="red")
+        frame = frame_type(self._frame_container)
         self._frames[name] = frame
         frame.grid(row=0, column=0, sticky="nsew")
-
-        frame_selector = tk.Button(
-            self._sidebar,
-            text=name,
-            command=lambda frame_name=name: self.show_frame(frame_name)
-        )
-
-        self._frame_selectors[name] = frame_selector
-
-        frame_selector.grid(
-            row=len(self._frame_selectors) - 1,
-            column=0,
-            sticky="ew",
-            padx=5,
-            pady=2
-        )
-
-        if self._current_frame_name is None:
-            self.show_frame(name)
-        else:
-            self.show_frame(self._current_frame_name)
-
-        return frame
-    
-    def create_multi_frame(self, name: str, rows: int, columns: int) -> MultiFrame:
-        if name in self._frames:
-            raise ValueError(f"Frame '{name}' already exists.")
-        
-        if rows < 1 or columns < 1:
-            raise ValueError("Rows and columns must be >= 1")
-
-        total_cells = rows * columns
-
-        frame = MultiFrame(self._frame_container)
-        self._frames[name] = frame
-        frame.grid(row=0, column=0, sticky="nsew")
-
-        for r in range(rows):
-            frame.grid_rowconfigure(r, weight=1)
-
-        for c in range(columns):
-            frame.grid_columnconfigure(c, weight=1)
-
-        inner_frames = []
-
-        for i in range(total_cells):
-            row = i // columns
-            column = i % columns
-
-            inner_frame = tk.Frame(
-                frame,
-                borderwidth=1,
-                relief="solid"
-            )
-
-            inner_frame.grid(
-                row=row,
-                column=column,
-                sticky="nsew",
-                padx=5,
-                pady=5
-            )
-
-            inner_frames.append(inner_frame)
-
-        frame.initialize_inner_frames(inner_frames)
 
         frame_selector = tk.Button(
             self._sidebar,

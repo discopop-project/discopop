@@ -6,12 +6,12 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 import tkinter as tk
-from typing import Dict
-from GUI.Objects.Frames.MultiFrame import MultiFrame
+from typing import Dict, Type
+from GUI.Types.FrameT import FrameT
 
-class Base:
+class Base(ABC):
     def __init__(self) -> None:
         self._root = tk.Tk()
         self._root.title("Discopop explorer")
@@ -25,11 +25,7 @@ class Base:
         self._root.destroy()
 
     @abstractmethod
-    def create_frame(self, name: str) -> tk.Frame:
-        pass
-
-    @abstractmethod
-    def create_multi_frame(self, name: str, rows: int, columns: int) -> MultiFrame:
+    def create_frame(self, name: str,  frame_type: Type[FrameT] = tk.Frame) -> FrameT:
         pass
 
     def get_frame(self, name: str) -> tk.Frame:
