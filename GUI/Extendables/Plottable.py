@@ -6,7 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import tkinter as tk 
+import tkinter as tk
+from matplotlib.axes import Axes
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
+from matplotlib.figure import Figure
 from GUI.Visualizers.Base import Base
 from GUI.Objects.Frames.MultiFrame import MultiFrame
 
@@ -14,13 +17,13 @@ class Plottable():
     def __init__(self, visualizer: Base | None = None) -> None:
         self._visualizer = visualizer
 
-    def create_plot(self, name: str) -> tk.Frame:
+    def create_frame(self, name: str) -> tk.Frame:
         if self._visualizer == None:
             raise ValueError("Visualizer not initialized.")
         
         return self._visualizer.create_frame(name)
 
-    def create_multi_plot(self, name: str, rows: int, columns: int) -> MultiFrame:
+    def create_multi_frame(self, name: str, rows: int, columns: int) -> MultiFrame:
         if self._visualizer is None:
             raise ValueError("Visualizer not initialized.")
 
@@ -48,7 +51,7 @@ class Plottable():
         frame.initialize(inner_frames)
         return frame
 
-    def get_from_multi_plot(self, name: str, index: int) -> tk.Frame:
+    def get_from_multi_frame(self, name: str, index: int) -> tk.Frame:
         if self._visualizer == None:
             raise ValueError("Visualizer not initialized.")
         
@@ -58,6 +61,46 @@ class Plottable():
             return frame.get_from_inner(index)
         else:
             raise KeyError(f"No multi frame named '{name}'.")
+        
+    def create_plot(self, name: str) -> Axes:
+        if self._visualizer == None:
+            raise ValueError("Visualizer not initialized.")
+        
+        frame = self._visualizer.create_frame(name)
+        figure = Figure()
+        axes = figure.add_subplot(111)
+        axes.set_title("Task graph")
+        canvas = FigureCanvasTkAgg(figure, master=frame)
+        canvas.draw()
+        canvas.get_tk_widget().grid(row=0, sticky="nsew")
+        toolbar = NavigationToolbar2Tk(canvas, pack_toolbar=False)
+        toolbar.update()
+        toolbar.grid(row=1)
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+
+        return axes
+    
+    def create_multi_plot(self, name: str, inner_plot_titles: list[str], rows: int, columns: int) -> list[Axes]:
+        self.create_multi_frame(name, rows, columns)
+        axeses = []
+
+        for index in range(rows * columns):
+            frame = self.get_from_multi_frame(name, index)
+            figure = Figure()
+            axes = figure.add_subplot(111)
+            axes.set_title(inner_plot_titles[index])
+            canvas = FigureCanvasTkAgg(figure, master=frame)
+            canvas.draw()
+            canvas.get_tk_widget().grid(row=0, sticky="nsew")
+            toolbar = NavigationToolbar2Tk(canvas, pack_toolbar=False)
+            toolbar.update()
+            toolbar.grid(row=1)
+            frame.grid_rowconfigure(0, weight=1)
+            frame.grid_columnconfigure(0, weight=1)
+            axeses.append(axes)
+        
+        return axeses
 
     def run_visualizer(self):
         if self._visualizer != None:
