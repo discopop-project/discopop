@@ -75,7 +75,6 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
     toolbar1.grid(row=1)
     frame1.grid_rowconfigure(0, weight=1)
     frame1.grid_columnconfigure(0, weight=1)
-    frame1.grid(column=0, row=0, sticky="nswe")
 
     # ---- Second independent figure ----
     frame2 = context_task_graph.get_from_multi_plot("Graphs", 1)
@@ -90,7 +89,6 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
     toolbar2.grid(row=1)
     frame2.grid_rowconfigure(0, weight=1)
     frame2.grid_columnconfigure(0, weight=1)
-    frame2.grid(row=0, column=2, sticky="nswe")
 
     # ---- Third independent figure ----
     frame3 = context_task_graph.get_from_multi_plot("Graphs", 2)
@@ -105,7 +103,6 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
     toolbar3.grid(row=1)
     frame3.grid_rowconfigure(0, weight=1)
     frame3.grid_columnconfigure(0, weight=1)
-    frame3.grid(row=2, column=0, sticky="nswe")
 
     # ---- Fourth independent figure ----
     frame4 = context_task_graph.get_from_multi_plot("Graphs", 3)
@@ -120,7 +117,6 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
     toolbar4.grid(row=1)
     frame4.grid_rowconfigure(0, weight=1)
     frame4.grid_columnconfigure(0, weight=1)
-    frame4.grid(row=2, column=2, sticky="nswe")
 
     # ---- Render contents
     print("Plotting task graph...")

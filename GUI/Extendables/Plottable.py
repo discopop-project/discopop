@@ -1,3 +1,11 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 import tkinter as tk 
 from GUI.Visualizers.Base import Base
 from GUI.Objects.Frames.MultiFrame import MultiFrame
@@ -21,11 +29,11 @@ class Plottable():
 
         frame: MultiFrame = self._visualizer.create_frame(name, MultiFrame)
 
-        for r in range(rows):
-            frame.grid_rowconfigure(r, weight=1)
+        for row in range(rows):
+            frame.grid_rowconfigure(row, weight=1)
 
-        for c in range(columns):
-            frame.grid_columnconfigure(c, weight=1)
+        for column in range(columns):
+            frame.grid_columnconfigure(column, weight=1)
 
         inner_frames = []
 
@@ -33,9 +41,9 @@ class Plottable():
             row = i // columns
             column = i % columns
 
-            inner = tk.Frame(frame, borderwidth=1, relief="solid")
-            inner.grid(row=row, column=column, sticky="nsew", padx=5, pady=5)
-            inner_frames.append(inner)
+            inner_frame = tk.Frame(frame, borderwidth=1, relief="solid")
+            inner_frame.grid(row=row, column=column, sticky="nsew", padx=5, pady=5)
+            inner_frames.append(inner_frame)
 
         frame.initialize(inner_frames)
         return frame
