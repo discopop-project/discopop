@@ -8,7 +8,7 @@
 
 from abc import abstractmethod, ABC
 import tkinter as tk
-from typing import Dict, Type
+from typing import Dict, Type, Callable
 from GUI.Types.FrameT import FrameT
 
 class Base(ABC):
@@ -59,6 +59,15 @@ class Base(ABC):
             if self._frames:
                 first_name = next(iter(self._frames))
                 self.show_frame(first_name)
+
+    @abstractmethod
+    def set_filter_callback(self, callback: Callable[[str], None]) -> None:
+        pass
+
+
+    @abstractmethod
+    def set_filter_text(self, text: str) -> None:
+        pass
 
     def run(self) -> None:
         self._root.mainloop()

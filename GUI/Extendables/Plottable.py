@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from typing import Callable
 import tkinter as tk
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
@@ -61,6 +62,18 @@ class Plottable():
             return frame.get_from_inner(index)
         else:
             raise KeyError(f"No multi frame named '{name}'.")
+        
+    def set_filter_callback(self, callback: Callable[[str], None]) -> None:
+        if self._visualizer == None:
+            raise ValueError("Visualizer not initialized.")
+        
+        self._visualizer.set_filter_callback(callback)
+
+    def delete_frame(self, name: str) -> None:
+        if self._visualizer == None:
+            raise ValueError("Visualizer not initialized.")
+        
+        self._visualizer.delete_frame(name)
         
     def create_plot(self, name: str) -> Axes:
         if self._visualizer == None:

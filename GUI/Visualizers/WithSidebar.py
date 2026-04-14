@@ -7,7 +7,7 @@
 # directory for details.
 
 import tkinter as tk
-from typing import Dict, Type
+from typing import Dict, Type, Callable
 from GUI.Visualizers.Base import Base
 from GUI.Objects.Frames.MultiFrame import MultiFrame
 from GUI.Types.FrameT import FrameT
@@ -19,12 +19,12 @@ class WithSidebar(Base):
         self._root.grid_rowconfigure(0, weight=1)
         self._root.grid_columnconfigure(0, weight=1)
 
-        # Draggable split: sidebar | content
-        self._paned = tk.PanedWindow(self._root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, opaqueresize=False, bg="black")
-        self._paned.grid(row=0, column=0, sticky="nsew")
+        # Draggable split: sidebar | content | filter
+        self._pane = tk.PanedWindow(self._root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, opaqueresize=False, bg="black")
+        self._pane.grid(row=0, column=0, sticky="nsew")
 
         # Sidebar
-        self._sidebar_container = tk.Frame(self._paned)
+        self._sidebar_container = tk.Frame(self._pane)
         self._sidebar_container.grid_rowconfigure(0, weight=1)
         self._sidebar_container.grid_columnconfigure(0, weight=1)
 
@@ -58,13 +58,44 @@ class WithSidebar(Base):
         self._sidebar_canvas.bind("<Configure>", self._on_canvas_configure)
 
         # Content area
-        self._frame_container = tk.Frame(self._paned)
+        self._frame_container = tk.Frame(self._pane)
         self._frame_container.grid_rowconfigure(0, weight=1)
         self._frame_container.grid_columnconfigure(0, weight=1)
 
-        # Add both panes to the PanedWindow
-        self._paned.add(self._sidebar_container, minsize=150, width=220)
-        self._paned.add(self._frame_container, minsize=300)
+        # Filter area
+        self._filter_container = tk.Frame(self._pane)
+        self._filter_container.grid_rowconfigure(0, weight=1)
+        self._filter_container.grid_columnconfigure(0, weight=1)
+
+        self._filter_scrollbar = tk.Scrollbar(
+            self._filter_container,
+            orient="vertical"
+        )
+
+        self._filter = tk.Text(
+            self._filter_container,
+            wrap="word",
+            yscrollcommand=self._filter_scrollbar.set,
+            width=30
+        )
+
+        self._filter_scrollbar.config(command=self._filter.yview)
+        self._filter.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 2))
+        self._filter_scrollbar.grid(row=0, column=1, sticky="ns", pady=(5, 2))
+
+        self._filter_button = tk.Button(
+            self._filter_container,
+            text="Apply Filter",
+            command=self._on_filter_button_click
+        )
+
+        self._filter_button.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=(2, 5))
+        self._filter_callback: Callable[[str], None] | None = None
+
+        # Add all panes to the PanedWindow
+        self._pane.add(self._sidebar_container, minsize=150, width=220)
+        self._pane.add(self._frame_container, minsize=300)
+        self._pane.add(self._filter_container, minsize=180, width=250)
 
         self._frame_selectors: Dict[str, tk.Button] = {}
 
@@ -77,6 +108,11 @@ class WithSidebar(Base):
     def _rebuild_selector_layout(self) -> None:
         for row_index, frame_name in enumerate(self._frame_selectors):
             self._frame_selectors[frame_name].grid_configure(row=row_index)
+
+    def _on_filter_button_click(self) -> None:
+        if self._filter_callback is not None:
+            filter_text = self._filter.get("1.0", tk.END).rstrip()
+            self._filter_callback(filter_text)
 
     def create_frame(self, name: str, frame_type: Type[FrameT] = tk.Frame) -> FrameT:
         if name in self._frames:
@@ -124,3 +160,10 @@ class WithSidebar(Base):
         del self._frame_selectors[name]
 
         self._rebuild_selector_layout()
+
+    def set_filter_callback(self, callback: Callable[[str], None]) -> None:
+        self._filter_callback = callback
+
+    def set_filter_text(self, text: str) -> None:
+        self._filter.delete("1.0", tk.END)
+        self._filter.insert("1.0", text)
