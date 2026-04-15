@@ -14,7 +14,7 @@ from matplotlib.figure import Figure
 from GUI.Visualizers.Base import Base
 from GUI.Objects.Frames.MultiFrame import MultiFrame
 
-class Plottable():
+class Plottable:
     def __init__(self, visualizer: Base | None = None) -> None:
         self._visualizer = visualizer
 
@@ -31,7 +31,7 @@ class Plottable():
         if rows < 1 or columns < 1:
             raise ValueError("Rows and columns must be >= 1")
 
-        frame: MultiFrame = self._visualizer.create_frame(name, MultiFrame)
+        frame : MultiFrame = self._visualizer.create_frame(name, MultiFrame)
 
         for row in range(rows):
             frame.grid_rowconfigure(row, weight=1)
@@ -79,7 +79,7 @@ class Plottable():
         if self._visualizer == None:
             raise ValueError("Visualizer not initialized.")
         
-        frame = self._visualizer.create_frame(name)
+        frame: tk.Frame = self._visualizer.create_frame(name)
         figure = Figure()
         axes = figure.add_subplot(111)
         axes.set_title("Task graph")
@@ -115,6 +115,6 @@ class Plottable():
         
         return axeses
 
-    def run_visualizer(self):
+    def run_visualizer(self) -> None:
         if self._visualizer != None:
             self._visualizer.run()

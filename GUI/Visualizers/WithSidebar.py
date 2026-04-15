@@ -6,8 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from __future__ import annotations
+
 import tkinter as tk
-from typing import Dict, Type, Callable
+from typing import Dict, Type, Callable, cast
 from GUI.Visualizers.Base import Base
 from GUI.Objects.Frames.MultiFrame import MultiFrame
 from GUI.Types.FrameT import FrameT
@@ -99,10 +101,10 @@ class WithSidebar(Base):
 
         self._frame_selectors: Dict[str, tk.Button] = {}
 
-    def _on_sidebar_configure(self, _: tk.Event) -> None:
+    def _on_sidebar_configure(self, _: tk.Event[tk.Widget]) -> None:
         self._sidebar_canvas.configure(scrollregion=self._sidebar_canvas.bbox("all"))
 
-    def _on_canvas_configure(self, event: tk.Event) -> None:
+    def _on_canvas_configure(self, event: tk.Event[tk.Widget]) -> None:
         self._sidebar_canvas.itemconfigure(self._sidebar_window, width=event.width)
 
     def _rebuild_selector_layout(self) -> None:
@@ -114,7 +116,7 @@ class WithSidebar(Base):
             filter_text = self._filter.get("1.0", tk.END).rstrip()
             self._filter_callback(filter_text)
 
-    def create_frame(self, name: str, frame_type: Type[FrameT] = tk.Frame) -> FrameT:
+    def create_frame(self, name: str, frame_type: Type[FrameT] = cast(Type[FrameT], tk.Frame)) -> FrameT:
         if name in self._frames:
             raise ValueError(f"Frame '{name}' already exists.")
 
@@ -122,10 +124,13 @@ class WithSidebar(Base):
         self._frames[name] = frame
         frame.grid(row=0, column=0, sticky="nsew")
 
+        def on_selector_click(frame_name: str = name) -> None:
+            self.show_frame(frame_name)
+
         frame_selector = tk.Button(
             self._sidebar,
-            text=name,
-            command=lambda frame_name=name: self.show_frame(frame_name)
+            text = name,
+            command = on_selector_click
         )
 
         self._frame_selectors[name] = frame_selector

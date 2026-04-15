@@ -8,7 +8,7 @@
 
 from abc import abstractmethod, ABC
 import tkinter as tk
-from typing import Dict, Type, Callable
+from typing import Dict, Type, Callable, cast
 from GUI.Types.FrameT import FrameT
 
 class Base(ABC):
@@ -25,7 +25,7 @@ class Base(ABC):
         self._root.destroy()
 
     @abstractmethod
-    def create_frame(self, name: str,  frame_type: Type[FrameT] = tk.Frame) -> FrameT:
+    def create_frame(self, name: str,  frame_type: Type[FrameT] = cast(Type[FrameT], tk.Frame)) -> FrameT:
         pass
 
     def get_frame(self, name: str) -> tk.Frame:
