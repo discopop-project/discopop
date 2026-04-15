@@ -14,7 +14,7 @@ from GUI.Types.FrameT import FrameT
 class Base(ABC):
     def __init__(self) -> None:
         self._root = tk.Tk()
-        self._root.title("Discopop explorer")
+        self._root.title("DiscoPoP")
         self._root.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self._frames: Dict[str, tk.Frame] = {}
