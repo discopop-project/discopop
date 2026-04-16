@@ -9,9 +9,8 @@
 from __future__ import annotations
 
 import tkinter as tk
-from typing import Dict, Type, Callable, cast
+from typing import Dict, Type, Callable
 from GUI.Visualizers.Base import Base
-from GUI.Objects.Frames.MultiFrame import MultiFrame
 from GUI.Types.FrameT import FrameT
 
 class WithSidebar(Base):
@@ -116,7 +115,7 @@ class WithSidebar(Base):
             filter_text = self._filter.get("1.0", tk.END).rstrip()
             self._filter_callback(filter_text)
 
-    def create_frame(self, name: str, frame_type: Type[FrameT] = tk.Frame) -> FrameT:
+    def create_frame(self, name: str, frame_type: Type[FrameT]) -> FrameT:
         if name in self._frames:
             raise ValueError(f"Frame '{name}' already exists.")
 

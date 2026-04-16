@@ -22,7 +22,7 @@ class Plottable:
         if self._visualizer == None:
             raise ValueError("Visualizer not initialized.")
         
-        return self._visualizer.create_frame(name)
+        return self._visualizer.create_frame(name, tk.Frame)
 
     def create_multi_frame(self, name: str, rows: int, columns: int) -> MultiFrame:
         if self._visualizer is None:
@@ -79,7 +79,7 @@ class Plottable:
         if self._visualizer == None:
             raise ValueError("Visualizer not initialized.")
         
-        frame: tk.Frame = self._visualizer.create_frame(name)
+        frame: tk.Frame = self._visualizer.create_frame(name, tk.Frame)
         figure = Figure()
         axes = figure.add_subplot(111)
         axes.set_title("Task graph")
