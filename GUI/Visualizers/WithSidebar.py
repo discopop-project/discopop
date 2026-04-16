@@ -116,7 +116,7 @@ class WithSidebar(Base):
             filter_text = self._filter.get("1.0", tk.END).rstrip()
             self._filter_callback(filter_text)
 
-    def create_frame(self, name: str, frame_type: Type[FrameT] = cast(Type[FrameT], tk.Frame)) -> FrameT:
+    def create_frame(self, name: str, frame_type: Type[FrameT] = tk.Frame) -> FrameT:
         if name in self._frames:
             raise ValueError(f"Frame '{name}' already exists.")
 

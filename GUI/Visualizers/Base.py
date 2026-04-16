@@ -25,7 +25,7 @@ class Base(ABC):
         self._root.destroy()
 
     @abstractmethod
-    def create_frame(self, name: str,  frame_type: Type[FrameT] = cast(Type[FrameT], tk.Frame)) -> FrameT:
+    def create_frame(self, name: str,  frame_type: Type[FrameT] = tk.Frame) -> FrameT:
         pass
 
     def get_frame(self, name: str) -> tk.Frame:
