@@ -27,6 +27,8 @@ from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopP
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
+from GUI.Extendables.Plottable import Plottable
+from GUI.Visualizers.Base import Base as Visualizer
 from termcolor import cprint
 from enum import IntEnum
 import matplotlib.lines as mlines
@@ -58,7 +60,7 @@ class CTGEdgeInfo(object):
 
 
 
-class ContextTaskGraph(object):
+class ContextTaskGraph(Plottable, object):
     pet: PEGraphX
     task_graph: TaskGraph
     graph: nx.DiGraph
@@ -66,7 +68,9 @@ class ContextTaskGraph(object):
     imaginary_replacement_edges: Dict[Context, List[Context]] = dict()
     inverse_imaginary_replacement_edges: Dict[Context, List[Context]] = dict()
 
-    def __init__(self, task_graph: TaskGraph) -> None:
+    def __init__(self, task_graph: TaskGraph, visualizer: Visualizer | None = None) -> None:
+        super().__init__(visualizer)
+
         self.pet = task_graph.pet
         self.task_graph = task_graph
         self.graph = nx.MultiDiGraph()

@@ -38,6 +38,8 @@ from discopop_library.ParallelRegionMerger.inflated_parallel_region_pattern impo
 )
 from discopop_explorer.pattern_detectors.new_task_detector import run_detection as detect_tasking
 
+from GUI.Visualizers.Base import Base as Visualizer
+
 
 class PatternDetectorX(object):
     pet: PEGraphX
@@ -85,6 +87,7 @@ class PatternDetectorX(object):
         jobs: Optional[int],
         enable_task_graph_plot: bool,
         enable_context_graph_plot: bool,
+        visualizer: Visualizer | None = None
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
@@ -97,14 +100,14 @@ class PatternDetectorX(object):
         # create TaskGraph from pet
         dynamic_deps_file = dependencies
         static_deps_file = os.path.join(Path(dependencies).parent, "static_dependencies.txt")
-        task_graph = TaskGraph(self.pet, dynamic_deps_file, static_deps_file)
+        task_graph = TaskGraph(self.pet, dynamic_deps_file, static_deps_file, visualizer)
         if enable_task_graph_plot:
             task_graph.plot()
         #        if enable_context_graph_plot:
         #            task_graph.plot_context_graph(plt.gca())
 
         # detect parallel tasks
-        res.patterns.task = detect_tasking(self.pet, task_graph)
+        res.patterns.task = detect_tasking(self.pet, task_graph, visualizer)
 
         # reduction before doall!
 

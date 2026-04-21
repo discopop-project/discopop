@@ -26,17 +26,17 @@ from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoo
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import TPIType, TaskParallelismInfo
-from GUI.Visualizers.WithSidebar import WithSidebar as VisualizerWithSideBar
+from GUI.Visualizers.Base import Base as Visualizer
 
 logger = logging.getLogger("Explorer").getChild("Tasking")
 
 
-def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[PatternInfo]:
+def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer | None) -> List[PatternInfo]:
     logger.info("Starting task detection...")
     result: List[PatternInfo] = []
 
     logger.info("--> Constructing context task graph from main function...")
-    context_task_graph = ContextTaskGraph(task_graph)
+    context_task_graph = ContextTaskGraph(task_graph, visualizer)
 
     # result += identify_simple_taskloop(pet, task_graph)
     result += identify_simple_tasking(context_task_graph)
@@ -54,184 +54,80 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[PatternInfo]:
 
 
 def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Optional[Set[Context]] = None) -> None:
-    ## PLOT
-    import tkinter as tk
-    import numpy as np
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
-    from matplotlib.figure import Figure
-
-    visualizer = VisualizerWithSideBar()
-    root = visualizer.create_frame("Graphs")
-
-    root.grid_rowconfigure(0, weight=20)
-    root.grid_rowconfigure(1, weight=1)
-    root.grid_rowconfigure(2, weight=20)
-    root.grid_columnconfigure(0, weight=40)
-    root.grid_columnconfigure(1, weight=1)
-    root.grid_columnconfigure(2, weight=40)
-
-    # ---- First independent figure ----
-    frame1 = tk.Frame(root)
-    fig1 = Figure()  # Figure(figsize=(5, 4))
-    ax1 = fig1.add_subplot(111)
-    ax1.set_title("Task graph")
-    canvas1 = FigureCanvasTkAgg(fig1, master=frame1)
-    canvas1.draw()
-    canvas1.get_tk_widget().grid(row=0, sticky="nsew")
-    toolbar1 = NavigationToolbar2Tk(canvas1, pack_toolbar=False)  # , root)
-    toolbar1.update()
-    toolbar1.grid(row=1)
-    frame1.grid_rowconfigure(0, weight=1)
-    frame1.grid_columnconfigure(0, weight=1)
-    frame1.grid(column=0, row=0, sticky="nswe")
-
-    # ---- Second independent figure ----
-    frame2 = tk.Frame(root)
-    fig2 = Figure()  # figsize=(5, 4))
-    ax2 = fig2.add_subplot(111)
-    ax2.set_title("Task graph (context graph)")
-    canvas2 = FigureCanvasTkAgg(fig2, master=frame2)
-    canvas2.draw()
-    canvas2.get_tk_widget().grid(row=0, sticky="nsew")
-    toolbar2 = NavigationToolbar2Tk(canvas2, pack_toolbar=False)  # , root)
-    toolbar2.update()
-    toolbar2.grid(row=1)
-    frame2.grid_rowconfigure(0, weight=1)
-    frame2.grid_columnconfigure(0, weight=1)
-    frame2.grid(row=0, column=2, sticky="nswe")
-
-    # ---- Third independent figure ----
-    frame3 = tk.Frame(root)
-    fig3 = Figure()  # figsize=(5, 4))
-    ax3 = fig3.add_subplot(111)
-    ax3.set_title("Task graph (context debug graph)")
-    canvas3 = FigureCanvasTkAgg(fig3, master=frame3)
-    canvas3.draw()
-    canvas3.get_tk_widget().grid(row=0, sticky="nswe")
-    toolbar3 = NavigationToolbar2Tk(canvas3, pack_toolbar=False)  # , root)
-    toolbar3.update()
-    toolbar3.grid(row=1)
-    frame3.grid_rowconfigure(0, weight=1)
-    frame3.grid_columnconfigure(0, weight=1)
-    frame3.grid(row=2, column=0, sticky="nswe")
-
-    # ---- Fourth independent figure ----
-    frame4 = tk.Frame(root)
-    fig4 = Figure()  # figsize=(5, 4))
-    ax4 = fig4.add_subplot(111)
-    ax4.set_title("Context task graph")
-    canvas4 = FigureCanvasTkAgg(fig4, master=frame4)
-    canvas4.draw()
-    canvas4.get_tk_widget().grid(row=0, sticky="nsew")
-    toolbar4 = NavigationToolbar2Tk(canvas4, pack_toolbar=False)  # , root)
-    toolbar4.update()
-    toolbar4.grid(row=1)
-    frame4.grid_rowconfigure(0, weight=1)
-    frame4.grid_columnconfigure(0, weight=1)
-    frame4.grid(row=2, column=2, sticky="nswe")
-
-    # ---- Spacer widgets ----
-    spacer1 = tk.Frame(root, background="grey", width=10, height=10)
-    spacer1.grid(row=0, column=1, rowspan=3, sticky="nswe")
-    spacer1 = tk.Frame(root, background="grey", width=10, height=10)
-    spacer1.grid(row=1, column=0, columnspan=3, sticky="nswe")
-
-    # ---- Render contents
-    print("Plotting task graph...")
-    if(len(context_task_graph.task_graph.graph.nodes()) < 500):
-        context_task_graph.task_graph.update_plot(ax1)
-    print("Plotting task graph (context graph)...")
-    if(len(context_task_graph.task_graph.graph.nodes()) < 500):
-        context_task_graph.task_graph.plot_context_graph(ax2)
-    print("Plotting task graph (context debug graph)...")
-    if(len(context_task_graph.task_graph.graph.nodes()) < 500):
-        context_task_graph.task_graph.plot_context_debug_graph(ax3)
-    print("Plotting context task graph...")
-    context_task_graph.update_plot(ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None)
-
-    # ---- start main loop
+    if (context_task_graph.plottable() == False):
+        return
     
-    graph_frame = visualizer.create_frame("Task Graph")
-    graph_frame.grid_rowconfigure(0, weight=1)
-    graph_frame.grid_columnconfigure(0, weight=1)
-    frame1 = tk.Frame(graph_frame)
-    fig1 = Figure()
-    ax1 = fig1.add_subplot(111)
-    ax1.set_title("Task graph")
-    canvas1 = FigureCanvasTkAgg(fig1, master=frame1)
-    canvas1.draw()
-    canvas1.get_tk_widget().grid(row=0, sticky="nsew")
-    toolbar1 = NavigationToolbar2Tk(canvas1, pack_toolbar=False)
-    toolbar1.update()
-    toolbar1.grid(row=1)
-    frame1.grid_rowconfigure(0, weight=1)
-    frame1.grid_columnconfigure(0, weight=1)
-    frame1.grid(column=0, row=0, sticky="nswe")
+    def draw_plots() -> None:
+        [ax1, ax2, ax3, ax4] = context_task_graph.create_multi_plot(
+            "Graphs",
+            ["Task Graph", "Task graph (context graph)", "Task graph (context debug graph)", "Context task graph"],
+            2,
+            2
+        )
 
-    graph_frame = visualizer.create_frame("Task graph (context graph)")
-    graph_frame.grid_rowconfigure(0, weight=1)
-    graph_frame.grid_columnconfigure(0, weight=1)
-    frame2 = tk.Frame(graph_frame)
-    fig2 = Figure()
-    ax2 = fig2.add_subplot(111)
-    ax2.set_title("Task graph (context graph)")
-    canvas2 = FigureCanvasTkAgg(fig2, master=frame2)
-    canvas2.draw()
-    canvas2.get_tk_widget().grid(row=0, sticky="nsew")
-    toolbar2 = NavigationToolbar2Tk(canvas2, pack_toolbar=False)
-    toolbar2.update()
-    toolbar2.grid(row=1)
-    frame2.grid_rowconfigure(0, weight=1)
-    frame2.grid_columnconfigure(0, weight=1)
-    frame2.grid(row=0, column=0, sticky="nswe")
+        print("Plotting task graph...")
+        if len(context_task_graph.task_graph.graph.nodes()) < 500:
+            context_task_graph.task_graph.update_plot(ax1)
 
-    graph_frame = visualizer.create_frame("Task graph (context debug graph)")
-    graph_frame.grid_rowconfigure(0, weight=1)
-    graph_frame.grid_columnconfigure(0, weight=1)
-    frame3 = tk.Frame(graph_frame)
-    fig3 = Figure()
-    ax3 = fig3.add_subplot(111)
-    ax3.set_title("Task graph (context debug graph)")
-    canvas3 = FigureCanvasTkAgg(fig3, master=frame3)
-    canvas3.draw()
-    canvas3.get_tk_widget().grid(row=0, sticky="nswe")
-    toolbar3 = NavigationToolbar2Tk(canvas3, pack_toolbar=False)
-    toolbar3.update()
-    toolbar3.grid(row=1)
-    frame3.grid_rowconfigure(0, weight=1)
-    frame3.grid_columnconfigure(0, weight=1)
-    frame3.grid(row=0, column=0, sticky="nswe")
+        print("Plotting task graph (context graph)...")
+        if len(context_task_graph.task_graph.graph.nodes()) < 500:
+            context_task_graph.task_graph.plot_context_graph(ax2)
 
-    graph_frame = visualizer.create_frame("Context task graph")
-    graph_frame.grid_rowconfigure(0, weight=1)
-    graph_frame.grid_columnconfigure(0, weight=1)
-    frame4 = tk.Frame(graph_frame)
-    fig4 = Figure()
-    ax4 = fig4.add_subplot(111)
-    ax4.set_title("Context task graph")
-    canvas4 = FigureCanvasTkAgg(fig4, master=frame4)
-    canvas4.draw()
-    canvas4.get_tk_widget().grid(row=0, sticky="nsew")
-    toolbar4 = NavigationToolbar2Tk(canvas4, pack_toolbar=False) 
-    toolbar4.update()
-    toolbar4.grid(row=1)
-    frame4.grid_rowconfigure(0, weight=1)
-    frame4.grid_columnconfigure(0, weight=1)
-    frame4.grid(row=0, column=0, sticky="nswe")
+        print("Plotting task graph (context debug graph)...")
+        if len(context_task_graph.task_graph.graph.nodes()) < 500:
+            context_task_graph.task_graph.plot_context_debug_graph(ax3)
 
-    print("Plotting separate task graph...")
-    if(len(context_task_graph.task_graph.graph.nodes()) < 500):
-        context_task_graph.task_graph.update_plot(ax1)
-    print("Plotting separate task graph (context graph)...")
-    if(len(context_task_graph.task_graph.graph.nodes()) < 500):
-        context_task_graph.task_graph.plot_context_graph(ax2)
-    print("Plotting separate task graph (context debug graph)...")
-    if(len(context_task_graph.task_graph.graph.nodes()) < 500):
-        context_task_graph.task_graph.plot_context_debug_graph(ax3)
-    print("Plotting separate context task graph...")
-    context_task_graph.update_plot(ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None)
-    
-    visualizer.run()
+        print("Plotting context task graph...")
+        context_task_graph.update_plot(
+            ax4,
+            highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
+        )
+
+        ax1 = context_task_graph.create_plot("Task Graph")
+        ax2 = context_task_graph.create_plot("Task graph (context graph)")
+        ax3 = context_task_graph.create_plot("Task graph (context debug graph)")
+        ax4 = context_task_graph.create_plot("Context task graph")
+
+        print("Plotting separate task graph...")
+        if len(context_task_graph.task_graph.graph.nodes()) < 500:
+            context_task_graph.task_graph.update_plot(ax1)
+
+        print("Plotting separate task graph (context graph)...")
+        if len(context_task_graph.task_graph.graph.nodes()) < 500:
+            context_task_graph.task_graph.plot_context_graph(ax2)
+
+        print("Plotting separate task graph (context debug graph)...")
+        if len(context_task_graph.task_graph.graph.nodes()) < 500:
+            context_task_graph.task_graph.plot_context_debug_graph(ax3)
+
+        print("Plotting separate context task graph...")
+        context_task_graph.update_plot(
+            ax4,
+            highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
+        )
+
+    def on_filter(filter_text: str) -> None:
+        print("Filter text:", filter_text)
+
+        # Extra processing here
+
+        for frame_name in [
+            "Graphs",
+            "Task Graph",
+            "Task graph (context graph)",
+            "Task graph (context debug graph)",
+            "Context task graph",
+        ]:
+            try:
+                context_task_graph.delete_frame(frame_name)
+            except KeyError:
+                pass
+
+        draw_plots()
+
+    context_task_graph.set_filter_callback(on_filter)
+    draw_plots()
+    context_task_graph.run_visualizer()
 
 
 def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskParallelismInfo]:

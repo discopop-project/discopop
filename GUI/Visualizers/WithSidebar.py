@@ -6,26 +6,34 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from __future__ import annotations
+
 import tkinter as tk
-from typing import Dict
+from typing import Dict, Type, Callable
+from GUI.Visualizers.Base import Base
+from GUI.Types.FrameT import FrameT
 
-
-class WithSidebar:
+class WithSidebar(Base):
     def __init__(self) -> None:
-        self._root = tk.Tk()
-        self._root.title("Discopop explorer")
-        self._root.protocol("WM_DELETE_WINDOW", self._on_close)
+        super().__init__()
 
-        # Root layout: sidebar | content
         self._root.grid_rowconfigure(0, weight=1)
-        self._root.grid_columnconfigure(0, weight=0)
-        self._root.grid_columnconfigure(1, weight=1)
+        self._root.grid_columnconfigure(0, weight=1)
+
+        # Draggable split: sidebar | content | filter
+        self._pane = tk.PanedWindow(self._root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, opaqueresize=False, bg="black")
+        self._pane.grid(row=0, column=0, sticky="nsew")
 
         # Sidebar
-        self._sidebar_container = tk.Frame(self._root)
-        self._sidebar_container.grid(row=0, column=0, sticky="ns")
+        self._sidebar_container = tk.Frame(self._pane)
+        self._sidebar_container.grid_rowconfigure(0, weight=1)
+        self._sidebar_container.grid_columnconfigure(0, weight=1)
 
-        self._sidebar_canvas = tk.Canvas(self._sidebar_container, highlightthickness=0, width=220)
+        self._sidebar_canvas = tk.Canvas(
+            self._sidebar_container,
+            highlightthickness=0,
+            width=220
+        )
 
         self._sidebar_scrollbar = tk.Scrollbar(
             self._sidebar_container,
@@ -33,7 +41,11 @@ class WithSidebar:
             command=self._sidebar_canvas.yview
         )
 
+        self._sidebar_canvas.grid(row=0, column=0, sticky="nsew")
+        self._sidebar_scrollbar.grid(row=0, column=1, sticky="ns")
+
         self._sidebar = tk.Frame(self._sidebar_canvas)
+        self._sidebar.grid_columnconfigure(0, weight=1)
 
         self._sidebar_window = self._sidebar_canvas.create_window(
             (0, 0),
@@ -43,53 +55,81 @@ class WithSidebar:
 
         self._sidebar_canvas.configure(yscrollcommand=self._sidebar_scrollbar.set)
 
-        self._sidebar_canvas.grid(row=0, column=0, sticky="ns")
-        self._sidebar_scrollbar.grid(row=0, column=1, sticky="ns")
-
-        self._sidebar_container.grid_rowconfigure(0, weight=1)
-        self._sidebar_container.grid_columnconfigure(0, weight=1)
-
         self._sidebar.bind("<Configure>", self._on_sidebar_configure)
         self._sidebar_canvas.bind("<Configure>", self._on_canvas_configure)
 
-        # Frame
-        self._frame_container = tk.Frame(self._root)
-        self._frame_container.grid(row=0, column=1, sticky="nsew")
-
+        # Content area
+        self._frame_container = tk.Frame(self._pane)
         self._frame_container.grid_rowconfigure(0, weight=1)
         self._frame_container.grid_columnconfigure(0, weight=1)
 
-        self._frames: Dict[str, tk.Frame] = {}
+        # Filter area
+        self._filter_container = tk.Frame(self._pane)
+        self._filter_container.grid_rowconfigure(0, weight=1)
+        self._filter_container.grid_columnconfigure(0, weight=1)
+
+        self._filter_scrollbar = tk.Scrollbar(
+            self._filter_container,
+            orient="vertical"
+        )
+
+        self._filter = tk.Text(
+            self._filter_container,
+            wrap="word",
+            yscrollcommand=self._filter_scrollbar.set,
+            width=30
+        )
+
+        self._filter_scrollbar.config(command=self._filter.yview)
+        self._filter.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 2))
+        self._filter_scrollbar.grid(row=0, column=1, sticky="ns", pady=(5, 2))
+
+        self._filter_button = tk.Button(
+            self._filter_container,
+            text="Apply Filter",
+            command=self._on_filter_button_click
+        )
+
+        self._filter_button.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=(2, 5))
+        self._filter_callback: Callable[[str], None] | None = None
+
+        # Add all panes to the PanedWindow
+        self._pane.add(self._sidebar_container, minsize=150, width=220)
+        self._pane.add(self._frame_container, minsize=300)
+        self._pane.add(self._filter_container, minsize=180, width=250)
+
         self._frame_selectors: Dict[str, tk.Button] = {}
-        self._current_frame_name: str | None = None
 
-    def _on_close(self) -> None:
-        self._root.quit()
-        self._root.destroy()
-
-    def _on_sidebar_configure(self, _: tk.Event) -> None:
+    def _on_sidebar_configure(self, _: tk.Event[tk.Widget]) -> None:
         self._sidebar_canvas.configure(scrollregion=self._sidebar_canvas.bbox("all"))
 
-    def _on_canvas_configure(self, event: tk.Event) -> None:
+    def _on_canvas_configure(self, event: tk.Event[tk.Widget]) -> None:
         self._sidebar_canvas.itemconfigure(self._sidebar_window, width=event.width)
 
     def _rebuild_selector_layout(self) -> None:
         for row_index, frame_name in enumerate(self._frame_selectors):
             self._frame_selectors[frame_name].grid_configure(row=row_index)
 
-    def create_frame(self, name: str) -> tk.Frame:
+    def _on_filter_button_click(self) -> None:
+        if self._filter_callback is not None:
+            filter_text = self._filter.get("1.0", tk.END).rstrip()
+            self._filter_callback(filter_text)
+
+    def create_frame(self, name: str, frame_type: Type[FrameT]) -> FrameT:
         if name in self._frames:
             raise ValueError(f"Frame '{name}' already exists.")
 
-        frame = tk.Frame(self._frame_container, background="red")
-
+        frame = frame_type(self._frame_container)
         self._frames[name] = frame
         frame.grid(row=0, column=0, sticky="nsew")
 
+        def on_selector_click(frame_name: str = name) -> None:
+            self.show_frame(frame_name)
+
         frame_selector = tk.Button(
             self._sidebar,
-            text=name,
-            command=lambda frame_name=name: self.show_frame(frame_name)
+            text = name,
+            command = on_selector_click
         )
 
         self._frame_selectors[name] = frame_selector
@@ -102,8 +142,6 @@ class WithSidebar:
             pady=2
         )
 
-        self._sidebar.grid_columnconfigure(0, weight=1)
-
         if self._current_frame_name is None:
             self.show_frame(name)
         else:
@@ -111,41 +149,25 @@ class WithSidebar:
 
         return frame
 
-    def get_frame(self, name: str) -> tk.Frame:
-        try:
-            return self._frames[name]
-        except KeyError as e:
-            raise KeyError(f"No frame named '{name}'.") from e
-
     def get_frame_selector(self, name: str) -> tk.Button:
         try:
             return self._frame_selectors[name]
         except KeyError as e:
             raise KeyError(f"No selector button for frame '{name}'.") from e
 
-    def show_frame(self, name: str) -> None:
-        frame = self.get_frame(name)
-        frame.tkraise()
-        self._current_frame_name = name
-
     def delete_frame(self, name: str) -> None:
-        frame = self.get_frame(name)
+        super().delete_frame(name)
+        
         selector = self.get_frame_selector(name)
 
-        frame.destroy()
         selector.destroy()
-
-        del self._frames[name]
         del self._frame_selectors[name]
 
         self._rebuild_selector_layout()
 
-        if self._current_frame_name == name:
-            self._current_frame_name = None
+    def set_filter_callback(self, callback: Callable[[str], None]) -> None:
+        self._filter_callback = callback
 
-            if self._frames:
-                first_name = next(iter(self._frames))
-                self.show_frame(first_name)
-
-    def run(self) -> None:
-        self._root.mainloop()
+    def set_filter_text(self, text: str) -> None:
+        self._filter.delete("1.0", tk.END)
+        self._filter.insert("1.0", text)

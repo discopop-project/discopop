@@ -86,6 +86,9 @@ from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+from GUI.Extendables.Plottable import Plottable
+from GUI.Visualizers.Base import Base as Visualizer
+
 logger = logging.getLogger("Explorer")
 
 
@@ -93,7 +96,7 @@ logger = logging.getLogger("Explorer")
 TGConstructionQueueElement = Tuple[Optional[TGNode], Union[PETNode, VisitorMarker]]  # (Predecessor, current element)
 
 
-class TaskGraph(object):
+class TaskGraph(Plottable, object):
     pet: PEGraphX
     graph: nx.MultiDiGraph
     root: TGNode
@@ -110,8 +113,10 @@ class TaskGraph(object):
     plotting_postions_buffer = None
 
     def __init__(
-        self, pet: PEGraphX, dynamic_dependency_file: Optional[str] = None, static_dependency_file: Optional[str] = None
+        self, pet: PEGraphX, dynamic_dependency_file: Optional[str] = None, static_dependency_file: Optional[str] = None, visualizer: Visualizer | None = None
     ) -> None:
+        super().__init__(visualizer)
+        
         self.pet = pet
         self.graph = nx.MultiDiGraph()
 
