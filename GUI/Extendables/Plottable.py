@@ -13,20 +13,27 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 from GUI.Visualizers.Base import Base
 from GUI.Objects.Frames.MultiFrame import MultiFrame
+from GUI.Exceptions.VisualizerNotDefined import VisualizerNotDefined
 
 class Plottable:
     def __init__(self, visualizer: Base | None = None) -> None:
         self._visualizer = visualizer
 
+    def plottable(self) -> bool:
+        if self._visualizer == None:
+            return False
+        
+        return True
+
     def create_frame(self, name: str) -> tk.Frame:
         if self._visualizer == None:
-            raise ValueError("Visualizer not initialized.")
+            raise VisualizerNotDefined()
         
         return self._visualizer.create_frame(name, tk.Frame)
 
     def create_multi_frame(self, name: str, rows: int, columns: int) -> MultiFrame:
         if self._visualizer is None:
-            raise ValueError("Visualizer not initialized.")
+            raise VisualizerNotDefined()
 
         if rows < 1 or columns < 1:
             raise ValueError("Rows and columns must be >= 1")
@@ -54,7 +61,7 @@ class Plottable:
 
     def get_from_multi_frame(self, name: str, index: int) -> tk.Frame:
         if self._visualizer == None:
-            raise ValueError("Visualizer not initialized.")
+            raise VisualizerNotDefined()
         
         frame = self._visualizer.get_frame(name)
         
@@ -65,19 +72,19 @@ class Plottable:
         
     def set_filter_callback(self, callback: Callable[[str], None]) -> None:
         if self._visualizer == None:
-            raise ValueError("Visualizer not initialized.")
+            raise VisualizerNotDefined()
         
         self._visualizer.set_filter_callback(callback)
 
     def delete_frame(self, name: str) -> None:
         if self._visualizer == None:
-            raise ValueError("Visualizer not initialized.")
+            raise VisualizerNotDefined()
         
         self._visualizer.delete_frame(name)
         
     def create_plot(self, name: str) -> Axes:
         if self._visualizer == None:
-            raise ValueError("Visualizer not initialized.")
+            raise VisualizerNotDefined()
         
         frame: tk.Frame = self._visualizer.create_frame(name, tk.Frame)
         figure = Figure()

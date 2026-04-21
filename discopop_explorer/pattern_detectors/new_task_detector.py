@@ -54,6 +54,9 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
 
 
 def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Optional[Set[Context]] = None) -> None:
+    if (context_task_graph.plottable() == False):
+        return
+    
     def draw_plots() -> None:
         [ax1, ax2, ax3, ax4] = context_task_graph.create_multi_plot(
             "Graphs",
