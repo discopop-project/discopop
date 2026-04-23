@@ -31,6 +31,8 @@ setup(
     install_requires=[
     "setuptools",
 	"numpy",
+    "requests",
+    "packaging",
     ],
     extras_require={
     },
