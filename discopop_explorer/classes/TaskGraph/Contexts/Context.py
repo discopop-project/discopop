@@ -148,6 +148,9 @@ class Context(object):
     def register_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
         self.outgoing_dependencies.add((target_context, dependency))
 
+    def delete_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
+        self.outgoing_dependencies.remove((target_context, dependency))
+
     def get_outgoing_dependency_targets(self) -> Set[Context]:
         return set([outgoing_dependency[0] for outgoing_dependency in self.outgoing_dependencies])
 
@@ -177,10 +180,10 @@ class Context(object):
                 return pet_node
         return None
 
-    def get_code_scope(self, pet: PEGraphX) -> List[LineID]:
+    def get_code_scope(self, pet: PEGraphX, inclusive: bool = False) -> List[LineID]:
         """returns a list of code scopes contained in the context."""
         scope: List[LineID] = []
-        for node in self.contained_nodes:
+        for node in self.get_contained_nodes(inclusive=inclusive):
             pet_node = node.get_pet_node(pet)
             if pet_node is None:
                 continue
@@ -201,7 +204,7 @@ class Context(object):
                 for var in pet_node.local_vars + pet_node.global_vars:
                     var_def_line = var.defLine
                     if var_def_line in code_scope:  # implicitly ignore definition line "LineNotFound"
-                        print("Definition of variable " + var.name + " at line " + var_def_line)
+                        # print("Definition of variable " + var.name + " at line " + var_def_line)
                         defined_vars.append((str(var.name), LineID(var_def_line)))
 
         # remove duplicates

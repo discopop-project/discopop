@@ -56,6 +56,7 @@ from discopop_explorer.classes.TaskGraph.TGFunctionNode import TGFunctionNode
 from discopop_explorer.classes.TaskGraph.VisitorMarker import EndFunctionMarker, VisitorMarker
 from discopop_explorer.classes.TaskGraph.Work.TGEndWorkNode import TGEndWorkNode
 from discopop_explorer.classes.TaskGraph.Work.TGStartWorkNode import TGStartWorkNode
+from discopop_explorer.enums.DepOrigin import DepOrigin
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
@@ -67,7 +68,7 @@ from discopop_explorer.functions.PEGraph.traversal.predecessors import direct_pr
 from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 
 matplotlib.use("TkAgg")
-import matplotlib.pyplot as plt  # type:ignore
+import matplotlib.pyplot as plt  # type: ignore
 from matplotlib.patches import Rectangle
 
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
@@ -113,47 +114,16 @@ class TaskGraph(Plottable, object):
     plotting_postions_buffer = None
 
     def __init__(
-        self, pet: PEGraphX, dynamic_dependency_file: Optional[str] = None, static_dependency_file: Optional[str] = None, visualizer: Visualizer | None = None
+        self,
+        pet: PEGraphX,
+        dynamic_dependency_file: Optional[str] = None,
+        static_dependency_file: Optional[str] = None,
+        visualizer: Visualizer | None = None,
     ) -> None:
         super().__init__(visualizer)
-        
+
         self.pet = pet
         self.graph = nx.MultiDiGraph()
-
-        # DEBUG
-        for cu in all_nodes(self.pet, CUNode):
-            print("CU: ", cu.id, cu.start_line, "-", cu.end_line)
-            print("--> Out deps:")
-            for edge in out_edges(self.pet, cu.id, EdgeType.DATA):
-                print(
-                    "--> ",
-                    edge[0],
-                    edge[1],
-                    "(",
-                    edge[2].dtype,
-                    edge[2].var_name,
-                    edge[2].sink_line,
-                    edge[2].source_line,
-                    ")",
-                )
-            print("--> In deps:")
-            for edge in in_edges(self.pet, cu.id, EdgeType.DATA):
-                print(
-                    "--> ",
-                    edge[0],
-                    edge[1],
-                    "(",
-                    edge[2].dtype,
-                    edge[2].var_name,
-                    edge[2].sink_line,
-                    edge[2].source_line,
-                    ")",
-                )
-
-        # import sys
-        # sys.exit(0)
-
-        # !DEBUG
 
         # define updating plot window
         fig1 = plt.figure(1)
@@ -163,6 +133,8 @@ class TaskGraph(Plottable, object):
         self.__assign_function_ids(pet)
         self.__construct_from_pet(pet)
         self.__insert_data_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
+        self.__determine_loop_variables()
+        self.__cleanup_loop_dependencies()
         print("Waiting for user to close the Window...")
         # plt.show(block=True)
         plt.ioff()
@@ -183,6 +155,7 @@ class TaskGraph(Plottable, object):
         self.__duplicate_loop_iterations()
         self.__validate_graph_structure()
         self.__add_work_nodes()
+        self.__assign_loopstate_positions_within_functions()
         self.__inline_function_calls()
         self.__add_branching_nodes()
 
@@ -416,14 +389,46 @@ class TaskGraph(Plottable, object):
             to_be_removed.append(edge)
         for tbr in to_be_removed:
             ctx_graph.remove_edge(tbr[0], tbr[1])
-        # draw dependency edges
+        # draw static dependency edges
         for ctx in self.contexts:
             targets: Set[Any] = set()
             for outgoing_dependency in ctx.outgoing_dependencies:
-                targets.add(outgoing_dependency[0])
+                if outgoing_dependency[1].origin == DepOrigin.STATIC_ANALYSIS:
+                    targets.add(outgoing_dependency[0])
+                if outgoing_dependency[1].origin is None:
+                    raise ValueError("HERE")
             for target in targets:
                 ctx_graph.add_edge(ctx, target)
-        nx.draw_networkx_edges(ctx_graph, positions, edge_color="red", ax=axis)
+        nx.draw_networkx_edges(
+            ctx_graph,
+            positions,
+            edge_color="blue",
+            ax=axis,
+            connectionstyle="arc3,rad=0.3",
+        )
+        # remove dependency edges
+        to_be_removed = []
+        for edge in ctx_graph.edges:
+            to_be_removed.append(edge)
+        for tbr in to_be_removed:
+            ctx_graph.remove_edge(tbr[0], tbr[1])
+        # draw dynamic dependency edges
+        for ctx in self.contexts:
+            targets_dyn: Set[Any] = set()
+            for outgoing_dependency in ctx.outgoing_dependencies:
+                if outgoing_dependency[1].origin == DepOrigin.DYNAMIC_ANALYSIS:
+                    targets.add(outgoing_dependency[0])
+                if outgoing_dependency[1].origin is None:
+                    raise ValueError("HERE")
+            for target in targets_dyn:
+                ctx_graph.add_edge(ctx, target)
+        nx.draw_networkx_edges(
+            ctx_graph,
+            positions,
+            edge_color="red",
+            ax=axis,
+            connectionstyle="arc3,rad=0.2",
+        )
 
         # draw labels
         labels: Dict[Any, str] = {}
@@ -749,11 +754,16 @@ class TaskGraph(Plottable, object):
 
                     # add iteration entry markings between entry_node and iteration_entry_points
                     ism_list: List[TGStartIterationNode] = []
+
                     for itenp in iteration_entry_points:
                         self.graph.remove_edge(entry_node, itenp)
                         ism = TGStartIterationNode(
                             itenp.pet_node_id, itenp.level, itenp.position, entry_node.pet_node_id
                         )
+                        ism.loopstate_iteration_ids = [
+                            0
+                        ]  # loop iterations will be duplicated later. loopstate_ids will be overwritten / set then.
+
                         ism_list.append(ism)
                         self.add_node(ism)
                         self.add_edge(entry_node, ism)
@@ -1033,7 +1043,13 @@ class TaskGraph(Plottable, object):
                         copied_nodes, copied_path, copied_iteration_entry, copied_iteration_exit = (
                             self.__copy_iteration_subgraph(copied_nodes, iteration_nodes, sin, ein)
                         )
-                        #                            print("COPIED PATH: ", [n.get_label() for n in copied_path])
+
+                        # set loopstate_iterations_ids sucht that both iteration nodes react to different loopsate information during dependency creation
+                        if sin.loopstate_iteration_ids is None:
+                            sin.set_loopstate_iteration_ids([1])
+                        if cast(TGStartIterationNode, copied_iteration_entry).loopstate_iteration_ids is None:
+                            cast(TGStartIterationNode, copied_iteration_entry).set_loopstate_iteration_ids([0, 2])
+
                         self.add_edge(ein, copied_iteration_entry)
                         for succ in ein_successors:
                             self.add_edge(copied_iteration_exit, succ)
@@ -1087,34 +1103,38 @@ class TaskGraph(Plottable, object):
             branch_context = BranchContext()
             sbn.register_created_context(branch_context)
             self.contexts.append(branch_context)
-            # DFS find nodes contained in the context
-            queue: List[Tuple[TGNode, int]] = [(succ, 0) for succ in self.get_successors(sbn)]
-            visited: Set[Tuple[TGNode, int]] = set()
-            contained_nodes: Set[TGNode] = set()
-            while len(queue) > 0:
-                current_node, current_level = queue.pop()
-                # stop search on this path, if a EndBranchNode is found and level is 0
-                if isinstance(current_node, TGEndBranchNode):
-                    if current_level == 0:
-                        # stop search along this path
-                        continue
-                    else:
-                        # decrease level
-                        current_level -= 1
-                # increase the level, if a StartBranchNode is encountered
-                if isinstance(current_node, TGStartBranchNode):
-                    current_level += 1
-                # mark the node on the path as contained in the branch
-                contained_nodes.add(current_node)
-                # enqueue successors
-                for succ in self.get_successors(current_node):
-                    queue_element = (succ, current_level)
-                    if queue_element not in visited:
-                        queue.append(queue_element)
-                        visited.add(queue_element)
-            # register contained nodes in the context
-        #            for contained_node in contained_nodes:
-        #                branch_context.add_node(contained_node)
+
+            if False:  # commented out due to high runtime without actual effect
+                # DFS find nodes contained in the context
+                queue: List[Tuple[TGNode, int]] = [(succ, 0) for succ in self.get_successors(sbn)]
+                visited: Set[Tuple[TGNode, int]] = set()
+                contained_nodes: Set[TGNode] = set()
+                while len(queue) > 0:
+                    current_node, current_level = queue.pop()
+                    print("queue len: ", len(queue))
+                    print("visited: len:", len(visited))
+                    # stop search on this path, if a EndBranchNode is found and level is 0
+                    if isinstance(current_node, TGEndBranchNode):
+                        if current_level == 0:
+                            # stop search along this path
+                            continue
+                        else:
+                            # decrease level
+                            current_level -= 1
+                    # increase the level, if a StartBranchNode is encountered
+                    if isinstance(current_node, TGStartBranchNode):
+                        current_level += 1
+                    # mark the node on the path as contained in the branch
+                    contained_nodes.add(current_node)
+                    # enqueue successors
+                    for succ in self.get_successors(current_node):
+                        queue_element = (succ, current_level)
+                        if queue_element not in visited and queue_element not in queue:
+                            queue.append(queue_element)
+                            visited.add(queue_element)
+                # register contained nodes in the context
+            #            for contained_node in contained_nodes:
+            #                branch_context.add_node(contained_node)
 
         # create branching parent contexts
         logger.info("--> Create branch parent contexts...")
@@ -1251,7 +1271,7 @@ class TaskGraph(Plottable, object):
                 pair_iteration_nodes[(it_start, it_end)] = list(tmp_iteration_nodes)
 
             # create loop context
-            loop_context = LoopParentContext(node.pet_node_id)
+            loop_context = LoopParentContext(node.pet_node_id, node.loopstate_position)
             node.register_created_context(loop_context)
             #            for loop_node in general_loop_nodes:
             #                is_regular_loop_node = True
@@ -1265,7 +1285,9 @@ class TaskGraph(Plottable, object):
 
             # create iteration contexts
             for pair in pair_iteration_nodes:
-                iteration_context = IterationContext(loop_context)
+                if pair[0].loopstate_iteration_ids is None:
+                    raise ValueError("TGStartIterationNode: loopstate iteration ids not set. Node: ", pair[0])
+                iteration_context = IterationContext(loop_context, pair[0].loopstate_iteration_ids)
                 pair[0].register_created_context(iteration_context)
                 #                for iteration_node in pair_iteration_nodes[pair]:
                 #                    iteration_context.add_node(iteration_node)
@@ -1376,6 +1398,38 @@ class TaskGraph(Plottable, object):
         # this should allow a cheap check for "incoming" and "outgoing" dependencies
         warnings.warn("Not yet implemented!")
 
+    def __assign_loopstate_positions_within_functions(self) -> None:
+        """Assigns loopstate positions to loops within functions in their order of occurrence in the source code.
+        This function MUST BE EXECUTED BEFORE inlining function calls."""
+        logger.info("Assigning Loop state positions within functions...")
+
+        entry_points: List[TGNode] = []
+        for node in tqdm(self.graph.nodes):
+            if isinstance(node, TGFunctionNode):
+                entry_points.append(node)
+        logger.info("--> Assigning loop state ids")
+        for entry_point in tqdm(entry_points):
+            # loop state position corresponds to the position of the iteration count for the specific loop within the "_loopstate"-information in the callpaths reported by the profiler
+            # find all loops in function, sort them by location, and assign loopstate_positions.
+            function_nodes = self.get_descendants(entry_point)
+            loops = [n for n in function_nodes if isinstance(n, TGStartLoopNode)]
+            loops_pet_nodes = list(set([n.get_pet_node(self.pet) for n in loops]))
+            cleaned_loops_pet_nodes = [lpn for lpn in loops_pet_nodes if lpn is not None]
+            sorted_loops_pet_nodes = sorted(cleaned_loops_pet_nodes, key=lambda x: x.start_line)
+            # assign loopstate_positions to PET node ids
+            next_unused_position = 0
+            assigned_loopstate_positions: Dict[PETNodeID, int] = dict()
+            for l_pet in sorted_loops_pet_nodes:
+                if l_pet.id in assigned_loopstate_positions:
+                    continue
+                assigned_loopstate_positions[l_pet.id] = next_unused_position
+                next_unused_position += 1
+            # assign loopstate positions to TGStartLoopNode's for later use
+            for loop in loops:
+                if loop.pet_node_id not in assigned_loopstate_positions:
+                    raise KeyError("No entry in assigned_loopstate_positions for PET node id: " + str(loop.pet_node_id))
+                loop.loopstate_position = assigned_loopstate_positions[loop.pet_node_id]
+
     def __calculate_context_successions(self) -> None:
         logger.info("Assigning context successions...")
         logger.info("--> classify entry points...")
@@ -1393,6 +1447,8 @@ class TaskGraph(Plottable, object):
             already_enqueued: Set[Tuple[TGNode, int]] = set()
             while len(queue) > 0:
                 current_node, current_level, current_predecessor_contexts_tuple = queue.pop(0)
+                if len(current_predecessor_contexts_tuple) == 0:
+                    continue
                 current_predecessor_contexts = list(current_predecessor_contexts_tuple)
                 # check for entering new context level
                 entered_context: Optional[Context] = None
@@ -1435,6 +1491,7 @@ class TaskGraph(Plottable, object):
 
                 # add successors to the queue
                 for succ in self.get_successors(current_node):
+                    # note: the insertion of the tuple (current_predecessor_contexts) into the queue is a quite severe bottleneck.
                     queue_element = (succ, current_level, tuple(current_predecessor_contexts))
                     if (queue_element[0], queue_element[1]) not in already_enqueued:
                         queue.append(queue_element)
@@ -1445,6 +1502,79 @@ class TaskGraph(Plottable, object):
     #       self.plot_context_graph()
     #       plt.pause(1)
     ## !DEBUG
+
+    def __determine_loop_variables(self) -> None:
+        """determine loop variables."""
+        logger.info("Determine loop variables...")
+        logger.info("--> classify entry points...")
+        entry_points: List[LoopParentContext] = []
+        for node in tqdm(self.graph.nodes):
+            if type(node.created_context) == LoopParentContext:
+                entry_points.append(node.created_context)
+        logger.info("--> determine loop variables...")
+        for loop_ctx in tqdm(entry_points):
+            loop_header_ctx = self.get_loop_header_context(loop_ctx)
+            if loop_header_ctx is None:
+                continue
+            # identify loop variables by checking for RAW dependencies between loop body and loop header
+            loop_iteration_ctxs = loop_ctx.get_contained_contexts(inclusive=True)
+            loop_vars: List[Tuple[str, MemoryRegion]] = []
+            for target_ctx, dep in loop_header_ctx.outgoing_dependencies:
+                if dep is None or dep.etype != EdgeType.DATA:
+                    continue
+                # only consider RAW dependencies
+                if dep.dtype != DepType.RAW:
+                    continue
+                if dep.var_name is None or dep.memory_region is None:
+                    continue
+
+                if target_ctx in loop_iteration_ctxs:
+                    loop_vars.append((dep.var_name, dep.memory_region))
+            # remove duplicates
+            loop_vars = list(set(loop_vars))
+            # save loop variables
+            loop_ctx.loop_variables = loop_vars
+
+    def __cleanup_loop_dependencies(self) -> None:
+        """removed incorrectly added static dependencies between loop iterations using the loop variable."""
+        logger.info("Cleaning loop dependencies...")
+        logger.info("--> classify entry points...")
+        entry_points: List[LoopParentContext] = []
+        for node in tqdm(self.graph.nodes):
+            if type(node.created_context) == LoopParentContext:
+                entry_points.append(node.created_context)
+        logger.info("--> cleaning loop dependencies")
+        for loop_ctx in tqdm(entry_points):
+            # get contexts by iterations
+            iteration_ctxs = [
+                c for c in loop_ctx.get_contained_contexts(inclusive=False) if type(c) == IterationContext
+            ]
+            iteration_contained_ctxs: Dict[IterationContext, Set[Context]] = dict()
+            for it_ctx in iteration_ctxs:
+                iteration_contained_ctxs[it_ctx] = it_ctx.get_contained_contexts(inclusive=True)
+            # remove dependencies targeting loop variables between loop iterations
+            for it_ctx_1 in iteration_ctxs:
+                for it_ctx_2 in iteration_ctxs:
+                    if it_ctx_1 == it_ctx_2:
+                        continue
+                    for it_1_node in iteration_contained_ctxs[it_ctx_1]:
+                        # it_1_node and it_2_node are in different iterations of the same loop
+                        # check static dependencies only
+                        # check for dependencies between them using the loop variable
+                        to_be_removed: List[Tuple[Context, Context, Dependency]] = []
+                        for target_ctx, dep in it_1_node.outgoing_dependencies:
+                            if dep is None or dep.etype != EdgeType.DATA:
+                                continue
+                            if dep.origin != DepOrigin.STATIC_ANALYSIS:
+                                continue
+                            if (dep.var_name, dep.memory_region) not in loop_ctx.loop_variables:
+                                continue
+
+                            if target_ctx in iteration_contained_ctxs[it_ctx_2]:
+                                to_be_removed.append((it_1_node, target_ctx, dep))
+                        # apply dependency deletions
+                        for tpl in to_be_removed:
+                            tpl[0].delete_outgoing_dependency(tpl[1], tpl[2])
 
     def __calculate_context_nesting(self) -> None:
         logger.info("Assigning context nestings...")
@@ -1505,14 +1635,21 @@ class TaskGraph(Plottable, object):
                 elif exited_context:
                     # update the current context
                     if current_context is None:
-                        logger.error("Current context must not be None during processing!")
-                        plt.ioff()
-                        self.plot(highlight_nodes=[current_node])
-                        plt.pause(10)
+                        warnings.warn("Current context must not be None during processing!")
+                        # plt.ioff()
+                        # self.plot(highlight_nodes=[current_node])
                         raise ValueError("Current context must not be None during processing!")
                     # if current_context.parent_context is None:
                     #    raise ValueError("Parent context is unspecified. Exiting a context thus not possible!")
                     else:
+                        # empty parent context can happen at the root level of the graph. All other cases are invalid.
+                        if current_context.parent_context is None:
+                            print("TYPE: ", type(current_context))
+                            if type(current_context) != Context:
+                                raise ValueError(
+                                    "Current.parent_context must not be None, as context must not be None during processing!"
+                                )
+                            continue
                         current_context = current_context.parent_context
 
                 # add successors to the queue
@@ -1670,8 +1807,6 @@ class TaskGraph(Plottable, object):
             if node in visited:
                 continue
 
-            print("NODE: ", node.pet_node_id)
-
             # create a new context, if the predecessor of node is not a regular work node
             preds = self.get_predecessors(node)
             create_new_context = False
@@ -1685,10 +1820,8 @@ class TaskGraph(Plottable, object):
 
             # create a new context if a preceeding node contains a function call
             for pred in preds:
-                print("-> PRED: ", pred.pet_node_id)
                 if pred.pet_node_id is not None:
                     if len(out_edges(self.pet, pred.pet_node_id, EdgeType.CALLSNODE)) > 0:
-                        print("---> HAS CALL")
                         create_new_context = True
                         break
 
@@ -1849,7 +1982,6 @@ class TaskGraph(Plottable, object):
         )  # {dep_type: {source_location: {source_state_id: {sink_location: {sink_state_id:  [var_info]}}}}}
 
         for idx, dependency_file in enumerate([dynamic_dependency_file, static_dependency_file]):
-            print("DEP FILE: ", dependency_file)
             if dependency_file is None or not os.path.exists(dependency_file):
                 continue
             with open(dependency_file, "r") as f:
@@ -1897,7 +2029,6 @@ class TaskGraph(Plottable, object):
                         sink_location = dep_contents_split[0]
                         var_info = dep_contents_split[1]
 
-                        
                         # unpack sink_location
                         dep_is_dynamic_based_on_sink = False
                         if "@" in sink_location:
@@ -1913,7 +2044,6 @@ class TaskGraph(Plottable, object):
                             dep_type = "DYN_" + dep_type
                         else:
                             dep_type = "STAT_" + dep_type
-
 
                         # register dependency
                         if dep_type not in deps:
@@ -2195,39 +2325,67 @@ class TaskGraph(Plottable, object):
                 if not isinstance(context, WorkContext):
                     continue
                 context_code_scope = context.get_code_scope(self.pet)
-                # DEBUG
-                # print("context locs: ", str(context_code_scope))
-                # !DEBUG
                 if location_lineid in context_code_scope:
                     contexts.add(context)
 
         # filter contexts for state_id compatibility
         if state_id != "NO_STATE":
-
-            warnings.warn("Not yet implemented: filtering contexts by state id. State ID: " + state_id)
-
-            print("Filtering contexts for state id: " + state_id)
             if state_id in state_mappings_dict:
-                callpath = state_mappings_dict[state_id]
-                print("--> Mapped state id: " + str(callpath))
+                callpath = copy.deepcopy(state_mappings_dict[state_id])
 
                 filtered_contexts: Set[Context] = set()
 
                 for ctx in contexts:
                     # determine ancestors
                     ancestors = ctx.get_ancestor_contexts()
-                    print("CTX: ", ctx.get_label())
-                    print("ANCESTORS: ", str([ancestor.get_label() for ancestor in ancestors]))
                     # traverse ancestors and convert them into a callpath compatible representation.
                     ctx_callpath: List[str] = []
                     last_ancestor_was_inlined_function_marker = False
                     last_called_function = None
+
+                    loopstate_violation_found = False
+                    loopstate_callpath_copy = copy.deepcopy(callpath)
+                    current_loopstate_info = [elem for elem in loopstate_callpath_copy if "_loopstate" in elem]
                     for ancestor in ancestors:
                         if isinstance(ancestor, FunctionContext):
                             last_ancestor_was_inlined_function_marker = False
                             if ancestor.parent_function is not None:
                                 ctx_callpath.insert(0, pet.node_at(ancestor.parent_function).name)
                                 last_called_function = ancestor.parent_function
+                                # function contexts trigger the invalidation and loading of a new loopstate, as they effectively end the "scope"
+                                # remove loopstate entry from callpath to allow analysis of ancestor iterations, and make size of callpath and ctx_callpath comparable for later check.
+                                # cleanup callpath loopstates at the end of the callpath
+                                found_loopstate = False
+                                search_index = len(loopstate_callpath_copy) - 1
+                                to_be_removed: List[int] = []
+                                while search_index >= 0:
+                                    if not found_loopstate:
+                                        if "_loopstate" in loopstate_callpath_copy[search_index]:
+                                            # found last loopstate entry. continue search with previous element.
+                                            # last loopstate entry shall not be removed from the
+                                            to_be_removed.append(search_index)
+                                            found_loopstate = True
+                                            search_index -= 1
+                                            continue
+                                        else:
+                                            # continue search for last loopstate entry
+                                            search_index -= 1
+                                    else:
+                                        if "_loopstate" in loopstate_callpath_copy[search_index]:
+                                            # found a next loopstate entry. register for deletion and continue search with previous element
+                                            to_be_removed.append(search_index)
+                                            search_index -= 1
+                                        else:
+                                            # did not find a next loopstate entry. stop the search
+                                            break
+                                # delete loopstate elements
+                                for (
+                                    tbr
+                                ) in (
+                                    to_be_removed
+                                ):  # indices are already in decreasing order. Thus, deletion in order is safe.
+                                    del loopstate_callpath_copy[tbr]
+
                             continue
                         if isinstance(ancestor, InlinedFunctionContext):
                             last_ancestor_was_inlined_function_marker = True
@@ -2255,6 +2413,57 @@ class TaskGraph(Plottable, object):
                             else:
                                 # unspecific, skip
                                 continue
+                        warnings.warn(
+                            "TODO: add check for Loop iteration here, and add loop identifier and loop state to iteration Contexts."
+                        )
+                        if isinstance(ancestor, IterationContext):
+                            # find last loopstate information in callpath
+                            if len(current_loopstate_info) == 0:
+                                # non-matching callpath. ctx is not a valid candidate
+                                loopstate_violation_found = True
+                                continue
+                            relevant_loopstate_position = cast(
+                                LoopParentContext, ancestor.belongs_to_context
+                            ).loopstate_position
+                            if relevant_loopstate_position is None:
+                                warnings.warn(
+                                    "Invalid LoopParentContext. Property 'loopstate_position' is None. Context: "
+                                    + str(ancestor.belongs_to_context)
+                                )
+                                continue
+                            if len(current_loopstate_info) == 0:
+                                raise ValueError("No loopstate found for IterationContext: ", ancestor)
+                            if ancestor.loopstate_iteration_ids is None:
+                                raise ValueError(
+                                    "Loopstate iteration ids are not registered. Value is None. IterationContext: ",
+                                    ancestor,
+                                )
+                            if len(ancestor.loopstate_iteration_ids) == 0:
+                                raise ValueError(
+                                    "No loopstate iteration ids registered for IterationContext: ", ancestor
+                                )
+                            last_loopstate_info = current_loopstate_info[-1]
+                            # get loopstate for checking
+                            full_loopstate = last_loopstate_info.split("_loopstate")[1]
+                            if relevant_loopstate_position + 1 > len(full_loopstate):
+                                warnings.warn(
+                                    "Loopstate "
+                                    + full_loopstate
+                                    + " does not allow lookup at position "
+                                    + str(relevant_loopstate_position)
+                                    + " due to length limitation. Skipping candidate."
+                                )
+                                continue
+                            unpacked_loopstate = int(full_loopstate[relevant_loopstate_position])
+
+                            # check for match
+                            if unpacked_loopstate not in ancestor.loopstate_iteration_ids:
+                                # ancestor does not target the unpacked loopstate
+                                loopstate_violation_found = True
+                            else:
+                                ctx_callpath.insert(0, last_loopstate_info)
+
+                            last_ancestor_was_inlined_function_marker = False
 
                         if isinstance(ancestor, Context):
                             # unspecific, skip
@@ -2264,19 +2473,34 @@ class TaskGraph(Plottable, object):
                             warnings.warn("Not yet implemented: unknown ancestor context type: " + str(type(ancestor)))
                             last_ancestor_was_inlined_function_marker = False
 
-                    for ctx_cp in ctx_callpath:
-                        print("--> CTX CP: ", ctx_cp)
+                    # compress sequences of loopstate information in callpath before checking for equivalence
+                    to_be_removed = []
+                    for i in range(1, len(callpath)):
+                        if "_loopstate" in callpath[i - 1] and "_loopstate" in callpath[i]:
+                            to_be_removed.append(i - 1)
+                    for tbr in sorted(to_be_removed, reverse=True):
+                        del callpath[tbr]
+
+                    # compress sequences of loopstate information in ctx_callpath before checking for equivalence
+                    to_be_removed = []
+                    for i in range(1, len(ctx_callpath)):
+                        if "_loopstate" in ctx_callpath[i - 1] and "_loopstate" in ctx_callpath[i]:
+                            to_be_removed.append(i - 1)
+                    for tbr in sorted(to_be_removed, reverse=True):
+                        del ctx_callpath[tbr]
 
                     # check equality of callpath and ctx_callpath
                     if len(callpath) != len(ctx_callpath):
                         continue
+
                     equal = True
                     for i in range(0, len(callpath)):
                         if callpath[i] != ctx_callpath[i]:
                             equal = False
                             break
-                    if equal:
+                    if equal and not loopstate_violation_found:
                         filtered_contexts.add(ctx)
+
                 return filtered_contexts
 
         return contexts
@@ -2285,6 +2509,14 @@ class TaskGraph(Plottable, object):
         self, dynamic_dependency_file: Optional[str], static_dependency_file: Optional[str]
     ) -> None:
         """Load data dependencies from profiler output files and insert them into the graph."""
+
+        logger.info(
+            "Inserting data dependencies from files: "
+            + "\n\t- "
+            + str(dynamic_dependency_file)
+            + "\n\t- "
+            + str(static_dependency_file)
+        )
 
         def debug_print_deps(
             deps: Dict[str, Dict[str, Dict[str, Dict[str, Dict[str, List[str]]]]]], indent: int = 0
@@ -2304,13 +2536,7 @@ class TaskGraph(Plottable, object):
 
         # collect data dependencies
         dependencies = self.__read_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
-        print("ORIGINAL DEPS:")
-        debug_print_deps(dependencies)
         dependencies = self.__apply_dependency_overwrites(dependencies)
-        print()
-        print()
-        print("FILTERED DEPS:")
-        debug_print_deps(dependencies)
 
         # read instructionID to lineID mapping
         warnings.warn("TODO: update available data to use instructionIDs instead of lineIDs as the default.")
@@ -2352,57 +2578,86 @@ class TaskGraph(Plottable, object):
 
         # insert data dependencies into graph
         # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
-        for dep_type, dep_type_deps in dependencies.items():
-            for source_location, source_location_deps in dep_type_deps.items():
+        logger.info("--> Inserting data dependencies: ")
+        for dep_type, dep_type_deps in tqdm(dependencies.items(), desc="Dependency types"):
+            for source_location, source_location_deps in tqdm(
+                dep_type_deps.items(), desc="Source locations", leave=False
+            ):
                 for source_state_id, source_state_deps in source_location_deps.items():
+                    # find source and target contexts based on locations and state ids
+                    # only work contexts can be source or target of data dependencies
+                    source_contexts = self.__get_work_contexts_by_location_and_state_id(
+                        self.pet, source_location, source_state_id, mappings_dict, state_mappings_dict
+                    )
                     for sink_location, sink_location_deps in source_state_deps.items():
                         for sink_state_id, var_infos in sink_location_deps.items():
                             # find source and target contexts based on locations and state ids
                             # only work contexts can be source or target of data dependencies
-                            source_contexts = self.__get_work_contexts_by_location_and_state_id(
-                                self.pet, source_location, source_state_id, mappings_dict, state_mappings_dict
-                            )
                             target_contexts = self.__get_work_contexts_by_location_and_state_id(
                                 self.pet, sink_location, sink_state_id, mappings_dict, state_mappings_dict
                             )
 
                             # handle static and dynamic dependencies separately
                             if dep_type.startswith("STAT_"):
-                                # static dependencies must not consider other branches or leave the current function scope
+                                # static dependencies must not leave the current function scope
+                                # source and target have to share a parent function context.
+
+                                # TODO (or consider other branches)
                                 for source_ctx in source_contexts:
                                     for target_ctx in target_contexts:
                                         if source_ctx == target_ctx:
                                             continue
-                                        warnings.warn("Not yet implemented: adding static dependencies to the graph.")
-                                        # source and target have to share a parent function context.
+                                        # check for shared closest function parent
+                                        source_parent_function_ctxs = [
+                                            c for c in source_ctx.get_ancestor_contexts() if type(c) == FunctionContext
+                                        ]
+                                        target_parent_function_ctxs = [
+                                            c for c in target_ctx.get_ancestor_contexts() if type(c) == FunctionContext
+                                        ]
+                                        if (
+                                            len(source_parent_function_ctxs) == 0
+                                            or len(target_parent_function_ctxs) == 0
+                                        ):
+                                            # no shared parent function context can exist
+                                            continue
+                                        if source_parent_function_ctxs[0] != target_parent_function_ctxs[0]:
+                                            # closest parent function contexts are not equal.
+                                            # static dependencies are only valid within a functions scope.
+                                            continue
 
-                                        # if source and target are both located in the same loop, they have to be located in the same loop iteration.,
-                                        # if only one of them is located in a loop, the other one must be located in the
-                                        #
+                                        for var_info in var_infos:
+                                            var_name = var_info if "(" not in var_info else var_info.split("(")[0]
+                                            memory_region = (
+                                                None
+                                                if "(" not in var_info
+                                                else MemoryRegion(var_info.split("(")[1].strip(")"))
+                                            )
+                                            # remove DYN_ or STAT_ prefix from dep_type to get the actual dependency type
+                                            clean_dep_type = dep_type.replace("STAT_", "")
+                                            dep_type_enum_obj = (
+                                                DepType[clean_dep_type]
+                                                if clean_dep_type in DepType.__members__
+                                                else None
+                                            )
+                                            dependency = Dependency(type=EdgeType.DATA)
 
-                            #                                        if source_ctx.get_enclosing_function() != target_ctx.get_enclosing_function():
-                            #                                            # skip dependency as it leaves the current function
-                            #                                            continue
+                                            dependency.dtype = dep_type_enum_obj
+                                            dependency.var_name = var_name
+                                            dependency.memory_region = memory_region
+                                            dependency.origin = (
+                                                DepOrigin.STATIC_ANALYSIS
+                                                if dep_type.startswith("STAT_")
+                                                else DepOrigin.DYNAMIC_ANALYSIS
+                                            )
 
-                            # for var_info in var_infos:
-                            #     var_name = var_info if "(" not in var_info else var_info.split("(")[0]
-                            #     memory_region = (
-                            #         None
-                            #         if "(" not in var_info
-                            #         else MemoryRegion(var_info.split("(")[1].strip(")"))
-                            #     )
-                            #     # remove STAT_ prefix from dep_type to get the actual dependency type
-                            #     clean_dep_type = dep_type.replace("STAT_", "")
-                            #     dep_type_enum_obj = (
-                            #         DepType[clean_dep_type] if clean_dep_type in DepType.__members__ else None
-                            #     )
-                            #     dependency = Dependency(type=EdgeType.DATA)
-                            #
-                            #                                            dependency.dtype = dep_type_enum_obj
-                            #                                            dependency.var_name = var_name
-                            #                                            dependency.memory_region = memory_region
-                            #
-                            #                                            source_ctx.register_outgoing_dependency(target_ctx, dependency)
+                                            # ignore WAW, as there is no data flow
+                                            if dependency.dtype == DepType.WAW:
+                                                continue
+                                            # ignore INIT as there is no data flow
+                                            if dependency.dtype == DepType.INIT:
+                                                continue
+
+                                            source_ctx.register_outgoing_dependency(target_ctx, dependency)
                             else:
                                 # dynamic dependencies are allowed to leave the current function
                                 # register dependencies between all pairs of source and target contexts
@@ -2429,6 +2684,11 @@ class TaskGraph(Plottable, object):
                                             dependency.dtype = dep_type_enum_obj
                                             dependency.var_name = var_name
                                             dependency.memory_region = memory_region
+                                            dependency.origin = (
+                                                DepOrigin.STATIC_ANALYSIS
+                                                if dep_type.startswith("STAT_")
+                                                else DepOrigin.DYNAMIC_ANALYSIS
+                                            )
 
                                             # ignore WAW, as there is no data flow
                                             if dependency.dtype == DepType.WAW:
@@ -2437,14 +2697,7 @@ class TaskGraph(Plottable, object):
                                             if dependency.dtype == DepType.INIT:
                                                 continue
 
-                                            # DEBUG
-                                            print("Registering dependency: ", dependency)
-                                            # !DEBUG
                                             source_ctx.register_outgoing_dependency(target_ctx, dependency)
-
-        # plt.ioff()
-        # self.plot_context_debug_graph(plt.gca())
-        # plt.pause(5)
 
         logger.info(
             "Inserting data dependencies from files: "
@@ -2453,10 +2706,6 @@ class TaskGraph(Plottable, object):
             + str(static_dependency_file)
             + " completed."
         )
-
-        # import sys
-
-        # sys.exit(0)
 
     def __validate_data_dependencies(self) -> None:
         self.__validate_data_dependencies_using_initializations()
@@ -2518,17 +2767,6 @@ class TaskGraph(Plottable, object):
         for source_ctx in tqdm(self.contexts):
             source_call_stack: Optional[List[Context]] = None  # only calculate, if it is required
             for target_ctx, dep in source_ctx.outgoing_dependencies:
-                #                print()
-                #                print(
-                #                    "PARSING: "
-                #                    + str(dep.source_line)
-                #                    + " "
-                #                    + str(dep.sink_line)
-                #                    + " "
-                #                    + str(dep.dtype)
-                #                    + " "
-                #                    + str(dep.var_name)
-                #                )
                 # check if metadata exists
                 if (
                     dep.metadata_inter_call_dep is None
@@ -2553,15 +2791,9 @@ class TaskGraph(Plottable, object):
                 if source_call_stack is None:
                     source_call_stack = get_context_call_stack(source_ctx)
                 target_call_stack = get_context_call_stack(target_ctx)
-                #                print("Source CS: " + str(source_call_stack))
-                #                print("Target CTX: " + target_ctx.get_label())
-                #                print("Target CS: " + str(target_call_stack))
                 # get LineIDs from callstacks
                 converted_source_call_stack = convert_callstacks_to_lineIDs(self.pet, source_call_stack)
                 converted_target_call_stack = convert_callstacks_to_lineIDs(self.pet, target_call_stack)
-
-                #                print("Conv. Source.CS: " + str(converted_source_call_stack))
-                #                print("Conv. Target.CS: " + str(converted_target_call_stack))
 
                 skip_further_checks = False
 
@@ -2570,8 +2802,6 @@ class TaskGraph(Plottable, object):
                     filtered_source_call_stack = [
                         elem[1] for elem in converted_source_call_stack if elem[0] != CallStackElementType.ITERATION
                     ]
-                    #                    print("FSCS: " + str(filtered_source_call_stack))
-                    #                    print("SANC: " + str(dep.metadata_sink_ancestors))
 
                     for entry in dep.metadata_sink_ancestors:
                         if entry not in filtered_source_call_stack:
@@ -2589,8 +2819,6 @@ class TaskGraph(Plottable, object):
                     filtered_target_call_stack = [
                         elem[1] for elem in converted_target_call_stack if elem[0] != CallStackElementType.ITERATION
                     ]
-                    #                    print("FTCS: " + str(filtered_target_call_stack))
-                    #                    print("TANC: " + str(dep.metadata_source_ancestors))
                     for entry in dep.metadata_source_ancestors:
                         if entry not in filtered_target_call_stack:
                             logger.warning(
@@ -2617,8 +2845,6 @@ class TaskGraph(Plottable, object):
                         for elem in converted_overlapping_stack_elements
                         if elem[0] == CallStackElementType.FUNCTION
                     ]
-                    #                    print("IAC-FCOSE: " + str(filtered_conv_ov_stack_elements))
-                    #                    print("IAC-MICD: " + str(dep.metadata_intra_call_dep))
                     for entry in dep.metadata_intra_call_dep:
                         if entry not in filtered_conv_ov_stack_elements:
                             logger.warning("found intra-call mismatch: " + entry)
@@ -2665,8 +2891,7 @@ class TaskGraph(Plottable, object):
                     loop_filtered_conv_ov_stack_elements = [
                         elem[1] for elem in converted_overlapping_stack_elements if elem[0] == CallStackElementType.LOOP
                     ]
-                    #                    print("IAI-IFCOSE: " + str(iteration_filtered_conv_ov_stack_elements))
-                    #                    print("IAI-MIID: " + str(dep.metadata_intra_iteration_dep))
+
                     for entry in dep.metadata_intra_iteration_dep:
                         if entry not in loop_filtered_conv_ov_stack_elements:
                             # source and target not in the same loop.
@@ -2709,8 +2934,7 @@ class TaskGraph(Plottable, object):
                     ]
                     converted_overlapping_loop_nodes = convert_callstacks_to_lineIDs(self.pet, overlapping_parent_loops)
                     filtered_conv_ov_loop_nodes = [elem[1] for elem in converted_overlapping_loop_nodes]
-                    #                    print("FCOLN: " + str(filtered_conv_ov_loop_nodes))
-                    #                    print("MIEID: " + str(dep.metadata_inter_iteration_dep))
+
                     for entry in dep.metadata_inter_iteration_dep:
                         if entry not in filtered_conv_ov_loop_nodes:
                             logger.warning("found inter-iteration mismatch: " + entry)
@@ -2725,25 +2949,14 @@ class TaskGraph(Plottable, object):
 
         self.__print_context_statistics("Pre validation")
 
-        # remove invalid dependencies
-        #        print("LEN INVALID PRE: ", len(invalid_deps))
+        # remove invalid dependencies)
         invalid_deps = [entry for entry in invalid_deps if entry not in valid_deps]
-        #        print("LEN INVALID PRE: ", len(invalid_deps))
         for source_ctx, target_ctx, dep in invalid_deps:
             tpl = (target_ctx, dep)
             if tpl in source_ctx.outgoing_dependencies:
                 source_ctx.outgoing_dependencies.remove(tpl)
 
         self.__print_context_statistics("Post validation")
-
-    #        ## DEBUG
-    #        # print remaining dependencies
-    #        print("REMAINING DEPS: ")
-    #        for ctx in self.contexts:
-    #            print("CTX: " + ctx.get_label())
-    #            for target_ctx, dep in ctx.outgoing_dependencies:
-    #                print("--> " + str(dep.source_line) + " " + str(dep.sink_line) + " " + str(dep.dtype) + " " + str(dep.var_name))
-    #       ## !DEBUG
 
     def __print_context_statistics(self, label: str = "") -> None:
         # prepare context dependency count
@@ -2866,15 +3079,41 @@ class TaskGraph(Plottable, object):
                 copied_nodes[node] = node_copy
             copied_iteration_nodes.append(copied_nodes[node])
         # copy edges
-        try:
-            for source in [
-                n for n in iteration_nodes if n != iteration_exit
-            ]:  # do not copy outgoing edges of the path exit
-                for succ in self.get_successors(source):
+
+        for source in [
+            n for n in iteration_nodes if n != iteration_exit
+        ]:  # do not copy outgoing edges of the path exit
+            for succ in self.get_successors(source):
+                try:
                     self.add_edge(copied_nodes[source], copied_nodes[succ])
-        except KeyError:
-            print("ERROR AT: source: ", source.get_label(), "  succ: ", succ.get_label())
-            plt.ioff()
-            self.plot()
+                except KeyError:
+                    # plt.ioff()
+                    # self.plot(highlight_nodes=[source, succ])
+                    warnings.warn(
+                        "could not draw edge between "
+                        + source.get_label()
+                        + " and "
+                        + succ.get_label()
+                        + " due to a KeyError"
+                    )
 
         return copied_nodes, copied_iteration_nodes, copied_nodes[iteration_entry], copied_nodes[iteration_exit]
+
+    def get_loop_header_context(self, loop: LoopParentContext) -> Optional[WorkContext]:
+        candidates: List[WorkContext] = []
+        for ctx_1 in loop.contained_contexts:
+            if not type(ctx_1) == WorkContext:
+                continue
+            # find a context ctx_1 without predecessor, i.e, the entry into the loops body, thus the loop header
+            is_loop_header = True
+            for ctx_2 in loop.contained_contexts:
+                if ctx_1 == ctx_2:
+                    continue
+                if ctx_1 == ctx_2.successor:
+                    is_loop_header = False
+                    break
+            if not is_loop_header:
+                continue
+            else:
+                return ctx_1
+        return None

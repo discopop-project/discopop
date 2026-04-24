@@ -37,6 +37,8 @@ from discopop_library.ParallelRegionMerger.inflated_parallel_region_pattern impo
     run_detection as detect_inflated_parallel_regions,
 )
 from discopop_explorer.pattern_detectors.new_task_detector import run_detection as detect_tasking
+from discopop_explorer.pattern_detectors.new_do_all_detector import run_detection as detect_do_all_new
+from discopop_explorer.pattern_detectors.new_reduction_detector import run_detection as detect_reduction_new
 
 from GUI.Visualizers.Base import Base as Visualizer
 
@@ -87,7 +89,7 @@ class PatternDetectorX(object):
         jobs: Optional[int],
         enable_task_graph_plot: bool,
         enable_context_graph_plot: bool,
-        visualizer: Visualizer | None = None
+        visualizer: Visualizer | None = None,
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         self.__merge(False, True)
@@ -108,6 +110,10 @@ class PatternDetectorX(object):
 
         # detect parallel tasks
         res.patterns.task = detect_tasking(self.pet, task_graph, visualizer)
+
+        res.patterns.do_all = detect_do_all_new(self.pet, task_graph)
+
+        res.patterns.reduction = detect_reduction_new(self.pet, task_graph)
 
         # reduction before doall!
 

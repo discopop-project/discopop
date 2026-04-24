@@ -37,6 +37,8 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
   std::string loopEndLine = dp_reduction_CFA(F, loop, file_id);
   loop_info.end_line = loopEndLine;
   loop_info.function_name = string((basic_blocks[1]->getParent()->getName()));
+  loop_info.loop_id = get_or_register_loop_id(loop);
+
   loops_.push_back(loop_info);
 
   // call 'instrument_loop' on all its subloops

@@ -728,6 +728,10 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
     // get loops contained in F
     auto contained_loops = get_loopIDs_in_function_body(F);
     auto sequentialized_contained_loops = sequentialize_contained_loops(contained_loops);
+    cerr << "seq_contained_loops: " << std::endl;
+    for (auto s : sequentialized_contained_loops){
+      cerr << " --> " << s << std::endl;
+    }
     auto loop_entry_instructionIDs = get_loop_entry_instructionIDs(F);
     auto loop_exit_instructionIDs = get_loop_exit_instructionIDs(F);
     auto loop_increment_instructionIDs = get_loop_increment_instructionIDs(F);
@@ -852,14 +856,14 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
           }
           else if(transition_type == TRANSITION_TYPE_INCREMENTLOOP){
             trigger_instruction = loop_increment_instructionIDs[loop_id];
+            cerr << "LOOP_ID: " << loop_id << std::endl;
+            cerr << "TRIGGER: " << trigger_instruction << std::endl;
           }
           // create edge
           calltree.addEdge(source_node, target_node, trigger_instruction);
         }
       }
     }
-
-
 
 
     // get connection between loops and called functions inside the loops
@@ -1109,12 +1113,18 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
       std::vector<std::tuple<StaticCallPathTreeNode*, int32_t, StaticCallPathTreeNode*>> new_elements_buffer;
       std::vector<std::tuple<uint32_t, int32_t, uint32_t>> new_transitions_buffer;
       for(auto succ_pair: new_current_path->base_node->successors){
-        int32_t trigger_instructionID = succ_pair.first;  // currently unused!
+        int32_t trigger_instructionID = succ_pair.first;
         for(auto succ: succ_pair.second){
+
           // check for cycles
           std::unordered_set<StaticCalltreeNode*> nodes_on_path;
           StaticCallPathTreeNode* current = new_current_path;
           StaticCallPathTreeNode* cycle_prefix_path = nullptr;
+
+          // TEST to fix cycle search
+          nodes_on_path.insert(succ);
+          // !TEST
+
           while(current->base_node != nullptr){ // traverse upwards until root
             if(nodes_on_path.count(current->base_node) > 0){
               // cycle found
@@ -1197,7 +1207,7 @@ StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::uno
   // -> process stack concurrently
 
 
-  unsigned int worker_count = std::thread::hardware_concurrency();
+  unsigned int worker_count = 1; // std::thread::hardware_concurrency();
   if(worker_count == 0){
     worker_count = 1; // fallback, if concurrency could not be determined.
   }

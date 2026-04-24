@@ -67,7 +67,7 @@ def suggest_parallel_regions(pet: PEGraphX, suggestions: List[TaskParallelismInf
             continue
         last_node = last_node
         region_suggestions.append(
-            ParallelRegionInfo(parent, TPIType.PARALLELREGION, last_node.start_position(), last_node.end_position())
+            ParallelRegionInfo(parent, TPIType.PARALLELREGION, last_node.start_line, last_node.end_line)
         )
     return region_suggestions
 

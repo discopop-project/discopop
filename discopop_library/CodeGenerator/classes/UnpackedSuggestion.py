@@ -206,7 +206,7 @@ class UnpackedSuggestion(object):
         pragmas.append(pragma)
         return pragmas
 
-    def __get_task_pragmas(self) -> List[Pragma]:
+    def __get_task_pragmas(self, contained_patterns: Optional[Dict[str, List[str]]]) -> List[Pragma]:
         pragmas: List[Pragma] = []
         if self.values["type"] == "TASKLOOP":
             pragma = Pragma()
@@ -214,15 +214,63 @@ class UnpackedSuggestion(object):
             pragma.start_line = self.start_line
             pragma.end_line = self.end_line
             pragma.pragma_str = " ".join(self.values["pragma"])
-            print("--> Pragma STR: ", pragma.pragma_str)
             pragmas.append(pragma)
         elif self.values["type"] == "TASK":
             pragma = Pragma()
             pragma.file_id = self.file_id
-            pragma.start_line = self.start_line
-            pragma.end_line = self.end_line
-            pragma.pragma_str = " ".join(self.values["pragma"])
+            pragma.start_line = int(self.values["region_start_line"])  # self.start_line
+            pragma.end_line = int(self.values["region_end_line"])  # self.end_line
+            pragma.pragma_str += " ".join(self.values["pragma"])
             pragmas.append(pragma)
+        elif self.values["type"] == "PARALLELREGION":
+            parallel_region_pragma = Pragma()
+            parallel_region_pragma.file_id = self.file_id
+            parallel_region_pragma.start_line = int(self.values["region_start_line"])
+            parallel_region_pragma.end_line = int(self.values["region_end_line"])
+            parallel_region_pragma.pragma_position = PragmaPosition.BEFORE_START
+            parallel_region_pragma.pragma_str = self.values["pragma"][0]
+
+            single_pragma = Pragma()
+            single_pragma.file_id = self.file_id
+            single_pragma.start_line = int(self.values["region_start_line"])
+            single_pragma.end_line = int(self.values["region_end_line"])
+            single_pragma.pragma_position = PragmaPosition.BEFORE_START
+            single_pragma.pragma_str = self.values["pragma"][1]
+
+            entry_brace = Pragma()
+            entry_brace.file_id = self.file_id
+            entry_brace.start_line = int(self.values["region_start_line"])
+            entry_brace.end_line = int(self.values["region_end_line"])
+            entry_brace.pragma_position = PragmaPosition.BEFORE_START
+            entry_brace.pragma_str = "{"
+            single_pragma.children.append(entry_brace)
+
+            # add contained pragmas as children
+            child_pragmas: List[Pragma] = []
+            if contained_patterns is not None:
+                for contained_pattern_id in self.values["contains_patterns"]:
+                    for pattern_type in contained_patterns:
+                        for pattern_str in contained_patterns[pattern_type]:
+                            pattern_dict = json.loads(pattern_str)
+                            if pattern_dict["pattern_id"] == contained_pattern_id:
+                                ups = UnpackedSuggestion(pattern_type, pattern_dict)
+                                child_pragmas += ups.get_pragmas(contained_patterns)
+
+            for cp in child_pragmas:
+                single_pragma.children.append(cp)
+
+            exit_brace = Pragma()
+            exit_brace.file_id = self.file_id
+            exit_brace.start_line = int(self.values["region_start_line"])
+            exit_brace.end_line = int(self.values["region_end_line"])
+            exit_brace.pragma_position = PragmaPosition.BEFORE_END
+            exit_brace.pragma_str = "}"
+
+            single_pragma.children.append(exit_brace)
+
+            parallel_region_pragma.children.append(single_pragma)
+
+            pragmas.append(parallel_region_pragma)
         elif self.values["type"] == "TASKWAIT":
             pragma = Pragma()
             pragma.file_id = self.file_id
@@ -568,7 +616,7 @@ class UnpackedSuggestion(object):
             pragmas += self.__get_do_all_and_reduction_pragmas(execute_on_gpu)
             return pragmas
         elif self.type == "task":
-            pragmas += self.__get_task_pragmas()
+            pragmas += self.__get_task_pragmas(contained_patterns=contained_patterns)
         elif self.type == "pipeline":
             pragmas += self.__get_pipeline_pragmas()
         elif self.type == "simple_gpu":

@@ -121,4 +121,5 @@ struct loop_info_t {
   std::string start_line;
   std::string end_line;
   std::string function_name;
+  int loop_id;
 };

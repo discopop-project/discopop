@@ -10,7 +10,6 @@ from typing import Optional, Tuple, Union
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.Node import Node
 
-
 TGNodeID = int
 PETNodeID = Optional[NodeID]
 PETNode = Node

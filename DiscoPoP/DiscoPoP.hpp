@@ -258,6 +258,8 @@ public:
 
   void getFunctionReturnLines(Region *TopRegion, Node *root);
 
+  int32_t get_or_register_loop_id(llvm::Loop* L);
+
   // functions to get list of global variables
   void collectGlobalVariables();
 
@@ -370,6 +372,7 @@ struct container_hash {
   std::vector<loop_info_t> loops_;
   std::vector<instr_info_t> instructions_;
   std::map<std::string, int> path_to_id_;
+  std::map<llvm::Loop*, int> loop_to_id;
 
   // DPReduction end
 

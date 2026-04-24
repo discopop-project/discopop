@@ -13,6 +13,7 @@ from typing import Dict, Type, Callable
 from GUI.Visualizers.Base import Base
 from GUI.Types.FrameT import FrameT
 
+
 class WithSidebar(Base):
     def __init__(self) -> None:
         super().__init__()
@@ -21,7 +22,9 @@ class WithSidebar(Base):
         self._root.grid_columnconfigure(0, weight=1)
 
         # Draggable split: sidebar | content | filter
-        self._pane = tk.PanedWindow(self._root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, opaqueresize=False, bg="black")
+        self._pane = tk.PanedWindow(
+            self._root, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, opaqueresize=False, bg="black"
+        )
         self._pane.grid(row=0, column=0, sticky="nsew")
 
         # Sidebar
@@ -29,16 +32,10 @@ class WithSidebar(Base):
         self._sidebar_container.grid_rowconfigure(0, weight=1)
         self._sidebar_container.grid_columnconfigure(0, weight=1)
 
-        self._sidebar_canvas = tk.Canvas(
-            self._sidebar_container,
-            highlightthickness=0,
-            width=220
-        )
+        self._sidebar_canvas = tk.Canvas(self._sidebar_container, highlightthickness=0, width=220)
 
         self._sidebar_scrollbar = tk.Scrollbar(
-            self._sidebar_container,
-            orient="vertical",
-            command=self._sidebar_canvas.yview
+            self._sidebar_container, orient="vertical", command=self._sidebar_canvas.yview
         )
 
         self._sidebar_canvas.grid(row=0, column=0, sticky="nsew")
@@ -47,11 +44,7 @@ class WithSidebar(Base):
         self._sidebar = tk.Frame(self._sidebar_canvas)
         self._sidebar.grid_columnconfigure(0, weight=1)
 
-        self._sidebar_window = self._sidebar_canvas.create_window(
-            (0, 0),
-            window=self._sidebar,
-            anchor="nw"
-        )
+        self._sidebar_window = self._sidebar_canvas.create_window((0, 0), window=self._sidebar, anchor="nw")
 
         self._sidebar_canvas.configure(yscrollcommand=self._sidebar_scrollbar.set)
 
@@ -68,26 +61,16 @@ class WithSidebar(Base):
         self._filter_container.grid_rowconfigure(0, weight=1)
         self._filter_container.grid_columnconfigure(0, weight=1)
 
-        self._filter_scrollbar = tk.Scrollbar(
-            self._filter_container,
-            orient="vertical"
-        )
+        self._filter_scrollbar = tk.Scrollbar(self._filter_container, orient="vertical")
 
-        self._filter = tk.Text(
-            self._filter_container,
-            wrap="word",
-            yscrollcommand=self._filter_scrollbar.set,
-            width=30
-        )
+        self._filter = tk.Text(self._filter_container, wrap="word", yscrollcommand=self._filter_scrollbar.set, width=30)
 
         self._filter_scrollbar.config(command=self._filter.yview)
         self._filter.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 2))
         self._filter_scrollbar.grid(row=0, column=1, sticky="ns", pady=(5, 2))
 
         self._filter_button = tk.Button(
-            self._filter_container,
-            text="Apply Filter",
-            command=self._on_filter_button_click
+            self._filter_container, text="Apply Filter", command=self._on_filter_button_click
         )
 
         self._filter_button.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=(2, 5))
@@ -126,21 +109,11 @@ class WithSidebar(Base):
         def on_selector_click(frame_name: str = name) -> None:
             self.show_frame(frame_name)
 
-        frame_selector = tk.Button(
-            self._sidebar,
-            text = name,
-            command = on_selector_click
-        )
+        frame_selector = tk.Button(self._sidebar, text=name, command=on_selector_click)
 
         self._frame_selectors[name] = frame_selector
 
-        frame_selector.grid(
-            row=len(self._frame_selectors) - 1,
-            column=0,
-            sticky="ew",
-            padx=5,
-            pady=2
-        )
+        frame_selector.grid(row=len(self._frame_selectors) - 1, column=0, sticky="ew", padx=5, pady=2)
 
         if self._current_frame_name is None:
             self.show_frame(name)
@@ -157,7 +130,7 @@ class WithSidebar(Base):
 
     def delete_frame(self, name: str) -> None:
         super().delete_frame(name)
-        
+
         selector = self.get_frame_selector(name)
 
         selector.destroy()

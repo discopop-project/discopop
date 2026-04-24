@@ -32,7 +32,6 @@ void DiscoPoP::dp_reduction_insert_functions() {
   std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
   tmp += "/loop_meta.txt";
   loop_metadata_file.open(tmp.data());
-  int loop_id = 1;
   llvm::Type *loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ctx_);
   //llvm::ArrayRef<llvm::Type *> loop_incr_fn_args();
   vector<llvm::Type *> loop_incr_fn_args;
@@ -48,12 +47,12 @@ void DiscoPoP::dp_reduction_insert_functions() {
 //    llvm::Value *val2 = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), 0);  // instruction id will be replaced after assigning unique instruction ids
     //llvm::ArrayRef<llvm::Value *> args(val, val2);
     vector<llvm::Value*> args;
-    args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_id));
+    args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_info.loop_id));
     args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), 0));  // instruction id will be replaced after assigning unique
 
     llvm::CallInst::Create(incr_loop_counter_callee, args, "", loop_info.first_body_instr_);
     loop_metadata_file << loop_info.file_id_ << " ";
-    loop_metadata_file << loop_id++ << " ";
+    loop_metadata_file << loop_info.loop_id << " ";
     loop_metadata_file << loop_info.line_nr_ << "\n";
   }
   loop_metadata_file.close();

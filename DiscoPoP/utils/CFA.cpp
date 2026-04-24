@@ -103,15 +103,16 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
       }
 
       if (hasValidEntry && hasValidExit) {
+        auto tmp_loop_id = get_or_register_loop_id(L);
         // Instrument loop header block.
-        instrumentLoopEntry(tmpBB, loopID);
+        instrumentLoopEntry(tmpBB, tmp_loop_id);
+
 
         // Instrument loop exit block(s).
         for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
              ++EI) {
-          instrumentLoopExit(*EI, loopID);
+          instrumentLoopExit(*EI, tmp_loop_id);
         }
-        ++loopID;
       }
     }
   }

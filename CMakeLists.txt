@@ -162,7 +162,7 @@ add_custom_target(
 add_custom_target(
     install_python_modules
     COMMENT "Installing python modules and dependencies"
-    COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
+    COMMAND ${Python3_VENV_EXECUTABLE} -m pip install -e ${DiscoPoP_SOURCE_DIR}
 )
 
 add_custom_target(

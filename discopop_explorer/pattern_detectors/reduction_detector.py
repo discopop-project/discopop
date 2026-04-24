@@ -42,7 +42,7 @@ from discopop_explorer.classes.variable import Variable
 class ReductionInfo(PatternInfo):
     """Class, that contains reduction detection result"""
 
-    def __init__(self, pet: PEGraphX, node: Node):
+    def __init__(self, pet: PEGraphX, node: Node, reduction: Optional[List[Variable]] = None):
         """
         :param pet: PET graph
         :param node: node, where reduction was detected
@@ -50,12 +50,13 @@ class ReductionInfo(PatternInfo):
         PatternInfo.__init__(self, node)
         self.pragma = "#pragma omp parallel for"
 
-        fp, p, lp, s, r = classify_loop_variables(pet, node)
-        self.first_private = fp
-        self.private = p
-        self.last_private = lp
-        self.shared = s
-        self.reduction = r
+        # fp, p, lp, s, r = classify_loop_variables(pet, node)
+
+        self.first_private: List[Variable] = []
+        self.private: List[Variable] = []
+        self.last_private: List[Variable] = []
+        self.shared: List[Variable] = []
+        self.reduction: List[Variable] = [] if reduction is None else reduction
         self.pattern_tag = self.get_tag()
         self.collapse_level = 1
 

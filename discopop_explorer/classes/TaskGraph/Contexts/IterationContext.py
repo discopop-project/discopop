@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 from discopop_explorer.classes.TaskGraph.Aliases import PETNode, PETNodeID
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
@@ -15,10 +15,12 @@ from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 class IterationContext(Context):
     belongs_to_context: Context
     contained_pet_nodes: Set[PETNode]
+    loopstate_iteration_ids: List[int]
 
-    def __init__(self, parent_context: Context):
+    def __init__(self, parent_context: Context, loopstate_iteration_ids: List[int]):
         self.belongs_to_context = parent_context
         self.contained_pet_nodes = set()
+        self.loopstate_iteration_ids = loopstate_iteration_ids
         super().__init__()
 
     def add_pet_node(self, pet_node: PETNode) -> None:
@@ -31,4 +33,4 @@ class IterationContext(Context):
         return "green"
 
     def get_label(self) -> str:
-        return "Iteration"
+        return "Iteration " + str(self.loopstate_iteration_ids)

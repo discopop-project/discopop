@@ -185,3 +185,20 @@ void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
     }
   }
 }
+
+
+int32_t DiscoPoP::get_or_register_loop_id(llvm::Loop* L){
+  // Check if loop is already registered
+    int32_t tmp_loop_id;
+    auto pos = loop_to_id.find(L);
+    if (pos != loop_to_id.end()) {
+        // L found. Return loop id
+        tmp_loop_id = pos->second;
+    } else {
+        // L not found. register loop id
+        tmp_loop_id = loopID;
+        loop_to_id.insert(make_pair(L, tmp_loop_id));
+        loopID++;
+    }
+    return tmp_loop_id;
+}

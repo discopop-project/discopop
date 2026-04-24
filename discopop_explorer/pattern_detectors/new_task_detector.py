@@ -8,10 +8,12 @@
 import logging
 import threading
 from typing import List, Optional, Set, Tuple, cast
+import warnings
 
 from tqdm import tqdm  # type: ignore
 
 
+from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.ContextTaskGraph import ContextTaskGraph
@@ -21,12 +23,17 @@ from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import Functio
 from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
 from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
+from discopop_explorer.classes.TaskGraph.Contexts.TaskParentContext import TaskParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TPIType, TaskParallelismInfo
 from GUI.Visualizers.Base import Base as Visualizer
+from discopop_explorer.pattern_detectors.task_parallelism.classes import (
+    ParallelRegionInfo,
+    TPIType,
+    TaskParallelismInfo,
+)
 
 logger = logging.getLogger("Explorer").getChild("Tasking")
 
@@ -37,9 +44,10 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
 
     logger.info("--> Constructing context task graph from main function...")
     context_task_graph = ContextTaskGraph(task_graph, visualizer)
+    simplification_result = context_task_graph.simplify_graph()
 
     # result += identify_simple_taskloop(pet, task_graph)
-    result += identify_simple_tasking(context_task_graph)
+    result += identify_simple_tasking(context_task_graph, simplification_result)
 
     # identify immediate successive contexts with no dependencies between them
     logger.info("--> Identify tasking with data sharing clauses ... TODO")
@@ -54,15 +62,15 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
 
 
 def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Optional[Set[Context]] = None) -> None:
-    if (context_task_graph.plottable() == False):
+    if context_task_graph.plottable() == False:
         return
-    
+
     def draw_plots() -> None:
         [ax1, ax2, ax3, ax4] = context_task_graph.create_multi_plot(
             "Graphs",
             ["Task Graph", "Task graph (context graph)", "Task graph (context debug graph)", "Context task graph"],
             2,
-            2
+            2,
         )
 
         print("Plotting task graph...")
@@ -79,8 +87,7 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
 
         print("Plotting context task graph...")
         context_task_graph.update_plot(
-            ax4,
-            highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
+            ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
         )
 
         ax1 = context_task_graph.create_plot("Task Graph")
@@ -102,8 +109,7 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
 
         print("Plotting separate context task graph...")
         context_task_graph.update_plot(
-            ax4,
-            highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
+            ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
         )
 
     def on_filter(filter_text: str) -> None:
@@ -123,152 +129,128 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
             except KeyError:
                 pass
 
-        draw_plots()
-
     context_task_graph.set_filter_callback(on_filter)
     draw_plots()
     context_task_graph.run_visualizer()
 
 
-def identify_simple_tasking(context_task_graph: ContextTaskGraph) -> List[TaskParallelismInfo]:
-    """NOTE: THIS SHOULD BE REMOVED / DISABLED, AS IT IS COVERED BY THE TASK DETECTION DURING GRAPH SIMPLIFICATION."""
-    logger.info("Identifying trivial tasking potential...")
-    patterns: List[TaskParallelismInfo] = []
-    fork_join_pairs: List[Tuple[Context, Context]] = []
-    logger.info("--> checking nodes")
-    for node in tqdm(context_task_graph.graph.nodes):
-        # ignore non-root descendants
+def identify_simple_tasking(
+    ctg: ContextTaskGraph, simplification_results: List[TaskParentContext]
+) -> List[PatternInfo]:
+    """Analyzes the results of the graph simplification and create simple tasking patterns."""
+    patterns: List[PatternInfo] = []
+    logger.info("Extracting task suggestions from graph simplification results")
 
-        # identify fork nodes
-        successors = context_task_graph.get_successors(node)
-        if len(successors) < 2:
+    def get_file_id(lid: LineID) -> int:
+        return int(lid.split(":")[0])
+
+    def get_line_num(lid: LineID) -> int:
+        return int(lid.split(":")[1])
+
+    task_group_num = 0
+
+    for tpc in simplification_results:
+
+        from discopop_explorer.pattern_detectors.task_parallelism.classes import TPIType
+
+        if tpc.parent_context is None:
             continue
+        tpc_parent_pet_node = tpc.parent_context.get_first_pet_node(ctg.pet)
+        if tpc_parent_pet_node is None:
+            continue
+        parent_scopes = tpc.parent_context.get_code_scope(ctg.pet, inclusive=False)
+        parent_scope_file_id = tpc_parent_pet_node.file_id
+        parent_scope_lines = [get_line_num(s) for s in parent_scopes]
+        parent_scopes_min_line = min(parent_scope_lines)
+        parent_scopes_max_line = max(parent_scope_lines)
 
-        # restrict search space. Require at least one inlined function as a child of the fork node
-        has_inlined_function = False
-        for succ in successors:
-            if isinstance(succ, InlinedFunctionContext):
-                has_inlined_function = True
+        # parent_scope_start_line
+        # print("TPC")
+        # print("parent scopes: ", parent_scopes)
+        # print("parent scopes file id:", parent_scope_file_id)
+        # print("parent scopes min line: ", parent_scopes_min_line)
+        # print("parent scopes max line: ", parent_scopes_max_line)
+
+        # TODO: filter scopes by relevant file id.
+        # TODO determine task scopes properly
+        # TODO create PatternInfo representing the identified tasks
+        # TODO: check if data sharing clauses are required
+        invalid = False
+        pattern_objects: List[TaskParallelismInfo] = []
+        parallel_region_start: Optional[int] = None
+        parallel_region_end: Optional[int] = None
+
+        for task in tpc.registered_tasks:
+            task_scopes: List[LineID] = []
+            task_scopes += task.get_code_scope(ctg.pet, inclusive=True)
+            task_scopes = list(set(task_scopes))
+            #            task_scope_file_id = task_pet_node.file_id
+            task_scope_line_nums = [get_line_num(ts) for ts in task_scopes if get_file_id(ts) == parent_scope_file_id]
+            filtered_task_scope_line_nums = [
+                n for n in task_scope_line_nums if n >= parent_scopes_min_line and n <= parent_scopes_max_line
+            ]
+            if len(filtered_task_scope_line_nums) == 0:
+                warnings.warn(
+                    "Empty task scope. Skipping Task suggestion. Parent scope: "
+                    + str(parent_scope_file_id)
+                    + ":"
+                    + str(parent_scopes_min_line)
+                    + " - "
+                    + str(parent_scopes_max_line)
+                )
+                invalid = True
                 break
-        if not has_inlined_function:
-            continue
-
-        # node is a fork
-        # check if a clean join node exists, i.e., if all branches arrive at the same node without crossing each other
-        frontiers: List[Tuple[Context, int]] = [(succ, 1) for succ in successors]
-        visited: Set[Context] = set(successors)
-        join_nodes: List[Context] = []
-
-        while len(frontiers) > 0:
-            current_frontier, counter = frontiers.pop()
-            successors = context_task_graph.get_successors(current_frontier)
-            predecessors = context_task_graph.get_predecessors(current_frontier)
-            # check if the end of the path is reached
-            if len(successors) == 0:
-                join_nodes.append(current_frontier)
-                continue
-            # decrease the counter, if a join node is encountered
-            if len(predecessors) > 1:
-                counter -= 1
-
-            # if the counter falls to zero, the join node that should belong to the original, outer fork node should be encountered
-            # -> stop the search on this path.
-            if counter == 0:
-                join_nodes.append(current_frontier)
-                continue
-
-            # increase the counter, if a fork node is encountered. After checking for counter=0 to allow join-fork-nodes
-            if len(successors) > 1:
-                counter += 1
-
-            for succ in successors:
-                if succ not in visited:
-                    frontiers.append((succ, counter))
-                    visited.add(succ)
-
-        # check if a clean join node has been found
-        # -> clean, if exactly one join node is identified along every branch
-        join_nodes = list(set(join_nodes))
-        clean_join_node: Optional[Context] = None if len(join_nodes) != 1 else join_nodes[0]
-
-        if clean_join_node is None:
-            continue
-
-        # ignore cases where the join node is a direct successor of the branch node, i.e., nothing happens in one branch
-        if clean_join_node in context_task_graph.get_successors(node):
-            continue
-
-        # tasking possible, if a clean join node has been found
-        print("----> Found clean JOIN node: " + str(clean_join_node))
-        fork_join_pairs.append((node, clean_join_node))
-
-    # convert fork-join-pairs to task entry-barrier-pairs
-    task_entry_barrier_pairs: List[Tuple[List[Context], Context]] = []
-    for tpl in fork_join_pairs:
-        # collect task entry nodes
-        task_entry_points: List[Context] = context_task_graph.get_successors(tpl[0])
-        task_entry_barrier_pairs.append((task_entry_points, tpl[1]))
-
-    #    # DEBUG
-    highlight_nodes: Set[Context] = set()
-    for tpl in fork_join_pairs:
-        highlight_nodes.add(tpl[0])
-        for succ in context_task_graph.get_successors(tpl[0]):
-            highlight_nodes.add(succ)
-        highlight_nodes.add(tpl[1])
-
-    show_all_plots(context_task_graph, highlight_nodes=highlight_nodes)
-    # !DEBUG
-
-    for tpl2 in task_entry_barrier_pairs:
-        print("FJP: ", tpl2)
-        tmp_patterns: List[TaskParallelismInfo] = []
-        # create task pattern for each entry
-        last_pet_node = None
-        for entry in tpl2[0]:
-            pet_node = entry.get_first_pet_node(context_task_graph.pet)
-            if pet_node is not None:
-                tmp_patterns.append(
-                    TaskParallelismInfo(
-                        pet_node,
-                        type=TPIType.TASK,
-                        pragma=["#pragma omp task"],
-                        pragma_line=pet_node.start_position(),
-                        first_private=[],
-                        private=[],
-                        shared=[],
-                    )
-                )
-                last_pet_node = pet_node
-
-        # create a barrier pattern for the join
-        # link the patterns together
-        barrier_location = tpl2[1].get_first_pet_node(context_task_graph.pet)
-        if barrier_location is not None:
-            tmp_patterns.append(
-                TaskParallelismInfo(
-                    barrier_location,
-                    type=TPIType.TASKWAIT,
-                    pragma=["#pragma omp taskwait"],
-                    pragma_line=barrier_location.start_position(),
-                    first_private=[],
-                    private=[],
-                    shared=[],
-                )
+            task_scope_min = min(filtered_task_scope_line_nums)
+            task_scope_max = max(filtered_task_scope_line_nums)
+            # update parallel region
+            if parallel_region_start is None:
+                parallel_region_start = task_scope_min
+            if parallel_region_end is None:
+                parallel_region_end = task_scope_max
+            if parallel_region_start > task_scope_min:
+                parallel_region_start = task_scope_min
+            if parallel_region_end < task_scope_max:
+                parallel_region_end = task_scope_max
+            fp: List[str] = []
+            p: List[str] = []
+            s: List[str] = []
+            tpi = TaskParallelismInfo(
+                tpc_parent_pet_node,
+                TPIType.TASK,
+                ["#pragma omp task"],
+                str(task_scope_min),  # LineID(str(tpc_parent_pet_node.file_id) + ":" + str(task_scope_min)),
+                fp,
+                p,
+                s,
             )
-        elif last_pet_node is not None:
-            tmp_patterns.append(
-                TaskParallelismInfo(
-                    last_pet_node,
-                    type=TPIType.TASKWAIT,
-                    pragma=["#pragma omp taskwait"],
-                    pragma_line=last_pet_node.start_position(),
-                    first_private=[],
-                    private=[],
-                    shared=[],
-                )
-            )
+            tpi.task_group.append(task_group_num)
+            tpi.region_end_line = str(
+                task_scope_max
+            )  #  LineID(str(tpc_parent_pet_node.file_id) + ":" + str(task_scope_max))
+            tpi.standalone_pattern = False
+            tpi.applicable_pattern = False
+            pattern_objects.append(tpi)
 
-        patterns += tmp_patterns
+        if invalid:
+            continue
+        # register found patterns
+        for tpi in pattern_objects:
+            patterns.append(tpi)
+
+        if parallel_region_start is None or parallel_region_end is None:
+            continue
+
+        parallel_region_pattern = ParallelRegionInfo(
+            tpc_parent_pet_node,
+            TPIType.PARALLELREGION,
+            parallel_region_start,  # LineID(str(parent_scope_file_id) + ":" + str(parallel_region_start)),
+            parallel_region_end,  # LineID(str(parent_scope_file_id) + ":" + str(parallel_region_end)),
+            task_group=[task_group_num],
+            contained_tasks=pattern_objects,
+        )
+
+        patterns.append(parallel_region_pattern)
+        # close task group
+        task_group_num += 1
 
     return patterns

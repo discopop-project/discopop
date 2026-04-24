@@ -12,6 +12,7 @@ from typing import Optional, List
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
+from discopop_explorer.enums.DepOrigin import DepOrigin
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 
@@ -31,6 +32,7 @@ class Dependency:
     metadata_inter_call_dep: Optional[List[LineID]]
     metadata_sink_ancestors: Optional[List[LineID]]
     metadata_source_ancestors: Optional[List[LineID]]
+    origin: Optional[DepOrigin] = None
 
     def __init__(self, type: EdgeType):
         self.etype = type

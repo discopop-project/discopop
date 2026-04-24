@@ -8,56 +8,73 @@
 
 import logging
 from typing import Dict, List, Optional, Set, Tuple, cast
+import warnings
 from matplotlib import pyplot as plt
 import networkx as nx  # type: ignore
 from matplotlib.axes import Axes
 from networkx import Graph
 from tqdm import tqdm  # type: ignore
+from discopop_explorer.classes.ContextTaskGraph.classes.edges import (
+    CTGEdgeInfo,
+    CTGEdgeType,
+)
+from discopop_explorer.classes.ContextTaskGraph.modifications.remove_edges.partial_transitive_reduction import (
+    partial_transitive_reduction,
+)
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
-from discopop_explorer.classes.PEGraph.Dependency import Dependency
-from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
+from discopop_explorer.classes.ContextTaskGraph.modifications.remove_edges.break_triangles import (
+    break_triangles,
+)
+from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.merge_only_childs_with_parents import (
+    merge_only_childs_with_parents,
+)
+from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.replace_trivial_branched_region import (
+    replace_trivial_branched_region,
+)
+from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.replace_trivial_task_region import (
+    replace_trivial_task_region,
+)
+from discopop_explorer.classes.ContextTaskGraph.modifications.inflate_nodes.split_taskable_control_sequence import (
+    split_taskable_control_sequence,
+)
+from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.trivial_control_sequence_simplification import (
+    trivial_control_sequence_simplification,
+)
+from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.merge_only_childs_without_successors_with_parents import (
+    merge_only_childs_without_successors_with_parents,
+)
+from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import (
+    BranchingParentContext,
+)
 from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
-from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
+from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import (
+    InlinedFunctionContext,
+)
 from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
-from discopop_explorer.classes.TaskGraph.Contexts.TaskParentContext import TaskParentContext
+from discopop_explorer.classes.TaskGraph.Contexts.TaskParentContext import (
+    TaskParentContext,
+)
 from discopop_explorer.classes.TaskGraph.Contexts.TaskEndContext import TaskEndContext
-from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
-from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
+from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import (
+    LoopParentContext,
+)
+from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import (
+    IterationContext,
+)
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from GUI.Extendables.Plottable import Plottable
 from GUI.Visualizers.Base import Base as Visualizer
 from termcolor import cprint
-from enum import IntEnum
 import matplotlib.lines as mlines
-import plotille
+import plotille  # type: ignore
+from discopop_explorer.classes.ContextTaskGraph.modifications.computationally_expensive.transitive_reduction import (
+    transitive_reduction,
+)
 
 logger = logging.getLogger("Explorer")
-
-
-class CombinedContext(Context):
-    outermost_context: Optional[Context] = None
-    def get_label(self) -> str:
-        return "CombinedCTX\ntype: " + type(self.outermost_context).__name__ + "\nsize: " + str(len(self.contained_contexts))
-    
-    def register_outermost_context(self, ctx: Context) -> None:
-        self.outermost_context = ctx
-
-
-class CTGEdgeType(IntEnum):
-    CONTROL = 1
-    DATA = 2
-
-class CTGEdgeInfo(object):
-    type: CTGEdgeType
-    dep_obj: Optional[Dependency]
-
-    def __init__(self, type: CTGEdgeType, dep_obj: Optional[Dependency] = None):
-        self.type = type
-        self.dep_obj = dep_obj
-
 
 
 class ContextTaskGraph(Plottable, object):
@@ -74,35 +91,8 @@ class ContextTaskGraph(Plottable, object):
         self.pet = task_graph.pet
         self.task_graph = task_graph
         self.graph = nx.MultiDiGraph()
-        # define updating plot window
-        fig1 = plt.figure(1)
-        self.plotting_axis = fig1.add_subplot(1, 1, 1)
-        plt.ion()
         # start processing
         self.__construct_from_task_graph()
-        try:
-            print(nx.find_cycle(self.graph))
-        except:
-            print("NO CYCLE")
-        
-        self.__simplify_graph()
-        
-        try:
-            cycle = nx.find_cycle(self.graph)
-            print("Cycle: ", cycle)
-            cycle_nodes: Set[Context] = set()
-            for tpl in cycle:
-                cycle_nodes.add(tpl[0])
-                cycle_nodes.add(tpl[1])
-            plt.ioff()
-            # self.plot(highlight_nodes=list(cycle_nodes))
-            # plt.pause(1)
-        except:
-            print("NO CYCLE")
-
-        print("Waiting for user to close the Window...")
-        # plt.show(block=True)
-        plt.ioff()
 
     def __construct_from_task_graph(self) -> None:
         """convert the given task graph to a ContextTaskGraph for Task detection. The created graph will be used to determine Forks, Barriers, and Tasks."""
@@ -124,7 +114,11 @@ class ContextTaskGraph(Plottable, object):
                     continue
                 queue += [nd for nd in self.task_graph.get_successors(current) if nd not in queue]
             for succ_ctx in successor_contexts:
-                self.add_edge(tg_node.created_context, succ_ctx, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
+                self.add_edge(
+                    tg_node.created_context,
+                    succ_ctx,
+                    edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL),
+                )
 
         # Extract branched sections
         if False:
@@ -163,13 +157,21 @@ class ContextTaskGraph(Plottable, object):
                 outside_predecessors = self.get_predecessors(current_branching_context)
                 for pred in outside_predecessors:
                     self.graph.remove_edge(pred, current_branching_context)
-                    self.add_edge(pred, replacement_node, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
+                    self.add_edge(
+                        pred,
+                        replacement_node,
+                        edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL),
+                    )
                 for node in contained_contexts:
                     for succ in self.get_successors(node):
                         if succ not in contained_contexts:
                             #            outside_successors.add(succ)
                             self.graph.remove_edge(node, succ)
-                            self.add_edge(replacement_node, succ, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
+                            self.add_edge(
+                                replacement_node,
+                                succ,
+                                edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL),
+                            )
                 # register replacements
                 for node in contained_contexts:
                     replacements[node] = replacement_node
@@ -335,7 +337,11 @@ class ContextTaskGraph(Plottable, object):
 
                 if sink_is_parent_of is not None:
                     # inward dependency found
-                    self.add_edge(sink_ctx, sink_is_parent_of, edge_info=CTGEdgeInfo(CTGEdgeType.DATA, dep_obj=dep))
+                    self.add_edge(
+                        sink_ctx,
+                        sink_is_parent_of,
+                        edge_info=CTGEdgeInfo(CTGEdgeType.DATA, dep_obj=dep),
+                    )
 
         logger.debug("--> Add inter-component dependency edges (outward)")
         for ctx in tqdm(self.graph.nodes):
@@ -363,7 +369,11 @@ class ContextTaskGraph(Plottable, object):
 
                 if source_is_parent_of is not None:
                     # outward dependency found
-                    self.add_edge(sink_is_parent_of, sink_ctx, edge_info=CTGEdgeInfo(CTGEdgeType.DATA, dep_obj=dep))  # TODO CHECK!
+                    self.add_edge(
+                        sink_is_parent_of,
+                        sink_ctx,
+                        edge_info=CTGEdgeInfo(CTGEdgeType.DATA, dep_obj=dep),
+                    )  # TODO CHECK!
                     logger.debug("ADDED OUTWARD DEPENDENCY")
 
         # add contained edges. absence of all successor edges might allow searching for parallelism
@@ -397,8 +407,6 @@ class ContextTaskGraph(Plottable, object):
             for sink_ctx in ctx.get_contained_contexts():
                 if isinstance(sink_ctx, InlinedFunctionContext):
                     self.add_edge(ctx, sink_ctx, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
-
-       
 
         # TODO Branching durch WORK knoten ersetzen. Branches individuell analysieren
         logger.info("--> Add dependencies to force synchronization at exit nodes via synthetic landing pads...")
@@ -440,28 +448,31 @@ class ContextTaskGraph(Plottable, object):
     #                    break
     #        # !DEBUG
 
-    def __simplify_graph(self) -> bool:
+    def simplify_graph(self) -> List[TaskParentContext]:
         """Execute the simplification pipeline.
         Inner iteration are cheap, local analysis steps.
         Outer iterations are expensive, path based analysis steps.
+        Returns a list of identified TaskParentContexts
         """
+        identified_tasks: List[TaskParentContext] = []
+
         statistics_current_step = 0
-        statistics_time_series_x_values: List[int] = []
-        statistics_time_series_node_count: List[int] = []
-        statistics_time_series_edge_count: List[int] = []
+        statistics_time_series_x_values: List[int] = [statistics_current_step]
+        statistics_time_series_node_count: List[int] = [len(self.graph.nodes)]
+        statistics_time_series_edge_count: List[int] = [len(self.graph.edges)]
         statistics_time_series_outer_epoch_markers: List[int] = []
         statistics_time_series_inner_epoch_markers: List[int] = []
+        statistics_current_step += 1
 
         # TODO: measure execution time and size differences per executed simplification step. Plot both in the Terminal.
         # TODO: plot total time impact of each applied simplification step as well as average.
-        # TODO: consider     plot of graph statistics over time (nodes, edges, depth?)
+        # TODO: consider plot of graph statistics over time (nodes, edges, depth?)
         # TODO: Consider adding a plot for the distrbution of found patterns over time / simplification step.
         # TODO: Consider plotting online statistics (especially interesting for larger software)
-
         self.__print_graph_statistics("Pre simplification", color="yellow")
 
         outer_modification_applied = True
-        while outer_modification_applied: 
+        while outer_modification_applied:
             outer_modification_applied = False
 
             inner_modification_applied = True
@@ -471,7 +482,7 @@ class ContextTaskGraph(Plottable, object):
                 if True:
                     # note: THIS IS A WORK IN PROGRESS, NOT SURE IT IS BENEFICIAL!
                     # split control sequences into tasks
-                    stcs_res = self.__split_taskable_control_sequence()
+                    stcs_res, identified_tasks = split_taskable_control_sequence(self, identified_tasks)
                     if stcs_res:
                         self.__print_graph_statistics("Post split taskable work sequence", color="yellow")
                     else:
@@ -481,11 +492,10 @@ class ContextTaskGraph(Plottable, object):
                     statistics_current_step += 1
                     statistics_time_series_node_count.append(len(self.graph.nodes))
                     statistics_time_series_edge_count.append(len(self.graph.edges))
-                    
 
                     # todo: replace trivial task region with CombinedContext
                     if True:
-                        rttr_res = self.__replace_trivial_task_region()
+                        rttr_res = replace_trivial_task_region(self)
                         if rttr_res:
                             self.__print_graph_statistics("Post replace trivial task region", color="yellow")
                         else:
@@ -498,14 +508,17 @@ class ContextTaskGraph(Plottable, object):
 
                 # todo: replace "trivial" BranchParent with CombinedContext (trivial: both branches consist of exaclty one node)
 
-                # merge only-childs with parents
-                if True:
-                    moc_res = self.__merge_only_childs_with_parents()
-                    if moc_res:
-                        self.__print_graph_statistics("Post merge only-childs with parents", color="yellow")
+                # merge only-childs without successors with parents
+                # Note: this is not really effective and leads to a lot more iterations
+                if False:
+                    mocwos_res = merge_only_childs_without_successors_with_parents(self)
+                    if mocwos_res:
+                        self.__print_graph_statistics(
+                            "Post merge only-childs without successors with parents", color="yellow"
+                        )
                     else:
-                        cprint("-> No effect: merge only-childs with parents", "yellow")
-                    inner_modification_applied = inner_modification_applied or moc_res
+                        cprint("-> No effect: merge only-childs without successors with parents", "yellow")
+                    inner_modification_applied = inner_modification_applied or mocwos_res
                     statistics_time_series_x_values.append(statistics_current_step)
                     statistics_current_step += 1
                     statistics_time_series_node_count.append(len(self.graph.nodes))
@@ -516,11 +529,17 @@ class ContextTaskGraph(Plottable, object):
                 # todo: redirect incoming CONTROL edges of tasks to taskParent? CHECK THIS
 
                 if True:
-                    css_res = self.__trivial_control_sequence_simplification()
+                    css_res = trivial_control_sequence_simplification(self)
                     if css_res:
-                        self.__print_graph_statistics("Post trivial_control sequence simplification", color="yellow")
+                        self.__print_graph_statistics(
+                            "Post trivial_control sequence simplification",
+                            color="yellow",
+                        )
                     else:
-                        cprint("-> No effect: trivial_control sequence simplification", "yellow")
+                        cprint(
+                            "-> No effect: trivial_control sequence simplification",
+                            "yellow",
+                        )
                     inner_modification_applied = inner_modification_applied or css_res
                     statistics_time_series_x_values.append(statistics_current_step)
                     statistics_current_step += 1
@@ -528,7 +547,7 @@ class ContextTaskGraph(Plottable, object):
                     statistics_time_series_edge_count.append(len(self.graph.edges))
 
                 if True:
-                    bt_res = self.__break_triangles()
+                    bt_res = break_triangles(self)
                     if bt_res:
                         self.__print_graph_statistics("Post break triangles", color="yellow")
                     else:
@@ -538,38 +557,83 @@ class ContextTaskGraph(Plottable, object):
                     statistics_current_step += 1
                     statistics_time_series_node_count.append(len(self.graph.nodes))
                     statistics_time_series_edge_count.append(len(self.graph.edges))
-                
+
+                if True:
+                    rtbr_res = replace_trivial_branched_region(self)
+                    if rtbr_res:
+                        self.__print_graph_statistics("Post replace trivial branched regions", color="yellow")
+                    else:
+                        cprint("-> No effect: replace trivial branched regions", "yellow")
+                    inner_modification_applied = inner_modification_applied or rtbr_res
+                    statistics_time_series_x_values.append(statistics_current_step)
+                    statistics_current_step += 1
+                    statistics_time_series_node_count.append(len(self.graph.nodes))
+                    statistics_time_series_edge_count.append(len(self.graph.edges))
+
                 # add inner epoch marker to plot
                 statistics_time_series_inner_epoch_markers.append(statistics_current_step)
 
             if inner_modification_applied:
                 outer_modification_applied = True
-            
+
             # todo: implement removal of all redundant edges. This is mainly for evaluation purposes.
             # Not sure if it will stay active, maybe as a step after stalled iterations.
+            # Problem: full transitive reduction is quite costly.
             if False:
-                rre_res = self.__remove_redundant_edges()
+                rre_res = transitive_reduction(self)
                 if rre_res:
                     self.__print_graph_statistics("Post remove redundant edges", color="yellow")
                 else:
                     cprint("-> No effect: remove redundant edges", "yellow")
-                outer_modification_applied = outer_modification_applied or rre_res           
+                outer_modification_applied = outer_modification_applied or rre_res
                 statistics_time_series_x_values.append(statistics_current_step)
                 statistics_current_step += 1
                 statistics_time_series_node_count.append(len(self.graph.nodes))
                 statistics_time_series_edge_count.append(len(self.graph.edges))
-        
+
+            if True:
+                ptr_res = partial_transitive_reduction(self)
+                if ptr_res:
+                    self.__print_graph_statistics("Post partial transitive reduction", color="yellow")
+                else:
+                    cprint("-> No effect: partial transitive reduction", "yellow")
+                outer_modification_applied = outer_modification_applied or ptr_res
+                statistics_time_series_x_values.append(statistics_current_step)
+                statistics_current_step += 1
+                statistics_time_series_node_count.append(len(self.graph.nodes))
+                statistics_time_series_edge_count.append(len(self.graph.edges))
+
+            # merge only-childs with successors with parents
+            if True:
+                moc_res = merge_only_childs_with_parents(self)
+                if moc_res:
+                    self.__print_graph_statistics("Post merge only-childs with parents", color="yellow")
+                else:
+                    cprint("-> No effect: merge only-childs with parents", "yellow")
+                outer_modification_applied = outer_modification_applied or moc_res
+                statistics_time_series_x_values.append(statistics_current_step)
+                statistics_current_step += 1
+                statistics_time_series_node_count.append(len(self.graph.nodes))
+                statistics_time_series_edge_count.append(len(self.graph.edges))
+
             # add epoch marker to plot
             statistics_time_series_outer_epoch_markers.append(statistics_current_step)
-        
+
         self.__print_graph_statistics("Post simplification", color="yellow")
 
         # OLD IMPLEMENTATION. BREAK TRIANGLES IS SIMPLER AND MORE ELEGANT
-        #self.__replace_triangles()
+        # self.__replace_triangles()
 
-        self.__plot_time_series(statistics_time_series_x_values, statistics_time_series_node_count, statistics_time_series_edge_count, statistics_time_series_outer_epoch_markers, statistics_time_series_inner_epoch_markers)
+        self.__plot_time_series(
+            statistics_time_series_x_values,
+            statistics_time_series_node_count,
+            statistics_time_series_edge_count,
+            statistics_time_series_outer_epoch_markers,
+            statistics_time_series_inner_epoch_markers,
+        )
 
-    
+        return identified_tasks
+
     def __plot_time_series(
         self,
         time_series_x_values: List[int],
@@ -578,668 +642,55 @@ class ContextTaskGraph(Plottable, object):
         time_series_outer_epoch_markers: List[int],
         time_series_inner_epoch_markers: List[int],
     ) -> None:
+        if (
+            len(time_series_x_values) == 0
+            or len(time_series_node_counts) == 0
+            or len(time_series_edge_counts) == 0
+            or len(time_series_outer_epoch_markers) == 0
+            or len(time_series_inner_epoch_markers) == 0
+        ):
+            logger.warning("Invalid arguments given to ContextTaskGraph.__plot_time_series. Skipping.")
+            return
+
         fig = plotille.Figure()
         fig.height = 30
         fig.width = 60
         fig.x_label = "Simplification step"
         fig.y_label = "Count"
         # add time series
-        fig.plot(time_series_x_values, time_series_node_counts, interp="linear", lc="green", label="Nodes")
-        fig.plot(time_series_x_values, time_series_edge_counts, interp="linear", lc="yellow", label="Edges")
+        fig.plot(
+            time_series_x_values,
+            time_series_node_counts,
+            interp="linear",
+            lc="green",
+            label="Nodes",
+        )
+        fig.plot(
+            time_series_x_values,
+            time_series_edge_counts,
+            interp="linear",
+            lc="yellow",
+            label="Edges",
+        )
         # add outer epoch markers
         max_x_val = max(time_series_x_values)
         for outer_epoch_marker in time_series_outer_epoch_markers:
             if outer_epoch_marker > max_x_val:
                 outer_epoch_marker = max_x_val
-            fig.axvline(x=outer_epoch_marker/max_x_val, ymin=0, ymax=1, lc="blue")  
+            fig.axvline(x=outer_epoch_marker / max_x_val, ymin=0, ymax=1, lc="blue")
         # add inner epoch markers
         for inner_epoch_marker in time_series_inner_epoch_markers:
             if inner_epoch_marker > max_x_val:
                 inner_epoch_marker = max_x_val
-            fig.axvline(x=inner_epoch_marker/max_x_val, ymin=0, ymax=1)  
+            fig.axvline(x=inner_epoch_marker / max_x_val, ymin=0, ymax=1)
         print(fig.show(legend=True))
-    
-    def __remove_redundant_edges(self) -> bool:
-        """Removes redundant CONTROL edges. Redundant edges are always the shorter ones, if two or more exist.
-        Returns True, if a modification was applied."""
-        modification_applied = False
-        edges_removed = True
-        while edges_removed:
-            edges_removed = False
-            queue: List[Tuple[Context, Context]] = list(self.graph.edges())
-            print("outer")
-            while len(queue) > 0:
-                print("queue: ", len(queue))
-                edge = queue.pop()
-                # check if edge is of type control
-                if len([info for info in self.get_edge_info(edge[0], edge[1]) if info.type == CTGEdgeType.CONTROL]) < 1:
-                    continue
-                # calculate alternative paths from source to target
-                print("pre-call")
-                paths = nx.all_simple_paths(self.graph, edge[0], edge[1], cutoff=25)
-                print("post-call")
-                # filter paths for use of CONTROL edges on every step
-                filtered_paths: List[List[Context]] = []
-                for p in paths:
-                    print("p")
-                    p_valid = True
-                    # check every step for edge type
-                    for idx in range(0, len(p) - 1):
-                        print("idx")
-                        if len([info for info in self.get_edge_info(edge[0], edge[1]) if info.type == CTGEdgeType.CONTROL]) < 1:
-                            p_valid = False
-                            break
-                    if p_valid:
-                        filtered_paths.append(p)
-                
-                # check if a path with a length > 2 exist, i.e., one which is longer than the direct edge.
-                remove_edge = False
-                for p in filtered_paths:
-                    print("fp")
-                    if len(p) > 2:
-                        remove_edge = True
-                        break
-                # remove CONTROL edge between source and target. Preserve DATA edge, if it exists
-                if remove_edge:
-                    
-                    to_be_removed: List[CTGEdgeInfo] = []
-                    for info in self.get_edge_info(edge[0], edge[1]):
-                        print("re")
-                        if info.type == CTGEdgeType.CONTROL:
-                            to_be_removed.append(info)
 
-                    for info in to_be_removed:
-                        print("tre")
-                        if info in self.edge_information[edge[0]][edge[1]]:
-                            self.edge_information[edge[0]][edge[1]].remove(info)
-                    # delete edge, if no DATA edge remains
-                    if len(self.edge_information[edge[0]][edge[1]]) == 0:
-                        self.graph.remove_edge(edge[0], edge[1])
-                    
-                    edges_removed = True
-                    modification_applied = True  
-                
-                if edges_removed:
-                    break
-
-        return modification_applied
-
-
-    def __replace_trivial_task_region(self) -> bool:
-        """Replaces a trivial tasking region (TaskParent + exactly two children + TaskEnd) with a CombinedContext node.
-        Returns True, if a modification was applied."""
-        modification_applied = False
-        nodes_merged = True
-        while nodes_merged:
-            nodes_merged = False
-            queue: List[Context] = list(self.graph.nodes())
-            while len(queue) > 0:
-                node = queue.pop()
-                # check if node is of type TaskParent
-                if not isinstance(node, TaskParentContext):
-                    continue
-                # check if exactly two CONTROL successors exist
-                control_edge_successors = [ctx for ctx in self.get_successors(node) if len([info for info in self.get_edge_info(node, ctx) if info.type == CTGEdgeType.CONTROL])>0]
-                if len(control_edge_successors) != 2:
-                    continue
-                # check if both successor have onyl a single predecessor (i.e., the taskParentContext node)
-                successors_preceeding_nodes_valid = True
-                for succ in control_edge_successors:
-                    succ_control_edge_predecessors = [ctx for ctx in self.get_predecessors(succ) if (len([info for info in self.get_edge_info(ctx, succ) if info.type == CTGEdgeType.CONTROL])>0)]
-                    if len(succ_control_edge_predecessors) != 1:
-                        successors_preceeding_nodes_valid = False
-                        break
-                if not successors_preceeding_nodes_valid:
-                    continue
-                # check if both successors are immediately followed by the TaskEnd node and have only a single successor
-                successors_immediately_followed_by_TaskEnd = True
-                for succ in control_edge_successors:
-                    succ_control_edge_successors = [ctx for ctx in self.get_successors(succ) if len([info for info in self.get_edge_info(succ, ctx) if info.type == CTGEdgeType.CONTROL])>0]
-                    if len(succ_control_edge_successors) != 1:
-                        successors_immediately_followed_by_TaskEnd = False
-                        break
-                    if succ_control_edge_successors[0] != cast(TaskParentContext, node).task_end_context:
-                        successors_immediately_followed_by_TaskEnd = False
-                        break
-                if not successors_immediately_followed_by_TaskEnd:
-                    continue
-                # combine nodes into CombinedContext node
-                combined_context_node = CombinedContext()
-                combined_context_node.register_parent_context(node.parent_context)
-                combined_context_node.register_outermost_context(node)
-                for n in [node, node.task_end_context] + control_edge_successors:
-                    if isinstance(n, CombinedContext):
-                        combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
-                            n.contained_contexts
-                        )
-                    else:
-                        combined_context_node.contained_contexts.add(n)
-                # redirect incoming edges                
-                in_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(pred, self.get_edge_info(pred, node)) for pred in self.get_predecessors(node)]
-                for pred, info in in_edges_with_info:
-                    for info_elem in info:
-                        self.add_edge(pred, combined_context_node, info_elem)
-                # redirect outgoing edges
-                out_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(succ, self.get_edge_info(node.task_end_context, succ )) for succ in self.get_successors(node.task_end_context)]
-                for succ, info in out_edges_with_info:
-                    for info_elem in info:
-                        self.add_edge(combined_context_node, succ, info_elem)
-                # redirect dependencies
-                for task_node in control_edge_successors:
-                    # redirect incoming dependencies
-                    in_data_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(pred, self.get_edge_info(pred, task_node)) for pred in self.get_predecessors(task_node)]
-                    for pred, info in in_data_edges_with_info:
-                        for info_elem in info:
-                            if info_elem.type == CTGEdgeType.DATA:
-                                self.add_edge(pred, combined_context_node, info_elem)
-                    # redirect outgoing dependencies
-                    out_data_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(succ, self.get_edge_info(task_node, succ)) for succ in self.get_successors(task_node)]
-                    for succ, info in out_data_edges_with_info:
-                        for info_elem in info:
-                            if info_elem.type == CTGEdgeType.DATA:
-                                self.add_edge(combined_context_node, succ, info_elem)
-
-                # delete original nodes
-                for task_node in control_edge_successors:
-                    self.graph.remove_node(task_node)
-                self.graph.remove_node(node.task_end_context)
-                self.graph.remove_node(node)
-                
-                nodes_merged = True
-                modification_applied = True
-                break  # break, so that queue will be newly constructed as it might contain deleted nodes.
-
-        return modification_applied
-
-    def __merge_only_childs_with_parents(self) -> bool:
-        """Merges two successive nodes, if the first node is the parent node of the second, successive node.
-        The seconde node must be of type WorkContext or CombinedContext, so that it contains at least some work.
-        Returns true, if a modification was applied."""
-        modification_applied = False
-        nodes_merged = True
-        while nodes_merged:
-            nodes_merged = False
-            queue: List[Context] = list(self.graph.nodes())
-            while len(queue) > 0:
-                node = queue.pop()
-                # ensure node is of allowed type
-                if not (isinstance(node, WorkContext) or isinstance(node, CombinedContext)):
-                    continue
-                # check if node has exactly one CONTROL predecessor
-                control_edge_predecessors = [ctx for ctx in self.get_predecessors(node) if (len([info for info in self.get_edge_info(ctx, node) if info.type == CTGEdgeType.CONTROL])>0)]
-                if len(control_edge_predecessors) != 1:
-                    continue
-                predecessor = control_edge_predecessors[0]
-                # check if predecessor has exactly one successor
-                pred_control_edge_successors = [ctx for ctx in self.get_successors(predecessor) if len([info for info in self.get_edge_info(predecessor, ctx) if info.type == CTGEdgeType.CONTROL])>0]
-                if len(pred_control_edge_successors) != 1:
-                    continue
-
-                # check if predecessor is the parent of node
-                if node.parent_context != predecessor:
-                    continue
-                                
-                # combine both nodes into CombinedContext node 
-                combined_context_node = CombinedContext()
-                combined_context_node.register_parent_context(predecessor.parent_context)
-                combined_context_node.register_outermost_context(predecessor)
-                if isinstance(predecessor, CombinedContext):
-                    combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
-                        predecessor.contained_contexts
-                    )
-                else:
-                    combined_context_node.contained_contexts.add(predecessor)
-                if isinstance(node, CombinedContext):
-                    combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
-                        node.contained_contexts
-                    )
-                else:
-                    combined_context_node.contained_contexts.add(node)
-                # redirect incoming edges                
-                in_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(pred, self.get_edge_info(pred, predecessor)) for pred in self.get_predecessors(predecessor)]
-                for pred, info in in_edges_with_info:
-                    for info_elem in info:
-                        self.add_edge(pred, combined_context_node, info_elem)
-                # redirect outgoing edges
-                out_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(succ, self.get_edge_info(node, succ )) for succ in self.get_successors(node)]
-                for succ, info in out_edges_with_info:
-                    for info_elem in info:
-                        self.add_edge(combined_context_node, succ, info_elem)
-                # delete original nodes
-                self.graph.remove_node(predecessor)
-                self.graph.remove_node(node)
-                
-                nodes_merged = True
-                modification_applied = True
-                break  # break, so that queue will be newly constructed as it might contain deleted nodes.
-
-        return modification_applied
-
-
-    def __INVALID_merge_successive_TaskParentContext_nodes(self) -> bool:
-        """Merges two TaskParentContext nodes, if one is a direct control edge successor of another.
-        Iterates until no further optimizations could be found.
-        Only CONTROL edges are checked / modified, since TaskParentContext nodes should only be connected to those.
-        Returns True, if a modification was applied.
-        NOTE: CURRENTLY INVALID DUE TO ADDITION OF TASKENDCONTEXTS!"""
-
-        nodes_merged = True
-        modification_applied = False
-
-        while nodes_merged:
-            nodes_merged = False    
-            queue: List[Context] = list(self.graph.nodes())
-            while len(queue) > 0:
-                node = queue.pop()
-                # check if node is of type TaskParentContext
-                if not isinstance(node, TaskParentContext):
-                    continue
-                # iterate over outgoing edges and search for control edges
-                node_control_edge_successors = [ctx for ctx in self.get_successors(node) if len([info for info in self.get_edge_info(node, ctx) if info.type == CTGEdgeType.CONTROL])>0]
-                to_be_removed: List[TaskParentContext] = []
-                for successor in node_control_edge_successors:
-                    # check if successor is of type TaskParentContext
-                    if not isinstance(successor, TaskParentContext):
-                        continue
-                    # merge successor into node
-                    control_edge_predecessors = [ctx for ctx in self.get_predecessors(successor) if (len([info for info in self.get_edge_info(ctx, successor) if info.type == CTGEdgeType.CONTROL])>0)]
-                    # redirect incoming control edges to node
-                    for pred in control_edge_predecessors:
-                        if pred == node:
-                            continue
-                        self.add_edge(pred, node, CTGEdgeInfo(CTGEdgeType.CONTROL))
-                    # redirect outgoing control edges
-                    succ_control_edge_successors = [ctx for ctx in self.get_successors(successor) if len([info for info in self.get_edge_info(successor, ctx) if info.type == CTGEdgeType.CONTROL])>0]
-                    for succ in succ_control_edge_successors:
-                        self.add_edge(node, succ, CTGEdgeInfo(CTGEdgeType.CONTROL))
-                    # register successor for removal from the graph
-                    to_be_removed.append(successor)
-                    nodes_merged = True
-                    modification_applied = True
-                # remove nodes
-                for ctx in to_be_removed:
-                    self.graph.remove_node(ctx)
-                # if modification was applied, queue might now contain deleted nodes. and thus be invalid. Start new outer iteration
-                if nodes_merged:
-                    break
-
-        return modification_applied
-
-
-    def __split_taskable_control_sequence(self) -> bool:
-        """Split Control sequence between two Work or CombinedContext nodes, if there is no DATA edge between them.
-        To Perform the split, a TaskParent dummy node is inserted before the first node of the sequence and both sequence nodes will become direct successors of the TaskParent node.
-        Implementation relies on the successive application of __break_triangles for cleanup, as it will not remove the edge between the first node in the sequence and its predecessor.
-        Returns True, if the graph was modified."""
-        sequences_split = True
-        modification_applied = False
-        while sequences_split:
-            sequences_split = False
-            queue: List[Context] = list(self.graph.nodes())
-            while len(queue) > 0:
-                node = queue.pop()
-                # check if node is of type Work or CombinedContext
-                if not (isinstance(node, WorkContext) or isinstance(node, CombinedContext)):
-                    continue
-                # iterate over outgoing edges and search for control edges
-                control_edge_successors = [ctx for ctx in self.get_successors(node) if len([info for info in self.get_edge_info(node, ctx) if info.type == CTGEdgeType.CONTROL])>0]
-                # ensure that node has exactly one control edge successor  (todo: this might be extended in the future, but should not be necessary for regular operation)
-                if len(control_edge_successors) != 1:
-                    continue
-                # at this point, control_edge_successors should only contain a single element, otherwise multiple TaskParents and TaskEnds would be spawned
-                for successor in control_edge_successors:
-                    # check if successor is of type Work or CombinedContext
-                    if not (isinstance(successor, WorkContext) or isinstance(successor, CombinedContext)):
-                        continue
-                    # check if a data dependency between both nodes exist, i.e., whether both can be executed in parallel or not
-                    if len([info for info in self.get_edge_info(node, successor) if info.type == CTGEdgeType.DATA]) > 0:
-                        continue
-                    # check that both nodes share the same parent
-                    if node.parent_context != successor.parent_context:
-                        continue
-
-                    # both can be executed in parallel. Create a TaskParent node and connect. 
-                    task_parent_node = TaskParentContext()
-                    task_parent_node.register_parent_context(node.parent_context)
-                    task_end_node = TaskEndContext()
-                    task_parent_node.set_task_end(task_end_node)
-                    task_end_node.set_task_parent(task_parent_node)
-                    # get source nodes of incoming control edges of node
-                    node_control_edge_predecessors = [ctx for ctx in self.get_predecessors(node) if (len([info for info in self.get_edge_info(ctx, node) if info.type == CTGEdgeType.CONTROL])>0)]
-                    # redicect CONTROL edges from node predecessors to task_parent_node
-                    for pred in node_control_edge_predecessors:
-                        self.add_edge(pred, task_parent_node, CTGEdgeInfo(CTGEdgeType.CONTROL))
-                        self.graph.remove_edge(pred, node)
-                    # redicect CONTROL edges from successors predecessors to task_parent_node. only consider additional predecessors to node
-                    succ_control_edge_predecessors = [ctx for ctx in self.get_predecessors(successor) if (len([info for info in self.get_edge_info(ctx, successor) if info.type == CTGEdgeType.CONTROL])>0)]
-                    for pred in succ_control_edge_predecessors:
-                        if pred == node:
-                            continue
-                        self.add_edge(pred, task_parent_node, CTGEdgeInfo(CTGEdgeType.CONTROL))
-                        self.graph.remove_edge(pred, successor)
-                    # connect task_parent_node to node
-                    self.add_edge(task_parent_node, node, CTGEdgeInfo(CTGEdgeType.CONTROL))
-                    # connect task_parent_node to successor
-                    self.add_edge(task_parent_node, successor, CTGEdgeInfo(CTGEdgeType.CONTROL))
-                    # remove control edge between node and successor
-                    self.graph.remove_edge(node, successor)
-                    # connect node to task_end_node
-                    self.add_edge(node, task_end_node, CTGEdgeInfo(CTGEdgeType.CONTROL))
-                    # redirect outgoing control edges of successor through task_end_node (again, __break_cycles will cleanup) 
-                    succ_control_edge_successors = [ctx for ctx in self.get_successors(successor) if len([info for info in self.get_edge_info(successor, ctx) if info.type == CTGEdgeType.CONTROL])>0]
-                    for succ in succ_control_edge_successors:
-                        self.add_edge(task_end_node, succ, CTGEdgeInfo(CTGEdgeType.CONTROL))
-                        self.graph.remove_edge(successor, succ)
-                    # connect successor to task_end_node
-                    self.add_edge(successor, task_end_node, CTGEdgeInfo(CTGEdgeType.CONTROL))
-
-                    # check for task loop:
-                    parent_is_same_loop = True
-                    parent_loop_node: Optional[LoopParentContext] = None
-                    for succ in succ_control_edge_successors:
-                        if isinstance(succ.parent_context, LoopParentContext):
-                            if parent_loop_node is None:
-                                parent_is_same_loop = succ.parent_context
-                            else:
-                                if succ.parent_context != parent_loop_node:
-                                    parent_is_same_loop = False
-                                    break
-                        else:
-                            parent_is_same_loop = False
-                            break
-                    
-                    if False:  # disable task reporting for debug purposes
-                        if parent_is_same_loop:
-                            print(" === FOUND TASK LOOP ===")
-                        else:
-                            print(" === FOUND TASK ===")
-                        print(" == Scope1: ")
-                        print("    == root node: ", node)
-                        scope_1: List[LineID] = node.get_code_scope(self.pet)
-                        for ctx in node.get_contained_contexts(inclusive=True):
-                            print("--> ctx: ", ctx)
-                            scope_1 += ctx.get_code_scope(self.pet)
-                        scope_1 = list(set(scope_1))
-                        print("    == scope: ", scope_1)
-
-                        print(" == Scope2: ", successor)
-                        print("    == root node: ", successor)
-                        scope_2: List[LineID] = successor.get_code_scope(self.pet)
-                        for ctx in successor.get_contained_contexts(inclusive=True):
-                            print("--> ctx: ", ctx)
-                            scope_2 += ctx.get_code_scope(self.pet)
-                        scope_2 = list(set(scope_2))
-                        print("    == scope: ", scope_2)
-
-                    sequences_split = True   
-                    modification_applied = True           
-
-        return modification_applied
-
-    def __trivial_control_sequence_simplification(self) -> bool:
-        """Replace trivial, linear control sequences with a CombinedContext node. Loop until no further linear sequences exist.
-        Trivial sequences can consist of WorkContext and CombinedContext nodes only.
-        Trivial sequences must contain at least some work. 
-        trivial sequences must share a common parent.
-        This is enforced by requiring, that either a WorkContext or a CombinedContext are contained.
-        CombinedContexts themselves have the same requirement.
-        Returns True, if a modification was applied."""
-        sequences_replaced = True
-        modification_applied = False
-        while sequences_replaced:
-            sequences_replaced = False
-            queue: List[Context] = list(self.graph.nodes())
-            while len(queue) > 0:
-                node = queue.pop()
-                # check if node is a valid sequence entry
-                predecessors = self.get_predecessors(node)
-                successors = self.get_successors(node)
-                if len(successors) != 1 or len(predecessors) != 1:
-                    continue
-                # ensure existing control edge to successor
-                if len([info for info in self.get_edge_info(node, successors[0]) if info.type == CTGEdgeType.CONTROL]) < 1:
-                    continue
-
-                sequence: List[Context] = []
-                # construct the longest possible sequence
-                current: Optional[Context] = node
-                while current is not None:
-                    # ensure current is of either allowed type of sequence members
-                    if not (isinstance(current, WorkContext) or isinstance(current, CombinedContext)): #  or isinstance(current, IterationContext) or isinstance(current, InlinedFunctionContext) or isinstance(current, FunctionContext)):
-                        # not a valid sequence member
-                        break
-                    
-                    # check if node is a valid sequence member
-                    predecessors = self.get_predecessors(current)
-                    successors = self.get_successors(current)
-                    if len(predecessors) != 1:
-                        # not a valid sequence member
-                        break
-                    if len(successors) != 1:
-                        # end of the current sequence, but a valid member
-                        sequence.append(current)
-                        break
-                    # ensure sequence members share a common parent
-                    if node.parent_context != current.parent_context:
-                        break
-                    
-                    # valid sequence member
-                    sequence.append(current)
-
-                    # ensure existing control edge to successor
-                    if len([info for info in self.get_edge_info(current, successors[0]) if info.type == CTGEdgeType.CONTROL]) < 1:
-                        # end of the sequence
-                        current = None
-                        break
-                    # check successor
-                    current = successors[0]
-                # ensure sequence consists of at least two elements
-                if len(sequence) < 2:
-                    continue
-                # ensure that the sequence contains at least one WorkContext or CombinedContext element, so that the Sequence performs at least some minor work.
-                if len([seq_elem for seq_elem in sequence if isinstance(seq_elem, WorkContext) or isinstance(seq_elem, CombinedContext)]) < 1:
-                    # no work contained in the sequence
-                    continue
-                # combine sequence into CombinedContext node 
-                combined_context_node = CombinedContext()
-                combined_context_node.register_parent_context(sequence[0].parent_context)
-                for seq_elem in sequence:
-                    if isinstance(seq_elem, CombinedContext):
-                        combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
-                            seq_elem.contained_contexts
-                        )
-                    else:
-                        combined_context_node.contained_contexts.add(seq_elem)
-                # redirect incoming edges                
-                in_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(pred, self.get_edge_info(pred, sequence[0])) for pred in self.get_predecessors(sequence[0])]
-                for pred, info in in_edges_with_info:
-                    for info_elem in info:
-                        self.add_edge(pred, combined_context_node, info_elem)
-                # redirect outgoing edges
-                out_edges_with_info: List[Tuple[Context, List[CTGEdgeInfo]]] = [(succ, self.get_edge_info(sequence[-1], succ )) for succ in self.get_successors(sequence[-1])]
-                # print("OEWI: ", out_edges_with_info)
-                for succ, info in out_edges_with_info:
-                    for info_elem in info:
-                        self.add_edge(combined_context_node, succ, info_elem)
-                # delete sequence nodes
-                for seq_elem in sequence:
-                    if seq_elem in queue:
-                        queue.remove(seq_elem)
-                    self.graph.remove_node(seq_elem)
-                sequences_replaced = True
-                modification_applied = True
-        return modification_applied
-
-
-    def __break_triangles(self) -> bool:
-        """search for triangles. If a triangle is found, delete the direct edge between triangle entry and exit node. 
-        As a result, the __control_sequence_simplification can combine the triangle into one CombinedContext node.
-        Returns True, if a modification was applied."""
-        logger.info("Breaking triangles...")
-        triangles_broken = True
-        modification_applied = False
-        while triangles_broken:
-            logger.info("--> iterating...")
-            triangles_broken = False
-            queue: List[Context] = list(self.graph.nodes())
-            while len(queue) > 0:
-                node = queue.pop()
-                #predecessors = self.get_predecessors(node)
-                control_edge_predecessors = [ctx for ctx in self.get_predecessors(node) if (len([info for info in self.get_edge_info(ctx, node) if info.type == CTGEdgeType.CONTROL])>0)]
-                if len(control_edge_predecessors) < 2:
-                    continue
-                # check all combinations of predecessors for triangles
-                triangle_nodes: Optional[Tuple[Context, Context]] = None
-                for pred_1 in control_edge_predecessors:
-                    for pred_2 in control_edge_predecessors:
-                        if pred_1 == pred_2:
-                            continue
-                        # triangle exists, if pred_1 is a predecessor of pred_2 or vice versa
-                        if pred_1 in self.get_predecessors(pred_2):
-                            triangle_nodes = (pred_1, pred_2)
-                            break
-                        if pred_2 in self.get_predecessors(pred_1):
-                            triangle_nodes = (pred_2, pred_1)
-                if triangle_nodes is None:
-                    # did not find a triangle
-                    continue
-                # delete the short triangle edge
-                self.graph.remove_edge(triangle_nodes[0], node)
-                triangles_broken = True
-                modification_applied = True
-        return modification_applied
-
-
-
-
-
-    def __replace_triangles(self) -> None:
-        """Replace triangles in the graph with a CombinedContext node. Loop until no further triangles exist."""
-        logger.info("Replacing triangles...")
-        triangles_replaced = True
-        while triangles_replaced:
-            logger.info("--> iterating...")
-            triangles_replaced = False
-            queue: List[Context] = list(self.graph.nodes())
-            while len(queue) > 0:
-                node = queue.pop()
-                predecessors = self.get_predecessors(node)
-                if len(predecessors) < 2:
-                    continue
-                # check all combinations of predecessors for triangles
-                triangle_nodes: Optional[Tuple[Context, Context]] = None
-                for pred_1 in predecessors:
-                    for pred_2 in predecessors:
-                        if pred_1 == pred_2:
-                            continue
-                        # triangle exists, if pred_1 is a predecessor of pred_2 or vice versa
-                        if pred_1 in self.get_predecessors(pred_2) :
-                            triangle_nodes = (pred_1, pred_2)
-                            break
-                        if pred_2 in self.get_predecessors(pred_1):
-                            triangle_nodes = (pred_2, pred_1)
-                            break
-                if triangle_nodes is None:
-                    # did not find a triangle
-                    continue
-                # replace triangle with CombinedContext
-                combined_context_node = CombinedContext()
-                combined_context_node.register_parent_context(triangle_nodes[0].parent_context)
-                self.add_node(combined_context_node)
-                # register contained contexts
-                if isinstance(node, CombinedContext):
-                    combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
-                        node.contained_contexts
-                    )
-                else:
-                    combined_context_node.contained_contexts.add(node)
-
-                if isinstance(triangle_nodes[0], CombinedContext):
-                    combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
-                        triangle_nodes[0].contained_contexts
-                    )
-                else:
-                    combined_context_node.contained_contexts.add(triangle_nodes[0])
-
-                if isinstance(triangle_nodes[1], CombinedContext):
-                    combined_context_node.contained_contexts = combined_context_node.contained_contexts.union(
-                        triangle_nodes[1].contained_contexts
-                    )
-                else:
-                    combined_context_node.contained_contexts.add(triangle_nodes[1])
-
-                # check validity of the transformation. Do not allow the creation of bi-directional edges
-                # -> get predecessors and successors
-                raw_outside_predecessors = [
-                    n
-                    for n in self.get_predecessors(node)
-                    + self.get_predecessors(triangle_nodes[0])
-                    + self.get_predecessors(triangle_nodes[1])
-                ]
-                raw_outside_successors = [
-                    n
-                    for n in self.get_successors(node)
-                    + self.get_successors(triangle_nodes[0])
-                    + self.get_successors(triangle_nodes[1])
-                ]
-                # -> remove duplicates
-                raw_outside_predecessors = list(set(raw_outside_predecessors))
-                raw_outside_successors = list(set(raw_outside_successors))
-                # -> cleanup
-                outside_predecessors = [
-                    n
-                    for n in raw_outside_predecessors
-                    if not (n == node or n == triangle_nodes[0] or n == triangle_nodes[1])
-                ]
-                outside_successors = [
-                    n
-                    for n in raw_outside_successors
-                    if not (n == node or n == triangle_nodes[0] or n == triangle_nodes[1])
-                ]
-                # -> check if bi-directional edges would be created
-                skip_triangle = False
-                for pred in outside_predecessors:
-                    if pred in outside_successors:
-                        # bi-directional edge would be created! Ignore triangle.
-                        skip_triangle = True
-                        break
-                if skip_triangle:
-                    continue
-
-                # redirect incoming edges
-                for pred in outside_predecessors:
-                    self.add_edge(pred, combined_context_node, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
-
-                # redirect outgoing edges
-                for succ in outside_successors:
-                    self.add_edge(combined_context_node, succ, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
-
-                # remove triangle nodes from queue
-                if triangle_nodes[0] in queue:
-                    queue.remove(triangle_nodes[0])
-                if triangle_nodes[1] in queue:
-                    queue.remove(triangle_nodes[1])
-                # delete triangle nodes
-                self.graph.remove_node(node)
-                self.graph.remove_node(triangle_nodes[0])
-                self.graph.remove_node(triangle_nodes[1])
-                # allow one more iteration
-                triangles_replaced = True
-
-        logger.info("--> removing trivial nodes")
-        to_be_removed: List[Context] = []
-        for node in tqdm(self.graph.nodes):
-            if len(self.get_predecessors(node)) == 0 and len(self.get_successors(node)) == 0:
-                to_be_removed.append(node)
-        for node in to_be_removed:
-            self.graph.remove_node(node)
-
-    def __print_graph_statistics(self, label: str = "", color="yellow") -> None:
-        #logger.info("####################")
-        #logger.info("# Graph statistics: " + label)
-        #logger.info("# Node count: " + str(len(self.graph.nodes)))
-        #logger.info("# Edge count:  " + str(len(self.graph.edges)))
-        #logger.info("####################")
+    def __print_graph_statistics(self, label: str = "", color: str = "yellow") -> None:
+        # logger.info("####################")
+        # logger.info("# Graph statistics: " + label)
+        # logger.info("# Node count: " + str(len(self.graph.nodes)))
+        # logger.info("# Edge count:  " + str(len(self.graph.edges)))
+        # logger.info("####################")
         cprint("####################", color)
         cprint("# Graph statistics: " + label, color)
         cprint("# Node count: " + str(len(self.graph.nodes)), color)
@@ -1263,15 +714,17 @@ class ContextTaskGraph(Plottable, object):
         import numpy as np
         from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
         from matplotlib.figure import Figure
+
         root = tk.Tk()
         root.title("Context Task Graph")
+
         def close_window() -> None:
             root.quit()
             root.destroy()
 
         frame1 = tk.Frame(root)
         fig1 = Figure()  # Figure(figsize=(5, 4))
-        
+
         ax1 = fig1.add_subplot(111)
         ax1.set_title("Context Task Graph")
         canvas1 = FigureCanvasTkAgg(fig1, master=frame1)
@@ -1281,7 +734,7 @@ class ContextTaskGraph(Plottable, object):
         toolbar1.update()
         toolbar1.grid(row=1)
         frame1.grid(column=0, row=0, sticky="nswe")
-        
+
         self.update_plot(ax1, highlight_nodes)
         print("Waiting for user to close the Window...")
         # ---- start main loop
@@ -1303,17 +756,28 @@ class ContextTaskGraph(Plottable, object):
             nx.draw_networkx_nodes(self.graph, positions, ax=axis)
         else:
             nx.draw_networkx_nodes(
-                self.graph, positions, nodelist=[n for n in self.graph.nodes() if n not in highlight_nodes], ax=axis
+                self.graph,
+                positions,
+                nodelist=[n for n in self.graph.nodes() if n not in highlight_nodes],
+                ax=axis,
             )
         # draw highlighted nodes
         if highlight_nodes is not None:
-            nx.draw_networkx_nodes(self.graph, positions, nodelist=highlight_nodes, node_color="red", ax=axis)
+            nx.draw_networkx_nodes(
+                self.graph,
+                positions,
+                nodelist=highlight_nodes,
+                node_color="red",
+                ax=axis,
+            )
         # draw control edges
         tmp_graph = self.graph
         edgelist: List[Tuple[Context, Context]] = []
         for source, target in [(s, t) for s, t in self.graph.edges()]:
-            edge_info = self.get_edge_info(source, target)            
-            is_control_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.CONTROL]) > 0 else False
+            edge_info = self.get_edge_info(source, target)
+            is_control_edge = (
+                True if len([info for info in edge_info if info.type == CTGEdgeType.CONTROL]) > 0 else False
+            )
             is_data_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.DATA]) > 0 else False
             if is_control_edge and not is_data_edge:
                 tmp_graph.add_edge(source, target)
@@ -1324,25 +788,43 @@ class ContextTaskGraph(Plottable, object):
         # draw data edges
         edgelist.clear()
         for source, target in [(s, t) for s, t in self.graph.edges()]:
-            edge_info = self.get_edge_info(source, target)            
-            is_control_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.CONTROL]) > 0 else False
+            edge_info = self.get_edge_info(source, target)
+            is_control_edge = (
+                True if len([info for info in edge_info if info.type == CTGEdgeType.CONTROL]) > 0 else False
+            )
             is_data_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.DATA]) > 0 else False
             if is_data_edge and not is_control_edge:
                 tmp_graph.add_edge(source, target)
                 edgelist.append((source, target))
-        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="red", ax=axis, connectionstyle="arc3,rad=0.2")
+        nx.draw_networkx_edges(
+            tmp_graph,
+            positions,
+            edgelist=edgelist,
+            edge_color="red",
+            ax=axis,
+            connectionstyle="arc3,rad=0.2",
+        )
         for tpl in edgelist:
             tmp_graph.remove_edge(tpl[0], tpl[1])
         # draw combined control and data edges
         edgelist.clear()
         for source, target in [(s, t) for s, t in self.graph.edges()]:
-            edge_info = self.get_edge_info(source, target)            
-            is_control_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.CONTROL]) > 0 else False
+            edge_info = self.get_edge_info(source, target)
+            is_control_edge = (
+                True if len([info for info in edge_info if info.type == CTGEdgeType.CONTROL]) > 0 else False
+            )
             is_data_edge = True if len([info for info in edge_info if info.type == CTGEdgeType.DATA]) > 0 else False
             if is_data_edge and is_control_edge:
                 tmp_graph.add_edge(source, target)
                 edgelist.append((source, target))
-        nx.draw_networkx_edges(tmp_graph, positions, edgelist=edgelist, edge_color="blue", ax=axis, connectionstyle="arc3,rad=0.2")
+        nx.draw_networkx_edges(
+            tmp_graph,
+            positions,
+            edgelist=edgelist,
+            edge_color="blue",
+            ax=axis,
+            connectionstyle="arc3,rad=0.2",
+        )
         for tpl in edgelist:
             tmp_graph.remove_edge(tpl[0], tpl[1])
 
@@ -1370,18 +852,22 @@ class ContextTaskGraph(Plottable, object):
         except KeyError:
             logger.info("KeyError during plotting node labels. Skipping.")
             pass
-        
-        # define legend
-        black_line = mlines.Line2D([], [], color='black', # marker='*',
-                          markersize=15, label='control')
-        red_line = mlines.Line2D([], [], color='red', # marker='*',
-                          markersize=15, label='data')
-        blue_line = mlines.Line2D([], [], color='blue', # marker='*',
-                          markersize=15, label='control + data')
-        green_line = mlines.Line2D([], [], color='green', # marker='*',
-                          markersize=15, label='imaginary replacement edges')
 
-        axis.legend(loc="upper left", handles=[black_line, red_line, blue_line, green_line] ) # labels=["control", "data", "control + data", "imaginary"], labelcolor=["black", "red", "blue", "green"], )
+        # define legend
+        black_line = mlines.Line2D([], [], color="black", markersize=15, label="control")  # marker='*',
+        red_line = mlines.Line2D([], [], color="red", markersize=15, label="data")  # marker='*',
+        blue_line = mlines.Line2D([], [], color="blue", markersize=15, label="control + data")  # marker='*',
+        green_line = mlines.Line2D(
+            [],
+            [],
+            color="green",  # marker='*',
+            markersize=15,
+            label="imaginary replacement edges",
+        )
+
+        axis.legend(
+            loc="upper left", handles=[black_line, red_line, blue_line, green_line]
+        )  # labels=["control", "data", "control + data", "imaginary"], labelcolor=["black", "red", "blue", "green"], )
 
     def quick_layout(self, subgraph: Optional[Graph] = None) -> Dict[TGNode, Tuple[float, float]]:
         logger.info("----> generating quick layout...")
@@ -1414,7 +900,10 @@ class ContextTaskGraph(Plottable, object):
                     occupied_positions[current_level] = current_x_offset
                 occupied_positions[current_level] += 1
                 current_position = occupied_positions[current_level]
-                positions[current_node] = (float(current_position), float(-current_level))
+                positions[current_node] = (
+                    float(current_position),
+                    float(-current_level),
+                )
 
                 out_edges = graph.out_edges(current_node)
 
@@ -1425,13 +914,18 @@ class ContextTaskGraph(Plottable, object):
     def add_node(self, node: Context) -> None:
         self.graph.add_node(node)
 
-    def add_edge(self, source: Optional[Context], target: Optional[Context], edge_info: CTGEdgeInfo) -> None:
+    def add_edge(
+        self,
+        source: Optional[Context],
+        target: Optional[Context],
+        edge_info: CTGEdgeInfo,
+    ) -> None:
         if source is None or target is None:
             return
         # disallow duplicate edges
         if not self.graph.has_edge(source, target):
             self.graph.add_edge(source, target)
-            
+
         # attach edge_info to the edge
         if source not in self.edge_information:
             self.edge_information[source] = dict()
@@ -1439,7 +933,7 @@ class ContextTaskGraph(Plottable, object):
             self.edge_information[source][target] = []
         if edge_info not in self.edge_information[source][target]:
             self.edge_information[source][target].append(edge_info)
-    
+
     def get_edge_info(self, source: Context, target: Context) -> List[CTGEdgeInfo]:
         if source not in self.edge_information:
             return []

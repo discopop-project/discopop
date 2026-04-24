@@ -134,12 +134,22 @@ class TaskParallelismInfo(PatternInfo):
 class ParallelRegionInfo(PatternInfo):
     """Class, that contains parallel region info."""
 
-    def __init__(self, node: Node, type: TPIType, region_start_line: LineID, region_end_line: LineID):
+    def __init__(
+        self,
+        node: Node,
+        type: TPIType,
+        region_start_line: int,
+        region_end_line: int,
+        task_group: Optional[List[int]] = None,
+        contained_tasks: Optional[List[TaskParallelismInfo]] = None,
+    ):
         PatternInfo.__init__(self, node)
-        self.region_start_line = region_start_line
-        self.region_end_line = region_end_line
-        self.pragma = "#pragma omp parallel\n\t#pragma omp single"
+        self.region_start_line = str(region_start_line)
+        self.region_end_line = str(region_end_line)
+        self.pragma = ["#pragma omp parallel", "#pragma omp single"]
         self.type = type
+        self.task_group: List[int] = [] if task_group is None else task_group
+        self.contains_patterns: List[int] = [] if contained_tasks is None else [t.pattern_id for t in contained_tasks]
 
     def __str__(self) -> str:
         return (
