@@ -44,6 +44,7 @@ for file in "$@"; do
     [[ "$file" = *"VERSION" ]] && continue
     [[ "$file" = *".clang-format" ]] && continue
     [[ "$file" = *"requirements.txt" ]] && continue
+    [[ "$file" = *"CLAUDE.md" ]] && continue
 
     # third-party software
     [[ "$file" = *"third_party/"* ]] && continue
