@@ -67,7 +67,9 @@ add_llvm_library(LLVMDiscoPoP MODULE
         static_analysis/createCUs.cpp
         static_analysis/fillCUVariables.cpp
         static_analysis/populateGlobalVariablesSet.cpp
-        static_analysis/disambiguatedInstructions.cpp
+        static_analysis/instruction_id_assignment.cpp
+        static_analysis/calltree_construction.cpp
+        static_analysis/path_enumeration.cpp
         static_analysis/StaticCalltree.cpp
         static_analysis/StaticCallPathTree.cpp
 
