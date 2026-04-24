@@ -13,6 +13,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 from GUI.Visualizers.Base import Base
 from GUI.Objects.Frames.MultiFrame import MultiFrame
+from GUI.Objects.Frames.CanvasViewer import CanvasViewer
 from GUI.Exceptions.VisualizerNotDefined import VisualizerNotDefined
 
 class Plottable:
@@ -100,6 +101,19 @@ class Plottable:
         frame.grid_columnconfigure(0, weight=1)
 
         return axes
+    
+    def temp_create_plot(self, name: str) -> tk.Canvas:
+        if self._visualizer is None:
+            raise VisualizerNotDefined()
+
+        frame: CanvasViewer = self._visualizer.create_frame(name, CanvasViewer)
+
+        canvas = frame.getCanvas()
+        
+        frame.grid_rowconfigure(0, weight=1)
+        frame.grid_columnconfigure(0, weight=1)
+
+        return canvas
     
     def create_multi_plot(self, name: str, inner_plot_titles: list[str], rows: int, columns: int) -> list[Axes]:
         self.create_multi_frame(name, rows, columns)

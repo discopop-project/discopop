@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
+import tkinter as tk
 from matplotlib.axes import Axes
 from networkx import Graph
 from tqdm import tqdm  # type: ignore
@@ -476,6 +477,109 @@ class TaskGraph(Plottable, object):
         for node in ctx_graph.nodes:
             labels[node] = node.get_label()
         nx.draw_networkx_labels(ctx_graph, positions, labels, font_size=7, ax=axis)
+
+    def new_plot_context_debug_graph(self, canvas: tk.Canvas) -> None:
+        logger.info("Plotting context debug graph...")
+
+        canvas.delete("all")
+
+        ctx_graph = nx.MultiDiGraph()
+
+        for ctx in self.contexts:
+            ctx_graph.add_node(ctx)
+            for ctx_cont_node in ctx.contained_nodes:
+                ctx_graph.add_node(ctx_cont_node)
+                
+        contained_edges = []
+
+        for ctx in self.contexts:
+            for contained_ctx in ctx.contained_contexts:
+                ctx_graph.add_edge(ctx, contained_ctx)
+                contained_edges.append((ctx, contained_ctx))
+            for ctx_cont_node in ctx.contained_nodes:
+                ctx_graph.add_edge(ctx, ctx_cont_node)
+                contained_edges.append((ctx, ctx_cont_node))
+
+        dependency_edges = []
+
+        for ctx in self.contexts:
+            for deps in ctx.outgoing_dependencies:
+                dependency_edges.append((ctx, deps[0]))
+
+        positions = nx.nx_pydot.pydot_layout(ctx_graph, prog="dot")
+
+        if not positions:
+            return
+
+        canvas.update_idletasks()
+        canvas_width = canvas.winfo_width()
+        canvas_height = canvas.winfo_height()
+
+        if canvas_width <= 1:
+            canvas_width = int(canvas.cget("width"))
+        if canvas_height <= 1:
+            canvas_height = int(canvas.cget("height"))
+
+        padding = 40
+        node_radius = 18
+
+        xs = [pos[0] for pos in positions.values()]
+        ys = [pos[1] for pos in positions.values()]
+
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+
+        x_span = max(max_x - min_x, 1)
+        y_span = max(max_y - min_y, 1)
+
+        scaled_positions = {}
+
+        for node, (x, y) in positions.items():
+            sx = padding + ((x - min_x) / x_span) * (canvas_width - (2 * padding))
+            sy = padding + (1 - ((y - min_y) / y_span)) * (canvas_height - (2 * padding))
+            scaled_positions[node] = (sx, sy)
+
+        def draw_edge(src, dst, color="black", width=1, arrow=False):
+            x1, y1 = scaled_positions[src]
+            x2, y2 = scaled_positions[dst]
+
+            if arrow:
+                canvas.create_line(x1, y1, x2, y2, fill=color, width=width, arrow="last")
+            else:
+                canvas.create_line(x1, y1, x2, y2, fill=color, width=width)
+
+        def draw_node(node, fill_color):
+            x, y = scaled_positions[node]
+
+            canvas.create_oval(
+                x - node_radius,
+                y - node_radius,
+                x + node_radius,
+                y + node_radius,
+                fill=fill_color,
+                outline="black",
+            )
+
+            canvas.create_text(
+                x,
+                y,
+                text=node.get_label(),
+                font=("Arial", 7),
+                anchor="center",
+            )
+
+        for src, dst in contained_edges:
+            draw_edge(src, dst, color="black", width=1, arrow=False)
+
+        for src, dst in dependency_edges:
+            draw_edge(src, dst, color="red", width=2, arrow=True)
+
+        for node in self.contexts:
+            draw_node(node, "orange")
+
+        for node in ctx_graph.nodes:
+            if node not in self.contexts:
+                draw_node(node, "cyan")
 
     def __get_or_insert_TGNode(self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex) -> TGNode:
         if pet_node_id is not None:

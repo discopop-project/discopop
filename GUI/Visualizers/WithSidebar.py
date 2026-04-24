@@ -93,10 +93,10 @@ class WithSidebar(Base):
         self._filter_button.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=(2, 5))
         self._filter_callback: Callable[[str], None] | None = None
 
-        # Add all panes to the PanedWindow
-        self._pane.add(self._sidebar_container, minsize=150, width=220)
-        self._pane.add(self._frame_container, minsize=300)
-        self._pane.add(self._filter_container, minsize=180, width=250)
+        # Add all parts to the Pane
+        self._pane.add(self._sidebar_container, minsize=150, width=220, stretch = "never")
+        self._pane.add(self._frame_container, minsize=300, stretch = "always")
+        self._pane.add(self._filter_container, minsize=180, width=250, stretch = "never")
 
         self._frame_selectors: Dict[str, tk.Button] = {}
 
