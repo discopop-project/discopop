@@ -2304,9 +2304,15 @@ class TaskGraph(Plottable, object):
         state_id: str,
         instructionID_mappings_dict: Dict[str, str],
         state_mappings_dict: Dict[str, List[str]],
+        location_to_work_contexts: Dict[LineID, Set[WorkContext]],
+        lookup_cache: Dict[Tuple[str, str], Set[Context]],
     ) -> Set[Context]:
         """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs.
         state_mappings_dict is a mapping from stateIDs to callpaths."""
+
+        cache_key = (location, state_id)
+        if cache_key in lookup_cache:
+            return lookup_cache[cache_key]
 
         contexts: Set[Context] = set()
         # check if location is an instructionID. If so, convert it to a lineID using the mappings_dict.
@@ -2323,12 +2329,8 @@ class TaskGraph(Plottable, object):
             line_num = location_split[1]
             location_lineid = LineID(file_id + ":" + line_num)
 
-            for context in self.contexts:
-                if not isinstance(context, WorkContext):
-                    continue
-                context_code_scope = context.get_code_scope(self.pet)
-                if location_lineid in context_code_scope:
-                    contexts.add(context)
+            if location_lineid in location_to_work_contexts:
+                contexts = set(location_to_work_contexts[location_lineid])
 
         # filter contexts for state_id compatibility
         if state_id != "NO_STATE":
@@ -2503,8 +2505,10 @@ class TaskGraph(Plottable, object):
                     if equal and not loopstate_violation_found:
                         filtered_contexts.add(ctx)
 
+                lookup_cache[cache_key] = filtered_contexts
                 return filtered_contexts
 
+        lookup_cache[cache_key] = contexts
         return contexts
 
     def __insert_data_dependencies_from_files(
@@ -2578,6 +2582,17 @@ class TaskGraph(Plottable, object):
                         callpath = [raw_callpath]
                     state_mappings_dict[state_id] = callpath
 
+        # build spatial index: LineID -> Set[WorkContext] (suggestion 2)
+        location_to_work_contexts: Dict[LineID, Set[WorkContext]] = {}
+        for _ctx in self.contexts:
+            if not isinstance(_ctx, WorkContext):
+                continue
+            for _line_id in _ctx.get_code_scope(self.pet):
+                location_to_work_contexts.setdefault(_line_id, set()).add(_ctx)
+
+        # cache for repeated (location, state_id) lookups (suggestion 1)
+        _context_lookup_cache: Dict[Tuple[str, str], Set[Context]] = {}
+
         # insert data dependencies into graph
         # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
         logger.info("--> Inserting data dependencies: ")
@@ -2589,14 +2604,26 @@ class TaskGraph(Plottable, object):
                     # find source and target contexts based on locations and state ids
                     # only work contexts can be source or target of data dependencies
                     source_contexts = self.__get_work_contexts_by_location_and_state_id(
-                        self.pet, source_location, source_state_id, mappings_dict, state_mappings_dict
+                        self.pet,
+                        source_location,
+                        source_state_id,
+                        mappings_dict,
+                        state_mappings_dict,
+                        location_to_work_contexts,
+                        _context_lookup_cache,
                     )
                     for sink_location, sink_location_deps in source_state_deps.items():
                         for sink_state_id, var_infos in sink_location_deps.items():
                             # find source and target contexts based on locations and state ids
                             # only work contexts can be source or target of data dependencies
                             target_contexts = self.__get_work_contexts_by_location_and_state_id(
-                                self.pet, sink_location, sink_state_id, mappings_dict, state_mappings_dict
+                                self.pet,
+                                sink_location,
+                                sink_state_id,
+                                mappings_dict,
+                                state_mappings_dict,
+                                location_to_work_contexts,
+                                _context_lookup_cache,
                             )
 
                             # handle static and dynamic dependencies separately
@@ -2610,19 +2637,12 @@ class TaskGraph(Plottable, object):
                                         if source_ctx == target_ctx:
                                             continue
                                         # check for shared closest function parent
-                                        source_parent_function_ctxs = [
-                                            c for c in source_ctx.get_ancestor_contexts() if type(c) == FunctionContext
-                                        ]
-                                        target_parent_function_ctxs = [
-                                            c for c in target_ctx.get_ancestor_contexts() if type(c) == FunctionContext
-                                        ]
-                                        if (
-                                            len(source_parent_function_ctxs) == 0
-                                            or len(target_parent_function_ctxs) == 0
-                                        ):
+                                        source_closest_fn = source_ctx.get_closest_function_ancestor()
+                                        target_closest_fn = target_ctx.get_closest_function_ancestor()
+                                        if source_closest_fn is None or target_closest_fn is None:
                                             # no shared parent function context can exist
                                             continue
-                                        if source_parent_function_ctxs[0] != target_parent_function_ctxs[0]:
+                                        if source_closest_fn != target_closest_fn:
                                             # closest parent function contexts are not equal.
                                             # static dependencies are only valid within a functions scope.
                                             continue

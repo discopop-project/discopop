@@ -17,6 +17,9 @@ class FunctionContext(Context):
         self.parent_function = parent_function
         super().__init__()
 
+    def is_function_context(self) -> bool:
+        return True
+
     def get_plot_border_color(self) -> str:
         return "b"
 

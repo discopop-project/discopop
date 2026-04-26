@@ -35,6 +35,10 @@ class Context(object):
         self.successor = None
         self.predecessor = None
         self.outgoing_dependencies = set()
+        self._ancestor_contexts_cache: Optional[List[Context]] = None
+        self._code_scope_cache: Optional[List[LineID]] = None
+        self._closest_function_ancestor_computed: bool = False
+        self._closest_function_ancestor: Optional[Context] = None
 
     def get_contained_nodes(self, inclusive: bool = False) -> List[TGNode]:
         """
@@ -136,14 +140,30 @@ class Context(object):
                         parent_queue.append(current_parent.parent_context)
         return successive_contexts
 
+    def is_function_context(self) -> bool:
+        return False
+
     def get_ancestor_contexts(self) -> List[Context]:
         """return the ancestor contexts of the current context, starting with the direct parent context and ending with the root context."""
+        if self._ancestor_contexts_cache is not None:
+            return self._ancestor_contexts_cache
         ancestors: List[Context] = []
         current_context = self.parent_context
         while current_context is not None:
             ancestors.append(current_context)
             current_context = current_context.parent_context
+        self._ancestor_contexts_cache = ancestors
         return ancestors
+
+    def get_closest_function_ancestor(self) -> Optional[Context]:
+        if self._closest_function_ancestor_computed:
+            return self._closest_function_ancestor
+        for ancestor in self.get_ancestor_contexts():
+            if ancestor.is_function_context():
+                self._closest_function_ancestor = ancestor
+                break
+        self._closest_function_ancestor_computed = True
+        return self._closest_function_ancestor
 
     def register_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
         self.outgoing_dependencies.add((target_context, dependency))
@@ -182,6 +202,8 @@ class Context(object):
 
     def get_code_scope(self, pet: PEGraphX, inclusive: bool = False) -> List[LineID]:
         """returns a list of code scopes contained in the context."""
+        if not inclusive and self._code_scope_cache is not None:
+            return self._code_scope_cache
         scope: List[LineID] = []
         for node in self.get_contained_nodes(inclusive=inclusive):
             pet_node = node.get_pet_node(pet)
@@ -189,8 +211,10 @@ class Context(object):
                 continue
             for i in range(pet_node.start_line, pet_node.end_line + 1):
                 scope.append(LineID(str(pet_node.file_id) + ":" + str(i)))
-        # remove duplicates
-        return list(set(scope))
+        result = list(set(scope))
+        if not inclusive:
+            self._code_scope_cache = result
+        return result
 
     def get_defined_variables(self, pet: PEGraphX) -> List[Tuple[str, LineID]]:
         """returns a list of defined variables in the context as tuples of (variable name, lineID)."""
