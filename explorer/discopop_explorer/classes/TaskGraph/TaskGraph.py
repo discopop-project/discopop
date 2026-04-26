@@ -7,12 +7,13 @@
 # directory for details.
 
 import copy
+from collections import deque
 import os
 from pathlib import Path
 import random
 import signal
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
@@ -1437,18 +1438,18 @@ class TaskGraph(Plottable, object):
         logger.info("--> classify entry points...")
         entry_points: List[TGNode] = []
         for node in tqdm(self.graph.nodes):
-            if len(self.get_predecessors(node)) == 0:
+            if self.graph.in_degree(node) == 0:
                 entry_points.append(node)
 
         logger.info("--> DFS parsing entry points...")
         for entry_point in tqdm(entry_points):
             # initialize succession calculation
-            queue: List[Tuple[TGNode, int, Tuple[Optional[Context], ...]]] = [
-                (entry_point, 0, (None,))
-            ]  # each position in the list corresponds to one level. Last position is always the last level
+            queue: Deque[Tuple[TGNode, int, Tuple[Optional[Context], ...]]] = deque(
+                [(entry_point, 0, (None,))]
+            )  # each position in the list corresponds to one level. Last position is always the last level
             already_enqueued: Set[Tuple[TGNode, int]] = set()
             while len(queue) > 0:
-                current_node, current_level, current_predecessor_contexts_tuple = queue.pop(0)
+                current_node, current_level, current_predecessor_contexts_tuple = queue.popleft()
                 if len(current_predecessor_contexts_tuple) == 0:
                     continue
                 current_predecessor_contexts = list(current_predecessor_contexts_tuple)
@@ -1492,7 +1493,7 @@ class TaskGraph(Plottable, object):
                     current_predecessor_contexts = current_predecessor_contexts[:-1]
 
                 # add successors to the queue
-                for succ in self.get_successors(current_node):
+                for succ in self.graph.successors(current_node):
                     # note: the insertion of the tuple (current_predecessor_contexts) into the queue is a quite severe bottleneck.
                     queue_element = (succ, current_level, tuple(current_predecessor_contexts))
                     if (queue_element[0], queue_element[1]) not in already_enqueued:
