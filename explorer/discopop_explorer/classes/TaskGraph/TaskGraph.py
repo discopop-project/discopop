@@ -20,6 +20,7 @@ import matplotlib
 from matplotlib.axes import Axes
 from networkx import Graph
 from tqdm import tqdm  # type: ignore
+import matplotlib.lines as mlines
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
@@ -133,6 +134,7 @@ class TaskGraph(Plottable, object):
         # start processing
         self.__assign_function_ids(pet)
         self.__construct_from_pet(pet)
+        self.__assign_state_ids(dynamic_dependency_file)
         self.__insert_data_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
         self.__determine_loop_variables()
         self.__cleanup_loop_dependencies()
@@ -440,6 +442,22 @@ class TaskGraph(Plottable, object):
             else:
                 labels[ctx] = ctx.get_label()
         nx.draw_networkx_labels(ctx_graph, positions, labels, font_size=7, ax=axis)
+
+        # define legend
+        black_line = mlines.Line2D([], [], color="black", markersize=15, label="contained")  # marker='*',
+        red_line = mlines.Line2D([], [], color="red", markersize=15, label="dynamic dep")  # marker='*',
+        blue_line = mlines.Line2D([], [], color="blue", markersize=15, label="static dep")  # marker='*',
+        green_line = mlines.Line2D(
+            [],
+            [],
+            color="green",
+            markersize=15,
+            label="successor",
+        )  # marker='*',
+
+        axis.legend(
+            loc="upper left", handles=[black_line, red_line, blue_line, green_line]
+        )  # labels=["control", "data", "control + data", "imaginary"], labelcolor=["black", "red", "blue", "green"], )
 
     def plot_context_debug_graph(self, axis: Axes) -> None:
         logger.info("Plotting context debug graph...")
@@ -762,9 +780,9 @@ class TaskGraph(Plottable, object):
                         ism = TGStartIterationNode(
                             itenp.pet_node_id, itenp.level, itenp.position, entry_node.pet_node_id
                         )
-                        ism.loopstate_iteration_ids = [
-                            0
-                        ]  # loop iterations will be duplicated later. loopstate_ids will be overwritten / set then.
+                        # ism.loopstate_iteration_ids = [
+                        #    0
+                        # ]  # loop iterations will be duplicated later. loopstate_ids will be overwritten / set then.
 
                         ism_list.append(ism)
                         self.add_node(ism)
@@ -1048,6 +1066,7 @@ class TaskGraph(Plottable, object):
                         )
 
                         # set loopstate_iterations_ids sucht that both iteration nodes react to different loopsate information during dependency creation
+                        print("sin.loopstate_iteration_ids: ", sin.loopstate_iteration_ids)
                         if sin.loopstate_iteration_ids is None:
                             sin.set_loopstate_iteration_ids([1])
                         if cast(TGStartIterationNode, copied_iteration_entry).loopstate_iteration_ids is None:
@@ -2298,6 +2317,398 @@ class TaskGraph(Plottable, object):
                     del dependencies[dep_type]
         return dependencies
 
+    def __get_state_mappings_from_file(self, dynamic_dependency_file: str) -> Dict[str, List[str]]:
+        warnings.warn(
+            "TODO: stateID to callpath mapping might get really big. Implement this more scalable / resilient."
+        )
+        state_mappings_dict: Dict[str, List[str]] = dict()  # {stateID: callpath}
+        state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
+        if os.path.exists(state_mappings_file):
+            with open(state_mappings_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("#") or len(line) == 0:
+                        continue
+                    line_split = [elem for elem in line.split(" ") if len(elem) > 0]
+                    if len(line_split) < 2:
+                        continue
+                    state_id = line_split[0]
+                    raw_callpath = line_split[1]
+                    if "-->" in raw_callpath:
+                        callpath = raw_callpath.split("-->")
+                    else:
+                        callpath = [raw_callpath]
+                    state_mappings_dict[state_id] = callpath
+        return state_mappings_dict
+
+    def __assign_state_ids(self, dynamic_dependency_file: Optional[str]) -> None:
+        """attaches state ids to Context nodes."""
+        # read stateID to callpath mapping
+        state_mappings_dict = self.__get_state_mappings_from_file(dynamic_dependency_file)
+        print("state_mappings_dict: ")
+        for state_id in state_mappings_dict:
+            print("->", state_id, " -> ", state_mappings_dict[state_id])
+
+        def recursive_assignment(state_id: int, callstate: List[str], ctx: Context) -> bool:
+            """assigns state_id to the matching states.
+            Returns True, if state_id was assigned to at least one Context.
+            Returns False otherwise."""
+            if len(callstate) == 0:
+                return False
+            #            print("--> callstate: ", callstate)
+            #            print("--> ctx:" , ctx)
+
+            if isinstance(ctx, FunctionContext):
+                if "_loopstate" in callstate[0]:
+                    # remove leading loopstate entries
+                    to_be_removed: List[int] = []
+                    for idx in range(0, len(callstate)):
+                        if "_loopstate" in callstate[idx] and callstate[idx].split("_loopstate")[1].isdigit():
+                            to_be_removed.append(idx)
+                    for idx in sorted(to_be_removed, reverse=True):
+                        del callstate[idx]
+
+                if (
+                    len(callstate) > 0
+                    and self.pet.node_at(cast(FunctionContext, ctx).parent_function).name == callstate[0]
+                ):
+                    # HIT
+                    del callstate[0]
+                else:
+                    # MISS
+                    return False
+            elif isinstance(ctx, IterationContext):
+                #                print("is iteration context")
+                if "_loopstate" in callstate[0]:
+                    # check for matching loopstate id
+                    # get current loopstate_info
+                    loopstate_info = callstate[0].split("_loopstate")[1]
+                    # get loopstate_position
+                    #                   print("parentCTX: ", ctx.parent_context)
+                    parent_loop_ctx = cast(LoopParentContext, ctx.parent_context)
+                    loopstate_position = parent_loop_ctx.loopstate_position
+                    #                   print("loopstate position: ", loopstate_position)
+                    #                   print(
+                    #                       "loopstate iteration ids: ",
+                    #                       ctx.loopstate_iteration_ids,
+                    #                   )
+                    #                   print("loopstate_info: ", loopstate_info)
+                    if int(loopstate_info[loopstate_position]) in ctx.loopstate_iteration_ids:
+                        # HIT LOOPSTATE
+                        #                       print("HIT LOOPSTATE")
+                        # replace iteration id with processed marker "4"
+                        #                       print("CALLSTATE[0] PRE: ", callstate[0])
+                        callstate[0] = (
+                            callstate[0][: callstate[0].index("_loopstate") + len("_loopstate") + loopstate_position]
+                            + "4"
+                            + callstate[0][
+                                callstate[0].index("_loopstate") + 1 + loopstate_position + len("_loopstate") :
+                            ]
+                        )
+                        #                       print("CALLSTATE[0] POST: ", callstate[0])
+                        # check if search along this path is finished
+                        if (
+                            len(callstate) == 1
+                            and "0" not in callstate[0].split("_loopstate")[1]
+                            and "1" not in callstate[0].split("_loopstate")[1]
+                            and "2" not in callstate[0].split("_loopstate")[1]
+                        ):
+                            # trigger setting of state id
+                            del callstate[0]
+                    else:
+                        # missed loop state. continue search with successors
+                        print("checked loopstate: ", ctx.loopstate_iteration_ids)
+                        print(
+                            "MISSING LOOPSTATE. Continue search with: ",
+                            ctx.successor.loopstate_iteration_ids if ctx.successor is not None else "None",
+                        )
+
+                else:
+                    # MISS (invalid)
+                    return False
+
+            # set state_id if necessary
+            if len(callstate) == 0:
+                ctx.state_ids.append(state_id)
+                print("ADD state_id:", state_id, "to ctx: ", ctx)
+                return True
+
+            # continue assignment with children
+            ret_val = False
+            for child in ctx.get_contained_contexts():
+                #                print("child: ", child)
+                ret_val = ret_val or recursive_assignment(state_id, copy.deepcopy(callstate), child)
+            # continue assignment with successors
+
+            if ctx.successor is not None:
+
+                ret_val = ret_val or recursive_assignment(state_id, copy.deepcopy(callstate), ctx.successor)
+            return ret_val
+
+        # assign state id to task_graph nodes
+        logger.info("Assigning state ids to nodes...")
+        for state_id in tqdm(state_mappings_dict):
+            print()
+            print("Parsing state_id: ", state_id)
+            print("CallState: ", state_mappings_dict[state_id])
+            # skip callstate ending with call element
+            if (
+                len(state_mappings_dict[state_id]) > 0
+                and state_mappings_dict[state_id][-1].startswith("call_")
+                and state_mappings_dict[state_id][-1].split("call_")[1].isdigit()
+            ):
+                print("skipping due to call at the end.")
+                continue
+            # cleanup callstate
+            callstate = copy.deepcopy(state_mappings_dict[state_id])
+            # cleanup callstate (remove call_<int> markers)
+            to_be_removed: List[int] = []
+            for idx in range(0, len(callstate)):
+                if callstate[idx].startswith("call_") and callstate[idx].split("call_")[1].isdigit():
+                    to_be_removed.append(idx)
+            for idx in sorted(to_be_removed, reverse=True):
+                del callstate[idx]
+            # cleanup callstate (compress multiple successive loopstates)
+            if len(callstate) > 0:
+                loopstate_indices: List[int] = []
+                for idx in range(0, len(callstate)):
+                    if "_loopstate" in callstate[idx]:
+                        loopstate_indices.append(idx)
+                to_be_removed: List[int] = []
+                for idx, val in enumerate(loopstate_indices):
+                    if idx >= len(loopstate_indices) - 1:
+                        continue
+                    # check next registered loopstate info is a direct successor of the current one.
+                    # if so, the current enty can be omitted
+                    if val + 1 == loopstate_indices[idx + 1]:
+                        to_be_removed.append(val)
+                for tbr in sorted(to_be_removed, reverse=True):
+                    del callstate[tbr]
+
+            print("Clean CallState: ", callstate)
+            entry_points: List[Context] = [c for c in self.contexts if isinstance(c, FunctionContext)]
+            could_be_assigned: bool = False
+            for entry_point in entry_points:
+                could_be_assigned = could_be_assigned or recursive_assignment(
+                    int(state_id), copy.deepcopy(callstate), entry_point
+                )
+            if not could_be_assigned:
+                print("-> Not assigned!")
+
+    #        ax = self.create_plot("Context Graph")
+    #        self.plot_context_graph(ax)
+    #        self.run_visualizer()
+
+    #        import sys
+    #        sys.exit(0)
+
+    def __old_assign_state_ids(self, dynamic_dependency_file: Optional[str]) -> None:
+        """attaches state ids to Context nodes."""
+        # read stateID to callpath mapping
+        state_mappings_dict = self.__get_state_mappings_from_file(dynamic_dependency_file)
+        print("state_mappings_dict: ")
+        for state_id in state_mappings_dict:
+            print("->", state_id, " -> ", state_mappings_dict[state_id])
+
+        # assign state id to task_graph nodes
+        logger.info("Assigning state ids to nodes...")
+        for state_id in tqdm(state_mappings_dict):
+            print()
+            print("Parsing state_id: ", state_id)
+            # skip invalid states
+            if (
+                len(state_mappings_dict[state_id]) > 0
+                and state_mappings_dict[state_id][-1].startswith("call_")
+                and state_mappings_dict[state_id][-1].split("call_")[1].isdigit()
+            ):
+                # skip state ending with call
+                print("--> skip due to last element being a call.")
+                continue
+            # search for first match along each path and set the state_id
+            queue: List[Tuple[TGNode, list[str]]] = [
+                (self.root, state_mappings_dict[state_id])
+            ]  # queue necessary to handle branching
+            while len(queue) > 0:
+                current_node, remaining_path = queue.pop()
+                # cleanup remaining_path (remove leading call_<int> markers)
+                while (
+                    len(remaining_path) > 0
+                    and remaining_path[0].startswith("call_")
+                    and remaining_path[0].split("call_")[1].isdigit()
+                ):
+                    del remaining_path[0]
+                # cleanup remaining_path (compress multiple successive loopstates)
+                if len(remaining_path) > 0:
+                    loopstate_indices: List[int] = []
+                    for idx in range(0, len(remaining_path)):
+                        if "_loopstate" in remaining_path[idx]:
+                            loopstate_indices.append(idx)
+                    to_be_removed: List[int] = []
+                    for idx, val in enumerate(loopstate_indices):
+                        if idx >= len(loopstate_indices) - 1:
+                            continue
+                        # check next registered loopstate info is a direct successor of the current one.
+                        # if so, the current enty can be omitted
+                        if val + 1 == loopstate_indices[idx + 1]:
+                            to_be_removed.append(val)
+                    for tbr in sorted(to_be_removed, reverse=True):
+                        del remaining_path[tbr]
+
+                print("candidate: ", current_node, "remaining path:", remaining_path)
+
+                if len(remaining_path) == 0:
+                    # end of search along this path
+                    continue
+
+                # check if current_node qualifies for a state hit.
+                is_candidate = isinstance(current_node, TGFunctionNode) or isinstance(
+                    current_node, TGStartIterationNode
+                )
+
+                if is_candidate:
+                    # check for potential hit
+                    print("remaining_path[0]: ", remaining_path)
+                    if isinstance(current_node, TGFunctionNode):
+                        # cleanup leading loopstate
+                        while (
+                            len(remaining_path) > 0
+                            and "_loopstate" in remaining_path[0]
+                            and remaining_path[0].split("_loopstate")[1].isdigit()
+                        ):
+                            del remaining_path[0]
+
+                        if len(remaining_path) == 0:
+                            continue
+
+                        if cast(TGFunctionNode, current_node).get_pet_node(self.pet).name == remaining_path[0]:
+                            # hit
+                            del remaining_path[0]
+                            if len(remaining_path) == 0:
+                                if current_node.state_id is not None:
+                                    # keep longer path
+                                    if len(state_mappings_dict[state_id]) > len(
+                                        state_mappings_dict[current_node.state_id]
+                                    ):
+                                        pass
+                                    else:
+                                        print(
+                                            "Skipped overwrite: "
+                                            + str(current_node.state_id)
+                                            + " with "
+                                            + str(state_id)
+                                        )
+                                        continue
+                                current_node.state_id = state_id
+                                print("set state_id: ", state_id, " to node: ", current_node)
+                                # hit. stop search along this path
+                                continue
+                        else:
+                            # not a hit. stop search along this path.
+                            warnings.warn(
+                                "WARN 0: State_id: "
+                                + str(state_id)
+                                + " could not be assigned to a node."
+                                #                                + "\nPath: "
+                                #                                + str(state_mappings_dict[state_id])
+                            )
+                            continue
+                    elif isinstance(current_node, TGStartIterationNode):
+                        if not "_loopstate" in remaining_path[0]:
+                            # not a hit. stop search along this path.
+                            warnings.warn(
+                                "WARN 1: State_id: "
+                                + str(state_id)
+                                + " could not be assigned to a node."
+                                #                                + "\nPath: "
+                                #                                + str(state_mappings_dict[state_id])
+                            )
+                            print("queue len: ", len(queue))
+                            continue
+                        else:
+                            # check for matching loopstate id
+                            # get current loopstate_info
+                            loopstate_info = remaining_path[0].split("_loopstate")[1]
+                            # get loopstate_position
+                            print("parentCTX: ", cast(TGStartIterationNode, current_node).parent_context)
+                            parent_ctxs = cast(TGStartIterationNode, current_node).parent_context
+                            if len(parent_ctxs) == 0:
+                                continue
+                            iter_ctx = cast(IterationContext, list(parent_ctxs)[0])
+                            if iter_ctx.parent_context is None:
+                                continue
+                            parent_loop_ctx = cast(LoopParentContext, iter_ctx.parent_context)
+                            loopstate_position = parent_loop_ctx.loopstate_position
+                            print("loopstate position: ", loopstate_position)
+                            print(
+                                "loopstate iteration ids: ",
+                                cast(
+                                    IterationContext, cast(TGStartIterationNode, current_node)
+                                ).loopstate_iteration_ids,
+                            )
+                            print("loopstate_info: ", loopstate_info)
+                            # if loopstate_iteraton at the current index is 3, the loop should not be entered. Some mismatch occured
+                            if loopstate_info[loopstate_position] == "3":
+                                # continue search with successors of current loop
+                                if parent_loop_ctx.successor is None:
+                                    continue
+                                for succ_node in parent_loop_ctx.successor.contained_nodes:
+                                    queue.append((succ_node, remaining_path))
+                                print("-> Skipped loop body due to loopstate 3")
+                                continue
+
+                            # find the IterationContext child of the parent_loop_ctx which matches the loopstate_iteration at the current index. Proceed processing there to skip previous iteration bodies.
+                            if int(loopstate_info[loopstate_position]) in loopstate_indices:
+                                # iter_ctx targets current loopstate. nothing to do.
+                                pass
+                            else:
+                                # check next loop iteration
+                                if iter_ctx.successor is not None:
+                                    if isinstance(iter_ctx.successor, IterationContext):
+                                        for succ_node in iter_ctx.successor.contained_nodes:
+                                            queue.append((succ_node, remaining_path))
+                                            continue
+                                # continue with successor of parent loop
+                                # continue search with successors of current loop
+                                if parent_loop_ctx.successor is None:
+                                    continue
+                                for succ_node in parent_loop_ctx.successor.contained_nodes:
+                                    queue.append((succ_node, remaining_path))
+                                print("-> Skipped loop body")
+                                continue
+
+                            #                                if isinstance(IterationContext)
+                            #
+                            #                                # search in children on parent_loop_ctx for matchin loopstate_index
+                            #                                for child in parent_loop_ctx.get_contained_contexts():
+                            #                                    if (
+                            #                                        isinstance(child, IterationContext)
+                            #                                        and int(loopstate_info[loopstate_position]) in child.loopstate_iteration_ids
+                            #                                    ):
+                            #                                        iter_ctx = child
+                            #                                        break
+                            # print("iterCTX: ", iter_ctx)
+
+                            # set state id
+                            for n in iter_ctx.get_contained_nodes():
+                                if n.state_id is not None:
+                                    # keep longer path
+                                    if len(state_mappings_dict[state_id]) > len(state_mappings_dict[n.state_id]):
+                                        pass
+                                    else:
+                                        print("Skipped overwrite: " + str(n.state_id) + " with " + str(state_id))
+                                        continue
+                                n.state_id = state_id
+                                print("set state_id: ", state_id, " to node: ", n)
+
+                            # since loopstate encodes information on multiple entered loops, it may not be discarded by the processed TGStartIterationNode.
+                            # successive TGFunctionNode encounters will cleanup leading loopstates in the remaining_path
+
+                # continue search with successors
+                for succ in self.get_successors(current_node):
+                    queue.append((succ, copy.deepcopy(remaining_path)))
+        plt.ioff()
+        self.plot()
+
     def __get_work_contexts_by_location_and_state_id(
         self,
         pet: PEGraphX,
@@ -2335,179 +2746,22 @@ class TaskGraph(Plottable, object):
 
         # filter contexts for state_id compatibility
         if state_id != "NO_STATE":
-            if state_id in state_mappings_dict:
-                callpath = copy.deepcopy(state_mappings_dict[state_id])
-
-                filtered_contexts: Set[Context] = set()
-
-                for ctx in contexts:
-                    # determine ancestors
-                    ancestors = ctx.get_ancestor_contexts()
-                    # traverse ancestors and convert them into a callpath compatible representation.
-                    ctx_callpath: List[str] = []
-                    last_ancestor_was_inlined_function_marker = False
-                    last_called_function = None
-
-                    loopstate_violation_found = False
-                    loopstate_callpath_copy = copy.deepcopy(callpath)
-                    current_loopstate_info = [elem for elem in loopstate_callpath_copy if "_loopstate" in elem]
-                    for ancestor in ancestors:
-                        if isinstance(ancestor, FunctionContext):
-                            last_ancestor_was_inlined_function_marker = False
-                            if ancestor.parent_function is not None:
-                                ctx_callpath.insert(0, pet.node_at(ancestor.parent_function).name)
-                                last_called_function = ancestor.parent_function
-                                # function contexts trigger the invalidation and loading of a new loopstate, as they effectively end the "scope"
-                                # remove loopstate entry from callpath to allow analysis of ancestor iterations, and make size of callpath and ctx_callpath comparable for later check.
-                                # cleanup callpath loopstates at the end of the callpath
-                                found_loopstate = False
-                                search_index = len(loopstate_callpath_copy) - 1
-                                to_be_removed: List[int] = []
-                                while search_index >= 0:
-                                    if not found_loopstate:
-                                        if "_loopstate" in loopstate_callpath_copy[search_index]:
-                                            # found last loopstate entry. continue search with previous element.
-                                            # last loopstate entry shall not be removed from the
-                                            to_be_removed.append(search_index)
-                                            found_loopstate = True
-                                            search_index -= 1
-                                            continue
-                                        else:
-                                            # continue search for last loopstate entry
-                                            search_index -= 1
-                                    else:
-                                        if "_loopstate" in loopstate_callpath_copy[search_index]:
-                                            # found a next loopstate entry. register for deletion and continue search with previous element
-                                            to_be_removed.append(search_index)
-                                            search_index -= 1
-                                        else:
-                                            # did not find a next loopstate entry. stop the search
-                                            break
-                                # delete loopstate elements
-                                for (
-                                    tbr
-                                ) in (
-                                    to_be_removed
-                                ):  # indices are already in decreasing order. Thus, deletion in order is safe.
-                                    del loopstate_callpath_copy[tbr]
-
-                            continue
-                        if isinstance(ancestor, InlinedFunctionContext):
-                            last_ancestor_was_inlined_function_marker = True
-                            continue
-                        if isinstance(ancestor, WorkContext):
-                            if last_ancestor_was_inlined_function_marker:
-                                # get the lineID from the call
-                                potential_contained_calls = ancestor.get_contained_calls(self.pet)
-                                potential_contained_calls = [
-                                    call for call in potential_contained_calls if call[0] == last_called_function
-                                ]
-                                # get candidate calls from callpath
-                                candidate_calls = [entry for entry in callpath if entry.startswith("call_")]
-                                for candidate_call in candidate_calls:
-                                    # get instruction id
-                                    instruction_id = candidate_call[5:]
-                                    if not instruction_id.isnumeric():
-                                        continue
-                                    # get lineID from instruction id
-                                    if instruction_id in instructionID_mappings_dict:
-                                        line_id = instructionID_mappings_dict[instruction_id]
-                                        if line_id in [call[1] for call in potential_contained_calls]:
-                                            ctx_callpath.insert(0, candidate_call)
-                                            break
-                            else:
-                                # unspecific, skip
-                                continue
-                        warnings.warn(
-                            "TODO: add check for Loop iteration here, and add loop identifier and loop state to iteration Contexts."
-                        )
-                        if isinstance(ancestor, IterationContext):
-                            # find last loopstate information in callpath
-                            if len(current_loopstate_info) == 0:
-                                # non-matching callpath. ctx is not a valid candidate
-                                loopstate_violation_found = True
-                                continue
-                            relevant_loopstate_position = cast(
-                                LoopParentContext, ancestor.belongs_to_context
-                            ).loopstate_position
-                            if relevant_loopstate_position is None:
-                                warnings.warn(
-                                    "Invalid LoopParentContext. Property 'loopstate_position' is None. Context: "
-                                    + str(ancestor.belongs_to_context)
-                                )
-                                continue
-                            if len(current_loopstate_info) == 0:
-                                raise ValueError("No loopstate found for IterationContext: ", ancestor)
-                            if ancestor.loopstate_iteration_ids is None:
-                                raise ValueError(
-                                    "Loopstate iteration ids are not registered. Value is None. IterationContext: ",
-                                    ancestor,
-                                )
-                            if len(ancestor.loopstate_iteration_ids) == 0:
-                                raise ValueError(
-                                    "No loopstate iteration ids registered for IterationContext: ", ancestor
-                                )
-                            last_loopstate_info = current_loopstate_info[-1]
-                            # get loopstate for checking
-                            full_loopstate = last_loopstate_info.split("_loopstate")[1]
-                            if relevant_loopstate_position + 1 > len(full_loopstate):
-                                warnings.warn(
-                                    "Loopstate "
-                                    + full_loopstate
-                                    + " does not allow lookup at position "
-                                    + str(relevant_loopstate_position)
-                                    + " due to length limitation. Skipping candidate."
-                                )
-                                continue
-                            unpacked_loopstate = int(full_loopstate[relevant_loopstate_position])
-
-                            # check for match
-                            if unpacked_loopstate not in ancestor.loopstate_iteration_ids:
-                                # ancestor does not target the unpacked loopstate
-                                loopstate_violation_found = True
-                            else:
-                                ctx_callpath.insert(0, last_loopstate_info)
-
-                            last_ancestor_was_inlined_function_marker = False
-
-                        if isinstance(ancestor, Context):
-                            # unspecific, skip
-                            last_ancestor_was_inlined_function_marker = False
-                            continue
-                        else:
-                            warnings.warn("Not yet implemented: unknown ancestor context type: " + str(type(ancestor)))
-                            last_ancestor_was_inlined_function_marker = False
-
-                    # compress sequences of loopstate information in callpath before checking for equivalence
-                    to_be_removed = []
-                    for i in range(1, len(callpath)):
-                        if "_loopstate" in callpath[i - 1] and "_loopstate" in callpath[i]:
-                            to_be_removed.append(i - 1)
-                    for tbr in sorted(to_be_removed, reverse=True):
-                        del callpath[tbr]
-
-                    # compress sequences of loopstate information in ctx_callpath before checking for equivalence
-                    to_be_removed = []
-                    for i in range(1, len(ctx_callpath)):
-                        if "_loopstate" in ctx_callpath[i - 1] and "_loopstate" in ctx_callpath[i]:
-                            to_be_removed.append(i - 1)
-                    for tbr in sorted(to_be_removed, reverse=True):
-                        del ctx_callpath[tbr]
-
-                    # check equality of callpath and ctx_callpath
-                    if len(callpath) != len(ctx_callpath):
-                        continue
-
-                    equal = True
-                    for i in range(0, len(callpath)):
-                        if callpath[i] != ctx_callpath[i]:
-                            equal = False
-                            break
-                    if equal and not loopstate_violation_found:
+            filtered_contexts: Set[Context] = set()
+            for ctx in self.contexts:
+                if location in ctx.get_code_scope(pet):
+                    if state_id == "28" or state_id == "29" or state_id == "30":
+                        print("HERE: state_id: ", state_id, " CTX state ids: ", ctx.get_state_ids())
+                    if int(state_id) in ctx.get_state_ids():
+                        if state_id == "28" or state_id == "29" or state_id == "30":
+                            print("HERE: MATCH")
                         filtered_contexts.add(ctx)
 
-                lookup_cache[cache_key] = filtered_contexts
-                return filtered_contexts
+            if state_id == "28" or state_id == "29" or state_id == "30":
+                print("STATE ID: ", state_id)
+                print("CTXS: ", filtered_contexts)
+
+            lookup_cache[cache_key] = filtered_contexts
+            return filtered_contexts
 
         lookup_cache[cache_key] = contexts
         return contexts
@@ -2561,29 +2815,9 @@ class TaskGraph(Plottable, object):
                     mappings_dict[instruction_id] = line_id
 
         # read stateID to callpath mapping
-        warnings.warn(
-            "TODO: stateID to callpath mapping might get really big. Implement this more scalable / resilient."
-        )
-        state_mappings_dict: Dict[str, List[str]] = dict()  # {stateID: callpath}
-        state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
-        if os.path.exists(state_mappings_file):
-            with open(state_mappings_file, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("#") or len(line) == 0:
-                        continue
-                    line_split = [elem for elem in line.split(" ") if len(elem) > 0]
-                    if len(line_split) < 2:
-                        continue
-                    state_id = line_split[0]
-                    raw_callpath = line_split[1]
-                    if "-->" in raw_callpath:
-                        callpath = raw_callpath.split("-->")
-                    else:
-                        callpath = [raw_callpath]
-                    state_mappings_dict[state_id] = callpath
+        state_mappings_dict = self.__get_state_mappings_from_file(dynamic_dependency_file)
 
-        # build spatial index: LineID -> Set[WorkContext] (suggestion 2)
+        # build spatial index: LineID -> Set[WorkContext]
         location_to_work_contexts: Dict[LineID, Set[WorkContext]] = {}
         for _ctx in self.contexts:
             if not isinstance(_ctx, WorkContext):
@@ -2591,7 +2825,7 @@ class TaskGraph(Plottable, object):
             for _line_id in _ctx.get_code_scope(self.pet):
                 location_to_work_contexts.setdefault(_line_id, set()).add(_ctx)
 
-        # cache for repeated (location, state_id) lookups (suggestion 1)
+        # cache for repeated (location, state_id) lookups
         _context_lookup_cache: Dict[Tuple[str, str], Set[Context]] = {}
 
         # insert data dependencies into graph
@@ -2719,7 +2953,45 @@ class TaskGraph(Plottable, object):
                                             # ignore INIT as there is no data flow
                                             if dependency.dtype == DepType.INIT:
                                                 continue
+                                            # prevent false positive dependencies in case of same iterations by checking for same ancestors
+                                            # TODO: add states to contexts to allow a more robust search in __get_work_contexts_by_location_and_state_id
+                                            # TODO: The fact the following condition is necessary is a result of incorrect behavior of __get_work_contexts_by_location_and_state_id, which should be fixed!
+                                            if source_state_id == sink_state_id:
+                                                source_ancs = source_ctx.get_ancestor_contexts()
+                                                target_ancs = target_ctx.get_ancestor_contexts()
+                                                # prune ancestors to closest iteration context and check for equality to ensure source and target are located in the same iteration.
+                                                while len(source_ancs) > 0:
+                                                    if isinstance(source_ancs[0], IterationContext):
+                                                        break
+                                                    del source_ancs[0]
+                                                while len(target_ancs) > 0:
+                                                    if isinstance(target_ancs[0], IterationContext):
+                                                        break
+                                                    del target_ancs[0]
+                                                if source_ancs != target_ancs:
+                                                    continue
 
+                                            if dependency.var_name == "error":
+                                                print(
+                                                    "REGISTER DEP: ",
+                                                    source_ctx,
+                                                    target_ctx,
+                                                    dependency.dtype,
+                                                    dependency.source_line,
+                                                    dependency.sink_line,
+                                                    dependency.var_name,
+                                                )
+                                                print("source: ", source_ctx)
+                                                print("source_ancs: ", source_ctx.get_ancestor_contexts())
+                                                print("sink: ", target_ctx)
+                                                print("sink ancs:", target_ctx.get_ancestor_contexts())
+                                                print("source_state: ", source_state_id)
+                                                print("sink_state: ", sink_state_id)
+                                                print("source_location: ", source_location)
+                                                print("sink_location: ", sink_location)
+                                                print("source_states: ", source_ctx.get_state_ids())
+                                                print("sink_states: ", target_ctx.get_state_ids())
+                                                print()
                                             source_ctx.register_outgoing_dependency(target_ctx, dependency)
 
         logger.info(

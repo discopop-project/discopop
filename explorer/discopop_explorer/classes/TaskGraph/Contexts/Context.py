@@ -27,6 +27,7 @@ class Context(object):
     predecessor: Optional[Context]
     parent_context: Optional[Context]
     outgoing_dependencies: Set[Tuple[Context, Dependency]]
+    state_ids: List[int]
 
     def __init__(self) -> None:
         self.contained_nodes = []
@@ -39,6 +40,7 @@ class Context(object):
         self._code_scope_cache: Optional[List[LineID]] = None
         self._closest_function_ancestor_computed: bool = False
         self._closest_function_ancestor: Optional[Context] = None
+        self.state_ids = []
 
     def get_contained_nodes(self, inclusive: bool = False) -> List[TGNode]:
         """
@@ -234,3 +236,12 @@ class Context(object):
         # remove duplicates
         defined_vars = list(set(defined_vars))
         return defined_vars
+
+    def get_state_ids(self) -> List[int]:
+        if len(self.state_ids) != 0:
+            return self.state_ids
+        for anc in self.get_ancestor_contexts():
+            if len(anc.state_ids) != 0:
+                return anc.state_ids
+        return []
+    

@@ -135,14 +135,7 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
     # read static dependencies
     static_dependency_lines = []
     if not os.path.exists(os.path.join(output_path, "static_dependencies.txt")):
-        warnings.warn(
-            "Static dependencies could not be found under: " + os.path.join(output_path, "static_dependencies.txt")
-        )
-        # todo
-        warnings.warn(
-            "TODO: Add command line parameter to pass a location for the static dependency file, "
-            "or combine static and dynamic dependencies from the beginning."
-        )
+        pass
     else:
         with open(os.path.join(output_path, "static_dependencies.txt"), "r") as static_dep_fd:
             static_dependency_lines = static_dep_fd.readlines()

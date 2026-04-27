@@ -44,15 +44,43 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[DoAllInfo]:
     logger.info("Starting new do_all detection...")
     result: List[DoAllInfo] = []
 
-    # show_all_plots(task_graph)
+    show_plot(task_graph)
 
     result += identify_simple_doall(task_graph)
 
     return result
 
 
-def show_all_plots(tg: TaskGraph) -> None:
-    raise NotImplementedError("Show all plots.")
+def show_plot(tg: TaskGraph) -> None:
+    if tg.plottable() == False:
+        return
+
+    def draw_plots() -> None:
+        ax = tg.create_plot("Context Graph")
+        print("Plotting task graph (context graph)...")
+        if len(tg.graph.nodes()) < 500:
+            tg.plot_context_graph(ax)
+
+    def on_filter(filter_text: str) -> None:
+        print("Filter text:", filter_text)
+
+        # Extra processing here
+
+        for frame_name in [
+            "Graphs",
+            "Task Graph",
+            "Task graph (context graph)",
+            "Task graph (context debug graph)",
+            "Context task graph",
+        ]:
+            try:
+                tg.delete_frame(frame_name)
+            except KeyError:
+                pass
+
+    tg.set_filter_callback(on_filter)
+    draw_plots()
+    tg.run_visualizer()
 
 
 def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
@@ -95,6 +123,17 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
             for subnode in subtrees[ic_source]:
                 for out_dep_target, dep in subnode.outgoing_dependencies:
                     if out_dep_target in other_iterations_subnodes:
+                        print(
+                            "Prevents doall:",
+                            dep.dtype,
+                            dep.source_line,
+                            dep.sink_line,
+                            dep.var_name,
+                            "source:",
+                            subnode.get_code_scope(tg.pet, inclusive=True),
+                            "out_dep_target:",
+                            out_dep_target.get_code_scope(tg.pet, inclusive=True),
+                        )
                         dependency_found = True
                         break
                 if dependency_found:
@@ -104,6 +143,7 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
         if dependency_found:
             # node is not a valid doall loop
             prevented_loops.add(node.pet_node_id)
+            print("PREVENTED: 1")
             continue
         # node is a valid doall loop. Register a pattern
         pattern = DoAllInfo(tg.pet, tg.pet.node_at(node.pet_node_id))
@@ -111,7 +151,7 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
         # prevent duplicates. Necessary since multiple copies of the same loop might exist
         if pattern.pattern_tag in [p.pattern_tag for p in patterns]:
             continue
-
+        print(" FOUND 1")
         patterns.append(pattern)
 
     # clean patterns agains prevented loops

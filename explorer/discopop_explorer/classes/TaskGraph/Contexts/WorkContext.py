@@ -35,6 +35,8 @@ class WorkContext(Context):
                 label += " " + str(node_id_str)
         # END DEBUG
 
+        label += "\nstate_ids: " + str(self.get_state_ids())
+
         return label
 
     def get_label_with_defined_vars(self, pet: PEGraphX) -> str:

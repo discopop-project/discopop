@@ -10,8 +10,9 @@ import json
 import os
 from pathlib import Path
 from posixpath import abspath, dirname
-from typing import Dict, cast
+from typing import Dict, List, Tuple, cast
 from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
+from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
 from discopop_explorer.utilities.PEGraphConstruction.parser import __parse_dep_file
 from discopop_library.DependencyComparator.DependencyComparatorArguments import DependencyComparatorArguments
 from discopop_library.global_data.version.utils import get_version
@@ -19,10 +20,10 @@ from discopop_library.global_data.version.utils import get_version
 
 def run(arguments: DependencyComparatorArguments) -> int:
 
-    if not os.path.exists(arguments.gold_standard):
-        raise FileNotFoundError(arguments.gold_standard)
-    if not os.path.exists(arguments.test_set):
-        raise FileNotFoundError(arguments.test_set)
+    if not (os.path.exists(arguments.gold_standard_dynamic) or os.path.exists(arguments.gold_standard_static)):
+        raise FileNotFoundError("GOLD STANDARD")
+    if not (os.path.exists(arguments.test_set_dynamic) or os.path.exists(arguments.test_set_static)):
+        raise FileNotFoundError("TEST SET")
     output_results: bool = True
     if arguments.output == "None" or arguments.output is None:
         output_results = False
@@ -31,12 +32,48 @@ def run(arguments: DependencyComparatorArguments) -> int:
         os.remove(arguments.output)
 
     # read gold standard
-    with open(arguments.gold_standard, "r") as f:
-        parsed_gold_standard = __parse_dep_file(f, dirname(abspath(arguments.gold_standard)))[0]
+    parsed_gold_standard: List[DependenceItem] = []
+    gold_standard_parent_folder: str = ""
+    if os.path.exists(arguments.gold_standard_dynamic):
+        with open(arguments.gold_standard_dynamic, "r") as f:
+            parsed_gold_standard += __parse_dep_file(f, dirname(abspath(arguments.gold_standard_dynamic)))[0]
+            gold_standard_parent_folder = str(Path(str(arguments.gold_standard_dynamic)).parent)
+    if os.path.exists(arguments.gold_standard_static):
+        with open(arguments.gold_standard_static, "r") as f:
+            tmp_deps = __parse_dep_file(f, dirname(abspath(arguments.gold_standard_static)))[0]
+            # prevent duplicates
+            for d in tmp_deps:
+                to_be_added = True
+                for gold_d in parsed_gold_standard:
+                    if d.is_equal(gold_d):
+                        to_be_added = False
+                        break
+                if to_be_added:
+                    parsed_gold_standard.append(d)
+
+            gold_standard_parent_folder = str(Path(str(arguments.gold_standard_static)).parent)
 
     # read test_set
-    with open(arguments.test_set, "r") as f:
-        parsed_test_set = __parse_dep_file(f, dirname(abspath(arguments.test_set)))[0]
+    parsed_test_set: List[DependenceItem] = []
+    test_set_parent_folder: str = ""
+    if os.path.exists(arguments.test_set_dynamic):
+        with open(arguments.test_set_dynamic, "r") as f:
+            parsed_test_set += __parse_dep_file(f, dirname(abspath(arguments.test_set_dynamic)))[0]
+            test_set_parent_folder = str(Path(str(arguments.test_set_dynamic)).parent)
+    if os.path.exists(arguments.test_set_static):
+        with open(arguments.test_set_static, "r") as f:
+            tmp_deps += __parse_dep_file(f, dirname(abspath(arguments.test_set_static)))[0]
+            # prevent duplicates
+            for d in tmp_deps:
+                to_be_added = True
+                for test_d in parsed_test_set:
+                    if d.is_equal(test_d):
+                        to_be_added = False
+                        break
+                if to_be_added:
+                    parsed_test_set.append(d)
+
+            test_set_parent_folder = str(Path(str(arguments.test_set_static)).parent)
 
     overlap = []
     missing = []
@@ -47,7 +84,7 @@ def run(arguments: DependencyComparatorArguments) -> int:
     for dep in parsed_gold_standard:
         found = False
         for dep_2 in parsed_test_set:
-            if dep_equal(dep, arguments.gold_standard, dep_2, arguments.test_set):
+            if dep_equal(dep, gold_standard_parent_folder, dep_2, test_set_parent_folder):
                 overlap.append(dep)
                 found = True
                 break
@@ -61,7 +98,7 @@ def run(arguments: DependencyComparatorArguments) -> int:
     for dep in parsed_test_set:
         found = False
         for dep_2 in parsed_gold_standard:
-            if dep_equal(dep, arguments.test_set, dep_2, arguments.gold_standard):
+            if dep_equal(dep, test_set_parent_folder, dep_2, gold_standard_parent_folder):
                 found = True
                 break
         if found:
@@ -143,7 +180,9 @@ def get_instructionID_to_lineID_mapping(project_folder: Path) -> Dict[str, str]:
     return mappings_dict
 
 
-def dep_equal(a: DependenceItem, a_dep_file: str, b: DependenceItem, b_dep_file: str) -> bool:
+def dep_equal(
+    a: DependenceItem, a_dep_file_parent_folder: str, b: DependenceItem, b_dep_file_parent_folder: str
+) -> bool:
     # ensure correct equality check in case of different profiler versions (legacy vs. instruction-based)
     a_source_legacy = ":" in a.source
     a_sink_legacy = ":" in a.sink
@@ -187,12 +226,12 @@ def dep_equal(a: DependenceItem, a_dep_file: str, b: DependenceItem, b_dep_file:
             return False
     elif a_source_legacy and not b_source_legacy:
         # compare a.source with converted b.source
-        instruction_id_mappings = get_instructionID_to_lineID_mapping(Path(str(b_dep_file)).parent.parent)
+        instruction_id_mappings = get_instructionID_to_lineID_mapping(Path(str(b_dep_file_parent_folder)).parent)
         if a.source != instruction_id_mappings[b.source]:
             return False
     elif not a_source_legacy and b_source_legacy:
         # compare a.source with converted b.source
-        instruction_id_mappings = get_instructionID_to_lineID_mapping(Path(str(a_dep_file)).parent.parent)
+        instruction_id_mappings = get_instructionID_to_lineID_mapping(Path(str(a_dep_file_parent_folder)).parent)
         if instruction_id_mappings[a.source] != b.source:
             return False
     else:
@@ -206,12 +245,12 @@ def dep_equal(a: DependenceItem, a_dep_file: str, b: DependenceItem, b_dep_file:
             return False
     elif a_sink_legacy and not b_sink_legacy:
         # compare a.sink with converted b.sink
-        instruction_id_mappings = get_instructionID_to_lineID_mapping(Path(str(b_dep_file)).parent.parent)
+        instruction_id_mappings = get_instructionID_to_lineID_mapping(Path(str(b_dep_file_parent_folder)).parent)
         if a.sink != instruction_id_mappings[b.sink]:
             return False
     elif not a_sink_legacy and b_sink_legacy:
         # compare a.sink with converted b.sink
-        instruction_id_mappings = get_instructionID_to_lineID_mapping(Path(str(a_dep_file)).parent.parent)
+        instruction_id_mappings = get_instructionID_to_lineID_mapping(Path(str(a_dep_file_parent_folder)).parent)
         if instruction_id_mappings[a.sink] != b.sink:
             return False
     else:
