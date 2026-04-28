@@ -781,7 +781,7 @@ class TaskGraph(Plottable, object):
                             itenp.pet_node_id, itenp.level, itenp.position, entry_node.pet_node_id
                         )
                         # ism.loopstate_iteration_ids = [
-                        #    0
+                        #   0
                         # ]  # loop iterations will be duplicated later. loopstate_ids will be overwritten / set then.
 
                         ism_list.append(ism)
@@ -1308,7 +1308,11 @@ class TaskGraph(Plottable, object):
             # create iteration contexts
             for pair in pair_iteration_nodes:
                 if pair[0].loopstate_iteration_ids is None:
-                    raise ValueError("TGStartIterationNode: loopstate iteration ids not set. Node: ", pair[0])
+                    warnings.warn(
+                        "Applied fix: set previously unspecified loopstate iteration id of " + str(pair[0]) + "to [0]."
+                    )
+                    pair[0].loopstate_iteration_ids = [0]
+                    # raise ValueError("TGStartIterationNode: loopstate iteration ids not set. Node: ", pair[0])
                 iteration_context = IterationContext(loop_context, pair[0].loopstate_iteration_ids)
                 pair[0].register_created_context(iteration_context)
                 #                for iteration_node in pair_iteration_nodes[pair]:
@@ -1536,7 +1540,7 @@ class TaskGraph(Plottable, object):
         logger.info("--> determine loop variables...")
         for loop_ctx in tqdm(entry_points):
             loop_header_ctx = self.get_loop_header_context(loop_ctx)
-            print("LOOP HEADER CTX:" , loop_header_ctx)
+            print("LOOP HEADER CTX:", loop_header_ctx)
             if loop_header_ctx is None:
                 continue
             # identify loop variables by checking for RAW dependencies between loop body and loop header
@@ -1567,7 +1571,6 @@ class TaskGraph(Plottable, object):
                 if source_ctx in loop_iteration_ctxs:
                     loop_vars.append((dep.var_name, dep.memory_region))
 
-            
             # remove duplicates
             loop_vars = list(set(loop_vars))
             # save loop variables
@@ -2365,63 +2368,48 @@ class TaskGraph(Plottable, object):
         for state_id in state_mappings_dict:
             print("->", state_id, " -> ", state_mappings_dict[state_id])
 
-        def recursive_assignment(state_id: int, callstate: List[str], ctx: Context) -> bool:
+        def recursive_assignment(state_id: int, callstate: Tuple[str, ...], ctx: Context) -> bool:
             """assigns state_id to the matching states.
             Returns True, if state_id was assigned to at least one Context.
             Returns False otherwise."""
             if len(callstate) == 0:
                 return False
-            #            print("--> callstate: ", callstate)
-            #            print("--> ctx:" , ctx)
 
             if isinstance(ctx, FunctionContext):
                 if "_loopstate" in callstate[0]:
                     # remove leading loopstate entries
-                    to_be_removed: List[int] = []
-                    for idx in range(0, len(callstate)):
-                        if "_loopstate" in callstate[idx] and callstate[idx].split("_loopstate")[1].isdigit():
-                            to_be_removed.append(idx)
-                    for idx in sorted(to_be_removed, reverse=True):
-                        del callstate[idx]
+                    callstate = tuple(
+                        v for v in callstate if not ("_loopstate" in v and v.split("_loopstate")[1].isdigit())
+                    )
 
                 if (
                     len(callstate) > 0
                     and self.pet.node_at(cast(FunctionContext, ctx).parent_function).name == callstate[0]
                 ):
                     # HIT
-                    del callstate[0]
+                    callstate = callstate[1:]
                 else:
                     # MISS
                     return False
             elif isinstance(ctx, IterationContext):
-                #                print("is iteration context")
                 if "_loopstate" in callstate[0]:
                     # check for matching loopstate id
                     # get current loopstate_info
                     loopstate_info = callstate[0].split("_loopstate")[1]
                     # get loopstate_position
-                    #                   print("parentCTX: ", ctx.parent_context)
                     parent_loop_ctx = cast(LoopParentContext, ctx.parent_context)
                     loopstate_position = parent_loop_ctx.loopstate_position
-                    #                   print("loopstate position: ", loopstate_position)
-                    #                   print(
-                    #                       "loopstate iteration ids: ",
-                    #                       ctx.loopstate_iteration_ids,
-                    #                   )
-                    #                   print("loopstate_info: ", loopstate_info)
                     if int(loopstate_info[loopstate_position]) in ctx.loopstate_iteration_ids:
                         # HIT LOOPSTATE
-                        #                       print("HIT LOOPSTATE")
                         # replace iteration id with processed marker "4"
-                        #                       print("CALLSTATE[0] PRE: ", callstate[0])
-                        callstate[0] = (
+                        new_head = (
                             callstate[0][: callstate[0].index("_loopstate") + len("_loopstate") + loopstate_position]
                             + "4"
                             + callstate[0][
                                 callstate[0].index("_loopstate") + 1 + loopstate_position + len("_loopstate") :
                             ]
                         )
-                        #                       print("CALLSTATE[0] POST: ", callstate[0])
+                        callstate = (new_head,) + callstate[1:]
                         # check if search along this path is finished
                         if (
                             len(callstate) == 1
@@ -2430,15 +2418,10 @@ class TaskGraph(Plottable, object):
                             and "2" not in callstate[0].split("_loopstate")[1]
                         ):
                             # trigger setting of state id
-                            del callstate[0]
+                            callstate = callstate[1:]
                     else:
                         # missed loop state. continue search with successors
-                        print("checked loopstate: ", ctx.loopstate_iteration_ids)
-                        print(
-                            "MISSING LOOPSTATE. Continue search with: ",
-                            ctx.successor.loopstate_iteration_ids if ctx.successor is not None else "None",
-                        )
-
+                        pass
                 else:
                     # MISS (invalid)
                     return False
@@ -2446,37 +2429,38 @@ class TaskGraph(Plottable, object):
             # set state_id if necessary
             if len(callstate) == 0:
                 ctx.state_ids.append(state_id)
-                print("ADD state_id:", state_id, "to ctx: ", ctx)
+                logger.debug("ADD state_id:" + str(state_id) + " to ctx: " + str(ctx))
                 return True
 
             # continue assignment with children
             ret_val = False
             for child in ctx.get_contained_contexts():
                 #                print("child: ", child)
-                ret_val = ret_val or recursive_assignment(state_id, copy.deepcopy(callstate), child)
+                ret_val = ret_val or recursive_assignment(state_id, callstate, child)
             # continue assignment with successors
 
             if ctx.successor is not None:
 
-                ret_val = ret_val or recursive_assignment(state_id, copy.deepcopy(callstate), ctx.successor)
+                ret_val = ret_val or recursive_assignment(state_id, callstate, ctx.successor)
             return ret_val
 
         # assign state id to task_graph nodes
         logger.info("Assigning state ids to nodes...")
         for state_id in tqdm(state_mappings_dict):
-            print()
-            print("Parsing state_id: ", state_id)
-            print("CallState: ", state_mappings_dict[state_id])
+            #            print()
+            #            print("Parsing state_id: ", state_id)
+            #            print("CallState: ", state_mappings_dict[state_id])
+            smd_entry = state_mappings_dict[state_id]
             # skip callstate ending with call element
             if (
                 len(state_mappings_dict[state_id]) > 0
-                and state_mappings_dict[state_id][-1].startswith("call_")
-                and state_mappings_dict[state_id][-1].split("call_")[1].isdigit()
+                and smd_entry[-1].startswith("call_")
+                and smd_entry[-1].split("call_")[1].isdigit()
             ):
-                print("skipping due to call at the end.")
+                #                print("skipping due to call at the end.")
                 continue
             # cleanup callstate
-            callstate = copy.deepcopy(state_mappings_dict[state_id])
+            callstate = copy.deepcopy(smd_entry)
             # cleanup callstate (remove call_<int> markers)
             to_be_removed: List[int] = []
             for idx in range(0, len(callstate)):
@@ -2501,15 +2485,17 @@ class TaskGraph(Plottable, object):
                 for tbr in sorted(to_be_removed, reverse=True):
                     del callstate[tbr]
 
-            print("Clean CallState: ", callstate)
+            #            print("Clean CallState: ", callstate)
             entry_points: List[Context] = [c for c in self.contexts if isinstance(c, FunctionContext)]
+            callstate_tuple: Tuple[str, ...] = tuple(callstate)
             could_be_assigned: bool = False
             for entry_point in entry_points:
                 could_be_assigned = could_be_assigned or recursive_assignment(
-                    int(state_id), copy.deepcopy(callstate), entry_point
+                    int(state_id), callstate_tuple, entry_point
                 )
-            if not could_be_assigned:
-                print("-> Not assigned!")
+
+    #            if not could_be_assigned:
+    #                print("-> Not assigned!")
 
     #        ax = self.create_plot("Context Graph")
     #        self.plot_context_graph(ax)
