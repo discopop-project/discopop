@@ -109,11 +109,14 @@ class PatternDetectorX(object):
         #            task_graph.plot_context_graph(plt.gca())
 
         # detect parallel tasks
-        res.patterns.task = detect_tasking(self.pet, task_graph, visualizer)
+        if "*" in enable_patterns or "task" in enable_patterns:
+            res.patterns.task = detect_tasking(self.pet, task_graph, visualizer)
 
-        res.patterns.do_all = detect_do_all_new(self.pet, task_graph)
+        if "*" in enable_patterns or "doall" in enable_patterns:
+            res.patterns.do_all = detect_do_all_new(self.pet, task_graph)
 
-        res.patterns.reduction = detect_reduction_new(self.pet, task_graph)
+        if "*" in enable_patterns or "reduction" in enable_patterns:
+            res.patterns.reduction = detect_reduction_new(self.pet, task_graph)
 
         # reduction before doall!
 
