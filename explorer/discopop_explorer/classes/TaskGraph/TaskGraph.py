@@ -1540,15 +1540,15 @@ class TaskGraph(Plottable, object):
         logger.info("--> determine loop variables...")
         for loop_ctx in tqdm(entry_points):
             loop_header_ctx = self.get_loop_header_context(loop_ctx)
-            print("LOOP HEADER CTX:", loop_header_ctx)
+#            print("LOOP HEADER CTX:", loop_header_ctx)
             if loop_header_ctx is None:
                 continue
             # identify loop variables by checking for RAW dependencies between loop body and loop header
             loop_iteration_ctxs = loop_ctx.get_contained_contexts(inclusive=True)
             loop_vars: List[Tuple[str, MemoryRegion]] = []
-            print("LOOP IT CTXS: ", loop_iteration_ctxs)
-            print("LOOP HEADER OUTDEPS: ", loop_header_ctx.outgoing_dependencies)
-            print("LOOP HEADER INDEPS: ", loop_header_ctx.incoming_dependencies)
+#            print("LOOP IT CTXS: ", loop_iteration_ctxs)
+#            print("LOOP HEADER OUTDEPS: ", loop_header_ctx.outgoing_dependencies)
+#            print("LOOP HEADER INDEPS: ", loop_header_ctx.incoming_dependencies)
             for target_ctx, dep in loop_header_ctx.outgoing_dependencies:
                 if dep is None or dep.etype != EdgeType.DATA:
                     continue
@@ -1685,7 +1685,7 @@ class TaskGraph(Plottable, object):
                     else:
                         # empty parent context can happen at the root level of the graph. All other cases are invalid.
                         if current_context.parent_context is None:
-                            print("TYPE: ", type(current_context))
+#                            print("TYPE: ", type(current_context))
                             if type(current_context) != Context:
                                 raise ValueError(
                                     "Current.parent_context must not be None, as context must not be None during processing!"
@@ -2337,9 +2337,24 @@ class TaskGraph(Plottable, object):
         return dependencies
 
     def __get_state_mappings_from_file(self, dynamic_dependency_file: str) -> Dict[str, List[str]]:
+        """Returns a dictionary mapping state ids to callpaths. Contained elements are filtered to only include these states which are used in dynamic_dependency_file."""
         warnings.warn(
             "TODO: stateID to callpath mapping might get really big. Implement this more scalable / resilient."
         )
+        # collect used state ids from dynamic_dependency_file
+        deps = self.__read_dependencies_from_files(dynamic_dependency_file, None)
+        used_state_ids: Set[int] = set()
+        for dep_type, dep_type_deps in deps.items():
+            for source_location, source_location_deps in dep_type_deps.items():
+                for source_state_id, source_state_deps in source_location_deps.items():
+                    for sink_location, sink_location_deps in source_state_deps.items():
+                        for sink_state_id, var_infos in sink_location_deps.items():
+                            used_state_ids.add(sink_state_id)
+        print("SEEN_STATE_IDS: ", used_state_ids)
+        # delete deps to free memory
+        del deps
+                                
+        # create state_mappings_dict
         state_mappings_dict: Dict[str, List[str]] = dict()  # {stateID: callpath}
         state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
         if os.path.exists(state_mappings_file):
@@ -2352,6 +2367,9 @@ class TaskGraph(Plottable, object):
                     if len(line_split) < 2:
                         continue
                     state_id = line_split[0]
+                    # filter state_id for seen state ids
+                    if state_id not in used_state_ids:
+                        continue
                     raw_callpath = line_split[1]
                     if "-->" in raw_callpath:
                         callpath = raw_callpath.split("-->")
@@ -2362,11 +2380,11 @@ class TaskGraph(Plottable, object):
 
     def __assign_state_ids(self, dynamic_dependency_file: Optional[str]) -> None:
         """attaches state ids to Context nodes."""
-        # read stateID to callpath mapping
+        # read stateID to callpath mapping. States are filtered for observed states in dynamic dependency file to compress map slightly
         state_mappings_dict = self.__get_state_mappings_from_file(dynamic_dependency_file)
-        print("state_mappings_dict: ")
-        for state_id in state_mappings_dict:
-            print("->", state_id, " -> ", state_mappings_dict[state_id])
+#        print("state_mappings_dict: ")
+#        for state_id in state_mappings_dict:
+#            print("->", state_id, " -> ", state_mappings_dict[state_id])
 
         def recursive_assignment(state_id: int, callstate: Tuple[str, ...], ctx: Context) -> bool:
             """assigns state_id to the matching states.
@@ -2396,6 +2414,9 @@ class TaskGraph(Plottable, object):
                     # check for matching loopstate id
                     # get current loopstate_info
                     loopstate_info = callstate[0].split("_loopstate")[1]
+                    # check if parent is LoopParentContext. if not, MISS
+                    if not isinstance(ctx.parent_context, LoopParentContext):
+                        return False
                     # get loopstate_position
                     parent_loop_ctx = cast(LoopParentContext, ctx.parent_context)
                     loopstate_position = parent_loop_ctx.loopstate_position
@@ -2753,16 +2774,16 @@ class TaskGraph(Plottable, object):
                 if type(ctx) != WorkContext:
                     continue
                 if location in ctx.get_code_scope(pet):
-                    if state_id == "28" or state_id == "29" or state_id == "30":
-                        print("HERE: state_id: ", state_id, " CTX state ids: ", ctx.get_state_ids())
+#                    if state_id == "28" or state_id == "29" or state_id == "30":
+#                        print("HERE: state_id: ", state_id, " CTX state ids: ", ctx.get_state_ids())
                     if int(state_id) in ctx.get_state_ids():
-                        if state_id == "28" or state_id == "29" or state_id == "30":
-                            print("HERE: MATCH")
+#                        if state_id == "28" or state_id == "29" or state_id == "30":
+#                            print("HERE: MATCH")
                         filtered_contexts.add(ctx)
 
-            if state_id == "28" or state_id == "29" or state_id == "30":
-                print("STATE ID: ", state_id)
-                print("CTXS: ", filtered_contexts)
+#            if state_id == "28" or state_id == "29" or state_id == "30":
+#                print("STATE ID: ", state_id)
+#                print("CTXS: ", filtered_contexts)
 
             lookup_cache[cache_key] = filtered_contexts
             return filtered_contexts

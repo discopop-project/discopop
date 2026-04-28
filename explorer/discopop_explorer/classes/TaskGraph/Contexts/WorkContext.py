@@ -62,6 +62,8 @@ class WorkContext(Context):
             label += "\n"
             for node_id_str in contained_node_ids:
                 label += " " + str(node_id_str)
+        
+        label += "\nstate_ids: " + str(self.get_state_ids())
 
         return label
 
