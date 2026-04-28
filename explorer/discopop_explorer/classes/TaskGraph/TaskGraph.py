@@ -1536,11 +1536,15 @@ class TaskGraph(Plottable, object):
         logger.info("--> determine loop variables...")
         for loop_ctx in tqdm(entry_points):
             loop_header_ctx = self.get_loop_header_context(loop_ctx)
+            print("LOOP HEADER CTX:" , loop_header_ctx)
             if loop_header_ctx is None:
                 continue
             # identify loop variables by checking for RAW dependencies between loop body and loop header
             loop_iteration_ctxs = loop_ctx.get_contained_contexts(inclusive=True)
             loop_vars: List[Tuple[str, MemoryRegion]] = []
+            print("LOOP IT CTXS: ", loop_iteration_ctxs)
+            print("LOOP HEADER OUTDEPS: ", loop_header_ctx.outgoing_dependencies)
+            print("LOOP HEADER INDEPS: ", loop_header_ctx.incoming_dependencies)
             for target_ctx, dep in loop_header_ctx.outgoing_dependencies:
                 if dep is None or dep.etype != EdgeType.DATA:
                     continue
@@ -1549,9 +1553,21 @@ class TaskGraph(Plottable, object):
                     continue
                 if dep.var_name is None or dep.memory_region is None:
                     continue
-
                 if target_ctx in loop_iteration_ctxs:
                     loop_vars.append((dep.var_name, dep.memory_region))
+
+            for source_ctx, dep in loop_header_ctx.incoming_dependencies:
+                if dep is None or dep.etype != EdgeType.DATA:
+                    continue
+                # only consider RAW dependencies
+                if dep.dtype != DepType.RAW:
+                    continue
+                if dep.var_name is None or dep.memory_region is None:
+                    continue
+                if source_ctx in loop_iteration_ctxs:
+                    loop_vars.append((dep.var_name, dep.memory_region))
+
+            
             # remove duplicates
             loop_vars = list(set(loop_vars))
             # save loop variables
@@ -2748,6 +2764,8 @@ class TaskGraph(Plottable, object):
         if state_id != "NO_STATE":
             filtered_contexts: Set[Context] = set()
             for ctx in self.contexts:
+                if type(ctx) != WorkContext:
+                    continue
                 if location in ctx.get_code_scope(pet):
                     if state_id == "28" or state_id == "29" or state_id == "30":
                         print("HERE: state_id: ", state_id, " CTX state ids: ", ctx.get_state_ids())

@@ -27,6 +27,7 @@ class Context(object):
     predecessor: Optional[Context]
     parent_context: Optional[Context]
     outgoing_dependencies: Set[Tuple[Context, Dependency]]
+    incoming_dependencies: Set[Tuple[Context, Dependency]]
     state_ids: List[int]
 
     def __init__(self) -> None:
@@ -36,6 +37,7 @@ class Context(object):
         self.successor = None
         self.predecessor = None
         self.outgoing_dependencies = set()
+        self.incoming_dependencies = set()
         self._ancestor_contexts_cache: Optional[List[Context]] = None
         self._code_scope_cache: Optional[List[LineID]] = None
         self._closest_function_ancestor_computed: bool = False
@@ -169,9 +171,11 @@ class Context(object):
 
     def register_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
         self.outgoing_dependencies.add((target_context, dependency))
+        target_context.incoming_dependencies.add((self, dependency))
 
     def delete_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
         self.outgoing_dependencies.remove((target_context, dependency))
+        target_context.incoming_dependencies.remove((self, dependency))
 
     def get_outgoing_dependency_targets(self) -> Set[Context]:
         return set([outgoing_dependency[0] for outgoing_dependency in self.outgoing_dependencies])

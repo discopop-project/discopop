@@ -29,6 +29,8 @@ from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoo
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
+from discopop_explorer.enums.DepType import DepType
+from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     ParallelRegionInfo,
@@ -61,6 +63,11 @@ def show_plot(tg: TaskGraph) -> None:
         if len(tg.graph.nodes()) < 500:
             tg.plot_context_graph(ax)
 
+        ax2 = tg.create_plot("Context Debug Graph")
+        print("Plotting task graph (context debug graph)...")
+        if len(tg.graph.nodes()) < 500:
+            tg.plot_context_debug_graph(ax2)
+
     def on_filter(filter_text: str) -> None:
         print("Filter text:", filter_text)
 
@@ -90,6 +97,9 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
     patterns: List[DoAllInfo] = []
     logger.info("Identifying trivial doall suggestions.")
 
+    show_plot(tg)
+
+
     prevented_loops: Set[NodeID] = set()
 
     for node in tg.graph.nodes():
@@ -109,6 +119,8 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
         subtrees: Dict[IterationContext, Set[Context]] = dict()
         for ic in iteration_contexts:
             subtrees[ic] = ic.get_contained_contexts(inclusive=True)
+        # get loop variables for later check 
+        loop_variables = cast(LoopParentContext, node.created_context).loop_variables
         # check for dependencies
         dependency_found = False
         for ic_source in iteration_contexts:
@@ -122,20 +134,32 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
             # check for do-all preventing dependencies
             for subnode in subtrees[ic_source]:
                 for out_dep_target, dep in subnode.outgoing_dependencies:
+                    # WAR dependencies between iterations are non-critical, as they overwrite data and thus can be privatized
+                    if dep.etype == EdgeType.DATA and dep.dtype == DepType.WAR:
+                        continue
+
                     if out_dep_target in other_iterations_subnodes:
-                        print(
-                            "Prevents doall:",
-                            dep.dtype,
-                            dep.source_line,
-                            dep.sink_line,
-                            dep.var_name,
-                            "source:",
-                            subnode.get_code_scope(tg.pet, inclusive=True),
-                            "out_dep_target:",
-                            out_dep_target.get_code_scope(tg.pet, inclusive=True),
-                        )
-                        dependency_found = True
-                        break
+                        # check for and allow accesses to the loop variable
+                        if (dep.var_name, dep.memory_region) in loop_variables:
+                            print("Dependency on Loop variable! ")
+                            pass
+                        else:
+                            print(
+                                "Prevents doall:",
+                                dep.dtype,
+                                dep.source_line,
+                                dep.sink_line,
+                                dep.var_name,
+                                dep.memory_region,
+                                "source:",
+                                subnode.get_code_scope(tg.pet, inclusive=True),
+                                "out_dep_target:",
+                                out_dep_target.get_code_scope(tg.pet, inclusive=True),
+                                "source_ctx:", ic_source,
+                                "target_ctx:", out_dep_target
+                            )
+                            dependency_found = True
+                            break
                 if dependency_found:
                     break
             if dependency_found:
