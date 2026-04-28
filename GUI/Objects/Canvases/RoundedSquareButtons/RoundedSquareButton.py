@@ -17,7 +17,7 @@ class RoundedSquareButton(tk.Canvas):
         size: int = 36,
         radius: int = 8,
         *args: Any,
-        **kwargs: Any,
+        **kwargs: Any
     ) -> None:
         super().__init__(
             parent,

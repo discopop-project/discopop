@@ -10,6 +10,7 @@ import tkinter as tk
 from enum import Enum, auto
 from typing import Any
 
+from GUI.Objects.Canvases.Viewable import Viewable
 from GUI.Objects.Canvases.RoundedSquareButtons.Magnifier import Magnifier
 from GUI.Objects.Canvases.RoundedSquareButtons.Panner import Panner
 
@@ -25,7 +26,7 @@ class CanvasViewer(tk.Frame):
 
         self._selected_option: CanvasViewerMode = CanvasViewerMode.PAN
 
-        self._canvas = tk.Canvas(self, bg="white")
+        self._canvas = Viewable(self, bg="white")
         self._toolbar = tk.Frame(self)
 
         self._panner = Panner(self._toolbar, command = self.select_pan)
