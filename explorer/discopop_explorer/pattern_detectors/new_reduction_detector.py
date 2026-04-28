@@ -77,6 +77,8 @@ def identify_simple_reduction(tg: TaskGraph) -> List[ReductionInfo]:
         subtrees: Dict[IterationContext, Set[Context]] = dict()
         for ic in iteration_contexts:
             subtrees[ic] = ic.get_contained_contexts(inclusive=True)
+        # get loop variables for later check 
+        loop_variables = cast(LoopParentContext, node.created_context).loop_variables
         # check for dependencies
         non_reduction_dependency_found = False
         reduction_info: List[Tuple[Context, Context, Dependency, Dict[str, str]]] = []
@@ -92,6 +94,7 @@ def identify_simple_reduction(tg: TaskGraph) -> List[ReductionInfo]:
             for subnode in subtrees[ic_source]:
                 for out_dep_target, dep in subnode.outgoing_dependencies:
                     if out_dep_target in other_iterations_subnodes:
+                        
                         # check if the preventing dependency is a reduction dependency.
                         # If all preventing dependencies are reduction dependencies, a trivial reduction loop is possible.
                         is_reduction_dependency = False
@@ -112,8 +115,27 @@ def identify_simple_reduction(tg: TaskGraph) -> List[ReductionInfo]:
                             reduction_info.append((subnode, out_dep_target, dep, red_var_dict))
 
                         if not is_reduction_dependency:
-                            non_reduction_dependency_found = True
-                            break
+                            # check for and allow accesses to the loop variable
+                            if (dep.var_name, dep.memory_region) in loop_variables:
+                                # dependency on loop variable
+                                pass
+                            else:
+                                print(
+                                    "Prevents reduction:",
+                                    dep.dtype,
+                                    dep.source_line,
+                                    dep.sink_line,
+                                    dep.var_name,
+                                    dep.memory_region,
+                                    "source:",
+                                    subnode.get_code_scope(tg.pet, inclusive=True),
+                                    "out_dep_target:",
+                                    out_dep_target.get_code_scope(tg.pet, inclusive=True),
+                                    "source_ctx:", ic_source,
+                                    "target_ctx:", out_dep_target
+                                )
+                                non_reduction_dependency_found = True
+                                break
 
                 if non_reduction_dependency_found:
                     break

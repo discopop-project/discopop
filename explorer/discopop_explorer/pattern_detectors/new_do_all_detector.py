@@ -141,7 +141,7 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
                     if out_dep_target in other_iterations_subnodes:
                         # check for and allow accesses to the loop variable
                         if (dep.var_name, dep.memory_region) in loop_variables:
-                            print("Dependency on Loop variable! ")
+                            # dependency on loop variable
                             pass
                         else:
                             print(
@@ -167,7 +167,6 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
         if dependency_found:
             # node is not a valid doall loop
             prevented_loops.add(node.pet_node_id)
-            print("PREVENTED: 1")
             continue
         # node is a valid doall loop. Register a pattern
         pattern = DoAllInfo(tg.pet, tg.pet.node_at(node.pet_node_id))
@@ -175,7 +174,6 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
         # prevent duplicates. Necessary since multiple copies of the same loop might exist
         if pattern.pattern_tag in [p.pattern_tag for p in patterns]:
             continue
-        print(" FOUND 1")
         patterns.append(pattern)
 
     # clean patterns agains prevented loops
