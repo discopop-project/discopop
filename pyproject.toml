@@ -30,6 +30,7 @@ classifiers = [
     "Topic :: Software Development",
 ]
 dependencies = [
+    "discopop-profiler",
     "contextlib2>=0.5.5",
     "argparse",
     "extrap",
