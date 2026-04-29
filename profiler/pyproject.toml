@@ -30,7 +30,11 @@ classifiers = [
 [project.urls]
 Homepage = "https://www.discopop.tu-darmstadt.de/"
 
+[project.scripts]
+discopop_cc = "discopop_cc.__main__:main"
+
 [tool.scikit-build]
 cmake.build-type = "Release"
+wheel.packages = ["discopop_cc"]
 # Pass optional build flags through via cmake.args, e.g.:
 #   pip install . --config-settings="cmake.args=-DLLVM_DIST_PATH=/path/to/llvm"
