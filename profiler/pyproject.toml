@@ -12,7 +12,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "discopop-profiler"
-version = "5.0.2"
+version = "0.0.1"
 description = "DiscoPoP profiler: LLVM instrumentation pass and runtime library"
 license = {file = "../LICENSE"}
 
