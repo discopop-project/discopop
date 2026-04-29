@@ -21,16 +21,15 @@ fi
 
 # SETTINGS
 DP_BUILD="$(dirname "$(dirname ${SCRIPT_PATH})")"
-DP_SCRIPTS=${DP_BUILD}/scripts
 LLVM_CLANG=$(which clang-19)
 LLVM_CLANGPP=$(which clang++-19)
 
-
 # original arguments: "$@"
-#echo "WRAPPED LINKING...."
-#echo "ARGS: $@"
-#
-#echo "${LLVM_CLANGPP} ${@} -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v"
+#echo "WRAPPED CC COMPILE..."
+#echo "ARGS: ${@}"
 
-#clang++ --language=ir "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v
-${LLVM_CLANGPP} "$@" -L${DP_BUILD}/profiler/rtlib -lDiscoPoP_RT -lpthread -fPIC -v
+# script will be located alongside LLVMDiscoPoP.so and libDiscoPoP_RT.a in the python venv/lib/../discopop-profiler.libs
+PARENT_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
+${LLVM_CLANG} "$@" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${PARENT_PATH}/LLVMDiscoPoP.so -Xclang -fpass-plugin=${PARENT_PATH}/LLVMDiscoPoP.so -fPIC -Xlinker -L${PARENT_PATH} -Xlinker -lDiscoPoP_RT -Xlinker -lpthread -Xlinker -v -Xlinker -lstdc++
+
+# WARNING: OUTPUT IS A .ll FILE, ENDING IS .o

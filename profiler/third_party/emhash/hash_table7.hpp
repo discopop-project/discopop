@@ -1683,7 +1683,7 @@ private:
     // key is not in this map. Find a place to put it.
     size_type find_empty_bucket(const size_type bucket_from, const size_type main_bucket)
     {
-#if EMH_ITER_SAFE 
+#if EMH_ITER_SAFE
         const auto boset = bucket_from % 8;
         auto* const align = (uint8_t*)_bitmask + bucket_from / 8;(void)main_bucket;
         size_t bmask; memcpy(&bmask, align + 0, sizeof(bmask)); bmask >>= boset;// bmask |= ((size_t)align[8] << (SIZE_BIT - boset));

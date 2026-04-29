@@ -89,3 +89,5 @@ else()
         target_compile_definitions(LLVMDiscoPoP PUBLIC DP_BRANCH_TRACKING=0)
 endif()
 # end of compiler flags
+
+install(TARGETS LLVMDiscoPoP LIBRARY DESTINATION discopop-profiler.libs)

@@ -20,7 +20,6 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
   StringRef fn = F.getName();
   if (fn.str() == "main"){
     isStart = 1;
-
     // insert 'allocations' of global variables
     Instruction *insertBefore = &*entryBB.begin();
 
@@ -88,9 +87,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
     lid = getLID(&*BI, fileID);
     if (lid > 0 && !isa<PHINode>(BI)) {
       IRBuilder<> IRB(&*entryBB.begin());
-      // NOTE: Changed to arrayref
-      ArrayRef<Value *> arguments({ConstantInt::get(Int32, lid), ConstantInt::get(Int32, isStart)});
-      IRB.CreateCall(DpFuncEntry, arguments);
+      IRB.CreateCall(DpFuncEntry, {ConstantInt::get(Int32, lid), ConstantInt::get(Int32, isStart)});
       if (DP_DEBUG) {
         errs() << "DiscoPoP: funcEntry instrumented\n";
       }

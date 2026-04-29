@@ -167,8 +167,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           // pthread_exit does not return to its caller.
           // Therefore, we insert DpFuncExit before pthread_exit
           IRBuilder<> IRBRet(&*BI);
-          ArrayRef<Value *> arguments({ConstantInt::get(Int32, getLID(&*BI, fileID)), ConstantInt::get(Int32, 0)});
-          IRBRet.CreateCall(DpFuncExit, arguments);
+          IRBRet.CreateCall(DpFuncExit, {ConstantInt::get(Int32, getLID(&*BI, fileID)), ConstantInt::get(Int32, 0)});
           continue;
         }
         if ((fn.str() == "exit") || F->doesNotReturn()) // using exit() to terminate program
@@ -248,8 +247,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
         insertDpFinalize(&*BI);
       } else {
         IRBuilder<> IRBRet(&*BI);
-        ArrayRef<Value *> arguments({ConstantInt::get(Int32, lid), ConstantInt::get(Int32, 0)});
-        IRBRet.CreateCall(DpFuncExit, arguments);
+        IRBRet.CreateCall(DpFuncExit, {ConstantInt::get(Int32, lid), ConstantInt::get(Int32, 0)});
       }
 
       if (DP_DEBUG) {

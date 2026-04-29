@@ -28,17 +28,16 @@ fi
 
 # SETTINGS
 DP_BUILD="$(dirname "$(dirname ${SCRIPT_PATH})")"
-DP_SCRIPTS=${DP_BUILD}/scripts
 LLVM_CLANG=$(which clang-19)
 LLVM_CLANGPP=$(which clang++-19)
-MPI_INCLUDES="$(mpic++ -showme:link)"
-
+MPI_INCLUDES="$(mpic++ -showme:compile)"
 
 # original arguments: "$@"
-#echo "WRAPPED MPI LINKING...."
-#echo "ARGS: $@"
-#
-#echo "${LLVM_CLANGPP} ${MPI_INCLUDES} ${@} -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v"
+#echo "WRAPPED MPI CXX COMPILE..."
+#echo "ARGS: ${@}"
 
-#clang++ --language=ir "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v
-${LLVM_CLANGPP} ${MPI_INCLUDES} "$@" -L${DP_BUILD}/profiler/rtlib -lDiscoPoP_RT -lpthread -fPIC -v
+# script will be located alongside LLVMDiscoPoP.so and libDiscoPoP_RT.a in the python venv/lib/../discopop-profiler.libs
+PARENT_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
+${LLVM_CLANGPP} "$@" -g -c -O0 -fno-discard-value-names -Xclang -load -Xclang ${PARENT_PATH}/LLVMDiscoPoP.so -Xclang -fpass-plugin=${PARENT_PATH}/LLVMDiscoPoP.so -fPIC ${MPI_INCLUDES}
+
+# WARNING: OUTPUT IS A .ll FILE, ENDING IS .o

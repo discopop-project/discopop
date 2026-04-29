@@ -401,8 +401,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
           insertionPoint = insertionPoint->getPrevNonDebugInstruction();
 
         auto LI = new LoadInst(Int32, AI, Twine(""), false, insertionPoint);
-        ArrayRef<Value *> arguments({LI, ConstantInt::get(Int32, bbDepCount)});
-        CallInst::Create(ReportBBPair, arguments, "", insertionPoint);
+        CallInst::Create(ReportBBPair, ArrayRef<Value *>({LI, ConstantInt::get(Int32, bbDepCount)}), "", insertionPoint);
 
         // ---- Insert deps into string ----
         if (bbDepCount)
