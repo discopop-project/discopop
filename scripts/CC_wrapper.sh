@@ -40,6 +40,6 @@ LLVM_CLANGPP=$(which clang++-19)
 
 #echo "${LLVM_CLANG} -g -c -O0 -S -emit-llvm -fno-discard-value-names ${@} -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP"
 #clang-11 -g -c -O0 -S -emit-llvm -fno-discard-value-names "$@" -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -DiscoPoP -mllvm --fm-path -mllvm ${DP_FM_PATH}
-${LLVM_CLANG} "$@" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -Xclang -fpass-plugin=${DP_BUILD}/libi/LLVMDiscoPoP.so -fPIC -Xlinker -L${DP_BUILD}/rtlib -Xlinker -lDiscoPoP_RT -Xlinker -lpthread -Xlinker -v -Xlinker -lstdc++
+${LLVM_CLANG} "$@" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${DP_BUILD}/libi/LLVMDiscoPoP.so -Xclang -fpass-plugin=${DP_BUILD}/libi/LLVMDiscoPoP.so -fPIC -Xlinker -L${DP_BUILD}/profiler/rtlib -Xlinker -lDiscoPoP_RT -Xlinker -lpthread -Xlinker -v -Xlinker -lstdc++
 
 # WARNING: OUTPUT IS A .ll FILE, ENDING IS .o

@@ -62,9 +62,7 @@ include(AddLLVM)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 
-add_subdirectory(DiscoPoP)
-
-add_subdirectory(rtlib)
+add_subdirectory(profiler)
 
 add_subdirectory(scripts)
 

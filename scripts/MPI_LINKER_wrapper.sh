@@ -41,4 +41,4 @@ MPI_INCLUDES="$(mpic++ -showme:link)"
 #echo "${LLVM_CLANGPP} ${MPI_INCLUDES} ${@} -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v"
 
 #clang++ --language=ir "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -v
-${LLVM_CLANGPP} ${MPI_INCLUDES} "$@" -L${DP_BUILD}/rtlib -lDiscoPoP_RT -lpthread -fPIC -v
+${LLVM_CLANGPP} ${MPI_INCLUDES} "$@" -L${DP_BUILD}/profiler/rtlib -lDiscoPoP_RT -lpthread -fPIC -v
