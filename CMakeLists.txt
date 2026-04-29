@@ -62,10 +62,6 @@ include(AddLLVM)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 
-# update or initialize git submodules
-message(STATUS "Updating git submodules")
-execute_process(COMMAND git submodule update --init --recursive --remote)
-
 add_subdirectory(DiscoPoP)
 
 add_subdirectory(rtlib)
@@ -162,24 +158,11 @@ add_custom_target(
     DEPENDS install_python_modules reset_symlinks setup_symlinks
 )
 
-add_custom_target(
-    update_submodules
-    COMMENT "Updating git submodules"
-    COMMAND git submodule update --init --recursive --remote
-)
-
-add_custom_target(
-    install_submodules
-    COMMENT "Installing git submodules"
-    COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}/tools/submodules/update_notifications
-    DEPENDS update_submodules
-)
 
 add_custom_target(
     install_python_modules
     COMMENT "Installing python modules and dependencies"
     COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${DiscoPoP_SOURCE_DIR}
-    DEPENDS update_submodules install_submodules
 )
 
 add_custom_target(
@@ -202,26 +185,15 @@ add_custom_target(
     setup_symlinks
     DEPENDS reset_symlinks
     COMMENT "Creating symlinks for DiscoPoP python executables"
-    COMMAND echo "--> discopop_auto_tuner"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_auto_tuner ${DP_LOCAL_BIN_DIR}/discopop_auto_tuner
-    COMMAND echo "--> discopop_config_provider"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_config_provider ${DP_LOCAL_BIN_DIR}/discopop_config_provider
-    COMMAND echo "--> discopop_explorer"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_explorer ${DP_LOCAL_BIN_DIR}/discopop_explorer
-    COMMAND echo "--> discopop_optimizer"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_optimizer ${DP_LOCAL_BIN_DIR}/discopop_optimizer
-    COMMAND echo "--> discopop_patch_applicator"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_patch_applicator ${DP_LOCAL_BIN_DIR}/discopop_patch_applicator
-    COMMAND echo "--> discopop_patch_generator"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_patch_generator ${DP_LOCAL_BIN_DIR}/discopop_patch_generator
-    COMMAND echo "--> discopop_sanity_checker"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_sanity_checker ${DP_LOCAL_BIN_DIR}/discopop_sanity_checker
-    COMMAND echo "--> discopop_preprocessor"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_preprocessor ${DP_LOCAL_BIN_DIR}/discopop_preprocessor
-    COMMAND echo "--> discopop_project_manager"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_project_manager ${DP_LOCAL_BIN_DIR}/discopop_project_manager
-    COMMAND echo "--> discopop_configuration_manager"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_configuration_manager ${DP_LOCAL_BIN_DIR}/discopop_configuration_manager
-    COMMAND echo "--> discopop_dependency_comparator"
     COMMAND ln -sf ${DiscoPoP_SOURCE_DIR}/venv/bin/discopop_dependency_comparator ${DP_LOCAL_BIN_DIR}/discopop_dependency_comparator
 )
