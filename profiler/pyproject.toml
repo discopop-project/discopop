@@ -8,7 +8,8 @@
 
 [build-system]
 requires = ["scikit-build-core>=0.9"]
-build-backend = "scikit_build_core.build"
+build-backend = "hatch_build"
+backend-path = ["."]
 
 [project]
 name = "discopop-profiler"
