@@ -5,10 +5,9 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from typing import List
 
-# This file specifies which additional files to include in the Python package.
-# https://packaging.python.org/guides/using-manifest-in/
-
-include VERSION
-include requirements.txt
-recursive-include discopop_library *
+REQUIRED_EXECUTABLES: List[str] = [
+    "clang-19",
+    "python3",
+]

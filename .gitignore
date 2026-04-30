@@ -26,6 +26,9 @@ __pycache__/
 # Visual Studio Code
 .vscode/
 
+# AI assistants
+.claude/
+
 # Distribution / packaging
 .Python
 build/
@@ -149,7 +152,6 @@ CMakeCache.txt
 CMakeFiles
 CMakeScripts
 Testing
-Makefile
 cmake_install.cmake
 install_manifest.txt
 compile_commands.json

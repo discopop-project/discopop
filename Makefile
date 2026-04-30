@@ -6,9 +6,16 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-# This file specifies which additional files to include in the Python package.
-# https://packaging.python.org/guides/using-manifest-in/
+install: venv
+# install discopop_explorer, library and profiler
+	venv/bin/pip install -e . ./profiler
 
-include VERSION
-include requirements.txt
-recursive-include discopop_library *
+venv:
+	python3 -m venv venv
+
+uninstall:
+	venv/bin/pip uninstall . ./profiler
+
+veryclean:
+	rm -rf venv
+	rm -rf build

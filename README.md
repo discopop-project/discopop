@@ -25,7 +25,7 @@ DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-ment
 A more comprehensive overview of DiscoPoP can be found on our [project website](https://www.discopop.tu-darmstadt.de/).
 
 ## Getting started
-Follow the steps in [setup](https://discopop-project.github.io/discopop/setup/discopop/) to install DiscoPoP.
+Follow the steps below to install DiscoPoP.
 To setup the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) (recommended for general use of the framework), please follow [these steps](https://discopop-project.github.io/discopop/setup/vscx/).
 
 For a brief introduction to the [VSCode Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop), please follow the [walk-through example](https://discopop-project.github.io/discopop/examples/walk_through_gui/).
@@ -34,25 +34,43 @@ For a brief introduction to the command line tools, please refer to the [tools o
 For detailed information on the gathered and stored data as well as the tools themselves, please refer to [data](https://discopop-project.github.io/discopop/Data) and the pages of the individual tools in the [tools overview](https://discopop-project.github.io/discopop/Tools).
 
 ## Installation
-To simplify the setup we provide a Debian package via the [Release Assets](https://github.com/discopop-project/discopop/releases/latest).
+### Prerequisites
+#### Via `APT` package manager
+```
+sudo apt install python3 python3-pip python3-venv python3-tk build-essential make cmake git llvm-19-dev clang-19 libomp-19-dev libboost-all-dev
+```
+### Latest release from PyPi
+```
+pip install discopop
+```
 
-## TL;DR - Example
+### Local installation
+```
+git clone https://github.com/discopop-project/discopop.git
+cd discopop
+# installs profiler and python packages
+make
+```
+
+### Developer
 If you are interested in installing DiscoPoP as a `developer`, please refer to the [DiscoPoP setup wiki page](https://discopop-project.github.io/discopop/setup/discopop/).
 
-The following example installs DiscoPoP for `users`, instruments and builds the provided example, analyzes the results, and prints the identified parallelization suggestions to the console.
-In case any issues arise during the process, please refer to the detailed [setup instructions](https://discopop-project.github.io/discopop/Setup), contact us via GitHub messages, or get in contact by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
+## Example
+The following example instruments and builds the provided example code, analyzes the results, and prints the identified parallelization suggestions to the console.
+In case any issues arise during the process please do not hesitate to contact us via GitHub messages, or get in contact by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
 
 ### Prerequisites
-- Download and install `.deb` package from [latest Release](https://github.com/discopop-project/discopop/releases/latest).
-- Install the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop)
+- Installed required system packages
+- Installed profiler and python packages
+- Installed the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) for visualization of the results.
 ### Example
 Instrument and execute the code.
 ```
-# create a copy of the example code
-cp -r /opt/DiscoPoP/example discopop_example
+# create a copy of the example code and enter the folder
 cd discopop_example
 
 # instrument and build the example code
+# use discopop_cxx for .cpp, and discopop_cc for .c files
 discopop_cxx example.cpp -o example
 
 # execute instrumented code
