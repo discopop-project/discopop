@@ -7,26 +7,22 @@
 # directory for details.
 
 import tkinter as tk
-from enum import Enum, auto
 from typing import Any
 
 from GUI.Objects.Canvases.Viewable import Viewable
 from GUI.Objects.Canvases.RoundedSquareButtons.Magnifier import Magnifier
 from GUI.Objects.Canvases.RoundedSquareButtons.Panner import Panner
+from GUI.Enums.ViewerMode import ViewerMode
 
-
-class CanvasViewerMode(Enum):
-    PAN = auto()
-    ZOOM = auto()
 
 
 class CanvasViewer(tk.Frame):
     def __init__(self, parent: tk.Misc, *args: Any, **kwargs: Any) -> None:
         super().__init__(parent, *args, **kwargs)
 
-        self._selected_option: CanvasViewerMode = CanvasViewerMode.PAN
+        self._selected_option: ViewerMode = ViewerMode.PAN
 
-        self._canvas = Viewable(self, bg="white")
+        self._canvas = Viewable(self, self._selected_option, bg="white")
         self._toolbar = tk.Frame(self)
 
         self._panner = Panner(self._toolbar, command = self.select_pan)
@@ -44,15 +40,17 @@ class CanvasViewer(tk.Frame):
         self._update_toolbar()
 
     def _update_toolbar(self) -> None:
-        self._panner.set_selected(self._selected_option == CanvasViewerMode.PAN)
-        self._magnifier.set_selected(self._selected_option == CanvasViewerMode.ZOOM)
+        self._panner.set_selected(self._selected_option == ViewerMode.PAN)
+        self._magnifier.set_selected(self._selected_option == ViewerMode.ZOOM)
 
     def select_pan(self) -> None:
-        self._selected_option = CanvasViewerMode.PAN
+        self._selected_option = ViewerMode.PAN
+        self._canvas.set_viewer_mode(self._selected_option)
         self._update_toolbar()
 
     def select_magnifier(self) -> None:
-        self._selected_option = CanvasViewerMode.ZOOM
+        self._selected_option = ViewerMode.ZOOM
+        self._canvas.set_viewer_mode(self._selected_option)
         self._update_toolbar()
 
     def getCanvas(self) -> tk.Canvas:
