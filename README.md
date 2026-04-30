@@ -34,6 +34,11 @@ For a brief introduction to the command line tools, please refer to the [tools o
 For detailed information on the gathered and stored data as well as the tools themselves, please refer to [data](https://discopop-project.github.io/discopop/Data) and the pages of the individual tools in the [tools overview](https://discopop-project.github.io/discopop/Tools).
 
 ## Installation
+### Prerequisites
+#### Via `APT` package manager
+```
+sudo apt install libc6 python3 python3-pip python3-venv python3-tk build-essential make cmake git llvm-19-dev clang-19 libomp-19-dev libboost-all-dev
+```
 ### Latest release from PyPi
 ```
 pip install discopop
@@ -57,7 +62,7 @@ The following example instruments and builds the provided example code, analyzes
 In case any issues arise during the process please do not hesitate to contact us via GitHub messages, or get in contact by mail to [discopop-support@lists.parallel.informatik.tu-darmstadt.de](mailto:discopop-support@lists.parallel.informatik.tu-darmstadt.de).
 
 ### Prerequisites
-- Installed required system packages (e.g. via `make install_deps`)
+- Installed required system packages
 - Installed profiler and python packages
 - Installed the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) for visualization of the results.
 ### Example

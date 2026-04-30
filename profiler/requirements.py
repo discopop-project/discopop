@@ -10,7 +10,6 @@
 # Maps display name → executable that must be on PATH.
 REQUIRED_EXECUTABLES: dict[str, str] = {
     "clang-19": "clang-19",
-    "clang++-19": "clang++-19",
     "python3": "python3",
 }
 
@@ -18,7 +17,6 @@ REQUIRED_EXECUTABLES: dict[str, str] = {
 # Maps display name → apt package name.
 REQUIRED_APT_PACKAGES: dict[str, str] = {
     # "libclang-19-dev": "libclang-19-dev",
-    "libc6": "libc6",
     "python3": "python3",
     "python3-pip": "python3-pip",
     "python3-venv": "python3-venv",
