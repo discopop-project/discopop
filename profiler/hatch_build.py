@@ -12,35 +12,11 @@ PEP 517 build backend wrapper.
 Checks for required system executables and apt packages before delegating
 all build hooks to scikit_build_core.build.
 """
-
 import shutil
-import subprocess
 import sys
 from typing import Any
 
 from requirements import REQUIRED_EXECUTABLES
-
-
-def _is_apt_package_installed(package: str) -> bool:
-    """Return True if dpkg considers the package installed. Skips check on non-dpkg systems."""
-    if shutil.which("dpkg-query") is None:
-        return True  # can't check; assume present on non-Debian systems
-    try:
-        result = subprocess.run(
-            ["dpkg-query", "-W", "-f=${Status}", package],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-        # dpkg-query concatenates one status line per installed architecture with no
-        # separator, so a multi-arch package like libc6 yields
-        # "install ok installedinstall ok installed".  Split on the known prefix
-        # and verify every chunk reports the package as installed.
-        raw = result.stdout.decode().strip()
-        chunks = [s for s in raw.split("install ok ") if s]
-        return bool(chunks) and all(c == "installed" for c in chunks)
-    except OSError:
-        return True
 
 
 def _check_system_dependencies() -> None:
