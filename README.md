@@ -37,7 +37,7 @@ For detailed information on the gathered and stored data as well as the tools th
 ### Prerequisites
 #### Via `APT` package manager
 ```
-sudo apt install libc6 python3 python3-pip python3-venv python3-tk build-essential make cmake git llvm-19-dev clang-19 libomp-19-dev libboost-all-dev
+sudo apt install python3 python3-pip python3-venv python3-tk build-essential make cmake git llvm-19-dev clang-19 libomp-19-dev libboost-all-dev
 ```
 ### Latest release from PyPi
 ```
@@ -48,10 +48,8 @@ pip install discopop
 ```
 git clone https://github.com/discopop-project/discopop.git
 cd discopop
-# installs dependencies via package manager.
-make install_deps
 # installs profiler and python packages
-make install
+make
 ```
 
 ### Developer

@@ -18,7 +18,7 @@ import subprocess
 import sys
 from typing import Any
 
-from requirements import REQUIRED_EXECUTABLES, REQUIRED_APT_PACKAGES
+from requirements import REQUIRED_EXECUTABLES
 
 
 def _is_apt_package_installed(package: str) -> bool:
@@ -38,24 +38,20 @@ def _is_apt_package_installed(package: str) -> bool:
 
 
 def _check_system_dependencies() -> None:
-    missing_exe: list[tuple[str, str]] = [
-        (name, exe) for name, exe in REQUIRED_EXECUTABLES.items() if shutil.which(exe) is None
-    ]
-    missing_apt: list[tuple[str, str]] = [
-        (name, pkg) for name, pkg in REQUIRED_APT_PACKAGES.items() if not _is_apt_package_installed(pkg)
-    ]
+    missing_exe: list[str] = [exe for exe in REQUIRED_EXECUTABLES if shutil.which(exe) is None]
 
-    if not missing_exe and not missing_apt:
+    if not missing_exe:
         return
 
-    lines = ["", "Missing required system dependencies:", ""]
-    for name, exe in missing_exe:
-        # Prefer an explicit apt package name when one is listed, else use the exe name.
-        apt_pkg = REQUIRED_APT_PACKAGES.get(name, name)
-        lines.append(f"  - {name} (executable '{exe}')  →  sudo apt install {apt_pkg}")
-    for name, pkg in missing_apt:
-        lines.append(f"  - {name} (apt package '{pkg}')  →  sudo apt install {pkg}")
-    lines += ["", "Install the packages above and re-run the build.", ""]
+    lines = ["", "Missing executables on path:", ""]
+    for exe in missing_exe:
+        lines.append(f"  - executable '{exe}'")
+    lines += [
+        "",
+        "Please refer to the installation instruction for prerequisites discribed in the README.md to prepare your environment and re-run the build.",
+        "GitHub: https://github.com/discopop-project/discopop",
+        "",
+    ]
     print("\n".join(lines), file=sys.stderr)
     sys.exit(1)
 
