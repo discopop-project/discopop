@@ -32,7 +32,13 @@ def _is_apt_package_installed(package: str) -> bool:
             stderr=subprocess.DEVNULL,
             check=False,
         )
-        return result.stdout.decode().strip() == "install ok installed"
+        # dpkg-query concatenates one status line per installed architecture with no
+        # separator, so a multi-arch package like libc6 yields
+        # "install ok installedinstall ok installed".  Split on the known prefix
+        # and verify every chunk reports the package as installed.
+        raw = result.stdout.decode().strip()
+        chunks = [s for s in raw.split("install ok ") if s]
+        return bool(chunks) and all(c == "installed" for c in chunks)
     except OSError:
         return True
 
