@@ -8,6 +8,10 @@
 from typing import List
 
 REQUIRED_EXECUTABLES: List[str] = [
-    "clang-19",
     "python3",
+]
+
+# Each inner list is a group of alternatives; at least one from each group must be present.
+REQUIRED_EXECUTABLE_ALTERNATIVES: List[List[str]] = [
+    ["clang-19", "clang-20", "clang-21", "clang-22"],
 ]

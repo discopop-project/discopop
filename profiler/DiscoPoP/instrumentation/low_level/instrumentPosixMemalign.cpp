@@ -29,7 +29,7 @@ void DiscoPoP::instrumentPosixMemalign(CallBase *toInstrument) {
     // resumed at a "normal destination" basic block. Set the first instruction
     // of the normal destination as nextInst in order to add the Instrumentation
     // at the correct location.
-    nextInst = cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    nextInst = &*cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
   }
 
   IRBuilder<> IRB(nextInst);

@@ -355,7 +355,7 @@ string VariableNameFinder::getVarName(Value const *V) {
 
   if (const GEPOperator *gepo = dyn_cast<GEPOperator>(V)) {
     if (const GlobalVariable *gv = dyn_cast<GlobalVariable>(gepo->getPointerOperand())) {
-      string r = gv->getGlobalIdentifier();
+      string r = GlobalValue::getGlobalIdentifier(gv->getName(), gv->getLinkage(), gv->getParent()->getSourceFileName());
       Type *st = gepo->getSourceElementType();
       if (StructType *ct = dyn_cast<StructType>(st)) {
         string structTypeName = ct->getName().str().erase(0, 7);

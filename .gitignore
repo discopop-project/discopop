@@ -39,6 +39,7 @@ eggs/
 .eggs/
 lib/
 !/share/lib/
+!/profiler/share/lib/
 lib64/
 parts/
 sdist/
