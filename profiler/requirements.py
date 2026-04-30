@@ -10,7 +10,6 @@
 # Maps display name → executable that must be on PATH.
 REQUIRED_EXECUTABLES: dict[str, str] = {
     "clang-19": "clang-19",
-    "clang++-19": "clang++-19",
     "python3": "python3",
 }
 
