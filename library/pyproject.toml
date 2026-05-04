@@ -15,9 +15,7 @@ name = "discopop-library"
 dynamic = ["version"]
 description = "DiscoPoP Library: shared utilities and tools for the DiscoPoP parallelization framework."
 readme = {file = "README.md", content-type = "text/markdown"}
-license-files = [
-    "LICENSE"
-]
+license = {file = "LICENSE"}
 authors = [
     {name = "TU Darmstadt and Iowa State University", email = "discopop@lists.parallel.informatik.tu-darmstadt.de"},
 ]
