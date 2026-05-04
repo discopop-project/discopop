@@ -38,7 +38,7 @@ def parse_args() -> PatchApplicatorArguments:
     parser.add_argument('-L', '--load', action="store_true", help="Load a previous state after clearing.")
     parser.add_argument('-l', '--list', action="store_true", help="Show the list of applied suggestions."
                                                                   "If set, nothing else will be done.")
-    
+
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:

@@ -27,7 +27,7 @@ elseif(NOT ${USE_LLVM_VERSION} STREQUAL "")
 	find_package(LLVM ${USE_LLVM_VERSION} REQUIRED)
 else()
 	# search for any supported LLVM major version (19–22), any minor version
-	foreach(_major 19 20 21 22)
+	foreach(_major 22 21 20 19 )
 		foreach(_minor RANGE 0 9)
 			if(NOT LLVM_FOUND)
 				find_package(LLVM "${_major}.${_minor}" CONFIG QUIET)

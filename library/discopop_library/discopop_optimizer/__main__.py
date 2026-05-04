@@ -64,7 +64,7 @@ def parse_args() -> OptimizerArguments:
         + "high overhead introduced by entering nested parallelism!")
     experimental_parser.add_argument("--check-called-function-for-nested-parallelism", action="store_true", help="Extend the check for nested parallelism to called functions."
         + "WARNING: Execution time may increase significantly!")
-    
+
     experimental_parser.add_argument("--plot", action="store_true",
         help="Plot the internal graph.")
     # fmt: on

@@ -20,7 +20,7 @@ while getopts ":r" opt; do
     esac
 done
 
-VERSION=$(cat discopop_library/global_data/version/VERSION)
+VERSION=$(cat library/discopop_library/global_data/version/VERSION)
 #PACKAGE_NAME="discopop-${VERSION}-$(uname --hardware-platform)-$(uname --kernel-name).deb"
 PACKAGE_NAME="discopop-${VERSION}-all-Linux.deb"
 

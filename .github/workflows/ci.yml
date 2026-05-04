@@ -88,7 +88,7 @@ jobs:
         id: package_information
         shell: bash
         run: |
-          VERSION=$(cat discopop_library/global_data/version/VERSION)
+          VERSION=$(cat library/discopop_library/global_data/version/VERSION)
           PACKAGE_NAME="discopop-${VERSION}-all-Linux.deb"
           echo "package_name=${PACKAGE_NAME}" >> "$GITHUB_OUTPUT"
           test -f "packages/${PACKAGE_NAME}"
@@ -149,12 +149,12 @@ jobs:
       - name: Check formatting of DiscoPoP Explorer
         run: |
           docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
-            python -m black -l 120 --check discopop_explorer
+            python -m black -l 120 --check explorer/discopop_explorer
 
       - name: Check formatting of DiscoPoP Library
         run: |
           docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
-            python -m black -l 120 --check discopop_library
+            python -m black -l 120 --check library/discopop_library
 
       - name: Execute C++ unit tests
         run: |
@@ -200,7 +200,7 @@ jobs:
         id: package_information
         shell: bash
         run: |
-          VERSION=$(cat discopop_library/global_data/version/VERSION)
+          VERSION=$(cat library/discopop_library/global_data/version/VERSION)
           PACKAGE_NAME="discopop-${VERSION}-all-Linux.deb"
           echo "package_name=${PACKAGE_NAME}" >> "$GITHUB_OUTPUT"
           ls -lah "packages"
@@ -229,12 +229,12 @@ jobs:
       - name: Check formatting of DiscoPoP Explorer
         run: |
           docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
-            python -m black -l 120 --check discopop_explorer
+            python -m black -l 120 --check explorer/discopop_explorer
 
       - name: Check formatting of DiscoPoP Library
         run: |
           docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
-            python -m black -l 120 --check discopop_library
+            python -m black -l 120 --check library/discopop_library
 
       - name: Execute C++ unit tests
         run: |
