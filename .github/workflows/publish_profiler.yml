@@ -20,7 +20,7 @@ permissions:
 jobs:
   publish:
     name: Build and publish discopop-profiler
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     environment: pypi
     permissions:
       # IMPORTANT: this permission is mandatory for Trusted Publishing
@@ -38,10 +38,15 @@ jobs:
         with:
           python-version: "3.8"
 
-      #- name: Build discopop-profiler
-      #  run: pip install build && python -m build profiler/
+      - name: Install prerequisites
+        run: |
+          sudo apt update
+          sudo apt install clang-20
+
+      - name: Build discopop-profiler
+        run: pip install build && python -m build --sdist profiler/ -v
 
       - name: Publish discopop-profiler to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-      #  with:
-      #    packages-dir: profiler/dist/
+        with:
+          packages-dir: profiler/dist/
