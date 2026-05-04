@@ -13,9 +13,8 @@ backend-path = ["."]
 
 [project]
 name = "discopop-profiler"
-version = "0.0.1"
 description = "DiscoPoP profiler: LLVM instrumentation pass and runtime library"
-license = {file = "../LICENSE"}
+license = {file = "LICENSE"}
 
 authors = [
     {name = "TU Darmstadt and Iowa State University", email = "discopop@lists.parallel.informatik.tu-darmstadt.de"},
@@ -40,3 +39,6 @@ cmake.build-type = "Release"
 wheel.packages = ["discopop_cc", "discopop_cxx"]
 # Pass optional build flags through via cmake.args, e.g.:
 #   pip install . --config-settings="cmake.args=-DLLVM_DIST_PATH=/path/to/llvm"
+
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
