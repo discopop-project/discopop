@@ -37,6 +37,7 @@ ModulePass *createDiscoPoPPass() {
 */
 
 
+#include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
@@ -69,12 +70,21 @@ struct DiscoPoP_new_PM_adaptor : public PassInfoMixin<DiscoPoP_new_PM_adaptor> {
 
 PassPluginLibraryInfo getPassPluginInfo() {
   const auto callback = [](PassBuilder &PB) {
+#if LLVM_VERSION_MAJOR >= 20
     PB.registerPipelineEarlySimplificationEPCallback(
-        [&](ModulePassManager &MPM, auto) {
+        [&](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
           MPM.addPass(createModuleToFunctionPassAdaptor(DiscoPoP_new_PM_adaptor()));
           MPM.addPass(DiscoPoP_new_PM_adaptor());
           return true;
         });
+#else
+    PB.registerPipelineEarlySimplificationEPCallback(
+        [&](ModulePassManager &MPM, OptimizationLevel) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(DiscoPoP_new_PM_adaptor()));
+          MPM.addPass(DiscoPoP_new_PM_adaptor());
+          return true;
+        });
+#endif
   };
 
   return {LLVM_PLUGIN_API_VERSION, "discopop_new_pm_adaptor", "0.0.1", callback};

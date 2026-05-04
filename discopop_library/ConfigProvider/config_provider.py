@@ -28,7 +28,11 @@ def run(arguments: ConfigProviderArguments) -> str:
         return str(Path(executable).parent.parent.absolute())
         # return str(Path(str(os.readlink(executable))).parent.parent.absolute())
     elif arguments.return_llvm_bin_dir:
-        return str(Path(str(shutil.which("clang-19"))).parent.absolute())
+        for _v in [22, 21, 20, 19]:
+            clang = shutil.which(f"clang-{_v}")
+            if clang:
+                return str(Path(clang).parent.absolute())
+        raise RuntimeError("No supported clang version (19-22) found in PATH")
     elif arguments.return_full_config:
         ret_str = ""
         assets_path = os.path.join(Path(__file__).parent.absolute(), "assets", "build_config.py")

@@ -66,19 +66,23 @@ def parse_args() -> PatchGeneratorArguments:
         )
     )
     # determine CC
-    if os.path.exists(os.path.join(llvm_bin_dir, "clang")):
-        arguments.cc = os.path.join(llvm_bin_dir, "clang")
-    elif os.path.exists(os.path.join(llvm_bin_dir, "clang-19")):
-        arguments.cc = os.path.join(llvm_bin_dir, "clang-19")
-    else:
+    arguments.cc = None
+    for _name in ["clang"] + [f"clang-{v}" for v in [22, 21, 20, 19]]:
+        candidate = os.path.join(llvm_bin_dir, _name)
+        if os.path.exists(candidate):
+            arguments.cc = candidate
+            break
+    if arguments.cc is None:
         raise ValueError("Could not determine CC from LLVM_BIN_DIR: ", llvm_bin_dir)
 
     # determine CXX
-    if os.path.exists(os.path.join(llvm_bin_dir, "clang++")):
-        arguments.cxx = os.path.join(llvm_bin_dir, "clang++")
-    elif os.path.exists(os.path.join(llvm_bin_dir, "clang++-19")):
-        arguments.cxx = os.path.join(llvm_bin_dir, "clang++-19")
-    else:
+    arguments.cxx = None
+    for _name in ["clang++"] + [f"clang++-{v}" for v in [22, 21, 20, 19]]:
+        candidate = os.path.join(llvm_bin_dir, _name)
+        if os.path.exists(candidate):
+            arguments.cxx = candidate
+            break
+    if arguments.cxx is None:
         raise ValueError("Could not determine CXX from LLVM_BIN_DIR: ", llvm_bin_dir)
 
     return PatchGeneratorArguments(

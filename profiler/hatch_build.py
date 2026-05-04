@@ -16,18 +16,24 @@ import shutil
 import sys
 from typing import Any
 
-from requirements import REQUIRED_EXECUTABLES
+from requirements import REQUIRED_EXECUTABLES, REQUIRED_EXECUTABLE_ALTERNATIVES
 
 
 def _check_system_dependencies() -> None:
     missing_exe: list[str] = [exe for exe in REQUIRED_EXECUTABLES if shutil.which(exe) is None]
 
-    if not missing_exe:
+    missing_groups: list[list[str]] = [
+        group for group in REQUIRED_EXECUTABLE_ALTERNATIVES if not any(shutil.which(alt) for alt in group)
+    ]
+
+    if not missing_exe and not missing_groups:
         return
 
     lines = ["", "Missing executables on path:", ""]
     for exe in missing_exe:
         lines.append(f"  - executable '{exe}'")
+    for group in missing_groups:
+        lines.append(f"  - one of: {', '.join(group)}")
     lines += [
         "",
         "Please refer to the installation instruction for prerequisites discribed in the README.md to prepare your environment and re-run the build.",
