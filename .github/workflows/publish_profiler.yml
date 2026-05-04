@@ -38,10 +38,10 @@ jobs:
         with:
           python-version: "3.8"
 
-      - name: Build discopop-profiler
-        run: pip install build && python -m build profiler/
+      #- name: Build discopop-profiler
+      #  run: pip install build && python -m build profiler/
 
       - name: Publish discopop-profiler to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          packages-dir: profiler/dist/
+      #  with:
+      #    packages-dir: profiler/dist/
