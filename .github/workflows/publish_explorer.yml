@@ -15,7 +15,6 @@ on:
 
 permissions:
   contents: read
-  # IMPORTANT: this permission is mandatory for Trusted Publishing
   id-token: write
 
 jobs:
@@ -23,6 +22,9 @@ jobs:
     name: Build and publish discopop-explorer
     runs-on: ubuntu-22.04
     environment: pypi
+    permissions:
+      # IMPORTANT: this permission is mandatory for Trusted Publishing
+      id-token: write
 
 
     steps:
