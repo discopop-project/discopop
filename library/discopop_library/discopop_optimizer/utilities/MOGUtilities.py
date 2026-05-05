@@ -12,7 +12,7 @@ from typing import Any, ClassVar, Dict, List, Optional, cast, Set, Tuple
 import warnings
 
 import matplotlib  # type: ignore
-import matplotlib.pyplot as plt  # type:ignore
+import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
 import tqdm  # type: ignore
 

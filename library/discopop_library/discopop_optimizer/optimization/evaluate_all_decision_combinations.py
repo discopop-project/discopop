@@ -26,7 +26,6 @@ from discopop_library.discopop_optimizer.optimization.validation import check_co
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
-
 global_experiment = None
 global_arguments = None
 

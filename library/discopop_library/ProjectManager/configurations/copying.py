@@ -16,7 +16,6 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
 from discopop_library.PatchApplicator.patch_applicator import run as apply_suggestions
 
-
 PATH = str
 logger = logging.getLogger("ConfigurationManager")
 

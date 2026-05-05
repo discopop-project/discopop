@@ -94,7 +94,7 @@ class Microbench(ABC):
         # z axis: measurement values
         # (iterations are fixed based on input parameter)
         z = [self.evaluateInterpolation(type, dim, (i, j, iterations)) for i in threads for j in workloads]  # results
-        X, Y = np.meshgrid(threads, workloads)
+        X, Y = np.meshgrid(threads, workloads)  # type: ignore
         Z = np.array(z).reshape(len(threads), len(workloads)).transpose()
 
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})  # type: ignore

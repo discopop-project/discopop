@@ -548,7 +548,7 @@ def get_called_functions_recursively(
                 for function_cu in all_nodes(pet, FunctionNode):
                     if child.name == function_cu.name:
                         child = function_cu
-            called_functions.append(cast(Union[FunctionNode, DummyNode], child))
+            called_functions.append(cast(FunctionNode, child))
         elif child not in visited:
             if child in cache:
                 called_functions += cache[child]

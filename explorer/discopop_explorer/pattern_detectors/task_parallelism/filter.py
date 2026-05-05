@@ -753,7 +753,7 @@ def remove_duplicates(suggestions: List[PatternInfo]) -> List[PatternInfo]:
     """
     buffer = []  # list of tuples containing region_start_line,
     # region_end_line and pragma, representing suggestions
-    result = []
+    result: List[PatternInfo] = []
     for sug in suggestions:
         if type(sug) == ParallelRegionInfo:
             sug_tmp = cast(Union[TaskParallelismInfo, ParallelRegionInfo], sug)
