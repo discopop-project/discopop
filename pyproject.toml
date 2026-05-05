@@ -32,11 +32,8 @@ dependencies = [
     "discopop-profiler",
     "discopop-library",
     "discopop-explorer",
+    "mypy", "black", "data-science-types"
 ]
-
-[project.optional-dependencies]
-dev = ["mypy", "black", "data-science-types", "pre-commit"]
-ci = ["mypy", "black", "data-science-types"]
 
 [project.urls]
 Homepage = "https://www.discopop.tu-darmstadt.de/"
