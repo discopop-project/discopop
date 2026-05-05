@@ -79,14 +79,14 @@ jobs:
       matrix: ${{ fromJson(needs.create_matrix.outputs.matrix) }}
 
     steps:
+      - name: Install Prerequisites
+        run: |
+          ${{ matrix.install_deps_cmd}}
+
       - name: Checkout Repository
         uses: actions/checkout@v3
         with:
           submodules: recursive
-
-      - name: Install Prerequisites
-        run: |
-          ${{ matrix.install_deps_cmd}}
 
       - name: Setup venv and install DiscoPoP
         run: |
