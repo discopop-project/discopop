@@ -98,11 +98,13 @@ jobs:
 
       - name: Profiler gold standard tests
         run: |
-            venv/bin/python3 -m unittest -v -k "*test.profiler.*"
+            . venv/bin/activate
+            python3 -m unittest -v -k "*test.profiler.*"
 
       - name: Python end-to-end-tests
         run: |
-            venv/bin/python3 -m unittest -v -k "*.end_to_end.*"
+            . venv/bin/activate
+            python3 -m unittest -v -k "*.end_to_end.*"
 
 
 
