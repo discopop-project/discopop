@@ -76,5 +76,8 @@ version = {file = "VERSION"}
 where = ["."]
 include = ["discopop_library*"]
 
+[tool.setuptools.package-data]
+discopop_library = ["scripts/*"]
+
 [tool.setuptools]
 zip-safe = true
