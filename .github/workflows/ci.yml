@@ -22,13 +22,10 @@ permissions:
   id-token: write
 
 jobs:
-
-
 # used for eventual multiple operating system testing
   create_matrix:
     runs-on: self-hosted
     name: Create matrix
-    needs: [license_check]
     outputs:
       matrix: ${{ steps.create_matrix.outputs.matrix }}
     steps:
