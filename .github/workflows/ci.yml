@@ -28,8 +28,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v3
-        with:
-          submodules: recursive
+#        with:
+#          submodules: recursive
 
       - name: Github SHA
         run: |
