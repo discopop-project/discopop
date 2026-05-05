@@ -85,8 +85,8 @@ jobs:
 
       - name: Checkout Repository
         uses: actions/checkout@v3
-        with:
-          submodules: recursive
+#        with:
+#          submodules: recursive
 
       - name: Setup venv and install DiscoPoP
         run: |
