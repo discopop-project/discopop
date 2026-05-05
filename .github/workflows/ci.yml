@@ -99,11 +99,11 @@ jobs:
 
       - name: Check formatting of DiscoPoP Explorer
         run: |
-            venv/bin/python3 -m black -l 120 --check explorer/discopop_explorer
+            venv/bin/python3 -m black -l 120 --check explorer
 
       - name: Check formatting of DiscoPoP Library
         run: |
-            venv/bin/python3 -m black -l 120 --check library/discopop_library
+            venv/bin/python3 -m black -l 120 --check library
 
  #     - name: Execute C++ unit tests
  #       run: |
