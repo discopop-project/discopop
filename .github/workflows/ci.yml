@@ -22,22 +22,7 @@ permissions:
   id-token: write
 
 jobs:
-  license_check:
-    runs-on: self-hosted
-    name: License check
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
-#        with:
-#          submodules: recursive
 
-      - name: Github SHA
-        run: |
-          echo "Hello from: ${{ github.sha }}"
-
-      - name: Check all files for DiscoPoP License tag
-        run: |
-          ./scripts/dev/check-license.sh $(find . -type f)
 
 # used for eventual multiple operating system testing
   create_matrix:
@@ -87,6 +72,10 @@ jobs:
         uses: actions/checkout@v3
 #        with:
 #          submodules: recursive
+
+      - name: Check all files for DiscoPoP License tag
+        run: |
+          ./scripts/dev/check-license.sh $(find . -type f)
 
       - name: Setup venv and install DiscoPoP
         run: |
