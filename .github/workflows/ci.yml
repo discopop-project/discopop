@@ -40,7 +40,7 @@ jobs:
             },
             {"id":"ubuntu-22-04",
              "base_image":"ubuntu:22.04",
-             "install_deps_cmd":" export DEBIAN_FRONTEND=noninteractive && apt install wget && wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 20 && apt update && apt install -y python3 python3-pip python3-venv python3-tk build-essential make cmake git libboost-all-dev"
+             "install_deps_cmd":" export DEBIAN_FRONTEND=noninteractive && apt update && apt install wget && wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 20 && apt install -y python3 python3-pip python3-venv python3-tk build-essential make cmake git libboost-all-dev"
             }
           ]}'
 
@@ -52,7 +52,7 @@ jobs:
               },
               {"id":"ubuntu-22-04",
               "base_image":"ubuntu:22.04",
-              "install_deps_cmd":"export DEBIAN_FRONTEND=noninteractive && apt install wget && wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 20 && apt update && apt install -y python3 python3-pip python3-venv python3-tk build-essential make cmake git llvm-19-dev clang-19 libomp-19-dev libboost-all-dev"
+              "install_deps_cmd":"export DEBIAN_FRONTEND=noninteractive && apt update && apt install wget && wget https://apt.llvm.org/llvm.sh && chmod +x llvm.sh && ./llvm.sh 20 && apt install -y python3 python3-pip python3-venv python3-tk build-essential make cmake git llvm-19-dev clang-19 libomp-19-dev libboost-all-dev"
               }
             ]}'
           fi
