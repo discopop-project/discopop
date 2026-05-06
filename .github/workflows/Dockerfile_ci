@@ -7,22 +7,30 @@
 # directory for details.
 
 ARG BASE_IMAGE="ubuntu:24.04"
+
 FROM ${BASE_IMAGE}
 
-ARG PACKAGE_FILE
+# ARG PACKAGE_FILE
+ARG REPOSITORY_LOCATION
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 WORKDIR /usr/local/ci
 
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    apt-utils
+#RUN apt-get update && apt-get install -y \
+#    ca-certificates \
+#    apt-utils
 
-COPY packages/${PACKAGE_FILE} /tmp/${PACKAGE_FILE}
+#COPY packages/${PACKAGE_FILE} /tmp/${PACKAGE_FILE}
+COPY ${REPOSITORY_LOCATION} /tmp/${REPOSITORY_LOCATION}
 
-RUN apt-get install -y /tmp/${PACKAGE_FILE}
+# RUN apt-get install -y /tmp/${PACKAGE_FILE}
 
-ENV PATH="/opt/DiscoPoP/venv/bin:${PATH}"
 
-WORKDIR /opt/DiscoPoP
+# ENV PATH="/opt/DiscoPoP/venv/bin:${PATH}"
+
+# WORKDIR /opt/DiscoPoP
+
+# install DiscoPoP
+WORKDIR /tmp/${REPOSITORY_LOCATION}
+RUN make install
