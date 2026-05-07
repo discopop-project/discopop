@@ -29,10 +29,10 @@ classifiers = [
     "Topic :: Software Development",
 ]
 dependencies = [
-    "discopop-profiler",
-    "discopop-library",
-    "discopop-gui",
-    "discopop-explorer",
+    "discopop-profiler>=0.0.1a2",
+    "discopop-library>=0.0.1a4",
+    "discopop-gui>=0.0.1a2",
+    "discopop-explorer>=0.0.1a2",
     "mypy", "black", "data-science-types"
 ]
 
