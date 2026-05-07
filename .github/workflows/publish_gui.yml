@@ -39,4 +39,4 @@ jobs:
       - name: Publish discopop-gui to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: gui/dist/
+          packages-dir: GUI/dist/
