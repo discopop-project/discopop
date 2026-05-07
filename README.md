@@ -42,7 +42,7 @@ sudo apt install python3 python3-pip python3-venv python3-tk build-essential mak
 ```
 ### Latest release from PyPi
 ```
-pip install discopop
+pip install discopop==5.0.3a1
 ```
 
 ### Local installation
