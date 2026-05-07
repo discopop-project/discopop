@@ -8,7 +8,7 @@
 
 install: venv
 # install discopop_explorer, library and profiler
-	venv/bin/pip install -e . ./profiler ./explorer ./library
+	venv/bin/pip install -e . ./profiler ./explorer ./library ./GUI
 
 venv:
 	python3 -m venv venv

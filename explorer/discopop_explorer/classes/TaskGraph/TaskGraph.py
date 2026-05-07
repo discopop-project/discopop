@@ -87,8 +87,8 @@ from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from GUI.Extendables.Plottable import Plottable
-from GUI.Visualizers.Base import Base as Visualizer
+from discopop_gui.Extendables.Plottable import Plottable
+from discopop_gui.Visualizers.Base import Base as Visualizer
 
 logger = logging.getLogger("Explorer")
 
@@ -128,7 +128,7 @@ class TaskGraph(Plottable, object):
         # define updating plot window
         fig1 = plt.figure(1)
         self.plotting_axis = fig1.add_subplot(1, 1, 1)
-        plt.ion()
+        plt.ion()  # type: ignore[attr-defined]
         # start processing
         self.__assign_function_ids(pet)
         self.__construct_from_pet(pet)
@@ -137,7 +137,7 @@ class TaskGraph(Plottable, object):
         self.__cleanup_loop_dependencies()
         print("Waiting for user to close the Window...")
         # plt.show(block=True)
-        plt.ioff()
+        plt.ioff()  # type: ignore[attr-defined]
 
     def __assign_function_ids(self, pet: PEGraphX) -> None:
         id = 0
@@ -193,7 +193,8 @@ class TaskGraph(Plottable, object):
         return buffer
 
     def plot(self, highlight_nodes: Optional[List[TGNode]] = None) -> None:
-        self.update_plot(plt.gca(), self.graph, highlight_nodes=highlight_nodes)
+        ax = plt.gca()  # type: ignore[attr-defined]
+        self.update_plot(ax, self.graph, highlight_nodes=highlight_nodes)
         print("Waiting for user to close the Window...")
         plt.show()
 
@@ -893,8 +894,9 @@ class TaskGraph(Plottable, object):
 
                         # show problematic loop
                         if plot_problematic_loops:
+                            ax = plt.gca()  # type: ignore[attr-defined]
                             self.update_plot(
-                                plt.gca(),
+                                ax,
                                 subgraph=nx.subgraph(self.graph, descendants),
                                 highlight_nodes=[e[1] for e in invalid_edges],
                             )
@@ -1192,9 +1194,9 @@ class TaskGraph(Plottable, object):
 
             if loop_end_node is None:
                 logger.warning("Could not determine loop end node for loop: " + node.get_label())
-                plt.ioff()
+                plt.ioff()  # type: ignore[attr-defined]
                 self.plot(highlight_nodes=[node])
-                plt.pause(1)
+                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Could not determine loop end node for loop: " + node.get_label())
 
             # search general loop nodes
@@ -1254,9 +1256,9 @@ class TaskGraph(Plottable, object):
                 try:
                     shortest_iteration_path = nx.shortest_path(self.graph, source=it_start, target=it_end)
                 except nx.NetworkXNoPath:
-                    plt.ioff()
+                    plt.ioff()  # type: ignore[attr-defined]
                     self.plot(highlight_nodes=[it_start, it_end])
-                    plt.pause(1)
+                    plt.pause(1)  # type: ignore[attr-defined]
 
                 for path_node in shortest_iteration_path:
                     tmp_iteration_nodes.add(path_node)
@@ -1782,15 +1784,15 @@ class TaskGraph(Plottable, object):
                 continue
             if (succ_count >= 2) and (not isinstance(node, TGStartBranchParentNode)):
                 logger.error("Invalid node type: " + str(type(node)) + " with " + str(succ_count) + " successors!")
-                plt.ioff()
+                plt.ioff()  # type: ignore[attr-defined]
                 self.plot(highlight_nodes=[node])
-                plt.pause(1)
+                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Invalid graph structure!")
             if (pred_count >= 2) and (not isinstance(node, TGEndBranchParentNode)):
                 logger.error("Invalid node type: " + str(type(node)) + " with " + str(pred_count) + " predecessors!")
-                plt.ioff()
+                plt.ioff()  # type: ignore[attr-defined]
                 self.plot(highlight_nodes=[node])
-                plt.pause(1)
+                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Invalid graph structure!")
 
     def __add_work_nodes(self) -> None:

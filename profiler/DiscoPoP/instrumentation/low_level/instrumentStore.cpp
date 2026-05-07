@@ -27,7 +27,7 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruct
   args.push_back(determineVariableName_dynamic(toInstrument, ""));
 
 #ifdef SKIP_DUP_INSTR
-  Twine name = Twine("S").concat(Twine(uniqueNum));
+  std::string name = "S" + std::to_string(uniqueNum);
 
   GlobalVariable *addrTracker = new GlobalVariable(*this->ThisModule,
                                                    Int64, // trackerType
@@ -35,7 +35,7 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruct
                                                    Constant::getNullValue(Int64), // trackerType
                                                    name);
   GlobalVariable *countTracker = new GlobalVariable(*this->ThisModule, Int64, false, GlobalVariable::PrivateLinkage,
-                                                    Constant::getNullValue(Int64), name.concat(Twine("count")));
+                                                    Constant::getNullValue(Int64), name + "count");
   uniqueNum++;
 
   // Load current values before instr

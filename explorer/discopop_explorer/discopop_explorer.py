@@ -50,7 +50,7 @@ from discopop_explorer.pattern_detection import PatternDetectorX
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 from discopop_library.tools.update_notifications.update_notifier import run as check_for_updates
 
-from GUI.Visualizers.WithSidebar import WithSidebar as Visualizer
+from discopop_gui.Visualizers.WithSidebar import WithSidebar as Visualizer
 
 
 @dataclass

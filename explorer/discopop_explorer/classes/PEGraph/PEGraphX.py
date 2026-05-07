@@ -44,8 +44,8 @@ from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 
-from GUI.Extendables.Plottable import Plottable
-from GUI.Visualizers.Base import Base as Visualizer
+from discopop_gui.Extendables.Plottable import Plottable
+from discopop_gui.Visualizers.Base import Base as Visualizer
 
 from discopop_explorer.utilities.PEGraphConstruction.parser import readlineToCUIdMap, writelineToCUIdMap
 from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData

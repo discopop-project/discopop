@@ -40,7 +40,7 @@ from discopop_explorer.pattern_detectors.new_task_detector import run_detection 
 from discopop_explorer.pattern_detectors.new_do_all_detector import run_detection as detect_do_all_new
 from discopop_explorer.pattern_detectors.new_reduction_detector import run_detection as detect_reduction_new
 
-from GUI.Visualizers.Base import Base as Visualizer
+from discopop_gui.Visualizers.Base import Base as Visualizer
 
 
 class PatternDetectorX(object):

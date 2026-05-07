@@ -65,8 +65,8 @@ from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import (
 )
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
-from GUI.Extendables.Plottable import Plottable
-from GUI.Visualizers.Base import Base as Visualizer
+from discopop_gui.Extendables.Plottable import Plottable
+from discopop_gui.Visualizers.Base import Base as Visualizer
 from termcolor import cprint
 import matplotlib.lines as mlines
 import plotille  # type: ignore

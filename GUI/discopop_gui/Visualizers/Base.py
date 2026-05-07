@@ -9,7 +9,8 @@
 from abc import abstractmethod, ABC
 import tkinter as tk
 from typing import Dict, Type, Callable
-from GUI.Types.FrameT import FrameT
+from discopop_gui.Types.FrameT import FrameT
+
 
 class Base(ABC):
     def __init__(self) -> None:
@@ -25,7 +26,7 @@ class Base(ABC):
         self._root.destroy()
 
     @abstractmethod
-    def create_frame(self, name: str,  frame_type: Type[FrameT]) -> FrameT:
+    def create_frame(self, name: str, frame_type: Type[FrameT]) -> FrameT:
         pass
 
     def get_frame(self, name: str) -> tk.Frame:
@@ -37,18 +38,18 @@ class Base(ABC):
     def show_frame(self, name: str) -> None:
         frame = self.get_frame(name)
 
-        if (frame == None):
+        if frame == None:
             raise KeyError(f"No frame named '{name}'.")
-        
-        frame.tkraise()        
+
+        frame.tkraise()
         self._current_frame_name = name
 
     def delete_frame(self, name: str) -> None:
         frame = self.get_frame(name)
 
-        if (frame == None):
+        if frame == None:
             raise KeyError(f"No frame named '{name}'.")
-        
+
         frame.destroy()
 
         del self._frames[name]
@@ -63,7 +64,6 @@ class Base(ABC):
     @abstractmethod
     def set_filter_callback(self, callback: Callable[[str], None]) -> None:
         pass
-
 
     @abstractmethod
     def set_filter_text(self, text: str) -> None:

@@ -35,7 +35,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TPIType,
     TaskParallelismInfo,
 )
-from GUI.Visualizers.WithSidebar import WithSidebar as VisualizerWithSideBar
+from discopop_gui.Visualizers.WithSidebar import WithSidebar as VisualizerWithSideBar
 
 logger = logging.getLogger("Explorer").getChild("DoAll")
 

@@ -7,7 +7,7 @@
 # directory for details.
 
 import subprocess
-from typing import Union, cast, Dict, List, Tuple, Optional, Any
+from typing import Union, cast, Dict, List, Set, Tuple, Optional, Any
 
 from lxml import objectify  # type: ignore
 
@@ -31,7 +31,7 @@ from discopop_explorer.utils import depends
 
 __workloadThreshold = 10000
 __minParallelism = 3
-__forks = set()
+__forks: Set[Task] = set()
 __global_llvm_cxxfilt_path: str = ""
 demangling_cache: Dict[str, str] = dict()
 

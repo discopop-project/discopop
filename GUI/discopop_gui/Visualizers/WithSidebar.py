@@ -10,8 +10,8 @@ from __future__ import annotations
 
 import tkinter as tk
 from typing import Dict, Type, Callable
-from GUI.Visualizers.Base import Base
-from GUI.Types.FrameT import FrameT
+from discopop_gui.Visualizers.Base import Base
+from discopop_gui.Types.FrameT import FrameT
 
 
 class WithSidebar(Base):

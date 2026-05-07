@@ -229,8 +229,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
         if(F){
           F_is_library_function = (int8_t) F->isDeclaration();
         }
-        ArrayRef<Value *> arguments({ConstantInt::get(Int32, llvm_ir_instruction_id), ConstantInt::get(Int8, F_is_library_function)});
-        IRBCall.CreateCall(DpCallOrInvoke, arguments);
+        IRBCall.CreateCall(DpCallOrInvoke, {ConstantInt::get(Int32, llvm_ir_instruction_id), ConstantInt::get(Int8, F_is_library_function)});
         if (DP_DEBUG) {
           if (isa<CallInst>(BI)) {
             if (!(fn.str() == ""))

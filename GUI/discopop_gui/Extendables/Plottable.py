@@ -11,9 +11,9 @@ import tkinter as tk
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
 from matplotlib.figure import Figure
-from GUI.Visualizers.Base import Base
-from GUI.Objects.Frames.MultiFrame import MultiFrame
-from GUI.Exceptions.VisualizerNotDefined import VisualizerNotDefined
+from discopop_gui.Visualizers.Base import Base
+from discopop_gui.Objects.Frames.MultiFrame import MultiFrame
+from discopop_gui.Exceptions.VisualizerNotDefined import VisualizerNotDefined
 
 
 class Plottable:

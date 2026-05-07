@@ -28,7 +28,7 @@ from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
-from GUI.Visualizers.Base import Base as Visualizer
+from discopop_gui.Visualizers.Base import Base as Visualizer
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     ParallelRegionInfo,
     TPIType,

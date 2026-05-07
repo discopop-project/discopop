@@ -6,5 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+
 class VisualizerNotDefined(Exception):
     pass
