@@ -11,7 +11,10 @@ name: Publish DiscoPoP Package
 on:
   push:
     tags:
-      - "v*"
+      - "v*[0-9]*.[0-9]*.[0-9]*"
+      - "!v*[0-9]*.[0-9]*.[0-9]*a[0-9]*"
+      - "!v*[0-9]*.[0-9]*.[0-9]*b[0-9]*"
+      - "!v*[0-9]*.[0-9]*.[0-9]*dev[0-9]*"
 
 permissions:
   contents: write
@@ -82,7 +85,7 @@ jobs:
           asset_name: discopop.deb
           asset_content_type: application/vnd.debian.binary-package
 
-      # - name: Publish Distribution to PyPI
-      #   uses: pypa/gh-action-pypi-publish@master
-      #   with:
-      #     password: ${{ secrets.pypi_password }}
+      - name: Publish Distribution to PyPI
+        uses: pypa/gh-action-pypi-publish@master
+        with:
+          password: ${{ secrets.pypi_password }}

@@ -15,7 +15,7 @@ name = "discopop"
 dynamic = ["version"]
 description = "DiscoPoP is a tool that helps software developers parallelize their programs with threads. It discovers potential parallelism in a sequential program and makes recommendations on how to exploit it."
 readme = {file = "README.md", content-type = "text/markdown"}
-license = "BSD-3-Clause"
+license = {file = "LICENSE"}
 authors = [
     {name = "TU Darmstadt and Iowa State University", email = "discopop@lists.parallel.informatik.tu-darmstadt.de"},
 ]
