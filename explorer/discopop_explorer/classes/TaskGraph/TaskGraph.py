@@ -63,7 +63,11 @@ from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
 from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
-from discopop_explorer.functions.PEGraph.traversal.called_functions import get_called_nodes
+from discopop_explorer.functions.PEGraph.traversal.called_functions import (
+    get_call_instruction_id,
+    get_called_node_ids,
+    get_called_nodes,
+)
 from discopop_explorer.functions.PEGraph.traversal.children import get_entry_child
 from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.functions.PEGraph.traversal.predecessors import direct_predecessors
@@ -1338,7 +1342,7 @@ class TaskGraph(Plottable, object):
             if not isinstance(node, TGStartInlinedFunctionNode):
                 continue
             # create a new inlined function context
-            inlined_function_context = InlinedFunctionContext()
+            inlined_function_context = InlinedFunctionContext(call_instruction_id=node.call_instruction_id)
             node.register_created_context(inlined_function_context)
             self.contexts.append(inlined_function_context)
 
@@ -1540,15 +1544,15 @@ class TaskGraph(Plottable, object):
         logger.info("--> determine loop variables...")
         for loop_ctx in tqdm(entry_points):
             loop_header_ctx = self.get_loop_header_context(loop_ctx)
-#            print("LOOP HEADER CTX:", loop_header_ctx)
+            #            print("LOOP HEADER CTX:", loop_header_ctx)
             if loop_header_ctx is None:
                 continue
             # identify loop variables by checking for RAW dependencies between loop body and loop header
             loop_iteration_ctxs = loop_ctx.get_contained_contexts(inclusive=True)
             loop_vars: List[Tuple[str, MemoryRegion]] = []
-#            print("LOOP IT CTXS: ", loop_iteration_ctxs)
-#            print("LOOP HEADER OUTDEPS: ", loop_header_ctx.outgoing_dependencies)
-#            print("LOOP HEADER INDEPS: ", loop_header_ctx.incoming_dependencies)
+            #            print("LOOP IT CTXS: ", loop_iteration_ctxs)
+            #            print("LOOP HEADER OUTDEPS: ", loop_header_ctx.outgoing_dependencies)
+            #            print("LOOP HEADER INDEPS: ", loop_header_ctx.incoming_dependencies)
             for target_ctx, dep in loop_header_ctx.outgoing_dependencies:
                 if dep is None or dep.etype != EdgeType.DATA:
                     continue
@@ -1685,7 +1689,7 @@ class TaskGraph(Plottable, object):
                     else:
                         # empty parent context can happen at the root level of the graph. All other cases are invalid.
                         if current_context.parent_context is None:
-#                            print("TYPE: ", type(current_context))
+                            #                            print("TYPE: ", type(current_context))
                             if type(current_context) != Context:
                                 raise ValueError(
                                     "Current.parent_context must not be None, as context must not be None during processing!"
@@ -1753,11 +1757,14 @@ class TaskGraph(Plottable, object):
                     if fcn.pet_node_id is None:
                         continue
                     # duplicate inlined function body and insert it after the caller
-                    called_functions_pet_nodes = get_called_nodes(self.pet, self.pet.node_at(fcn.pet_node_id))
-                    for cf_pet_node in called_functions_pet_nodes:
-                        function_entry = self.TGFunctionNode_pet_node_id_to_tg_node[cf_pet_node.id]
-                        #                        logger.info("--> function entry: " + function_entry.get_label())
-                        inlined_entry, inlined_exit = self.__duplicate_inlined_function(function_entry, fcn.pet_node_id)
+                    caller = self.pet.node_at(fcn.pet_node_id)
+                    called_functions_pet_node_ids = get_called_node_ids(self.pet, caller)
+                    for cf_pet_node_id in called_functions_pet_node_ids:
+                        call_instruction_id = get_call_instruction_id(caller, self.pet.node_at(cf_pet_node_id))
+                        function_entry = self.TGFunctionNode_pet_node_id_to_tg_node[cf_pet_node_id]
+                        inlined_entry, inlined_exit = self.__duplicate_inlined_function(
+                            function_entry, fcn.pet_node_id, call_instruction_id
+                        )
                         # connect edges
                         for succ in self.get_successors(fcn):
                             self.graph.remove_edge(fcn, succ)
@@ -1904,11 +1911,11 @@ class TaskGraph(Plottable, object):
                 self.add_edge(end_work_node, succ)
 
     def __duplicate_inlined_function(
-        self, inlined_function: TGFunctionNode, inlining_pet_node_id: PETNodeID
+        self, inlined_function: TGFunctionNode, inlining_pet_node_id: PETNodeID, call_instruction_id: Optional[int]
     ) -> Tuple[TGStartInlinedFunctionNode, TGEndInlinedFunctionNode]:
 
         # initialize entry and exit nodes
-        entry = TGStartInlinedFunctionNode(inlining_pet_node_id, 0, 0)
+        entry = TGStartInlinedFunctionNode(inlining_pet_node_id, 0, 0, call_instruction_id)
         exit = TGEndInlinedFunctionNode(inlining_pet_node_id, 0, 0)
         self.add_node(entry)
         self.add_node(exit)
@@ -2353,7 +2360,7 @@ class TaskGraph(Plottable, object):
         print("SEEN_STATE_IDS: ", used_state_ids)
         # delete deps to free memory
         del deps
-                                
+
         # create state_mappings_dict
         state_mappings_dict: Dict[str, List[str]] = dict()  # {stateID: callpath}
         state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
@@ -2382,9 +2389,9 @@ class TaskGraph(Plottable, object):
         """attaches state ids to Context nodes."""
         # read stateID to callpath mapping. States are filtered for observed states in dynamic dependency file to compress map slightly
         state_mappings_dict = self.__get_state_mappings_from_file(dynamic_dependency_file)
-#        print("state_mappings_dict: ")
-#        for state_id in state_mappings_dict:
-#            print("->", state_id, " -> ", state_mappings_dict[state_id])
+        #        print("state_mappings_dict: ")
+        #        for state_id in state_mappings_dict:
+        #            print("->", state_id, " -> ", state_mappings_dict[state_id])
 
         def recursive_assignment(state_id: int, callstate: Tuple[str, ...], ctx: Context) -> bool:
             """assigns state_id to the matching states.
@@ -2446,6 +2453,20 @@ class TaskGraph(Plottable, object):
                 else:
                     # MISS (invalid)
                     return False
+            elif isinstance(ctx, InlinedFunctionContext):
+                if callstate[0].startswith("call_") and callstate[0].split("call_")[1].isdigit():
+                    # check for matching CallInstruction ID
+                    print(
+                        "FOUND InlinedFunctionContext "
+                        + str(ctx)
+                        + " at current callstate: "
+                        + str(callstate)
+                        + " with callInstID: "
+                        + str(ctx.call_instruction_id)
+                    )
+                    import sys
+
+                    sys.exit(0)
 
             # set state_id if necessary
             if len(callstate) == 0:
@@ -2456,7 +2477,6 @@ class TaskGraph(Plottable, object):
             # continue assignment with children
             ret_val = False
             for child in ctx.get_contained_contexts():
-                #                print("child: ", child)
                 ret_val = ret_val or recursive_assignment(state_id, callstate, child)
             # continue assignment with successors
 
@@ -2482,13 +2502,13 @@ class TaskGraph(Plottable, object):
                 continue
             # cleanup callstate
             callstate = copy.deepcopy(smd_entry)
-            # cleanup callstate (remove call_<int> markers)
-            to_be_removed: List[int] = []
-            for idx in range(0, len(callstate)):
-                if callstate[idx].startswith("call_") and callstate[idx].split("call_")[1].isdigit():
-                    to_be_removed.append(idx)
-            for idx in sorted(to_be_removed, reverse=True):
-                del callstate[idx]
+            #            # cleanup callstate (remove call_<int> markers)
+            #            to_be_removed: List[int] = []
+            #            for idx in range(0, len(callstate)):
+            #                if callstate[idx].startswith("call_") and callstate[idx].split("call_")[1].isdigit():
+            #                    to_be_removed.append(idx)
+            #            for idx in sorted(to_be_removed, reverse=True):
+            #                del callstate[idx]
             # cleanup callstate (compress multiple successive loopstates)
             if len(callstate) > 0:
                 loopstate_indices: List[int] = []
@@ -2774,16 +2794,16 @@ class TaskGraph(Plottable, object):
                 if type(ctx) != WorkContext:
                     continue
                 if location in ctx.get_code_scope(pet):
-#                    if state_id == "28" or state_id == "29" or state_id == "30":
-#                        print("HERE: state_id: ", state_id, " CTX state ids: ", ctx.get_state_ids())
+                    #                    if state_id == "28" or state_id == "29" or state_id == "30":
+                    #                        print("HERE: state_id: ", state_id, " CTX state ids: ", ctx.get_state_ids())
                     if int(state_id) in ctx.get_state_ids():
-#                        if state_id == "28" or state_id == "29" or state_id == "30":
-#                            print("HERE: MATCH")
+                        #                        if state_id == "28" or state_id == "29" or state_id == "30":
+                        #                            print("HERE: MATCH")
                         filtered_contexts.add(ctx)
 
-#            if state_id == "28" or state_id == "29" or state_id == "30":
-#                print("STATE ID: ", state_id)
-#                print("CTXS: ", filtered_contexts)
+            #            if state_id == "28" or state_id == "29" or state_id == "30":
+            #                print("STATE ID: ", state_id)
+            #                print("CTXS: ", filtered_contexts)
 
             lookup_cache[cache_key] = filtered_contexts
             return filtered_contexts

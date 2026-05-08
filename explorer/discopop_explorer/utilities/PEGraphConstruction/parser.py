@@ -58,7 +58,6 @@ def __parse_xml_input(xml_fd: TextIOWrapper) -> Dict[str, ObjectifiedElement]:
             # entry exists already! merge the two entries
             pass
         else:
-            tmp = node.get("id")
             cu_dict[node.get("id")] = node
 
     return cu_dict
@@ -92,13 +91,16 @@ def __map_dummy_nodes(cu_dict: Dict[str, ObjectifiedElement]) -> Dict[str, Objec
         if "childrenNodes" in dir(node):
             for child_idx, child in enumerate(node.childrenNodes):
                 if child in dummy_to_func_ids_map:
-                    cu_dict[node_id].childrenNodes[child_idx] = dummy_to_func_ids_map[child]
+                    cu_dict[node_id].childrenNodes[child_idx]._setText(dummy_to_func_ids_map[child])
 
             # Also do the same in callLineToFunctionMap
             if "callsNode" in dir(node):
                 for idx, i in enumerate(node.callsNode.nodeCalled):
+                    # atLine = i.get("atLine")
+                    # callInstId = i.get("callInstId")
                     if i in dummy_to_func_ids_map:
-                        cu_dict[node_id].callsNode.nodeCalled[idx] = dummy_to_func_ids_map[i]
+                        cu_dict[node_id].callsNode.nodeCalled[idx]._setText(dummy_to_func_ids_map[i])
+
     return cu_dict
 
 
