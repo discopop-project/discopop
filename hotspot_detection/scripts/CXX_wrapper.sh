@@ -18,8 +18,19 @@ fi
 HSD_BUILD="$(dirname "$(dirname ${SCRIPT_PATH})")"
 #HSD_BUILD_LLVM_BIN_DIR="$(cat ${HSD_BUILD}/build_config.txt | grep -oP "(?<=LLVM_BIN_DIR=).*")"
 HSD_SCRIPTS=${HSD_BUILD}/scripts
-LLVM_CLANG=$(which clang-19)
-LLVM_CLANGPP=$(which clang++-19)
+LLVM_CLANG=""
+LLVM_CLANGPP=""
+for _v in 22 21 20 19; do
+    if command -v clang-$_v &> /dev/null; then
+        LLVM_CLANG=$(which clang-$_v)
+        LLVM_CLANGPP=$(which clang++-$_v)
+        break
+    fi
+done
+if [ -z "$LLVM_CLANG" ]; then
+    echo "ERROR: No supported clang version (19-22) found in PATH"
+    exit 1
+fi
 
 # original arguments: "$@"
 #echo "WRAPPED CXX COMPILE..."

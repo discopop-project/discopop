@@ -18,15 +18,26 @@ elseif(NOT ${USE_LLVM_VERSION} STREQUAL "")
     # search for specified llvm version
     find_package(LLVM ${USE_LLVM_VERSION} REQUIRED)
 else()
-    # search for llvm 19 installations
-    find_package(LLVM 19.0 CONFIG QUIET)
+    # search for any supported LLVM major version (19–22), any minor version
+    foreach(_major 22 21 20 19)
+        foreach(_minor RANGE 0 9)
+            if(NOT LLVM_FOUND)
+                find_package(LLVM "${_major}.${_minor}" CONFIG QUIET)
+            endif()
+        endforeach()
+    endforeach()
     if(NOT LLVM_FOUND)
-        find_package(LLVM 19.1 CONFIG QUIET)
-        if(NOT LLVM_FOUND)
-            message(FATAL_ERROR "No supported LLVM Version found. Version 19.0 or 19.1 required!")
-        endif()
+        message(FATAL_ERROR "No supported LLVM Version found. Versions 19–22 are supported. If a supported LLVM Version is installed, consider specifying the -DLLVM_DIST_PATH flag.")
     endif()
 endif()
+
+# Derive the clang executable name from the detected LLVM major version
+string(REGEX MATCH "^([0-9]+)" LLVM_MAJOR_VERSION "${LLVM_PACKAGE_VERSION}")
+find_program(CLANG_EXECUTABLE NAMES clang-${LLVM_MAJOR_VERSION} clang)
+if(NOT CLANG_EXECUTABLE)
+    message(FATAL_ERROR "clang-${LLVM_MAJOR_VERSION} is required but was not found. Please install clang-${LLVM_MAJOR_VERSION}.")
+endif()
+message(STATUS "Found clang: ${CLANG_EXECUTABLE}")
 
 message(STATUS "Using LLVM version ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")

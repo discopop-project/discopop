@@ -13,7 +13,6 @@
 //#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/BasicBlock.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/SmallVector.h"
@@ -43,7 +42,8 @@
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/IR/CFG.h"
-// llvm 19 compatibility
+// llvm 19+ compatibility
+#include "llvm/Config/llvm-config.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/PassBuilder.h"
 
@@ -837,12 +837,21 @@ PassPluginLibraryInfo getPassPluginInfo() {
   */
 
   const auto callback = [](PassBuilder &PB) {
+#if LLVM_VERSION_MAJOR >= 20
     PB.registerPipelineEarlySimplificationEPCallback(
-        [&](ModulePassManager &MPM, auto) {
+        [&](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
           MPM.addPass(createModuleToFunctionPassAdaptor(HotspotDetection_new_PM_adaptor()));
           MPM.addPass(HotspotDetection_new_PM_adaptor());
           return true;
         });
+#else
+    PB.registerPipelineEarlySimplificationEPCallback(
+        [&](ModulePassManager &MPM, OptimizationLevel) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(HotspotDetection_new_PM_adaptor()));
+          MPM.addPass(HotspotDetection_new_PM_adaptor());
+          return true;
+        });
+#endif
   };
 
 

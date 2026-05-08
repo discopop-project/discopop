@@ -33,6 +33,7 @@ setup(
 	"numpy",
     "requests",
     "packaging",
+    "termcolor",
     ],
     extras_require={
     },
