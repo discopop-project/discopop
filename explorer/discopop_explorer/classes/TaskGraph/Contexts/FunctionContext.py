@@ -27,4 +27,6 @@ class FunctionContext(Context):
         return "lightgrey"
 
     def get_label(self) -> str:
-        return "Function " + str(self.parent_function)
+        label = "Function " + str(self.parent_function)
+        label += "\nstate_ids: " + str(self.get_state_ids())
+        return label

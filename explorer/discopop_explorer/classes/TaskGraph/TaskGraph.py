@@ -2454,8 +2454,9 @@ class TaskGraph(Plottable, object):
                     # MISS (invalid)
                     return False
             elif isinstance(ctx, InlinedFunctionContext):
-                if callstate[0].startswith("call_") and callstate[0].split("call_")[1].isdigit():
+                if callstate[0].startswith("call_") and callstate[0][5:].isdigit():
                     # check for matching CallInstruction ID
+                    call_instruction_id = int(callstate[0][5:])
                     print(
                         "FOUND InlinedFunctionContext "
                         + str(ctx)
@@ -2464,9 +2465,15 @@ class TaskGraph(Plottable, object):
                         + " with callInstID: "
                         + str(ctx.call_instruction_id)
                     )
-                    import sys
-
-                    sys.exit(0)
+                    if call_instruction_id == ctx.call_instruction_id:
+                        # HIT CALL
+                        callstate = callstate[1:]
+                    else:
+                        # MISS (invalid)
+                        return False
+                else:
+                    # MISS (invalid)
+                    return False
 
             # set state_id if necessary
             if len(callstate) == 0:
