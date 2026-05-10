@@ -1,5 +1,5 @@
 from enum import Enum, auto
 
 class ViewerMode(Enum):
-    PAN = auto()
+    MAIN = auto()
     ZOOM = auto()

@@ -40,9 +40,7 @@ class Viewable(tk.Canvas):
         self._start_drag(event, button=1)
 
     def _left_drag(self, event: tk.Event) -> None:
-        if self._viewer_mode == ViewerMode.PAN:
-            self._update_pan(event)
-        elif self._viewer_mode == ViewerMode.ZOOM:
+        if self._viewer_mode == ViewerMode.ZOOM:
             self._update_zoom_rectangle(event, outline="blue")
 
     def _left_release(self, event: tk.Event) -> None:
@@ -52,7 +50,7 @@ class Viewable(tk.Canvas):
         self._start_drag(event, button=3)
 
     def _right_drag(self, event: tk.Event) -> None:
-        if self._viewer_mode == ViewerMode.PAN:
+        if self._viewer_mode == ViewerMode.MAIN:
             self._update_pan(event)
         elif self._viewer_mode == ViewerMode.ZOOM:
             self._update_zoom_rectangle(event, outline="red")
@@ -66,9 +64,11 @@ class Viewable(tk.Canvas):
         assert self._drag_start_x is not None
         assert self._drag_start_y is not None
 
-        if self._viewer_mode == ViewerMode.PAN:
-            self._last_drag_x = self._drag_start_x
-            self._last_drag_y = self._drag_start_y
+        if self._viewer_mode == ViewerMode.MAIN:
+            if button == 3:
+                self._last_drag_x = self._drag_start_x
+                self._last_drag_y = self._drag_start_y
+
             return
 
         if self._drag_rectangle_id is not None:
@@ -125,7 +125,7 @@ class Viewable(tk.Canvas):
 
     def _finish_drag(self, event: tk.Event, button: int) -> None:
         if (
-            self._viewer_mode == ViewerMode.PAN
+            self._viewer_mode == ViewerMode.MAIN
             or self._drag_start_x is None
             or self._drag_start_y is None
             or self._drag_rectangle_id is None
@@ -265,6 +265,9 @@ class Viewable(tk.Canvas):
     def _store_original_coordinates(self, item_id: int) -> None:
         self._original_coordinates[item_id] = tuple(self.coords(item_id))
 
+    def get_viewer_mode(self) -> ViewerMode:
+        return self._viewer_mode
+    
     def set_viewer_mode(self, viewer_mode : ViewerMode) -> None:
         self._reset_drag_state()
         self._viewer_mode = viewer_mode

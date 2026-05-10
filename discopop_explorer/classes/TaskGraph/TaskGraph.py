@@ -89,6 +89,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from GUI.Extendables.Plottable import Plottable
 from GUI.Visualizers.Base import Base as Visualizer
+from GUI.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
 
 logger = logging.getLogger("Explorer")
 
@@ -478,7 +479,7 @@ class TaskGraph(Plottable, object):
             labels[node] = node.get_label()
         nx.draw_networkx_labels(ctx_graph, positions, labels, font_size=7, ax=axis)
 
-    def new_plot_context_debug_graph(self, canvas: tk.Canvas) -> None:
+    def new_plot_context_debug_graph(self, canvas: ViewableCanvasWithTrees) -> None:
         logger.info("Plotting context debug graph...")
 
         canvas.delete("all")
@@ -539,47 +540,50 @@ class TaskGraph(Plottable, object):
             sy = padding + (1 - ((y - min_y) / y_span)) * (canvas_height - (2 * padding))
             scaled_positions[node] = (sx, sy)
 
-        def draw_edge(src, dst, color="black", width=1, arrow=False):
-            x1, y1 = scaled_positions[src]
-            x2, y2 = scaled_positions[dst]
+        node_ids = {}
 
-            if arrow:
-                canvas.create_line(x1, y1, x2, y2, fill=color, width=width, arrow="last")
-            else:
-                canvas.create_line(x1, y1, x2, y2, fill=color, width=width)
-
-        def draw_node(node, fill_color):
+        for node in ctx_graph.nodes:
             x, y = scaled_positions[node]
 
-            canvas.create_oval(
-                x - node_radius,
-                y - node_radius,
-                x + node_radius,
-                y + node_radius,
-                fill=fill_color,
-                outline="black",
-            )
+            fill_color = "orange" if node in self.contexts else "cyan"
 
-            canvas.create_text(
+            node_ids[node] = canvas.create_node(
                 x,
                 y,
-                text=node.get_label(),
-                font=("Arial", 7),
-                anchor="center",
+                node.get_label(),
+                fill_color,
             )
 
         for src, dst in contained_edges:
-            draw_edge(src, dst, color="black", width=1, arrow=False)
+            x1, y1 = scaled_positions[src]
+            x2, y2 = scaled_positions[dst]
+
+            canvas.add_dependency(
+                node_ids[src],
+                node_ids[dst],
+                x1,
+                y1,
+                x2,
+                y2,
+                fill="black",
+                width=1,
+            )
 
         for src, dst in dependency_edges:
-            draw_edge(src, dst, color="red", width=2, arrow=True)
+            x1, y1 = scaled_positions[src]
+            x2, y2 = scaled_positions[dst]
 
-        for node in self.contexts:
-            draw_node(node, "orange")
-
-        for node in ctx_graph.nodes:
-            if node not in self.contexts:
-                draw_node(node, "cyan")
+            canvas.add_dependency(
+                node_ids[src],
+                node_ids[dst],
+                x1,
+                y1,
+                x2,
+                y2,
+                fill="red",
+                width=2,
+                arrow="last",
+            )
 
     def __get_or_insert_TGNode(self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex) -> TGNode:
         if pet_node_id is not None:
