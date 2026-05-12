@@ -161,6 +161,18 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             )
         if len(dep_fields) < 4 or dep_fields[1] != "NOM":
             continue
+
+        # load instruction to lineID mapping for backwards compatibility
+        instruction_to_lineID_mapping: Dict[str, str] = dict()
+        if os.path.exists(os.path.join(output_path, "instructionID_to_lineID_mapping.txt")):
+            with open(os.path.join(output_path, "instructionID_to_lineID_mapping.txt"), "r") as f:
+                for line in f.readlines():
+                    line = line.replace("\n", "")
+                    split_line = line.split(" ") 
+                    instruction_id = split_line[0]
+                    lineID = split_line[1]
+                    instruction_to_lineID_mapping[instruction_id] = lineID
+        
         sink = dep_fields[0]
         # pairwise iteration over dependencies source
         for dep_pair in list(zip(dep_fields[2:], dep_fields[3:]))[::2]:
@@ -191,22 +203,37 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
                 var_name = var_name.replace("GEPRESULT_", "")
                 is_gep_result_dependency = True
 
+    
+            # convert instruction ids to lineIds for backwards compatibility
+            source = source_fields[0]
+            if ":" not in sink:
+                if "@" in sink:
+                    sink = sink[:sink.index("@")]  # remove state information 
+                if sink in instruction_to_lineID_mapping:
+                    sink = instruction_to_lineID_mapping[sink]
+            if ":" not in source:
+                if "@" in source:
+                    source = source[:source.index("@")]  # remove state information
+                if source in instruction_to_lineID_mapping:
+                    source = instruction_to_lineID_mapping[source]
+
+
             # register dependencies
             if metadata is None:
                 dependencies_list.append(
-                    DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, is_gep_result_dependency, None)
+                    DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency, None)
                 )
                 continue
 
             if len(metadata) == 0:
                 dependencies_list.append(
-                    DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, is_gep_result_dependency, "")
+                    DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency, "")
                 )
             else:
                 for md_set in metadata:
                     dependencies_list.append(
                         DependenceItem(
-                            sink, source_fields[0], type, var_name, aa_var_name, is_gep_result_dependency, md_set
+                            sink, source, type, var_name, aa_var_name, is_gep_result_dependency, md_set
                         )
                     )
 

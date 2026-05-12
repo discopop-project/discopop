@@ -28,6 +28,12 @@ class Context(object):
     parent_context: Optional[Context]
     outgoing_dependencies: Set[Tuple[Context, Dependency]]
     incoming_dependencies: Set[Tuple[Context, Dependency]]
+    affected_contexts_by_outgoing_dependency: Dict[
+        Dependency, List[Context]
+    ]  # List of contexts in order of upward tree traversal
+    affecting_contexts_by_incoming_dependency: Dict[
+        Dependency, List[Context]
+    ]  # List of contexts in order of upward tree traversal
     state_ids: List[int]
 
     def __init__(self) -> None:
@@ -38,6 +44,8 @@ class Context(object):
         self.predecessor = None
         self.outgoing_dependencies = set()
         self.incoming_dependencies = set()
+        self.affected_contexts_by_outgoing_dependency = dict()
+        self.affecting_contexts_by_incoming_dependency = dict()
         self._ancestor_contexts_cache: Optional[List[Context]] = None
         self._code_scope_cache: Optional[List[LineID]] = None
         self._closest_function_ancestor_computed: bool = False
@@ -68,6 +76,21 @@ class Context(object):
         result = result.union(self.contained_contexts)
         for ctx in self.contained_contexts:
             result = result.union(ctx.get_contained_contexts(inclusive=True))
+        return result
+
+    def get_contained_contexts_in_sequence(self, is_entry: bool = True) -> List[Context]:
+        """enumerates contained contexts in their sequence of occurrence in the program"""
+        result: List[Context] = []
+        for ctx in self.contained_contexts:
+            if ctx.predecessor is None:
+                # entry of a sequence
+                result.append(ctx)
+                result += ctx.get_contained_contexts_in_sequence(is_entry=False)
+
+        if not is_entry:
+            if self.successor is not None:
+                result += self.successor.get_contained_contexts_in_sequence(is_entry=False)
+
         return result
 
     def add_node(self, node: TGNode) -> None:
@@ -170,12 +193,29 @@ class Context(object):
         return self._closest_function_ancestor
 
     def register_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
+        # register dependency
         self.outgoing_dependencies.add((target_context, dependency))
         target_context.incoming_dependencies.add((self, dependency))
+        # register affected contexts
+        self_ancestors = self.get_ancestor_contexts()
+        target_ancestors = target_context.get_ancestor_contexts()
+        # -> ignore matching prefix ancestors
+        while len(self_ancestors) > 0 and len(target_ancestors) > 0 and self_ancestors[-1] == target_ancestors[-1]:
+            self_ancestors = self_ancestors[:-1]
+            target_ancestors = target_ancestors[:-1]
+        # -> register affected contexts
+        self.affected_contexts_by_outgoing_dependency[dependency] = target_ancestors
+        target_context.affecting_contexts_by_incoming_dependency[dependency] = self_ancestors
 
     def delete_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
+        # register dependency
         self.outgoing_dependencies.remove((target_context, dependency))
         target_context.incoming_dependencies.remove((self, dependency))
+        # delete affected contexts
+        if dependency in self.affected_contexts_by_outgoing_dependency:
+            del self.affected_contexts_by_outgoing_dependency[dependency]
+        if dependency in target_context.affecting_contexts_by_incoming_dependency:
+            del target_context.affecting_contexts_by_incoming_dependency[dependency]
 
     def get_outgoing_dependency_targets(self) -> Set[Context]:
         return set([outgoing_dependency[0] for outgoing_dependency in self.outgoing_dependencies])
@@ -248,4 +288,3 @@ class Context(object):
             if len(anc.state_ids) != 0:
                 return anc.state_ids
         return []
-    

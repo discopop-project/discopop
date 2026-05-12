@@ -2922,6 +2922,7 @@ class TaskGraph(Plottable, object):
                                 for source_ctx in source_contexts:
                                     for target_ctx in target_contexts:
                                         if source_ctx == target_ctx:
+                                            print("SKIPPING POTENTIAL DEP: ", dep_type, var_infos)
                                             continue
                                         # check for shared closest function parent
                                         source_closest_fn = source_ctx.get_closest_function_ancestor()

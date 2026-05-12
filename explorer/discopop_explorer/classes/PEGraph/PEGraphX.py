@@ -171,6 +171,7 @@ class PEGraphX(Plottable, object):
             except nx.exception.NetworkXException:
                 pos = nx.random_layout(g)
         print("\tCalculated positions...")
+        print("DEPENDENCIES LIST: ", dependencies_list)
         for idx, dep in enumerate(dependencies_list):
             if dep.type == "INIT":
                 sink = readlineToCUIdMap[dep.sink]
@@ -210,6 +211,7 @@ class PEGraphX(Plottable, object):
                     #                        continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
+                        print("PET ADDED DEP: ", dep)
         print("\tAdded dependencies...")
         return cls(g, reduction_vars, pos, visualizer)
 
