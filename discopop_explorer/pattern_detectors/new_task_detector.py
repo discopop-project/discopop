@@ -106,9 +106,9 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
         #     highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
         # )
 
-        test = context_task_graph.temp_create_plot("test")
+        new_context_debug_graph = context_task_graph.create_plottable_canvas("New Context debug graph")
         print("Plotting test...")
-        context_task_graph.task_graph.new_plot_context_debug_graph(test)
+        context_task_graph.task_graph.new_plot_context_debug_graph(new_context_debug_graph)
 
     def on_filter(filter_text: str) -> None:
         print("Filter text:", filter_text)

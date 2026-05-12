@@ -7,22 +7,21 @@
 # directory for details.
 
 import tkinter as tk
-from typing import Any, Type
+from typing import Any, Generic, Callable
 
+from GUI.Types.ViewableCanvasT import ViewableCanvasT
 from GUI.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
 from GUI.Objects.Canvases.RoundedSquareButtons.Mouse import Mouse as MouseButton
 from GUI.Objects.Canvases.RoundedSquareButtons.Magnifier import Magnifier as MagnifierButton
 from GUI.Enums.ViewerMode import ViewerMode
 
-
-
-class CanvasViewer(tk.Frame):
-    def __init__(self, parent: tk.Misc, *args: Any, **kwargs: Any) -> None:
+class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
+    def __init__(self, parent: tk.Misc, canvas_builder: Callable[["CanvasViewer", ViewerMode], ViewableCanvasT], *args: Any, **kwargs: Any) -> None:
         super().__init__(parent, *args, **kwargs)
 
         self._selected_option: ViewerMode = ViewerMode.MAIN
 
-        self._canvas = ViewableCanvasWithTrees(self, self._selected_option, bg = "white")
+        self._canvas = canvas_builder(self, self._selected_option)
         self._toolbar = tk.Frame(self)
 
         self._main = MouseButton(self._toolbar, command = self.select_main)
@@ -53,5 +52,5 @@ class CanvasViewer(tk.Frame):
         self._canvas.set_viewer_mode(self._selected_option)
         self._update_toolbar()
 
-    def getCanvas(self) -> tk.Canvas:
+    def getCanvas(self) -> ViewableCanvasT:
         return self._canvas

@@ -11,10 +11,13 @@ import tkinter as tk
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
 from matplotlib.figure import Figure
+
 from GUI.Visualizers.Base import Base
 from GUI.Objects.Frames.MultiFrame import MultiFrame
 from GUI.Objects.Frames.CanvasViewer import CanvasViewer
+from GUI.Enums.ViewerMode import ViewerMode as CanvasViewerMode
 from GUI.Exceptions.VisualizerNotDefined import VisualizerNotDefined
+from GUI.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
 
 class Plottable:
     def __init__(self, visualizer: Base | None = None) -> None:
@@ -38,8 +41,11 @@ class Plottable:
 
         if rows < 1 or columns < 1:
             raise ValueError("Rows and columns must be >= 1")
+        
+        def frame_builder(parent: tk.Misc) -> MultiFrame:
+            return MultiFrame(parent)
 
-        frame : MultiFrame = self._visualizer.create_frame(name, MultiFrame)
+        frame = self._visualizer.create_frame(name, frame_builder)
 
         for row in range(rows):
             frame.grid_rowconfigure(row, weight=1)
@@ -102,11 +108,17 @@ class Plottable:
 
         return axes
     
-    def temp_create_plot(self, name: str) -> tk.Canvas:
+    def create_plottable_canvas(self, name: str) -> ViewableCanvasWithTrees:
         if self._visualizer is None:
             raise VisualizerNotDefined()
+        
+        def canvas_builder(parent : CanvasViewer, canvas_viewer_mode : CanvasViewerMode):
+            return ViewableCanvasWithTrees(parent, canvas_viewer_mode, bg="white")
+        
+        def frame_builder(parent : tk.Misc) -> CanvasViewer[ViewableCanvasWithTrees]:
+            return CanvasViewer(parent, canvas_builder)
 
-        frame: CanvasViewer = self._visualizer.create_frame(name, CanvasViewer)
+        frame = self._visualizer.create_frame(name, frame_builder)
 
         canvas = frame.getCanvas()
         
