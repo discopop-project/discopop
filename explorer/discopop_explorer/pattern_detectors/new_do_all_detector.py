@@ -44,17 +44,16 @@ from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edge
 from discopop_explorer.classes.variable import Variable
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import MemoryRegion, VarName
 from discopop_explorer.enums.DepOrigin import DepOrigin
+from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 
 logger = logging.getLogger("Explorer").getChild("DoAll")
 
 
-def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[DoAllInfo]:
-    logger.info("Starting new do_all detection...")
-    result: List[DoAllInfo] = []
+def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[DoAllInfo | ReductionInfo]:
+    logger.info("Starting new do_all and reduction detection...")
+    result: List[DoAllInfo | ReductionInfo] = []
 
-    
-
-    result += identify_simple_doall(task_graph)
+    result += identify_simple_doall_and_reduction(task_graph)
 
     show_plot(task_graph)
 
@@ -103,7 +102,7 @@ def show_plot(tg: TaskGraph) -> None:
     tg.run_visualizer()
 
 
-def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
+def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | ReductionInfo]:
     """Analyzes the results of the graph simplification and create simple doall patterns.
     Implementation is fundamentally similar to the original doall detector, but implemented in a more maintainable fashion.
     Checks for clean doall opportunities."""
@@ -111,7 +110,6 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
     logger.info("Identifying trivial doall suggestions.")
 
     show_plot(tg)
-
 
     prevented_loops: Set[NodeID] = set()
 
@@ -136,6 +134,7 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
         loop_variables = cast(LoopParentContext, node.created_context).loop_variables
         # check for dependencies
         dependency_found = False
+        reduction_info: List[Tuple[Context, Context, Dependency, Dict[str, str]]] = []
         potential_breaking_dependencies: List[Tuple[Context, Context, Dependency]] = []
         for ic_source in iteration_contexts:
             # collect nodes from other iterations
@@ -153,9 +152,31 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
                         continue
 
                     if out_dep_target in other_iterations_subnodes:
+                        # check if the preventing dependency is a reduction dependency.
+                        is_reduction_dependency = False
+                        for red_var_dict in tg.pet.reduction_vars:
+                            # check for correct parent loop
+                            if red_var_dict["loop_line"] not in node.created_context.get_code_scope(tg.pet):
+                                continue
+                            # check for variable name
+                            if red_var_dict["name"] != dep.var_name:
+                                continue
+                            # check for source code position
+                            if red_var_dict["reduction_line"] not in subnode.get_code_scope(tg.pet):
+                                continue
+                            if red_var_dict["reduction_line"] not in out_dep_target.get_code_scope(tg.pet):
+                                continue
+                            # all of the previous requirements are met
+                            is_reduction_dependency = True
+                        if is_reduction_dependency:
+                            # not a valid doall loop
+                            reduction_info.append((subnode, out_dep_target, dep, red_var_dict))
+#                            dependency_found = True
+#                            break
+
                         # check for and allow accesses to the loop variable
-                        if (dep.var_name, dep.memory_region) in loop_variables:
-                            # dependency on loop variable
+                        if (dep.var_name, dep.memory_region) in loop_variables or is_reduction_dependency:
+                            # dependency on loop variable or reduction variable
                             pass
                         else:
                             # check if dep.origin is static. If so, give it a "second chance", which is tested after classifying variables in the loop.
@@ -167,13 +188,16 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
                                 dep.sink_line,
                                 dep.var_name,
                                 dep.memory_region,
-                                "origin:", dep.origin,
+                                "origin:",
+                                dep.origin,
                                 "source:",
                                 subnode.get_code_scope(tg.pet, inclusive=True),
                                 "out_dep_target:",
                                 out_dep_target.get_code_scope(tg.pet, inclusive=True),
-                                "source_ctx:", ic_source,
-                                "target_ctx:", out_dep_target
+                                "source_ctx:",
+                                ic_source,
+                                "target_ctx:",
+                                out_dep_target,
                             )
                             if dep.origin == DepOrigin.DYNAMIC_ANALYSIS:
                                 # dependency is trustworthy and definitely breaks doall
@@ -194,23 +218,68 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
         # get contexts contained in loopparent for later check
         loopparent_contained_ctxs = node.created_context.get_contained_contexts(inclusive=True)
         # node is a valid doall loop. Detect data sharing clauses
-        firstprivate, private, lastprivate, shared, firstwritten = detect_doall_sharing_clauses(tg.pet, iteration_contexts, loopparent_contained_ctxs, set([v[0] for v in loop_variables]))
-        # check potential_breaking_dependencies for cases which actually prevent doall 
+        print("CURRENT LOOP: ", node.created_context.get_code_scope(tg.pet))
+        firstprivate, private, lastprivate, shared, firstwritten, init = detect_doall_sharing_clauses(
+            tg.pet, iteration_contexts, loopparent_contained_ctxs, set([v[0] for v in loop_variables])
+        )
+        reduction: Set[str] = set([ri[2].var_name for ri in reduction_info if ri[2].var_name is not None])
+        # check potential_breaking_dependencies for cases which actually prevent doall
         for src_ctx, dst_ctx, dep in potential_breaking_dependencies:
-            if dep.var_name not in firstwritten:
+            if dep.var_name not in firstwritten.union(init).union(reduction):
                 # node is not a valid doall loop
                 prevented_loops.add(node.pet_node_id)
+                print("LOOP: ", node.created_context.get_code_scope(tg.pet))
+                print("SECOND CHANCEs missed!: ", dep.dtype, dep.var_name)
                 continue
             else:
                 # static dependency does not actually prevent doall parallelization, as privatization is possible
                 pass
+        if len(potential_breaking_dependencies) > 0:
+            print(
+                "HERE DUE TO SECOND CHANCEs!: ", [(d[2].dtype, d[2].var_name) for d in potential_breaking_dependencies]
+            )
 
         # Register a pattern
-        pattern = DoAllInfo(tg.pet, tg.pet.node_at(node.pet_node_id))
-        pattern.first_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate]
-        pattern.private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in private]
-        pattern.last_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in lastprivate]
-        pattern.shared = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in shared]
+        if len(reduction) == 0:
+            # register DoAll pattern
+            pattern = DoAllInfo(tg.pet, tg.pet.node_at(node.pet_node_id))
+            pattern.first_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate]
+            pattern.private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in private]
+            pattern.last_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in lastprivate]
+            pattern.shared = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in shared]
+        else:
+            # register reduction pattern
+            reduction_vars: List[Variable] = []
+            for ri in reduction_info:
+                if ri[2].var_name is None:
+                    continue
+                var = Variable(type="unknown", name=VarName(ri[2].var_name), defLine="LineNotFound")
+                # correct operation
+                red_op = ri[3]["operation"]
+                if red_op == ">":
+                    red_op = "max"
+                if red_op == "<":
+                    red_op = "min"
+                var.operation = red_op
+                # prevent duplicates
+                duplicate = True if len(reduction_vars) > 0 else False
+                for key in var.__dict__:
+                    for elem in reduction_vars:
+                        if var.__dict__[key] != elem.__dict__[key]:
+                            duplicate = False
+                            break
+                    if duplicate:
+                        break
+                if not duplicate:
+                    reduction_vars.append(var)
+
+            if node.created_context.parent_loop is None:
+                continue
+            pattern = ReductionInfo(tg.pet, tg.pet.node_at(node.created_context.parent_loop), reduction=reduction_vars)
+            pattern.first_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate if v not in reduction]
+            pattern.private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in private if v not in reduction]
+            pattern.last_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in lastprivate if v not in reduction]
+            pattern.shared = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in shared if v not in reduction]
 
         # prevent duplicates. Necessary since multiple copies of the same loop might exist
         if pattern.pattern_tag in [p.pattern_tag for p in patterns]:
@@ -223,19 +292,24 @@ def identify_simple_doall(tg: TaskGraph) -> List[DoAllInfo]:
     return patterns
 
 
-def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[IterationContext], loopparent_contained_ctxs: Set[Context], loop_variables: Set[str]) -> Tuple[Set[str], Set[str], Set[str], Set[str], Set[str]]:
+def detect_doall_sharing_clauses(
+    pet: PEGraphX,
+    iteration_contexts: List[IterationContext],
+    loopparent_contained_ctxs: Set[Context],
+    loop_variables: Set[str],
+) -> Tuple[Set[str], Set[str], Set[str], Set[str], Set[str], Set[str]]:
     """classifies variables used inside the iterations and returns the classifications in the following structure:
-    (firstprivate, private, lastprivate, shared, firstwritten)
-    firstwritten is not a data sharing clause, but required to validate potential doall-breaking dependencies originating from static information.
+    (firstprivate, private, lastprivate, shared, firstwritten, init)
+    firstwritten and init are not data sharing clauses, but required to validate potential doall-breaking dependencies originating from static information.
     """
     # Initialization
     # calculate CUs contained in the loop parent for later use dureing filtering
     contained_tg_nodes_in_loopparent: List[TGNode] = []
     for ctx in loopparent_contained_ctxs:
         contained_tg_nodes_in_loopparent += ctx.contained_nodes
-    contained_cu_node_ids_in_loopparent = set([tg.pet_node_id for tg in contained_tg_nodes_in_loopparent if tg.pet_node_id is not None])
-
-
+    contained_cu_node_ids_in_loopparent = set(
+        [tg.pet_node_id for tg in contained_tg_nodes_in_loopparent if tg.pet_node_id is not None]
+    )
 
     # shared:
     # - no dependency between iterations
@@ -248,7 +322,6 @@ def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[Iterati
     # IMPORTANT: first- and lastprivate can be applied to one variable at the same time!
     # -> Check them independently
     # -> private and lastprivate / firstprivate can NOT be used at the same time.
-
 
     # # TODO update
     # reformatted condition to better suit the available data:
@@ -266,21 +339,24 @@ def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[Iterati
     lastprivate: Set[str] = set()
     firstprivate: Set[str] = set()
     firstwritten: Set[str] = set()
+    init: Set[str] = set()
+    
 
     for it_ctx in iteration_contexts:
-        contained_contexts_in_sequence = it_ctx.get_contained_contexts_in_sequence()
-        print("contained CTXs in sequence: ", contained_contexts_in_sequence)
+        contained_contexts_in_sequence = it_ctx.get_contained_contexts_in_sequence(pet)
+        #        print("contained CTXs in sequence: ", [c.get_code_scope(pet) for c in contained_contexts_in_sequence])
         contained_tg_nodes_in_sequence: List[TGNode] = []
         for ctx in contained_contexts_in_sequence:
             contained_tg_nodes_in_sequence += ctx.contained_nodes
-        print("contained tg nodes in sequence: ", contained_tg_nodes_in_sequence)
-        contained_cu_node_ids_in_sequence = [tg.pet_node_id for tg in contained_tg_nodes_in_sequence if tg.pet_node_id is not None]
-        print("contained cu nodes in sequence: ", contained_cu_node_ids_in_sequence)
-
+        #        print("contained tg nodes in sequence: ", [(n, n.pet_node_id) for n in contained_tg_nodes_in_sequence])
+        contained_cu_node_ids_in_sequence = [
+            tg.pet_node_id for tg in contained_tg_nodes_in_sequence if tg.pet_node_id is not None
+        ]
+        #        print("contained cu nodes in sequence: ", contained_cu_node_ids_in_sequence)
 
         # -> get lists of firstwritten, firstread, written, read, read_in, read_out for all iterations.
         # -> use the gathered lists to determine sharing clauses after the loop over iteration contexts
-        init: Set[str] = set()
+        it_init: Set[str] = set()
         written: Set[str] = set()
         read: Set[str] = set()
         it_firstwritten: Set[str] = set()
@@ -291,14 +367,21 @@ def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[Iterati
             incoming_deps = in_edges(pet, cu_node_id, EdgeType.DATA)
             outgoing_deps = out_edges(pet, cu_node_id, EdgeType.DATA)
 
-            
             # TODO:# filter incoming and outgoing deps to ignore nodes within the parent loop
             # TODO: ignore variables defined inside the loop
-           # reasone: remove data sharing clauses correlating to loop headers etc.
-            incoming_deps = [d for d in incoming_deps if d[0] not in contained_cu_node_ids_in_loopparent - set(contained_cu_node_ids_in_sequence)]
-            outgoing_deps = [d for d in outgoing_deps if d[1] not in contained_cu_node_ids_in_loopparent - set(contained_cu_node_ids_in_sequence)]
+            # reasone: remove data sharing clauses correlating to loop headers etc.
+            incoming_deps = [
+                d
+                for d in incoming_deps
+                if d[0] not in contained_cu_node_ids_in_loopparent - set(contained_cu_node_ids_in_sequence)
+            ]
+            outgoing_deps = [
+                d
+                for d in outgoing_deps
+                if d[1] not in contained_cu_node_ids_in_loopparent - set(contained_cu_node_ids_in_sequence)
+            ]
 
-            # outgoing 
+            # outgoing
             #   RAW: cu reads
             #   WAR: cu overwrites
             #   WAW: cu overwrites
@@ -306,7 +389,7 @@ def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[Iterati
             #   RAW: value is used after cu wrote the value
             #   WAR: value is overwritten after cu read the value
             #   WAW: value is overwritten after cu wrote the value
-            
+
             for src, dst, dep in outgoing_deps:
                 if dep.var_name is None:
                     continue
@@ -320,19 +403,18 @@ def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[Iterati
                     if dep.var_name not in read:
                         it_firstwritten.add(dep.var_name)
                     written.add(dep.var_name)
-                elif dep.dtype == DepType.WAW:    
+                elif dep.dtype == DepType.WAW:
                     if dep.var_name not in read:
                         it_firstwritten.add(dep.var_name)
                     written.add(dep.var_name)
                 elif dep.dtype == DepType.INIT:
                     if dep.var_name not in read:
                         it_firstwritten.add(dep.var_name)
-                    init.add(dep.var_name)
+                    it_init.add(dep.var_name)
                     written.add(dep.var_name)
                 else:
                     raise ValueError("Unsupported dependency type: " + str(dep.dtype))
-                
-            
+
             for src, dst, dep in incoming_deps:
                 if dep.var_name is None:
                     continue
@@ -342,7 +424,7 @@ def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[Iterati
                     written.add(dep.var_name)
                     if src not in contained_cu_node_ids_in_sequence:
                         data_outgoing.add(dep.var_name)
-                elif dep.dtype == DepType.WAR:                    
+                elif dep.dtype == DepType.WAR:
                     if dep.var_name not in written:
                         firstread.add(dep.var_name)
                     read.add(dep.var_name)
@@ -353,53 +435,49 @@ def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[Iterati
                 elif dep.dtype == DepType.INIT:
                     if dep.var_name not in read:
                         it_firstwritten.add(dep.var_name)
-                    init.add(dep.var_name)
+                    it_init.add(dep.var_name)
                     written.add(dep.var_name)
                 else:
-                    raise ValueError("Usupported dependency type: "+ str(dep.dtype))
-                    
+                    raise ValueError("Usupported dependency type: " + str(dep.dtype))
 
-            print("cunode -> ", cu_node_id)
-            #print("--> in deps:", [(d[2].dtype, d[0], d[2].var_name) for d in incoming_deps])
-            #print("--> out_deps: ", [(d[2].dtype, d[1], d[2].var_name) for d in outgoing_deps])
+        #            print("cunode -> ", cu_node_id)
+        # print("--> in deps:", [(d[2].dtype, d[0], d[2].var_name) for d in incoming_deps])
+        # print("--> out_deps: ", [(d[2].dtype, d[1], d[2].var_name) for d in outgoing_deps])
         print("--> written: ", written)
         print("--> read: ", read)
         print("--> data_incoming: ", data_incoming)
         print("--> data_outgoing: ", data_outgoing)
         print("--> firstread: ", firstread)
-        print("--> firstwritten: ", it_firstwritten)
-        print("--> init: ", init)
+        print("--> it_firstwritten: ", it_firstwritten)
+        print("--> it_init: ", it_init)
         # dependency between iterations is trivially not possible, as this would invalidate the doall pattern.
         ##if dependency_between_iterations:
         ##    raise ValueError("Doall not possible!")
 
+        #       ### classification scheme ###
+        #       if first_written_in_iteration(var_name):
+        ##           if is_read_after_iteration(var_name):
+        #               mark var_name lastprivate
+        #           else:
+        #               # value is not used after the loop
+        #               mark var_name private
+        #       else:
+        #           # first read in iteration
+        #           if written_in_iteration(var_name):
+        #               mark varname firstprivate
+        #           else:
+        #               # read-only
+        #               mark varname shared
 
-#       ### classification scheme ###
-#       if first_written_in_iteration(var_name):
-##           if is_read_after_iteration(var_name):
-#               mark var_name lastprivate
-#           else:
-#               # value is not used after the loop
-#               mark var_name private
-#       else:
-#           # first read in iteration
-#           if written_in_iteration(var_name):
-#               mark varname firstprivate
-#           else:
-#               # read-only
-#               mark varname shared
+        # shared:
+        # - no dependency between iterations
+        # private:
+        # - no dependency between iterations && first written in iteration && no RAW from outside to inside of loop
+        # lastprivate:
+        # - no dependency between iterations && read from outside to inside of loop
+        # firstprivate:
+        # - no dependency between iterations && first read in iterations && written in iteration
 
-
-
-    # shared:
-    # - no dependency between iterations
-    # private:
-    # - no dependency between iterations && first written in iteration && no RAW from outside to inside of loop
-    # lastprivate:
-    # - no dependency between iterations && read from outside to inside of loop
-    # firstprivate:
-    # - no dependency between iterations && first read in iterations && written in iteration
-        
         # iterate over all found variable names. use set union via '|'
         it_private: Set[str] = set()
         it_shared: Set[str] = set()
@@ -414,23 +492,46 @@ def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[Iterati
             if var_name in written:
                 if var_name in data_outgoing:
                     it_lastprivate.add(var_name)
-                if var_name in firstread and var_name not in init:
+                if var_name in firstread and var_name not in it_init:
                     it_firstprivate.add(var_name)
-                if var_name not in data_outgoing and var_name not in init and var_name not in it_lastprivate and var_name not in it_firstprivate:
+                if (
+                    var_name not in data_outgoing
+                    and var_name not in it_init
+                    and var_name not in it_lastprivate
+                    and var_name not in it_firstprivate
+                ):
                     it_private.add(var_name)
-                if var_name in data_incoming and var_name in it_firstwritten and var_name not in it_lastprivate and var_name not in it_firstprivate and var_name not in it_private:
+                if (
+                    var_name in data_incoming
+                    and var_name in it_firstwritten
+                    and var_name not in it_lastprivate
+                    and var_name not in it_firstprivate
+                    and var_name not in it_private
+                ):
                     it_shared.add(var_name)
 
-                assert(var_name in it_lastprivate or var_name in it_firstprivate or var_name in it_private or var_name in init)
+                assert (
+                    var_name in it_lastprivate
+                    or var_name in it_firstprivate
+                    or var_name in it_private
+                    or var_name in it_init
+                )
             else:
                 # read-only
                 it_shared.add(var_name)
-            assert(var_name in it_lastprivate or var_name in it_firstprivate or var_name in it_private or var_name in it_shared or var_name in init)
-        
+            assert (
+                var_name in it_lastprivate
+                or var_name in it_firstprivate
+                or var_name in it_private
+                or var_name in it_shared
+                or var_name in it_init
+            )
+
         print("it_private: ", it_private)
         print("it_shared: ", it_shared)
         print("it_lastprivate: ", it_lastprivate)
         print("it_firstprivate: ", it_firstprivate)
+        print("loop_vars: ", loop_variables)
 
         # save classifications
         private = private.union(it_private)
@@ -438,8 +539,9 @@ def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[Iterati
         lastprivate = lastprivate.union(it_lastprivate)
         firstprivate = firstprivate.union(it_firstprivate)
         firstwritten = firstwritten.union(it_firstwritten)
+        init = init.union(it_init)
 
-    # merge classifications 
+    # merge classifications
     print()
     print("PRE MERGE: private: ", private)
     print("PRE MERGE: shared: ", shared)
@@ -451,7 +553,8 @@ def detect_doall_sharing_clauses(pet: PEGraphX, iteration_contexts: List[Iterati
     print("POST MERGE: shared: ", shared)
     print("POST MERGE: lastprivate: ", lastprivate)
     print("POST MERGE: firstprivate: ", firstprivate)
-    return firstprivate, private, lastprivate, shared, firstwritten
+    return firstprivate, private, lastprivate, shared, firstwritten, init
+
 
 def __merge_classifications(
     first_private: Set[str],
@@ -469,10 +572,9 @@ def __merge_classifications(
     remove_from_last_private: Set[str] = set()
     remove_from_shared: Set[str] = set()
 
-
     # Rule 1: firstprivate is more restrictive than private
     remove_from_private = first_private.intersection(private)
-    # Rule 2: lastprivate is more restrictive than private    
+    # Rule 2: lastprivate is more restrictive than private
     remove_from_private = remove_from_private.union(last_private.intersection(private))
     # Rule 3: shared is less restrictive than first_private or last_private
     remove_from_shared = shared.intersection(first_private.union(last_private))

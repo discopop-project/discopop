@@ -78,19 +78,24 @@ class Context(object):
             result = result.union(ctx.get_contained_contexts(inclusive=True))
         return result
 
-    def get_contained_contexts_in_sequence(self, is_entry: bool = True) -> List[Context]:
+    def get_contained_contexts_in_sequence(self, pet: PEGraphX, is_entry: bool = True) -> List[Context]:
         """enumerates contained contexts in their sequence of occurrence in the program"""
         result: List[Context] = []
+        if not is_entry:
+            result.append(self)
         for ctx in self.contained_contexts:
             if ctx.predecessor is None:
                 # entry of a sequence
-                result.append(ctx)
-                result += ctx.get_contained_contexts_in_sequence(is_entry=False)
+                # result.append(ctx)
+                result += ctx.get_contained_contexts_in_sequence(pet, is_entry=False)
 
+        #        print("FOLLOWING SUCCESSOR OF: ", self.get_code_scope(pet))
+        #        print("result: ", result)
         if not is_entry:
             if self.successor is not None:
-                result += self.successor.get_contained_contexts_in_sequence(is_entry=False)
-
+                #                print("--> TRUE")
+                result += self.successor.get_contained_contexts_in_sequence(pet, is_entry=False)
+        #        print("-> FALSE")
         return result
 
     def add_node(self, node: TGNode) -> None:

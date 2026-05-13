@@ -37,8 +37,7 @@ from discopop_library.ParallelRegionMerger.inflated_parallel_region_pattern impo
     run_detection as detect_inflated_parallel_regions,
 )
 from discopop_explorer.pattern_detectors.new_task_detector import run_detection as detect_tasking
-from discopop_explorer.pattern_detectors.new_do_all_detector import run_detection as detect_do_all_new
-from discopop_explorer.pattern_detectors.new_reduction_detector import run_detection as detect_reduction_new
+from discopop_explorer.pattern_detectors.new_do_all_detector import run_detection as detect_do_all_and_reduction_new
 
 from discopop_gui.Visualizers.Base import Base as Visualizer
 
@@ -112,11 +111,12 @@ class PatternDetectorX(object):
         if "*" in enable_patterns or "task" in enable_patterns:
             res.patterns.task = detect_tasking(self.pet, task_graph, visualizer)
 
-        if "*" in enable_patterns or "doall" in enable_patterns:
-            res.patterns.do_all = detect_do_all_new(self.pet, task_graph)
-
-        if "*" in enable_patterns or "reduction" in enable_patterns:
-            res.patterns.reduction = detect_reduction_new(self.pet, task_graph)
+        if "*" in enable_patterns or "doall" in enable_patterns or "reduction" in enable_patterns:
+            tmp_result = detect_do_all_and_reduction_new(self.pet, task_graph)
+            if "*" in enable_patterns or "doall" in enable_patterns:
+                res.patterns.do_all = [p for p in tmp_result if isinstance(p, DoAllInfo)]
+            if "*" in enable_patterns or "reduction" in enable_patterns:
+                res.patterns.reduction = [p for p in tmp_result if isinstance(p, ReductionInfo)]
 
         # reduction before doall!
 
