@@ -51,7 +51,7 @@ void update_callstate_from_call(int32_t instructionID){
 }
 
 void update_callstate_from_func_exit(int32_t instructionID){
-//        std::cout << "func_exit: " << instructionID << std::endl;
+        std::cout << "func_exit: " << instructionID << std::endl;
         // check if callstate update is currently disabled
         if(calls_without_executed_transitions.back() > 0){
                 // disabled, decrease counter
