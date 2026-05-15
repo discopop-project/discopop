@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
 #
 # Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
@@ -10,12 +11,11 @@
 set -euo pipefail
 
 # check if act is installed
-if ! [ -x "$(command -v act)" ]; then
+if ! command -v act >/dev/null 2>&1; then
   echo 'Error: act is not installed.' >&2
   echo 'Visit https://github.com/nektos/act for more details'
   exit 1
 fi
-
 
 workflow=()
 hasW=false
@@ -36,7 +36,17 @@ for gid in $(id -G); do
   groups+=" --group-add $gid"
 done
 
+event_file="$(mktemp)"
+trap 'rm -f "$event_file"' EXIT
+
+cat > "$event_file" <<'EOF'
+{
+  "act": true
+}
+EOF
+
 act "$@" \
   "${workflow[@]}" \
+  -e "$event_file" \
   -P self-hosted=catthehacker/ubuntu:act-latest \
   --container-options "--user $(id -u):$(id -g)$groups"

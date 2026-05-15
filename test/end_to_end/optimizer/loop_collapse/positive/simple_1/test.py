@@ -31,13 +31,9 @@ class TestMethods(unittest.TestCase):
 
         src_dir = os.path.join(current_dir, "src")
 
-        # create FileMapping
-        cmd = os.path.join(dp_build_dir, "scripts", "dp-fmap")
-        run_cmd(cmd, src_dir, env_vars)
-
         # build
-        env_vars["CC"] = os.path.join(dp_build_dir, "scripts", "CC_wrapper.sh")
-        env_vars["CXX"] = os.path.join(dp_build_dir, "scripts", "CXX_wrapper.sh")
+        env_vars["CC"] = "discopop_cc"
+        env_vars["CXX"] = "discopop_cxx"
         env_vars["DP_PROJECT_ROOT_DIR"] = src_dir
         cmd = "make "
         run_cmd(cmd, src_dir, env_vars)
