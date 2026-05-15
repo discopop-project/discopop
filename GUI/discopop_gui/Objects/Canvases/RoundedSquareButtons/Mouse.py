@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from GUI.Objects.Canvases.RoundedSquareButtons.RoundedSquareButton import RoundedSquareButton
+from discopop_gui.Objects.Canvases.RoundedSquareButtons.RoundedSquareButton import RoundedSquareButton
 
 class Mouse(RoundedSquareButton):
     def draw(self) -> None:

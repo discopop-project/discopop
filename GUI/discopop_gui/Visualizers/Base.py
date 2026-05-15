@@ -10,7 +10,7 @@ from abc import abstractmethod, ABC
 import tkinter as tk
 from typing import Dict, Callable
 
-from GUI.Types.FrameT import FrameT
+from discopop_gui.Types.FrameT import FrameT
 
 class Base(ABC):
     def __init__(self) -> None:

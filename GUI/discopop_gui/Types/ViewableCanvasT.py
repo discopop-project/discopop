@@ -8,6 +8,6 @@
 
 from typing import TypeVar
 
-from GUI.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
+from discopop_gui.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
 
 ViewableCanvasT = TypeVar("ViewableCanvasT", bound=ViewableCanvas)

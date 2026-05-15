@@ -9,11 +9,11 @@
 import tkinter as tk
 from typing import Any, Generic, Callable
 
-from GUI.Types.ViewableCanvasT import ViewableCanvasT
-from GUI.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
-from GUI.Objects.Canvases.RoundedSquareButtons.Mouse import Mouse as MouseButton
-from GUI.Objects.Canvases.RoundedSquareButtons.Magnifier import Magnifier as MagnifierButton
-from GUI.Enums.ViewerMode import ViewerMode
+from discopop_gui.Types.ViewableCanvasT import ViewableCanvasT
+from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
+from discopop_gui.Objects.Canvases.RoundedSquareButtons.Mouse import Mouse as MouseButton
+from discopop_gui.Objects.Canvases.RoundedSquareButtons.Magnifier import Magnifier as MagnifierButton
+from discopop_gui.Enums.ViewerMode import ViewerMode
 
 class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
     def __init__(self, parent: tk.Misc, canvas_builder: Callable[["CanvasViewer", ViewerMode], ViewableCanvasT], *args: Any, **kwargs: Any) -> None:

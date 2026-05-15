@@ -9,9 +9,9 @@
 import tkinter as tk
 from typing import Any, List
 
-from GUI.Enums.ViewerMode import ViewerMode
-from GUI.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
-from GUI.Objects.CanvasObjects.TreeNode import TreeNode
+from discopop_gui.Enums.ViewerMode import ViewerMode
+from discopop_gui.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
+from discopop_gui.Objects.CanvasObjects.TreeNode import TreeNode
 
 class WithTrees(ViewableCanvas):
     def __init__(self, parent: tk.Misc, viewer_mode: ViewerMode, *args: Any, **kwargs: Any) -> None:

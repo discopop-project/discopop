@@ -12,12 +12,12 @@ from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
 from matplotlib.figure import Figure
 
-from GUI.Visualizers.Base import Base
-from GUI.Objects.Frames.MultiFrame import MultiFrame
-from GUI.Objects.Frames.CanvasViewer import CanvasViewer
-from GUI.Enums.ViewerMode import ViewerMode as CanvasViewerMode
-from GUI.Exceptions.VisualizerNotDefined import VisualizerNotDefined
-from GUI.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
+from discopop_gui.Visualizers.Base import Base
+from discopop_gui.Objects.Frames.MultiFrame import MultiFrame
+from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
+from discopop_gui.Enums.ViewerMode import ViewerMode as CanvasViewerMode
+from discopop_gui.Exceptions.VisualizerNotDefined import VisualizerNotDefined
+from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
 
 class Plottable:
     def __init__(self, visualizer: Base | None = None) -> None:

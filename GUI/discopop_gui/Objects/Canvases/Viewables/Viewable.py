@@ -9,7 +9,7 @@
 import tkinter as tk
 from typing import Any
 
-from GUI.Enums.ViewerMode import ViewerMode
+from discopop_gui.Enums.ViewerMode import ViewerMode
 
 class Viewable(tk.Canvas):
     def __init__(self, parent: tk.Misc, viewer_mode: ViewerMode, *args: Any, **kwargs: Any) -> None:

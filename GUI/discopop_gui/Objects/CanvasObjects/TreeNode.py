@@ -9,8 +9,8 @@
 from typing import List
 import tkinter as tk
 
-from GUI.Enums.ViewerMode import ViewerMode
-from GUI.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
+from discopop_gui.Enums.ViewerMode import ViewerMode
+from discopop_gui.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
 
 class TreeNode:
     def __init__(self, canvas : ViewableCanvas, oval_id : int, text_id : int):

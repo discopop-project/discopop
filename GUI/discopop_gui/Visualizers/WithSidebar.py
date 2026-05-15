@@ -11,8 +11,8 @@ from __future__ import annotations
 import tkinter as tk
 from typing import Dict, Callable
 
-from GUI.Types.FrameT import FrameT
-from GUI.Visualizers.Base import Base
+from discopop_gui.Types.FrameT import FrameT
+from discopop_gui.Visualizers.Base import Base
 
 class WithSidebar(Base):
     def __init__(self) -> None:
