@@ -106,7 +106,7 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
     """Analyzes the results of the graph simplification and create simple doall patterns.
     Implementation is fundamentally similar to the original doall detector, but implemented in a more maintainable fashion.
     Checks for clean doall opportunities."""
-    patterns: List[DoAllInfo] = []
+    patterns: List[DoAllInfo | ReductionInfo] = []
     logger.info("Identifying trivial doall suggestions.")
 
     show_plot(tg)
@@ -131,7 +131,7 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
         for ic in iteration_contexts:
             subtrees[ic] = ic.get_contained_contexts(inclusive=True)
         # get loop variables for later check
-        loop_variables = cast(LoopParentContext, node.created_context).loop_variables
+        loop_variables = node.created_context.loop_variables
         # check for dependencies
         dependency_found = False
         reduction_info: List[Tuple[Context, Context, Dependency, Dict[str, str]]] = []
@@ -171,8 +171,8 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
                         if is_reduction_dependency:
                             # not a valid doall loop
                             reduction_info.append((subnode, out_dep_target, dep, red_var_dict))
-#                            dependency_found = True
-#                            break
+                        #                            dependency_found = True
+                        #                            break
 
                         # check for and allow accesses to the loop variable
                         if (dep.var_name, dep.memory_region) in loop_variables or is_reduction_dependency:
@@ -240,6 +240,7 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
             )
 
         # Register a pattern
+        pattern: DoAllInfo | ReductionInfo
         if len(reduction) == 0:
             # register DoAll pattern
             pattern = DoAllInfo(tg.pet, tg.pet.node_at(node.pet_node_id))
@@ -276,10 +277,18 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
             if node.created_context.parent_loop is None:
                 continue
             pattern = ReductionInfo(tg.pet, tg.pet.node_at(node.created_context.parent_loop), reduction=reduction_vars)
-            pattern.first_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate if v not in reduction]
-            pattern.private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in private if v not in reduction]
-            pattern.last_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in lastprivate if v not in reduction]
-            pattern.shared = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in shared if v not in reduction]
+            pattern.first_private = [
+                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate if v not in reduction
+            ]
+            pattern.private = [
+                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in private if v not in reduction
+            ]
+            pattern.last_private = [
+                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in lastprivate if v not in reduction
+            ]
+            pattern.shared = [
+                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in shared if v not in reduction
+            ]
 
         # prevent duplicates. Necessary since multiple copies of the same loop might exist
         if pattern.pattern_tag in [p.pattern_tag for p in patterns]:
@@ -340,7 +349,6 @@ def detect_doall_sharing_clauses(
     firstprivate: Set[str] = set()
     firstwritten: Set[str] = set()
     init: Set[str] = set()
-    
 
     for it_ctx in iteration_contexts:
         contained_contexts_in_sequence = it_ctx.get_contained_contexts_in_sequence(pet)

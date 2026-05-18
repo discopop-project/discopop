@@ -168,11 +168,11 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             with open(os.path.join(output_path, "instructionID_to_lineID_mapping.txt"), "r") as f:
                 for line in f.readlines():
                     line = line.replace("\n", "")
-                    split_line = line.split(" ") 
+                    split_line = line.split(" ")
                     instruction_id = split_line[0]
                     lineID = split_line[1]
                     instruction_to_lineID_mapping[instruction_id] = lineID
-        
+
         sink = dep_fields[0]
         # pairwise iteration over dependencies source
         for dep_pair in list(zip(dep_fields[2:], dep_fields[3:]))[::2]:
@@ -203,20 +203,18 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
                 var_name = var_name.replace("GEPRESULT_", "")
                 is_gep_result_dependency = True
 
-    
             # convert instruction ids to lineIds for backwards compatibility
             source = source_fields[0]
             if ":" not in sink:
                 if "@" in sink:
-                    sink = sink[:sink.index("@")]  # remove state information 
+                    sink = sink[: sink.index("@")]  # remove state information
                 if sink in instruction_to_lineID_mapping:
                     sink = instruction_to_lineID_mapping[sink]
             if ":" not in source:
                 if "@" in source:
-                    source = source[:source.index("@")]  # remove state information
+                    source = source[: source.index("@")]  # remove state information
                 if source in instruction_to_lineID_mapping:
                     source = instruction_to_lineID_mapping[source]
-
 
             # register dependencies
             if metadata is None:
@@ -232,9 +230,7 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             else:
                 for md_set in metadata:
                     dependencies_list.append(
-                        DependenceItem(
-                            sink, source, type, var_name, aa_var_name, is_gep_result_dependency, md_set
-                        )
+                        DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency, md_set)
                     )
 
     return dependencies_list, loop_data_list
@@ -318,7 +314,7 @@ def possible_reduction(line: int, src_lines: List[str]) -> bool:
     bracket_b = src_line[0:pos].rfind("]")
     assert bracket_b != -1
 
-    rex_search_res = re.search("([A-Za-z0-9_]+)\[", src_line[0 : (bracket_a + 1)])
+    rex_search_res = re.search(r"([A-Za-z0-9_]+)\[", src_line[0 : (bracket_a + 1)])
     if not rex_search_res:
         return True
 
