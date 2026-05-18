@@ -314,7 +314,7 @@ def possible_reduction(line: int, src_lines: List[str]) -> bool:
     bracket_b = src_line[0:pos].rfind("]")
     assert bracket_b != -1
 
-    rex_search_res = re.search(r"([A-Za-z0-9_]+)\[", src_line[0 : (bracket_a + 1)])
+    rex_search_res = re.search("([A-Za-z0-9_]+)\[", src_line[0 : (bracket_a + 1)])
     if not rex_search_res:
         return True
 
