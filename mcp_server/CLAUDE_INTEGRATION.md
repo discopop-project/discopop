@@ -10,7 +10,7 @@ directory for details.
 
 # Integrating DiscoPoP MCP Server with Claude
 
-This guide shows how to configure Claude to use the DiscoPoP MCP Server.
+This guide shows how to configure Claude Code to use the DiscoPoP MCP Server.
 
 ## Prerequisites
 
@@ -24,9 +24,41 @@ pip install discopop-mcp-server
 discopop-mcp-server --help
 ```
 
-## Claude Code (CLI)
+## Quick Setup (Recommended)
 
-Claude Code uses MCP server configuration stored in your local Claude directory.
+Use the automated setup utility for easy configuration:
+
+```bash
+# Navigate to the mcp_server directory
+cd mcp_server
+
+# Run the setup script
+./setup-mcp.sh --setup claude_code
+```
+
+That's it! The script will:
+- ✓ Automatically detect your virtual environment (if any)
+- ✓ Create the configuration directory
+- ✓ Merge configuration with any existing settings
+- ✓ Use the correct executable path
+
+Verify the setup:
+```bash
+./setup-mcp.sh --verify claude_code
+```
+
+For more setup options (debug logging, status checking, etc.), see [SETUP_GUIDE.md](SETUP_GUIDE.md).
+
+## Using with Claude Code
+
+Once configured, you can ask Claude:
+> "What tools do you have available?"
+
+Claude will list the available DiscoPoP tools.
+
+## Claude Code (CLI) - Manual Configuration
+
+For advanced users who prefer manual configuration, Claude Code uses MCP server configuration stored in your local Claude directory.
 
 ### 1. Create configuration directory
 
@@ -36,12 +68,12 @@ mkdir -p ~/.claude
 
 ### 2. Add MCP server configuration
 
-Create or edit `~/.claude/settings.json` and add the DiscoPoP server configuration:
+Create or edit `~/.claude/.claude.json` and add the DiscoPoP server configuration:
 
 ```json
 {
   "mcpServers": {
-    "discopop": {
+    "discopop-mcp-server": {
       "command": "discopop-mcp-server",
       "args": ["--debug"]
     }
@@ -61,13 +93,6 @@ You should see output like:
 2026-05-19 10:30:00 - discopop-mcp - INFO - Starting DiscoPoP MCP Server (stdio mode)
 ```
 
-### 4. Use with Claude Code
-
-When using Claude Code with MCP enabled, you can ask:
-> "What tools do you have available?"
-
-Claude will list the available DiscoPoP tools.
-
 ## Using the Server
 
 Once configured, you can ask Claude to:
@@ -85,14 +110,37 @@ Claude will use the MCP server to fetch this information and provide analysis an
 
 ## Configuration Options
 
-### Enable debug logging
+### Using the Setup Utility (Recommended)
 
-The `--debug` flag enables verbose logging of incoming calls and responses:
+The setup utility handles these options automatically:
 
+**Enable debug logging:**
+```bash
+./setup-mcp.sh --setup claude_code --debug
+```
+
+**Check virtual environment detection:**
+```bash
+./setup-mcp.sh --setup claude_code --verbose
+```
+
+The setup script automatically:
+- ✓ Detects and uses your virtual environment
+- ✓ Finds the correct executable path
+- ✓ Adds debug flags if requested
+- ✓ Preserves other configuration
+
+See [SETUP_GUIDE.md](SETUP_GUIDE.md) for all available options.
+
+### Manual Configuration Options
+
+For manual configuration, you can customize these settings:
+
+**Enable debug logging:**
 ```json
 {
   "mcpServers": {
-    "discopop": {
+    "discopop-mcp-server": {
       "command": "discopop-mcp-server",
       "args": ["--debug"]
     }
@@ -100,14 +148,11 @@ The `--debug` flag enables verbose logging of incoming calls and responses:
 }
 ```
 
-### Using a custom Python environment
-
-If you're using a virtual environment or conda:
-
+**Using a custom Python environment:**
 ```json
 {
   "mcpServers": {
-    "discopop": {
+    "discopop-mcp-server": {
       "command": "/path/to/venv/bin/discopop-mcp-server",
       "args": ["--debug"]
     }
@@ -115,14 +160,11 @@ If you're using a virtual environment or conda:
 }
 ```
 
-### Multiple MCP servers
-
-You can configure multiple servers in the same file:
-
+**Multiple MCP servers:**
 ```json
 {
   "mcpServers": {
-    "discopop": {
+    "discopop-mcp-server": {
       "command": "discopop-mcp-server",
       "args": ["--debug"]
     },
@@ -136,14 +178,32 @@ You can configure multiple servers in the same file:
 
 ## Troubleshooting
 
+### General troubleshooting
+
+Start with the setup utility's verification and status commands:
+
+```bash
+# Check setup status
+./setup-mcp.sh --status
+
+# Verify Claude Code configuration
+./setup-mcp.sh --verify claude_code
+
+# Enable verbose output for debugging
+./setup-mcp.sh --setup claude_code --verbose
+```
+
 ### Server not found
 
 **Error:** "command not found: discopop-mcp-server"
 
 **Solution:**
-- Install the package: `pip install discopop-mcp-server`
-- Verify installation: `which discopop-mcp-server`
-- Use full path in config if needed: `/path/to/venv/bin/discopop-mcp-server`
+1. Install the package: `pip install discopop-mcp-server`
+2. Verify installation: `which discopop-mcp-server`
+3. Use the setup utility which automatically handles paths:
+   ```bash
+   ./setup-mcp.sh --setup claude_code
+   ```
 
 ### Server fails to start
 
@@ -152,28 +212,41 @@ You can configure multiple servers in the same file:
 **Solution:**
 1. Test the server directly: `discopop-mcp-server --debug`
 2. Check for error messages in the output
-3. Verify the command in the config is correct
-4. Try with absolute path to the server command
+3. Use the setup utility with verbose output:
+   ```bash
+   ./setup-mcp.sh --setup claude_code --verbose
+   ```
+4. For manual config, verify the command path is correct
 
 ### Tools not appearing
 
 **Error:** Claude doesn't see DiscoPoP tools
 
 **Solution:**
-1. Verify `~/.claude/settings.json` exists and has valid JSON syntax
+1. Verify configuration:
+   ```bash
+   ./setup-mcp.sh --verify claude_code
+   ```
 2. Check that the server can start: `discopop-mcp-server --help`
 3. Try restarting Claude Code
-4. Run server with debug: `discopop-mcp-server --debug`
+4. Run setup with debug:
+   ```bash
+   ./setup-mcp.sh --setup claude_code --debug
+   ```
 
 ### JSON syntax errors
 
 **Error:** "Invalid JSON in settings.json"
 
 **Solution:**
-- Use a JSON validator to check your config file syntax
-- Ensure all strings use double quotes `"`
-- Check that all commas and braces are balanced
-- Example: `cat ~/.claude/settings.json | python -m json.tool`
+- Let the setup utility handle it:
+  ```bash
+  ./setup-mcp.sh --setup claude_code
+  ```
+- For manual config:
+  - Use a JSON validator: `cat ~/.claude/.claude.json | python -m json.tool`
+  - Ensure all strings use double quotes `"`
+  - Check that all commas and braces are balanced
 
 ## Configuration Format
 
@@ -240,6 +313,8 @@ The MCP server configuration uses this format:
 
 ## See Also
 
+- [Setup Utility Guide](SETUP_GUIDE.md) - Comprehensive guide for the setup script
+- [Installation Guide](INSTALLATION.md) - How to install the MCP server
 - [DiscoPoP Documentation](https://www.discopop.tu-darmstadt.de/)
 - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 - [Claude Documentation](https://docs.anthropic.com/)
