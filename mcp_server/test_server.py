@@ -43,35 +43,27 @@ class TestDiscoPopMCPServer(unittest.TestCase):
         # Just verify no errors occur
         self.assertIsNotNone(tools)
 
-    def test_profiling_info_handler(self) -> None:
-        """Test get_profiling_info tool"""
-        result = self.server._handle_profiling_info({"profile_path": "/test/path", "info_type": "summary"})
+    def test_get_configurations_handler(self) -> None:
+        """Test get_configurations tool"""
+        result = self.server._handle_get_configurations({"project_path": "/test/project"})
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 1)
         text_content = result[0].text
         data = json.loads(text_content)
         self.assertEqual(data["status"], "success")
-        self.assertIn("data", data)
+        self.assertEqual(data["project_path"], "/test/project")
+        self.assertIn("configurations", data)
 
-    def test_analysis_handler(self) -> None:
-        """Test execute_analysis tool"""
-        result = self.server._handle_analysis({"profile_path": "/test/path", "analysis_type": "patterns"})
+    def test_get_execution_results_handler(self) -> None:
+        """Test get_execution_results tool"""
+        result = self.server._handle_get_execution_results({"project_path": "/test/project"})
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 1)
         text_content = result[0].text
         data = json.loads(text_content)
         self.assertEqual(data["status"], "success")
-        self.assertIn("patterns", data)
-
-    def test_list_data_handler(self) -> None:
-        """Test list_available_data tool"""
-        result = self.server._handle_list_data({"base_path": "/test/path"})
-        self.assertIsNotNone(result)
-        self.assertEqual(len(result), 1)
-        text_content = result[0].text
-        data = json.loads(text_content)
-        self.assertEqual(data["status"], "success")
-        self.assertIn("available_data", data)
+        self.assertEqual(data["project_path"], "/test/project")
+        self.assertIn("execution_results", data)
 
 
 class TestServerIntegration(unittest.TestCase):

@@ -17,6 +17,7 @@ Allows remote execution of instrumented code and analysis of profiling data.
 import json
 import logging
 import sys
+from pathlib import Path
 from typing import Any
 
 from mcp.server import Server
@@ -52,12 +53,10 @@ class DiscoPopMCPServer:
         def handle_tool_call(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             self._log_call(name, arguments)
 
-            if name == "get_profiling_info":
-                return self._handle_profiling_info(arguments)
-            elif name == "execute_analysis":
-                return self._handle_analysis(arguments)
-            elif name == "list_available_data":
-                return self._handle_list_data(arguments)
+            if name == "get_configurations":
+                return self._handle_get_configurations(arguments)
+            elif name == "get_execution_results":
+                return self._handle_get_execution_results(arguments)
             else:
                 error_msg = f"Unknown tool: {name}"
                 logger.error(error_msg)
@@ -67,125 +66,81 @@ class DiscoPopMCPServer:
         def list_tools() -> list[Tool]:
             tools = [
                 Tool(
-                    name="get_profiling_info",
-                    description="Retrieve profiling information from DiscoPoP profiler results",
+                    name="get_configurations",
+                    description="Retrieve list of defined execution configurations from a target project",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "profile_path": {
+                            "project_path": {
                                 "type": "string",
-                                "description": "Path to the DiscoPoP profile data directory",
-                            },
-                            "info_type": {
-                                "type": "string",
-                                "enum": ["summary", "detailed", "statistics"],
-                                "description": "Type of profiling information to retrieve",
+                                "description": "Path to the target project",
                             },
                         },
-                        "required": ["profile_path"],
+                        "required": ["project_path"],
                     },
                 ),
                 Tool(
-                    name="execute_analysis",
-                    description="Execute pattern analysis on profiled data",
+                    name="get_execution_results",
+                    description="Retrieve execution results from prior program executions",
                     inputSchema={
                         "type": "object",
                         "properties": {
-                            "profile_path": {
+                            "project_path": {
                                 "type": "string",
-                                "description": "Path to the DiscoPoP profile data",
-                            },
-                            "analysis_type": {
-                                "type": "string",
-                                "enum": ["patterns", "dependencies", "recommendations"],
-                                "description": "Type of analysis to perform",
+                                "description": "Path to the target project",
                             },
                         },
-                        "required": ["profile_path", "analysis_type"],
-                    },
-                ),
-                Tool(
-                    name="list_available_data",
-                    description="List available profiling data and analysis results",
-                    inputSchema={
-                        "type": "object",
-                        "properties": {
-                            "base_path": {
-                                "type": "string",
-                                "description": "Base path to search for DiscoPoP data",
-                            },
-                        },
-                        "required": ["base_path"],
+                        "required": ["project_path"],
                     },
                 ),
             ]
             logger.debug(f"Listed {len(tools)} available tools")
             return tools
 
-    def _handle_profiling_info(self, arguments: dict[str, Any]) -> list[TextContent]:
+    def _handle_get_configurations(self, arguments: dict[str, Any]) -> list[TextContent]:
         try:
-            profile_path = arguments.get("profile_path", "")
-            info_type = arguments.get("info_type", "summary")
+            project_path = arguments.get("project_path", "")
+            configs_dir = Path(project_path) / ".discopop" / "project" / "configs"
+
+            configurations = []
+            if configs_dir.exists() and configs_dir.is_dir():
+                for config_name in sorted(configs_dir.iterdir()):
+                    if config_name.is_dir():
+                        configurations.append(config_name.name)
 
             result = {
                 "status": "success",
-                "profile_path": profile_path,
-                "info_type": info_type,
-                "message": f"Retrieved {info_type} profiling information from {profile_path}",
-                "data": {
-                    "execution_time": 1.234,
-                    "memory_usage": 256,
-                    "parallelism_potential": 0.75,
-                },
+                "project_path": project_path,
+                "configurations": configurations,
             }
-            self._log_response("get_profiling_info", result)
+            self._log_response("get_configurations", result)
             return [TextContent(type="text", text=json.dumps(result))]
 
         except Exception as e:
-            error_msg = f"Error retrieving profiling info: {str(e)}"
+            error_msg = f"Error retrieving configurations: {str(e)}"
             logger.error(error_msg)
             return [TextContent(type="text", text=error_msg)]
 
-    def _handle_analysis(self, arguments: dict[str, Any]) -> list[TextContent]:
+    def _handle_get_execution_results(self, arguments: dict[str, Any]) -> list[TextContent]:
         try:
-            profile_path = arguments.get("profile_path", "")
-            analysis_type = arguments.get("analysis_type", "patterns")
+            project_path = arguments.get("project_path", "")
+            results_file = Path(project_path) / ".discopop" / "project" / "execution_results.json"
+
+            execution_results = {}
+            if results_file.exists() and results_file.is_file():
+                with open(results_file, "r") as f:
+                    execution_results = json.load(f)
 
             result = {
                 "status": "success",
-                "analysis_type": analysis_type,
-                "message": f"Completed {analysis_type} analysis on {profile_path}",
-                "patterns": ["reduction", "pipeline", "task_parallelism"],
-                "recommendations": ["Consider using OpenMP for reduction operations"],
+                "project_path": project_path,
+                "execution_results": execution_results,
             }
-            self._log_response("execute_analysis", result)
+            self._log_response("get_execution_results", result)
             return [TextContent(type="text", text=json.dumps(result))]
 
         except Exception as e:
-            error_msg = f"Error executing analysis: {str(e)}"
-            logger.error(error_msg)
-            return [TextContent(type="text", text=error_msg)]
-
-    def _handle_list_data(self, arguments: dict[str, Any]) -> list[TextContent]:
-        try:
-            base_path = arguments.get("base_path", "")
-
-            result = {
-                "status": "success",
-                "base_path": base_path,
-                "available_data": [
-                    {
-                        "path": f"{base_path}/.discopop",
-                        "type": "profile",
-                        "timestamp": "2026-05-19T10:30:00Z",
-                    },
-                ],
-            }
-            self._log_response("list_available_data", result)
-            return [TextContent(type="text", text=json.dumps(result))]
-
-        except Exception as e:
-            error_msg = f"Error listing data: {str(e)}"
+            error_msg = f"Error retrieving execution results: {str(e)}"
             logger.error(error_msg)
             return [TextContent(type="text", text=error_msg)]
 
