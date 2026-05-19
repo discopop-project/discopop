@@ -8,20 +8,21 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-"""
-Setup script for DiscoPoP MCP Server integration.
+"""Agent configuration helper for the DiscoPoP MCP Server.
 
-Configures various agents (Claude Code, etc.) to use the DiscoPoP MCP Server.
-Handles JSON configuration merging and multi-agent support.
+Provides MCPSetup, which handles reading and writing agent configuration files
+(e.g. ~/.claude.json) so that agents can discover and launch discopop-mcp-server.
+
+This module is imported by server.py and its functionality is exposed through
+the discopop-mcp-server CLI via the --setup / --status / --verify flags.
 """
 
 import json
 import os
-import sys
-import argparse
 import subprocess
+import sys
 from pathlib import Path
-from typing import Optional, Dict, Any, Callable
+from typing import Any, Callable, Dict, Optional
 
 
 class MCPSetup:
@@ -41,24 +42,17 @@ class MCPSetup:
         }
     }
 
-    def __init__(self, debug: bool = False, verbose: bool = False):
-        self.debug = debug
+    def __init__(self, verbose: bool = False):
         self.verbose = verbose
         self._venv_path = self._detect_venv()
 
     def log(self, message: str, level: str = "INFO") -> None:
-        """Print log message."""
-        if level == "DEBUG" and not self.debug:
+        if level == "DEBUG" and not self.verbose:
             return
         prefix = f"[{level}]" if level != "INFO" else ""
         print(f"{prefix} {message}".strip())
 
     def _detect_venv(self) -> Optional[Path]:
-        """Detect if running inside a virtual environment.
-
-        Returns the path to the virtual environment, or None if not in a venv.
-        """
-        # Check if VIRTUAL_ENV environment variable is set
         venv_env = os.environ.get("VIRTUAL_ENV")
         if venv_env:
             venv_path = Path(venv_env)
@@ -66,7 +60,6 @@ class MCPSetup:
                 self.log(f"Detected venv: {venv_path}", "DEBUG")
                 return venv_path
 
-        # Check if sys.prefix != sys.base_prefix (standard venv indicator)
         if hasattr(sys, "base_prefix") and sys.prefix != sys.base_prefix:
             venv_path = Path(sys.prefix)
             self.log(f"Detected venv from sys.prefix: {venv_path}", "DEBUG")
@@ -76,54 +69,19 @@ class MCPSetup:
         return None
 
     def _get_venv_executable_path(self, executable_name: str) -> Optional[str]:
-        """Get the full path to an executable in the current venv.
-
-        Args:
-            executable_name: Name of the executable (e.g., 'discopop-mcp-server')
-
-        Returns:
-            Full path to the executable if found in venv, None otherwise.
-        """
         if not self._venv_path:
             return None
 
-        # Construct path to executable in venv bin directory
         bin_dir = "Scripts" if sys.platform == "win32" else "bin"
         executable_path = self._venv_path / bin_dir / executable_name
 
         if executable_path.is_file() or executable_path.with_suffix(".exe").is_file():
             return str(executable_path)
 
-        self.log(
-            f"Executable {executable_name} not found in venv {self._venv_path}",
-            "DEBUG",
-        )
+        self.log(f"Executable {executable_name} not found in venv {self._venv_path}", "DEBUG")
         return None
 
-    def check_server_installed(self) -> bool:
-        """Check if discopop-mcp-server is installed."""
-        self.log("Checking if discopop-mcp-server is installed...", "DEBUG")
-        try:
-            result = subprocess.run(
-                ["discopop-mcp-server", "--help"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if result.returncode == 0:
-                self.log("✓ discopop-mcp-server is installed")
-                return True
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            pass
-
-        self.log(
-            "✗ discopop-mcp-server not found in PATH",
-            "WARN",
-        )
-        return False
-
     def find_server_path(self) -> Optional[str]:
-        """Find the full path to discopop-mcp-server."""
         try:
             result = subprocess.run(
                 ["which", "discopop-mcp-server"],
@@ -137,11 +95,9 @@ class MCPSetup:
                 return path
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pass
-
         return None
 
     def load_config(self, config_path: Path) -> Dict[str, Any]:
-        """Load JSON config file, handling non-existent files gracefully."""
         if not config_path.exists():
             self.log(f"Creating new config file: {config_path}", "DEBUG")
             return {}
@@ -155,7 +111,6 @@ class MCPSetup:
             raise
 
     def save_config(self, config_path: Path, config: Dict[str, Any]) -> None:
-        """Save JSON config file with proper formatting."""
         config_path.parent.mkdir(parents=True, exist_ok=True)
         with open(config_path, "w") as f:
             json.dump(config, f, indent=2)
@@ -167,23 +122,18 @@ class MCPSetup:
         server_name: str,
         command: str,
         args: Optional[list[str]] = None,
-        debug: bool = False,
     ) -> Dict[str, Any]:
-        """Merge MCP server configuration into existing config."""
         if "mcpServers" not in config:
             config["mcpServers"] = {}
 
         server_config: Dict[str, Any] = {"command": command}
         if args:
             server_config["args"] = args
-        elif debug:
-            server_config["args"] = ["--debug"]
 
         config["mcpServers"][server_name] = server_config
         return config
 
     def setup_agent(self, agent: str, use_debug: bool = False, use_full_path: bool = False) -> bool:
-        """Setup MCP server for a specific agent."""
         if agent not in self.AGENTS:
             self.log(f"✗ Unknown agent: {agent}", "ERROR")
             return False
@@ -191,29 +141,21 @@ class MCPSetup:
         agent_info = self.AGENTS[agent]
         self.log(f"Setting up {agent_info['name']}...")
 
-        # Get server command
         if use_full_path:
             server_command = self.find_server_path()
             if not server_command:
                 self.log("✗ Could not find discopop-mcp-server in PATH", "ERROR")
                 return False
         else:
-            # Try to use venv executable if available
             venv_executable = self._get_venv_executable_path("discopop-mcp-server")
             if venv_executable:
-                self.log(
-                    f"Using executable from virtual environment: {venv_executable}",
-                    "DEBUG",
-                )
+                self.log(f"Using executable from virtual environment: {venv_executable}", "DEBUG")
                 server_command = venv_executable
             else:
-                # Fall back to command name (rely on PATH)
                 server_command = "discopop-mcp-server"
 
-        # Setup configuration directory and file
         config_dir_func: Callable[[], Path] = agent_info["config_dir"]
-        config_dir = config_dir_func()
-        config_path = config_dir / agent_info["config_file"]
+        config_path = config_dir_func() / agent_info["config_file"]
 
         try:
             config = self.load_config(config_path)
@@ -222,21 +164,19 @@ class MCPSetup:
                 agent_info["server_name"],
                 server_command,
                 args=["--debug"] if use_debug else None,
-                debug=use_debug,
             )
             self.save_config(config_path, config)
             self.log(f"✓ {agent_info['name']} is now configured")
             return True
         except Exception as e:
             self.log(f"✗ Failed to setup {agent_info['name']}: {e}", "ERROR")
-            if self.debug:
+            if self.verbose:
                 import traceback
 
                 traceback.print_exc()
             return False
 
     def verify_setup(self, agent: str) -> bool:
-        """Verify that the agent is properly configured."""
         if agent not in self.AGENTS:
             return False
 
@@ -257,137 +197,19 @@ class MCPSetup:
                 self.log(f"✓ Configuration verified: {command} {' '.join(args)}")
                 return True
             else:
-                self.log(f"✗ DiscoPoP MCP server not found in configuration", "WARN")
+                self.log("✗ DiscoPoP MCP server not found in configuration", "WARN")
                 return False
         except Exception as e:
             self.log(f"✗ Failed to verify setup: {e}", "ERROR")
             return False
 
     def show_status(self) -> None:
-        """Show current setup status."""
         self.log("DiscoPoP MCP Server Setup Status")
         self.log("=" * 40)
-
-        # Check server installation
-        if self.check_server_installed():
-            self.log("Server Status: ✓ Installed")
-            if path := self.find_server_path():
-                self.log(f"Server Location: {path}")
-        else:
-            self.log("Server Status: ✗ Not installed")
-
-        # Check agent configurations
+        self.log(f"Server Location: {self.find_server_path() or 'not found in PATH'}")
         self.log("\nAgent Configurations:")
         for agent_key in self.AGENTS:
             if self.verify_setup(agent_key):
                 self.log(f"  {agent_key}: ✓ Configured")
             else:
                 self.log(f"  {agent_key}: ✗ Not configured")
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="Setup DiscoPoP MCP Server for Claude agents",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  %(prog)s --setup claude_code              # Setup Claude Code
-  %(prog)s --setup-all                       # Setup all agents
-  %(prog)s --status                          # Show current status
-  %(prog)s --verify claude_code              # Verify Claude Code setup
-  %(prog)s --setup claude_code --debug       # Enable debug logging
-        """,
-    )
-
-    parser.add_argument(
-        "--setup",
-        choices=list(MCPSetup.AGENTS.keys()),
-        help="Setup MCP server for a specific agent",
-    )
-    parser.add_argument(
-        "--setup-all",
-        action="store_true",
-        help="Setup MCP server for all available agents",
-    )
-    parser.add_argument(
-        "--verify",
-        choices=list(MCPSetup.AGENTS.keys()),
-        help="Verify MCP server setup for a specific agent",
-    )
-    parser.add_argument(
-        "--status",
-        action="store_true",
-        help="Show current setup status",
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        help="Enable debug logging in the MCP server",
-    )
-    parser.add_argument(
-        "--full-path",
-        action="store_true",
-        help="Use full path to discopop-mcp-server instead of just the command name",
-    )
-    parser.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Enable verbose output",
-    )
-
-    args = parser.parse_args()
-
-    setup = MCPSetup(debug=args.verbose, verbose=args.verbose)
-
-    # Show help if no arguments provided
-    if not any([args.setup, args.setup_all, args.verify, args.status]):
-        parser.print_help()
-        return 0
-
-    # Check if server is installed (not needed for verify or status)
-    if args.setup or args.setup_all:
-        if not setup.check_server_installed():
-            setup.log(
-                "Install the DiscoPoP MCP server with: pip install discopop-mcp-server",
-                "ERROR",
-            )
-            return 1
-
-    # Execute requested action
-    try:
-        if args.status:
-            setup.show_status()
-            return 0
-
-        if args.setup:
-            success = setup.setup_agent(args.setup, use_debug=args.debug, use_full_path=args.full_path)
-            return 0 if success else 1
-
-        if args.setup_all:
-            all_success = True
-            for agent in MCPSetup.AGENTS:
-                success = setup.setup_agent(agent, use_debug=args.debug, use_full_path=args.full_path)
-                all_success = all_success and success
-            return 0 if all_success else 1
-
-        if args.verify:
-            success = setup.verify_setup(args.verify)
-            return 0 if success else 1
-
-    except KeyboardInterrupt:
-        setup.log("Setup cancelled by user", "INFO")
-        return 130
-    except Exception as e:
-        setup.log(f"Setup failed: {e}", "ERROR")
-        if args.verbose:
-            import traceback
-
-            traceback.print_exc()
-        return 1
-
-    return 0
-
-
-if __name__ == "__main__":
-    sys.exit(main())

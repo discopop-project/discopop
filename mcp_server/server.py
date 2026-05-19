@@ -23,6 +23,8 @@ from typing import Any
 from mcp.server import Server
 from mcp.types import TextContent, Tool
 
+from setup_mcp import MCPSetup
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -157,25 +159,110 @@ def main() -> None:
     import argparse
     import asyncio
 
-    parser = argparse.ArgumentParser(description="DiscoPoP MCP Server - Exposes DiscoPoP functionality to Claude")
+    agent_choices = list(MCPSetup.AGENTS.keys())
+
+    parser = argparse.ArgumentParser(
+        description="DiscoPoP MCP Server - Exposes DiscoPoP functionality to Claude",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"""
+Examples:
+  %(prog)s                              # Start the MCP server (stdio mode)
+  %(prog)s --debug                      # Start with debug logging
+  %(prog)s --setup claude_code          # Configure Claude Code
+  %(prog)s --setup-all                  # Configure all agents
+  %(prog)s --status                     # Show current setup status
+  %(prog)s --verify claude_code         # Verify Claude Code setup
+  %(prog)s --setup claude_code --debug  # Configure with debug logging enabled
+        """,
+    )
+
     parser.add_argument(
         "--debug",
         action="store_true",
-        help="Enable debug logging",
+        help="Enable debug logging (server mode) or configure server with debug logging (setup mode)",
+    )
+
+    setup_group = parser.add_argument_group("setup")
+    setup_group.add_argument(
+        "--setup",
+        choices=agent_choices,
+        metavar="AGENT",
+        help=f"Configure MCP server for a specific agent (choices: {', '.join(agent_choices)})",
+    )
+    setup_group.add_argument(
+        "--setup-all",
+        action="store_true",
+        help="Configure MCP server for all available agents",
+    )
+    setup_group.add_argument(
+        "--verify",
+        choices=agent_choices,
+        metavar="AGENT",
+        help="Verify MCP server setup for a specific agent",
+    )
+    setup_group.add_argument(
+        "--status",
+        action="store_true",
+        help="Show current setup status",
+    )
+    setup_group.add_argument(
+        "--full-path",
+        action="store_true",
+        help="Use full path to discopop-mcp-server instead of just the command name",
+    )
+    setup_group.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output during setup",
     )
 
     args = parser.parse_args()
 
-    server = DiscoPopMCPServer(debug=args.debug)
+    is_setup_mode = any([args.setup, args.setup_all, args.verify, args.status])
 
-    try:
-        asyncio.run(server.run())
-    except KeyboardInterrupt:
-        logger.info("Server shutting down...")
-        sys.exit(0)
-    except Exception as e:
-        logger.error(f"Fatal error: {e}", exc_info=True)
-        sys.exit(1)
+    if is_setup_mode:
+        setup = MCPSetup(verbose=args.verbose)
+        try:
+            if args.status:
+                setup.show_status()
+                sys.exit(0)
+
+            if args.setup:
+                success = setup.setup_agent(args.setup, use_debug=args.debug, use_full_path=args.full_path)
+                sys.exit(0 if success else 1)
+
+            if args.setup_all:
+                all_success = all(
+                    setup.setup_agent(agent, use_debug=args.debug, use_full_path=args.full_path)
+                    for agent in MCPSetup.AGENTS
+                )
+                sys.exit(0 if all_success else 1)
+
+            if args.verify:
+                success = setup.verify_setup(args.verify)
+                sys.exit(0 if success else 1)
+
+        except KeyboardInterrupt:
+            print("Setup cancelled by user")
+            sys.exit(130)
+        except Exception as e:
+            print(f"Setup failed: {e}", file=sys.stderr)
+            if args.verbose:
+                import traceback
+
+                traceback.print_exc()
+            sys.exit(1)
+    else:
+        server = DiscoPopMCPServer(debug=args.debug)
+        try:
+            asyncio.run(server.run())
+        except KeyboardInterrupt:
+            logger.info("Server shutting down...")
+            sys.exit(0)
+        except Exception as e:
+            logger.error(f"Fatal error: {e}", exc_info=True)
+            sys.exit(1)
 
 
 if __name__ == "__main__":

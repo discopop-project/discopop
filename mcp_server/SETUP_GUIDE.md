@@ -10,19 +10,12 @@ directory for details.
 
 # DiscoPoP MCP Server Setup Guide
 
-This guide explains how to use the automated setup scripts to configure the DiscoPoP MCP Server for various Claude agents.
+This guide explains how to use `discopop-mcp-server` to configure the DiscoPoP MCP Server for various Claude agents.
 
 ## Quick Start
 
-### Using the Setup Script (Recommended)
-
 ```bash
-./setup-mcp.sh --setup claude_code
-```
-
-Or directly with Python:
-```bash
-python3 setup_mcp.py --setup claude_code
+discopop-mcp-server --setup claude_code
 ```
 
 ### Manual Configuration
@@ -48,7 +41,7 @@ discopop-mcp-server --help
 
 ## Virtual Environment Support
 
-The setup script automatically detects and uses the active Python virtual environment. This means:
+`discopop-mcp-server --setup` automatically detects and uses the active Python virtual environment. This means:
 
 - If you run the script inside a venv, it will automatically use the MCP server executable from that venv
 - No manual path configuration needed
@@ -57,11 +50,8 @@ The setup script automatically detects and uses the active Python virtual enviro
 ### Example: Setup with Virtual Environment
 
 ```bash
-# Activate your virtual environment
 source venv/bin/activate
-
-# Run the setup script - it will automatically detect the venv
-./setup-mcp.sh --setup claude_code
+discopop-mcp-server --setup claude_code
 
 # The configuration will use:
 # /path/to/your/venv/bin/discopop-mcp-server
@@ -69,37 +59,21 @@ source venv/bin/activate
 
 ### Example: Setup without Virtual Environment
 
-If you run the script outside a venv:
-
 ```bash
-# Install globally or to user path
 pip install --user discopop-mcp-server
-
-# Then run setup
-./setup-mcp.sh --setup claude_code
-
-# The configuration will use:
-# discopop-mcp-server (from PATH)
+discopop-mcp-server --setup claude_code
 ```
 
 ---
 
-## Setup Script Overview
+## Setup Overview
 
-The setup script (`setup_mcp.py`) automates the configuration of the DiscoPoP MCP Server for different agents. It:
+The `discopop-mcp-server --setup` command automates the configuration of the DiscoPoP MCP Server for different agents. It:
 
 - ✓ Detects your operating system
-- ✓ Checks if the MCP server is installed
 - ✓ Creates or updates agent configuration files
 - ✓ Handles JSON configuration merging safely
 - ✓ Supports multiple agents and platforms
-
-### Running the Setup
-
-| Method | Command |
-|--------|---------|
-| Shell script | `./setup-mcp.sh [options]` |
-| Python directly | `python3 setup_mcp.py [options]` |
 
 ---
 
@@ -109,7 +83,7 @@ The setup script (`setup_mcp.py`) automates the configuration of the DiscoPoP MC
 
 #### Setup a specific agent
 ```bash
-./setup-mcp.sh --setup claude_code
+discopop-mcp-server --setup claude_code
 ```
 
 Setup the DiscoPoP MCP Server for Claude Code. This will:
@@ -119,21 +93,21 @@ Setup the DiscoPoP MCP Server for Claude Code. This will:
 
 #### Setup all available agents
 ```bash
-./setup-mcp.sh --setup-all
+discopop-mcp-server --setup-all
 ```
 
 Configures all supported agents in one command.
 
 #### Enable debug logging
 ```bash
-./setup-mcp.sh --setup claude_code --debug
+discopop-mcp-server --setup claude_code --debug
 ```
 
 Adds `--debug` flag to the MCP server arguments for verbose logging.
 
 #### Use full path to server
 ```bash
-./setup-mcp.sh --setup claude_code --full-path
+discopop-mcp-server --setup claude_code --full-path
 ```
 
 Uses the absolute path to `discopop-mcp-server` instead of relying on PATH. Useful if the server isn't in your PATH or you want to use a specific installation.
@@ -142,7 +116,7 @@ Uses the absolute path to `discopop-mcp-server` instead of relying on PATH. Usef
 
 #### Check current setup status
 ```bash
-./setup-mcp.sh --status
+discopop-mcp-server --status
 ```
 
 Shows:
@@ -152,7 +126,7 @@ Shows:
 
 #### Verify a specific agent's setup
 ```bash
-./setup-mcp.sh --verify claude_code
+discopop-mcp-server --verify claude_code
 ```
 
 Checks if Claude Code is properly configured and displays the configuration details.
@@ -160,7 +134,7 @@ Checks if Claude Code is properly configured and displays the configuration deta
 ### Help
 
 ```bash
-./setup-mcp.sh --help
+discopop-mcp-server --help
 ```
 
 Shows all available commands and options.
@@ -179,10 +153,10 @@ pip install discopop-mcp-server
 discopop-mcp-server --help
 
 # 3. Run setup
-./setup-mcp.sh --setup claude_code
+discopop-mcp-server --setup claude_code
 
 # 4. Verify setup
-./setup-mcp.sh --verify claude_code
+discopop-mcp-server --verify claude_code
 ```
 
 ### Example 2: Setup with Debug Logging
@@ -190,7 +164,7 @@ discopop-mcp-server --help
 For troubleshooting MCP server communication:
 
 ```bash
-./setup-mcp.sh --setup claude_code --debug
+discopop-mcp-server --setup claude_code --debug
 ```
 
 This enables verbose logging so you can see:
@@ -204,7 +178,7 @@ This enables verbose logging so you can see:
 If you need to explicitly detect and use the full path from your system PATH:
 
 ```bash
-./setup-mcp.sh --setup claude_code --full-path
+discopop-mcp-server --setup claude_code --full-path
 ```
 
 This searches your PATH and uses the absolute path to `discopop-mcp-server`.
@@ -215,16 +189,16 @@ This searches your PATH and uses the absolute path to `discopop-mcp-server`.
 
 ```bash
 # Check current state
-./setup-mcp.sh --status
+discopop-mcp-server --status
 
 # If not installed, install it
 pip install discopop-mcp-server
 
 # Setup
-./setup-mcp.sh --setup-all
+discopop-mcp-server --setup-all
 
 # Verify
-./setup-mcp.sh --status
+discopop-mcp-server --status
 ```
 
 ---
@@ -273,14 +247,7 @@ See [CLAUDE_INTEGRATION.md](./CLAUDE_INTEGRATION.md#configuration-options) for a
 ### "command not found" or "Python not found"
 
 ```bash
-# Make sure you're in the correct directory
-cd /path/to/discopop/mcp_server
-
-# Make the script executable
-chmod +x setup-mcp.sh
-
-# Run with explicit Python
-python3 setup_mcp.py --setup claude_code
+discopop-mcp-server --setup claude_code
 ```
 
 ### "discopop-mcp-server not found"
@@ -295,7 +262,7 @@ pip install discopop-mcp-server
 which discopop-mcp-server
 
 # If installed but not found, use --full-path
-./setup-mcp.sh --setup claude_code --full-path
+discopop-mcp-server --setup claude_code --full-path
 ```
 
 ### "Invalid JSON in settings.json"
@@ -309,14 +276,14 @@ python3 -m json.tool ~/.claude/settings.json
 # Or reset (back up first!)
 cp ~/.claude/settings.json ~/.claude/settings.json.backup
 rm ~/.claude/settings.json
-./setup-mcp.sh --setup claude_code
+discopop-mcp-server --setup claude_code
 ```
 
 ### Tools not appearing in Claude Code
 
 1. Verify setup completed successfully:
    ```bash
-   ./setup-mcp.sh --verify claude_code
+   discopop-mcp-server --verify claude_code
    ```
 
 2. Check JSON syntax:
@@ -328,7 +295,7 @@ rm ~/.claude/settings.json
 
 4. Enable debug logging to see what's happening:
    ```bash
-   ./setup-mcp.sh --setup claude_code --debug
+   discopop-mcp-server --setup claude_code --debug
    ```
 
 ### Verbose output for debugging
@@ -336,17 +303,14 @@ rm ~/.claude/settings.json
 Use the `-v` or `--verbose` flag to see detailed information:
 
 ```bash
-./setup-mcp.sh --setup claude_code --verbose
+discopop-mcp-server --setup claude_code --verbose
 ```
 
 ---
 
 ## Extending for New Agents
 
-The setup script is designed to be extensible. To add support for a new agent:
-
-1. Open `setup_mcp.py`
-2. Add a new entry to the `AGENTS` dictionary:
+To add support for a new agent, open `setup_mcp.py` and add a new entry to the `MCPSetup.AGENTS` dictionary:
 
 ```python
 AGENTS = {
@@ -360,10 +324,10 @@ AGENTS = {
 }
 ```
 
-3. The script will automatically support:
+The new agent will automatically be supported:
    ```bash
-   ./setup-mcp.sh --setup your_agent
-   ./setup-mcp.sh --verify your_agent
+   discopop-mcp-server --setup your_agent
+   discopop-mcp-server --verify your_agent
    ```
 
 ---
@@ -372,40 +336,37 @@ AGENTS = {
 
 ### Using with Virtual Environments
 
-The setup script automatically detects and uses your active virtual environment. Simply activate it and run:
+`discopop-mcp-server --setup` automatically detects and uses the active virtual environment. Simply activate it and run:
 
 ```bash
-# Activate your virtual environment
 source venv/bin/activate
-
-# The setup script automatically detects the venv and uses its executable
-python3 setup_mcp.py --setup claude_code
+discopop-mcp-server --setup claude_code
 ```
 
-The script will automatically use `/path/to/venv/bin/discopop-mcp-server` in the configuration.
+It automatically uses `/path/to/venv/bin/discopop-mcp-server` in the generated configuration.
 
 If you need to explicitly use the full path for any reason:
 
 ```bash
 # Force full path detection from PATH
-python3 setup_mcp.py --setup claude_code --full-path
+discopop-mcp-server --setup claude_code --full-path
 ```
 
 ### Checking Configuration Before Setup
 
 ```bash
 # See current status without making changes
-python3 setup_mcp.py --status
+discopop-mcp-server --status
 ```
 
 ### Batch Operations
 
 ```bash
 # Setup all agents with debug
-./setup-mcp.sh --setup-all --debug
+discopop-mcp-server --setup-all --debug
 
 # Then verify each one
-./setup-mcp.sh --status
+discopop-mcp-server --status
 ```
 
 ---
@@ -416,13 +377,13 @@ You can integrate the setup into your CI/CD pipeline:
 
 ```bash
 # In your deployment/setup script
-python3 setup_mcp.py --setup-all --verbose || {
+discopop-mcp-server --setup-all --verbose || {
     echo "Failed to setup MCP server"
     exit 1
 }
 
 # Verify success
-python3 setup_mcp.py --verify claude_code || {
+discopop-mcp-server --verify claude_code || {
     echo "Verification failed"
     exit 1
 }

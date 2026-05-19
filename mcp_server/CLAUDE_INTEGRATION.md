@@ -26,17 +26,13 @@ discopop-mcp-server --help
 
 ## Quick Setup (Recommended)
 
-Use the automated setup utility for easy configuration:
+Run the built-in setup command:
 
 ```bash
-# Navigate to the mcp_server directory
-cd mcp_server
-
-# Run the setup script
-./setup-mcp.sh --setup claude_code
+discopop-mcp-server --setup claude_code
 ```
 
-That's it! The script will:
+This will:
 - ✓ Automatically detect your virtual environment (if any)
 - ✓ Create the configuration directory
 - ✓ Merge configuration with any existing settings
@@ -44,7 +40,7 @@ That's it! The script will:
 
 Verify the setup:
 ```bash
-./setup-mcp.sh --verify claude_code
+discopop-mcp-server --verify claude_code
 ```
 
 For more setup options (debug logging, status checking, etc.), see [SETUP_GUIDE.md](SETUP_GUIDE.md).
@@ -112,19 +108,19 @@ Claude will use the MCP server to fetch this information and provide analysis an
 
 ### Using the Setup Utility (Recommended)
 
-The setup utility handles these options automatically:
+The `--setup` flag handles these options automatically:
 
 **Enable debug logging:**
 ```bash
-./setup-mcp.sh --setup claude_code --debug
+discopop-mcp-server --setup claude_code --debug
 ```
 
 **Check virtual environment detection:**
 ```bash
-./setup-mcp.sh --setup claude_code --verbose
+discopop-mcp-server --setup claude_code --verbose
 ```
 
-The setup script automatically:
+It automatically:
 - ✓ Detects and uses your virtual environment
 - ✓ Finds the correct executable path
 - ✓ Adds debug flags if requested
@@ -180,17 +176,17 @@ For manual configuration, you can customize these settings:
 
 ### General troubleshooting
 
-Start with the setup utility's verification and status commands:
+Start with the verification and status commands:
 
 ```bash
 # Check setup status
-./setup-mcp.sh --status
+discopop-mcp-server --status
 
 # Verify Claude Code configuration
-./setup-mcp.sh --verify claude_code
+discopop-mcp-server --verify claude_code
 
 # Enable verbose output for debugging
-./setup-mcp.sh --setup claude_code --verbose
+discopop-mcp-server --setup claude_code --verbose
 ```
 
 ### Server not found
@@ -200,9 +196,9 @@ Start with the setup utility's verification and status commands:
 **Solution:**
 1. Install the package: `pip install discopop-mcp-server`
 2. Verify installation: `which discopop-mcp-server`
-3. Use the setup utility which automatically handles paths:
+3. Re-run setup, which automatically handles paths:
    ```bash
-   ./setup-mcp.sh --setup claude_code
+   discopop-mcp-server --setup claude_code
    ```
 
 ### Server fails to start
@@ -212,9 +208,9 @@ Start with the setup utility's verification and status commands:
 **Solution:**
 1. Test the server directly: `discopop-mcp-server --debug`
 2. Check for error messages in the output
-3. Use the setup utility with verbose output:
+3. Re-run setup with verbose output:
    ```bash
-   ./setup-mcp.sh --setup claude_code --verbose
+   discopop-mcp-server --setup claude_code --verbose
    ```
 4. For manual config, verify the command path is correct
 
@@ -225,13 +221,13 @@ Start with the setup utility's verification and status commands:
 **Solution:**
 1. Verify configuration:
    ```bash
-   ./setup-mcp.sh --verify claude_code
+   discopop-mcp-server --verify claude_code
    ```
 2. Check that the server can start: `discopop-mcp-server --help`
 3. Try restarting Claude Code
 4. Run setup with debug:
    ```bash
-   ./setup-mcp.sh --setup claude_code --debug
+   discopop-mcp-server --setup claude_code --debug
    ```
 
 ### JSON syntax errors
@@ -239,9 +235,9 @@ Start with the setup utility's verification and status commands:
 **Error:** "Invalid JSON in settings.json"
 
 **Solution:**
-- Let the setup utility handle it:
+- Re-run setup to let it handle it:
   ```bash
-  ./setup-mcp.sh --setup claude_code
+  discopop-mcp-server --setup claude_code
   ```
 - For manual config:
   - Use a JSON validator: `cat ~/.claude/settings.json | python -m json.tool`
@@ -313,7 +309,7 @@ The MCP server configuration uses this format:
 
 ## See Also
 
-- [Setup Utility Guide](SETUP_GUIDE.md) - Comprehensive guide for the setup script
+- [Setup Guide](SETUP_GUIDE.md) - All `--setup` / `--verify` / `--status` options
 - [Installation Guide](INSTALLATION.md) - How to install the MCP server
 - [DiscoPoP Documentation](https://www.discopop.tu-darmstadt.de/)
 - [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)

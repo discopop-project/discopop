@@ -74,16 +74,13 @@ discopop-mcp-server --debug
 
 ### Integration with Claude Code
 
-Use the automated setup utility for easy integration:
+Use the built-in setup flag for easy integration:
 
 ```bash
-./setup-mcp.sh --setup claude_code
+discopop-mcp-server --setup claude_code
 ```
 
-This automatically configures Claude Code to use the server. The setup script handles:
-- Virtual environment detection
-- Configuration directory creation
-- Path resolution
+This automatically configures Claude Code to use the server, handling virtual environment detection, configuration directory creation, and path resolution.
 
 See [SETUP_GUIDE.md](SETUP_GUIDE.md) for more options or [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) for detailed setup instructions.
 
@@ -226,13 +223,13 @@ mypy mcp_server/server.py
 ## Troubleshooting
 
 ### Claude setup issues
-- Use the setup utility to automatically configure Claude Code:
+- Automatically configure Claude Code:
   ```bash
-  ./setup-mcp.sh --setup claude_code
+  discopop-mcp-server --setup claude_code
   ```
 - Verify the setup with:
   ```bash
-  ./setup-mcp.sh --verify claude_code
+  discopop-mcp-server --verify claude_code
   ```
 - See [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) for detailed troubleshooting
 
@@ -245,9 +242,9 @@ mypy mcp_server/server.py
 - Verify server is running: `discopop-mcp-server --debug`
 - Check claude configuration points to correct command
 - Ensure stdio mode is being used (default)
-- Use the setup utility to fix configuration:
+- Check setup status:
   ```bash
-  ./setup-mcp.sh --status
+  discopop-mcp-server --status
   ```
 
 ### Missing dependencies

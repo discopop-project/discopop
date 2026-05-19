@@ -105,7 +105,7 @@ discopop-mcp-server --help
 discopop-mcp-server --debug
 
 # Test 3: Verify setup (if configured with Claude Code)
-./setup-mcp.sh --status
+discopop-mcp-server --status
 ```
 
 ## Python Virtual Environment Setup (Recommended)
@@ -147,17 +147,17 @@ After installation, configure Claude Code to use the server.
 
 ### Automated Setup (Recommended)
 
-Use the automated setup script for easy configuration:
+Use the built-in setup flag for easy configuration:
 
 ```bash
 # Setup Claude Code integration
-./setup-mcp.sh --setup claude_code
+discopop-mcp-server --setup claude_code
 
 # Verify configuration
-./setup-mcp.sh --verify claude_code
+discopop-mcp-server --verify claude_code
 
 # Check status
-./setup-mcp.sh --status
+discopop-mcp-server --status
 ```
 
 For detailed setup options, see [SETUP_GUIDE.md](SETUP_GUIDE.md).

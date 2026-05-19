@@ -22,14 +22,13 @@ mcp_server/
 ├── __init__.py                    # Package initialization
 ├── test_server.py                 # Unit and integration tests
 ├── demo_test.py                   # Demo script showing all tools in action
-├── setup_mcp.py                   # Automated Claude Code setup utility
-├── setup-mcp.sh                   # Shell wrapper for setup utility
+├── setup_mcp.py                   # Agent configuration module (MCPSetup class)
 ├── pyproject.toml                 # Package configuration & dependencies
 │
 ├── README.md                      # Main documentation (features, tools, usage)
 ├── INSTALLATION.md                # Installation guide
 ├── CLAUDE_INTEGRATION.md          # How to configure Claude Code
-├── SETUP_GUIDE.md                 # Automated setup script guide
+├── SETUP_GUIDE.md                 # Setup flag reference guide
 ├── DISTRIBUTION.md                # How to ship to users
 ├── QUICKSTART.md                  # Quick reference guide
 └── SETUP_SUMMARY.md              # This file
@@ -140,7 +139,7 @@ Retrieve execution results from prior program executions
 | [README.md](README.md) | Features, tools, architecture | Everyone |
 | [INSTALLATION.md](INSTALLATION.md) | How to install | End users |
 | [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) | Configure Claude Code | Claude users |
-| [SETUP_GUIDE.md](SETUP_GUIDE.md) | Automated setup script | Claude users |
+| [SETUP_GUIDE.md](SETUP_GUIDE.md) | Setup flags reference | Claude users |
 | [QUICKSTART.md](QUICKSTART.md) | Quick reference | Everyone |
 | [DISTRIBUTION.md](DISTRIBUTION.md) | How to ship to users | Maintainers |
 

@@ -58,5 +58,5 @@ Documentation = "https://www.discopop.tu-darmstadt.de/"
 version = {file = "VERSION"}
 
 [tool.setuptools]
-py-modules = ["server"]
+py-modules = ["server", "setup_mcp"]
 zip-safe = true
