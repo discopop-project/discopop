@@ -13,7 +13,7 @@ directory for details.
 ## System Requirements
 
 - **Python**: 3.8 or higher
-- **Operating System**: Linux, macOS, or Windows
+- **Operating System**: Linux (primary), macOS, or Windows
 - **Memory**: Minimal (< 100MB)
 - **Disk Space**: ~50MB (including dependencies)
 
@@ -105,7 +105,10 @@ discopop-mcp-server --help
 # Test 2: Run with debug
 discopop-mcp-server --debug
 
-# Test 3: Test in SSE mode
+# Test 3: Verify setup (if configured with Claude Code)
+./setup-mcp.sh --status
+
+# Test 4: Test in SSE mode (optional)
 discopop-mcp-server --mode sse --port 8000
 ```
 
@@ -144,9 +147,28 @@ pip install git+https://github.com/discopop-tool/discopop.git#subdirectory=mcp_s
 
 ## Integration with Claude Code
 
-After installation, configure Claude Code to use the server. See [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) for detailed instructions.
+After installation, configure Claude Code to use the server.
 
-Quick start:
+### Automated Setup (Recommended)
+
+Use the automated setup script for easy configuration:
+
+```bash
+# Setup Claude Code integration
+./setup-mcp.sh --setup claude_code
+
+# Verify configuration
+./setup-mcp.sh --verify claude_code
+
+# Check status
+./setup-mcp.sh --status
+```
+
+For detailed setup options, see [SETUP_GUIDE.md](SETUP_GUIDE.md).
+
+### Manual Configuration
+
+Alternatively, configure manually. See [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) for detailed instructions.
 
 1. Create the configuration directory:
 
@@ -354,10 +376,11 @@ discopop-mcp-server --debug
 
 ## Next Steps
 
-1. [Integrate with Claude](CLAUDE_INTEGRATION.md)
-2. [Read the README](README.md)
-3. [Run tests](README.md#testing)
-4. [Configure for your use case](README.md#configuration)
+1. [Setup with automated script](SETUP_GUIDE.md) (Recommended)
+2. [Integrate with Claude manually](CLAUDE_INTEGRATION.md)
+3. [Read the README](README.md)
+4. [Run tests](README.md#testing)
+5. [Configure for your use case](README.md#configuration)
 
 ## Getting Help
 
