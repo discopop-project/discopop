@@ -16,6 +16,7 @@ Handles JSON configuration merging and multi-agent support.
 """
 
 import json
+import os
 import sys
 import argparse
 import subprocess
@@ -43,6 +44,7 @@ class MCPSetup:
     def __init__(self, debug: bool = False, verbose: bool = False):
         self.debug = debug
         self.verbose = verbose
+        self._venv_path = self._detect_venv()
 
     def log(self, message: str, level: str = "INFO") -> None:
         """Print log message."""
@@ -50,6 +52,53 @@ class MCPSetup:
             return
         prefix = f"[{level}]" if level != "INFO" else ""
         print(f"{prefix} {message}".strip())
+
+    def _detect_venv(self) -> Optional[Path]:
+        """Detect if running inside a virtual environment.
+
+        Returns the path to the virtual environment, or None if not in a venv.
+        """
+        # Check if VIRTUAL_ENV environment variable is set
+        venv_env = os.environ.get("VIRTUAL_ENV")
+        if venv_env:
+            venv_path = Path(venv_env)
+            if venv_path.is_dir():
+                self.log(f"Detected venv: {venv_path}", "DEBUG")
+                return venv_path
+
+        # Check if sys.prefix != sys.base_prefix (standard venv indicator)
+        if hasattr(sys, "base_prefix") and sys.prefix != sys.base_prefix:
+            venv_path = Path(sys.prefix)
+            self.log(f"Detected venv from sys.prefix: {venv_path}", "DEBUG")
+            return venv_path
+
+        self.log("Not running inside a virtual environment", "DEBUG")
+        return None
+
+    def _get_venv_executable_path(self, executable_name: str) -> Optional[str]:
+        """Get the full path to an executable in the current venv.
+
+        Args:
+            executable_name: Name of the executable (e.g., 'discopop-mcp-server')
+
+        Returns:
+            Full path to the executable if found in venv, None otherwise.
+        """
+        if not self._venv_path:
+            return None
+
+        # Construct path to executable in venv bin directory
+        bin_dir = "Scripts" if sys.platform == "win32" else "bin"
+        executable_path = self._venv_path / bin_dir / executable_name
+
+        if executable_path.is_file() or executable_path.with_suffix(".exe").is_file():
+            return str(executable_path)
+
+        self.log(
+            f"Executable {executable_name} not found in venv {self._venv_path}",
+            "DEBUG",
+        )
+        return None
 
     def check_server_installed(self) -> bool:
         """Check if discopop-mcp-server is installed."""
@@ -149,7 +198,17 @@ class MCPSetup:
                 self.log("✗ Could not find discopop-mcp-server in PATH", "ERROR")
                 return False
         else:
-            server_command = "discopop-mcp-server"
+            # Try to use venv executable if available
+            venv_executable = self._get_venv_executable_path("discopop-mcp-server")
+            if venv_executable:
+                self.log(
+                    f"Using executable from virtual environment: {venv_executable}",
+                    "DEBUG",
+                )
+                server_command = venv_executable
+            else:
+                # Fall back to command name (rely on PATH)
+                server_command = "discopop-mcp-server"
 
         # Setup configuration directory and file
         config_dir_func: Callable[[], Path] = agent_info["config_dir"]
