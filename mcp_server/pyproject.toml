@@ -12,12 +12,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "discopop-mcp-server"
-version = "0.0.1a1"
+dynamic = ["version"]
 description = "MCP Server for DiscoPoP - Enables Claude to interact with DiscoPoP profiling and analysis tools"
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.8"
 authors = [
-    {name = "Technische Universität Darmstadt", email = "discopop@lists.parallel.informatik.tu-darmstadt.de"}
+    {name = "TU Darmstadt and Iowa State University", email = "discopop@lists.parallel.informatik.tu-darmstadt.de"}
 ]
 license = {file = "LICENSE"}
 classifiers = [
@@ -42,6 +42,8 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21.0",
+    "mypy",
+    "black",
 ]
 
 [project.scripts]
@@ -52,5 +54,9 @@ Homepage = "https://www.discopop.tu-darmstadt.de/"
 Repository = "https://github.com/discopop-tool/discopop"
 Documentation = "https://www.discopop.tu-darmstadt.de/"
 
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+
 [tool.setuptools]
 py-modules = ["server"]
+zip-safe = true

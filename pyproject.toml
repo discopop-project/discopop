@@ -33,6 +33,7 @@ dependencies = [
     "discopop-library>=0.0.1a4",
     "discopop-gui>=0.0.1a2",
     "discopop-explorer>=0.0.1a2",
+    "discopop-mcp-server>=0.0.1a1",
     "mypy", "black", "data-science-types"
 ]
 
