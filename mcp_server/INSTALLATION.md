@@ -1,0 +1,367 @@
+<!--
+This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+
+Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+
+This software may be modified and distributed under the terms of
+the 3-Clause BSD License.  See the LICENSE file in the package base
+directory for details.
+-->
+
+# DiscoPoP MCP Server - Installation Guide
+
+## System Requirements
+
+- **Python**: 3.8 or higher
+- **Operating System**: Linux, macOS, or Windows
+- **Memory**: Minimal (< 100MB)
+- **Disk Space**: ~50MB (including dependencies)
+
+## Installation Methods
+
+### Method 1: Install from PyPI (Easiest - Coming Soon)
+
+Once published to PyPI:
+
+```bash
+pip install discopop-mcp-server
+```
+
+### Method 2: Install from Source (Current)
+
+```bash
+# Clone the repository
+git clone https://github.com/discopop-tool/discopop.git
+cd discopop/mcp_server
+
+# Install in development mode
+pip install -e .
+```
+
+For development (including testing tools):
+```bash
+pip install -e ".[dev]"
+```
+
+### Method 3: Install from URL
+
+```bash
+pip install git+https://github.com/discopop-tool/discopop.git#subdirectory=mcp_server
+```
+
+### Method 4: Manual Installation (Without pip)
+
+If you prefer not to use pip:
+
+1. Download the repository:
+```bash
+git clone https://github.com/discopop-tool/discopop.git
+```
+
+2. Install dependencies:
+```bash
+pip install mcp
+# Optional: for SSE support
+pip install starlette uvicorn
+```
+
+3. Run directly:
+```bash
+cd discopop/mcp_server
+python3 server.py --debug
+```
+
+## Dependency Installation
+
+The server requires the `mcp` package. Installation methods:
+
+### Standard pip
+
+```bash
+pip install mcp
+```
+
+### From conda
+
+```bash
+conda install -c conda-forge mcp
+```
+
+### All dependencies
+
+The `pyproject.toml` includes:
+- **Required**: `mcp>=0.1.0`
+- **Optional (SSE mode)**: `starlette>=0.25.0`, `uvicorn>=0.23.0`
+- **Optional (Development)**: `pytest>=7.0`, `pytest-asyncio>=0.21.0`
+
+## Verification
+
+After installation, verify everything works:
+
+```bash
+# Test 1: Check command is available
+discopop-mcp-server --help
+
+# Test 2: Run with debug
+discopop-mcp-server --debug
+
+# Test 3: Test in SSE mode
+discopop-mcp-server --mode sse --port 8000
+```
+
+## Python Virtual Environment Setup (Recommended)
+
+Using a virtual environment is recommended to avoid dependency conflicts:
+
+### Using venv (Python 3.8+)
+
+```bash
+# Create virtual environment
+python3 -m venv mcp_venv
+
+# Activate it
+# On macOS/Linux:
+source mcp_venv/bin/activate
+# On Windows:
+mcp_venv\Scripts\activate
+
+# Install the server
+pip install git+https://github.com/discopop-tool/discopop.git#subdirectory=mcp_server
+```
+
+### Using conda
+
+```bash
+# Create environment
+conda create -n discopop-mcp python=3.11
+
+# Activate it
+conda activate discopop-mcp
+
+# Install the server
+pip install git+https://github.com/discopop-tool/discopop.git#subdirectory=mcp_server
+```
+
+## Integration with Claude Code
+
+After installation, configure Claude Code to use the server. See [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) for detailed instructions.
+
+Quick start:
+
+1. Create the configuration directory:
+
+   ```bash
+   mkdir -p ~/.claude
+   ```
+
+2. Edit `~/.claude/settings.json` and add:
+
+   ```json
+   {
+     "mcpServers": {
+       "discopop": {
+         "command": "discopop-mcp-server",
+         "args": ["--debug"]
+       }
+     }
+   }
+   ```
+
+3. Verify the server starts:
+
+   ```bash
+   discopop-mcp-server --debug
+   ```
+
+## Troubleshooting Installation
+
+### Error: "No module named 'mcp'"
+
+**Cause**: MCP package not installed
+
+**Solution**:
+```bash
+pip install mcp
+```
+
+Or install the server with dependencies:
+```bash
+pip install -e ".[sse,dev]"
+```
+
+### Error: "command not found: discopop-mcp-server"
+
+**Cause**: Command not in PATH
+
+**Solutions**:
+1. Ensure pip install completed successfully
+2. Check Python environment:
+```bash
+which python3
+python3 -m pip --version
+```
+3. Try running with full path:
+```bash
+python3 -m server --debug
+```
+4. Install to user path:
+```bash
+pip install --user discopop-mcp-server
+```
+
+### Error: "ModuleNotFoundError: No module named 'starlette'"
+
+**Cause**: Optional SSE dependencies not installed
+
+**Solution** (choose one):
+```bash
+# Install SSE dependencies only
+pip install starlette uvicorn
+
+# Or reinstall with SSE support
+pip install -e ".[sse]"
+```
+
+### Error: "ImportError" on macOS M1/M2
+
+**Cause**: Binary compatibility issues
+
+**Solution**:
+```bash
+# Create native Python environment
+conda create -n discopop-mcp python=3.11
+conda activate discopop-mcp
+pip install git+https://github.com/discopop-tool/discopop.git#subdirectory=mcp_server
+```
+
+### Python version too old
+
+**Cause**: Using Python < 3.8
+
+**Solution**:
+```bash
+# Check version
+python3 --version
+
+# Update Python or use specific version
+python3.11 -m pip install discopop-mcp-server
+```
+
+## Installing with DiscoPoP
+
+If installing the full DiscoPoP package:
+
+```bash
+cd discopop
+pip install .  # Installs main package
+pip install ./mcp_server  # Installs MCP server
+```
+
+## Uninstallation
+
+```bash
+pip uninstall discopop-mcp-server
+```
+
+## Upgrading
+
+### From PyPI
+
+```bash
+pip install --upgrade discopop-mcp-server
+```
+
+### From source
+
+```bash
+cd discopop/mcp_server
+git pull
+pip install -e . --upgrade
+```
+
+## Development Installation
+
+For contributing to the MCP server:
+
+```bash
+cd mcp_server
+
+# Install with dev dependencies
+pip install -e ".[dev,sse]"
+
+# Run tests
+python -m pytest -v
+
+# Type checking
+python -m mypy server.py
+
+# Code formatting
+python -m black server.py
+```
+
+## Docker Installation
+
+For containerized deployment:
+
+```bash
+# Build image
+docker build -t discopop-mcp-server .
+
+# Run container
+docker run -it discopop-mcp-server --debug
+```
+
+See [Dockerfile](Dockerfile) for details.
+
+## Platform-Specific Notes
+
+### Linux
+
+Standard installation with pip works on most distributions:
+
+```bash
+sudo apt-get install python3-pip  # Debian/Ubuntu
+pip3 install discopop-mcp-server
+```
+
+### macOS
+
+Using Homebrew Python (recommended):
+
+```bash
+brew install python
+pip install discopop-mcp-server
+```
+
+For Apple Silicon (M1/M2), native Python 3.9+ installation is recommended.
+
+### Windows
+
+Using PowerShell:
+
+```powershell
+python -m pip install discopop-mcp-server
+discopop-mcp-server --help
+```
+
+Or using WSL2 (Windows Subsystem for Linux):
+
+```bash
+wsl
+pip install discopop-mcp-server
+discopop-mcp-server --debug
+```
+
+## Next Steps
+
+1. [Integrate with Claude](CLAUDE_INTEGRATION.md)
+2. [Read the README](README.md)
+3. [Run tests](README.md#testing)
+4. [Configure for your use case](README.md#configuration)
+
+## Getting Help
+
+- **Installation issues**: Check the Troubleshooting section above
+- **Usage questions**: See [README.md](README.md)
+- **Bug reports**: https://github.com/discopop-tool/discopop/issues
+- **Contact**: discopop@lists.parallel.informatik.tu-darmstadt.de
