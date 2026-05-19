@@ -50,7 +50,7 @@ class DiscoPopMCPServer:
 
     def _register_tools(self) -> None:
         @self.server.call_tool()  # type: ignore[misc]
-        def handle_tool_call(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+        async def handle_tool_call(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             self._log_call(name, arguments)
 
             if name == "get_configurations":
@@ -63,7 +63,7 @@ class DiscoPopMCPServer:
                 return [TextContent(type="text", text=error_msg)]
 
         @self.server.list_tools()  # type: ignore[misc]
-        def list_tools() -> list[Tool]:
+        async def list_tools() -> list[Tool]:
             tools = [
                 Tool(
                     name="get_configurations",

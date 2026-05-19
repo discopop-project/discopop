@@ -14,7 +14,7 @@ __version__ = "0.0.1a1"
 
 def cli() -> None:
     """CLI entry point"""
-    from server import main
+    from .server import main
 
     main()
 
