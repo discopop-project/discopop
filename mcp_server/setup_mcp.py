@@ -286,8 +286,8 @@ Examples:
         parser.print_help()
         return 0
 
-    # Check if server is installed
-    if args.setup or args.setup_all or args.verify:
+    # Check if server is installed (not needed for verify or status)
+    if args.setup or args.setup_all:
         if not setup.check_server_installed():
             setup.log(
                 "Install the DiscoPoP MCP server with: pip install discopop-mcp-server",
