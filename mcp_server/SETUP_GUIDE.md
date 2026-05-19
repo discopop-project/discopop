@@ -46,6 +46,42 @@ Verify installation:
 discopop-mcp-server --help
 ```
 
+## Virtual Environment Support
+
+The setup script automatically detects and uses the active Python virtual environment. This means:
+
+- If you run the script inside a venv, it will automatically use the MCP server executable from that venv
+- No manual path configuration needed
+- The correct version is always used, regardless of your system PATH
+
+### Example: Setup with Virtual Environment
+
+```bash
+# Activate your virtual environment
+source venv/bin/activate
+
+# Run the setup script - it will automatically detect the venv
+./setup-mcp.sh --setup claude_code
+
+# The configuration will use:
+# /path/to/your/venv/bin/discopop-mcp-server
+```
+
+### Example: Setup without Virtual Environment
+
+If you run the script outside a venv:
+
+```bash
+# Install globally or to user path
+pip install --user discopop-mcp-server
+
+# Then run setup
+./setup-mcp.sh --setup claude_code
+
+# The configuration will use:
+# discopop-mcp-server (from PATH)
+```
+
 ---
 
 ## Setup Script Overview
@@ -163,15 +199,17 @@ This enables verbose logging so you can see:
 - Response data
 - Any errors or warnings
 
-### Example 3: Using Full Path
+### Example 3: Forcing Full Path Detection
 
-If you installed DiscoPoP in a virtual environment:
+If you need to explicitly detect and use the full path from your system PATH:
 
 ```bash
 ./setup-mcp.sh --setup claude_code --full-path
 ```
 
-This finds the exact path to `discopop-mcp-server` and uses it in the configuration.
+This searches your PATH and uses the absolute path to `discopop-mcp-server`.
+
+**Note:** If you're using a virtual environment, the setup script automatically detects and uses it without this flag.
 
 ### Example 4: Check Status Before Setup
 
@@ -334,13 +372,22 @@ AGENTS = {
 
 ### Using with Virtual Environments
 
-If you use a Python virtual environment:
+The setup script automatically detects and uses your active virtual environment. Simply activate it and run:
 
 ```bash
-# Activate your environment
+# Activate your virtual environment
 source venv/bin/activate
 
-# Run setup
+# The setup script automatically detects the venv and uses its executable
+python3 setup_mcp.py --setup claude_code
+```
+
+The script will automatically use `/path/to/venv/bin/discopop-mcp-server` in the configuration.
+
+If you need to explicitly use the full path for any reason:
+
+```bash
+# Force full path detection from PATH
 python3 setup_mcp.py --setup claude_code --full-path
 ```
 
