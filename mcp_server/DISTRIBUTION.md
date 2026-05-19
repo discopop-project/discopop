@@ -1,3 +1,13 @@
+<!--
+This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+
+Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+
+This software may be modified and distributed under the terms of
+the 3-Clause BSD License.  See the LICENSE file in the package base
+directory for details.
+-->
+
 # DiscoPoP MCP Server - Distribution Guide
 
 This guide explains how to package and distribute the DiscoPoP MCP Server to end users.
@@ -130,12 +140,12 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      
+
       - run: |
           pip install pyinstaller
           cd mcp_server
           pyinstaller --onefile --name discopop-mcp-server server.py
-      
+
       - uses: actions/upload-artifact@v3
         with:
           name: discopop-mcp-server-${{ matrix.name }}
@@ -307,15 +317,14 @@ pip install discopop-mcp-server==0.1.0
 discopop-mcp-server --help
 \`\`\`
 
-### Via Docker
+### Via Source
 \`\`\`bash
-docker run ghcr.io/discopop-tool/mcp-server:v0.1.0
+pip install git+https://github.com/discopop-tool/discopop.git#subdirectory=mcp_server
 \`\`\`
 
 ## Features
-- Get profiling information
-- Execute pattern analysis
-- List available data
+- Retrieve execution configurations
+- Retrieve execution results
 - Full logging support
 
 ## Changes

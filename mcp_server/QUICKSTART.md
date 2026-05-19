@@ -84,29 +84,24 @@ You should see startup messages with no errors.
 
 ## Tools Available
 
-### 1. `get_profiling_info`
+### 1. `get_configurations`
 
-- Retrieve profiling information
-- Parameters: `profile_path`, `info_type` (summary|detailed|statistics)
+- Retrieve list of defined execution configurations from a target project
+- Parameters: `project_path` (required)
 
-### 2. `execute_analysis`
+### 2. `get_execution_results`
 
-- Run pattern analysis
-- Parameters: `profile_path`, `analysis_type` (patterns|dependencies|recommendations)
-
-### 3. `list_available_data`
-
-- List profiling data
-- Parameters: `base_path`
+- Retrieve execution results from prior program executions
+- Parameters: `project_path` (required)
 
 ## Example Usage
 
 ```
-Claude: "Analyze the profiling data in ./example/.discopop"
+Claude: "Get the execution configurations for ./my_project"
 
 Server logs:
-   2026-05-19 10:30:05 - discopop-mcp - INFO - → Incoming call: execute_analysis
-   2026-05-19 10:30:05 - discopop-mcp - INFO - ← Outgoing response: execute_analysis
+   2026-05-19 10:30:05 - discopop-mcp - INFO - → Incoming call: get_configurations
+   2026-05-19 10:30:05 - discopop-mcp - INFO - ← Outgoing response: get_configurations
 ```
 
 ## Testing
@@ -143,9 +138,9 @@ python -m black server.py
 
 **Solution:**
 - Verify server runs: `discopop-mcp-server --debug`
-- Check `claude_desktop_config.json` syntax
+- Check `~/.claude/settings.json` syntax
 - Check file is in correct location
-- Restart Claude
+- Restart Claude Code
 
 ## Documentation
 

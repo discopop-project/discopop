@@ -91,8 +91,7 @@ conda install -c conda-forge mcp
 
 The `pyproject.toml` includes:
 - **Required**: `mcp>=0.1.0`
-- **Optional (SSE mode)**: `starlette>=0.25.0`, `uvicorn>=0.23.0`
-- **Optional (Development)**: `pytest>=7.0`, `pytest-asyncio>=0.21.0`
+- **Optional (Development)**: `pytest>=7.0`, `pytest-asyncio>=0.21.0`, `mypy`, `black`
 
 ## Verification
 
@@ -107,9 +106,6 @@ discopop-mcp-server --debug
 
 # Test 3: Verify setup (if configured with Claude Code)
 ./setup-mcp.sh --status
-
-# Test 4: Test in SSE mode (optional)
-discopop-mcp-server --mode sse --port 8000
 ```
 
 ## Python Virtual Environment Setup (Recommended)
@@ -206,9 +202,9 @@ Alternatively, configure manually. See [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATIO
 pip install mcp
 ```
 
-Or install the server with dependencies:
+Or install the server with development dependencies:
 ```bash
-pip install -e ".[sse,dev]"
+pip install -e ".[dev]"
 ```
 
 ### Error: "command not found: discopop-mcp-server"
@@ -229,19 +225,6 @@ python3 -m server --debug
 4. Install to user path:
 ```bash
 pip install --user discopop-mcp-server
-```
-
-### Error: "ModuleNotFoundError: No module named 'starlette'"
-
-**Cause**: Optional SSE dependencies not installed
-
-**Solution** (choose one):
-```bash
-# Install SSE dependencies only
-pip install starlette uvicorn
-
-# Or reinstall with SSE support
-pip install -e ".[sse]"
 ```
 
 ### Error: "ImportError" on macOS M1/M2
@@ -309,7 +292,7 @@ For contributing to the MCP server:
 cd mcp_server
 
 # Install with dev dependencies
-pip install -e ".[dev,sse]"
+pip install -e ".[dev]"
 
 # Run tests
 python -m pytest -v
@@ -320,20 +303,6 @@ python -m mypy server.py
 # Code formatting
 python -m black server.py
 ```
-
-## Docker Installation
-
-For containerized deployment:
-
-```bash
-# Build image
-docker build -t discopop-mcp-server .
-
-# Run container
-docker run -it discopop-mcp-server --debug
-```
-
-See [Dockerfile](Dockerfile) for details.
 
 ## Platform-Specific Notes
 

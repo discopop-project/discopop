@@ -68,7 +68,7 @@ mkdir -p ~/.claude
 
 ### 2. Add MCP server configuration
 
-Create or edit `~/.claude/.claude.json` and add the DiscoPoP server configuration:
+Create or edit `~/.claude/settings.json` and add the DiscoPoP server configuration:
 
 ```json
 {
@@ -244,7 +244,7 @@ Start with the setup utility's verification and status commands:
   ./setup-mcp.sh --setup claude_code
   ```
 - For manual config:
-  - Use a JSON validator: `cat ~/.claude/.claude.json | python -m json.tool`
+  - Use a JSON validator: `cat ~/.claude/settings.json | python -m json.tool`
   - Ensure all strings use double quotes `"`
   - Check that all commas and braces are balanced
 

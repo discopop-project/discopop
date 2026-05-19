@@ -22,12 +22,15 @@ mcp_server/
 ├── __init__.py                    # Package initialization
 ├── test_server.py                 # Unit and integration tests
 ├── demo_test.py                   # Demo script showing all tools in action
+├── setup_mcp.py                   # Automated Claude Code setup utility
+├── setup-mcp.sh                   # Shell wrapper for setup utility
 ├── pyproject.toml                 # Package configuration & dependencies
 │
 ├── README.md                      # Main documentation (features, tools, usage)
-├── INSTALLATION.md                # Installation guide (6+ methods)
-├── CLAUDE_INTEGRATION.md          # How to use with Claude Desktop/Web
-├── DISTRIBUTION.md                # How to ship to users (5 strategies)
+├── INSTALLATION.md                # Installation guide
+├── CLAUDE_INTEGRATION.md          # How to configure Claude Code
+├── SETUP_GUIDE.md                 # Automated setup script guide
+├── DISTRIBUTION.md                # How to ship to users
 ├── QUICKSTART.md                  # Quick reference guide
 └── SETUP_SUMMARY.md              # This file
 ```
@@ -35,9 +38,9 @@ mcp_server/
 ## Key Files
 
 ### Core Implementation
-- **server.py** (~250 lines)
+- **server.py** (~180 lines)
   - `DiscoPopMCPServer` class - Main server implementation
-  - Three example tools: `get_profiling_info`, `execute_analysis`, `list_available_data`
+  - Two tools: `get_configurations`, `get_execution_results`
   - Stdio transport for Claude integration
   - Full logging of incoming calls and outgoing responses
 
@@ -104,29 +107,19 @@ Restart Claude Desktop and ask:
 
 ## Available Tools
 
-### 1. `get_profiling_info`
-Retrieve profiling information from DiscoPoP results
+### 1. `get_configurations`
+Retrieve list of defined execution configurations from a target project
 ```json
 {
-  "profile_path": "./example/.discopop",
-  "info_type": "summary"  // "summary", "detailed", "statistics"
+  "project_path": "./my_project"
 }
 ```
 
-### 2. `execute_analysis`
-Execute pattern analysis on profiled data
+### 2. `get_execution_results`
+Retrieve execution results from prior program executions
 ```json
 {
-  "profile_path": "./example/.discopop",
-  "analysis_type": "patterns"  // "patterns", "dependencies", "recommendations"
-}
-```
-
-### 3. `list_available_data`
-List available profiling data and analysis results
-```json
-{
-  "base_path": "./example"
+  "project_path": "./my_project"
 }
 ```
 
@@ -138,15 +131,17 @@ List available profiling data and analysis results
 ✅ **Production Ready** - Type hints, error handling, tests
 ✅ **Easy Installation** - Single command: `pip install -e .`
 ✅ **Multiple Distribution Options** - PyPI, GitHub, binaries
-✅ **Comprehensive Documentation** - 4 detailed guides included
+✅ **Comprehensive Documentation** - Multiple detailed guides included
 
 ## Documentation
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
 | [README.md](README.md) | Features, tools, architecture | Everyone |
-| [INSTALLATION.md](INSTALLATION.md) | How to install (6+ methods) | End users |
-| [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) | Configure with Claude | Claude users |
+| [INSTALLATION.md](INSTALLATION.md) | How to install | End users |
+| [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) | Configure Claude Code | Claude users |
+| [SETUP_GUIDE.md](SETUP_GUIDE.md) | Automated setup script | Claude users |
+| [QUICKSTART.md](QUICKSTART.md) | Quick reference | Everyone |
 | [DISTRIBUTION.md](DISTRIBUTION.md) | How to ship to users | Maintainers |
 
 ## Next Steps
@@ -240,9 +235,8 @@ Claude: I'll help you parallelize your code. First, let me
 │  └──────┬───────────────┘   │
 └─────────┼────────────────────┘
           │
-          ├─→ get_profiling_info() ──→ DiscoPoP data
-          ├─→ execute_analysis() ───→ Pattern analysis
-          └─→ list_available_data() ─→ File system
+          ├─→ get_configurations() ──→ .discopop/project/configs/
+          └─→ get_execution_results() → .discopop/project/execution_results.json
 ```
 
 ## Security Considerations

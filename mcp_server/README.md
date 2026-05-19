@@ -70,9 +70,6 @@ discopop-mcp-server
 
 # With debug logging
 discopop-mcp-server --debug
-
-# SSE mode on custom port
-discopop-mcp-server --mode sse --port 9000
 ```
 
 ### Integration with Claude Code
@@ -92,55 +89,35 @@ See [SETUP_GUIDE.md](SETUP_GUIDE.md) for more options or [CLAUDE_INTEGRATION.md]
 
 ## Available Tools
 
-### 1. `get_profiling_info`
+### 1. `get_configurations`
 
-Retrieves profiling information from DiscoPoP results.
+Retrieves the list of defined execution configurations from a target project.
 
 **Parameters:**
-- `profile_path` (string, required): Path to the DiscoPoP profile data directory
-- `info_type` (string, optional): Type of information to retrieve
-  - `"summary"` - High-level summary
-  - `"detailed"` - Detailed metrics
-  - `"statistics"` - Statistical data
+- `project_path` (string, required): Path to the target project
+
+Looks for configuration directories under `<project_path>/.discopop/project/configs/`.
 
 **Example:**
 ```json
 {
-  "profile_path": "./example/.discopop",
-  "info_type": "summary"
+  "project_path": "./my_project"
 }
 ```
 
-### 2. `execute_analysis`
+### 2. `get_execution_results`
 
-Executes pattern analysis on profiled data.
+Retrieves execution results from prior program executions.
 
 **Parameters:**
-- `profile_path` (string, required): Path to the DiscoPoP profile data
-- `analysis_type` (string, required): Type of analysis to perform
-  - `"patterns"` - Detect parallelization patterns
-  - `"dependencies"` - Analyze data dependencies
-  - `"recommendations"` - Generate optimization recommendations
+- `project_path` (string, required): Path to the target project
+
+Reads `<project_path>/.discopop/project/execution_results.json`.
 
 **Example:**
 ```json
 {
-  "profile_path": "./example/.discopop",
-  "analysis_type": "patterns"
-}
-```
-
-### 3. `list_available_data`
-
-Lists available profiling data and analysis results.
-
-**Parameters:**
-- `base_path` (string, required): Base path to search for DiscoPoP data
-
-**Example:**
-```json
-{
-  "base_path": "./example"
+  "project_path": "./my_project"
 }
 ```
 
@@ -150,9 +127,9 @@ The server logs all incoming and outgoing communication:
 
 ```
 2026-05-19 10:30:00 - discopop-mcp - INFO - Starting DiscoPoP MCP Server (stdio mode)
-2026-05-19 10:30:05 - discopop-mcp - INFO - → Incoming call: get_profiling_info
-2026-05-19 10:30:05 - discopop-mcp - DEBUG - Arguments: {"profile_path": "./example/.discopop"}
-2026-05-19 10:30:05 - discopop-mcp - INFO - ← Outgoing response: get_profiling_info
+2026-05-19 10:30:05 - discopop-mcp - INFO - → Incoming call: get_configurations
+2026-05-19 10:30:05 - discopop-mcp - DEBUG - Arguments: {"project_path": "./my_project"}
+2026-05-19 10:30:05 - discopop-mcp - INFO - ← Outgoing response: get_configurations
 ```
 
 Enable `--debug` for full argument/response logging.
@@ -227,11 +204,11 @@ Tool(
 
 2. Add handler method:
 ```python
-def _handle_your_tool(self, arguments: dict[str, Any]) -> ToolResponse:
+def _handle_your_tool(self, arguments: dict[str, Any]) -> list[TextContent]:
     self._log_call("your_tool", arguments)
     # Implementation here
     self._log_response("your_tool", result)
-    return ToolResponse(content=[TextContent(type="text", text=json.dumps(result))])
+    return [TextContent(type="text", text=json.dumps(result))]
 ```
 
 3. Register in tool call handler:
@@ -245,13 +222,6 @@ elif name == "your_tool":
 ```bash
 mypy mcp_server/server.py
 ```
-
-## Configuration
-
-The server supports the following environment variables:
-
-- `MCP_DEBUG` - Enable debug logging
-- `MCP_LOG_LEVEL` - Set log level (DEBUG, INFO, WARNING, ERROR)
 
 ## Troubleshooting
 
