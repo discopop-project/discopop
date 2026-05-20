@@ -63,7 +63,11 @@ bool DiscoPoP::doFinalization(Module &M) {
             if (Fun->getName() == "__dp_finalize") {
               IRBuilder<> builder(call_inst);
               Value *V = builder.CreateGlobalStringPtr(StringRef(bbDepString), ".dp_bb_deps");
+#if LLVM_VERSION_MAJOR >= 22
+              CallInst::Create(F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr), V, "", call_inst->getIterator());
+#else
               CallInst::Create(F.getParent()->getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr), V, "", call_inst);
+#endif
             }
           }
         }

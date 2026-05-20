@@ -50,7 +50,11 @@ void DiscoPoP::dp_reduction_insert_functions() {
     args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_info.loop_id));
     args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), 0));  // instruction id will be replaced after assigning unique
 
+#if LLVM_VERSION_MAJOR >= 22
+    llvm::CallInst::Create(incr_loop_counter_callee, args, "", loop_info.first_body_instr_->getIterator());
+#else
     llvm::CallInst::Create(incr_loop_counter_callee, args, "", loop_info.first_body_instr_);
+#endif
     loop_metadata_file << loop_info.file_id_ << " ";
     loop_metadata_file << loop_info.loop_id << " ";
     loop_metadata_file << loop_info.line_nr_ << "\n";
