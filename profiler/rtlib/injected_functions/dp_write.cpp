@@ -85,25 +85,25 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
   AccessInfo current;
 #else
   // check if buffer is full. Push it to firstAccessQueue if so, and create a new buffer
-  if(mainThread_AccessInfoBuffer->is_full()){
+  if (mainThread_AccessInfoBuffer->is_full()) {
     // spin-lock to prevent endless queue growth
-    while(!firstAccessQueue.can_accept_entries()){
+    while (!firstAccessQueue.can_accept_entries()) {
       usleep(1000);
     }
     firstAccessQueue.push(mainThread_AccessInfoBuffer);
     mainThread_AccessInfoBuffer = firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_SIZES);
   }
-  AccessInfo& current = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
+  AccessInfo &current = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
 
 #endif
   current.isRead = false;
   // add current call path state identifier to lid for later retrieval
-  current.lid = lid | (((uint64_t) current_callpath_state->get_id()) << 32);
+  current.lid = lid | (((uint64_t)current_callpath_state->get_id()) << 32);
   current.var = var;
 #if DP_MEMORY_REGION_DEALIASING
   current.AAvar = getMemoryRegionIdFromAddr(var, addr);
 #else
-  current.AAvar = (std::int64_t) var;
+  current.AAvar = (std::int64_t)var;
 #endif
   current.addr = addr;
 
@@ -115,7 +115,6 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
   analyzeSingleAccess(singleThreadedExecutionSMem, current);
 #endif
-
 }
 }
 

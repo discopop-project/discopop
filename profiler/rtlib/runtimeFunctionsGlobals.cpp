@@ -34,12 +34,11 @@ LoopManager *loop_manager = nullptr;
 MemoryManager *memory_manager = nullptr;
 
 #if DP_CALLTREE_PROFILING
-    CallTree call_tree;
-    std::mutex dependency_metadata_results_mtx;
-    std::unordered_set<DependencyMetadata> dependency_metadata_results;
-    thread_local std::unordered_set<DependencyMetadata> local_dependency_metadata_results;
+CallTree call_tree;
+std::mutex dependency_metadata_results_mtx;
+std::unordered_set<DependencyMetadata> dependency_metadata_results;
+thread_local std::unordered_set<DependencyMetadata> local_dependency_metadata_results;
 #endif
-
 
 // hybrid analysis
 ReportedBBSet *bbList = nullptr;
@@ -64,11 +63,12 @@ std::ofstream *out = nullptr;
 /******* BEGIN: parallelization section *******/
 std::mutex allDepsLock;
 pthread_t *workers = nullptr; // worker threads
-volatile bool finalizeParallelizationCalled = false;  // signals to worker threads that no further data access will be registered in the first queue
-FirstAccessQueueChunk* mainThread_AccessInfoBuffer = nullptr;
+volatile bool finalizeParallelizationCalled =
+    false; // signals to worker threads that no further data access will be registered in the first queue
+FirstAccessQueueChunk *mainThread_AccessInfoBuffer = nullptr;
 FirstAccessQueue firstAccessQueue(FIRST_ACCESS_QUEUE_SIZES);
 SecondAccessQueue secondAccessQueue(SECOND_ACCESS_QUEUE_SIZES);
-pthread_t* secondAccessQueue_worker_thread = nullptr;
+pthread_t *secondAccessQueue_worker_thread = nullptr;
 FirstAccessQueueChunkBuffer firstAccessQueueChunkBuffer(10);
 
 #define XSTR(x) STR(x)
@@ -84,13 +84,12 @@ AbstractShadow *singleThreadedExecutionSMem = nullptr; // used if NUM_WORKERS==0
 
 thread_local depMap *myMap = nullptr;
 
-CallState* current_callpath_state = 0;
+CallState *current_callpath_state = 0;
 std::vector<uint32_t> calls_without_executed_transitions;
-CallStateGraph* call_state_graph;
+CallStateGraph *call_state_graph;
 
 // statistics
 std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
-
 
 /******* END: parallelization section *******/
 

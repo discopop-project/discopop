@@ -17,13 +17,13 @@
 #include "../../share/include/debug_print.hpp"
 #include "../../share/include/timer.hpp"
 
+#include <boost/algorithm/string.hpp>
 #include <cstdint>
 #include <iostream>
 #include <mutex>
 #include <regex>
-#include <unordered_set>
 #include <string>
-#include <boost/algorithm/string.hpp>
+#include <unordered_set>
 
 namespace __dp {
 
@@ -47,17 +47,17 @@ void __dp_add_bb_deps(char *depStringPtr) {
 
   std::string depString(depStringPtr);
   std::regex r0("[^\\/]+"), r1("[^=]+"), r2("[^,]+"), r4("(INIT|(R|W)A(R|W)).*");
-  std::regex r3("[0-9]+");  // use instructionID based regex, instead of old r3("[0-9]+:[0-9]+") for lineID
+  std::regex r3("[0-9]+"); // use instructionID based regex, instead of old r3("[0-9]+:[0-9]+") for lineID
   std::smatch res1, res2, res3;
 
   std::vector<std::string> strs;
   boost::split(strs, depString, boost::is_any_of("/"));
 
-  for(string substring : strs) {
+  for (string substring : strs) {
     regex_search(substring, res1, r1);
     std::string cond(res1[0]);
 
-    if(cond.length() == 0){
+    if (cond.length() == 0) {
       // skip invalid entry
       continue;
     }

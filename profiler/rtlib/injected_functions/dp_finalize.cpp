@@ -20,12 +20,12 @@
 
 #include "dp_func_exit.hpp"
 
+#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <mutex>
 #include <set>
 #include <string>
-#include <chrono>
 
 using namespace std;
 
@@ -160,9 +160,9 @@ void __dp_finalize(LID lid) {
   delete call_state_graph;
 
 #ifdef DP_CALLTREE_PROFILING
-  //delete call_tree;
-  // delete metadata_queue;
-  //  output metadata to file
+  // delete call_tree;
+  //  delete metadata_queue;
+  //   output metadata to file
   std::cout << "Outputting dependency metadata... " << std::endl;
   std::ifstream ifile;
   std::string line;
@@ -193,7 +193,8 @@ void __dp_finalize(LID lid) {
   delete out;
 
   // output elapsed time for profiling
-  std::chrono::milliseconds time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - statistics_profiling_start_time);
+  std::chrono::milliseconds time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::high_resolution_clock::now() - statistics_profiling_start_time);
 #ifdef __linux__
   // try to get an output file name w.r.t. the target application
   // if it is not available, fall back to "Output.txt"
