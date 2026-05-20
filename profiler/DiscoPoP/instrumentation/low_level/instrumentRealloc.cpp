@@ -21,7 +21,11 @@ void DiscoPoP::instrumentRealloc(CallBase *toInstrument) {
   // Determine correct placement for the call to __dp_new
   Instruction *nextInst = nullptr;
   if (isa<CallInst>(toInstrument)) {
+#if LLVM_VERSION_MAJOR >= 22
+    nextInst = toInstrument->getNextNode();
+#else
     nextInst = toInstrument->getNextNonDebugInstruction();
+#endif
   } else if (isa<InvokeInst>(toInstrument)) {
     // Invoke instructions are always located at the end of a basic block.
     // Invoke instructions may throw errors, in which case the successor is a
@@ -37,8 +41,13 @@ void DiscoPoP::instrumentRealloc(CallBase *toInstrument) {
 
   // deallocate
   args.push_back(ConstantInt::get(Int32, lid));
+#if LLVM_VERSION_MAJOR >= 22
+  Value *startAddr =
+      PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode()->getIterator());
+#else
   Value *startAddr =
       PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode());
+#endif
   args.push_back(startAddr);
   IRB.CreateCall(DpDelete, args, "");
   args.clear();

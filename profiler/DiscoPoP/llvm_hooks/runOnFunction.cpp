@@ -371,9 +371,17 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
       // Insert call to reportbb
       Instruction *insertionPoint = pair.first->getTerminator();
       if (isa<ReturnInst>(pair.first->getTerminator())) {
+#if LLVM_VERSION_MAJOR >= 22
+        insertionPoint = insertionPoint->getPrevNode();
+#else
         insertionPoint = insertionPoint->getPrevNonDebugInstruction();
+#endif
       }
+#if LLVM_VERSION_MAJOR >= 22
+      CallInst::Create(ReportBB, ConstantInt::get(Int32, bbDepCount), "", insertionPoint->getIterator());
+#else
       CallInst::Create(ReportBB, ConstantInt::get(Int32, bbDepCount), "", insertionPoint);
+#endif
 
       // ---- Insert deps into string ----
       if (bbDepCount)
@@ -393,17 +401,32 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     // Add observation of in-order execution of pairs of basic blocks
     for (auto pair1 : conditionalBBPairDepMap) {
       // Alloca and init semaphore var for BB
+#if LLVM_VERSION_MAJOR >= 22
+      auto AI = new AllocaInst(Int32, 0, "__dp_bb", F.getEntryBlock().getFirstNonPHI()->getNextNode()->getIterator());
+      new StoreInst(ConstantInt::get(Int32, 0), AI, false, AI->getNextNode()->getIterator());
+#else
       auto AI = new AllocaInst(Int32, 0, "__dp_bb", F.getEntryBlock().getFirstNonPHI()->getNextNonDebugInstruction());
       new StoreInst(ConstantInt::get(Int32, 0), AI, false, AI->getNextNonDebugInstruction());
+#endif
 
       for (auto pair2 : pair1.second) {
         // Insert check for semaphore
         Instruction *insertionPoint = pair2.first->getTerminator();
-        if (isa<ReturnInst>(pair2.first->getTerminator()))
+        if (isa<ReturnInst>(pair2.first->getTerminator())) {
+#if LLVM_VERSION_MAJOR >= 22
+          insertionPoint = insertionPoint->getPrevNode();
+#else
           insertionPoint = insertionPoint->getPrevNonDebugInstruction();
+#endif
+        }
 
+#if LLVM_VERSION_MAJOR >= 22
+        auto LI = new LoadInst(Int32, AI, Twine(""), false, insertionPoint->getIterator());
+        CallInst::Create(ReportBBPair, ArrayRef<Value *>({LI, ConstantInt::get(Int32, bbDepCount)}), "", insertionPoint->getIterator());
+#else
         auto LI = new LoadInst(Int32, AI, Twine(""), false, insertionPoint);
         CallInst::Create(ReportBBPair, ArrayRef<Value *>({LI, ConstantInt::get(Int32, bbDepCount)}), "", insertionPoint);
+#endif
 
         // ---- Insert deps into string ----
         if (bbDepCount)
@@ -421,7 +444,11 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
         ++bbDepCount;
       }
       // Insert semaphore update to true
+#if LLVM_VERSION_MAJOR >= 22
+      new StoreInst(ConstantInt::get(Int32, 1), AI, false, pair1.first->getTerminator()->getIterator());
+#else
       new StoreInst(ConstantInt::get(Int32, 1), AI, false, pair1.first->getTerminator());
+#endif
     }
 
     if (DumpToDot) {

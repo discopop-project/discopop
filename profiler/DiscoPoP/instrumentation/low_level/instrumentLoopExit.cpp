@@ -23,8 +23,13 @@ void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id) {
       args.push_back(ConstantInt::get(Int32, lid));
       args.push_back(ConstantInt::get(Int32, id));
       args.push_back(ConstantInt::get(Int32, 0));  // instruction id will be replaced after the assignment of unique instruction ids
+#if LLVM_VERSION_MAJOR >= 22
+      CallInst::Create(DpLoopExit, args, "",
+                       currentBB->begin()); // always insert to the beiginning
+#else
       CallInst::Create(DpLoopExit, args, "",
                        &*currentBB->begin()); // always insert to the beiginning
+#endif
       break;
     }
   }
