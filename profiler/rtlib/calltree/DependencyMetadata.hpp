@@ -58,17 +58,17 @@ template <> struct std::hash<__dp::DependencyMetadata> {
     hash_combine(seed, hash_value(k.source));
     hash_combine(seed, hash_value(k.var));
     hash_combine(seed, hash_value(k.AAvar));
-    for(auto e: k.intra_call_dependencies)
+    for (auto e : k.intra_call_dependencies)
       hash_combine(seed, hash_value(e));
-    for(auto e: k.intra_iteration_dependencies)
+    for (auto e : k.intra_iteration_dependencies)
       hash_combine(seed, hash_value(e));
-    for(auto e: k.inter_call_dependencies)
+    for (auto e : k.inter_call_dependencies)
       hash_combine(seed, hash_value(e));
-    for(auto e : k.inter_iteration_dependencies)
+    for (auto e : k.inter_iteration_dependencies)
       hash_combine(seed, hash_value(e));
-    for(auto e : k.sink_ancestors)
+    for (auto e : k.sink_ancestors)
       hash_combine(seed, hash_value(e));
-    for(auto e : k.source_ancestors)
+    for (auto e : k.source_ancestors)
       hash_combine(seed, hash_value(e));
 
     // Return the result.

@@ -14,7 +14,7 @@
 
 #include "../DPUtils.hpp"
 
-#define get_char_at_level(addr, level) ((((addr) << ((level)*4)) >> 60) & 0x000000000000000F)
+#define get_char_at_level(addr, level) ((((addr) << ((level) * 4)) >> 60) & 0x000000000000000F)
 
 inline ADDR get_level_shifting_mask(int level) {
   switch (level) {

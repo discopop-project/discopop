@@ -23,8 +23,8 @@ DependencyMetadata::DependencyMetadata(MetaDataQueueElement mdqe, hashset<unsign
       intra_call_dependencies(std::move(arg_intra_call_dependencies)),
       intra_iteration_dependencies(std::move(arg_intra_iteration_dependencies)),
       inter_call_dependencies(std::move(arg_inter_call_dependencies)),
-      inter_iteration_dependencies(std::move(arg_inter_iteration_dependencies)), sink_ancestors(std::move(arg_sink_ancestors)),
-      source_ancestors(std::move(arg_source_ancestors)) {}
+      inter_iteration_dependencies(std::move(arg_inter_iteration_dependencies)),
+      sink_ancestors(std::move(arg_sink_ancestors)), source_ancestors(std::move(arg_source_ancestors)) {}
 
 bool DependencyMetadata::operator==(const DependencyMetadata &other) const {
   return (type == other.type) && (sink == other.sink) && (source == other.source) && (var == other.var) &&

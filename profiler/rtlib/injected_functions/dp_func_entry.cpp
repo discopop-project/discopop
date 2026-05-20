@@ -22,12 +22,12 @@
 
 #include <linux/limits.h>
 
+#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <mutex>
 #include <set>
 #include <string>
-#include <chrono>
 
 using namespace std;
 
@@ -65,7 +65,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     //
 #if DP_CALLTREE_PROFILING
 //    call_tree = new CallTree();
-    // metadata_queue = new MetaDataQueue(6); // TODO: add Worker argument
+// metadata_queue = new MetaDataQueue(6); // TODO: add Worker argument
 //    dependency_metadata_results_mtx = new std::mutex();
 //    dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
 #endif
@@ -110,7 +110,6 @@ void __dp_func_entry(LID lid, int32_t isStart) {
       // Static callPath tracing
       call_state_graph = new CallStateGraph();
       initialize_current_callpath_state();
-
     }
 #else
     out->open("Output.txt", ios::out);
