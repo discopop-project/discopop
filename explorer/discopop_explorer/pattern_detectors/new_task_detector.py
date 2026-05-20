@@ -28,12 +28,13 @@ from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
-from discopop_gui.Visualizers.Base import Base as Visualizer
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     ParallelRegionInfo,
     TPIType,
     TaskParallelismInfo,
 )
+
+from discopop_gui.Visualizers.Base import Base as Visualizer
 
 logger = logging.getLogger("Explorer").getChild("Tasking")
 
@@ -112,6 +113,9 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
             ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
         )
 
+        new_graph = context_task_graph.create_plottable_canvas("New graph")
+        context_task_graph.task_graph.new_plot_context_debug_graph(new_graph)
+
     def on_filter(filter_text: str) -> None:
         print("Filter text:", filter_text)
 
@@ -123,6 +127,7 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
             "Task graph (context graph)",
             "Task graph (context debug graph)",
             "Context task graph",
+            "New Graph"
         ]:
             try:
                 context_task_graph.delete_frame(frame_name)
