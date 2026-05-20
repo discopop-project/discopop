@@ -23,8 +23,6 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
   const auto calltree_timer = Timer(timers, TimerRegion::PROCESSQUEUEELEMENT);
 #endif
 
-  // cout << "processing " << mdqe.toString() << "\n";
-
   // Keep accessed nodes alive at least until this function is returning
   // Since theo sink_ctn and source_ctn are kept alive until the function returns, we
   // also know, that their ancestors will be kept alive. For this reason, we can use the
@@ -126,8 +124,6 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
       disjoint_source_ancestors.insert(source_anc);
     }
   }
-  // cout << "common: " << common_ancestors.size() << " disjoint sink: " << disjoint_sink_ancestors.size() << " source:
-  // " << disjoint_source_ancestors.size() << "\n";
 
   // identify intra_call and intra_iteration dependencies
   hashset<unsigned int> intra_call_dependencies;
@@ -139,8 +135,6 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
       intra_iteration_dependencies.insert(common_anc->get_loop_or_function_id());
     }
   }
-  // cout << "intra_call: " << intra_call_dependencies.size() << " intra_iteration: " <<
-  // intra_iteration_dependencies.size() << "\n";
 
   // identify inter_call and inter_iteration dependencies
   hashset<unsigned int> inter_call_dependencies;
@@ -164,8 +158,6 @@ DependencyMetadata processQueueElement(MetaDataQueueElement &&mdqe) {
       }
     }
   }
-  // cout << "inter_call: " << inter_call_dependencies.size() << " inter_iteration: " <<
-  // inter_iteration_dependencies.size() << "\n";
 
   return DependencyMetadata(mdqe, std::move(intra_call_dependencies), std::move(intra_iteration_dependencies),
                             std::move(inter_call_dependencies), std::move(inter_iteration_dependencies),
