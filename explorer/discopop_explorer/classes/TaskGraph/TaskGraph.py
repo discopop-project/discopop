@@ -97,7 +97,7 @@ logger = logging.getLogger("Explorer")
 TGConstructionQueueElement = Tuple[Optional[TGNode], Union[PETNode, VisitorMarker]]  # (Predecessor, current element)
 
 
-class TaskGraph(Plottable, object):
+class TaskGraph(Plottable, object):  # type: ignore[misc]
     pet: PEGraphX
     graph: nx.MultiDiGraph
     root: TGNode

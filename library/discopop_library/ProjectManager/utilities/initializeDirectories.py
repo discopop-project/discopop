@@ -27,7 +27,3 @@ def initialize_directories(arguments: ProjectManagerArguments) -> None:
     if not os.path.exists(arguments.project_config_dir):
         logger.info("Creating directory: " + arguments.project_config_dir)
         os.mkdir(arguments.project_config_dir)
-
-    if not os.path.exists(os.path.join(arguments.project_config_dir, "tiny")):
-        logger.info("Creating configurations directory: " + os.path.join(arguments.project_config_dir, "tiny"))
-        os.mkdir(os.path.join(arguments.project_config_dir, "tiny"))

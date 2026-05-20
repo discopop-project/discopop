@@ -86,7 +86,7 @@ global_pet = None
 #            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
 
 
-class PEGraphX(Plottable, object):
+class PEGraphX(Plottable, object):  # type: ignore[misc]
     g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
     main: Node
