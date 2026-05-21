@@ -47,3 +47,4 @@ class WithTrees(ViewableCanvas):
     def add_dependency(self, source_node_id : int, destination_node_id : int, *args: Any, **kwargs: Any) -> None:
         edge_id = self.create_line(*args, **kwargs)
         self._nodes[source_node_id].add_child(self._nodes[destination_node_id], edge_id)
+        self._nodes[destination_node_id].add_child(self._nodes[source_node_id], edge_id)
