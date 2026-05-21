@@ -46,6 +46,7 @@ This document contains critical information about working with this codebase. Fo
 ## Testing
 ### Install python packages
 - to install python packages, execute `venv/bin/pip install . ./profiler ./library` from the root directory of the project
+- **Important:** The profiler module must be installed without the `-e` (editable) flag. Use `pip install ./profiler`, not `pip install -e ./profiler`. Editable mode breaks the relative paths required by `CXX_wrapper.sh` to locate compiled artifacts like `LLVMDiscoPoP.so`.
 ### Python
 - to execute python unit tests, use 'venv/bin/python -m unittest -v -k "*.end_to_end.*"'
 ### C++

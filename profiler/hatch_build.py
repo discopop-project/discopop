@@ -102,11 +102,37 @@ if _has_prepare_wheel:
 if _has_editable:
 
     def get_requires_for_build_editable(config_settings: Any = None) -> list[str]:
-        return _get_requires_for_build_editable(config_settings)  # type: ignore
+        raise RuntimeError(
+            "Editable installs (-e flag) are not supported for discopop-profiler.\n"
+            "\n"
+            "Reason: The profiler requires compiled artifacts (LLVMDiscoPoP.so) and\n"
+            "        wrapper scripts to be in specific locations. Editable mode breaks\n"
+            "        relative path resolution.\n"
+            "\n"
+            "Solution: Use standard install instead:\n"
+            "  pip install ./profiler\n"
+        )
 
     def build_editable(wheel_directory: str, config_settings: Any = None, metadata_directory: Any = None) -> str:
-        _check_system_dependencies()
-        return _build_editable(wheel_directory, config_settings, metadata_directory)  # type: ignore
+        raise RuntimeError(
+            "Editable installs (-e flag) are not supported for discopop-profiler.\n"
+            "\n"
+            "Reason: The profiler requires compiled artifacts (LLVMDiscoPoP.so) and\n"
+            "        wrapper scripts to be in specific locations. Editable mode breaks\n"
+            "        relative path resolution.\n"
+            "\n"
+            "Solution: Use standard install instead:\n"
+            "  pip install ./profiler\n"
+        )
 
     def prepare_metadata_for_build_editable(metadata_directory: str, config_settings: Any = None) -> str:
-        return _prepare_metadata_for_build_editable(metadata_directory, config_settings)  # type: ignore
+        raise RuntimeError(
+            "Editable installs (-e flag) are not supported for discopop-profiler.\n"
+            "\n"
+            "Reason: The profiler requires compiled artifacts (LLVMDiscoPoP.so) and\n"
+            "        wrapper scripts to be in specific locations. Editable mode breaks\n"
+            "        relative path resolution.\n"
+            "\n"
+            "Solution: Use standard install instead:\n"
+            "  pip install ./profiler\n"
+        )
