@@ -63,6 +63,7 @@ class SuggestionBrowserDialog:
         self._load_patches()
         self._load_selection()
         self._merge_new_patches()
+        self._save_selection(notify=False)
         self._build_dialog()
 
     def _get_selection_path(self) -> str:
@@ -106,7 +107,7 @@ class SuggestionBrowserDialog:
                     if f not in self._selection[sid]:
                         self._selection[sid].append(f)
 
-    def _save_selection(self) -> None:
+    def _save_selection(self, notify: bool = True) -> None:
         path = self._get_selection_path()
         os.makedirs(os.path.dirname(path), exist_ok=True)
         try:
@@ -114,7 +115,7 @@ class SuggestionBrowserDialog:
                 json.dump({"selected": self._selection}, f, indent=2)
         except IOError:
             pass
-        if self.on_selection_changed:
+        if notify and self.on_selection_changed:
             self.on_selection_changed()
 
     def _build_dialog(self) -> None:
