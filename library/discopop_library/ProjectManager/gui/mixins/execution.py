@@ -256,3 +256,122 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
 
         threading.Thread(target=thread_func, daemon=True).start()
+
+    def _prepare_pattern_detection(self) -> None:
+        if not self.current_config:
+            show_warning(self, "No Configuration Selected", "Please select a configuration first.")
+            return
+
+        self.prepare_pattern_detection_button.config(state="disabled", text="⟳ Preparing...")
+        self.run_button.config(state="disabled")
+        self.generate_report_button.config(state="disabled")
+        self.view_report_button.config(state="disabled")
+
+        self.status_label.config(text="⏳ Preparing pattern detection...", fg="#FF6B6B")
+
+        self.output_text.config(state=tk.NORMAL)
+        self.output_text.delete("1.0", tk.END)
+        self.output_text.config(state="disabled")
+
+        def append_output(text: str) -> None:
+            self.output_text.config(state=tk.NORMAL)
+            self.output_text.insert(tk.END, text)
+            self.output_text.see(tk.END)
+            self.output_text.config(state="disabled")
+
+        args_copy = copy.copy(self.arguments)
+        args_copy.execute_inplace = True
+        args_copy.skip_cleanup = False
+        args_copy.label_prefix = ""
+        args_copy.timeout_execution = self.timeout_execution_var.get()
+        args_copy.timeout_compilation = self.timeout_compilation_var.get()
+        args_copy.log_level = "INFO"
+        args_copy.apply_suggestions = None
+
+        current_config = self.current_config
+        config_path = os.path.join(self.config_dir, current_config)
+
+        import logging
+
+        logging.basicConfig(level="INFO", force=True)
+        root_logger = logging.getLogger()
+        root_logger.setLevel("INFO")
+
+        for handler in root_logger.handlers[:]:
+            root_logger.removeHandler(handler)
+
+        from discopop_library.ProjectManager.gui.mixins.helpers import TextAreaHandler
+
+        text_handler = TextAreaHandler(self.output_text)
+        text_handler.setLevel("INFO")
+        formatter = logging.Formatter("[%(name)s] %(levelname)s: %(message)s")
+        text_handler.setFormatter(formatter)
+        root_logger.addHandler(text_handler)
+
+        logger = logging.getLogger("Prepare Pattern Detection")
+
+        def thread_func() -> None:
+            logger.info(f"Starting pattern detection preparation for: {current_config}")
+            self.after(0, lambda: append_output("Compiling in 'dp' mode with inplace execution...\n\n"))  # type: ignore
+
+            shared_compile_sh = os.path.join(self.arguments.project_config_dir, "compile.sh")
+            shared_dp_settings = os.path.join(self.arguments.project_config_dir, "dp_settings.json")
+
+            self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", fg="#FF6B6B"))  # type: ignore
+            self.after(0, lambda: append_output("Compiling...\n"))  # type: ignore
+
+            compile_result = execute_configuration(
+                args_copy,
+                self.arguments.project_root,
+                config_path,
+                shared_dp_settings,
+                shared_compile_sh,
+                1,
+                args_copy.timeout_compilation,
+            )
+
+            if compile_result is None or compile_result[0] != 0:
+                ret_code = compile_result[0] if compile_result else "None"
+                self.after(0, lambda rc=ret_code: append_output(f"Compilation failed (return code: {rc})\n"))  # type: ignore
+                self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", fg="red"))  # type: ignore
+            else:
+                ret_code, elapsed, stdout, stderr = compile_result
+                self.after(0, lambda e=elapsed: append_output(f"Compilation succeeded ({e:.2f}s)\n"))  # type: ignore
+                if stdout:
+                    self.after(0, lambda o=stdout: append_output(f"stdout: {o}\n"))  # type: ignore
+                if stderr:
+                    self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+
+                self.after(0, lambda: self.status_label.config(text="⏳ Executing...", fg="#FF6B6B"))  # type: ignore
+                self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
+
+                execute_result = execute_configuration(
+                    args_copy,
+                    self.arguments.project_root,
+                    config_path,
+                    shared_dp_settings,
+                    os.path.join(config_path, "execute.sh"),
+                    1,
+                    args_copy.timeout_execution,
+                )
+
+                if execute_result is None or execute_result[0] != 0:
+                    ret_code = execute_result[0] if execute_result else "None"
+                    self.after(0, lambda rc=ret_code: append_output(f"Execution failed (return code: {rc})\n"))  # type: ignore
+                    self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", fg="red"))  # type: ignore
+                else:
+                    ret_code, elapsed, stdout, stderr = execute_result
+                    self.after(0, lambda e=elapsed: append_output(f"Execution succeeded ({e:.2f}s)\n"))  # type: ignore
+                    if stdout:
+                        self.after(0, lambda o=stdout: append_output(f"stdout: {o}\n"))  # type: ignore
+                    if stderr:
+                        self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+
+            self.after(0, lambda: append_output("\n=== Pattern detection preparation complete ===\n"))  # type: ignore
+            self.after(0, lambda: self.prepare_pattern_detection_button.config(state=tk.NORMAL, text="Prepare Pattern Detection"))  # type: ignore
+            self.after(0, lambda: self.run_button.config(state=tk.NORMAL))  # type: ignore
+            self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
+            self.after(0, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
+
+        threading.Thread(target=thread_func, daemon=True).start()

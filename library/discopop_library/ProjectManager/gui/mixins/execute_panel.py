@@ -303,11 +303,19 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         def on_run() -> None:
             self._run_execution()
 
+        def on_prepare_pattern_detection() -> None:
+            self._prepare_pattern_detection()
+
         run_button_frame = tk.Frame(left_frame)
         run_button_frame.pack(fill=tk.X, padx=0, pady=0)
 
         self.run_button = tk.Button(run_button_frame, text="Run", command=on_run, state="disabled", width=15)
         self.run_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        self.prepare_pattern_detection_button = tk.Button(
+            run_button_frame, text="Prepare Pattern Detection", command=on_prepare_pattern_detection, state="disabled"
+        )
+        self.prepare_pattern_detection_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         # Right panel - output
         right_frame = tk.Frame(main_paned)

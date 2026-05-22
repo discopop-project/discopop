@@ -55,6 +55,7 @@ class ConfigManagerMixinBase:
     inplace_var: tk.BooleanVar
     skip_cleanup_var: tk.BooleanVar
     run_button: tk.Button
+    prepare_pattern_detection_button: tk.Button
     output_text: scrolledtext.ScrolledText
     generate_report_button: tk.Button
 
@@ -144,6 +145,10 @@ class ConfigManagerMixinBase:
 
     def _run_execution(self) -> None:
         """Run the execution."""
+        ...
+
+    def _prepare_pattern_detection(self) -> None:
+        """Prepare for pattern detection with pre-configured parameters."""
         ...
 
     def _open_compilation_editor(self) -> None:
