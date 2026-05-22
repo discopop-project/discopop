@@ -206,6 +206,11 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         save_button = tk.Button(bottom_comp_frame, text="Save (Ctrl+S)", command=self._save_compilation_files)
         save_button.pack(side=tk.LEFT, padx=5)
 
+        self.test_compilation_button = tk.Button(
+            bottom_comp_frame, text="Test Compilation", command=self._test_compilation_from_editor, state="disabled"
+        )
+        self.test_compilation_button.pack(side=tk.LEFT, padx=5)
+
         self.derive_compilation_button = tk.Button(
             bottom_comp_frame, text="Derive", command=self._derive_compilation_settings, state="disabled"
         )
@@ -316,13 +321,17 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             self.status_label.config(text="No changes to save", fg="gray")
 
     def _on_compilation_tab_changed(self, event: Any) -> None:
-        """Show/hide Derive button based on active compilation tab"""
+        """Show/hide Derive and Test buttons based on active compilation tab"""
         notebook = self.compilation_notebook
         if not notebook:
             return
         current_tab = notebook.select()
         if current_tab:
             tab_text = notebook.tab(current_tab, "text").rstrip("*")
+            if tab_text == "compile.sh":
+                self.test_compilation_button.pack(side=tk.LEFT, padx=5)
+            else:
+                self.test_compilation_button.pack_forget()
             if tab_text == "seq_settings.json":
                 self.derive_compilation_button.pack(side=tk.LEFT, padx=5)
             else:
@@ -374,6 +383,105 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         for _, tooltip in self.compilation_tab_tooltips.values():
             tooltip.hidetip()
         self.current_tooltip_tab = None
+
+    def _test_compilation_from_editor(self) -> None:
+        """Test compilation using current compile.sh and seq_settings.json"""
+        import threading
+
+        if self.compilation_modified_files.get("compile.sh", False) or self.compilation_modified_files.get(
+            "seq_settings.json", False
+        ):
+            self._save_compilation_files()
+
+        compile_sh_path = os.path.join(self.arguments.project_config_dir, "compile.sh")
+        seq_settings_path = os.path.join(self.arguments.project_config_dir, "seq_settings.json")
+
+        if not os.path.exists(compile_sh_path):
+            show_error(self, "Missing File", "compile.sh not found")
+            return
+
+        if not os.path.exists(seq_settings_path):
+            show_error(self, "Missing File", "seq_settings.json not found")
+            return
+
+        self.test_compilation_button.config(state="disabled", text="⟳ Testing...")
+        self.status_label.config(text="Running compilation test...", fg="#FF6B6B")
+
+        def thread_func() -> None:
+            from discopop_library.ProjectManager.configurations.execution import execute_configuration
+
+            result = execute_configuration(
+                copy.copy(self.arguments),
+                self.arguments.project_root,
+                self.arguments.project_config_dir,
+                seq_settings_path,
+                compile_sh_path,
+                1,
+                self.arguments.timeout_compilation,
+            )
+
+            if result is None:
+                self.after(0, lambda: self.status_label.config(text="✗ Compilation test failed: settings not found", fg="red"))  # type: ignore
+            else:
+                ret_code, elapsed, stdout, stderr = result
+                if ret_code == 0:
+                    self.after(0, lambda e=elapsed: self.status_label.config(text=f"✓ Compilation successful ({e:.2f}s)", fg="green"))  # type: ignore
+                else:
+                    self.after(0, lambda rc=ret_code, e=elapsed: self.status_label.config(text=f"✗ Compilation failed (exit code: {rc}, {e:.2f}s)", fg="red"))  # type: ignore
+
+                output_msg = f"Compilation test output:\n\n"
+                if ret_code == 0:
+                    output_msg += f"Success ({elapsed:.2f}s)\n"
+                else:
+                    output_msg += f"Failed with exit code {ret_code} ({elapsed:.2f}s)\n"
+                if stdout:
+                    output_msg += f"\nstdout:\n{stdout}\n"
+                if stderr:
+                    output_msg += f"\nstderr:\n{stderr}\n"
+
+                self.after(0, lambda msg=output_msg, rc=ret_code: self._show_test_compilation_result(msg, rc))  # type: ignore
+
+            self.after(0, lambda: self.test_compilation_button.config(state="normal", text="Test Compilation"))  # type: ignore
+
+        threading.Thread(target=thread_func, daemon=True).start()
+
+    def _show_test_compilation_result(self, output: str, return_code: int) -> None:
+        """Show test compilation result in a dialog"""
+        from tkinter import simpledialog
+
+        dialog = tk.Toplevel(self)  # type: ignore
+        dialog.title("Compilation Test Result")
+        dialog.geometry("700x500")
+        dialog.minsize(400, 300)
+
+        status_color = "green" if return_code == 0 else "red"
+        status_text = "✓ Success" if return_code == 0 else "✗ Failed"
+
+        status_label = tk.Label(dialog, text=status_text, fg=status_color, font=("TkDefaultFont", 12, "bold"))
+        status_label.pack(pady=10)
+
+        text_frame = tk.Frame(dialog)
+        text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        scrollbar = tk.Scrollbar(text_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        output_text = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD)
+        output_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=output_text.yview)
+
+        output_text.insert(1.0, output)
+        output_text.config(state=tk.DISABLED)
+
+        close_button = tk.Button(dialog, text="Close", command=dialog.destroy)
+        close_button.pack(pady=10)
+
+        pw = self.winfo_width()  # type: ignore
+        ph = self.winfo_height()  # type: ignore
+        px = self.winfo_rootx()  # type: ignore
+        py = self.winfo_rooty()  # type: ignore
+        w, h = 700, 500
+        dialog.geometry(f"{w}x{h}+{px + (pw - w) // 2}+{py + (ph - h) // 2}")
 
     def _derive_compilation_settings(self) -> None:
         """Derive dp, hd, and par settings from seq_settings.json"""

@@ -71,6 +71,7 @@ class ConfigManagerMixinBase:
     compilation_tab_tooltips: Dict[int, tuple[str, Tooltip]]
     compilation_tooltip_timer: Optional[str]
     current_tooltip_tab: Optional[int]
+    test_compilation_button: tk.Button
     derive_compilation_button: tk.Button
     derive_button_tooltip: Optional[Tooltip]
     derive_button_tooltip_timer: Optional[str]
