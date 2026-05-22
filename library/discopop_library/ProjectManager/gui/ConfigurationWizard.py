@@ -83,6 +83,7 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
 
         self.step_frames = [
             self._create_step_welcome(content_frame),
+            self._create_step_write_access_check(content_frame),
             self._create_step_compile_sh(content_frame),
             self._create_step_seq_settings(content_frame),
             self._create_step_test_compilation(content_frame),
@@ -97,14 +98,15 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
 
         step_titles = [
             "Welcome",
+            "Write Access Check",
             "Compilation Script",
             "Compilation Settings",
             "Test Compilation",
             "Derived Settings",
             "Execution Script",
         ]
-        self.title(f"Configuration Assistant - Step {step_index + 1} of 6: {step_titles[step_index]}")
-        self.step_label.config(text=f"Step {step_index + 1} of 6: {step_titles[step_index]}")
+        self.title(f"Configuration Assistant - Step {step_index + 1} of 7: {step_titles[step_index]}")
+        self.step_label.config(text=f"Step {step_index + 1} of 7: {step_titles[step_index]}")
 
         self.back_btn.config(state=tk.NORMAL if step_index > 0 else tk.DISABLED)
         if step_index < len(self.step_frames) - 1:
@@ -118,6 +120,8 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
         if self.step_index == 0:
             self._show_step(self.step_index + 1)
         elif self.step_index == 1:
+            self._show_step(self.step_index + 1)
+        elif self.step_index == 2:
             self.step_data["compile_sh"] = self.compile_sh_text.get(1.0, tk.END)
             compile_sh_content = self.step_data["compile_sh"]
             if "$CC" not in compile_sh_content and "$CXX" not in compile_sh_content:
@@ -131,17 +135,17 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
                     return
             self._write_compile_sh()
             self._show_step(self.step_index + 1)
-        elif self.step_index == 2:
+        elif self.step_index == 3:
             self.step_data["cc"] = self.cc_entry.get()
             self.step_data["cxx"] = self.cxx_entry.get()
             self.step_data["cflags"] = self.cflags_entry.get()
             self.step_data["cxxflags"] = self.cxxflags_entry.get()
             self._write_seq_settings()
             self._show_step(self.step_index + 1)
-        elif self.step_index == 3:
+        elif self.step_index == 4:
             self._show_step(self.step_index + 1)
             self._compute_and_display_derived_settings()
-        elif self.step_index == 4:
+        elif self.step_index == 5:
             self._save_derived_settings()
             self._show_step(self.step_index + 1)
         else:

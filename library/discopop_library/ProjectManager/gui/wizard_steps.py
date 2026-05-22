@@ -41,6 +41,41 @@ Click "Next >" to begin."""
         label.pack(anchor=tk.NW, padx=10, pady=15)
         return frame
 
+    def _create_step_write_access_check(self, parent: ttk.Frame) -> ttk.Frame:
+        frame = ttk.Frame(parent)
+
+        parent_folder = os.path.dirname(self.arguments.project_root)
+        has_write_access = os.access(parent_folder, os.W_OK)
+
+        if has_write_access:
+            status_text = "✓ Write Access Available"
+            status_color = "green"
+            description = """Write access to the parent folder has been detected.
+
+This allows DiscoPoP to automatically create and delete temporary project copies
+during execution, which enables non-inplace mode for testing and validation.
+
+You can proceed with the wizard configuration."""
+        else:
+            status_text = "⚠ No Write Access"
+            status_color = "orange"
+            description = """Write access to the parent folder is not available.
+
+Executions will be limited to "inplace" mode, where the project directory is
+modified directly. Temporary project copies cannot be created.
+
+You can still proceed with the configuration, but keep this limitation in mind."""
+
+        status_label = ttk.Label(frame, text=status_text, font=("TkDefaultFont", 11, "bold"), foreground=status_color)
+        status_label.pack(anchor=tk.W, padx=10, pady=(15, 10))
+
+        description_label = ttk.Label(
+            frame, text=description, font=("TkDefaultFont", 9), justify=tk.LEFT, wraplength=900
+        )
+        description_label.pack(anchor=tk.NW, padx=10, pady=10)
+
+        return frame
+
     def _create_step_compile_sh(self, parent: ttk.Frame) -> ttk.Frame:
         frame = ttk.Frame(parent)
 
