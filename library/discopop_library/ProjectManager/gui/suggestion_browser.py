@@ -269,10 +269,18 @@ class SuggestionBrowserDialog:
             self.selection_count_label.config(text=f"{selected} of {total} selected for execution")
 
     def _build_right_panel(self, parent: tk.Frame) -> None:
+        header_frame = tk.Frame(parent)
+        header_frame.pack(fill=tk.X, padx=5, pady=(5, 2))
+
         self.right_title_label = tk.Label(
-            parent, text="Select a file from the left panel", fg="gray", anchor=tk.W, font=("Arial", 9)
+            header_frame, text="Select a file from the left panel", fg="gray", anchor=tk.W, font=("Arial", 9)
         )
-        self.right_title_label.pack(fill=tk.X, padx=5, pady=(5, 2))
+        self.right_title_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        self.save_button = tk.Button(
+            header_frame, text="Save", command=self._save_current_patch, state=tk.DISABLED, width=10
+        )
+        self.save_button.pack(side=tk.LEFT, padx=(5, 0))
 
         editor_frame = tk.Frame(parent)
         editor_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
@@ -301,14 +309,6 @@ class SuggestionBrowserDialog:
         self.editor_text.tag_config("diff_remove", foreground="#f38ba8")
         self.editor_text.tag_config("diff_header", foreground="#89b4fa")
         self.editor_text.tag_config("diff_hunk", foreground="#f9e2af")
-
-        save_frame = tk.Frame(parent)
-        save_frame.pack(fill=tk.X, padx=5, pady=(2, 5))
-
-        self.save_button = tk.Button(
-            save_frame, text="Save", command=self._save_current_patch, state=tk.DISABLED, width=10
-        )
-        self.save_button.pack(side=tk.RIGHT, padx=2)
 
         self.editor_text.bind("<<Modified>>", self._on_text_modified)
 
