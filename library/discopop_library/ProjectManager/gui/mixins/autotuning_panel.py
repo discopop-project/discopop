@@ -140,7 +140,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         self.autotuning_run_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         # Selected suggestions display
-        suggestions_frame = tk.LabelFrame(left_frame, text="Selected Suggestions", padx=5, pady=5)
+        suggestions_frame = tk.LabelFrame(left_frame, text="Selected Suggestion IDs", padx=5, pady=5)
         suggestions_frame.pack(fill=tk.X, padx=5, pady=5)
 
         self.autotuning_suggestions_label = tk.Label(
