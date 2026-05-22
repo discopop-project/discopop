@@ -86,7 +86,7 @@ class ConfigManagerApp(  # type: ignore
         left_frame.pack_propagate(False)
         self.paned.add(left_frame, width=280, minsize=220)
 
-        label = tk.Label(left_frame, text="Run Configurations", font=("Arial", 12, "bold"))
+        label = tk.Label(left_frame, text="Run Configs", font=("Arial", 12, "bold"))
         label.pack(side=tk.TOP, padx=5, pady=5)
 
         self.listbox = tk.Listbox(
