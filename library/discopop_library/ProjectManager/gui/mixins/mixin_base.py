@@ -85,8 +85,7 @@ class ConfigManagerMixinBase:
     jobs_var: Optional[tk.StringVar]
 
     # Apply Suggestions (Execute tab)
-    apply_suggestions_var: tk.BooleanVar
-    apply_autotuner_suggestions_var: tk.BooleanVar
+    suggestions_mode_var: tk.StringVar
     suggestions_count_label: tk.Label
     autotuner_suggestions_info_label: tk.Label
 

@@ -233,14 +233,38 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         suggestions_frame = tk.LabelFrame(options_outer, text="Apply Suggestions", padx=5, pady=5)
         suggestions_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        self.apply_suggestions_var = tk.BooleanVar(value=False)
-        self.apply_suggestions_cb = tk.Checkbutton(
+        self.suggestions_mode_var = tk.StringVar(value="none")
+        self._autotuner_prefix_auto_value: str = ""
+
+        def _on_suggestions_mode_change(*args: Any) -> None:
+            mode = self.suggestions_mode_var.get()
+            if mode == "autotuner":
+                self._autotuner_prefix_auto_value = "auto"
+                self.label_prefix_var.set("auto")
+            else:
+                if self.label_prefix_var.get() == self._autotuner_prefix_auto_value:
+                    self.label_prefix_var.set("")
+                self._autotuner_prefix_auto_value = ""
+
+        self.suggestions_mode_var.trace_add("write", _on_suggestions_mode_change)
+
+        rb_none = tk.Radiobutton(
+            suggestions_frame,
+            text="None (apply no suggestions)",
+            variable=self.suggestions_mode_var,
+            value="none",
+        )
+        rb_none.pack(anchor=tk.W)
+
+        rb_manual = tk.Radiobutton(
             suggestions_frame,
             text="Apply manually selected suggestions",
-            variable=self.apply_suggestions_var,
+            variable=self.suggestions_mode_var,
+            value="manual",
             state="disabled",
         )
-        self.apply_suggestions_cb.pack(anchor=tk.W)
+        rb_manual.pack(anchor=tk.W)
+        self.apply_suggestions_rb = rb_manual
 
         suggestions_info_row = tk.Frame(suggestions_frame)
         suggestions_info_row.pack(fill=tk.X, pady=(3, 0))
@@ -258,27 +282,15 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         )
         self.browse_edit_suggestions_button.pack(side=tk.LEFT)
 
-        self.apply_autotuner_suggestions_var = tk.BooleanVar(value=False)
-        self._autotuner_prefix_auto_value: str = ""
-
-        def _on_autotuner_toggle(*args: Any) -> None:
-            if self.apply_autotuner_suggestions_var.get():
-                self._autotuner_prefix_auto_value = "auto"
-                self.label_prefix_var.set("auto")
-            else:
-                if self.label_prefix_var.get() == self._autotuner_prefix_auto_value:
-                    self.label_prefix_var.set("")
-                self._autotuner_prefix_auto_value = ""
-
-        self.apply_autotuner_suggestions_var.trace_add("write", _on_autotuner_toggle)
-
-        self.apply_autotuner_suggestions_cb = tk.Checkbutton(
+        rb_autotuner = tk.Radiobutton(
             suggestions_frame,
             text="Apply autotuner-selected suggestions",
-            variable=self.apply_autotuner_suggestions_var,
+            variable=self.suggestions_mode_var,
+            value="autotuner",
             state="disabled",
         )
-        self.apply_autotuner_suggestions_cb.pack(anchor=tk.W, pady=(5, 0))
+        rb_autotuner.pack(anchor=tk.W, pady=(5, 0))
+        self.apply_autotuner_suggestions_rb = rb_autotuner
 
         autotuner_info_row = tk.Frame(suggestions_frame)
         autotuner_info_row.pack(fill=tk.X, pady=(3, 0))
@@ -345,13 +357,14 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
 
         if total == 0:
             self.suggestions_count_label.config(text="No suggestions available", fg="gray")
-            self.apply_suggestions_cb.config(state="disabled")
-            self.apply_suggestions_var.set(False)
+            self.apply_suggestions_rb.config(state="disabled")
+            if self.suggestions_mode_var.get() == "manual":
+                self.suggestions_mode_var.set("none")
             self.browse_edit_suggestions_button.config(state="disabled")
         else:
             fg = "black" if selected > 0 else "gray"
             self.suggestions_count_label.config(text=f"{selected} of {total} selected", fg=fg)
-            self.apply_suggestions_cb.config(state="normal")
+            self.apply_suggestions_rb.config(state="normal")
             self.browse_edit_suggestions_button.config(state="normal")
 
         if hasattr(self, "autotuner_suggestions_info_label"):
@@ -378,12 +391,13 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
             else:
                 self.autotuner_suggestions_info_label.config(text="Autotuner not yet executed", fg="gray")
 
-            if hasattr(self, "apply_autotuner_suggestions_cb"):
+            if hasattr(self, "apply_autotuner_suggestions_rb"):
                 if autotuner_executed and config_key:
-                    self.apply_autotuner_suggestions_cb.config(state="normal")
+                    self.apply_autotuner_suggestions_rb.config(state="normal")
                 else:
-                    self.apply_autotuner_suggestions_cb.config(state="disabled")
-                    self.apply_autotuner_suggestions_var.set(False)
+                    self.apply_autotuner_suggestions_rb.config(state="disabled")
+                    if self.suggestions_mode_var.get() == "autotuner":
+                        self.suggestions_mode_var.set("none")
 
         if hasattr(self, "_refresh_autotuning_suggestions_display"):
             self._refresh_autotuning_suggestions_display()

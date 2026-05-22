@@ -97,8 +97,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
         timeout_execution = self.timeout_execution_var.get()
         timeout_compilation = self.timeout_compilation_var.get()
         log_level = self.log_level_var.get()
-        apply_suggestions_enabled = self.apply_suggestions_var.get()
-        apply_autotuner_suggestions_enabled = self.apply_autotuner_suggestions_var.get()
+        suggestions_mode = self.suggestions_mode_var.get()
         assert self.current_config is not None
         current_config = self.current_config
         config_path = os.path.join(self.config_dir, current_config)
@@ -112,7 +111,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
 
         combined_ids: list[str] = []
 
-        if apply_suggestions_enabled:
+        if suggestions_mode == "manual":
             selection_path = os.path.join(args_copy.dot_dp, "project", "manager", "selected_suggestions.json")
             try:
                 with open(selection_path, "r") as f:
@@ -121,7 +120,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             except (json.JSONDecodeError, IOError):
                 pass
 
-        if apply_autotuner_suggestions_enabled:
+        if suggestions_mode == "autotuner":
             results_path = os.path.join(args_copy.dot_dp, "auto_tuner", "results.json")
             try:
                 with open(results_path, "r") as f:
