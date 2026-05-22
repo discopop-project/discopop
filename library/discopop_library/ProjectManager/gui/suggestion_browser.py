@@ -272,15 +272,10 @@ class SuggestionBrowserDialog:
         header_frame = tk.Frame(parent)
         header_frame.pack(fill=tk.X, padx=5, pady=(5, 2))
 
-        self.right_title_label = tk.Label(
-            header_frame, text="Select a file from the left panel", fg="gray", anchor=tk.W, font=("Arial", 9)
-        )
-        self.right_title_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
         self.save_button = tk.Button(
             header_frame, text="Save", command=self._save_current_patch, state=tk.DISABLED, width=10
         )
-        self.save_button.pack(side=tk.LEFT, padx=(5, 0))
+        self.save_button.pack(side=tk.LEFT)
 
         editor_frame = tk.Frame(parent)
         editor_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
@@ -338,8 +333,6 @@ class SuggestionBrowserDialog:
         self.editor_text.edit_modified(False)
         self._resetting_modified = False
 
-        rel_path = os.path.relpath(patch_path, self.dot_dp_path)
-        self.right_title_label.config(text=rel_path, fg="#cdd6f4")
         self.save_button.config(text="Save", state=tk.NORMAL)
 
     def _apply_diff_highlighting(self) -> None:
