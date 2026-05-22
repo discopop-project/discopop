@@ -69,7 +69,6 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
 
         self.mode_vars: dict[str, tk.BooleanVar] = {}
         self.mode_checkbuttons: dict[str, tk.Checkbutton] = {}
-        self.mode_tooltip_timers: dict[str, str] = {}
         mode_tooltips = {
             "seq": "Sequential",
             "dp": "DiscoPoP Instrumented",
@@ -88,23 +87,6 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
             cb.pack(anchor=tk.W, padx=5, pady=2)
             self.mode_vars[mode] = var
             self.mode_checkbuttons[mode] = cb
-            from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip
-
-            tooltip = Tooltip(cb, mode_tooltips[mode])
-
-            def on_enter(event: Any, mode_key: str = mode, t: Tooltip = tooltip) -> None:
-                if mode_key in self.mode_tooltip_timers:
-                    self.after_cancel(self.mode_tooltip_timers[mode_key])  # type: ignore
-                self.mode_tooltip_timers[mode_key] = self.after(500, t.showtip, event.x_root, event.y_root)  # type: ignore
-
-            def on_leave(event: Any, mode_key: str = mode, t: Tooltip = tooltip) -> None:
-                if mode_key in self.mode_tooltip_timers:
-                    self.after_cancel(self.mode_tooltip_timers[mode_key])  # type: ignore
-                    del self.mode_tooltip_timers[mode_key]
-                t.hidetip()
-
-            cb.bind("<Enter>", on_enter)
-            cb.bind("<Leave>", on_leave)
 
         settings_frame = tk.LabelFrame(options_outer, text="Execution Settings", padx=5, pady=5)
         settings_frame.pack(fill=tk.X, padx=5, pady=5)

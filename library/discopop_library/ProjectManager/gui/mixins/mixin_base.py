@@ -46,7 +46,6 @@ class ConfigManagerMixinBase:
     # Execute panel elements
     mode_vars: Dict[str, tk.BooleanVar]
     mode_checkbuttons: Dict[str, tk.Checkbutton]
-    mode_tooltip_timers: Dict[str, str]
     thread_var: tk.IntVar
     label_prefix_var: tk.StringVar
     timeout_execution_var: tk.IntVar
