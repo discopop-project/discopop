@@ -59,6 +59,7 @@ class SuggestionBrowserDialog:
         self._status_labels: Dict[str, tk.Label] = {}
         self._action_buttons: Dict[str, tk.Button] = {}
         self._child_frames: Dict[str, tk.Frame] = {}
+        self._row_frames: Dict[str, tk.Frame] = {}
 
         self._current_patch_path: Optional[str] = None
         self._current_text_modified = False
@@ -227,6 +228,7 @@ class SuggestionBrowserDialog:
     def _add_suggestion_row(self, container: tk.Frame, sid: str) -> None:
         row = tk.Frame(container, relief=tk.FLAT)
         row.pack(fill=tk.X, padx=2, pady=1)
+        self._row_frames[sid] = row
 
         expand_btn = tk.Button(
             row, text="▼", width=2, relief=tk.FLAT, bd=0, command=lambda s=sid: self._toggle_expand(s)  # type: ignore[misc]
@@ -304,7 +306,7 @@ class SuggestionBrowserDialog:
     def _toggle_expand(self, sid: str) -> None:
         self._expanded[sid] = not self._expanded[sid]
         if self._expanded[sid]:
-            self._child_frames[sid].pack(fill=tk.X)
+            self._child_frames[sid].pack(fill=tk.X, after=self._row_frames[sid])
             self._expand_buttons[sid].config(text="▼")
         else:
             self._child_frames[sid].pack_forget()
