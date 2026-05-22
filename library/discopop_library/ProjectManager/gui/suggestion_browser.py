@@ -103,7 +103,7 @@ class SuggestionBrowserDialog:
             if sid not in self._selection:
                 self._selection[sid] = list(files)
 
-    def _save_selection(self, notify: bool = True) -> None:
+    def _save_selection(self, notify: bool = False) -> None:
         path = self._get_selection_path()
         os.makedirs(os.path.dirname(path), exist_ok=True)
         try:
@@ -113,6 +113,9 @@ class SuggestionBrowserDialog:
             pass
         if notify and self.on_selection_changed:
             self.on_selection_changed()
+
+    def _register_for_execution(self) -> None:
+        self._save_selection(notify=True)
 
     def _build_dialog(self) -> None:
         self.dialog = tk.Toplevel(self.parent)
@@ -126,6 +129,14 @@ class SuggestionBrowserDialog:
         py = self.parent.winfo_rooty()
         w, h = 1200, 800
         self.dialog.geometry(f"{w}x{h}+{px + (pw - w) // 2}+{py + (ph - h) // 2}")
+
+        bottom_bar = tk.Frame(self.dialog)
+        bottom_bar.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=(0, 5))
+        tk.Button(
+            bottom_bar,
+            text="Register suggestions for execution",
+            command=self._register_for_execution,
+        ).pack(side=tk.LEFT, padx=5)
 
         main_paned = tk.PanedWindow(self.dialog, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
