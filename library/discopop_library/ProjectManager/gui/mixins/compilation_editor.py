@@ -14,7 +14,12 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Optional
 
-from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, show_warning, show_error
+from discopop_library.ProjectManager.gui.mixins.helpers import (
+    Tooltip,
+    show_warning,
+    show_error,
+    enable_text_context_menu,
+)
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 
 BASE_FILES = ["compile.sh", "execute.sh", "seq_settings.json"]
@@ -187,6 +192,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             text_area = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD)
             text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             scrollbar.config(command=text_area.yview)
+            enable_text_context_menu(text_area)
 
             self.compilation_text_areas[filename] = text_area
             self.compilation_modified_files[filename] = False

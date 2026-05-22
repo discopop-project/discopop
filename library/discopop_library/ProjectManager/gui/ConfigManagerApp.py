@@ -20,7 +20,12 @@ from discopop_library.ProjectManager.utilities.initializeFiles import (
     initialize_configuration_files,
 )
 from discopop_library.ProjectManager.gui.widgets import create_styled_output_console
-from discopop_library.ProjectManager.gui.mixins.helpers import TextAreaHandler, Tooltip, show_error
+from discopop_library.ProjectManager.gui.mixins.helpers import (
+    TextAreaHandler,
+    Tooltip,
+    show_error,
+    enable_text_context_menu,
+)
 from discopop_library.ProjectManager.gui.mixins.execute_panel import ExecutePanelMixin
 from discopop_library.ProjectManager.gui.mixins.report_panel import ReportPanelMixin
 from discopop_library.ProjectManager.gui.mixins.config_list import ConfigListMixin
@@ -168,6 +173,7 @@ class ConfigManagerApp(  # type: ignore
         text_area = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD)
         text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=text_area.yview)
+        enable_text_context_menu(text_area)
 
         self.text_areas["execute.sh"] = text_area
         self.modified_files["execute.sh"] = False

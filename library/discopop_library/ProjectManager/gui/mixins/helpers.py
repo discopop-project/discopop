@@ -10,7 +10,7 @@ import logging
 import tkinter as tk
 import tkinter.font
 from tkinter import scrolledtext
-from typing import Optional, Literal, Any
+from typing import Optional, Literal, Any, Union
 
 
 class TextAreaHandler(logging.Handler):
@@ -172,3 +172,29 @@ def ask_yes_no(parent: Any, title: str, message: str) -> bool:  # type: ignore
     dialog.wait_window()
 
     return result[0]
+
+
+def enable_text_context_menu(text_widget: Union[tk.Text, scrolledtext.ScrolledText]) -> None:
+    """Add right-click context menu with copy and paste to a Text widget."""
+
+    def copy_text() -> None:
+        try:
+            sel = text_widget.get("sel.first", "sel.last")
+            text_widget.clipboard_clear()
+            text_widget.clipboard_append(sel)
+        except tk.TclError:
+            pass
+
+    def paste_text() -> None:
+        try:
+            text_widget.insert("insert", text_widget.clipboard_get())
+        except tk.TclError:
+            pass
+
+    def show_menu(event: Any) -> None:
+        menu = tk.Menu(text_widget, tearoff=False)
+        menu.add_command(label="Copy", command=copy_text)
+        menu.add_command(label="Paste", command=paste_text)
+        menu.tk_popup(event.x_root, event.y_root)
+
+    text_widget.bind("<Button-3>", show_menu)
