@@ -22,8 +22,6 @@ from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerM
 class WizardStepsMixin(ConfigManagerMixinBase):
     def _create_step_welcome(self, parent: ttk.Frame) -> ttk.Frame:
         frame = ttk.Frame(parent)
-        text = tk.Text(frame, height=20, width=80, state=tk.NORMAL, wrap=tk.WORD)
-        text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         intro = """Welcome to the Configuration Assistant
 
 This wizard will guide you through the steps necessary to create a valid and complete configuration for DiscoPoP profiling.
@@ -39,8 +37,8 @@ The wizard will help you with:
 After completing this wizard, your project will be ready to use with DiscoPoP.
 
 Click "Next >" to begin."""
-        text.insert(1.0, intro)
-        text.config(state=tk.DISABLED)
+        label = ttk.Label(frame, text=intro, font=("TkDefaultFont", 9), justify=tk.LEFT, wraplength=600)
+        label.pack(anchor=tk.NW, padx=10, pady=15)
         return frame
 
     def _create_step_compile_sh(self, parent: ttk.Frame) -> ttk.Frame:
