@@ -144,6 +144,11 @@ class SuggestionBrowserDialog:
         self.dialog.geometry("1200x800")
         self.dialog.minsize(800, 500)
 
+        # Probe default button foreground so we can restore it for the "not applied" state
+        _probe = tk.Button(self.dialog)
+        self._default_btn_fg: str = str(_probe.cget("fg"))
+        _probe.destroy()
+
         pw = self.parent.winfo_width()
         ph = self.parent.winfo_height()
         px = self.parent.winfo_rootx()
@@ -264,7 +269,7 @@ class SuggestionBrowserDialog:
         action_btn = tk.Button(
             btn_container,
             text="✓ Applied" if is_applied else "○ Apply",
-            fg="#5ca668" if is_applied else "gray",
+            fg="#5ca668" if is_applied else self._default_btn_fg,
             anchor=tk.CENTER,
             command=lambda s=sid: self._on_action_button(s),  # type: ignore[misc]
         )
@@ -373,7 +378,7 @@ class SuggestionBrowserDialog:
             if sid in self._action_buttons:
                 self._action_buttons[sid].config(
                     text="✓ Applied" if is_applied else "○ Apply",
-                    fg="#5ca668" if is_applied else "gray",
+                    fg="#5ca668" if is_applied else self._default_btn_fg,
                 )
 
     def _on_action_button(self, sid: str) -> None:
