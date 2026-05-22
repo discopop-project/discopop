@@ -125,11 +125,13 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         self.compilation_tab_tooltips = {}
         self.compilation_tooltip_timer = None
 
-        comp_tab_frame = tk.Frame(self.right_tabs)
-        self.right_tabs.add(comp_tab_frame, text="Compilation")
+        comp_window = tk.Toplevel(self)  # type: ignore
+        comp_window.title("Compilation Editor")
+        comp_window.geometry("900x700")
+        comp_window.minsize(700, 500)
 
-        def on_close_tab() -> None:
-            self.right_tabs.forget(comp_tab_frame)
+        def on_close_window() -> None:
+            comp_window.destroy()
             self.compilation_editor_open = False
             self.compilation_text_areas = {}
             self.compilation_modified_files = {}
@@ -143,7 +145,12 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             if self.derive_button_tooltip:
                 self.derive_button_tooltip.hidetip()
 
-        self.compilation_notebook = ttk.Notebook(comp_tab_frame)
+        comp_window.protocol("WM_DELETE_WINDOW", on_close_window)
+
+        comp_content_frame = tk.Frame(comp_window)
+        comp_content_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        self.compilation_notebook = ttk.Notebook(comp_content_frame)
 
         style = ttk.Style()
         style.configure("TNotebook.Tab", padding=[10, 2], font=("TkDefaultFont", 9))
@@ -206,8 +213,15 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
                 tab_index = self.compilation_tabs[filename]
                 self.compilation_notebook.tab(tab_index, state="disabled")
 
-        bottom_comp_frame = tk.Frame(comp_tab_frame)
-        bottom_comp_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=2)
+        self.compilation_notebook.pack(fill=tk.BOTH, expand=True)
+
+        self.compilation_notebook.bind("<<NotebookTabChanged>>", self._on_compilation_tab_changed)
+
+        self.compilation_notebook.bind("<Motion>", self._on_compilation_tab_motion)
+        self.compilation_notebook.bind("<Leave>", self._on_compilation_tab_leave)
+
+        bottom_comp_frame = tk.Frame(comp_window)
+        bottom_comp_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
 
         save_button = tk.Button(bottom_comp_frame, text="Save (Ctrl+S)", command=self._save_compilation_files)
         save_button.pack(side=tk.LEFT, padx=5)
@@ -244,17 +258,8 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         self.derive_compilation_button.bind("<Enter>", on_derive_enter)
         self.derive_compilation_button.bind("<Leave>", on_derive_leave)
 
-        close_button = tk.Button(bottom_comp_frame, text="Close", command=on_close_tab)
+        close_button = tk.Button(bottom_comp_frame, text="Close", command=on_close_window)
         close_button.pack(side=tk.LEFT, padx=5)
-
-        self.compilation_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=(5, 0))
-
-        self.compilation_notebook.bind("<<NotebookTabChanged>>", self._on_compilation_tab_changed)
-
-        self.compilation_notebook.bind("<Motion>", self._on_compilation_tab_motion)
-        self.compilation_notebook.bind("<Leave>", self._on_compilation_tab_leave)
-
-        self.right_tabs.select(self.right_tabs.index(comp_tab_frame))
 
         self._update_derive_button_state()
         self._on_compilation_tab_changed(None)  # type: ignore
