@@ -83,7 +83,8 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
             ("par", "par_settings.json"),
         ]:
             var = tk.BooleanVar(value=mode == "seq")
-            cb = tk.Checkbutton(modes_inner, text=mode, variable=var, state="disabled")
+            mode_text = f"{mode_tooltips[mode]} ({mode})"
+            cb = tk.Checkbutton(modes_inner, text=mode_text, variable=var, state="disabled")
             cb.pack(side=tk.LEFT, padx=5)
             self.mode_vars[mode] = var
             self.mode_checkbuttons[mode] = cb
