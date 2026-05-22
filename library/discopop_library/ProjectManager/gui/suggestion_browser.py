@@ -258,15 +258,17 @@ class SuggestionBrowserDialog:
         name_label.bind("<Button-1>", lambda e, s=sid: self._load_all_patches_in_editor(s))  # type: ignore[misc]
 
         is_applied = sid in self._applied_suggestions
+        btn_container = tk.Frame(row, width=90)
+        btn_container.pack_propagate(False)
+        btn_container.pack(side=tk.LEFT, padx=(5, 4))
         action_btn = tk.Button(
-            row,
-            text="✓ Applied" if is_applied else "○ Apply  ",
+            btn_container,
+            text="✓ Applied" if is_applied else "○ Apply",
             fg="#5ca668" if is_applied else "gray",
-            width=12,
             anchor=tk.CENTER,
             command=lambda s=sid: self._on_action_button(s),  # type: ignore[misc]
         )
-        action_btn.pack(side=tk.LEFT, padx=(5, 4))
+        action_btn.pack(fill=tk.BOTH, expand=True)
         self._action_buttons[sid] = action_btn
 
         children_frame = tk.Frame(container)
@@ -370,7 +372,7 @@ class SuggestionBrowserDialog:
             is_applied = sid in self._applied_suggestions
             if sid in self._action_buttons:
                 self._action_buttons[sid].config(
-                    text="✓ Applied" if is_applied else "○ Apply  ",
+                    text="✓ Applied" if is_applied else "○ Apply",
                     fg="#5ca668" if is_applied else "gray",
                 )
 
