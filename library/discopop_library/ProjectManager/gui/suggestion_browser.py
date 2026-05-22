@@ -142,10 +142,6 @@ class SuggestionBrowserDialog:
         self._build_left_panel(left_frame)
         self._build_right_panel(right_frame)
 
-        bottom_bar = tk.Frame(self.dialog)
-        bottom_bar.pack(fill=tk.X, padx=5, pady=(0, 5))
-        tk.Button(bottom_bar, text="Close", command=self._on_close, width=10).pack(side=tk.RIGHT, padx=5)
-
         self.dialog.transient(self.parent)
         self.dialog.grab_set()
 
