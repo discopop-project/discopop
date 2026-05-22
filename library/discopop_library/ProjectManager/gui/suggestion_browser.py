@@ -173,13 +173,19 @@ class SuggestionBrowserDialog:
         main_paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         left_frame = tk.Frame(main_paned)
-        main_paned.add(left_frame, minsize=220)
+        # stretch="always": window growth goes to the left (suggestions) panel first;
+        # minsize=420 ensures buttons/checkboxes are never clipped
+        main_paned.add(left_frame, minsize=420, stretch="always")
 
         right_frame = tk.Frame(main_paned)
-        main_paned.add(right_frame, minsize=350)
+        # stretch="never": editor does not absorb window resize — left panel does
+        main_paned.add(right_frame, minsize=300, stretch="never")
 
         self._build_left_panel(left_frame)
         self._build_right_panel(right_frame)
+
+        # Place sash so left starts with more space than its minimum
+        self.dialog.after(10, lambda: main_paned.sash_place(0, 500, 0))  # type: ignore[misc]
 
         self.dialog.transient(self.parent)
         self.dialog.grab_set()
