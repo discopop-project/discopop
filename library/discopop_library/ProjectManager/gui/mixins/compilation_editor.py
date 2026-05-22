@@ -251,6 +251,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         self.right_tabs.select(self.right_tabs.index(comp_tab_frame))
 
         self._update_derive_button_state()
+        self._on_compilation_tab_changed(None)  # type: ignore
 
     def _load_compilation_files(self) -> None:
         comp_dir = self.arguments.project_config_dir
@@ -330,6 +331,10 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             tab_text = notebook.tab(current_tab, "text").rstrip("*")
             if tab_text == "compile.sh":
                 self.test_compilation_button.pack(side=tk.LEFT, padx=5)
+                compile_sh_path = os.path.join(self.arguments.project_config_dir, "compile.sh")
+                seq_settings_path = os.path.join(self.arguments.project_config_dir, "seq_settings.json")
+                can_test = os.path.exists(compile_sh_path) and os.path.exists(seq_settings_path)
+                self.test_compilation_button.config(state="normal" if can_test else "disabled")
             else:
                 self.test_compilation_button.pack_forget()
             if tab_text == "seq_settings.json":
