@@ -212,6 +212,7 @@ class SuggestionBrowserDialog:
 
         if item in self._item_to_sid:
             self._toggle_suggestion(self._item_to_sid[item])
+            self._load_all_patches_in_editor(self._item_to_sid[item])
         elif item in self._item_to_file:
             sid, filename = self._item_to_file[item]
             self._toggle_file(sid, filename)
@@ -299,6 +300,39 @@ class SuggestionBrowserDialog:
         self.editor_text.tag_config("diff_hunk", foreground="#f9e2af")
 
         self.editor_text.bind("<<Modified>>", self._on_text_modified)
+
+    def _load_all_patches_in_editor(self, sid: str) -> None:
+        if self._current_text_modified and self._current_patch_path:
+            from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no
+
+            if ask_yes_no(self.dialog, "Unsaved Changes", "You have unsaved changes. Save before switching?"):
+                self._save_current_patch()
+
+        self._current_patch_path = None
+        self._current_text_modified = False
+
+        parts = []
+        for filename in self._patches.get(sid, []):
+            patch_path = os.path.join(self.dot_dp_path, "patch_generator", sid, filename)
+            try:
+                with open(patch_path, "r") as f:
+                    parts.append(f.read())
+            except IOError as e:
+                parts.append(f"Error reading {filename}: {e}\n")
+
+        content = "\n".join(parts)
+        self._text_content_on_load = content
+
+        self.editor_text.config(state=tk.NORMAL)
+        self.editor_text.delete("1.0", tk.END)
+        self.editor_text.insert("1.0", content)
+        self._apply_diff_highlighting()
+        self._resetting_modified = True
+        self.editor_text.edit_modified(False)
+        self._resetting_modified = False
+
+        self.editor_text.config(state=tk.DISABLED)
+        self.save_button.config(text="Save File", state=tk.DISABLED)
 
     def _load_patch_in_editor(self, patch_path: str) -> None:
         if self._current_text_modified and self._current_patch_path:
