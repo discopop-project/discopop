@@ -37,10 +37,7 @@ class ConfigListMixin(ConfigManagerMixinBase):
                 pass
 
             for config in configs:
-                has_results = config in execution_results
-                indicator = "✓ " if has_results else "○ "
-                display_text = f"{indicator}{config}"
-                self.listbox.insert(tk.END, display_text)
+                self.listbox.insert(tk.END, config)
 
             if configs:
                 if previous_config and previous_config in configs:
@@ -61,8 +58,7 @@ class ConfigListMixin(ConfigManagerMixinBase):
         selection = self.listbox.curselection()
         if not selection:
             return
-        display_text = self.listbox.get(selection[0])
-        self.current_config = display_text[2:] if display_text.startswith(("✓ ", "○ ")) else display_text
+        self.current_config = self.listbox.get(selection[0])
         self._load_config()
         self._update_autotuning_config_display()
         if hasattr(self, "_refresh_autotuning_suggestions_display"):
@@ -84,8 +80,7 @@ class ConfigListMixin(ConfigManagerMixinBase):
 
         self.listbox.selection_clear(0, tk.END)
         self.listbox.selection_set(index)
-        display_text = self.listbox.get(index)
-        self.current_config = display_text[2:] if display_text.startswith(("✓ ", "○ ")) else display_text
+        self.current_config = self.listbox.get(index)
         self._load_config()
 
         menu = tk.Menu(self.listbox, tearoff=False)
