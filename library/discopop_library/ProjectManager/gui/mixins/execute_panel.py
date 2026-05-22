@@ -85,7 +85,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
             var = tk.BooleanVar(value=mode == "seq")
             mode_text = f"{mode_tooltips[mode]} ({mode})"
             cb = tk.Checkbutton(modes_inner, text=mode_text, variable=var, state="disabled")
-            cb.pack(side=tk.LEFT, padx=5)
+            cb.pack(anchor=tk.W, padx=5, pady=2)
             self.mode_vars[mode] = var
             self.mode_checkbuttons[mode] = cb
             from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip
