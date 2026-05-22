@@ -265,7 +265,7 @@ class SuggestionBrowserDialog:
         is_applied = sid in self._applied_suggestions
         btn_container = tk.Frame(row, width=90)
         btn_container.pack_propagate(False)
-        btn_container.pack(side=tk.LEFT, padx=(5, 4))
+        btn_container.pack(side=tk.LEFT, padx=(5, 4), fill=tk.Y)
         action_btn = tk.Button(
             btn_container,
             text="✓ Applied" if is_applied else "○ Apply",
