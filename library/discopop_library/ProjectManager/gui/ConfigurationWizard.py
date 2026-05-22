@@ -98,7 +98,7 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
 
         step_titles = [
             "Welcome",
-            "Write Access Check",
+            "Write Permissions Check",
             "Compilation Script",
             "Compilation Settings",
             "Test Compilation",
