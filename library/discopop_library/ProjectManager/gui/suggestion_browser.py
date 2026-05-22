@@ -8,6 +8,8 @@
 
 import json
 import os
+import subprocess
+import sys
 import tkinter as tk
 from tkinter import ttk
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -48,12 +50,15 @@ class SuggestionBrowserDialog:
         self._patches: Dict[str, List[str]] = {}
         self._patch_display_names: Dict[Tuple[str, str], str] = {}
         self._selection: Dict[str, List[str]] = {}
+        self._applied_suggestions: List[str] = []
 
-        self._tree: Optional[ttk.Treeview] = None
-        self._sid_to_item: Dict[str, str] = {}
-        self._file_to_item: Dict[Tuple[str, str], str] = {}
-        self._item_to_sid: Dict[str, str] = {}
-        self._item_to_file: Dict[str, Tuple[str, str]] = {}
+        self._expanded: Dict[str, bool] = {}
+        self._expand_buttons: Dict[str, tk.Button] = {}
+        self._check_buttons: Dict[str, tk.Button] = {}
+        self._file_check_buttons: Dict[Tuple[str, str], tk.Button] = {}
+        self._status_labels: Dict[str, tk.Label] = {}
+        self._action_buttons: Dict[str, tk.Button] = {}
+        self._child_frames: Dict[str, tk.Frame] = {}
 
         self._current_patch_path: Optional[str] = None
         self._current_text_modified = False
@@ -64,7 +69,10 @@ class SuggestionBrowserDialog:
         self._load_selection()
         self._merge_new_patches()
         self._save_selection(notify=False)
+        self._applied_suggestions = self._load_applied_suggestions()
         self._build_dialog()
+
+    # ── persistence helpers ──────────────────────────────────────────────────
 
     def _get_selection_path(self) -> str:
         return os.path.join(self.dot_dp_path, "project", "manager", "selected_suggestions.json")
@@ -114,8 +122,21 @@ class SuggestionBrowserDialog:
         if notify and self.on_selection_changed:
             self.on_selection_changed()
 
+    def _load_applied_suggestions(self) -> List[str]:
+        applied_file = os.path.join(self.dot_dp_path, "patch_applicator", "applied_suggestions.json")
+        if not os.path.exists(applied_file):
+            return []
+        try:
+            with open(applied_file, "r") as f:
+                data = json.load(f)
+            return list(data.get("applied", []))
+        except (json.JSONDecodeError, IOError):
+            return []
+
     def _register_for_execution(self) -> None:
         self._save_selection(notify=True)
+
+    # ── dialog construction ──────────────────────────────────────────────────
 
     def _build_dialog(self) -> None:
         self.dialog = tk.Toplevel(self.parent)
@@ -136,13 +157,23 @@ class SuggestionBrowserDialog:
             bottom_bar,
             text="Register suggestions for execution",
             command=self._register_for_execution,
-        ).pack(side=tk.LEFT, padx=5)
+        ).pack(side=tk.LEFT, padx=(0, 10))
+        tk.Button(
+            bottom_bar,
+            text="Apply selected to code",
+            command=self._apply_selected_to_code,
+        ).pack(side=tk.LEFT, padx=(0, 5))
+        tk.Button(
+            bottom_bar,
+            text="Reset all applied patches",
+            command=self._reset_all_applied,
+        ).pack(side=tk.LEFT)
 
         main_paned = tk.PanedWindow(self.dialog, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         left_frame = tk.Frame(main_paned)
-        main_paned.add(left_frame, minsize=180)
+        main_paned.add(left_frame, minsize=220)
 
         right_frame = tk.Frame(main_paned)
         main_paned.add(right_frame, minsize=350)
@@ -160,44 +191,126 @@ class SuggestionBrowserDialog:
             font=("Arial", 9, "bold"),
         ).pack(anchor=tk.W, padx=5, pady=(5, 2))
 
-        container = tk.Frame(parent)
-        container.pack(fill=tk.BOTH, expand=True)
+        list_outer = tk.Frame(parent)
+        list_outer.pack(fill=tk.BOTH, expand=True)
 
-        self._tree = ttk.Treeview(
-            container,
-            show="tree",
-            selectmode="browse",
-        )
-        self._tree.column("#0", stretch=True)
+        self._list_canvas = tk.Canvas(list_outer, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(list_outer, orient=tk.VERTICAL, command=self._list_canvas.yview)
+        self._list_inner = tk.Frame(self._list_canvas)
 
-        scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=self._tree.yview)
-        self._tree.configure(yscrollcommand=scrollbar.set)
+        self._list_canvas.configure(yscrollcommand=scrollbar.set)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self._tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self._list_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self._list_window = self._list_canvas.create_window((0, 0), window=self._list_inner, anchor="nw")
+
+        def _on_inner_configure(event: Any) -> None:
+            self._list_canvas.configure(scrollregion=self._list_canvas.bbox("all"))
+
+        def _on_canvas_resize(event: Any) -> None:
+            self._list_canvas.itemconfig(self._list_window, width=event.width)
+
+        self._list_inner.bind("<Configure>", _on_inner_configure)
+        self._list_canvas.bind("<Configure>", _on_canvas_resize)
 
         if not self._patches:
-            self._tree.insert("", "end", text="No suggestions found.")
+            tk.Label(self._list_inner, text="No suggestions found.", fg="gray").pack(anchor=tk.W, padx=10, pady=5)
         else:
             for sid in sorted(self._patches.keys(), key=lambda x: int(x) if x.isdigit() else x):
-                self._build_tree_suggestion(sid)
-
-        self._tree.bind("<Button-1>", self._on_tree_click)
+                self._expanded[sid] = True
+                self._add_suggestion_row(self._list_inner, sid)
 
         self.selection_count_label = tk.Label(parent, text="", font=("Arial", 8), fg="gray")
         self.selection_count_label.pack(anchor=tk.W, padx=5, pady=2)
         self._update_selection_count()
 
-    def _build_tree_suggestion(self, sid: str) -> None:
-        assert self._tree is not None
-        item = self._tree.insert("", "end", text=f"{self._suggestion_select_char(sid)}  Suggestion {sid}", open=True)
-        self._sid_to_item[sid] = item
-        self._item_to_sid[item] = sid
+    def _add_suggestion_row(self, container: tk.Frame, sid: str) -> None:
+        row = tk.Frame(container, relief=tk.FLAT)
+        row.pack(fill=tk.X, padx=2, pady=1)
+
+        expand_btn = tk.Button(
+            row, text="▼", width=2, relief=tk.FLAT, bd=0, command=lambda s=sid: self._toggle_expand(s)  # type: ignore[misc]
+        )
+        expand_btn.pack(side=tk.LEFT)
+        self._expand_buttons[sid] = expand_btn
+
+        check_char = self._suggestion_select_char(sid)
+        check_btn = tk.Button(
+            row,
+            text=check_char,
+            width=2,
+            relief=tk.FLAT,
+            bd=0,
+            command=lambda s=sid: self._on_suggestion_checkbox_click(s),  # type: ignore[misc]
+        )
+        check_btn.pack(side=tk.LEFT)
+        self._check_buttons[sid] = check_btn
+
+        name_label = tk.Label(row, text=f"Suggestion {sid}", anchor=tk.W, cursor="hand2")
+        name_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        name_label.bind("<Button-1>", lambda e, s=sid: self._load_all_patches_in_editor(s))  # type: ignore[misc]
+
+        is_applied = sid in self._applied_suggestions
+        status_label = tk.Label(
+            row,
+            text="Applied" if is_applied else "Not applied",
+            fg="#a6e3a1" if is_applied else "gray",
+            width=9,
+            anchor=tk.W,
+        )
+        status_label.pack(side=tk.LEFT, padx=(5, 2))
+        self._status_labels[sid] = status_label
+
+        action_btn = tk.Button(
+            row,
+            text="Rollback" if is_applied else "Apply",
+            width=8,
+            command=lambda s=sid: self._on_action_button(s),  # type: ignore[misc]
+        )
+        action_btn.pack(side=tk.LEFT, padx=(2, 4))
+        self._action_buttons[sid] = action_btn
+
+        children_frame = tk.Frame(container)
+        children_frame.pack(fill=tk.X)
+        self._child_frames[sid] = children_frame
 
         for filename in self._patches[sid]:
-            display_name = self._patch_display_names.get((sid, filename), filename)
-            fitem = self._tree.insert(item, "end", text=f"{self._file_select_char(sid, filename)}  {display_name}")
-            self._file_to_item[(sid, filename)] = fitem
-            self._item_to_file[fitem] = (sid, filename)
+            self._add_file_row(children_frame, sid, filename)
+
+    def _add_file_row(self, container: tk.Frame, sid: str, filename: str) -> None:
+        row = tk.Frame(container)
+        row.pack(fill=tk.X, padx=(28, 2), pady=1)
+
+        check_char = self._file_select_char(sid, filename)
+        check_btn = tk.Button(
+            row,
+            text=check_char,
+            width=2,
+            relief=tk.FLAT,
+            bd=0,
+            command=lambda s=sid, f=filename: self._on_file_checkbox_click(s, f),  # type: ignore[misc]
+        )
+        check_btn.pack(side=tk.LEFT)
+        self._file_check_buttons[(sid, filename)] = check_btn
+
+        display_name = self._patch_display_names.get((sid, filename), filename)
+        name_label = tk.Label(row, text=display_name, anchor=tk.W, fg="#89b4fa", cursor="hand2")
+        name_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        patch_path = os.path.join(self.dot_dp_path, "patch_generator", sid, filename)
+        name_label.bind("<Button-1>", lambda e, p=patch_path: self._load_patch_in_editor(p))  # type: ignore[misc]
+
+    # ── expand / collapse ────────────────────────────────────────────────────
+
+    def _toggle_expand(self, sid: str) -> None:
+        self._expanded[sid] = not self._expanded[sid]
+        if self._expanded[sid]:
+            self._child_frames[sid].pack(fill=tk.X)
+            self._expand_buttons[sid].config(text="▼")
+        else:
+            self._child_frames[sid].pack_forget()
+            self._expand_buttons[sid].config(text="▶")
+
+    # ── selection helpers ────────────────────────────────────────────────────
 
     def _suggestion_select_char(self, sid: str) -> str:
         files = self._patches[sid]
@@ -213,65 +326,157 @@ class SuggestionBrowserDialog:
     def _file_select_char(self, sid: str, filename: str) -> str:
         return _CHECKED if filename in self._selection.get(sid, []) else _UNCHECKED
 
-    def _on_tree_click(self, event: Any) -> None:
-        assert self._tree is not None
-        item = self._tree.identify_row(event.y)
-        if not item:
-            return
-        if self._tree.identify_element(event.x, event.y) == "indicator":
-            return  # let Treeview handle expand/collapse natively
-
-        if item in self._item_to_sid:
-            self._toggle_suggestion(self._item_to_sid[item])
-            self._load_all_patches_in_editor(self._item_to_sid[item])
-        elif item in self._item_to_file:
-            sid, filename = self._item_to_file[item]
-            self._toggle_file(sid, filename)
-            patch_path = os.path.join(self.dot_dp_path, "patch_generator", sid, filename)
-            self._load_patch_in_editor(patch_path)
-
-    def _toggle_suggestion(self, sid: str) -> None:
-        assert self._tree is not None
+    def _on_suggestion_checkbox_click(self, sid: str) -> None:
         files = self._patches[sid]
         selected = self._selection.get(sid, [])
         if all(f in selected for f in files):
             self._selection[sid] = []
         else:
             self._selection[sid] = list(files)
-
-        self._tree.item(self._sid_to_item[sid], text=f"{self._suggestion_select_char(sid)}  Suggestion {sid}")
+        self._refresh_suggestion_row(sid)
         for filename in files:
-            fitem = self._file_to_item.get((sid, filename))
-            if fitem:
-                display_name = self._patch_display_names.get((sid, filename), filename)
-                self._tree.item(fitem, text=f"{self._file_select_char(sid, filename)}  {display_name}")
-
+            if (sid, filename) in self._file_check_buttons:
+                self._file_check_buttons[(sid, filename)].config(text=self._file_select_char(sid, filename))
         self._save_selection()
         self._update_selection_count()
 
-    def _toggle_file(self, sid: str, filename: str) -> None:
-        assert self._tree is not None
+    def _on_file_checkbox_click(self, sid: str, filename: str) -> None:
         if sid not in self._selection:
             self._selection[sid] = []
         if filename in self._selection[sid]:
             self._selection[sid].remove(filename)
         else:
             self._selection[sid].append(filename)
-
-        fitem = self._file_to_item.get((sid, filename))
-        if fitem:
-            display_name = self._patch_display_names.get((sid, filename), filename)
-            self._tree.item(fitem, text=f"{self._file_select_char(sid, filename)}  {display_name}")
-        self._tree.item(self._sid_to_item[sid], text=f"{self._suggestion_select_char(sid)}  Suggestion {sid}")
-
+        if (sid, filename) in self._file_check_buttons:
+            self._file_check_buttons[(sid, filename)].config(text=self._file_select_char(sid, filename))
+        self._refresh_suggestion_row(sid)
         self._save_selection()
         self._update_selection_count()
+
+    def _refresh_suggestion_row(self, sid: str) -> None:
+        if sid in self._check_buttons:
+            self._check_buttons[sid].config(text=self._suggestion_select_char(sid))
 
     def _update_selection_count(self) -> None:
         total = sum(len(files) for files in self._patches.values())
         selected = sum(len(sel) for sel in self._selection.values())
         if hasattr(self, "selection_count_label"):
             self.selection_count_label.config(text=f"{selected} of {total} selected for execution")
+
+    # ── applied status ───────────────────────────────────────────────────────
+
+    def _reload_applied_status(self) -> None:
+        self._applied_suggestions = self._load_applied_suggestions()
+        for sid in self._patches:
+            is_applied = sid in self._applied_suggestions
+            if sid in self._status_labels:
+                self._status_labels[sid].config(
+                    text="Applied" if is_applied else "Not applied",
+                    fg="#a6e3a1" if is_applied else "gray",
+                )
+            if sid in self._action_buttons:
+                self._action_buttons[sid].config(text="Rollback" if is_applied else "Apply")
+
+    def _on_action_button(self, sid: str) -> None:
+        if sid in self._applied_suggestions:
+            self._rollback_suggestion(sid)
+        else:
+            self._apply_suggestion(sid)
+
+    # ── patch applicator operations ──────────────────────────────────────────
+
+    def _run_patch_applicator(self, args: List[str]) -> Tuple[int, str, str]:
+        result = subprocess.run(
+            [sys.executable, "-m", "discopop_library.PatchApplicator"] + args,
+            cwd=self.dot_dp_path,
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode, result.stdout, result.stderr
+
+    def _apply_suggestion(self, sid: str) -> None:
+        from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no, show_error
+
+        if not ask_yes_no(
+            self.dialog,
+            "Apply Suggestion",
+            f"Apply Suggestion {sid} to the project code?\n\n"
+            "This will modify source files in your project directory.\n"
+            "Profiling results will be invalidated.",
+        ):
+            return
+        retcode, stdout, stderr = self._run_patch_applicator(["--apply", sid])
+        if retcode not in (0, 2):
+            show_error(self.dialog, "Apply Failed", f"Failed to apply suggestion {sid}.\n\n{stderr or stdout}")
+        self._reload_applied_status()
+
+    def _rollback_suggestion(self, sid: str) -> None:
+        from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no, show_error
+
+        if not ask_yes_no(
+            self.dialog,
+            "Rollback Suggestion",
+            f"Roll back Suggestion {sid} from the project code?\n\n"
+            "This will revert the changes made by this suggestion.",
+        ):
+            return
+        retcode, stdout, stderr = self._run_patch_applicator(["--rollback", sid])
+        if retcode not in (0, 3):
+            show_error(self.dialog, "Rollback Failed", f"Failed to roll back suggestion {sid}.\n\n{stderr or stdout}")
+        self._reload_applied_status()
+
+    def _apply_selected_to_code(self) -> None:
+        from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no, show_error
+
+        selected_sids = [sid for sid, files in self._selection.items() if files]
+        if not selected_sids:
+            from discopop_library.ProjectManager.gui.mixins.helpers import show_warning
+
+            show_warning(self.dialog, "No Suggestions Selected", "No suggestions are currently selected for execution.")
+            return
+        if not ask_yes_no(
+            self.dialog,
+            "Apply Selected Suggestions",
+            f"Apply {len(selected_sids)} selected suggestion(s) to the project code?\n\n"
+            "This will directly modify source files in your project directory\n"
+            "and invalidate any existing profiling results.\n\n"
+            "Do you want to proceed?",
+        ):
+            return
+        failed = []
+        for sid in selected_sids:
+            retcode, stdout, stderr = self._run_patch_applicator(["--apply", sid])
+            if retcode not in (0, 2):
+                failed.append(sid)
+        self._reload_applied_status()
+        if failed:
+            show_error(
+                self.dialog,
+                "Partial Failure",
+                f"The following suggestions could not be applied:\n{', '.join(failed)}",
+            )
+
+    def _reset_all_applied(self) -> None:
+        from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no, show_error
+
+        if not self._applied_suggestions:
+            from discopop_library.ProjectManager.gui.mixins.helpers import show_warning
+
+            show_warning(self.dialog, "Nothing to Reset", "No suggestions are currently applied.")
+            return
+        if not ask_yes_no(
+            self.dialog,
+            "Reset All Applied Patches",
+            f"Reset all {len(self._applied_suggestions)} applied suggestion(s)?\n\n"
+            "This will revert all patch applicator changes to your project code.",
+        ):
+            return
+        retcode, stdout, stderr = self._run_patch_applicator(["--clear"])
+        if retcode not in (0, 3):
+            show_error(self.dialog, "Reset Failed", f"Failed to reset applied patches.\n\n{stderr or stdout}")
+        self._reload_applied_status()
+
+    # ── right panel / editor ─────────────────────────────────────────────────
 
     def _build_right_panel(self, parent: tk.Frame) -> None:
         header_frame = tk.Frame(parent)
