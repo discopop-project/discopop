@@ -147,8 +147,11 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
 
         comp_window.protocol("WM_DELETE_WINDOW", on_close_window)
 
+        bottom_comp_frame = tk.Frame(comp_window)
+        bottom_comp_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
+
         comp_content_frame = tk.Frame(comp_window)
-        comp_content_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        comp_content_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(5, 0))
 
         self.compilation_notebook = ttk.Notebook(comp_content_frame)
 
@@ -220,9 +223,6 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         self.compilation_notebook.bind("<Motion>", self._on_compilation_tab_motion)
         self.compilation_notebook.bind("<Leave>", self._on_compilation_tab_leave)
 
-        bottom_comp_frame = tk.Frame(comp_window)
-        bottom_comp_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
-
         save_button = tk.Button(bottom_comp_frame, text="Save (Ctrl+S)", command=self._save_compilation_files)
         save_button.pack(side=tk.LEFT, padx=5)
 
@@ -257,9 +257,6 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
 
         self.derive_compilation_button.bind("<Enter>", on_derive_enter)
         self.derive_compilation_button.bind("<Leave>", on_derive_leave)
-
-        close_button = tk.Button(bottom_comp_frame, text="Close", command=on_close_window)
-        close_button.pack(side=tk.LEFT, padx=5)
 
         self._update_derive_button_state()
         self._on_compilation_tab_changed(None)  # type: ignore
