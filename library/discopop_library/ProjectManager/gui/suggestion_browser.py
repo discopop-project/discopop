@@ -56,7 +56,6 @@ class SuggestionBrowserDialog:
         self._expand_buttons: Dict[str, tk.Button] = {}
         self._check_buttons: Dict[str, tk.Button] = {}
         self._file_check_buttons: Dict[Tuple[str, str], tk.Button] = {}
-        self._status_labels: Dict[str, tk.Label] = {}
         self._action_buttons: Dict[str, tk.Button] = {}
         self._child_frames: Dict[str, tk.Frame] = {}
         self._row_frames: Dict[str, tk.Frame] = {}
@@ -253,23 +252,15 @@ class SuggestionBrowserDialog:
         name_label.bind("<Button-1>", lambda e, s=sid: self._load_all_patches_in_editor(s))  # type: ignore[misc]
 
         is_applied = sid in self._applied_suggestions
-        status_label = tk.Label(
-            row,
-            text="Applied" if is_applied else "Not applied",
-            fg="#a6e3a1" if is_applied else "gray",
-            width=9,
-            anchor=tk.W,
-        )
-        status_label.pack(side=tk.LEFT, padx=(5, 2))
-        self._status_labels[sid] = status_label
-
         action_btn = tk.Button(
             row,
-            text="Rollback" if is_applied else "Apply",
-            width=8,
+            text="✓ Applied" if is_applied else "○ Apply",
+            fg="#a6e3a1" if is_applied else "gray",
+            width=10,
+            anchor=tk.CENTER,
             command=lambda s=sid: self._on_action_button(s),  # type: ignore[misc]
         )
-        action_btn.pack(side=tk.LEFT, padx=(2, 4))
+        action_btn.pack(side=tk.LEFT, padx=(5, 4))
         self._action_buttons[sid] = action_btn
 
         children_frame = tk.Frame(container)
@@ -371,13 +362,11 @@ class SuggestionBrowserDialog:
         self._applied_suggestions = self._load_applied_suggestions()
         for sid in self._patches:
             is_applied = sid in self._applied_suggestions
-            if sid in self._status_labels:
-                self._status_labels[sid].config(
-                    text="Applied" if is_applied else "Not applied",
+            if sid in self._action_buttons:
+                self._action_buttons[sid].config(
+                    text="✓ Applied" if is_applied else "○ Apply",
                     fg="#a6e3a1" if is_applied else "gray",
                 )
-            if sid in self._action_buttons:
-                self._action_buttons[sid].config(text="Rollback" if is_applied else "Apply")
 
     def _on_action_button(self, sid: str) -> None:
         if sid in self._applied_suggestions:
