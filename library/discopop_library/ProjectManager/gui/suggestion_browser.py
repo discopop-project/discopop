@@ -11,7 +11,6 @@ import os
 import subprocess
 import sys
 import tkinter as tk
-import tkinter.font as tkfont
 from tkinter import ttk
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -142,23 +141,19 @@ class SuggestionBrowserDialog:
     def _build_dialog(self) -> None:
         self.dialog = tk.Toplevel(self.parent)
         self.dialog.title("Browse Parallelization Suggestions")
-        self.dialog.geometry("1200x800")
-        self.dialog.minsize(800, 500)
+        self.dialog.geometry("1300x800")
+        self.dialog.minsize(900, 500)
 
-        # Probe default button fg and measure the widest label so the container
-        # is sized correctly for any font / DPI setting
+        # Probe default button fg so we can restore it for the "not applied" state
         _probe = tk.Button(self.dialog)
         self._default_btn_fg: str = str(_probe.cget("fg"))
-        _font = tkfont.Font(font=_probe.cget("font"))  # type: ignore[arg-type]
-        _text_w = max(_font.measure("✓ Applied"), _font.measure("○ Apply"))
-        self._apply_btn_width: int = _text_w + 24  # 24 px for borders + internal padding
         _probe.destroy()
 
         pw = self.parent.winfo_width()
         ph = self.parent.winfo_height()
         px = self.parent.winfo_rootx()
         py = self.parent.winfo_rooty()
-        w, h = 1200, 800
+        w, h = 1300, 800
         self.dialog.geometry(f"{w}x{h}+{px + (pw - w) // 2}+{py + (ph - h) // 2}")
 
         bottom_bar = tk.Frame(self.dialog)
@@ -268,17 +263,15 @@ class SuggestionBrowserDialog:
         name_label.bind("<Button-1>", lambda e, s=sid: self._load_all_patches_in_editor(s))  # type: ignore[misc]
 
         is_applied = sid in self._applied_suggestions
-        btn_container = tk.Frame(row, width=self._apply_btn_width)
-        btn_container.pack_propagate(False)
-        btn_container.pack(side=tk.LEFT, padx=(5, 4), fill=tk.Y)
         action_btn = tk.Button(
-            btn_container,
+            row,
             text="✓ Applied" if is_applied else "○ Apply",
             fg="#5ca668" if is_applied else self._default_btn_fg,
+            width=10,
             anchor=tk.CENTER,
             command=lambda s=sid: self._on_action_button(s),  # type: ignore[misc]
         )
-        action_btn.pack(fill=tk.BOTH, expand=True)
+        action_btn.pack(side=tk.LEFT, padx=(5, 4))
         self._action_buttons[sid] = action_btn
 
         children_frame = tk.Frame(container)
