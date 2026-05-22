@@ -43,6 +43,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     explorer_output_text: Optional[scrolledtext.ScrolledText] = None
     explorer_run_button: Optional[tk.Button] = None
     browse_suggestions_button: Optional[tk.Button] = None
+    no_suggestions_label: Optional[tk.Label] = None
     prerequisite_info_label: Optional[tk.Label] = None
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
     jobs_var: Optional[tk.StringVar] = None
@@ -107,6 +108,10 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             button_frame, text="Browse Suggestions", command=self._open_suggestion_browser, state="disabled"
         )
         self.browse_suggestions_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # No suggestions notification label
+        self.no_suggestions_label = tk.Label(left_frame, text="No patterns found.", fg="#f38ba8", font=("Arial", 9))
+        self.no_suggestions_label.pack(anchor=tk.W, padx=5, pady=(5, 0))
 
         # Right panel - output
         right_frame = tk.Frame(main_paned)
@@ -182,6 +187,14 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         if self.browse_suggestions_button is not None:
             self.browse_suggestions_button.config(state="normal" if browse_ready else "disabled")
 
+        detection_executed = self._check_pattern_detection_executed()
+        patterns_found = self._check_patterns_found()
+        if self.no_suggestions_label is not None:
+            if detection_executed and not patterns_found:
+                self.no_suggestions_label.pack(anchor=tk.W, padx=5, pady=(5, 0))
+            else:
+                self.no_suggestions_label.pack_forget()
+
         self._update_pattern_detection_tab_state(ready)
         self._update_autotuning_tab_state(ready and browse_ready)
         if hasattr(self, "_update_autotuning_ui"):
@@ -212,6 +225,26 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         profiler_dir = os.path.join(self.arguments.dot_dp, "profiler")
         return os.path.isdir(profiler_dir)
 
+    def _check_patterns_found(self) -> bool:
+        import json
+
+        patterns_file = os.path.join(self.arguments.dot_dp, "explorer", "patterns.json")
+        if not os.path.exists(patterns_file):
+            return False
+        try:
+            with open(patterns_file, "r") as f:
+                data = json.load(f)
+            patterns = data.get("patterns", {})
+            return any(
+                patterns.get(key, []) for key in ["optimizer_output", "merged_pattern", "task", "do_all", "reduction"]
+            )
+        except (json.JSONDecodeError, IOError):
+            return False
+
+    def _check_pattern_detection_executed(self) -> bool:
+        explorer_dir = os.path.join(self.arguments.dot_dp, "explorer")
+        return os.path.isdir(explorer_dir)
+
     def _run_pattern_detection(self) -> None:
         if not self._check_explorer_prerequisites():
             show_error(
@@ -228,6 +261,9 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         self.explorer_running = True
         if self.explorer_run_button is not None:
             self.explorer_run_button.config(state="disabled", text="⟳ Running...")
+
+        if self.no_suggestions_label is not None:
+            self.no_suggestions_label.pack_forget()
 
         self.status_label.config(text="⏳ Pattern detection in progress...", fg="#FF6B6B")
 
