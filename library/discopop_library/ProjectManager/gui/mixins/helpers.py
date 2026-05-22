@@ -72,8 +72,8 @@ def show_message(parent: Any, title: str, message: str) -> None:  # type: ignore
     dialog = tk.Toplevel(parent)  # type: ignore
     dialog.withdraw()
     dialog.title(title)
-    dialog.geometry("600x250")
-    dialog.minsize(500, 150)
+    dialog.geometry("700x300")
+    dialog.minsize(550, 180)
     dialog.resizable(True, True)
 
     button_frame = tk.Frame(dialog, padx=15)
@@ -85,7 +85,7 @@ def show_message(parent: Any, title: str, message: str) -> None:  # type: ignore
     main_frame = tk.Frame(dialog, padx=15, pady=15)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    label = tk.Label(main_frame, text=message, wraplength=450, justify=tk.LEFT, font=("TkDefaultFont", 9))
+    label = tk.Label(main_frame, text=message, wraplength=550, justify=tk.LEFT, font=("TkDefaultFont", 9))
     label.pack(fill=tk.BOTH, expand=True)
 
     dialog.transient(parent)  # type: ignore
@@ -109,8 +109,8 @@ def ask_yes_no(parent: Any, title: str, message: str) -> bool:  # type: ignore
     dialog = tk.Toplevel(parent)  # type: ignore
     dialog.withdraw()
     dialog.title(title)
-    dialog.geometry("600x250")
-    dialog.minsize(500, 150)
+    dialog.geometry("700x300")
+    dialog.minsize(550, 180)
     dialog.resizable(True, True)
 
     result: list[bool] = [False]
@@ -135,7 +135,7 @@ def ask_yes_no(parent: Any, title: str, message: str) -> bool:  # type: ignore
     main_frame = tk.Frame(dialog, padx=15, pady=15)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    label = tk.Label(main_frame, text=message, wraplength=450, justify=tk.LEFT, font=("TkDefaultFont", 9))
+    label = tk.Label(main_frame, text=message, wraplength=550, justify=tk.LEFT, font=("TkDefaultFont", 9))
     label.pack(fill=tk.BOTH, expand=True)
 
     dialog.transient(parent)  # type: ignore
