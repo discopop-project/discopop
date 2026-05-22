@@ -273,7 +273,7 @@ class SuggestionBrowserDialog:
         header_frame.pack(fill=tk.X, padx=5, pady=(5, 2))
 
         self.save_button = tk.Button(
-            header_frame, text="Save", command=self._save_current_patch, state=tk.DISABLED, width=10
+            header_frame, text="Save File", command=self._save_current_patch, state=tk.DISABLED, width=10
         )
         self.save_button.pack(side=tk.LEFT)
 
@@ -333,7 +333,7 @@ class SuggestionBrowserDialog:
         self.editor_text.edit_modified(False)
         self._resetting_modified = False
 
-        self.save_button.config(text="Save", state=tk.NORMAL)
+        self.save_button.config(text="Save File", state=tk.NORMAL)
 
     def _apply_diff_highlighting(self) -> None:
         for tag in ("diff_add", "diff_remove", "diff_header", "diff_hunk"):
@@ -361,10 +361,10 @@ class SuggestionBrowserDialog:
         current = self.editor_text.get("1.0", "end-1c")
         if current != self._text_content_on_load:
             self._current_text_modified = True
-            self.save_button.config(text="Save *")
+            self.save_button.config(text="Save File *")
         else:
             self._current_text_modified = False
-            self.save_button.config(text="Save")
+            self.save_button.config(text="Save File")
 
     def _save_current_patch(self) -> None:
         if not self._current_patch_path:
@@ -378,7 +378,7 @@ class SuggestionBrowserDialog:
             self._resetting_modified = True
             self.editor_text.edit_modified(False)
             self._resetting_modified = False
-            self.save_button.config(text="Save")
+            self.save_button.config(text="Save File")
             self._apply_diff_highlighting()
         except IOError as e:
             from discopop_library.ProjectManager.gui.mixins.helpers import show_error
