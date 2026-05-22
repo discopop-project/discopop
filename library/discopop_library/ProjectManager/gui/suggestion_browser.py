@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import tkinter as tk
+import tkinter.font as tkfont
 from tkinter import ttk
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -144,9 +145,13 @@ class SuggestionBrowserDialog:
         self.dialog.geometry("1200x800")
         self.dialog.minsize(800, 500)
 
-        # Probe default button foreground so we can restore it for the "not applied" state
+        # Probe default button fg and measure the widest label so the container
+        # is sized correctly for any font / DPI setting
         _probe = tk.Button(self.dialog)
         self._default_btn_fg: str = str(_probe.cget("fg"))
+        _font = tkfont.Font(font=_probe.cget("font"))  # type: ignore[arg-type]
+        _text_w = max(_font.measure("✓ Applied"), _font.measure("○ Apply"))
+        self._apply_btn_width: int = _text_w + 24  # 24 px for borders + internal padding
         _probe.destroy()
 
         pw = self.parent.winfo_width()
@@ -263,7 +268,7 @@ class SuggestionBrowserDialog:
         name_label.bind("<Button-1>", lambda e, s=sid: self._load_all_patches_in_editor(s))  # type: ignore[misc]
 
         is_applied = sid in self._applied_suggestions
-        btn_container = tk.Frame(row, width=90)
+        btn_container = tk.Frame(row, width=self._apply_btn_width)
         btn_container.pack_propagate(False)
         btn_container.pack(side=tk.LEFT, padx=(5, 4), fill=tk.Y)
         action_btn = tk.Button(
