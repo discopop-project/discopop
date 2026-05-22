@@ -377,6 +377,7 @@ class SuggestionBrowserDialog:
                 self._action_buttons[sid].config(
                     text="✓ Applied" if is_applied else "○ Apply",
                     fg="#5ca668" if is_applied else self._default_btn_fg,
+                    width=10,
                 )
 
     def _on_action_button(self, sid: str) -> None:
