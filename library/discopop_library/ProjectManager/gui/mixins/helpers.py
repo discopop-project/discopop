@@ -72,8 +72,6 @@ def show_message(parent: Any, title: str, message: str) -> None:  # type: ignore
     dialog = tk.Toplevel(parent)  # type: ignore
     dialog.withdraw()
     dialog.title(title)
-    dialog.geometry("700x300")
-    dialog.minsize(550, 180)
     dialog.resizable(True, True)
 
     button_frame = tk.Frame(dialog, padx=15)
@@ -85,8 +83,24 @@ def show_message(parent: Any, title: str, message: str) -> None:  # type: ignore
     main_frame = tk.Frame(dialog, padx=15, pady=15)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    label = tk.Label(main_frame, text=message, wraplength=550, justify=tk.LEFT, font=("TkDefaultFont", 9))
+    label = tk.Label(main_frame, text=message, wraplength=600, justify=tk.LEFT, font=("TkDefaultFont", 9))
     label.pack(fill=tk.BOTH, expand=True)
+
+    dialog.update_idletasks()
+    req_width = label.winfo_reqwidth() + 60
+    req_height = label.winfo_reqheight() + 90
+    w = max(600, min(900, req_width))
+    h = max(250, min(700, req_height))
+
+    px = parent.winfo_rootx()
+    py = parent.winfo_rooty()
+    pw = parent.winfo_width()
+    ph = parent.winfo_height()
+    x = px + (pw - w) // 2
+    y = py + (ph - h) // 2
+
+    dialog.geometry(f"{int(w)}x{int(h)}+{int(x)}+{int(y)}")
+    dialog.minsize(600, 250)
 
     dialog.transient(parent)  # type: ignore
     dialog.deiconify()
@@ -109,8 +123,6 @@ def ask_yes_no(parent: Any, title: str, message: str) -> bool:  # type: ignore
     dialog = tk.Toplevel(parent)  # type: ignore
     dialog.withdraw()
     dialog.title(title)
-    dialog.geometry("700x300")
-    dialog.minsize(550, 180)
     dialog.resizable(True, True)
 
     result: list[bool] = [False]
@@ -135,8 +147,24 @@ def ask_yes_no(parent: Any, title: str, message: str) -> bool:  # type: ignore
     main_frame = tk.Frame(dialog, padx=15, pady=15)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    label = tk.Label(main_frame, text=message, wraplength=550, justify=tk.LEFT, font=("TkDefaultFont", 9))
+    label = tk.Label(main_frame, text=message, wraplength=600, justify=tk.LEFT, font=("TkDefaultFont", 9))
     label.pack(fill=tk.BOTH, expand=True)
+
+    dialog.update_idletasks()
+    req_width = label.winfo_reqwidth() + 60
+    req_height = label.winfo_reqheight() + 100
+    w = max(600, min(900, req_width))
+    h = max(250, min(700, req_height))
+
+    px = parent.winfo_rootx()
+    py = parent.winfo_rooty()
+    pw = parent.winfo_width()
+    ph = parent.winfo_height()
+    x = px + (pw - w) // 2
+    y = py + (ph - h) // 2
+
+    dialog.geometry(f"{int(w)}x{int(h)}+{int(x)}+{int(y)}")
+    dialog.minsize(600, 250)
 
     dialog.transient(parent)  # type: ignore
     dialog.deiconify()
