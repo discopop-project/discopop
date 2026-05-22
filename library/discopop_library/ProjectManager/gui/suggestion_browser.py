@@ -295,7 +295,7 @@ class SuggestionBrowserDialog:
         self._file_check_buttons[(sid, filename)] = check_btn
 
         display_name = self._patch_display_names.get((sid, filename), filename)
-        name_label = tk.Label(row, text=display_name, anchor=tk.W, fg="#89b4fa", cursor="hand2")
+        name_label = tk.Label(row, text=display_name, anchor=tk.W, fg="#4a7fbb", cursor="hand2")
         name_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
         patch_path = os.path.join(self.dot_dp_path, "patch_generator", sid, filename)
         name_label.bind("<Button-1>", lambda e, p=patch_path: self._load_patch_in_editor(p))  # type: ignore[misc]
