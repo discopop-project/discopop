@@ -98,14 +98,10 @@ class SuggestionBrowserDialog:
                 self._selection = {}
 
     def _merge_new_patches(self) -> None:
-        """Newly discovered patches default to selected."""
+        """Newly discovered suggestions default to fully selected; known suggestions preserve user choices."""
         for sid, files in self._patches.items():
             if sid not in self._selection:
                 self._selection[sid] = list(files)
-            else:
-                for f in files:
-                    if f not in self._selection[sid]:
-                        self._selection[sid].append(f)
 
     def _save_selection(self, notify: bool = True) -> None:
         path = self._get_selection_path()
