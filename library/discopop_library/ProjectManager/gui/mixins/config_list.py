@@ -101,6 +101,8 @@ class ConfigListMixin(ConfigManagerMixinBase):
             for cb in self.mode_checkbuttons.values():
                 cb.config(state="disabled")
             self.run_button.config(state="disabled")
+            if hasattr(self, "prepare_pattern_detection_button"):
+                self.prepare_pattern_detection_button.config(state="disabled")
             self.output_text.config(state=tk.NORMAL)
             self.output_text.delete("1.0", tk.END)
             self.output_text.config(state="disabled")
@@ -143,6 +145,8 @@ class ConfigListMixin(ConfigManagerMixinBase):
                 self.mode_vars[mode].set(False)
 
         self.run_button.config(state="normal")
+        if hasattr(self, "prepare_pattern_detection_button"):
+            self.prepare_pattern_detection_button.config(state="normal")
 
         reports_dir = os.path.join(self.arguments.project_dir, "reports")
         report_exists = False
