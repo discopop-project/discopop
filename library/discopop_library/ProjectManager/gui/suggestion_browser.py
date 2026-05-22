@@ -260,9 +260,9 @@ class SuggestionBrowserDialog:
         is_applied = sid in self._applied_suggestions
         action_btn = tk.Button(
             row,
-            text="✓ Applied" if is_applied else "○ Apply",
-            fg="#a6e3a1" if is_applied else "gray",
-            width=10,
+            text="✓ Applied" if is_applied else "○ Apply  ",
+            fg="#5ca668" if is_applied else "gray",
+            width=12,
             anchor=tk.CENTER,
             command=lambda s=sid: self._on_action_button(s),  # type: ignore[misc]
         )
@@ -370,8 +370,8 @@ class SuggestionBrowserDialog:
             is_applied = sid in self._applied_suggestions
             if sid in self._action_buttons:
                 self._action_buttons[sid].config(
-                    text="✓ Applied" if is_applied else "○ Apply",
-                    fg="#a6e3a1" if is_applied else "gray",
+                    text="✓ Applied" if is_applied else "○ Apply  ",
+                    fg="#5ca668" if is_applied else "gray",
                 )
 
     def _on_action_button(self, sid: str) -> None:
