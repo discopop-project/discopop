@@ -67,38 +67,6 @@ class Tooltip:
             self.tipwindow = None
 
 
-def _adjust_dialog_size(dialog: tk.Toplevel, text: tk.Text, parent: Any) -> None:  # type: ignore
-    """Adjust dialog size to fit text content and center it on the parent window."""
-    font = text.cget("font")
-    content = text.get("1.0", "end-1c")
-
-    # Width: measure the longest raw line via font metrics (works regardless of widget visibility)
-    longest_line = max(content.split("\n"), key=len) if content.strip() else ""
-    text_pixel_width = tk.font.Font(font=font).measure(longest_line)  # type: ignore
-
-    # Height: count content lines and measure line height from font metrics
-    line_count = max(1, content.count("\n") + 1)
-    font_obj = tk.font.Font(font=font)  # type: ignore
-    px_per_line = font_obj.metrics("linespace")
-    text_height = line_count * px_per_line
-
-    padding_h = 60  # horizontal: 30px each side
-    padding_v = 120  # vertical: title bar + button row + frame margins
-
-    w = max(400, min(900, text_pixel_width + padding_h))
-    h = max(200, min(600, text_height + padding_v))
-
-    # Center on the parent window
-    px = parent.winfo_rootx()
-    py = parent.winfo_rooty()
-    pw = parent.winfo_width()
-    ph = parent.winfo_height()
-    x = px + (pw - w) // 2
-    y = py + (ph - h) // 2
-
-    dialog.geometry(f"{int(w)}x{int(h)}+{int(x)}+{int(y)}")
-
-
 def show_message(parent: Any, title: str, message: str) -> None:  # type: ignore
     """Display a message dialog with normal (non-bold) text."""
     dialog = tk.Toplevel(parent)  # type: ignore
@@ -117,12 +85,8 @@ def show_message(parent: Any, title: str, message: str) -> None:  # type: ignore
     main_frame = tk.Frame(dialog, padx=15, pady=15)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    text = tk.Text(main_frame, wrap=tk.WORD, height=1, width=60, font=("TkDefaultFont", 9))
-    text.pack(fill=tk.BOTH, expand=True)
-    text.insert(1.0, message)
-    text.config(state=tk.DISABLED)
-
-    _adjust_dialog_size(dialog, text, parent)
+    label = tk.Label(main_frame, text=message, wraplength=450, justify=tk.LEFT, font=("TkDefaultFont", 9))
+    label.pack(fill=tk.BOTH, expand=True)
 
     dialog.transient(parent)  # type: ignore
     dialog.deiconify()
@@ -171,12 +135,8 @@ def ask_yes_no(parent: Any, title: str, message: str) -> bool:  # type: ignore
     main_frame = tk.Frame(dialog, padx=15, pady=15)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    text = tk.Text(main_frame, wrap=tk.WORD, height=1, width=60, font=("TkDefaultFont", 9))
-    text.pack(fill=tk.BOTH, expand=True)
-    text.insert(1.0, message)
-    text.config(state=tk.DISABLED)
-
-    _adjust_dialog_size(dialog, text, parent)
+    label = tk.Label(main_frame, text=message, wraplength=450, justify=tk.LEFT, font=("TkDefaultFont", 9))
+    label.pack(fill=tk.BOTH, expand=True)
 
     dialog.transient(parent)  # type: ignore
     dialog.deiconify()

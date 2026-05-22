@@ -74,6 +74,20 @@ class ExecutionMixin(ConfigManagerMixinBase):
             show_warning(self, "No mode selected", "Please select at least one execution mode.")
             return
 
+        inplace = self.inplace_var.get()
+        suggestions_mode = self.suggestions_mode_var.get()
+        if inplace and suggestions_mode != "none":
+            from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no
+
+            if not ask_yes_no(
+                self,
+                "Dangerous Configuration",
+                "Warning: You have selected inplace execution with suggestion application.\n\n"
+                "This will directly modify your project directory and may overwrite existing files.\n\n"
+                "Do you want to proceed?",
+            ):
+                return
+
         self.run_button.config(state="disabled", text="⟳ Running...")
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
