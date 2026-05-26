@@ -40,6 +40,23 @@ For detailed information on the gathered and stored data as well as the tools th
 sudo apt install python3 python3-pip python3-venv python3-tk build-essential make cmake git llvm-19-dev clang-19 libomp-19-dev libboost-all-dev
 # Replace 19 with 20, 21, or 22 if you prefer a newer LLVM release.
 ```
+
+#### Via `pacman` package manager (Arch-based distributions)
+```
+sudo pacman -S python python-pip tk base-devel cmake git llvm clang openmp boost
+# Arch ships the latest LLVM release. For a specific version (e.g., 19), install llvm19, clang19, and openmp from the AUR instead.
+```
+
+<!--#### Via `Homebrew` package manager (macOS)
+```
+xcode-select --install
+brew install python python-tk cmake git llvm libomp boost
+# For a specific LLVM version (e.g., 19), use llvm@19 instead of llvm.
+# Homebrew installs LLVM keg-only to avoid conflicting with Apple's clang. Add it to your PATH:
+echo 'export PATH="$(brew --prefix llvm)/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
+```
+!-->
+
 ### Latest release from PyPi
 ```
 pip install discopop==5.0.3a1
