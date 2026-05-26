@@ -18,7 +18,7 @@ from discopop_library.ProjectManager.gui.mixins.helpers import show_error, show_
 
 class ConfigCrudMixin(ConfigManagerMixinBase):
     def _new_config(self) -> None:
-        dialog = simpledialog.askstring("New Configuration", "Enter configuration name:")
+        dialog = simpledialog.askstring("New Configuration", "Enter configuration name:", parent=self)  # type: ignore[arg-type]
         if not dialog:
             return
 

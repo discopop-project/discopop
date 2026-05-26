@@ -96,8 +96,11 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
 
         comp_window = tk.Toplevel(self)  # type: ignore
         comp_window.title("Compilation Editor")
-        comp_window.geometry("1050x700")
         comp_window.minsize(800, 500)
+        w, h = 1050, 700
+        x = self.winfo_rootx() + (self.winfo_width() - w) // 2  # type: ignore[attr-defined]
+        y = self.winfo_rooty() + (self.winfo_height() - h) // 2  # type: ignore[attr-defined]
+        comp_window.geometry(f"{w}x{h}+{x}+{y}")
 
         def on_close_window() -> None:
             comp_window.destroy()
