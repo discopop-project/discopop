@@ -27,40 +27,34 @@ class ExecutionMixin(ConfigManagerMixinBase):
         try:
             thread_count = self.thread_var.get()
             if thread_count < 1:
-                self.status_label.config(text="Error: Thread count must be >= 1", fg="red")
-                self.after(3000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+                self._set_status("Error: Thread count must be >= 1", fg="red", reset_delay=3000)
                 return False
             if thread_count > cpu_count:
-                self.status_label.config(
-                    text=f"Warning: Thread count ({thread_count}) exceeds CPU count ({cpu_count})",
+                self._set_status(
+                    f"Warning: Thread count ({thread_count}) exceeds CPU count ({cpu_count})",
                     fg="orange",
+                    reset_delay=3000,
                 )
-                self.after(3000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
         except (ValueError, tk.TclError):
-            self.status_label.config(text="Error: Thread count must be a valid integer", fg="red")
-            self.after(3000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self._set_status("Error: Thread count must be a valid integer", fg="red", reset_delay=3000)
             return False
 
         try:
             timeout_exec = self.timeout_execution_var.get()
             if timeout_exec < 0:
-                self.status_label.config(text="Error: Execution timeout cannot be negative", fg="red")
-                self.after(3000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+                self._set_status("Error: Execution timeout cannot be negative", fg="red", reset_delay=3000)
                 return False
         except (ValueError, tk.TclError):
-            self.status_label.config(text="Error: Execution timeout must be a valid integer", fg="red")
-            self.after(3000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self._set_status("Error: Execution timeout must be a valid integer", fg="red", reset_delay=3000)
             return False
 
         try:
             timeout_comp = self.timeout_compilation_var.get()
             if timeout_comp < 0:
-                self.status_label.config(text="Error: Compilation timeout cannot be negative", fg="red")
-                self.after(3000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+                self._set_status("Error: Compilation timeout cannot be negative", fg="red", reset_delay=3000)
                 return False
         except (ValueError, tk.TclError):
-            self.status_label.config(text="Error: Compilation timeout must be a valid integer", fg="red")
-            self.after(3000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self._set_status("Error: Compilation timeout must be a valid integer", fg="red", reset_delay=3000)
             return False
 
         return True

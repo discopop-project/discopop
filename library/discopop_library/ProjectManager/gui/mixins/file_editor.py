@@ -64,11 +64,11 @@ class FileEditorMixin(ConfigManagerMixinBase):
                     "with the DiscoPoP framework.",
                 )
         except Exception as e:
-            self.status_label.config(text=f"Error validating compile.sh: {e}", fg="red")
+            self._set_status(f"Error validating compile.sh: {e}", fg="red")
 
     def _save_config(self) -> None:
         if not self.current_config:
-            self.status_label.config(text="No configuration selected", fg="red")
+            self._set_status("No configuration selected", fg="red")
             return
 
         config_path = os.path.join(self.config_dir, self.current_config)
@@ -94,19 +94,17 @@ class FileEditorMixin(ConfigManagerMixinBase):
                 self.right_tabs.tab(self.editor_tab_index, text="Editor")
                 saved_files.append(filename)
             except Exception as e:
-                self.status_label.config(text=f"Error saving file {filename}: {e}", fg="red")
+                self._set_status(f"Error saving file {filename}: {e}", fg="red")
                 return
 
         if saved_files:
-            self.status_label.config(text=f"Saved {', '.join(saved_files)}", fg="green")
+            self._set_status(f"Saved {', '.join(saved_files)}", fg="green", reset_delay=2000)
 
             if "compile.sh" in saved_files:
                 compile_path = os.path.join(config_path, "compile.sh")
                 self._validate_compile_script(compile_path)
-
-            self.after(2000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
         else:
-            self.status_label.config(text="No changes to save", fg="gray")
+            self._set_status("No changes to save")
 
     def _check_modification(self, filename: str) -> None:
         if filename not in self.text_areas:

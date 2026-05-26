@@ -7,6 +7,7 @@
 # directory for details.
 
 import logging
+import re
 import tkinter as tk
 import tkinter.font
 from tkinter import scrolledtext
@@ -172,6 +173,40 @@ def ask_yes_no(parent: Any, title: str, message: str) -> bool:  # type: ignore
     dialog.wait_window()
 
     return result[0]
+
+
+def clean_ansi_output(text: str) -> str:
+    """Remove ANSI escape codes and clean up carriage returns for display."""
+    ansi_escape = re.compile(r"\x1b\[[0-9;]*m|\x1b\[[A-Z]")
+    text = ansi_escape.sub("", text)
+    lines = text.split("\n")
+    cleaned_lines = []
+    for line in lines:
+        if "\r" in line:
+            parts = line.split("\r")
+            line = parts[-1] if parts[-1] else parts[-2] if len(parts) > 1 else ""
+        if line.strip():
+            cleaned_lines.append(line)
+    return "\n".join(cleaned_lines)
+
+
+def bind_tooltip_hover(widget: tk.Widget, tooltip: Tooltip, parent: Any, delay: int = 500) -> None:
+    """Bind <Enter>/<Leave> on widget to show/hide tooltip with a debounce timer."""
+    timer: list[Optional[str]] = [None]
+
+    def on_enter(event: Any) -> None:
+        if timer[0]:
+            parent.after_cancel(timer[0])
+        timer[0] = parent.after(delay, tooltip.showtip, event.x_root, event.y_root)
+
+    def on_leave(event: Any) -> None:
+        if timer[0]:
+            parent.after_cancel(timer[0])
+            timer[0] = None
+        tooltip.hidetip()
+
+    widget.bind("<Enter>", on_enter)
+    widget.bind("<Leave>", on_leave)
 
 
 def enable_text_context_menu(text_widget: Union[tk.Text, scrolledtext.ScrolledText]) -> None:

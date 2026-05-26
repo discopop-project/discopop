@@ -71,12 +71,12 @@ class ReportMixin(ConfigManagerMixinBase):
 
         try:
             reset_project(args_copy)
-            self.status_label.config(text="Execution results reset successfully", fg="green")
+            self._set_status("Execution results reset successfully", fg="green")
             self._refresh_config_list()
             self._update_report_display()
             self._update_pattern_detection_ui()
         except Exception as e:
-            self.status_label.config(text=f"Error resetting execution results: {e}", fg="red")
+            self._set_status(f"Error resetting execution results: {e}", fg="red")
 
     def _reset_project_data(self) -> None:
         args_copy = copy.copy(self.arguments)
@@ -87,9 +87,9 @@ class ReportMixin(ConfigManagerMixinBase):
 
         try:
             reset_project(args_copy)
-            self.status_label.config(text="Project reset successfully", fg="green")
+            self._set_status("Project reset successfully", fg="green")
             self._refresh_config_list()
             self._update_report_display()
             self._update_pattern_detection_ui()
         except Exception as e:
-            self.status_label.config(text=f"Error resetting project: {e}", fg="red")
+            self._set_status(f"Error resetting project: {e}", fg="red")

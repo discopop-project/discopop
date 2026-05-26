@@ -10,8 +10,9 @@ import json
 import os
 import tkinter as tk
 from tkinter import ttk
-from typing import Any, Optional
+from typing import Any
 
+from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, bind_tooltip_hover
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 
 
@@ -157,30 +158,12 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         )
         inplace_cb.pack(anchor=tk.W)
 
-        from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip
-
         inplace_tooltip = Tooltip(
             inplace_cb,
             "In-place: execution modifies your project directory directly\n"
             "Non-in-place: execution happens in a copy, keeping your project clean",
         )
-        inplace_tooltip_timer: Optional[str] = None
-
-        def on_inplace_enter(event: Any, tooltip: Tooltip = inplace_tooltip) -> None:
-            nonlocal inplace_tooltip_timer
-            if inplace_tooltip_timer:
-                self.after_cancel(inplace_tooltip_timer)  # type: ignore
-            inplace_tooltip_timer = self.after(500, tooltip.showtip, event.x_root, event.y_root)  # type: ignore
-
-        def on_inplace_leave(event: Any, tooltip: Tooltip = inplace_tooltip) -> None:
-            nonlocal inplace_tooltip_timer
-            if inplace_tooltip_timer:
-                self.after_cancel(inplace_tooltip_timer)  # type: ignore
-                inplace_tooltip_timer = None
-            tooltip.hidetip()
-
-        inplace_cb.bind("<Enter>", on_inplace_enter)
-        inplace_cb.bind("<Leave>", on_inplace_leave)
+        bind_tooltip_hover(inplace_cb, inplace_tooltip, self)
 
         self.skip_cleanup_var = tk.BooleanVar(value=False)
         skip_cleanup_cb = tk.Checkbutton(
@@ -195,23 +178,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
             "Warning: Enabling this may result in significant disk space usage\n"
             "as project copies are retained after execution.",
         )
-        skip_cleanup_tooltip_timer: Optional[str] = None
-
-        def on_skip_cleanup_enter(event: Any, tooltip: Tooltip = skip_cleanup_tooltip) -> None:
-            nonlocal skip_cleanup_tooltip_timer
-            if skip_cleanup_tooltip_timer:
-                self.after_cancel(skip_cleanup_tooltip_timer)  # type: ignore
-            skip_cleanup_tooltip_timer = self.after(500, tooltip.showtip, event.x_root, event.y_root)  # type: ignore
-
-        def on_skip_cleanup_leave(event: Any, tooltip: Tooltip = skip_cleanup_tooltip) -> None:
-            nonlocal skip_cleanup_tooltip_timer
-            if skip_cleanup_tooltip_timer:
-                self.after_cancel(skip_cleanup_tooltip_timer)  # type: ignore
-                skip_cleanup_tooltip_timer = None
-            tooltip.hidetip()
-
-        skip_cleanup_cb.bind("<Enter>", on_skip_cleanup_enter)
-        skip_cleanup_cb.bind("<Leave>", on_skip_cleanup_leave)
+        bind_tooltip_hover(skip_cleanup_cb, skip_cleanup_tooltip, self)
 
         suggestions_frame = tk.LabelFrame(options_outer, text="Apply Suggestions", padx=5, pady=5)
         suggestions_frame.pack(fill=tk.X, padx=5, pady=5)

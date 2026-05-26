@@ -57,7 +57,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
 
     def _derive_current_config(self) -> None:
         if not self.current_config:
-            self.status_label.config(text="No configuration selected", fg="red")
+            self._set_status("No configuration selected", fg="red")
             return
 
         has_unsaved = any(self.modified_files.get(filename, False) for filename in ["execute.sh"])
@@ -78,11 +78,10 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             derive_settings_files(config_path, overwrite=False)
 
             self._load_config()
-            self.status_label.config(text="Derived configuration files created", fg="green")
-            self.after(2000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self._set_status("Derived configuration files created", fg="green", reset_delay=2000)
         except Exception as e:
             show_error(self, "Error", f"Failed to derive settings: {e}")
-            self.status_label.config(text="Error deriving config", fg="red")
+            self._set_status("Error deriving config", fg="red")
 
     def _open_compilation_editor(self) -> None:
         if self.compilation_editor_open:
@@ -289,15 +288,14 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
                     self.compilation_notebook.tab(tab_index, text=filename)
                 saved_files.append(filename)
             except Exception as e:
-                self.status_label.config(text=f"Error saving file {filename}: {e}", fg="red")
+                self._set_status(f"Error saving file {filename}: {e}", fg="red")
                 return
 
         if saved_files:
-            self.status_label.config(text=f"Saved {', '.join(saved_files)}", fg="green")
+            self._set_status(f"Saved {', '.join(saved_files)}", fg="green", reset_delay=2000)
             self._update_derive_button_state()
-            self.after(2000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
         else:
-            self.status_label.config(text="No changes to save", fg="gray")
+            self._set_status("No changes to save")
 
     def _on_compilation_tab_changed(self, event: Any) -> None:
         """Show/hide Derive and Test buttons based on active compilation tab"""
@@ -472,7 +470,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             from discopop_library.ProjectManager.utilities.deriveSettingsFiles import derive_settings_files
 
             derive_settings_files(self.arguments.project_config_dir)
-            self.status_label.config(text="Derived settings created successfully", fg="green")
+            self._set_status("Derived settings created successfully", fg="green")
 
             if self.compilation_notebook is not None:
                 for filename in DERIVED_FILES:
@@ -480,10 +478,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
                     self.compilation_notebook.tab(tab_index, state="normal")
 
             self._load_compilation_files()
-
             self._update_derive_button_state()
-
             self.after(2000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
         except Exception as e:
-            self.status_label.config(text=f"Error deriving settings: {e}", fg="red")
-            self.after(3000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self._set_status(f"Error deriving settings: {e}", fg="red", reset_delay=3000)

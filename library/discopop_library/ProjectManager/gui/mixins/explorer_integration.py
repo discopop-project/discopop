@@ -8,7 +8,6 @@
 
 import logging
 import os
-import re
 import subprocess
 import sys
 import threading
@@ -16,26 +15,11 @@ import tkinter as tk
 from tkinter import scrolledtext
 from typing import Any, Callable, Dict, Optional
 
-from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, show_error
+from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, show_error, clean_ansi_output
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.widgets import create_styled_output_console
 
 logger = logging.getLogger("ExplorerIntegration")
-
-
-def _clean_ansi_output(text: str) -> str:
-    """Remove ANSI escape codes and clean up carriage returns for display."""
-    ansi_escape = re.compile(r"\x1b\[[0-9;]*m|\x1b\[[A-Z]")
-    text = ansi_escape.sub("", text)
-    lines = text.split("\n")
-    cleaned_lines = []
-    for line in lines:
-        if "\r" in line:
-            parts = line.split("\r")
-            line = parts[-1] if parts[-1] else parts[-2] if len(parts) > 1 else ""
-        if line.strip():
-            cleaned_lines.append(line)
-    return "\n".join(cleaned_lines)
 
 
 class ExplorerIntegrationMixin(ConfigManagerMixinBase):
@@ -352,7 +336,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         assert process.stdout is not None
         for line in process.stdout:
-            cleaned = _clean_ansi_output(line.rstrip("\n"))
+            cleaned = clean_ansi_output(line.rstrip("\n"))
             if cleaned:
                 output_callback(cleaned + "\n")
 

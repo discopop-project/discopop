@@ -43,11 +43,10 @@ class ConfigCrudMixin(ConfigManagerMixinBase):
                     self.listbox.selection_set(i)
                     break
             self._load_config()
-            self.status_label.config(text=f"Created configuration '{config_name}'", fg="green")
-            self.after(2000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self._set_status(f"Created configuration '{config_name}'", fg="green", reset_delay=2000)
         except Exception as e:
             show_error(self, "Error", f"Failed to create configuration: {e}")
-            self.status_label.config(text="Error creating config", fg="red")
+            self._set_status("Error creating config", fg="red")
 
     def _copy_config(self) -> None:
         if not self.current_config:
@@ -77,11 +76,10 @@ class ConfigCrudMixin(ConfigManagerMixinBase):
         try:
             shutil.copytree(source_path, dest_path)
             self._refresh_config_list()
-            self.status_label.config(text=f"Copied configuration to '{config_name}'", fg="green")
-            self.after(2000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self._set_status(f"Copied configuration to '{config_name}'", fg="green", reset_delay=2000)
         except Exception as e:
             show_error(self, "Error", f"Failed to copy configuration: {e}")
-            self.status_label.config(text="Error copying config", fg="red")
+            self._set_status("Error copying config", fg="red")
 
     def _rename_config(self) -> None:
         if not self.current_config:
@@ -113,11 +111,10 @@ class ConfigCrudMixin(ConfigManagerMixinBase):
             self.current_config = new_name
             self._refresh_config_list()
             self._load_config()
-            self.status_label.config(text=f"Renamed configuration to '{new_name}'", fg="green")
-            self.after(2000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self._set_status(f"Renamed configuration to '{new_name}'", fg="green", reset_delay=2000)
         except Exception as e:
             show_error(self, "Error", f"Failed to rename configuration: {e}")
-            self.status_label.config(text="Error renaming config", fg="red")
+            self._set_status("Error renaming config", fg="red")
 
     def _delete_config(self) -> None:
         if not self.current_config:
@@ -136,8 +133,7 @@ class ConfigCrudMixin(ConfigManagerMixinBase):
             shutil.rmtree(config_path)
             self.current_config = None
             self._refresh_config_list()
-            self.status_label.config(text=f"Deleted configuration", fg="green")
-            self.after(2000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self._set_status("Deleted configuration", fg="green", reset_delay=2000)
         except Exception as e:
             show_error(self, "Error", f"Failed to delete configuration: {e}")
-            self.status_label.config(text="Error deleting config", fg="red")
+            self._set_status("Error deleting config", fg="red")
