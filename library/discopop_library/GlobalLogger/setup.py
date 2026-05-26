@@ -20,6 +20,8 @@ def setup_logger(arguments: GeneralArguments) -> None:
             format="[DP][%(name)s] %(levelname)s: %(message)s",  # "[DiscoPoP][%(name)s] %(levelname)s: %(asctime)s: %(message)s"
         )
 
+    logging.getLogger("filelock").setLevel(logging.WARNING)
+
     logger = logging.getLogger("GlobalLogger")
 
     # create console handler and set level to debug

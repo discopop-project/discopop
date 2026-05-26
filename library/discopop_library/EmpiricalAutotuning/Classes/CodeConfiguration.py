@@ -74,18 +74,28 @@ class CodeConfiguration(object):
             apply_suggestions=None,
             reset=False,
             reset_execution_results=False,
+            gui=False,
             label_prefix="",
             timeout_compilation=timeout,
             timeout_execution=timeout,
         )
 
         compilation_successful = True
+        config_path = os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration)
+        shared_compile_sh = os.path.join(self.config_dot_dp_path, "project", "configs", "compile.sh")
+
+        # All settings files are now shared
+        if self.settings_name in ["seq_settings.json", "dp_settings.json", "hd_settings.json", "par_settings.json"]:
+            settings_path = os.path.join(self.config_dot_dp_path, "project", "configs", self.settings_name)
+        else:
+            settings_path = os.path.join(config_path, self.settings_name)
+
         ret = execute_configuration(
             cm_args,
             self.root_path,
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration),
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, self.settings_name),
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, "compile.sh"),
+            config_path,
+            settings_path,
+            shared_compile_sh,
             thread_count,
             timeout,
         )
@@ -114,17 +124,26 @@ class CodeConfiguration(object):
             apply_suggestions=None,
             reset=False,
             reset_execution_results=False,
+            gui=False,
             label_prefix="",
             timeout_compilation=timeout,
             timeout_execution=timeout,
         )
 
+        config_path = os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration)
+
+        # All settings files are now shared
+        if self.settings_name in ["seq_settings.json", "dp_settings.json", "hd_settings.json", "par_settings.json"]:
+            settings_path = os.path.join(self.config_dot_dp_path, "project", "configs", self.settings_name)
+        else:
+            settings_path = os.path.join(config_path, self.settings_name)
+
         ret = execute_configuration(
             cm_args,
             self.root_path,
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration),
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, self.settings_name),
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, "execute.sh"),
+            config_path,
+            settings_path,
+            os.path.join(self.config_dot_dp_path, "project", "configs", "compile.sh"),
             thread_count,
             timeout,
         )
@@ -165,14 +184,23 @@ class CodeConfiguration(object):
             apply_suggestions=None,
             reset=False,
             reset_execution_results=False,
+            gui=False,
             label_prefix="",
             timeout_compilation=None,
             timeout_execution=None,
         )
+        # Settings files are now shared
+        if settings_name in ["seq_settings.json", "dp_settings.json", "hd_settings.json", "par_settings.json"]:
+            settings_path = os.path.join(self.config_dot_dp_path, "project", "configs", settings_name)
+        else:
+            settings_path = os.path.join(
+                self.config_dot_dp_path, "project", "configs", arguments.configuration, settings_name
+            )
+
         dest_path = copy_configuration(
             cm_args,
             arguments.configuration,
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, settings_name),
+            settings_path,
             get_new_configuration_id(),
         )
         new_dot_discopop_path = os.path.join(dest_path, ".discopop")

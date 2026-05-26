@@ -77,7 +77,7 @@ from discopop_explorer.classes.ContextTaskGraph.modifications.computationally_ex
 logger = logging.getLogger("Explorer")
 
 
-class ContextTaskGraph(Plottable, object):
+class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
     pet: PEGraphX
     task_graph: TaskGraph
     graph: nx.DiGraph

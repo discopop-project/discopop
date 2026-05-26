@@ -33,6 +33,7 @@ class ProjectManagerArguments(GeneralArguments):
     apply_suggestions: Optional[str]
     reset: bool
     reset_execution_results: bool
+    gui: bool
     label_prefix: str
     timeout_execution: Optional[float]
     timeout_compilation: Optional[float]
@@ -62,8 +63,8 @@ class ProjectManagerArguments(GeneralArguments):
 
     def __validate(self) -> None:
         """Validate the arguments passed to the discopop_configuration_manager, e.g check if given files exist"""
-        # check if .discopop folder exists
-        if not self.initialize_directory and not os.path.exists(self.dot_dp):
+        # check if .discopop folder exists (allow GUI mode to auto-initialize)
+        if not self.initialize_directory and not self.gui and not os.path.exists(self.dot_dp):
             print("ERROR: folder not found: " + self.dot_dp + "\n-> Did you initialize the project using '--init' ? ")
             sys.exit(1)
 

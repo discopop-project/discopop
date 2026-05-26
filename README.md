@@ -81,7 +81,18 @@ In case any issues arise during the process please do not hesitate to contact us
 - Installed required system packages
 - Installed profiler and python packages
 - Installed the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) for visualization of the results.
-### Example
+
+### Example (GUI)
+To launch the GUI, navigate to the project's folder and execute the `discopop` command.
+```
+# create a copy of the example code and enter the folder
+cd discopop_example
+# start the GUI. A wizard will start to help you configure your project.
+discopop
+```
+The below explanation on the Visual Studio Code Extension is also valid when using the GUI.
+
+### Example (manual)
 Instrument and execute the code.
 ```
 # create a copy of the example code and enter the folder
