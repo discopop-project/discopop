@@ -13,5 +13,5 @@ REQUIRED_EXECUTABLES: List[str] = [
 
 # Each inner list is a group of alternatives; at least one from each group must be present.
 REQUIRED_EXECUTABLE_ALTERNATIVES: List[List[str]] = [
-    ["clang-19", "clang-20", "clang-21", "clang-22"],
+    ["clang-19", "clang-20", "clang-21", "clang-22", "clang"],
 ]
