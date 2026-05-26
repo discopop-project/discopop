@@ -7,7 +7,6 @@
 # directory for details.
 
 import copy
-import json
 import os
 import subprocess
 import tkinter as tk
@@ -74,38 +73,9 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             return
 
         try:
-            with open(settings_path, "r") as f:
-                settings = json.load(f)
-        except Exception as e:
-            show_error(self, "Error", f"Failed to load seq_settings.json: {e}")
-            return
+            from discopop_library.ProjectManager.utilities.deriveSettingsFiles import derive_settings_files
 
-        try:
-            dp_path = os.path.join(config_path, "dp_settings.json")
-            if not os.path.exists(dp_path):
-                dp = copy.deepcopy(settings)
-                dp["CC"] = "discopop_cc"
-                dp["CXX"] = "discopop_cxx"
-                with open(dp_path, "w") as f:
-                    json.dump(dp, f, indent=2)
-
-            hd_path = os.path.join(config_path, "hd_settings.json")
-            if not os.path.exists(hd_path):
-                hd = copy.deepcopy(settings)
-                hd["CC"] = "discopop_hotspot_cc"
-                hd["CXX"] = "discopop_hotspot_cxx"
-                hd["CFLAGS"] += " -fopenmp" if hd["CFLAGS"] else "-fopenmp"
-                hd["CXXFLAGS"] += " -fopenmp" if hd["CXXFLAGS"] else "-fopenmp"
-                with open(hd_path, "w") as f:
-                    json.dump(hd, f, indent=2)
-
-            par_path = os.path.join(config_path, "par_settings.json")
-            if not os.path.exists(par_path):
-                par = copy.deepcopy(settings)
-                par["CFLAGS"] += " -fopenmp" if par["CFLAGS"] else "-fopenmp"
-                par["CXXFLAGS"] += " -fopenmp" if par["CXXFLAGS"] else "-fopenmp"
-                with open(par_path, "w") as f:
-                    json.dump(par, f, indent=2)
+            derive_settings_files(config_path, overwrite=False)
 
             self._load_config()
             self.status_label.config(text="Derived configuration files created", fg="green")
@@ -501,7 +471,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         try:
             from discopop_library.ProjectManager.utilities.deriveSettingsFiles import derive_settings_files
 
-            derive_settings_files(self.arguments)
+            derive_settings_files(self.arguments.project_config_dir)
             self.status_label.config(text="Derived settings created successfully", fg="green")
 
             if self.compilation_notebook is not None:

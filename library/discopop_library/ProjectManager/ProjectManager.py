@@ -51,7 +51,7 @@ def run(arguments: ProjectManagerArguments) -> None:
         run_gui(arguments)
         return
 
-    derive_settings_files(arguments)
+    derive_settings_files(arguments.project_config_dir)
 
     if arguments.list:
         show_configurations_without_execution(arguments)
