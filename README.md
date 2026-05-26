@@ -47,7 +47,7 @@ sudo pacman -S python python-pip tk base-devel cmake git llvm clang openmp boost
 # Arch ships the latest LLVM release. For a specific version (e.g., 19), install llvm19, clang19, and openmp from the AUR instead.
 ```
 
-#### Via `Homebrew` package manager (macOS)
+<!--#### Via `Homebrew` package manager (macOS)
 ```
 xcode-select --install
 brew install python python-tk cmake git llvm libomp boost
@@ -55,6 +55,7 @@ brew install python python-tk cmake git llvm libomp boost
 # Homebrew installs LLVM keg-only to avoid conflicting with Apple's clang. Add it to your PATH:
 echo 'export PATH="$(brew --prefix llvm)/bin:$PATH"' >> ~/.zshrc && source ~/.zshrc
 ```
+!-->
 
 ### Latest release from PyPi
 ```
