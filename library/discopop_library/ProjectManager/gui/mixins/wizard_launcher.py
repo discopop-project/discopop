@@ -52,4 +52,5 @@ class WizardLauncherMixin(ConfigManagerMixinBase):
                     self.listbox.selection_set(i)
                     self.current_config = wizard.result
                     self._load_config()
+                    self.right_tabs.select(self.execute_tab_index)  # type: ignore
                     break

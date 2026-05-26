@@ -386,6 +386,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self.after(0, lambda: self._update_report_display())  # type: ignore
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
 
         threading.Thread(target=thread_func, daemon=True).start()

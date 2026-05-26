@@ -122,6 +122,7 @@ class ConfigManagerApp(  # type: ignore
         # Execute tab
         execute_frame = tk.Frame(self.right_tabs)
         self.right_tabs.add(execute_frame, text="Execute")
+        self.execute_tab_index = self.right_tabs.index(execute_frame)
 
         # Report tab
         report_tab_frame = tk.Frame(self.right_tabs)

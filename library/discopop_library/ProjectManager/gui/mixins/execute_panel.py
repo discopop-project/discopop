@@ -375,7 +375,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
                     pass
             if autotuner_ids:
                 self.autotuner_suggestions_info_label.config(
-                    text="Suggestions: " + ", ".join(autotuner_ids), fg="black"
+                    text="Suggestion IDs: " + ", ".join(autotuner_ids), fg="black"
                 )
             elif autotuner_executed and config_key:
                 self.autotuner_suggestions_info_label.config(text="No suggestions selected", fg="gray")
