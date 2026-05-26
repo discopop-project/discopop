@@ -94,7 +94,9 @@ You can still proceed with the configuration, but keep this limitation in mind."
         scrollbar = ttk.Scrollbar(frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.compile_sh_text = tk.Text(frame, height=14, width=80, yscrollcommand=scrollbar.set, wrap=tk.WORD)
+        self.compile_sh_text = tk.Text(
+            frame, height=14, width=80, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11)
+        )
         self.compile_sh_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         scrollbar.config(command=self.compile_sh_text.yview)
         enable_text_context_menu(self.compile_sh_text)
@@ -221,15 +223,15 @@ You can still proceed with the configuration, but keep this limitation in mind."
         notebook = ttk.Notebook(frame)
         notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        self.dp_settings_text = tk.Text(notebook, height=15, width=80, wrap=tk.WORD)
+        self.dp_settings_text = tk.Text(notebook, height=15, width=80, wrap=tk.WORD, font=("TkDefaultFont", 11))
         notebook.add(self.dp_settings_text, text="dp_settings.json")
         enable_text_context_menu(self.dp_settings_text)
 
-        self.hd_settings_text = tk.Text(notebook, height=15, width=80, wrap=tk.WORD)
+        self.hd_settings_text = tk.Text(notebook, height=15, width=80, wrap=tk.WORD, font=("TkDefaultFont", 11))
         notebook.add(self.hd_settings_text, text="hd_settings.json")
         enable_text_context_menu(self.hd_settings_text)
 
-        self.par_settings_text = tk.Text(notebook, height=15, width=80, wrap=tk.WORD)
+        self.par_settings_text = tk.Text(notebook, height=15, width=80, wrap=tk.WORD, font=("TkDefaultFont", 11))
         notebook.add(self.par_settings_text, text="par_settings.json")
         enable_text_context_menu(self.par_settings_text)
 
@@ -262,7 +264,9 @@ You can still proceed with the configuration, but keep this limitation in mind."
         scrollbar = ttk.Scrollbar(frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.execute_sh_text = tk.Text(frame, height=10, width=80, yscrollcommand=scrollbar.set, wrap=tk.WORD)
+        self.execute_sh_text = tk.Text(
+            frame, height=10, width=80, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11)
+        )
         self.execute_sh_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         scrollbar.config(command=self.execute_sh_text.yview)
         enable_text_context_menu(self.execute_sh_text)

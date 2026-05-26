@@ -15,7 +15,6 @@ from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerM
 
 class HelpDialogsMixin(ConfigManagerMixinBase):
     def _show_help_dialog(self, title: str, content: str) -> None:
-        """Display a formatted help dialog similar to wizard steps."""
         help_window = tk.Toplevel(self)  # type: ignore[arg-type]
         help_window.withdraw()
         help_window.title(title)
@@ -35,16 +34,7 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
         scrollbar = ttk.Scrollbar(main_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        text = tk.Text(
-            main_frame,
-            wrap=tk.WORD,
-            yscrollcommand=scrollbar.set,
-            font=("TkDefaultFont", 11),
-            relief=tk.FLAT,
-            borderwidth=0,
-            highlightthickness=0,
-            cursor="arrow",
-        )
+        text = tk.Text(main_frame, wrap=tk.WORD, yscrollcommand=scrollbar.set, font=("TkDefaultFont", 11))
         text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=text.yview)
 

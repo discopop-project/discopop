@@ -30,7 +30,7 @@ def create_styled_output_console(parent: tk.Misc) -> scrolledtext.ScrolledText:
         state="disabled",
         bg=CATPPUCCIN_OUTPUT_BG,
         fg=CATPPUCCIN_FG,
-        font=("Courier New", 10),
+        font=("Courier New", 11),
         insertbackground=CATPPUCCIN_FG,
         relief=tk.FLAT,
         bd=0,

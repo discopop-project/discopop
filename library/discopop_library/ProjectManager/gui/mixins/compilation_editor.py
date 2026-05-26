@@ -171,7 +171,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             scrollbar = ttk.Scrollbar(text_frame)
             scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-            text_area = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD)
+            text_area = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11))
             text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
             scrollbar.config(command=text_area.yview)
             enable_text_context_menu(text_area)
@@ -450,7 +450,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         scrollbar = ttk.Scrollbar(text_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        output_text = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD)
+        output_text = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11))
         output_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=output_text.yview)
 

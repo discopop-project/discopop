@@ -168,7 +168,7 @@ class ConfigManagerApp(  # type: ignore
         scrollbar = ttk.Scrollbar(text_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        text_area = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD)
+        text_area = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11))
         text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=text_area.yview)
         enable_text_context_menu(text_area)
@@ -198,8 +198,8 @@ class ConfigManagerApp(  # type: ignore
     def _setup_styles(self) -> None:
         from ttkthemes import ThemedStyle
 
-        style = ThemedStyle(self, theme="radiance")
-        # style = ttk.Style()
+        # style = ThemedStyle(self, theme="radiance")
+        style = ttk.Style()
 
         style.configure(
             "TCombobox",

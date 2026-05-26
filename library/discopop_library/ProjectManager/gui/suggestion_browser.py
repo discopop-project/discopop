@@ -498,7 +498,7 @@ class SuggestionBrowserDialog:
         self.editor_text = tk.Text(
             editor_frame,
             wrap=tk.NONE,
-            font=("Courier New", 10),
+            font=("Courier New", 11),
             bg=CATPPUCCIN_OUTPUT_BG,
             fg=CATPPUCCIN_FG,
             insertbackground=CATPPUCCIN_FG,
