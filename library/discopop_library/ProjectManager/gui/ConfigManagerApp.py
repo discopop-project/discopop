@@ -8,10 +8,8 @@
 
 from __future__ import annotations
 
-import logging
 import os
 import tkinter as tk
-from tkinter import scrolledtext
 from tkinter import ttk
 from typing import Optional
 
@@ -21,7 +19,6 @@ from discopop_library.ProjectManager.utilities.initializeFiles import (
 )
 from discopop_library.ProjectManager.gui.widgets import create_styled_output_console
 from discopop_library.ProjectManager.gui.mixins.helpers import (
-    TextAreaHandler,
     Tooltip,
     show_error,
     enable_text_context_menu,
