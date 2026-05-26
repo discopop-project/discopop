@@ -13,7 +13,7 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 from discopop_library.ProjectManager.ProjectManager import run
 
 
-def parse_args() -> ProjectManagerArguments:
+def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
     """Parse the arguments passed to the discopop_configuration_manager"""
     parser = ArgumentParser(description="Initialize and prepare projects for the use in the DiscoPoP framework.")
     # all flags that are not considered stable should be added to the experimental_parser
@@ -48,6 +48,8 @@ def parse_args() -> ProjectManagerArguments:
     # fmt: on
 
     arguments = parser.parse_args()
+    if force_gui:
+        arguments.gui = True
 
     return ProjectManagerArguments(
         project_root=arguments.project,
@@ -73,6 +75,12 @@ def parse_args() -> ProjectManagerArguments:
 
 def main() -> None:
     arguments = parse_args()
+    setup_logger(arguments)
+    run(arguments)
+
+
+def gui_main() -> None:
+    arguments = parse_args(force_gui=True)
     setup_logger(arguments)
     run(arguments)
 
