@@ -266,6 +266,11 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
             run_button_frame, text="Prepare Pattern Detection", command=on_prepare_pattern_detection, state="disabled"
         )
         self.prepare_pattern_detection_button.pack(side=tk.LEFT, padx=5, pady=5)
+        _prepare_tooltip = Tooltip(
+            self.prepare_pattern_detection_button,
+            "Runs the selected configuration in 'dp' mode with 'inplace' enabled.",
+        )
+        bind_tooltip_hover(self.prepare_pattern_detection_button, _prepare_tooltip, self)
 
         # Right panel - output
         right_frame = ttk.Frame(main_paned)
