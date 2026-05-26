@@ -51,14 +51,14 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         # Configuration display
         config_row = ttk.Frame(settings_frame)
         config_row.pack(fill=tk.X, pady=3)
-        ttk.Label(config_row, text="Configuration:", font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=5)
+        ttk.Label(config_row, text="Configuration:", font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
         self.autotuning_config_label = ttk.Label(config_row, text="(none selected)", foreground="gray")
         self.autotuning_config_label.pack(side=tk.LEFT, padx=5)
 
         # Threads selection
         threads_row = ttk.Frame(settings_frame)
         threads_row.pack(fill=tk.X, pady=5)
-        ttk.Label(threads_row, text="Threads:", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(threads_row, text="Threads:", font=("Arial", 11)).pack(side=tk.LEFT, padx=5)
         self.autotuning_threads_var = tk.StringVar(value="auto")
         threads_combo = ttk.Combobox(
             threads_row,
@@ -73,7 +73,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         # Hotspot types
         hotspot_frame = ttk.Frame(settings_frame)
         hotspot_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(hotspot_frame, text="Hotspot Types:", font=("Arial", 9, "bold")).pack(anchor=tk.W, padx=5)
+        ttk.Label(hotspot_frame, text="Hotspot Types:", font=("Arial", 11, "bold")).pack(anchor=tk.W, padx=5)
 
         self.autotuning_hotspot_types_vars = {}
         for htype in ["yes", "no", "maybe"]:
@@ -85,7 +85,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         # Algorithm selection
         algo_frame = ttk.Frame(settings_frame)
         algo_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(algo_frame, text="Algorithm:", font=("Arial", 9, "bold")).pack(anchor=tk.W, padx=5)
+        ttk.Label(algo_frame, text="Algorithm:", font=("Arial", 11, "bold")).pack(anchor=tk.W, padx=5)
         self.autotuning_algorithm_var = tk.StringVar(value="Evolutionary combination")
         algo_options = [
             ("0", "No combination (measure only)"),
@@ -101,7 +101,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         # Log level
         loglevel_frame = ttk.Frame(settings_frame)
         loglevel_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(loglevel_frame, text="Log Level:", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(loglevel_frame, text="Log Level:", font=("Arial", 11)).pack(side=tk.LEFT, padx=5)
         self.autotuning_log_level_var = tk.StringVar(value="WARNING")
         loglevel_combo = ttk.Combobox(
             loglevel_frame,

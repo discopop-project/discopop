@@ -52,7 +52,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         patterns_frame = ttk.Frame(settings_frame)
         patterns_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(patterns_frame, text="Pattern Types:", font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=5)
+        ttk.Label(patterns_frame, text="Pattern Types:", font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
 
         self.pattern_types_vars = {}
         for pattern in ["reduction", "doall", "task"]:
@@ -65,7 +65,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         jobs_frame = ttk.Frame(settings_frame)
         jobs_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(jobs_frame, text="Threads:", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(jobs_frame, text="Threads:", font=("Arial", 11)).pack(side=tk.LEFT, padx=5)
         self.jobs_var = tk.StringVar(value="auto")
         jobs_combo = ttk.Combobox(
             jobs_frame,
@@ -93,7 +93,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         # No suggestions notification label
         self.no_suggestions_label = ttk.Label(
-            left_frame, text="No patterns found.", foreground="#f38ba8", font=("Arial", 9)
+            left_frame, text="No patterns found.", foreground="#f38ba8", font=("Arial", 11)
         )
         self.no_suggestions_label.pack(anchor=tk.W, padx=5, pady=(5, 0))
 

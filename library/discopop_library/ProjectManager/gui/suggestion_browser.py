@@ -199,7 +199,7 @@ class SuggestionBrowserDialog:
         ttk.Label(
             parent,
             text=f"Suggestions ({len(self._patches)})",
-            font=("Arial", 9, "bold"),
+            font=("Arial", 11, "bold"),
         ).pack(anchor=tk.W, padx=5, pady=(5, 2))
 
         list_outer = ttk.Frame(parent)

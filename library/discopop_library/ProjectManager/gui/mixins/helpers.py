@@ -54,7 +54,7 @@ class Tooltip:
             background="#ffffe0",
             relief=tk.SOLID,
             borderwidth=1,
-            font=("Arial", 9),
+            font=("Arial", 11),
             justify=tk.LEFT,
             wraplength=300,
             padx=8,
@@ -84,7 +84,7 @@ def show_message(parent: Any, title: str, message: str) -> None:  # type: ignore
     main_frame = ttk.Frame(dialog, padding=15)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    label = ttk.Label(main_frame, text=message, wraplength=600, justify=tk.LEFT, font=("TkDefaultFont", 9))
+    label = ttk.Label(main_frame, text=message, wraplength=600, justify=tk.LEFT, font=("TkDefaultFont", 11))
     label.pack(fill=tk.BOTH, expand=True)
 
     dialog.update_idletasks()
@@ -148,7 +148,7 @@ def ask_yes_no(parent: Any, title: str, message: str) -> bool:  # type: ignore
     main_frame = ttk.Frame(dialog, padding=15)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    label = ttk.Label(main_frame, text=message, wraplength=600, justify=tk.LEFT, font=("TkDefaultFont", 9))
+    label = ttk.Label(main_frame, text=message, wraplength=600, justify=tk.LEFT, font=("TkDefaultFont", 11))
     label.pack(fill=tk.BOTH, expand=True)
 
     dialog.update_idletasks()

@@ -147,7 +147,7 @@ class ConfigManagerApp(  # type: ignore
         header_frame = ttk.Frame(editor_frame)
         header_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        help_label = ttk.Label(header_frame, text="Execution script", font=("TkDefaultFont", 9, "bold"))
+        help_label = ttk.Label(header_frame, text="Execution script", font=("TkDefaultFont", 11, "bold"))
         help_label.pack(side=tk.LEFT)
 
         help_button = ttk.Button(header_frame, text="Help", command=self._show_execute_sh_help)
@@ -198,9 +198,8 @@ class ConfigManagerApp(  # type: ignore
     def _setup_styles(self) -> None:
         from ttkthemes import ThemedStyle
 
-        # style = ThemedStyle(self, theme="arc")
-        # style.set_theme("arc")
-        style = ttk.Style()
+        style = ThemedStyle(self, theme="radiance")
+        # style = ttk.Style()
 
         style.configure(
             "TCombobox",

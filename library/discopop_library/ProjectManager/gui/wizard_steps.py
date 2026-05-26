@@ -38,7 +38,7 @@ The wizard will help you with:
 After completing this wizard, your project will be ready to use with DiscoPoP.
 
 Click "Next >" to begin."""
-        label = ttk.Label(frame, text=intro, font=("TkDefaultFont", 9), justify=tk.LEFT, wraplength=900)
+        label = ttk.Label(frame, text=intro, font=("TkDefaultFont", 11), justify=tk.LEFT, wraplength=900)
         label.pack(anchor=tk.NW, padx=10, pady=15)
         return frame
 
@@ -71,7 +71,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
         status_label.pack(anchor=tk.W, padx=10, pady=(15, 10))
 
         description_label = ttk.Label(
-            frame, text=description, font=("TkDefaultFont", 9), justify=tk.LEFT, wraplength=900
+            frame, text=description, font=("TkDefaultFont", 11), justify=tk.LEFT, wraplength=900
         )
         description_label.pack(anchor=tk.NW, padx=10, pady=10)
 
@@ -88,7 +88,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
             "You can use relative paths as if you are already in the project root.\n"
             "See the wiki for examples: https://discopop-project.github.io/discopop/"
         )
-        hint = ttk.Label(frame, text=hint_text, font=("TkDefaultFont", 9), justify=tk.LEFT)
+        hint = ttk.Label(frame, text=hint_text, font=("TkDefaultFont", 11), justify=tk.LEFT)
         hint.pack(anchor=tk.W, padx=5, pady=(5, 10))
 
         scrollbar = ttk.Scrollbar(frame)
@@ -145,7 +145,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
         hint = ttk.Label(
             frame,
             text="Configure your compilation settings. These will be used to compile your project.",
-            font=("TkDefaultFont", 9),
+            font=("TkDefaultFont", 11),
         )
         hint.pack(anchor=tk.W, padx=5, pady=(5, 10))
 
@@ -190,7 +190,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
         hint = ttk.Label(
             frame,
             text="Click 'Run Test Compilation' to verify your compilation script works.",
-            font=("TkDefaultFont", 9),
+            font=("TkDefaultFont", 11),
         )
         hint.pack(anchor=tk.W, padx=5, pady=(5, 10))
 
@@ -200,7 +200,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
         self.run_test_btn = ttk.Button(button_frame, text="Run Test Compilation", command=self._run_test_compilation)
         self.run_test_btn.pack(side=tk.LEFT)
 
-        self.test_status_label = ttk.Label(button_frame, text="", font=("TkDefaultFont", 9))
+        self.test_status_label = ttk.Label(button_frame, text="", font=("TkDefaultFont", 11))
         self.test_status_label.pack(side=tk.LEFT, padx=10)
 
         self.test_output_text = create_styled_output_console(frame)
@@ -214,7 +214,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
         hint = ttk.Label(
             frame,
             text="Review and accept the derived settings. You can edit them before continuing.",
-            font=("TkDefaultFont", 9),
+            font=("TkDefaultFont", 11),
         )
         hint.pack(anchor=tk.W, padx=5, pady=(5, 10))
 
@@ -242,7 +242,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
         config_frame = ttk.Frame(frame)
         config_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
 
-        ttk.Label(config_frame, text="Configuration Name:", font=("TkDefaultFont", 9)).pack(anchor=tk.W, pady=5)
+        ttk.Label(config_frame, text="Configuration Name:", font=("TkDefaultFont", 11)).pack(anchor=tk.W, pady=5)
         self.config_name_entry = ttk.Entry(config_frame, width=40)
         self.config_name_entry.pack(anchor=tk.W)
         self.config_name_entry.insert(0, "default")
@@ -256,7 +256,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
             "You can use relative paths as if you are already in the project root.\n"
             "See the wiki for examples: https://discopop-project.github.io/discopop/"
         )
-        hint = ttk.Label(frame, text=hint_text, font=("TkDefaultFont", 9), justify=tk.LEFT)
+        hint = ttk.Label(frame, text=hint_text, font=("TkDefaultFont", 11), justify=tk.LEFT)
         hint.pack(anchor=tk.W, padx=5, pady=(0, 10))
 
         scrollbar = ttk.Scrollbar(frame)

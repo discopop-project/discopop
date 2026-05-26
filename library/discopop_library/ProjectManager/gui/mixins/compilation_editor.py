@@ -125,7 +125,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         self.compilation_notebook = ttk.Notebook(comp_content_frame)
 
         style = ttk.Style()
-        style.configure("TNotebook.Tab", padding=[10, 2], font=("TkDefaultFont", 9))
+        style.configure("TNotebook.Tab", padding=[10, 2], font=("TkDefaultFont", 11))
 
         compilation_files = [
             "compile.sh",
@@ -154,7 +154,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             header_frame = ttk.Frame(frame)
             header_frame.pack(fill=tk.X, padx=5, pady=5)
 
-            help_label = ttk.Label(header_frame, text=filename, font=("TkDefaultFont", 9, "bold"))
+            help_label = ttk.Label(header_frame, text=filename, font=("TkDefaultFont", 11, "bold"))
             help_label.pack(side=tk.LEFT)
 
             help_command = self._get_help_command(filename)

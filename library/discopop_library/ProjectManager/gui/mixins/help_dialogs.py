@@ -35,7 +35,16 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
         scrollbar = ttk.Scrollbar(main_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        text = tk.Text(main_frame, wrap=tk.WORD, yscrollcommand=scrollbar.set, font=("TkDefaultFont", 9))
+        text = tk.Text(
+            main_frame,
+            wrap=tk.WORD,
+            yscrollcommand=scrollbar.set,
+            font=("TkDefaultFont", 11),
+            relief=tk.FLAT,
+            borderwidth=0,
+            highlightthickness=0,
+            cursor="arrow",
+        )
         text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=text.yview)
 
