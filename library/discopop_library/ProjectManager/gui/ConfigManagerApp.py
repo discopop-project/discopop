@@ -198,8 +198,8 @@ class ConfigManagerApp(  # type: ignore
     def _setup_styles(self) -> None:
         from ttkthemes import ThemedStyle
 
-        # style = ThemedStyle(self, theme="radiance")
-        style = ttk.Style()
+        style = ThemedStyle(self, theme="scidblue")
+        # style = ttk.Style()
 
         style.configure(
             "TCombobox",
