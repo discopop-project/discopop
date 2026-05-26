@@ -18,7 +18,7 @@ from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no
 
 
 class ReportPanelMixin(ConfigManagerMixinBase):
-    def _build_report_panel(self, parent: tk.Frame) -> None:
+    def _build_report_panel(self, parent: tk.Widget) -> None:
         style = ttk.Style()
         style.configure(
             "Treeview", rowheight=40, font=("TkDefaultFont", 10), fieldbackground="#ffffff", background="#ffffff"
@@ -27,7 +27,7 @@ class ReportPanelMixin(ConfigManagerMixinBase):
         style.map("Treeview.Heading", background=[("", "#e0e0e0")])
         style.map("Treeview", fieldbackground=[("", "#ffffff")])
 
-        button_frame = tk.Frame(parent)
+        button_frame = ttk.Frame(parent)
         button_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
         def on_reset_execution_results() -> None:
@@ -46,14 +46,14 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             ):
                 self._reset_project_data()
 
-        reset_results_button = tk.Button(
+        reset_results_button = ttk.Button(
             button_frame,
             text="Reset Execution Results",
             command=on_reset_execution_results,
         )
         reset_results_button.pack(side=tk.LEFT, padx=5)
 
-        reset_project_button = tk.Button(
+        reset_project_button = ttk.Button(
             button_frame,
             text="Reset Project",
             command=on_reset_project,
@@ -66,7 +66,7 @@ class ReportPanelMixin(ConfigManagerMixinBase):
         def on_view_report() -> None:
             self._view_report()
 
-        self.generate_report_button = tk.Button(
+        self.generate_report_button = ttk.Button(
             button_frame,
             text="Generate PDF Report",
             state="disabled",
@@ -74,7 +74,7 @@ class ReportPanelMixin(ConfigManagerMixinBase):
         )
         self.generate_report_button.pack(side=tk.LEFT, padx=5)
 
-        self.view_report_button = tk.Button(
+        self.view_report_button = ttk.Button(
             button_frame,
             text="View Report PDF",
             state="disabled",
@@ -82,7 +82,7 @@ class ReportPanelMixin(ConfigManagerMixinBase):
         )
         self.view_report_button.pack(side=tk.LEFT, padx=5)
 
-        tree_frame = tk.Frame(parent)
+        tree_frame = ttk.Frame(parent)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         vsb = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)

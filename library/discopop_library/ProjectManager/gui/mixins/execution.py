@@ -86,7 +86,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
 
-        self.status_label.config(text="⏳ Execution in progress...", fg="#FF6B6B")
+        self.status_label.config(text="⏳ Execution in progress...", foreground="#FF6B6B")
 
         self.output_text.config(state=tk.NORMAL)
         self.output_text.delete("1.0", tk.END)
@@ -196,7 +196,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                         self.after(0, lambda e_msg=str(e): append_output(f"Error copying project: {e_msg}\n"))  # type: ignore
                         continue
 
-                self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", fg="#FF6B6B"))  # type: ignore
+                self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground="#FF6B6B"))  # type: ignore
                 self.after(0, lambda: append_output("Compiling...\n"))  # type: ignore
                 compile_result = execute_configuration(
                     args_copy,
@@ -225,7 +225,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 if stderr:
                     self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
 
-                self.after(0, lambda: self.status_label.config(text="⏳ Executing...", fg="#FF6B6B"))  # type: ignore
+                self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground="#FF6B6B"))  # type: ignore
                 self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
                 execute_result = execute_configuration(
                     args_copy,
@@ -258,7 +258,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL, text="Run"))  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.inplace_var.set(False))  # type: ignore
-            self.after(0, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self.after(0, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
             self.after(0, lambda: self._refresh_config_list())  # type: ignore
             self.after(0, lambda: self._update_report_display())  # type: ignore
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
@@ -275,7 +275,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
 
-        self.status_label.config(text="⏳ Preparing pattern detection...", fg="#FF6B6B")
+        self.status_label.config(text="⏳ Preparing pattern detection...", foreground="#FF6B6B")
 
         self.output_text.config(state=tk.NORMAL)
         self.output_text.delete("1.0", tk.END)
@@ -325,7 +325,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             shared_compile_sh = os.path.join(self.arguments.project_config_dir, "compile.sh")
             shared_dp_settings = os.path.join(self.arguments.project_config_dir, "dp_settings.json")
 
-            self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", fg="#FF6B6B"))  # type: ignore
+            self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground="#FF6B6B"))  # type: ignore
             self.after(0, lambda: append_output("Compiling...\n"))  # type: ignore
 
             compile_result = execute_configuration(
@@ -341,7 +341,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             if compile_result is None or compile_result[0] != 0:
                 ret_code = compile_result[0] if compile_result else "None"
                 self.after(0, lambda rc=ret_code: append_output(f"Compilation failed (return code: {rc})\n"))  # type: ignore
-                self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", fg="red"))  # type: ignore
+                self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground="red"))  # type: ignore
             else:
                 ret_code, elapsed, stdout, stderr = compile_result
                 self.after(0, lambda e=elapsed: append_output(f"Compilation succeeded ({e:.2f}s)\n"))  # type: ignore
@@ -350,7 +350,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 if stderr:
                     self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
 
-                self.after(0, lambda: self.status_label.config(text="⏳ Executing...", fg="#FF6B6B"))  # type: ignore
+                self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground="#FF6B6B"))  # type: ignore
                 self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
 
                 execute_result = execute_configuration(
@@ -366,7 +366,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 if execute_result is None or execute_result[0] != 0:
                     ret_code = execute_result[0] if execute_result else "None"
                     self.after(0, lambda rc=ret_code: append_output(f"Execution failed (return code: {rc})\n"))  # type: ignore
-                    self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", fg="red"))  # type: ignore
+                    self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground="red"))  # type: ignore
                 else:
                     ret_code, elapsed, stdout, stderr = execute_result
                     self.after(0, lambda e=elapsed: append_output(f"Execution succeeded ({e:.2f}s)\n"))  # type: ignore
@@ -379,7 +379,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.after(0, lambda: self.prepare_pattern_detection_button.config(state=tk.NORMAL, text="Prepare Pattern Detection"))  # type: ignore
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
-            self.after(0, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self.after(0, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
             self.after(0, lambda: self._update_report_display())  # type: ignore
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
 

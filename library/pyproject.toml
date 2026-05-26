@@ -47,6 +47,7 @@ dependencies = [
     "tabulate",
     "termcolor",
     "tqdm",
+    "ttkthemes",
 ]
 
 [project.optional-dependencies]

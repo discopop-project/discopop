@@ -116,10 +116,10 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
 
         comp_window.protocol("WM_DELETE_WINDOW", on_close_window)
 
-        bottom_comp_frame = tk.Frame(comp_window)
+        bottom_comp_frame = ttk.Frame(comp_window)
         bottom_comp_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
 
-        comp_content_frame = tk.Frame(comp_window)
+        comp_content_frame = ttk.Frame(comp_window)
         comp_content_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(5, 0))
 
         self.compilation_notebook = ttk.Notebook(comp_content_frame)
@@ -136,7 +136,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         ]
 
         for filename in compilation_files:
-            frame = tk.Frame(self.compilation_notebook)
+            frame = ttk.Frame(self.compilation_notebook)
             self.compilation_notebook.add(frame, text=filename)
             self.compilation_tabs[filename] = self.compilation_notebook.index(frame)
 
@@ -151,21 +151,21 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
                 tooltip = Tooltip(self.compilation_notebook, tooltip_text)
                 self.compilation_tab_tooltips[tab_index] = (filename, tooltip)
 
-            header_frame = tk.Frame(frame)
+            header_frame = ttk.Frame(frame)
             header_frame.pack(fill=tk.X, padx=5, pady=5)
 
-            help_label = tk.Label(header_frame, text=filename, font=("TkDefaultFont", 9, "bold"))
+            help_label = ttk.Label(header_frame, text=filename, font=("TkDefaultFont", 9, "bold"))
             help_label.pack(side=tk.LEFT)
 
             help_command = self._get_help_command(filename)
             if help_command:
-                help_button = tk.Button(header_frame, text="Help", command=help_command)
+                help_button = ttk.Button(header_frame, text="Help", command=help_command)
                 help_button.pack(side=tk.RIGHT, padx=5)
 
-            text_frame = tk.Frame(frame)
+            text_frame = ttk.Frame(frame)
             text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-            scrollbar = tk.Scrollbar(text_frame)
+            scrollbar = ttk.Scrollbar(text_frame)
             scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
             text_area = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD)
@@ -192,15 +192,15 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         self.compilation_notebook.bind("<Motion>", self._on_compilation_tab_motion)
         self.compilation_notebook.bind("<Leave>", self._on_compilation_tab_leave)
 
-        save_button = tk.Button(bottom_comp_frame, text="Save (Ctrl+S)", command=self._save_compilation_files)
+        save_button = ttk.Button(bottom_comp_frame, text="Save (Ctrl+S)", command=self._save_compilation_files)
         save_button.pack(side=tk.LEFT, padx=5)
 
-        self.test_compilation_button = tk.Button(
+        self.test_compilation_button = ttk.Button(
             bottom_comp_frame, text="Test Compilation", command=self._test_compilation_from_editor, state="disabled"
         )
         self.test_compilation_button.pack(side=tk.LEFT, padx=5)
 
-        self.derive_compilation_button = tk.Button(
+        self.derive_compilation_button = ttk.Button(
             bottom_comp_frame, text="Derive", command=self._derive_compilation_settings, state="disabled"
         )
         self.derive_compilation_button.pack(side=tk.LEFT, padx=5)
@@ -386,7 +386,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             return
 
         self.test_compilation_button.config(state="disabled", text="⟳ Testing...")
-        self.status_label.config(text="Running compilation test...", fg="#FF6B6B")
+        self.status_label.config(text="Running compilation test...", foreground="#FF6B6B")
 
         def thread_func() -> None:
             from discopop_library.ProjectManager.configurations.execution import execute_configuration
@@ -402,13 +402,13 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             )
 
             if result is None:
-                self.after(0, lambda: self.status_label.config(text="✗ Compilation test failed: settings not found", fg="red"))  # type: ignore
+                self.after(0, lambda: self.status_label.config(text="✗ Compilation test failed: settings not found", foreground="red"))  # type: ignore
             else:
                 ret_code, elapsed, stdout, stderr = result
                 if ret_code == 0:
-                    self.after(0, lambda e=elapsed: self.status_label.config(text=f"✓ Compilation successful ({e:.2f}s)", fg="green"))  # type: ignore
+                    self.after(0, lambda e=elapsed: self.status_label.config(text=f"✓ Compilation successful ({e:.2f}s)", foreground="green"))  # type: ignore
                 else:
-                    self.after(0, lambda rc=ret_code, e=elapsed: self.status_label.config(text=f"✗ Compilation failed (exit code: {rc}, {e:.2f}s)", fg="red"))  # type: ignore
+                    self.after(0, lambda rc=ret_code, e=elapsed: self.status_label.config(text=f"✗ Compilation failed (exit code: {rc}, {e:.2f}s)", foreground="red"))  # type: ignore
 
                 output_msg = f"Compilation test output:\n\n"
                 if ret_code == 0:
@@ -438,13 +438,13 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         status_color = "green" if return_code == 0 else "red"
         status_text = "✓ Success" if return_code == 0 else "✗ Failed"
 
-        status_label = tk.Label(dialog, text=status_text, fg=status_color, font=("TkDefaultFont", 12, "bold"))
+        status_label = ttk.Label(dialog, text=status_text, foreground=status_color, font=("TkDefaultFont", 12, "bold"))
         status_label.pack(pady=10)
 
-        text_frame = tk.Frame(dialog)
+        text_frame = ttk.Frame(dialog)
         text_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        scrollbar = tk.Scrollbar(text_frame)
+        scrollbar = ttk.Scrollbar(text_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         output_text = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD)
@@ -454,7 +454,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         output_text.insert(1.0, output)
         output_text.config(state=tk.DISABLED)
 
-        close_button = tk.Button(dialog, text="Close", command=dialog.destroy)
+        close_button = ttk.Button(dialog, text="Close", command=dialog.destroy)
         close_button.pack(pady=10)
 
         pw = self.winfo_width()  # type: ignore
@@ -479,6 +479,6 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
 
             self._load_compilation_files()
             self._update_derive_button_state()
-            self.after(2000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self.after(2000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
         except Exception as e:
             self._set_status(f"Error deriving settings: {e}", fg="red", reset_delay=3000)

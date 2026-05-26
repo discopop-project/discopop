@@ -12,7 +12,7 @@ import subprocess
 import sys
 import threading
 import tkinter as tk
-from tkinter import scrolledtext
+from tkinter import scrolledtext, ttk
 from typing import Any, Callable, Dict, Optional
 
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, show_error, clean_ansi_output
@@ -25,10 +25,10 @@ logger = logging.getLogger("ExplorerIntegration")
 class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     explorer_running = False
     explorer_output_text: Optional[scrolledtext.ScrolledText] = None
-    explorer_run_button: Optional[tk.Button] = None
-    browse_suggestions_button: Optional[tk.Button] = None
-    no_suggestions_label: Optional[tk.Label] = None
-    prerequisite_info_label: Optional[tk.Label] = None
+    explorer_run_button: Optional[ttk.Button] = None
+    browse_suggestions_button: Optional[ttk.Button] = None
+    no_suggestions_label: Optional[ttk.Label] = None
+    prerequisite_info_label: Optional[ttk.Label] = None
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
     jobs_var: Optional[tk.StringVar] = None
     collect_stats_var: Optional[tk.BooleanVar] = None
@@ -36,38 +36,36 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     _pattern_detection_tab_tooltip_timer: Optional[str] = None
     _pattern_detection_tab_tooltip_active_tab: Optional[int] = None
 
-    def _build_pattern_detection_panel(self, parent: tk.Frame) -> None:
-        import tkinter.ttk as ttk
-
+    def _build_pattern_detection_panel(self, parent: tk.Widget) -> None:
         main_paned = tk.PanedWindow(parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
 
         # Left panel - settings
-        left_frame = tk.Frame(main_paned)
+        left_frame = ttk.Frame(main_paned)
         main_paned.add(left_frame, minsize=650, width=650)
 
         # Settings frame
-        settings_frame = tk.LabelFrame(left_frame, text="Settings", padx=5, pady=5)
+        settings_frame = ttk.LabelFrame(left_frame, text="Settings", padding=5)
         settings_frame.pack(fill=tk.X, padx=5, pady=5)
 
         # Pattern types selection
-        patterns_frame = tk.Frame(settings_frame)
+        patterns_frame = ttk.Frame(settings_frame)
         patterns_frame.pack(fill=tk.X, pady=5)
 
-        tk.Label(patterns_frame, text="Pattern Types:", font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=5)
+        ttk.Label(patterns_frame, text="Pattern Types:", font=("Arial", 9, "bold")).pack(side=tk.LEFT, padx=5)
 
         self.pattern_types_vars = {}
         for pattern in ["reduction", "doall", "task"]:
             var = tk.BooleanVar(value=pattern in ["reduction", "doall"])
             self.pattern_types_vars[pattern] = var
-            cb = tk.Checkbutton(patterns_frame, text=pattern, variable=var)
+            cb = ttk.Checkbutton(patterns_frame, text=pattern, variable=var)
             cb.pack(side=tk.LEFT, padx=5)
 
         # Jobs selection
-        jobs_frame = tk.Frame(settings_frame)
+        jobs_frame = ttk.Frame(settings_frame)
         jobs_frame.pack(fill=tk.X, pady=5)
 
-        tk.Label(jobs_frame, text="Threads:", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(jobs_frame, text="Threads:", font=("Arial", 9)).pack(side=tk.LEFT, padx=5)
         self.jobs_var = tk.StringVar(value="auto")
         jobs_combo = ttk.Combobox(
             jobs_frame,
@@ -77,31 +75,33 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             state="readonly",
         )
         jobs_combo.pack(side=tk.LEFT, padx=5)
-        tk.Label(jobs_frame, text="(auto = unlimited)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(jobs_frame, text="(auto = unlimited)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
 
         # Buttons frame
-        button_frame = tk.Frame(left_frame)
+        button_frame = ttk.Frame(left_frame)
         button_frame.pack(fill=tk.X, padx=0, pady=0)
 
-        self.explorer_run_button = tk.Button(
+        self.explorer_run_button = ttk.Button(
             button_frame, text="Run Pattern Detection", command=self._run_pattern_detection, state="disabled"
         )
         self.explorer_run_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.browse_suggestions_button = tk.Button(
+        self.browse_suggestions_button = ttk.Button(
             button_frame, text="Browse Suggestions", command=self._open_suggestion_browser, state="disabled"
         )
         self.browse_suggestions_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         # No suggestions notification label
-        self.no_suggestions_label = tk.Label(left_frame, text="No patterns found.", fg="#f38ba8", font=("Arial", 9))
+        self.no_suggestions_label = ttk.Label(
+            left_frame, text="No patterns found.", foreground="#f38ba8", font=("Arial", 9)
+        )
         self.no_suggestions_label.pack(anchor=tk.W, padx=5, pady=(5, 0))
 
         # Right panel - output
-        right_frame = tk.Frame(main_paned)
+        right_frame = ttk.Frame(main_paned)
         main_paned.add(right_frame)
 
-        output_frame = tk.LabelFrame(right_frame, text="Output")
+        output_frame = ttk.LabelFrame(right_frame, text="Output")
         output_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
         self.explorer_output_text = create_styled_output_console(output_frame)
@@ -249,7 +249,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         if self.no_suggestions_label is not None:
             self.no_suggestions_label.pack_forget()
 
-        self.status_label.config(text="⏳ Pattern detection in progress...", fg="#FF6B6B")
+        self.status_label.config(text="⏳ Pattern detection in progress...", foreground="#FF6B6B")
 
         if self.explorer_output_text is not None:
             self.explorer_output_text.config(state=tk.NORMAL)
@@ -377,8 +377,8 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         self._refresh_suggestion_selection_display()
 
         if not error:
-            self.status_label.config(text="Pattern detection completed successfully", fg="green")
-            self.after(3000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self.status_label.config(text="Pattern detection completed successfully", foreground="green")
+            self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
         else:
-            self.status_label.config(text="Pattern detection failed", fg="red")
-            self.after(3000, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self.status_label.config(text="Pattern detection failed", foreground="red")
+            self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore

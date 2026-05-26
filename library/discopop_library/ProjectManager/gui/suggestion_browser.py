@@ -57,8 +57,8 @@ class SuggestionBrowserDialog:
         self._check_buttons: Dict[str, tk.Button] = {}
         self._file_check_buttons: Dict[Tuple[str, str], tk.Button] = {}
         self._action_buttons: Dict[str, tk.Button] = {}
-        self._child_frames: Dict[str, tk.Frame] = {}
-        self._row_frames: Dict[str, tk.Frame] = {}
+        self._child_frames: Dict[str, ttk.Frame] = {}
+        self._row_frames: Dict[str, ttk.Frame] = {}
 
         self._current_patch_path: Optional[str] = None
         self._current_text_modified = False
@@ -156,19 +156,19 @@ class SuggestionBrowserDialog:
         w, h = 1300, 800
         self.dialog.geometry(f"{w}x{h}+{px + (pw - w) // 2}+{py + (ph - h) // 2}")
 
-        bottom_bar = tk.Frame(self.dialog)
+        bottom_bar = ttk.Frame(self.dialog)
         bottom_bar.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=(0, 5))
-        tk.Button(
+        ttk.Button(
             bottom_bar,
             text="Register suggestions for execution",
             command=self._register_for_execution,
         ).pack(side=tk.LEFT, padx=(0, 10))
-        tk.Button(
+        ttk.Button(
             bottom_bar,
             text="Apply selected to code",
             command=self._apply_selected_to_code,
         ).pack(side=tk.LEFT, padx=(0, 5))
-        tk.Button(
+        ttk.Button(
             bottom_bar,
             text="Reset all applied patches",
             command=self._reset_all_applied,
@@ -177,12 +177,12 @@ class SuggestionBrowserDialog:
         main_paned = tk.PanedWindow(self.dialog, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        left_frame = tk.Frame(main_paned)
+        left_frame = ttk.Frame(main_paned)
         # stretch="always": window growth goes to the left (suggestions) panel first;
         # minsize=420 ensures buttons/checkboxes are never clipped
         main_paned.add(left_frame, minsize=420, stretch="always")
 
-        right_frame = tk.Frame(main_paned)
+        right_frame = ttk.Frame(main_paned)
         # stretch="never": editor does not absorb window resize — left panel does
         main_paned.add(right_frame, minsize=300, stretch="never")
 
@@ -195,19 +195,19 @@ class SuggestionBrowserDialog:
         self.dialog.transient(self.parent)
         self.dialog.grab_set()
 
-    def _build_left_panel(self, parent: tk.Frame) -> None:
-        tk.Label(
+    def _build_left_panel(self, parent: tk.Widget) -> None:
+        ttk.Label(
             parent,
             text=f"Suggestions ({len(self._patches)})",
             font=("Arial", 9, "bold"),
         ).pack(anchor=tk.W, padx=5, pady=(5, 2))
 
-        list_outer = tk.Frame(parent)
+        list_outer = ttk.Frame(parent)
         list_outer.pack(fill=tk.BOTH, expand=True)
 
         self._list_canvas = tk.Canvas(list_outer, highlightthickness=0)
         scrollbar = ttk.Scrollbar(list_outer, orient=tk.VERTICAL, command=self._list_canvas.yview)
-        self._list_inner = tk.Frame(self._list_canvas)
+        self._list_inner = ttk.Frame(self._list_canvas)
 
         self._list_canvas.configure(yscrollcommand=scrollbar.set)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
@@ -225,18 +225,20 @@ class SuggestionBrowserDialog:
         self._list_canvas.bind("<Configure>", _on_canvas_resize)
 
         if not self._patches:
-            tk.Label(self._list_inner, text="No suggestions found.", fg="gray").pack(anchor=tk.W, padx=10, pady=5)
+            ttk.Label(self._list_inner, text="No suggestions found.", foreground="gray").pack(
+                anchor=tk.W, padx=10, pady=5
+            )
         else:
             for sid in sorted(self._patches.keys(), key=lambda x: int(x) if x.isdigit() else x):
                 self._expanded[sid] = True
                 self._add_suggestion_row(self._list_inner, sid)
 
-        self.selection_count_label = tk.Label(parent, text="", font=("Arial", 8), fg="gray")
+        self.selection_count_label = ttk.Label(parent, text="", font=("Arial", 8), foreground="gray")
         self.selection_count_label.pack(anchor=tk.W, padx=5, pady=2)
         self._update_selection_count()
 
-    def _add_suggestion_row(self, container: tk.Frame, sid: str) -> None:
-        row = tk.Frame(container, relief=tk.FLAT)
+    def _add_suggestion_row(self, container: tk.Widget, sid: str) -> None:
+        row = ttk.Frame(container)
         row.pack(fill=tk.X, padx=2, pady=1)
         self._row_frames[sid] = row
 
@@ -258,7 +260,7 @@ class SuggestionBrowserDialog:
         check_btn.pack(side=tk.LEFT)
         self._check_buttons[sid] = check_btn
 
-        name_label = tk.Label(row, text=f"Suggestion {sid}", anchor=tk.W, cursor="hand2")
+        name_label = ttk.Label(row, text=f"Suggestion {sid}", anchor=tk.W, cursor="hand2")
         name_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
         name_label.bind("<Button-1>", lambda e, s=sid: self._load_all_patches_in_editor(s))  # type: ignore[misc]
 
@@ -274,15 +276,15 @@ class SuggestionBrowserDialog:
         action_btn.pack(side=tk.LEFT, padx=(5, 4))
         self._action_buttons[sid] = action_btn
 
-        children_frame = tk.Frame(container)
+        children_frame = ttk.Frame(container)
         children_frame.pack(fill=tk.X)
         self._child_frames[sid] = children_frame
 
         for filename in self._patches[sid]:
             self._add_file_row(children_frame, sid, filename)
 
-    def _add_file_row(self, container: tk.Frame, sid: str, filename: str) -> None:
-        row = tk.Frame(container)
+    def _add_file_row(self, container: tk.Widget, sid: str, filename: str) -> None:
+        row = ttk.Frame(container)
         row.pack(fill=tk.X, padx=(28, 2), pady=1)
 
         check_char = self._file_select_char(sid, filename)
@@ -298,7 +300,7 @@ class SuggestionBrowserDialog:
         self._file_check_buttons[(sid, filename)] = check_btn
 
         display_name = self._patch_display_names.get((sid, filename), filename)
-        name_label = tk.Label(row, text=display_name, anchor=tk.W, fg="#6699cc", cursor="hand2")
+        name_label = ttk.Label(row, text=display_name, anchor=tk.W, foreground="#6699cc", cursor="hand2")
         name_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
         patch_path = os.path.join(self.dot_dp_path, "patch_generator", sid, filename)
         name_label.bind("<Button-1>", lambda e, p=patch_path: self._load_patch_in_editor(p))  # type: ignore[misc]
@@ -481,16 +483,16 @@ class SuggestionBrowserDialog:
 
     # ── right panel / editor ─────────────────────────────────────────────────
 
-    def _build_right_panel(self, parent: tk.Frame) -> None:
-        header_frame = tk.Frame(parent)
+    def _build_right_panel(self, parent: tk.Widget) -> None:
+        header_frame = ttk.Frame(parent)
         header_frame.pack(fill=tk.X, padx=5, pady=(5, 2))
 
-        self.save_button = tk.Button(
+        self.save_button = ttk.Button(
             header_frame, text="Save File", command=self._save_current_patch, state=tk.DISABLED, width=10
         )
         self.save_button.pack(side=tk.LEFT)
 
-        editor_frame = tk.Frame(parent)
+        editor_frame = ttk.Frame(parent)
         editor_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
 
         self.editor_text = tk.Text(

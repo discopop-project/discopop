@@ -17,15 +17,15 @@ from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerM
 
 
 class ExecutePanelMixin(ConfigManagerMixinBase):
-    def _build_execute_panel(self, parent: tk.Frame) -> None:
+    def _build_execute_panel(self, parent: tk.Widget) -> None:
         main_paned = tk.PanedWindow(parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
 
         # Left panel - settings
-        left_frame = tk.Frame(main_paned)
+        left_frame = ttk.Frame(main_paned)
         main_paned.add(left_frame, minsize=650, width=650)
 
-        scroll_container = tk.Frame(left_frame)
+        scroll_container = ttk.Frame(left_frame)
         scroll_container.pack(fill=tk.BOTH, expand=True)
 
         scrollbar = ttk.Scrollbar(scroll_container, orient=tk.VERTICAL)
@@ -35,7 +35,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=canvas.yview)
 
-        options_outer = tk.Frame(canvas)
+        options_outer = ttk.Frame(canvas)
         _win = canvas.create_window((0, 0), window=options_outer, anchor=tk.NW)
 
         def _on_content_configure(event: Any) -> None:
@@ -62,14 +62,14 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         canvas.bind("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
         canvas.bind("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
 
-        modes_frame = tk.LabelFrame(options_outer, text="Execution Modes", padx=5, pady=5)
+        modes_frame = ttk.LabelFrame(options_outer, text="Execution Modes", padding=5)
         modes_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        modes_inner = tk.Frame(modes_frame)
+        modes_inner = ttk.Frame(modes_frame)
         modes_inner.pack(fill=tk.X)
 
         self.mode_vars: dict[str, tk.BooleanVar] = {}
-        self.mode_checkbuttons: dict[str, tk.Checkbutton] = {}
+        self.mode_checkbuttons: dict[str, ttk.Checkbutton] = {}
         mode_tooltips = {
             "seq": "Sequential",
             "dp": "DiscoPoP Instrumented",
@@ -84,59 +84,59 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         ]:
             var = tk.BooleanVar(value=mode == "seq")
             mode_text = f"{mode_tooltips[mode]} ({mode})"
-            cb = tk.Checkbutton(modes_inner, text=mode_text, variable=var, state="disabled")
+            cb = ttk.Checkbutton(modes_inner, text=mode_text, variable=var, state="disabled")
             cb.pack(anchor=tk.W, padx=5, pady=2)
             self.mode_vars[mode] = var
             self.mode_checkbuttons[mode] = cb
 
-        settings_frame = tk.LabelFrame(options_outer, text="Execution Settings", padx=5, pady=5)
+        settings_frame = ttk.LabelFrame(options_outer, text="Execution Settings", padding=5)
         settings_frame.pack(fill=tk.X, padx=5, pady=5)
 
         cpu_count = os.cpu_count() or 4
-        thread_frame = tk.Frame(settings_frame)
+        thread_frame = ttk.Frame(settings_frame)
         thread_frame.pack(fill=tk.X, pady=3)
-        tk.Label(
+        ttk.Label(
             thread_frame,
             text=f"Thread Count: (1-{cpu_count})",
             width=20,
             anchor=tk.W,
         ).pack(side=tk.LEFT)
         self.thread_var = tk.IntVar(value=cpu_count // 2)
-        thread_entry = tk.Entry(thread_frame, textvariable=self.thread_var, width=10)
+        thread_entry = ttk.Entry(thread_frame, textvariable=self.thread_var, width=10)
         thread_entry.pack(side=tk.LEFT, padx=5)
 
-        label_prefix_frame = tk.Frame(settings_frame)
+        label_prefix_frame = ttk.Frame(settings_frame)
         label_prefix_frame.pack(fill=tk.X, pady=3)
-        tk.Label(label_prefix_frame, text="Label Prefix:", width=20, anchor=tk.W).pack(side=tk.LEFT)
+        ttk.Label(label_prefix_frame, text="Label Prefix:", width=20, anchor=tk.W).pack(side=tk.LEFT)
         self.label_prefix_var = tk.StringVar(value="")
-        label_prefix_entry = tk.Entry(label_prefix_frame, textvariable=self.label_prefix_var, width=20)
+        label_prefix_entry = ttk.Entry(label_prefix_frame, textvariable=self.label_prefix_var, width=20)
         label_prefix_entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
 
-        timeout_frame = tk.LabelFrame(options_outer, text="Timeout Settings", padx=5, pady=5)
+        timeout_frame = ttk.LabelFrame(options_outer, text="Timeout Settings", padding=5)
         timeout_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        timeout_exec_frame = tk.Frame(timeout_frame)
+        timeout_exec_frame = ttk.Frame(timeout_frame)
         timeout_exec_frame.pack(fill=tk.X, pady=3)
-        tk.Label(timeout_exec_frame, text="Execution (s):", width=20, anchor=tk.W).pack(side=tk.LEFT)
+        ttk.Label(timeout_exec_frame, text="Execution (s):", width=20, anchor=tk.W).pack(side=tk.LEFT)
         self.timeout_execution_var = tk.IntVar(value=3600)
-        timeout_exec_entry = tk.Entry(timeout_exec_frame, textvariable=self.timeout_execution_var, width=10)
+        timeout_exec_entry = ttk.Entry(timeout_exec_frame, textvariable=self.timeout_execution_var, width=10)
         timeout_exec_entry.pack(side=tk.LEFT, padx=5)
-        tk.Label(timeout_exec_frame, text="(0 = disabled)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(timeout_exec_frame, text="(0 = disabled)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
 
-        timeout_comp_frame = tk.Frame(timeout_frame)
+        timeout_comp_frame = ttk.Frame(timeout_frame)
         timeout_comp_frame.pack(fill=tk.X, pady=3)
-        tk.Label(timeout_comp_frame, text="Compilation (s):", width=20, anchor=tk.W).pack(side=tk.LEFT)
+        ttk.Label(timeout_comp_frame, text="Compilation (s):", width=20, anchor=tk.W).pack(side=tk.LEFT)
         self.timeout_compilation_var = tk.IntVar(value=3600)
-        timeout_comp_entry = tk.Entry(timeout_comp_frame, textvariable=self.timeout_compilation_var, width=10)
+        timeout_comp_entry = ttk.Entry(timeout_comp_frame, textvariable=self.timeout_compilation_var, width=10)
         timeout_comp_entry.pack(side=tk.LEFT, padx=5)
-        tk.Label(timeout_comp_frame, text="(0 = disabled)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(timeout_comp_frame, text="(0 = disabled)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
 
-        behavior_frame = tk.LabelFrame(options_outer, text="Logging & Behavior", padx=5, pady=5)
+        behavior_frame = ttk.LabelFrame(options_outer, text="Logging & Behavior", padding=5)
         behavior_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        log_level_frame = tk.Frame(behavior_frame)
+        log_level_frame = ttk.Frame(behavior_frame)
         log_level_frame.pack(fill=tk.X, pady=3)
-        tk.Label(log_level_frame, text="Log Level:", width=20, anchor=tk.W).pack(side=tk.LEFT)
+        ttk.Label(log_level_frame, text="Log Level:", width=20, anchor=tk.W).pack(side=tk.LEFT)
         self.log_level_var = tk.StringVar(value="WARNING")
         log_level_combo = ttk.Combobox(
             log_level_frame,
@@ -147,11 +147,11 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         )
         log_level_combo.pack(side=tk.LEFT, padx=5)
 
-        checkboxes_frame = tk.Frame(behavior_frame)
+        checkboxes_frame = ttk.Frame(behavior_frame)
         checkboxes_frame.pack(fill=tk.X, pady=3)
 
         self.inplace_var = tk.BooleanVar(value=False)
-        inplace_cb = tk.Checkbutton(
+        inplace_cb = ttk.Checkbutton(
             checkboxes_frame,
             text="Execute in-place (skip project copy)",
             variable=self.inplace_var,
@@ -166,7 +166,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         bind_tooltip_hover(inplace_cb, inplace_tooltip, self)
 
         self.skip_cleanup_var = tk.BooleanVar(value=False)
-        skip_cleanup_cb = tk.Checkbutton(
+        skip_cleanup_cb = ttk.Checkbutton(
             checkboxes_frame,
             text="Skip cleanup (keep project copies)",
             variable=self.skip_cleanup_var,
@@ -180,7 +180,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         )
         bind_tooltip_hover(skip_cleanup_cb, skip_cleanup_tooltip, self)
 
-        suggestions_frame = tk.LabelFrame(options_outer, text="Apply Suggestions", padx=5, pady=5)
+        suggestions_frame = ttk.LabelFrame(options_outer, text="Apply Suggestions", padding=5)
         suggestions_frame.pack(fill=tk.X, padx=5, pady=5)
 
         self.suggestions_mode_var = tk.StringVar(value="none")
@@ -198,7 +198,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
 
         self.suggestions_mode_var.trace_add("write", _on_suggestions_mode_change)
 
-        rb_none = tk.Radiobutton(
+        rb_none = ttk.Radiobutton(
             suggestions_frame,
             text="None (apply no suggestions)",
             variable=self.suggestions_mode_var,
@@ -206,7 +206,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         )
         rb_none.pack(anchor=tk.W)
 
-        rb_manual = tk.Radiobutton(
+        rb_manual = ttk.Radiobutton(
             suggestions_frame,
             text="Apply manually selected suggestions",
             variable=self.suggestions_mode_var,
@@ -216,15 +216,15 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         rb_manual.pack(anchor=tk.W)
         self.apply_suggestions_rb = rb_manual
 
-        suggestions_info_row = tk.Frame(suggestions_frame)
+        suggestions_info_row = ttk.Frame(suggestions_frame)
         suggestions_info_row.pack(fill=tk.X, pady=(3, 0))
 
-        self.suggestions_count_label = tk.Label(
-            suggestions_info_row, text="No suggestions available", fg="gray", font=("Arial", 8)
+        self.suggestions_count_label = ttk.Label(
+            suggestions_info_row, text="No suggestions available", foreground="gray", font=("Arial", 8)
         )
         self.suggestions_count_label.pack(side=tk.LEFT, padx=(20, 10))
 
-        self.browse_edit_suggestions_button = tk.Button(
+        self.browse_edit_suggestions_button = ttk.Button(
             suggestions_info_row,
             text="Browse / Edit →",
             command=self._open_suggestion_browser,
@@ -232,7 +232,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         )
         self.browse_edit_suggestions_button.pack(side=tk.LEFT)
 
-        rb_autotuner = tk.Radiobutton(
+        rb_autotuner = ttk.Radiobutton(
             suggestions_frame,
             text="Apply autotuner-selected suggestions",
             variable=self.suggestions_mode_var,
@@ -242,11 +242,11 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         rb_autotuner.pack(anchor=tk.W, pady=(5, 0))
         self.apply_autotuner_suggestions_rb = rb_autotuner
 
-        autotuner_info_row = tk.Frame(suggestions_frame)
+        autotuner_info_row = ttk.Frame(suggestions_frame)
         autotuner_info_row.pack(fill=tk.X, pady=(3, 0))
 
-        self.autotuner_suggestions_info_label = tk.Label(
-            autotuner_info_row, text="No autotuner results available", fg="gray", font=("Arial", 8)
+        self.autotuner_suggestions_info_label = ttk.Label(
+            autotuner_info_row, text="No autotuner results available", foreground="gray", font=("Arial", 8)
         )
         self.autotuner_suggestions_info_label.pack(side=tk.LEFT, padx=(20, 10))
 
@@ -256,22 +256,22 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         def on_prepare_pattern_detection() -> None:
             self._prepare_pattern_detection()
 
-        run_button_frame = tk.Frame(left_frame)
+        run_button_frame = ttk.Frame(left_frame)
         run_button_frame.pack(fill=tk.X, padx=0, pady=0)
 
-        self.run_button = tk.Button(run_button_frame, text="Run", command=on_run, state="disabled", width=15)
+        self.run_button = ttk.Button(run_button_frame, text="Run", command=on_run, state="disabled", width=15)
         self.run_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.prepare_pattern_detection_button = tk.Button(
+        self.prepare_pattern_detection_button = ttk.Button(
             run_button_frame, text="Prepare Pattern Detection", command=on_prepare_pattern_detection, state="disabled"
         )
         self.prepare_pattern_detection_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         # Right panel - output
-        right_frame = tk.Frame(main_paned)
+        right_frame = ttk.Frame(main_paned)
         main_paned.add(right_frame)
 
-        output_frame = tk.LabelFrame(right_frame, text="Output")
+        output_frame = ttk.LabelFrame(right_frame, text="Output")
         output_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
         from discopop_library.ProjectManager.gui.widgets import create_styled_output_console
@@ -314,14 +314,14 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
                 pass
 
         if total == 0:
-            self.suggestions_count_label.config(text="No suggestions available", fg="gray")
+            self.suggestions_count_label.config(text="No suggestions available", foreground="gray")
             self.apply_suggestions_rb.config(state="disabled")
             if self.suggestions_mode_var.get() == "manual":
                 self.suggestions_mode_var.set("none")
             self.browse_edit_suggestions_button.config(state="disabled")
         else:
             fg = "black" if selected > 0 else "gray"
-            self.suggestions_count_label.config(text=f"{selected} of {total} selected", fg=fg)
+            self.suggestions_count_label.config(text=f"{selected} of {total} selected", foreground=fg)
             self.apply_suggestions_rb.config(state="normal")
             self.browse_edit_suggestions_button.config(state="normal")
 
@@ -342,12 +342,12 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
                     pass
             if autotuner_ids:
                 self.autotuner_suggestions_info_label.config(
-                    text="Suggestion IDs: " + ", ".join(autotuner_ids), fg="black"
+                    text="Suggestion IDs: " + ", ".join(autotuner_ids), foreground="black"
                 )
             elif autotuner_executed and config_key:
-                self.autotuner_suggestions_info_label.config(text="No suggestions selected", fg="gray")
+                self.autotuner_suggestions_info_label.config(text="No suggestions selected", foreground="gray")
             else:
-                self.autotuner_suggestions_info_label.config(text="Autotuner not yet executed", fg="gray")
+                self.autotuner_suggestions_info_label.config(text="Autotuner not yet executed", foreground="gray")
 
             if hasattr(self, "apply_autotuner_suggestions_rb"):
                 if autotuner_executed and config_key:

@@ -7,6 +7,7 @@
 # directory for details.
 
 import tkinter as tk
+from tkinter import ttk
 from typing import Callable, Optional
 
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
@@ -22,16 +23,16 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
         help_window.minsize(850, 600)
         help_window.resizable(True, True)
 
-        button_frame = tk.Frame(help_window)
+        button_frame = ttk.Frame(help_window)
         button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(0, 10))
 
-        ok_button = tk.Button(button_frame, text="OK", command=help_window.destroy)
+        ok_button = ttk.Button(button_frame, text="OK", command=help_window.destroy)
         ok_button.pack(side=tk.LEFT)
 
-        main_frame = tk.Frame(help_window)
+        main_frame = ttk.Frame(help_window)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        scrollbar = tk.Scrollbar(main_frame)
+        scrollbar = ttk.Scrollbar(main_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         text = tk.Text(main_frame, wrap=tk.WORD, yscrollcommand=scrollbar.set, font=("TkDefaultFont", 9))

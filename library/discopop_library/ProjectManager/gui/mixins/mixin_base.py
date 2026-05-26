@@ -25,27 +25,27 @@ class ConfigManagerMixinBase:
 
     # UI elements - main layout
     paned: tk.PanedWindow
-    status_label: tk.Label
+    status_label: ttk.Label
     tooltip: Optional[Tooltip]
     right_tabs: ttk.Notebook
     editor_tab_index: int
 
     # Left panel - configuration list
     listbox: tk.Listbox
-    new_button: tk.Button
-    edit_compilation_button: tk.Button
+    new_button: ttk.Button
+    edit_compilation_button: ttk.Button
 
     # Editor tab
     text_areas: Dict[str, tk.Text]
     modified_files: Dict[str, bool]
-    save_button: tk.Button
+    save_button: ttk.Button
 
     # Pattern Detection tab
     pattern_detection_tab_index: int
 
     # Execute panel elements
     mode_vars: Dict[str, tk.BooleanVar]
-    mode_checkbuttons: Dict[str, tk.Checkbutton]
+    mode_checkbuttons: Dict[str, ttk.Checkbutton]
     thread_var: tk.IntVar
     label_prefix_var: tk.StringVar
     timeout_execution_var: tk.IntVar
@@ -53,14 +53,14 @@ class ConfigManagerMixinBase:
     log_level_var: tk.StringVar
     inplace_var: tk.BooleanVar
     skip_cleanup_var: tk.BooleanVar
-    run_button: tk.Button
-    prepare_pattern_detection_button: tk.Button
+    run_button: ttk.Button
+    prepare_pattern_detection_button: ttk.Button
     output_text: scrolledtext.ScrolledText
-    generate_report_button: tk.Button
+    generate_report_button: ttk.Button
 
     # Report panel elements
     results_tree: ttk.Treeview
-    view_report_button: tk.Button
+    view_report_button: ttk.Button
 
     # Compilation editor
     compilation_editor_open: bool
@@ -71,34 +71,34 @@ class ConfigManagerMixinBase:
     compilation_tab_tooltips: Dict[int, tuple[str, Tooltip]]
     compilation_tooltip_timer: Optional[str]
     current_tooltip_tab: Optional[int]
-    test_compilation_button: tk.Button
-    derive_compilation_button: tk.Button
+    test_compilation_button: ttk.Button
+    derive_compilation_button: ttk.Button
     derive_button_tooltip: Optional[Tooltip]
     derive_button_tooltip_timer: Optional[str]
 
     # Pattern Detection panel elements
     explorer_output_text: Optional[scrolledtext.ScrolledText]
-    explorer_run_button: Optional[tk.Button]
-    browse_suggestions_button: Optional[tk.Button]
+    explorer_run_button: Optional[ttk.Button]
+    browse_suggestions_button: Optional[ttk.Button]
     explorer_running: bool
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]]
     jobs_var: Optional[tk.StringVar]
 
     # Apply Suggestions (Execute tab)
     suggestions_mode_var: tk.StringVar
-    suggestions_count_label: tk.Label
-    autotuner_suggestions_info_label: tk.Label
+    suggestions_count_label: ttk.Label
+    autotuner_suggestions_info_label: ttk.Label
 
     # Autotuning panel elements
     autotuning_output_text: Optional[scrolledtext.ScrolledText]
-    autotuning_run_button: Optional[tk.Button]
-    autotuning_config_label: Optional[tk.Label]
+    autotuning_run_button: Optional[ttk.Button]
+    autotuning_config_label: Optional[ttk.Label]
     autotuning_running: bool
     autotuning_threads_var: Optional[tk.StringVar]
     autotuning_hotspot_types_vars: Optional[Dict[str, tk.BooleanVar]]
     autotuning_algorithm_var: Optional[tk.StringVar]
     autotuning_log_level_var: Optional[tk.StringVar]
-    autotuning_suggestions_label: Optional[tk.Label]
+    autotuning_suggestions_label: Optional[ttk.Label]
     autotuning_tab_index: int
 
     # Methods that mixins call on each other
@@ -108,9 +108,9 @@ class ConfigManagerMixinBase:
 
     def _set_status(self, text: str, fg: str = "gray", *, reset_delay: Optional[int] = None) -> None:
         """Set status label text and optionally schedule a reset to 'Ready' after reset_delay ms."""
-        self.status_label.config(text=text, fg=fg)
+        self.status_label.config(text=text, foreground=fg)
         if reset_delay is not None:
-            self.after(reset_delay, lambda: self.status_label.config(text="Ready", fg="gray"))  # type: ignore
+            self.after(reset_delay, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
 
     def _load_config(self) -> None:
         """Load configuration from disk."""
@@ -132,11 +132,11 @@ class ConfigManagerMixinBase:
         """Update execution mode availability."""
         ...
 
-    def _build_execute_panel(self, parent: tk.Frame) -> None:
+    def _build_execute_panel(self, parent: tk.Widget) -> None:
         """Build the execute panel UI."""
         ...
 
-    def _build_report_panel(self, parent: tk.Frame) -> None:
+    def _build_report_panel(self, parent: tk.Widget) -> None:
         """Build the report panel UI."""
         ...
 
@@ -236,7 +236,7 @@ class ConfigManagerMixinBase:
         """Handle right-click on configuration."""
         ...
 
-    def _build_pattern_detection_panel(self, parent: tk.Frame) -> None:
+    def _build_pattern_detection_panel(self, parent: tk.Widget) -> None:
         """Build the pattern detection panel UI."""
         ...
 
@@ -260,7 +260,7 @@ class ConfigManagerMixinBase:
         """Refresh the suggestion selection count label in the Execute tab."""
         ...
 
-    def _build_autotuning_panel(self, parent: tk.Frame) -> None:
+    def _build_autotuning_panel(self, parent: tk.Widget) -> None:
         """Build the autotuning panel UI."""
         ...
 

@@ -67,11 +67,11 @@ class ConfigManagerApp(  # type: ignore
         self._setup_styles()
 
         # --- BOTTOM BAR: Status (pack first to keep it at bottom) ---
-        bottom_frame = tk.Frame(self, height=45)
+        bottom_frame = ttk.Frame(self, height=45)
         bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
         bottom_frame.pack_propagate(False)
 
-        self.status_label = tk.Label(bottom_frame, text="Ready", fg="gray")
+        self.status_label = ttk.Label(bottom_frame, text="Ready", foreground="gray")
         self.status_label.pack(side=tk.LEFT, padx=10, pady=5)
 
         # Main layout: PanedWindow with left (configs) and right (editor/execute/report)
@@ -79,11 +79,11 @@ class ConfigManagerApp(  # type: ignore
         self.paned.pack(fill=tk.BOTH, expand=True)
 
         # --- LEFT PANEL: Configuration List ---
-        left_frame = tk.Frame(self.paned)
+        left_frame = ttk.Frame(self.paned)
         left_frame.pack_propagate(False)
         self.paned.add(left_frame, width=280, minsize=220)
 
-        label = tk.Label(left_frame, text="Run Configs", font=("Arial", 12, "bold"))
+        label = ttk.Label(left_frame, text="Run Configs", font=("Arial", 12, "bold"))
         label.pack(side=tk.TOP, padx=5, pady=5)
 
         self.listbox = tk.Listbox(
@@ -93,47 +93,47 @@ class ConfigManagerApp(  # type: ignore
         self.listbox.bind("<<ListboxSelect>>", self._on_config_selected)
         self.listbox.bind("<Button-3>", self._on_config_right_click)
 
-        button_frame = tk.Frame(left_frame)
+        button_frame = ttk.Frame(left_frame)
         button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
 
-        self.new_button = tk.Button(button_frame, text="+ New", command=self._new_config)
+        self.new_button = ttk.Button(button_frame, text="+ New", command=self._new_config)
         self.new_button.pack(side=tk.TOP, fill=tk.X, pady=2)
 
-        self.edit_compilation_button = tk.Button(
+        self.edit_compilation_button = ttk.Button(
             button_frame, text="Edit Compilation", command=self._open_compilation_editor
         )
         self.edit_compilation_button.pack(side=tk.TOP, fill=tk.X, pady=2)
 
         # --- RIGHT PANEL: Tab switcher (Editor / Execute / Report) ---
-        right_frame = tk.Frame(self.paned)
+        right_frame = ttk.Frame(self.paned)
         self.paned.add(right_frame, minsize=600)
 
         self.right_tabs = ttk.Notebook(right_frame)
         self.right_tabs.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         # Editor tab
-        editor_frame = tk.Frame(self.right_tabs)
+        editor_frame = ttk.Frame(self.right_tabs)
         self.right_tabs.add(editor_frame, text="Editor")
         self.editor_tab_index = self.right_tabs.index(editor_frame)
 
         # Execute tab
-        execute_frame = tk.Frame(self.right_tabs)
+        execute_frame = ttk.Frame(self.right_tabs)
         self.right_tabs.add(execute_frame, text="Execute")
         self.execute_tab_index = self.right_tabs.index(execute_frame)
 
         # Report tab
-        report_tab_frame = tk.Frame(self.right_tabs)
+        report_tab_frame = ttk.Frame(self.right_tabs)
         self.right_tabs.add(report_tab_frame, text="Report")
         self._build_report_panel(report_tab_frame)
 
         # Pattern Detection tab
-        pattern_detection_frame = tk.Frame(self.right_tabs)
+        pattern_detection_frame = ttk.Frame(self.right_tabs)
         self.right_tabs.add(pattern_detection_frame, text="Pattern Detection")
         self.pattern_detection_tab_index = self.right_tabs.index(pattern_detection_frame)
         self._build_pattern_detection_panel(pattern_detection_frame)
 
         # Autotuning tab
-        autotuning_frame = tk.Frame(self.right_tabs)
+        autotuning_frame = ttk.Frame(self.right_tabs)
         self.right_tabs.add(autotuning_frame, text="Autotuning")
         self.autotuning_tab_index = self.right_tabs.index(autotuning_frame)
         self._build_autotuning_panel(autotuning_frame)
@@ -144,28 +144,28 @@ class ConfigManagerApp(  # type: ignore
         self.modified_files: dict[str, bool] = {}
 
         # Header with help button
-        header_frame = tk.Frame(editor_frame)
+        header_frame = ttk.Frame(editor_frame)
         header_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        help_label = tk.Label(header_frame, text="Execution script", font=("TkDefaultFont", 9, "bold"))
+        help_label = ttk.Label(header_frame, text="Execution script", font=("TkDefaultFont", 9, "bold"))
         help_label.pack(side=tk.LEFT)
 
-        help_button = tk.Button(header_frame, text="Help", command=self._show_execute_sh_help)
+        help_button = ttk.Button(header_frame, text="Help", command=self._show_execute_sh_help)
         help_button.pack(side=tk.RIGHT, padx=5)
 
         # Bottom bar with buttons — packed before text_frame so it always reserves its natural height
-        bottom_editor_frame = tk.Frame(editor_frame)
+        bottom_editor_frame = ttk.Frame(editor_frame)
         bottom_editor_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=2)
 
         # Buttons on the left side
-        self.save_button = tk.Button(bottom_editor_frame, text="Save (Ctrl+S)", command=self._save_config)
+        self.save_button = ttk.Button(bottom_editor_frame, text="Save (Ctrl+S)", command=self._save_config)
         self.save_button.pack(side=tk.LEFT, padx=5)
 
         # Text widget with scrollbar for execute.sh
-        text_frame = tk.Frame(editor_frame)
+        text_frame = ttk.Frame(editor_frame)
         text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        scrollbar = tk.Scrollbar(text_frame)
+        scrollbar = ttk.Scrollbar(text_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         text_area = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD)
@@ -196,6 +196,10 @@ class ConfigManagerApp(  # type: ignore
         self._start_modification_polling()
 
     def _setup_styles(self) -> None:
+        from ttkthemes import ThemedStyle
+
+        # style = ThemedStyle(self, theme="arc")
+        # style.set_theme("arc")
         style = ttk.Style()
 
         style.configure(
