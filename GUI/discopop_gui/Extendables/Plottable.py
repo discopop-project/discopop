@@ -19,6 +19,7 @@ from discopop_gui.Enums.ViewerMode import ViewerMode as CanvasViewerMode
 from discopop_gui.Exceptions.VisualizerNotDefined import VisualizerNotDefined
 from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
 
+
 class Plottable:
     def __init__(self, visualizer: Base | None = None) -> None:
         self._visualizer = visualizer
@@ -41,7 +42,7 @@ class Plottable:
 
         if rows < 1 or columns < 1:
             raise ValueError("Rows and columns must be >= 1")
-        
+
         def frame_builder(parent: tk.Misc) -> MultiFrame:
             return MultiFrame(parent)
 
@@ -107,26 +108,28 @@ class Plottable:
         frame.grid_columnconfigure(0, weight=1)
 
         return axes
-    
+
     def create_plottable_canvas(self, name: str) -> ViewableCanvasWithTrees:
         if self._visualizer is None:
             raise VisualizerNotDefined()
-        
-        def canvas_builder(parent : CanvasViewer, canvas_viewer_mode : CanvasViewerMode):
+
+        def canvas_builder(
+            parent: CanvasViewer[ViewableCanvasWithTrees], canvas_viewer_mode: CanvasViewerMode
+        ) -> ViewableCanvasWithTrees:
             return ViewableCanvasWithTrees(parent, canvas_viewer_mode, bg="white")
-        
-        def frame_builder(parent : tk.Misc) -> CanvasViewer[ViewableCanvasWithTrees]:
+
+        def frame_builder(parent: tk.Misc) -> CanvasViewer[ViewableCanvasWithTrees]:
             return CanvasViewer(parent, canvas_builder)
 
         frame = self._visualizer.create_frame(name, frame_builder)
 
         canvas = frame.getCanvas()
-        
+
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
 
         return canvas
-    
+
     def create_multi_plot(self, name: str, inner_plot_titles: list[str], rows: int, columns: int) -> list[Axes]:
         self.create_multi_frame(name, rows, columns)
         axeses = []
