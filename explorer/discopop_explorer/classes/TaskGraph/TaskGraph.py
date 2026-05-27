@@ -517,8 +517,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
         for ctx in self.contexts:
             ctx_graph.add_node(ctx)
-            for ctx_cont_node in ctx.contained_nodes:
-                ctx_graph.add_node(ctx_cont_node)
+        #            for ctx_cont_node in ctx.contained_nodes:
+        #                ctx_graph.add_node(ctx_cont_node)
 
         contained_edges = []
 
@@ -526,9 +526,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             for contained_ctx in ctx.contained_contexts:
                 ctx_graph.add_edge(ctx, contained_ctx)
                 contained_edges.append((ctx, contained_ctx))
-            for ctx_cont_node in ctx.contained_nodes:
-                ctx_graph.add_edge(ctx, ctx_cont_node)
-                contained_edges.append((ctx, ctx_cont_node))
+        #            for ctx_cont_node in ctx.contained_nodes:
+        #                ctx_graph.add_edge(ctx, ctx_cont_node)
+        #                contained_edges.append((ctx, ctx_cont_node))
 
         dependency_edges = []
 
