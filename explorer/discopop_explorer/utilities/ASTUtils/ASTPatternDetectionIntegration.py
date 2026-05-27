@@ -1,0 +1,143 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+"""Integration utilities for AST analysis in pattern detection"""
+
+from __future__ import annotations
+
+from typing import Any, Optional
+
+import networkx as nx
+
+from discopop_explorer.utilities.ASTUtils.ASTLoader import ClangASTLoader
+from discopop_explorer.utilities.ASTUtils.ASTGraph import ClangASTGraph
+from discopop_explorer.utilities.ASTUtils.ASTQueries import (
+    ASTQueries,
+    ASTVariableAndTypeQueries,
+)
+from discopop_explorer.utilities.ASTUtils.ASTVisualization import ASTVisualization
+
+
+class ASTPatternDetectionHelper:
+    """Helper class for AST analysis during pattern detection
+
+    Provides convenient methods for pattern detectors to query AST information.
+    """
+
+    def __init__(self) -> None:
+        """Initialize helper with no AST loaded"""
+        self.ast_graph: Optional[nx.DiGraph[str]] = None
+
+    def load_ast_from_project(self, project_path: str) -> None:
+        """Load and build AST graph from project
+
+        Args:
+            project_path: Root path of the DiscoPoP project
+        """
+        import sys
+        import traceback
+
+        ast_dict = ClangASTLoader.load_ast_from_project(project_path)
+        if ast_dict is None:
+            print(
+                f"[ASTUtils] ast_dump.json not found under {project_path}/profiler/",
+                file=sys.stderr,
+            )
+            return
+        try:
+            self.ast_graph = ClangASTGraph().build_from_ast(ast_dict)
+        except Exception:
+            print("[ASTUtils] Failed to build AST graph:", file=sys.stderr)
+            traceback.print_exc(file=sys.stderr)
+            self.ast_graph = None
+
+    def get_variables_at_location(self, filename: str, line: int, column: int) -> list[tuple[str, Optional[str]]]:
+        """Get variables visible at a specific code location
+
+        Args:
+            filename: Source filename
+            line: Line number
+            column: Column number
+
+        Returns:
+            List of (var_name, var_type) tuples
+        """
+        if not self.ast_graph:
+            return []
+
+        return ASTVariableAndTypeQueries.find_all_variables_in_scope(self.ast_graph, filename, line, column)
+
+    def get_variable_declarations_in_scope(self, scope_name: str) -> list[tuple[str, Optional[str]]]:
+        """Get variables declared in a scope by function/loop name
+
+        Args:
+            scope_name: Name of the function or loop
+
+        Returns:
+            List of (var_name, var_type) tuples
+        """
+        if not self.ast_graph:
+            return []
+
+        for node_id, attrs in self.ast_graph.nodes(data=True):
+            if attrs.get("name") == scope_name:
+                kind = attrs.get("kind")
+                if kind in {"FunctionDecl", "ForStmt", "WhileStmt"}:
+                    return ASTVariableAndTypeQueries.get_variables_in_scope(self.ast_graph, node_id)
+
+        return []
+
+    def get_ast_statistics(self) -> Optional[dict[str, Any]]:
+        """Get statistics about the loaded AST
+
+        Returns:
+            Dictionary with graph statistics or None if no AST loaded
+        """
+        if not self.ast_graph:
+            return None
+
+        return ASTVisualization.get_statistics(self.ast_graph)
+
+    def get_ast_visualization(self) -> Optional[str]:
+        """Get GraphViz DOT format representation of AST
+
+        Returns:
+            DOT format string or None if no AST loaded
+        """
+        if not self.ast_graph:
+            return None
+
+        return ASTVisualization.get_graphviz_format(self.ast_graph)
+
+    def print_ast_structure(self, max_depth: Optional[int] = None) -> None:
+        """Print ASCII representation of AST structure
+
+        Args:
+            max_depth: Maximum depth to print (None = unlimited)
+        """
+        if not self.ast_graph:
+            print("No AST loaded")
+            return
+
+        ASTVisualization.print_tree_structure(self.ast_graph, max_depth=max_depth)
+
+    def get_ast_graph(self) -> Optional[nx.DiGraph[str]]:
+        """Get the underlying AST graph for direct querying
+
+        Returns:
+            AST graph or None if not loaded
+        """
+        return self.ast_graph
+
+    def is_ast_loaded(self) -> bool:
+        """Check if AST is available
+
+        Returns:
+            True if AST is loaded, False otherwise
+        """
+        return self.ast_graph is not None

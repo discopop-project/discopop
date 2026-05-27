@@ -1,0 +1,355 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+from __future__ import annotations
+
+from typing import Any, Optional
+
+import networkx as nx
+
+
+class ASTQueries:
+    """Query interface for AST graph operations."""
+
+    @staticmethod
+    def find_nodes_by_kind(graph: nx.DiGraph[str], kind: str) -> list[str]:
+        """Find all nodes of a specific kind.
+
+        Args:
+            graph: AST graph
+            kind: AST node kind (e.g., 'FunctionDecl', 'VarDecl')
+
+        Returns:
+            List of node IDs matching the kind
+        """
+        return [node_id for node_id, attrs in graph.nodes(data=True) if attrs.get("kind") == kind]
+
+    @staticmethod
+    def find_functions(graph: nx.DiGraph[str]) -> list[str]:
+        """Find all function declaration nodes.
+
+        Args:
+            graph: AST graph
+
+        Returns:
+            List of FunctionDecl node IDs
+        """
+        return ASTQueries.find_nodes_by_kind(graph, "FunctionDecl")
+
+    @staticmethod
+    def find_loops(graph: nx.DiGraph[str]) -> list[str]:
+        """Find all loop nodes (ForStmt, WhileStmt, DoStmt).
+
+        Args:
+            graph: AST graph
+
+        Returns:
+            List of loop node IDs
+        """
+        loop_kinds = {"ForStmt", "WhileStmt", "DoStmt"}
+        return [node_id for node_id, attrs in graph.nodes(data=True) if attrs.get("kind") in loop_kinds]
+
+    @staticmethod
+    def find_declarations(graph: nx.DiGraph[str]) -> list[str]:
+        """Find all variable declaration nodes (VarDecl).
+
+        Args:
+            graph: AST graph
+
+        Returns:
+            List of VarDecl node IDs
+        """
+        return ASTQueries.find_nodes_by_kind(graph, "VarDecl")
+
+    @staticmethod
+    def get_parent(graph: nx.DiGraph[str], node_id: str) -> Optional[str]:
+        """Get parent node of a given node.
+
+        Args:
+            graph: AST graph
+            node_id: Node ID
+
+        Returns:
+            Parent node ID or None if node is root
+        """
+        parents = list(graph.predecessors(node_id))
+        return parents[0] if parents else None
+
+    @staticmethod
+    def get_children(graph: nx.DiGraph[str], node_id: str) -> list[str]:
+        """Get all child nodes.
+
+        Args:
+            graph: AST graph
+            node_id: Node ID
+
+        Returns:
+            List of child node IDs
+        """
+        return list(graph.successors(node_id))
+
+    @staticmethod
+    def find_enclosing_scope(graph: nx.DiGraph[str], node_id: str) -> Optional[str]:
+        """Find the nearest enclosing scope node (function or compound statement).
+
+        Walks up the tree until a scope-defining node is found.  A visited set
+        guards against cycles in malformed graphs.
+
+        Args:
+            graph: AST graph
+            node_id: Node ID to start from
+
+        Returns:
+            ID of enclosing scope node or None if none found
+        """
+        scope_kinds = {"FunctionDecl", "CompoundStmt", "ForStmt", "WhileStmt"}
+        visited: set[str] = set()
+
+        current: Optional[str] = node_id
+        while current is not None and current not in visited:
+            visited.add(current)
+            if graph.nodes[current].get("kind") in scope_kinds:
+                return current
+            current = ASTQueries.get_parent(graph, current)
+
+        return None
+
+    @staticmethod
+    def get_node_info(graph: nx.DiGraph[str], node_id: str) -> dict[str, Any]:
+        """Get all attributes of a node.
+
+        Args:
+            graph: AST graph
+            node_id: Node ID
+
+        Returns:
+            Dictionary with node attributes
+        """
+        return dict(graph.nodes[node_id])
+
+    @staticmethod
+    def find_nodes_in_file(graph: nx.DiGraph[str], filename: str) -> list[str]:
+        """Find all nodes whose resolved location is in a specific file.
+
+        Args:
+            graph: AST graph
+            filename: Source filename (basename or full path)
+
+        Returns:
+            List of matching node IDs
+        """
+        return [
+            node_id
+            for node_id, attrs in graph.nodes(data=True)
+            if _file_matches(attrs.get("loc", {}).get("file"), filename)
+        ]
+
+    @staticmethod
+    def find_nodes_at_location(graph: nx.DiGraph[str], filename: str, line: int, column: int) -> list[str]:
+        """Find nodes whose source range contains a specific location.
+
+        Args:
+            graph: AST graph
+            filename: Source filename
+            line: Line number
+            column: Column number
+
+        Returns:
+            List of matching node IDs
+        """
+        matching = []
+        for node_id, attrs in graph.nodes(data=True):
+            if not _file_matches(attrs.get("loc", {}).get("file"), filename):
+                continue
+            if ASTQueries._is_in_range(line, column, attrs.get("range", {})):
+                matching.append(node_id)
+        return matching
+
+    @staticmethod
+    def _is_in_range(line: int, column: int, range_info: dict[str, Any]) -> bool:
+        """Check whether a (line, column) position falls within a source range.
+
+        Args:
+            line: Line number to test
+            column: Column number to test
+            range_info: Range dict with begin_line/begin_column/end_line/end_column
+
+        Returns:
+            True if the position is within the range
+        """
+        begin_line = range_info.get("begin_line")
+        begin_col = range_info.get("begin_column")
+        end_line = range_info.get("end_line")
+        end_col = range_info.get("end_column")
+
+        if begin_line is None or end_line is None:
+            return False
+
+        if line < begin_line or line > end_line:
+            return False
+
+        # Use explicit None checks — column 0 is a valid (falsy) value
+        if line == begin_line and begin_col is not None and column < begin_col:
+            return False
+
+        if line == end_line and end_col is not None and column > end_col:
+            return False
+
+        return True
+
+
+class ASTVariableAndTypeQueries:
+    """Query variables and types from AST nodes."""
+
+    @staticmethod
+    def find_declarations_at_location(
+        graph: nx.DiGraph[str], filename: str, line: int, column: int
+    ) -> list[tuple[str, Optional[str], str]]:
+        """Find VarDecl nodes at or enclosing a source location.
+
+        Args:
+            graph: AST graph
+            filename: Source filename
+            line: Line number
+            column: Column number
+
+        Returns:
+            List of (var_name, var_type, node_kind) tuples
+        """
+        nodes_at_loc = ASTQueries.find_nodes_at_location(graph, filename, line, column)
+        return [
+            (
+                attrs.get("name", ""),
+                attrs.get("type"),
+                attrs.get("kind", ""),
+            )
+            for node_id in nodes_at_loc
+            if (attrs := graph.nodes[node_id]).get("kind") == "VarDecl"
+        ]
+
+    @staticmethod
+    def find_references_at_location(
+        graph: nx.DiGraph[str], filename: str, line: int, column: int
+    ) -> list[tuple[str, Optional[str], str]]:
+        """Find DeclRefExpr nodes at a source location.
+
+        Args:
+            graph: AST graph
+            filename: Source filename
+            line: Line number
+            column: Column number
+
+        Returns:
+            List of (var_name, var_type, node_kind) tuples
+        """
+        nodes_at_loc = ASTQueries.find_nodes_at_location(graph, filename, line, column)
+        return [
+            (
+                attrs.get("name", ""),
+                attrs.get("type"),
+                attrs.get("kind", ""),
+            )
+            for node_id in nodes_at_loc
+            if (attrs := graph.nodes[node_id]).get("kind") == "DeclRefExpr"
+        ]
+
+    @staticmethod
+    def find_all_variables_in_scope(
+        graph: nx.DiGraph[str], filename: str, line: int, column: int
+    ) -> list[tuple[str, Optional[str]]]:
+        """Find all variables visible at a source location.
+
+        Locates the enclosing scope of the given position and collects all
+        VarDecl nodes reachable from it.
+
+        Args:
+            graph: AST graph
+            filename: Source filename
+            line: Line number
+            column: Column number
+
+        Returns:
+            Sorted list of (var_name, var_type) tuples
+        """
+        nodes_at_loc = ASTQueries.find_nodes_at_location(graph, filename, line, column)
+        if not nodes_at_loc:
+            return []
+
+        scope_node_id: Optional[str] = None
+        for node_id in nodes_at_loc:
+            scope = ASTQueries.find_enclosing_scope(graph, node_id)
+            if scope:
+                scope_node_id = scope
+                break
+
+        if not scope_node_id:
+            return []
+
+        variables: set[tuple[str, Optional[str]]] = set()
+        ASTVariableAndTypeQueries._collect_var_decls_in_scope(graph, scope_node_id, variables)
+        return sorted(variables)
+
+    @staticmethod
+    def get_variables_in_scope(graph: nx.DiGraph[str], scope_node_id: str) -> list[tuple[str, Optional[str]]]:
+        """Find all variables declared within a scope node.
+
+        Args:
+            graph: AST graph
+            scope_node_id: ID of the scope node (function, loop, etc.)
+
+        Returns:
+            Sorted list of (var_name, var_type) tuples
+        """
+        variables: set[tuple[str, Optional[str]]] = set()
+        ASTVariableAndTypeQueries._collect_var_decls_in_scope(graph, scope_node_id, variables)
+        return sorted(variables)
+
+    @staticmethod
+    def _collect_var_decls_in_scope(
+        graph: nx.DiGraph[str],
+        scope_node_id: str,
+        variables: set[tuple[str, Optional[str]]],
+    ) -> None:
+        """Recursively collect all VarDecl nodes reachable from a scope.
+
+        Args:
+            graph: AST graph
+            scope_node_id: Root node to search from
+            variables: Accumulator set (modified in place)
+        """
+        attrs = graph.nodes[scope_node_id]
+        if attrs.get("kind") == "VarDecl":
+            var_name = attrs.get("name")
+            if var_name:
+                variables.add((var_name, attrs.get("type")))
+
+        for child_id in graph.successors(scope_node_id):
+            ASTVariableAndTypeQueries._collect_var_decls_in_scope(graph, child_id, variables)
+
+
+# ---------------------------------------------------------------------------
+# Internal helpers
+# ---------------------------------------------------------------------------
+
+
+def _file_matches(stored: Optional[str], query: str) -> bool:
+    """Return True if *stored* file path matches the *query* filename.
+
+    Accepts both full paths and basenames so that
+    ``_file_matches("/path/to/main.cpp", "main.cpp")`` is True.
+
+    Args:
+        stored: File path stored in a node's loc dict (may be None)
+        query: Filename or path to look for
+
+    Returns:
+        True on match
+    """
+    if stored is None:
+        return False
+    return stored == query or stored.endswith("/" + query) or stored.endswith("\\" + query)
