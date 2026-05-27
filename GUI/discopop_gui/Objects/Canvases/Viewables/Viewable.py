@@ -37,29 +37,29 @@ class Viewable(tk.Canvas):
         self.bind("<B3-Motion>", self._right_drag)
         self.bind("<ButtonRelease-3>", self._right_release)
 
-    def _left_press(self, event: tk.Event) -> None:
+    def _left_press(self, event: tk.Event[tk.Canvas]) -> None:
         self._start_drag(event, button=1)
 
-    def _left_drag(self, event: tk.Event) -> None:
+    def _left_drag(self, event: tk.Event[tk.Canvas]) -> None:
         if self._viewer_mode == ViewerMode.ZOOM:
             self._update_zoom_rectangle(event, outline="blue")
 
-    def _left_release(self, event: tk.Event) -> None:
+    def _left_release(self, event: tk.Event[tk.Canvas]) -> None:
         self._finish_drag(event, button=1)
 
-    def _right_press(self, event: tk.Event) -> None:
+    def _right_press(self, event: tk.Event[tk.Canvas]) -> None:
         self._start_drag(event, button=3)
 
-    def _right_drag(self, event: tk.Event) -> None:
+    def _right_drag(self, event: tk.Event[tk.Canvas]) -> None:
         if self._viewer_mode == ViewerMode.MAIN:
             self._update_pan(event)
         elif self._viewer_mode == ViewerMode.ZOOM:
             self._update_zoom_rectangle(event, outline="red")
 
-    def _right_release(self, event: tk.Event) -> None:
+    def _right_release(self, event: tk.Event[tk.Canvas]) -> None:
         self._finish_drag(event, button=3)
 
-    def _start_drag(self, event: tk.Event, button: int) -> None:
+    def _start_drag(self, event: tk.Event[tk.Canvas], button: int) -> None:
         self._drag_start_x = self.canvasx(event.x)
         self._drag_start_y = self.canvasy(event.y)
         assert self._drag_start_x is not None
@@ -84,7 +84,7 @@ class Viewable(tk.Canvas):
             dash=(4, 2),
         )
 
-    def _update_pan(self, event: tk.Event) -> None:
+    def _update_pan(self, event: tk.Event[tk.Canvas]) -> None:
         current_x = self.canvasx(event.x)
         current_y = self.canvasy(event.y)
 
@@ -104,7 +104,7 @@ class Viewable(tk.Canvas):
 
         self._apply_transform()
 
-    def _update_zoom_rectangle(self, event: tk.Event, outline: str) -> None:
+    def _update_zoom_rectangle(self, event: tk.Event[tk.Canvas], outline: str) -> None:
         if self._drag_start_x is None or self._drag_start_y is None or self._drag_rectangle_id is None:
             return
 
@@ -120,7 +120,7 @@ class Viewable(tk.Canvas):
             current_y,
         )
 
-    def _finish_drag(self, event: tk.Event, button: int) -> None:
+    def _finish_drag(self, event: tk.Event[tk.Canvas], button: int) -> None:
         if (
             self._viewer_mode == ViewerMode.MAIN
             or self._drag_start_x is None

@@ -2976,7 +2976,13 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     line_split = [elem for elem in line.split(" ") if len(elem) > 0]
                     instruction_id = line_split[0]
                     line_id = line_split[1]
-                    mappings_dict[instruction_id] = line_id
+                    if line_id.startswith("*"):
+                        continue
+                    line_id_split = line_id.split(":")
+                    file_id = line_id_split[0]
+                    line_num = line_id_split[1]
+                    column_num = line_id_split[2]
+                    mappings_dict[instruction_id] = str(file_id) + ":" + str(line_num)
 
         # read stateID to callpath mapping
         if dynamic_dependency_file is None:

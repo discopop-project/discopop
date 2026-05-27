@@ -168,10 +168,18 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             with open(os.path.join(output_path, "instructionID_to_lineID_mapping.txt"), "r") as f:
                 for line in f.readlines():
                     line = line.replace("\n", "")
+                    if line.startswith("#") or len(line) == 0:
+                        continue
                     split_line = line.split(" ")
                     instruction_id = split_line[0]
-                    lineID = split_line[1]
-                    instruction_to_lineID_mapping[instruction_id] = lineID
+                    line_id = split_line[1]
+                    if line_id.startswith("*"):
+                        continue
+                    line_id_split = line_id.split(":")
+                    file_id = line_id_split[0]
+                    line_num = line_id_split[1]
+                    column_num = line_id_split[2]
+                    instruction_to_lineID_mapping[instruction_id] = str(file_id) + ":" + str(line_num)
 
         sink = dep_fields[0]
         # pairwise iteration over dependencies source

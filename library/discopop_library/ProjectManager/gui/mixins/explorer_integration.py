@@ -313,8 +313,8 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             sys.executable,
             "-m",
             "discopop_explorer",
-            "--path",
-            project_path,
+            #            "--path",
+            #            project_path,
             "--enable-patterns",
             enable_patterns,
             "--log",
@@ -327,11 +327,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         output_callback("Running pattern detection...\n\n")
 
         process = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            bufsize=1,
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=project_path
         )
 
         assert process.stdout is not None

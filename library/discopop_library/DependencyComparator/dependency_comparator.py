@@ -147,7 +147,13 @@ def get_instructionID_to_lineID_mapping(project_folder: Path) -> Dict[str, str]:
                 line_split = [elem for elem in line.split(" ") if len(elem) > 0]
                 instruction_id = line_split[0]
                 line_id = line_split[1]
-                mappings_dict[instruction_id] = line_id
+                if line_id.startswith("*"):
+                    continue
+                line_id_split = line_id.split(":")
+                file_id = line_id_split[0]
+                line_num = line_id_split[1]
+                column_num = line_id_split[2]
+                mappings_dict[instruction_id] = str(file_id) + ":" + str(line_num)
     return mappings_dict
 
 
@@ -169,18 +175,18 @@ def dep_equal(a: DependenceItem, a_dep_file: str, b: DependenceItem, b_dep_file:
         b.sink = b.sink.split("@")[0]
 
     # convert location "0" to "*" if conversion to legacy representation is required
-#    if a_source_legacy and not b_source_legacy:
-#        if b.source == "0":
-#            b.source = "*"
-#    if b_source_legacy and not a_source_legacy:
-#        if a.source == "0":
-#            a.source = "*"
-#    if a_sink_legacy and not b_sink_legacy:
-#        if a.sink == "0":
-#            a.sink = "*"
-#    if b_sink_legacy and not a_sink_legacy:
-#        if b.sink == "0":
-#            b.sink = "*"
+    #    if a_source_legacy and not b_source_legacy:
+    #        if b.source == "0":
+    #            b.source = "*"
+    #    if b_source_legacy and not a_source_legacy:
+    #        if a.source == "0":
+    #            a.source = "*"
+    #    if a_sink_legacy and not b_sink_legacy:
+    #        if a.sink == "0":
+    #            a.sink = "*"
+    #    if b_sink_legacy and not a_sink_legacy:
+    #        if b.sink == "0":
+    #            b.sink = "*"
 
     # check var name
     if a.var_name != b.var_name:
