@@ -102,10 +102,13 @@ class TestMethods(unittest.TestCase):
                     self.assertTrue(res, msg)
 
                 expected_clauses: Dict[str, List[str]] = {"reduction": ["+:d"], "shared": ["r1", "r2", "dr"]}
+                allowed_clauses: Dict[str, List[str]] = {"first_private": ["nd"]}
 
                 for pattern in self.test_output.patterns.__dict__[pattern_type]:
                     with self.subTest("check pattern for FP data sharing clauses"):
-                        res, msg = check_clauses_for_FP(self, expected_clauses, pattern)
+                        res, msg = check_clauses_for_FP(
+                            self, expected_clauses, pattern, allowed_clauses=allowed_clauses
+                        )
                         self.assertTrue(res, msg)
                     with self.subTest("check pattern for FN data sharing clauses"):
                         res, msg = check_clauses_for_FN(self, expected_clauses, pattern)

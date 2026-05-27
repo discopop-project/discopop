@@ -52,4 +52,11 @@ fi
 PARENT_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
 ${LLVM_CLANG} "$@" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${PARENT_PATH}/LLVMDiscoPoP.so -Xclang -fpass-plugin=${PARENT_PATH}/LLVMDiscoPoP.so -fPIC -Xlinker -L${PARENT_PATH} -Xlinker -lDiscoPoP_RT -Xlinker -lpthread -Xlinker -v -Xlinker -lstdc++
 
+# dump ast for later use during pattern detection
+if [ -n "$DOT_DISCOPOP" ]; then
+  TMP_DOT_DISCOPOP="$DOT_DISCOPOP"
+else
+  TMP_DOT_DISCOPOP="$PWD/.discopop"
+fi
+${LLVM_CLANG} "$@" -fsyntax-only -Xclang -ast-dump=json >> "$TMP_DOT_DISCOPOP/profiler/ast_dump.json"
 # WARNING: OUTPUT IS A .ll FILE, ENDING IS .o

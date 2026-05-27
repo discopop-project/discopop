@@ -42,6 +42,7 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
         d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
     d.memory_region = dep.memory_region
+    d.is_gep_result_dependency = dep.is_gep_result_dependency
 
     # parse metadata
     if dep.metadata is None:

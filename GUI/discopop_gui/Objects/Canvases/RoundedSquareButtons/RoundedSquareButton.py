@@ -6,6 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from __future__ import annotations
+
 import tkinter as tk
 from typing import Any, Callable
 

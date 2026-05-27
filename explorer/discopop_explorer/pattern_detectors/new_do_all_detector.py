@@ -257,6 +257,7 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
                 var = Variable(type="unknown", name=VarName(ri[2].var_name), defLine="LineNotFound")
                 # correct operation
                 red_op = ri[3]["operation"]
+                print("RED OP:", red_op, "var:", var.name)
                 if red_op == ">":
                     red_op = "max"
                 if red_op == "<":
@@ -311,6 +312,7 @@ def detect_doall_sharing_clauses(
     (firstprivate, private, lastprivate, shared, firstwritten, init)
     firstwritten and init are not data sharing clauses, but required to validate potential doall-breaking dependencies originating from static information.
     """
+    print("-------------------- LOOP START ---------------------")
     # Initialization
     # calculate CUs contained in the loop parent for later use dureing filtering
     contained_tg_nodes_in_loopparent: List[TGNode] = []
@@ -349,6 +351,7 @@ def detect_doall_sharing_clauses(
     firstprivate: Set[str] = set()
     firstwritten: Set[str] = set()
     init: Set[str] = set()
+    gep_result_access: Set[str] = set()
 
     for it_ctx in iteration_contexts:
         contained_contexts_in_sequence = it_ctx.get_contained_contexts_in_sequence(pet)
@@ -371,6 +374,7 @@ def detect_doall_sharing_clauses(
         firstread: Set[str] = set()
         data_incoming: Set[str] = set()
         data_outgoing: Set[str] = set()
+
         for cu_node_id in contained_cu_node_ids_in_sequence:
             incoming_deps = in_edges(pet, cu_node_id, EdgeType.DATA)
             outgoing_deps = out_edges(pet, cu_node_id, EdgeType.DATA)
@@ -401,6 +405,11 @@ def detect_doall_sharing_clauses(
             for src, dst, dep in outgoing_deps:
                 if dep.var_name is None:
                     continue
+
+                # check if dep is access to array type value (or result of pointer arithmetic)
+                if dep.is_gep_result_dependency:
+                    gep_result_access.add(dep.var_name)
+
                 if dep.dtype == DepType.RAW:
                     if dep.var_name not in written:
                         firstread.add(dep.var_name)
@@ -451,32 +460,16 @@ def detect_doall_sharing_clauses(
         #            print("cunode -> ", cu_node_id)
         # print("--> in deps:", [(d[2].dtype, d[0], d[2].var_name) for d in incoming_deps])
         # print("--> out_deps: ", [(d[2].dtype, d[1], d[2].var_name) for d in outgoing_deps])
-        print("--> written: ", written)
-        print("--> read: ", read)
-        print("--> data_incoming: ", data_incoming)
-        print("--> data_outgoing: ", data_outgoing)
-        print("--> firstread: ", firstread)
-        print("--> it_firstwritten: ", it_firstwritten)
-        print("--> it_init: ", it_init)
+        print("\t--> written: ", written)
+        print("\t--> read: ", read)
+        print("\t--> data_incoming: ", data_incoming)
+        print("\t--> data_outgoing: ", data_outgoing)
+        print("\t--> firstread: ", firstread)
+        print("\t--> it_firstwritten: ", it_firstwritten)
+        print("\t--> it_init: ", it_init)
+        print("\t--> gep_access: ", gep_result_access)
         # dependency between iterations is trivially not possible, as this would invalidate the doall pattern.
-        ##if dependency_between_iterations:
-        ##    raise ValueError("Doall not possible!")
-
-        #       ### classification scheme ###
-        #       if first_written_in_iteration(var_name):
-        ##           if is_read_after_iteration(var_name):
-        #               mark var_name lastprivate
-        #           else:
-        #               # value is not used after the loop
-        #               mark var_name private
-        #       else:
-        #           # first read in iteration
-        #           if written_in_iteration(var_name):
-        #               mark varname firstprivate
-        #           else:
-        #               # read-only
-        #               mark varname shared
-
+        # Classification scheme:
         # shared:
         # - no dependency between iterations
         # private:
@@ -499,7 +492,10 @@ def detect_doall_sharing_clauses(
             # -> classification of the variables clauses according to scheme above
             if var_name in written:
                 if var_name in data_outgoing:
-                    it_lastprivate.add(var_name)
+                    if var_name in gep_result_access:
+                        it_shared.add(var_name)
+                    else:
+                        it_lastprivate.add(var_name)
                 if var_name in firstread and var_name not in it_init:
                     it_firstprivate.add(var_name)
                 if (
@@ -508,7 +504,10 @@ def detect_doall_sharing_clauses(
                     and var_name not in it_lastprivate
                     and var_name not in it_firstprivate
                 ):
-                    it_private.add(var_name)
+                    if var_name in gep_result_access:
+                        it_shared.add(var_name)
+                    else:
+                        it_private.add(var_name)
                 if (
                     var_name in data_incoming
                     and var_name in it_firstwritten
@@ -518,15 +517,30 @@ def detect_doall_sharing_clauses(
                 ):
                     it_shared.add(var_name)
 
+                if (
+                    var_name not in it_private
+                    and var_name not in it_shared
+                    and var_name not in it_lastprivate
+                    and var_name not in it_firstprivate
+                    and var_name in it_init
+                    and var_name in gep_result_access
+                ):
+                    # array initializations without immediate successive uses
+                    it_shared.add(var_name)
+
                 assert (
                     var_name in it_lastprivate
                     or var_name in it_firstprivate
                     or var_name in it_private
                     or var_name in it_init
+                    or var_name in it_shared
                 )
             else:
                 # read-only
-                it_shared.add(var_name)
+                if var_name in gep_result_access:
+                    it_shared.add(var_name)
+                else:
+                    it_firstprivate.add(var_name)
             assert (
                 var_name in it_lastprivate
                 or var_name in it_firstprivate
@@ -535,11 +549,11 @@ def detect_doall_sharing_clauses(
                 or var_name in it_init
             )
 
-        print("it_private: ", it_private)
-        print("it_shared: ", it_shared)
-        print("it_lastprivate: ", it_lastprivate)
-        print("it_firstprivate: ", it_firstprivate)
-        print("loop_vars: ", loop_variables)
+        print("\tit_private: ", it_private)
+        print("\tit_shared: ", it_shared)
+        print("\tit_lastprivate: ", it_lastprivate)
+        print("\tit_firstprivate: ", it_firstprivate)
+        print("\tloop_vars: ", loop_variables)
 
         # save classifications
         private = private.union(it_private)
@@ -548,19 +562,22 @@ def detect_doall_sharing_clauses(
         firstprivate = firstprivate.union(it_firstprivate)
         firstwritten = firstwritten.union(it_firstwritten)
         init = init.union(it_init)
+        print("----------------------- IT END ------------------")
 
     # merge classifications
     print()
-    print("PRE MERGE: private: ", private)
-    print("PRE MERGE: shared: ", shared)
-    print("PRE MERGE: lastprivate: ", lastprivate)
-    print("PRE MERGE: firstprivate: ", firstprivate)
+    print("\tPRE MERGE: private: ", private)
+    print("\tPRE MERGE: shared: ", shared)
+    print("\tPRE MERGE: lastprivate: ", lastprivate)
+    print("\tPRE MERGE: firstprivate: ", firstprivate)
     print()
     firstprivate, private, lastprivate, shared = __merge_classifications(firstprivate, private, lastprivate, shared)
-    print("POST MERGE: private: ", private)
-    print("POST MERGE: shared: ", shared)
-    print("POST MERGE: lastprivate: ", lastprivate)
-    print("POST MERGE: firstprivate: ", firstprivate)
+    print("\tPOST MERGE: private: ", private)
+    print("\tPOST MERGE: shared: ", shared)
+    print("\tPOST MERGE: lastprivate: ", lastprivate)
+    print("\tPOST MERGE: firstprivate: ", firstprivate)
+    print("---------------------------- LOOP END --------------------")
+    print()
     return firstprivate, private, lastprivate, shared, firstwritten, init
 
 
