@@ -100,7 +100,6 @@ void __dp_loop_entry(LID lid, int32_t loopID, int32_t instruction_id) {
   }
 
   update_callstate(instruction_id);
-
 }
 }
 

@@ -8,9 +8,9 @@
 
 from abc import abstractmethod, ABC
 import tkinter as tk
-from typing import Dict, Type, Callable
-from discopop_gui.Types.FrameT import FrameT
+from typing import Dict, Callable
 
+from discopop_gui.Types.FrameT import FrameT
 
 class Base(ABC):
     def __init__(self) -> None:
@@ -26,7 +26,7 @@ class Base(ABC):
         self._root.destroy()
 
     @abstractmethod
-    def create_frame(self, name: str, frame_type: Type[FrameT]) -> FrameT:
+    def create_frame(self, name: str, frame_builder: Callable[[tk.Misc], FrameT]) -> FrameT:
         pass
 
     def get_frame(self, name: str) -> tk.Frame:

@@ -112,15 +112,10 @@ struct ScopeManager {
     // positive Scope change --> current scope id higher than the id during the
     // last access
     if (!addrToLastAccessScopeID[addr]) {
-      // cout << "positiveStackChange\n";
       return true;
     }
 
-    //            cout << "LAST: " << to_string(addrToLastAccessScopeID[addr])
-    //            << "  current: " << to_string(scopeStack.back().scope_id) <<
-    //            "\n";
     if (addrToLastAccessScopeID[addr] < scopeStack.back().get_id()) {
-      // cout << "positiveStackChange\n";
       return true;
     }
 
@@ -145,21 +140,15 @@ struct Scope2 {
 
   void registerStackRead(ADDR address, LID debug_lid, char *debug_var) {
     const auto not_found = first_written.find(address) == first_written.end();
-    // const auto not_found = std::find(first_written.begin(),
-    // first_written.end(), address) == first_written.end();
     if (not_found) {
       first_read.insert(address);
-      // first_read.emplace_back(address);
     }
   }
 
   void registerStackWrite(ADDR address, LID debug_lid, char *debug_var) {
     const auto not_found = first_read.find(address) == first_read.end();
-    // const auto not_found = std::find(first_read.begin(), first_read.end(),
-    // address) == first_read.end();
     if (not_found) {
       first_written.insert(address);
-      // first_written.emplace_back(address);
     }
   }
 

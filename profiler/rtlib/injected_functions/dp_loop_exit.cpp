@@ -80,7 +80,6 @@ void __dp_loop_exit(LID lid, int32_t loopID, int32_t instruction_id) {
 #endif
 
   update_callstate(instruction_id);
-
 }
 }
 

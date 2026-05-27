@@ -56,9 +56,8 @@ class AutotunerArguments(GeneralArguments):
             os.path.join(self.dot_dp_path, "project"),
             os.path.join(self.dot_dp_path, "project", "configs"),
             os.path.join(self.dot_dp_path, "project", "configs", self.configuration),
-            os.path.join(self.dot_dp_path, "project", "configs", self.configuration, "par_settings.json"),
-            os.path.join(self.dot_dp_path, "project", "configs", self.configuration, "hd_settings.json"),
-            os.path.join(self.dot_dp_path, "project", "configs", self.configuration, "compile.sh"),
+            os.path.join(self.dot_dp_path, "project", "configs", "seq_settings.json"),
+            os.path.join(self.dot_dp_path, "project", "configs", "compile.sh"),
             os.path.join(self.dot_dp_path, "project", "configs", self.configuration, "execute.sh"),
         ]
         for file in required_files:

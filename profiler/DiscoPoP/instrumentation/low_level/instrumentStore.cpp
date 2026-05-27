@@ -21,7 +21,11 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruct
   vector<Value *> args;
   args.push_back(ConstantInt::get(Int32, llvm_ir_instruction_id));
 
+#if LLVM_VERSION_MAJOR >= 22
+  Value *memAddr = PtrToIntInst::CreatePointerCast(toInstrument->getPointerOperand(), Int64, "", toInstrument->getIterator());
+#else
   Value *memAddr = PtrToIntInst::CreatePointerCast(toInstrument->getPointerOperand(), Int64, "", toInstrument);
+#endif
   args.push_back(memAddr);
 
   args.push_back(determineVariableName_dynamic(toInstrument, ""));
@@ -47,7 +51,11 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruct
   args.push_back(currentCount);
 #endif
 
+#if LLVM_VERSION_MAJOR >= 22
+  CallInst::Create(DpWrite, args, "", toInstrument->getIterator());
+#else
   CallInst::Create(DpWrite, args, "", toInstrument);
+#endif
 
 #ifdef SKIP_DUP_INSTR
   // Post instrumentation call
@@ -58,8 +66,14 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruct
   StoreInst *countUpdate = new StoreInst::StoreInst(incCount, countTracker);
 
   // add updates after before
+#if LLVM_VERSION_MAJOR >= 22
+  addrUpdate->insertAfter(toInstrument->getIterator());
+  incCount->insertAfter(toInstrument->getIterator());
+  countUpdate->insertAfter(incCount->getIterator());
+#else
   addrUpdate->insertAfter(toInstrument);
   incCount->insertAfter(toInstrument);
   countUpdate->insertAfter(incCount);
+#endif
 #endif
 }

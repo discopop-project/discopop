@@ -50,7 +50,7 @@ void __dp_call(LID instructionID, int8_t isLibraryFunction) {
 
   // exclude library functions from callstate updates due to the missing instrumented function exit
   // and the resulting inconsistent callstate after returning
-  if(!isLibraryFunction){
+  if (!isLibraryFunction) {
     update_callstate_from_call(instructionID);
   }
 }

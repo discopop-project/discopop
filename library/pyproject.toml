@@ -47,6 +47,7 @@ dependencies = [
     "tabulate",
     "termcolor",
     "tqdm",
+    "ttkthemes",
 ]
 
 [project.optional-dependencies]
@@ -65,6 +66,7 @@ discopop_auto_tuner = "discopop_library.EmpiricalAutotuning.__main__:main"
 discopop_sanity_checker = "discopop_library.SanityChecker.__main__:main"
 discopop_preprocessor = "discopop_library.PreProcessor.__main__:main"
 discopop_project_manager = "discopop_library.ProjectManager.__main__:main"
+discopop = "discopop_library.ProjectManager.__main__:gui_main"
 discopop_configuration_manager = "discopop_library.ConfigurationManager.__main__:main"
 discopop_dependency_comparator = "discopop_library.DependencyComparator.__main__:main"
 discopop_parallel_region_merger = "discopop_library.ParallelRegionMerger.__main__:main"

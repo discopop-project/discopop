@@ -17,13 +17,22 @@ void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
   LID lid = getLID(toInstrument, fileID);
   if (lid == 0)
     return;
+#if LLVM_VERSION_MAJOR >= 22
+  IRBuilder<> IRB(toInstrument->getNextNode());
+#else
   IRBuilder<> IRB(toInstrument->getNextNonDebugInstruction());
+#endif
 
   vector<Value *> args;
   args.push_back(ConstantInt::get(Int32, lid));
 
+#if LLVM_VERSION_MAJOR >= 22
+  Value *startAddr =
+      PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode()->getIterator());
+#else
   Value *startAddr =
       PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode());
+#endif
 
   args.push_back(startAddr);
 

@@ -12,9 +12,13 @@ SCRIPT_PATH="$(readlink -fm "$0")"
 
 # ensure that copy of script in build folder is invoked instead of the "original"
 if [[ "${SCRIPT_PATH}" == *"discopop/scripts/"* ]]; then
-  echo "ERROR: Invoked script directly from source folder:"
-  echo "    ${SCRIPT_PATH}"
-  echo "Use the copy located in the DiscoPoP build folder instead."
+  echo "ERROR: The profiler does not support editable installs (-e)."
+  echo ""
+  echo "You invoked: pip install -e ./profiler"
+  echo "Use instead:  pip install ./profiler"
+  echo ""
+  echo "Reason: CXX_wrapper.sh and compiled artifacts (LLVMDiscoPoP.so) must be"
+  echo "        located in the venv's site-packages for relative paths to resolve."
   echo ""
   exit 1
 fi
@@ -31,8 +35,13 @@ for _v in 22 21 20 19; do
     fi
 done
 if [ -z "$LLVM_CLANG" ]; then
-    echo "ERROR: No supported clang version (19-22) found in PATH"
-    exit 1
+    if command -v clang &> /dev/null && command -v clang++ &> /dev/null; then
+        LLVM_CLANG=$(which clang)
+        LLVM_CLANGPP=$(which clang++)
+    else
+        echo "ERROR: No supported clang version (19-22) found in PATH"
+        exit 1
+    fi
 fi
 
 # original arguments: "$@"

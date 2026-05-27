@@ -13,7 +13,7 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 from discopop_library.ProjectManager.ProjectManager import run
 
 
-def parse_args() -> ProjectManagerArguments:
+def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
     """Parse the arguments passed to the discopop_configuration_manager"""
     parser = ArgumentParser(description="Initialize and prepare projects for the use in the DiscoPoP framework.")
     # all flags that are not considered stable should be added to the experimental_parser
@@ -27,6 +27,7 @@ def parse_args() -> ProjectManagerArguments:
                         help="Enable verbose output.")
     parser.add_argument("-p", "--project", default=os.getcwd(), help="Path to the projects root folder. Important: it must be possible to create a copy of this folder and compile / execute the copy with the definitions from compile.sh, execute.sh, and settings.json. Please refer to the wiki pages (https://discopop-project.github.io/discopop/) for further details. Default: $(cwd)")
     parser.add_argument("--init", action="store_true", help="Initialize the .discopop directory in the specified project path")
+    parser.add_argument("--gui", action="store_true", help="Open the graphical configuration manager")
     parser.add_argument("-x", "--execute", default="tiny", help="Comma separated list of configurations to be executed. Format: <config_name>[:<mode>][:<thread_count>] . Modes: dp,hd,seq,par. Default: tiny")
     parser.add_argument("-xf", "--execute-full", action="store_true", help="Execute all configurations for validation purposes.")
     parser.add_argument("-a", "--apply-suggestions", help="Comma separated list of suggestions ids to be applied before the specified execution. Use the keyword 'auto' to load the configuration determined by the autotuner (if multiple configurations exist, union will be considered). Use the keyword 'prm' to load the configuration determined by the parallel region merger.")
@@ -47,6 +48,8 @@ def parse_args() -> ProjectManagerArguments:
     # fmt: on
 
     arguments = parser.parse_args()
+    if force_gui:
+        arguments.gui = True
 
     return ProjectManagerArguments(
         project_root=arguments.project,
@@ -61,6 +64,7 @@ def parse_args() -> ProjectManagerArguments:
         apply_suggestions=arguments.apply_suggestions,
         reset=arguments.reset,
         reset_execution_results=arguments.reset_execution_results,
+        gui=arguments.gui,
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
         label_prefix=arguments.label_prefix,
@@ -71,6 +75,12 @@ def parse_args() -> ProjectManagerArguments:
 
 def main() -> None:
     arguments = parse_args()
+    setup_logger(arguments)
+    run(arguments)
+
+
+def gui_main() -> None:
+    arguments = parse_args(force_gui=True)
     setup_logger(arguments)
     run(arguments)
 

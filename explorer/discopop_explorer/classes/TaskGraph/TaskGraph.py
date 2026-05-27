@@ -17,6 +17,7 @@ from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
+import tkinter as tk
 from matplotlib.axes import Axes
 from networkx import Graph
 from tqdm import tqdm  # type: ignore
@@ -95,6 +96,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from discopop_gui.Extendables.Plottable import Plottable
 from discopop_gui.Visualizers.Base import Base as Visualizer
+from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
 
 logger = logging.getLogger("Explorer")
 
@@ -103,7 +105,7 @@ logger = logging.getLogger("Explorer")
 TGConstructionQueueElement = Tuple[Optional[TGNode], Union[PETNode, VisitorMarker]]  # (Predecessor, current element)
 
 
-class TaskGraph(Plottable, object):
+class TaskGraph(Plottable, object):  # type: ignore[misc]
     pet: PEGraphX
     graph: nx.MultiDiGraph
     root: TGNode
@@ -505,6 +507,112 @@ class TaskGraph(Plottable, object):
         for node in ctx_graph.nodes:
             labels[node] = node.get_label()
         nx.draw_networkx_labels(ctx_graph, positions, labels, font_size=7, ax=axis)
+
+    def new_plot_context_debug_graph(self, canvas: ViewableCanvasWithTrees) -> None:
+        logger.info("Plotting context debug graph...")
+
+        canvas.delete("all")
+
+        ctx_graph = nx.MultiDiGraph()
+
+        for ctx in self.contexts:
+            ctx_graph.add_node(ctx)
+            for ctx_cont_node in ctx.contained_nodes:
+                ctx_graph.add_node(ctx_cont_node)
+
+        contained_edges = []
+
+        for ctx in self.contexts:
+            for contained_ctx in ctx.contained_contexts:
+                ctx_graph.add_edge(ctx, contained_ctx)
+                contained_edges.append((ctx, contained_ctx))
+            for ctx_cont_node in ctx.contained_nodes:
+                ctx_graph.add_edge(ctx, ctx_cont_node)
+                contained_edges.append((ctx, ctx_cont_node))
+
+        dependency_edges = []
+
+        for ctx in self.contexts:
+            for deps in ctx.outgoing_dependencies:
+                dependency_edges.append((ctx, deps[0]))
+
+        positions = nx.nx_pydot.pydot_layout(ctx_graph, prog="dot")
+
+        if not positions:
+            return
+
+        canvas.update_idletasks()
+        canvas_width = canvas.winfo_width()
+        canvas_height = canvas.winfo_height()
+
+        if canvas_width <= 1:
+            canvas_width = int(canvas.cget("width"))
+        if canvas_height <= 1:
+            canvas_height = int(canvas.cget("height"))
+
+        padding = 40
+        node_radius = 18
+
+        xs = [pos[0] for pos in positions.values()]
+        ys = [pos[1] for pos in positions.values()]
+
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+
+        x_span = max(max_x - min_x, 1)
+        y_span = max(max_y - min_y, 1)
+
+        scaled_positions = {}
+
+        for node, (x, y) in positions.items():
+            sx = padding + ((x - min_x) / x_span) * (canvas_width - (2 * padding))
+            sy = padding + (1 - ((y - min_y) / y_span)) * (canvas_height - (2 * padding))
+            scaled_positions[node] = (sx, sy)
+
+        node_ids = {}
+
+        for node in ctx_graph.nodes:
+            x, y = scaled_positions[node]
+
+            fill_color = "orange" if node in self.contexts else "cyan"
+
+            node_ids[node] = canvas.create_node(
+                x,
+                y,
+                node.get_label(),
+                fill_color,
+            )
+
+        for src, dst in contained_edges:
+            x1, y1 = scaled_positions[src]
+            x2, y2 = scaled_positions[dst]
+
+            canvas.add_dependency(
+                node_ids[src],
+                node_ids[dst],
+                x1,
+                y1,
+                x2,
+                y2,
+                fill="black",
+                width=1,
+            )
+
+        for src, dst in dependency_edges:
+            x1, y1 = scaled_positions[src]
+            x2, y2 = scaled_positions[dst]
+
+            canvas.add_dependency(
+                node_ids[src],
+                node_ids[dst],
+                x1,
+                y1,
+                x2,
+                y2,
+                fill="red",
+                width=2,
+                arrow="last",
+            )
 
     def __get_or_insert_TGNode(self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex) -> TGNode:
         if pet_node_id is not None:
