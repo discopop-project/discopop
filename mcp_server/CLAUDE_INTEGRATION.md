@@ -16,12 +16,12 @@ This guide shows how to configure Claude Code to use the DiscoPoP MCP Server.
 
 1. Install the DiscoPoP MCP Server:
 ```bash
-pip install discopop-mcp-server
+pip install discopop_mcp_server
 ```
 
 2. Verify installation:
 ```bash
-discopop-mcp-server --help
+discopop_mcp_server --help
 ```
 
 ## Quick Setup (Recommended)
@@ -29,7 +29,7 @@ discopop-mcp-server --help
 Run the built-in setup command:
 
 ```bash
-discopop-mcp-server --setup claude_code
+discopop_mcp_server --setup claude_code
 ```
 
 This will:
@@ -40,7 +40,7 @@ This will:
 
 Verify the setup:
 ```bash
-discopop-mcp-server --verify claude_code
+discopop_mcp_server --verify claude_code
 ```
 
 For more setup options (debug logging, status checking, etc.), see [SETUP_GUIDE.md](SETUP_GUIDE.md).
@@ -69,8 +69,8 @@ Create or edit `~/.claude/settings.json` and add the DiscoPoP server configurati
 ```json
 {
   "mcpServers": {
-    "discopop-mcp-server": {
-      "command": "discopop-mcp-server",
+    "discopop_mcp_server": {
+      "command": "discopop_mcp_server",
       "args": ["--debug"]
     }
   }
@@ -81,7 +81,7 @@ Create or edit `~/.claude/settings.json` and add the DiscoPoP server configurati
 
 Test that the server starts:
 ```bash
-discopop-mcp-server --debug
+discopop_mcp_server --debug
 ```
 
 You should see output like:
@@ -112,12 +112,12 @@ The `--setup` flag handles these options automatically:
 
 **Enable debug logging:**
 ```bash
-discopop-mcp-server --setup claude_code --debug
+discopop_mcp_server --setup claude_code --debug
 ```
 
 **Check virtual environment detection:**
 ```bash
-discopop-mcp-server --setup claude_code --verbose
+discopop_mcp_server --setup claude_code --verbose
 ```
 
 It automatically:
@@ -136,8 +136,8 @@ For manual configuration, you can customize these settings:
 ```json
 {
   "mcpServers": {
-    "discopop-mcp-server": {
-      "command": "discopop-mcp-server",
+    "discopop_mcp_server": {
+      "command": "discopop_mcp_server",
       "args": ["--debug"]
     }
   }
@@ -148,8 +148,8 @@ For manual configuration, you can customize these settings:
 ```json
 {
   "mcpServers": {
-    "discopop-mcp-server": {
-      "command": "/path/to/venv/bin/discopop-mcp-server",
+    "discopop_mcp_server": {
+      "command": "/path/to/venv/bin/discopop_mcp_server",
       "args": ["--debug"]
     }
   }
@@ -160,8 +160,8 @@ For manual configuration, you can customize these settings:
 ```json
 {
   "mcpServers": {
-    "discopop-mcp-server": {
-      "command": "discopop-mcp-server",
+    "discopop_mcp_server": {
+      "command": "discopop_mcp_server",
       "args": ["--debug"]
     },
     "other-server": {
@@ -180,25 +180,25 @@ Start with the verification and status commands:
 
 ```bash
 # Check setup status
-discopop-mcp-server --status
+discopop_mcp_server --status
 
 # Verify Claude Code configuration
-discopop-mcp-server --verify claude_code
+discopop_mcp_server --verify claude_code
 
 # Enable verbose output for debugging
-discopop-mcp-server --setup claude_code --verbose
+discopop_mcp_server --setup claude_code --verbose
 ```
 
 ### Server not found
 
-**Error:** "command not found: discopop-mcp-server"
+**Error:** "command not found: discopop_mcp_server"
 
 **Solution:**
-1. Install the package: `pip install discopop-mcp-server`
-2. Verify installation: `which discopop-mcp-server`
+1. Install the package: `pip install discopop_mcp_server`
+2. Verify installation: `which discopop_mcp_server`
 3. Re-run setup, which automatically handles paths:
    ```bash
-   discopop-mcp-server --setup claude_code
+   discopop_mcp_server --setup claude_code
    ```
 
 ### Server fails to start
@@ -206,11 +206,11 @@ discopop-mcp-server --setup claude_code --verbose
 **Error:** Server exits with error
 
 **Solution:**
-1. Test the server directly: `discopop-mcp-server --debug`
+1. Test the server directly: `discopop_mcp_server --debug`
 2. Check for error messages in the output
 3. Re-run setup with verbose output:
    ```bash
-   discopop-mcp-server --setup claude_code --verbose
+   discopop_mcp_server --setup claude_code --verbose
    ```
 4. For manual config, verify the command path is correct
 
@@ -221,13 +221,13 @@ discopop-mcp-server --setup claude_code --verbose
 **Solution:**
 1. Verify configuration:
    ```bash
-   discopop-mcp-server --verify claude_code
+   discopop_mcp_server --verify claude_code
    ```
-2. Check that the server can start: `discopop-mcp-server --help`
+2. Check that the server can start: `discopop_mcp_server --help`
 3. Try restarting Claude Code
 4. Run setup with debug:
    ```bash
-   discopop-mcp-server --setup claude_code --debug
+   discopop_mcp_server --setup claude_code --debug
    ```
 
 ### JSON syntax errors
@@ -237,7 +237,7 @@ discopop-mcp-server --setup claude_code --verbose
 **Solution:**
 - Re-run setup to let it handle it:
   ```bash
-  discopop-mcp-server --setup claude_code
+  discopop_mcp_server --setup claude_code
   ```
 - For manual config:
   - Use a JSON validator: `cat ~/.claude/settings.json | python -m json.tool`
@@ -275,7 +275,7 @@ The MCP server configuration uses this format:
 {
   "mcpServers": {
     "discopop": {
-      "command": "discopop-mcp-server"
+      "command": "discopop_mcp_server"
     }
   }
 }
@@ -287,7 +287,7 @@ The MCP server configuration uses this format:
 {
   "mcpServers": {
     "discopop": {
-      "command": "discopop-mcp-server",
+      "command": "discopop_mcp_server",
       "args": ["--debug"]
     }
   }
@@ -300,7 +300,7 @@ The MCP server configuration uses this format:
 {
   "mcpServers": {
     "discopop": {
-      "command": "/home/user/venv/bin/discopop-mcp-server",
+      "command": "/home/user/venv/bin/discopop_mcp_server",
       "args": ["--debug"]
     }
   }

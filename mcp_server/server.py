@@ -34,7 +34,7 @@ logger = logging.getLogger("discopop-mcp")
 
 class DiscoPopMCPServer:
     def __init__(self, debug: bool = False):
-        self.server = Server("discopop-mcp-server")
+        self.server = Server("discopop_mcp_server")
         self.debug = debug
         if debug:
             logger.setLevel(logging.DEBUG)
@@ -208,7 +208,7 @@ Examples:
     setup_group.add_argument(
         "--full-path",
         action="store_true",
-        help="Use full path to discopop-mcp-server instead of just the command name",
+        help="Use full path to discopop_mcp_server instead of just the command name",
     )
     setup_group.add_argument(
         "-v",

@@ -31,7 +31,7 @@ pip install twine
 python -m twine upload dist/*
 
 # 4. Users install via:
-pip install discopop-mcp-server
+pip install discopop_mcp_server
 ```
 
 **Pros:**
@@ -87,13 +87,13 @@ pip install pyinstaller
 
 # Create one-file executable
 pyinstaller --onefile \
-    --name discopop-mcp-server \
+    --name discopop_mcp_server \
     --hidden-import=mcp \
     --collect-all=mcp \
     server.py
 
-# Result: dist/discopop-mcp-server (Linux/macOS)
-#        dist/discopop-mcp-server.exe (Windows)
+# Result: dist/discopop_mcp_server (Linux/macOS)
+#        dist/discopop_mcp_server.exe (Windows)
 ```
 
 #### Distribution:
@@ -144,12 +144,12 @@ jobs:
       - run: |
           pip install pyinstaller
           cd mcp_server
-          pyinstaller --onefile --name discopop-mcp-server server.py
+          pyinstaller --onefile --name discopop_mcp_server server.py
 
       - uses: actions/upload-artifact@v3
         with:
-          name: discopop-mcp-server-${{ matrix.name }}
-          path: mcp_server/dist/discopop-mcp-server*
+          name: discopop_mcp_server-${{ matrix.name }}
+          path: mcp_server/dist/discopop_mcp_server*
 ```
 
 ### 4. ~~Docker Container~~ (Not Recommended)
@@ -168,7 +168,7 @@ jobs:
 
 1. Create feedstock repository
 2. Submit PR to [conda-forge](https://conda-forge.org/)
-3. Users install via: `conda install -c conda-forge discopop-mcp-server`
+3. Users install via: `conda install -c conda-forge discopop_mcp_server`
 
 **Pros:**
 - Reaches conda users
@@ -192,7 +192,7 @@ dependencies = [
     "discopop-profiler>=0.0.1",
     "discopop-library>=0.0.1",
     "discopop-explorer>=0.0.1",
-    "discopop-mcp-server>=0.0.1",  # Include MCP
+    "discopop_mcp_server>=0.0.1",  # Include MCP
 ]
 
 # Users get it automatically:
@@ -313,8 +313,8 @@ Provide comprehensive documentation for each distribution method:
 
 ### Via PyPI (Recommended)
 \`\`\`bash
-pip install discopop-mcp-server==0.1.0
-discopop-mcp-server --help
+pip install discopop_mcp_server==0.1.0
+discopop_mcp_server --help
 \`\`\`
 
 ### Via Source
@@ -365,7 +365,7 @@ Track distribution stats:
 
 ```bash
 # PyPI stats
-curl -s https://pypistats.org/api/packages/discopop-mcp-server/overall | jq .
+curl -s https://pypistats.org/api/packages/discopop_mcp_server/overall | jq .
 
 # GitHub releases
 gh release list --repo discopop-tool/discopop | grep mcp

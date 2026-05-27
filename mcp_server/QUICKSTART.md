@@ -40,7 +40,7 @@ python3 mcp_server/server.py --debug
 ## Run the Server
 
 ```bash
-discopop-mcp-server --debug
+discopop_mcp_server --debug
 ```
 
 Or directly:
@@ -63,7 +63,7 @@ mkdir -p ~/.claude
 {
   "mcpServers": {
     "discopop": {
-      "command": "discopop-mcp-server",
+      "command": "discopop_mcp_server",
       "args": ["--debug"]
     }
   }
@@ -73,7 +73,7 @@ mkdir -p ~/.claude
 ### 3. Verify the server starts
 
 ```bash
-discopop-mcp-server --debug
+discopop_mcp_server --debug
 ```
 
 You should see startup messages with no errors.
@@ -126,7 +126,7 @@ python -m black server.py
 
 ## Troubleshooting
 
-### Issue: "command not found: discopop-mcp-server"
+### Issue: "command not found: discopop_mcp_server"
 
 **Solution:** `pip install -e .`
 
@@ -137,7 +137,7 @@ python -m black server.py
 ### Issue: Claude can't connect
 
 **Solution:**
-- Verify server runs: `discopop-mcp-server --debug`
+- Verify server runs: `discopop_mcp_server --debug`
 - Check `~/.claude/settings.json` syntax
 - Check file is in correct location
 - Restart Claude Code
@@ -158,7 +158,7 @@ python -m black server.py
 ### For users
 
 1. Install: `pip install -e .`
-2. Run: `discopop-mcp-server --debug`
+2. Run: `discopop_mcp_server --debug`
 3. Integrate: See [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md)
 
 ### For developers
@@ -177,13 +177,13 @@ python -m black server.py
 
 ```bash
 # Test server directly
-echo '{}' | discopop-mcp-server --debug
+echo '{}' | discopop_mcp_server --debug
 
 # Check if installed
-which discopop-mcp-server
+which discopop_mcp_server
 
 # View version
-discopop-mcp-server --help
+discopop_mcp_server --help
 
 # Run tests
 pytest -v

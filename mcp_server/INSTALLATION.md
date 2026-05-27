@@ -24,7 +24,7 @@ directory for details.
 Once published to PyPI:
 
 ```bash
-pip install discopop-mcp-server
+pip install discopop_mcp_server
 ```
 
 ### Method 2: Install from Source (Current)
@@ -99,13 +99,13 @@ After installation, verify everything works:
 
 ```bash
 # Test 1: Check command is available
-discopop-mcp-server --help
+discopop_mcp_server --help
 
 # Test 2: Run with debug
-discopop-mcp-server --debug
+discopop_mcp_server --debug
 
 # Test 3: Verify setup (if configured with Claude Code)
-discopop-mcp-server --status
+discopop_mcp_server --status
 ```
 
 ## Python Virtual Environment Setup (Recommended)
@@ -151,13 +151,13 @@ Use the built-in setup flag for easy configuration:
 
 ```bash
 # Setup Claude Code integration
-discopop-mcp-server --setup claude_code
+discopop_mcp_server --setup claude_code
 
 # Verify configuration
-discopop-mcp-server --verify claude_code
+discopop_mcp_server --verify claude_code
 
 # Check status
-discopop-mcp-server --status
+discopop_mcp_server --status
 ```
 
 For detailed setup options, see [SETUP_GUIDE.md](SETUP_GUIDE.md).
@@ -178,7 +178,7 @@ Alternatively, configure manually. See [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATIO
    {
      "mcpServers": {
        "discopop": {
-         "command": "discopop-mcp-server",
+         "command": "discopop_mcp_server",
          "args": ["--debug"]
        }
      }
@@ -188,7 +188,7 @@ Alternatively, configure manually. See [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATIO
 3. Verify the server starts:
 
    ```bash
-   discopop-mcp-server --debug
+   discopop_mcp_server --debug
    ```
 
 ## Troubleshooting Installation
@@ -207,7 +207,7 @@ Or install the server with development dependencies:
 pip install -e ".[dev]"
 ```
 
-### Error: "command not found: discopop-mcp-server"
+### Error: "command not found: discopop_mcp_server"
 
 **Cause**: Command not in PATH
 
@@ -224,7 +224,7 @@ python3 -m server --debug
 ```
 4. Install to user path:
 ```bash
-pip install --user discopop-mcp-server
+pip install --user discopop_mcp_server
 ```
 
 ### Error: "ImportError" on macOS M1/M2
@@ -249,7 +249,7 @@ pip install git+https://github.com/discopop-tool/discopop.git#subdirectory=mcp_s
 python3 --version
 
 # Update Python or use specific version
-python3.11 -m pip install discopop-mcp-server
+python3.11 -m pip install discopop_mcp_server
 ```
 
 ## Installing with DiscoPoP
@@ -265,7 +265,7 @@ pip install ./mcp_server  # Installs MCP server
 ## Uninstallation
 
 ```bash
-pip uninstall discopop-mcp-server
+pip uninstall discopop_mcp_server
 ```
 
 ## Upgrading
@@ -273,7 +273,7 @@ pip uninstall discopop-mcp-server
 ### From PyPI
 
 ```bash
-pip install --upgrade discopop-mcp-server
+pip install --upgrade discopop_mcp_server
 ```
 
 ### From source
@@ -312,7 +312,7 @@ Standard installation with pip works on most distributions:
 
 ```bash
 sudo apt-get install python3-pip  # Debian/Ubuntu
-pip3 install discopop-mcp-server
+pip3 install discopop_mcp_server
 ```
 
 ### macOS
@@ -321,7 +321,7 @@ Using Homebrew Python (recommended):
 
 ```bash
 brew install python
-pip install discopop-mcp-server
+pip install discopop_mcp_server
 ```
 
 For Apple Silicon (M1/M2), native Python 3.9+ installation is recommended.
@@ -331,16 +331,16 @@ For Apple Silicon (M1/M2), native Python 3.9+ installation is recommended.
 Using PowerShell:
 
 ```powershell
-python -m pip install discopop-mcp-server
-discopop-mcp-server --help
+python -m pip install discopop_mcp_server
+discopop_mcp_server --help
 ```
 
 Or using WSL2 (Windows Subsystem for Linux):
 
 ```bash
 wsl
-pip install discopop-mcp-server
-discopop-mcp-server --debug
+pip install discopop_mcp_server
+discopop_mcp_server --debug
 ```
 
 ## Next Steps

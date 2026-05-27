@@ -11,10 +11,10 @@
 """Agent configuration helper for the DiscoPoP MCP Server.
 
 Provides MCPSetup, which handles reading and writing agent configuration files
-(e.g. ~/.claude.json) so that agents can discover and launch discopop-mcp-server.
+(e.g. ~/.claude.json) so that agents can discover and launch discopop_mcp_server.
 
 This module is imported by server.py and its functionality is exposed through
-the discopop-mcp-server CLI via the --setup / --status / --verify flags.
+the discopop_mcp_server CLI via the --setup / --status / --verify flags.
 """
 
 import json
@@ -38,7 +38,7 @@ class MCPSetup:
             "name": "Claude Code",
             "config_dir": lambda: Path.home(),
             "config_file": ".claude.json",
-            "server_name": "discopop-mcp-server",
+            "server_name": "discopop_mcp_server",
         }
     }
 
@@ -84,7 +84,7 @@ class MCPSetup:
     def find_server_path(self) -> Optional[str]:
         try:
             result = subprocess.run(
-                ["which", "discopop-mcp-server"],
+                ["which", "discopop_mcp_server"],
                 capture_output=True,
                 text=True,
                 timeout=5,
@@ -144,15 +144,15 @@ class MCPSetup:
         if use_full_path:
             server_command = self.find_server_path()
             if not server_command:
-                self.log("✗ Could not find discopop-mcp-server in PATH", "ERROR")
+                self.log("✗ Could not find discopop_mcp_server in PATH", "ERROR")
                 return False
         else:
-            venv_executable = self._get_venv_executable_path("discopop-mcp-server")
+            venv_executable = self._get_venv_executable_path("discopop_mcp_server")
             if venv_executable:
                 self.log(f"Using executable from virtual environment: {venv_executable}", "DEBUG")
                 server_command = venv_executable
             else:
-                server_command = "discopop-mcp-server"
+                server_command = "discopop_mcp_server"
 
         config_dir_func: Callable[[], Path] = agent_info["config_dir"]
         config_path = config_dir_func() / agent_info["config_file"]

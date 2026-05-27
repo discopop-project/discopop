@@ -55,7 +55,7 @@ python mcp_server/server.py --debug
 ### Run the server
 
 ```bash
-discopop-mcp-server --debug
+discopop_mcp_server --debug
 ```
 
 This starts the server in stdio mode, which is used by Claude. The `--debug` flag enables verbose logging.
@@ -66,10 +66,10 @@ This starts the server in stdio mode, which is used by Claude. The `--debug` fla
 
 ```bash
 # Basic usage
-discopop-mcp-server
+discopop_mcp_server
 
 # With debug logging
-discopop-mcp-server --debug
+discopop_mcp_server --debug
 ```
 
 ### Integration with Claude Code
@@ -77,7 +77,7 @@ discopop-mcp-server --debug
 Use the built-in setup flag for easy integration:
 
 ```bash
-discopop-mcp-server --setup claude_code
+discopop_mcp_server --setup claude_code
 ```
 
 This automatically configures Claude Code to use the server, handling virtual environment detection, configuration directory creation, and path resolution.
@@ -169,7 +169,7 @@ Uses **Stdio Mode** for local Claude integration:
 1. Update version in `pyproject.toml`
 2. Build: `python -m build`
 3. Publish: `python -m twine upload dist/*`
-4. Users install: `pip install discopop-mcp-server`
+4. Users install: `pip install discopop_mcp_server`
 
 ### Method 2: Source Distribution
 
@@ -183,7 +183,7 @@ pip install git+https://github.com/discopop-tool/discopop.git#subdirectory=mcp_s
 Use PyInstaller to create standalone executables:
 ```bash
 pip install pyinstaller
-pyinstaller --onefile mcp_server/server.py --name discopop-mcp-server
+pyinstaller --onefile mcp_server/server.py --name discopop_mcp_server
 ```
 
 ## Development
@@ -225,11 +225,11 @@ mypy mcp_server/server.py
 ### Claude setup issues
 - Automatically configure Claude Code:
   ```bash
-  discopop-mcp-server --setup claude_code
+  discopop_mcp_server --setup claude_code
   ```
 - Verify the setup with:
   ```bash
-  discopop-mcp-server --verify claude_code
+  discopop_mcp_server --verify claude_code
   ```
 - See [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) for detailed troubleshooting
 
@@ -239,12 +239,12 @@ mypy mcp_server/server.py
 - Run with `--debug` for detailed error messages
 
 ### Claude can't connect
-- Verify server is running: `discopop-mcp-server --debug`
+- Verify server is running: `discopop_mcp_server --debug`
 - Check claude configuration points to correct command
 - Ensure stdio mode is being used (default)
 - Check setup status:
   ```bash
-  discopop-mcp-server --status
+  discopop_mcp_server --status
   ```
 
 ### Missing dependencies

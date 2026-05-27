@@ -54,7 +54,7 @@ mcp_server/
   - Python package metadata
   - Dependencies: `mcp>=0.1.0` (required)
   - Optional: `pytest`, `pytest-asyncio` (for development)
-  - CLI entry point: `discopop-mcp-server`
+  - CLI entry point: `discopop_mcp_server`
 
 ## Quick Start
 
@@ -68,7 +68,7 @@ pip install -e ".[dev]"
 ### 2. Run the Server
 
 ```bash
-discopop-mcp-server --debug
+discopop_mcp_server --debug
 ```
 
 Or directly:
@@ -90,7 +90,7 @@ Edit `~/.claude/settings.json`:
 {
   "mcpServers": {
     "discopop": {
-      "command": "discopop-mcp-server",
+      "command": "discopop_mcp_server",
       "args": ["--debug"]
     }
   }
@@ -276,13 +276,13 @@ pip install mcp
 ### Claude can't find server
 ```bash
 # Test directly
-discopop-mcp-server --debug
+discopop_mcp_server --debug
 
 # Check location
-which discopop-mcp-server
+which discopop_mcp_server
 
 # Or use full path in Claude config
-"/home/user/venv/bin/discopop-mcp-server"
+"/home/user/venv/bin/discopop_mcp_server"
 ```
 
 ## Support Resources
