@@ -26,6 +26,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
     autotuning_running = False
     autotuning_output_text: Optional[scrolledtext.ScrolledText] = None
     autotuning_run_button: Optional[ttk.Button] = None
+    autotuning_stop_button: Optional[ttk.Button] = None
     autotuning_config_label: Optional[ttk.Label] = None
     autotuning_threads_var: Optional[tk.StringVar] = None
     autotuning_hotspot_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
@@ -36,6 +37,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
     _autotuning_tab_tooltip: Optional[Any] = None
     _autotuning_tab_tooltip_timer: Optional[str] = None
     _autotuning_tab_tooltip_active_tab: Optional[int] = None
+    _autotuning_process: Optional["subprocess.Popen[str]"] = None
 
     def _build_autotuning_panel(self, parent: tk.Widget) -> None:
         main_paned = tk.PanedWindow(parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
@@ -120,6 +122,11 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
             button_frame, text="Run Autotuning", command=self._run_autotuning, state="disabled"
         )
         self.autotuning_run_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        self.autotuning_stop_button = ttk.Button(
+            button_frame, text="Stop", command=self._stop_autotuning, state="disabled"
+        )
+        self.autotuning_stop_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         # Selected suggestions display
         suggestions_frame = ttk.LabelFrame(left_frame, text="Selected Suggestion IDs", padding=5)
@@ -245,6 +252,9 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         if self.autotuning_run_button is not None:
             self.autotuning_run_button.config(state="disabled", text="⟳ Running...")
 
+        if self.autotuning_stop_button is not None:
+            self.autotuning_stop_button.config(state="normal")
+
         self.status_label.config(text="⏳ Autotuning in progress...", foreground="#FF6B6B")
 
         if self.autotuning_output_text is not None:
@@ -318,7 +328,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
 
         output_callback("Running autotuner...\n\n")
 
-        process = subprocess.Popen(
+        self._autotuning_process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -327,18 +337,19 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
             cwd=dot_discopop,
         )
 
-        assert process.stdout is not None
-        for line in process.stdout:
+        assert self._autotuning_process.stdout is not None
+        for line in self._autotuning_process.stdout:
             cleaned = clean_ansi_output(line.rstrip("\n"))
             if cleaned:
                 output_callback(cleaned + "\n")
 
-        process.wait()
+        self._autotuning_process.wait()
 
-        if process.returncode != 0:
-            raise RuntimeError(f"Autotuner exited with return code {process.returncode}")
+        if self._autotuning_process.returncode != 0:
+            raise RuntimeError(f"Autotuner exited with return code {self._autotuning_process.returncode}")
 
         output_callback("\nAutotuning completed.\n")
+        self._autotuning_process = None
 
     def _on_autotuning_complete(self, error: bool = False) -> None:
         self.autotuning_running = False
@@ -346,12 +357,26 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         if self.autotuning_run_button is not None:
             self.autotuning_run_button.config(state="normal", text="Run Autotuning")
 
+        if self.autotuning_stop_button is not None:
+            self.autotuning_stop_button.config(state="disabled")
+
         if not error:
             self._refresh_autotuning_suggestions_display()
             if hasattr(self, "_refresh_suggestion_selection_display"):
                 self._refresh_suggestion_selection_display()
+            if hasattr(self, "_update_report_display"):
+                self._update_report_display()
             self.status_label.config(text="Autotuning completed successfully", foreground="green")
             self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
         else:
             self.status_label.config(text="Autotuning failed", foreground="red")
             self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+
+    def _stop_autotuning(self) -> None:
+        if self._autotuning_process is not None:
+            self._autotuning_process.terminate()
+        if self.autotuning_stop_button is not None:
+            self.autotuning_stop_button.config(state="disabled")
+        if hasattr(self, "_update_report_display"):
+            self._update_report_display()
+        self.status_label.config(text="Stopping autotuning...", foreground="orange")
