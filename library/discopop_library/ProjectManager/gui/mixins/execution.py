@@ -19,9 +19,14 @@ from discopop_library.ProjectManager.configurations.deletion import delete_confi
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import show_warning
+from typing import Optional
+from tkinter import ttk
 
 
 class ExecutionMixin(ConfigManagerMixinBase):
+    _execution_stop_event: threading.Event = threading.Event()
+    stop_execution_button: Optional[ttk.Button] = None
+
     def _validate_execution_inputs(self) -> bool:
         cpu_count = os.cpu_count() or 4
         try:
@@ -81,6 +86,10 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 "Do you want to proceed?",
             ):
                 return
+
+        self._execution_stop_event.clear()
+        if self.stop_execution_button is not None:
+            self.stop_execution_button.config(state="normal")
 
         self.run_button.config(state="disabled", text="⟳ Running...")
         self.generate_report_button.config(state="disabled")
@@ -172,6 +181,10 @@ class ExecutionMixin(ConfigManagerMixinBase):
             shared_par_settings = os.path.join(self.arguments.project_config_dir, "par_settings.json")
 
             for mode in selected_modes:
+                if self._execution_stop_event.is_set():
+                    self.after(0, lambda: append_output("Execution stopped by user.\n"))  # type: ignore
+                    break
+
                 self.after(0, lambda m=mode: append_output(f"\n=== {m.upper()} mode ===\n"))  # type: ignore
 
                 settings_file = f"{mode}_settings.json"
@@ -225,6 +238,10 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 if stderr:
                     self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
 
+                if self._execution_stop_event.is_set():
+                    self.after(0, lambda: append_output("Execution stopped by user.\n"))  # type: ignore
+                    break
+
                 self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground="#FF6B6B"))  # type: ignore
                 self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
                 execute_result = execute_configuration(
@@ -256,6 +273,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
 
             self.after(0, lambda: append_output("\n=== Execution complete ===\n"))  # type: ignore
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL, text="Run"))  # type: ignore
+            self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.inplace_var.set(False))  # type: ignore
             self.after(0, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
@@ -269,6 +287,10 @@ class ExecutionMixin(ConfigManagerMixinBase):
         if not self.current_config:
             show_warning(self, "No Configuration Selected", "Please select a configuration first.")
             return
+
+        self._execution_stop_event.clear()
+        if self.stop_execution_button is not None:
+            self.stop_execution_button.config(state="normal")
 
         self.prepare_pattern_detection_button.config(state="disabled", text="⟳ Preparing...")
         self.run_button.config(state="disabled")
@@ -350,18 +372,21 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 if stderr:
                     self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
 
-                self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground="#FF6B6B"))  # type: ignore
-                self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
+                if self._execution_stop_event.is_set():
+                    self.after(0, lambda: append_output("Pattern detection preparation stopped by user.\n"))  # type: ignore
+                else:
+                    self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground="#FF6B6B"))  # type: ignore
+                    self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
 
-                execute_result = execute_configuration(
-                    args_copy,
-                    self.arguments.project_root,
-                    config_path,
-                    shared_dp_settings,
-                    os.path.join(config_path, "execute.sh"),
-                    1,
-                    args_copy.timeout_execution,
-                )
+                    execute_result = execute_configuration(
+                        args_copy,
+                        self.arguments.project_root,
+                        config_path,
+                        shared_dp_settings,
+                        os.path.join(config_path, "execute.sh"),
+                        1,
+                        args_copy.timeout_execution,
+                    )
 
                 if execute_result is None or execute_result[0] != 0:
                     ret_code = execute_result[0] if execute_result else "None"
@@ -377,6 +402,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
 
             self.after(0, lambda: append_output("\n=== Pattern detection preparation complete ===\n"))  # type: ignore
             self.after(0, lambda: self.prepare_pattern_detection_button.config(state=tk.NORMAL, text="Prepare Pattern Detection"))  # type: ignore
+            self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
@@ -384,3 +410,9 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
 
         threading.Thread(target=thread_func, daemon=True).start()
+
+    def _stop_execution(self) -> None:
+        self._execution_stop_event.set()
+        if self.stop_execution_button is not None:
+            self.stop_execution_button.config(state="disabled")
+        self.status_label.config(text="Stopping execution...", foreground="orange")
