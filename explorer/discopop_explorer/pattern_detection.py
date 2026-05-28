@@ -117,7 +117,7 @@ class PatternDetectorX(object):
             res.patterns.task = detect_tasking(self.pet, task_graph, visualizer)
 
         if "*" in enable_patterns or "doall" in enable_patterns or "reduction" in enable_patterns:
-            tmp_result = detect_do_all_and_reduction_new(self.pet, task_graph)
+            tmp_result = detect_do_all_and_reduction_new(self.pet, task_graph, self.ast_helper)
             if "*" in enable_patterns or "doall" in enable_patterns:
                 res.patterns.do_all = [p for p in tmp_result if isinstance(p, DoAllInfo)]
             if "*" in enable_patterns or "reduction" in enable_patterns:
