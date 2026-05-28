@@ -227,6 +227,56 @@ class TestASTVariableAndTypeQueries:
         no_col = ASTVariableAndTypeQueries.find_all_variables_in_scope(sample_graph, "test.cpp", 6)
         assert set(with_col).issubset(set(no_col))
 
+    def test_function_parameters_included(self) -> None:
+        """ParmVarDecl nodes (function parameters) must be returned alongside VarDecl locals."""
+        ast = {
+            "kind": "TranslationUnitDecl",
+            "inner": [
+                {
+                    "id": "fn_dist",
+                    "kind": "FunctionDecl",
+                    "name": "dist",
+                    "loc": {"file": "test.cpp", "line": 1, "col": 1},
+                    "range": {"begin": {"col": 1}, "end": {"line": 20, "col": 1}},
+                    "inner": [
+                        {
+                            "id": "parm_nd",
+                            "kind": "ParmVarDecl",
+                            "name": "nd",
+                            "type": "int",
+                            "loc": {"line": 1, "col": 10},
+                            "range": {"begin": {"col": 10}, "end": {"col": 12}},
+                            "inner": [],
+                        },
+                        {
+                            "id": "parm_r1",
+                            "kind": "ParmVarDecl",
+                            "name": "r1",
+                            "type": "double *",
+                            "loc": {"line": 1, "col": 14},
+                            "range": {"begin": {"col": 14}, "end": {"col": 16}},
+                            "inner": [],
+                        },
+                        {
+                            "id": "var_d",
+                            "kind": "VarDecl",
+                            "name": "d",
+                            "type": "double",
+                            "loc": {"line": 3, "col": 5},
+                            "range": {"begin": {"col": 5}, "end": {"col": 6}},
+                            "inner": [],
+                        },
+                    ],
+                }
+            ],
+        }
+        graph = ClangASTGraph().build_from_ast(ast)
+        variables = ASTVariableAndTypeQueries.find_all_variables_in_scope(graph, "test.cpp", 10, 1)
+        var_names = [v[0] for v in variables]
+        assert "nd" in var_names
+        assert "r1" in var_names
+        assert "d" in var_names
+
     def test_get_variables_in_scope(self, sample_graph: nx.DiGraph[str]) -> None:
         variables = ASTVariableAndTypeQueries.get_variables_in_scope(sample_graph, "fn_main")
         var_names = [v[0] for v in variables]

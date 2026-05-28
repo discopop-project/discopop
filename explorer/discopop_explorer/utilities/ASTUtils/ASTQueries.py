@@ -324,7 +324,7 @@ class ASTVariableAndTypeQueries:
         scope_node_id: str,
         variables: set[tuple[str, Optional[str]]],
     ) -> None:
-        """Recursively collect all VarDecl nodes reachable from a scope.
+        """Recursively collect all VarDecl and ParmVarDecl nodes reachable from a scope.
 
         Args:
             graph: AST graph
@@ -332,7 +332,7 @@ class ASTVariableAndTypeQueries:
             variables: Accumulator set (modified in place)
         """
         attrs = graph.nodes[scope_node_id]
-        if attrs.get("kind") == "VarDecl":
+        if attrs.get("kind") in {"VarDecl", "ParmVarDecl"}:
             var_name = attrs.get("name")
             if var_name:
                 variables.add((var_name, attrs.get("type")))
