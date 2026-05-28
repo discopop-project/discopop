@@ -668,5 +668,25 @@ def __filter_classifications(
     res = ast_helper.get_variables_at_location(file_id, line_num)
     print("VARS AT LOC: ", file_id, line_num)
     print("--> ", res)
+    known_vars = [v[0] for v in res]
+
+    # perform filtering
+    for var in first_private:
+        if var not in known_vars:
+            remove_from_first_private.add(var)
+    for var in private:
+        if var not in known_vars:
+            remove_from_private.add(var)
+    for var in last_private:
+        if var not in known_vars:
+            remove_from_last_private.add(var)
+    for var in shared:
+        if var not in known_vars:
+            remove_from_shared.add(var)
+
+    new_first_private = first_private - remove_from_first_private
+    new_last_private = last_private - remove_from_last_private
+    new_private = private - remove_from_private
+    new_shared = shared - remove_from_shared
 
     return new_first_private, new_private, new_last_private, new_shared
