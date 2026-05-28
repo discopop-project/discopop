@@ -260,6 +260,7 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
         else:
             # register reduction pattern
             reduction_vars: List[Variable] = []
+            print("------- New red analysis ----------")
             for ri in reduction_info:
                 if ri[2].var_name is None:
                     continue
