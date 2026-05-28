@@ -45,15 +45,18 @@ from discopop_explorer.classes.variable import Variable
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import MemoryRegion, VarName
 from discopop_explorer.enums.DepOrigin import DepOrigin
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
+from discopop_explorer.utilities.ASTUtils.ASTPatternDetectionIntegration import ASTPatternDetectionHelper
 
 logger = logging.getLogger("Explorer").getChild("DoAll")
 
 
-def run_detection(pet: PEGraphX, task_graph: TaskGraph) -> List[DoAllInfo | ReductionInfo]:
+def run_detection(
+    pet: PEGraphX, task_graph: TaskGraph, ast_helper: ASTPatternDetectionHelper
+) -> List[DoAllInfo | ReductionInfo]:
     logger.info("Starting new do_all and reduction detection...")
     result: List[DoAllInfo | ReductionInfo] = []
 
-    result += identify_simple_doall_and_reduction(task_graph)
+    result += identify_simple_doall_and_reduction(task_graph, ast_helper)
 
     show_plot(task_graph)
 
@@ -102,7 +105,9 @@ def show_plot(tg: TaskGraph) -> None:
     tg.run_visualizer()
 
 
-def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | ReductionInfo]:
+def identify_simple_doall_and_reduction(
+    tg: TaskGraph, ast_helper: ASTPatternDetectionHelper
+) -> List[DoAllInfo | ReductionInfo]:
     """Analyzes the results of the graph simplification and create simple doall patterns.
     Implementation is fundamentally similar to the original doall detector, but implemented in a more maintainable fashion.
     Checks for clean doall opportunities."""
@@ -229,7 +234,12 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
         # node is a valid doall loop. Detect data sharing clauses
         logger.debug("CURRENT LOOP: " + str(node.created_context.get_code_scope(tg.pet)))
         firstprivate, private, lastprivate, shared, firstwritten, init = detect_doall_sharing_clauses(
-            tg.pet, iteration_contexts, loopparent_contained_ctxs, set([v[0] for v in loop_variables])
+            tg.pet,
+            ast_helper,
+            node.pet_node_id,
+            iteration_contexts,
+            loopparent_contained_ctxs,
+            set([v[0] for v in loop_variables]),
         )
         reduction: Set[str] = set([ri[2].var_name for ri in reduction_info if ri[2].var_name is not None])
         # check potential_breaking_dependencies for cases which actually prevent doall
@@ -313,6 +323,8 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
 
 def detect_doall_sharing_clauses(
     pet: PEGraphX,
+    ast_helper: ASTPatternDetectionHelper,
+    loop_node_id: NodeID,
     iteration_contexts: List[IterationContext],
     loopparent_contained_ctxs: Set[Context],
     loop_variables: Set[str],
@@ -585,6 +597,13 @@ def detect_doall_sharing_clauses(
     logger.debug("\tPOST MERGE: shared: " + str(shared))
     logger.debug("\tPOST MERGE: lastprivate: " + str(lastprivate))
     logger.debug("\tPOST MERGE: firstprivate: " + str(firstprivate))
+    firstprivate, private, lastprivate, shared = __filter_classifications(
+        pet, ast_helper, loop_node_id, firstprivate, private, lastprivate, shared
+    )
+    logger.debug("\tPOST FILTER: private: " + str(private))
+    logger.debug("\tPOST FILTER: shared: " + str(shared))
+    logger.debug("\tPOST FILTER: lastprivate: " + str(lastprivate))
+    logger.debug("\tPOST FILTER: firstprivate: " + str(firstprivate))
     logger.debug("---------------------------- LOOP END --------------------")
     logger.debug("")
     return firstprivate, private, lastprivate, shared, firstwritten, init
@@ -614,6 +633,53 @@ def __merge_classifications(
     remove_from_shared = shared.intersection(first_private.union(last_private))
     # Rule 4: if a variable is classifyable as shared and private, select shared.
     remove_from_private = remove_from_private.union(shared.intersection(private))
+
+    new_first_private = first_private - remove_from_first_private
+    new_last_private = last_private - remove_from_last_private
+    new_private = private - remove_from_private
+    new_shared = shared - remove_from_shared
+
+    return new_first_private, new_private, new_last_private, new_shared
+
+
+def __filter_classifications(
+    pet: PEGraphX,
+    ast_helper: ASTPatternDetectionHelper,
+    loop_node_id: NodeID,
+    first_private: Set[str],
+    private: Set[str],
+    last_private: Set[str],
+    shared: Set[str],
+) -> Tuple[Set[str], Set[str], Set[str], Set[str]]:
+    new_first_private: Set[str] = set()
+    new_private: Set[str] = set()
+    new_last_private: Set[str] = set()
+    new_shared: Set[str] = set()
+
+    remove_from_private: Set[str] = set()
+    remove_from_first_private: Set[str] = set()
+    remove_from_last_private: Set[str] = set()
+    remove_from_shared: Set[str] = set()
+
+    # get known variables for source location from AST
+    file_id = pet.node_at(loop_node_id).file_id
+    line_num = pet.node_at(loop_node_id).start_line
+    res = ast_helper.get_variables_at_location(file_id, line_num)
+    known_vars = [v[0] for v in res]
+
+    # perform filtering
+    for var in first_private:
+        if var not in known_vars:
+            remove_from_first_private.add(var)
+    for var in private:
+        if var not in known_vars:
+            remove_from_private.add(var)
+    for var in last_private:
+        if var not in known_vars:
+            remove_from_last_private.add(var)
+    for var in shared:
+        if var not in known_vars:
+            remove_from_shared.add(var)
 
     new_first_private = first_private - remove_from_first_private
     new_last_private = last_private - remove_from_last_private

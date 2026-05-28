@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple, cast
 from alive_progress import alive_bar  # type: ignore
 
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
+from discopop_explorer.utilities.ASTUtils import ASTPatternDetectionHelper
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
@@ -44,6 +45,7 @@ from discopop_gui.Visualizers.Base import Base as Visualizer
 
 class PatternDetectorX(object):
     pet: PEGraphX
+    ast_helper: ASTPatternDetectionHelper
 
     def __init__(self, pet_graph: PEGraphX) -> None:
         """This class runs detection algorithms on CU graph
@@ -51,6 +53,7 @@ class PatternDetectorX(object):
         :param pet_graph: CU graph
         """
         self.pet = pet_graph
+        self.ast_helper = ASTPatternDetectionHelper()
 
     def __merge(self, loop_type: bool, remove_dummies: bool) -> None:
         """Removes dummy nodes
@@ -91,6 +94,8 @@ class PatternDetectorX(object):
         visualizer: Visualizer | None = None,
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
+        self.ast_helper.load_ast_from_project(project_path)
+        self.ast_helper.print_ast_structure()
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()
         self.pet.calculateFunctionMetadata(hotspots)
@@ -112,7 +117,7 @@ class PatternDetectorX(object):
             res.patterns.task = detect_tasking(self.pet, task_graph, visualizer)
 
         if "*" in enable_patterns or "doall" in enable_patterns or "reduction" in enable_patterns:
-            tmp_result = detect_do_all_and_reduction_new(self.pet, task_graph)
+            tmp_result = detect_do_all_and_reduction_new(self.pet, task_graph, self.ast_helper)
             if "*" in enable_patterns or "doall" in enable_patterns:
                 res.patterns.do_all = [p for p in tmp_result if isinstance(p, DoAllInfo)]
             if "*" in enable_patterns or "reduction" in enable_patterns:
