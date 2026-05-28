@@ -270,7 +270,6 @@ def identify_simple_doall_and_reduction(
         else:
             # register reduction pattern
             reduction_vars: List[Variable] = []
-            print("------- New red analysis ----------")
             for ri in reduction_info:
                 if ri[2].var_name is None:
                     continue
@@ -666,8 +665,6 @@ def __filter_classifications(
     file_id = pet.node_at(loop_node_id).file_id
     line_num = pet.node_at(loop_node_id).start_line
     res = ast_helper.get_variables_at_location(file_id, line_num)
-    print("VARS AT LOC: ", file_id, line_num)
-    print("--> ", res)
     known_vars = [v[0] for v in res]
 
     # perform filtering
