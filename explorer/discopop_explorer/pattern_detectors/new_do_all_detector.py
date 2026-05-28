@@ -181,23 +181,32 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
                         else:
                             # check if dep.origin is static. If so, give it a "second chance", which is tested after classifying variables in the loop.
                             # --> In this case it is a valid doall, if the variable is firstwritten inside the loop
-                            print(
-                                "Prevents doall:",
-                                dep.dtype,
-                                dep.source_line,
-                                dep.sink_line,
-                                dep.var_name,
-                                dep.memory_region,
-                                "origin:",
-                                dep.origin,
-                                "source:",
-                                subnode.get_code_scope(tg.pet, inclusive=True),
-                                "out_dep_target:",
-                                out_dep_target.get_code_scope(tg.pet, inclusive=True),
-                                "source_ctx:",
-                                ic_source,
-                                "target_ctx:",
-                                out_dep_target,
+                            logger.debug(
+                                "Prevents doall: "
+                                + str(dep.dtype)
+                                + " "
+                                + str(dep.source_line)
+                                + " "
+                                + str(dep.sink_line)
+                                + " "
+                                + str(dep.var_name)
+                                + " "
+                                + str(dep.memory_region)
+                                + " "
+                                + "origin: "
+                                + str(dep.origin)
+                                + " "
+                                + "source: "
+                                + str(subnode.get_code_scope(tg.pet, inclusive=True))
+                                + " "
+                                + "out_dep_target: "
+                                + str(out_dep_target.get_code_scope(tg.pet, inclusive=True))
+                                + " "
+                                + "source_ctx: "
+                                + str(ic_source)
+                                + " "
+                                + "target_ctx: "
+                                + str(out_dep_target)
                             )
                             if dep.origin == DepOrigin.DYNAMIC_ANALYSIS:
                                 # dependency is trustworthy and definitely breaks doall
@@ -218,7 +227,7 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
         # get contexts contained in loopparent for later check
         loopparent_contained_ctxs = node.created_context.get_contained_contexts(inclusive=True)
         # node is a valid doall loop. Detect data sharing clauses
-        print("CURRENT LOOP: ", node.created_context.get_code_scope(tg.pet))
+        logger.debug("CURRENT LOOP: " + str(node.created_context.get_code_scope(tg.pet)))
         firstprivate, private, lastprivate, shared, firstwritten, init = detect_doall_sharing_clauses(
             tg.pet, iteration_contexts, loopparent_contained_ctxs, set([v[0] for v in loop_variables])
         )
@@ -228,16 +237,16 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
             if dep.var_name not in firstwritten.union(init).union(reduction):
                 # node is not a valid doall loop
                 prevented_loops.add(node.pet_node_id)
-                print("LOOP: ", node.created_context.get_code_scope(tg.pet))
-                print("SECOND CHANCEs missed!: ", dep.dtype, dep.var_name)
+                # print("LOOP: ", node.created_context.get_code_scope(tg.pet))
+                # print("SECOND CHANCEs missed!: ", dep.dtype, dep.var_name)
                 continue
             else:
                 # static dependency does not actually prevent doall parallelization, as privatization is possible
                 pass
-        if len(potential_breaking_dependencies) > 0:
-            print(
-                "HERE DUE TO SECOND CHANCEs!: ", [(d[2].dtype, d[2].var_name) for d in potential_breaking_dependencies]
-            )
+        # if len(potential_breaking_dependencies) > 0:
+        #    print(
+        #        "HERE DUE TO SECOND CHANCEs!: ", [(d[2].dtype, d[2].var_name) for d in potential_breaking_dependencies]
+        #    )
 
         # Register a pattern
         pattern: DoAllInfo | ReductionInfo
@@ -257,7 +266,7 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
                 var = Variable(type="unknown", name=VarName(ri[2].var_name), defLine="LineNotFound")
                 # correct operation
                 red_op = ri[3]["operation"]
-                print("RED OP:", red_op, "var:", var.name)
+                logger.debug("RED OP: " + red_op + " var: " + var.name)
                 if red_op == ">":
                     red_op = "max"
                 if red_op == "<":
@@ -312,7 +321,7 @@ def detect_doall_sharing_clauses(
     (firstprivate, private, lastprivate, shared, firstwritten, init)
     firstwritten and init are not data sharing clauses, but required to validate potential doall-breaking dependencies originating from static information.
     """
-    print("-------------------- LOOP START ---------------------")
+    logger.debug("-------------------- LOOP START ---------------------")
     # Initialization
     # calculate CUs contained in the loop parent for later use dureing filtering
     contained_tg_nodes_in_loopparent: List[TGNode] = []
@@ -460,14 +469,14 @@ def detect_doall_sharing_clauses(
         #            print("cunode -> ", cu_node_id)
         # print("--> in deps:", [(d[2].dtype, d[0], d[2].var_name) for d in incoming_deps])
         # print("--> out_deps: ", [(d[2].dtype, d[1], d[2].var_name) for d in outgoing_deps])
-        print("\t--> written: ", written)
-        print("\t--> read: ", read)
-        print("\t--> data_incoming: ", data_incoming)
-        print("\t--> data_outgoing: ", data_outgoing)
-        print("\t--> firstread: ", firstread)
-        print("\t--> it_firstwritten: ", it_firstwritten)
-        print("\t--> it_init: ", it_init)
-        print("\t--> gep_access: ", gep_result_access)
+        logger.debug("\t--> written: " + str(written))
+        logger.debug("\t--> read: " + str(read))
+        logger.debug("\t--> data_incoming: " + str(data_incoming))
+        logger.debug("\t--> data_outgoing: " + str(data_outgoing))
+        logger.debug("\t--> firstread: " + str(firstread))
+        logger.debug("\t--> it_firstwritten: " + str(it_firstwritten))
+        logger.debug("\t--> it_init: " + str(it_init))
+        logger.debug("\t--> gep_access: " + str(gep_result_access))
         # dependency between iterations is trivially not possible, as this would invalidate the doall pattern.
         # Classification scheme:
         # shared:
@@ -549,11 +558,11 @@ def detect_doall_sharing_clauses(
                 or var_name in it_init
             )
 
-        print("\tit_private: ", it_private)
-        print("\tit_shared: ", it_shared)
-        print("\tit_lastprivate: ", it_lastprivate)
-        print("\tit_firstprivate: ", it_firstprivate)
-        print("\tloop_vars: ", loop_variables)
+        logger.debug("\tit_private: " + str(it_private))
+        logger.debug("\tit_shared: " + str(it_shared))
+        logger.debug("\tit_lastprivate: " + str(it_lastprivate))
+        logger.debug("\tit_firstprivate: " + str(it_firstprivate))
+        logger.debug("\tloop_vars: " + str(loop_variables))
 
         # save classifications
         private = private.union(it_private)
@@ -562,22 +571,22 @@ def detect_doall_sharing_clauses(
         firstprivate = firstprivate.union(it_firstprivate)
         firstwritten = firstwritten.union(it_firstwritten)
         init = init.union(it_init)
-        print("----------------------- IT END ------------------")
+        logger.debug("----------------------- IT END ------------------")
 
     # merge classifications
-    print()
-    print("\tPRE MERGE: private: ", private)
-    print("\tPRE MERGE: shared: ", shared)
-    print("\tPRE MERGE: lastprivate: ", lastprivate)
-    print("\tPRE MERGE: firstprivate: ", firstprivate)
-    print()
+    logger.debug("")
+    logger.debug("\tPRE MERGE: private: " + str(private))
+    logger.debug("\tPRE MERGE: shared: " + str(shared))
+    logger.debug("\tPRE MERGE: lastprivate: " + str(lastprivate))
+    logger.debug("\tPRE MERGE: firstprivate: " + str(firstprivate))
+    logger.debug("")
     firstprivate, private, lastprivate, shared = __merge_classifications(firstprivate, private, lastprivate, shared)
-    print("\tPOST MERGE: private: ", private)
-    print("\tPOST MERGE: shared: ", shared)
-    print("\tPOST MERGE: lastprivate: ", lastprivate)
-    print("\tPOST MERGE: firstprivate: ", firstprivate)
-    print("---------------------------- LOOP END --------------------")
-    print()
+    logger.debug("\tPOST MERGE: private: " + str(private))
+    logger.debug("\tPOST MERGE: shared: " + str(shared))
+    logger.debug("\tPOST MERGE: lastprivate: " + str(lastprivate))
+    logger.debug("\tPOST MERGE: firstprivate: " + str(firstprivate))
+    logger.debug("---------------------------- LOOP END --------------------")
+    logger.debug("")
     return firstprivate, private, lastprivate, shared, firstwritten, init
 
 

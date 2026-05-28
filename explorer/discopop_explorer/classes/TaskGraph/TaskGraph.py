@@ -1178,7 +1178,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         )
 
                         # set loopstate_iterations_ids sucht that both iteration nodes react to different loopsate information during dependency creation
-                        print("sin.loopstate_iteration_ids: ", sin.loopstate_iteration_ids)
+                        # print("sin.loopstate_iteration_ids: ", sin.loopstate_iteration_ids)
                         if sin.loopstate_iteration_ids is None:
                             sin.set_loopstate_iteration_ids([1])
                         if cast(TGStartIterationNode, copied_iteration_entry).loopstate_iteration_ids is None:
@@ -2465,7 +2465,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     for sink_location, sink_location_deps in source_state_deps.items():
                         for sink_state_id, var_infos in sink_location_deps.items():
                             used_state_ids.add(sink_state_id)
-        print("SEEN_STATE_IDS: ", used_state_ids)
+        # print("SEEN_STATE_IDS: ", used_state_ids)
         # delete deps to free memory
         del deps
 
@@ -2569,14 +2569,14 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 if callstate[0].startswith("call_") and callstate[0][5:].isdigit():
                     # check for matching CallInstruction ID
                     call_instruction_id = int(callstate[0][5:])
-                    print(
-                        "FOUND InlinedFunctionContext "
-                        + str(ctx)
-                        + " at current callstate: "
-                        + str(callstate)
-                        + " with callInstID: "
-                        + str(ctx.call_instruction_id)
-                    )
+                    #                    print(
+                    #                        "FOUND InlinedFunctionContext "
+                    #                        + str(ctx)
+                    #                        + " at current callstate: "
+                    #                        + str(callstate)
+                    #                        + " with callInstID: "
+                    #                        + str(ctx.call_instruction_id)
+                    #                    )
                     if call_instruction_id == ctx.call_instruction_id:
                         # HIT CALL
                         callstate = callstate[1:]
@@ -3042,7 +3042,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                 for source_ctx in source_contexts:
                                     for target_ctx in target_contexts:
                                         if source_ctx == target_ctx:
-                                            print("SKIPPING POTENTIAL DEP: ", dep_type, var_infos)
+                                            # print("SKIPPING POTENTIAL DEP: ", dep_type, var_infos)
                                             continue
                                         # check for shared closest function parent
                                         source_closest_fn = source_ctx.get_closest_function_ancestor()

@@ -171,7 +171,6 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
             except nx.exception.NetworkXException:
                 pos = nx.random_layout(g)
         print("\tCalculated positions...")
-        print("DEPENDENCIES LIST: ", dependencies_list)
         for idx, dep in enumerate(dependencies_list):
             if dep.type == "INIT":
                 sink = readlineToCUIdMap[dep.sink]
@@ -211,7 +210,6 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                     #                        continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
-                        print("PET ADDED DEP: ", dep)
         print("\tAdded dependencies...")
         return cls(g, reduction_vars, pos, visualizer)
 
@@ -510,7 +508,6 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
 
     def enforce_single_function_exit_node(self) -> None:
         for func in all_nodes(self, FunctionNode):
-            print("FUNCTION: ", func)
             # define exit node
             file_id = func.file_id
             max_node_id_in_file = 0
@@ -531,7 +528,6 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
             max_end_line = 0
             for node in subtree:
                 if len(out_edges(self, node.id, EdgeType.SUCCESSOR)) == 0:
-                    print("--> exit: ", node.id)
                     self.g.add_edge(node.id, exit_id, data=Dependency(EdgeType.SUCCESSOR))
                     max_end_line = max(max_end_line, node.end_line)
             exit_node.start_line = max_end_line
