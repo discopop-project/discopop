@@ -413,7 +413,8 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     if stderr:
                         self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
 
-            self.after(0, lambda: append_output("\n=== Pattern detection preparation complete ===\n"))  # type: ignore
+            if not self._execution_stop_event.is_set():
+                self.after(0, lambda: append_output("\n=== Pattern detection preparation complete ===\n"))  # type: ignore
             self.after(0, lambda: self.prepare_pattern_detection_button.config(state=tk.NORMAL, text="Prepare Pattern Detection"))  # type: ignore
             self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL))  # type: ignore
