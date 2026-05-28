@@ -253,6 +253,9 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         def on_run() -> None:
             self._run_execution()
 
+        def on_stop() -> None:
+            self._stop_execution()  # type: ignore
+
         def on_prepare_pattern_detection() -> None:
             self._prepare_pattern_detection()
 
@@ -261,6 +264,9 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
 
         self.run_button = ttk.Button(run_button_frame, text="Run", command=on_run, state="disabled", width=15)
         self.run_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        self.stop_execution_button = ttk.Button(run_button_frame, text="Stop", command=on_stop, state="disabled")
+        self.stop_execution_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.prepare_pattern_detection_button = ttk.Button(
             run_button_frame, text="Prepare Pattern Detection", command=on_prepare_pattern_detection, state="disabled"
