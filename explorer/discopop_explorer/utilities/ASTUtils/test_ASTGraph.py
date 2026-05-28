@@ -292,6 +292,72 @@ class TestClangASTGraph:
         assert len(graph.nodes) == 6
         assert len(graph.edges) == 5
 
+    def test_file_inherited_across_siblings(self) -> None:
+        """Clang omits 'file' from siblings after the first occurrence.
+
+        The second FunctionDecl has no 'file' in its loc — it must inherit
+        the file set by the first FunctionDecl sibling, not the parent's
+        (None) context.
+        """
+        ast = {
+            "kind": "TranslationUnitDecl",
+            "loc": {},
+            "inner": [
+                {
+                    "id": "0x1",
+                    "kind": "FunctionDecl",
+                    "name": "foo",
+                    "loc": {"file": "test.cpp", "line": 1, "col": 1},
+                    "inner": [],
+                },
+                {
+                    "id": "0x2",
+                    "kind": "FunctionDecl",
+                    "name": "bar",
+                    # No 'file' key — should inherit "test.cpp" from sibling 0x1
+                    "loc": {"line": 10, "col": 1},
+                    "inner": [],
+                },
+            ],
+        }
+        graph = _make_builder().build_from_ast(ast)
+        assert graph.nodes["0x2"]["loc"]["file"] == "test.cpp"
+
+    def test_file_updated_when_sibling_changes_it(self) -> None:
+        """A sibling that introduces a new file must not affect previous siblings."""
+        ast = {
+            "kind": "TranslationUnitDecl",
+            "loc": {},
+            "inner": [
+                {
+                    "id": "0x1",
+                    "kind": "FunctionDecl",
+                    "name": "foo",
+                    "loc": {"file": "a.cpp", "line": 1, "col": 1},
+                    "inner": [],
+                },
+                {
+                    "id": "0x2",
+                    "kind": "FunctionDecl",
+                    "name": "bar",
+                    "loc": {"file": "b.cpp", "line": 5, "col": 1},
+                    "inner": [],
+                },
+                {
+                    "id": "0x3",
+                    "kind": "FunctionDecl",
+                    "name": "baz",
+                    # No file — should inherit "b.cpp" from sibling 0x2
+                    "loc": {"line": 10, "col": 1},
+                    "inner": [],
+                },
+            ],
+        }
+        graph = _make_builder().build_from_ast(ast)
+        assert graph.nodes["0x1"]["loc"]["file"] == "a.cpp"
+        assert graph.nodes["0x2"]["loc"]["file"] == "b.cpp"
+        assert graph.nodes["0x3"]["loc"]["file"] == "b.cpp"
+
 
 class TestNormalizeFilePaths:
     def test_relative_path_replaced(self) -> None:

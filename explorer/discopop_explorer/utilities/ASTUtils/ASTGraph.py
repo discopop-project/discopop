@@ -55,6 +55,12 @@ class ClangASTGraph:
         inherited file/line context from the nearest ancestor that provided
         explicit values for those fields.
 
+        Clang omits ``file`` (and ``line``) from a node's ``loc`` when they
+        are unchanged from the *previous sibling* in the same ``inner`` array,
+        not just from the parent.  We therefore pre-compute each child's
+        inherited context by walking the sibling list left-to-right before
+        pushing them (in reverse) onto the DFS stack.
+
         Args:
             ast_root: Root node of the AST
         """
@@ -82,9 +88,25 @@ class ClangASTGraph:
             if parent_id is not None:
                 self.graph.add_edge(parent_id, node_id, relation="child")
 
-            # Push children in reverse order so the first child is processed first
-            for child in reversed(node.get("inner", [])):
-                stack.append((child, node_id, resolved_file, resolved_line))
+            children = node.get("inner", [])
+            if not children:
+                continue
+
+            # Pre-compute the inherited (file, line) context for each child.
+            # Each child inherits from the previous sibling's resolved context,
+            # not from the parent directly.
+            ctx_file: Optional[str] = resolved_file
+            ctx_line: Optional[int] = resolved_line
+            child_inherited: list[tuple[Optional[str], Optional[int]]] = []
+            for child in children:
+                child_inherited.append((ctx_file, ctx_line))
+                child_loc = self._resolve_macro_loc(child.get("loc", {}))
+                ctx_file = child_loc.get("file", ctx_file)
+                ctx_line = child_loc.get("line", ctx_line)
+
+            # Push in reverse so the first child is processed first
+            for child, (inh_f, inh_l) in zip(reversed(children), reversed(child_inherited)):
+                stack.append((child, node_id, inh_f, inh_l))
 
     def _extract_id(self, node: dict[str, Any]) -> str:
         """Extract or generate unique node ID.
