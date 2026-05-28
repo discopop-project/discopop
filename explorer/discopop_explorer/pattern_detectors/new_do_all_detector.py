@@ -343,6 +343,15 @@ def detect_doall_sharing_clauses(
         [tg.pet_node_id for tg in contained_tg_nodes_in_loopparent if tg.pet_node_id is not None]
     )
 
+    # get known variables for source location from AST
+    file_id = pet.node_at(loop_node_id).file_id
+    line_num = pet.node_at(loop_node_id).start_line
+    known_vars_with_types = ast_helper.get_variables_at_location(file_id, line_num)
+
+    known_vars = set([v[0] for v in known_vars_with_types])
+    if "rij" in known_vars:
+        print("known_vars_with_types: ", known_vars_with_types)
+
     # shared:
     # - no dependency between iterations
     # private:
@@ -373,6 +382,7 @@ def detect_doall_sharing_clauses(
     firstwritten: Set[str] = set()
     init: Set[str] = set()
     gep_result_access: Set[str] = set()
+    ptr_type_access: Set[str] = set()
 
     for it_ctx in iteration_contexts:
         contained_contexts_in_sequence = it_ctx.get_contained_contexts_in_sequence(pet)
@@ -430,6 +440,14 @@ def detect_doall_sharing_clauses(
                 # check if dep is access to array type value (or result of pointer arithmetic)
                 if dep.is_gep_result_dependency:
                     gep_result_access.add(dep.var_name)
+                # check if dep is access to pointer type
+                if dep.var_name in known_vars:
+                    for tmp_var_name, type_str in known_vars_with_types:
+                        if type_str is None:
+                            continue
+                        if tmp_var_name == dep.var_name:
+                            if "*" in type_str:
+                                ptr_type_access.add(dep.var_name)
 
                 if dep.dtype == DepType.RAW:
                     if dep.var_name not in written:
@@ -488,7 +506,8 @@ def detect_doall_sharing_clauses(
         logger.debug("\t--> firstread: " + str(firstread))
         logger.debug("\t--> it_firstwritten: " + str(it_firstwritten))
         logger.debug("\t--> it_init: " + str(it_init))
-        logger.debug("\t--> gep_access: " + str(gep_result_access))
+        logger.debug("\t--> gep_result_access: " + str(gep_result_access))
+        logger.debug("\t--> ptr_type_access: " + str(ptr_type_access))
         # dependency between iterations is trivially not possible, as this would invalidate the doall pattern.
         # Classification scheme:
         # shared:
@@ -513,7 +532,7 @@ def detect_doall_sharing_clauses(
             # -> classification of the variables clauses according to scheme above
             if var_name in written:
                 if var_name in data_outgoing:
-                    if var_name in gep_result_access:
+                    if var_name in ptr_type_access:
                         it_shared.add(var_name)
                     else:
                         it_lastprivate.add(var_name)
@@ -525,7 +544,7 @@ def detect_doall_sharing_clauses(
                     and var_name not in it_lastprivate
                     and var_name not in it_firstprivate
                 ):
-                    if var_name in gep_result_access:
+                    if var_name in ptr_type_access:
                         it_shared.add(var_name)
                     else:
                         it_private.add(var_name)
@@ -544,10 +563,19 @@ def detect_doall_sharing_clauses(
                     and var_name not in it_lastprivate
                     and var_name not in it_firstprivate
                     and var_name in it_init
-                    and var_name in gep_result_access
+                    and var_name in ptr_type_access
                 ):
                     # array initializations without immediate successive uses
                     it_shared.add(var_name)
+
+                if (
+                    var_name not in it_private
+                    and var_name not in it_shared
+                    and var_name not in it_lastprivate
+                    and var_name not in it_firstprivate
+                    and var_name in it_init
+                ):
+                    it_private.add(var_name)
 
                 assert (
                     var_name in it_lastprivate
@@ -558,7 +586,7 @@ def detect_doall_sharing_clauses(
                 )
             else:
                 # read-only
-                if var_name in gep_result_access:
+                if var_name in ptr_type_access:
                     it_shared.add(var_name)
                 else:
                     it_firstprivate.add(var_name)
@@ -597,8 +625,9 @@ def detect_doall_sharing_clauses(
     logger.debug("\tPOST MERGE: shared: " + str(shared))
     logger.debug("\tPOST MERGE: lastprivate: " + str(lastprivate))
     logger.debug("\tPOST MERGE: firstprivate: " + str(firstprivate))
+    logger.debug("")
     firstprivate, private, lastprivate, shared = __filter_classifications(
-        pet, ast_helper, loop_node_id, firstprivate, private, lastprivate, shared
+        known_vars, firstprivate, private, lastprivate, shared
     )
     logger.debug("\tPOST FILTER: private: " + str(private))
     logger.debug("\tPOST FILTER: shared: " + str(shared))
@@ -643,9 +672,7 @@ def __merge_classifications(
 
 
 def __filter_classifications(
-    pet: PEGraphX,
-    ast_helper: ASTPatternDetectionHelper,
-    loop_node_id: NodeID,
+    known_vars: Set[str],
     first_private: Set[str],
     private: Set[str],
     last_private: Set[str],
@@ -660,12 +687,6 @@ def __filter_classifications(
     remove_from_first_private: Set[str] = set()
     remove_from_last_private: Set[str] = set()
     remove_from_shared: Set[str] = set()
-
-    # get known variables for source location from AST
-    file_id = pet.node_at(loop_node_id).file_id
-    line_num = pet.node_at(loop_node_id).start_line
-    res = ast_helper.get_variables_at_location(file_id, line_num)
-    known_vars = [v[0] for v in res]
 
     # perform filtering
     for var in first_private:

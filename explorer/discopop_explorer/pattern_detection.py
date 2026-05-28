@@ -95,7 +95,7 @@ class PatternDetectorX(object):
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         self.ast_helper.load_ast_from_project(project_path)
-        self.ast_helper.print_ast_structure()
+        # self.ast_helper.print_ast_structure()
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()
         self.pet.calculateFunctionMetadata(hotspots)
