@@ -273,13 +273,13 @@ def identify_simple_doall_and_reduction(tg: TaskGraph) -> List[DoAllInfo | Reduc
                     red_op = "min"
                 var.operation = red_op
                 # prevent duplicates
-                duplicate = True if len(reduction_vars) > 0 else False
-                for key in var.__dict__:
-                    for elem in reduction_vars:
-                        if var.__dict__[key] != elem.__dict__[key]:
-                            duplicate = False
-                            break
-                    if duplicate:
+                duplicate = False
+
+                for elem in reduction_vars:
+                    if "name" not in var.__dict__ or "name" not in elem.__dict__:
+                        continue
+                    if var.__dict__["name"] == elem.__dict__["name"]:
+                        duplicate = True
                         break
                 if not duplicate:
                     reduction_vars.append(var)
