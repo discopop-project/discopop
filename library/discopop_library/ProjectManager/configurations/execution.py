@@ -13,7 +13,7 @@ import shutil
 import signal
 import subprocess
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from filelock import FileLock
 
@@ -32,6 +32,7 @@ def execute_configuration(
     script_path: PATH,
     thread_count: int,
     timeout: Optional[float] = None,
+    process_started_callback: Optional[Callable[["subprocess.Popen[bytes]"], None]] = None,
 ) -> Optional[Tuple[int, float, str, str]]:
     # check prerequisites
     if not os.path.exists(settings_path):
@@ -112,6 +113,9 @@ def execute_configuration(
             stdout=subprocess.PIPE,
             env=my_env,
         )
+
+        if process_started_callback is not None:
+            process_started_callback(p)
 
         stdout, stderr = p.communicate()
 

@@ -10,6 +10,7 @@ import copy
 import json
 import logging
 import os
+import subprocess
 import threading
 import tkinter as tk
 
@@ -25,7 +26,11 @@ from tkinter import ttk
 
 class ExecutionMixin(ConfigManagerMixinBase):
     _execution_stop_event: threading.Event = threading.Event()
+    _execution_process: Optional["subprocess.Popen[bytes]"] = None
     stop_execution_button: Optional[ttk.Button] = None
+
+    def _register_execution_process(self, p: "subprocess.Popen[bytes]") -> None:
+        self._execution_process = p
 
     def _validate_execution_inputs(self) -> bool:
         cpu_count = os.cpu_count() or 4
@@ -219,7 +224,9 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     shared_compile_sh,
                     1 if mode == "seq" else thread_count,
                     args_copy.timeout_compilation,
+                    process_started_callback=self._register_execution_process,
                 )
+                self._execution_process = None
 
                 if compile_result is None or compile_result[0] != 0:
                     ret_code = compile_result[0] if compile_result else "None"
@@ -252,7 +259,9 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     os.path.join(config_path, "execute.sh"),
                     1 if mode == "seq" else thread_count,
                     args_copy.timeout_execution,
+                    process_started_callback=self._register_execution_process,
                 )
+                self._execution_process = None
 
                 if execute_result is None or execute_result[0] != 0:
                     ret_code = execute_result[0] if execute_result else "None"
@@ -358,7 +367,9 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 shared_compile_sh,
                 1,
                 args_copy.timeout_compilation,
+                process_started_callback=self._register_execution_process,
             )
+            self._execution_process = None
 
             if compile_result is None or compile_result[0] != 0:
                 ret_code = compile_result[0] if compile_result else "None"
@@ -386,7 +397,9 @@ class ExecutionMixin(ConfigManagerMixinBase):
                         os.path.join(config_path, "execute.sh"),
                         1,
                         args_copy.timeout_execution,
+                        process_started_callback=self._register_execution_process,
                     )
+                    self._execution_process = None
 
                 if execute_result is None or execute_result[0] != 0:
                     ret_code = execute_result[0] if execute_result else "None"
@@ -413,6 +426,8 @@ class ExecutionMixin(ConfigManagerMixinBase):
 
     def _stop_execution(self) -> None:
         self._execution_stop_event.set()
+        if self._execution_process is not None:
+            self._execution_process.terminate()
         if self.run_button is not None:
             self.run_button.config(state="normal", text="Run")
         if self.prepare_pattern_detection_button is not None:
