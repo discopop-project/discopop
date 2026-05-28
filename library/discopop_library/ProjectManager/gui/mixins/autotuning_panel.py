@@ -377,4 +377,6 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
             self._autotuning_process.terminate()
         if self.autotuning_stop_button is not None:
             self.autotuning_stop_button.config(state="disabled")
+        if hasattr(self, "_update_report_display"):
+            self._update_report_display()
         self.status_label.config(text="Stopping autotuning...", foreground="orange")
