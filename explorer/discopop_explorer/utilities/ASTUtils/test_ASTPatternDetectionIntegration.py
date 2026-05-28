@@ -141,3 +141,31 @@ class TestGetVariablesAtLocationByFileID:
 
             assert 1 in h.file_mapping
             assert 2 in h.file_mapping
+
+    def test_no_column_returns_variables_on_line(self) -> None:
+        """Omitting column returns variables for any column on the given line."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            abs_path = str(Path(tmpdir) / "test.cpp")
+            Path(abs_path).write_text("")
+            project = _write_project(tmpdir, _make_ast(abs_path), [f"1\t{abs_path}"])
+
+            h = ASTPatternDetectionHelper()
+            h.load_ast_from_project(project)
+
+            result = h.get_variables_at_location(file_id=1, line=5)
+            var_names = [name for name, _ in result]
+            assert "x" in var_names
+
+    def test_no_column_superset_of_with_column(self) -> None:
+        """Results without column are a superset of results with an explicit column."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            abs_path = str(Path(tmpdir) / "test.cpp")
+            Path(abs_path).write_text("")
+            project = _write_project(tmpdir, _make_ast(abs_path), [f"1\t{abs_path}"])
+
+            h = ASTPatternDetectionHelper()
+            h.load_ast_from_project(project)
+
+            with_col = set(h.get_variables_at_location(file_id=1, line=5, column=1))
+            no_col = set(h.get_variables_at_location(file_id=1, line=5))
+            assert with_col.issubset(no_col)

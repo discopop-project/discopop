@@ -150,14 +150,16 @@ class ASTQueries:
         ]
 
     @staticmethod
-    def find_nodes_at_location(graph: nx.DiGraph[str], filename: str, line: int, column: int) -> list[str]:
+    def find_nodes_at_location(
+        graph: nx.DiGraph[str], filename: str, line: int, column: Optional[int] = None
+    ) -> list[str]:
         """Find nodes whose source range contains a specific location.
 
         Args:
             graph: AST graph
             filename: Source filename
             line: Line number
-            column: Column number
+            column: Column number, or ``None`` to match any column on *line*
 
         Returns:
             List of matching node IDs
@@ -171,27 +173,34 @@ class ASTQueries:
         return matching
 
     @staticmethod
-    def _is_in_range(line: int, column: int, range_info: dict[str, Any]) -> bool:
+    def _is_in_range(line: int, column: Optional[int], range_info: dict[str, Any]) -> bool:
         """Check whether a (line, column) position falls within a source range.
+
+        When *column* is ``None`` the check degenerates to a pure line-range
+        test: any node whose range spans *line* is considered a match.
 
         Args:
             line: Line number to test
-            column: Column number to test
+            column: Column number to test, or ``None`` to ignore column bounds
             range_info: Range dict with begin_line/begin_column/end_line/end_column
 
         Returns:
             True if the position is within the range
         """
         begin_line = range_info.get("begin_line")
-        begin_col = range_info.get("begin_column")
         end_line = range_info.get("end_line")
-        end_col = range_info.get("end_column")
 
         if begin_line is None or end_line is None:
             return False
 
         if line < begin_line or line > end_line:
             return False
+
+        if column is None:
+            return True
+
+        begin_col = range_info.get("begin_column")
+        end_col = range_info.get("end_column")
 
         # Use explicit None checks — column 0 is a valid (falsy) value
         if line == begin_line and begin_col is not None and column < begin_col:
@@ -260,7 +269,7 @@ class ASTVariableAndTypeQueries:
 
     @staticmethod
     def find_all_variables_in_scope(
-        graph: nx.DiGraph[str], filename: str, line: int, column: int
+        graph: nx.DiGraph[str], filename: str, line: int, column: Optional[int] = None
     ) -> list[tuple[str, Optional[str]]]:
         """Find all variables visible at a source location.
 
@@ -271,7 +280,7 @@ class ASTVariableAndTypeQueries:
             graph: AST graph
             filename: Source filename
             line: Line number
-            column: Column number
+            column: Column number, or ``None`` to consider all columns on *line*
 
         Returns:
             Sorted list of (var_name, var_type) tuples

@@ -83,13 +83,15 @@ class ASTPatternDetectionHelper:
         if path_mapping:
             ClangASTGraph.normalize_file_paths(self.ast_graph, path_mapping)
 
-    def get_variables_at_location(self, file_id: int, line: int, column: int) -> list[tuple[str, Optional[str]]]:
+    def get_variables_at_location(
+        self, file_id: int, line: int, column: Optional[int] = None
+    ) -> list[tuple[str, Optional[str]]]:
         """Get variables visible at a specific source location, identified by file ID.
 
         Args:
             file_id: Integer file identifier as defined in ``FileMapping.txt``
             line: Line number
-            column: Column number
+            column: Column number, or ``None`` to consider all columns on *line*
 
         Returns:
             List of (var_name, var_type) tuples, or empty list when the file ID

@@ -187,6 +187,22 @@ class TestASTQueries:
         assert not ASTQueries._is_in_range(1, 1, {})
         assert not ASTQueries._is_in_range(1, 1, {"begin_line": None, "end_line": 5})
 
+    def test_is_in_range_none_column_ignores_column_bounds(self) -> None:
+        """column=None matches any column on a line within the line range."""
+        r = {"begin_line": 3, "begin_column": 10, "end_line": 7, "end_column": 5}
+        assert ASTQueries._is_in_range(3, None, r)  # first line, before begin_col — still matches
+        assert ASTQueries._is_in_range(5, None, r)  # middle line
+        assert ASTQueries._is_in_range(7, None, r)  # last line, after end_col — still matches
+        assert not ASTQueries._is_in_range(2, None, r)  # before range
+        assert not ASTQueries._is_in_range(8, None, r)  # after range
+
+    def test_find_nodes_at_location_none_column(self, sample_graph: nx.DiGraph[str]) -> None:
+        """column=None returns nodes spanning the line regardless of column."""
+        nodes_with_col = ASTQueries.find_nodes_at_location(sample_graph, "test.cpp", 2, 7)
+        nodes_no_col = ASTQueries.find_nodes_at_location(sample_graph, "test.cpp", 2)
+        # Without a column filter we get at least as many nodes
+        assert set(nodes_with_col).issubset(set(nodes_no_col))
+
 
 # ---------------------------------------------------------------------------
 # ASTVariableAndTypeQueries tests
@@ -204,6 +220,12 @@ class TestASTVariableAndTypeQueries:
         var_names = [v[0] for v in variables]
         assert len(var_names) > 0
         assert any(name in var_names for name in ["x", "y", "i"])
+
+    def test_find_all_variables_in_scope_none_column(self, sample_graph: nx.DiGraph[str]) -> None:
+        """Omitting column returns the same or more variables than a specific column."""
+        with_col = ASTVariableAndTypeQueries.find_all_variables_in_scope(sample_graph, "test.cpp", 6, 5)
+        no_col = ASTVariableAndTypeQueries.find_all_variables_in_scope(sample_graph, "test.cpp", 6)
+        assert set(with_col).issubset(set(no_col))
 
     def test_get_variables_in_scope(self, sample_graph: nx.DiGraph[str]) -> None:
         variables = ASTVariableAndTypeQueries.get_variables_in_scope(sample_graph, "fn_main")
