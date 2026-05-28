@@ -131,6 +131,7 @@ class CodeConfiguration(object):
         )
 
         config_path = os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration)
+        execute_sh_path = os.path.join(config_path, "execute.sh")
 
         # All settings files are now shared
         if self.settings_name in ["seq_settings.json", "dp_settings.json", "hd_settings.json", "par_settings.json"]:
@@ -143,7 +144,7 @@ class CodeConfiguration(object):
             self.root_path,
             config_path,
             settings_path,
-            os.path.join(self.config_dot_dp_path, "project", "configs", "compile.sh"),
+            execute_sh_path,
             thread_count,
             timeout,
         )
