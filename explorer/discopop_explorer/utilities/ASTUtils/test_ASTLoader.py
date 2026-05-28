@@ -109,3 +109,41 @@ class TestClangASTLoader:
             assert len(result["inner"]) == 1
             assert result["inner"][0]["kind"] == "FunctionDecl"
             assert len(result["inner"][0]["inner"]) == 1
+
+    def test_load_ast_multiple_translation_units(self) -> None:
+        """Multiple concatenated JSON objects are wrapped in a synthetic root."""
+        tu1 = {
+            "kind": "TranslationUnitDecl",
+            "id": "0x1",
+            "inner": [{"kind": "FunctionDecl", "name": "foo", "inner": []}],
+        }
+        tu2 = {
+            "kind": "TranslationUnitDecl",
+            "id": "0x2",
+            "inner": [{"kind": "FunctionDecl", "name": "bar", "inner": []}],
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ast_file = Path(tmpdir) / "ast_dump.json"
+            with open(ast_file, "w") as f:
+                f.write(json.dumps(tu1))
+                f.write("\n")
+                f.write(json.dumps(tu2))
+
+            result = ClangASTLoader.load_ast(str(ast_file))
+            assert result["kind"] == "TranslationUnitDecl"
+            assert len(result["inner"]) == 2
+            assert result["inner"][0]["id"] == "0x1"
+            assert result["inner"][1]["id"] == "0x2"
+
+    def test_load_ast_single_tu_not_wrapped(self) -> None:
+        """A single-TU file returns the object directly (no extra wrapper)."""
+        tu = {"kind": "TranslationUnitDecl", "id": "0xABC", "inner": []}
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            ast_file = Path(tmpdir) / "ast_dump.json"
+            with open(ast_file, "w") as f:
+                json.dump(tu, f)
+
+            result = ClangASTLoader.load_ast(str(ast_file))
+            assert result["id"] == "0xABC"

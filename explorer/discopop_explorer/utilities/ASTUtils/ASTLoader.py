@@ -16,7 +16,13 @@ class ClangASTLoader:
 
     @staticmethod
     def load_ast(ast_dump_path: str) -> dict[str, Any]:
-        """Load JSON-formatted Clang AST from file
+        """Load JSON-formatted Clang AST from file.
+
+        Handles files that contain multiple concatenated top-level JSON objects
+        (one per translation unit), which Clang produces when multiple source
+        files are compiled together.  When more than one object is found they
+        are wrapped in a single synthetic ``TranslationUnitDecl`` root whose
+        ``inner`` list contains all per-file roots.
 
         Args:
             ast_dump_path: Path to the ast_dump.json file
@@ -37,14 +43,57 @@ class ClangASTLoader:
             raise ValueError(f"AST dump path is not a file: {ast_dump_path}")
 
         try:
-            with open(path, "r") as f:
-                return dict(json.load(f))  # type: ignore[return-value]
-        except json.JSONDecodeError as e:
-            raise json.JSONDecodeError(
-                f"Failed to parse AST JSON from {ast_dump_path}: {e.msg}",
-                e.doc,
-                e.pos,
-            ) from e
+            content = path.read_text(encoding="utf-8")
+        except OSError as e:
+            raise OSError(f"Failed to read {ast_dump_path}: {e}") from e
+
+        roots = ClangASTLoader._parse_all_objects(content, ast_dump_path)
+
+        if len(roots) == 1:
+            return roots[0]
+
+        # Multiple translation units: merge under a synthetic root so that the
+        # rest of the pipeline sees a single tree entry point.
+        return {"kind": "TranslationUnitDecl", "inner": roots}
+
+    @staticmethod
+    def _parse_all_objects(content: str, source_path: str) -> list[dict[str, Any]]:
+        """Parse one or more concatenated JSON objects from *content*.
+
+        Args:
+            content: Raw file text
+            source_path: Original file path (used only in error messages)
+
+        Returns:
+            List of parsed top-level objects (at least one)
+
+        Raises:
+            json.JSONDecodeError: If any object cannot be parsed
+        """
+        decoder = json.JSONDecoder()
+        objects: list[dict[str, Any]] = []
+        pos = 0
+        text = content.lstrip()
+
+        while pos < len(text):
+            try:
+                obj, end_pos = decoder.raw_decode(text, pos)
+            except json.JSONDecodeError as e:
+                raise json.JSONDecodeError(
+                    f"Failed to parse AST JSON from {source_path} at offset {pos}: {e.msg}",
+                    e.doc,
+                    e.pos,
+                ) from e
+            objects.append(dict(obj))  # type: ignore[arg-type]
+            pos = end_pos
+            # skip inter-object whitespace
+            while pos < len(text) and text[pos] in " \t\n\r":
+                pos += 1
+
+        if not objects:
+            raise json.JSONDecodeError(f"No JSON objects found in {source_path}", content, 0)
+
+        return objects
 
     @staticmethod
     def load_ast_from_project(project_path: str) -> Optional[dict[str, Any]]:
