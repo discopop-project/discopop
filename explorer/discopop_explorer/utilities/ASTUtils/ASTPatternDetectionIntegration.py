@@ -10,7 +10,10 @@
 
 from __future__ import annotations
 
-from typing import Any, Optional
+import sys
+import traceback
+from pathlib import Path
+from typing import Any, Dict, Optional
 
 import networkx as nx
 
@@ -21,6 +24,7 @@ from discopop_explorer.utilities.ASTUtils.ASTQueries import (
     ASTVariableAndTypeQueries,
 )
 from discopop_explorer.utilities.ASTUtils.ASTVisualization import ASTVisualization
+from discopop_library.PathManagement.PathManagement import load_file_mapping
 
 
 class ASTPatternDetectionHelper:
@@ -32,20 +36,27 @@ class ASTPatternDetectionHelper:
     def __init__(self) -> None:
         """Initialize helper with no AST loaded"""
         self.ast_graph: Optional[nx.DiGraph[str]] = None
+        self.file_mapping: Dict[int, Path] = {}
 
     def load_ast_from_project(self, project_path: str) -> None:
         """Load and build AST graph from project.
 
-        After building the graph, file paths stored in node ``loc`` dicts are
-        normalised against ``FileMapping.txt`` so that callers can look up nodes
-        using the same paths that the rest of the DiscoPoP pipeline uses.
+        Also loads ``FileMapping.txt`` so that callers can pass integer file IDs
+        (as used throughout the rest of the DiscoPoP pipeline) instead of raw
+        filenames.  After building the graph, file paths stored in node ``loc``
+        dicts are normalised against ``FileMapping.txt`` so lookups by file ID
+        resolve correctly.
 
         Args:
             project_path: Root path of the DiscoPoP project (.discopop directory)
         """
-        import sys
-        import traceback
-        from pathlib import Path
+        file_mapping_path = str(Path(project_path) / "FileMapping.txt")
+
+        # Load FileMapping.txt so file-ID lookups work later
+        try:
+            self.file_mapping = load_file_mapping(file_mapping_path)
+        except (ValueError, OSError):
+            self.file_mapping = {}
 
         ast_dict = ClangASTLoader.load_ast_from_project(project_path)
         if ast_dict is None:
@@ -63,7 +74,6 @@ class ASTPatternDetectionHelper:
             return
 
         # Normalise file paths to match FileMapping.txt entries
-        file_mapping_path = str(Path(project_path) / "FileMapping.txt")
         ast_file_paths: set[str] = {
             attrs["loc"]["file"]
             for _, attrs in self.ast_graph.nodes(data=True)
@@ -73,21 +83,26 @@ class ASTPatternDetectionHelper:
         if path_mapping:
             ClangASTGraph.normalize_file_paths(self.ast_graph, path_mapping)
 
-    def get_variables_at_location(self, filename: str, line: int, column: int) -> list[tuple[str, Optional[str]]]:
-        """Get variables visible at a specific code location
+    def get_variables_at_location(self, file_id: int, line: int, column: int) -> list[tuple[str, Optional[str]]]:
+        """Get variables visible at a specific source location, identified by file ID.
 
         Args:
-            filename: Source filename
+            file_id: Integer file identifier as defined in ``FileMapping.txt``
             line: Line number
             column: Column number
 
         Returns:
-            List of (var_name, var_type) tuples
+            List of (var_name, var_type) tuples, or empty list when the file ID
+            is unknown or the AST has not been loaded.
         """
         if not self.ast_graph:
             return []
 
-        return ASTVariableAndTypeQueries.find_all_variables_in_scope(self.ast_graph, filename, line, column)
+        file_path = self.file_mapping.get(file_id)
+        if file_path is None:
+            return []
+
+        return ASTVariableAndTypeQueries.find_all_variables_in_scope(self.ast_graph, str(file_path), line, column)
 
     def get_variable_declarations_in_scope(self, scope_name: str) -> list[tuple[str, Optional[str]]]:
         """Get variables declared in a scope by function/loop name
