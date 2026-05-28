@@ -286,7 +286,6 @@ class ASTVariableAndTypeQueries:
             Sorted list of (var_name, var_type) tuples
         """
         nodes_at_loc = ASTQueries.find_nodes_at_location(graph, filename, line, column)
-        print("LINE MATCHES: ", nodes_at_loc, "filename: ", filename)
         if not nodes_at_loc:
             return []
 
