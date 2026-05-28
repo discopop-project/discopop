@@ -413,6 +413,10 @@ class ExecutionMixin(ConfigManagerMixinBase):
 
     def _stop_execution(self) -> None:
         self._execution_stop_event.set()
+        if self.run_button is not None:
+            self.run_button.config(state="normal", text="Run")
+        if self.prepare_pattern_detection_button is not None:
+            self.prepare_pattern_detection_button.config(state="normal", text="Prepare Pattern Detection")
         if self.stop_execution_button is not None:
             self.stop_execution_button.config(state="disabled")
         self.status_label.config(text="Stopping execution...", foreground="orange")
