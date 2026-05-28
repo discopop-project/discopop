@@ -291,3 +291,44 @@ class TestClangASTGraph:
         graph = _make_builder().build_from_ast(ast)
         assert len(graph.nodes) == 6
         assert len(graph.edges) == 5
+
+
+class TestNormalizeFilePaths:
+    def test_relative_path_replaced(self) -> None:
+        """Bare filenames in loc are replaced with the canonical absolute path."""
+        ast = {
+            "id": "0x1",
+            "kind": "FunctionDecl",
+            "name": "foo",
+            "loc": {"file": "test.cpp", "line": 1, "col": 1},
+            "inner": [],
+        }
+        graph = _make_builder().build_from_ast(ast)
+        ClangASTGraph.normalize_file_paths(graph, {"test.cpp": "/home/user/project/test.cpp"})
+        assert graph.nodes["0x1"]["loc"]["file"] == "/home/user/project/test.cpp"
+
+    def test_unmapped_path_left_unchanged(self) -> None:
+        """Paths not in the mapping are not modified."""
+        ast = {
+            "id": "0x1",
+            "kind": "FunctionDecl",
+            "name": "foo",
+            "loc": {"file": "/usr/include/stdio.h", "line": 1, "col": 1},
+            "inner": [],
+        }
+        graph = _make_builder().build_from_ast(ast)
+        ClangASTGraph.normalize_file_paths(graph, {"test.cpp": "/home/user/project/test.cpp"})
+        assert graph.nodes["0x1"]["loc"]["file"] == "/usr/include/stdio.h"
+
+    def test_empty_mapping_is_noop(self) -> None:
+        """An empty mapping leaves the graph completely untouched."""
+        ast = {
+            "id": "0x1",
+            "kind": "FunctionDecl",
+            "name": "foo",
+            "loc": {"file": "test.cpp", "line": 1, "col": 1},
+            "inner": [],
+        }
+        graph = _make_builder().build_from_ast(ast)
+        ClangASTGraph.normalize_file_paths(graph, {})
+        assert graph.nodes["0x1"]["loc"]["file"] == "test.cpp"

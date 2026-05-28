@@ -34,13 +34,18 @@ class ASTPatternDetectionHelper:
         self.ast_graph: Optional[nx.DiGraph[str]] = None
 
     def load_ast_from_project(self, project_path: str) -> None:
-        """Load and build AST graph from project
+        """Load and build AST graph from project.
+
+        After building the graph, file paths stored in node ``loc`` dicts are
+        normalised against ``FileMapping.txt`` so that callers can look up nodes
+        using the same paths that the rest of the DiscoPoP pipeline uses.
 
         Args:
-            project_path: Root path of the DiscoPoP project
+            project_path: Root path of the DiscoPoP project (.discopop directory)
         """
         import sys
         import traceback
+        from pathlib import Path
 
         ast_dict = ClangASTLoader.load_ast_from_project(project_path)
         if ast_dict is None:
@@ -55,6 +60,18 @@ class ASTPatternDetectionHelper:
             print("[ASTUtils] Failed to build AST graph:", file=sys.stderr)
             traceback.print_exc(file=sys.stderr)
             self.ast_graph = None
+            return
+
+        # Normalise file paths to match FileMapping.txt entries
+        file_mapping_path = str(Path(project_path) / "FileMapping.txt")
+        ast_file_paths: set[str] = {
+            attrs["loc"]["file"]
+            for _, attrs in self.ast_graph.nodes(data=True)
+            if isinstance(attrs.get("loc"), dict) and attrs["loc"].get("file")
+        }
+        path_mapping = ClangASTLoader.build_path_mapping(file_mapping_path, ast_file_paths)
+        if path_mapping:
+            ClangASTGraph.normalize_file_paths(self.ast_graph, path_mapping)
 
     def get_variables_at_location(self, filename: str, line: int, column: int) -> list[tuple[str, Optional[str]]]:
         """Get variables visible at a specific code location

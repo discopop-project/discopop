@@ -111,3 +111,56 @@ class ClangASTLoader:
             return None
 
         return ClangASTLoader.load_ast(str(ast_dump_path))
+
+    @staticmethod
+    def build_path_mapping(file_mapping_path: str, ast_file_paths: set[str]) -> dict[str, str]:
+        """Build a mapping from AST file paths to the canonical absolute paths in FileMapping.txt.
+
+        Clang sometimes records source file paths as bare filenames (e.g. ``test.cpp``)
+        while ``FileMapping.txt`` always stores absolute paths.  This method resolves
+        the discrepancy by suffix-matching each AST path against the FileMapping
+        entries: a FileMapping path ``/a/b/test.cpp`` is considered a match for the
+        AST path ``test.cpp`` because the former ends with ``/test.cpp``.
+
+        Only AST paths that actually differ from their FileMapping counterpart are
+        included in the returned dict; callers can therefore use it as a plain
+        substitution table.
+
+        Args:
+            file_mapping_path: Path to ``FileMapping.txt``
+            ast_file_paths: Set of raw ``file`` strings collected from the AST graph
+
+        Returns:
+            Dict mapping each non-canonical AST path to its canonical absolute path.
+            Empty when ``FileMapping.txt`` is absent or no substitution is needed.
+        """
+        fm_path = Path(file_mapping_path)
+        if not fm_path.exists():
+            return {}
+
+        filemapping_entries: list[str] = []
+        with open(fm_path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split("\t", 1)
+                if len(parts) == 2:
+                    filemapping_entries.append(parts[1])
+
+        filemapping_set = set(filemapping_entries)
+        mapping: dict[str, str] = {}
+
+        for ast_path in ast_file_paths:
+            # Skip empty strings, Clang internal markers, and already-canonical paths
+            if not ast_path or ast_path.startswith("<") or ast_path in filemapping_set:
+                continue
+
+            # Find a FileMapping entry whose path ends with /<ast_path>.
+            # The separator guard prevents "other_test.cpp".endswith("/test.cpp") from matching.
+            for fm_entry in filemapping_entries:
+                if fm_entry.endswith("/" + ast_path) or fm_entry.endswith("\\" + ast_path):
+                    mapping[ast_path] = fm_entry
+                    break
+
+        return mapping

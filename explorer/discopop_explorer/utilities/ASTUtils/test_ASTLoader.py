@@ -147,3 +147,61 @@ class TestClangASTLoader:
 
             result = ClangASTLoader.load_ast(str(ast_file))
             assert result["id"] == "0xABC"
+
+
+class TestBuildPathMapping:
+    def test_relative_basename_matched(self) -> None:
+        """Bare filename in AST is resolved to absolute path from FileMapping."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fmap = Path(tmpdir) / "FileMapping.txt"
+            fmap.write_text("1\t/home/user/project/test.cpp\n2\t/home/user/project/util.cpp\n")
+
+            mapping = ClangASTLoader.build_path_mapping(str(fmap), {"test.cpp", "util.cpp"})
+
+            assert mapping["test.cpp"] == "/home/user/project/test.cpp"
+            assert mapping["util.cpp"] == "/home/user/project/util.cpp"
+
+    def test_already_canonical_path_not_remapped(self) -> None:
+        """Paths that already match a FileMapping entry are not included in the result."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fmap = Path(tmpdir) / "FileMapping.txt"
+            fmap.write_text("1\t/home/user/project/test.cpp\n")
+
+            mapping = ClangASTLoader.build_path_mapping(str(fmap), {"/home/user/project/test.cpp"})
+
+            assert "/home/user/project/test.cpp" not in mapping
+
+    def test_no_match_produces_empty_mapping(self) -> None:
+        """AST path that shares no suffix with any FileMapping entry produces no entry."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fmap = Path(tmpdir) / "FileMapping.txt"
+            fmap.write_text("1\t/home/user/project/other.cpp\n")
+
+            mapping = ClangASTLoader.build_path_mapping(str(fmap), {"test.cpp"})
+
+            assert mapping == {}
+
+    def test_suffix_guard_prevents_false_positive(self) -> None:
+        """'other_test.cpp' must not match against a FileMapping entry ending '/test.cpp'."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fmap = Path(tmpdir) / "FileMapping.txt"
+            fmap.write_text("1\t/proj/test.cpp\n")
+
+            mapping = ClangASTLoader.build_path_mapping(str(fmap), {"other_test.cpp"})
+
+            assert mapping == {}
+
+    def test_clang_special_entries_skipped(self) -> None:
+        """Clang internal paths like '<scratch space>' are not mapped."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fmap = Path(tmpdir) / "FileMapping.txt"
+            fmap.write_text("1\t/proj/test.cpp\n")
+
+            mapping = ClangASTLoader.build_path_mapping(str(fmap), {"<scratch space>"})
+
+            assert mapping == {}
+
+    def test_missing_file_mapping_returns_empty(self) -> None:
+        """Missing FileMapping.txt returns an empty mapping (no crash)."""
+        mapping = ClangASTLoader.build_path_mapping("/nonexistent/FileMapping.txt", {"test.cpp"})
+        assert mapping == {}

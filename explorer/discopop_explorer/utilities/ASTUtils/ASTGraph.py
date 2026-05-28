@@ -196,6 +196,28 @@ class ClangASTGraph:
         }
         return extracted, file_name, line
 
+    @staticmethod
+    def normalize_file_paths(graph: nx.DiGraph[str], path_mapping: dict[str, str]) -> None:
+        """Replace non-canonical file paths in every node's ``loc`` with their canonical counterparts.
+
+        Uses the mapping produced by :meth:`ClangASTLoader.build_path_mapping`.
+        Only the ``loc["file"]`` field is updated; ``range`` endpoints do not carry
+        independent file information.
+
+        Args:
+            graph: AST graph (modified in place)
+            path_mapping: Dict mapping raw AST paths to canonical absolute paths
+        """
+        if not path_mapping:
+            return
+
+        for node_id in graph.nodes():
+            loc = graph.nodes[node_id].get("loc")
+            if isinstance(loc, dict):
+                raw = loc.get("file")
+                if raw in path_mapping:
+                    loc["file"] = path_mapping[raw]
+
     def _extract_range(
         self,
         range_info: dict[str, Any],
