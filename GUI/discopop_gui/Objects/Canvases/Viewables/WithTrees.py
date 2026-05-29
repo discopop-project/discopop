@@ -8,7 +8,7 @@
 
 import tkinter as tk
 import networkx as nx
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, List
 
 from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
@@ -75,6 +75,17 @@ class WithTrees(ViewableCanvas):
         self._transform_x = 0.0
         self._transform_y = 0.0
 
+        dependency_edges : List[Tuple[Any, Any, Any]] = []
+        edges_to_remove : List[Tuple[Any, Any, Any]] = []
+        
+        for src, dst, key, data in graph.edges(keys=True, data=True):
+            if data.get("edge_type") == "dependency":
+                dependency_edges.append((src, dst, data))
+                edges_to_remove.append((src, dst, key))
+                
+        for src, dst, key in edges_to_remove:
+            graph.remove_edge(src, dst, key=key)
+
         positions = nx.nx_pydot.pydot_layout(graph, prog="dot")
 
         if not positions:
@@ -126,7 +137,9 @@ class WithTrees(ViewableCanvas):
                 }
             )
 
-        for source, destination, data in graph.edges(data=True):
+        all_edges : List[Tuple[Any, Any, Any]] = list(graph.edges(data=True)) + dependency_edges
+
+        for source, destination, data in all_edges:
             source_id = nodes_to_ids[source]
             destination_id = nodes_to_ids[destination]
             edge_type = data.get("edge_type")
