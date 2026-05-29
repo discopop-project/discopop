@@ -1,5 +1,0 @@
-./library
-./GUI
-./explorer
-./profiler
-.

@@ -141,7 +141,7 @@ class Viewable(tk.Canvas):
         x2 = max(self._drag_start_x, end_x)
         y2 = max(self._drag_start_y, end_y)
 
-        if x2 - x1 > 5 and y2 - y1 > 5:
+        if ((x2 - x1) > 5) and ((y2 - y1) > 5):
             if button == 1:
                 self._left_drag_area_selected(x1, y1, x2, y2)
             elif button == 3:
@@ -177,16 +177,20 @@ class Viewable(tk.Canvas):
     ) -> None:
         self._zoom_out(x1, y1, x2, y2)
 
+    def _apply_transform_to_item(self, item_id: int) -> None:
+        coordinates = self._original_coordinates[item_id]
+        new_coords = []
+
+        for i in range(0, len(coordinates), 2):
+            x = (coordinates[i] * self._transform_scale) + self._transform_x
+            y = (coordinates[i + 1] * self._transform_scale) + self._transform_y
+            new_coords.extend([x, y])
+
+        self.coords(item_id, *new_coords)
+
     def _apply_transform(self):
-        for item_id, coordinates in self._original_coordinates.items():
-            new_coords = []
-
-            for i in range(0, len(coordinates), 2):
-                x = (coordinates[i] * self._transform_scale) + self._transform_x
-                y = (coordinates[i + 1] * self._transform_scale) + self._transform_y
-                new_coords.extend([x, y])
-
-            self.coords(item_id, *new_coords)
+        for item_id in self._original_coordinates.keys():
+            self._apply_transform_to_item(item_id)
 
     def _zoom_in(
         self,
@@ -275,26 +279,31 @@ class Viewable(tk.Canvas):
     def create_oval(self, *args: Any, **kwargs: Any) -> int:
         item_id = super().create_oval(*args, **kwargs)
         self._store_original_coordinates(item_id)
+        self._apply_transform_to_item(item_id)
         return item_id
 
     def create_line(self, *args: Any, **kwargs: Any) -> int:
         item_id = super().create_line(*args, **kwargs)
         self._store_original_coordinates(item_id)
+        self._apply_transform_to_item(item_id)
         return item_id
 
     def create_text(self, *args: Any, **kwargs: Any) -> int:
         item_id = super().create_text(*args, **kwargs)
         self._store_original_coordinates(item_id)
+        self._apply_transform_to_item(item_id)
         return item_id
 
     def create_rectangle(self, *args: Any, **kwargs: Any) -> int:
         item_id = super().create_rectangle(*args, **kwargs)
         self._store_original_coordinates(item_id)
+        self._apply_transform_to_item(item_id)
         return item_id
 
     def create_polygon(self, *args: Any, **kwargs: Any) -> int:
         item_id = super().create_polygon(*args, **kwargs)
         self._store_original_coordinates(item_id)
+        self._apply_transform_to_item(item_id)
         return item_id
 
     def delete(self, *args: Any) -> None:
