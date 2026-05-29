@@ -300,7 +300,7 @@ class ASTVariableAndTypeQueries:
             return []
 
         variables: set[tuple[str, Optional[str]]] = set()
-        ASTVariableAndTypeQueries._collect_var_decls_in_scope(graph, scope_node_id, variables)
+        ASTVariableAndTypeQueries._collect_var_decls_in_scope(graph, scope_node_id, variables, before_line=line)
         return sorted(variables)
 
     @staticmethod
@@ -323,6 +323,7 @@ class ASTVariableAndTypeQueries:
         graph: nx.DiGraph[str],
         scope_node_id: str,
         variables: set[tuple[str, Optional[str]]],
+        before_line: Optional[int] = None,
     ) -> None:
         """Recursively collect all VarDecl and ParmVarDecl nodes reachable from a scope.
 
@@ -330,15 +331,20 @@ class ASTVariableAndTypeQueries:
             graph: AST graph
             scope_node_id: Root node to search from
             variables: Accumulator set (modified in place)
+            before_line: When set, only include declarations at or before this line number.
         """
         attrs = graph.nodes[scope_node_id]
         if attrs.get("kind") in {"VarDecl", "ParmVarDecl"}:
             var_name = attrs.get("name")
             if var_name:
+                if before_line is not None:
+                    decl_line = (attrs.get("loc") or {}).get("line")
+                    if decl_line is not None and decl_line > before_line:
+                        return
                 variables.add((var_name, attrs.get("type")))
 
         for child_id in graph.successors(scope_node_id):
-            ASTVariableAndTypeQueries._collect_var_decls_in_scope(graph, child_id, variables)
+            ASTVariableAndTypeQueries._collect_var_decls_in_scope(graph, child_id, variables, before_line)
 
 
 # ---------------------------------------------------------------------------

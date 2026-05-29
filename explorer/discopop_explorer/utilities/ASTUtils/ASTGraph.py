@@ -72,6 +72,21 @@ class ClangASTGraph:
 
             node_id = self._extract_id(node)
             loc, resolved_file, resolved_line = self._extract_location(node.get("loc", {}), inh_file, inh_line)
+
+            # When the node's loc didn't carry an explicit line, refine resolved_line
+            # using range.begin.line.  Clang only omits loc.line when it equals the
+            # previous sibling's line, but intermediate wrapper nodes (e.g. DeclStmt)
+            # often have no loc at all while their range.begin correctly records the
+            # actual source line.  Using range.begin here propagates the right line
+            # to every descendant inside such wrapper nodes.
+            raw_loc = self._resolve_macro_loc(node.get("loc", {}))
+            if "line" not in raw_loc:
+                raw_range_begin = self._resolve_macro_loc(node.get("range", {}).get("begin", {}))
+                range_begin_line: Optional[int] = raw_range_begin.get("line")
+                if range_begin_line is not None:
+                    resolved_line = range_begin_line
+                    loc = {**loc, "line": resolved_line}
+
             range_info = self._extract_range(node.get("range", {}), resolved_file, resolved_line)
 
             attrs = {
@@ -94,7 +109,9 @@ class ClangASTGraph:
 
             # Pre-compute the inherited (file, line) context for each child.
             # Each child inherits from the previous sibling's resolved context,
-            # not from the parent directly.
+            # not from the parent directly.  When a child's loc omits line, also
+            # check range.begin so that wrapper nodes (DeclStmt etc.) propagate
+            # the correct line to the next sibling.
             ctx_file: Optional[str] = resolved_file
             ctx_line: Optional[int] = resolved_line
             child_inherited: list[tuple[Optional[str], Optional[int]]] = []
@@ -102,7 +119,12 @@ class ClangASTGraph:
                 child_inherited.append((ctx_file, ctx_line))
                 child_loc = self._resolve_macro_loc(child.get("loc", {}))
                 ctx_file = child_loc.get("file", ctx_file)
-                ctx_line = child_loc.get("line", ctx_line)
+                new_line: Optional[int] = child_loc.get("line")
+                if new_line is None:
+                    child_range_begin = self._resolve_macro_loc(child.get("range", {}).get("begin", {}))
+                    new_line = child_range_begin.get("line")
+                if new_line is not None:
+                    ctx_line = new_line
 
             # Push in reverse so the first child is processed first
             for child, (inh_f, inh_l) in zip(reversed(children), reversed(child_inherited)):

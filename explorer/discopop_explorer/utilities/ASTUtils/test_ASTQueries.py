@@ -290,3 +290,67 @@ class TestASTVariableAndTypeQueries:
         assert var_dict["x"] == "int"
         assert var_dict["y"] == "double"
         assert var_dict["i"] == "int"
+
+    def test_variables_declared_after_query_line_excluded(self) -> None:
+        """Variables declared after the queried line must not appear in results.
+
+        Reproduces the bug where querying line 5 (a ForStmt header) incorrectly
+        returned a variable declared on line 6 inside the loop body.
+        """
+        ast = {
+            "kind": "TranslationUnitDecl",
+            "inner": [
+                {
+                    "id": "fn_main",
+                    "kind": "FunctionDecl",
+                    "name": "main",
+                    "loc": {"file": "test.cpp", "line": 1, "col": 1},
+                    "range": {"begin": {"col": 1}, "end": {"line": 10, "col": 1}},
+                    "inner": [
+                        {
+                            "id": "var_n",
+                            "kind": "VarDecl",
+                            "name": "n",
+                            "type": "int",
+                            "loc": {"line": 2, "col": 5},
+                            "range": {"begin": {"col": 5}, "end": {"col": 6}},
+                            "inner": [],
+                        },
+                        {
+                            "id": "for_stmt",
+                            "kind": "ForStmt",
+                            "loc": {"line": 5, "col": 3},
+                            "range": {"begin": {"col": 3}, "end": {"line": 8, "col": 3}},
+                            "inner": [
+                                {
+                                    "id": "var_i",
+                                    "kind": "VarDecl",
+                                    "name": "i",
+                                    "type": "int",
+                                    "loc": {"line": 5, "col": 8},
+                                    "range": {"begin": {"col": 8}, "end": {"col": 9}},
+                                    "inner": [],
+                                },
+                                {
+                                    "id": "var_ielem",
+                                    "kind": "VarDecl",
+                                    "name": "ielem",
+                                    "type": "int",
+                                    "loc": {"line": 6, "col": 5},
+                                    "range": {"begin": {"col": 5}, "end": {"col": 10}},
+                                    "inner": [],
+                                },
+                            ],
+                        },
+                    ],
+                }
+            ],
+        }
+        graph = ClangASTGraph().build_from_ast(ast)
+        # Query at line 5 (the for-loop header): ielem (line 6) must not appear
+        variables = ASTVariableAndTypeQueries.find_all_variables_in_scope(graph, "test.cpp", 5)
+        var_names = [v[0] for v in variables]
+        assert "ielem" not in var_names, "ielem is declared after the queried line and must be excluded"
+        # Variables declared at or before line 5 should be present
+        assert "i" in var_names
+        assert "n" in var_names

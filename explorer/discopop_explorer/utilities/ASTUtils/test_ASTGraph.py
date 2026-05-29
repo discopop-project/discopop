@@ -398,3 +398,115 @@ class TestNormalizeFilePaths:
         graph = _make_builder().build_from_ast(ast)
         ClangASTGraph.normalize_file_paths(graph, {})
         assert graph.nodes["0x1"]["loc"]["file"] == "test.cpp"
+
+
+class TestRangeBeginLineFallback:
+    """Tests for the range.begin.line fallback when loc omits line.
+
+    Clang wrapper nodes (e.g. DeclStmt) often carry no ``loc`` field at all
+    while their ``range.begin`` correctly records the actual source line.
+    Without the fallback, every descendant inside such a wrapper would
+    inherit the wrong line from the previous sibling context.
+    """
+
+    def test_declstmt_wrapper_propagates_correct_line_to_child(self) -> None:
+        """VarDecl inside a no-loc DeclStmt must get the DeclStmt's range.begin.line."""
+        ast = {
+            "kind": "TranslationUnitDecl",
+            "inner": [
+                {
+                    "id": "fn",
+                    "kind": "FunctionDecl",
+                    "name": "main",
+                    "loc": {"file": "test.cpp", "line": 1, "col": 1},
+                    "range": {"begin": {"line": 1, "col": 1}, "end": {"line": 10, "col": 1}},
+                    "inner": [
+                        {
+                            "id": "for_stmt",
+                            "kind": "ForStmt",
+                            "loc": {"line": 3, "col": 3},
+                            "range": {"begin": {"col": 3}, "end": {"line": 7, "col": 3}},
+                            "inner": [
+                                {
+                                    "id": "var_i",
+                                    "kind": "VarDecl",
+                                    "name": "i",
+                                    "loc": {"line": 3, "col": 8},
+                                    "range": {"begin": {"col": 8}, "end": {"col": 9}},
+                                    "inner": [],
+                                },
+                                # DeclStmt has no loc, only range.begin with line 4
+                                {
+                                    "id": "decl_stmt",
+                                    "kind": "DeclStmt",
+                                    "range": {
+                                        "begin": {"line": 4, "col": 5},
+                                        "end": {"col": 20},
+                                    },
+                                    "inner": [
+                                        # VarDecl inside DeclStmt also has no line in loc
+                                        {
+                                            "id": "var_ielem",
+                                            "kind": "VarDecl",
+                                            "name": "ielem",
+                                            "loc": {"col": 10},
+                                            "range": {"begin": {"col": 5}, "end": {"col": 20}},
+                                            "inner": [],
+                                        }
+                                    ],
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+        graph = _make_builder().build_from_ast(ast)
+        # DeclStmt should get line 4 from range.begin (not inherit line 3 from ForStmt)
+        assert graph.nodes["decl_stmt"]["loc"]["line"] == 4
+        # VarDecl ielem should also get line 4 (inheriting from DeclStmt's resolved line)
+        assert graph.nodes["var_ielem"]["loc"]["line"] == 4
+
+    def test_sibling_after_declstmt_inherits_correct_line(self) -> None:
+        """A sibling following a no-loc DeclStmt must see the DeclStmt's line, not the previous one."""
+        ast = {
+            "kind": "TranslationUnitDecl",
+            "inner": [
+                {
+                    "id": "fn",
+                    "kind": "FunctionDecl",
+                    "loc": {"file": "test.cpp", "line": 1, "col": 1},
+                    "range": {"begin": {"col": 1}, "end": {"line": 20, "col": 1}},
+                    "inner": [
+                        {
+                            "id": "var_x",
+                            "kind": "VarDecl",
+                            "name": "x",
+                            "loc": {"line": 2, "col": 5},
+                            "range": {"begin": {"col": 5}, "end": {"col": 6}},
+                            "inner": [],
+                        },
+                        # DeclStmt with no loc, range.begin line 5
+                        {
+                            "id": "ds",
+                            "kind": "DeclStmt",
+                            "range": {"begin": {"line": 5, "col": 3}, "end": {"col": 10}},
+                            "inner": [],
+                        },
+                        # The next sibling should inherit line 5, not line 2
+                        {
+                            "id": "ret",
+                            "kind": "ReturnStmt",
+                            "loc": {"col": 3},
+                            "range": {"begin": {"line": 8, "col": 3}, "end": {"col": 10}},
+                            "inner": [],
+                        },
+                    ],
+                }
+            ],
+        }
+        graph = _make_builder().build_from_ast(ast)
+        # DeclStmt gets line 5 from its range.begin
+        assert graph.nodes["ds"]["loc"]["line"] == 5
+        # ReturnStmt has explicit range.begin.line=8, so it wins regardless
+        assert graph.nodes["ret"]["loc"]["line"] == 8

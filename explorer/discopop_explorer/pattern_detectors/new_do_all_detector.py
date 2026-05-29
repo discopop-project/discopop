@@ -346,11 +346,9 @@ def detect_doall_sharing_clauses(
     # get known variables for source location from AST
     file_id = pet.node_at(loop_node_id).file_id
     line_num = pet.node_at(loop_node_id).start_line
-    known_vars_with_types = ast_helper.get_variables_at_location(file_id, line_num)
 
+    known_vars_with_types = ast_helper.get_variables_at_location(file_id, line_num)
     known_vars = set([v[0] for v in known_vars_with_types])
-    if "rij" in known_vars:
-        print("known_vars_with_types: ", known_vars_with_types)
 
     # shared:
     # - no dependency between iterations
