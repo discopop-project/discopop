@@ -53,6 +53,7 @@ endif()
 message(STATUS "Found clang: ${CLANG_EXECUTABLE}")
 
 find_package(Boost REQUIRED)
+find_package(OpenMP REQUIRED)
 
 message(STATUS "Using LLVM version ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
