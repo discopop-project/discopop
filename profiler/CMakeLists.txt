@@ -64,6 +64,17 @@ message(STATUS "Found clang: ${CLANG_EXECUTABLE}")
 
 find_package(Boost REQUIRED)
 
+# Propagate Boost include dirs globally so subdirectories that override
+# CMAKE_CXX_FLAGS (and thus bypass target-property propagation) still see them.
+if(TARGET Boost::headers)
+    get_target_property(_boost_includes Boost::headers INTERFACE_INCLUDE_DIRECTORIES)
+    if(_boost_includes)
+        include_directories(${_boost_includes})
+    endif()
+elseif(Boost_INCLUDE_DIRS)
+    include_directories(${Boost_INCLUDE_DIRS})
+endif()
+
 if(APPLE)
     # Homebrew's libomp is keg-only; probe its prefix so FindOpenMP can locate it
     execute_process(
