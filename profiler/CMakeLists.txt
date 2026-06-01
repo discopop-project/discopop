@@ -62,23 +62,51 @@ if(NOT CLANG_EXECUTABLE)
 endif()
 message(STATUS "Found clang: ${CLANG_EXECUTABLE}")
 
-find_package(Boost REQUIRED)
+# ── Boost ────────────────────────────────────────────────────────────────────
+# Try the system-installed Boost first. If not found, download it via
+# FetchContent so the build works without a pre-installed Boost.
+find_package(Boost QUIET)
+
+if(Boost_FOUND)
+    # Resolve a plain include path for subdirectories that override
+    # CMAKE_CXX_FLAGS and therefore can't rely on target-property propagation.
+    if(Boost_INCLUDE_DIRS)
+        set(DISCOPOP_BOOST_INCLUDE_DIR "${Boost_INCLUDE_DIRS}")
+    elseif(APPLE)
+        execute_process(
+            COMMAND brew --prefix boost
+            OUTPUT_VARIABLE _brew_boost_prefix
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            ERROR_QUIET
+        )
+        if(_brew_boost_prefix)
+            set(DISCOPOP_BOOST_INCLUDE_DIR "${_brew_boost_prefix}/include")
+        endif()
+    endif()
+else()
+    message(STATUS "Boost not found — downloading via FetchContent")
+    include(FetchContent)
+    FetchContent_Declare(
+        Boost
+        URL https://github.com/boostorg/boost/releases/download/boost-1.87.0/boost-1.87.0-cmake.tar.xz
+        DOWNLOAD_EXTRACT_TIMESTAMP ON
+    )
+    set(BOOST_INCLUDE_LIBRARIES container_hash functional)
+    set(BOOST_ENABLE_CMAKE ON)
+    FetchContent_MakeAvailable(Boost)
+    FetchContent_GetProperties(Boost SOURCE_DIR _boost_src_dir)
+    # Headers live at the source root (e.g. <boost_src>/boost/...)
+    set(DISCOPOP_BOOST_INCLUDE_DIR "${_boost_src_dir}")
+endif()
+
+if(DISCOPOP_BOOST_INCLUDE_DIR)
+    include_directories("${DISCOPOP_BOOST_INCLUDE_DIR}")
+    message(STATUS "Boost include dir: ${DISCOPOP_BOOST_INCLUDE_DIR}")
+endif()
+# ─────────────────────────────────────────────────────────────────────────────
 
 if(APPLE)
-    # Homebrew installs keg-only packages that aren't on the default search path.
-    # Probe prefixes at configure time and add them as global include directories
-    # so subdirectories that override CMAKE_CXX_FLAGS still find the headers.
-
-    execute_process(
-        COMMAND brew --prefix boost
-        OUTPUT_VARIABLE HOMEBREW_BOOST_PREFIX
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-    )
-    if(HOMEBREW_BOOST_PREFIX)
-        include_directories("${HOMEBREW_BOOST_PREFIX}/include")
-    endif()
-
+    # Homebrew's libomp is keg-only; probe its prefix so FindOpenMP can locate it.
     execute_process(
         COMMAND brew --prefix libomp
         OUTPUT_VARIABLE HOMEBREW_LIBOMP_PREFIX
@@ -86,7 +114,6 @@ if(APPLE)
         ERROR_QUIET
     )
     if(HOMEBREW_LIBOMP_PREFIX)
-        include_directories("${HOMEBREW_LIBOMP_PREFIX}/include")
         set(OpenMP_C_FLAGS   "-fopenmp -I${HOMEBREW_LIBOMP_PREFIX}/include")
         set(OpenMP_CXX_FLAGS "-fopenmp -I${HOMEBREW_LIBOMP_PREFIX}/include")
         set(OpenMP_C_LIB_NAMES   "omp")

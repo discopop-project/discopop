@@ -60,6 +60,13 @@ add_library(DiscoPoP_RT STATIC
 
 target_link_libraries(DiscoPoP_RT PRIVATE Boost::headers)
 
+# DISCOPOP_BOOST_INCLUDE_DIR is a plain path set by the top-level CMakeLists.
+# We need it here because set(CMAKE_CXX_FLAGS ...) above replaces all flags,
+# bypassing CMake's normal include-directory propagation from parent scope.
+if(DISCOPOP_BOOST_INCLUDE_DIR)
+    target_include_directories(DiscoPoP_RT PRIVATE "${DISCOPOP_BOOST_INCLUDE_DIR}")
+endif()
+
 # forward compiler flags
 if(DEFINED DP_PTHREAD_COMPATIBILITY_MODE)
         if(NOT ${DP_PTHREAD_COMPATIBILITY_MODE} EQUAL 0)
