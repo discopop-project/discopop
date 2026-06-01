@@ -64,19 +64,21 @@ message(STATUS "Found clang: ${CLANG_EXECUTABLE}")
 
 find_package(Boost REQUIRED)
 
-# Propagate Boost include dirs globally so subdirectories that override
-# CMAKE_CXX_FLAGS (and thus bypass target-property propagation) still see them.
-if(TARGET Boost::headers)
-    get_target_property(_boost_includes Boost::headers INTERFACE_INCLUDE_DIRECTORIES)
-    if(_boost_includes)
-        include_directories(${_boost_includes})
-    endif()
-elseif(Boost_INCLUDE_DIRS)
-    include_directories(${Boost_INCLUDE_DIRS})
-endif()
-
 if(APPLE)
-    # Homebrew's libomp is keg-only; probe its prefix so FindOpenMP can locate it
+    # Homebrew installs keg-only packages that aren't on the default search path.
+    # Probe prefixes at configure time and add them as global include directories
+    # so subdirectories that override CMAKE_CXX_FLAGS still find the headers.
+
+    execute_process(
+        COMMAND brew --prefix boost
+        OUTPUT_VARIABLE HOMEBREW_BOOST_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(HOMEBREW_BOOST_PREFIX)
+        include_directories("${HOMEBREW_BOOST_PREFIX}/include")
+    endif()
+
     execute_process(
         COMMAND brew --prefix libomp
         OUTPUT_VARIABLE HOMEBREW_LIBOMP_PREFIX
@@ -84,6 +86,7 @@ if(APPLE)
         ERROR_QUIET
     )
     if(HOMEBREW_LIBOMP_PREFIX)
+        include_directories("${HOMEBREW_LIBOMP_PREFIX}/include")
         set(OpenMP_C_FLAGS   "-fopenmp -I${HOMEBREW_LIBOMP_PREFIX}/include")
         set(OpenMP_CXX_FLAGS "-fopenmp -I${HOMEBREW_LIBOMP_PREFIX}/include")
         set(OpenMP_C_LIB_NAMES   "omp")
