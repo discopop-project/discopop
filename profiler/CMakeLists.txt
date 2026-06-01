@@ -7,6 +7,16 @@
 # directory for details.
 
 cmake_minimum_required(VERSION 3.28.0)
+
+# Select clang as compiler before project() so CMake uses it for all targets.
+# Only set if not already overridden on the command line or via environment.
+if(NOT DEFINED CMAKE_C_COMPILER)
+    find_program(CMAKE_C_COMPILER NAMES clang-22 clang-21 clang-20 clang-19 clang)
+endif()
+if(NOT DEFINED CMAKE_CXX_COMPILER)
+    find_program(CMAKE_CXX_COMPILER NAMES clang++-22 clang++-21 clang++-20 clang++-19 clang++)
+endif()
+
 project(DiscoPopProfiler)
 
 set(CMAKE_CXX_STANDARD 17)
