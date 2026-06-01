@@ -8,7 +8,7 @@
 # the 3-Clause BSD License. See the LICENSE file in the package base
 # directory for details.
 
-SCRIPT_PATH="$(readlink -fm "$0")"
+SCRIPT_PATH="$(readlink -fm "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$0")"
 
 # ensure that copy of script in build folder is invoked instead of the "original"
 if [[ "${SCRIPT_PATH}" == *"discopop/scripts/"* ]]; then
@@ -38,10 +38,22 @@ if [ -z "$LLVM_CLANG" ]; then
     if command -v clang &> /dev/null && command -v clang++ &> /dev/null; then
         LLVM_CLANG=$(which clang)
         LLVM_CLANGPP=$(which clang++)
-    else
-        echo "ERROR: No supported clang version (19-22) found in PATH"
-        exit 1
     fi
+fi
+# macOS: Homebrew LLVM is keg-only and not on PATH — probe brew prefixes
+if [ -z "$LLVM_CLANG" ] && command -v brew &> /dev/null; then
+    for _v in 22 21 20 19; do
+        _brew_prefix=$(brew --prefix "llvm@$_v" 2>/dev/null)
+        if [ -n "$_brew_prefix" ] && [ -x "$_brew_prefix/bin/clang" ]; then
+            LLVM_CLANG="$_brew_prefix/bin/clang"
+            LLVM_CLANGPP="$_brew_prefix/bin/clang++"
+            break
+        fi
+    done
+fi
+if [ -z "$LLVM_CLANG" ]; then
+    echo "ERROR: No supported clang version (19-22) found in PATH"
+    exit 1
 fi
 
 # original arguments: "$@"
