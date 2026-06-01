@@ -30,7 +30,12 @@ LLVM_CLANGPP=""
 for _v in 22 21 20 19; do
     if command -v clang-$_v &> /dev/null; then
         LLVM_CLANG=$(which clang-$_v)
-        LLVM_CLANGPP=$(which clang++-$_v)
+        if command -v clang++-$_v &> /dev/null; then
+            LLVM_CLANGPP=$(which clang++-$_v)
+        elif [ -x "$(dirname "$LLVM_CLANG")/clang++" ]; then
+            # Homebrew on macOS ships clang++ not clang++-21
+            LLVM_CLANGPP="$(dirname "$LLVM_CLANG")/clang++"
+        fi
         break
     fi
 done
@@ -51,7 +56,7 @@ if [ -z "$LLVM_CLANG" ] && command -v brew &> /dev/null; then
         fi
     done
 fi
-if [ -z "$LLVM_CLANG" ]; then
+if [ -z "$LLVM_CLANG" ] || [ -z "$LLVM_CLANGPP" ]; then
     echo "ERROR: No supported clang version (19-22) found in PATH"
     exit 1
 fi
@@ -59,6 +64,8 @@ fi
 # original arguments: "$@"
 #echo "WRAPPED CXX COMPILE..."
 #echo "ARGS: ${@}"
+
+
 
 # script will be located alongside LLVMDiscoPoP.so and libDiscoPoP_RT.a in the python venv/lib/../discopop-profiler.libs
 PARENT_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
