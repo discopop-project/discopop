@@ -63,6 +63,24 @@ endif()
 message(STATUS "Found clang: ${CLANG_EXECUTABLE}")
 
 find_package(Boost REQUIRED)
+
+if(APPLE)
+    # Homebrew's libomp is keg-only; probe its prefix so FindOpenMP can locate it
+    execute_process(
+        COMMAND brew --prefix libomp
+        OUTPUT_VARIABLE HOMEBREW_LIBOMP_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+    )
+    if(HOMEBREW_LIBOMP_PREFIX)
+        set(OpenMP_C_FLAGS   "-fopenmp -I${HOMEBREW_LIBOMP_PREFIX}/include")
+        set(OpenMP_CXX_FLAGS "-fopenmp -I${HOMEBREW_LIBOMP_PREFIX}/include")
+        set(OpenMP_C_LIB_NAMES   "omp")
+        set(OpenMP_CXX_LIB_NAMES "omp")
+        set(OpenMP_omp_LIBRARY   "${HOMEBREW_LIBOMP_PREFIX}/lib/libomp.dylib")
+    endif()
+endif()
+
 find_package(OpenMP REQUIRED)
 
 message(STATUS "Using LLVM version ${LLVM_PACKAGE_VERSION}")
