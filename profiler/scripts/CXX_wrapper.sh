@@ -67,7 +67,14 @@ fi
 
 
 
-# script will be located alongside LLVMDiscoPoP.so and libDiscoPoP_RT.a in the python venv/lib/../discopop-profiler.libs
+# script will be located alongside LLVMDiscoPoP.{so,dylib} and libDiscoPoP_RT.a in the python venv/lib/../discopop-profiler.libs
 PARENT_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
-${LLVM_CLANGPP} "$@" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${PARENT_PATH}/LLVMDiscoPoP.so -Xclang -fpass-plugin=${PARENT_PATH}/LLVMDiscoPoP.so -fPIC -Xlinker -L${PARENT_PATH} -Xlinker -lDiscoPoP_RT -Xlinker -lpthread -Xlinker -v
+# macOS uses .dylib for LLVM MODULE plugins; Linux uses .so
+if [ -f "${PARENT_PATH}/LLVMDiscoPoP.dylib" ]; then
+    DISCOPOP_PLUGIN="${PARENT_PATH}/LLVMDiscoPoP.dylib"
+else
+    DISCOPOP_PLUGIN="${PARENT_PATH}/LLVMDiscoPoP.so"
+fi
+${LLVM_CLANGPP} "$@" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${DISCOPOP_PLUGIN} -Xclang -fpass-plugin=${DISCOPOP_PLUGIN} -fPIC -Xlinker -L${PARENT_PATH} -Xlinker -lDiscoPoP_RT -Xlinker -lpthread -Xlinker -v
+
 # WARNING: OUTPUT IS A .ll FILE, ENDING IS .o
