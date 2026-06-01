@@ -20,7 +20,9 @@
 
 #include "../static_callstate_transitions/utils.hpp"
 
+#ifdef __linux__
 #include <linux/limits.h>
+#endif
 
 #include <chrono>
 #include <cstdint>
