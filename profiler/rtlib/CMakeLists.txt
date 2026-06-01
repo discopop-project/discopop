@@ -58,6 +58,8 @@ set(CMAKE_CXX_FLAGS
 add_library(DiscoPoP_RT STATIC
         ${DiscoPoP_SOURCES})
 
+target_link_libraries(DiscoPoP_RT PRIVATE Boost::headers)
+
 # forward compiler flags
 if(DEFINED DP_PTHREAD_COMPATIBILITY_MODE)
         if(NOT ${DP_PTHREAD_COMPATIBILITY_MODE} EQUAL 0)
