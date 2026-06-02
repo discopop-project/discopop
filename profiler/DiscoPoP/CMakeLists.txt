@@ -77,6 +77,8 @@ add_llvm_library(LLVMDiscoPoP MODULE
         hybrid_analysis/InstructionDG.cpp
         )
 
+target_link_libraries(LLVMDiscoPoP PRIVATE OpenMP::OpenMP_CXX)
+
 # forward compiler flags
 if(DEFINED DP_HYBRID_PROFILING)
         target_compile_definitions(LLVMDiscoPoP PUBLIC DP_HYBRID_PROFILING=${DP_HYBRID_PROFILING})
