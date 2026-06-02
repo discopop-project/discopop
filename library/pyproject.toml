@@ -29,7 +29,6 @@ classifiers = [
     "Topic :: Software Development",
 ]
 dependencies = [
-    "extrap",
     "filelock",
     "jsonpickle",
     "jsons",
@@ -51,6 +50,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+optimizer = ["extrap"]
 dev = ["mypy", "black", "data-science-types", "pre-commit"]
 ci = ["mypy", "black", "data-science-types"]
 

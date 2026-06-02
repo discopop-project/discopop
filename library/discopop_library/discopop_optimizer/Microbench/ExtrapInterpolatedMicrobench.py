@@ -5,18 +5,26 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+from __future__ import annotations
+
 from typing import Dict, List, Tuple, Union, cast
 
 
 import sympy  # type: ignore
-from extrap.entities.callpath import Callpath  # type: ignore
-from extrap.entities.metric import Metric  # type: ignore
-from extrap.entities.model import Model  # type: ignore
-from extrap.entities.parameter import Parameter  # type: ignore
-from extrap.fileio.json_file_reader import read_json_file  # type: ignore
-from extrap.modelers.model_generator import ModelGenerator  # type: ignore
-from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler  # type: ignore
 from sympy.parsing.sympy_parser import parse_expr  # type: ignore
+
+try:
+    from extrap.entities.callpath import Callpath  # type: ignore
+    from extrap.entities.metric import Metric  # type: ignore
+    from extrap.entities.model import Model  # type: ignore
+    from extrap.entities.parameter import Parameter  # type: ignore
+    from extrap.fileio.json_file_reader import read_json_file  # type: ignore
+    from extrap.modelers.model_generator import ModelGenerator  # type: ignore
+    from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler  # type: ignore
+
+    _extrap_available = True
+except ImportError:
+    _extrap_available = False
 
 from discopop_library.discopop_optimizer.Microbench.Microbench import (
     Microbench,
@@ -31,6 +39,11 @@ class ExtrapInterpolatedMicrobench(Microbench):
     models: Dict[Tuple[Callpath, Metric], Model]
 
     def __init__(self, jsonFile: str):
+        if not _extrap_available:
+            raise ImportError(
+                "extrap is required for ExtrapInterpolatedMicrobench. "
+                "Install it with: pip install 'discopop-library[optimizer]'"
+            )
         experiment = read_json_file(jsonFile)
         modeler = MultiParameterModeler()
         modeler.single_parameter_modeler.use_crossvalidation = False
