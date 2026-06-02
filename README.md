@@ -50,7 +50,6 @@ sudo pacman -S python python-pip tk base-devel cmake git llvm clang openmp boost
 #### Via `Homebrew` package manager (macOS)
 ```
 brew install python python-tk llvm@21 libomp boost ninja
-pip install "cmake<4"
 # For a specific LLVM version (e.g., 19), use llvm@19 instead of llvm.
 # Homebrew installs LLVM keg-only to avoid conflicting with Apple's clang. Add it to your PATH:
 export PATH="$(brew --prefix llvm@21)/bin:$PATH"
