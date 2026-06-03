@@ -42,11 +42,10 @@ Homepage = "https://www.discopop.tu-darmstadt.de/"
 discopop_hotspot_analyzer = "discopop_hotspot_analyzer.__main__:main"
 discopop_hotspot_cc = "discopop_hotspot_cc.__main__:main"
 discopop_hotspot_cxx = "discopop_hotspot_cxx.__main__:main"
-discopop_hotspot_cmake = "discopop_hotspot_cmake.__main__:main"
 
 [tool.scikit-build]
 cmake.build-type = "Release"
-wheel.packages = ["discopop_hotspot_analyzer", "discopop_hotspot_cc", "discopop_hotspot_cxx", "discopop_hotspot_cmake"]
+wheel.packages = ["discopop_hotspot_analyzer", "discopop_hotspot_cc", "discopop_hotspot_cxx"]
 build-dir = "build/{wheel_tag}"
 # Pass optional build flags through via cmake.args, e.g.:
 #   pip install . --config-settings="cmake.args=-DLLVM_DIST_PATH=/path/to/llvm"

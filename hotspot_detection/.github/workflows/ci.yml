@@ -40,11 +40,11 @@ jobs:
 
       - name: Run MyPy type checking
         run: |
-          venv/bin/python3 -m mypy --ignore-missing-imports discopop_hotspot_analyzer discopop_hotspot_cc discopop_hotspot_cxx discopop_hotspot_cmake
+          venv/bin/python3 -m mypy --ignore-missing-imports discopop_hotspot_analyzer discopop_hotspot_cc discopop_hotspot_cxx
 
       - name: Check formatting
         run: |
-          venv/bin/python3 -m black -l 120 --check discopop_hotspot_analyzer discopop_hotspot_cc discopop_hotspot_cxx discopop_hotspot_cmake
+          venv/bin/python3 -m black -l 120 --check discopop_hotspot_analyzer discopop_hotspot_cc discopop_hotspot_cxx
 
   checks_successful:
     runs-on: ubuntu-latest
