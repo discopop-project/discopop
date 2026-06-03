@@ -1,3 +1,16 @@
+/*
+ * This file is part of the DiscoPoP software
+ * (http://www.discopop.tu-darmstadt.de)
+ *
+ * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+ *
+ * This software may be modified and distributed under the terms of
+ * the 3-Clause BSD License. See the LICENSE file in the package base
+ * directory for details.
+ *
+ */
+
+
 #include <fstream>
 #include <set>
 #include <sstream>
@@ -179,7 +192,7 @@ fstream tempfile;
 string getFName(Instruction *BI)
 {
   Instruction *tmpI = &*BI;
-  
+
   if (tmpI->getModule())
   {
       // determine file path
@@ -337,7 +350,7 @@ namespace
         setenv("DP_PROJECT_ROOT_DIR", "/", 1);
       }
 
-      
+
       string tmp5 = tmp3 + "/temp.txt";
       tempfile.open(tmp5.data(), ios::in);
       if (tempfile.is_open())
@@ -400,7 +413,7 @@ namespace
       }
 
 
-      
+
       //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
       FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
       LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
@@ -532,7 +545,7 @@ namespace
                     //IRB2.CreateCall(lentry, ConstantInt::get(Int64, UID));
                   }
                 }
-              } 
+              }
             }
 
             // if(!(std::find(SCEVLoopList.begin(), SCEVLoopList.end(), lnid)!=SCEVLoopList.end())){
@@ -651,7 +664,7 @@ namespace
                 BasicBlock *endBB = *EI;
                 IRBuilder<> IRB(&*endBB->begin());
                 IRB.CreateCall(lend, ConstantInt::get(Int64, UID));
-                // todo: warning: 
+                // todo: warning:
                 // If the call to loop_end is inserted into the return BB, and
                 // returning from before the loop is possible,
                 // the calculated counters and thus reported runtimes of the loop might
@@ -721,7 +734,7 @@ namespace
           IRBuilder<> init_builder(&*BB->begin());
           init_builder.CreateCall(hd_init);
         }
-          
+
 
 
         for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE; ++BB)
@@ -739,7 +752,7 @@ namespace
           {
             BasicBlock *tmpBB = &*BB;
 
-            
+
             if (fn.str() == "main") // inside main function
             {
               if (isa<ReturnInst>(I)) // returning from main
@@ -792,7 +805,7 @@ static RegisterStandardPasses
 //static RegisterPass<HotspotPass> X("HotspotDetection", "Records runtimes of loops and functions",
 //                                    false /* Only looks at CFG */,
 //                                    false /* Analysis Pass */);
-                              
+
 /* old LLVM pass manager
 static RegisterStandardPasses Y(
     PassManagerBuilder::EP_EarlyAsPossible,
@@ -800,7 +813,7 @@ static RegisterStandardPasses Y(
        legacy::PassManagerBase &PM)
     { PM.add(new HotspotPass()); });
 */
-  
+
 // compatibility with new LLVM pass manager
 struct HotspotDetection_new_PM_adaptor : public PassInfoMixin<HotspotDetection_new_PM_adaptor> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
@@ -820,14 +833,14 @@ struct HotspotDetection_new_PM_adaptor : public PassInfoMixin<HotspotDetection_n
 PassPluginLibraryInfo getPassPluginInfo() {
   /*
   const auto callback = [](PassBuilder &PB) {
-    
+
     PB.registerPipelineEarlySimplificationEPCallback(
         [&](ModulePassManager &MPM, auto) {
           MPM.addPass(createModuleToFunctionPassAdaptor(DiscoPoP_new_PM_adaptor()));
           MPM.addPass(DiscoPoP_new_PM_adaptor());
           return true;
         });
-    
+
     PB.registerPipelineEarlySimplificationEPCallback(
         [&](FunctionPassManager &FPM, auto) {
           FPM.addPass(HotspotDetection_new_PM_adaptor());
