@@ -1,3 +1,16 @@
+<!--
+ /*
+ * This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+ *
+ * Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+ *
+ * This software may be modified and distributed under the terms of
+ * the 3-Clause BSD License. See the LICENSE file in the package base
+ * directory for details.
+ *
+ */
+ -->
+
 # Hotspot-Detection
 
 Hotspot-Detection is an open-source tool that helps software developers to detect hotspots in their programs. This allows to focus optimization efforts to where it really matters.
@@ -14,61 +27,66 @@ B) the runtime of the code region increases a lot when using different program p
 
 ## Installation
 
-Install the requirements:
+Hotspot-Detection is part of the [DiscoPoP](https://github.com/discopop-project/discopop) framework.
 
+### Install as part of DiscoPoP
 ```
-sudo apt install git build-essential cmake python3 llvm-19-dev clang-19 libclang-19-dev
-```
-
-Install the Hotspot-Detection:
-
-```
-git clone git@github.com:discopop-project/Hotspot-Detection.git
-cd Hotspot-Detection
-mkdir build
-cd build
-cmake ..
-make
+pip install discopop
 ```
 
+### Install standalone
+```
+pip install discopop-hotspot-detection
+```
+
+### Prerequisites for building from source
+- LLVM/clang version 19, 20, 21, or 22 (installed and on `PATH`)
 
 ## Usage
 
-The Hotspot-Detection is built on the llvm project and has two core components:
-- The **llvm optimizer pass** modifies the program during compilation. With these modifications we automatically monitor how much time your program spends in any code region.
-- A **python tool** analyzes the measured runtimes of the code regions and reports hotspots.
+The Hotspot-Detection has two core components:
+- The **LLVM pass** instruments your program during compilation to measure the time spent in each code region.
+- The **`discopop_hotspot_analyzer`** Python tool analyzes the measured runtimes and reports hotspots.
 
-It is possible to manually use these components on (almost) any project. However we also provide a script that wraps the CMake build process to automatically apply the llvm optimizer pass for you. Simply perform the following steps to analyze any project that is built using CMake.
+### 1) Build your project with hotspot-detection instrumentation
 
-### 1) Build your project and apply the hotspot-detection instrumentation
+**For individual source files**, use the provided compiler wrappers directly:
+```
+discopop_hotspot_cc  source.c   -o program   # C files
+discopop_hotspot_cxx source.cpp -o program   # C++ files
+```
 
+**For CMake-based projects**, pass the wrappers as the C/CXX compiler.
+The `-DCMAKE_*_COMPILER_WORKS=1` flags skip CMake's compiler detection, which is necessary because the wrappers add instrumentation flags that CMake's test programs do not expect.
 ```
 cd <your_project_directory>
-mkdir build
-cd build
-<HOTSPOT_DETECTION_BUILD>/scripts/CMAKE_wrapper.sh ..
+mkdir build && cd build
+cmake -DCMAKE_C_COMPILER_WORKS=1 \
+      -DCMAKE_CXX_COMPILER_WORKS=1 \
+      -DCMAKE_C_COMPILER=discopop_hotspot_cc \
+      -DCMAKE_CXX_COMPILER=discopop_hotspot_cxx \
+      ..
 make
 ```
-
-Note that it is possible to add your own custom flags for the cmake build.
 
 ### 2) Run the instrumented program
 
 Run your program multiple times with varying parameters.
 
 ```
-./<your_program_name> <your_program arguments_1>
-./<your_program_name> <your_program arguments_2>
-./<your_program_name> <your_program arguments_3>
+./<your_program_name> <your_program_arguments_1>
+./<your_program_name> <your_program_arguments_2>
+./<your_program_name> <your_program_arguments_3>
 # ...
 ```
 
 ### 3) Analyze the results
 
-Change your working directory so you are inside the `.discopop` directory. By default it is located inside the build directory.
+Change your working directory to the `.discopop` directory (created inside the build directory by default).
 
 ```
-hotspot_analyzer
+cd .discopop
+discopop_hotspot_analyzer
 ```
 
 You can now find the analysis results inside `.discopop/hotspot_detection`.
@@ -101,4 +119,3 @@ Please cite in your publications if it helps your research:
 		location = {Denver, CO, USA},
 		series = {SC-W '23}
 	}
-
