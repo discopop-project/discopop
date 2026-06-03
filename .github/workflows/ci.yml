@@ -91,7 +91,7 @@ jobs:
       - name: Setup venv and install DiscoPoP
         run: |
           python3 -m venv venv
-          venv/bin/pip install -e . ./profiler ./explorer ./library
+          venv/bin/pip install -e . ./profiler ./explorer ./library ./hotspot_detection
 
       - name: Run MyPy Type Checking
         run: |
@@ -104,6 +104,10 @@ jobs:
       - name: Check formatting of DiscoPoP Library
         run: |
             venv/bin/python3 -m black -l 120 --check library
+
+      - name: Check formatting of DiscoPoP Hotspot Detection
+        run: |
+            venv/bin/python3 -m black -l 120 --check hotspot_detection/discopop_hotspot_analyzer hotspot_detection/discopop_hotspot_cc hotspot_detection/discopop_hotspot_cxx
 
  #     - name: Execute C++ unit tests
  #       run: |
