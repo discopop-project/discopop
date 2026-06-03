@@ -5,4 +5,4 @@ set(HotspotDetection_SOURCES
 
 add_library(HotspotDetection_RT STATIC
         ${HotspotDetection_SOURCES})
-install(TARGETS HotspotDetection_RT ARCHIVE DESTINATION lib)
+install(TARGETS HotspotDetection_RT ARCHIVE DESTINATION discopop-hotspot-detection.libs)

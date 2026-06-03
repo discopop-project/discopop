@@ -1,11 +1,17 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
 import os.path
 import numpy as np
 import json
 import sys
 from typing import List, Optional
-from enum import Enum
 from dataclasses import dataclass
-from tools.submodules.update_notifications.update_notifier import run as check_for_updates
 
 inf = float("inf")
 
@@ -14,88 +20,89 @@ inf = float("inf")
 class HotspotAnalyzerArguments(object):
     """Container Class for the arguments passed to the hotspot analyzer"""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self.__validate()
 
-    def __validate(self):
-        """Validate the arguments passed to the discopop_explorer, e.g check if given files exist"""
+    def __validate(self) -> None:
+        """Validate the arguments passed to the hotspot analyzer, e.g check if given files exist"""
         validation_failure = False
 
         if validation_failure:
             print("Exiting...")
             sys.exit()
 
+
 class cs:
-    def __init__(self, csid):
+    def __init__(self, csid: int) -> None:
         self.csid = csid  # note: csid is a unique identifier
         self.typ = "FUNCTION"  # options: FUNCTION, LOOP
         self.fid = 0  # file id
         self.lineNum = 0  # line number
         self.name = ""  # only for functions: name of function
-        self.runtimes = []  # runtimes
+        self.runtimes: List[float] = []
         self.level = 0
         self.hot = True
         self.hotness = "MAYBE"  # possible: YES, NO, MAYBE
 
-    delta = -1.0
-    avr = 0.0
-    sum = -1
-    minVal = inf
-    maxVal = 0.0
-    ratio = 0.0
-    topAvr = False
-    topRatio = False
+        self.delta = -1.0
+        self.avr = 0.0
+        self.sum: float = -1
+        self.minVal = inf
+        self.maxVal = 0.0
+        self.ratio = 0.0
+        self.topAvr = False
+        self.topRatio = False
 
-    def toJSON(self):
+    def toJSON(self) -> str:
         return json.dumps(self.__dict__, indent=4)
 
-    def addData(self, runtime):
+    def addData(self, runtime: float) -> None:
         self.runtimes.append(runtime)
 
-    def addInfo(self, tp, linN, filN, namN):
+    def addInfo(self, tp: str, linN: int, filN: int, namN: str) -> None:
         self.typ = tp
         self.lineNum = linN
         self.fid = filN
         self.name = namN
 
-    def updateLevel(self, lvl):
+    def updateLevel(self, lvl: int) -> None:
         self.level = lvl
 
-    def calMin(self):
+    def calMin(self) -> None:
         for x in self.runtimes:
             self.minVal = min(x, self.minVal)
 
-    def roundMin(self):
+    def roundMin(self) -> None:
         if self.minVal == 0:
             self.minVal = 0.000001
 
-    def calMax(self):
+    def calMax(self) -> None:
         for x in self.runtimes:
             self.maxVal = max(x, self.maxVal)
 
-    def calDelta(self):
+    def calDelta(self) -> None:
         self.delta = self.maxVal - self.minVal
 
-    def calRatio(self):
+    def calRatio(self) -> None:
         self.ratio = 1 / ((self.minVal / self.maxVal) + 1)
 
-    def calAvr(self):
-        tempSum = 0
+    def calAvr(self) -> None:
+        tempSum = 0.0
         for i in self.runtimes:
             tempSum += i
         self.avr = tempSum / len(self.runtimes)
         self.sum = tempSum
 
-    def isHot(self, bl):
+    def isHot(self, bl: bool) -> None:
         self.hot = bl
 
-    def isTopAvr(self, bl):
+    def isTopAvr(self, bl: bool) -> None:
         self.topAvr = bl
 
-    def isTopRatio(self, bl):
+    def isTopRatio(self, bl: bool) -> None:
         self.topRatio = bl
 
-    def getHotness(self):
+    def getHotness(self) -> str:
         if self.topAvr == True and self.topRatio == True:
             return "YES"
         if self.topAvr != self.topRatio:
@@ -103,7 +110,7 @@ class cs:
         return "NO"
 
 
-def __print_cs_list(list: List[cs]):
+def __print_cs_list(list: List[cs]) -> None:
     for x in list:
         print(
             "##cs lists:",
@@ -118,13 +125,7 @@ def __print_cs_list(list: List[cs]):
     print(len(list))
 
 
-def run(arguments: HotspotAnalyzerArguments):
-    # check for updates
-    module_name = "hotspot_analyzer"
-    module_api_url = "https://api.github.com/repos/discopop-project/Hotspot-Detection/releases/latest"
-    module_release_url = "https://github.com/discopop-project/Hotspot-Detection/releases"
-    check_for_updates(module_name, module_api_url, module_release_url)
-
+def run(arguments: HotspotAnalyzerArguments) -> None:
     ## TO BE USED FROM WITHIN THE .discopop directory!
     discopop_dir = os.getcwd()
     print("DiscoPoP Dir: ", discopop_dir)
@@ -132,32 +133,33 @@ def run(arguments: HotspotAnalyzerArguments):
     hotspot_detection_dir = os.path.join(discopop_dir, "hotspot_detection")
     hotspot_detection_private_dir = os.path.join(hotspot_detection_dir, "private")
     if not os.path.exists(hotspot_detection_dir):
-        raise FileNotFoundError("Static analysis and profiling results not found: Please execute the static analysis and profiling!" )
+        raise FileNotFoundError(
+            "Static analysis and profiling results not found: Please execute the static analysis and profiling!"
+        )
     if not os.path.exists(hotspot_detection_private_dir):
-        raise FileNotFoundError("Static analysis and profiling results not found: Please execute the static analysis and profiling!" )
+        raise FileNotFoundError(
+            "Static analysis and profiling results not found: Please execute the static analysis and profiling!"
+        )
     os.chdir(hotspot_detection_private_dir)
 
-
-
     ## CS LIST
-    # TODO turn this into a Dict
     cslist: List[cs] = []
 
-    def findCs(iid):
+    def findCs(iid: int) -> Optional[cs]:
         for x in cslist:
             if x.csid == iid:
                 return x
-        return False
+        return None
 
-    def getHots(bl):
+    def getHots(bl: bool) -> List[cs]:
         Hots = []
         for x in cslist:
             if x.hot == bl:
                 Hots.append(x)
         return Hots
 
-    def getSum(lst):
-        hotSum = 0
+    def getSum(lst: List[cs]) -> float:
+        hotSum = 0.0
         for i in lst:
             hotSum += i.avr
         return hotSum
@@ -173,15 +175,13 @@ def run(arguments: HotspotAnalyzerArguments):
     i = 0
     resultNum = 0
     minData = inf
-    maxData = 0
+    maxData = 0.0
     while True:
         fileName = f"hotspot_result_{i}.txt"
         i += 1
         if os.path.exists(fileName):
-            # print("a file")
             pass
         else:
-            # print("no file")
             break
         resultNum += 1
         dataFile = open(fileName, "r")
@@ -215,10 +215,10 @@ def run(arguments: HotspotAnalyzerArguments):
     ## CALCULATE
     vMAX = 0
     vMIN = inf
-    dMAX = 0
+    dMAX = 0.0
     dMIN = inf
     deltaData = maxData - minData
-    ratioData = maxData / minData
+    ratioData = maxData / minData if minData != 0 else 0.0
 
     __print_cs_list(cslist)
 
@@ -317,13 +317,11 @@ def run(arguments: HotspotAnalyzerArguments):
             yesNoMaybe = " is NO"
             x.hotness = "NO"
         f.write(str(x.csid) + " " + str(x.name) + " at " + str(x.fid) + ":" + str(x.lineNum) + yesNoMaybe + "\n")
-        # f.write(" "+ str(x.topAvr)+" "+ str(x.topRatio)+"\n")
     f.write("Number of YES code regions: " + str(counterY) + " \n")
     f.write("Number of MAYBE code regions: " + str(counterM) + " \n")
     f.write("Number of NO code regions: " + str(counterN) + " \n")
     f.write("Number of Non-zero code regions: " + str(counterN + counterM + counterY) + " \n")
     f.close()
-
 
     # export results to Hotspots.json and store in "public" folder
     with open(os.path.join(hotspot_detection_dir, "Hotspots.json"), "w+") as outfile:

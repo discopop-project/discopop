@@ -14,11 +14,11 @@ from .hotspot_analyzer import HotspotAnalyzerArguments, run
 def parse_args() -> HotspotAnalyzerArguments:
     """Parse the arguments passed to the hotspot_analyzer"""
     parser = ArgumentParser(description="Hotspot Analyzer")
-    arguments = parser.parse_args()
+    parser.parse_args()
     return HotspotAnalyzerArguments()
 
 
-def main():
+def main() -> None:
     arguments = parse_args()
     run(arguments)
 

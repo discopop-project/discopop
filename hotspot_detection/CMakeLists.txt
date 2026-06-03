@@ -1,4 +1,14 @@
 cmake_minimum_required(VERSION 3.28.0)
+
+# Select clang as compiler before project() so CMake uses it for all targets.
+# Only set if not already overridden on the command line or via environment.
+if(NOT DEFINED CMAKE_C_COMPILER)
+    find_program(CMAKE_C_COMPILER NAMES clang-22 clang-21 clang-20 clang-19 clang)
+endif()
+if(NOT DEFINED CMAKE_CXX_COMPILER)
+    find_program(CMAKE_CXX_COMPILER NAMES clang++-22 clang++-21 clang++-20 clang++-19 clang++)
+endif()
+
 project(HotspotDetection)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -58,40 +68,3 @@ add_subdirectory(HotspotDetection)
 add_subdirectory(rtlib)
 
 add_subdirectory(scripts)
-
-# update or initialize git submodules
-execute_process(COMMAND git submodule update --init --recursive --remote)
-
-# install Hotspot Analyzer python modules
-find_package(Python3 REQUIRED COMPONENTS Interpreter)
-message(STATUS "Installing Hotspot Analyzer python modules")
-
-# setup venv
-
-message(STATUS "Setting up default python venv: ${HotspotDetection_SOURCE_DIR}/venv")
-execute_process(
-    COMMAND ${Python3_EXECUTABLE} -m venv ${HotspotDetection_SOURCE_DIR}/venv
-)
-set(Python3_VENV_EXECUTABLE ${HotspotDetection_SOURCE_DIR}/venv/bin/python3)
-
-
-execute_process(
-        COMMAND ${Python3_VENV_EXECUTABLE} -m pip install ${HotspotDetection_SOURCE_DIR}
-        RESULT_VARIABLE HD_INSTALLATION_EXIT_CODE
-        OUTPUT_VARIABLE HD_INSTALLATION_OUTPUT
-)
-# check if installation of DiscoPoP Modules was successful
-if(${HD_INSTALLATION_EXIT_CODE})
-    message(FATAL_ERROR "${HD_INSTALLATION_OUTPUT}")
-endif()
-
-# create softlinks in venv/bin
-#COMMAND ln -sf ${DiscoPoP_SOHotspotDetection_SOURCE_DIRURCE_DIR}/venv/bin/discopop_optimizer ${DP_LOCAL_BIN_DIR}/discopop_optimizer
-
-
-# save build configuration to build/build_config.txt
-file(REMOVE "${HotspotDetection_BINARY_DIR}/build_config.txt")
-file(TOUCH "${HotspotDetection_BINARY_DIR}/build_config.txt")
-file(APPEND "${HotspotDetection_BINARY_DIR}/build_config.txt" "HOTSPOT_DETECTION_BUILD=${HotspotDetection_BINARY_DIR}\n")
-file(APPEND "${HotspotDetection_BINARY_DIR}/build_config.txt" "HOTSPOT_DETECTION_SOURCE=${HotspotDetection_SOURCE_DIR}\n")
-file(APPEND "${HotspotDetection_BINARY_DIR}/build_config.txt" "LLVM_BIN_DIR=${LLVM_TOOLS_BINARY_DIR}\n")
