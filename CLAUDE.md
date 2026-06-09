@@ -62,3 +62,6 @@ You can execute a full example by following the steps below. The example should 
 - execute profiling via `cd example && ./a.out`
 - execute pattern analysis via `cd example/.discopop && ../../venv/bin/discopop_explorer`
 - check for existing parallelization suggestions by checking for created patch files in example/.discopop/patch_generator
+
+### Excecute CI Pipeline locally
+To execute the CI pipeline locally, use the following command from the root folder: `scripts/dev/run_ci_locally.sh`.
