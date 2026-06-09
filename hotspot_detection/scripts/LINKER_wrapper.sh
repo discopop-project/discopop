@@ -18,4 +18,6 @@ if [ -z "$LLVM_CLANGPP" ]; then
     exit 1
 fi
 
-${LLVM_CLANGPP} "$@" -L${LIBS_DIR} -lHotspotDetection_RT -lpthread -fPIC -v
+# pthread is bundled into libSystem on macOS; only link explicitly on Linux
+PTHREAD_FLAG=""; [[ "$(uname)" != "Darwin" ]] && PTHREAD_FLAG="-lpthread"
+${LLVM_CLANGPP} "$@" -L${LIBS_DIR} -lHotspotDetection_RT ${PTHREAD_FLAG} -fPIC -v

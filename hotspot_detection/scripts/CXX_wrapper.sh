@@ -20,4 +20,7 @@ if [ -z "$LLVM_CLANGPP" ]; then
     exit 1
 fi
 
-${LLVM_CLANGPP} "$@" -g -fno-discard-value-names -O0 -Xclang -load -Xclang ${LIBS_DIR}/LLVMHotspotDetection.so -Xclang -fpass-plugin=${LIBS_DIR}/LLVMHotspotDetection.so -Xlinker -L${LIBS_DIR} -Xlinker -lHotspotDetection_RT -Xlinker -lpthread -Xlinker -v
+# pthread is bundled into libSystem on macOS; only link explicitly on Linux
+PTHREAD_XLINKER_FLAGS=()
+[[ "$(uname)" != "Darwin" ]] && PTHREAD_XLINKER_FLAGS=(-Xlinker -lpthread)
+${LLVM_CLANGPP} "$@" -g -fno-discard-value-names -O0 -Xclang -load -Xclang ${LIBS_DIR}/LLVMHotspotDetection.so -Xclang -fpass-plugin=${LIBS_DIR}/LLVMHotspotDetection.so -Xlinker -L${LIBS_DIR} -Xlinker -lHotspotDetection_RT "${PTHREAD_XLINKER_FLAGS[@]}" -Xlinker -v
