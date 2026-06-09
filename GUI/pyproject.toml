@@ -48,3 +48,6 @@ include = ["discopop_gui*"]
 
 [tool.setuptools]
 zip-safe = true
+
+[tool.setuptools.package-data]
+discopop_gui = ["py.typed"]
