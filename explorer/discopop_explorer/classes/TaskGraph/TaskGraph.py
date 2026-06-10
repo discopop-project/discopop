@@ -8,6 +8,7 @@
 
 import copy
 import os
+import sys
 from pathlib import Path
 import random
 import signal
@@ -496,7 +497,7 @@ class TaskGraph(Plottable, object):
             ctx_graph.add_node(ctx)
             for ctx_cont_node in ctx.contained_nodes:
                 ctx_graph.add_node(ctx_cont_node)
-                
+
         contained_edges = []
 
         for ctx in self.contexts:
@@ -2411,7 +2412,7 @@ class TaskGraph(Plottable, object):
         location: str,
         state_id: str,
         instructionID_mappings_dict: Dict[str, str],
-        state_mappings_dict: Dict[str, List[str]],
+        state_mappings_dict: Dict[str, Tuple[str, ...]],
     ) -> Set[Context]:
         """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs.
         state_mappings_dict is a mapping from stateIDs to callpaths."""
@@ -2441,7 +2442,11 @@ class TaskGraph(Plottable, object):
         # filter contexts for state_id compatibility
         if state_id != "NO_STATE":
             if state_id in state_mappings_dict:
-                callpath = copy.deepcopy(state_mappings_dict[state_id])
+                # state_mappings_dict stores an immutable tuple of interned strings shared
+                # across states; this function mutates its callpath (see `del callpath[...]`
+                # below), so take a private shallow list copy. Elements are immutable, so a
+                # shallow copy is sufficient (and far cheaper than the previous deepcopy).
+                callpath = list(state_mappings_dict[state_id])
 
                 filtered_contexts: Set[Context] = set()
 
@@ -2454,7 +2459,9 @@ class TaskGraph(Plottable, object):
                     last_called_function = None
 
                     loopstate_violation_found = False
-                    loopstate_callpath_copy = copy.deepcopy(callpath)
+                    # mutable working copy (loopstate entries are deleted below); a shallow
+                    # list copy is sufficient since the elements are immutable strings.
+                    loopstate_callpath_copy = list(callpath)
                     current_loopstate_info = [elem for elem in loopstate_callpath_copy if "_loopstate" in elem]
                     for ancestor in ancestors:
                         if isinstance(ancestor, FunctionContext):
@@ -2664,10 +2671,22 @@ class TaskGraph(Plottable, object):
                     mappings_dict[instruction_id] = line_id
 
         # read stateID to callpath mapping
-        warnings.warn(
-            "TODO: stateID to callpath mapping might get really big. Implement this more scalable / resilient."
-        )
-        state_mappings_dict: Dict[str, List[str]] = dict()  # {stateID: callpath}
+        # the mapping file can list large amount of stateIDs, but only stateIDs that
+        # referenced as a source or sink in `dependencies` are looked up. So, we can collect
+        # that working set first and skip every other line, so the resident dict only
+        # holds what is used. Callpath components (e.g. "call_123", "..._loopstate_...")
+        # repeat heavily across states, so we intern each component and store immutable
+        # tuples
+        needed_state_ids: Set[str] = set()
+        for dep_type_deps in dependencies.values():
+            for source_location_deps in dep_type_deps.values():
+                for source_state_id, source_state_deps in source_location_deps.items():
+                    needed_state_ids.add(source_state_id)
+                    for sink_location_deps in source_state_deps.values():
+                        needed_state_ids.update(sink_location_deps.keys())
+
+        state_mappings_dict: Dict[str, Tuple[str, ...]] = dict()  # {stateID: callpath}
+        canonical_callpaths: Dict[Tuple[str, ...], Tuple[str, ...]] = dict()
         state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
         if os.path.exists(state_mappings_file):
             with open(state_mappings_file, "r") as f:
@@ -2679,11 +2698,15 @@ class TaskGraph(Plottable, object):
                     if len(line_split) < 2:
                         continue
                     state_id = line_split[0]
+                    if state_id not in needed_state_ids:
+                        # never looked up
+                        continue
                     raw_callpath = line_split[1]
                     if "-->" in raw_callpath:
-                        callpath = raw_callpath.split("-->")
+                        callpath = tuple(sys.intern(s) for s in raw_callpath.split("-->"))
                     else:
-                        callpath = [raw_callpath]
+                        callpath = (sys.intern(raw_callpath),)
+                    callpath = canonical_callpaths.setdefault(callpath, callpath)
                     state_mappings_dict[state_id] = callpath
 
         # insert data dependencies into graph
