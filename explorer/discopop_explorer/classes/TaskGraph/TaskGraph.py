@@ -9,6 +9,7 @@
 import copy
 import os
 import sys
+from collections import defaultdict
 from pathlib import Path
 import random
 import signal
@@ -2413,9 +2414,12 @@ class TaskGraph(Plottable, object):
         state_id: str,
         instructionID_mappings_dict: Dict[str, str],
         state_mappings_dict: Dict[str, Tuple[str, ...]],
+        line_to_work_contexts: Dict[LineID, Set[Context]],
     ) -> Set[Context]:
         """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs.
-        state_mappings_dict is a mapping from stateIDs to callpaths."""
+        state_mappings_dict is a mapping from stateIDs to callpaths.
+        line_to_work_contexts is a reverse index {lineID: WorkContexts whose code scope contains it},
+        built once per dependency-insertion pass (see __insert_data_dependencies_from_files)."""
 
         contexts: Set[Context] = set()
         # check if location is an instructionID. If so, convert it to a lineID using the mappings_dict.
@@ -2432,12 +2436,8 @@ class TaskGraph(Plottable, object):
             line_num = location_split[1]
             location_lineid = LineID(file_id + ":" + line_num)
 
-            for context in self.contexts:
-                if not isinstance(context, WorkContext):
-                    continue
-                context_code_scope = context.get_code_scope(self.pet)
-                if location_lineid in context_code_scope:
-                    contexts.add(context)
+            # lookup instead of rebuilding code scope on each call.
+            contexts.update(line_to_work_contexts.get(location_lineid, set()))
 
         # filter contexts for state_id compatibility
         if state_id != "NO_STATE":
@@ -2709,6 +2709,16 @@ class TaskGraph(Plottable, object):
                     callpath = canonical_callpaths.setdefault(callpath, callpath)
                     state_mappings_dict[state_id] = callpath
 
+        # Build a reverse index {lineID: WorkContexts whose code scope contains it} once.
+        # The per-location context lookup below used to scan every context and rebuild its
+        # code scope on each of the millions of calls; the index turns that into one O(1)
+        # dict lookup and computes each context's code scope exactly once.
+        line_to_work_contexts: Dict[LineID, Set[Context]] = defaultdict(set)
+        for context in self.contexts:
+            if isinstance(context, WorkContext):
+                for line_id in context.get_code_scope(self.pet):
+                    line_to_work_contexts[line_id].add(context)
+
         # insert data dependencies into graph
         # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
         logger.info("--> Inserting data dependencies: ")
@@ -2720,14 +2730,24 @@ class TaskGraph(Plottable, object):
                     # find source and target contexts based on locations and state ids
                     # only work contexts can be source or target of data dependencies
                     source_contexts = self.__get_work_contexts_by_location_and_state_id(
-                        self.pet, source_location, source_state_id, mappings_dict, state_mappings_dict
+                        self.pet,
+                        source_location,
+                        source_state_id,
+                        mappings_dict,
+                        state_mappings_dict,
+                        line_to_work_contexts,
                     )
                     for sink_location, sink_location_deps in source_state_deps.items():
                         for sink_state_id, var_infos in sink_location_deps.items():
                             # find source and target contexts based on locations and state ids
                             # only work contexts can be source or target of data dependencies
                             target_contexts = self.__get_work_contexts_by_location_and_state_id(
-                                self.pet, sink_location, sink_state_id, mappings_dict, state_mappings_dict
+                                self.pet,
+                                sink_location,
+                                sink_state_id,
+                                mappings_dict,
+                                state_mappings_dict,
+                                line_to_work_contexts,
                             )
 
                             # handle static and dynamic dependencies separately
