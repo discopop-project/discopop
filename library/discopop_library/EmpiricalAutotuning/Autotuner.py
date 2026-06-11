@@ -119,6 +119,7 @@ def run(arguments: AutotunerArguments) -> None:
 
     time_limit_s = 3600  # seconds
 
+    optimization_start_time = time.time()
     if arguments.suggestions is None:
         if arguments.algorithm == 1:
             execute_linear_hotspot_combination(
@@ -218,6 +219,8 @@ def run(arguments: AutotunerArguments) -> None:
             [int(s) for s in arguments.suggestions.split(",")],
         )
 
+    optimization_time_s = time.time() - optimization_start_time
+
     # select best option and create code folder
     if arguments.algorithm == 1:
         for stat_entry in sorted(debug_stats, key=lambda x: len(x[0]), reverse=True):
@@ -293,6 +296,7 @@ def run(arguments: AutotunerArguments) -> None:
         print("Applied suggestions: " + str(best_suggestion_configuration[0]))
         print("Speedup: ", round(speedup, 3))
         print("Parallel efficiency: ", round(parallel_efficiency, 3))
+        print("Optimization time: ", str(round(optimization_time_s, 1)) + "s")
         print("##############################")
 
         # export results to result.json
