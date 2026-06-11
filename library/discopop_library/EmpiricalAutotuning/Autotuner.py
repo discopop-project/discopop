@@ -22,7 +22,11 @@ from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import Executi
 from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor, NodeShape, StatisticsGraph
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.optimization.check_single_combination import check_single_combination
+from discopop_library.EmpiricalAutotuning.optimization.coordinate_descent_combination import (
+    execute_coordinate_descent_combination,
+)
 from discopop_library.EmpiricalAutotuning.optimization.evolutionary_combination import execute_evolutionary_combination
+from discopop_library.EmpiricalAutotuning.optimization.greedy_combination import execute_greedy_combination
 from discopop_library.EmpiricalAutotuning.optimization.linear_hotspot_combination import (
     execute_linear_hotspot_combination,
 )
@@ -154,6 +158,30 @@ def run(arguments: AutotunerArguments) -> None:
         #            )
         elif arguments.algorithm == 3:
             execute_evolutionary_combination(
+                detection_result,
+                hotspot_information,
+                logger,
+                time_limit_s,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                debug_stats,
+                get_unique_configuration_id,
+            )
+        elif arguments.algorithm == 4:
+            execute_greedy_combination(
+                detection_result,
+                hotspot_information,
+                logger,
+                time_limit_s,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                debug_stats,
+                get_unique_configuration_id,
+            )
+        elif arguments.algorithm == 5:
+            execute_coordinate_descent_combination(
                 detection_result,
                 hotspot_information,
                 logger,
