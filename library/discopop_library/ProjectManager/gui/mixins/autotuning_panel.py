@@ -92,8 +92,9 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         algo_options = [
             ("0", "No combination (measure only)"),
             ("1", "Linear combination"),
-            ("2", "Linear combination with refinement"),
             ("3", "Evolutionary combination"),
+            ("4", "Greedy combination"),
+            ("5", "Coordinate descent combination"),
         ]
         self.autotuning_algorithm_map = {opt[1]: opt[0] for opt in algo_options}
         algo_combo = ttk.Combobox(algo_frame, textvariable=self.autotuning_algorithm_var, state="readonly", width=40)
