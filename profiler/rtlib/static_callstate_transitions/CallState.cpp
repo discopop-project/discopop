@@ -16,6 +16,10 @@ void CallState::register_transition(std::int32_t trigger_instruction, CallState 
   transitions[trigger_instruction] = target_state;
 }
 
+void CallState::register_implicit_return_transition(CallState *target_state) {
+  implicit_return_transition_target = target_state;
+}
+
 int32_t CallState::get_id() { return id; }
 
 CallState *CallState::get_transition_target(int32_t trigger_instruction) {
@@ -25,3 +29,5 @@ CallState *CallState::get_transition_target(int32_t trigger_instruction) {
   }
   return pos->second;
 }
+
+CallState *CallState::get_implicit_return_transition_target() { return implicit_return_transition_target; }

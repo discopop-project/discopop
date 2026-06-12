@@ -57,6 +57,9 @@ void update_callstate_from_func_exit(int32_t instructionID) {
 
   // check if a transition exists
   CallState *transition_target = current_callpath_state->get_transition_target(instructionID);
+  if (!transition_target && instructionID == 1) {
+    transition_target = current_callpath_state->get_implicit_return_transition_target();
+  }
   if (transition_target) {
     // transition found
     // update current callstate

@@ -395,11 +395,22 @@ void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_pt
   *callpath_state_transitions_file << "# Format: <source_state_id> <instruction_id> <target_state_id>\n";
 
   std::string global_buffer = "";
+  std::string return_targets_buffer = "# Format: <source_state_id> <target_state_id>\n";
   #pragma omp parallel for reduction(+:global_buffer)
   for(auto path: call_path_tree_ptr->all_nodes){
     for(auto transition_pair: path->state_transitions){
-        std::string transition_buffer = "" + std::to_string(path->path_id) + " " + std::to_string(transition_pair.first) + " " + std::to_string(transition_pair.second) + "\n";
-        global_buffer += transition_buffer;
+      if(transition_pair.first == 1){
+        continue;
+      }
+      std::string transition_buffer = "" + std::to_string(path->path_id) + " " + std::to_string(transition_pair.first) + " " + std::to_string(transition_pair.second) + "\n";
+      global_buffer += transition_buffer;
+    }
+  }
+  for(auto path: call_path_tree_ptr->all_nodes){
+    for(auto transition_pair: path->state_transitions){
+      if(transition_pair.first == 1){
+        return_targets_buffer += std::to_string(path->path_id) + " " + std::to_string(transition_pair.second) + "\n";
+      }
     }
   }
   *callpath_state_transitions_file << global_buffer;
@@ -407,6 +418,16 @@ void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_pt
   if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
     callpath_state_transitions_file->flush();
     callpath_state_transitions_file->close();
+  }
+
+  auto callpath_state_return_targets_file = new std::ofstream();
+  std::string tmp03(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp03 += "/callpath_state_return_targets.txt";
+  callpath_state_return_targets_file->open(tmp03.data(), std::ios_base::app);
+  *callpath_state_return_targets_file << return_targets_buffer;
+  if (callpath_state_return_targets_file != NULL && callpath_state_return_targets_file->is_open()) {
+    callpath_state_return_targets_file->flush();
+    callpath_state_return_targets_file->close();
   }
 
   // prepare saving the callpathState transitions as DOT file
@@ -421,8 +442,11 @@ void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_pt
   #pragma omp parallel for reduction(+:global_buffer)
   for(auto path : call_path_tree_ptr->all_nodes){
     for(auto transition_pair: path->state_transitions){
-        std::string transition_buffer = "  " + std::to_string(path->path_id) + " -> " + std::to_string(transition_pair.second) + " [label = " + std::to_string(transition_pair.first) + "];\n";
-        global_buffer += transition_buffer;
+      if(transition_pair.first == 1){
+        continue;
+      }
+      std::string transition_buffer = "  " + std::to_string(path->path_id) + " -> " + std::to_string(transition_pair.second) + " [label = " + std::to_string(transition_pair.first) + "];\n";
+      global_buffer += transition_buffer;
     }
   }
   *callpath_state_transitions_file << global_buffer;
