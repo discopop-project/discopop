@@ -198,36 +198,24 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
       // enqueue successors
       std::vector<std::tuple<StaticCallPathTreeNode*, int32_t, StaticCallPathTreeNode*>> new_elements_buffer;
-      std::vector<std::tuple<uint32_t, int32_t, uint32_t>> new_transitions_buffer;
+
+      // The ancestor chain of new_current_path is identical for every successor,
+      // so map base_node -> closest ancestor path node once, then look up per successor.
+      std::unordered_map<StaticCalltreeNode*, StaticCallPathTreeNode*> ancestor_by_base;
+      for(StaticCallPathTreeNode* current = new_current_path; current->base_node != nullptr; current = current->prefix){
+        // keep the first (closest to new_current_path) match
+        ancestor_by_base.emplace(current->base_node, current);
+      }
+
       for(auto succ_pair: new_current_path->base_node->successors){
         int32_t trigger_instructionID = succ_pair.first;
         for(auto succ: succ_pair.second){
 
-          // check for cycles
-          std::unordered_set<StaticCalltreeNode*> nodes_on_path;
-          StaticCallPathTreeNode* current = new_current_path;
-          StaticCallPathTreeNode* cycle_prefix_path = nullptr;
-
-          // TEST to fix cycle search
-          nodes_on_path.insert(succ);
-          // !TEST
-
-          while(current->base_node != nullptr){ // traverse upwards until root
-            if(nodes_on_path.count(current->base_node) > 0){
-              // cycle found
-              cycle_prefix_path = current;
-              break;
-            }
-            else{
-              // no cycle found
-              nodes_on_path.insert(current->base_node);
-              current = current->prefix;
-            }
-          }
-
-          if(cycle_prefix_path){
+          // check for cycles: succ already present on the path -> cycle
+          auto cycle_it = ancestor_by_base.find(succ);
+          if(cycle_it != ancestor_by_base.end()){
             // register transition
-            new_current_path->register_transition(trigger_instructionID, cycle_prefix_path->path_id);
+            new_current_path->register_transition(trigger_instructionID, cycle_it->second->path_id);
             continue;
           }
           // new stack element
