@@ -371,8 +371,18 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
       }
     }
 */
-    // save path string to buffer
-    std::string path_buffer = to_string(path->path_id) + " " + path->get_path_string() + "\n";
+    int32_t parent_id = 0;
+    if(path->prefix != nullptr) {
+        parent_id = path->prefix->path_id;
+    }
+    
+    std::string node_label = "ROOT";
+    if(path->base_node != nullptr) {
+        node_label = path->base_node->get_label();
+    }
+
+    // new format: <NodeID> <ParentID> <Label>
+    std::string path_buffer = std::to_string(path->path_id) + " " + std::to_string(parent_id) + " " + node_label + "\n";
     global_buffer += path_buffer;
   }
   *stateID_to_callpath_file << global_buffer;
