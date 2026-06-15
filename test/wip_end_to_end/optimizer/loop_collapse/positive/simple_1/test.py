@@ -53,7 +53,7 @@ class TestMethods(unittest.TestCase):
         test_output_file = os.path.join(self.src_dir, ".discopop", "optimizer", "detection_result_dump.json")
         with open(test_output_file, "r") as f:
             tmp_str = f.read()
-        self.test_output: DetectionResult = jsonpickle.decode(tmp_str)
+        self.test_output: DetectionResult = jsonpickle.decode(tmp_str, keys=True)
 
     @classmethod
     def tearDownClass(self):

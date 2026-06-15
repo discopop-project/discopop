@@ -97,7 +97,7 @@ def run(arguments: AutotunerArguments) -> None:
     # load suggestions
     with open(os.path.join(arguments.dot_dp_path, "explorer", "detection_result_dump.json"), "r") as f:
         tmp_str = f.read()
-    detection_result: DetectionResult = jsonpickle.decode(tmp_str)
+    detection_result: DetectionResult = jsonpickle.decode(tmp_str, keys=True)
     logger.debug("loaded suggestions")
 
     # get metadata: highest average runtime in hotspot information. Used to filter relevant loops (1% runtime contribution)

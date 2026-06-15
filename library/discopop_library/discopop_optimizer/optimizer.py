@@ -151,7 +151,7 @@ def run_passive_optimizer(arguments: OptimizerArguments) -> None:
     detection_result_dump_str = ""
     with open(os.path.join(explorer_dir, "detection_result_dump.json")) as f:
         detection_result_dump_str = f.read()
-    detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str)
+    detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str, keys=True)
 
     if "version" in detection_result.__dict__:  # for backwards compatibility
         if detection_result.version != get_version():
