@@ -438,13 +438,13 @@ def detect_doall_sharing_clauses(
                 # check if dep is access to array type value (or result of pointer arithmetic)
                 if dep.is_gep_result_dependency:
                     gep_result_access.add(dep.var_name)
-                # check if dep is access to pointer type
+                # check if dep is access to pointer or reference type
                 if dep.var_name in known_vars:
                     for tmp_var_name, type_str in known_vars_with_types:
                         if type_str is None:
                             continue
                         if tmp_var_name == dep.var_name:
-                            if "*" in type_str:
+                            if "*" in type_str or "&" in type_str:
                                 ptr_type_access.add(dep.var_name)
 
                 if dep.dtype == DepType.RAW:
