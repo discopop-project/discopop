@@ -329,7 +329,7 @@ def detect_doall_sharing_clauses(
     loopparent_contained_ctxs: Set[Context],
     loop_variables: Set[str],
 ) -> Tuple[Set[str], Set[str], Set[str], Set[str], Set[str], Set[str]]:
-    """classifies variables used inside the iterations and returns the classifications in the following structure:
+    """classifies variables used inside the iterations and returns the OpenMP data sharing clauses in the following structure:
     (firstprivate, private, lastprivate, shared, firstwritten, init)
     firstwritten and init are not data sharing clauses, but required to validate potential doall-breaking dependencies originating from static information.
     """
@@ -538,6 +538,7 @@ def detect_doall_sharing_clauses(
                     it_firstprivate.add(var_name)
                 if (
                     var_name not in data_outgoing
+                    and var_name not in data_incoming
                     and var_name not in it_init
                     and var_name not in it_lastprivate
                     and var_name not in it_firstprivate
