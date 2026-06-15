@@ -2663,28 +2663,48 @@ class TaskGraph(Plottable, object):
                     line_id = line_split[1]
                     mappings_dict[instruction_id] = line_id
 
-        # read stateID to callpath mapping
+        # read stateID to callpath mapping (prefix tree format: <NodeID> <ParentID> <Label>)
         warnings.warn(
             "TODO: stateID to callpath mapping might get really big. Implement this more scalable / resilient."
         )
         state_mappings_dict: Dict[str, List[str]] = dict()  # {stateID: callpath}
         state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
         if os.path.exists(state_mappings_file):
+            # first pass: collect the prefix tree as {node_id: (parent_id, label)}
+            prefix_tree: Dict[str, Tuple[str, str]] = dict()
             with open(state_mappings_file, "r") as f:
                 for line in f:
                     line = line.strip()
                     if line.startswith("#") or len(line) == 0:
                         continue
                     line_split = [elem for elem in line.split(" ") if len(elem) > 0]
-                    if len(line_split) < 2:
+                    if len(line_split) < 3:
                         continue
-                    state_id = line_split[0]
-                    raw_callpath = line_split[1]
-                    if "-->" in raw_callpath:
-                        callpath = raw_callpath.split("-->")
-                    else:
-                        callpath = [raw_callpath]
-                    state_mappings_dict[state_id] = callpath
+                    node_id = line_split[0]
+                    parent_id = line_split[1]
+                    # labels shouldn't contain spaces, but join just in case
+                    label = " ".join(line_split[2:])
+                    prefix_tree[node_id] = (parent_id, label)
+
+            # second pass: reconstruct the full callpath (root -> node order) for every node
+            for start_node_id in prefix_tree:
+                if start_node_id in state_mappings_dict:
+                    continue
+                stack: List[Tuple[str, str]] = []
+                current = start_node_id
+                visited: Set[str] = set()
+                while current in prefix_tree and current not in state_mappings_dict and current not in visited:
+                    visited.add(current)
+                    cur_parent_id, cur_label = prefix_tree[current]
+                    # the root node points to itself, it carries no callpath label
+                    if cur_parent_id == current:
+                        break
+                    stack.append((current, cur_label))
+                    current = cur_parent_id
+                running_callpath: List[str] = list(state_mappings_dict.get(current, []))
+                for node_id, label in reversed(stack):
+                    running_callpath = running_callpath + [label]
+                    state_mappings_dict[node_id] = running_callpath
 
         # insert data dependencies into graph
         # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
