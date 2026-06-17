@@ -105,6 +105,9 @@ except (ImportError, ModuleNotFoundError):
         def __init__(self, visualizer: object = None) -> None:
             pass
 
+        def plottable(self) -> bool:
+            return False
+
     Visualizer = object  # type: ignore[assignment, misc]
     ViewableCanvasWithTrees = object  # type: ignore[assignment, misc]
 
