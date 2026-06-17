@@ -17,7 +17,6 @@ from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
-import tkinter as tk
 from matplotlib.axes import Axes
 from networkx import Graph
 from tqdm import tqdm  # type: ignore
@@ -74,7 +73,10 @@ from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_func
 from discopop_explorer.functions.PEGraph.traversal.predecessors import direct_predecessors
 from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 
-matplotlib.use("TkAgg")
+try:
+    matplotlib.use("TkAgg")
+except Exception:
+    matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # type: ignore
 from matplotlib.patches import Rectangle
 
@@ -92,8 +94,6 @@ from discopop_explorer.classes.TaskGraph.Aliases import (
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
 from discopop_gui.Extendables.Plottable import Plottable
 from discopop_gui.Visualizers.Base import Base as Visualizer
 from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
