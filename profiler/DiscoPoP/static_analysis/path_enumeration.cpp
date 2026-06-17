@@ -263,8 +263,9 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
-StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions){
-  StaticCallPathTree* call_path_tree = new StaticCallPathTree();
+StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions, std::uint32_t start_path_id){
+  // start ids from start_path_id (no collisions between modules)
+  StaticCallPathTree* call_path_tree = new StaticCallPathTree(start_path_id);
 
   // path id 0 is reserved for debugging and initialization purposes
   // select entry nodes
@@ -371,7 +372,8 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
       }
     }
 */
-    int32_t parent_id = 0;
+    // root node uses itself as parent
+    uint32_t parent_id = path->path_id;
     if(path->prefix != nullptr) {
         parent_id = path->prefix->path_id;
     }

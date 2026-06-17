@@ -80,7 +80,7 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   auto state_transitions_ptr = &state_transitions;
   auto inverset_state_transitions_ptr = &inverse_state_transitions;
   auto static_calltree_ptr = &static_calltree;
-  auto call_path_tree_ptr = enumerate_paths(static_calltree, &state_transitions, &inverse_state_transitions);
+  auto call_path_tree_ptr = enumerate_paths(static_calltree, &state_transitions, &inverse_state_transitions, unique_callpath_state_id);
   auto end = chrono::high_resolution_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
   cout << "Done enumerating paths.. took: " << (time/1000.0) << "s" << std::endl;
@@ -123,6 +123,9 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
 
   // save current instructionID for continuation in the next Module
   InstructionIDCounter = unique_llvm_ir_instruction_id;
+
+  // update the global path id so the next module starts with a new id
+  unique_callpath_state_id = call_path_tree_ptr->get_current_free_path_id();
 
   // save current stateID for continuation in the next Module
   CallpathStateIDCounter = unique_callpath_state_id;
