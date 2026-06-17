@@ -70,6 +70,13 @@ StaticCallPathTree::StaticCallPathTree(){
     register_node_in_all_nodes(root);
 }
 
+StaticCallPathTree::StaticCallPathTree(std::uint32_t start_path_id){
+    // start counting paths from start_path_id
+    next_free_path_id = start_path_id;
+    root = new StaticCallPathTreeNode(get_next_free_path_id(), nullptr);
+    register_node_in_all_nodes(root);
+}
+
 StaticCallPathTree::~StaticCallPathTree(){
     delete root;
 }
@@ -93,6 +100,10 @@ std::string StaticCallPathTree::to_dot_string(){
     return buffer;
     */
     return next_free_path_id.fetch_add(1);
+}
+
+std::uint32_t StaticCallPathTree::get_current_free_path_id(){
+    return next_free_path_id.load();
 }
 
 void StaticCallPathTree::register_node_in_all_nodes(StaticCallPathTreeNode* node_ptr){
