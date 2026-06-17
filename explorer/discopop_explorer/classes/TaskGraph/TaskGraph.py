@@ -94,9 +94,18 @@ from discopop_explorer.classes.TaskGraph.Aliases import (
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
-from discopop_gui.Extendables.Plottable import Plottable
-from discopop_gui.Visualizers.Base import Base as Visualizer
-from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
+
+try:
+    from discopop_gui.Extendables.Plottable import Plottable
+    from discopop_gui.Visualizers.Base import Base as Visualizer
+    from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
+except (ImportError, ModuleNotFoundError):
+
+    class Plottable:  # type: ignore[no-redef]
+        pass
+
+    Visualizer = object  # type: ignore[assignment, misc]
+    ViewableCanvasWithTrees = object  # type: ignore[assignment, misc]
 
 logger = logging.getLogger("Explorer")
 
