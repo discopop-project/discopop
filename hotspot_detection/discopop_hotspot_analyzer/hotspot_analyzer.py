@@ -325,7 +325,7 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
 
     # export results to Hotspots.json and store in "public" folder
     with open(os.path.join(hotspot_detection_dir, "Hotspots.json"), "w+") as outfile:
-        outfile.write("{\"code_regions\": [")
+        outfile.write('{"code_regions": [')
         for id, x in enumerate(NZcslist):
             outfile.write(x.toJSON())
             if id != len(NZcslist) - 1:
