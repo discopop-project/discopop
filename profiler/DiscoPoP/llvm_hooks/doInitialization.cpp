@@ -90,7 +90,12 @@ bool DiscoPoP::doInitialization(Module &M) {
   {
     CallpathStateIDCounter = 0;
     initializeCallpathStateIDCounter();
-    unique_callpath_state_id = CallpathStateIDCounter + 1;
+    if (CallpathStateIDCounter == 0) {
+      unique_callpath_state_id = 1;
+    } else {
+      unique_callpath_state_id = CallpathStateIDCounter;
+    }
+    //unique_callpath_state_id = CallpathStateIDCounter + 1;
   }
 
 
