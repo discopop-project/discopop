@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 import networkx as nx
 
@@ -84,27 +84,32 @@ class ASTPatternDetectionHelper:
             ClangASTGraph.normalize_file_paths(self.ast_graph, path_mapping)
 
     def get_variables_at_location(
-        self, file_id: int, line: int, column: Optional[int] = None
+        self, file_id: Union[int, str], line: int, column: Optional[int] = None
     ) -> list[tuple[str, Optional[str]]]:
-        """Get variables visible at a specific source location, identified by file ID.
+        """Get variables visible at a specific source location.
 
         Args:
-            file_id: Integer file identifier as defined in ``FileMapping.txt``
+            file_id: Integer file identifier as defined in ``FileMapping.txt``,
+                or a filename string (e.g. ``"compute.cpp"``) used directly.
             line: Line number
             column: Column number, or ``None`` to consider all columns on *line*
 
         Returns:
-            List of (var_name, var_type) tuples, or empty list when the file ID
-            is unknown or the AST has not been loaded.
+            List of (var_name, var_type) tuples, or empty list when the file is
+            unknown or the AST has not been loaded.
         """
         if not self.ast_graph:
             return []
 
-        file_path = self.file_mapping.get(file_id)
-        if file_path is None:
-            return []
+        if isinstance(file_id, int):
+            file_path = self.file_mapping.get(file_id)
+            if file_path is None:
+                return []
+            file_path_str = str(file_path)
+        else:
+            file_path_str = file_id
 
-        return ASTVariableAndTypeQueries.find_all_variables_in_scope(self.ast_graph, str(file_path), line, column)
+        return ASTVariableAndTypeQueries.find_all_variables_in_scope(self.ast_graph, file_path_str, line, column)
 
     def get_variable_declarations_in_scope(self, scope_name: str) -> list[tuple[str, Optional[str]]]:
         """Get variables declared in a scope by function/loop name

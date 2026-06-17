@@ -93,6 +93,7 @@ jobs:
         run: |
           python3 -m venv venv
           venv/bin/pip install -e . ./profiler ./explorer ./library ./hotspot_detection
+          venv/bin/pip install pytest
 
       - name: Run MyPy Type Checking
         run: |
