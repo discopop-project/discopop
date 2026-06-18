@@ -162,7 +162,7 @@ void __hotspot_detection_printOut()
     strcpy(envbuffer2, getenv("DOT_DISCOPOP"));
     strcat(buffer2, strcat(envbuffer2, "/hotspot_detection/private/hotspot_result_"));
 
-    const char* result_base_name = &buffer2;
+    const char* result_base_name = buffer2;
     const char* result_file_ending = ".txt";
     char unused_file_name[255] = "";
     int counter = 0;

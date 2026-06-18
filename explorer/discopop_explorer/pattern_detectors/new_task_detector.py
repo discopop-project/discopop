@@ -127,7 +127,7 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
             "Task graph (context graph)",
             "Task graph (context debug graph)",
             "Context task graph",
-            "New Graph"
+            "New Graph",
         ]:
             try:
                 context_task_graph.delete_frame(frame_name)

@@ -31,6 +31,7 @@ This document contains critical information about working with this codebase. Fo
 ## Setup
 ### Setup venv
 - in case the `venv` is not set up, execute `python3 -m venv venv` to create a new virtual environment
+- always use the `venv` located in the project root directory; if it is not already activated, activate it via `source venv/bin/activate` before running any Python commands
 
 ## Type checking
 ### Python

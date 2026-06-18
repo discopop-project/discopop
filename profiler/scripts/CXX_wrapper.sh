@@ -80,4 +80,11 @@ PTHREAD_XLINKER_FLAGS=()
 [[ "$(uname)" != "Darwin" ]] && PTHREAD_XLINKER_FLAGS=(-Xlinker -lpthread)
 ${LLVM_CLANGPP} "$@" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${DISCOPOP_PLUGIN} -Xclang -fpass-plugin=${DISCOPOP_PLUGIN} -fPIC -Xlinker -L${PARENT_PATH} -Xlinker -lDiscoPoP_RT "${PTHREAD_XLINKER_FLAGS[@]}" -Xlinker -v
 
+# dump ast for later use during pattern detection
+if [ -n "$DOT_DISCOPOP" ]; then
+  TMP_DOT_DISCOPOP="$DOT_DISCOPOP"
+else
+  TMP_DOT_DISCOPOP="$PWD/.discopop"
+fi
+${LLVM_CLANGPP} "$@" -fsyntax-only -Xclang -ast-dump=json >> "$TMP_DOT_DISCOPOP/profiler/ast_dump.json"
 # WARNING: OUTPUT IS A .ll FILE, ENDING IS .o

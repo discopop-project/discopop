@@ -58,7 +58,6 @@ def __parse_xml_input(xml_fd: TextIOWrapper) -> Dict[str, ObjectifiedElement]:
             # entry exists already! merge the two entries
             pass
         else:
-            tmp = node.get("id")
             cu_dict[node.get("id")] = node
 
     return cu_dict
@@ -92,13 +91,16 @@ def __map_dummy_nodes(cu_dict: Dict[str, ObjectifiedElement]) -> Dict[str, Objec
         if "childrenNodes" in dir(node):
             for child_idx, child in enumerate(node.childrenNodes):
                 if child in dummy_to_func_ids_map:
-                    cu_dict[node_id].childrenNodes[child_idx] = dummy_to_func_ids_map[child]
+                    cu_dict[node_id].childrenNodes[child_idx]._setText(dummy_to_func_ids_map[child])
 
             # Also do the same in callLineToFunctionMap
             if "callsNode" in dir(node):
                 for idx, i in enumerate(node.callsNode.nodeCalled):
+                    # atLine = i.get("atLine")
+                    # callInstId = i.get("callInstId")
                     if i in dummy_to_func_ids_map:
-                        cu_dict[node_id].callsNode.nodeCalled[idx] = dummy_to_func_ids_map[i]
+                        cu_dict[node_id].callsNode.nodeCalled[idx]._setText(dummy_to_func_ids_map[i])
+
     return cu_dict
 
 
@@ -135,14 +137,7 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
     # read static dependencies
     static_dependency_lines = []
     if not os.path.exists(os.path.join(output_path, "static_dependencies.txt")):
-        warnings.warn(
-            "Static dependencies could not be found under: " + os.path.join(output_path, "static_dependencies.txt")
-        )
-        # todo
-        warnings.warn(
-            "TODO: Add command line parameter to pass a location for the static dependency file, "
-            "or combine static and dynamic dependencies from the beginning."
-        )
+        pass
     else:
         with open(os.path.join(output_path, "static_dependencies.txt"), "r") as static_dep_fd:
             static_dependency_lines = static_dep_fd.readlines()
@@ -166,6 +161,26 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             )
         if len(dep_fields) < 4 or dep_fields[1] != "NOM":
             continue
+
+        # load instruction to lineID mapping for backwards compatibility
+        instruction_to_lineID_mapping: Dict[str, str] = dict()
+        if os.path.exists(os.path.join(output_path, "instructionID_to_lineID_mapping.txt")):
+            with open(os.path.join(output_path, "instructionID_to_lineID_mapping.txt"), "r") as f:
+                for line in f.readlines():
+                    line = line.replace("\n", "")
+                    if line.startswith("#") or len(line) == 0:
+                        continue
+                    split_line = line.split(" ")
+                    instruction_id = split_line[0]
+                    line_id = split_line[1]
+                    if line_id.startswith("*"):
+                        continue
+                    line_id_split = line_id.split(":")
+                    file_id = line_id_split[0]
+                    line_num = line_id_split[1]
+                    column_num = line_id_split[2]
+                    instruction_to_lineID_mapping[instruction_id] = str(file_id) + ":" + str(line_num)
+
         sink = dep_fields[0]
         # pairwise iteration over dependencies source
         for dep_pair in list(zip(dep_fields[2:], dep_fields[3:]))[::2]:
@@ -196,23 +211,34 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
                 var_name = var_name.replace("GEPRESULT_", "")
                 is_gep_result_dependency = True
 
+            # convert instruction ids to lineIds for backwards compatibility
+            source = source_fields[0]
+            if ":" not in sink:
+                if "@" in sink:
+                    sink = sink[: sink.index("@")]  # remove state information
+                if sink in instruction_to_lineID_mapping:
+                    sink = instruction_to_lineID_mapping[sink]
+            if ":" not in source:
+                if "@" in source:
+                    source = source[: source.index("@")]  # remove state information
+                if source in instruction_to_lineID_mapping:
+                    source = instruction_to_lineID_mapping[source]
+
             # register dependencies
             if metadata is None:
                 dependencies_list.append(
-                    DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, is_gep_result_dependency, None)
+                    DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency, None)
                 )
                 continue
 
             if len(metadata) == 0:
                 dependencies_list.append(
-                    DependenceItem(sink, source_fields[0], type, var_name, aa_var_name, is_gep_result_dependency, "")
+                    DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency, "")
                 )
             else:
                 for md_set in metadata:
                     dependencies_list.append(
-                        DependenceItem(
-                            sink, source_fields[0], type, var_name, aa_var_name, is_gep_result_dependency, md_set
-                        )
+                        DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency, md_set)
                     )
 
     return dependencies_list, loop_data_list

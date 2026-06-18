@@ -87,6 +87,8 @@ typedef struct CU_struct : Node_struct {
 
   // Map to record function call line numbers
   map<int, vector<Node *>> callLineTofunctionMap;
+  // Map to record function call instruction ids
+  map<int, vector<Instruction*>> callLineToCallInstructionMap;
 
   CU_struct() {
     type = nodeTypes::cu;
