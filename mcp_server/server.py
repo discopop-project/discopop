@@ -236,7 +236,9 @@ Available agents: {', '.join(agent_choices)}
 
             if args.setup_all:
                 all_success = all(
-                    setup.setup_agent(agent, use_debug=args.debug, use_full_path=args.full_path)
+                    setup.setup_agent(
+                        agent, use_debug=args.debug, use_full_path=args.full_path, skip_if_not_installed=True
+                    )
                     for agent in MCPSetup.AGENTS
                 )
                 sys.exit(0 if all_success else 1)

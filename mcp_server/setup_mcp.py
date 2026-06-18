@@ -19,6 +19,7 @@ the discopop_mcp_server CLI via the --setup / --status / --verify flags.
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -40,6 +41,7 @@ class MCPSetup:
             "config_file": ".claude.json",
             "server_name": "discopop_mcp_server",
             "config_format": "claude",
+            "detect": lambda: shutil.which("claude") is not None,
         },
         "opencode": {
             "name": "OpenCode",
@@ -47,6 +49,9 @@ class MCPSetup:
             "config_file": "opencode.jsonc",
             "server_name": "discopop_mcp_server",
             "config_format": "opencode",
+            "detect": lambda: (
+                shutil.which("opencode") is not None or (Path.home() / ".opencode" / "bin" / "opencode").is_file()
+            ),
         },
     }
 
@@ -189,12 +194,21 @@ class MCPSetup:
         config["mcp"][server_name] = {"type": "local", "command": full_command}
         return config
 
-    def setup_agent(self, agent: str, use_debug: bool = False, use_full_path: bool = False) -> bool:
+    def setup_agent(
+        self, agent: str, use_debug: bool = False, use_full_path: bool = False, skip_if_not_installed: bool = False
+    ) -> bool:
         if agent not in self.AGENTS:
             self.log(f"✗ Unknown agent: {agent}", "ERROR")
             return False
 
         agent_info = self.AGENTS[agent]
+
+        if skip_if_not_installed:
+            detect: Optional[Callable[[], bool]] = agent_info.get("detect")
+            if detect is not None and not detect():
+                self.log(f"⚠ Skipping {agent_info['name']}: not installed")
+                return True
+
         self.log(f"Setting up {agent_info['name']}...")
 
         if use_full_path:
