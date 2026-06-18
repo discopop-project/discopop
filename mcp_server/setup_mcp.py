@@ -39,7 +39,15 @@ class MCPSetup:
             "config_dir": lambda: Path.home(),
             "config_file": ".claude.json",
             "server_name": "discopop_mcp_server",
-        }
+            "config_format": "claude",
+        },
+        "opencode": {
+            "name": "OpenCode",
+            "config_dir": lambda: Path.home() / ".config" / "opencode",
+            "config_file": "opencode.jsonc",
+            "server_name": "discopop_mcp_server",
+            "config_format": "opencode",
+        },
     }
 
     def __init__(self, verbose: bool = False):
@@ -97,6 +105,37 @@ class MCPSetup:
             pass
         return None
 
+    def _strip_jsonc_comments(self, text: str) -> str:
+        result: list[str] = []
+        i = 0
+        in_string = False
+        while i < len(text):
+            c = text[i]
+            if in_string:
+                result.append(c)
+                if c == "\\" and i + 1 < len(text):
+                    i += 1
+                    result.append(text[i])
+                elif c == '"':
+                    in_string = False
+            elif c == '"':
+                in_string = True
+                result.append(c)
+            elif text[i : i + 2] == "//":
+                while i < len(text) and text[i] != "\n":
+                    i += 1
+                continue
+            elif text[i : i + 2] == "/*":
+                i += 2
+                while i < len(text) and text[i : i + 2] != "*/":
+                    i += 1
+                i += 2
+                continue
+            else:
+                result.append(c)
+            i += 1
+        return "".join(result)
+
     def load_config(self, config_path: Path) -> Dict[str, Any]:
         if not config_path.exists():
             self.log(f"Creating new config file: {config_path}", "DEBUG")
@@ -104,8 +143,11 @@ class MCPSetup:
 
         try:
             with open(config_path, "r") as f:
-                loaded: Any = json.load(f)
-                return loaded if isinstance(loaded, dict) else {}
+                content = f.read()
+            if config_path.suffix == ".jsonc":
+                content = self._strip_jsonc_comments(content)
+            loaded: Any = json.loads(content)
+            return loaded if isinstance(loaded, dict) else {}
         except json.JSONDecodeError as e:
             self.log(f"✗ Invalid JSON in {config_path}: {e}", "ERROR")
             raise
@@ -131,6 +173,20 @@ class MCPSetup:
             server_config["args"] = args
 
         config["mcpServers"][server_name] = server_config
+        return config
+
+    def merge_mcp_server_config_opencode(
+        self,
+        config: Dict[str, Any],
+        server_name: str,
+        command: str,
+        args: Optional[list[str]] = None,
+    ) -> Dict[str, Any]:
+        if "mcp" not in config:
+            config["mcp"] = {}
+
+        full_command = [command] + (args or [])
+        config["mcp"][server_name] = {"type": "local", "command": full_command}
         return config
 
     def setup_agent(self, agent: str, use_debug: bool = False, use_full_path: bool = False) -> bool:
@@ -159,12 +215,21 @@ class MCPSetup:
 
         try:
             config = self.load_config(config_path)
-            config = self.merge_mcp_server_config(
-                config,
-                agent_info["server_name"],
-                server_command,
-                args=["--debug"] if use_debug else None,
-            )
+            debug_args = ["--debug"] if use_debug else None
+            if agent_info.get("config_format") == "opencode":
+                config = self.merge_mcp_server_config_opencode(
+                    config,
+                    agent_info["server_name"],
+                    server_command,
+                    args=debug_args,
+                )
+            else:
+                config = self.merge_mcp_server_config(
+                    config,
+                    agent_info["server_name"],
+                    server_command,
+                    args=debug_args,
+                )
             self.save_config(config_path, config)
             self.log(f"✓ {agent_info['name']} is now configured")
             return True
@@ -190,15 +255,21 @@ class MCPSetup:
 
         try:
             config = self.load_config(config_path)
-            if "mcpServers" in config and agent_info["server_name"] in config["mcpServers"]:
-                server_config = config["mcpServers"][agent_info["server_name"]]
-                command = server_config.get("command", "")
-                args = server_config.get("args", [])
-                self.log(f"✓ Configuration verified: {command} {' '.join(args)}")
-                return True
+            if agent_info.get("config_format") == "opencode":
+                mcp_section = config.get("mcp", {})
+                if agent_info["server_name"] in mcp_section:
+                    cmd = mcp_section[agent_info["server_name"]].get("command", [])
+                    self.log(f"✓ Configuration verified: {' '.join(cmd)}")
+                    return True
             else:
-                self.log("✗ DiscoPoP MCP server not found in configuration", "WARN")
-                return False
+                if "mcpServers" in config and agent_info["server_name"] in config["mcpServers"]:
+                    server_config = config["mcpServers"][agent_info["server_name"]]
+                    command = server_config.get("command", "")
+                    args = server_config.get("args", [])
+                    self.log(f"✓ Configuration verified: {command} {' '.join(args)}")
+                    return True
+            self.log("✗ DiscoPoP MCP server not found in configuration", "WARN")
+            return False
         except Exception as e:
             self.log(f"✗ Failed to verify setup: {e}", "ERROR")
             return False

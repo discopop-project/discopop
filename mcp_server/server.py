@@ -166,13 +166,15 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 Examples:
-  %(prog)s                              # Start the MCP server (stdio mode)
-  %(prog)s --debug                      # Start with debug logging
-  %(prog)s --setup claude_code          # Configure Claude Code
-  %(prog)s --setup-all                  # Configure all agents
-  %(prog)s --status                     # Show current setup status
-  %(prog)s --verify claude_code         # Verify Claude Code setup
-  %(prog)s --setup claude_code --debug  # Configure with debug logging enabled
+  %(prog)s                        # Start the MCP server (stdio mode)
+  %(prog)s --debug                # Start with debug logging
+  %(prog)s --setup <agent>        # Configure a specific agent
+  %(prog)s --setup <agent> --debug  # Configure with debug logging enabled
+  %(prog)s --setup-all            # Configure all agents
+  %(prog)s --verify <agent>       # Verify agent setup
+  %(prog)s --status               # Show current setup status
+
+Available agents: {', '.join(agent_choices)}
         """,
     )
 
