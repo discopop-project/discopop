@@ -7,14 +7,14 @@
 # directory for details.
 
 install: venv
-# install discopop_explorer, library and profiler
-	venv/bin/pip install -e . ./profiler ./explorer ./library ./GUI
+# install discopop_explorer, library, profiler and hotspot_detection
+	venv/bin/pip install -e . ./profiler -e ./explorer -e ./library -e ./GUI ./hotspot_detection
 
 venv:
 	python3 -m venv venv
 
 uninstall:
-	venv/bin/pip uninstall . ./profiler ./explorer ./library
+	venv/bin/pip uninstall . ./profiler ./explorer ./library ./hotspot_detection
 
 veryclean:
 	rm -rf venv

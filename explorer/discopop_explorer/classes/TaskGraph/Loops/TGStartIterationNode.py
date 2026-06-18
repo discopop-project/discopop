@@ -23,7 +23,7 @@ class TGStartIterationNode(TGNode):
     pass
 
     def get_label(self) -> str:
-        return "Start IT " + str(self.pet_node_id)
+        return "Start IT " + str(self.pet_node_id) + "\nstate_id: " + str(self.state_id)
 
     def __init__(
         self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex, parent_loop_pet_node_id: PETNodeID

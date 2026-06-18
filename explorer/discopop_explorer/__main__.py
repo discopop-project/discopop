@@ -69,8 +69,8 @@ def parse_args() -> ExplorerArguments:
         help="Dump DetectionResult object to JSON file. If a path is given, the DetectionResult object is written to the given file, otherwise to detection_result_dump.json. Contents are equivalent to the json output. NOTE: This dump contains a dump of the PET Graph!",
     )
     parser.add_argument(
-        "--enable-patterns", type=str, nargs="?", default="reduction,doall",
-        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,pipeline,geodec,simplegpu. Default: reduction,doall",
+        "--enable-patterns", type=str, nargs="?", default="reduction,doall,task",
+        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,task,pipeline,geodec,simplegpu. Default: reduction,doall,task",
     )
     parser.add_argument("--load-existing-doall-and-reduction-patterns", action="store_true", help="Skip pattern detection and insert existing patterns.json contents into the created detection_result.json")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
@@ -106,7 +106,7 @@ def parse_args() -> ExplorerArguments:
         help="Path to llvm-cxxfilt executable. Required for task pattern detector if non-standard path should be used.",
     )
     experimental_parser.add_argument(
-        "--disable-statistics", action="store_false", help="Disable the calculation and storing of statistics for code and generated suggestions."
+        "--enable-statistics", action="store_true", help="Enable the calculation and storing of statistics for code and generated suggestions."
     )
     experimental_parser.add_argument(
         "--plot-pet", type=str, nargs="?", default=None, const="explorer/pet_plot.gexf",
@@ -172,7 +172,7 @@ def parse_args() -> ExplorerArguments:
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
         load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
-        collect_statistics=arguments.disable_statistics,
+        collect_statistics=arguments.enable_statistics,
         jobs=arguments.jobs,
         enable_pet_plot_file=arguments.plot_pet,
         enable_task_graph_plot=arguments.plot_task_graph,

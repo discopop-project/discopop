@@ -12,6 +12,7 @@ import os
 import tkinter as tk
 from tkinter import ttk
 from typing import Optional
+from ttkthemes import ThemedStyle  # type: ignore
 
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
 from discopop_library.ProjectManager.utilities.initializeFiles import (
@@ -196,8 +197,6 @@ class ConfigManagerApp(  # type: ignore
         self._start_modification_polling()
 
     def _setup_styles(self) -> None:
-        from ttkthemes import ThemedStyle
-
         style = ThemedStyle(self, theme="scidblue")
         # style = ttk.Style()
 

@@ -22,12 +22,13 @@ from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import Executi
 from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor, NodeShape, StatisticsGraph
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.optimization.check_single_combination import check_single_combination
+from discopop_library.EmpiricalAutotuning.optimization.coordinate_descent_combination import (
+    execute_coordinate_descent_combination,
+)
 from discopop_library.EmpiricalAutotuning.optimization.evolutionary_combination import execute_evolutionary_combination
+from discopop_library.EmpiricalAutotuning.optimization.greedy_combination import execute_greedy_combination
 from discopop_library.EmpiricalAutotuning.optimization.linear_hotspot_combination import (
     execute_linear_hotspot_combination,
-)
-from discopop_library.EmpiricalAutotuning.optimization.linear_hotspot_combination_with_refinement import (
-    execute_linear_hotspot_combination_with_refinement,
 )
 
 from discopop_library.EmpiricalAutotuning.optimization.measure_only import execute_measure_only
@@ -96,7 +97,7 @@ def run(arguments: AutotunerArguments) -> None:
     # load suggestions
     with open(os.path.join(arguments.dot_dp_path, "explorer", "detection_result_dump.json"), "r") as f:
         tmp_str = f.read()
-    detection_result: DetectionResult = jsonpickle.decode(tmp_str)
+    detection_result: DetectionResult = jsonpickle.decode(tmp_str, keys=True)
     logger.debug("loaded suggestions")
 
     # get metadata: highest average runtime in hotspot information. Used to filter relevant loops (1% runtime contribution)
@@ -115,21 +116,10 @@ def run(arguments: AutotunerArguments) -> None:
 
     time_limit_s = 3600  # seconds
 
+    optimization_start_time = time.time()
     if arguments.suggestions is None:
         if arguments.algorithm == 1:
             execute_linear_hotspot_combination(
-                detection_result,
-                hotspot_information,
-                logger,
-                time_limit_s,
-                reference_configuration,
-                arguments,
-                timeout_after,
-                debug_stats,
-                get_unique_configuration_id,
-            )
-        elif arguments.algorithm == 2:
-            execute_linear_hotspot_combination_with_refinement(
                 detection_result,
                 hotspot_information,
                 logger,
@@ -154,6 +144,30 @@ def run(arguments: AutotunerArguments) -> None:
         #            )
         elif arguments.algorithm == 3:
             execute_evolutionary_combination(
+                detection_result,
+                hotspot_information,
+                logger,
+                time_limit_s,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                debug_stats,
+                get_unique_configuration_id,
+            )
+        elif arguments.algorithm == 4:
+            execute_greedy_combination(
+                detection_result,
+                hotspot_information,
+                logger,
+                time_limit_s,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                debug_stats,
+                get_unique_configuration_id,
+            )
+        elif arguments.algorithm == 5:
+            execute_coordinate_descent_combination(
                 detection_result,
                 hotspot_information,
                 logger,
@@ -190,6 +204,8 @@ def run(arguments: AutotunerArguments) -> None:
             [int(s) for s in arguments.suggestions.split(",")],
         )
 
+    optimization_time_s = time.time() - optimization_start_time
+
     # select best option and create code folder
     if arguments.algorithm == 1:
         for stat_entry in sorted(debug_stats, key=lambda x: len(x[0]), reverse=True):
@@ -203,15 +219,6 @@ def run(arguments: AutotunerArguments) -> None:
                 if not arguments.skip_cleanup:
                     sibling_config.deleteFolder()
                 break
-    elif arguments.algorithm == 2:
-        sibling_config = reference_configuration.create_copy(
-            arguments, "par_settings.json", get_unique_configuration_id
-        )
-        sibling_config.apply_suggestions(arguments, debug_stats[-1][0])
-        sibling_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
-        best_suggestion_configuration = (debug_stats[-1][0], sibling_config)
-        if not arguments.skip_cleanup:
-            sibling_config.deleteFolder()
     else:
         for stat_entry in sorted(debug_stats, key=lambda x: (x[1])):
             if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
@@ -265,6 +272,7 @@ def run(arguments: AutotunerArguments) -> None:
         print("Applied suggestions: " + str(best_suggestion_configuration[0]))
         print("Speedup: ", round(speedup, 3))
         print("Parallel efficiency: ", round(parallel_efficiency, 3))
+        print("Optimization time: ", str(round(optimization_time_s, 1)) + "s")
         print("##############################")
 
         # export results to result.json

@@ -8,6 +8,7 @@
 
 import logging
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -26,6 +27,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     explorer_running = False
     explorer_output_text: Optional[scrolledtext.ScrolledText] = None
     explorer_run_button: Optional[ttk.Button] = None
+    explorer_stop_button: Optional[ttk.Button] = None
     browse_suggestions_button: Optional[ttk.Button] = None
     no_suggestions_label: Optional[ttk.Label] = None
     prerequisite_info_label: Optional[ttk.Label] = None
@@ -35,6 +37,8 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     _pattern_detection_tab_tooltip: Optional[Tooltip] = None
     _pattern_detection_tab_tooltip_timer: Optional[str] = None
     _pattern_detection_tab_tooltip_active_tab: Optional[int] = None
+    _explorer_process: Optional["subprocess.Popen[str]"] = None
+    _explorer_stopped: bool = False
 
     def _build_pattern_detection_panel(self, parent: tk.Widget) -> None:
         main_paned = tk.PanedWindow(parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
@@ -85,6 +89,11 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             button_frame, text="Run Pattern Detection", command=self._run_pattern_detection, state="disabled"
         )
         self.explorer_run_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        self.explorer_stop_button = ttk.Button(
+            button_frame, text="Stop", command=self._stop_pattern_detection, state="disabled"
+        )
+        self.explorer_stop_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.browse_suggestions_button = ttk.Button(
             button_frame, text="Browse Suggestions", command=self._open_suggestion_browser, state="disabled"
@@ -243,8 +252,12 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             return
 
         self.explorer_running = True
+        self._explorer_stopped = False
         if self.explorer_run_button is not None:
             self.explorer_run_button.config(state="disabled", text="⟳ Running...")
+
+        if self.explorer_stop_button is not None:
+            self.explorer_stop_button.config(state="normal")
 
         if self.no_suggestions_label is not None:
             self.no_suggestions_label.pack_forget()
@@ -313,8 +326,8 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             sys.executable,
             "-m",
             "discopop_explorer",
-            "--path",
-            project_path,
+            #            "--path",
+            #            project_path,
             "--enable-patterns",
             enable_patterns,
             "--log",
@@ -326,26 +339,31 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         output_callback("Running pattern detection...\n\n")
 
-        process = subprocess.Popen(
+        self._explorer_process = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,
             bufsize=1,
+            cwd=project_path,
+            start_new_session=True,
         )
 
-        assert process.stdout is not None
-        for line in process.stdout:
+        assert self._explorer_process.stdout is not None
+        for line in self._explorer_process.stdout:
             cleaned = clean_ansi_output(line.rstrip("\n"))
             if cleaned:
                 output_callback(cleaned + "\n")
 
-        process.wait()
+        self._explorer_process.wait()
+        returncode = self._explorer_process.returncode
+        self._explorer_process = None
 
-        if process.returncode != 0:
-            raise RuntimeError(f"Explorer exited with return code {process.returncode}")
+        if returncode != 0:
+            raise RuntimeError(f"Explorer exited with return code {returncode}")
 
-        output_callback("\nPattern detection completed.\n")
+        if not self._explorer_stopped:
+            output_callback("\nPattern detection completed.\n")
 
     def _update_pattern_detection_tab_state(self, enabled: bool) -> None:
         try:
@@ -373,6 +391,9 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         if self.explorer_run_button is not None:
             self.explorer_run_button.config(state="normal", text="Run Pattern Detection")
 
+        if self.explorer_stop_button is not None:
+            self.explorer_stop_button.config(state="disabled")
+
         self._update_pattern_detection_ui()
         self._refresh_suggestion_selection_display()
 
@@ -382,3 +403,14 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         else:
             self.status_label.config(text="Pattern detection failed", foreground="red")
             self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+
+    def _stop_pattern_detection(self) -> None:
+        self._explorer_stopped = True
+        if self._explorer_process is not None:
+            try:
+                os.killpg(os.getpgid(self._explorer_process.pid), signal.SIGTERM)
+            except (ProcessLookupError, OSError):
+                self._explorer_process.terminate()
+        if self.explorer_stop_button is not None:
+            self.explorer_stop_button.config(state="disabled")
+        self.status_label.config(text="Stopping pattern detection...", foreground="orange")

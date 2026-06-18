@@ -8,7 +8,7 @@
 # the 3-Clause BSD License. See the LICENSE file in the package base
 # directory for details.
 
-SCRIPT_PATH="$(readlink -fm "$0")"
+SCRIPT_PATH="$(readlink -fm "$0" 2>/dev/null || readlink -f "$0" 2>/dev/null || echo "$0")"
 
 # ensure that copy of script in build folder is invoked instead of the "original"
 if [[ "${SCRIPT_PATH}" == *"discopop/scripts/"* ]]; then
@@ -26,30 +26,54 @@ fi
 # SETTINGS
 DP_BUILD="$(dirname "$(dirname ${SCRIPT_PATH})")"
 LLVM_CLANG=""
-LLVM_CLANGPP=""
 for _v in 22 21 20 19; do
     if command -v clang-$_v &> /dev/null; then
         LLVM_CLANG=$(which clang-$_v)
-        LLVM_CLANGPP=$(which clang++-$_v)
         break
     fi
 done
 if [ -z "$LLVM_CLANG" ]; then
-    if command -v clang &> /dev/null && command -v clang++ &> /dev/null; then
+    if command -v clang &> /dev/null; then
         LLVM_CLANG=$(which clang)
-        LLVM_CLANGPP=$(which clang++)
-    else
-        echo "ERROR: No supported clang version (19-22) found in PATH"
-        exit 1
     fi
+fi
+# macOS: Homebrew LLVM is keg-only and not on PATH — probe brew prefixes
+if [ -z "$LLVM_CLANG" ] && command -v brew &> /dev/null; then
+    for _v in 22 21 20 19; do
+        _brew_prefix=$(brew --prefix "llvm@$_v" 2>/dev/null)
+        if [ -n "$_brew_prefix" ] && [ -x "$_brew_prefix/bin/clang" ]; then
+            LLVM_CLANG="$_brew_prefix/bin/clang"
+            break
+        fi
+    done
+fi
+if [ -z "$LLVM_CLANG" ]; then
+    echo "ERROR: No supported clang version (19-22) found in PATH"
+    exit 1
 fi
 
 # original arguments: "$@"
 #echo "WRAPPED CC COMPILE..."
 #echo "ARGS: ${@}"
 
-# script will be located alongside LLVMDiscoPoP.so and libDiscoPoP_RT.a in the python venv/lib/../discopop-profiler.libs
+# script will be located alongside LLVMDiscoPoP.{so,dylib} and libDiscoPoP_RT.a in the python venv/lib/../discopop-profiler.libs
 PARENT_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
-${LLVM_CLANG} "$@" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${PARENT_PATH}/LLVMDiscoPoP.so -Xclang -fpass-plugin=${PARENT_PATH}/LLVMDiscoPoP.so -fPIC -Xlinker -L${PARENT_PATH} -Xlinker -lDiscoPoP_RT -Xlinker -lpthread -Xlinker -v -Xlinker -lstdc++
+# macOS uses .dylib for LLVM MODULE plugins; Linux uses .so
+if [ -f "${PARENT_PATH}/LLVMDiscoPoP.dylib" ]; then
+    DISCOPOP_PLUGIN="${PARENT_PATH}/LLVMDiscoPoP.dylib"
+else
+    DISCOPOP_PLUGIN="${PARENT_PATH}/LLVMDiscoPoP.so"
+fi
+# pthread is bundled into libSystem on macOS; only link explicitly on Linux
+PTHREAD_XLINKER_FLAGS=()
+[[ "$(uname)" != "Darwin" ]] && PTHREAD_XLINKER_FLAGS=(-Xlinker -lpthread)
+${LLVM_CLANG} "$@" -g -O0 -fno-discard-value-names -Xclang -load -Xclang ${DISCOPOP_PLUGIN} -Xclang -fpass-plugin=${DISCOPOP_PLUGIN} -fPIC -Xlinker -L${PARENT_PATH} -Xlinker -lDiscoPoP_RT "${PTHREAD_XLINKER_FLAGS[@]}" -Xlinker -v -Xlinker -lstdc++
 
+# dump ast for later use during pattern detection
+if [ -n "$DOT_DISCOPOP" ]; then
+  TMP_DOT_DISCOPOP="$DOT_DISCOPOP"
+else
+  TMP_DOT_DISCOPOP="$PWD/.discopop"
+fi
+${LLVM_CLANG} "$@" -fsyntax-only -Xclang -ast-dump=json >> "$TMP_DOT_DISCOPOP/profiler/ast_dump.json"
 # WARNING: OUTPUT IS A .ll FILE, ENDING IS .o

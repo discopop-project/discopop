@@ -12,6 +12,7 @@ on:
   push:
     branches:
       - master
+      - new_explorer  # This is a temporary addition and should be removed before merging into master!
   pull_request:
     branches:
       - "**"
@@ -91,7 +92,12 @@ jobs:
       - name: Setup venv and install DiscoPoP
         run: |
           python3 -m venv venv
+<<<<<<< MCP_test
           venv/bin/pip install -e . ./profiler ./explorer ./library ./mcp_server
+=======
+          venv/bin/pip install -e . ./profiler ./explorer ./library ./hotspot_detection
+          venv/bin/pip install pytest
+>>>>>>> new_explorer
 
       - name: Run MyPy Type Checking
         run: |
@@ -104,6 +110,10 @@ jobs:
       - name: Check formatting of DiscoPoP Library
         run: |
             venv/bin/python3 -m black -l 120 --check library
+
+      - name: Check formatting of DiscoPoP Hotspot Detection
+        run: |
+            venv/bin/python3 -m black -l 120 --check hotspot_detection/discopop_hotspot_analyzer hotspot_detection/discopop_hotspot_cc hotspot_detection/discopop_hotspot_cxx
 
  #     - name: Execute C++ unit tests
  #       run: |
