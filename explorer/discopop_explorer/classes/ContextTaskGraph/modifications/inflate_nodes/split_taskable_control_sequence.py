@@ -186,7 +186,7 @@ def split_taskable_control_sequence(
                 if parent_is_same_loop and len(succ_control_edge_successors) == 0:
                     parent_is_same_loop = False
 
-                if True:  # disable task reporting for debug purposes
+                if False:  # disable task reporting for debug purposes
                     if parent_is_same_loop:
                         print(" === FOUND TASK LOOP ===")
                     else:

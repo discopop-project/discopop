@@ -36,6 +36,7 @@ repos:
   hooks:
     - id: mypy
       args: [--config-file=mypy.ini, --ignore-missing-imports]
+      exclude: '^test/'
       #additional_dependencies: [dep==version.version.version, ...]
       # NOTE: pre-commit runs mypy in a virtualenv, so dependencies are not installed unless explicitly listed here
 

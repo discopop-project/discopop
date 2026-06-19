@@ -16,8 +16,8 @@ from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 def dump_to_pickled_json(self: PEGraphX) -> str:
     """Encodes and returns the entire Object into a pickled json string.
     The encoded string can be reconstructed into an object by using:
-    jsonpickle.decode(json_str)
+    jsonpickle.decode(json_str, keys=True)
 
     :return: encoded string
     """
-    return cast(str, jsonpickle.encode(self))
+    return cast(str, jsonpickle.encode(self, keys=True))

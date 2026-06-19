@@ -33,6 +33,7 @@ class Dependency:
     metadata_sink_ancestors: Optional[List[LineID]]
     metadata_source_ancestors: Optional[List[LineID]]
     origin: Optional[DepOrigin] = None
+    is_gep_result_dependency: bool = False
 
     def __init__(self, type: EdgeType):
         self.etype = type

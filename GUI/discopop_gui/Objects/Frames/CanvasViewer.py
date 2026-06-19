@@ -15,8 +15,15 @@ from discopop_gui.Objects.Canvases.RoundedSquareButtons.Mouse import Mouse as Mo
 from discopop_gui.Objects.Canvases.RoundedSquareButtons.Magnifier import Magnifier as MagnifierButton
 from discopop_gui.Enums.ViewerMode import ViewerMode
 
+
 class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
-    def __init__(self, parent: tk.Misc, canvas_builder: Callable[["CanvasViewer", ViewerMode], ViewableCanvasT], *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        parent: tk.Misc,
+        canvas_builder: Callable[["CanvasViewer[ViewableCanvasT]", ViewerMode], ViewableCanvasT],
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
         super().__init__(parent, *args, **kwargs)
 
         self._selected_option: ViewerMode = ViewerMode.MAIN
@@ -24,8 +31,8 @@ class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
         self._canvas = canvas_builder(self, self._selected_option)
         self._toolbar = tk.Frame(self)
 
-        self._main = MouseButton(self._toolbar, command = self.select_main)
-        self._magnifier = MagnifierButton(self._toolbar, command = self.select_magnifier)
+        self._main = MouseButton(self._toolbar, command=self.select_main)
+        self._magnifier = MagnifierButton(self._toolbar, command=self.select_magnifier)
 
         self._canvas.grid(row=0, column=0, sticky="nsew")
         self._toolbar.grid(row=1, column=0, sticky="ew")
