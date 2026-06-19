@@ -154,8 +154,6 @@ def identify_simple_tasking(
 
     task_group_num = 0
 
-    show_all_plots(context_task_graph=ctg)
-
     for tpc in simplification_results:
 
         from discopop_explorer.pattern_detectors.task_parallelism.classes import TPIType

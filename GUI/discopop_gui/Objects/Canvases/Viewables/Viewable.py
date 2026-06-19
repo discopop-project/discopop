@@ -7,14 +7,19 @@
 # directory for details.
 
 import tkinter as tk
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from discopop_gui.Enums.ViewerMode import ViewerMode
+from discopop_gui.Objects.CanvasItems.Popup import Popup
+
+if TYPE_CHECKING:
+    from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
 
 class Viewable(tk.Canvas):
-    def __init__(self, parent: tk.Misc, viewer_mode: ViewerMode, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, parent: tk.Misc, canvas_viewer : "CanvasViewer", viewer_mode: ViewerMode, *args: Any, **kwargs: Any) -> None:
         super().__init__(parent, *args, **kwargs)
 
+        self._canvas_viewer = canvas_viewer
         self._viewer_mode = viewer_mode
 
         self._original_coordinates : dict[int, tuple[float, ...]] = {}
@@ -28,6 +33,9 @@ class Viewable(tk.Canvas):
         self._last_drag_y: float | None = None
         self._drag_rectangle_id : int | None = None
 
+        self._popup = Popup(self)
+        self._popup_hide_threshold: float = 50.0
+
         self.bind("<ButtonPress-1>", self._left_press)
         self.bind("<B1-Motion>", self._left_drag)
         self.bind("<ButtonRelease-1>", self._left_release)
@@ -35,6 +43,23 @@ class Viewable(tk.Canvas):
         self.bind("<ButtonPress-3>", self._right_press)
         self.bind("<B3-Motion>", self._right_drag)
         self.bind("<ButtonRelease-3>", self._right_release)
+
+        self.bind("<Motion>", self._check_popup_distance)
+
+    def _check_popup_distance(self, event: tk.Event) -> None:
+        if self._popup.get_visible() == False:
+            return
+
+        bbox = self._popup.get_last_bbox()
+        x1, y1, x2, y2 = bbox
+        cx = self.canvasx(event.x)
+        cy = self.canvasy(event.y)
+        threshold = self._popup_hide_threshold
+
+        if ((x1 - threshold) <= cx <= (x2 + threshold)) and ((y1 - threshold) <= cy <= (y2 + threshold)):
+            return
+        
+        self._popup.hide()
 
     def _left_press(self, event: tk.Event) -> None:
         self._start_drag(event, button=1)
@@ -305,6 +330,45 @@ class Viewable(tk.Canvas):
         self._store_original_coordinates(item_id)
         self._apply_transform_to_item(item_id)
         return item_id
+    
+    def clone_item_to_canvas(self, canvas: "Viewable", item_id: int,) -> int:
+        item_type = self.type(item_id)
+
+        coords = self._original_coordinates.get(item_id, tuple(self.coords(item_id)))
+
+        options = {}
+
+        config = self.itemconfigure(item_id)
+
+        if not config:
+            raise ValueError(f"Invalid canvas item_id: {item_id}")
+
+        for option in config:
+            try:
+                options[option] = self.itemcget(item_id, option)
+            except tk.TclError:
+                pass
+
+        match item_type:
+            case "oval":
+                return canvas.create_oval(*coords, **options)
+
+            case "rectangle":
+                return canvas.create_rectangle(*coords, **options)
+
+            case "line":
+                return canvas.create_line(*coords, **options)
+
+            case "polygon":
+                return canvas.create_polygon(*coords, **options)
+
+            case "text":
+                return canvas.create_text(*coords, **options)
+
+            case _:
+                raise NotImplementedError(
+                    f"Canvas item type '{item_type}' is not supported."
+                )
 
     def delete(self, *args: Any) -> None:
         if "all" in args:

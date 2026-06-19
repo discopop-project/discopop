@@ -8,32 +8,37 @@
 
 import tkinter as tk
 import networkx as nx
-from typing import Any, Dict, Tuple, List
+from typing import Any, Dict, Tuple, List, TYPE_CHECKING
 
 from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
 from discopop_gui.utils.TreeNode import TreeNode
-from discopop_gui.Objects.CanvasObjects.TreeNode import TreeNode as VisualTreeNode
+from discopop_gui.Objects.CanvasItems.TreeNode import TreeNode as VisualTreeNode
+
+if TYPE_CHECKING:
+    from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
 
 class WithTrees(ViewableCanvas):
     def __init__(
         self,
-        parent: tk.Misc,
+        parent: tk.Frame,
+        canvas_viewer: "CanvasViewer",
         viewer_mode: ViewerMode,
         trees: Dict[int, TreeNode] = {},
         *args: Any,
         **kwargs: Any,
     ) -> None:
-        super().__init__(parent, viewer_mode, *args, **kwargs)
+        super().__init__(parent, canvas_viewer, viewer_mode, *args, **kwargs)
+        self._canvas_viewer = canvas_viewer
         self._nodes : Dict[int, TreeNode] = trees
         self._visual_nodes : Dict[int, VisualTreeNode] = {}
 
-    def get_visual_node(self, id : int):
+    def get_visual_node(self, id : int) -> VisualTreeNode:
         return self._visual_nodes[id]
     
-    def create_visual_node(self, id: int) -> None:
+    def create_visual_node(self, id: int, state : str = "normal") -> bool:
         if id in self._visual_nodes:
-            return
+            return False
 
         node = self._nodes[id]
 
@@ -50,6 +55,7 @@ class WithTrees(ViewableCanvas):
             y + node_radius,
             fill=fill_color,
             outline="black",
+            state = state
         )
 
         text_id = self.create_text(
@@ -58,14 +64,23 @@ class WithTrees(ViewableCanvas):
             text=label,
             font=("Arial", 7),
             anchor="center",
+            state = state
         )
 
         self._visual_nodes[id] = VisualTreeNode(
             self,
             self._nodes[id],
+            self._popup,
             oval_id,
             text_id,
         )
+
+        return True
+    
+    def add_clone_to_canvas_viewer(self, starting_tree_node_id : int) -> None:
+        starting_tree_node = self.get_visual_node(starting_tree_node_id)
+        cloned_canvas : "WithTrees" = self._canvas_viewer.get_canvas(self._canvas_viewer.add_canvas())
+        starting_tree_node.recursive_copy_to_canvas(cloned_canvas)
 
     def build_trees(self, graph: nx.MultiDiGraph) -> None:
         self.delete("all")
