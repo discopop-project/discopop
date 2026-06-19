@@ -8,7 +8,7 @@
 
 install: venv
 # install discopop_explorer, library, profiler and hotspot_detection
-	venv/bin/pip install -e . ./profiler -e ./explorer -e ./library -e ./GUI ./hotspot_detection
+	venv/bin/pip install -e . ./profiler -e ./explorer -e ./library -e ./GUI ./hotspot_detection -e ./mcp_server
 
 venv:
 	python3 -m venv venv
