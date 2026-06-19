@@ -13,7 +13,7 @@ import shutil
 import signal
 import subprocess
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
 from filelock import FileLock
 
@@ -32,6 +32,7 @@ def execute_configuration(
     script_path: PATH,
     thread_count: int,
     timeout: Optional[float] = None,
+    process_started_callback: Optional[Callable[["subprocess.Popen[bytes]"], None]] = None,
 ) -> Optional[Tuple[int, float, str, str]]:
     # check prerequisites
     if not os.path.exists(settings_path):
@@ -76,6 +77,13 @@ def execute_configuration(
     my_env["DOT_DISCOPOP"] = project_copy_dp_path
     my_env["OMP_NUM_THREADS"] = str(thread_count)
 
+    # Ensure the PATH includes the directory where discopop tools are found
+    import sys
+
+    venv_bin = os.path.dirname(sys.executable)
+    if venv_bin not in my_env.get("PATH", ""):
+        my_env["PATH"] = venv_bin + os.pathsep + my_env.get("PATH", "")
+
     # print("MYENV:")
     # for key in my_env:
     #    print("--> ", key, " : ", my_env[key])
@@ -93,18 +101,21 @@ def execute_configuration(
         #            timeout=timeout,
         #        )
         if timeout is None:
-            cmd = str(script_path)
+            cmd = f"/bin/bash {str(script_path)}"
         else:
-            cmd = "timeout " + str(timeout) + " " + str(script_path)
+            cmd = f"timeout {str(timeout)} /bin/bash {str(script_path)}"
         p = subprocess.Popen(
             cmd,
-            cwd=config_path,
+            cwd=project_copy_root_path,
             executable="/bin/bash",
             shell=True,
             stderr=subprocess.PIPE,
             stdout=subprocess.PIPE,
             env=my_env,
         )
+
+        if process_started_callback is not None:
+            process_started_callback(p)
 
         stdout, stderr = p.communicate()
 

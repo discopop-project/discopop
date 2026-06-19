@@ -31,6 +31,7 @@ This document contains critical information about working with this codebase. Fo
 ## Setup
 ### Setup venv
 - in case the `venv` is not set up, execute `python3 -m venv venv` to create a new virtual environment
+- always use the `venv` located in the project root directory; if it is not already activated, activate it via `source venv/bin/activate` before running any Python commands
 
 ## Type checking
 ### Python
@@ -46,6 +47,7 @@ This document contains critical information about working with this codebase. Fo
 ## Testing
 ### Install python packages
 - to install python packages, execute `venv/bin/pip install . ./profiler ./library` from the root directory of the project
+- **Important:** The profiler module must be installed without the `-e` (editable) flag. Use `pip install ./profiler`, not `pip install -e ./profiler`. Editable mode breaks the relative paths required by `CXX_wrapper.sh` to locate compiled artifacts like `LLVMDiscoPoP.so`.
 ### Python
 - to execute python unit tests, use 'venv/bin/python -m unittest -v -k "*.end_to_end.*"'
 ### C++
@@ -61,3 +63,6 @@ You can execute a full example by following the steps below. The example should 
 - execute profiling via `cd example && ./a.out`
 - execute pattern analysis via `cd example/.discopop && ../../venv/bin/discopop_explorer`
 - check for existing parallelization suggestions by checking for created patch files in example/.discopop/patch_generator
+
+### Excecute CI Pipeline locally
+To execute the CI pipeline locally, use the following command from the root folder: `scripts/dev/run_ci_locally.sh`.

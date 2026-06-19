@@ -43,4 +43,6 @@ fi
 
 # script will be located alongside LLVMDiscoPoP.so and libDiscoPoP_RT.a in the python venv/lib/../discopop-profiler.libs
 PARENT_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
-${LLVM_CLANGPP} "$@" -L${PARENT_PATH} -lDiscoPoP_RT -lpthread -fPIC -v
+# pthread is bundled into libSystem on macOS; only link explicitly on Linux
+PTHREAD_FLAG=""; [[ "$(uname)" != "Darwin" ]] && PTHREAD_FLAG="-lpthread"
+${LLVM_CLANGPP} "$@" -L${PARENT_PATH} -lDiscoPoP_RT ${PTHREAD_FLAG} -fPIC -v

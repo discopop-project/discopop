@@ -86,7 +86,7 @@ global_pet = None
 #            raise ValueError("Mal-formatted MemoryRegion identifier: ", id_string)
 
 
-class PEGraphX(Plottable, object):
+class PEGraphX(Plottable, object):  # type: ignore[misc]
     g: nx.MultiDiGraph
     reduction_vars: List[Dict[str, str]]
     main: Node
@@ -508,7 +508,6 @@ class PEGraphX(Plottable, object):
 
     def enforce_single_function_exit_node(self) -> None:
         for func in all_nodes(self, FunctionNode):
-            print("FUNCTION: ", func)
             # define exit node
             file_id = func.file_id
             max_node_id_in_file = 0
@@ -529,7 +528,6 @@ class PEGraphX(Plottable, object):
             max_end_line = 0
             for node in subtree:
                 if len(out_edges(self, node.id, EdgeType.SUCCESSOR)) == 0:
-                    print("--> exit: ", node.id)
                     self.g.add_edge(node.id, exit_id, data=Dependency(EdgeType.SUCCESSOR))
                     max_end_line = max(max_end_line, node.end_line)
             exit_node.start_line = max_end_line

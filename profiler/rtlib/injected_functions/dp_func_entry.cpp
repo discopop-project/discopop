@@ -20,14 +20,16 @@
 
 #include "../static_callstate_transitions/utils.hpp"
 
+#ifdef __linux__
 #include <linux/limits.h>
+#endif
 
+#include <chrono>
 #include <cstdint>
 #include <iostream>
 #include <mutex>
 #include <set>
 #include <string>
-#include <chrono>
 
 using namespace std;
 
@@ -65,7 +67,7 @@ void __dp_func_entry(LID lid, int32_t isStart) {
     //
 #if DP_CALLTREE_PROFILING
 //    call_tree = new CallTree();
-    // metadata_queue = new MetaDataQueue(6); // TODO: add Worker argument
+// metadata_queue = new MetaDataQueue(6); // TODO: add Worker argument
 //    dependency_metadata_results_mtx = new std::mutex();
 //    dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
 #endif
@@ -110,10 +112,24 @@ void __dp_func_entry(LID lid, int32_t isStart) {
       // Static callPath tracing
       call_state_graph = new CallStateGraph();
       initialize_current_callpath_state();
-
     }
 #else
-    out->open("Output.txt", ios::out);
+    // Non-Linux: replicate the env-var + output-file + call-state setup from
+    // the Linux path above, but without /proc/self/exe (POSIX only).
+    {
+      char const *tmp = getenv("DOT_DISCOPOP");
+      if (tmp == NULL) {
+        setenv("DOT_DISCOPOP", ".discopop", 1);
+      }
+      std::string tmp_str(getenv("DOT_DISCOPOP"));
+      setenv("DOT_DISCOPOP_PROFILER", (tmp_str + "/profiler").data(), 1);
+      std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
+      tmp2 += "/dynamic_dependencies.txt";
+      out->open(tmp2.data(), ios::out);
+
+      call_state_graph = new CallStateGraph();
+      initialize_current_callpath_state();
+    }
 #endif
     assert(out->is_open() && "Cannot open a file to output dependences.\n");
 

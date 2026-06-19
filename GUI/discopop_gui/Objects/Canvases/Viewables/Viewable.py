@@ -6,6 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from __future__ import annotations
+
 import tkinter as tk
 from typing import Any, TYPE_CHECKING
 
@@ -15,6 +17,7 @@ from discopop_gui.Objects.CanvasItems.Popup import Popup
 if TYPE_CHECKING:
     from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
 
+
 class Viewable(tk.Canvas):
     def __init__(self, parent: tk.Misc, canvas_viewer : "CanvasViewer", viewer_mode: ViewerMode, *args: Any, **kwargs: Any) -> None:
         super().__init__(parent, *args, **kwargs)
@@ -22,16 +25,16 @@ class Viewable(tk.Canvas):
         self._canvas_viewer = canvas_viewer
         self._viewer_mode = viewer_mode
 
-        self._original_coordinates : dict[int, tuple[float, ...]] = {}
-        self._transform_scale : float = 1
-        self._transform_x : float = 0.0
-        self._transform_y : float = 0.0
+        self._original_coordinates: dict[int, tuple[float, ...]] = {}
+        self._transform_scale: float = 1
+        self._transform_x: float = 0.0
+        self._transform_y: float = 0.0
 
-        self._drag_start_x : float | None = None
-        self._drag_start_y : float | None = None
+        self._drag_start_x: float | None = None
+        self._drag_start_y: float | None = None
         self._last_drag_x: float | None = None
         self._last_drag_y: float | None = None
-        self._drag_rectangle_id : int | None = None
+        self._drag_rectangle_id: int | None = None
 
         self._popup = Popup(self)
         self._popup_hide_threshold: float = 50.0
@@ -60,30 +63,30 @@ class Viewable(tk.Canvas):
             return
         
         self._popup.hide()
-
-    def _left_press(self, event: tk.Event) -> None:
+        
+    def _left_press(self, event: tk.Event[tk.Canvas]) -> None:
         self._start_drag(event, button=1)
 
-    def _left_drag(self, event: tk.Event) -> None:
+    def _left_drag(self, event: tk.Event[tk.Canvas]) -> None:
         if self._viewer_mode == ViewerMode.ZOOM:
             self._update_zoom_rectangle(event, outline="blue")
 
-    def _left_release(self, event: tk.Event) -> None:
+    def _left_release(self, event: tk.Event[tk.Canvas]) -> None:
         self._finish_drag(event, button=1)
 
-    def _right_press(self, event: tk.Event) -> None:
+    def _right_press(self, event: tk.Event[tk.Canvas]) -> None:
         self._start_drag(event, button=3)
 
-    def _right_drag(self, event: tk.Event) -> None:
+    def _right_drag(self, event: tk.Event[tk.Canvas]) -> None:
         if self._viewer_mode == ViewerMode.MAIN:
             self._update_pan(event)
         elif self._viewer_mode == ViewerMode.ZOOM:
             self._update_zoom_rectangle(event, outline="red")
 
-    def _right_release(self, event: tk.Event) -> None:
+    def _right_release(self, event: tk.Event[tk.Canvas]) -> None:
         self._finish_drag(event, button=3)
 
-    def _start_drag(self, event: tk.Event, button: int) -> None:
+    def _start_drag(self, event: tk.Event[tk.Canvas], button: int) -> None:
         self._drag_start_x = self.canvasx(event.x)
         self._drag_start_y = self.canvasy(event.y)
         assert self._drag_start_x is not None
@@ -107,8 +110,8 @@ class Viewable(tk.Canvas):
             outline="blue" if button == 1 else "red",
             dash=(4, 2),
         )
-    
-    def _update_pan(self, event: tk.Event) -> None:
+
+    def _update_pan(self, event: tk.Event[tk.Canvas]) -> None:
         current_x = self.canvasx(event.x)
         current_y = self.canvasy(event.y)
 
@@ -128,12 +131,8 @@ class Viewable(tk.Canvas):
 
         self._apply_transform()
 
-    def _update_zoom_rectangle(self, event: tk.Event, outline: str) -> None:
-        if (
-            self._drag_start_x is None
-            or self._drag_start_y is None
-            or self._drag_rectangle_id is None
-        ):
+    def _update_zoom_rectangle(self, event: tk.Event[tk.Canvas], outline: str) -> None:
+        if self._drag_start_x is None or self._drag_start_y is None or self._drag_rectangle_id is None:
             return
 
         current_x = self.canvasx(event.x)
@@ -148,7 +147,7 @@ class Viewable(tk.Canvas):
             current_y,
         )
 
-    def _finish_drag(self, event: tk.Event, button: int) -> None:
+    def _finish_drag(self, event: tk.Event[tk.Canvas], button: int) -> None:
         if (
             self._viewer_mode == ViewerMode.MAIN
             or self._drag_start_x is None
@@ -244,7 +243,7 @@ class Viewable(tk.Canvas):
 
         canvas_ratio = canvas_width / canvas_height
         selected_ratio = selected_width / selected_height
-        scale_factor = 1
+        scale_factor = 1.0
 
         if selected_ratio > canvas_ratio:
             scale_factor = canvas_width / selected_width
@@ -296,8 +295,8 @@ class Viewable(tk.Canvas):
 
     def get_viewer_mode(self) -> ViewerMode:
         return self._viewer_mode
-    
-    def set_viewer_mode(self, viewer_mode : ViewerMode) -> None:
+
+    def set_viewer_mode(self, viewer_mode: ViewerMode) -> None:
         self._reset_drag_state()
         self._viewer_mode = viewer_mode
 

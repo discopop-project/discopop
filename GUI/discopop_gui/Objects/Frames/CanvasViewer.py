@@ -17,6 +17,7 @@ from discopop_gui.Objects.Canvases.RoundedSquareButtons.Magnifier import Magnifi
 from discopop_gui.Objects.Canvases.RoundedSquareButtons.Cross import Cross as CrossButton
 from discopop_gui.Enums.ViewerMode import ViewerMode
 
+
 class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
     def __init__(self, parent: tk.Misc, canvas_builder: Callable[[tk.Frame, "CanvasViewer", ViewerMode], ViewableCanvasT], *args: Any, **kwargs: Any) -> None:
         super().__init__(parent, *args, **kwargs)

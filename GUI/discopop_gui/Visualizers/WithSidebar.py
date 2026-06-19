@@ -14,6 +14,7 @@ from typing import Dict, Callable
 from discopop_gui.Types.FrameT import FrameT
 from discopop_gui.Visualizers.Base import Base
 
+
 class WithSidebar(Base):
     def __init__(self) -> None:
         super().__init__()
@@ -69,19 +70,15 @@ class WithSidebar(Base):
         self._filter.grid(row=0, column=0, sticky="nsew", padx=5, pady=(5, 2))
         self._filter_scrollbar.grid(row=0, column=1, sticky="ns", pady=(5, 2))
 
-        self._filter_button = tk.Button(
-            self._filter_container,
-            text="Apply Filter",
-            command=self._filter_button_click
-        )
+        self._filter_button = tk.Button(self._filter_container, text="Apply Filter", command=self._filter_button_click)
 
         self._filter_button.grid(row=1, column=0, columnspan=2, sticky="ew", padx=5, pady=(2, 5))
         self._filter_callback: Callable[[str], None] | None = None
 
         # Add all parts to the Pane
-        self._pane.add(self._sidebar_container, minsize=150, width=220, stretch = "never")
-        self._pane.add(self._frame_container, minsize=300, stretch = "always")
-        self._pane.add(self._filter_container, minsize=180, width=250, stretch = "never")
+        self._pane.add(self._sidebar_container, minsize=150, width=220, stretch="never")
+        self._pane.add(self._frame_container, minsize=300, stretch="always")
+        self._pane.add(self._filter_container, minsize=180, width=250, stretch="never")
 
         self._frame_selectors: Dict[str, tk.Button] = {}
 
@@ -111,11 +108,7 @@ class WithSidebar(Base):
         def selector_click(frame_name: str = name) -> None:
             self.show_frame(frame_name)
 
-        frame_selector = tk.Button(
-            self._sidebar,
-            text = name,
-            command = selector_click
-        )
+        frame_selector = tk.Button(self._sidebar, text=name, command=selector_click)
 
         self._frame_selectors[name] = frame_selector
 

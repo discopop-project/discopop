@@ -10,20 +10,18 @@
  *
  */
 
- #include "CallState.hpp"
+#include "CallState.hpp"
 
- void CallState::register_transition(std::int32_t trigger_instruction, CallState* target_state){
-    transitions[trigger_instruction] = target_state;
- }
+void CallState::register_transition(std::int32_t trigger_instruction, CallState *target_state) {
+  transitions[trigger_instruction] = target_state;
+}
 
- int32_t CallState::get_id(){
-    return id;
- }
+int32_t CallState::get_id() { return id; }
 
- CallState* CallState::get_transition_target(int32_t trigger_instruction){
-   auto pos = transitions.find(trigger_instruction);
-   if(pos == transitions.end()){
-      return nullptr;
-   }
-   return pos->second;
- }
+CallState *CallState::get_transition_target(int32_t trigger_instruction) {
+  auto pos = transitions.find(trigger_instruction);
+  if (pos == transitions.end()) {
+    return nullptr;
+  }
+  return pos->second;
+}

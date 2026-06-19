@@ -121,22 +121,27 @@ def show_configurations_with_execution(
         par_execute_successful = False
 
         # collect overview information
+        shared_compile_sh = os.path.join(arguments.project_config_dir, "compile.sh")
+        shared_dp_settings = os.path.join(arguments.project_config_dir, "dp_settings.json")
+        shared_hd_settings = os.path.join(arguments.project_config_dir, "hd_settings.json")
+        shared_seq_settings = os.path.join(arguments.project_config_dir, "seq_settings.json")
+        shared_par_settings = os.path.join(arguments.project_config_dir, "par_settings.json")
+
         # --> dp
-        dp_settings = os.path.join(config, "dp_settings.json")
-        dp_settings_exist = os.path.exists(dp_settings)
+        dp_settings_exist = os.path.exists(shared_dp_settings)
         if __is_selected(config_restrictions, config, "dp"):
             dp_project_path = (
                 arguments.project_root
                 if arguments.execute_inplace
-                else copy_configuration(arguments, config, dp_settings)
+                else copy_configuration(arguments, config, shared_dp_settings)
             )
 
             ret = execute_configuration(
                 arguments,
                 dp_project_path,
                 config,
-                dp_settings,
-                os.path.join(config, "compile.sh"),
+                shared_dp_settings,
+                shared_compile_sh,
                 __get_thread_count(config, "dp", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -147,7 +152,7 @@ def show_configurations_with_execution(
                     arguments,
                     dp_project_path,
                     config,
-                    dp_settings,
+                    shared_dp_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "dp", config_thread_counts),
                     arguments.timeout_execution,
@@ -156,21 +161,20 @@ def show_configurations_with_execution(
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, dp_project_path)
         # --> hd
-        hd_settings = os.path.join(config, "hd_settings.json")
-        hd_settings_exist = os.path.exists(hd_settings)
+        hd_settings_exist = os.path.exists(shared_hd_settings)
         if __is_selected(config_restrictions, config, "hd"):
             hd_project_path = (
                 arguments.project_root
                 if arguments.execute_inplace
-                else copy_configuration(arguments, config, hd_settings)
+                else copy_configuration(arguments, config, shared_hd_settings)
             )
 
             ret = execute_configuration(
                 arguments,
                 hd_project_path,
                 config,
-                hd_settings,
-                os.path.join(config, "compile.sh"),
+                shared_hd_settings,
+                shared_compile_sh,
                 __get_thread_count(config, "hd", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -181,7 +185,7 @@ def show_configurations_with_execution(
                     arguments,
                     hd_project_path,
                     config,
-                    hd_settings,
+                    shared_hd_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "hd", config_thread_counts),
                     arguments.timeout_execution,
@@ -190,20 +194,19 @@ def show_configurations_with_execution(
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, hd_project_path)
         # --> seq
-        seq_settings = os.path.join(config, "seq_settings.json")
-        seq_settings_exist = os.path.exists(seq_settings)
+        seq_settings_exist = os.path.exists(shared_seq_settings)
         if __is_selected(config_restrictions, config, "seq"):
             seq_project_path = (
                 arguments.project_root
                 if arguments.execute_inplace
-                else copy_configuration(arguments, config, seq_settings)
+                else copy_configuration(arguments, config, shared_seq_settings)
             )
             ret = execute_configuration(
                 arguments,
                 seq_project_path,
                 config,
-                seq_settings,
-                os.path.join(config, "compile.sh"),
+                shared_seq_settings,
+                shared_compile_sh,
                 __get_thread_count(config, "seq", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -214,7 +217,7 @@ def show_configurations_with_execution(
                     arguments,
                     seq_project_path,
                     config,
-                    seq_settings,
+                    shared_seq_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "seq", config_thread_counts),
                     arguments.timeout_execution,
@@ -223,20 +226,19 @@ def show_configurations_with_execution(
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, seq_project_path)
         # --> par
-        par_settings = os.path.join(config, "par_settings.json")
-        par_settings_exist = os.path.exists(par_settings)
+        par_settings_exist = os.path.exists(shared_par_settings)
         if __is_selected(config_restrictions, config, "par"):
             par_project_path = (
                 arguments.project_root
                 if arguments.execute_inplace
-                else copy_configuration(arguments, config, par_settings)
+                else copy_configuration(arguments, config, shared_par_settings)
             )
             ret = execute_configuration(
                 arguments,
                 par_project_path,
                 config,
-                par_settings,
-                os.path.join(config, "compile.sh"),
+                shared_par_settings,
+                shared_compile_sh,
                 __get_thread_count(config, "par", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -247,7 +249,7 @@ def show_configurations_with_execution(
                     arguments,
                     par_project_path,
                     config,
-                    par_settings,
+                    shared_par_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "par", config_thread_counts),
                     arguments.timeout_execution,

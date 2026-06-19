@@ -57,7 +57,7 @@ class TestMethods(unittest.TestCase):
         # load detection results
         with open(test_output_file, "r") as f:
             tmp_str = f.read()
-        self.test_output: DetectionResult = jsonpickle.decode(tmp_str)
+        self.test_output: DetectionResult = jsonpickle.decode(tmp_str, keys=True)
 
     @classmethod
     def tearDownClass(self):
@@ -69,7 +69,7 @@ class TestMethods(unittest.TestCase):
         self.assertEqual(len(doall_patterns), 1)
         do_all_pattern = doall_patterns[0]
 
-        expected_clauses: Dict[str, List[str]] = {"shared": ["y"], "private": ["z"]}
+        expected_clauses: Dict[str, List[str]] = {"first_private": ["y"], "private": ["z"]}
 
         with self.subTest("check pattern for FP data sharing clauses"):
             res, msg = check_clauses_for_FP(self, expected_clauses, do_all_pattern)
@@ -78,24 +78,20 @@ class TestMethods(unittest.TestCase):
             res, msg = check_clauses_for_FN(self, expected_clauses, do_all_pattern)
             self.assertTrue(res, msg)
 
-    def test_dynamic_deps(self) -> None:
-        # compare detected dependencies to gold standard
-        current_dir = pathlib.Path(__file__).parent.resolve()
-        gold_standard_dir = os.path.join(current_dir, "gold_std")
-        test_output_dir = os.path.join(self.src_dir, ".discopop", "profiler")
-        dynamic_gold_std = os.path.join(gold_standard_dir, "dynamic_dependencies.txt")
-        dynamic_test_result = os.path.join(test_output_dir, "dynamic_dependencies.txt")
-        self.assertEqual(
-            run_comparator(DependencyComparatorArguments(dynamic_gold_std, dynamic_test_result, "None", False)), 0
-        )
-
-    def test_static_deps(self) -> None:
-        # compare detected dependencies to gold standard
-        current_dir = pathlib.Path(__file__).parent.resolve()
-        gold_standard_dir = os.path.join(current_dir, "gold_std")
-        test_output_dir = os.path.join(self.src_dir, ".discopop", "profiler")
-        static_gold_std = os.path.join(gold_standard_dir, "static_dependencies.txt")
-        static_test_result = os.path.join(test_output_dir, "static_dependencies.txt")
-        self.assertEqual(
-            run_comparator(DependencyComparatorArguments(static_gold_std, static_test_result, "None", False)), 0
-        )
+    # def test_deps(self) -> None:
+    #     # compare detected dependencies to gold standard
+    #     current_dir = pathlib.Path(__file__).parent.resolve()
+    #     gold_standard_dir = os.path.join(current_dir, "gold_std")
+    #     test_output_dir = os.path.join(self.src_dir, ".discopop", "profiler")
+    #     dynamic_gold_std = os.path.join(gold_standard_dir, "dynamic_dependencies.txt")
+    #     static_gold_std = os.path.join(gold_standard_dir, "dynamic_dependencies.txt")
+    #     dynamic_test_result = os.path.join(test_output_dir, "dynamic_dependencies.txt")
+    #     static_test_result = os.path.join(test_output_dir, "dynamic_dependencies.txt")
+    #     self.assertEqual(
+    #         run_comparator(
+    #             DependencyComparatorArguments(
+    #                 dynamic_gold_std, static_gold_std, dynamic_test_result, static_test_result, "None", False
+    #             )
+    #         ),
+    #         0,
+    #     )

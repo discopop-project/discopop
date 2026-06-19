@@ -40,6 +40,23 @@ For detailed information on the gathered and stored data as well as the tools th
 sudo apt install python3 python3-pip python3-venv python3-tk build-essential make cmake git llvm-19-dev clang-19 libomp-19-dev libboost-all-dev
 # Replace 19 with 20, 21, or 22 if you prefer a newer LLVM release.
 ```
+
+#### Via `pacman` package manager (Arch-based distributions)
+```
+sudo pacman -S python python-pip tk base-devel cmake git llvm clang openmp boost
+# Arch ships the latest LLVM release. For a specific version (e.g., 19), install llvm19, clang19, and openmp from the AUR instead.
+```
+
+#### Via `Homebrew` package manager (macOS)
+```
+brew install python python-tk llvm@21 libomp boost ninja
+# For a specific LLVM version (e.g., 19), use llvm@19 instead of llvm.
+# Homebrew installs LLVM keg-only to avoid conflicting with Apple's clang. Add it to your PATH:
+export PATH="$(brew --prefix llvm@21)/bin:$PATH"
+export LDFLAGS="-L$(brew --prefix llvm@21)/lib"
+export CPPFLAGS="-I$(brew --prefix llvm@21)/include"
+```
+
 ### Latest release from PyPi
 ```
 pip install discopop==5.0.3a1
@@ -64,7 +81,18 @@ In case any issues arise during the process please do not hesitate to contact us
 - Installed required system packages
 - Installed profiler and python packages
 - Installed the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) for visualization of the results.
-### Example
+
+### Example (GUI)
+To launch the GUI, navigate to the project's folder and execute the `discopop` command.
+```
+# create a copy of the example code and enter the folder
+cd discopop_example
+# start the GUI. A wizard will start to help you configure your project.
+discopop
+```
+The below explanation on the Visual Studio Code Extension is also valid when using the GUI.
+
+### Example (manual)
 Instrument and execute the code.
 ```
 # create a copy of the example code and enter the folder

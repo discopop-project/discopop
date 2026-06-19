@@ -42,7 +42,7 @@ def from_optimizer_output(
     detection_result_dump_str = ""
     with open(os.path.join("explorer", "detection_result_dump.json")) as f:
         detection_result_dump_str = f.read()
-    detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str)
+    detection_result: DetectionResult = jsonpickle.decode(detection_result_dump_str, keys=True)
     if arguments.verbose:
         print("Done")
 

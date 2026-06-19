@@ -178,12 +178,22 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
 
       *outCUs << "\t\t<callsNode>" << endl;
       for (auto i : (cu->callLineTofunctionMap)) {
+        int idx = 0;  // for correctly accessing callLineToCallInstructionMap's value
         for (auto ii : i.second) {
-          *outCUs << "\t\t\t<nodeCalled atLine=\"" << dputil::decodeLID(i.first) << "\">" << ii->ID << "</nodeCalled>"
+          // get call instruction id
+          MDNode *md = cu->callLineToCallInstructionMap[i.first][idx]->getMetadata("dp.md.instr.id");
+          string callInstId = "UNKNOWN";
+          if(md && md->getNumOperands() > 0){
+            StringRef instruction_id_str = cast<MDString>(md->getOperand(0))->getString();
+            callInstId = instruction_id_str.split(':').second.str();
+          }
+          // append to XML file
+          *outCUs << "\t\t\t<nodeCalled atLine=\"" << dputil::decodeLID(i.first) << "\" callInstId=\"" << callInstId << "\">" << ii->ID << "</nodeCalled>"
                   << endl;
           // specifica for recursive fucntions inside loops. (Mo 5.11.2019)
           *outCUs << "\t\t\t\t<recursiveFunctionCall>" << ii->recursiveFunctionCall << "</recursiveFunctionCall>"
                   << endl;
+          idx++;
         }
       }
       *outCUs << "\t\t</callsNode>" << endl;
