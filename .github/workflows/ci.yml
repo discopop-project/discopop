@@ -92,12 +92,8 @@ jobs:
       - name: Setup venv and install DiscoPoP
         run: |
           python3 -m venv venv
-<<<<<<< MCP_test
-          venv/bin/pip install -e . ./profiler ./explorer ./library ./mcp_server
-=======
-          venv/bin/pip install -e . ./profiler ./explorer ./library ./hotspot_detection
+          venv/bin/pip install -e . ./profiler ./explorer ./library ./hotspot_detection ./GUI ./mcp_server
           venv/bin/pip install pytest
->>>>>>> new_explorer
 
       - name: Run MyPy Type Checking
         run: |
