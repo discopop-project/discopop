@@ -2670,13 +2670,13 @@ class TaskGraph(Plottable, object):
                     line_id = line_split[1]
                     mappings_dict[instruction_id] = line_id
 
-        # read stateID to callpath mapping
-        # the mapping file can list large amount of stateIDs, but only stateIDs that
-        # referenced as a source or sink in `dependencies` are looked up. So, we can collect
-        # that working set first and skip every other line, so the resident dict only
-        # holds what is used. Callpath components (e.g. "call_123", "..._loopstate_...")
-        # repeat heavily across states, so we intern each component and store immutable
-        # tuples
+        # read stateID to callpath mapping (prefix tree format: <NodeID> <ParentID> <Label>)
+        # the mapping file can list a large amount of stateIDs, but only stateIDs that are
+        # referenced as a source or sink in `dependencies` are looked up. So, we collect that
+        # working set first and reconstruct callpaths only for those, so the resident dict
+        # only holds what is used. Callpath components (e.g. "call_123", "..._loopstate_...")
+        # repeat heavily across states, so we intern each component and store immutable,
+        # canonicalized tuples.
         needed_state_ids: Set[str] = set()
         for dep_type_deps in dependencies.values():
             for source_location_deps in dep_type_deps.values():
@@ -2689,25 +2689,42 @@ class TaskGraph(Plottable, object):
         canonical_callpaths: Dict[Tuple[str, ...], Tuple[str, ...]] = dict()
         state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
         if os.path.exists(state_mappings_file):
+            # first pass: collect the prefix tree as {node_id: (parent_id, label)}
+            prefix_tree: Dict[str, Tuple[str, str]] = dict()
             with open(state_mappings_file, "r") as f:
                 for line in f:
                     line = line.strip()
                     if line.startswith("#") or len(line) == 0:
                         continue
                     line_split = [elem for elem in line.split(" ") if len(elem) > 0]
-                    if len(line_split) < 2:
+                    if len(line_split) < 3:
                         continue
-                    state_id = line_split[0]
-                    if state_id not in needed_state_ids:
-                        # never looked up
-                        continue
-                    raw_callpath = line_split[1]
-                    if "-->" in raw_callpath:
-                        callpath = tuple(sys.intern(s) for s in raw_callpath.split("-->"))
-                    else:
-                        callpath = (sys.intern(raw_callpath),)
-                    callpath = canonical_callpaths.setdefault(callpath, callpath)
-                    state_mappings_dict[state_id] = callpath
+                    node_id = line_split[0]
+                    parent_id = line_split[1]
+                    # labels shouldn't contain spaces, but join just in case
+                    label = sys.intern(" ".join(line_split[2:]))
+                    prefix_tree[node_id] = (parent_id, label)
+
+            # second pass: reconstruct the full callpath (root -> node order), but only for
+            # the stateIDs that are actually looked up. Each callpath is interned and
+            # canonicalized so repeated paths share memory.
+            for state_id in needed_state_ids:
+                if state_id in state_mappings_dict or state_id not in prefix_tree:
+                    continue
+                labels: List[str] = []
+                current = state_id
+                visited: Set[str] = set()
+                while current in prefix_tree and current not in visited:
+                    visited.add(current)
+                    cur_parent_id, cur_label = prefix_tree[current]
+                    # the root node points to itself, it carries no callpath label
+                    if cur_parent_id == current:
+                        break
+                    labels.append(cur_label)
+                    current = cur_parent_id
+                callpath = tuple(reversed(labels))
+                callpath = canonical_callpaths.setdefault(callpath, callpath)
+                state_mappings_dict[state_id] = callpath
 
         # Build a reverse index {lineID: WorkContexts whose code scope contains it} once.
         # The per-location context lookup below used to scan every context and rebuild its
