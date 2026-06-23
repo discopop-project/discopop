@@ -43,6 +43,18 @@ CallStateGraph::CallStateGraph() {
     register_transition(std::stoi(source_callstate_id_str), std::stoi(trigger_instruction_id_str),
                         std::stoi(target_callstate_id_str));
   }
+  std::string tmp_3(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp_3 += "/callpath_state_return_targets.txt";
+  std::ifstream return_targets_file(tmp_3);
+  while (std::getline(return_targets_file, line)) {
+    if (line[0] == '#') {
+      continue;
+    }
+    std::size_t pos = line.find(' ');
+    std::string source_callstate_id_str = line.substr(0, pos);
+    std::string target_callstate_id_str = line.substr(pos + 1);
+    register_implicit_return_transition(std::stoi(source_callstate_id_str), std::stoi(target_callstate_id_str));
+  }
   auto end_time = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
   std::cout << "[CallStateGraph()]: " << ((double)duration.count() / 1000.0) << "s" << std::endl;
@@ -73,4 +85,11 @@ void CallStateGraph::register_transition(std::int32_t source_call_state_id, std:
   CallState *source = get_or_register_node(source_call_state_id);
   CallState *target = get_or_register_node(target_call_state_id);
   source->register_transition(trigger_instruction, target);
+}
+
+void CallStateGraph::register_implicit_return_transition(std::int32_t source_call_state_id,
+                                                         std::int32_t target_call_state_id) {
+  CallState *source = get_or_register_node(source_call_state_id);
+  CallState *target = get_or_register_node(target_call_state_id);
+  source->register_implicit_return_transition(target);
 }
