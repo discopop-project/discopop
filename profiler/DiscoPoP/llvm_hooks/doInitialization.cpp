@@ -47,15 +47,18 @@ bool DiscoPoP::doInitialization(Module &M) {
     project_overview_file << std::put_time(&tm, "%d_%m_%Y-%H_%M_%S") << " " << std::filesystem::absolute(std::string(getenv("DOT_DISCOPOP"))).string() << "\n";
     project_overview_file.close();
   }
-  // prepare profiler directory - delete if it already exists to prevent stale data accumulation across runs
-  if (std::filesystem::exists(getenv("DOT_DISCOPOP_PROFILER"))) {
-    std::filesystem::remove_all(getenv("DOT_DISCOPOP_PROFILER"));
+  // prepare profiler directory if not present
+  struct stat st2;
+  if (stat(getenv("DOT_DISCOPOP_PROFILER"), &st2) == -1) {
+    mkdir(getenv("DOT_DISCOPOP_PROFILER"), 0777);
   }
-  mkdir(getenv("DOT_DISCOPOP_PROFILER"), 0777);
-  // prepare statistics directory
+  // prepare statistics directory if not present
+  struct stat st3;
   std::string tmp_str_2(getenv("DOT_DISCOPOP_PROFILER"));
   tmp_str_2 += "/statistics";
-  mkdir(tmp_str_2.data(), 0777);
+  if (stat(tmp_str_2.data(), &st3) == -1) {
+    mkdir(tmp_str_2.data(), 0777);
+  }
 
   // prepare target directory if not present
   char const *tmp2 = getenv("DP_PROJECT_ROOT_DIR");
