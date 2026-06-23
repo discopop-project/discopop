@@ -178,6 +178,7 @@ def parse_args() -> ExplorerArguments:
         enable_task_graph_plot=arguments.plot_task_graph,
         enable_context_graph_plot=arguments.plot_context_graph,
         enable_visualizer=arguments.visualize,
+        visualize_on=None
     )
 
 
