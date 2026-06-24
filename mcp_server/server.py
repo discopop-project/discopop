@@ -15,6 +15,7 @@ Allows an LLM to drive the full instrumentation pipeline — compile, profile,
 detect patterns, and retrieve patches — without human intervention.
 """
 
+import datetime
 import json
 import logging
 import os
@@ -48,15 +49,64 @@ class DiscoPopMCPServer:
             logger.setLevel(logging.DEBUG)
         self._register_tools()
 
+    def _log_to_file(self, project_path: str, marker: str, tool_name: str, message: str) -> None:
+        """Append a timestamped entry to <project_path>/.discopop/mcp_server/log.txt.
+        Never raises — logging failures must not affect tool execution."""
+        try:
+            log_dir = Path(project_path) / ".discopop" / "mcp_server"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            line = f"{ts}  {marker:<8}  {tool_name:<40}  {message}\n"
+            with open(log_dir / "log.txt", "a") as f:
+                f.write(line)
+        except Exception:
+            pass
+
     def _log_call(self, tool_name: str, arguments: dict[str, Any]) -> None:
         logger.info(f"→ Incoming call: {tool_name}")
         if self.debug:
             logger.debug(f"  Arguments: {json.dumps(arguments, indent=2)}")
+        project_path = arguments.get("project_path", "")
+        if project_path:
+            args_summary = ", ".join(f"{k}={v!r}" for k, v in arguments.items() if k != "script_body")
+            self._log_to_file(project_path, "→ CALL", tool_name, args_summary)
 
     def _log_response(self, tool_name: str, result: Any) -> None:
         logger.info(f"← Outgoing response: {tool_name}")
         if self.debug:
             logger.debug(f"  Result: {json.dumps(result if isinstance(result, dict) else str(result), indent=2)}")
+        if isinstance(result, dict):
+            project_path = result.get("project_path", "")
+            if not project_path:
+                return
+            status = result.get("status", "?")
+            extras = {
+                k: v
+                for k in (
+                    "returncode",
+                    "elapsed_time",
+                    "patterns_found",
+                    "files_created",
+                    "profiling_files",
+                    "created_files",
+                    "patches",
+                )
+                if (v := result.get(k)) is not None
+            }
+            summary = f"status={status}" + (
+                ", "
+                + ", ".join(
+                    f"{k}={v!r}" if not isinstance(v, list) else f"{k}=[{len(v)} items]" for k, v in extras.items()
+                )
+                if extras
+                else ""
+            )
+            self._log_to_file(project_path, "← RESULT", tool_name, summary)
+
+    def _log_action(self, project_path: str, tool_name: str, message: str) -> None:
+        logger.debug(f"  Action [{tool_name}]: {message}")
+        if project_path:
+            self._log_to_file(project_path, "· ACTION", tool_name, message)
 
     def _error(self, message: str) -> list[TextContent]:
         result = {"status": "error", "message": message}
@@ -632,6 +682,7 @@ class DiscoPopMCPServer:
 
             configs_dir = p / ".discopop" / "project" / "configs"
             configs_dir.mkdir(parents=True, exist_ok=True)
+            self._log_action(project_path, "initialize_discopop_directory", f"Ensured directory exists: {configs_dir}")
 
             created: list[str] = []
             skipped: list[str] = []
@@ -642,10 +693,18 @@ class DiscoPopMCPServer:
                     json.dumps({"CC": base_cc, "CXX": base_cxx, "CFLAGS": cflags, "CXXFLAGS": cxxflags}, indent=2)
                 )
                 created.append(str(seq_settings_path.relative_to(p)))
+                self._log_action(
+                    project_path,
+                    "initialize_discopop_directory",
+                    f"Created seq_settings.json (CC={base_cc}, CXX={base_cxx})",
+                )
             else:
                 skipped.append(str(seq_settings_path.relative_to(p)))
 
             derive_settings_files(str(configs_dir), overwrite=False)
+            self._log_action(
+                project_path, "initialize_discopop_directory", "Derived dp/hd/par settings files from seq_settings.json"
+            )
             for name in ("dp_settings.json", "hd_settings.json", "par_settings.json"):
                 f = configs_dir / name
                 if str(f.relative_to(p)) not in skipped:
@@ -665,6 +724,7 @@ class DiscoPopMCPServer:
                 compile_sh.write_text(initial_content)
                 compile_sh.chmod(compile_sh.stat().st_mode | 0o111)
                 created.append(str(compile_sh.relative_to(p)))
+                self._log_action(project_path, "initialize_discopop_directory", "Created placeholder compile.sh")
             else:
                 skipped.append(str(compile_sh.relative_to(p)))
 
@@ -697,9 +757,11 @@ class DiscoPopMCPServer:
             compile_sh = configs_dir / "compile.sh"
             compile_sh.write_text(script_body)
             compile_sh.chmod(compile_sh.stat().st_mode | 0o111)
+            self._log_action(project_path, "set_compile_script", f"Wrote compile.sh ({len(script_body)} bytes)")
 
             result = {
                 "status": "success",
+                "project_path": project_path,
                 "path": str(compile_sh),
             }
             self._log_response("set_compile_script", result)
@@ -727,6 +789,7 @@ class DiscoPopMCPServer:
 
             config_dir = configs_dir / config_name
             config_dir.mkdir(parents=True, exist_ok=True)
+            self._log_action(project_path, "create_execution_configuration", f"Ensured config directory: {config_dir}")
 
             if not script_body.startswith("#!"):
                 script_body = "#!/bin/bash\n" + script_body
@@ -734,9 +797,15 @@ class DiscoPopMCPServer:
             execute_sh = config_dir / "execute.sh"
             execute_sh.write_text(script_body)
             execute_sh.chmod(execute_sh.stat().st_mode | 0o111)
+            self._log_action(
+                project_path,
+                "create_execution_configuration",
+                f"Wrote execute.sh for config '{config_name}' ({len(script_body)} bytes)",
+            )
 
             result = {
                 "status": "success",
+                "project_path": project_path,
                 "config_name": config_name,
                 "path": str(execute_sh),
             }
@@ -772,9 +841,15 @@ class DiscoPopMCPServer:
 
             if profiler_dir.exists():
                 shutil.rmtree(str(profiler_dir))
+                self._log_action(project_path, "instrument_project", "Deleted stale .discopop/profiler/ directory")
 
             pm_args = self._make_pm_args(project_path, timeout_seconds)
 
+            self._log_action(
+                project_path,
+                "instrument_project",
+                f"Launching compile.sh via dp_settings (discopop_cxx), config='{config_name}', timeout={timeout_seconds}s",
+            )
             original_cwd = os.getcwd()
             try:
                 exec_result = execute_configuration(
@@ -866,6 +941,11 @@ class DiscoPopMCPServer:
 
             pm_args = self._make_pm_args(project_path, timeout_seconds)
 
+            self._log_action(
+                project_path,
+                "run_instrumented_binary",
+                f"Launching execute.sh for config='{config_name}' to collect runtime profiling data, timeout={timeout_seconds}s",
+            )
             original_cwd = os.getcwd()
             try:
                 exec_result = execute_configuration(
@@ -916,6 +996,11 @@ class DiscoPopMCPServer:
                     "stderr": stderr,
                 }
             else:
+                self._log_action(
+                    project_path,
+                    "run_instrumented_binary",
+                    f"Profiling complete in {elapsed}s: {len(profiling_files)} output files collected",
+                )
                 result = {
                     "status": "success",
                     "returncode": returncode,
@@ -959,6 +1044,7 @@ class DiscoPopMCPServer:
                     "Ensure the DiscoPoP library package is installed: pip install ./library"
                 )
 
+            self._log_action(project_path, "run_pattern_detection", f"Invoking discopop_explorer in {discopop_dir}")
             proc = subprocess.run(
                 [explorer],
                 cwd=str(discopop_dir),
@@ -990,8 +1076,14 @@ class DiscoPopMCPServer:
                     "stderr": proc.stderr,
                 }
             else:
+                self._log_action(
+                    project_path,
+                    "run_pattern_detection",
+                    f"Pattern detection complete: {patterns_found} patterns found (do_all={pattern_types['do_all']}, reduction={pattern_types['reduction']}, task={pattern_types['task']}, pipeline={pattern_types['pipeline']})",
+                )
                 result = {
                     "status": "success",
+                    "project_path": project_path,
                     "returncode": proc.returncode,
                     "patterns_found": patterns_found,
                     "pattern_types": pattern_types,
@@ -1041,8 +1133,15 @@ class DiscoPopMCPServer:
                         }
                     )
 
+            pattern_ids: list[int] = sorted({p["pattern_id"] for p in patches if isinstance(p["pattern_id"], int)})
+            self._log_action(
+                project_path,
+                "get_parallelization_patches",
+                f"Found {len(patches)} patches across {len(pattern_ids)} pattern IDs: {pattern_ids}",
+            )
             result = {
                 "status": "success",
+                "project_path": project_path,
                 "patches": patches,
             }
             self._log_response("get_parallelization_patches", result)
