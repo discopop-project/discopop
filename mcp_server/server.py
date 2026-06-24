@@ -185,7 +185,7 @@ class DiscoPopMCPServer:
                 Tool(
                     name="check_configurations_status",
                     description=(
-                        "Check whether the DiscoPoP directory has been initialised and whether "
+                        "Read-only. Check whether the DiscoPoP directory has been initialised and whether "
                         "the compile script and execution configurations are set up. "
                         "Call this at the start of a session to determine whether "
                         "initialize_discopop_directory, set_compile_script, and "
@@ -214,7 +214,7 @@ class DiscoPopMCPServer:
                 Tool(
                     name="check_profiling_status",
                     description=(
-                        "Check whether data dependency profiling results already exist for the project. "
+                        "Read-only. Check whether data dependency profiling results already exist for the project. "
                         "Call this before instrument_project or run_instrumented_binary to determine "
                         "whether these steps can be skipped because valid results are already present. "
                         "\n\n"
@@ -246,7 +246,7 @@ class DiscoPopMCPServer:
                 Tool(
                     name="check_parallelization_status",
                     description=(
-                        "Check whether parallelization pattern detection has already been run "
+                        "Read-only. Check whether parallelization pattern detection has already been run "
                         "and whether patch files are available. "
                         "Call this before run_pattern_detection or get_parallelization_patches "
                         "to determine whether these steps can be skipped. "
@@ -278,7 +278,7 @@ class DiscoPopMCPServer:
                 Tool(
                     name="check_hotspot_profiling_status",
                     description=(
-                        "Check whether hotspot profiling data has been collected for the project. "
+                        "Read-only. Check whether hotspot profiling data has been collected for the project. "
                         "Call this before instrument_for_hotspot_detection or run_hotspot_profiling "
                         "to determine whether these steps can be skipped. "
                         "\n\n"
@@ -308,7 +308,7 @@ class DiscoPopMCPServer:
                 Tool(
                     name="check_hotspot_analysis_status",
                     description=(
-                        "Check whether hotspot analysis results (Hotspots.json) are available. "
+                        "Read-only. Check whether hotspot analysis results (Hotspots.json) are available. "
                         "Call this before run_hotspot_analysis to determine whether the step can "
                         "be skipped because a current Hotspots.json already exists. "
                         "\n\n"
