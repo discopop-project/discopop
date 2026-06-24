@@ -10,7 +10,7 @@
 
 """DiscoPoP MCP Server
 
-A Model Context Protocol server that exposes DiscoPoP functionality to Claude.
+A Model Context Protocol server that exposes DiscoPoP functionality to LLM Agents.
 Allows an LLM to drive the full instrumentation pipeline — compile, profile,
 detect patterns, and retrieve patches — without human intervention.
 """
