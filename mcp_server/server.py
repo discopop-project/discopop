@@ -140,7 +140,17 @@ class DiscoPopMCPServer:
         async def handle_tool_call(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             self._log_call(name, arguments)
 
-            if name == "get_configurations":
+            if name == "check_configurations_status":
+                return self._handle_check_configurations_status(arguments)
+            elif name == "check_profiling_status":
+                return self._handle_check_profiling_status(arguments)
+            elif name == "check_parallelization_status":
+                return self._handle_check_parallelization_status(arguments)
+            elif name == "check_hotspot_profiling_status":
+                return self._handle_check_hotspot_profiling_status(arguments)
+            elif name == "check_hotspot_analysis_status":
+                return self._handle_check_hotspot_analysis_status(arguments)
+            elif name == "get_configurations":
                 return self._handle_get_configurations(arguments)
             elif name == "get_execution_results":
                 return self._handle_get_execution_results(arguments)
@@ -172,6 +182,158 @@ class DiscoPopMCPServer:
         @self.server.list_tools()  # type: ignore[misc, untyped-decorator]
         async def list_tools() -> list[Tool]:
             tools = [
+                Tool(
+                    name="check_configurations_status",
+                    description=(
+                        "Check whether the DiscoPoP directory has been initialised and whether "
+                        "the compile script and execution configurations are set up. "
+                        "Call this at the start of a session to determine whether "
+                        "initialize_discopop_directory, set_compile_script, and "
+                        "create_execution_configuration need to be run, or whether existing "
+                        "configurations can be reused. "
+                        "\n\n"
+                        "Returns:\n"
+                        "  - initialized: true if .discopop/project/configs/ exists\n"
+                        "  - compile_script_configured: true if compile.sh exists and has been "
+                        "customised (i.e. is not the auto-generated placeholder)\n"
+                        "  - settings_files: which of seq/dp/hd/par settings JSON files are present\n"
+                        "  - configurations: list of named configurations and whether each has an execute.sh\n"
+                        "  - num_configurations: total number of configurations found"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_path": {
+                                "type": "string",
+                                "description": "Absolute path to the project root directory.",
+                            },
+                        },
+                        "required": ["project_path"],
+                    },
+                ),
+                Tool(
+                    name="check_profiling_status",
+                    description=(
+                        "Check whether data dependency profiling results already exist for the project. "
+                        "Call this before instrument_project or run_instrumented_binary to determine "
+                        "whether these steps can be skipped because valid results are already present. "
+                        "\n\n"
+                        "Returns:\n"
+                        "  - instrumentation_complete: true if Data.xml exists "
+                        "(static analysis from instrument_project succeeded)\n"
+                        "  - profiling_complete: true if dynamic_dependencies.txt exists "
+                        "(runtime profiling from run_instrumented_binary succeeded)\n"
+                        "  - last_instrumentation: timestamp of Data.xml, or null\n"
+                        "  - last_profiling: timestamp of dynamic_dependencies.txt, or null\n"
+                        "  - newest_source_modified: timestamp of the most recently modified "
+                        "source file (.c/.cpp/.h etc.) in the project directory, or null if none found\n"
+                        "  - results_potentially_stale: true if a source file is newer than the "
+                        "profiling results (suggesting re-profiling may be needed); false if results "
+                        "are up to date; null if results do not exist or no source files were found\n"
+                        "  - profiling_files: list of files currently present in .discopop/profiler/"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_path": {
+                                "type": "string",
+                                "description": "Absolute path to the project root directory.",
+                            },
+                        },
+                        "required": ["project_path"],
+                    },
+                ),
+                Tool(
+                    name="check_parallelization_status",
+                    description=(
+                        "Check whether parallelization pattern detection has already been run "
+                        "and whether patch files are available. "
+                        "Call this before run_pattern_detection or get_parallelization_patches "
+                        "to determine whether these steps can be skipped. "
+                        "\n\n"
+                        "Returns:\n"
+                        "  - patterns_detected: true if patterns.json exists\n"
+                        "  - patches_available: true if at least one patch file exists under "
+                        ".discopop/patch_generator/\n"
+                        "  - last_detection: timestamp of patterns.json, or null\n"
+                        "  - newest_source_modified: timestamp of the most recently modified "
+                        "source file in the project directory, or null\n"
+                        "  - results_potentially_stale: true if a source file is newer than "
+                        "patterns.json; false if up to date; null if results do not exist or "
+                        "no source files were found\n"
+                        "  - pattern_counts: per-type pattern counts from patterns.json\n"
+                        "  - num_patches: total number of patch files available"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_path": {
+                                "type": "string",
+                                "description": "Absolute path to the project root directory.",
+                            },
+                        },
+                        "required": ["project_path"],
+                    },
+                ),
+                Tool(
+                    name="check_hotspot_profiling_status",
+                    description=(
+                        "Check whether hotspot profiling data has been collected for the project. "
+                        "Call this before instrument_for_hotspot_detection or run_hotspot_profiling "
+                        "to determine whether these steps can be skipped. "
+                        "\n\n"
+                        "Returns:\n"
+                        "  - hotspot_profiling_available: true if at least one hotspot_result_*.txt "
+                        "file exists in .discopop/hotspot_detection/private/\n"
+                        "  - num_runs_accumulated: number of hotspot profiling runs collected so far\n"
+                        "  - last_run: timestamp of the most recently written hotspot_result_*.txt, or null\n"
+                        "  - newest_source_modified: timestamp of the most recently modified "
+                        "source file in the project directory, or null\n"
+                        "  - results_potentially_stale: true if a source file is newer than the "
+                        "most recent hotspot profiling result; false if up to date; null if no "
+                        "results exist or no source files were found\n"
+                        "  - profiling_files: list of hotspot_result_*.txt files present"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_path": {
+                                "type": "string",
+                                "description": "Absolute path to the project root directory.",
+                            },
+                        },
+                        "required": ["project_path"],
+                    },
+                ),
+                Tool(
+                    name="check_hotspot_analysis_status",
+                    description=(
+                        "Check whether hotspot analysis results (Hotspots.json) are available. "
+                        "Call this before run_hotspot_analysis to determine whether the step can "
+                        "be skipped because a current Hotspots.json already exists. "
+                        "\n\n"
+                        "Returns:\n"
+                        "  - hotspot_analysis_available: true if Hotspots.json exists\n"
+                        "  - last_analysis: timestamp of Hotspots.json, or null\n"
+                        "  - newest_source_modified: timestamp of the most recently modified "
+                        "source file in the project directory, or null\n"
+                        "  - results_potentially_stale: true if a source file is newer than "
+                        "Hotspots.json; false if up to date; null if Hotspots.json does not "
+                        "exist or no source files were found\n"
+                        "  - hotness_summary: counts of YES/MAYBE/NO regions from Hotspots.json\n"
+                        "  - num_regions: total number of classified code regions"
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {
+                            "project_path": {
+                                "type": "string",
+                                "description": "Absolute path to the project root directory.",
+                            },
+                        },
+                        "required": ["project_path"],
+                    },
+                ),
                 Tool(
                     name="get_configurations",
                     description=(
@@ -1601,6 +1763,268 @@ class DiscoPopMCPServer:
 
         except Exception as e:
             error_msg = f"Error retrieving parallelization patches: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return [TextContent(type="text", text=json.dumps({"status": "error", "message": error_msg}))]
+
+    @staticmethod
+    def _newest_source_mtime(project_path: str) -> Optional[float]:
+        """Return the mtime of the most recently modified source file under project_path,
+        excluding the .discopop subtree. Returns None if no source files are found."""
+        source_exts = {".c", ".cpp", ".cc", ".cxx", ".h", ".hpp", ".hh"}
+        newest: Optional[float] = None
+        for f in Path(project_path).rglob("*"):
+            if ".discopop" in f.parts:
+                continue
+            if f.suffix.lower() in source_exts and f.is_file():
+                mtime = f.stat().st_mtime
+                if newest is None or mtime > newest:
+                    newest = mtime
+        return newest
+
+    @staticmethod
+    def _fmt_ts(mtime: float) -> str:
+        return datetime.datetime.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
+
+    # -------------------------------------------------------------------------
+    # Status check tools
+    # -------------------------------------------------------------------------
+
+    def _handle_check_configurations_status(self, arguments: dict[str, Any]) -> list[TextContent]:
+        try:
+            project_path = arguments.get("project_path", "")
+            p = Path(project_path)
+            configs_dir = p / ".discopop" / "project" / "configs"
+
+            initialized = configs_dir.exists()
+
+            compile_script_configured = False
+            if initialized:
+                compile_sh = configs_dir / "compile.sh"
+                if compile_sh.exists():
+                    content = compile_sh.read_text()
+                    compile_script_configured = "Use set_compile_script" not in content and "exit 1" not in content
+
+            settings_files = {}
+            for key, filename in [
+                ("seq", "seq_settings.json"),
+                ("dp", "dp_settings.json"),
+                ("hd", "hd_settings.json"),
+                ("par", "par_settings.json"),
+            ]:
+                settings_files[key] = (configs_dir / filename).exists() if initialized else False
+
+            configurations = []
+            if initialized:
+                for config_dir in sorted(configs_dir.iterdir()):
+                    if config_dir.is_dir():
+                        configurations.append(
+                            {
+                                "name": config_dir.name,
+                                "has_execute_sh": (config_dir / "execute.sh").exists(),
+                            }
+                        )
+
+            result = {
+                "status": "success",
+                "project_path": project_path,
+                "initialized": initialized,
+                "compile_script_configured": compile_script_configured,
+                "settings_files": settings_files,
+                "configurations": configurations,
+                "num_configurations": len(configurations),
+            }
+            self._log_response("check_configurations_status", result)
+            return [TextContent(type="text", text=json.dumps(result))]
+
+        except Exception as e:
+            error_msg = f"Error checking configurations status: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return [TextContent(type="text", text=json.dumps({"status": "error", "message": error_msg}))]
+
+    def _handle_check_profiling_status(self, arguments: dict[str, Any]) -> list[TextContent]:
+        try:
+            project_path = arguments.get("project_path", "")
+            p = Path(project_path)
+            profiler_dir = p / ".discopop" / "profiler"
+            data_xml = profiler_dir / "Data.xml"
+            dyn_deps = profiler_dir / "dynamic_dependencies.txt"
+
+            instrumentation_complete = data_xml.exists()
+            profiling_complete = dyn_deps.exists()
+
+            last_instrumentation: Optional[str] = (
+                self._fmt_ts(data_xml.stat().st_mtime) if instrumentation_complete else None
+            )
+            last_profiling: Optional[str] = self._fmt_ts(dyn_deps.stat().st_mtime) if profiling_complete else None
+
+            source_mtime = self._newest_source_mtime(project_path)
+            newest_source_modified: Optional[str] = self._fmt_ts(source_mtime) if source_mtime is not None else None
+
+            results_potentially_stale: Optional[bool] = None
+            if profiling_complete and source_mtime is not None:
+                results_potentially_stale = source_mtime > dyn_deps.stat().st_mtime
+            elif instrumentation_complete and source_mtime is not None:
+                results_potentially_stale = source_mtime > data_xml.stat().st_mtime
+
+            profiling_files = (
+                [str(f.relative_to(p)) for f in profiler_dir.rglob("*") if f.is_file()] if profiler_dir.exists() else []
+            )
+
+            result = {
+                "status": "success",
+                "project_path": project_path,
+                "instrumentation_complete": instrumentation_complete,
+                "profiling_complete": profiling_complete,
+                "last_instrumentation": last_instrumentation,
+                "last_profiling": last_profiling,
+                "newest_source_modified": newest_source_modified,
+                "results_potentially_stale": results_potentially_stale,
+                "profiling_files": profiling_files,
+            }
+            self._log_response("check_profiling_status", result)
+            return [TextContent(type="text", text=json.dumps(result))]
+
+        except Exception as e:
+            error_msg = f"Error checking profiling status: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return [TextContent(type="text", text=json.dumps({"status": "error", "message": error_msg}))]
+
+    def _handle_check_parallelization_status(self, arguments: dict[str, Any]) -> list[TextContent]:
+        try:
+            project_path = arguments.get("project_path", "")
+            p = Path(project_path)
+            patterns_json = p / ".discopop" / "explorer" / "patterns.json"
+            patch_gen_dir = p / ".discopop" / "patch_generator"
+
+            patterns_detected = patterns_json.exists()
+            patch_files = list(patch_gen_dir.rglob("*.patch")) if patch_gen_dir.exists() else []
+            patches_available = len(patch_files) > 0
+
+            last_detection: Optional[str] = self._fmt_ts(patterns_json.stat().st_mtime) if patterns_detected else None
+
+            source_mtime = self._newest_source_mtime(project_path)
+            newest_source_modified: Optional[str] = self._fmt_ts(source_mtime) if source_mtime is not None else None
+
+            results_potentially_stale: Optional[bool] = None
+            if patterns_detected and source_mtime is not None:
+                results_potentially_stale = source_mtime > patterns_json.stat().st_mtime
+
+            pattern_counts: dict[str, int] = {"do_all": 0, "reduction": 0, "task": 0, "pipeline": 0}
+            if patterns_detected:
+                try:
+                    data = json.loads(patterns_json.read_text())
+                    patterns = data.get("patterns", {})
+                    for key in pattern_counts:
+                        pattern_counts[key] = len(patterns.get(key, []))
+                except Exception:
+                    pass
+
+            result = {
+                "status": "success",
+                "project_path": project_path,
+                "patterns_detected": patterns_detected,
+                "patches_available": patches_available,
+                "last_detection": last_detection,
+                "newest_source_modified": newest_source_modified,
+                "results_potentially_stale": results_potentially_stale,
+                "pattern_counts": pattern_counts,
+                "num_patches": len(patch_files),
+            }
+            self._log_response("check_parallelization_status", result)
+            return [TextContent(type="text", text=json.dumps(result))]
+
+        except Exception as e:
+            error_msg = f"Error checking parallelization status: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return [TextContent(type="text", text=json.dumps({"status": "error", "message": error_msg}))]
+
+    def _handle_check_hotspot_profiling_status(self, arguments: dict[str, Any]) -> list[TextContent]:
+        try:
+            project_path = arguments.get("project_path", "")
+            p = Path(project_path)
+            private_dir = p / ".discopop" / "hotspot_detection" / "private"
+
+            result_files = sorted(private_dir.glob("hotspot_result_*.txt")) if private_dir.exists() else []
+            hotspot_profiling_available = len(result_files) > 0
+
+            last_run: Optional[str] = None
+            last_run_mtime: Optional[float] = None
+            if hotspot_profiling_available:
+                last_run_mtime = max(f.stat().st_mtime for f in result_files)
+                last_run = self._fmt_ts(last_run_mtime)
+
+            source_mtime = self._newest_source_mtime(project_path)
+            newest_source_modified: Optional[str] = self._fmt_ts(source_mtime) if source_mtime is not None else None
+
+            results_potentially_stale: Optional[bool] = None
+            if hotspot_profiling_available and source_mtime is not None and last_run_mtime is not None:
+                results_potentially_stale = source_mtime > last_run_mtime
+
+            result = {
+                "status": "success",
+                "project_path": project_path,
+                "hotspot_profiling_available": hotspot_profiling_available,
+                "num_runs_accumulated": len(result_files),
+                "last_run": last_run,
+                "newest_source_modified": newest_source_modified,
+                "results_potentially_stale": results_potentially_stale,
+                "profiling_files": [str(f.relative_to(p)) for f in result_files],
+            }
+            self._log_response("check_hotspot_profiling_status", result)
+            return [TextContent(type="text", text=json.dumps(result))]
+
+        except Exception as e:
+            error_msg = f"Error checking hotspot profiling status: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            return [TextContent(type="text", text=json.dumps({"status": "error", "message": error_msg}))]
+
+    def _handle_check_hotspot_analysis_status(self, arguments: dict[str, Any]) -> list[TextContent]:
+        try:
+            project_path = arguments.get("project_path", "")
+            p = Path(project_path)
+            hotspots_json = p / ".discopop" / "hotspot_detection" / "Hotspots.json"
+
+            hotspot_analysis_available = hotspots_json.exists()
+
+            last_analysis: Optional[str] = (
+                self._fmt_ts(hotspots_json.stat().st_mtime) if hotspot_analysis_available else None
+            )
+
+            source_mtime = self._newest_source_mtime(project_path)
+            newest_source_modified: Optional[str] = self._fmt_ts(source_mtime) if source_mtime is not None else None
+
+            results_potentially_stale: Optional[bool] = None
+            if hotspot_analysis_available and source_mtime is not None:
+                results_potentially_stale = source_mtime > hotspots_json.stat().st_mtime
+
+            hotness_summary: dict[str, int] = {"YES": 0, "MAYBE": 0, "NO": 0}
+            num_regions = 0
+            if hotspot_analysis_available:
+                try:
+                    data = json.loads(hotspots_json.read_text())
+                    for region in data.get("code_regions", []):
+                        hotness = region.get("hotness", "")
+                        if hotness in hotness_summary:
+                            hotness_summary[hotness] += 1
+                        num_regions += 1
+                except Exception:
+                    pass
+
+            result = {
+                "status": "success",
+                "project_path": project_path,
+                "hotspot_analysis_available": hotspot_analysis_available,
+                "last_analysis": last_analysis,
+                "newest_source_modified": newest_source_modified,
+                "results_potentially_stale": results_potentially_stale,
+                "hotness_summary": hotness_summary,
+                "num_regions": num_regions,
+            }
+            self._log_response("check_hotspot_analysis_status", result)
+            return [TextContent(type="text", text=json.dumps(result))]
+
+        except Exception as e:
+            error_msg = f"Error checking hotspot analysis status: {str(e)}"
             logger.error(error_msg, exc_info=True)
             return [TextContent(type="text", text=json.dumps({"status": "error", "message": error_msg}))]
 
