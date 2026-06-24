@@ -59,4 +59,5 @@ version = {file = "VERSION"}
 
 [tool.setuptools]
 py-modules = ["server", "setup_mcp"]
+packages = ["tools"]
 zip-safe = true
