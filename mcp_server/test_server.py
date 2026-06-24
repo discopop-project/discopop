@@ -12,13 +12,13 @@
 Test suite for the DiscoPoP MCP Server
 """
 
-import asyncio
 import json
 import logging
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
-from server import DiscoPopMCPServer
+from mcp_server.server import DiscoPopMCPServer
+from mcp_server.tools import get_configurations, get_execution_results
 
 
 class TestDiscoPopMCPServer(unittest.TestCase):
@@ -33,7 +33,7 @@ class TestDiscoPopMCPServer(unittest.TestCase):
     def test_logging_call_info(self) -> None:
         """Test that call logging works"""
         with patch("logging.Logger.info") as mock_info:
-            self.server._log_call("test_tool", {"arg": "value"})
+            self.server._ctx.log_call("test_tool", {"arg": "value"})
             # Just verify the method doesn't raise
 
     def test_tool_registration(self) -> None:
@@ -45,7 +45,7 @@ class TestDiscoPopMCPServer(unittest.TestCase):
 
     def test_get_configurations_handler(self) -> None:
         """Test get_configurations tool"""
-        result = self.server._handle_get_configurations({"project_path": "/test/project"})
+        result = get_configurations.handle({"project_path": "/test/project"}, self.server._ctx)
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 1)
         text_content = result[0].text
@@ -56,7 +56,7 @@ class TestDiscoPopMCPServer(unittest.TestCase):
 
     def test_get_execution_results_handler(self) -> None:
         """Test get_execution_results tool"""
-        result = self.server._handle_get_execution_results({"project_path": "/test/project"})
+        result = get_execution_results.handle({"project_path": "/test/project"}, self.server._ctx)
         self.assertIsNotNone(result)
         self.assertEqual(len(result), 1)
         text_content = result[0].text

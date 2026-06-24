@@ -22,7 +22,7 @@ from typing import Any, Callable
 from mcp.server import Server
 from mcp.types import TextContent, Tool
 
-from setup_mcp import MCPSetup
+from mcp_server.setup_mcp import MCPSetup
 
 from mcp_server.tools import (
     check_configurations_status,

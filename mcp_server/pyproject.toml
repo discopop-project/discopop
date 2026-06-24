@@ -47,7 +47,7 @@ dev = [
 ]
 
 [project.scripts]
-discopop_mcp_server = "server:main"
+discopop_mcp_server = "mcp_server.server:main"
 
 [project.urls]
 Homepage = "https://www.discopop.tu-darmstadt.de/"
@@ -57,7 +57,9 @@ Documentation = "https://www.discopop.tu-darmstadt.de/"
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
 
+[tool.setuptools.packages.find]
+where = [".."]
+include = ["mcp_server*"]
+
 [tool.setuptools]
-py-modules = ["server", "setup_mcp"]
-packages = ["tools"]
 zip-safe = true
