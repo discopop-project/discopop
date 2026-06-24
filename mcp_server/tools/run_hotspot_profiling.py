@@ -64,6 +64,13 @@ TOOL = Tool(
                 "type": "integer",
                 "description": ("Maximum time in seconds for the binary to run. Default: 3600."),
             },
+            "force": {
+                "type": "boolean",
+                "description": (
+                    "Set to true to force another profiling run even if at least 2 current "
+                    "results are already accumulated. Default: false."
+                ),
+            },
         },
         "required": ["project_path", "config_name"],
         "additionalProperties": False,
@@ -76,6 +83,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         project_path = arguments.get("project_path", "")
         config_name = arguments.get("config_name", "")
         timeout_seconds = arguments.get("timeout_seconds", 3600)
+        force = arguments.get("force", False)
 
         p = Path(project_path)
         configs_dir = p / ".discopop" / "project" / "configs"
@@ -89,6 +97,23 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             )
         if not hd_settings.exists():
             return ctx.error("hd_settings.json not found. Run initialize_discopop_directory first.")
+
+        if not force and private_dir.exists():
+            existing = list(private_dir.glob("hotspot_result_*.txt"))
+            if len(existing) >= 2:
+                source_mtime = ToolContext.newest_source_mtime(project_path)
+                last_run_mtime = max(f.stat().st_mtime for f in existing)
+                if source_mtime is None or source_mtime <= last_run_mtime:
+                    result: dict[str, Any] = {
+                        "status": "skipped",
+                        "reason": "results_are_current",
+                        "project_path": project_path,
+                        "last_run": ToolContext.fmt_ts(last_run_mtime),
+                        "num_runs_accumulated": len(existing),
+                        "newest_source_modified": ToolContext.fmt_ts(source_mtime) if source_mtime else None,
+                    }
+                    ctx.log_response("run_hotspot_profiling", result)
+                    return [TextContent(type="text", text=json.dumps(result))]
 
         pm_args = ctx.make_pm_args(project_path, timeout_seconds)
 
@@ -121,7 +146,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         profiling_files = [str(f.relative_to(p)) for f in result_files]
 
         if returncode != 0:
-            result: dict[str, Any] = {
+            result = {
                 "status": "error",
                 "message": f"Hotspot profiling run failed with return code {returncode}.",
                 "returncode": returncode,

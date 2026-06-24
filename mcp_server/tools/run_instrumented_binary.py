@@ -80,6 +80,13 @@ TOOL = Tool(
                     "Set this to accommodate the expected runtime with its input."
                 ),
             },
+            "force": {
+                "type": "boolean",
+                "description": (
+                    "Set to true to force re-execution even if dynamic_dependencies.txt "
+                    "is already current. Default: false."
+                ),
+            },
         },
         "required": ["project_path", "config_name"],
         "additionalProperties": False,
@@ -92,12 +99,14 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         project_path = arguments.get("project_path", "")
         config_name = arguments.get("config_name", "")
         timeout_seconds = arguments.get("timeout_seconds", 3600)
+        force = arguments.get("force", False)
 
         p = Path(project_path)
         configs_dir = p / ".discopop" / "project" / "configs"
         dp_settings = configs_dir / "dp_settings.json"
         execute_sh = configs_dir / config_name / "execute.sh"
         data_xml = p / ".discopop" / "profiler" / "Data.xml"
+        dyn_deps = p / ".discopop" / "profiler" / "dynamic_dependencies.txt"
 
         if not execute_sh.exists():
             return ctx.error(
@@ -109,6 +118,20 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             )
         if not dp_settings.exists():
             return ctx.error("dp_settings.json not found. Run initialize_discopop_directory first.")
+
+        if not force and dyn_deps.exists():
+            source_mtime = ToolContext.newest_source_mtime(project_path)
+            result_mtime = dyn_deps.stat().st_mtime
+            if source_mtime is None or source_mtime <= result_mtime:
+                result: dict[str, Any] = {
+                    "status": "skipped",
+                    "reason": "results_are_current",
+                    "project_path": project_path,
+                    "last_run": ToolContext.fmt_ts(result_mtime),
+                    "newest_source_modified": ToolContext.fmt_ts(source_mtime) if source_mtime else None,
+                }
+                ctx.log_response("run_instrumented_binary", result)
+                return [TextContent(type="text", text=json.dumps(result))]
 
         pm_args = ctx.make_pm_args(project_path, timeout_seconds)
 
@@ -141,9 +164,8 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             [str(f.relative_to(p)) for f in profiler_dir.rglob("*") if f.is_file()] if profiler_dir.exists() else []
         )
 
-        dyn_deps = p / ".discopop" / "profiler" / "dynamic_dependencies.txt"
         if returncode != 0:
-            result: dict[str, Any] = {
+            result = {
                 "status": "error",
                 "message": f"Binary execution failed with return code {returncode}.",
                 "returncode": returncode,

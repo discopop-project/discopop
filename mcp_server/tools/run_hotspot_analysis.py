@@ -62,6 +62,12 @@ TOOL = Tool(
                 "type": "integer",
                 "description": "Maximum time in seconds allowed for hotspot analysis. Default: 3600.",
             },
+            "force": {
+                "type": "boolean",
+                "description": (
+                    "Set to true to force re-analysis even if Hotspots.json is already " "current. Default: false."
+                ),
+            },
         },
         "required": ["project_path"],
         "additionalProperties": False,
@@ -73,10 +79,12 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
     try:
         project_path = arguments.get("project_path", "")
         timeout_seconds = arguments.get("timeout_seconds", 3600)
+        force = arguments.get("force", False)
 
         p = Path(project_path)
         discopop_dir = p / ".discopop"
         private_dir = discopop_dir / "hotspot_detection" / "private"
+        hotspots_json = discopop_dir / "hotspot_detection" / "Hotspots.json"
 
         if not private_dir.exists():
             return ctx.error(
@@ -89,6 +97,20 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                 "No hotspot_result_*.txt files found in .discopop/hotspot_detection/private/. "
                 "Run run_hotspot_profiling at least once."
             )
+
+        if not force and hotspots_json.exists():
+            source_mtime = ToolContext.newest_source_mtime(project_path)
+            analysis_mtime = hotspots_json.stat().st_mtime
+            if source_mtime is None or source_mtime <= analysis_mtime:
+                result: dict[str, Any] = {
+                    "status": "skipped",
+                    "reason": "results_are_current",
+                    "project_path": project_path,
+                    "last_run": ToolContext.fmt_ts(analysis_mtime),
+                    "newest_source_modified": ToolContext.fmt_ts(source_mtime) if source_mtime else None,
+                }
+                ctx.log_response("run_hotspot_analysis", result)
+                return [TextContent(type="text", text=json.dumps(result))]
 
         venv_bin = os.path.dirname(sys.executable)
         env = os.environ.copy()
@@ -119,7 +141,6 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         except subprocess.TimeoutExpired:
             return ctx.error(f"discopop_hotspot_analyzer timed out after {timeout_seconds}s.")
 
-        hotspots_json = discopop_dir / "hotspot_detection" / "Hotspots.json"
         hotness_summary: dict[str, int] = {"YES": 0, "MAYBE": 0, "NO": 0}
         hotspots_found = 0
         if hotspots_json.exists():
@@ -134,7 +155,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                 pass
 
         if proc.returncode != 0:
-            result: dict[str, Any] = {
+            result = {
                 "status": "error",
                 "message": f"discopop_hotspot_analyzer failed with return code {proc.returncode}.",
                 "returncode": proc.returncode,

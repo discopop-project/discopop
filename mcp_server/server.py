@@ -27,10 +27,6 @@ from mcp_server.setup_mcp import MCPSetup
 
 from mcp_server.tools import (
     check_configurations_status,
-    check_hotspot_analysis_status,
-    check_hotspot_profiling_status,
-    check_parallelization_status,
-    check_profiling_status,
     create_execution_configuration,
     get_configurations,
     get_execution_results,
@@ -54,10 +50,6 @@ logger = logging.getLogger("discopop-mcp")
 
 _ALL_TOOLS = [
     check_configurations_status,
-    check_profiling_status,
-    check_parallelization_status,
-    check_hotspot_profiling_status,
-    check_hotspot_analysis_status,
     get_configurations,
     get_execution_results,
     initialize_discopop_directory,

@@ -75,6 +75,12 @@ TOOL = Tool(
                     "Default: 3600. Increase for very large codebases."
                 ),
             },
+            "force": {
+                "type": "boolean",
+                "description": (
+                    "Set to true to force re-analysis even if patterns.json is already " "current. Default: false."
+                ),
+            },
         },
         "required": ["project_path"],
         "additionalProperties": False,
@@ -86,16 +92,32 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
     try:
         project_path = arguments.get("project_path", "")
         timeout_seconds = arguments.get("timeout_seconds", 3600)
+        force = arguments.get("force", False)
 
         p = Path(project_path)
         discopop_dir = p / ".discopop"
         data_xml = discopop_dir / "profiler" / "Data.xml"
         dyn_deps = discopop_dir / "profiler" / "dynamic_dependencies.txt"
+        patterns_json = discopop_dir / "explorer" / "patterns.json"
 
         if not data_xml.exists():
             return ctx.error("profiler/Data.xml not found. Run instrument_project first.")
         if not dyn_deps.exists():
             return ctx.error("profiler/dynamic_dependencies.txt not found. Run run_instrumented_binary first.")
+
+        if not force and patterns_json.exists():
+            source_mtime = ToolContext.newest_source_mtime(project_path)
+            result_mtime = patterns_json.stat().st_mtime
+            if source_mtime is None or source_mtime <= result_mtime:
+                result: dict[str, Any] = {
+                    "status": "skipped",
+                    "reason": "results_are_current",
+                    "project_path": project_path,
+                    "last_run": ToolContext.fmt_ts(result_mtime),
+                    "newest_source_modified": ToolContext.fmt_ts(source_mtime) if source_mtime else None,
+                }
+                ctx.log_response("run_pattern_detection", result)
+                return [TextContent(type="text", text=json.dumps(result))]
 
         venv_bin = os.path.dirname(sys.executable)
         env = os.environ.copy()
@@ -122,7 +144,6 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         except subprocess.TimeoutExpired:
             return ctx.error(f"discopop_explorer timed out after {timeout_seconds}s.")
 
-        patterns_json = discopop_dir / "explorer" / "patterns.json"
         pattern_types: dict[str, int] = {"do_all": 0, "reduction": 0, "task": 0, "pipeline": 0}
         patterns_found = 0
         if patterns_json.exists():
@@ -137,7 +158,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                 pass
 
         if proc.returncode != 0:
-            result: dict[str, Any] = {
+            result = {
                 "status": "error",
                 "message": f"discopop_explorer failed with return code {proc.returncode}.",
                 "returncode": proc.returncode,

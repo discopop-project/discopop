@@ -69,6 +69,13 @@ TOOL = Tool(
                 "type": "integer",
                 "description": ("Maximum time in seconds allowed for compilation. " "Default: 3600."),
             },
+            "force": {
+                "type": "boolean",
+                "description": (
+                    "Set to true to force re-instrumentation and discard existing hotspot "
+                    "profiling data even if it is already current. Default: false."
+                ),
+            },
         },
         "required": ["project_path", "config_name"],
         "additionalProperties": False,
@@ -81,12 +88,14 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         project_path = arguments.get("project_path", "")
         config_name = arguments.get("config_name", "")
         timeout_seconds = arguments.get("timeout_seconds", 3600)
+        force = arguments.get("force", False)
 
         p = Path(project_path)
         configs_dir = p / ".discopop" / "project" / "configs"
         compile_sh = configs_dir / "compile.sh"
         hd_settings = configs_dir / "hd_settings.json"
         hotspot_dir = p / ".discopop" / "hotspot_detection"
+        private_dir = hotspot_dir / "private"
 
         if not compile_sh.exists():
             return ctx.error(f"compile.sh not found at {compile_sh}. Run set_compile_script first.")
@@ -95,6 +104,23 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         config_dir = configs_dir / config_name
         if not config_dir.exists():
             return ctx.error(f"Configuration '{config_name}' not found. Run create_execution_configuration first.")
+
+        if not force and private_dir.exists():
+            result_files = list(private_dir.glob("hotspot_result_*.txt"))
+            if result_files:
+                source_mtime = ToolContext.newest_source_mtime(project_path)
+                last_run_mtime = max(f.stat().st_mtime for f in result_files)
+                if source_mtime is None or source_mtime <= last_run_mtime:
+                    result: dict[str, Any] = {
+                        "status": "skipped",
+                        "reason": "results_are_current",
+                        "project_path": project_path,
+                        "last_run": ToolContext.fmt_ts(last_run_mtime),
+                        "num_runs_accumulated": len(result_files),
+                        "newest_source_modified": ToolContext.fmt_ts(source_mtime) if source_mtime else None,
+                    }
+                    ctx.log_response("instrument_for_hotspot_detection", result)
+                    return [TextContent(type="text", text=json.dumps(result))]
 
         if hotspot_dir.exists():
             shutil.rmtree(str(hotspot_dir))
@@ -131,7 +157,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         returncode, elapsed, stdout, stderr = exec_result
 
         if returncode != 0:
-            result: dict[str, Any] = {
+            result = {
                 "status": "error",
                 "message": f"Hotspot detection compilation failed with return code {returncode}.",
                 "returncode": returncode,

@@ -64,6 +64,12 @@ TOOL = Tool(
                     "Default: 3600. Set lower for fast projects, higher for large codebases."
                 ),
             },
+            "force": {
+                "type": "boolean",
+                "description": (
+                    "Set to true to force re-instrumentation even if Data.xml is already " "current. Default: false."
+                ),
+            },
         },
         "required": ["project_path", "config_name"],
         "additionalProperties": False,
@@ -76,12 +82,14 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         project_path = arguments.get("project_path", "")
         config_name = arguments.get("config_name", "")
         timeout_seconds = arguments.get("timeout_seconds", 3600)
+        force = arguments.get("force", False)
 
         p = Path(project_path)
         configs_dir = p / ".discopop" / "project" / "configs"
         compile_sh = configs_dir / "compile.sh"
         dp_settings = configs_dir / "dp_settings.json"
         profiler_dir = p / ".discopop" / "profiler"
+        data_xml = p / ".discopop" / "profiler" / "Data.xml"
 
         if not compile_sh.exists():
             return ctx.error(f"compile.sh not found at {compile_sh}. Run set_compile_script first.")
@@ -90,6 +98,20 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         config_dir = configs_dir / config_name
         if not config_dir.exists():
             return ctx.error(f"Configuration '{config_name}' not found. Run create_execution_configuration first.")
+
+        if not force and data_xml.exists():
+            source_mtime = ToolContext.newest_source_mtime(project_path)
+            result_mtime = data_xml.stat().st_mtime
+            if source_mtime is None or source_mtime <= result_mtime:
+                result: dict[str, Any] = {
+                    "status": "skipped",
+                    "reason": "results_are_current",
+                    "project_path": project_path,
+                    "last_run": ToolContext.fmt_ts(result_mtime),
+                    "newest_source_modified": ToolContext.fmt_ts(source_mtime) if source_mtime else None,
+                }
+                ctx.log_response("instrument_project", result)
+                return [TextContent(type="text", text=json.dumps(result))]
 
         if profiler_dir.exists():
             shutil.rmtree(str(profiler_dir))
@@ -125,9 +147,8 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             [str(f.relative_to(p)) for f in profiler_dir.rglob("*") if f.is_file()] if profiler_dir.exists() else []
         )
 
-        data_xml = p / ".discopop" / "profiler" / "Data.xml"
         if returncode != 0:
-            result: dict[str, Any] = {
+            result = {
                 "status": "error",
                 "message": f"Compilation failed with return code {returncode}.",
                 "returncode": returncode,
