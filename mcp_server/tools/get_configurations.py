@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any, Optional
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from mcp_server.tools.helpers import ToolContext
 
@@ -19,6 +19,7 @@ logger = logging.getLogger("discopop-mcp")
 
 TOOL = Tool(
     name="get_configurations",
+    annotations=ToolAnnotations(readOnlyHint=True),
     description=(
         "Retrieve all execution configurations defined for a DiscoPoP project, "
         "including the content of the shared compile.sh and each configuration's execute.sh. "
@@ -45,6 +46,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path"],
+        "additionalProperties": False,
     },
 )
 

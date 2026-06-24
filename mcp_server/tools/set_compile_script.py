@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from mcp_server.tools.helpers import ToolContext
 
@@ -19,6 +19,7 @@ logger = logging.getLogger("discopop-mcp")
 
 TOOL = Tool(
     name="set_compile_script",
+    annotations=ToolAnnotations(idempotentHint=True),
     description=(
         "Write the shared compilation script compile.sh for a DiscoPoP project. "
         "Call this after initialize_discopop_directory, once you know how the project is built. "
@@ -69,6 +70,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path", "script_body"],
+        "additionalProperties": False,
     },
 )
 

@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any, Optional
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from mcp_server.tools.helpers import ToolContext
 
@@ -19,6 +19,7 @@ logger = logging.getLogger("discopop-mcp")
 
 TOOL = Tool(
     name="get_parallelization_patches",
+    annotations=ToolAnnotations(readOnlyHint=True),
     description=(
         "Retrieve the generated OpenMP parallelization patches. Call this after "
         "run_pattern_detection to inspect or present the suggested code changes. "
@@ -64,6 +65,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path"],
+        "additionalProperties": False,
     },
 )
 

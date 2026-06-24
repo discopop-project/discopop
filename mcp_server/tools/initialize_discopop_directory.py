@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from discopop_library.ProjectManager.utilities.deriveSettingsFiles import derive_settings_files
 from mcp_server.tools.helpers import ToolContext
@@ -20,6 +20,7 @@ logger = logging.getLogger("discopop-mcp")
 
 TOOL = Tool(
     name="initialize_discopop_directory",
+    annotations=ToolAnnotations(idempotentHint=True),
     description=(
         "Set up the DiscoPoP directory structure for a project. Call this as the very "
         "first step before any other DiscoPoP tool when working with a project that has "
@@ -73,6 +74,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path"],
+        "additionalProperties": False,
     },
 )
 

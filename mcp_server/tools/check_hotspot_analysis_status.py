@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any, Optional
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from mcp_server.tools.helpers import ToolContext
 
@@ -19,8 +19,9 @@ logger = logging.getLogger("discopop-mcp")
 
 TOOL = Tool(
     name="check_hotspot_analysis_status",
+    annotations=ToolAnnotations(readOnlyHint=True),
     description=(
-        "Read-only. Check whether hotspot analysis results (Hotspots.json) are available. "
+        "Check whether hotspot analysis results (Hotspots.json) are available. "
         "Call this before run_hotspot_analysis to determine whether the step can "
         "be skipped because a current Hotspots.json already exists. "
         "\n\n"
@@ -44,6 +45,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path"],
+        "additionalProperties": False,
     },
 )
 

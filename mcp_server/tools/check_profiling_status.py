@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any, Optional
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from mcp_server.tools.helpers import ToolContext
 
@@ -19,8 +19,9 @@ logger = logging.getLogger("discopop-mcp")
 
 TOOL = Tool(
     name="check_profiling_status",
+    annotations=ToolAnnotations(readOnlyHint=True),
     description=(
-        "Read-only. Check whether data dependency profiling results already exist for the project. "
+        "Check whether data dependency profiling results already exist for the project. "
         "Call this before instrument_project or run_instrumented_binary to determine "
         "whether these steps can be skipped because valid results are already present. "
         "\n\n"
@@ -47,6 +48,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path"],
+        "additionalProperties": False,
     },
 )
 

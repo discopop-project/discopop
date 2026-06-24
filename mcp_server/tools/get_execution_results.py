@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from mcp_server.tools.helpers import ToolContext
 
@@ -19,6 +19,7 @@ logger = logging.getLogger("discopop-mcp")
 
 TOOL = Tool(
     name="get_execution_results",
+    annotations=ToolAnnotations(readOnlyHint=True),
     description=(
         "Retrieve stored execution results from prior DiscoPoP runs. "
         "Call this after run_instrumented_binary to inspect timing, return codes, "
@@ -41,6 +42,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path"],
+        "additionalProperties": False,
     },
 )
 

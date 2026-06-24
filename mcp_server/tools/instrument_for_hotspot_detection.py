@@ -71,6 +71,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path", "config_name"],
+        "additionalProperties": False,
     },
 )
 

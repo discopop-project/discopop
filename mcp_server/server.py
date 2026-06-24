@@ -15,6 +15,7 @@ Allows an LLM to drive the full instrumentation pipeline — compile, profile,
 detect patterns, and retrieve patches — without human intervention.
 """
 
+import json
 import logging
 import sys
 from typing import Any, Callable
@@ -90,11 +91,21 @@ class DiscoPopMCPServer:
         async def handle_tool_call(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             self._ctx.log_call(name, arguments)
             handler = _dispatch.get(name)
-            if handler:
-                return handler(arguments, self._ctx)
-            error_msg = f"Unknown tool: {name}"
-            logger.error(error_msg)
-            return [TextContent(type="text", text=error_msg)]
+            if not handler:
+                error_msg = f"Unknown tool: {name}"
+                logger.error(error_msg)
+                raise Exception(error_msg)
+            result = handler(arguments, self._ctx)
+            # Raise on tool errors so the MCP client receives isError=true.
+            # The exception message is the JSON payload, preserving all error detail.
+            if result:
+                try:
+                    data = json.loads(result[0].text)
+                    if isinstance(data, dict) and data.get("status") == "error":
+                        raise Exception(result[0].text)
+                except json.JSONDecodeError:
+                    pass
+            return result
 
         @self.server.list_tools()  # type: ignore[misc, untyped-decorator]
         async def list_tools() -> list[Tool]:

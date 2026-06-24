@@ -68,8 +68,16 @@ TOOL = Tool(
                     "with <project_path>/.discopop as its working directory."
                 ),
             },
+            "timeout_seconds": {
+                "type": "integer",
+                "description": (
+                    "Maximum time in seconds allowed for pattern detection. "
+                    "Default: 3600. Increase for very large codebases."
+                ),
+            },
         },
         "required": ["project_path"],
+        "additionalProperties": False,
     },
 )
 
@@ -77,6 +85,7 @@ TOOL = Tool(
 def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
     try:
         project_path = arguments.get("project_path", "")
+        timeout_seconds = arguments.get("timeout_seconds", 3600)
 
         p = Path(project_path)
         discopop_dir = p / ".discopop"
@@ -101,13 +110,17 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             )
 
         ctx.log_action(project_path, "run_pattern_detection", f"Invoking discopop_explorer in {discopop_dir}")
-        proc = subprocess.run(
-            [explorer],
-            cwd=str(discopop_dir),
-            capture_output=True,
-            text=True,
-            env=env,
-        )
+        try:
+            proc = subprocess.run(
+                [explorer],
+                cwd=str(discopop_dir),
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=timeout_seconds,
+            )
+        except subprocess.TimeoutExpired:
+            return ctx.error(f"discopop_explorer timed out after {timeout_seconds}s.")
 
         patterns_json = discopop_dir / "explorer" / "patterns.json"
         pattern_types: dict[str, int] = {"do_all": 0, "reduction": 0, "task": 0, "pipeline": 0}

@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any, Optional
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from mcp_server.tools.helpers import ToolContext
 
@@ -19,8 +19,9 @@ logger = logging.getLogger("discopop-mcp")
 
 TOOL = Tool(
     name="check_hotspot_profiling_status",
+    annotations=ToolAnnotations(readOnlyHint=True),
     description=(
-        "Read-only. Check whether hotspot profiling data has been collected for the project. "
+        "Check whether hotspot profiling data has been collected for the project. "
         "Call this before instrument_for_hotspot_detection or run_hotspot_profiling "
         "to determine whether these steps can be skipped. "
         "\n\n"
@@ -45,6 +46,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path"],
+        "additionalProperties": False,
     },
 )
 

@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from mcp_server.tools.helpers import ToolContext
 
@@ -19,8 +19,9 @@ logger = logging.getLogger("discopop-mcp")
 
 TOOL = Tool(
     name="check_configurations_status",
+    annotations=ToolAnnotations(readOnlyHint=True),
     description=(
-        "Read-only. Check whether the DiscoPoP directory has been initialised and whether "
+        "Check whether the DiscoPoP directory has been initialised and whether "
         "the compile script and execution configurations are set up. "
         "Call this at the start of a session to determine whether "
         "initialize_discopop_directory, set_compile_script, and "
@@ -44,6 +45,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path"],
+        "additionalProperties": False,
     },
 )
 

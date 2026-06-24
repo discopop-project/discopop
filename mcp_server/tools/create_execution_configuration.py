@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from mcp_server.tools.helpers import ToolContext
 
@@ -20,6 +20,7 @@ logger = logging.getLogger("discopop-mcp")
 
 TOOL = Tool(
     name="create_execution_configuration",
+    annotations=ToolAnnotations(idempotentHint=True),
     description=(
         "Create a named execution configuration for a DiscoPoP project. "
         "Call this after set_compile_script to define how to run the compiled binary. "
@@ -75,6 +76,7 @@ TOOL = Tool(
             },
         },
         "required": ["project_path", "config_name", "script_body"],
+        "additionalProperties": False,
     },
 )
 
