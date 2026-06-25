@@ -96,10 +96,10 @@ from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 
 try:
+    from discopop_gui.Enums.EdgeTypes import EdgeTypes as TreeEdgeTypes
     from discopop_gui.Extendables.Plottable import Plottable
     from discopop_gui.Visualizers.Base import Base as Visualizer
     from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
-    from discopop_gui.Enums.EdgeTypes import EdgeTyes as TreeEdgeTypes
 except (ImportError, ModuleNotFoundError):
 
     class Plottable:  # type: ignore[no-redef]
