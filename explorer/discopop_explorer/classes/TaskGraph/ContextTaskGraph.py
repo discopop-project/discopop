@@ -14,6 +14,7 @@ import networkx as nx  # type: ignore
 from matplotlib.axes import Axes
 from networkx import Graph
 from tqdm import tqdm  # type: ignore
+
 from discopop_explorer.classes.ContextTaskGraph.classes.edges import (
     CTGEdgeInfo,
     CTGEdgeType,
@@ -67,9 +68,11 @@ from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_gui.Extendables.Plottable import Plottable
 from discopop_gui.Visualizers.Base import Base as Visualizer
+
 from termcolor import cprint
 import matplotlib.lines as mlines
 import plotille  # type: ignore
+
 from discopop_explorer.classes.ContextTaskGraph.modifications.computationally_expensive.transitive_reduction import (
     transitive_reduction,
 )

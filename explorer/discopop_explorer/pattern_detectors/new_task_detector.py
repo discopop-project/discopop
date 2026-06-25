@@ -49,6 +49,8 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
 
     # result += identify_simple_taskloop(pet, task_graph)
     result += identify_simple_tasking(context_task_graph, simplification_result)
+    if visualizer:
+        show_all_plots(context_task_graph)
 
     # identify immediate successive contexts with no dependencies between them
     logger.info("--> Identify tasking with data sharing clauses ... TODO")
@@ -67,72 +69,73 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
         return
 
     def draw_plots() -> None:
-        [ax1, ax2, ax3, ax4] = context_task_graph.create_multi_plot(
-            "Graphs",
-            ["Task Graph", "Task graph (context graph)", "Task graph (context debug graph)", "Context task graph"],
-            2,
-            2,
+        # [ax1, ax2, ax3, ax4] = context_task_graph.create_multi_plot(
+        #     "Graphs",
+        #     ["Task Graph", "Task graph (context graph)", "Task graph (context debug graph)", "Context task graph"],
+        #     2,
+        #     2,
+        # )
+
+        # print("Plotting task graph...")
+        # if len(context_task_graph.task_graph.graph.nodes()) < 500:
+        #     context_task_graph.task_graph.update_plot(ax1)
+
+        # print("Plotting task graph (context graph)...")
+        # if len(context_task_graph.task_graph.graph.nodes()) < 500:
+        #     context_task_graph.task_graph.plot_context_graph(ax2)
+
+        # print("Plotting task graph (context debug graph)...")
+        # if len(context_task_graph.task_graph.graph.nodes()) < 500:
+        #     context_task_graph.task_graph.plot_context_debug_graph(ax3)
+
+        # print("Plotting context task graph...")
+        # context_task_graph.update_plot(
+        #     ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
+        # )
+
+        # ax1 = context_task_graph.create_plot("Task Graph")
+        # ax2 = context_task_graph.create_plot("Task graph (context graph)")
+        # ax3 = context_task_graph.create_plot("Task graph (context debug graph)")
+        # ax4 = context_task_graph.create_plot("Context task graph")
+
+        # print("Plotting separate task graph...")
+        # if len(context_task_graph.task_graph.graph.nodes()) < 500:
+        #     context_task_graph.task_graph.update_plot(ax1)
+
+        # print("Plotting separate task graph (context graph)...")
+        # if len(context_task_graph.task_graph.graph.nodes()) < 500:
+        #     context_task_graph.task_graph.plot_context_graph(ax2)
+
+        # print("Plotting separate task graph (context debug graph)...")
+        # if len(context_task_graph.task_graph.graph.nodes()) < 500:
+        #     context_task_graph.task_graph.plot_context_debug_graph(ax3)
+
+        # print("Plotting separate context task graph...")
+        # context_task_graph.update_plot(
+        #     ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
+        # )
+
+        context_task_graph.task_graph.new_plot_context_debug_graph(
+            context_task_graph.create_plottable_canvas("Main graph")
         )
-
-        print("Plotting task graph...")
-        if len(context_task_graph.task_graph.graph.nodes()) < 500:
-            context_task_graph.task_graph.update_plot(ax1)
-
-        print("Plotting task graph (context graph)...")
-        if len(context_task_graph.task_graph.graph.nodes()) < 500:
-            context_task_graph.task_graph.plot_context_graph(ax2)
-
-        print("Plotting task graph (context debug graph)...")
-        if len(context_task_graph.task_graph.graph.nodes()) < 500:
-            context_task_graph.task_graph.plot_context_debug_graph(ax3)
-
-        print("Plotting context task graph...")
-        context_task_graph.update_plot(
-            ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
-        )
-
-        ax1 = context_task_graph.create_plot("Task Graph")
-        ax2 = context_task_graph.create_plot("Task graph (context graph)")
-        ax3 = context_task_graph.create_plot("Task graph (context debug graph)")
-        ax4 = context_task_graph.create_plot("Context task graph")
-
-        print("Plotting separate task graph...")
-        if len(context_task_graph.task_graph.graph.nodes()) < 500:
-            context_task_graph.task_graph.update_plot(ax1)
-
-        print("Plotting separate task graph (context graph)...")
-        if len(context_task_graph.task_graph.graph.nodes()) < 500:
-            context_task_graph.task_graph.plot_context_graph(ax2)
-
-        print("Plotting separate task graph (context debug graph)...")
-        if len(context_task_graph.task_graph.graph.nodes()) < 500:
-            context_task_graph.task_graph.plot_context_debug_graph(ax3)
-
-        print("Plotting separate context task graph...")
-        context_task_graph.update_plot(
-            ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
-        )
-
-        new_graph = context_task_graph.create_plottable_canvas("New graph")
-        context_task_graph.task_graph.new_plot_context_debug_graph(new_graph)
 
     def on_filter(filter_text: str) -> None:
         print("Filter text:", filter_text)
 
         # Extra processing here
 
-        for frame_name in [
-            "Graphs",
-            "Task Graph",
-            "Task graph (context graph)",
-            "Task graph (context debug graph)",
-            "Context task graph",
-            "New Graph",
-        ]:
-            try:
-                context_task_graph.delete_frame(frame_name)
-            except KeyError:
-                pass
+    for frame_name in [
+        # "Graphs",
+        # "Task Graph",
+        # "Task graph (context graph)",
+        # "Task graph (context debug graph)",
+        # "Context task graph",
+        "Main Graph"
+    ]:
+        try:
+            context_task_graph.delete_frame(frame_name)
+        except KeyError:
+            pass
 
     context_task_graph.set_filter_callback(on_filter)
     draw_plots()

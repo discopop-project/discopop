@@ -88,17 +88,11 @@ def show_plot(tg: TaskGraph) -> None:
 
         # Extra processing here
 
-        for frame_name in [
-            "Graphs",
-            "Task Graph",
-            "Task graph (context graph)",
-            "Task graph (context debug graph)",
-            "Context task graph",
-        ]:
-            try:
-                tg.delete_frame(frame_name)
-            except KeyError:
-                pass
+    for frame_name in ["Context Graph", "Context Debug Graph", "Task Graph"]:
+        try:
+            tg.delete_frame(frame_name)
+        except KeyError:
+            pass
 
     tg.set_filter_callback(on_filter)
     draw_plots()

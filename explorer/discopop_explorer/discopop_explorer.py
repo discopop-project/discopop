@@ -18,6 +18,7 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+import tkinter as tk
 
 import pstats2  # type: ignore
 from pluginbase import PluginBase  # type: ignore
@@ -86,6 +87,7 @@ class ExplorerArguments(GeneralArguments):
     enable_task_graph_plot: bool
     enable_context_graph_plot: bool
     enable_visualizer: bool
+    visualize_on: Optional[tk.Frame]
 
     def __post_init__(self) -> None:
         self.__validate()
@@ -139,6 +141,7 @@ def __run(
     enable_task_graph_plot: bool = False,
     enable_context_graph_plot: bool = False,
     enable_visualizer: bool = False,
+    visualize_on: Optional[tk.Frame] = None,
 ) -> DetectionResult:
     # check for updates
     module_name = "discopop"
@@ -149,7 +152,7 @@ def __run(
     visualizer = None
 
     if enable_visualizer == True:
-        visualizer = Visualizer()
+        visualizer = Visualizer(visualize_on)
 
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping), visualizer=visualizer)  # type: ignore
     pet.validate()
@@ -283,6 +286,7 @@ def run(arguments: ExplorerArguments) -> None:
             enable_task_graph_plot=arguments.enable_task_graph_plot,
             enable_context_graph_plot=arguments.enable_context_graph_plot,
             enable_visualizer=arguments.enable_visualizer,
+            visualize_on=arguments.visualize_on,
         )
 
         end = time.time()

@@ -112,19 +112,17 @@ class Plottable:
     def create_plottable_canvas(self, name: str) -> ViewableCanvasWithTrees:
         if self._visualizer is None:
             raise VisualizerNotDefined()
-
-        def canvas_builder(
-            parent: CanvasViewer[ViewableCanvasWithTrees], canvas_viewer_mode: CanvasViewerMode
-        ) -> ViewableCanvasWithTrees:
-            return ViewableCanvasWithTrees(parent, canvas_viewer_mode, bg="white")
-
-        def frame_builder(parent: tk.Misc) -> CanvasViewer[ViewableCanvasWithTrees]:
+        
+        def canvas_builder(parent : tk.Frame, canvas_viewer : CanvasViewer[ViewableCanvasWithTrees], canvas_viewer_mode : CanvasViewerMode) -> ViewableCanvasWithTrees:
+            return ViewableCanvasWithTrees(parent, canvas_viewer, canvas_viewer_mode, bg="white")
+        
+        def frame_builder(parent : tk.Misc) -> CanvasViewer[ViewableCanvasWithTrees]:
             return CanvasViewer(parent, canvas_builder)
 
         frame = self._visualizer.create_frame(name, frame_builder)
 
-        canvas = frame.getCanvas()
-
+        canvas = frame.get_canvas(frame.add_canvas())
+        
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
 
