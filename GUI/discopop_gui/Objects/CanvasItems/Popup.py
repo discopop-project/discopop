@@ -88,7 +88,7 @@ class Popup:
         state = "normal" if self._visible else "hidden"
 
         rectangle_id = self._canvas.create_rectangle(
-            0.0, 0.0, 0.0, 0.0, 
+            (0.0, 0.0), (0.0, 0.0), 
             state = state, 
             fill = "#ffffff", 
             outline = "#ffffff"
@@ -108,6 +108,8 @@ class Popup:
             if self._visible:
                 self.hide()
                 return callback(event)
+            
+            return None
 
         def on_enter(_ : tk.Event) -> str | None:
             if self._visible:
