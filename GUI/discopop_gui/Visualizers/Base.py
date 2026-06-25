@@ -32,26 +32,17 @@ class Base(ABC):
     def get_frame(self, name: str) -> tk.Frame:
         try:
             return self._frames[name]
-        except KeyError as e:
-            raise KeyError(f"No frame named '{name}'.") from e
+        except KeyError as error:
+            raise KeyError(f"No Frame named '{name}'.") from error
 
     def show_frame(self, name: str) -> None:
         frame = self.get_frame(name)
-
-        if frame == None:
-            raise KeyError(f"No frame named '{name}'.")
-
         frame.tkraise()
         self._current_frame_name = name
 
     def delete_frame(self, name: str) -> None:
         frame = self.get_frame(name)
-
-        if frame == None:
-            raise KeyError(f"No frame named '{name}'.")
-
         frame.destroy()
-
         del self._frames[name]
 
         if self._current_frame_name == name:
