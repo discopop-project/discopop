@@ -8,15 +8,22 @@
 
 from abc import abstractmethod, ABC
 import tkinter as tk
-from typing import Dict, Callable
+from typing import Dict, Callable, Optional
 
 from discopop_gui.Types.FrameT import FrameT
 
 class Base(ABC):
-    def __init__(self) -> None:
-        self._root = tk.Tk()
-        self._root.title("DiscoPoP")
-        self._root.protocol("WM_DELETE_WINDOW", self._on_close)
+    def __init__(self, visualize_on : Optional[tk.Frame] = None) -> None:
+        self._root : tk.Tk | tk.Frame
+        self._visualizing_on : bool = False
+
+        if not visualize_on:
+            self._root = tk.Tk()
+            self._root.title("DiscoPoP")
+            self._root.protocol("WM_DELETE_WINDOW", self._on_close)
+        else:
+            self._root = visualize_on
+            self._visualizing_on = True
 
         self._frames: Dict[str, tk.Frame] = {}
         self._current_frame_name: str | None = None
@@ -34,7 +41,7 @@ class Base(ABC):
             return self._frames[name]
         except KeyError as error:
             raise KeyError(f"No Frame named '{name}'.") from error
-
+        
     def show_frame(self, name: str) -> None:
         frame = self.get_frame(name)
         frame.tkraise()
@@ -61,4 +68,14 @@ class Base(ABC):
         pass
 
     def run(self) -> None:
+        if self._visualizing_on:
+            return
+        
         self._root.mainloop()
+
+    def clear(self) -> None:
+        for frame in self._frames.values():
+            frame.destroy()
+
+        self._frames.clear()
+        self._current_frame_name = None

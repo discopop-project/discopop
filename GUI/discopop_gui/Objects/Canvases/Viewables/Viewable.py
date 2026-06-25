@@ -15,11 +15,12 @@ from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Objects.CanvasItems.Popup import Popup
 
 if TYPE_CHECKING:
+    from discopop_gui.Types.ViewableCanvasT import ViewableCanvasT
     from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
 
 
 class Viewable(tk.Canvas):
-    def __init__(self, parent: tk.Misc, canvas_viewer : "CanvasViewer", viewer_mode: ViewerMode, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, parent: tk.Misc, canvas_viewer : "CanvasViewer[ViewableCanvasT]", viewer_mode: ViewerMode, *args: Any, **kwargs: Any) -> None:
         super().__init__(parent, *args, **kwargs)
 
         self._canvas_viewer = canvas_viewer
@@ -212,7 +213,7 @@ class Viewable(tk.Canvas):
 
         self.coords(item_id, *new_coords)
 
-    def _apply_transform(self):
+    def _apply_transform(self) -> None:
         for item_id in self._original_coordinates.keys():
             self._apply_transform_to_item(item_id)
 

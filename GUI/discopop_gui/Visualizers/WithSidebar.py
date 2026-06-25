@@ -9,15 +9,15 @@
 from __future__ import annotations
 
 import tkinter as tk
-from typing import Dict, Callable
+from typing import Dict, Callable, Optional
 
 from discopop_gui.Types.FrameT import FrameT
 from discopop_gui.Visualizers.Base import Base
 
 
 class WithSidebar(Base):
-    def __init__(self) -> None:
-        super().__init__()
+    def __init__(self, visualize_on : Optional[tk.Frame] = None) -> None:
+        super().__init__(visualize_on)
 
         self._root.grid_rowconfigure(0, weight=1)
         self._root.grid_columnconfigure(0, weight=1)
@@ -143,3 +143,12 @@ class WithSidebar(Base):
     def set_filter_text(self, text: str) -> None:
         self._filter.delete("1.0", tk.END)
         self._filter.insert("1.0", text)
+
+    def clear(self) -> None:
+        super().clear()
+
+        for selector in self._frame_selectors.values():
+            selector.destroy()
+
+        self._frame_selectors.clear()
+        self._filter.delete("1.0", tk.END)

@@ -49,6 +49,8 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
 
     # result += identify_simple_taskloop(pet, task_graph)
     result += identify_simple_tasking(context_task_graph, simplification_result)
+    if visualizer:
+        show_all_plots(context_task_graph)
 
     # identify immediate successive contexts with no dependencies between them
     logger.info("--> Identify tasking with data sharing clauses ... TODO")
@@ -113,26 +115,27 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
         #     ax4, highlight_nodes=list(highlight_nodes) if highlight_nodes is not None else None
         # )
 
-        new_graph = context_task_graph.create_plottable_canvas("New graph")
-        context_task_graph.task_graph.new_plot_context_debug_graph(new_graph)
+        context_task_graph.task_graph.new_plot_context_debug_graph(
+            context_task_graph.create_plottable_canvas("Main graph")
+        )
 
     def on_filter(filter_text: str) -> None:
         print("Filter text:", filter_text)
 
         # Extra processing here
 
-        for frame_name in [
-            # "Graphs",
-            # "Task Graph",
-            # "Task graph (context graph)",
-            # "Task graph (context debug graph)",
-            # "Context task graph",
-            "New Graph"
-        ]:
-            try:
-                context_task_graph.delete_frame(frame_name)
-            except KeyError:
-                pass
+    for frame_name in [
+        # "Graphs",
+        # "Task Graph",
+        # "Task graph (context graph)",
+        # "Task graph (context debug graph)",
+        # "Context task graph",
+        "Main Graph"
+    ]:
+        try:
+            context_task_graph.delete_frame(frame_name)
+        except KeyError:
+            pass
 
     context_task_graph.set_filter_callback(on_filter)
     draw_plots()

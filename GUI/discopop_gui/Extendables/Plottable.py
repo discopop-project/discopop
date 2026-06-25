@@ -113,7 +113,7 @@ class Plottable:
         if self._visualizer is None:
             raise VisualizerNotDefined()
         
-        def canvas_builder(parent : tk.Frame, canvas_viewer : CanvasViewer, canvas_viewer_mode : CanvasViewerMode):
+        def canvas_builder(parent : tk.Frame, canvas_viewer : CanvasViewer[ViewableCanvasWithTrees], canvas_viewer_mode : CanvasViewerMode) -> ViewableCanvasWithTrees:
             return ViewableCanvasWithTrees(parent, canvas_viewer, canvas_viewer_mode, bg="white")
         
         def frame_builder(parent : tk.Misc) -> CanvasViewer[ViewableCanvasWithTrees]:
