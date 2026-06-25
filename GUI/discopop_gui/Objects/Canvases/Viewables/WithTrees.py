@@ -8,7 +8,7 @@
 
 import tkinter as tk
 import networkx as nx
-from typing import Any, Dict, Tuple, List, TYPE_CHECKING
+from typing import Any, Dict, Tuple, List, TYPE_CHECKING, cast
 
 from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Enums.EdgeTypes import EdgeTypes
@@ -23,7 +23,7 @@ class WithTrees(ViewableCanvas):
     def __init__(
         self,
         parent: tk.Frame,
-        canvas_viewer: "CanvasViewer[WithTrees]",
+        canvas_viewer: "CanvasViewer[Any]",
         viewer_mode: ViewerMode,
         *args: Any,
         **kwargs: Any,
@@ -97,7 +97,12 @@ class WithTrees(ViewableCanvas):
     
     def add_clone_to_canvas_viewer(self, starting_tree_node_id : int) -> None:
         starting_tree_node = self.get_visual_node(starting_tree_node_id)
-        cloned_canvas : "WithTrees" = self._canvas_viewer.get_canvas(self._canvas_viewer.add_canvas())
+
+        cloned_canvas = cast(
+            "WithTrees", 
+            self._canvas_viewer.get_canvas(self._canvas_viewer.add_canvas())
+        )
+
         starting_tree_node.recursive_copy_to_canvas(cloned_canvas)
 
     def build_trees(self, graph: nx.MultiDiGraph) -> None:
