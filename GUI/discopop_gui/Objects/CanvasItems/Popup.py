@@ -7,7 +7,7 @@
 # directory for details.
 
 import tkinter as tk
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Dict, Optional, Tuple, Literal
 
 class Popup:
     def __init__(self, canvas: tk.Canvas, initial_width: int = 150) -> None:
@@ -85,7 +85,7 @@ class Popup:
 
     def add_button(self, button_id: str, callback: Callable[[tk.Event], str | None]) -> None:
         self._callbacks[button_id] = callback
-        state = "normal" if self._visible else "hidden"
+        state : Literal["normal", "hidden"] = "normal" if self._visible else "hidden"
 
         rectangle_id = self._canvas.create_rectangle(
             0.0, 0.0, 0.0, 0.0, 
