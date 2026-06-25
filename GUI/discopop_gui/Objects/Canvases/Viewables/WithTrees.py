@@ -12,6 +12,7 @@ from typing import Any, Dict, Tuple, List, TYPE_CHECKING
 
 from discopop_gui.Types.ViewableCanvasT import ViewableCanvasT
 from discopop_gui.Enums.ViewerMode import ViewerMode
+from discopop_gui.Enums.EdgeTypes import EdgeTypes
 from discopop_gui.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
 from discopop_gui.utils.TreeNode import TreeNode
 from discopop_gui.Objects.CanvasItems.TreeNode import TreeNode as VisualTreeNode
@@ -25,13 +26,12 @@ class WithTrees(ViewableCanvas):
         parent: tk.Frame,
         canvas_viewer: "CanvasViewer[ViewableCanvasT]",
         viewer_mode: ViewerMode,
-        trees: Dict[int, TreeNode] = {},
         *args: Any,
         **kwargs: Any,
     ) -> None:
         super().__init__(parent, canvas_viewer, viewer_mode, *args, **kwargs)
         self._canvas_viewer = canvas_viewer
-        self._nodes : Dict[int, TreeNode] = trees
+        self._nodes : Dict[int, TreeNode] = {}
         self._visual_nodes : Dict[int, VisualTreeNode] = {}
 
     def get_visual_node(self, id : int) -> VisualTreeNode:
@@ -78,6 +78,24 @@ class WithTrees(ViewableCanvas):
 
         return True
     
+    def create_visual_edge(self, from_id : int, to_id : int, edge_type : EdgeTypes, state : str = "hidden") -> int:
+        from_node = self.get_visual_node(from_id)
+        to_node = self.get_visual_node(to_id)
+        (x1, y1) = from_node.get_location()
+        (x2, y2) = to_node.get_location()
+
+        return self.create_line(
+            x1,
+            y1,
+            x2,
+            y2,
+            fill = "black" if edge_type == EdgeTypes.MAIN else "red",
+            width = 1,
+            state = state,
+            tags = "tree_edge"
+        )
+
+    
     def add_clone_to_canvas_viewer(self, starting_tree_node_id : int) -> None:
         starting_tree_node = self.get_visual_node(starting_tree_node_id)
         cloned_canvas : "WithTrees" = self._canvas_viewer.get_canvas(self._canvas_viewer.add_canvas())
@@ -95,7 +113,7 @@ class WithTrees(ViewableCanvas):
         edges_to_remove : List[Tuple[Any, Any, Any]] = []
         
         for src, dst, key, data in graph.edges(keys=True, data=True):
-            if data.get("edge_type") == "dependency":
+            if data.get("edge_type") == EdgeTypes.DEPENDENCY:
                 dependency_edges.append((src, dst, data))
                 edges_to_remove.append((src, dst, key))
                 
@@ -160,7 +178,7 @@ class WithTrees(ViewableCanvas):
             destination_id = nodes_to_ids[destination]
             edge_type = data.get("edge_type")
 
-            if edge_type == "dependency":
+            if edge_type == EdgeTypes.DEPENDENCY:
                 self._nodes[source_id].dependency_connections.append(self._nodes[destination_id])
             else:
                 self._nodes[source_id].lower_order_connections.append(self._nodes[destination_id])

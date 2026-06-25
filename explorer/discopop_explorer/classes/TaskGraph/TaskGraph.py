@@ -99,6 +99,7 @@ try:
     from discopop_gui.Extendables.Plottable import Plottable
     from discopop_gui.Visualizers.Base import Base as Visualizer
     from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
+    from discopop_gui.Enums.EdgeTypes import EdgeTyes as TreeEdgeTypes
 except (ImportError, ModuleNotFoundError):
 
     class Plottable:  # type: ignore[no-redef]
@@ -537,14 +538,14 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 ctx_graph.add_edge(
                     ctx,
                     contained_ctx,
-                    edge_type="contained",
+                    edge_type = TreeEdgeTypes.MAIN,
                 )
 
             for node in ctx.contained_nodes:
                 ctx_graph.add_edge(
                     ctx,
                     node,
-                    edge_type="contained",
+                    edge_type = TreeEdgeTypes.MAIN,
                 )
 
         for ctx in self.contexts:
@@ -552,7 +553,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 ctx_graph.add_edge(
                     ctx,
                     dep[0],
-                    edge_type="dependency",
+                    edge_type = TreeEdgeTypes.DEPENDENCY,
                 )
 
         canvas.build_trees(ctx_graph)

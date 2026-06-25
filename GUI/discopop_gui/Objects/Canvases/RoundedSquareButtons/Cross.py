@@ -7,7 +7,7 @@
 # directory for details.
 
 import tkinter as tk
-from typing import Callable
+from typing import Any, Callable
 
 from discopop_gui.Objects.Canvases.RoundedSquareButtons.RoundedSquareButton import RoundedSquareButton
 
@@ -17,8 +17,8 @@ class Cross(RoundedSquareButton):
         parent : tk.Misc,
         command : Callable[[], None],
         colour : str = "red",
-        *args,
-        **kwargs,
+        *args : Any,
+        **kwargs : Any,
     ) -> None:
         self._colour = colour
         super().__init__(parent, command, *args, **kwargs)

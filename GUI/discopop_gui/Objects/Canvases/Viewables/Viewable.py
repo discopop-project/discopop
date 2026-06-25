@@ -11,11 +11,11 @@ from __future__ import annotations
 import tkinter as tk
 from typing import Any, TYPE_CHECKING
 
-from discopop_gui.Types.ViewableCanvasT import ViewableCanvasT
 from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Objects.CanvasItems.Popup import Popup
 
 if TYPE_CHECKING:
+    from discopop_gui.Types.ViewableCanvasT import ViewableCanvasT
     from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
 
 

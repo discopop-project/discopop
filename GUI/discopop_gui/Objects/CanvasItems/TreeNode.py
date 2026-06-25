@@ -6,10 +6,11 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, Set, TYPE_CHECKING
+from typing import Tuple, Dict, Set, TYPE_CHECKING
 import tkinter as tk
 
 from discopop_gui.Enums.ViewerMode import ViewerMode
+from discopop_gui.Enums.EdgeTypes import EdgeTypes
 from discopop_gui.utils.TreeNode import TreeNode as BaseTreeNode
 from discopop_gui.Objects.CanvasItems.Popup import Popup
 
@@ -43,16 +44,10 @@ class TreeNode:
 
                 self._canvas.create_visual_node(base_node_connection.id, state = "hidden")
 
-                edge_id = self._canvas.create_line(
-                    base_node_connection.metadata.get("x"),
-                    base_node_connection.metadata.get("y"),
-                    self._base_node.metadata.get("x"),
-                    self._base_node.metadata.get("y"),
-                    fill = "black",
-                    width = 1,
-                    state = "hidden",
-                    tags = "tree_edge"
-                )
+                if self._base_node.id in base_node_connection.dependency_connections:
+                    edge_id = self._canvas.create_visual_edge(base_node_connection.id, self._base_node.id, EdgeTypes.DEPENDENCY)
+                else:
+                    edge_id = self._canvas.create_visual_edge(base_node_connection.id, self._base_node.id, EdgeTypes.MAIN)
 
                 connection = self._canvas.get_visual_node(base_node_connection.id)
                 connection.add_lower_order_connection(self._base_node.id, edge_id)
@@ -78,7 +73,7 @@ class TreeNode:
 
     def _on_left_press(self, _ : tk.Event) -> str | None:
         if not (self._canvas.get_viewer_mode() == ViewerMode.MAIN):
-            return
+            return None
         
         if len(self._lower_order_connections) < (len(self._base_node.dependency_connections) + len(self._base_node.lower_order_connections)):
             for base_node_connection in self._base_node.lower_order_connections:
@@ -86,18 +81,7 @@ class TreeNode:
                     continue
 
                 self._canvas.create_visual_node(base_node_connection.id, state = "hidden")
-
-                edge_id = self._canvas.create_line(
-                    self._base_node.metadata.get("x"),
-                    self._base_node.metadata.get("y"),
-                    base_node_connection.metadata.get("x"),
-                    base_node_connection.metadata.get("y"),
-                    fill = "black",
-                    width = 1,
-                    state = "hidden",
-                    tags = "tree_edge"
-                )
-
+                edge_id = self._canvas.create_visual_edge(self._base_node.id, base_node_connection.id, EdgeTypes.MAIN)
                 connection = self._canvas.get_visual_node(base_node_connection.id)
                 connection.add_higher_order_connection(self._base_node.id, edge_id)
                 self._lower_order_connections[base_node_connection.id] = edge_id
@@ -108,19 +92,7 @@ class TreeNode:
                     continue
                 
                 self._canvas.create_visual_node(base_node_connection.id, state = "hidden")
-
-                edge_id = self._canvas.create_line(
-                    self._base_node.metadata.get("x"),
-                    self._base_node.metadata.get("y"),
-                    base_node_connection.metadata.get("x"),
-                    base_node_connection.metadata.get("y"),
-                    fill = "red",
-                    width = 2,
-                    arrow = "last",
-                    state = "hidden",
-                    tags = "tree_edge"
-                )
-
+                edge_id = self._canvas.create_visual_edge(self._base_node.id, base_node_connection.id, EdgeTypes.DEPENDENCY)
                 connection = self._canvas.get_visual_node(base_node_connection.id)
                 connection.add_higher_order_connection(self._base_node.id, edge_id)
                 self._lower_order_connections[base_node_connection.id] = edge_id
@@ -167,6 +139,9 @@ class TreeNode:
 
     def get_id(self) -> int:
         return self._base_node.id
+    
+    def get_location(self) -> Tuple[float, float]:
+        return (self._base_node.metadata["x"], self._base_node.metadata["y"])
     
     def set_higher_order_connections_shown(self, shown : bool) -> None:
         if (shown == False) and (len(self._higher_order_hide_requests) < len(self._higher_order_connections)):

@@ -85,7 +85,7 @@ class Popup:
 
     def add_button(self, button_id: str, callback: Callable[[tk.Event], str | None]) -> None:
         self._callbacks[button_id] = callback
-        state : Literal["normal", "hidden"] = "normal" if self._visible else "hidden"
+        state : str = "normal" if self._visible else "hidden"
 
         rectangle_id = self._canvas.create_rectangle(
             0.0, 0.0, 0.0, 0.0, 
