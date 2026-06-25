@@ -12,7 +12,6 @@ from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
 from matplotlib.figure import Figure
 
-from discopop_gui.Types.ViewableCanvasT import ViewableCanvasT
 from discopop_gui.Visualizers.Base import Base
 from discopop_gui.Objects.Frames.MultiFrame import MultiFrame
 from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
@@ -114,7 +113,7 @@ class Plottable:
         if self._visualizer is None:
             raise VisualizerNotDefined()
         
-        def canvas_builder(parent : tk.Frame, canvas_viewer : CanvasViewer[ViewableCanvasT], canvas_viewer_mode : CanvasViewerMode) -> ViewableCanvasWithTrees:
+        def canvas_builder(parent : tk.Frame, canvas_viewer : CanvasViewer[ViewableCanvasWithTrees], canvas_viewer_mode : CanvasViewerMode) -> ViewableCanvasWithTrees:
             return ViewableCanvasWithTrees(parent, canvas_viewer, canvas_viewer_mode, bg="white")
         
         def frame_builder(parent : tk.Misc) -> CanvasViewer[ViewableCanvasWithTrees]:

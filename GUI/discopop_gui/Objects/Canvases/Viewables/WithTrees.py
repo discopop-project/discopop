@@ -10,7 +10,6 @@ import tkinter as tk
 import networkx as nx
 from typing import Any, Dict, Tuple, List, TYPE_CHECKING
 
-from discopop_gui.Types.ViewableCanvasT import ViewableCanvasT
 from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Enums.EdgeTypes import EdgeTypes
 from discopop_gui.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
@@ -24,7 +23,7 @@ class WithTrees(ViewableCanvas):
     def __init__(
         self,
         parent: tk.Frame,
-        canvas_viewer: "CanvasViewer[ViewableCanvasT]",
+        canvas_viewer: "CanvasViewer[WithTrees]",
         viewer_mode: ViewerMode,
         *args: Any,
         **kwargs: Any,

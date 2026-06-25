@@ -44,7 +44,10 @@ class TreeNode:
 
                 self._canvas.create_visual_node(base_node_connection.id, state = "hidden")
 
-                if (self._base_node.id == base_node_connection_dependency for base_node_connection_dependency in base_node_connection.dependency_connections):
+                if (
+                    self._base_node.id == base_node_connection_dependency.id
+                    for base_node_connection_dependency in base_node_connection.dependency_connections
+                ):
                     edge_id = self._canvas.create_visual_edge(base_node_connection.id, self._base_node.id, EdgeTypes.DEPENDENCY)
                 else:
                     edge_id = self._canvas.create_visual_edge(base_node_connection.id, self._base_node.id, EdgeTypes.MAIN)
