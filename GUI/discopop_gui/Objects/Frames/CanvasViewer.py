@@ -19,7 +19,7 @@ from discopop_gui.Enums.ViewerMode import ViewerMode
 
 
 class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
-    def __init__(self, parent: tk.Misc, canvas_builder: Callable[[tk.Frame, "CanvasViewer", ViewerMode], ViewableCanvasT], *args: Any, **kwargs: Any) -> None:
+    def __init__(self, parent: tk.Misc, canvas_builder: Callable[[tk.Frame, "CanvasViewer[ViewableCanvasT]", ViewerMode], ViewableCanvasT], *args: Any, **kwargs: Any) -> None:
         super().__init__(parent, *args, **kwargs)
 
         self._canvas_builder = canvas_builder
@@ -119,7 +119,7 @@ class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
                 pady = 2,
             )
 
-    def add_canvas(self, canvas_builder: Callable[[tk.Frame, "CanvasViewer", ViewerMode], ViewableCanvasT] | None = None) -> str:
+    def add_canvas(self, canvas_builder: Callable[[tk.Frame, "CanvasViewer[ViewableCanvasT]", ViewerMode], ViewableCanvasT] | None = None) -> str:
         self._canvas_id_counter += 1
         canvas_id = str(self._canvas_id_counter)
 

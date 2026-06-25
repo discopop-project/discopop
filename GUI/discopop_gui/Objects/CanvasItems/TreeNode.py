@@ -74,6 +74,8 @@ class TreeNode:
             for connection_id, edge_id in self._higher_order_connections.items():
                 self._canvas.get_visual_node(connection_id).set_lower_order_connections_shown(False)
 
+        return None
+
     def _on_left_press(self, _ : tk.Event) -> str | None:
         if not (self._canvas.get_viewer_mode() == ViewerMode.MAIN):
             return
@@ -139,12 +141,15 @@ class TreeNode:
             for connection_id, edge_id in self._lower_order_connections.items():
                 self._canvas.get_visual_node(connection_id).set_higher_order_connections_shown(False)
 
+        return None
+
     def _on_new_canvas(self, _ : tk.Event) -> str | None:
         self._canvas.add_clone_to_canvas_viewer(self._base_node.id)
+        return None
 
     def _on_right_press(self, event : tk.Event) -> str | None:
         if not (self._canvas.get_viewer_mode() == ViewerMode.MAIN):
-            return
+            return None
         
         self._popup.clear_buttons()
 
@@ -158,6 +163,7 @@ class TreeNode:
         x = self._canvas.canvasx(event.x)
         y = self._canvas.canvasy(event.y)
         self._popup.visualize(x, y)
+        return None
 
     def get_id(self) -> int:
         return self._base_node.id
@@ -217,7 +223,7 @@ class TreeNode:
             if (self._lower_order_connections_shown == True):
                 self.hide_lower_order_connections()
 
-    def hide_by_lower_order(self, lower_order_id) -> None:
+    def hide_by_lower_order(self, lower_order_id : int) -> None:
         _ = self._lower_order_connections[lower_order_id]
 
         if lower_order_id in self._lower_order_hide_requests:

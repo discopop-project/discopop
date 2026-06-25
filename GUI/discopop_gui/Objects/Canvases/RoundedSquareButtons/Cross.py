@@ -6,14 +6,17 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import tkinter as tk
+from typing import Callable
+
 from discopop_gui.Objects.Canvases.RoundedSquareButtons.RoundedSquareButton import RoundedSquareButton
 
 class Cross(RoundedSquareButton):
     def __init__(
         self,
-        parent,
-        command,
-        colour: str = "red",
+        parent : tk.Misc,
+        command : Callable[[], None],
+        colour : str = "red",
         *args,
         **kwargs,
     ) -> None:
