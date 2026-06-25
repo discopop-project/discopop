@@ -88,7 +88,7 @@ class Popup:
         state = "normal" if self._visible else "hidden"
 
         rectangle_id = self._canvas.create_rectangle(
-            (0.0, 0.0), (0.0, 0.0), 
+            0.0, 0.0, 0.0, 0.0, 
             state = state, 
             fill = "#ffffff", 
             outline = "#ffffff"
