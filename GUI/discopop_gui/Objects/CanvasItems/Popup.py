@@ -19,7 +19,7 @@ class Popup:
         self._button_height : float = 30
 
         self._background_id = self._canvas.create_rectangle(
-            0, 0, self._min_width, 0, 
+            0.0, 0.0, self._min_width, 0.0 ,
             state = "hidden", 
             fill = "#f2f2f2", 
             outline = "#999999",
@@ -28,7 +28,7 @@ class Popup:
 
         self._callbacks : Dict[str, Callable[[tk.Event], str | None]] = {}
         self._button_items : Dict[str, Tuple[int, int]] = {}
-        self._last_bbox : Tuple[float, float, float, float] = (0, 0, self._min_width, 0)
+        self._last_bbox : Tuple[float, float, float, float] = (0.0, 0.0, self._min_width, 0.0)
 
     def _update_layout(self) -> None:
         current_y = self._y + 2 
@@ -88,14 +88,14 @@ class Popup:
         state = "normal" if self._visible else "hidden"
 
         rectangle_id = self._canvas.create_rectangle(
-            0, 0, 0, 0, 
+            0.0, 0.0, 0.0, 0.0, 
             state = state, 
             fill = "#ffffff", 
             outline = "#ffffff"
         )
         
         text_id = self._canvas.create_text(
-            0, 0, 
+            0.0, 0.0, 
             text = button_id, 
             anchor = "w", 
             state = state, 
@@ -107,15 +107,19 @@ class Popup:
         def on_click(event: tk.Event) -> str | None:
             if self._visible:
                 self.hide()
-                callback(event)
+                return callback(event)
 
         def on_enter(_ : tk.Event) -> str | None:
             if self._visible:
                 self._canvas.itemconfigure(rectangle_id, fill = "#cfe8ff", outline = "#cfe8ff")
+            
+            return None
                 
         def on_exit(_ : tk.Event) -> str | None:
             if self._visible:
                 self._canvas.itemconfigure(rectangle_id, fill = "#ffffff", outline = "#ffffff")
+
+            return None
 
         self._canvas.tag_bind(rectangle_id, "<Button-1>", on_click)
         self._canvas.tag_bind(text_id, "<Button-1>", on_click)
