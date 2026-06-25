@@ -538,14 +538,14 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 ctx_graph.add_edge(
                     ctx,
                     contained_ctx,
-                    edge_type = TreeEdgeTypes.MAIN,
+                    edge_type=TreeEdgeTypes.MAIN,
                 )
 
             for node in ctx.contained_nodes:
                 ctx_graph.add_edge(
                     ctx,
                     node,
-                    edge_type = TreeEdgeTypes.MAIN,
+                    edge_type=TreeEdgeTypes.MAIN,
                 )
 
         for ctx in self.contexts:
@@ -553,7 +553,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 ctx_graph.add_edge(
                     ctx,
                     dep[0],
-                    edge_type = TreeEdgeTypes.DEPENDENCY,
+                    edge_type=TreeEdgeTypes.DEPENDENCY,
                 )
 
         canvas.build_trees(ctx_graph)

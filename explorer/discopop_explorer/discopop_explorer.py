@@ -141,7 +141,7 @@ def __run(
     enable_task_graph_plot: bool = False,
     enable_context_graph_plot: bool = False,
     enable_visualizer: bool = False,
-    visualize_on: Optional[tk.Frame] = None
+    visualize_on: Optional[tk.Frame] = None,
 ) -> DetectionResult:
     # check for updates
     module_name = "discopop"
@@ -286,7 +286,7 @@ def run(arguments: ExplorerArguments) -> None:
             enable_task_graph_plot=arguments.enable_task_graph_plot,
             enable_context_graph_plot=arguments.enable_context_graph_plot,
             enable_visualizer=arguments.enable_visualizer,
-            visualize_on=arguments.visualize_on
+            visualize_on=arguments.visualize_on,
         )
 
         end = time.time()
