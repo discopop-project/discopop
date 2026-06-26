@@ -60,7 +60,7 @@ Reading raw files from `.discopop` (via file reads, directory listings, or shell
 - The directory contains large binary files, intermediate artefacts, and `jsonpickle`-serialised objects that are expensive to parse.
 - Doing so consumes a significant number of tokens for data that the MCP tools already expose in a structured, pre-processed form.
 
-The MCP tools return exactly the information needed at a fraction of the token cost. If a piece of information appears to be missing, use the tool that produces it — for example, run `run_pattern_detection` before calling `get_parallelization_patches` — rather than reading the underlying files directly.
+The MCP tools return exactly the information needed at a fraction of the token cost. If a piece of information appears to be missing, use the tool that produces it — for example, run `gather_data` before calling `get_parallelization_patches` or `get_data_dependencies` — rather than reading the underlying files directly.
 
 ## Claude Code (CLI) - Manual Configuration
 
@@ -103,14 +103,17 @@ You should see output like:
 
 Once configured, you can ask Claude to:
 
-1. **Retrieve profiling data:**
-   > "Show me a summary of the profiling data in ./example/.discopop"
+1. **Detect parallelism:**
+   > "Instrument my project and identify parallelization opportunities"
 
-2. **Analyze patterns:**
-   > "Analyze the parallelization patterns in my profiled code"
+2. **Retrieve OpenMP patches:**
+   > "Show me the parallelization patches for my profiled code"
 
-3. **List available data:**
-   > "What profiling data is available in this directory?"
+3. **Query data dependencies:**
+   > "What data dependencies exist for lines 40–80 of src/compute.cpp?"
+
+4. **List available data:**
+   > "What execution configurations and profiling data are available in this project?"
 
 Claude will use the MCP server to fetch this information and provide analysis and recommendations.
 

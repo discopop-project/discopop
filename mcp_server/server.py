@@ -13,6 +13,12 @@
 A Model Context Protocol server that exposes DiscoPoP functionality to LLM Agents.
 Allows an LLM to drive the full instrumentation pipeline — compile, profile,
 detect patterns, and retrieve patches — without human intervention.
+
+Primary use cases:
+  - Parallelism detection: instrument a project, run profiling, detect parallel patterns,
+    and retrieve OpenMP patches ready for application.
+  - Data dependency analysis: query static and dynamic data dependencies for arbitrary
+    code regions to support general code understanding, refactoring, and correctness checks.
 """
 
 import asyncio
@@ -31,6 +37,7 @@ from mcp_server.tools import (
     create_execution_configuration,
     gather_data,
     get_configurations,
+    get_data_dependencies,
     get_execution_results,
     get_parallelization_patches,
     initialize_discopop_directory,
@@ -45,6 +52,11 @@ logging.basicConfig(
 logger = logging.getLogger("discopop-mcp")
 
 _SERVER_INSTRUCTIONS = (
+    "This server exposes DiscoPoP functionality for two primary use cases: "
+    "(1) parallelism detection — instrument a project, run profiling, detect parallel patterns, "
+    "and retrieve OpenMP patches; "
+    "(2) data dependency analysis — query static and dynamic data dependencies for arbitrary "
+    "code regions to support code understanding, refactoring, and correctness checks. "
     "All DiscoPoP data must be accessed exclusively through the tool calls provided by this server. "
     "Do not read, list, or inspect .discopop directories or their contents directly via file reads, "
     "directory listings, or shell commands. "
@@ -52,13 +64,14 @@ _SERVER_INSTRUCTIONS = (
     "that are expensive to parse and consume a large number of tokens. "
     "The MCP tools return pre-processed, structured summaries at a fraction of the token cost. "
     "If information appears to be missing, use the tool that produces it "
-    "(e.g. run gather_data before calling get_parallelization_patches) "
+    "(e.g. run gather_data before calling get_parallelization_patches or get_data_dependencies) "
     "rather than reading the underlying files directly."
 )
 
 _ALL_TOOLS = [
     get_configurations,
     get_execution_results,
+    get_data_dependencies,
     initialize_discopop_directory,
     set_compile_script,
     create_execution_configuration,

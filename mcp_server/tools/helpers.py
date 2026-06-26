@@ -25,6 +25,8 @@ class ToolContext:
         self.debug = debug
         # project_path → (DetectionResult, dump_file_mtime)
         self._detection_cache: dict[str, tuple[Any, float]] = {}
+        # project_path → (file_id_to_path, FileMapping.txt mtime)
+        self._file_mapping_cache: dict[str, tuple[dict[int, Path], float]] = {}
 
     def log_to_file(self, project_path: str, marker: str, tool_name: str, message: str) -> None:
         """Append a timestamped entry to <project_path>/.discopop/mcp_server/log.txt.
@@ -111,6 +113,29 @@ class ToolContext:
             log_level="WARNING",
             write_log=False,
         )
+
+    def get_file_mapping(self, project_path: str) -> Optional[dict[int, Path]]:
+        """Return a cached file_id → Path mapping loaded from .discopop/FileMapping.txt.
+        Reloads when the file is newer than the cache. Returns None if the file does not exist."""
+        fmap_path = Path(project_path) / ".discopop" / "FileMapping.txt"
+        if not fmap_path.exists():
+            return None
+        current_mtime = fmap_path.stat().st_mtime
+        cached = self._file_mapping_cache.get(project_path)
+        if cached is not None:
+            mapping, cached_mtime = cached
+            if cached_mtime == current_mtime:
+                return mapping
+        try:
+            from discopop_library.PathManagement.PathManagement import load_file_mapping
+
+            mapping = load_file_mapping(str(fmap_path))
+            self._file_mapping_cache[project_path] = (mapping, current_mtime)
+            logger.info(f"Loaded FileMapping for {project_path} into cache")
+            return mapping
+        except Exception as e:
+            logger.warning(f"Failed to load FileMapping from {fmap_path}: {e}")
+            return None
 
     def get_detection_result(self, project_path: str) -> Optional[Any]:
         """Return the cached DetectionResult for project_path, loading or reloading from

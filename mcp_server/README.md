@@ -10,16 +10,16 @@ directory for details.
 
 # DiscoPoP MCP Server
 
-A Model Context Protocol (MCP) server that exposes DiscoPoP functionality to Claude, enabling Claude to execute instrumented code locally and request analysis of profiling data.
+A Model Context Protocol (MCP) server that exposes DiscoPoP functionality to Claude, enabling Claude to drive the full instrumentation pipeline and query static and dynamic data dependencies.
 
 ## Overview
 
 The DiscoPoP MCP Server bridges the gap between Claude and DiscoPoP's profiling and analysis tools. It allows Claude to:
 
+- Instrument a project, run profiling, detect parallel patterns, and retrieve OpenMP patches
+- Query static and dynamic data dependencies for arbitrary code regions to support code understanding, refactoring, and correctness checks
 - Retrieve profiling information from executed instrumented code
-- Execute pattern analysis on profiled data
-- List and discover available profiling data
-- Process results and provide recommendations
+- List and discover available profiling data and execution configurations
 
 ## Features
 
@@ -127,6 +127,26 @@ Reads `<project_path>/.discopop/project/execution_results.json`.
 }
 ```
 
+### 3. `get_data_dependencies`
+
+Returns data dependencies (RAW, WAR, WAW) that cross or lie within a specified code region. Results contain both statically and dynamically identified dependencies — dynamic profiling correctly captures aliasing and other cases that pure static analysis cannot resolve.
+
+Dependencies are grouped by direction:
+- `incoming` — source outside the region, sink inside
+- `outgoing` — source inside the region, sink outside
+- `intra_region` — both source and sink within the region
+
+**Parameters:**
+- `project_path` (string, required): Absolute path to the project root
+- `file_path` (string, required): Absolute path to the source file
+- `start_line` (integer, required): First line of the code region (inclusive)
+- `end_line` (integer, required): Last line of the code region (inclusive)
+- `include_raw` / `include_war` / `include_waw` (boolean, optional): Filter by dependency type (default: all true)
+- `include_incoming` / `include_outgoing` / `include_intra_region` (boolean, optional): Filter by direction (default: all true)
+- `var_name` (string, optional): Restrict results to a specific variable; automatically excludes incoming dependencies (aliasing safety)
+
+This tool is cheap to call repeatedly — `DetectionResult` and `FileMapping` are cached in memory after the first load. Requires `gather_data` to have been run first.
+
 ## Logging Output
 
 The server logs all incoming and outgoing communication:
@@ -160,7 +180,7 @@ pytest mcp_server/test_server.py -v
 
 Reading raw files from `.discopop` is wasteful and unreliable: the directory contains large binary files, intermediate artefacts, and serialised objects that are expensive to parse and consume a significant number of tokens. The MCP tools return pre-processed, structured summaries that contain exactly the information needed — at a fraction of the token cost.
 
-If a piece of information appears to be missing from the available tools, the correct response is to use the tool that produces it (e.g. run `run_pattern_detection` before calling `get_parallelization_patches`) rather than reading the underlying files directly.
+If a piece of information appears to be missing from the available tools, the correct response is to use the tool that produces it (e.g. run `gather_data` before calling `get_parallelization_patches` or `get_data_dependencies`) rather than reading the underlying files directly.
 
 ## Daemon Mode
 
@@ -212,7 +232,12 @@ discopop_mcp_server --daemon-port 8888
 
 ### What is cached
 
-The daemon's `ToolContext` caches the `DetectionResult` object produced by `run_pattern_detection`. On the first tool call that needs it, the result is loaded from `.discopop/explorer/detection_result_dump.json` using `jsonpickle` and kept in memory. Subsequent calls skip the deserialization step entirely. The cache is automatically invalidated when the dump file's modification time changes (i.e., after `run_pattern_detection` runs again).
+The daemon's `ToolContext` maintains two caches:
+
+- **`DetectionResult`** — loaded from `.discopop/explorer/detection_result_dump.json` using `jsonpickle` on the first call that needs it (e.g. `get_data_dependencies`, `get_parallelization_patches`). Subsequent calls skip the deserialization step entirely.
+- **`FileMapping`** — loaded from `.discopop/FileMapping.txt` on the first call to `get_data_dependencies`. Maps numeric file IDs to absolute source file paths.
+
+Both caches are keyed by `project_path` and automatically invalidated when the underlying file's modification time changes (i.e., after `gather_data` runs again).
 
 ## Architecture
 
