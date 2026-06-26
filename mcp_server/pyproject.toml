@@ -36,6 +36,8 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=0.1.0",
+    "uvicorn>=0.20",
+    "starlette>=0.20",
 ]
 
 [project.optional-dependencies]

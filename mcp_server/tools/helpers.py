@@ -23,6 +23,8 @@ logger = logging.getLogger("discopop-mcp")
 class ToolContext:
     def __init__(self, debug: bool = False) -> None:
         self.debug = debug
+        # project_path → (DetectionResult, dump_file_mtime)
+        self._detection_cache: dict[str, tuple[Any, float]] = {}
 
     def log_to_file(self, project_path: str, marker: str, tool_name: str, message: str) -> None:
         """Append a timestamped entry to <project_path>/.discopop/mcp_server/log.txt.
@@ -109,6 +111,31 @@ class ToolContext:
             log_level="WARNING",
             write_log=False,
         )
+
+    def get_detection_result(self, project_path: str) -> Optional[Any]:
+        """Return the cached DetectionResult for project_path, loading or reloading from
+        .discopop/explorer/detection_result_dump.json when the file is newer than the cache.
+        Returns None if the dump file does not exist."""
+        dump_path = Path(project_path) / ".discopop" / "explorer" / "detection_result_dump.json"
+        if not dump_path.exists():
+            return None
+        current_mtime = dump_path.stat().st_mtime
+        cached = self._detection_cache.get(project_path)
+        if cached is not None:
+            result, cached_mtime = cached
+            if cached_mtime == current_mtime:
+                return result
+        try:
+            import jsonpickle  # type: ignore
+
+            json_str = dump_path.read_text(encoding="utf-8")
+            result = jsonpickle.decode(json_str, keys=True)
+            self._detection_cache[project_path] = (result, current_mtime)
+            logger.info(f"Loaded DetectionResult for {project_path} into cache")
+            return result
+        except Exception as e:
+            logger.warning(f"Failed to load DetectionResult from {dump_path}: {e}")
+            return None
 
     @staticmethod
     def newest_source_mtime(project_path: str) -> Optional[float]:

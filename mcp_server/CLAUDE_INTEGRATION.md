@@ -52,6 +52,16 @@ Once configured, you can ask Claude:
 
 Claude will list the available DiscoPoP tools.
 
+### Best Practices for LLM Agents
+
+> **Do not inspect `.discopop` directories directly.** All DiscoPoP data must be accessed exclusively through the `discopop_mcp_server` tool calls.
+
+Reading raw files from `.discopop` (via file reads, directory listings, or shell commands) is both wasteful and unreliable:
+- The directory contains large binary files, intermediate artefacts, and `jsonpickle`-serialised objects that are expensive to parse.
+- Doing so consumes a significant number of tokens for data that the MCP tools already expose in a structured, pre-processed form.
+
+The MCP tools return exactly the information needed at a fraction of the token cost. If a piece of information appears to be missing, use the tool that produces it — for example, run `run_pattern_detection` before calling `get_parallelization_patches` — rather than reading the underlying files directly.
+
 ## Claude Code (CLI) - Manual Configuration
 
 For advanced users who prefer manual configuration, Claude Code uses MCP server configuration stored in your local Claude directory.
