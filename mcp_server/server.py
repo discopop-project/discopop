@@ -100,69 +100,6 @@ def _is_daemon_running(port: int) -> bool:
         return False
 
 
-async def _wait_for_daemon(port: int, max_wait: float = 5.0) -> bool:
-    import time
-
-    deadline = time.monotonic() + max_wait
-    while time.monotonic() < deadline:
-        if _is_daemon_running(port):
-            return True
-        await asyncio.sleep(0.25)
-    return False
-
-
-def _try_spawn_daemon(port: int, debug: bool) -> bool:
-    import os
-    import shlex
-    import shutil
-    import subprocess
-
-    if not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
-        logger.debug("No display available, skipping daemon terminal spawn")
-        return False
-
-    daemon_exe = shutil.which("discopop_mcp_server") or sys.argv[0]
-    daemon_args = [daemon_exe, "--daemon", "--daemon-port", str(port)]
-    if debug:
-        daemon_args.append("--debug")
-    daemon_cmd = shlex.join(daemon_args)
-    shell_cmd = (
-        'printf "\\033]0;DiscoPoP MCP Server Daemon\\007"; '
-        f"{daemon_cmd}; "
-        'echo; echo "DiscoPoP MCP daemon stopped. Press Enter to close."; read'
-    )
-
-    terminals = [
-        ["gnome-terminal", "--", "bash", "-c", shell_cmd],
-        ["xterm", "-e", "bash", "-c", shell_cmd],
-        ["konsole", "-e", "bash", "-c", shell_cmd],
-        ["alacritty", "-e", "bash", "-c", shell_cmd],
-        ["kitty", "--", "bash", "-c", shell_cmd],
-        ["xfce4-terminal", "--", "bash", "-c", shell_cmd],
-        ["mate-terminal", "--", "bash", "-c", shell_cmd],
-        ["tilix", "-e", "bash", "-c", shell_cmd],
-        ["lxterminal", "-e", f"bash -c {shlex.quote(shell_cmd)}"],
-    ]
-
-    for cmd in terminals:
-        if shutil.which(cmd[0]):
-            try:
-                subprocess.Popen(
-                    cmd,
-                    close_fds=True,
-                    start_new_session=True,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                logger.info(f"Spawned DiscoPoP MCP daemon terminal using {cmd[0]}")
-                return True
-            except OSError:
-                continue
-
-    logger.warning("No suitable terminal emulator found for daemon spawn")
-    return False
-
-
 class DiscoPopMCPServer:
     def __init__(self, debug: bool = False):
         self.server = Server("discopop_mcp_server", instructions=_SERVER_INSTRUCTIONS)
@@ -227,17 +164,20 @@ class DiscoPopMCPServer:
 class DiscoPopMCPProxy:
     """Default stdio entry point.
 
-    The daemon is not contacted at startup. On the first actual tool call the
-    proxy checks whether a daemon is already listening on ``daemon_port``. If
-    not, it attempts to spawn one in a new terminal window. Once a daemon is
-    reachable, a single ClientSession is kept open for the lifetime of this
-    process and all subsequent tool calls are forwarded through it — giving the
-    daemon's ToolContext a chance to keep expensive data structures (e.g.
-    DetectionResult) in memory between calls.
+    On the first tool call the proxy checks whether a daemon is already
+    listening on ``daemon_port``. If one is found, a single ClientSession is
+    kept open for the lifetime of this process and all subsequent tool calls
+    are forwarded through it — giving the daemon's ToolContext a chance to
+    keep expensive data structures (e.g. DetectionResult) in memory between
+    calls and across sessions.
 
-    If the daemon cannot be reached (no display, spawn timeout, connection
-    error), every tool call falls back to inline execution so that the server
-    remains fully functional without a daemon.
+    The proxy never spawns a daemon on its own. To use the daemon, start it
+    manually before launching the MCP client::
+
+        discopop_mcp_server --daemon [--daemon-port PORT] [--debug]
+
+    If no daemon is reachable, every tool call runs inline inside this process.
+    The server is fully functional in both modes.
     """
 
     def __init__(self, daemon_port: int = DEFAULT_DAEMON_PORT, debug: bool = False):
@@ -290,11 +230,10 @@ class DiscoPopMCPProxy:
             return inline_result
 
     async def _ensure_daemon(self) -> None:
-        """Connect to (or spawn) the daemon on the first tool call. Idempotent.
+        """Connect to a manually-started daemon on the first tool call. Idempotent.
 
-        Safe to call concurrently: Python's cooperative scheduler guarantees no
-        context switch between the flag check and the flag set (no await in
-        between), so at most one caller proceeds to initialisation.
+        Safe to call concurrently: no await between the flag check and the flag
+        set, so at most one caller proceeds to initialisation.
         """
         if self._daemon_init_started:
             if self._daemon_session_ready is not None:
@@ -304,17 +243,11 @@ class DiscoPopMCPProxy:
         self._daemon_init_started = True
         self._daemon_session_ready = asyncio.Event()
 
-        running = _is_daemon_running(self.daemon_port)
-        if not running:
-            if _try_spawn_daemon(self.daemon_port, self.debug):
-                running = await _wait_for_daemon(self.daemon_port)
-                if not running:
-                    logger.warning("Daemon spawn timed out; using inline execution")
-
-        if running and self._tg is not None:
+        if _is_daemon_running(self.daemon_port) and self._tg is not None:
             self._tg.start_soon(self._daemon_conn)
             await self._daemon_session_ready.wait()
         else:
+            logger.debug(f"No daemon on port {self.daemon_port}; using inline execution")
             self._daemon_session_ready.set()
 
     async def _daemon_conn(self) -> None:
@@ -400,15 +333,21 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=f"""
 Examples:
-  %(prog)s                             # Start (proxy → daemon if running, else inline)
+  %(prog)s                             # Start server (inline execution, no daemon)
   %(prog)s --debug                     # Start with debug logging
-  %(prog)s --daemon                    # Start as a persistent daemon (keeps state in memory)
+  %(prog)s --daemon                    # Start a persistent daemon for a live console
   %(prog)s --daemon --daemon-port 8888 # Daemon on a custom port
   %(prog)s --setup <agent>             # Configure a specific agent
   %(prog)s --setup <agent> --debug     # Configure with debug logging enabled
   %(prog)s --setup-all                 # Configure all agents
   %(prog)s --verify <agent>            # Verify agent setup
   %(prog)s --status                    # Show current setup status
+
+Optional daemon workflow (for a live request console):
+  Run the daemon in a terminal of your choice before starting the MCP client:
+    %(prog)s --daemon
+  The server will forward all tool calls to the daemon automatically.
+  Stop the daemon at any time by pressing Ctrl+C in that terminal.
 
 Available agents: {', '.join(agent_choices)}
         """,
@@ -422,7 +361,7 @@ Available agents: {', '.join(agent_choices)}
     parser.add_argument(
         "--daemon",
         action="store_true",
-        help="Run as a persistent SSE daemon that keeps ToolContext alive between calls",
+        help="Run as a persistent SSE daemon (keeps ToolContext alive; connect via --daemon-port)",
     )
     parser.add_argument(
         "--daemon-port",
