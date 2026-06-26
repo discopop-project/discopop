@@ -67,6 +67,10 @@ _SERVER_INSTRUCTIONS = (
     "If information appears to be missing, use the tool that produces it "
     "(e.g. run gather_data before calling get_parallelization_patches or get_data_dependencies) "
     "rather than reading the underlying files directly. "
+    "IMPORTANT: Always use manage_patches to apply suggested patches — never read patch content "
+    "and apply changes manually. manage_patches delegates all patching work to the "
+    "discopop_patch_applicator binary, which is orders of magnitude faster and consumes far "
+    "fewer tokens than reading patch files and editing source files by hand. "
     "Use initialize_discopop_directory with reset=true to clear stale analysis artefacts "
     "when the pipeline is in a broken or inconsistent state."
 )

@@ -47,7 +47,11 @@ TOOL = Tool(
         "  +  #pragma omp parallel for firstprivate(N)\n"
         "     for (int i = 0; i < N; i++) {\n"
         "       Arr[i] = i % 13;\n"
-        "     }"
+        "     }\n"
+        "\n"
+        "IMPORTANT: To apply a patch, always use manage_patches(action='apply', "
+        "suggestion_ids=[...]) — never read the patch content here and edit source files manually. "
+        "The manage_patches tool applies changes in one tool call and consumes far fewer tokens."
     ),
     inputSchema={
         "type": "object",
