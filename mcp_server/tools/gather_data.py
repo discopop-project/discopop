@@ -562,7 +562,10 @@ def _run_pattern_detection(
 
 
 def _progress(step: int, total: int, label: str) -> None:
-    sys.stderr.write(f"\r[gather_data {step}/{total}] {label}...\n")
+    from termcolor import colored
+
+    prefix = colored(f"[gather_data {step}/{total}]", "cyan", attrs=["bold"])
+    sys.stderr.write(f"\r{prefix} {label}...\n")
     sys.stderr.flush()
 
 
@@ -668,7 +671,9 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             ctx.log_response("gather_data", result)
             return [TextContent(type="text", text=json.dumps(result))]
 
-        sys.stderr.write(f"\r[gather_data] Pipeline complete.\n")
+        from termcolor import colored
+
+        sys.stderr.write(f"\r{colored('[gather_data] Pipeline complete.', 'green', attrs=['bold'])}\n")
         sys.stderr.flush()
 
         result = {

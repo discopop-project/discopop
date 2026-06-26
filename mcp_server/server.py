@@ -30,6 +30,7 @@ from typing import Any, Callable, Optional
 
 from mcp.server import Server
 from mcp.types import TextContent, Tool
+from termcolor import colored
 
 from mcp_server.setup_mcp import MCPSetup
 
@@ -46,10 +47,54 @@ from mcp_server.tools import (
 )
 from mcp_server.tools.helpers import ToolContext
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+_LOG_FORMAT = "%(asctime)s  %(levelname)-8s  %(message)s"
+_LOG_DATEFMT = "%H:%M:%S"
+
+
+class _ColoredFormatter(logging.Formatter):
+    """Applies ANSI colours to log lines based on level and message marker."""
+
+    # INFO messages are coloured by the leading marker character.
+    _MARKER: dict[str, tuple[str, list[str]]] = {
+        "▶": ("cyan", ["bold"]),  # ▶ Executing
+        "✓": ("green", ["bold"]),  # ✓ Completed
+        "✗": ("red", ["bold"]),  # ✗ Failed
+        "→": ("cyan", []),  # → Incoming call
+        "←": ("magenta", []),  # ← Outgoing response
+    }
+    _LEVEL: dict[int, tuple[str, list[str]]] = {
+        logging.DEBUG: ("white", ["dark"]),
+        logging.WARNING: ("yellow", []),
+        logging.ERROR: ("red", ["bold"]),
+        logging.CRITICAL: ("red", ["bold", "underline"]),
+    }
+
+    def format(self, record: logging.LogRecord) -> str:
+        text = super().format(record)
+        if record.levelno in self._LEVEL:
+            c, attrs = self._LEVEL[record.levelno]
+            return str(colored(text, c, attrs=attrs or None))
+        # INFO: pick colour from the first non-space character of the message.
+        first = record.getMessage().lstrip()[:1]
+        if first in self._MARKER:
+            c, attrs = self._MARKER[first]
+            return str(colored(text, c, attrs=attrs or None))
+        return text
+
+
+def _setup_logging(debug: bool = False) -> None:
+    handler = logging.StreamHandler(sys.stderr)
+    if sys.stderr.isatty():
+        handler.setFormatter(_ColoredFormatter(fmt=_LOG_FORMAT, datefmt=_LOG_DATEFMT))
+    else:
+        handler.setFormatter(logging.Formatter(fmt=_LOG_FORMAT, datefmt=_LOG_DATEFMT))
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(logging.DEBUG if debug else logging.INFO)
+
+
+_setup_logging()
 logger = logging.getLogger("discopop-mcp")
 
 _SERVER_INSTRUCTIONS = (
@@ -104,8 +149,7 @@ class DiscoPopMCPServer:
     def __init__(self, debug: bool = False):
         self.server = Server("discopop_mcp_server", instructions=_SERVER_INSTRUCTIONS)
         self.debug = debug
-        if debug:
-            logger.setLevel(logging.DEBUG)
+        _setup_logging(debug=debug)
         self._ctx = ToolContext(debug=debug)
         self._register_tools()
 
@@ -183,6 +227,7 @@ class DiscoPopMCPProxy:
     def __init__(self, daemon_port: int = DEFAULT_DAEMON_PORT, debug: bool = False):
         self.daemon_port = daemon_port
         self.debug = debug
+        _setup_logging(debug=debug)
         self._session: Optional[Any] = None  # mcp.client.session.ClientSession when connected
         # Inline fallback components (used when daemon is unavailable)
         self._ctx = ToolContext(debug=debug)

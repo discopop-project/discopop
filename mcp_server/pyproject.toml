@@ -36,6 +36,7 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=0.1.0",
+    "termcolor>=2.0",
     "uvicorn>=0.20",
     "starlette>=0.20",
 ]
