@@ -28,18 +28,12 @@ from mcp.types import TextContent, Tool
 from mcp_server.setup_mcp import MCPSetup
 
 from mcp_server.tools import (
-    check_configurations_status,
     create_execution_configuration,
+    gather_data,
     get_configurations,
     get_execution_results,
     get_parallelization_patches,
     initialize_discopop_directory,
-    instrument_for_hotspot_detection,
-    instrument_project,
-    run_hotspot_analysis,
-    run_hotspot_profiling,
-    run_instrumented_binary,
-    run_pattern_detection,
     set_compile_script,
 )
 from mcp_server.tools.helpers import ToolContext
@@ -58,23 +52,17 @@ _SERVER_INSTRUCTIONS = (
     "that are expensive to parse and consume a large number of tokens. "
     "The MCP tools return pre-processed, structured summaries at a fraction of the token cost. "
     "If information appears to be missing, use the tool that produces it "
-    "(e.g. run run_pattern_detection before calling get_parallelization_patches) "
+    "(e.g. run gather_data before calling get_parallelization_patches) "
     "rather than reading the underlying files directly."
 )
 
 _ALL_TOOLS = [
-    check_configurations_status,
     get_configurations,
     get_execution_results,
     initialize_discopop_directory,
     set_compile_script,
     create_execution_configuration,
-    instrument_for_hotspot_detection,
-    run_hotspot_profiling,
-    run_hotspot_analysis,
-    instrument_project,
-    run_instrumented_binary,
-    run_pattern_detection,
+    gather_data,
     get_parallelization_patches,
 ]
 
@@ -177,7 +165,8 @@ class DiscoPopMCPServer:
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
-            logger.info(f"▶ Executing: {name}")
+            params_summary = ", ".join(f"{k}={v!r}" for k, v in (arguments or {}).items() if k != "script_body")
+            logger.info(f"▶ Executing: {name}({params_summary})")
             start_time = time.time()
             try:
                 result = handler(arguments, self._ctx)

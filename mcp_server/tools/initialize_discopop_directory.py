@@ -23,11 +23,17 @@ TOOL = Tool(
     annotations=ToolAnnotations(idempotentHint=True),
     description=(
         "Set up the DiscoPoP directory structure for a project. Call this as the very "
-        "first step before any other DiscoPoP tool when working with a project that has "
-        "not been initialized yet. Safe to call on an already-initialized project — "
-        "existing files are left unchanged and reported in skipped_files. "
+        "first step before any other DiscoPoP tool. "
         "\n\n"
-        "This tool creates:\n"
+        "If the project is already initialized (.discopop/project/configs/ exists), "
+        "this tool returns the current configuration status without modifying any files:\n"
+        "  - already_initialized: true\n"
+        "  - compile_script_configured: whether compile.sh has been customised\n"
+        "  - settings_files: which of the seq/dp/hd/par settings JSON files are present\n"
+        "  - configurations: list of named execution configurations with has_execute_sh flag\n"
+        "  - num_configurations: total number of execution configurations\n"
+        "\n"
+        "If the project is not yet initialized, this tool creates:\n"
         "  - .discopop/project/configs/          — configuration directory\n"
         "  - seq_settings.json                   — base sequential build settings (CC, CXX, CFLAGS, CXXFLAGS)\n"
         "  - dp_settings.json                    — instrumentation settings (CC=discopop_cc, CXX=discopop_cxx)\n"
@@ -35,7 +41,7 @@ TOOL = Tool(
         "  - par_settings.json                   — parallel build settings\n"
         "  - compile.sh                          — placeholder that must be replaced via set_compile_script\n"
         "\n"
-        "After this tool succeeds, call set_compile_script to describe how to build the "
+        "After initializing, call set_compile_script to describe how to build the "
         "project, then create_execution_configuration to describe how to run it."
     ),
     inputSchema={
@@ -92,6 +98,42 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             return ctx.error(f"project_path does not exist: {project_path}")
 
         configs_dir = p / ".discopop" / "project" / "configs"
+
+        if configs_dir.exists():
+            compile_sh = configs_dir / "compile.sh"
+            compile_script_configured = False
+            if compile_sh.exists():
+                content = compile_sh.read_text()
+                compile_script_configured = "Use set_compile_script" not in content and "exit 1" not in content
+
+            settings_files = {
+                key: (configs_dir / filename).exists()
+                for key, filename in [
+                    ("seq", "seq_settings.json"),
+                    ("dp", "dp_settings.json"),
+                    ("hd", "hd_settings.json"),
+                    ("par", "par_settings.json"),
+                ]
+            }
+
+            configurations = [
+                {"name": d.name, "has_execute_sh": (d / "execute.sh").exists()}
+                for d in sorted(configs_dir.iterdir())
+                if d.is_dir()
+            ]
+
+            result = {
+                "status": "success",
+                "project_path": project_path,
+                "already_initialized": True,
+                "compile_script_configured": compile_script_configured,
+                "settings_files": settings_files,
+                "configurations": configurations,
+                "num_configurations": len(configurations),
+            }
+            ctx.log_response("initialize_discopop_directory", result)
+            return [TextContent(type="text", text=json.dumps(result))]
+
         configs_dir.mkdir(parents=True, exist_ok=True)
         ctx.log_action(project_path, "initialize_discopop_directory", f"Ensured directory exists: {configs_dir}")
 
