@@ -165,7 +165,7 @@ class DiscoPopMCPServer:
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
-            params_summary = ", ".join(f"{k}={v!r}" for k, v in (arguments or {}).items() if k != "script_body")
+            params_summary = "".join(f"\n\t{k}={v!r}" for k, v in (arguments or {}).items() if k != "script_body")
             logger.info(f"▶ Executing: {name}({params_summary})")
             start_time = time.time()
             try:
