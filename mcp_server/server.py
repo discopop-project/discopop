@@ -52,15 +52,22 @@ _LOG_DATEFMT = "%H:%M:%S"
 
 
 class _ColoredFormatter(logging.Formatter):
-    """Applies ANSI colours to log lines based on level and message marker."""
+    """Applies ANSI colours to the prefix portion of each log line.
 
-    # INFO messages are coloured by the leading marker character.
+    For INFO lines with a semantic marker (▶ ✓ ✗ → ←) the coloured region
+    is:  timestamp  LEVEL  <marker> <label>:
+    Everything after the colon (the tool name, arguments, …) is left plain.
+
+    For WARNING / ERROR / DEBUG the coloured region is the timestamp + level
+    prefix only; the message body is always plain.
+    """
+
     _MARKER: dict[str, tuple[str, list[str]]] = {
-        "▶": ("cyan", ["bold"]),  # ▶ Executing
-        "✓": ("green", ["bold"]),  # ✓ Completed
-        "✗": ("red", ["bold"]),  # ✗ Failed
-        "→": ("cyan", []),  # → Incoming call
-        "←": ("magenta", []),  # ← Outgoing response
+        "▶": ("cyan", ["bold"]),  # ▶ Executing:
+        "✓": ("green", ["bold"]),  # ✓ Completed:
+        "✗": ("red", ["bold"]),  # ✗ Failed:
+        "→": ("cyan", []),  # → Incoming call:
+        "←": ("magenta", []),  # ← Outgoing response:
     }
     _LEVEL: dict[int, tuple[str, list[str]]] = {
         logging.DEBUG: ("white", ["dark"]),
@@ -70,16 +77,34 @@ class _ColoredFormatter(logging.Formatter):
     }
 
     def format(self, record: logging.LogRecord) -> str:
-        text = super().format(record)
+        timestamp = self.formatTime(record, self.datefmt)
+        prefix = f"{timestamp}  {record.levelname:<8}  "
+        msg = record.getMessage()
+
+        # Level-based lines: colour prefix only, message body stays plain.
         if record.levelno in self._LEVEL:
             c, attrs = self._LEVEL[record.levelno]
-            return str(colored(text, c, attrs=attrs or None))
-        # INFO: pick colour from the first non-space character of the message.
-        first = record.getMessage().lstrip()[:1]
-        if first in self._MARKER:
-            c, attrs = self._MARKER[first]
-            return str(colored(text, c, attrs=attrs or None))
-        return text
+            result = str(colored(prefix, c, attrs=attrs or None)) + msg
+        # INFO with semantic marker: colour prefix + label up to the first colon.
+        elif msg.lstrip()[:1] in self._MARKER:
+            c, attrs = self._MARKER[msg.lstrip()[:1]]
+            colon = msg.find(":")
+            if colon >= 0:
+                result = str(colored(prefix + msg[: colon + 1], c, attrs=attrs or None)) + msg[colon + 1 :]
+            else:
+                result = str(colored(prefix + msg, c, attrs=attrs or None))
+        else:
+            result = prefix + msg
+
+        # Append exception / stack info verbatim (never coloured).
+        if record.exc_info and not record.exc_text:
+            record.exc_text = self.formatException(record.exc_info)
+        if record.exc_text:
+            result += "\n" + record.exc_text
+        if record.stack_info:
+            result += "\n" + self.formatStack(record.stack_info)
+
+        return result
 
 
 def _setup_logging(debug: bool = False) -> None:

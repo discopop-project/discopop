@@ -673,7 +673,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
 
         from termcolor import colored
 
-        sys.stderr.write(f"\r{colored('[gather_data] Pipeline complete.', 'green', attrs=['bold'])}\n")
+        sys.stderr.write(f"\r{colored('[gather_data]', 'green', attrs=['bold'])} Pipeline complete.\n")
         sys.stderr.flush()
 
         result = {
