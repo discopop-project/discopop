@@ -41,6 +41,7 @@ from mcp_server.tools import (
     get_execution_results,
     get_parallelization_patches,
     initialize_discopop_directory,
+    manage_patches,
     set_compile_script,
 )
 from mcp_server.tools.helpers import ToolContext
@@ -54,7 +55,7 @@ logger = logging.getLogger("discopop-mcp")
 _SERVER_INSTRUCTIONS = (
     "This server exposes DiscoPoP functionality for two primary use cases: "
     "(1) parallelism detection — instrument a project, run profiling, detect parallel patterns, "
-    "and retrieve OpenMP patches; "
+    "retrieve OpenMP patches, and apply or roll back patches via manage_patches; "
     "(2) data dependency analysis — query static and dynamic data dependencies for arbitrary "
     "code regions to support code understanding, refactoring, and correctness checks. "
     "All DiscoPoP data must be accessed exclusively through the tool calls provided by this server. "
@@ -65,7 +66,9 @@ _SERVER_INSTRUCTIONS = (
     "The MCP tools return pre-processed, structured summaries at a fraction of the token cost. "
     "If information appears to be missing, use the tool that produces it "
     "(e.g. run gather_data before calling get_parallelization_patches or get_data_dependencies) "
-    "rather than reading the underlying files directly."
+    "rather than reading the underlying files directly. "
+    "Use initialize_discopop_directory with reset=true to clear stale analysis artefacts "
+    "when the pipeline is in a broken or inconsistent state."
 )
 
 _ALL_TOOLS = [
@@ -77,6 +80,7 @@ _ALL_TOOLS = [
     create_execution_configuration,
     gather_data,
     get_parallelization_patches,
+    manage_patches,
 ]
 
 DEFAULT_DAEMON_PORT = 7777

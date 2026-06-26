@@ -22,7 +22,7 @@ TOOL = Tool(
     annotations=ToolAnnotations(readOnlyHint=True),
     description=(
         "Retrieve the generated OpenMP parallelization patches. Call this after "
-        "run_pattern_detection to inspect or present the suggested code changes. "
+        "gather_data to inspect or present the suggested code changes. "
         "\n\n"
         "Each detected pattern results in a unified-diff patch file stored under "
         ".discopop/patch_generator/<pattern_id>/. The patch inserts an OpenMP pragma "
@@ -37,8 +37,8 @@ TOOL = Tool(
         "pattern detection, the returned patches cover every parallelization candidate "
         "found in the code base — they are not guaranteed to correspond to hotspots "
         "and may include regions with negligible contribution to overall runtime. "
-        "To restrict suggestions to hotspot regions, re-run the pipeline starting "
-        "from instrument_for_hotspot_detection. "
+        "To restrict suggestions to hotspot regions, re-run gather_data with "
+        "hotspot_config_names set. "
         "\n\n"
         "Example patch content:\n"
         "  --- original/main.cpp\n"

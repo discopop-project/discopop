@@ -14,6 +14,7 @@ from typing import Any
 from mcp.types import TextContent, Tool, ToolAnnotations
 
 from discopop_library.ProjectManager.utilities.deriveSettingsFiles import derive_settings_files
+from discopop_library.ProjectManager.utilities.reset import reset_project
 from mcp_server.tools.helpers import ToolContext
 
 logger = logging.getLogger("discopop-mcp")
@@ -25,6 +26,7 @@ TOOL = Tool(
         "Set up the DiscoPoP directory structure for a project. Call this as the very "
         "first step before any other DiscoPoP tool. "
         "\n\n"
+        "NORMAL MODE (reset=false, the default):\n"
         "If the project is already initialized (.discopop/project/configs/ exists), "
         "this tool returns the current configuration status without modifying any files:\n"
         "  - already_initialized: true\n"
@@ -41,6 +43,13 @@ TOOL = Tool(
         "  - par_settings.json                   — parallel build settings\n"
         "  - compile.sh                          — placeholder that must be replaced via set_compile_script\n"
         "\n"
+        "RESET MODE (reset=true):\n"
+        "Removes all DiscoPoP analysis artefacts (profiler output, explorer results, "
+        "patch files, hotspot data, execution results) while preserving the project "
+        "configuration directory (.discopop/project/) so that compile.sh and execution "
+        "configurations are kept intact. Use this to force a clean re-run of gather_data "
+        "when the pipeline is in a broken or inconsistent state.\n"
+        "\n"
         "After initializing, call set_compile_script to describe how to build the "
         "project, then create_execution_configuration to describe how to run it."
     ),
@@ -52,6 +61,15 @@ TOOL = Tool(
                 "description": (
                     "Absolute path to the project root directory (the directory containing "
                     "the source files). Example: /home/user/myproject"
+                ),
+            },
+            "reset": {
+                "type": "boolean",
+                "description": (
+                    "When true, delete all DiscoPoP analysis artefacts under .discopop/ "
+                    "(profiler output, explorer results, patch files, hotspot data, "
+                    "execution results) while keeping the project configuration "
+                    "(.discopop/project/). Default: false."
                 ),
             },
             "base_cc": {
@@ -88,6 +106,7 @@ TOOL = Tool(
 def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
     try:
         project_path = arguments.get("project_path", "")
+        reset: bool = arguments.get("reset", False)
         base_cc = arguments.get("base_cc", "clang")
         base_cxx = arguments.get("base_cxx", "clang++")
         cflags = arguments.get("cflags", "")
@@ -95,7 +114,29 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
 
         p = Path(project_path)
         if not p.exists():
-            return ctx.error(f"project_path does not exist: {project_path}")
+            return ctx.error(
+                f"project_path does not exist: {project_path}", project_path, "initialize_discopop_directory"
+            )
+
+        # === Reset mode ===
+        if reset:
+            pm_args = ctx.make_pm_args(project_path)
+            pm_args.reset = True
+            pm_args.reset_execution_results = True
+            reset_project(pm_args)
+            ctx.log_action(project_path, "initialize_discopop_directory", "Reset: removed analysis artefacts")
+            result: dict[str, Any] = {
+                "status": "success",
+                "project_path": project_path,
+                "reset": True,
+                "message": (
+                    "Analysis artefacts removed (.discopop/profiler, .discopop/explorer, "
+                    ".discopop/patch_generator, .discopop/hotspot_detection, execution_results.json). "
+                    "Project configuration (.discopop/project/) was preserved."
+                ),
+            }
+            ctx.log_response("initialize_discopop_directory", result)
+            return [TextContent(type="text", text=json.dumps(result))]
 
         configs_dir = p / ".discopop" / "project" / "configs"
 

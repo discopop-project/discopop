@@ -121,8 +121,6 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         include_intra_region: bool = bool(arguments.get("include_intra_region", True))
         var_name_filter: Optional[str] = arguments.get("var_name", None)
 
-        ctx.log_call("get_data_dependencies", arguments)
-
         # Enforce var_name aliasing constraint
         incoming_excluded_by_var_name = False
         if var_name_filter is not None and include_incoming:
@@ -132,12 +130,12 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         # Load DetectionResult (cached)
         detection_result = ctx.get_detection_result(project_path)
         if detection_result is None:
-            return ctx.error("No detection result found. Run gather_data first.")
+            return ctx.error("No detection result found. Run gather_data first.", project_path, "get_data_dependencies")
 
         # Load FileMapping (cached)
         file_mapping = ctx.get_file_mapping(project_path)
         if file_mapping is None:
-            return ctx.error("FileMapping.txt not found. Run gather_data first.")
+            return ctx.error("FileMapping.txt not found. Run gather_data first.", project_path, "get_data_dependencies")
 
         # Resolve target file_id
         resolved_request = Path(file_path).resolve()
@@ -147,7 +145,9 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                 target_file_id = fid
                 break
         if target_file_id is None:
-            return ctx.error(f"file_path not found in FileMapping.txt: {file_path}")
+            return ctx.error(
+                f"file_path not found in FileMapping.txt: {file_path}", project_path, "get_data_dependencies"
+            )
 
         # Import DiscoPoP enums (available via installed packages)
         from discopop_explorer.enums.DepType import DepType

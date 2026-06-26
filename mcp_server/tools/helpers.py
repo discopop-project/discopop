@@ -88,8 +88,10 @@ class ToolContext:
         if project_path:
             self.log_to_file(project_path, "· ACTION", tool_name, message)
 
-    def error(self, message: str) -> list[TextContent]:
+    def error(self, message: str, project_path: str = "", tool_name: str = "") -> list[TextContent]:
         result = {"status": "error", "message": message}
+        if project_path and tool_name:
+            self.log_to_file(project_path, "← RESULT", tool_name, f"status=error, message={message}")
         return [TextContent(type="text", text=json.dumps(result))]
 
     def make_pm_args(self, project_path: str, timeout_seconds: Optional[int] = None) -> ProjectManagerArguments:

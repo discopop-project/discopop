@@ -22,7 +22,7 @@ TOOL = Tool(
     annotations=ToolAnnotations(readOnlyHint=True),
     description=(
         "Retrieve stored execution results from prior DiscoPoP runs. "
-        "Call this after run_instrumented_binary to inspect timing, return codes, "
+        "Call this after gather_data to inspect timing, return codes, "
         "and captured output from previous executions, or to check whether profiling "
         "data has been collected. "
         "\n\n"

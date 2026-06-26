@@ -87,14 +87,29 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         config_name = arguments.get("config_name", "")
         script_body = arguments.get("script_body", "")
 
-        if not config_name or os.sep in config_name or "/" in config_name:
-            return ctx.error(f"Invalid config_name '{config_name}'. Must be a plain name without path separators.")
+        if not config_name or os.sep in config_name or "/" in config_name or config_name.startswith("."):
+            return ctx.error(
+                f"Invalid config_name '{config_name}'. Must be a plain name without path separators or leading dots.",
+                project_path,
+                "create_execution_configuration",
+            )
 
         configs_dir = Path(project_path) / ".discopop" / "project" / "configs"
         if not configs_dir.exists():
-            return ctx.error("DiscoPoP directory not initialized. Run initialize_discopop_directory first.")
+            return ctx.error(
+                "DiscoPoP directory not initialized. Run initialize_discopop_directory first.",
+                project_path,
+                "create_execution_configuration",
+            )
 
         config_dir = configs_dir / config_name
+        # Guard against any remaining traversal after Path resolution.
+        if not config_dir.resolve().is_relative_to(configs_dir.resolve()):
+            return ctx.error(
+                f"Invalid config_name '{config_name}': resolves outside configs directory.",
+                project_path,
+                "create_execution_configuration",
+            )
         config_dir.mkdir(parents=True, exist_ok=True)
         ctx.log_action(project_path, "create_execution_configuration", f"Ensured config directory: {config_dir}")
 
