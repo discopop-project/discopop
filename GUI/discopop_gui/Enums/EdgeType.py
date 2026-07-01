@@ -9,6 +9,6 @@
 from enum import Enum, auto
 
 
-class EdgeTypes(Enum):
+class EdgeType(Enum):
     MAIN = auto()
     DEPENDENCY = auto()

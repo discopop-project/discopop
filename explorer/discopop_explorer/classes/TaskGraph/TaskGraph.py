@@ -96,7 +96,7 @@ from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 
 try:
-    from discopop_gui.Enums.EdgeTypes import EdgeTypes as TreeEdgeTypes
+    from discopop_gui.Enums.EdgeType import EdgeType as TreeEdgeType
     from discopop_gui.Extendables.Plottable import Plottable
     from discopop_gui.Visualizers.Base import Base as Visualizer
     from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
@@ -538,14 +538,14 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 ctx_graph.add_edge(
                     ctx,
                     contained_ctx,
-                    edge_type=TreeEdgeTypes.MAIN,
+                    edge_type=TreeEdgeType.MAIN,
                 )
 
             for node in ctx.contained_nodes:
                 ctx_graph.add_edge(
                     ctx,
                     node,
-                    edge_type=TreeEdgeTypes.MAIN,
+                    edge_type=TreeEdgeType.MAIN,
                 )
 
         for ctx in self.contexts:
@@ -553,7 +553,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 ctx_graph.add_edge(
                     ctx,
                     dep[0],
-                    edge_type=TreeEdgeTypes.DEPENDENCY,
+                    edge_type=TreeEdgeType.DEPENDENCY,
                 )
 
         canvas.build_trees(ctx_graph)

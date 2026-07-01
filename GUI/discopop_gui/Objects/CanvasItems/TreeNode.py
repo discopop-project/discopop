@@ -10,7 +10,6 @@ from typing import Tuple, Dict, Set, TYPE_CHECKING
 import tkinter as tk
 
 from discopop_gui.Enums.ViewerMode import ViewerMode
-from discopop_gui.Enums.EdgeTypes import EdgeTypes
 from discopop_gui.utils.TreeNode import TreeNode as BaseTreeNode
 from discopop_gui.Objects.CanvasItems.Popup import Popup
 
@@ -38,20 +37,12 @@ class TreeNode:
 
     def _on_show_or_hide_higher_order(self, _ : tk.Event) -> str | None:
         if len(self._higher_order_connections) < len(self._base_node.higher_order_connections):
-            for base_node_connection in self._base_node.higher_order_connections:
+            for base_node_connection, edge_type in self._base_node.higher_order_connections:
                 if base_node_connection.id in self._higher_order_connections:
                     continue
 
                 self._canvas.create_visual_node(base_node_connection.id, state = "hidden")
-
-                if (
-                    self._base_node.id == base_node_connection_dependency.id
-                    for base_node_connection_dependency in base_node_connection.dependency_connections
-                ):
-                    edge_id = self._canvas.create_visual_edge(base_node_connection.id, self._base_node.id, EdgeTypes.DEPENDENCY)
-                else:
-                    edge_id = self._canvas.create_visual_edge(base_node_connection.id, self._base_node.id, EdgeTypes.MAIN)
-
+                edge_id = self._canvas.create_visual_edge(base_node_connection.id, self._base_node.id, edge_type)
                 connection = self._canvas.get_visual_node(base_node_connection.id)
                 connection.add_lower_order_connection(self._base_node.id, edge_id)
                 self._higher_order_connections[base_node_connection.id] = edge_id
@@ -60,9 +51,6 @@ class TreeNode:
             self._canvas.tag_lower("tree_edge", "tree_node")
 
         if len(self._higher_order_hide_requests) > 0:
-            for connection_id in self._higher_order_hide_requests:
-                self._canvas.get_visual_node(connection_id).set_lower_order_connections_shown(True)
-
             self.visualize_higher_order_connections()
             self._higher_order_connections_shown = True
         else:
@@ -78,24 +66,13 @@ class TreeNode:
         if not (self._canvas.get_viewer_mode() == ViewerMode.MAIN):
             return None
         
-        if len(self._lower_order_connections) < (len(self._base_node.dependency_connections) + len(self._base_node.lower_order_connections)):
-            for base_node_connection in self._base_node.lower_order_connections:
+        if len(self._lower_order_connections) < len(self._base_node.lower_order_connections):
+            for base_node_connection, edge_type in self._base_node.lower_order_connections:
                 if base_node_connection.id in self._lower_order_connections:
                     continue
 
                 self._canvas.create_visual_node(base_node_connection.id, state = "hidden")
-                edge_id = self._canvas.create_visual_edge(self._base_node.id, base_node_connection.id, EdgeTypes.MAIN)
-                connection = self._canvas.get_visual_node(base_node_connection.id)
-                connection.add_higher_order_connection(self._base_node.id, edge_id)
-                self._lower_order_connections[base_node_connection.id] = edge_id
-                self._lower_order_hide_requests.add(base_node_connection.id)
-
-            for base_node_connection in self._base_node.dependency_connections:
-                if base_node_connection.id in self._lower_order_connections:
-                    continue
-                
-                self._canvas.create_visual_node(base_node_connection.id, state = "hidden")
-                edge_id = self._canvas.create_visual_edge(self._base_node.id, base_node_connection.id, EdgeTypes.DEPENDENCY)
+                edge_id = self._canvas.create_visual_edge(self._base_node.id, base_node_connection.id, edge_type)
                 connection = self._canvas.get_visual_node(base_node_connection.id)
                 connection.add_higher_order_connection(self._base_node.id, edge_id)
                 self._lower_order_connections[base_node_connection.id] = edge_id
@@ -104,9 +81,6 @@ class TreeNode:
             self._canvas.tag_lower("tree_edge", "tree_node")
         
         if len(self._lower_order_hide_requests) > 0:
-            for connection_id in self._lower_order_hide_requests:
-                    self._canvas.get_visual_node(connection_id).set_higher_order_connections_shown(True)
-
             self.visualize_lower_order_connections()
             self._lower_order_connections_shown = True
         else:
@@ -129,7 +103,7 @@ class TreeNode:
         self._popup.clear_buttons()
 
         if len(self._base_node.higher_order_connections) > 0:
-            if len(self._higher_order_hide_requests) > 0 or len(self._higher_order_connections) < len(self._base_node.higher_order_connections):
+            if (len(self._higher_order_hide_requests) > 0) or (len(self._higher_order_connections) < len(self._base_node.higher_order_connections)):
                 self._popup.add_button("Show higher order", self._on_show_or_hide_higher_order)
             else:
                 self._popup.add_button("Hide higher order", self._on_show_or_hide_higher_order)
@@ -252,20 +226,12 @@ class TreeNode:
         higher_order_connection_id : int| None = None,
         higher_order_edge_id : int | None = None
     ) -> None:
-        state = "normal"
-
-        if (
-            higher_order_connection_id and
-            higher_order_edge_id and
-            len(self._higher_order_hide_requests) == len(self._higher_order_connections) and
-            len(self._lower_order_hide_requests) == len(self._lower_order_connections)
-        ):
-            state = "hidden"
+        state : str = self._canvas.itemcget(self._oval_id, "state")
 
         created = canvas.create_visual_node(self._base_node.id, state)
         cloned_node = canvas.get_visual_node(self._base_node.id)
 
-        if higher_order_connection_id and higher_order_edge_id:
+        if higher_order_connection_id is not None and higher_order_edge_id is not None:
             canvas.tag_lower("tree_edge", "tree_node")
 
             if created:

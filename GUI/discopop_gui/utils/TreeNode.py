@@ -6,12 +6,12 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
+from discopop_gui.Enums.EdgeType import EdgeType
 
 class TreeNode:
     def __init__(self, id : int) -> None:
         self.id : int = id
-        self.lower_order_connections : List["TreeNode"] = []
-        self.higher_order_connections : List["TreeNode"] = []
-        self.dependency_connections : List["TreeNode"] = []
+        self.lower_order_connections : List[Tuple["TreeNode", EdgeType]] = []
+        self.higher_order_connections : List[Tuple["TreeNode", EdgeType]] = []
         self.metadata : Dict[str, Any] = {}

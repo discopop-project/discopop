@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Callable
+from typing import Callable, List
 import tkinter as tk
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
@@ -54,7 +54,7 @@ class Plottable:
         for column in range(columns):
             frame.grid_columnconfigure(column, weight=1)
 
-        inner_frames = []
+        inner_frames : List[tk.Frame] = []
 
         for i in range(rows * columns):
             row = i // columns

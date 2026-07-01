@@ -10,7 +10,7 @@ import tkinter as tk
 from typing import Callable, Dict, Optional, Tuple, Literal
 
 class Popup:
-    def __init__(self, canvas: tk.Canvas, initial_width: int = 150) -> None:
+    def __init__(self, canvas: tk.Canvas, initial_width: float = 150) -> None:
         self._canvas = canvas
         self._visible = False
         self._min_width : float = initial_width
@@ -156,7 +156,7 @@ class Popup:
 
         self._update_layout()
 
-    def visualize(self, x: Optional[int] = None, y: Optional[int] = None) -> None:
+    def visualize(self, x: Optional[float] = None, y: Optional[float] = None) -> None:
         if x is not None:
             self._x = x
 

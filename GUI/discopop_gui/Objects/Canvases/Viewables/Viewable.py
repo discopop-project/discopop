@@ -9,21 +9,16 @@
 from __future__ import annotations
 
 import tkinter as tk
-from typing import Any, TYPE_CHECKING
+from typing import Any
 
 from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Objects.CanvasItems.Popup import Popup
 
-if TYPE_CHECKING:
-    from discopop_gui.Types.ViewableCanvasT import ViewableCanvasT
-    from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
-
 
 class Viewable(tk.Canvas):
-    def __init__(self, parent: tk.Misc, canvas_viewer : "CanvasViewer[ViewableCanvasT]", viewer_mode: ViewerMode, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, parent: tk.Misc, viewer_mode: ViewerMode, *args: Any, **kwargs: Any) -> None:
         super().__init__(parent, *args, **kwargs)
 
-        self._canvas_viewer = canvas_viewer
         self._viewer_mode = viewer_mode
 
         self._original_coordinates: dict[int, tuple[float, ...]] = {}
