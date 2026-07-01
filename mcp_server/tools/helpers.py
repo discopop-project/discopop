@@ -16,6 +16,7 @@ from typing import Any, Optional
 from mcp.types import TextContent
 
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from mcp_server.static_dependencies import StaticDependency, parse_static_dependencies
 
 logger = logging.getLogger("discopop-mcp")
 
@@ -27,6 +28,8 @@ class ToolContext:
         self._detection_cache: dict[str, tuple[Any, float]] = {}
         # project_path → (file_id_to_path, FileMapping.txt mtime)
         self._file_mapping_cache: dict[str, tuple[dict[int, Path], float]] = {}
+        # project_path → (parsed static dependencies, static_dependencies.txt mtime)
+        self._static_deps_cache: dict[str, tuple[list[StaticDependency], float]] = {}
 
     def log_to_file(self, project_path: str, marker: str, tool_name: str, message: str) -> None:
         """Append a timestamped entry to <project_path>/.discopop/mcp_server/log.txt.
@@ -162,6 +165,27 @@ class ToolContext:
             return result
         except Exception as e:
             logger.warning(f"Failed to load DetectionResult from {dump_path}: {e}")
+            return None
+
+    def get_static_dependencies(self, project_path: str) -> Optional[list[StaticDependency]]:
+        """Return the cached parse of .discopop/profiler/static_dependencies.txt for project_path,
+        reloading when the file is newer than the cache. Returns None if the file does not exist."""
+        static_deps_path = Path(project_path) / ".discopop" / "profiler" / "static_dependencies.txt"
+        if not static_deps_path.exists():
+            return None
+        current_mtime = static_deps_path.stat().st_mtime
+        cached = self._static_deps_cache.get(project_path)
+        if cached is not None:
+            deps, cached_mtime = cached
+            if cached_mtime == current_mtime:
+                return deps
+        try:
+            deps = parse_static_dependencies(project_path) or []
+            self._static_deps_cache[project_path] = (deps, current_mtime)
+            logger.info(f"Loaded static dependencies for {project_path} into cache")
+            return deps
+        except Exception as e:
+            logger.warning(f"Failed to parse static dependencies for {project_path}: {e}")
             return None
 
     @staticmethod
