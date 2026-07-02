@@ -8,10 +8,10 @@
 
 import tkinter as tk
 import networkx as nx
-from typing import Any, Dict, Tuple, List, TYPE_CHECKING, cast
+from typing import Any, Dict, Tuple, List, Set, TYPE_CHECKING
 
 from discopop_gui.Enums.ViewerMode import ViewerMode
-from discopop_gui.Enums.EdgeTypes import EdgeTypes
+from discopop_gui.Enums.EdgeType import EdgeType
 from discopop_gui.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
 from discopop_gui.utils.TreeNode import TreeNode
 from discopop_gui.Objects.CanvasItems.TreeNode import TreeNode as VisualTreeNode
@@ -22,15 +22,16 @@ if TYPE_CHECKING:
 class WithTrees(ViewableCanvas):
     def __init__(
         self,
-        parent: tk.Frame,
-        canvas_viewer: "CanvasViewer[Any]",
-        viewer_mode: ViewerMode,
-        *args: Any,
-        **kwargs: Any,
+        parent : tk.Frame,
+        canvas_viewer : "CanvasViewer[WithTrees]",
+        viewer_mode : ViewerMode,
+        trees : Dict[int, TreeNode] = {},
+        *args : Any,
+        **kwargs : Any,
     ) -> None:
-        super().__init__(parent, canvas_viewer, viewer_mode, *args, **kwargs)
+        super().__init__(parent, viewer_mode, *args, **kwargs)
         self._canvas_viewer = canvas_viewer
-        self._nodes : Dict[int, TreeNode] = {}
+        self._nodes : Dict[int, TreeNode] = trees
         self._visual_nodes : Dict[int, VisualTreeNode] = {}
 
     def get_visual_node(self, id : int) -> VisualTreeNode:
@@ -77,7 +78,7 @@ class WithTrees(ViewableCanvas):
 
         return True
     
-    def create_visual_edge(self, from_id : int, to_id : int, edge_type : EdgeTypes, state : str = "hidden") -> int:
+    def create_visual_edge(self, from_id : int, to_id : int, edge_type : EdgeType, state : str = "hidden") -> int:
         from_node = self.get_visual_node(from_id)
         to_node = self.get_visual_node(to_id)
         (x1, y1) = from_node.get_location()
@@ -88,7 +89,7 @@ class WithTrees(ViewableCanvas):
             y1,
             x2,
             y2,
-            fill = "black" if edge_type == EdgeTypes.MAIN else "red",
+            fill = "black" if edge_type == EdgeType.MAIN else "red",
             width = 1,
             state = state,
             tags = "tree_edge"
@@ -98,11 +99,10 @@ class WithTrees(ViewableCanvas):
     def add_clone_to_canvas_viewer(self, starting_tree_node_id : int) -> None:
         starting_tree_node = self.get_visual_node(starting_tree_node_id)
 
-        cloned_canvas = cast(
-            "WithTrees", 
-            self._canvas_viewer.get_canvas(self._canvas_viewer.add_canvas())
-        )
+        def canvas_builder(parent : tk.Frame, canvas_viewer : "CanvasViewer[WithTrees]", canvas_viewer_mode : ViewerMode) -> "WithTrees":
+            return WithTrees(parent, canvas_viewer, canvas_viewer_mode, self._nodes, bg = self["bg"])
 
+        cloned_canvas = self._canvas_viewer.get_canvas(self._canvas_viewer.add_canvas(canvas_builder))
         starting_tree_node.recursive_copy_to_canvas(cloned_canvas)
 
     def build_trees(self, graph: nx.MultiDiGraph) -> None:
@@ -117,7 +117,7 @@ class WithTrees(ViewableCanvas):
         edges_to_remove : List[Tuple[Any, Any, Any]] = []
         
         for src, dst, key, data in graph.edges(keys=True, data=True):
-            if data.get("edge_type") == EdgeTypes.DEPENDENCY:
+            if data.get("edge_type") == EdgeType.DEPENDENCY:
                 dependency_edges.append((src, dst, data))
                 edges_to_remove.append((src, dst, key))
                 
@@ -158,7 +158,7 @@ class WithTrees(ViewableCanvas):
             sy = padding + (1 - ((y - min_y) / y_span)) * (canvas_height - (2 * padding))
             scaled_positions[node] = (sx, sy)
 
-        nodes_to_ids = {}
+        nodes_to_ids : Dict[Any, int] = {}
 
         for node in graph.nodes:
             node_id = len(self._nodes)
@@ -175,20 +175,22 @@ class WithTrees(ViewableCanvas):
                 }
             )
 
-        all_edges : List[Tuple[Any, Any, Any]] = list(graph.edges(data=True)) + dependency_edges
+        all_edges : List[Tuple[Any, Any, Any]] = list(graph.edges(data = True)) + dependency_edges
+        seen_edges : Set[Tuple[int, int]] = set()
 
         for source, destination, data in all_edges:
             source_id = nodes_to_ids[source]
             destination_id = nodes_to_ids[destination]
+
+            if ((source_id, destination_id) in seen_edges):
+                continue
+
             edge_type = data.get("edge_type")
-
-            if edge_type == EdgeTypes.DEPENDENCY:
-                self._nodes[source_id].dependency_connections.append(self._nodes[destination_id])
-            else:
-                self._nodes[source_id].lower_order_connections.append(self._nodes[destination_id])
-                self._nodes[destination_id].higher_order_connections.append(self._nodes[source_id])
-
+            self._nodes[source_id].lower_order_connections.append((self._nodes[destination_id], edge_type))
+            self._nodes[destination_id].higher_order_connections.append((self._nodes[source_id], edge_type))
             self._nodes[source_id].metadata["fill"] = "orange"
+            seen_edges.add((source_id, destination_id))
+            seen_edges.add((destination_id, source_id))
 
         for node_id, node in self._nodes.items():
             if node.higher_order_connections:

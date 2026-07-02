@@ -136,9 +136,7 @@ class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
         self._canvas_selectors[canvas_id] = selector_button
         selector_button.grid(row=0, column=len(self._canvas_selectors) - 1, sticky="ns", padx=5, pady=2)
         self._update_switcher_visibility()
-
-        if self._active_canvas_id is None:
-            self.show_canvas(canvas_id)
+        self.show_canvas(canvas_id)
 
         return canvas_id
 
