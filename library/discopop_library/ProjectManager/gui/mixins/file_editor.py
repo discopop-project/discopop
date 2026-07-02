@@ -11,8 +11,13 @@ import os
 import tkinter as tk
 
 
+from discopop_library.ProjectManager.configurations.compile_script import (
+    get_per_config_compile_script_path,
+    get_shared_compile_script_path,
+)
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
-from discopop_library.ProjectManager.gui.mixins.helpers import show_warning
+from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no, show_warning
+from discopop_library.ProjectManager.utilities.scriptFiles import write_script_file
 
 
 class FileEditorMixin(ConfigManagerMixinBase):
@@ -47,8 +52,75 @@ class FileEditorMixin(ConfigManagerMixinBase):
             self.modified_files[filename] = False
             text_area.edit_modified(False)
 
+        self._load_compile_override()
         self._update_execute_modes()
         self._update_report_display()
+
+    def _load_compile_override(self) -> None:
+        if not self.current_config:
+            return
+
+        compile_path = get_per_config_compile_script_path(self.arguments.project_config_dir, self.current_config)
+        text_area = self.text_areas["compile.sh"]
+
+        text_area.config(state=tk.NORMAL)
+        text_area.delete("1.0", tk.END)
+
+        has_override = os.path.exists(compile_path)
+        if has_override:
+            try:
+                with open(compile_path, "r") as f:
+                    text_area.insert("1.0", f.read())
+            except Exception as e:
+                text_area.insert("1.0", f"Error loading file: {e}")
+        else:
+            text_area.insert(
+                "1.0",
+                "# This configuration has no compile.sh override.\n"
+                "# The shared compile.sh is used to compile it instead.\n"
+                "# Click 'Add Override' above to create one for this configuration only.\n",
+            )
+            text_area.config(state=tk.DISABLED)
+
+        self.modified_files["compile.sh"] = False
+        text_area.edit_modified(False)
+        self.compile_override_button.config(text="Remove Override" if has_override else "Add Override")
+
+    def _toggle_compile_override(self) -> None:
+        if not self.current_config:
+            return
+
+        compile_path = get_per_config_compile_script_path(self.arguments.project_config_dir, self.current_config)
+        if os.path.exists(compile_path):
+            self._remove_compile_override(compile_path)
+        else:
+            self._add_compile_override(compile_path)
+
+    def _add_compile_override(self, compile_path: str) -> None:
+        shared_path = get_shared_compile_script_path(self.arguments.project_config_dir)
+        seed_content = ""
+        if os.path.exists(shared_path):
+            with open(shared_path, "r") as f:
+                seed_content = f.read()
+
+        write_script_file(compile_path, seed_content)
+        self._load_compile_override()
+        self._update_execute_modes()
+        self._set_status("Added compile.sh override for this configuration", fg="green", reset_delay=2000)
+
+    def _remove_compile_override(self, compile_path: str) -> None:
+        if not ask_yes_no(
+            self,
+            "Remove Override",
+            "Remove the compile.sh override for this configuration?\n\n"
+            "The configuration will use the shared compile.sh instead.",
+        ):
+            return
+
+        os.remove(compile_path)
+        self._load_compile_override()
+        self._update_execute_modes()
+        self._set_status("Removed compile.sh override for this configuration", fg="green", reset_delay=2000)
 
     def _validate_compile_script(self, file_path: str) -> None:
         try:

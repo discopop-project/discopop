@@ -12,6 +12,7 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 import logging
 from tabulate import tabulate  # type: ignore
 
+from discopop_library.ProjectManager.configurations.compile_script import resolve_compile_script_path
 from discopop_library.ProjectManager.configurations.copying import copy_configuration
 from discopop_library.ProjectManager.configurations.deletion import delete_configuration
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
@@ -121,7 +122,7 @@ def show_configurations_with_execution(
         par_execute_successful = False
 
         # collect overview information
-        shared_compile_sh = os.path.join(arguments.project_config_dir, "compile.sh")
+        compile_sh = resolve_compile_script_path(arguments.project_config_dir, os.path.basename(config))
         shared_dp_settings = os.path.join(arguments.project_config_dir, "dp_settings.json")
         shared_hd_settings = os.path.join(arguments.project_config_dir, "hd_settings.json")
         shared_seq_settings = os.path.join(arguments.project_config_dir, "seq_settings.json")
@@ -141,7 +142,7 @@ def show_configurations_with_execution(
                 dp_project_path,
                 config,
                 shared_dp_settings,
-                shared_compile_sh,
+                compile_sh,
                 __get_thread_count(config, "dp", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -174,7 +175,7 @@ def show_configurations_with_execution(
                 hd_project_path,
                 config,
                 shared_hd_settings,
-                shared_compile_sh,
+                compile_sh,
                 __get_thread_count(config, "hd", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -206,7 +207,7 @@ def show_configurations_with_execution(
                 seq_project_path,
                 config,
                 shared_seq_settings,
-                shared_compile_sh,
+                compile_sh,
                 __get_thread_count(config, "seq", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -238,7 +239,7 @@ def show_configurations_with_execution(
                 par_project_path,
                 config,
                 shared_par_settings,
-                shared_compile_sh,
+                compile_sh,
                 __get_thread_count(config, "par", config_thread_counts),
                 arguments.timeout_compilation,
             )

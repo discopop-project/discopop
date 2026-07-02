@@ -140,21 +140,11 @@ class ConfigManagerApp(  # type: ignore
         self._build_autotuning_panel(autotuning_frame)
         self._update_pattern_detection_ui()
 
-        # Content frame for execute.sh (no tabs needed for single file)
+        # Content frames for execute.sh and the optional per-configuration compile.sh override
         self.text_areas: dict[str, tk.Text] = {}
         self.modified_files: dict[str, bool] = {}
 
-        # Header with help button
-        header_frame = ttk.Frame(editor_frame)
-        header_frame.pack(fill=tk.X, padx=5, pady=5)
-
-        help_label = ttk.Label(header_frame, text="Execution script", font=("TkDefaultFont", 11, "bold"))
-        help_label.pack(side=tk.LEFT)
-
-        help_button = ttk.Button(header_frame, text="Help", command=self._show_execute_sh_help)
-        help_button.pack(side=tk.RIGHT, padx=5)
-
-        # Bottom bar with buttons — packed before text_frame so it always reserves its natural height
+        # Bottom bar with buttons — packed before the notebook so it always reserves its natural height
         bottom_editor_frame = ttk.Frame(editor_frame)
         bottom_editor_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=2)
 
@@ -162,20 +152,75 @@ class ConfigManagerApp(  # type: ignore
         self.save_button = ttk.Button(bottom_editor_frame, text="Save (Ctrl+S)", command=self._save_config)
         self.save_button.pack(side=tk.LEFT, padx=5)
 
-        # Text widget with scrollbar for execute.sh
-        text_frame = ttk.Frame(editor_frame)
-        text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.editor_notebook = ttk.Notebook(editor_frame)
+        self.editor_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        scrollbar = ttk.Scrollbar(text_frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        # --- execute.sh tab ---
+        execute_sh_frame = ttk.Frame(self.editor_notebook)
+        self.editor_notebook.add(execute_sh_frame, text="execute.sh")
 
-        text_area = tk.Text(text_frame, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11))
-        text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=text_area.yview)
-        enable_text_context_menu(text_area)
+        execute_header_frame = ttk.Frame(execute_sh_frame)
+        execute_header_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        self.text_areas["execute.sh"] = text_area
+        execute_help_label = ttk.Label(
+            execute_header_frame, text="Execution script", font=("TkDefaultFont", 11, "bold")
+        )
+        execute_help_label.pack(side=tk.LEFT)
+
+        execute_help_button = ttk.Button(execute_header_frame, text="Help", command=self._show_execute_sh_help)
+        execute_help_button.pack(side=tk.RIGHT, padx=5)
+
+        execute_text_frame = ttk.Frame(execute_sh_frame)
+        execute_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        execute_scrollbar = ttk.Scrollbar(execute_text_frame)
+        execute_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        execute_text_area = tk.Text(
+            execute_text_frame, yscrollcommand=execute_scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11)
+        )
+        execute_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        execute_scrollbar.config(command=execute_text_area.yview)
+        enable_text_context_menu(execute_text_area)
+
+        self.text_areas["execute.sh"] = execute_text_area
         self.modified_files["execute.sh"] = False
+
+        # --- compile.sh override tab ---
+        compile_sh_frame = ttk.Frame(self.editor_notebook)
+        self.editor_notebook.add(compile_sh_frame, text="compile.sh (override)")
+
+        compile_header_frame = ttk.Frame(compile_sh_frame)
+        compile_header_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        compile_help_label = ttk.Label(
+            compile_header_frame, text="Compilation script override", font=("TkDefaultFont", 11, "bold")
+        )
+        compile_help_label.pack(side=tk.LEFT)
+
+        compile_help_button = ttk.Button(compile_header_frame, text="Help", command=self._show_compile_sh_help)
+        compile_help_button.pack(side=tk.RIGHT, padx=5)
+
+        self.compile_override_button = ttk.Button(
+            compile_header_frame, text="Add Override", command=self._toggle_compile_override
+        )
+        self.compile_override_button.pack(side=tk.RIGHT, padx=5)
+
+        compile_text_frame = ttk.Frame(compile_sh_frame)
+        compile_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        compile_scrollbar = ttk.Scrollbar(compile_text_frame)
+        compile_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        compile_text_area = tk.Text(
+            compile_text_frame, yscrollcommand=compile_scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11)
+        )
+        compile_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        compile_scrollbar.config(command=compile_text_area.yview)
+        enable_text_context_menu(compile_text_area)
+
+        self.text_areas["compile.sh"] = compile_text_area
+        self.modified_files["compile.sh"] = False
 
         # Build execute panel
         self._build_execute_panel(execute_frame)
