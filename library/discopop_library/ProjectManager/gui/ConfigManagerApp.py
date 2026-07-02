@@ -222,6 +222,15 @@ class ConfigManagerApp(  # type: ignore
         self.text_areas["compile.sh"] = compile_text_area
         self.modified_files["compile.sh"] = False
 
+        self.editor_sub_tab_index = {
+            "execute.sh": self.editor_notebook.index(execute_sh_frame),
+            "compile.sh": self.editor_notebook.index(compile_sh_frame),
+        }
+        self.editor_sub_tab_labels = {
+            "execute.sh": "execute.sh",
+            "compile.sh": "compile.sh (override)",
+        }
+
         # Build execute panel
         self._build_execute_panel(execute_frame)
 

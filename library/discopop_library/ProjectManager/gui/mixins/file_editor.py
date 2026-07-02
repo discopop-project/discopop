@@ -51,10 +51,19 @@ class FileEditorMixin(ConfigManagerMixinBase):
 
             self.modified_files[filename] = False
             text_area.edit_modified(False)
+            self._set_sub_tab_modified(filename, False)
 
         self._load_compile_override()
+        self.right_tabs.tab(self.editor_tab_index, text="Editor")
         self._update_execute_modes()
         self._update_report_display()
+
+    def _set_sub_tab_modified(self, filename: str, modified: bool) -> None:
+        tab_index = self.editor_sub_tab_index.get(filename)
+        if tab_index is None:
+            return
+        base_label = self.editor_sub_tab_labels[filename]
+        self.editor_notebook.tab(tab_index, text=f"{base_label} *" if modified else base_label)
 
     def _load_compile_override(self) -> None:
         if not self.current_config:
@@ -84,6 +93,7 @@ class FileEditorMixin(ConfigManagerMixinBase):
 
         self.modified_files["compile.sh"] = False
         text_area.edit_modified(False)
+        self._set_sub_tab_modified("compile.sh", False)
         self.compile_override_button.config(text="Remove Override" if has_override else "Add Override")
 
     def _toggle_compile_override(self) -> None:
@@ -163,11 +173,14 @@ class FileEditorMixin(ConfigManagerMixinBase):
                     f.write(formatted_content)
                 self.modified_files[filename] = False
                 self.text_areas[filename].edit_modified(False)
-                self.right_tabs.tab(self.editor_tab_index, text="Editor")
+                self._set_sub_tab_modified(filename, False)
                 saved_files.append(filename)
             except Exception as e:
                 self._set_status(f"Error saving file {filename}: {e}", fg="red")
                 return
+
+        if not any(self.modified_files.values()):
+            self.right_tabs.tab(self.editor_tab_index, text="Editor")
 
         if saved_files:
             self._set_status(f"Saved {', '.join(saved_files)}", fg="green", reset_delay=2000)
@@ -187,10 +200,13 @@ class FileEditorMixin(ConfigManagerMixinBase):
 
         if is_modified and not self.modified_files[filename]:
             self.modified_files[filename] = True
+            self._set_sub_tab_modified(filename, True)
             self.right_tabs.tab(self.editor_tab_index, text="Editor *")
         elif not is_modified and self.modified_files[filename]:
             self.modified_files[filename] = False
-            self.right_tabs.tab(self.editor_tab_index, text="Editor")
+            self._set_sub_tab_modified(filename, False)
+            if not any(self.modified_files.values()):
+                self.right_tabs.tab(self.editor_tab_index, text="Editor")
 
     def _start_modification_polling(self) -> None:
         for filename in self.text_areas:
