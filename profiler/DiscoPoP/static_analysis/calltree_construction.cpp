@@ -465,10 +465,10 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
     for(auto root : loop_forest){
       flatten_loop_forest(root, sequentialized_contained_loops, node_to_offset);
     }
-    cerr << "seq_contained_loops: " << std::endl;
-    for (auto s : sequentialized_contained_loops){
-      cerr << " --> " << s << std::endl;
-    }
+    //cerr << "seq_contained_loops: " << std::endl;
+    //for (auto s : sequentialized_contained_loops){
+    //  cerr << " --> " << s << std::endl;
+    //}
     auto loop_entry_instructionIDs = get_loop_entry_instructionIDs(F);
     auto loop_exit_instructionIDs = get_loop_exit_instructionIDs(F);
     auto loop_increment_instructionIDs = get_loop_increment_instructionIDs(F);
@@ -588,8 +588,8 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
           }
           else if(transition_type == TRANSITION_TYPE_INCREMENTLOOP){
             trigger_instruction = loop_increment_instructionIDs[loop_id];
-            cerr << "LOOP_ID: " << loop_id << std::endl;
-            cerr << "TRIGGER: " << trigger_instruction << std::endl;
+            //cerr << "LOOP_ID: " << loop_id << std::endl;
+            //cerr << "TRIGGER: " << trigger_instruction << std::endl;
           }
           // create edge
           calltree.addEdge(source_node, target_node, trigger_instruction);
