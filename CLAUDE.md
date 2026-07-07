@@ -50,9 +50,23 @@ This document contains critical information about working with this codebase. Fo
 - **Important:** The profiler module must be installed without the `-e` (editable) flag. Use `pip install ./profiler`, not `pip install -e ./profiler`. Editable mode breaks the relative paths required by `CXX_wrapper.sh` to locate compiled artifacts like `LLVMDiscoPoP.so`.
 ### Python
 - to execute python unit tests, use 'venv/bin/python -m unittest -v -k "*.end_to_end.*"'
+
+### Coverage report (discopop_explorer)
+- the `discopop_explorer` package (`explorer/discopop_explorer`) has pytest-based unit tests colocated with the source as `test_*.py` files (e.g. `explorer/discopop_explorer/utilities/ASTUtils/test_ASTQueries.py`)
+- install prerequisites via `venv/bin/pip install pytest pytest-cov`
+- to generate a coverage report, run from the repository root:
+  `venv/bin/python -m pytest explorer/discopop_explorer --cov=discopop_explorer --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-config=<(echo -e "[run]\nomit =\n    */test_*.py\n")`
+- this excludes the test files themselves from the coverage count and produces:
+  - a terminal summary with missing line ranges per file
+  - an HTML report at `htmlcov/index.html`
+  - a Cobertura-style `coverage.xml`
+- **Note:** these unit tests do not cover code paths that are only exercised by the end-to-end tests (`test/end_to_end`), since those invoke `discopop_explorer` as a subprocess rather than in-process; the coverage numbers reflect unit-test coverage only
+
 ### C++
 #### Profiler
-- to execute unit tests for the profiler, enter the directory `test/profiler`, build using the `make` command, and execute the unittests via use 'DP_TEST_PROFILER_CONFIG=build_hybrid ../../venv/bin/python -m pytest'
+- the profiler's C++ unit tests (GoogleTest, in `test/unit_tests`) are only reachable via the root `CMakeLists.txt`, not via `pip install ./profiler`
+- to execute them, configure and build from the repository root with `cmake -S . -B build_tests -DCMAKE_BUILD_TYPE=Release -DDP_BUILD_UNITTESTS=1`, then `cmake --build build_tests --target DiscoPoP_UT -j "$(nproc)"`, then run `build_tests/test/unit_tests/DiscoPoP_UT`
+- the end-to-end profiler dependency-detection tests (`test/profiler/{RAW,WAR,WAW}`) are separate and run via `venv/bin/python -m unittest -v -k "*test.profiler.*"` from the repository root
 
 ### Execute example
 You can execute a full example by following the steps below. The example should not raise any errors. Warnings may arise during different parts of the process and can be tolerated.

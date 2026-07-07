@@ -39,15 +39,22 @@ target_sources(
   memory/mrtnode/test_mrtnode.cpp
   memory/perfect_shadow/test_perfect_shadow.cpp
   memory/scope/test_scope.cpp
+  memory/signature/test_signature.cpp
   calltree/call_tree/test_call_tree.cpp
   calltree/call_tree_node/test_call_tree_node.cpp
   calltree/metadata_queue/test_metadata_queue.cpp
+  calltree/dependency_metadata/test_dependency_metadata.cpp
+  calltree/utils/test_calltree_utils.cpp
   access_queues/test_first_access_queue_chunk.cpp
   access_queues/test_first_access_queue_chunk_buffer.cpp
   access_queues/test_second_access_queue_element.cpp
   access_queues/test_second_access_queue.cpp
   access_queues/test_first_access_queue.cpp
   access_queues/test_integration.cpp
+  functions/function_manager/test_function_manager.cpp
+  static_callstate_transitions/call_state/test_call_state.cpp
+  static_callstate_transitions/call_state_graph/test_call_state_graph.cpp
+  static_callstate_transitions/utils/test_call_state_transitions_utils.cpp
 
   )
 

@@ -111,10 +111,11 @@ jobs:
         run: |
             venv/bin/python3 -m black -l 120 --check hotspot_detection/discopop_hotspot_analyzer hotspot_detection/discopop_hotspot_cc hotspot_detection/discopop_hotspot_cxx
 
- #     - name: Execute C++ unit tests
- #       run: |
- #         docker run --rm discopop_ci_${{ github.sha }}-${{ matrix.id }} \
- #           build/test/unit_tests/DiscoPoP_UT
+      - name: Build and execute C++ unit tests
+        run: |
+          cmake -S . -B build_tests -DCMAKE_BUILD_TYPE=Release -DDP_BUILD_UNITTESTS=1
+          cmake --build build_tests --target DiscoPoP_UT -j "$(nproc)"
+          build_tests/test/unit_tests/DiscoPoP_UT
 
       - name: Profiler gold standard tests
         run: |
