@@ -44,8 +44,19 @@ from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 
-from discopop_gui.Extendables.Plottable import Plottable
-from discopop_gui.Visualizers.Base import Base as Visualizer
+try:
+    from discopop_gui.Extendables.Plottable import Plottable
+    from discopop_gui.Visualizers.Base import Base as Visualizer
+except (ImportError, ModuleNotFoundError):
+
+    class Plottable:  # type: ignore[no-redef]
+        def __init__(self, visualizer: object = None) -> None:
+            pass
+
+        def plottable(self) -> bool:
+            return False
+
+    Visualizer = object  # type: ignore[assignment, misc]
 
 from discopop_explorer.utilities.PEGraphConstruction.parser import readlineToCUIdMap, writelineToCUIdMap
 from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData

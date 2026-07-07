@@ -13,6 +13,7 @@ from pathlib import Path
 import random
 import signal
 import logging
+import sys
 from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
@@ -73,9 +74,14 @@ from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_func
 from discopop_explorer.functions.PEGraph.traversal.predecessors import direct_predecessors
 from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 
-try:
-    matplotlib.use("TkAgg")
-except Exception:
+if os.environ.get("DISPLAY") or sys.platform in ("darwin", "win32"):
+    try:
+        matplotlib.use("TkAgg")
+    except Exception:
+        matplotlib.use("Agg")
+else:
+    # no display available (e.g. headless server via ssh): avoid an interactive
+    # backend, which would crash as soon as a figure is created
     matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # type: ignore
 from matplotlib.patches import Rectangle
@@ -131,7 +137,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     contexts: List[Context] = []
     current_level: LevelIndex = 0
     current_position: Dict[LevelIndex, PositionIndex] = {0: 0}
-    plotting_axis = None  # type: ignore
     plotting_graph_buffer = None
     plotting_postions_buffer = None
 
@@ -147,10 +152,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         self.pet = pet
         self.graph = nx.MultiDiGraph()
 
-        # define updating plot window
-        fig1 = plt.figure(1)
-        self.plotting_axis = fig1.add_subplot(1, 1, 1)
-        plt.ion()  # type: ignore[attr-defined]
         # start processing
         self.__assign_function_ids(pet)
         self.__construct_from_pet(pet)
@@ -158,9 +159,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         self.__insert_data_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
         self.__determine_loop_variables()
         self.__cleanup_loop_dependencies()
-        print("Waiting for user to close the Window...")
-        # plt.show(block=True)
-        plt.ioff()  # type: ignore[attr-defined]
 
     def __assign_function_ids(self, pet: PEGraphX) -> None:
         id = 0

@@ -17,8 +17,10 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-import tkinter as tk
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    import tkinter as tk
 
 import pstats2  # type: ignore
 from pluginbase import PluginBase  # type: ignore
@@ -50,8 +52,6 @@ from discopop_explorer.pattern_detection import PatternDetectorX
 
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 from discopop_library.tools.update_notifications.update_notifier import run as check_for_updates
-
-from discopop_gui.Visualizers.WithSidebar import WithSidebar as Visualizer
 
 
 @dataclass
@@ -87,7 +87,7 @@ class ExplorerArguments(GeneralArguments):
     enable_task_graph_plot: bool
     enable_context_graph_plot: bool
     enable_visualizer: bool
-    visualize_on: Optional[tk.Frame]
+    visualize_on: Optional["tk.Frame"]
 
     def __post_init__(self) -> None:
         self.__validate()
@@ -141,7 +141,7 @@ def __run(
     enable_task_graph_plot: bool = False,
     enable_context_graph_plot: bool = False,
     enable_visualizer: bool = False,
-    visualize_on: Optional[tk.Frame] = None,
+    visualize_on: Optional["tk.Frame"] = None,
 ) -> DetectionResult:
     # check for updates
     module_name = "discopop"
@@ -152,6 +152,10 @@ def __run(
     visualizer = None
 
     if enable_visualizer == True:
+        # imported lazily since it requires tkinter, which may be unavailable
+        # (e.g. on a headless server) when the GUI visualizer is not requested
+        from discopop_gui.Visualizers.WithSidebar import WithSidebar as Visualizer
+
         visualizer = Visualizer(visualize_on)
 
     pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping), visualizer=visualizer)  # type: ignore

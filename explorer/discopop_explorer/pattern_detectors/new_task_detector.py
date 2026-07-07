@@ -34,7 +34,10 @@ from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
 )
 
-from discopop_gui.Visualizers.Base import Base as Visualizer
+try:
+    from discopop_gui.Visualizers.Base import Base as Visualizer
+except (ImportError, ModuleNotFoundError):
+    Visualizer = object  # type: ignore[assignment, misc]
 
 logger = logging.getLogger("Explorer").getChild("Tasking")
 
