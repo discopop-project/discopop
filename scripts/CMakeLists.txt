@@ -28,17 +28,29 @@ else()
     # create symlinks to files
     set(DP_LOCAL_BIN_DIR "$ENV{HOME}/.local/bin")
     if(EXISTS ${Python3_VENV_BIN_PATH})
-        execute_process(COMMAND rm -f ${Python3_VENV_BIN_PATH}/discopop_cc)
-        message(STATUS "Creating symlink ${Python3_VENV_BIN_PATH}/discopop_cc to ${CMAKE_CURRENT_BINARY_DIR}/CC_wrapper.sh")
-        execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CC_wrapper.sh ${Python3_VENV_BIN_PATH}/discopop_cc)
+        # These wrapper scripts are only produced by `cmake --install` of this
+        # (top-level, unit-test-only) build tree, which nothing in the documented
+        # build/CI flow ever runs. Only (re-)point discopop_cc/cxx/cmake at them
+        # if they actually exist here — otherwise leave whatever `pip install
+        # ./profiler` already placed in the venv (the supported install path)
+        # alone, instead of replacing a working script with a dangling symlink.
+        if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/CC_wrapper.sh)
+            execute_process(COMMAND rm -f ${Python3_VENV_BIN_PATH}/discopop_cc)
+            message(STATUS "Creating symlink ${Python3_VENV_BIN_PATH}/discopop_cc to ${CMAKE_CURRENT_BINARY_DIR}/CC_wrapper.sh")
+            execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CC_wrapper.sh ${Python3_VENV_BIN_PATH}/discopop_cc)
+        endif()
 
-        execute_process(COMMAND rm -f ${Python3_VENV_BIN_PATH}/discopop_cxx)
-        message(STATUS "Creating symlink ${Python3_VENV_BIN_PATH}/discopop_cxx to ${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh")
-        execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh ${Python3_VENV_BIN_PATH}/discopop_cxx)
+        if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh)
+            execute_process(COMMAND rm -f ${Python3_VENV_BIN_PATH}/discopop_cxx)
+            message(STATUS "Creating symlink ${Python3_VENV_BIN_PATH}/discopop_cxx to ${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh")
+            execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh ${Python3_VENV_BIN_PATH}/discopop_cxx)
+        endif()
 
-        execute_process(COMMAND rm -f ${Python3_VENV_BIN_PATH}/discopop_cmake)
-        message(STATUS "Creating symlink ${Python3_VENV_BIN_PATH}/discopop_cmake to ${CMAKE_CURRENT_BINARY_DIR}/CMAKE_wrapper.sh")
-        execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CMAKE_wrapper.sh ${Python3_VENV_BIN_PATH}/discopop_cmake)
+        if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/CMAKE_wrapper.sh)
+            execute_process(COMMAND rm -f ${Python3_VENV_BIN_PATH}/discopop_cmake)
+            message(STATUS "Creating symlink ${Python3_VENV_BIN_PATH}/discopop_cmake to ${CMAKE_CURRENT_BINARY_DIR}/CMAKE_wrapper.sh")
+            execute_process(COMMAND ln -sf ${CMAKE_CURRENT_BINARY_DIR}/CMAKE_wrapper.sh ${Python3_VENV_BIN_PATH}/discopop_cmake)
+        endif()
     else()
         message(WARNING "Creation of symlinks discopop_cc to ${CMAKE_CURRENT_BINARY_DIR}/CC_wrapper.sh not possible. Please create it manually.")
         message(WARNING "Creation of symlinks discopop_cxx to ${CMAKE_CURRENT_BINARY_DIR}/CXX_wrapper.sh not possible. Please create it manually.")
