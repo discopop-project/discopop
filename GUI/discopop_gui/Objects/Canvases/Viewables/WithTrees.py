@@ -10,6 +10,7 @@ import tkinter as tk
 import networkx as nx
 from typing import Any, Dict, Tuple, List, Set, TYPE_CHECKING
 
+from discopop_gui.Constants import TREE_NODES_SPACING
 from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Enums.EdgeType import EdgeType
 from discopop_gui.Objects.Canvases.Viewables.Viewable import Viewable as ViewableCanvas
@@ -37,14 +38,14 @@ class WithTrees(ViewableCanvas):
     def get_visual_node(self, id : int) -> VisualTreeNode:
         return self._visual_nodes[id]
     
-    def create_visual_node(self, id: int, state : str = "normal") -> bool:
+    def create_visual_node(self, id: int, highest : bool = True, state : str = "normal", x_offset : int = 0, y_offset : int = 0) -> bool:
         if id in self._visual_nodes:
             return False
 
         node = self._nodes[id]
 
-        x = node.metadata["x"]
-        y = node.metadata["y"]
+        x = x_offset * TREE_NODES_SPACING
+        y = y_offset * TREE_NODES_SPACING
         label = node.metadata["label"]
         fill_color = node.metadata.get("fill", "cyan")
         node_radius = 40
@@ -71,9 +72,13 @@ class WithTrees(ViewableCanvas):
         self._visual_nodes[id] = VisualTreeNode(
             self,
             self._nodes[id],
+            highest,
+            True if state == "normal" else False,
             self._popup,
             oval_id,
             text_id,
+            x_offset,
+            y_offset
         )
 
         return True
