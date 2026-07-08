@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "../../../../rtlib/runtimeFunctionsGlobals.hpp"
-#include "../../../../rtlib/runtimeFunctionsTypes.hpp"
-#include "../../../../rtlib/runtimeFunctions.hpp"
+#include "../../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
+#include "../../../../profiler/rtlib/runtimeFunctionsTypes.hpp"
+#include "../../../../profiler/rtlib/runtimeFunctions.hpp"
 
 using namespace __dp;
 

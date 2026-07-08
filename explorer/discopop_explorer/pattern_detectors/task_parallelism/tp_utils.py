@@ -57,7 +57,7 @@ def demangle(mangled_name: str) -> str:
             out = out_bytes.decode("UTF-8")
             out = out.replace("\n", "")
             demangling_cache[mangled_name] = out
-            return out
+            return str(out)
     except FileNotFoundError:
         raise ValueError(
             "Executable '" + llvm_cxxfilt_path + "' not found." + " Check or supply --llvm-cxxfilt-path parameter."

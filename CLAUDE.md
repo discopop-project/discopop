@@ -48,11 +48,35 @@ This document contains critical information about working with this codebase. Fo
 ### Install python packages
 - to install python packages, execute `venv/bin/pip install . ./profiler ./library` from the root directory of the project
 - **Important:** The profiler module must be installed without the `-e` (editable) flag. Use `pip install ./profiler`, not `pip install -e ./profiler`. Editable mode breaks the relative paths required by `CXX_wrapper.sh` to locate compiled artifacts like `LLVMDiscoPoP.so`.
-### Python
-- to execute python unit tests, use 'venv/bin/python -m unittest -v -k "*.end_to_end.*"'
+### Python end-to-end tests
+- to execute the python end-to-end tests, use 'venv/bin/python -m unittest -v -k "*.end_to_end.*"'
+
+### Python unit tests (discopop_explorer)
+- the `discopop_explorer` package (`explorer/discopop_explorer`) has pytest-based unit tests colocated with the source as `test_*.py` files (e.g. `explorer/discopop_explorer/utilities/ASTUtils/test_ASTQueries.py`, `explorer/discopop_explorer/test_utils.py`, `explorer/discopop_explorer/pattern_detectors/test_do_all_detector.py`)
+- install prerequisites via `venv/bin/pip install pytest pytest-cov`
+- to run all of them, from the repository root: `venv/bin/python -m pytest explorer/discopop_explorer`
+- to run a single file: `venv/bin/python -m pytest explorer/discopop_explorer/test_utils.py -v`
+- to run tests matching a name substring: `venv/bin/python -m pytest explorer/discopop_explorer -k "detect_do_all"`
+- `explorer/discopop_explorer/conftest.py` provides shared fixtures for building small in-memory graphs without running the full profiler pipeline; extend these rather than re-deriving graph setup per test file:
+  - `make_node`/`build_pet_graph`: build a `PEGraphX` directly from hand-picked `CUNode`/`FunctionNode`/`LoopNode` instances and edges, bypassing `PEGraphX.from_parsed_input`'s XML/dependency parsing
+  - `build_task_graph`/`make_tg_node`: build a `TaskGraph` (bypassing its profiler-file-dependent `__init__`) plus `TGNode`s, for testing `TaskGraph`/`Context`-based code (e.g. `new_do_all_detector.py`)
+  - `isolated_pattern_id_cwd`: isolates the `next_free_pattern_id.txt` file that `PatternInfo` subclasses (e.g. `DoAllInfo`, `ReductionInfo`) allocate ids from into a temp directory, so tests don't touch/lock files in the repo root
+- **Note:** these unit tests do not cover code paths that are only exercised by the end-to-end tests (`test/end_to_end`), since those invoke `discopop_explorer` as a subprocess rather than in-process
+
+### Coverage report (discopop_explorer)
+- to generate a coverage report, run from the repository root:
+  `venv/bin/python -m pytest explorer/discopop_explorer --cov=discopop_explorer --cov-report=term-missing --cov-report=html:htmlcov --cov-report=xml:coverage.xml --cov-config=<(echo -e "[run]\nomit =\n    */test_*.py\n")`
+- this excludes the test files themselves from the coverage count and produces:
+  - a terminal summary with missing line ranges per file
+  - an HTML report at `htmlcov/index.html`
+  - a Cobertura-style `coverage.xml`
+- the coverage numbers reflect unit-test coverage only (see note above)
+
 ### C++
 #### Profiler
-- to execute unit tests for the profiler, enter the directory `test/profiler`, build using the `make` command, and execute the unittests via use 'DP_TEST_PROFILER_CONFIG=build_hybrid ../../venv/bin/python -m pytest'
+- the profiler's C++ unit tests (GoogleTest, in `test/unit_tests`) are only reachable via the root `CMakeLists.txt`, not via `pip install ./profiler`
+- to execute them, configure and build from the repository root with `cmake -S . -B build_tests -DCMAKE_BUILD_TYPE=Release -DDP_BUILD_UNITTESTS=1`, then `cmake --build build_tests --target DiscoPoP_UT -j "$(nproc)"`, then run `build_tests/test/unit_tests/DiscoPoP_UT`
+- the end-to-end profiler dependency-detection tests (`test/profiler/{RAW,WAR,WAW}`) are separate and run via `venv/bin/python -m unittest -v -k "*test.profiler.*"` from the repository root
 
 ### Execute example
 You can execute a full example by following the steps below. The example should not raise any errors. Warnings may arise during different parts of the process and can be tolerated.
