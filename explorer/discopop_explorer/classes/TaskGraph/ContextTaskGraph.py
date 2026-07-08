@@ -66,8 +66,20 @@ from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import (
 )
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
-from discopop_gui.Extendables.Plottable import Plottable
-from discopop_gui.Visualizers.Base import Base as Visualizer
+
+try:
+    from discopop_gui.Extendables.Plottable import Plottable
+    from discopop_gui.Visualizers.Base import Base as Visualizer
+except (ImportError, ModuleNotFoundError):
+
+    class Plottable:  # type: ignore[no-redef]
+        def __init__(self, visualizer: object = None) -> None:
+            pass
+
+        def plottable(self) -> bool:
+            return False
+
+    Visualizer = object  # type: ignore[assignment, misc]
 
 from termcolor import cprint
 import matplotlib.lines as mlines
