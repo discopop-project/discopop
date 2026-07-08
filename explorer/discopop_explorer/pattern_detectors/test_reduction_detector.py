@@ -1,0 +1,143 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+from __future__ import annotations
+
+from typing import Callable, cast
+
+from discopop_explorer.classes.PEGraph.Dependency import Dependency
+from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
+from discopop_explorer.classes.PEGraph.Node import Node
+from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.variable import Variable
+from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
+from discopop_explorer.pattern_detectors.reduction_detector import (
+    __check_for_problematic_function_argument_access,
+    __get_called_functions,
+    __get_parent_loops,
+)
+
+MakeNode = Callable[..., Node]
+BuildPetGraph = Callable[..., PEGraphX]
+
+
+def _loop(node: Node) -> LoopNode:
+    return cast(LoopNode, node)
+
+
+# --- __get_parent_loops ---------------------------------------------------------
+#
+# NOTE: reduction_detector's __get_parent_loops is a near-duplicate of
+# do_all_detector's (both files' own docstrings say "duplicates exists:
+# do_all_detector <-> reduction_detector !"), but they are NOT identical:
+# do_all_detector's version filters `if p != root_loop.id` before returning,
+# this one does not. Since the BFS always starts at root_loop.id and appends
+# it to `parents` (it is itself a LoopNode), the loop's own start position is
+# always included in its own "parent loops" here. These tests characterize
+# that as-shipped behavior rather than assume the do_all_detector variant.
+
+
+def test_get_parent_loops_includes_the_loop_itself(make_node: MakeNode, build_pet_graph: BuildPetGraph) -> None:
+    loop = make_node("1:1", NodeType.LOOP, name="loop", start_line=1)
+    pet = build_pet_graph([loop])
+    assert __get_parent_loops(pet, _loop(loop)) == [loop.start_position()]
+
+
+def test_get_parent_loops_includes_both_the_loop_and_its_ancestor(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    outer = make_node("1:1", NodeType.LOOP, name="outer", start_line=1)
+    inner = make_node("1:2", NodeType.LOOP, name="inner", start_line=2)
+    pet = build_pet_graph([outer, inner], [(outer.id, inner.id, EdgeType.CHILD)])
+    assert set(__get_parent_loops(pet, _loop(inner))) == {outer.start_position(), inner.start_position()}
+
+
+def test_get_parent_loops_empty_only_for_a_non_loop_root(make_node: MakeNode, build_pet_graph: BuildPetGraph) -> None:
+    # root_loop is always itself a LoopNode in real usage; this documents that a
+    # FunctionNode root (which the type signature disallows, but nothing enforces
+    # at runtime) is correctly excluded from the result.
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    pet = build_pet_graph([main])
+    assert __get_parent_loops(pet, cast(LoopNode, main)) == []
+
+
+def test_get_parent_loops_follows_calls_node_edges(make_node: MakeNode, build_pet_graph: BuildPetGraph) -> None:
+    outer = make_node("1:1", NodeType.LOOP, name="outer", start_line=1)
+    caller_cu = make_node("1:2", NodeType.CU, name="caller_cu")
+    helper = make_node("2:1", NodeType.FUNC, name="helper")
+    inner = make_node("2:2", NodeType.LOOP, name="inner", start_line=2)
+    pet = build_pet_graph(
+        [outer, caller_cu, helper, inner],
+        [
+            (outer.id, caller_cu.id, EdgeType.CHILD),
+            (caller_cu.id, helper.id, EdgeType.CALLSNODE),
+            (helper.id, inner.id, EdgeType.CHILD),
+        ],
+    )
+    assert set(__get_parent_loops(pet, _loop(inner))) == {outer.start_position(), inner.start_position()}
+
+
+# --- __get_called_functions -----------------------------------------------------
+
+
+def test_get_called_functions_collects_direct_call(make_node: MakeNode, build_pet_graph: BuildPetGraph) -> None:
+    loop = make_node("1:1", NodeType.LOOP, name="loop")
+    cu = make_node("1:2", NodeType.CU, name="cu")
+    helper = make_node("2:1", NodeType.FUNC, name="helper")
+    pet = build_pet_graph(
+        [loop, cu, helper],
+        [(loop.id, cu.id, EdgeType.CHILD), (cu.id, helper.id, EdgeType.CALLSNODE)],
+    )
+    assert __get_called_functions(pet, _loop(loop)) == [helper.start_position()]
+
+
+def test_get_called_functions_empty_when_nothing_called(make_node: MakeNode, build_pet_graph: BuildPetGraph) -> None:
+    loop = make_node("1:1", NodeType.LOOP, name="loop")
+    cu = make_node("1:2", NodeType.CU, name="cu")
+    pet = build_pet_graph([loop, cu], [(loop.id, cu.id, EdgeType.CHILD)])
+    assert __get_called_functions(pet, _loop(loop)) == []
+
+
+# --- __check_for_problematic_function_argument_access ---------------------------
+
+
+def test_problematic_function_argument_access_true_for_shared_pointer_arg(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    func = make_node("1:1", NodeType.FUNC, name="f", args=[Variable("int*", VarName("p"), "1:1")])
+    cu1 = make_node("1:2", NodeType.CU, name="cu1")
+    cu2 = make_node("1:3", NodeType.CU, name="cu2")
+    pet = build_pet_graph([func, cu1, cu2], [(func.id, cu1.id, EdgeType.CHILD), (func.id, cu2.id, EdgeType.CHILD)])
+    dep = Dependency(EdgeType.DATA)
+    dep.var_name = "p"
+    assert __check_for_problematic_function_argument_access(pet, cu1.id, cu2.id, dep) is True
+
+
+def test_problematic_function_argument_access_false_for_non_pointer_arg(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    func = make_node("1:1", NodeType.FUNC, name="f", args=[Variable("int", VarName("x"), "1:1")])
+    cu1 = make_node("1:2", NodeType.CU, name="cu1")
+    cu2 = make_node("1:3", NodeType.CU, name="cu2")
+    pet = build_pet_graph([func, cu1, cu2], [(func.id, cu1.id, EdgeType.CHILD), (func.id, cu2.id, EdgeType.CHILD)])
+    dep = Dependency(EdgeType.DATA)
+    dep.var_name = "x"
+    assert __check_for_problematic_function_argument_access(pet, cu1.id, cu2.id, dep) is False
+
+
+def test_problematic_function_argument_access_false_when_var_is_not_an_argument(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    func = make_node("1:1", NodeType.FUNC, name="f", args=[])
+    cu1 = make_node("1:2", NodeType.CU, name="cu1")
+    cu2 = make_node("1:3", NodeType.CU, name="cu2")
+    pet = build_pet_graph([func, cu1, cu2], [(func.id, cu1.id, EdgeType.CHILD), (func.id, cu2.id, EdgeType.CHILD)])
+    dep = Dependency(EdgeType.DATA)
+    dep.var_name = "not_an_arg"
+    assert __check_for_problematic_function_argument_access(pet, cu1.id, cu2.id, dep) is False
