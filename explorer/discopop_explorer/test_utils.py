@@ -18,6 +18,7 @@ from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.variable import Variable
+from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
@@ -33,6 +34,7 @@ from discopop_explorer.utils import (
     is_written_in_subtree,
     no_inter_iteration_dependency_exists,
     var_declared_in_subtree,
+    classify_loop_variables,
     __merge_classifications,
 )
 
@@ -345,3 +347,182 @@ def test_is_reduction_any_true_if_any_candidate_line_matches() -> None:
 def test_is_reduction_any_false_when_no_line_matches() -> None:
     reduction_vars = [{"loop_line": "1:5", "name": "sum"}]
     assert is_reduction_any([LineID("1:1"), LineID("1:2")], "sum", reduction_vars) is False
+
+
+# --- classify_loop_variables -------------------------------------------------------
+#
+# classify_loop_variables only classifies a variable at all if at least one of its
+# accessed memory regions survives an internal filter: the region must be either
+# (a) already referenced by a DATA dependency on some CU *before* the loop
+# ("prior known"), (b) the target of an INIT dependency inside the loop, or
+# (c) otherwise falls back to "uninitialized" (first use, unknown before the loop).
+# Regions matching none of the three are silently dropped and the variable is never
+# classified at all. These scenarios pin down each of the five outcomes with the
+# minimal graph shape needed to reach it -- each was verified against the real
+# implementation first; the branching is deep enough that guessing wrong was the
+# default outcome.
+#
+# Also note: Variable.defLine == "GlobalVar" (the literal string) is treated
+# specially and excluded unless it's a reduction variable -- tests below use a
+# real line position instead to avoid that special case entirely.
+
+
+def test_classify_loop_variables_reduction_for_declared_reduction_variable(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    loop = make_node("1:2", NodeType.LOOP, name="loop", start_line=5, end_line=6, reduction=True)
+    body = make_node(
+        "1:3", NodeType.CU, name="body", start_line=6, end_line=6, local_vars=[Variable("int", VarName("sum"), "1:1")]
+    )
+    self_dep = _dep("M_SUM")
+    self_dep.dtype = DepType.RAW
+    self_dep.var_name = "sum"
+    pet = build_pet_graph(
+        [main, loop, body],
+        [(main.id, loop.id, EdgeType.CHILD), (loop.id, body.id, EdgeType.CHILD), (body.id, body.id, self_dep)],
+        reduction_vars=[{"loop_line": loop.start_position(), "name": "sum", "operation": "+"}],
+    )
+    fp, p, lp, s, r = classify_loop_variables(pet, loop)
+    assert (fp, p, lp, s) == ([], [], [], [])
+    assert [(v.name, v.operation) for v in r] == [("sum", "+")]
+
+
+def test_classify_loop_variables_private_for_uninitialized_first_write(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    loop = make_node("1:2", NodeType.LOOP, name="loop", start_line=5, end_line=7)
+    cu_a = make_node("1:3", NodeType.CU, name="cu_a", start_line=6, end_line=6)
+    cu_b = make_node(
+        "1:4", NodeType.CU, name="cu_b", start_line=7, end_line=7, local_vars=[Variable("int", VarName("tmp"), "1:1")]
+    )
+    write = _dep("M_TMP")
+    write.dtype = DepType.RAW
+    write.var_name = "tmp"
+    pet = build_pet_graph(
+        [main, loop, cu_a, cu_b],
+        [
+            (main.id, loop.id, EdgeType.CHILD),
+            (loop.id, cu_a.id, EdgeType.CHILD),
+            (loop.id, cu_b.id, EdgeType.CHILD),
+            (cu_a.id, cu_b.id, write),
+        ],
+    )
+    fp, p, lp, s, r = classify_loop_variables(pet, loop)
+    assert [v.name for v in p] == ["tmp"]
+    assert (fp, lp, s, r) == ([], [], [], [])
+
+
+def test_classify_loop_variables_last_private_when_written_and_read_after_loop(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    before_cu = make_node(
+        "1:2",
+        NodeType.CU,
+        name="before_cu",
+        start_line=2,
+        end_line=2,
+        local_vars=[Variable("int", VarName("tmp"), "1:2")],
+    )
+    loop = make_node("1:3", NodeType.LOOP, name="loop", start_line=5, end_line=7)
+    cu_a = make_node("1:4", NodeType.CU, name="cu_a", start_line=6, end_line=6)
+    cu_b = make_node(
+        "1:5", NodeType.CU, name="cu_b", start_line=7, end_line=7, local_vars=[Variable("int", VarName("tmp"), "1:2")]
+    )
+    after_cu = make_node("1:6", NodeType.CU, name="after_cu", start_line=9, end_line=9)
+
+    # registers "M_TMP" as a memory region known before the loop, via before_cu
+    prior_known = _dep("M_TMP")
+    prior_known.dtype = DepType.WAW
+    prior_known.var_name = "tmp"
+
+    write_inside_loop = _dep("M_TMP")
+    write_inside_loop.dtype = DepType.RAW
+    write_inside_loop.var_name = "tmp"
+
+    read_after_loop = _dep("M_TMP")
+    read_after_loop.dtype = DepType.RAW
+    read_after_loop.var_name = "tmp"
+
+    pet = build_pet_graph(
+        [main, before_cu, loop, cu_a, cu_b, after_cu],
+        [
+            (main.id, before_cu.id, EdgeType.CHILD),
+            (main.id, loop.id, EdgeType.CHILD),
+            (main.id, after_cu.id, EdgeType.CHILD),
+            (loop.id, cu_a.id, EdgeType.CHILD),
+            (loop.id, cu_b.id, EdgeType.CHILD),
+            (before_cu.id, before_cu.id, prior_known),
+            (cu_a.id, cu_b.id, write_inside_loop),
+            (after_cu.id, cu_b.id, read_after_loop),
+        ],
+    )
+    fp, p, lp, s, r = classify_loop_variables(pet, loop)
+    assert [v.name for v in lp] == ["tmp"]
+    assert (fp, p, s, r) == ([], [], [], [])
+
+
+def test_classify_loop_variables_shared_for_readonly_global_variable(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    before_cu = make_node("1:2", NodeType.CU, name="before_cu", start_line=2, end_line=2)
+    loop = make_node("1:3", NodeType.LOOP, name="loop", start_line=5, end_line=6)
+    cu_a = make_node(
+        "1:4", NodeType.CU, name="cu_a", start_line=5, end_line=5, global_vars=[Variable("int", VarName("g"), "1:1")]
+    )
+    cu_b = make_node("1:5", NodeType.CU, name="cu_b", start_line=6, end_line=6)
+
+    # a RAW edge from inside the loop back to before_cu: satisfies "written in the left
+    # subtree" without being visible to is_readonly (which only inspects war/waw/rev_raw).
+    raw_back = _dep("M_G")
+    raw_back.dtype = DepType.RAW
+    raw_back.var_name = "g"
+
+    pet = build_pet_graph(
+        [main, before_cu, loop, cu_a, cu_b],
+        [
+            (main.id, before_cu.id, EdgeType.CHILD),
+            (main.id, loop.id, EdgeType.CHILD),
+            (loop.id, cu_a.id, EdgeType.CHILD),
+            (loop.id, cu_b.id, EdgeType.CHILD),
+            (cu_a.id, before_cu.id, raw_back),
+        ],
+    )
+    fp, p, lp, s, r = classify_loop_variables(pet, loop)
+    assert [v.name for v in s] == ["g"]
+    assert (fp, p, lp, r) == ([], [], [], [])
+
+
+def test_classify_loop_variables_first_private_for_readonly_local_variable(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    before_cu = make_node("1:2", NodeType.CU, name="before_cu", start_line=2, end_line=2)
+    loop = make_node("1:3", NodeType.LOOP, name="loop", start_line=5, end_line=6)
+    cu_a = make_node(
+        "1:4", NodeType.CU, name="cu_a", start_line=5, end_line=5, local_vars=[Variable("int", VarName("v"), "1:1")]
+    )
+    cu_b = make_node("1:5", NodeType.CU, name="cu_b", start_line=6, end_line=6)
+
+    # identical shape to the "shared" scenario above, but "v" is local rather than
+    # global -- the only difference between the two outcomes.
+    raw_back = _dep("M_V")
+    raw_back.dtype = DepType.RAW
+    raw_back.var_name = "v"
+
+    pet = build_pet_graph(
+        [main, before_cu, loop, cu_a, cu_b],
+        [
+            (main.id, before_cu.id, EdgeType.CHILD),
+            (main.id, loop.id, EdgeType.CHILD),
+            (loop.id, cu_a.id, EdgeType.CHILD),
+            (loop.id, cu_b.id, EdgeType.CHILD),
+            (cu_a.id, before_cu.id, raw_back),
+        ],
+    )
+    fp, p, lp, s, r = classify_loop_variables(pet, loop)
+    assert [v.name for v in fp] == ["v"]
+    assert (p, lp, s, r) == ([], [], [], [])
