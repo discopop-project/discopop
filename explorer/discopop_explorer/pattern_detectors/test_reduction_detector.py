@@ -7,18 +7,20 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import Callable, cast
+from typing import Callable, List, Sequence, Tuple, Union, cast
 
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.variable import Variable
+from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.pattern_detectors.reduction_detector import (
     __check_for_problematic_function_argument_access,
+    __detect_reduction,
     __get_called_functions,
     __get_parent_loops,
 )
@@ -141,3 +143,74 @@ def test_problematic_function_argument_access_false_when_var_is_not_an_argument(
     dep = Dependency(EdgeType.DATA)
     dep.var_name = "not_an_arg"
     assert __check_for_problematic_function_argument_access(pet, cu1.id, cu2.id, dep) is False
+
+
+# --- __detect_reduction / __check_loop_dependencies ------------------------------
+
+
+DepEdge = Tuple[str, str, Union[EdgeType, Dependency]]
+
+
+def _sum_reduction_pet(
+    make_node: MakeNode,
+    build_pet_graph: BuildPetGraph,
+    deps: Sequence[DepEdge] = (),
+    declare_reduction_var: bool = True,
+) -> Tuple[PEGraphX, Node, Node, Node]:
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    loop = make_node("1:2", NodeType.LOOP, name="loop", start_line=5, end_line=10)
+    cu1 = make_node(
+        "1:3", NodeType.CU, name="cu1", start_line=6, end_line=6, local_vars=[Variable("int", VarName("sum"), "1:1")]
+    )
+    cu2 = make_node("1:4", NodeType.CU, name="cu2", start_line=7, end_line=7)
+    reduction_vars = [{"loop_line": loop.start_position(), "name": "sum"}] if declare_reduction_var else None
+    pet = build_pet_graph(
+        [main, loop, cu1, cu2],
+        [
+            (main.id, loop.id, EdgeType.CHILD),
+            (loop.id, cu1.id, EdgeType.CHILD),
+            (loop.id, cu2.id, EdgeType.CHILD),
+        ]
+        + list(deps),
+        reduction_vars=reduction_vars,
+    )
+    return pet, loop, cu1, cu2
+
+
+def test_detect_reduction_false_without_a_declared_reduction_variable(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, loop, cu1, cu2 = _sum_reduction_pet(make_node, build_pet_graph, declare_reduction_var=False)
+    assert __detect_reduction(pet, _loop(loop)) is False
+
+
+def test_detect_reduction_true_for_declared_reduction_variable_without_dependencies(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    pet, loop, cu1, cu2 = _sum_reduction_pet(make_node, build_pet_graph)
+    assert __detect_reduction(pet, _loop(loop)) is True
+
+
+def test_detect_reduction_false_for_raw_on_reduction_var_between_different_cus(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    # _sum_reduction_pet always places cu1 at "1:3" and cu2 at "1:4"
+    raw = Dependency(EdgeType.DATA)
+    raw.dtype = DepType.RAW
+    raw.var_name = "sum"
+    pet, loop, cu1, cu2 = _sum_reduction_pet(make_node, build_pet_graph, deps=[("1:3", "1:4", raw)])
+    # a RAW on the reduction variable between two *different* CUs violates the
+    # read-compute-write pattern a reduction relies on.
+    assert __detect_reduction(pet, _loop(loop)) is False
+
+
+def test_detect_reduction_true_for_raw_on_reduction_var_within_the_same_cu(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    raw_self = Dependency(EdgeType.DATA)
+    raw_self.dtype = DepType.RAW
+    raw_self.var_name = "sum"
+    pet, loop, cu1, cu2 = _sum_reduction_pet(make_node, build_pet_graph, deps=[("1:3", "1:3", raw_self)])
+    # a self-dependency (source == target) is exactly the accumulation pattern
+    # (e.g. "sum += x[i]") a reduction is meant to allow.
+    assert __detect_reduction(pet, _loop(loop)) is True
