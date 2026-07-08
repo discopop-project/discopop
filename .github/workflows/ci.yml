@@ -111,6 +111,11 @@ jobs:
         run: |
             venv/bin/python3 -m black -l 120 --check hotspot_detection/discopop_hotspot_analyzer hotspot_detection/discopop_hotspot_cc hotspot_detection/discopop_hotspot_cxx
 
+      - name: Python unit tests (discopop_explorer)
+        run: |
+            . venv/bin/activate
+            python3 -m pytest explorer/discopop_explorer
+
       - name: Build and execute C++ unit tests
         run: |
           cmake -S . -B build_tests -DCMAKE_BUILD_TYPE=Release -DDP_BUILD_UNITTESTS=1
