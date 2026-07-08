@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Callable, List, Sequence, Tuple, Union, cast
 
+from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.Node import Node
@@ -214,3 +215,24 @@ def test_detect_reduction_true_for_raw_on_reduction_var_within_the_same_cu(
     # a self-dependency (source == target) is exactly the accumulation pattern
     # (e.g. "sum += x[i]") a reduction is meant to allow.
     assert __detect_reduction(pet, _loop(loop)) is True
+
+
+def test_detect_reduction_false_for_raw_on_non_reduction_variable_between_different_cus(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    # a RAW on a variable that is *not* the declared reduction variable ("sum") is handled
+    # by a separate branch of __check_loop_dependencies: with no dependency metadata and
+    # not an intra-iteration dependency, it must still block the reduction suggestion.
+    raw = Dependency(EdgeType.DATA)
+    raw.dtype = DepType.RAW
+    raw.var_name = "y"
+    raw.memory_region = "M2"  # type: ignore[assignment]
+    war = Dependency(EdgeType.DATA)
+    war.dtype = DepType.WAR
+    war.var_name = "y"
+    war.memory_region = "M2"  # type: ignore[assignment]
+    war.sink_line = LineID("1:7")
+    pet, loop, cu1, cu2 = _sum_reduction_pet(
+        make_node, build_pet_graph, deps=[("1:3", "1:4", raw), ("1:4", "1:3", war)]
+    )
+    assert __detect_reduction(pet, _loop(loop)) is False

@@ -248,6 +248,14 @@ def test_var_declared_in_subtree_false_for_malformed_defline(make_node: MakeNode
     assert var_declared_in_subtree(var, [_cu(node)]) is False
 
 
+def test_var_declared_in_subtree_true_when_defline_equals_start_line(make_node: MakeNode) -> None:
+    """The range check is inclusive on both ends: a var defined exactly on a node's
+    start_line must still count as declared in that node's subtree."""
+    var = Variable("int", VarName("x"), "1:1")
+    node = make_node("1:1", NodeType.CU, name="cu", start_line=1, end_line=10)
+    assert var_declared_in_subtree(var, [_cu(node)]) is True
+
+
 # --- no_inter_iteration_dependency_exists --------------------------------------------
 
 
@@ -412,6 +420,38 @@ def test_classify_loop_variables_private_for_uninitialized_first_write(
     fp, p, lp, s, r = classify_loop_variables(pet, loop)
     assert [v.name for v in p] == ["tmp"]
     assert (fp, lp, s, r) == ([], [], [], [])
+
+
+def test_classify_loop_variables_reduction_flag_alone_does_not_classify_unrelated_var(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    """loop.reduction=True is not sufficient on its own to classify a variable as reduction --
+    the variable also has to be the declared reduction variable (checked via
+    is_reduction_var_by_name / pet.reduction_vars). A variable that is merely first-written
+    inside a loop that happens to be marked as a reduction loop, but isn't itself the
+    reduction variable, must fall through to the ordinary private/first_private/shared logic."""
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    loop = make_node("1:2", NodeType.LOOP, name="loop", start_line=5, end_line=7, reduction=True)
+    cu_a = make_node("1:3", NodeType.CU, name="cu_a", start_line=6, end_line=6)
+    cu_b = make_node(
+        "1:4", NodeType.CU, name="cu_b", start_line=7, end_line=7, local_vars=[Variable("int", VarName("tmp"), "1:1")]
+    )
+    write = _dep("M_TMP")
+    write.dtype = DepType.RAW
+    write.var_name = "tmp"
+    pet = build_pet_graph(
+        [main, loop, cu_a, cu_b],
+        [
+            (main.id, loop.id, EdgeType.CHILD),
+            (loop.id, cu_a.id, EdgeType.CHILD),
+            (loop.id, cu_b.id, EdgeType.CHILD),
+            (cu_a.id, cu_b.id, write),
+        ],
+        # note: pet.reduction_vars stays empty -- "tmp" is not the declared reduction variable
+    )
+    fp, p, lp, s, r = classify_loop_variables(pet, loop)
+    assert [v.name for v in p] == ["tmp"]
+    assert r == []
 
 
 def test_classify_loop_variables_last_private_when_written_and_read_after_loop(

@@ -270,6 +270,46 @@ def test_detect_do_all_true_for_raw_read_at_loop_header_line(
     assert __detect_do_all(pet, _loop(loop)) is True
 
 
+def test_detect_do_all_false_for_raw_with_inter_iteration_metadata_dependency(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    loop = make_node("1:2", NodeType.LOOP, name="loop", start_line=5, end_line=10)
+    cu1 = make_node("1:3", NodeType.CU, name="cu1", start_line=6, end_line=6)
+    cu2 = make_node("1:4", NodeType.CU, name="cu2", start_line=7, end_line=7)
+    raw = Dependency(EdgeType.DATA)
+    raw.dtype = DepType.RAW
+    raw.var_name = "x"
+    raw.memory_region = "M1"  # type: ignore[assignment]
+    # fully populated metadata (all non-None, non-empty ancestors) routes the RAW check
+    # into the "metadata exists" branch of __check_loop_dependencies instead of the
+    # "no metadata created" branch.
+    raw.metadata_source_ancestors = [loop.start_position()]
+    raw.metadata_sink_ancestors = [loop.start_position()]
+    raw.metadata_intra_iteration_dep = []
+    raw.metadata_inter_iteration_dep = [loop.start_position()]
+    raw.metadata_intra_call_dep = []
+    raw.metadata_inter_call_dep = []
+    war = Dependency(EdgeType.DATA)
+    war.dtype = DepType.WAR
+    war.var_name = "x"
+    war.memory_region = "M1"  # type: ignore[assignment]
+    war.sink_line = LineID("1:7")
+    pet = build_pet_graph(
+        [main, loop, cu1, cu2],
+        [
+            (main.id, loop.id, EdgeType.CHILD),
+            (loop.id, cu1.id, EdgeType.CHILD),
+            (loop.id, cu2.id, EdgeType.CHILD),
+            (cu1.id, cu2.id, raw),
+            (cu2.id, cu1.id, war),
+        ],
+    )
+    # cond_4 (root_loop.start_position() in dep.metadata_inter_iteration_dep) is satisfied,
+    # which must block the do-all suggestion even though full dependency metadata exists.
+    assert __detect_do_all(pet, _loop(loop)) is False
+
+
 def test_detect_do_all_false_for_war_with_explicit_missing_metadata(
     make_node: MakeNode, build_pet_graph: BuildPetGraph
 ) -> None:

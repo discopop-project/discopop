@@ -83,6 +83,29 @@ def test_identify_simple_doall_detected_without_inter_iteration_dependencies(
     assert patterns[0].node_id == loop.id
 
 
+def test_identify_simple_doall_allows_war_dependency_between_iterations(
+    make_node: MakeNode,
+    build_pet_graph: BuildPetGraph,
+    build_task_graph: Any,
+    make_tg_node: Any,
+    isolated_pattern_id_cwd: Any,
+) -> None:
+    """A WAR dependency between iterations is explicitly documented as non-critical
+    (privatizable), unlike RAW/WAW, and must not prevent the do-all suggestion."""
+    tg, loop, loop_ctx, work1, work2 = _build_two_iteration_loop(
+        make_node, build_pet_graph, build_task_graph, make_tg_node
+    )
+    dep = Dependency(EdgeType.DATA)
+    dep.dtype = DepType.WAR
+    dep.var_name = "x"
+    dep.origin = DepOrigin.DYNAMIC_ANALYSIS
+    work1.register_outgoing_dependency(work2, dep)
+
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    assert len(patterns) == 1
+    assert isinstance(patterns[0], DoAllInfo)
+
+
 def test_identify_simple_doall_prevented_by_dynamic_cross_iteration_dependency(
     make_node: MakeNode,
     build_pet_graph: BuildPetGraph,
@@ -169,6 +192,66 @@ def test_identify_simple_reduction_dependency_currently_only_prevents_doall(
     assert patterns == []
 
 
+def test_identify_simple_doall_allows_static_dependency_first_written_inside_loop(
+    make_node: MakeNode,
+    build_pet_graph: BuildPetGraph,
+    build_task_graph: Any,
+    make_tg_node: Any,
+    isolated_pattern_id_cwd: Any,
+) -> None:
+    """A cross-iteration dependency whose origin is static analysis (as opposed to dynamic
+    analysis) gets a "second chance": unlike a dynamic-analysis dependency, it does not
+    immediately break do-all detection, and is instead only re-checked against variables
+    that are first written inside the loop body. Here "x" is first written (an INIT
+    dependency on the body CU itself), so the static dependency must not prevent the
+    do-all suggestion."""
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    loop = make_node("1:2", NodeType.LOOP, name="loop", start_line=5, end_line=10)
+    body_cu = make_node("1:3", NodeType.CU, name="body", start_line=6, end_line=6)
+    init_dep = Dependency(EdgeType.DATA)
+    init_dep.dtype = DepType.INIT
+    init_dep.var_name = "x"
+    pet = build_pet_graph(
+        [main, loop, body_cu],
+        [
+            (main.id, loop.id, EdgeType.CHILD),
+            (loop.id, body_cu.id, EdgeType.CHILD),
+            (body_cu.id, body_cu.id, init_dep),
+        ],
+    )
+
+    loop_ctx = LoopParentContext(parent_loop=loop.id)
+    iter1 = IterationContext(parent_context=loop_ctx, loopstate_iteration_ids=[0])
+    iter2 = IterationContext(parent_context=loop_ctx, loopstate_iteration_ids=[1])
+    loop_ctx.add_contained_context(iter1)
+    loop_ctx.add_contained_context(iter2)
+    iter1.register_parent_context(loop_ctx)
+    iter2.register_parent_context(loop_ctx)
+
+    work1 = WorkContext()
+    work2 = WorkContext()
+    work1.add_node(make_tg_node(body_cu.id, level=1, position=0))
+    work2.add_node(make_tg_node(body_cu.id, level=1, position=1))
+    iter1.add_contained_context(work1)
+    iter2.add_contained_context(work2)
+    work1.register_parent_context(iter1)
+    work2.register_parent_context(iter2)
+
+    dep = Dependency(EdgeType.DATA)
+    dep.dtype = DepType.RAW
+    dep.var_name = "x"
+    dep.origin = DepOrigin.STATIC_ANALYSIS
+    work1.register_outgoing_dependency(work2, dep)
+
+    tg_loop = make_tg_node(loop.id, level=0, position=0)
+    tg_loop.register_created_context(loop_ctx)
+    tg = build_task_graph(pet, [tg_loop])
+
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    assert len(patterns) == 1
+    assert isinstance(patterns[0], DoAllInfo)
+
+
 def test_identify_simple_doall_skips_loops_with_fewer_than_two_iterations(
     make_node: MakeNode,
     build_pet_graph: BuildPetGraph,
@@ -182,6 +265,42 @@ def test_identify_simple_doall_skips_loops_with_fewer_than_two_iterations(
 
     loop_ctx = LoopParentContext(parent_loop=loop.id)
     tg_loop = make_tg_node(loop.id)
+    tg_loop.register_created_context(loop_ctx)
+    tg = build_task_graph(pet, [tg_loop])
+
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    assert patterns == []
+
+
+def test_identify_simple_doall_skips_loop_with_exactly_one_iteration(
+    make_node: MakeNode,
+    build_pet_graph: BuildPetGraph,
+    build_task_graph: Any,
+    make_tg_node: Any,
+    isolated_pattern_id_cwd: Any,
+) -> None:
+    """A single-iteration loop has no other iteration to compare against, so it can never
+    be shown to be free of cross-iteration dependencies; the "< 2" check must reject it
+    just like the zero-iteration case."""
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    loop = make_node("1:2", NodeType.LOOP, name="loop", start_line=5, end_line=10)
+    body_cu = make_node("1:3", NodeType.CU, name="body", start_line=6, end_line=6)
+    pet = build_pet_graph(
+        [main, loop, body_cu],
+        [(main.id, loop.id, EdgeType.CHILD), (loop.id, body_cu.id, EdgeType.CHILD)],
+    )
+
+    loop_ctx = LoopParentContext(parent_loop=loop.id)
+    iter1 = IterationContext(parent_context=loop_ctx, loopstate_iteration_ids=[0])
+    loop_ctx.add_contained_context(iter1)
+    iter1.register_parent_context(loop_ctx)
+
+    work1 = WorkContext()
+    work1.add_node(make_tg_node(body_cu.id, level=1, position=0))
+    iter1.add_contained_context(work1)
+    work1.register_parent_context(iter1)
+
+    tg_loop = make_tg_node(loop.id, level=0, position=0)
     tg_loop.register_created_context(loop_ctx)
     tg = build_task_graph(pet, [tg_loop])
 

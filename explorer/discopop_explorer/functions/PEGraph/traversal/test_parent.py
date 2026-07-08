@@ -80,3 +80,26 @@ def test_get_all_parents_until_function_empty_for_top_level_function(
 ) -> None:
     pet, main, loop, cu, helper, helper_cu = _nested_pet(make_node, build_pet_graph)
     assert get_all_parents_until_function(pet, main) == [main]
+
+
+def test_get_all_parents_until_function_does_not_climb_past_enclosing_function(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph
+) -> None:
+    # outer_loop(LOOP) -> main(FUNC) -> loop(LOOP) -> cu(CU), all via CHILD edges.
+    # Climbing from cu must stop once it reaches the enclosing function "main":
+    # outer_loop must NOT be included, even though it is reachable via a further
+    # CHILD edge above main.
+    outer_loop = make_node("1:1", NodeType.LOOP, name="outer_loop")
+    main = make_node("1:2", NodeType.FUNC, name="main")
+    loop = make_node("1:3", NodeType.LOOP, name="loop")
+    cu = make_node("1:4", NodeType.CU, name="cu")
+    pet = build_pet_graph(
+        [outer_loop, main, loop, cu],
+        [
+            (outer_loop.id, main.id, EdgeType.CHILD),
+            (main.id, loop.id, EdgeType.CHILD),
+            (loop.id, cu.id, EdgeType.CHILD),
+        ],
+    )
+    parents = get_all_parents_until_function(pet, cu)
+    assert set(parents) == {loop, main}
