@@ -14,7 +14,7 @@ import sys
 import threading
 import tkinter as tk
 from tkinter import scrolledtext, ttk
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, show_error, clean_ansi_output
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
@@ -34,6 +34,10 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
     jobs_var: Optional[tk.StringVar] = None
     collect_stats_var: Optional[tk.BooleanVar] = None
+    visualize_var: Optional[tk.BooleanVar] = None
+    explorer_visualization_frame: Optional[tk.Frame] = None
+    explorer_visualization_placeholder: Optional[ttk.Label] = None
+    pattern_detection_output_tabs: Optional[ttk.Notebook] = None
     _pattern_detection_tab_tooltip: Optional[Tooltip] = None
     _pattern_detection_tab_tooltip_timer: Optional[str] = None
     _pattern_detection_tab_tooltip_active_tab: Optional[int] = None
@@ -41,7 +45,13 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     _explorer_stopped: bool = False
 
     def _build_pattern_detection_panel(self, parent: tk.Widget) -> None:
-        main_paned = tk.PanedWindow(parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
+        self.pattern_detection_output_tabs = ttk.Notebook(parent)
+        self.pattern_detection_output_tabs.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
+
+        detection_tab = ttk.Frame(self.pattern_detection_output_tabs)
+        self.pattern_detection_output_tabs.add(detection_tab, text="Detection")
+
+        main_paned = tk.PanedWindow(detection_tab, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
 
         # Left panel - settings
@@ -81,6 +91,19 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         jobs_combo.pack(side=tk.LEFT, padx=5)
         ttk.Label(jobs_frame, text="(auto = unlimited)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
 
+        # Visualization option
+        visualize_frame = ttk.Frame(settings_frame)
+        visualize_frame.pack(fill=tk.X, pady=5)
+
+        self.visualize_var = tk.BooleanVar(value=False)
+        visualize_cb = ttk.Checkbutton(visualize_frame, text="Show graph visualization", variable=self.visualize_var)
+        visualize_cb.pack(side=tk.LEFT, padx=5)
+        ttk.Label(
+            visualize_frame,
+            text="(runs in-process; UI is unresponsive while detection runs)",
+            font=("Arial", 8),
+        ).pack(side=tk.LEFT, padx=5)
+
         # Buttons frame
         button_frame = ttk.Frame(left_frame)
         button_frame.pack(fill=tk.X, padx=0, pady=0)
@@ -115,6 +138,21 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         self.explorer_output_text = create_styled_output_console(output_frame)
         self.explorer_output_text.pack(fill=tk.BOTH, expand=True)
+
+        # Graph Visualization tab - top-level, spans the full panel width
+        visualization_tab = ttk.Frame(self.pattern_detection_output_tabs)
+        self.pattern_detection_output_tabs.add(visualization_tab, text="Graph Visualization")
+
+        self.explorer_visualization_frame = tk.Frame(visualization_tab)
+        self.explorer_visualization_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.explorer_visualization_placeholder = ttk.Label(
+            self.explorer_visualization_frame,
+            text="Run pattern detection with 'Show graph visualization' enabled to see graphs here.",
+            font=("Arial", 10),
+            foreground="gray",
+        )
+        self.explorer_visualization_placeholder.pack(expand=True)
 
         self._update_pattern_detection_ui()
         self._setup_pattern_detection_tab_tooltip()
@@ -256,8 +294,11 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         if self.explorer_run_button is not None:
             self.explorer_run_button.config(state="disabled", text="⟳ Running...")
 
+        visualize = self.visualize_var is not None and self.visualize_var.get()
+
         if self.explorer_stop_button is not None:
-            self.explorer_stop_button.config(state="normal")
+            # a visualized run blocks the main thread, so it cannot be interrupted by a button click
+            self.explorer_stop_button.config(state="disabled" if visualize else "normal")
 
         if self.no_suggestions_label is not None:
             self.no_suggestions_label.pack_forget()
@@ -279,6 +320,13 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         def thread_safe_append(text: str) -> None:
             self.after(0, lambda: append_output(text))  # type: ignore
 
+        if visualize:
+            assert self.pattern_detection_output_tabs is not None
+            self.pattern_detection_output_tabs.select(1)
+            # let the "Running..." button state redraw before the blocking call starts
+            self.after(50, lambda: self._run_pattern_detection_in_process(append_output))  # type: ignore
+            return
+
         def thread_func() -> None:
             try:
                 thread_safe_append("Starting pattern detection...\n")
@@ -291,12 +339,17 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         thread = threading.Thread(target=thread_func, daemon=True)
         thread.start()
 
-    def _invoke_explorer(self, output_callback: Callable[[str], None]) -> None:
-        dot_discopop = self.arguments.dot_dp
-        project_path = dot_discopop
+    def _run_pattern_detection_in_process(self, output_callback: Callable[[str], None]) -> None:
+        output_callback("Starting pattern detection...\n")
+        error = False
+        try:
+            self._invoke_explorer_in_process(output_callback)
+        except Exception as e:
+            output_callback(f"\nError: {str(e)}\n")
+            error = True
+        self._on_pattern_detection_complete(error=error)
 
-        output_callback("Loading explorer configuration...\n")
-
+    def _get_missing_required_explorer_files(self, project_path: str) -> List[str]:
         required_files = [
             os.path.join(project_path, "profiler", "Data.xml"),
             os.path.join(project_path, "profiler", "dynamic_dependencies.txt"),
@@ -304,7 +357,15 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             os.path.join(project_path, "profiler", "reduction.txt"),
             os.path.join(project_path, "FileMapping.txt"),
         ]
-        missing_files = [f for f in required_files if not os.path.exists(f)]
+        return [f for f in required_files if not os.path.exists(f)]
+
+    def _invoke_explorer(self, output_callback: Callable[[str], None]) -> None:
+        dot_discopop = self.arguments.dot_dp
+        project_path = dot_discopop
+
+        output_callback("Loading explorer configuration...\n")
+
+        missing_files = self._get_missing_required_explorer_files(project_path)
         if missing_files:
             output_callback("\nMissing required files:\n")
             for file_path in missing_files:
@@ -361,6 +422,83 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         if returncode != 0:
             raise RuntimeError(f"Explorer exited with return code {returncode}")
+
+        if not self._explorer_stopped:
+            output_callback("\nPattern detection completed.\n")
+
+    def _invoke_explorer_in_process(self, output_callback: Callable[[str], None]) -> None:
+        project_path = self.arguments.dot_dp
+
+        output_callback("Loading explorer configuration...\n")
+
+        missing_files = self._get_missing_required_explorer_files(project_path)
+        if missing_files:
+            output_callback("\nMissing required files:\n")
+            for file_path in missing_files:
+                output_callback(f"  - {file_path}\n")
+            raise RuntimeError("Missing required profiling data files")
+
+        assert self.pattern_types_vars is not None
+        assert self.jobs_var is not None
+        assert self.explorer_visualization_frame is not None
+
+        selected_patterns = [pattern for pattern, var in self.pattern_types_vars.items() if var.get()]
+        enable_patterns = ",".join(selected_patterns) if selected_patterns else "reduction,doall"
+        jobs_value = self.jobs_var.get()
+
+        output_callback("Configuration:\n")
+        output_callback(f"  Patterns: {enable_patterns}\n")
+        output_callback(f"  Threads: {jobs_value}\n")
+        output_callback("  Graph visualization: enabled\n\n")
+
+        # discard widgets from a previous visualized run; WithSidebar always builds
+        # a fresh layout into the given frame and never clears prior content itself
+        for child in self.explorer_visualization_frame.winfo_children():
+            child.destroy()
+
+        argv = [
+            "--path",
+            project_path,
+            "--enable-patterns",
+            enable_patterns,
+            "--log",
+            "WARNING",
+            "--visualize",
+        ]
+        if jobs_value != "auto":
+            argv.extend(["-j", jobs_value])
+
+        # lazy import: discopop_explorer is only needed for this in-process path,
+        # mirroring discopop_explorer's own lazy import of discopop_gui
+        from discopop_explorer.__main__ import parse_args
+        from discopop_explorer.discopop_explorer import run as run_explorer
+
+        arguments = parse_args(argv)
+        arguments.visualize_on = self.explorer_visualization_frame
+
+        class _TkConsoleWriter:
+            def __init__(self, callback: Callable[[str], None], widget: Any) -> None:
+                self._callback = callback
+                self._widget = widget
+
+            def write(self, text: str) -> None:
+                if text:
+                    self._callback(text)
+                    self._widget.update_idletasks()
+
+            def flush(self) -> None:
+                pass
+
+        output_callback("Running pattern detection...\n\n")
+
+        old_stdout = sys.stdout
+        sys.stdout = _TkConsoleWriter(output_callback, self)  # type: ignore[assignment]
+        try:
+            run_explorer(arguments)
+        except SystemExit as e:
+            raise RuntimeError(f"Explorer exited unexpectedly (code {e.code})") from e
+        finally:
+            sys.stdout = old_stdout
 
         if not self._explorer_stopped:
             output_callback("\nPattern detection completed.\n")
