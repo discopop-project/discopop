@@ -464,7 +464,7 @@ def __calculate_fitness(
     global entry_to_configuration
     logger.info("Calculating fitness...")
     logger.info("--- Removing duplicates")
-    population_wo_duplicates = list(set(population))
+    population_wo_duplicates = list(dict.fromkeys(population))
 
     compilation_successful: Dict[CHROMOSOME, bool] = dict()
 

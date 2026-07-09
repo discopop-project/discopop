@@ -197,7 +197,7 @@ def split_taskable_control_sequence(
                     for ctx in node.get_contained_contexts(inclusive=True):
                         # lsprint("--> ctx: ", ctx)
                         scope_1 += ctx.get_code_scope(ctg.pet)
-                    scope_1 = list(set(scope_1))
+                    scope_1 = list(dict.fromkeys(scope_1))
                     print("    == scope size: ", len(scope_1))
 
                     print(" == Scope2: ", successor)
@@ -206,7 +206,7 @@ def split_taskable_control_sequence(
                     for ctx in successor.get_contained_contexts(inclusive=True):
                         #    print("--> ctx: ", ctx)
                         scope_2 += ctx.get_code_scope(ctg.pet)
-                    scope_2 = list(set(scope_2))
+                    scope_2 = list(dict.fromkeys(scope_2))
                     print("    == scope size: ", len(scope_2))
 
                 sequences_split = True

@@ -96,7 +96,7 @@ class TaskGraph(object):
                 if type(edge_type) == SuccessorEdge:
                     # found incoming successor edge
                     redirect_in_edges.append((in_edges[0], base_node))
-        for tpl in list(set(redirect_in_edges)):
+        for tpl in list(dict.fromkeys(redirect_in_edges)):
             self.add_successor_edge(tpl[0], enter)
             self.graph.remove_edge(tpl[0], tpl[1])
         # redirect outgoing edges
@@ -106,7 +106,7 @@ class TaskGraph(object):
                 if type(edge_type) == SuccessorEdge:
                     # found outgoing successor edge
                     redirect_out_edges.append((base_node, out_edges[1]))
-        for tpl in list(set(redirect_out_edges)):
+        for tpl in list(dict.fromkeys(redirect_out_edges)):
             self.add_successor_edge(exit, tpl[1])
             self.graph.remove_edge(tpl[0], tpl[1])
         # connect enter and exit
@@ -134,7 +134,7 @@ class TaskGraph(object):
                 if type(edge_type) == SuccessorEdge:
                     # found incoming successor edge
                     redirect_in_edges.append((in_edges[0], entry_node))
-        for tpl in list(set(redirect_in_edges)):
+        for tpl in list(dict.fromkeys(redirect_in_edges)):
             self.add_successor_edge(tpl[0], enter)
             self.graph.remove_edge(tpl[0], tpl[1])
         # redirect outgoing edges
@@ -144,7 +144,7 @@ class TaskGraph(object):
                 if type(edge_type) == SuccessorEdge:
                     # found outgoing successor edge
                     redirect_out_edges.append((exit_node, out_edges[1]))
-        for tpl in list(set(redirect_out_edges)):
+        for tpl in list(dict.fromkeys(redirect_out_edges)):
             self.add_successor_edge(exit, tpl[1])
             self.graph.remove_edge(tpl[0], tpl[1])
         # connect enter and exit

@@ -97,7 +97,9 @@ class PatternDetectorX(object):
         visualizer: Visualizer | None = None,
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
+        print("Loading AST...")
         self.ast_helper.load_ast_from_project(project_path)
+        print("   done.")
         # self.ast_helper.print_ast_structure()
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()

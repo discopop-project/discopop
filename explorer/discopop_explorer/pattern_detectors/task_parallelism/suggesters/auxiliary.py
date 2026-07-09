@@ -43,7 +43,7 @@ def suggest_parallel_regions(pet: PEGraphX, suggestions: List[TaskParallelismInf
     for ts in task_suggestions:
         parents += get_parent_of_type(pet, ts._node, NodeType.FUNC, EdgeType.CHILD, False)
     # remove duplicates
-    parents = list(set(parents))
+    parents = list(dict.fromkeys(parents))
     # get outer-most parents of suggested tasks
     outer_parents: List[Tuple[Node, Optional[Node]]] = []
     # iterate over entries in parents.
@@ -279,14 +279,14 @@ def combine_omittable_cus(pet: PEGraphX, suggestions: List[PatternInfo]) -> List
     for key in task_suggestions_dict:
         for ts in task_suggestions_dict[key]:
             # remove duplicates
-            ts.in_dep = list(set(ts.in_dep))
-            ts.out_dep = list(set(ts.out_dep))
+            ts.in_dep = list(dict.fromkeys(ts.in_dep))
+            ts.out_dep = list(dict.fromkeys(ts.out_dep))
             # reset in_out_dep, might have changed due to combination
             if len(ts.in_dep) < len(ts.out_dep):  # just for performance
                 ts.in_out_dep = [var for var in ts.in_dep if var in ts.out_dep]
             else:
                 ts.in_out_dep = [var for var in ts.out_dep if var in ts.in_dep]
-            ts.in_out_dep = list(set(ts.in_out_dep))
+            ts.in_out_dep = list(dict.fromkeys(ts.in_out_dep))
             result.append(ts)
 
     return result

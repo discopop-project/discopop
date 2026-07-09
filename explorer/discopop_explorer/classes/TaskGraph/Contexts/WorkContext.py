@@ -76,7 +76,7 @@ class WorkContext(Context):
                 continue
 
             # print("CALLS: ", str([e.name for e in get_called_nodes(pet, pet_node)]))
-            for called_function in list(set([e for e in get_called_nodes(pet, pet_node)])):
+            for called_function in list(dict.fromkeys([e for e in get_called_nodes(pet, pet_node)])):
                 for i in range(pet_node.start_line, pet_node.end_line + 1):
                     calls.append((called_function.id, LineID(str(pet_node.file_id) + ":" + str(i))))
-        return list(set(calls))
+        return list(dict.fromkeys(calls))

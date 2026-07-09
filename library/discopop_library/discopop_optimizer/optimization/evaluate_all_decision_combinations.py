@@ -88,7 +88,7 @@ def evaluate_all_decision_combinations(
 
         # print the sorted result for improved readability
         print("# Sorted and simplified costs of all combinations using PATH NODE IDS")
-        for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x], reverse=True):
+        for combination_tuple in sorted(costs_dict.keys(), key=lambda x: (costs_dict[x], x), reverse=True):
             print(
                 "#",
                 combination_tuple,
@@ -100,7 +100,7 @@ def evaluate_all_decision_combinations(
 
         # print the sorted result list using parallel pattern ids for improved interpretability
         print("# Sorted and simplified costs of all combinations using PARALLEL PATTERN IDS")
-        for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x], reverse=True):
+        for combination_tuple in sorted(costs_dict.keys(), key=lambda x: (costs_dict[x], x), reverse=True):
             new_key = []
             for node_id in combination_tuple:
                 # find pattern id
@@ -169,7 +169,9 @@ def __dump_result_to_file_using_pattern_ids(
         json.dump(dumpable_dict, fp)
 
     # dump the best option
-    for combination_tuple in sorted(costs_dict.keys(), key=lambda x: costs_dict[x]):
+    # secondary sort key on the combination tuple itself makes tie-breaking deterministic,
+    # regardless of the non-deterministic arrival order of imap_unordered() results
+    for combination_tuple in sorted(costs_dict.keys(), key=lambda x: (costs_dict[x], x)):
         new_key_2 = []
         best_configuration = None
         # collect applied suggestions

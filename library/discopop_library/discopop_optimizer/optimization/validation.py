@@ -118,7 +118,7 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int],
             called_function_nodes = [fr for fr in all_function_nodes if str(fr.original_cu_id) in called_cu_ids]
 
             # remove duplicates
-            called_function_nodes = list(set(called_function_nodes))
+            called_function_nodes = list(dict.fromkeys(called_function_nodes))
             # add to children_queue
             children_queue += [
                 fid.node_id
