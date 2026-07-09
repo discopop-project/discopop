@@ -82,7 +82,11 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
             "$CXX $CXXFLAGS -o program main.cpp\n\n"
             "Notes:\n"
             "The DiscoPoP framework will set the compiler variables to appropriate values\n"
-            "during the instrumentation process."
+            "during the instrumentation process.\n\n"
+            "Per-configuration override:\n"
+            "Each configuration may define its own compile.sh (via the 'compile.sh (override)'\n"
+            "tab in the configuration editor). When present, it is used instead of this shared\n"
+            "script for that configuration only."
         )
         self._show_help_dialog("compile.sh Help", help_text)
 

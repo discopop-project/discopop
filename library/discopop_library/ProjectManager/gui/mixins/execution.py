@@ -15,6 +15,7 @@ import threading
 import tkinter as tk
 
 
+from discopop_library.ProjectManager.configurations.compile_script import resolve_compile_script_path
 from discopop_library.ProjectManager.configurations.copying import copy_configuration
 from discopop_library.ProjectManager.configurations.deletion import delete_configuration
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
@@ -179,7 +180,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     lambda: append_output("Note: Apply suggestions is ignored in inplace mode.\n"),
                 )
 
-            shared_compile_sh = os.path.join(self.arguments.project_config_dir, "compile.sh")
+            compile_sh = resolve_compile_script_path(self.arguments.project_config_dir, current_config)
             shared_seq_settings = os.path.join(self.arguments.project_config_dir, "seq_settings.json")
             shared_dp_settings = os.path.join(self.arguments.project_config_dir, "dp_settings.json")
             shared_hd_settings = os.path.join(self.arguments.project_config_dir, "hd_settings.json")
@@ -221,7 +222,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     project_copy_path,
                     config_path,
                     settings_path,
-                    shared_compile_sh,
+                    compile_sh,
                     1 if mode == "seq" else thread_count,
                     args_copy.timeout_compilation,
                     process_started_callback=self._register_execution_process,
@@ -353,7 +354,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             logger.info(f"Starting pattern detection preparation for: {current_config}")
             self.after(0, lambda: append_output("Compiling in 'dp' mode with inplace execution...\n\n"))  # type: ignore
 
-            shared_compile_sh = os.path.join(self.arguments.project_config_dir, "compile.sh")
+            compile_sh = resolve_compile_script_path(self.arguments.project_config_dir, current_config)
             shared_dp_settings = os.path.join(self.arguments.project_config_dir, "dp_settings.json")
 
             self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground="#FF6B6B"))  # type: ignore
@@ -364,7 +365,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 self.arguments.project_root,
                 config_path,
                 shared_dp_settings,
-                shared_compile_sh,
+                compile_sh,
                 1,
                 args_copy.timeout_compilation,
                 process_started_callback=self._register_execution_process,

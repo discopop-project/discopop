@@ -39,6 +39,10 @@ class ConfigManagerMixinBase:
     text_areas: Dict[str, tk.Text]
     modified_files: Dict[str, bool]
     save_button: ttk.Button
+    editor_notebook: ttk.Notebook
+    editor_sub_tab_index: Dict[str, int]
+    editor_sub_tab_labels: Dict[str, str]
+    compile_override_button: ttk.Button
 
     # Pattern Detection tab
     pattern_detection_tab_index: int

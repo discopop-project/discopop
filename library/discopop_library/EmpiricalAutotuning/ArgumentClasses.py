@@ -12,6 +12,7 @@ import os
 from pathlib import Path
 from typing import Optional
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
+from discopop_library.ProjectManager.configurations.compile_script import resolve_compile_script_path
 
 logger = logging.getLogger("AutotunerArguments")
 
@@ -57,7 +58,7 @@ class AutotunerArguments(GeneralArguments):
             os.path.join(self.dot_dp_path, "project", "configs"),
             os.path.join(self.dot_dp_path, "project", "configs", self.configuration),
             os.path.join(self.dot_dp_path, "project", "configs", "seq_settings.json"),
-            os.path.join(self.dot_dp_path, "project", "configs", "compile.sh"),
+            resolve_compile_script_path(os.path.join(self.dot_dp_path, "project", "configs"), self.configuration),
             os.path.join(self.dot_dp_path, "project", "configs", self.configuration, "execute.sh"),
         ]
         for file in required_files:

@@ -14,6 +14,8 @@ from typing import Any
 
 from mcp.types import TextContent, Tool, ToolAnnotations
 
+from discopop_library.ProjectManager.configurations.compile_script import get_per_config_compile_script_path
+from discopop_library.ProjectManager.utilities.scriptFiles import write_script_file
 from mcp_server.tools.helpers import ToolContext
 
 logger = logging.getLogger("discopop-mcp")
@@ -29,6 +31,11 @@ TOOL = Tool(
         "containing an execute.sh script. A project can have multiple configurations "
         "representing different execution scenarios (e.g. different input sizes or "
         "argument sets). "
+        "\n\n"
+        "By default a configuration compiles with the project's shared compile.sh. Pass "
+        "compile_script_body to also give this configuration its own compile.sh override, "
+        "used only for this configuration (e.g. when it needs different compile-time "
+        "parameters) — equivalent to calling set_compile_script with this config_name. "
         "\n\n"
         "IMPORTANT — profiling overhead: The instrumented binary records every memory "
         "access at runtime, which incurs significant overhead compared to the original "
@@ -74,6 +81,15 @@ TOOL = Tool(
                     "A #!/bin/bash shebang is prepended automatically if not present."
                 ),
             },
+            "compile_script_body": {
+                "type": "string",
+                "description": (
+                    "Optional. If given, also writes a per-configuration compile.sh override to "
+                    "configs/<config_name>/compile.sh, used instead of the shared compile.sh for "
+                    "this configuration only. A #!/bin/bash shebang is prepended automatically "
+                    "if not present."
+                ),
+            },
         },
         "required": ["project_path", "config_name", "script_body"],
         "additionalProperties": False,
@@ -113,24 +129,32 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         config_dir.mkdir(parents=True, exist_ok=True)
         ctx.log_action(project_path, "create_execution_configuration", f"Ensured config directory: {config_dir}")
 
-        if not script_body.startswith("#!"):
-            script_body = "#!/bin/bash\n" + script_body
-
         execute_sh = config_dir / "execute.sh"
-        execute_sh.write_text(script_body)
-        execute_sh.chmod(execute_sh.stat().st_mode | 0o111)
+        write_script_file(str(execute_sh), script_body)
         ctx.log_action(
             project_path,
             "create_execution_configuration",
             f"Wrote execute.sh for config '{config_name}' ({len(script_body)} bytes)",
         )
 
-        result = {
+        result: dict[str, Any] = {
             "status": "success",
             "project_path": project_path,
             "config_name": config_name,
             "path": str(execute_sh),
         }
+
+        compile_script_body = arguments.get("compile_script_body")
+        if compile_script_body:
+            compile_sh = get_per_config_compile_script_path(str(configs_dir), config_name)
+            write_script_file(compile_sh, compile_script_body)
+            ctx.log_action(
+                project_path,
+                "create_execution_configuration",
+                f"Wrote compile.sh override for config '{config_name}' ({len(compile_script_body)} bytes)",
+            )
+            result["compile_script_path"] = compile_sh
+
         ctx.log_response("create_execution_configuration", result)
         return [TextContent(type="text", text=json.dumps(result))]
 
