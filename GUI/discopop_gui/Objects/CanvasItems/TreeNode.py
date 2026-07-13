@@ -125,7 +125,11 @@ class TreeNode:
         self.set_offset(self._x_offset, self._y_offset)
 
         if self._highest == False:
-            self.request_x_space(self._base_node.id, self.get_x_space_needed())
+            for connection_id, edge in self._higher_order_connections.items():
+                if edge[1] == EdgeType.DEPENDENCY:
+                    continue
+
+                self._canvas.get_visual_node(connection_id).request_x_space(self._base_node.id, self.get_x_space_needed())
         else:
             self._canvas.request_x_space(self._base_node.id, self.get_x_space_needed())
 
@@ -348,9 +352,9 @@ class TreeNode:
             space_needed = connection.get_x_space_needed()
             
             if i == 0:
-                space_needed_left = space_needed[0] + x_offset_data[0]
-            if i == len(self._lower_order_connections) - 1:
-                space_needed_right = space_needed[1] + x_offset_data[0]
+                space_needed_left = space_needed[0] + abs(x_offset_data[0])
+            if i == len(self._lower_order_x_offset_data) - 1:
+                space_needed_right = space_needed[1] + abs(x_offset_data[0])
 
         return (space_needed_left, space_needed_right)
     
@@ -363,7 +367,7 @@ class TreeNode:
         space_needed_from_higher_order_right = 0
         flip = False
 
-        for i, (connection_id, x_offset_data) in enumerate(self._lower_order_x_offset_data.items()):
+        for i, (connection_id, __) in enumerate(self._lower_order_x_offset_data.items()):
             if connection_id == lower_order_id:
                 self._lower_order_x_offset_data[connection_id] = (self._lower_order_x_offset_data[connection_id][0], space_needed[0], space_needed[1])
                 flip = True
@@ -373,9 +377,9 @@ class TreeNode:
                 self._lower_order_x_offset_data[connection_id] = (self._lower_order_x_offset_data[connection_id][0] + right_offset, self._lower_order_x_offset_data[connection_id][1], self._lower_order_x_offset_data[connection_id][2])
 
             if i == 0:
-                space_needed_from_higher_order_left = space_needed[0] + x_offset_data[0]
-            if i == len(self._lower_order_connections) - 1:
-                space_needed_from_higher_order_right = space_needed[1] + x_offset_data[0]
+                space_needed_from_higher_order_left = abs(self._lower_order_x_offset_data[connection_id][0]) + self._lower_order_x_offset_data[connection_id][1]
+            if i == len(self._lower_order_x_offset_data) - 1:
+                space_needed_from_higher_order_right = abs(self._lower_order_x_offset_data[connection_id][0]) + self._lower_order_x_offset_data[connection_id][2]
 
         self.set_offset(self._x_offset, self._y_offset, lower_order_id)
 

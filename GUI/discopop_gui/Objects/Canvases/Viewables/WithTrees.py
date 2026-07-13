@@ -65,9 +65,6 @@ class WithTrees(ViewableCanvas):
             self.get_visual_node(node_id).set_highest_by_higher_order()
 
     def remove_highest_visual_node_id(self, visual_node_id : int) -> int:
-        value = self._highest_visual_node_ids.index(visual_node_id)
-        self._highest_visual_node_ids.remove(visual_node_id)
-
         left_offset = self._highest_visual_nodes_x_offset_data[visual_node_id][1]
         right_offset = self._highest_visual_nodes_x_offset_data[visual_node_id][2]
         flip = False
@@ -80,6 +77,8 @@ class WithTrees(ViewableCanvas):
             else:
                 self._highest_visual_nodes_x_offset_data[node_id] = (self._highest_visual_nodes_x_offset_data[node_id][0] - right_offset - 1, self._highest_visual_nodes_x_offset_data[node_id][1], self._highest_visual_nodes_x_offset_data[node_id][2])
 
+        value = self._highest_visual_node_ids.index(visual_node_id)
+        self._highest_visual_node_ids.remove(visual_node_id)
         self._highest_visual_nodes_x_offset_data.pop(visual_node_id, None)
         return value
 
