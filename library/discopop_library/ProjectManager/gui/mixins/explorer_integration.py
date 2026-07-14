@@ -18,7 +18,14 @@ from typing import Any, Callable, Dict, List, Optional
 
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, show_error, clean_ansi_output
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
-from discopop_library.ProjectManager.gui.widgets import create_styled_output_console
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.widgets import (
+    create_styled_output_console,
+    heading_label,
+    caption_label,
+    error_label,
+    primary_button,
+)
 
 logger = logging.getLogger("ExplorerIntegration")
 
@@ -66,7 +73,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         patterns_frame = ttk.Frame(settings_frame)
         patterns_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(patterns_frame, text="Pattern Types:", font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
+        heading_label(patterns_frame, "Pattern Types:").pack(side=tk.LEFT, padx=5)
 
         self.pattern_types_vars = {}
         for pattern in ["reduction", "doall", "task"]:
@@ -79,17 +86,17 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         jobs_frame = ttk.Frame(settings_frame)
         jobs_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(jobs_frame, text="Threads:", font=("Arial", 11)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(jobs_frame, text="Threads:", font=widgets.FONT_BODY).pack(side=tk.LEFT, padx=5)
         self.jobs_var = tk.StringVar(value="auto")
         jobs_combo = ttk.Combobox(
             jobs_frame,
             textvariable=self.jobs_var,
-            values=["auto", "1", "2", "4", "8", "16"],
+            values=widgets.THREAD_VALUES,
             width=10,
             state="readonly",
         )
         jobs_combo.pack(side=tk.LEFT, padx=5)
-        ttk.Label(jobs_frame, text="(auto = unlimited)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+        caption_label(jobs_frame, "(auto = unlimited)").pack(side=tk.LEFT, padx=5)
 
         # Visualization option
         visualize_frame = ttk.Frame(settings_frame)
@@ -98,17 +105,16 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         self.visualize_var = tk.BooleanVar(value=False)
         visualize_cb = ttk.Checkbutton(visualize_frame, text="Show graph visualization", variable=self.visualize_var)
         visualize_cb.pack(side=tk.LEFT, padx=5)
-        ttk.Label(
+        caption_label(
             visualize_frame,
-            text="(runs in-process; UI is unresponsive while detection runs)",
-            font=("Arial", 8),
+            "(runs in-process; UI is unresponsive while detection runs)",
         ).pack(side=tk.LEFT, padx=5)
 
         # Buttons frame
         button_frame = ttk.Frame(left_frame)
         button_frame.pack(fill=tk.X, padx=0, pady=0)
 
-        self.explorer_run_button = ttk.Button(
+        self.explorer_run_button = primary_button(
             button_frame, text="Run Pattern Detection", command=self._run_pattern_detection, state="disabled"
         )
         self.explorer_run_button.pack(side=tk.LEFT, padx=5, pady=5)
@@ -124,9 +130,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         self.browse_suggestions_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         # No suggestions notification label
-        self.no_suggestions_label = ttk.Label(
-            left_frame, text="No patterns found.", foreground="#f38ba8", font=("Arial", 11)
-        )
+        self.no_suggestions_label = error_label(left_frame, "No patterns found.")
         self.no_suggestions_label.pack(anchor=tk.W, padx=5, pady=(5, 0))
 
         # Right panel - output
@@ -146,11 +150,9 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         self.explorer_visualization_frame = tk.Frame(visualization_tab)
         self.explorer_visualization_frame.pack(fill=tk.BOTH, expand=True)
 
-        self.explorer_visualization_placeholder = ttk.Label(
+        self.explorer_visualization_placeholder = caption_label(
             self.explorer_visualization_frame,
-            text="Run pattern detection with 'Show graph visualization' enabled to see graphs here.",
-            font=("Arial", 10),
-            foreground="gray",
+            "Run pattern detection with 'Show graph visualization' enabled to see graphs here.",
         )
         self.explorer_visualization_placeholder.pack(expand=True)
 
@@ -303,7 +305,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         if self.no_suggestions_label is not None:
             self.no_suggestions_label.pack_forget()
 
-        self.status_label.config(text="⏳ Pattern detection in progress...", foreground="#FF6B6B")
+        self.status_label.config(text="⏳ Pattern detection in progress...", foreground=widgets.STATUS_BUSY)
 
         if self.explorer_output_text is not None:
             self.explorer_output_text.config(state=tk.NORMAL)
@@ -348,6 +350,39 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             output_callback(f"\nError: {str(e)}\n")
             error = True
         self._on_pattern_detection_complete(error=error)
+        # The visualizer builds its matplotlib canvases while the Tk event loop is
+        # blocked by the in-process explorer run, so they were drawn before their
+        # widgets had a real size. Force geometry to settle and re-render now, once
+        # the event loop is running again, so the graphs appear without a manual
+        # window resize.
+        self.after(0, self._refresh_visualization_layout)  # type: ignore
+
+    def _refresh_visualization_layout(self) -> None:
+        frame = self.explorer_visualization_frame
+        if frame is None:
+            return
+        try:
+            # process pending geometry work so widgets report their final size
+            frame.update_idletasks()
+        except tk.TclError:
+            return
+        self._redraw_embedded_canvases(frame)
+
+    def _redraw_embedded_canvases(self, widget: tk.Misc) -> None:
+        for child in widget.winfo_children():
+            self._redraw_embedded_canvases(child)
+        # matplotlib's FigureCanvasTkAgg widget is a tk Canvas that re-renders the
+        # figure at the correct resolution in its <Configure> handler. Synthesizing
+        # that event with the widget's now-correct size triggers the redraw that a
+        # manual window resize would otherwise be needed for.
+        if widget.winfo_class() == "Canvas":
+            width = widget.winfo_width()
+            height = widget.winfo_height()
+            if width > 1 and height > 1:
+                try:
+                    widget.event_generate("<Configure>", width=width, height=height)
+                except tk.TclError:
+                    pass
 
     def _get_missing_required_explorer_files(self, project_path: str) -> List[str]:
         required_files = [
@@ -536,11 +571,11 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         self._refresh_suggestion_selection_display()
 
         if not error:
-            self.status_label.config(text="Pattern detection completed successfully", foreground="green")
-            self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+            self.status_label.config(text="Pattern detection completed successfully", foreground=widgets.STATUS_OK)
+            self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
         else:
-            self.status_label.config(text="Pattern detection failed", foreground="red")
-            self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+            self.status_label.config(text="Pattern detection failed", foreground=widgets.STATUS_FAIL)
+            self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
 
     def _stop_pattern_detection(self) -> None:
         self._explorer_stopped = True
@@ -551,4 +586,4 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
                 self._explorer_process.terminate()
         if self.explorer_stop_button is not None:
             self.explorer_stop_button.config(state="disabled")
-        self.status_label.config(text="Stopping pattern detection...", foreground="orange")
+        self.status_label.config(text="Stopping pattern detection...", foreground=widgets.STATUS_STOP)

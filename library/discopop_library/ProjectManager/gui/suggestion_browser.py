@@ -14,7 +14,15 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from discopop_library.ProjectManager.gui.widgets import CATPPUCCIN_OUTPUT_BG, CATPPUCCIN_FG
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.widgets import (
+    heading_label,
+    caption_label,
+    create_code_view,
+    icon_button,
+    primary_button,
+    danger_button,
+)
 
 _CHECKED = "☑"
 _UNCHECKED = "☐"
@@ -53,10 +61,10 @@ class SuggestionBrowserDialog:
         self._applied_suggestions: List[str] = []
 
         self._expanded: Dict[str, bool] = {}
-        self._expand_buttons: Dict[str, tk.Button] = {}
-        self._check_buttons: Dict[str, tk.Button] = {}
-        self._file_check_buttons: Dict[Tuple[str, str], tk.Button] = {}
-        self._action_buttons: Dict[str, tk.Button] = {}
+        self._expand_buttons: Dict[str, ttk.Button] = {}
+        self._check_buttons: Dict[str, ttk.Button] = {}
+        self._file_check_buttons: Dict[Tuple[str, str], ttk.Button] = {}
+        self._action_buttons: Dict[str, ttk.Button] = {}
         self._child_frames: Dict[str, ttk.Frame] = {}
         self._row_frames: Dict[str, ttk.Frame] = {}
 
@@ -144,11 +152,6 @@ class SuggestionBrowserDialog:
         self.dialog.geometry("1300x800")
         self.dialog.minsize(900, 500)
 
-        # Probe default button fg so we can restore it for the "not applied" state
-        _probe = tk.Button(self.dialog)
-        self._default_btn_fg: str = str(_probe.cget("fg"))
-        _probe.destroy()
-
         pw = self.parent.winfo_width()
         ph = self.parent.winfo_height()
         px = self.parent.winfo_rootx()
@@ -158,17 +161,17 @@ class SuggestionBrowserDialog:
 
         bottom_bar = ttk.Frame(self.dialog)
         bottom_bar.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=(0, 5))
-        ttk.Button(
+        primary_button(
             bottom_bar,
             text="Register suggestions for execution",
             command=self._register_for_execution,
         ).pack(side=tk.LEFT, padx=(0, 10))
-        ttk.Button(
+        primary_button(
             bottom_bar,
             text="Apply selected to code",
             command=self._apply_selected_to_code,
         ).pack(side=tk.LEFT, padx=(0, 5))
-        ttk.Button(
+        danger_button(
             bottom_bar,
             text="Reset all applied patches",
             command=self._reset_all_applied,
@@ -196,11 +199,7 @@ class SuggestionBrowserDialog:
         self.dialog.grab_set()
 
     def _build_left_panel(self, parent: tk.Widget) -> None:
-        ttk.Label(
-            parent,
-            text=f"Suggestions ({len(self._patches)})",
-            font=("Arial", 11, "bold"),
-        ).pack(anchor=tk.W, padx=5, pady=(5, 2))
+        heading_label(parent, f"Suggestions ({len(self._patches)})").pack(anchor=tk.W, padx=5, pady=(5, 2))
 
         list_outer = ttk.Frame(parent)
         list_outer.pack(fill=tk.BOTH, expand=True)
@@ -225,15 +224,13 @@ class SuggestionBrowserDialog:
         self._list_canvas.bind("<Configure>", _on_canvas_resize)
 
         if not self._patches:
-            ttk.Label(self._list_inner, text="No suggestions found.", foreground="gray").pack(
-                anchor=tk.W, padx=10, pady=5
-            )
+            caption_label(self._list_inner, "No suggestions found.").pack(anchor=tk.W, padx=10, pady=5)
         else:
             for sid in sorted(self._patches.keys(), key=lambda x: int(x) if x.isdigit() else x):
                 self._expanded[sid] = True
                 self._add_suggestion_row(self._list_inner, sid)
 
-        self.selection_count_label = ttk.Label(parent, text="", font=("Arial", 8), foreground="gray")
+        self.selection_count_label = caption_label(parent, "")
         self.selection_count_label.pack(anchor=tk.W, padx=5, pady=2)
         self._update_selection_count()
 
@@ -242,19 +239,14 @@ class SuggestionBrowserDialog:
         row.pack(fill=tk.X, padx=2, pady=1)
         self._row_frames[sid] = row
 
-        expand_btn = tk.Button(
-            row, text="▼", width=2, relief=tk.FLAT, bd=0, command=lambda s=sid: self._toggle_expand(s)  # type: ignore[misc]
-        )
+        expand_btn = icon_button(row, "▼", command=lambda s=sid: self._toggle_expand(s))  # type: ignore[misc]
         expand_btn.pack(side=tk.LEFT)
         self._expand_buttons[sid] = expand_btn
 
         check_char = self._suggestion_select_char(sid)
-        check_btn = tk.Button(
+        check_btn = icon_button(
             row,
-            text=check_char,
-            width=2,
-            relief=tk.FLAT,
-            bd=0,
+            check_char,
             command=lambda s=sid: self._on_suggestion_checkbox_click(s),  # type: ignore[misc]
         )
         check_btn.pack(side=tk.LEFT)
@@ -265,12 +257,11 @@ class SuggestionBrowserDialog:
         name_label.bind("<Button-1>", lambda e, s=sid: self._load_all_patches_in_editor(s))  # type: ignore[misc]
 
         is_applied = sid in self._applied_suggestions
-        action_btn = tk.Button(
+        action_btn = ttk.Button(
             row,
             text="✓ Applied" if is_applied else "○ Apply",
-            fg="#5ca668" if is_applied else self._default_btn_fg,
             width=10,
-            anchor=tk.CENTER,
+            style=widgets.STYLE_SUCCESS_BUTTON if is_applied else "TButton",
             command=lambda s=sid: self._on_action_button(s),  # type: ignore[misc]
         )
         action_btn.pack(side=tk.LEFT, padx=(5, 4))
@@ -288,19 +279,16 @@ class SuggestionBrowserDialog:
         row.pack(fill=tk.X, padx=(28, 2), pady=1)
 
         check_char = self._file_select_char(sid, filename)
-        check_btn = tk.Button(
+        check_btn = icon_button(
             row,
-            text=check_char,
-            width=2,
-            relief=tk.FLAT,
-            bd=0,
+            check_char,
             command=lambda s=sid, f=filename: self._on_file_checkbox_click(s, f),  # type: ignore[misc]
         )
         check_btn.pack(side=tk.LEFT)
         self._file_check_buttons[(sid, filename)] = check_btn
 
         display_name = self._patch_display_names.get((sid, filename), filename)
-        name_label = ttk.Label(row, text=display_name, anchor=tk.W, foreground="#6699cc", cursor="hand2")
+        name_label = ttk.Label(row, text=display_name, anchor=tk.W, foreground=widgets.LINK_FG, cursor="hand2")
         name_label.pack(side=tk.LEFT, fill=tk.X, expand=True)
         patch_path = os.path.join(self.dot_dp_path, "patch_generator", sid, filename)
         name_label.bind("<Button-1>", lambda e, p=patch_path: self._load_patch_in_editor(p))  # type: ignore[misc]
@@ -378,7 +366,7 @@ class SuggestionBrowserDialog:
             if sid in self._action_buttons:
                 self._action_buttons[sid].config(
                     text="✓ Applied" if is_applied else "○ Apply",
-                    fg="#5ca668" if is_applied else self._default_btn_fg,
+                    style=widgets.STYLE_SUCCESS_BUTTON if is_applied else "TButton",
                     width=10,
                 )
 
@@ -495,31 +483,7 @@ class SuggestionBrowserDialog:
         editor_frame = ttk.Frame(parent)
         editor_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=2)
 
-        self.editor_text = tk.Text(
-            editor_frame,
-            wrap=tk.NONE,
-            font=("Courier New", 11),
-            bg=CATPPUCCIN_OUTPUT_BG,
-            fg=CATPPUCCIN_FG,
-            insertbackground=CATPPUCCIN_FG,
-            relief=tk.FLAT,
-            bd=0,
-            state=tk.DISABLED,
-        )
-
-        y_scroll = ttk.Scrollbar(editor_frame, orient=tk.VERTICAL, command=self.editor_text.yview)
-        x_scroll = ttk.Scrollbar(editor_frame, orient=tk.HORIZONTAL, command=self.editor_text.xview)
-        self.editor_text.configure(yscrollcommand=y_scroll.set, xscrollcommand=x_scroll.set)
-
-        y_scroll.pack(side=tk.RIGHT, fill=tk.Y)
-        x_scroll.pack(side=tk.BOTTOM, fill=tk.X)
-        self.editor_text.pack(fill=tk.BOTH, expand=True)
-
-        self.editor_text.tag_config("diff_add", foreground="#a6e3a1")
-        self.editor_text.tag_config("diff_remove", foreground="#f38ba8")
-        self.editor_text.tag_config("diff_header", foreground="#89b4fa")
-        self.editor_text.tag_config("diff_hunk", foreground="#f9e2af")
-
+        self.editor_text = create_code_view(editor_frame, wrap=tk.NONE)
         self.editor_text.bind("<<Modified>>", self._on_text_modified)
 
     def _load_all_patches_in_editor(self, sid: str) -> None:

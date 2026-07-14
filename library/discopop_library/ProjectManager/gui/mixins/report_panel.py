@@ -15,18 +15,12 @@ from typing import Any
 
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.widgets import danger_button, primary_button
 
 
 class ReportPanelMixin(ConfigManagerMixinBase):
     def _build_report_panel(self, parent: tk.Widget) -> None:
-        style = ttk.Style()
-        style.configure(
-            "Treeview", rowheight=40, font=("TkDefaultFont", 10), fieldbackground="#ffffff", background="#ffffff"
-        )
-        style.configure("Treeview.Heading", font=("TkDefaultFont", 10, "bold"), borderwidth=1, relief="solid")
-        style.map("Treeview.Heading", background=[("", "#e0e0e0")])
-        style.map("Treeview", fieldbackground=[("", "#ffffff")])
-
         button_frame = ttk.Frame(parent)
         button_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
@@ -46,14 +40,14 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             ):
                 self._reset_project_data()
 
-        reset_results_button = ttk.Button(
+        reset_results_button = danger_button(
             button_frame,
             text="Reset Execution Results",
             command=on_reset_execution_results,
         )
         reset_results_button.pack(side=tk.LEFT, padx=5)
 
-        reset_project_button = ttk.Button(
+        reset_project_button = danger_button(
             button_frame,
             text="Reset Project",
             command=on_reset_project,
@@ -66,7 +60,7 @@ class ReportPanelMixin(ConfigManagerMixinBase):
         def on_view_report() -> None:
             self._view_report()
 
-        self.generate_report_button = ttk.Button(
+        self.generate_report_button = primary_button(
             button_frame,
             text="Generate PDF Report",
             state="disabled",
@@ -128,9 +122,8 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             self.report_tree.heading(col, text=col)
             self.report_tree.column(col, width=column_widths.get(col, 100), anchor="w", stretch=True)
 
-        self.report_tree.tag_configure("evenrow", background="#d9e8f5")
-        self.report_tree.tag_configure("oddrow", background="#ffffff")
-        style.configure("Treeview", padding=2, bordercolor="#e0e0e0")
+        self.report_tree.tag_configure("evenrow", background=widgets.TREE_EVEN_ROW)
+        self.report_tree.tag_configure("oddrow", background=widgets.TREE_ODD_ROW)
 
         self.report_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         vsb.config(command=self.report_tree.yview)

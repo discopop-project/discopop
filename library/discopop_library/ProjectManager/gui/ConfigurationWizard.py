@@ -20,7 +20,8 @@ from discopop_library.ProjectManager.utilities.initializeFiles import (
     initial_script_content,
     initialize_configuration_files,
 )
-from discopop_library.ProjectManager.gui.widgets import create_styled_output_console
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.widgets import create_styled_output_console, heading_label
 from discopop_library.ProjectManager.gui.wizard_steps import WizardStepsMixin
 from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no, show_error
 
@@ -63,7 +64,7 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
         step_indicator_frame = ttk.Frame(main_frame)
         step_indicator_frame.pack(fill=tk.X, pady=(0, 10))
 
-        self.step_label = ttk.Label(step_indicator_frame, text="", font=("TkDefaultFont", 10, "bold"))
+        self.step_label = heading_label(step_indicator_frame, "")
         self.step_label.pack(anchor=tk.W)
 
         nav_frame = ttk.Frame(main_frame)
@@ -201,7 +202,7 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
         self.test_output_text.config(state=tk.NORMAL)
         self.test_output_text.delete(1.0, tk.END)
         self.test_output_text.config(state=tk.DISABLED)
-        self.test_status_label.config(text="Running...", foreground="black")
+        self.test_status_label.config(text="Running...", foreground=widgets.STATUS_BUSY)
         self.run_test_btn.config(state=tk.DISABLED)
         self.next_btn.config(state=tk.DISABLED)
 
@@ -225,12 +226,12 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
             )
             if result is None:
                 self.after(0, lambda: append_output("Compilation failed: settings file not found.\n"))
-                self.after(0, lambda: self.test_status_label.config(text="✗ Failed", foreground="red"))
+                self.after(0, lambda: self.test_status_label.config(text="✗ Failed", foreground=widgets.STATUS_FAIL))
             else:
                 ret_code, elapsed, stdout, stderr = result
                 if ret_code == 0:
                     self.after(0, lambda e=elapsed: append_output(f"Compilation succeeded ({e:.2f}s)\n"))  # type: ignore[misc]
-                    self.after(0, lambda: self.test_status_label.config(text="✓ Success", foreground="green"))
+                    self.after(0, lambda: self.test_status_label.config(text="✓ Success", foreground=widgets.STATUS_OK))
                 else:
                     self.after(
                         0,
@@ -241,7 +242,7 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
                     self.after(
                         0,
                         lambda rc=ret_code: self.test_status_label.config(  # type: ignore[misc]
-                            text=f"✗ Failed (exit code: {rc})", foreground="red"
+                            text=f"✗ Failed (exit code: {rc})", foreground=widgets.STATUS_FAIL
                         ),
                     )
                 if stdout:

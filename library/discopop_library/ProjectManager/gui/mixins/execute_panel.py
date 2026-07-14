@@ -12,6 +12,8 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any
 
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.widgets import caption_label, primary_button
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, bind_tooltip_hover
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 
@@ -121,7 +123,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         self.timeout_execution_var = tk.IntVar(value=3600)
         timeout_exec_entry = ttk.Entry(timeout_exec_frame, textvariable=self.timeout_execution_var, width=10)
         timeout_exec_entry.pack(side=tk.LEFT, padx=5)
-        ttk.Label(timeout_exec_frame, text="(0 = disabled)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+        caption_label(timeout_exec_frame, "(0 = disabled)").pack(side=tk.LEFT, padx=5)
 
         timeout_comp_frame = ttk.Frame(timeout_frame)
         timeout_comp_frame.pack(fill=tk.X, pady=3)
@@ -129,7 +131,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         self.timeout_compilation_var = tk.IntVar(value=3600)
         timeout_comp_entry = ttk.Entry(timeout_comp_frame, textvariable=self.timeout_compilation_var, width=10)
         timeout_comp_entry.pack(side=tk.LEFT, padx=5)
-        ttk.Label(timeout_comp_frame, text="(0 = disabled)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+        caption_label(timeout_comp_frame, "(0 = disabled)").pack(side=tk.LEFT, padx=5)
 
         behavior_frame = ttk.LabelFrame(options_outer, text="Logging & Behavior", padding=5)
         behavior_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -141,7 +143,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         log_level_combo = ttk.Combobox(
             log_level_frame,
             textvariable=self.log_level_var,
-            values=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+            values=widgets.LOG_LEVEL_VALUES,
             state="readonly",
             width=10,
         )
@@ -220,7 +222,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         suggestions_info_row.pack(fill=tk.X, pady=(3, 0))
 
         self.suggestions_count_label = ttk.Label(
-            suggestions_info_row, text="No suggestions available", foreground="gray", font=("Arial", 8)
+            suggestions_info_row, text="No suggestions available", foreground="gray", font=widgets.FONT_CAPTION
         )
         self.suggestions_count_label.pack(side=tk.LEFT, padx=(20, 10))
 
@@ -246,7 +248,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         autotuner_info_row.pack(fill=tk.X, pady=(3, 0))
 
         self.autotuner_suggestions_info_label = ttk.Label(
-            autotuner_info_row, text="No autotuner results available", foreground="gray", font=("Arial", 8)
+            autotuner_info_row, text="No autotuner results available", foreground="gray", font=widgets.FONT_CAPTION
         )
         self.autotuner_suggestions_info_label.pack(side=tk.LEFT, padx=(20, 10))
 
@@ -262,7 +264,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         run_button_frame = ttk.Frame(left_frame)
         run_button_frame.pack(fill=tk.X, padx=0, pady=0)
 
-        self.run_button = ttk.Button(run_button_frame, text="Run", command=on_run, state="disabled", width=15)
+        self.run_button = primary_button(run_button_frame, text="Run", command=on_run, state="disabled")
         self.run_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         self.stop_execution_button = ttk.Button(run_button_frame, text="Stop", command=on_stop, state="disabled")

@@ -17,7 +17,13 @@ from typing import Any, Callable, Dict, Optional
 
 from discopop_library.ProjectManager.gui.mixins.helpers import show_error, Tooltip, clean_ansi_output
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
-from discopop_library.ProjectManager.gui.widgets import create_styled_output_console
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.widgets import (
+    create_styled_output_console,
+    heading_label,
+    caption_label,
+    primary_button,
+)
 
 logger_name = "AutotuningPanel"
 
@@ -53,29 +59,29 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         # Configuration display
         config_row = ttk.Frame(settings_frame)
         config_row.pack(fill=tk.X, pady=3)
-        ttk.Label(config_row, text="Configuration:", font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
-        self.autotuning_config_label = ttk.Label(config_row, text="(none selected)", foreground="gray")
+        heading_label(config_row, "Configuration:").pack(side=tk.LEFT, padx=5)
+        self.autotuning_config_label = caption_label(config_row, "(none selected)")
         self.autotuning_config_label.pack(side=tk.LEFT, padx=5)
 
         # Threads selection
         threads_row = ttk.Frame(settings_frame)
         threads_row.pack(fill=tk.X, pady=5)
-        ttk.Label(threads_row, text="Threads:", font=("Arial", 11)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(threads_row, text="Threads:", font=widgets.FONT_BODY).pack(side=tk.LEFT, padx=5)
         self.autotuning_threads_var = tk.StringVar(value="auto")
         threads_combo = ttk.Combobox(
             threads_row,
             textvariable=self.autotuning_threads_var,
-            values=["auto", "1", "2", "4", "8", "16"],
+            values=widgets.THREAD_VALUES,
             width=10,
             state="readonly",
         )
         threads_combo.pack(side=tk.LEFT, padx=5)
-        ttk.Label(threads_row, text="(auto = CPU count / 2)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+        caption_label(threads_row, "(auto = CPU count / 2)").pack(side=tk.LEFT, padx=5)
 
         # Hotspot types
         hotspot_frame = ttk.Frame(settings_frame)
         hotspot_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(hotspot_frame, text="Hotspot Types:", font=("Arial", 11, "bold")).pack(anchor=tk.W, padx=5)
+        heading_label(hotspot_frame, "Hotspot Types:").pack(anchor=tk.W, padx=5)
 
         self.autotuning_hotspot_types_vars = {}
         for htype in ["yes", "no", "maybe"]:
@@ -87,7 +93,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         # Algorithm selection
         algo_frame = ttk.Frame(settings_frame)
         algo_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(algo_frame, text="Algorithm:", font=("Arial", 11, "bold")).pack(anchor=tk.W, padx=5)
+        heading_label(algo_frame, "Algorithm:").pack(anchor=tk.W, padx=5)
         self.autotuning_algorithm_var = tk.StringVar(value="Evolutionary combination")
         algo_options = [
             ("0", "No combination (measure only)"),
@@ -104,12 +110,12 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         # Log level
         loglevel_frame = ttk.Frame(settings_frame)
         loglevel_frame.pack(fill=tk.X, pady=5)
-        ttk.Label(loglevel_frame, text="Log Level:", font=("Arial", 11)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(loglevel_frame, text="Log Level:", font=widgets.FONT_BODY).pack(side=tk.LEFT, padx=5)
         self.autotuning_log_level_var = tk.StringVar(value="WARNING")
         loglevel_combo = ttk.Combobox(
             loglevel_frame,
             textvariable=self.autotuning_log_level_var,
-            values=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+            values=widgets.LOG_LEVEL_VALUES,
             state="readonly",
             width=10,
         )
@@ -119,7 +125,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         button_frame = ttk.Frame(left_frame)
         button_frame.pack(fill=tk.X, padx=0, pady=0)
 
-        self.autotuning_run_button = ttk.Button(
+        self.autotuning_run_button = primary_button(
             button_frame, text="Run Autotuning", command=self._run_autotuning, state="disabled"
         )
         self.autotuning_run_button.pack(side=tk.LEFT, padx=5, pady=5)
@@ -133,9 +139,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         suggestions_frame = ttk.LabelFrame(left_frame, text="Selected Suggestion IDs", padding=5)
         suggestions_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        self.autotuning_suggestions_label = ttk.Label(
-            suggestions_frame, text="(none)", foreground="gray", font=("Arial", 8), justify=tk.LEFT
-        )
+        self.autotuning_suggestions_label = caption_label(suggestions_frame, "(none)", justify=tk.LEFT)
         self.autotuning_suggestions_label.pack(anchor=tk.W)
 
         # Right panel - output
@@ -256,7 +260,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         if self.autotuning_stop_button is not None:
             self.autotuning_stop_button.config(state="normal")
 
-        self.status_label.config(text="⏳ Autotuning in progress...", foreground="#FF6B6B")
+        self.status_label.config(text="⏳ Autotuning in progress...", foreground=widgets.STATUS_BUSY)
 
         if self.autotuning_output_text is not None:
             self.autotuning_output_text.config(state=tk.NORMAL)
@@ -367,11 +371,11 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
                 self._refresh_suggestion_selection_display()
             if hasattr(self, "_update_report_display"):
                 self._update_report_display()
-            self.status_label.config(text="Autotuning completed successfully", foreground="green")
-            self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+            self.status_label.config(text="Autotuning completed successfully", foreground=widgets.STATUS_OK)
+            self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
         else:
-            self.status_label.config(text="Autotuning failed", foreground="red")
-            self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+            self.status_label.config(text="Autotuning failed", foreground=widgets.STATUS_FAIL)
+            self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
 
     def _stop_autotuning(self) -> None:
         if self._autotuning_process is not None:
@@ -380,4 +384,4 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
             self.autotuning_stop_button.config(state="disabled")
         if hasattr(self, "_update_report_display"):
             self._update_report_display()
-        self.status_label.config(text="Stopping autotuning...", foreground="orange")
+        self.status_label.config(text="Stopping autotuning...", foreground=widgets.STATUS_STOP)

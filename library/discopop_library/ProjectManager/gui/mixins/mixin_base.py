@@ -11,6 +11,7 @@ from tkinter import ttk, scrolledtext
 from typing import Any, Optional, Dict
 
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip
 
 
@@ -110,11 +111,11 @@ class ConfigManagerMixinBase:
     # are inherited at runtime and should not be defined here as stubs - they would
     # shadow the real implementations due to MRO
 
-    def _set_status(self, text: str, fg: str = "gray", *, reset_delay: Optional[int] = None) -> None:
+    def _set_status(self, text: str, fg: str = widgets.STATUS_IDLE, *, reset_delay: Optional[int] = None) -> None:
         """Set status label text and optionally schedule a reset to 'Ready' after reset_delay ms."""
         self.status_label.config(text=text, foreground=fg)
         if reset_delay is not None:
-            self.after(reset_delay, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+            self.after(reset_delay, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
 
     def _load_config(self) -> None:
         """Load configuration from disk."""

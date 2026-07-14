@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Callable, Optional
 
+from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 
 
@@ -34,7 +35,7 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
         scrollbar = ttk.Scrollbar(main_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        text = tk.Text(main_frame, wrap=tk.WORD, yscrollcommand=scrollbar.set, font=("TkDefaultFont", 11))
+        text = tk.Text(main_frame, wrap=tk.WORD, yscrollcommand=scrollbar.set, font=widgets.FONT_BODY)
         text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=text.yview)
 

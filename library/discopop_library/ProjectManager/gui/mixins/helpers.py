@@ -13,6 +13,8 @@ import tkinter.font
 from tkinter import scrolledtext, ttk
 from typing import Optional, Literal, Any, Union
 
+from discopop_library.ProjectManager.gui import widgets
+
 
 class TextAreaHandler(logging.Handler):
     """Custom logging handler that writes to a tkinter Text widget with color coding"""
@@ -54,7 +56,7 @@ class Tooltip:
             background="#ffffe0",
             relief=tk.SOLID,
             borderwidth=1,
-            font=("Arial", 11),
+            font=widgets.FONT_BODY,
             justify=tk.LEFT,
             wraplength=300,
             padx=8,
@@ -84,7 +86,7 @@ def show_message(parent: Any, title: str, message: str) -> None:  # type: ignore
     main_frame = ttk.Frame(dialog, padding=15)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    label = ttk.Label(main_frame, text=message, wraplength=600, justify=tk.LEFT, font=("TkDefaultFont", 11))
+    label = ttk.Label(main_frame, text=message, wraplength=600, justify=tk.LEFT, font=widgets.FONT_BODY)
     label.pack(fill=tk.BOTH, expand=True)
 
     dialog.update_idletasks()
@@ -148,7 +150,7 @@ def ask_yes_no(parent: Any, title: str, message: str) -> bool:  # type: ignore
     main_frame = ttk.Frame(dialog, padding=15)
     main_frame.pack(fill=tk.BOTH, expand=True)
 
-    label = ttk.Label(main_frame, text=message, wraplength=600, justify=tk.LEFT, font=("TkDefaultFont", 11))
+    label = ttk.Label(main_frame, text=message, wraplength=600, justify=tk.LEFT, font=widgets.FONT_BODY)
     label.pack(fill=tk.BOTH, expand=True)
 
     dialog.update_idletasks()

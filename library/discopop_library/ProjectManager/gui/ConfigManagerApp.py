@@ -18,7 +18,8 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 from discopop_library.ProjectManager.utilities.initializeFiles import (
     initialize_configuration_files,
 )
-from discopop_library.ProjectManager.gui.widgets import create_styled_output_console
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.widgets import create_styled_output_console, heading_label
 from discopop_library.ProjectManager.gui.mixins.helpers import (
     Tooltip,
     show_error,
@@ -72,7 +73,7 @@ class ConfigManagerApp(  # type: ignore
         bottom_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
         bottom_frame.pack_propagate(False)
 
-        self.status_label = ttk.Label(bottom_frame, text="Ready", foreground="gray")
+        self.status_label = ttk.Label(bottom_frame, text="Ready", foreground=widgets.STATUS_IDLE)
         self.status_label.pack(side=tk.LEFT, padx=10, pady=5)
 
         # Main layout: PanedWindow with left (configs) and right (editor/execute/report)
@@ -84,11 +85,15 @@ class ConfigManagerApp(  # type: ignore
         left_frame.pack_propagate(False)
         self.paned.add(left_frame, width=280, minsize=220)
 
-        label = ttk.Label(left_frame, text="Run Configs", font=("Arial", 12, "bold"))
+        label = heading_label(left_frame, "Run Configs", title=True)
         label.pack(side=tk.TOP, padx=5, pady=5)
 
         self.listbox = tk.Listbox(
-            left_frame, selectmode=tk.SINGLE, selectbackground="#4A90E2", selectforeground="white", activestyle="none"
+            left_frame,
+            selectmode=tk.SINGLE,
+            selectbackground=widgets.LISTBOX_SELECT_BG,
+            selectforeground=widgets.LISTBOX_SELECT_FG,
+            activestyle="none",
         )
         self.listbox.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
         self.listbox.bind("<<ListboxSelect>>", self._on_config_selected)
@@ -162,9 +167,7 @@ class ConfigManagerApp(  # type: ignore
         execute_header_frame = ttk.Frame(execute_sh_frame)
         execute_header_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        execute_help_label = ttk.Label(
-            execute_header_frame, text="Execution script", font=("TkDefaultFont", 11, "bold")
-        )
+        execute_help_label = heading_label(execute_header_frame, "Execution script")
         execute_help_label.pack(side=tk.LEFT)
 
         execute_help_button = ttk.Button(execute_header_frame, text="Help", command=self._show_execute_sh_help)
@@ -176,9 +179,7 @@ class ConfigManagerApp(  # type: ignore
         execute_scrollbar = ttk.Scrollbar(execute_text_frame)
         execute_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        execute_text_area = tk.Text(
-            execute_text_frame, yscrollcommand=execute_scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11)
-        )
+        execute_text_area = widgets.create_script_editor(execute_text_frame, yscrollcommand=execute_scrollbar.set)
         execute_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         execute_scrollbar.config(command=execute_text_area.yview)
         enable_text_context_menu(execute_text_area)
@@ -193,9 +194,7 @@ class ConfigManagerApp(  # type: ignore
         compile_header_frame = ttk.Frame(compile_sh_frame)
         compile_header_frame.pack(fill=tk.X, padx=5, pady=5)
 
-        compile_help_label = ttk.Label(
-            compile_header_frame, text="Compilation script override", font=("TkDefaultFont", 11, "bold")
-        )
+        compile_help_label = heading_label(compile_header_frame, "Compilation script override")
         compile_help_label.pack(side=tk.LEFT)
 
         compile_help_button = ttk.Button(compile_header_frame, text="Help", command=self._show_compile_sh_help)
@@ -212,9 +211,7 @@ class ConfigManagerApp(  # type: ignore
         compile_scrollbar = ttk.Scrollbar(compile_text_frame)
         compile_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        compile_text_area = tk.Text(
-            compile_text_frame, yscrollcommand=compile_scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11)
-        )
+        compile_text_area = widgets.create_script_editor(compile_text_frame, yscrollcommand=compile_scrollbar.set)
         compile_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         compile_scrollbar.config(command=compile_text_area.yview)
         enable_text_context_menu(compile_text_area)
@@ -251,8 +248,14 @@ class ConfigManagerApp(  # type: ignore
         self._start_modification_polling()
 
     def _setup_styles(self) -> None:
+        """Single location for all shared ttk styles.
+
+        Named button styles and the Treeview / Notebook tab styling all live
+        here so components of the same type look identical wherever they are
+        built (the Treeview and TNotebook.Tab styling used to be configured
+        ad hoc from report_panel.py and compilation_editor.py).
+        """
         style = ThemedStyle(self, theme="scidblue")
-        # style = ttk.Style()
 
         style.configure(
             "TCombobox",
@@ -267,6 +270,36 @@ class ConfigManagerApp(  # type: ignore
             fieldbackground=[("readonly", "#f0f0f0"), ("active", "white")],
             bordercolor=[("focus", CATPPUCCIN_CYAN)],
         )
+
+        # Semantic button styles
+        style.configure(widgets.STYLE_PRIMARY_BUTTON, font=(widgets.FONT_FAMILY, 11, "bold"))
+        style.configure(widgets.STYLE_DANGER_BUTTON, foreground=widgets.STATUS_FAIL)
+        style.map(widgets.STYLE_DANGER_BUTTON, foreground=[("disabled", widgets.STATUS_IDLE)])
+        style.configure(widgets.STYLE_SUCCESS_BUTTON, foreground=widgets.APPLIED_FG)
+        style.configure(widgets.STYLE_ICON_BUTTON, relief="flat", borderwidth=0, padding=0)
+
+        # Notebook tabs (previously configured globally from compilation_editor.py,
+        # which made the styling order-dependent).
+        style.configure("TNotebook.Tab", padding=[10, 2], font=widgets.FONT_BODY)
+
+        # Report Treeview (previously configured ad hoc in report_panel.py).
+        style.configure(
+            "Treeview",
+            rowheight=40,
+            font=(widgets.FONT_FAMILY, 10),
+            fieldbackground=widgets.TREE_BG,
+            background=widgets.TREE_BG,
+            padding=2,
+            bordercolor=widgets.TREE_BORDER,
+        )
+        style.configure(
+            "Treeview.Heading",
+            font=(widgets.FONT_FAMILY, 10, "bold"),
+            borderwidth=1,
+            relief="solid",
+        )
+        style.map("Treeview.Heading", background=[("", widgets.TREE_HEADING_BG)])
+        style.map("Treeview", fieldbackground=[("", widgets.TREE_BG)])
 
 
 def run_gui(arguments: ProjectManagerArguments) -> None:

@@ -15,7 +15,13 @@ from discopop_library.ProjectManager.utilities.initializeFiles import (
     initial_settings_content,
     initial_script_content,
 )
-from discopop_library.ProjectManager.gui.widgets import create_styled_output_console
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.widgets import (
+    create_styled_output_console,
+    create_script_editor,
+    heading_label,
+    primary_button,
+)
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import enable_text_context_menu
 
@@ -38,7 +44,7 @@ The wizard will help you with:
 After completing this wizard, your project will be ready to use with DiscoPoP.
 
 Click "Next >" to begin."""
-        label = ttk.Label(frame, text=intro, font=("TkDefaultFont", 11), justify=tk.LEFT, wraplength=900)
+        label = ttk.Label(frame, text=intro, font=widgets.FONT_BODY, justify=tk.LEFT, wraplength=900)
         label.pack(anchor=tk.NW, padx=10, pady=15)
         return frame
 
@@ -50,7 +56,7 @@ Click "Next >" to begin."""
 
         if has_write_access:
             status_text = "✓ Write Access Available"
-            status_color = "green"
+            status_color = widgets.STATUS_OK
             description = """Write access to the parent folder has been detected.
 
 This allows DiscoPoP to automatically create and delete temporary project copies
@@ -59,7 +65,7 @@ during execution, which enables non-inplace mode for testing and validation.
 You can proceed with the wizard configuration."""
         else:
             status_text = "⚠ No Write Access"
-            status_color = "orange"
+            status_color = widgets.STATUS_STOP
             description = """Write access to the parent folder is not available.
 
 Executions will be limited to "inplace" mode, where the project directory is
@@ -67,12 +73,10 @@ modified directly. Temporary project copies cannot be created.
 
 You can still proceed with the configuration, but keep this limitation in mind."""
 
-        status_label = ttk.Label(frame, text=status_text, font=("TkDefaultFont", 11, "bold"), foreground=status_color)
+        status_label = heading_label(frame, status_text, foreground=status_color)
         status_label.pack(anchor=tk.W, padx=10, pady=(15, 10))
 
-        description_label = ttk.Label(
-            frame, text=description, font=("TkDefaultFont", 11), justify=tk.LEFT, wraplength=900
-        )
+        description_label = ttk.Label(frame, text=description, font=widgets.FONT_BODY, justify=tk.LEFT, wraplength=900)
         description_label.pack(anchor=tk.NW, padx=10, pady=10)
 
         return frame
@@ -88,20 +92,18 @@ You can still proceed with the configuration, but keep this limitation in mind."
             "You can use relative paths as if you are already in the project root.\n"
             "See the wiki for examples: https://discopop-project.github.io/discopop/"
         )
-        hint = ttk.Label(frame, text=hint_text, font=("TkDefaultFont", 11), justify=tk.LEFT)
+        hint = ttk.Label(frame, text=hint_text, font=widgets.FONT_BODY, justify=tk.LEFT)
         hint.pack(anchor=tk.W, padx=5, pady=(5, 10))
 
         scrollbar = ttk.Scrollbar(frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.compile_sh_text = tk.Text(
-            frame, height=14, width=80, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11)
-        )
+        self.compile_sh_text = create_script_editor(frame, height=14, width=80, yscrollcommand=scrollbar.set)
         self.compile_sh_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         scrollbar.config(command=self.compile_sh_text.yview)
         enable_text_context_menu(self.compile_sh_text)
 
-        self.compile_sh_text.tag_config("placeholder", foreground="#999999")
+        self.compile_sh_text.tag_config("placeholder", foreground=widgets.PLACEHOLDER_FG)
         self._compile_sh_has_placeholder = False
 
         compile_sh_path = os.path.join(self.arguments.project_config_dir, "compile.sh")
@@ -147,7 +149,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
         hint = ttk.Label(
             frame,
             text="Configure your compilation settings. These will be used to compile your project.",
-            font=("TkDefaultFont", 11),
+            font=widgets.FONT_BODY,
         )
         hint.pack(anchor=tk.W, padx=5, pady=(5, 10))
 
@@ -192,17 +194,19 @@ You can still proceed with the configuration, but keep this limitation in mind."
         hint = ttk.Label(
             frame,
             text="Click 'Run Test Compilation' to verify your compilation script works.",
-            font=("TkDefaultFont", 11),
+            font=widgets.FONT_BODY,
         )
         hint.pack(anchor=tk.W, padx=5, pady=(5, 10))
 
         button_frame = ttk.Frame(frame)
         button_frame.pack(fill=tk.X, padx=10, pady=5)
 
-        self.run_test_btn = ttk.Button(button_frame, text="Run Test Compilation", command=self._run_test_compilation)
+        self.run_test_btn = primary_button(
+            button_frame, text="Run Test Compilation", command=self._run_test_compilation
+        )
         self.run_test_btn.pack(side=tk.LEFT)
 
-        self.test_status_label = ttk.Label(button_frame, text="", font=("TkDefaultFont", 11))
+        self.test_status_label = ttk.Label(button_frame, text="", font=widgets.FONT_BODY)
         self.test_status_label.pack(side=tk.LEFT, padx=10)
 
         self.test_output_text = create_styled_output_console(frame)
@@ -216,22 +220,22 @@ You can still proceed with the configuration, but keep this limitation in mind."
         hint = ttk.Label(
             frame,
             text="Review and accept the derived settings. You can edit them before continuing.",
-            font=("TkDefaultFont", 11),
+            font=widgets.FONT_BODY,
         )
         hint.pack(anchor=tk.W, padx=5, pady=(5, 10))
 
         notebook = ttk.Notebook(frame)
         notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-        self.dp_settings_text = tk.Text(notebook, height=15, width=80, wrap=tk.WORD, font=("TkDefaultFont", 11))
+        self.dp_settings_text = create_script_editor(notebook, height=15, width=80)
         notebook.add(self.dp_settings_text, text="dp_settings.json")
         enable_text_context_menu(self.dp_settings_text)
 
-        self.hd_settings_text = tk.Text(notebook, height=15, width=80, wrap=tk.WORD, font=("TkDefaultFont", 11))
+        self.hd_settings_text = create_script_editor(notebook, height=15, width=80)
         notebook.add(self.hd_settings_text, text="hd_settings.json")
         enable_text_context_menu(self.hd_settings_text)
 
-        self.par_settings_text = tk.Text(notebook, height=15, width=80, wrap=tk.WORD, font=("TkDefaultFont", 11))
+        self.par_settings_text = create_script_editor(notebook, height=15, width=80)
         notebook.add(self.par_settings_text, text="par_settings.json")
         enable_text_context_menu(self.par_settings_text)
 
@@ -244,7 +248,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
         config_frame = ttk.Frame(frame)
         config_frame.pack(fill=tk.X, padx=10, pady=(5, 10))
 
-        ttk.Label(config_frame, text="Configuration Name:", font=("TkDefaultFont", 11)).pack(anchor=tk.W, pady=5)
+        ttk.Label(config_frame, text="Configuration Name:", font=widgets.FONT_BODY).pack(anchor=tk.W, pady=5)
         self.config_name_entry = ttk.Entry(config_frame, width=40)
         self.config_name_entry.pack(anchor=tk.W)
         self.config_name_entry.insert(0, "default")
@@ -258,20 +262,18 @@ You can still proceed with the configuration, but keep this limitation in mind."
             "You can use relative paths as if you are already in the project root.\n"
             "See the wiki for examples: https://discopop-project.github.io/discopop/"
         )
-        hint = ttk.Label(frame, text=hint_text, font=("TkDefaultFont", 11), justify=tk.LEFT)
+        hint = ttk.Label(frame, text=hint_text, font=widgets.FONT_BODY, justify=tk.LEFT)
         hint.pack(anchor=tk.W, padx=5, pady=(0, 10))
 
         scrollbar = ttk.Scrollbar(frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.execute_sh_text = tk.Text(
-            frame, height=10, width=80, yscrollcommand=scrollbar.set, wrap=tk.WORD, font=("TkDefaultFont", 11)
-        )
+        self.execute_sh_text = create_script_editor(frame, height=10, width=80, yscrollcommand=scrollbar.set)
         self.execute_sh_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         scrollbar.config(command=self.execute_sh_text.yview)
         enable_text_context_menu(self.execute_sh_text)
 
-        self.execute_sh_text.tag_config("placeholder", foreground="#999999")
+        self.execute_sh_text.tag_config("placeholder", foreground=widgets.PLACEHOLDER_FG)
         self._execute_sh_has_placeholder = False
 
         self.execute_sh_text.insert(1.0, "#!/bin/bash\n")
