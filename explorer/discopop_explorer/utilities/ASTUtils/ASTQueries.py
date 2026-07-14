@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import weakref
 from typing import Any, Optional
 
 import networkx as nx
@@ -155,6 +156,14 @@ class ASTQueries:
     ) -> list[str]:
         """Find nodes whose source range contains a specific location.
 
+        Descends the AST from its root node(s) instead of scanning every node:
+        a child's range is always nested within its parent's, so any subtree
+        whose range excludes *line* is skipped along with all its descendants.
+        This visits roughly O(depth-to-matches) nodes per query rather than
+        O(graph size), which matters once the AST is large enough that a full
+        scan (repeated for every query against the same static graph) would
+        dominate runtime.
+
         Args:
             graph: AST graph
             filename: Source filename
@@ -164,13 +173,48 @@ class ASTQueries:
         Returns:
             List of matching node IDs
         """
-        matching = []
-        for node_id, attrs in graph.nodes(data=True):
-            if not _file_matches(attrs.get("loc", {}).get("file"), filename):
+        matching: list[str] = []
+        visited: set[str] = set()
+        stack: list[str] = list(_get_root_node_ids(graph))
+        while stack:
+            node_id = stack.pop()
+            if node_id in visited:
                 continue
-            if ASTQueries._is_in_range(line, column, attrs.get("range", {})):
+            visited.add(node_id)
+
+            attrs = graph.nodes[node_id]
+            range_info = attrs.get("range", {})
+            if not ASTQueries._range_could_contain_line(line, range_info):
+                continue  # prune: this subtree's range excludes *line*
+
+            if _file_matches(attrs.get("loc", {}).get("file"), filename) and ASTQueries._is_in_range(
+                line, column, range_info
+            ):
                 matching.append(node_id)
+
+            stack.extend(graph.successors(node_id))
         return matching
+
+    @staticmethod
+    def _range_could_contain_line(line: int, range_info: dict[str, Any]) -> bool:
+        """Check whether a node's subtree could possibly contain *line*.
+
+        Used to prune AST subtrees during descent in :meth:`find_nodes_at_location`.
+        Nodes with incomplete range info (e.g. the TranslationUnitDecl root, which
+        Clang gives no range at all) can't be ruled out and must always be explored.
+
+        Args:
+            line: Line number to test
+            range_info: Range dict with begin_line/end_line
+
+        Returns:
+            False only when the range is fully known and definitely excludes *line*
+        """
+        begin_line = range_info.get("begin_line")
+        end_line = range_info.get("end_line")
+        if begin_line is None or end_line is None:
+            return True
+        return bool(begin_line <= line <= end_line)
 
     @staticmethod
     def _is_in_range(line: int, column: Optional[int], range_info: dict[str, Any]) -> bool:
@@ -350,6 +394,33 @@ class ASTVariableAndTypeQueries:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+# Keyed by the graph object itself (weakly) rather than id(graph): a plain
+# id()-keyed cache would risk a stale hit if a graph is garbage-collected and
+# a new, unrelated graph happens to be allocated at the same address.
+_root_node_cache: "weakref.WeakKeyDictionary[nx.DiGraph[str], list[str]]" = weakref.WeakKeyDictionary()
+
+
+def _get_root_node_ids(graph: nx.DiGraph[str]) -> list[str]:
+    """Return the graph's root node IDs (no incoming edges), cached per graph.
+
+    AST graphs are built once and then queried many times via
+    :meth:`ASTQueries.find_nodes_at_location`; computing in-degree for every
+    node is itself an O(graph size) scan, so the result is cached against the
+    graph instance to keep that cost one-time rather than per-query.
+
+    Args:
+        graph: AST graph
+
+    Returns:
+        List of node IDs with no incoming edges
+    """
+    cached = _root_node_cache.get(graph)
+    if cached is not None:
+        return cached
+    roots = [node_id for node_id in graph.nodes() if graph.in_degree(node_id) == 0]
+    _root_node_cache[graph] = roots
+    return roots
 
 
 def _file_matches(stored: Optional[str], query: str) -> bool:

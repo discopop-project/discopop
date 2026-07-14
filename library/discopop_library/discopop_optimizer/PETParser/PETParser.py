@@ -624,7 +624,7 @@ class PETParser(object):
         self.graph.remove_node(node)
 
         retval = True
-        return retval, list(set(modified_nodes))
+        return retval, list(dict.fromkeys(modified_nodes))
 
     def __remove_non_hotspot_function_bodys(self) -> None:
         if len(self.experiment.hotspot_functions) == 0:
@@ -802,7 +802,7 @@ class PETParser(object):
                     show_dataflow=False,
                     show_mutex_edges=False,
                 )
-            nodes_in_function = list(set(nodes_in_function).union(set(added_node_ids)))
+            nodes_in_function = list(dict.fromkeys(list(nodes_in_function) + list(added_node_ids)))
 
             # re-calculate post_dominators and merge nodes
             #            post_dominators = self.__get_post_dominators(nodes_in_function)

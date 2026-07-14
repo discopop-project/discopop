@@ -115,6 +115,9 @@ def greedy_search(
                 local_results.append(local_result)
 
             # identify best option and update made_decisions
+            # sort deterministically so that ties are always resolved the same way, regardless of the
+            # non-deterministic arrival order of imap_unordered() results across process runs
+            local_results.sort(key=lambda item: (item[1], __get_dicision_list(item[0])))
             best_option: Optional[Tuple[Dict[int, List[List[int]]], int, ContextObject]] = None
             for k, e, c in local_results:
                 dbg_decisions_string = ""

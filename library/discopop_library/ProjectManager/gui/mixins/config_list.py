@@ -11,6 +11,7 @@ import os
 import tkinter as tk
 from typing import Any, Literal, Optional
 
+from discopop_library.ProjectManager.configurations.compile_script import resolve_compile_script_path
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 
 
@@ -109,7 +110,7 @@ class ConfigListMixin(ConfigManagerMixinBase):
             return
 
         config_path = os.path.join(self.config_dir, self.current_config)
-        shared_compile_sh = os.path.join(self.arguments.project_config_dir, "compile.sh")
+        compile_sh = resolve_compile_script_path(self.arguments.project_config_dir, self.current_config)
         shared_seq_settings = os.path.join(self.arguments.project_config_dir, "seq_settings.json")
         shared_dp_settings = os.path.join(self.arguments.project_config_dir, "dp_settings.json")
         shared_hd_settings = os.path.join(self.arguments.project_config_dir, "hd_settings.json")
@@ -133,7 +134,7 @@ class ConfigListMixin(ConfigManagerMixinBase):
             else:
                 settings_path = ""
 
-            exists = os.path.exists(settings_path) and os.path.exists(shared_compile_sh) and os.path.exists(execute_sh)
+            exists = os.path.exists(settings_path) and os.path.exists(compile_sh) and os.path.exists(execute_sh)
             state: Literal["normal", "disabled"] = "normal" if exists else "disabled"
             self.mode_checkbuttons[mode].config(state=state)
             if not exists:

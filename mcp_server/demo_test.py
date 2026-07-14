@@ -11,12 +11,9 @@
 """Demo test showing the MCP server tools in action"""
 
 import json
-import sys
 
-# Add parent to path
-sys.path.insert(0, ".")
-
-from server import DiscoPopMCPServer
+from mcp_server.server import DiscoPopMCPServer
+from mcp_server.tools import get_configurations, get_execution_results, initialize_discopop_directory
 
 
 def demo() -> None:
@@ -27,39 +24,29 @@ def demo() -> None:
 
     server = DiscoPopMCPServer(debug=True)
 
-    # Test 1: get_profiling_info
-    print("📊 TEST 1: Get Profiling Info")
+    # Test 1: initialize_discopop_directory on a non-existent path
+    print("TEST 1: Initialize DiscoPoP Directory (non-existent path)")
     print("-" * 70)
-    result = server._handle_profiling_info({"profile_path": "./example/.discopop", "info_type": "summary"})
+    result = initialize_discopop_directory.handle({"project_path": "./nonexistent"}, server._ctx)
     print("Response:", json.loads(result[0].text))
     print()
 
-    # Test 2: execute_analysis
-    print("🔍 TEST 2: Execute Analysis")
+    # Test 2: get_configurations
+    print("TEST 2: Get Configurations")
     print("-" * 70)
-    result = server._handle_analysis({"profile_path": "./example/.discopop", "analysis_type": "patterns"})
+    result = get_configurations.handle({"project_path": "./example"}, server._ctx)
     print("Response:", json.loads(result[0].text))
     print()
 
-    # Test 3: list_available_data
-    print("📁 TEST 3: List Available Data")
+    # Test 3: get_execution_results
+    print("TEST 3: Get Execution Results")
     print("-" * 70)
-    result = server._handle_list_data({"base_path": "./example"})
+    result = get_execution_results.handle({"project_path": "./example"}, server._ctx)
     print("Response:", json.loads(result[0].text))
-    print()
-
-    # Test 4: Error handling
-    print("⚠️  TEST 4: Error Handling")
-    print("-" * 70)
-    try:
-        result = server._handle_profiling_info({"profile_path": "/nonexistent/path"})
-        print("Result:", json.loads(result[0].text)["message"])
-    except Exception as e:
-        print(f"Error handled: {str(e)}")
     print()
 
     print("=" * 70)
-    print("✅ All tests completed successfully!")
+    print("All tests completed successfully!")
     print("=" * 70 + "\n")
 
 

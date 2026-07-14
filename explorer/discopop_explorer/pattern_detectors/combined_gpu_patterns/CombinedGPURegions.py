@@ -101,7 +101,7 @@ class CombinedGPURegion(PatternInfo):
         device_cu_ids: List[NodeID] = []
         for region in contained_regions:
             device_cu_ids += [NodeID(cu_id_str) for cu_id_str in region.contained_cu_ids]
-            device_cu_ids = list(set(device_cu_ids))
+            device_cu_ids = list(dict.fromkeys(device_cu_ids))
         PatternInfo.__init__(self, pet.node_at(node_id))
         self.contained_regions = contained_regions
         self.device_cu_ids = device_cu_ids

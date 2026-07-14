@@ -588,6 +588,6 @@ def set_affected_cu_ids(
         affected_cus: List[NodeID] = par_reg.affected_cu_ids
         for contained_pattern_id in par_reg.contains_patterns:
             affected_cus += patterns_by_id[contained_pattern_id].affected_cu_ids
-        affected_cus = list(set(affected_cus))
+        affected_cus = list(dict.fromkeys(affected_cus))
         par_reg.affected_cu_ids = affected_cus
     return parallel_regions

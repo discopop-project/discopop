@@ -27,19 +27,19 @@ def print_suggestions_overview(arguments: ViewerArguments) -> None:
     suggestion_to_files_map: Dict[int, Set[int]] = dict()
     files_to_suggestions_map: Dict[int, Set[int]] = dict()
 
-    suggestion_ids = [
+    suggestion_ids = sorted(
         x
         for x in os.listdir(os.path.join(arguments.path, "patch_generator"))
         if os.path.isdir(os.path.join(arguments.path, "patch_generator", x))
-    ]
+    )
 
     for suggestion_id in suggestion_ids:
         suggestion_to_files_map[int(suggestion_id)] = set()
-        file_ids = [
+        file_ids = sorted(
             x.replace(".patch", "")
             for x in os.listdir(os.path.join(arguments.path, "patch_generator", suggestion_id))
             if os.path.isfile(os.path.join(arguments.path, "patch_generator", suggestion_id, x))
-        ]
+        )
         for file_id in file_ids:
             suggestion_to_files_map[int(suggestion_id)].add(int(file_id))
             if int(file_id) not in files_to_suggestions_map:

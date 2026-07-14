@@ -20,7 +20,6 @@ the discopop_mcp_server CLI via the --setup / --status / --verify flags.
 import json
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
@@ -95,20 +94,10 @@ class MCPSetup:
         return None
 
     def find_server_path(self) -> Optional[str]:
-        try:
-            result = subprocess.run(
-                ["which", "discopop_mcp_server"],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            if result.returncode == 0:
-                path = result.stdout.strip()
-                self.log(f"Found server at: {path}", "DEBUG")
-                return path
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            pass
-        return None
+        path = shutil.which("discopop_mcp_server")
+        if path:
+            self.log(f"Found server at: {path}", "DEBUG")
+        return path
 
     def _strip_jsonc_comments(self, text: str) -> str:
         result: list[str] = []
@@ -158,9 +147,21 @@ class MCPSetup:
             raise
 
     def save_config(self, config_path: Path, config: Dict[str, Any]) -> None:
+        import tempfile
+
         config_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(config_path, "w") as f:
-            json.dump(config, f, indent=2)
+        # Write to a sibling temp file and atomically rename to avoid partial writes.
+        fd, tmp_path = tempfile.mkstemp(dir=config_path.parent, prefix=".tmp_", suffix=config_path.suffix)
+        try:
+            with os.fdopen(fd, "w") as f:
+                json.dump(config, f, indent=2)
+            os.replace(tmp_path, config_path)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
         self.log(f"✓ Configuration saved to {config_path}")
 
     def merge_mcp_server_config(

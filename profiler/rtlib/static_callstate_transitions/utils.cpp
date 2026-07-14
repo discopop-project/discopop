@@ -65,9 +65,9 @@ void update_callstate_from_func_exit(int32_t instructionID) {
   } else {
     // no transition found
     // issue an error message
-    cerr << "No transition found from state " << current_callpath_state->get_id() << " via instruction "
-         << instructionID << "!\n";
-    cerr << "State might be incorrect from here on!\n";
+    //cerr << "No transition found from state " << current_callpath_state->get_id() << " via instruction "
+    //     << instructionID << "!\n";
+    //cerr << "State might be incorrect from here on!\n";
   }
 }
 

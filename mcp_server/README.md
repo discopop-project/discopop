@@ -10,21 +10,24 @@ directory for details.
 
 # DiscoPoP MCP Server
 
-A Model Context Protocol (MCP) server that exposes DiscoPoP functionality to Claude, enabling Claude to execute instrumented code locally and request analysis of profiling data.
+A Model Context Protocol (MCP) server that exposes DiscoPoP functionality to Claude, enabling Claude to drive the full instrumentation pipeline and query static and dynamic data dependencies.
 
 ## Overview
 
 The DiscoPoP MCP Server bridges the gap between Claude and DiscoPoP's profiling and analysis tools. It allows Claude to:
 
+- Instrument a project, run profiling, detect parallel patterns, and retrieve OpenMP patches
+- Query static and dynamic data dependencies for arbitrary code regions to support code understanding, refactoring, and correctness checks
 - Retrieve profiling information from executed instrumented code
-- Execute pattern analysis on profiled data
-- List and discover available profiling data
-- Process results and provide recommendations
+- List and discover available profiling data and execution configurations
 
 ## Features
 
 - **Standalone CLI executable** - Run independently via command line
 - **Local deployment** - Uses stdio for direct Claude integration
+- **Persistent daemon mode** - Optional long-running server that keeps analysis data in memory between calls
+- **Automatic daemon launch** - Spawns a daemon terminal on the first tool call when none is running
+- **Transparent fallback** - Falls back to inline execution when no daemon is available
 - **Comprehensive logging** - View all incoming calls and outgoing responses
 - **Type-safe** - Full type hints throughout
 - **Extensible** - Easy to add new tools and capabilities
@@ -65,11 +68,17 @@ This starts the server in stdio mode, which is used by Claude. The `--debug` fla
 ### From the command line
 
 ```bash
-# Basic usage
+# Default mode — proxy that routes to daemon if available, otherwise runs inline
 discopop_mcp_server
 
 # With debug logging
 discopop_mcp_server --debug
+
+# Persistent daemon — keeps analysis data in memory between calls
+discopop_mcp_server --daemon
+
+# Daemon on a custom port (default: 7777)
+discopop_mcp_server --daemon --daemon-port 8888
 ```
 
 ### Integration with Claude Code
@@ -118,6 +127,26 @@ Reads `<project_path>/.discopop/project/execution_results.json`.
 }
 ```
 
+### 3. `get_data_dependencies`
+
+Returns data dependencies (RAW, WAR, WAW) that cross or lie within a specified code region. Results contain both statically and dynamically identified dependencies — dynamic profiling correctly captures aliasing and other cases that pure static analysis cannot resolve.
+
+Dependencies are grouped by direction:
+- `incoming` — source outside the region, sink inside
+- `outgoing` — source inside the region, sink outside
+- `intra_region` — both source and sink within the region
+
+**Parameters:**
+- `project_path` (string, required): Absolute path to the project root
+- `file_path` (string, required): Absolute path to the source file
+- `start_line` (integer, required): First line of the code region (inclusive)
+- `end_line` (integer, required): Last line of the code region (inclusive)
+- `include_raw` / `include_war` / `include_waw` (boolean, optional): Filter by dependency type (default: all true)
+- `include_incoming` / `include_outgoing` / `include_intra_region` (boolean, optional): Filter by direction (default: all true)
+- `var_name` (string, optional): Restrict results to a specific variable; automatically excludes incoming dependencies (aliasing safety)
+
+This tool is cheap to call repeatedly — `DetectionResult` and `FileMapping` are cached in memory after the first load. Requires `gather_data` to have been run first.
+
 ## Logging Output
 
 The server logs all incoming and outgoing communication:
@@ -145,22 +174,85 @@ Or with pytest:
 pytest mcp_server/test_server.py -v
 ```
 
+## Guidelines for LLM Agents
+
+> **LLM agents must not inspect `.discopop` directories directly** (e.g. via file reads, directory listings, or shell commands). All DiscoPoP data must be accessed exclusively through the `discopop_mcp_server` tool calls.
+
+Reading raw files from `.discopop` is wasteful and unreliable: the directory contains large binary files, intermediate artefacts, and serialised objects that are expensive to parse and consume a significant number of tokens. The MCP tools return pre-processed, structured summaries that contain exactly the information needed — at a fraction of the token cost.
+
+If a piece of information appears to be missing from the available tools, the correct response is to use the tool that produces it (e.g. run `gather_data` before calling `get_parallelization_patches` or `get_data_dependencies`) rather than reading the underlying files directly.
+
+## Daemon Mode
+
+By default, Claude Code spawns a fresh `discopop_mcp_server` process for each session. This is stateless — every tool call starts from scratch and any data loaded during the session (such as the `DetectionResult` produced by `run_pattern_detection`) is discarded when the session ends.
+
+**Daemon mode** (`--daemon`) solves this by running a single long-lived server process that keeps its internal state alive across multiple tool calls and across multiple Claude sessions.
+
+### How it works
+
+When Claude Code runs `discopop_mcp_server` (the default, no flags), the process acts as a **proxy**. No daemon connection is attempted at startup — the check is deferred until the first actual tool call, so idle sessions consume no extra resources.
+
+On the **first tool call**:
+
+1. The proxy checks whether a daemon is already listening on `localhost:7777`.
+2. If no daemon is found, it attempts to **automatically spawn one** in a new terminal window using the first available terminal emulator (`gnome-terminal`, `xterm`, `konsole`, `alacritty`, `kitty`, and others).
+3. Once a daemon is reachable, the proxy opens a **single persistent connection** to it and forwards all subsequent tool calls through that connection for the lifetime of the Claude session.
+4. If the daemon cannot be reached (no graphical display, spawn timeout, or connection error), every tool call **falls back to inline execution** — the old stateless behaviour — so the server remains fully functional without a daemon.
+
+### Running the daemon manually
+
+You can start the daemon yourself instead of relying on auto-spawn:
+
+```bash
+discopop_mcp_server --daemon
+```
+
+The terminal window stays open showing daemon logs. Press `Ctrl+C` to stop it.
+
+Use `--daemon-port` to run on a non-default port (both the daemon and the proxy must use the same value):
+
+```bash
+# Terminal 1 — daemon
+discopop_mcp_server --daemon --daemon-port 8888
+
+# Claude Code config — proxy pointing at the same port
+discopop_mcp_server --daemon-port 8888
+```
+
+### Comparison
+
+|                          | `discopop_mcp_server` (default) | `discopop_mcp_server --daemon` |
+|--------------------------|--------------------------------|-------------------------------|
+| Who runs it              | Claude Code (automatic)        | You, manually (or auto-spawned on first tool call) |
+| Lifetime                 | One Claude session             | Until `Ctrl+C`                |
+| Daemon check timing      | First tool call                | N/A                           |
+| State between tool calls | None                           | Kept alive in `ToolContext`   |
+| `DetectionResult` cache  | Not applicable                 | Loaded once, reused across calls |
+| Fallback if unavailable  | Inline execution               | N/A                           |
+
+### What is cached
+
+The daemon's `ToolContext` maintains two caches:
+
+- **`DetectionResult`** — loaded from `.discopop/explorer/detection_result_dump.json` using `jsonpickle` on the first call that needs it (e.g. `get_data_dependencies`, `get_parallelization_patches`). Subsequent calls skip the deserialization step entirely.
+- **`FileMapping`** — loaded from `.discopop/FileMapping.txt` on the first call to `get_data_dependencies`. Maps numeric file IDs to absolute source file paths.
+
+Both caches are keyed by `project_path` and automatically invalidated when the underlying file's modification time changes (i.e., after `gather_data` runs again).
+
 ## Architecture
 
-### Transport Mode
+### Transport
 
-Uses **Stdio Mode** for local Claude integration:
-- Bidirectional communication via stdin/stdout
-- Lightweight, no additional dependencies
-- Direct integration with Claude Desktop
+The default (`discopop_mcp_server`) uses **stdio** for communication with Claude Code. The daemon (`--daemon`) uses **SSE over HTTP** (Starlette + uvicorn on `localhost:7777`). The proxy bridges between the two: it presents a stdio interface to Claude Code and forwards calls to the daemon over SSE.
 
 ### Tool Handler Flow
 
-1. Claude calls a tool
-2. Server logs the incoming call with arguments
-3. Handler processes the request
-4. Server logs the outgoing response
-5. Response returned to Claude
+1. Claude calls a tool via stdio
+2. Proxy checks whether a daemon session is open
+   - If yes: forwards the call to the daemon over SSE
+   - If no: executes the tool inline
+3. Server logs the incoming call and outgoing response
+4. Response returned to Claude
 
 ## Shipping to Users
 

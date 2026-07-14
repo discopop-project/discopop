@@ -7,6 +7,7 @@
 # directory for details.
 from __future__ import annotations
 
+import logging
 from typing import Dict, List, Optional, Set, Tuple, TYPE_CHECKING
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
@@ -19,6 +20,8 @@ from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.TaskGraph.Aliases import LevelIndex, PETNode, PositionIndex
 
+logger = logging.getLogger("Explorer")
+
 
 class Context(object):
     contained_nodes: List[TGNode]
@@ -28,12 +31,6 @@ class Context(object):
     parent_context: Optional[Context]
     outgoing_dependencies: Set[Tuple[Context, Dependency]]
     incoming_dependencies: Set[Tuple[Context, Dependency]]
-    affected_contexts_by_outgoing_dependency: Dict[
-        Dependency, List[Context]
-    ]  # List of contexts in order of upward tree traversal
-    affecting_contexts_by_incoming_dependency: Dict[
-        Dependency, List[Context]
-    ]  # List of contexts in order of upward tree traversal
     state_ids: List[int]
 
     def __init__(self) -> None:
@@ -44,12 +41,6 @@ class Context(object):
         self.predecessor = None
         self.outgoing_dependencies = set()
         self.incoming_dependencies = set()
-        self.affected_contexts_by_outgoing_dependency = dict()
-        self.affecting_contexts_by_incoming_dependency = dict()
-        self._ancestor_contexts_cache: Optional[List[Context]] = None
-        self._code_scope_cache: Optional[List[LineID]] = None
-        self._closest_function_ancestor_computed: bool = False
-        self._closest_function_ancestor: Optional[Context] = None
         self.state_ids = []
 
     def get_contained_nodes(self, inclusive: bool = False) -> List[TGNode]:
@@ -177,50 +168,73 @@ class Context(object):
 
     def get_ancestor_contexts(self) -> List[Context]:
         """return the ancestor contexts of the current context, starting with the direct parent context and ending with the root context."""
-        if self._ancestor_contexts_cache is not None:
-            return self._ancestor_contexts_cache
         ancestors: List[Context] = []
+        visited: Set[Context] = {self}
         current_context = self.parent_context
         while current_context is not None:
+            if current_context in visited:
+                #                logger.warning(
+                #                    "Cyclic parent_context chain detected while collecting ancestor contexts of "
+                #                    + str(self)
+                #                    + " (revisited "
+                #                    + str(current_context)
+                #                    + "). Truncating ancestor list to break the cycle."
+                #                )
+                break
+            visited.add(current_context)
             ancestors.append(current_context)
             current_context = current_context.parent_context
-        self._ancestor_contexts_cache = ancestors
         return ancestors
 
     def get_closest_function_ancestor(self) -> Optional[Context]:
-        if self._closest_function_ancestor_computed:
-            return self._closest_function_ancestor
-        for ancestor in self.get_ancestor_contexts():
-            if ancestor.is_function_context():
-                self._closest_function_ancestor = ancestor
-                break
-        self._closest_function_ancestor_computed = True
-        return self._closest_function_ancestor
+        """return the closest ancestor function context."""
+        if self.is_function_context():
+            return self
+        visited: Set[Context] = {self}
+        current_context = self.parent_context
+        while current_context is not None:
+            if current_context.is_function_context():
+                return current_context
+            if current_context in visited:
+                logger.warning(
+                    "Cyclic parent_context chain detected while searching for the closest function ancestor of "
+                    + str(self)
+                    + " (revisited "
+                    + str(current_context)
+                    + "). Treating as if no function ancestor exists."
+                )
+                return None
+            visited.add(current_context)
+            current_context = current_context.parent_context
+        return None
 
     def register_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
         # register dependency
         self.outgoing_dependencies.add((target_context, dependency))
         target_context.incoming_dependencies.add((self, dependency))
         # register affected contexts
-        self_ancestors = self.get_ancestor_contexts()
-        target_ancestors = target_context.get_ancestor_contexts()
-        # -> ignore matching prefix ancestors
-        while len(self_ancestors) > 0 and len(target_ancestors) > 0 and self_ancestors[-1] == target_ancestors[-1]:
-            self_ancestors = self_ancestors[:-1]
-            target_ancestors = target_ancestors[:-1]
-        # -> register affected contexts
-        self.affected_contexts_by_outgoing_dependency[dependency] = target_ancestors
-        target_context.affecting_contexts_by_incoming_dependency[dependency] = self_ancestors
+
+    #        self_ancestors = self.get_ancestor_contexts()
+    #        target_ancestors = target_context.get_ancestor_contexts()
+    #        # -> ignore matching prefix ancestors
+    #        while len(self_ancestors) > 0 and len(target_ancestors) > 0 and self_ancestors[-1] == target_ancestors[-1]:
+    #            self_ancestors = self_ancestors[:-1]
+    #            target_ancestors = target_ancestors[:-1]
+    #        # -> register affected contexts
+    #        self.affected_contexts_by_outgoing_dependency[dependency] = target_ancestors
+    #        print("ln: ", len(target_ancestors))
+    #        target_context.affecting_contexts_by_incoming_dependency[dependency] = self_ancestors
 
     def delete_outgoing_dependency(self, target_context: Context, dependency: Dependency) -> None:
         # register dependency
         self.outgoing_dependencies.remove((target_context, dependency))
         target_context.incoming_dependencies.remove((self, dependency))
         # delete affected contexts
-        if dependency in self.affected_contexts_by_outgoing_dependency:
-            del self.affected_contexts_by_outgoing_dependency[dependency]
-        if dependency in target_context.affecting_contexts_by_incoming_dependency:
-            del target_context.affecting_contexts_by_incoming_dependency[dependency]
+
+    #        if dependency in self.affected_contexts_by_outgoing_dependency:
+    #            del self.affected_contexts_by_outgoing_dependency[dependency]
+    #        if dependency in target_context.affecting_contexts_by_incoming_dependency:
+    #            del target_context.affecting_contexts_by_incoming_dependency[dependency]
 
     def get_outgoing_dependency_targets(self) -> Set[Context]:
         return set([outgoing_dependency[0] for outgoing_dependency in self.outgoing_dependencies])
@@ -253,8 +267,6 @@ class Context(object):
 
     def get_code_scope(self, pet: PEGraphX, inclusive: bool = False) -> List[LineID]:
         """returns a list of code scopes contained in the context."""
-        if not inclusive and self._code_scope_cache is not None:
-            return self._code_scope_cache
         scope: List[LineID] = []
         for node in self.get_contained_nodes(inclusive=inclusive):
             pet_node = node.get_pet_node(pet)
@@ -262,9 +274,7 @@ class Context(object):
                 continue
             for i in range(pet_node.start_line, pet_node.end_line + 1):
                 scope.append(LineID(str(pet_node.file_id) + ":" + str(i)))
-        result = list(set(scope))
-        if not inclusive:
-            self._code_scope_cache = result
+        result = list(dict.fromkeys(scope))
         return result
 
     def get_defined_variables(self, pet: PEGraphX) -> List[Tuple[str, LineID]]:
@@ -283,7 +293,7 @@ class Context(object):
                         defined_vars.append((str(var.name), LineID(var_def_line)))
 
         # remove duplicates
-        defined_vars = list(set(defined_vars))
+        defined_vars = list(dict.fromkeys(defined_vars))
         return defined_vars
 
     def get_state_ids(self) -> List[int]:
