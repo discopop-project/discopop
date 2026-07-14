@@ -8,6 +8,7 @@
 
 import logging
 import os
+import shutil
 import signal
 import subprocess
 import sys
@@ -15,16 +16,17 @@ import threading
 import tkinter as tk
 from tkinter import scrolledtext, ttk
 from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import quote
 
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, show_error, clean_ansi_output
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
 from discopop_library.ProjectManager.gui.widgets import (
     create_styled_output_console,
     heading_label,
     caption_label,
     error_label,
-    primary_button,
 )
 
 logger = logging.getLogger("ExplorerIntegration")
@@ -33,9 +35,10 @@ logger = logging.getLogger("ExplorerIntegration")
 class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     explorer_running = False
     explorer_output_text: Optional[scrolledtext.ScrolledText] = None
-    explorer_run_button: Optional[ttk.Button] = None
-    explorer_stop_button: Optional[ttk.Button] = None
-    browse_suggestions_button: Optional[ttk.Button] = None
+    explorer_run_button: Optional[RoundedButton] = None
+    explorer_stop_button: Optional[RoundedButton] = None
+    browse_suggestions_button: Optional[RoundedButton] = None
+    show_in_vscode_button: Optional[RoundedButton] = None
     no_suggestions_label: Optional[ttk.Label] = None
     prerequisite_info_label: Optional[ttk.Label] = None
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
@@ -114,18 +117,31 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         button_frame = ttk.Frame(left_frame)
         button_frame.pack(fill=tk.X, padx=0, pady=0)
 
-        self.explorer_run_button = primary_button(
+        self.explorer_run_button = widgets.primary_button(
             button_frame, text="Run Pattern Detection", command=self._run_pattern_detection, state="disabled"
         )
         self.explorer_run_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.explorer_stop_button = ttk.Button(
+        self.explorer_stop_button = widgets.danger_button(
             button_frame, text="Stop", command=self._stop_pattern_detection, state="disabled"
         )
         self.explorer_stop_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.browse_suggestions_button = ttk.Button(
-            button_frame, text="Browse Suggestions", command=self._open_suggestion_browser, state="disabled"
+        # Second row of buttons
+        button_frame_row2 = ttk.Frame(left_frame)
+        button_frame_row2.pack(fill=tk.X, padx=0, pady=0)
+
+        self.show_in_vscode_button = widgets.create_button(
+            button_frame_row2, text="Show Suggestions in VSCode", command=self._open_in_vscode, state="disabled"
+        )
+        self.show_in_vscode_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # Third row of buttons
+        button_frame_row3 = ttk.Frame(left_frame)
+        button_frame_row3.pack(fill=tk.X, padx=0, pady=0)
+
+        self.browse_suggestions_button = widgets.create_button(
+            button_frame_row3, text="Browse Suggestions", command=self._open_suggestion_browser, state="disabled"
         )
         self.browse_suggestions_button.pack(side=tk.LEFT, padx=5, pady=5)
 
@@ -219,6 +235,8 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         browse_ready = total_suggestions > 0
         if self.browse_suggestions_button is not None:
             self.browse_suggestions_button.config(state="normal" if browse_ready else "disabled")
+        if self.show_in_vscode_button is not None:
+            self.show_in_vscode_button.config(state="normal" if browse_ready else "disabled")
 
         detection_executed = self._check_pattern_detection_executed()
         patterns_found = self._check_patterns_found()
@@ -251,8 +269,62 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         SuggestionBrowserDialog(
             self,
             self.arguments.dot_dp,
-            on_selection_changed=self._refresh_suggestion_selection_display,
         )
+
+    def _open_in_vscode(self) -> None:
+        # The DiscoPoP VSCode extension activates on a workspace that *contains* a
+        # .discopop directory (activation event "workspaceContains:**/.discopop")
+        # and then focuses its sidebar view. We therefore open the project root
+        # (the parent of the .discopop directory), not the .discopop dir itself.
+        dot_dp = os.path.abspath(self.arguments.dot_dp)
+        project_root = os.path.dirname(dot_dp)
+
+        code_executable = shutil.which("code")
+        if code_executable is None:
+            show_error(
+                self,
+                "VSCode Not Found",
+                "Could not find the 'code' command on your PATH.\n\n"
+                "Install Visual Studio Code and, from within VSCode, run "
+                "'Shell Command: Install \"code\" command in PATH' to enable this feature.",
+            )
+            return
+
+        try:
+            subprocess.Popen(
+                [code_executable, project_root],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except OSError as e:
+            show_error(self, "Failed to open VSCode", f"Could not launch VSCode:\n{e}")
+            return
+
+        # Opening the folder alone only focuses the DiscoPoP sidebar on a *fresh*
+        # window (activation runs once). If the folder is already open, re-running
+        # `code` just refocuses the window without re-firing activation. Dispatching
+        # a URI to the extension's UriHandler focuses the sidebar on every
+        # invocation, so the button behaves consistently regardless of window state.
+        # The dotDiscopop/projectPath query tells the extension which configuration
+        # to select (creating a ViewOnly configuration for it if none exists).
+        focus_uri = (
+            "vscode://TUDarmstadt-LaboratoryforParallelProgramming.discopop/focus"
+            f"?dotDiscopop={quote(dot_dp, safe='')}&projectPath={quote(project_root, safe='')}"
+        )
+        try:
+            subprocess.Popen(
+                [code_executable, "--open-url", focus_uri],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except OSError:
+            # Best-effort: the folder is already opening; only the auto-focus is lost.
+            pass
+
+        self.status_label.config(text="Opening project in VSCode...", foreground=widgets.STATUS_BUSY)
+        self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
 
     def _check_explorer_prerequisites(self) -> bool:
         profiler_dir = os.path.join(self.arguments.dot_dp, "profiler")

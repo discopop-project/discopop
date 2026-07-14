@@ -20,6 +20,8 @@ import tkinter as tk
 from tkinter import scrolledtext, ttk
 from typing import Any, Literal, Optional
 
+from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
+
 _Wrap = Literal["none", "char", "word"]
 
 # ---------------------------------------------------------------------------
@@ -55,7 +57,6 @@ STATUS_STOP = "#e65100"  # stopping / interrupted
 
 # Accent colors used by the suggestion browser.
 LINK_FG = "#6699cc"  # clickable file/patch name
-APPLIED_FG = "#5ca668"  # "applied" success marker
 
 # Grayed-out placeholder text inside editors.
 PLACEHOLDER_FG = "#999999"
@@ -90,10 +91,13 @@ THREAD_VALUES = ["auto", "1", "2", "4", "8", "16"]
 LOG_LEVEL_VALUES = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # Named ttk button styles registered in ConfigManagerApp._setup_styles.
+# NOTE: the primary command buttons are now the canvas-drawn RoundedButton
+# (see create_button below and style.py). These ttk styles remain for the
+# small ttk widgets that are intentionally NOT rounded: the icon/toggle
+# buttons (STYLE_ICON_BUTTON).
 STYLE_PRIMARY_BUTTON = "Primary.TButton"
 STYLE_DANGER_BUTTON = "Danger.TButton"
 STYLE_ICON_BUTTON = "Icon.TButton"
-STYLE_SUCCESS_BUTTON = "Success.TButton"
 
 
 def _apply_log_level_tags(widget: "scrolledtext.ScrolledText | tk.Text") -> None:
@@ -205,16 +209,38 @@ def error_label(parent: tk.Misc, text: str, **kwargs: Any) -> ttk.Label:
     return ttk.Label(parent, text=text, **kwargs)
 
 
-def primary_button(parent: tk.Misc, text: str, command: Any = None, **kwargs: Any) -> ttk.Button:
-    """An emphasized primary-action button (Run / Execute / Apply / Generate)."""
-    return ttk.Button(parent, text=text, command=command, style=STYLE_PRIMARY_BUTTON, **kwargs)
+def create_button(
+    parent: tk.Misc, text: str, command: Any = None, *, variant: str = "default", **kwargs: Any
+) -> RoundedButton:
+    """Create a rounded, themed push button.
+
+    This is the standard factory for command buttons. ``variant`` selects the
+    look (``"default"`` / ``"primary"`` / ``"success"`` / ``"danger"``); see
+    ``style.py`` to restyle. ``kwargs`` (e.g. ``state``, ``width``) are passed
+    through to :class:`RoundedButton`.
+    """
+    return RoundedButton(parent, text=text, command=command, variant=variant, **kwargs)
 
 
-def danger_button(parent: tk.Misc, text: str, command: Any = None, **kwargs: Any) -> ttk.Button:
-    """A destructive-action button (Reset / Delete), visually distinct (red)."""
-    return ttk.Button(parent, text=text, command=command, style=STYLE_DANGER_BUTTON, **kwargs)
+def primary_button(parent: tk.Misc, text: str, command: Any = None, **kwargs: Any) -> RoundedButton:
+    """A primary/affirmative action button (Run, Save, Next, ...)."""
+    return create_button(parent, text, command, variant="primary", **kwargs)
+
+
+def success_button(parent: tk.Misc, text: str, command: Any = None, **kwargs: Any) -> RoundedButton:
+    """A success/completed-state button (green)."""
+    return create_button(parent, text, command, variant="success", **kwargs)
+
+
+def danger_button(parent: tk.Misc, text: str, command: Any = None, **kwargs: Any) -> RoundedButton:
+    """A destructive/interrupting-action button (Reset / Delete / Stop), red."""
+    return create_button(parent, text, command, variant="danger", **kwargs)
 
 
 def icon_button(parent: tk.Misc, text: str, command: Any = None, *, width: int = 2, **kwargs: Any) -> ttk.Button:
-    """A small, flat icon/toolbar button (expand toggles, row checkboxes)."""
+    """A small, flat ttk icon/toolbar button (expand toggles, row checkboxes).
+
+    Intentionally left as a ttk button (not rounded): these are tiny, dense
+    toggles where the rounded treatment adds no value.
+    """
     return ttk.Button(parent, text=text, command=command, width=width, style=STYLE_ICON_BUTTON, **kwargs)

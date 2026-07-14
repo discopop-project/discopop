@@ -80,7 +80,7 @@ def show_message(parent: Any, title: str, message: str) -> None:  # type: ignore
     button_frame = ttk.Frame(dialog, padding=(15, 0))
     button_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 15))
 
-    ok_button = ttk.Button(button_frame, text="OK", command=dialog.destroy, width=10)
+    ok_button = widgets.primary_button(button_frame, text="OK", command=dialog.destroy, width=10)
     ok_button.pack(side=tk.LEFT)
 
     main_frame = ttk.Frame(dialog, padding=15)
@@ -141,10 +141,10 @@ def ask_yes_no(parent: Any, title: str, message: str) -> bool:  # type: ignore
         result[0] = False
         dialog.destroy()
 
-    yes_button = ttk.Button(button_frame, text="Yes", command=on_yes, width=10)
+    yes_button = widgets.primary_button(button_frame, text="Yes", command=on_yes, width=10)
     yes_button.pack(side=tk.LEFT, padx=5)
 
-    no_button = ttk.Button(button_frame, text="No", command=on_no, width=10)
+    no_button = widgets.create_button(button_frame, text="No", command=on_no, width=10)
     no_button.pack(side=tk.LEFT, padx=5)
 
     main_frame = ttk.Frame(dialog, padding=15)

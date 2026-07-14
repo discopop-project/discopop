@@ -117,9 +117,17 @@ def show_configurations_with_execution(
         seq_settings_exist = False
         seq_compile_successful = False
         seq_execute_successful = False
+        seq_validate_successful = False
         par_settings_exist = False
         par_compile_successful = False
         par_execute_successful = False
+        par_validate_successful = False
+        # validate.sh is an optional, per-config script that re-runs the code and
+        # validates its output, separated from the timed execute.sh run. It is only
+        # applied to the "real" runs (seq/par); dp/hd are profiling modes where
+        # re-running the instrumented binary would regenerate profiling data.
+        validate_sh = os.path.join(config, "validate.sh")
+        validate_sh_exists = os.path.exists(validate_sh)
 
         # collect overview information
         compile_sh = resolve_compile_script_path(arguments.project_config_dir, os.path.basename(config))
@@ -224,6 +232,22 @@ def show_configurations_with_execution(
                     arguments.timeout_execution,
                 )
                 seq_execute_successful = ret is not None and ret[0] == 0
+
+                # optional output validation (auto-run when validate.sh exists)
+                if seq_execute_successful and validate_sh_exists:
+                    ret = execute_configuration(
+                        arguments,
+                        seq_project_path,
+                        config,
+                        shared_seq_settings,
+                        validate_sh,
+                        __get_thread_count(config, "seq", config_thread_counts),
+                        arguments.timeout_validation,
+                    )
+                    seq_validate_successful = ret is not None and ret[0] == 0
+                else:
+                    # no validate.sh => execute.sh alone decides correctness
+                    seq_validate_successful = seq_execute_successful
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, seq_project_path)
         # --> par
@@ -256,6 +280,22 @@ def show_configurations_with_execution(
                     arguments.timeout_execution,
                 )
                 par_execute_successful = ret is not None and ret[0] == 0
+
+                # optional output validation (auto-run when validate.sh exists)
+                if par_execute_successful and validate_sh_exists:
+                    ret = execute_configuration(
+                        arguments,
+                        par_project_path,
+                        config,
+                        shared_par_settings,
+                        validate_sh,
+                        __get_thread_count(config, "par", config_thread_counts),
+                        arguments.timeout_validation,
+                    )
+                    par_validate_successful = ret is not None and ret[0] == 0
+                else:
+                    # no validate.sh => execute.sh alone decides correctness
+                    par_validate_successful = par_execute_successful
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, par_project_path)
 
@@ -286,10 +326,18 @@ def show_configurations_with_execution(
             overview_cell_contents += "(PASS) seq - settings\n" if seq_settings_exist else "(M) seq - settings\n"
             overview_cell_contents += "(PASS) seq - compile\n" if seq_compile_successful else "(F) seq - compile\n"
             overview_cell_contents += "(PASS) seq - execute\n" if seq_execute_successful else "(F) seq - execute\n"
+            if validate_sh_exists:
+                overview_cell_contents += (
+                    "(PASS) seq - validate\n" if seq_validate_successful else "(F) seq - validate\n"
+                )
         if __is_selected(config_restrictions, config, "par"):
             overview_cell_contents += "(PASS) par - settings\n" if par_settings_exist else "(M) par - settings\n"
             overview_cell_contents += "(PASS) par - compile\n" if par_compile_successful else "(F) par - compile\n"
             overview_cell_contents += "(PASS) par - execute\n" if par_execute_successful else "(F) par - execute\n"
+            if validate_sh_exists:
+                overview_cell_contents += (
+                    "(PASS) par - validate\n" if par_validate_successful else "(F) par - validate\n"
+                )
         # --> autotuner
         if compatibility[config]["autotuner"]:
             autotuner_cell_contents = "PASS "

@@ -13,17 +13,21 @@ import sys
 import threading
 import tkinter as tk
 from tkinter import scrolledtext, ttk
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from discopop_library.ProjectManager.gui.mixins.helpers import show_error, Tooltip, clean_ansi_output
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
+from discopop_library.ProjectManager.gui.suggestion_selector import SuggestionSelector
 from discopop_library.ProjectManager.gui.widgets import (
     create_styled_output_console,
     heading_label,
     caption_label,
-    primary_button,
 )
+from discopop_library.ProjectManager.gui.plots import autotuning_chart, embedding
+from discopop_library.ProjectManager.gui.plots.autotuning_chart import ProgressModel
+from discopop_library.ProjectManager.gui.plots.data import parse_progress_jsonl, parse_progress_line
 
 logger_name = "AutotuningPanel"
 
@@ -31,8 +35,8 @@ logger_name = "AutotuningPanel"
 class AutotuningPanelMixin(ConfigManagerMixinBase):
     autotuning_running = False
     autotuning_output_text: Optional[scrolledtext.ScrolledText] = None
-    autotuning_run_button: Optional[ttk.Button] = None
-    autotuning_stop_button: Optional[ttk.Button] = None
+    autotuning_run_button: Optional[RoundedButton] = None
+    autotuning_stop_button: Optional[RoundedButton] = None
     autotuning_config_label: Optional[ttk.Label] = None
     autotuning_threads_var: Optional[tk.StringVar] = None
     autotuning_hotspot_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
@@ -44,16 +48,61 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
     _autotuning_tab_tooltip_timer: Optional[str] = None
     _autotuning_tab_tooltip_active_tab: Optional[int] = None
     _autotuning_process: Optional["subprocess.Popen[str]"] = None
+    # Live-plot state (Live Plot sub-tab): matplotlib figure/canvas, the accumulated
+    # progress model, and the value labels of the summary tile row.
+    _autotuning_figure: Optional[Any] = None
+    _autotuning_canvas: Optional[Any] = None
+    _autotuning_progress_model: Optional[ProgressModel] = None
+    _autotuning_tile_values: Optional[List[Any]] = None
+    _autotuning_plot_frame: Optional[tk.Widget] = None
 
     def _build_autotuning_panel(self, parent: tk.Widget) -> None:
         main_paned = tk.PanedWindow(parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
 
-        # Left panel - settings
+        # Left panel - scrollable settings, with the Run/Stop buttons and the
+        # "Selected Suggestion IDs" overview pinned below (mirrors the Execute tab).
         left_frame = ttk.Frame(main_paned)
         main_paned.add(left_frame, minsize=650, width=650)
 
-        settings_frame = ttk.LabelFrame(left_frame, text="Settings", padding=5)
+        scroll_container = ttk.Frame(left_frame)
+        scroll_container.pack(fill=tk.BOTH, expand=True)
+
+        scrollbar = ttk.Scrollbar(scroll_container, orient=tk.VERTICAL)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        canvas = tk.Canvas(scroll_container, highlightthickness=0, yscrollcommand=scrollbar.set)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.config(command=canvas.yview)
+
+        options_outer = ttk.Frame(canvas)
+        _win = canvas.create_window((0, 0), window=options_outer, anchor=tk.NW)
+
+        def _on_content_configure(event: Any) -> None:
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _on_canvas_resize(event: Any) -> None:
+            canvas.itemconfig(_win, width=event.width)
+
+        options_outer.bind("<Configure>", _on_content_configure)
+        canvas.bind("<Configure>", _on_canvas_resize)
+
+        def _on_mousewheel(event: Any) -> object:
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            return "break"
+
+        def _bind_scroll(widget: tk.Widget) -> None:
+            widget.bind("<MouseWheel>", _on_mousewheel)
+            widget.bind("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+            widget.bind("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+            for child in widget.winfo_children():
+                _bind_scroll(child)  # type: ignore
+
+        canvas.bind("<MouseWheel>", _on_mousewheel)
+        canvas.bind("<Button-4>", lambda e: canvas.yview_scroll(-1, "units"))
+        canvas.bind("<Button-5>", lambda e: canvas.yview_scroll(1, "units"))
+
+        settings_frame = ttk.LabelFrame(options_outer, text="Settings", padding=5)
         settings_frame.pack(fill=tk.X, padx=5, pady=5)
 
         # Configuration display
@@ -106,6 +155,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         algo_combo = ttk.Combobox(algo_frame, textvariable=self.autotuning_algorithm_var, state="readonly", width=40)
         algo_combo["values"] = [opt[1] for opt in algo_options]
         algo_combo.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        self.autotuning_algorithm_combo = algo_combo
 
         # Log level
         loglevel_frame = ttk.Frame(settings_frame)
@@ -121,16 +171,79 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         )
         loglevel_combo.pack(side=tk.LEFT, padx=5)
 
+        # Suggestion selection: pick between searching for the best combination
+        # (algorithm + restricted search space) and evaluating one fixed combination.
+        selection_frame = ttk.LabelFrame(options_outer, text="Suggestion Selection", padding=5)
+        selection_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        self.autotuning_suggestions_mode_var = tk.StringVar(value="search")
+        ttk.Radiobutton(
+            selection_frame,
+            text="Search for best combination",
+            variable=self.autotuning_suggestions_mode_var,
+            value="search",
+            command=self._update_autotuning_mode_widgets,
+        ).pack(anchor=tk.W)
+        ttk.Radiobutton(
+            selection_frame,
+            text="Evaluate a specific combination",
+            variable=self.autotuning_suggestions_mode_var,
+            value="evaluate",
+            command=self._update_autotuning_mode_widgets,
+        ).pack(anchor=tk.W)
+
+        # Overview of the active selector + shortcut to the patch viewer/editor,
+        # mirroring the Execute tab.
+        info_row = ttk.Frame(selection_frame)
+        info_row.pack(fill=tk.X, pady=(3, 0))
+        self.autotuning_suggestions_count_label = ttk.Label(
+            info_row, text="No suggestions available", foreground="gray", font=widgets.FONT_CAPTION
+        )
+        self.autotuning_suggestions_count_label.pack(side=tk.LEFT, padx=(20, 10))
+        self.autotuning_browse_edit_button = widgets.create_button(
+            info_row, text="Browse / Edit →", command=self._open_suggestion_browser, state="disabled"
+        )
+        self.autotuning_browse_edit_button.pack(side=tk.LEFT)
+
+        self._autotuner_search_space_container = ttk.Frame(selection_frame)
+        caption_label(self._autotuner_search_space_container, "Suggestions the algorithm may explore:").pack(
+            anchor=tk.W, padx=(20, 0)
+        )
+        self.autotuner_search_space_selector = SuggestionSelector(
+            self._autotuner_search_space_container,
+            self.arguments.dot_dp,
+            "autotuner_search_space",
+            on_change=self._update_autotuning_suggestion_count,
+        )
+        self.autotuner_search_space_selector.pack(fill=tk.X, padx=(20, 0))
+
+        self._autotuner_evaluate_container = ttk.Frame(selection_frame)
+        caption_label(
+            self._autotuner_evaluate_container, "Suggestions to apply together and compare to the baseline:"
+        ).pack(anchor=tk.W, padx=(20, 0))
+        self.autotuner_evaluate_selector = SuggestionSelector(
+            self._autotuner_evaluate_container,
+            self.arguments.dot_dp,
+            "autotuner_evaluate",
+            on_change=self._update_autotuning_suggestion_count,
+        )
+        self.autotuner_evaluate_selector.pack(fill=tk.X, padx=(20, 0))
+
+        self._update_autotuning_mode_widgets()
+
+        # Horizontal divider separating the action buttons from the settings above.
+        ttk.Separator(left_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=5, pady=(8, 0))
+
         # Run button
         button_frame = ttk.Frame(left_frame)
         button_frame.pack(fill=tk.X, padx=0, pady=0)
 
-        self.autotuning_run_button = primary_button(
+        self.autotuning_run_button = widgets.primary_button(
             button_frame, text="Run Autotuning", command=self._run_autotuning, state="disabled"
         )
         self.autotuning_run_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.autotuning_stop_button = ttk.Button(
+        self.autotuning_stop_button = widgets.danger_button(
             button_frame, text="Stop", command=self._stop_autotuning, state="disabled"
         )
         self.autotuning_stop_button.pack(side=tk.LEFT, padx=5, pady=5)
@@ -142,18 +255,48 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         self.autotuning_suggestions_label = caption_label(suggestions_frame, "(none)", justify=tk.LEFT)
         self.autotuning_suggestions_label.pack(anchor=tk.W)
 
-        # Right panel - output
+        # Right panel - a sub-notebook: a live search plot (default) and the
+        # raw console. The plot auto-refreshes from the autotuner's @@AT_PROGRESS
+        # stream; the console keeps the human-readable log.
         right_frame = ttk.Frame(main_paned)
         main_paned.add(right_frame)
 
-        output_frame = ttk.LabelFrame(right_frame, text="Output")
-        output_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+        right_notebook = ttk.Notebook(right_frame)
+        right_notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
 
-        self.autotuning_output_text = create_styled_output_console(output_frame)
+        # --- Live Plot tab (default) ---
+        plot_tab = ttk.Frame(right_notebook)
+        right_notebook.add(plot_tab, text="📈 Live Plot")
+
+        tiles_frame = ttk.Frame(plot_tab)
+        tiles_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=(6, 2))
+        self._autotuning_tile_values = []
+        # placeholder tiles; labels come from an empty model so they read "—"
+        for key, value in ProgressModel().summary_tiles():
+            tile = ttk.Frame(tiles_frame)
+            tile.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=3)
+            caption_label(tile, key).pack(anchor=tk.W)
+            value_label = heading_label(tile, value)
+            value_label.pack(anchor=tk.W)
+            self._autotuning_tile_values.append(value_label)
+
+        plot_frame = ttk.Frame(plot_tab)
+        plot_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self._autotuning_plot_frame = plot_frame
+        self._autotuning_figure, self._autotuning_canvas, _ = embedding.create_canvas(plot_frame)
+        self._autotuning_progress_model = ProgressModel()
+
+        # --- Console tab ---
+        console_tab = ttk.Frame(right_notebook)
+        right_notebook.add(console_tab, text="🖥 Console")
+        self.autotuning_output_text = create_styled_output_console(console_tab)
         self.autotuning_output_text.pack(fill=tk.BOTH, expand=True)
 
+        _bind_scroll(options_outer)
         self._update_autotuning_ui()
         self._setup_autotuning_tab_tooltip()
+        # show the last run (if any) so the plot is not empty on open
+        self._load_autotuning_progress_from_file()
 
     def _update_autotuning_ui(self) -> None:
         if self.autotuning_run_button is not None:
@@ -205,8 +348,53 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         self.right_tabs.bind("<Motion>", on_motion, add="+")
         self.right_tabs.bind("<Leave>", on_leave, add="+")
 
+    def _update_autotuning_mode_widgets(self) -> None:
+        """Show/enable the selector for the active suggestion mode; disable the other.
+
+        In 'evaluate' mode the optimization algorithm does not run (the autotuner
+        checks the one fixed combination), so its dropdown is disabled too.
+        """
+        if not hasattr(self, "autotuner_search_space_selector"):
+            return
+        search = self.autotuning_suggestions_mode_var.get() == "search"
+        if search:
+            self._autotuner_evaluate_container.pack_forget()
+            self._autotuner_search_space_container.pack(fill=tk.X, pady=(3, 0))
+        else:
+            self._autotuner_search_space_container.pack_forget()
+            self._autotuner_evaluate_container.pack(fill=tk.X, pady=(3, 0))
+        self.autotuner_search_space_selector.set_enabled(search)
+        self.autotuner_evaluate_selector.set_enabled(not search)
+        if hasattr(self, "autotuning_algorithm_combo"):
+            self.autotuning_algorithm_combo.config(state="readonly" if search else "disabled")
+        self._update_autotuning_suggestion_count()
+
+    def _update_autotuning_suggestion_count(self) -> None:
+        """Update the 'N of M selected' overview for the currently active selector."""
+        if not hasattr(self, "autotuning_suggestions_count_label") or not hasattr(
+            self, "autotuner_search_space_selector"
+        ):
+            return
+        search = self.autotuning_suggestions_mode_var.get() == "search"
+        selector = self.autotuner_search_space_selector if search else self.autotuner_evaluate_selector
+        total = len(selector.get_available_ids())
+        selected = len(selector.get_selected_ids())
+        if total == 0:
+            self.autotuning_suggestions_count_label.config(text="No suggestions available", foreground="gray")
+        else:
+            fg = "black" if selected > 0 else "gray"
+            self.autotuning_suggestions_count_label.config(text=f"{selected} of {total} selected", foreground=fg)
+
     def _refresh_autotuning_suggestions_display(self) -> None:
         """Read autotuning results and update the display label."""
+        if hasattr(self, "autotuner_search_space_selector"):
+            self.autotuner_search_space_selector.refresh()
+        if hasattr(self, "autotuner_evaluate_selector"):
+            self.autotuner_evaluate_selector.refresh()
+        if hasattr(self, "autotuning_browse_edit_button"):
+            total = len(self.autotuner_search_space_selector.get_available_ids())
+            self.autotuning_browse_edit_button.config(state="normal" if total > 0 else "disabled")
+        self._update_autotuning_suggestion_count()
         if not hasattr(self, "autotuning_suggestions_label") or self.autotuning_suggestions_label is None:
             return
 
@@ -233,6 +421,47 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
             self.autotuning_suggestions_label.config(text="No suggestions selected", foreground="gray")
         else:
             self.autotuning_suggestions_label.config(text="Autotuner not yet executed", foreground="gray")
+
+    def _on_autotuning_progress(self, event: Dict[str, Any]) -> None:
+        """Ingest one progress event (main thread) and refresh the live plot."""
+        if self._autotuning_progress_model is None:
+            self._autotuning_progress_model = ProgressModel()
+        self._autotuning_progress_model.ingest(event)
+        self._redraw_autotuning_plot()
+        self._update_autotuning_tiles()
+
+    def _redraw_autotuning_plot(self) -> None:
+        if self._autotuning_figure is None or self._autotuning_progress_model is None:
+            return
+        autotuning_chart.render(self._autotuning_figure, self._autotuning_progress_model)
+        if self._autotuning_canvas is not None:
+            embedding.redraw(self._autotuning_canvas)
+
+    def _update_autotuning_tiles(self) -> None:
+        if self._autotuning_tile_values is None or self._autotuning_progress_model is None:
+            return
+        tiles = self._autotuning_progress_model.summary_tiles()
+        for label_widget, (_key, value) in zip(self._autotuning_tile_values, tiles):
+            label_widget.config(text=value)
+
+    def _load_autotuning_progress_from_file(self) -> None:
+        """Populate the live plot from a previous run's progress.jsonl, if present."""
+        path = os.path.join(self.arguments.dot_dp, "auto_tuner", "progress.jsonl")
+        if not os.path.exists(path):
+            return
+        try:
+            with open(path, "r") as f:
+                events = parse_progress_jsonl(f.read())
+        except OSError:
+            return
+        if not events:
+            return
+        self._autotuning_progress_model = ProgressModel.from_events(events)
+        self._redraw_autotuning_plot()
+        self._update_autotuning_tiles()
+        # canvases built before the window is laid out render at the wrong size
+        if self._autotuning_plot_frame is not None:
+            embedding.force_resize_redraw(self._autotuning_plot_frame)
 
     def _update_autotuning_config_display(self) -> None:
         """Update the configuration display label."""
@@ -266,6 +495,11 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
             self.autotuning_output_text.config(state=tk.NORMAL)
             self.autotuning_output_text.delete("1.0", tk.END)
             self.autotuning_output_text.config(state="disabled")
+
+        # start a fresh live plot for this run
+        self._autotuning_progress_model = ProgressModel()
+        self._redraw_autotuning_plot()
+        self._update_autotuning_tiles()
 
         def append_output(text: str) -> None:
             if self.autotuning_output_text is not None:
@@ -331,6 +565,22 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         if threads_value != "auto":
             cmd.extend(["-t", threads_value])
 
+        mode = self.autotuning_suggestions_mode_var.get()
+        if mode == "evaluate":
+            evaluate_ids = self.autotuner_evaluate_selector.get_selected_ids()
+            if evaluate_ids:
+                cmd.extend(["-s", ",".join(evaluate_ids)])
+                output_callback("Evaluating specific combination: " + ", ".join(evaluate_ids) + "\n")
+            else:
+                output_callback("No suggestions selected to evaluate; running the search algorithm instead.\n")
+        else:
+            if not self.autotuner_search_space_selector.is_all_selected():
+                search_ids = self.autotuner_search_space_selector.get_selected_ids()
+                cmd.extend(["--search-space", ",".join(search_ids)])
+                output_callback(
+                    "Restricting search space to suggestion IDs: " + (", ".join(search_ids) or "(none)") + "\n"
+                )
+
         output_callback("Running autotuner...\n\n")
 
         self._autotuning_process = subprocess.Popen(
@@ -344,6 +594,12 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
 
         assert self._autotuning_process.stdout is not None
         for line in self._autotuning_process.stdout:
+            # Structured progress events drive the live plot and are kept out of the
+            # console; everything else is echoed to the console as before.
+            event = parse_progress_line(line)
+            if event is not None:
+                self.after(0, lambda e=event: self._on_autotuning_progress(e))  # type: ignore
+                continue
             cleaned = clean_ansi_output(line.rstrip("\n"))
             if cleaned:
                 output_callback(cleaned + "\n")

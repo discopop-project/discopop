@@ -6,20 +6,41 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import functools
 import json
 import os
 import textwrap
 import tkinter as tk
 from tkinter import ttk
-from typing import Any
+from typing import Any, Dict, List, Optional
 
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no
 from discopop_library.ProjectManager.gui import widgets
-from discopop_library.ProjectManager.gui.widgets import danger_button, primary_button
+from discopop_library.ProjectManager.gui.widgets import danger_button
+from discopop_library.ProjectManager.gui.plots import embedding, report_charts
+from discopop_library.ProjectManager.gui.plots.data import ExecutionRecord, parse_execution_results
+
+# Chart types offered by the "+" tab. Each entry: default state + a title stem.
+_PLOT_TYPES: Dict[str, Dict[str, Any]] = {
+    "pareto": {"label": "Trade-off scatter", "stem": "Scatter"},
+    "scaling": {"label": "Thread scaling", "stem": "Scaling"},
+    "spbars": {"label": "Speedup / efficiency bars", "stem": "Bars"},
+    "rtbars": {"label": "Runtime bars", "stem": "Runtime"},
+}
+_ADD_TAB_TEXT = "  ＋  "
+_DETAIL_BAR_WIDTH = 280
+_DETAIL_PLACEHOLDER = "Click a point, line, or bar\nto see its details here."
 
 
 class ReportPanelMixin(ConfigManagerMixinBase):
+    # notebook + plot-tab bookkeeping
+    report_notebook: Optional[ttk.Notebook] = None
+    _report_plot_tabs: Optional[Dict[str, Dict[str, Any]]] = None
+    _report_add_tab: Optional[tk.Widget] = None
+    _report_prev_tab: Optional[str] = None
+    _report_plot_counter: int = 0
+
     def _build_report_panel(self, parent: tk.Widget) -> None:
         button_frame = ttk.Frame(parent)
         button_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
@@ -40,48 +61,46 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             ):
                 self._reset_project_data()
 
-        reset_results_button = danger_button(
-            button_frame,
-            text="Reset Execution Results",
-            command=on_reset_execution_results,
+        danger_button(button_frame, text="Reset Execution Results", command=on_reset_execution_results).pack(
+            side=tk.LEFT, padx=5
         )
-        reset_results_button.pack(side=tk.LEFT, padx=5)
+        danger_button(button_frame, text="Reset Project", command=on_reset_project).pack(side=tk.LEFT, padx=5)
 
-        reset_project_button = danger_button(
-            button_frame,
-            text="Reset Project",
-            command=on_reset_project,
-        )
-        reset_project_button.pack(side=tk.LEFT, padx=5)
-
-        def on_generate_report() -> None:
-            self._generate_report()
-
-        def on_view_report() -> None:
-            self._view_report()
-
-        self.generate_report_button = primary_button(
-            button_frame,
-            text="Generate PDF Report",
-            state="disabled",
-            command=on_generate_report,
+        self.generate_report_button = widgets.primary_button(
+            button_frame, text="Generate PDF Report", state="disabled", command=self._generate_report
         )
         self.generate_report_button.pack(side=tk.LEFT, padx=5)
-
-        self.view_report_button = ttk.Button(
-            button_frame,
-            text="View Report PDF",
-            state="disabled",
-            command=on_view_report,
+        self.view_report_button = widgets.create_button(
+            button_frame, text="View Report PDF", state="disabled", command=self._view_report
         )
         self.view_report_button.pack(side=tk.LEFT, padx=5)
 
+        # Results notebook: a permanent Table tab, on-demand plot tabs, and a
+        # trailing "+" tab that opens the add-plot menu.
+        self.report_notebook = ttk.Notebook(parent)
+        self.report_notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self._report_plot_tabs = {}
+
+        table_tab = ttk.Frame(self.report_notebook)
+        self.report_notebook.add(table_tab, text="Table")
+        self._build_report_table(table_tab)
+
+        self._report_add_tab = ttk.Frame(self.report_notebook)
+        self.report_notebook.add(self._report_add_tab, text=_ADD_TAB_TEXT)
+
+        self.report_notebook.bind("<<NotebookTabChanged>>", self._on_report_tab_changed)
+
+        # open with a trade-off scatter shown by default
+        self._add_report_plot("pareto")
+
+    # ── the permanent Table tab ────────────────────────────────────────────────
+
+    def _build_report_table(self, parent: tk.Widget) -> None:
         tree_frame = ttk.Frame(parent)
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         vsb = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL)
         vsb.pack(side=tk.RIGHT, fill=tk.Y)
-
         hsb = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL)
         hsb.pack(side=tk.BOTTOM, fill=tk.X)
 
@@ -92,19 +111,14 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             "Label",
             "Applied Suggestions",
             "Threads",
-            "Code",
+            "Status",
             "Time",
             "Speedup",
             "Efficiency",
         )
         self.report_tree = ttk.Treeview(
-            tree_frame,
-            columns=columns,
-            show="headings",
-            yscrollcommand=vsb.set,
-            xscrollcommand=hsb.set,
+            tree_frame, columns=columns, show="headings", yscrollcommand=vsb.set, xscrollcommand=hsb.set
         )
-
         column_widths = {
             "Config": 90,
             "Script": 100,
@@ -112,18 +126,20 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             "Label": 85,
             "Applied Suggestions": 90,
             "Threads": 65,
-            "Code": 55,
+            "Status": 70,
             "Time": 65,
             "Speedup": 75,
             "Efficiency": 75,
         }
-
         for col in columns:
             self.report_tree.heading(col, text=col)
             self.report_tree.column(col, width=column_widths.get(col, 100), anchor="w", stretch=True)
 
         self.report_tree.tag_configure("evenrow", background=widgets.TREE_EVEN_ROW)
         self.report_tree.tag_configure("oddrow", background=widgets.TREE_ODD_ROW)
+        # validity / best-row emphasis
+        self.report_tree.tag_configure("failed", foreground=widgets.STATUS_FAIL)
+        self.report_tree.tag_configure("best", background="#d6ebd5")
 
         self.report_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         vsb.config(command=self.report_tree.yview)
@@ -137,62 +153,327 @@ class ReportPanelMixin(ConfigManagerMixinBase):
         self.report_tree.bind("<Button-4>", lambda e: self.report_tree.yview_scroll(-1, "units"))
         self.report_tree.bind("<Button-5>", lambda e: self.report_tree.yview_scroll(1, "units"))
 
+    def _load_execution_records(self) -> List[ExecutionRecord]:
+        path = os.path.join(self.arguments.project_dir, "execution_results.json")
+        if not os.path.exists(path):
+            return []
+        try:
+            with open(path, "r") as f:
+                return parse_execution_results(json.load(f))
+        except (json.JSONDecodeError, OSError):
+            return []
+
     def _update_report_display(self) -> None:
+        """Refresh the table and any open plot tabs from execution_results.json."""
+        records = self._load_execution_records()
+        self._populate_report_table(records)
+        self._refresh_report_charts(records)
+
+    def _populate_report_table(self, records: List[ExecutionRecord]) -> None:
         for item in self.report_tree.get_children():
             self.report_tree.delete(item)
 
-        execution_results_path = os.path.join(self.arguments.project_dir, "execution_results.json")
-        if not os.path.exists(execution_results_path):
-            return
+        # best (highest speedup) valid record per config, for highlighting
+        best_ids: Dict[str, int] = {}
+        best_speedup: Dict[str, float] = {}
+        for idx, r in enumerate(records):
+            if (
+                r.valid
+                and r.speedup is not None
+                and (r.config not in best_speedup or r.speedup > best_speedup[r.config])
+            ):
+                best_speedup[r.config] = r.speedup
+                best_ids[r.config] = idx
 
+        prev_config = prev_script = prev_setting = None
+        for idx, r in enumerate(records):
+            row_index = len(self.report_tree.get_children())
+            tags: List[str] = ["evenrow" if row_index % 2 == 0 else "oddrow"]
+            if not r.valid:
+                tags.append("failed")
+            if best_ids.get(r.config) == idx:
+                tags.append("best")
+
+            config_str = r.config if r.config != prev_config else ""
+            script_str = r.script if (r.config != prev_config or r.script != prev_script) else ""
+            setting_str = r.mode if (r.config, r.script, r.mode) != (prev_config, prev_script, prev_setting) else ""
+            prev_config, prev_script, prev_setting = r.config, r.script, r.mode
+
+            status = "✓ valid" if r.valid else ("⧗ timeout" if r.timeout else "✗ failed")
+            self.report_tree.insert(
+                "",
+                "end",
+                values=(
+                    config_str,
+                    script_str,
+                    setting_str,
+                    r.label,
+                    textwrap.shorten(str(r.applied_suggestions), width=20, placeholder="...]"),
+                    str(r.thread_count),
+                    status,
+                    str(r.time),
+                    "-" if r.speedup is None else str(round(r.speedup, 3)),
+                    "-" if r.efficiency is None else str(round(r.efficiency, 3)),
+                ),
+                tags=tuple(tags),
+            )
+
+    # ── the "+" tab and plot tabs ───────────────────────────────────────────────
+
+    def _on_report_tab_changed(self, _event: Any) -> None:
+        """When the trailing '+' tab is selected, open the menu and bounce back."""
+        assert self.report_notebook is not None
+        current = self.report_notebook.select()
+        add_tab_id = str(self._report_add_tab) if self._report_add_tab is not None else None
+        if current == add_tab_id:
+            # restore the previously active tab so "+" never stays selected
+            if self._report_prev_tab and self._report_prev_tab in self.report_notebook.tabs():
+                self.report_notebook.select(self._report_prev_tab)
+            else:
+                self.report_notebook.select(0)
+            self._open_add_plot_menu()
+        else:
+            self._report_prev_tab = current
+
+    def _open_add_plot_menu(self) -> None:
+        assert self.report_notebook is not None
+        menu = tk.Menu(self.report_notebook, tearoff=0)
+        for key, meta in _PLOT_TYPES.items():
+            menu.add_command(label=str(meta["label"]), command=functools.partial(self._add_report_plot, key))
+        x = self.report_notebook.winfo_pointerx()
+        y = self.report_notebook.winfo_pointery()
         try:
-            with open(execution_results_path, "r") as f:
-                execution_results = json.load(f)
-        except Exception:
+            menu.tk_popup(x, y)
+        finally:
+            menu.grab_release()
+
+    def _add_report_plot(self, plot_type: str) -> None:
+        assert self.report_notebook is not None and self._report_plot_tabs is not None
+        self._report_plot_counter += 1
+        stem = _PLOT_TYPES[plot_type]["stem"]
+        title = f"{stem} {self._report_plot_counter}"
+
+        tab = ttk.Frame(self.report_notebook)
+        # insert before the trailing "+" tab
+        insert_index = self.report_notebook.index(str(self._report_add_tab))
+        self.report_notebook.insert(insert_index, tab, text=title)
+
+        state: Dict[str, Any] = {"type": plot_type, "controls": {}}
+        # Control strip (selectors + close) pinned below the plot + detail bar.
+        strip = ttk.Frame(tab)
+        strip.pack(side=tk.BOTTOM, fill=tk.X, padx=4, pady=4)
+        self._build_plot_controls(strip, tab, state)
+
+        # Above the strip: the plot on the left, an always-visible detail bar on
+        # the right showing whichever point/line/bar was last clicked -- kept
+        # visible (rather than a popup window) so the view stays stable. A
+        # PanedWindow (rather than a plain frame) lets the user drag the bar
+        # wider or narrower.
+        content = tk.PanedWindow(tab, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
+        content.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+
+        plot_frame = ttk.Frame(content)
+        figure, canvas, _ = embedding.create_canvas(plot_frame)
+        state["figure"] = figure
+        state["canvas"] = canvas
+        state["plot_frame"] = plot_frame
+        content.add(plot_frame, stretch="always")
+
+        detail_frame = ttk.Frame(content)
+        self._build_detail_bar(detail_frame, state)
+        content.add(detail_frame, minsize=160, width=_DETAIL_BAR_WIDTH, stretch="never")
+
+        self._report_plot_tabs[str(tab)] = state
+        self.report_notebook.select(tab)
+        self._render_plot_tab(state)
+
+    # ── the always-visible detail bar ───────────────────────────────────────────
+
+    def _build_detail_bar(self, parent: tk.Widget, state: Dict[str, Any]) -> None:
+        widgets.heading_label(parent, "Selection Details").pack(anchor=tk.W, padx=8, pady=(8, 4))
+        ttk.Separator(parent, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=8, pady=(0, 8))
+
+        # A scrollable canvas holds the field rows: a narrow bar plus many wrapped
+        # fields (e.g. a long suggestion list) can exceed the available height.
+        scroll_container = ttk.Frame(parent)
+        scroll_container.pack(fill=tk.BOTH, expand=True, padx=(8, 0))
+
+        canvas = tk.Canvas(scroll_container, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(scroll_container, orient=tk.VERTICAL, command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        body = ttk.Frame(canvas)
+        body_window = canvas.create_window((0, 0), window=body, anchor="nw")
+        canvas.bind("<Configure>", lambda e: canvas.itemconfig(body_window, width=e.width))
+
+        state["detail_canvas"] = canvas
+        state["detail_body"] = body
+        state["detail_value_labels"] = []
+        # A single <Configure> handler covers both the scrollregion (grows with
+        # the field rows) and the value labels' wraplength (tracks the bar's
+        # current width) -- bound once here rather than re-bound per selection,
+        # since Tk's bind() replaces rather than chains a widget's handler for
+        # the same event sequence.
+        body.bind("<Configure>", lambda _e: self._on_detail_body_configure(state))
+        self._bind_detail_scroll(canvas, canvas)
+        self._bind_detail_scroll(body, canvas)
+        self._show_detail_placeholder(state)
+
+    def _on_detail_body_configure(self, state: Dict[str, Any]) -> None:
+        canvas = state["detail_canvas"]
+        body = state["detail_body"]
+        canvas.configure(scrollregion=canvas.bbox("all"))
+        width = max(80, body.winfo_width())
+        for value_label in state["detail_value_labels"]:
+            value_label.configure(wraplength=width)
+
+    def _bind_detail_scroll(self, widget: tk.Widget, canvas: tk.Canvas) -> None:
+        """Route mouse-wheel events on ``widget`` to ``canvas``, mirroring the
+        suggestion selector's scroll handling (all platforms; no-op if the
+        content already fits, so it never steals the wheel from a parent)."""
+
+        def _on_wheel(event: Any) -> str:
+            bbox = canvas.bbox("all")
+            if bbox is None or (bbox[3] - bbox[1]) <= canvas.winfo_height():
+                return "break"
+            if getattr(event, "num", None) == 4:
+                delta = -1
+            elif getattr(event, "num", None) == 5:
+                delta = 1
+            else:
+                delta = -1 if event.delta > 0 else 1
+            canvas.yview_scroll(delta, "units")
+            return "break"
+
+        widget.bind("<MouseWheel>", _on_wheel)  # Windows / macOS
+        widget.bind("<Button-4>", _on_wheel)  # X11 scroll up
+        widget.bind("<Button-5>", _on_wheel)  # X11 scroll down
+
+    def _show_detail_placeholder(self, state: Dict[str, Any]) -> None:
+        body = state["detail_body"]
+        for child in body.winfo_children():
+            child.destroy()
+        state["detail_value_labels"] = []
+        placeholder = widgets.caption_label(body, _DETAIL_PLACEHOLDER, justify=tk.LEFT)
+        placeholder.pack(anchor=tk.W, pady=4)
+        self._bind_detail_scroll(placeholder, state["detail_canvas"])
+
+    def _on_plot_record_selected(self, state: Dict[str, Any], record: ExecutionRecord) -> None:
+        body = state["detail_body"]
+        canvas = state["detail_canvas"]
+        for child in body.winfo_children():
+            child.destroy()
+
+        status = "✓ valid" if record.valid else ("⧗ timeout" if record.timeout else "✗ failed")
+        fields = [
+            ("Config", record.config),
+            ("Mode", record.mode),
+            ("Suggestions", str(record.applied_suggestions) if record.applied_suggestions else "(none)"),
+            ("Threads", str(record.thread_count)),
+            ("Runtime", f"{record.time:.3f} s"),
+            ("Status", status),
+        ]
+        if record.speedup is not None:
+            fields.append(("Speedup", f"{record.speedup:.3f}×"))
+        if record.efficiency is not None:
+            fields.append(("Efficiency", f"{record.efficiency:.3f}"))
+        fields.append(("Script", record.script))
+        fields.append(("Label", record.label or "(unnamed)"))
+
+        # Label above its value (rather than side-by-side) so both stay readable
+        # as the detail bar is resized narrower.
+        value_labels = []
+        for label, value in fields:
+            label_widget = ttk.Label(body, text=label, font=widgets.FONT_CAPTION, foreground=widgets.STATUS_IDLE)
+            label_widget.pack(anchor=tk.W, pady=(8, 0))
+            value_label = ttk.Label(body, text=value, font=widgets.FONT_BODY, justify=tk.LEFT)
+            value_label.pack(anchor=tk.W, fill=tk.X)
+            value_labels.append(value_label)
+            self._bind_detail_scroll(label_widget, canvas)
+            self._bind_detail_scroll(value_label, canvas)
+
+        state["detail_value_labels"] = value_labels
+        self._on_detail_body_configure(state)
+
+    def _build_plot_controls(self, strip: tk.Widget, tab: tk.Widget, state: Dict[str, Any]) -> None:
+        plot_type = state["type"]
+        configs = ["all"] + sorted({r.config for r in self._load_execution_records()})
+
+        def add_combo(label: str, key: str, values: List[str], default: str) -> None:
+            ttk.Label(strip, text=label + ":").pack(side=tk.LEFT, padx=(14, 6))
+            var = tk.StringVar(value=default)
+            combo = ttk.Combobox(
+                strip, textvariable=var, values=values, state="readonly", width=max(8, len(default) + 2)
+            )
+            combo.pack(side=tk.LEFT, padx=(0, 6))
+            combo.bind("<<ComboboxSelected>>", lambda _e: self._render_plot_tab(state))
+            state["controls"][key] = var
+
+        def add_check(label: str, key: str, default: bool) -> None:
+            var = tk.BooleanVar(value=default)
+            ttk.Checkbutton(strip, text=label, variable=var, command=lambda: self._render_plot_tab(state)).pack(
+                side=tk.LEFT, padx=6
+            )
+            state["controls"][key] = var
+
+        if plot_type == "pareto":
+            add_combo("X", "x", ["efficiency", "speedup", "threads"], "efficiency")
+            add_combo("Y", "y", ["speedup", "efficiency", "runtime"], "speedup")
+            add_combo("Config", "config", configs, "all")
+            add_check("Frontier", "frontier", True)
+            add_check("Valid only", "valid_only", False)
+        elif plot_type == "scaling":
+            add_combo("Metric", "metric", ["speedup", "runtime", "efficiency"], "speedup")
+            add_combo("Config", "config", configs, "all")
+            add_check("Ideal", "ideal", True)
+        # bar charts have a fixed metric (spbars=speedup, rtbars=runtime); no controls
+
+        danger_button(strip, text="✕", command=lambda: self._close_report_plot(tab)).pack(side=tk.RIGHT, padx=4)
+
+    def _render_plot_tab(self, state: Dict[str, Any]) -> None:
+        records = [r for r in self._load_execution_records() if r.script == "execute.sh"]
+        figure = state["figure"]
+        controls = state["controls"]
+        plot_type = state["type"]
+        on_select = functools.partial(self._on_plot_record_selected, state)
+        if plot_type == "pareto":
+            report_charts.render_pareto(
+                figure,
+                records,
+                x_metric=controls["x"].get(),
+                y_metric=controls["y"].get(),
+                config_filter=controls["config"].get(),
+                valid_only=controls["valid_only"].get(),
+                show_frontier=controls["frontier"].get(),
+                on_select=on_select,
+            )
+        elif plot_type == "scaling":
+            report_charts.render_scaling(
+                figure,
+                records,
+                metric=controls["metric"].get(),
+                config_filter=controls["config"].get(),
+                show_ideal=controls["ideal"].get(),
+                on_select=on_select,
+            )
+        elif plot_type == "spbars":
+            report_charts.render_bars(figure, records, metric="speedup", on_select=on_select)
+        elif plot_type == "rtbars":
+            report_charts.render_bars(figure, records, metric="runtime", on_select=on_select)
+        embedding.redraw(state["canvas"])
+        if state.get("plot_frame") is not None:
+            embedding.force_resize_redraw(state["plot_frame"])
+
+    def _close_report_plot(self, tab: tk.Widget) -> None:
+        assert self.report_notebook is not None and self._report_plot_tabs is not None
+        self._report_plot_tabs.pop(str(tab), None)
+        self.report_notebook.forget(tab)
+        self.report_notebook.select(0)
+
+    def _refresh_report_charts(self, records: Optional[List[ExecutionRecord]] = None) -> None:
+        if not self._report_plot_tabs:
             return
-
-        for configuration in sorted(execution_results.keys()):
-            configuration_first_occurrence = True
-            for script in sorted(execution_results[configuration].keys()):
-                script_first_occurrence = True
-                for setting in sorted(execution_results[configuration][script].keys()):
-                    setting_first_occurrence = True
-
-                    seq_runtime: float = -1.0
-                    if "seq_settings.json" in execution_results[configuration][script]:
-                        for execution in execution_results[configuration][script]["seq_settings.json"]:
-                            if execution["code"] == 0:
-                                seq_runtime = execution["time"]
-
-                    setting_row_index = len(self.report_tree.get_children())
-                    tags = ("evenrow",) if setting_row_index % 2 == 0 else ("oddrow",)
-
-                    for execution in execution_results[configuration][script][setting]:
-                        config_str = configuration if configuration_first_occurrence else ""
-                        script_str = script if script_first_occurrence else ""
-                        setting_str = setting.replace("_settings.json", "") if setting_first_occurrence else ""
-
-                        configuration_first_occurrence = False
-                        script_first_occurrence = False
-                        setting_first_occurrence = False
-
-                        speedup = seq_runtime / execution["time"] if seq_runtime > 0 else -1
-                        efficiency = speedup / execution["thread_count"] if speedup > 0 else -1
-
-                        self.report_tree.insert(
-                            "",
-                            "end",
-                            values=(
-                                config_str,
-                                script_str,
-                                setting_str,
-                                execution.get("label", ""),
-                                textwrap.shorten(str(execution["applied_suggestions"]), width=20, placeholder="...]"),
-                                str(execution["thread_count"]),
-                                str(execution["code"]),
-                                str(execution["time"]),
-                                str(round(speedup, 3)),
-                                str(round(efficiency, 3)),
-                            ),
-                            tags=tags,
-                        )
+        for state in list(self._report_plot_tabs.values()):
+            self._render_plot_tab(state)

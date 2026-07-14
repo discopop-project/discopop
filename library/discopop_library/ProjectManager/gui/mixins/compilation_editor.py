@@ -25,7 +25,6 @@ from discopop_library.ProjectManager.gui.widgets import (
     heading_label,
     create_styled_output_console,
     create_script_editor,
-    primary_button,
 )
 
 BASE_FILES = ["compile.sh", "execute.sh", "seq_settings.json"]
@@ -166,7 +165,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
 
             help_command = self._get_help_command(filename)
             if help_command:
-                help_button = ttk.Button(header_frame, text="Help", command=help_command)
+                help_button = widgets.create_button(header_frame, text="Help", command=help_command)
                 help_button.pack(side=tk.RIGHT, padx=5)
 
             text_frame = ttk.Frame(frame)
@@ -199,15 +198,17 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         self.compilation_notebook.bind("<Motion>", self._on_compilation_tab_motion)
         self.compilation_notebook.bind("<Leave>", self._on_compilation_tab_leave)
 
-        save_button = ttk.Button(bottom_comp_frame, text="Save (Ctrl+S)", command=self._save_compilation_files)
+        save_button = widgets.primary_button(
+            bottom_comp_frame, text="Save (Ctrl+S)", command=self._save_compilation_files
+        )
         save_button.pack(side=tk.LEFT, padx=5)
 
-        self.test_compilation_button = primary_button(
+        self.test_compilation_button = widgets.create_button(
             bottom_comp_frame, text="Test Compilation", command=self._test_compilation_from_editor, state="disabled"
         )
         self.test_compilation_button.pack(side=tk.LEFT, padx=5)
 
-        self.derive_compilation_button = ttk.Button(
+        self.derive_compilation_button = widgets.create_button(
             bottom_comp_frame, text="Derive", command=self._derive_compilation_settings, state="disabled"
         )
         self.derive_compilation_button.pack(side=tk.LEFT, padx=5)
@@ -458,7 +459,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         output_text.insert(1.0, output)
         output_text.config(state=tk.DISABLED)
 
-        close_button = ttk.Button(dialog, text="Close", command=dialog.destroy)
+        close_button = widgets.create_button(dialog, text="Close", command=dialog.destroy)
         close_button.pack(pady=10)
 
         pw = self.winfo_width()  # type: ignore

@@ -20,7 +20,6 @@ from discopop_library.ProjectManager.gui.widgets import (
     create_styled_output_console,
     create_script_editor,
     heading_label,
-    primary_button,
 )
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import enable_text_context_menu
@@ -40,6 +39,7 @@ The wizard will help you with:
 3. Testing the compilation configuration
 4. Reviewing and accepting derived settings files
 5. Specifying the execution script and naming your configuration
+6. Optionally specifying an output validation script (validate.sh)
 
 After completing this wizard, your project will be ready to use with DiscoPoP.
 
@@ -201,7 +201,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
         button_frame = ttk.Frame(frame)
         button_frame.pack(fill=tk.X, padx=10, pady=5)
 
-        self.run_test_btn = primary_button(
+        self.run_test_btn = widgets.primary_button(
             button_frame, text="Run Test Compilation", command=self._run_test_compilation
         )
         self.run_test_btn.pack(side=tk.LEFT)
@@ -268,7 +268,7 @@ You can still proceed with the configuration, but keep this limitation in mind."
         scrollbar = ttk.Scrollbar(frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.execute_sh_text = create_script_editor(frame, height=10, width=80, yscrollcommand=scrollbar.set)
+        self.execute_sh_text = create_script_editor(frame, height=14, width=80, yscrollcommand=scrollbar.set)
         self.execute_sh_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         scrollbar.config(command=self.execute_sh_text.yview)
         enable_text_context_menu(self.execute_sh_text)
@@ -282,6 +282,29 @@ You can still proceed with the configuration, but keep this limitation in mind."
 
         self.execute_sh_text.bind("<KeyPress>", self._on_execute_sh_interact)
         self.execute_sh_text.bind("<Button-1>", self._on_execute_sh_interact)
+
+        return frame
+
+    def _create_step_validate_sh(self, parent: ttk.Frame) -> ttk.Frame:
+        frame = ttk.Frame(parent)
+
+        hint_text = (
+            "Optionally specify a validation script (validate.sh).\n\n"
+            "Leave empty to skip. If provided, validate.sh re-runs the program and validates its\n"
+            "output separately from the timed execute.sh run (e.g. a diff against a reference).\n"
+            "A run then counts as correct only if BOTH execute.sh and validate.sh exit 0.\n\n"
+            "You can use relative paths as if you are already in the project root."
+        )
+        hint = ttk.Label(frame, text=hint_text, font=widgets.FONT_BODY, justify=tk.LEFT)
+        hint.pack(anchor=tk.W, padx=5, pady=(5, 10))
+
+        scrollbar = ttk.Scrollbar(frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.validate_sh_text = create_script_editor(frame, height=14, width=80, yscrollcommand=scrollbar.set)
+        self.validate_sh_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        scrollbar.config(command=self.validate_sh_text.yview)
+        enable_text_context_menu(self.validate_sh_text)
 
         return frame
 

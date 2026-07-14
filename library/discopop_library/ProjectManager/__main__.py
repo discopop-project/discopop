@@ -41,6 +41,7 @@ def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
     parser.add_argument("-lp", "--label-prefix", default="", help="Specify a prefix for execution measurement labels")
     parser.add_argument("-tox", "--timeout-execution", type=int, default=3600, help="Timeout in seconds for each individual code execution. Use 0 to disable timeout. Default: 3600.")
     parser.add_argument("-toc", "--timeout-compilation", type=int, default=3600, help="Timeout in seconds for each individual code compilation. Use 0 to disable timeout. Default: 3600.")
+    parser.add_argument("-tov", "--timeout-validation", type=int, default=3600, help="Timeout in seconds for each individual output validation (validate.sh). Use 0 to disable timeout. Default: 3600.")
 
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
@@ -69,7 +70,8 @@ def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
         write_log=arguments.write_log,
         label_prefix=arguments.label_prefix,
         timeout_execution=None if arguments.timeout_execution == 0 else float(arguments.timeout_execution),
-        timeout_compilation=None if arguments.timeout_execution == 0 else float(arguments.timeout_execution),
+        timeout_compilation=None if arguments.timeout_compilation == 0 else float(arguments.timeout_compilation),
+        timeout_validation=None if arguments.timeout_validation == 0 else float(arguments.timeout_validation),
     )
 
 

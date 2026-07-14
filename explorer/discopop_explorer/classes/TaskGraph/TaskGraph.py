@@ -1900,6 +1900,19 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 # first - there is no internal merge point to close here
                 continue
 
+            # m can be a convergence point shared with another, non-nested branch (e.g. an
+            # independent early exit that happens to reconverge at the same place). Check
+            # up front whether n actually owns any of m's current predecessors: if none are
+            # dominated by n, wrapping here would create an EndBranchParent with zero
+            # predecessors - an orphaned node with no way to ever be entered, which later
+            # crashes context nesting since it looks like a valid entry point starting
+            # mid-context. Leave n entirely unwrapped in that case and let
+            # __add_branching_nodes_fallback_cleanup, which is designed for exactly this
+            # situation, wrap it unconditionally instead.
+            claimed_preds = [pred for pred in self.get_predecessors(m) if dominates(n, pred)]
+            if len(claimed_preds) == 0:
+                continue
+
             start_branch_parent_node = TGStartBranchParentNode(n.pet_node_id, level=n.level, position=n.position)
             self.add_node(start_branch_parent_node)
             region_owner[start_branch_parent_node] = n
@@ -1911,10 +1924,21 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             end_branch_parent_node = TGEndBranchParentNode(m.pet_node_id, level=m.level, position=m.position)
             self.add_node(end_branch_parent_node)
             region_owner[end_branch_parent_node] = n
-            for pred in list(self.get_predecessors(m)):
-                if dominates(n, pred):
-                    self.graph.remove_edge(pred, m)
-                    self.add_edge(pred, end_branch_parent_node)
+            for pred in claimed_preds:
+                # n trivially dominates itself, so n can be one of its own arms feeding
+                # directly into m (e.g. an "if" with no "else"). claimed_preds was snapshotted
+                # before the successor-rewiring loop above, which unconditionally retargets all
+                # of n's own outgoing edges (including a direct n->m arm) to
+                # start_branch_parent_node - so by now that's the live stand-in for n's own
+                # contribution, not n itself. Removing (n, m) again would raise NetworkXError
+                # (the edge is already gone) and abort this function's wrapping partway
+                # through, leaving end_branch_parent_node behind with whatever predecessors
+                # happened to be wired before the abort - possibly zero.
+                actual_pred = start_branch_parent_node if pred == n else pred
+                if not self.graph.has_edge(actual_pred, m):
+                    continue
+                self.graph.remove_edge(actual_pred, m)
+                self.add_edge(actual_pred, end_branch_parent_node)
             self.add_edge(end_branch_parent_node, m)
 
             for succ in list(self.get_successors(start_branch_parent_node)):
@@ -2031,6 +2055,18 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         for node in tqdm(self.graph.nodes):
             succ_count = len(self.get_successors(node))
             pred_count = len(self.get_predecessors(node))
+            if isinstance(node, TGEndBranchParentNode) and pred_count == 0:
+                logger.error("Invalid graph structure: " + str(type(node)) + " has no predecessors!")
+                plt.ioff()  # type: ignore[attr-defined]
+                self.plot(highlight_nodes=[node])
+                plt.pause(1)  # type: ignore[attr-defined]
+                raise ValueError("Invalid graph structure!")
+            if isinstance(node, TGStartBranchParentNode) and succ_count == 0:
+                logger.error("Invalid graph structure: " + str(type(node)) + " has no successors!")
+                plt.ioff()  # type: ignore[attr-defined]
+                self.plot(highlight_nodes=[node])
+                plt.pause(1)  # type: ignore[attr-defined]
+                raise ValueError("Invalid graph structure!")
             if succ_count < 2 and pred_count < 2:
                 continue
             if (succ_count >= 2) and (not isinstance(node, TGStartBranchParentNode)):

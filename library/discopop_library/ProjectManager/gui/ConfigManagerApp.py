@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import os
 import tkinter as tk
+from tkinter import font as tkfont
 from tkinter import ttk
 from typing import Optional
 from ttkthemes import ThemedStyle  # type: ignore
@@ -22,6 +23,7 @@ from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.widgets import create_styled_output_console, heading_label
 from discopop_library.ProjectManager.gui.mixins.helpers import (
     Tooltip,
+    bind_tooltip_hover,
     show_error,
     enable_text_context_menu,
 )
@@ -58,6 +60,7 @@ class ConfigManagerApp(  # type: ignore
     def __init__(self, arguments: ProjectManagerArguments, was_initialized: bool = False) -> None:
         super().__init__()
         self.title("DiscoPoP Project Manager")
+        self._set_window_icon()
         self.geometry("1600x1000")
         self.minsize(1400, 800)
         self.arguments = arguments
@@ -76,8 +79,24 @@ class ConfigManagerApp(  # type: ignore
         self.status_label = ttk.Label(bottom_frame, text="Ready", foreground=widgets.STATUS_IDLE)
         self.status_label.pack(side=tk.LEFT, padx=10, pady=5)
 
+        # Show the path to the currently used .discopop folder, aligned with the status bar.
+        # The text is truncated to at most half of the bottom bar's width; the full path is
+        # available via a mouse-over tooltip.
+        self.dot_dp_path = self.arguments.dot_dp
+        self.dot_dp_label = ttk.Label(
+            bottom_frame,
+            text=self.dot_dp_path,
+            foreground=widgets.STATUS_IDLE,
+        )
+        self.dot_dp_label.pack(side=tk.RIGHT, padx=10, pady=5)
+
+        self._dot_dp_font = tkfont.nametofont(str(self.dot_dp_label.cget("font")) or "TkDefaultFont")
+        self._dot_dp_tooltip = Tooltip(self.dot_dp_label, self.dot_dp_path)
+        bind_tooltip_hover(self.dot_dp_label, self._dot_dp_tooltip, self)
+        bottom_frame.bind("<Configure>", self._update_dot_dp_label)
+
         # Main layout: PanedWindow with left (configs) and right (editor/execute/report)
-        self.paned = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
+        self.paned = tk.PanedWindow(self, orient=tk.HORIZONTAL, sashrelief=tk.RAISED, sashwidth=18, sashpad=3)
         self.paned.pack(fill=tk.BOTH, expand=True)
 
         # --- LEFT PANEL: Configuration List ---
@@ -102,10 +121,10 @@ class ConfigManagerApp(  # type: ignore
         button_frame = ttk.Frame(left_frame)
         button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
 
-        self.new_button = ttk.Button(button_frame, text="+ New", command=self._new_config)
+        self.new_button = widgets.primary_button(button_frame, text="+ New", command=self._new_config)
         self.new_button.pack(side=tk.TOP, fill=tk.X, pady=2)
 
-        self.edit_compilation_button = ttk.Button(
+        self.edit_compilation_button = widgets.create_button(
             button_frame, text="Edit Compilation", command=self._open_compilation_editor
         )
         self.edit_compilation_button.pack(side=tk.TOP, fill=tk.X, pady=2)
@@ -154,7 +173,7 @@ class ConfigManagerApp(  # type: ignore
         bottom_editor_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=2)
 
         # Buttons on the left side
-        self.save_button = ttk.Button(bottom_editor_frame, text="Save (Ctrl+S)", command=self._save_config)
+        self.save_button = widgets.primary_button(bottom_editor_frame, text="Save (Ctrl+S)", command=self._save_config)
         self.save_button.pack(side=tk.LEFT, padx=5)
 
         self.editor_notebook = ttk.Notebook(editor_frame)
@@ -170,7 +189,9 @@ class ConfigManagerApp(  # type: ignore
         execute_help_label = heading_label(execute_header_frame, "Execution script")
         execute_help_label.pack(side=tk.LEFT)
 
-        execute_help_button = ttk.Button(execute_header_frame, text="Help", command=self._show_execute_sh_help)
+        execute_help_button = widgets.create_button(
+            execute_header_frame, text="Help", command=self._show_execute_sh_help
+        )
         execute_help_button.pack(side=tk.RIGHT, padx=5)
 
         execute_text_frame = ttk.Frame(execute_sh_frame)
@@ -197,10 +218,12 @@ class ConfigManagerApp(  # type: ignore
         compile_help_label = heading_label(compile_header_frame, "Compilation script override")
         compile_help_label.pack(side=tk.LEFT)
 
-        compile_help_button = ttk.Button(compile_header_frame, text="Help", command=self._show_compile_sh_help)
+        compile_help_button = widgets.create_button(
+            compile_header_frame, text="Help", command=self._show_compile_sh_help
+        )
         compile_help_button.pack(side=tk.RIGHT, padx=5)
 
-        self.compile_override_button = ttk.Button(
+        self.compile_override_button = widgets.create_button(
             compile_header_frame, text="Add Override", command=self._toggle_compile_override
         )
         self.compile_override_button.pack(side=tk.RIGHT, padx=5)
@@ -219,13 +242,49 @@ class ConfigManagerApp(  # type: ignore
         self.text_areas["compile.sh"] = compile_text_area
         self.modified_files["compile.sh"] = False
 
+        # --- validate.sh tab (optional, per-configuration) ---
+        validate_sh_frame = ttk.Frame(self.editor_notebook)
+        self.editor_notebook.add(validate_sh_frame, text="validate.sh")
+
+        validate_header_frame = ttk.Frame(validate_sh_frame)
+        validate_header_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        validate_help_label = heading_label(validate_header_frame, "Output validation script")
+        validate_help_label.pack(side=tk.LEFT)
+
+        validate_help_button = widgets.create_button(
+            validate_header_frame, text="Help", command=self._show_validate_sh_help
+        )
+        validate_help_button.pack(side=tk.RIGHT, padx=5)
+
+        self.validate_script_button = widgets.create_button(
+            validate_header_frame, text="Add validate.sh", command=self._toggle_validate_script
+        )
+        self.validate_script_button.pack(side=tk.RIGHT, padx=5)
+
+        validate_text_frame = ttk.Frame(validate_sh_frame)
+        validate_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        validate_scrollbar = ttk.Scrollbar(validate_text_frame)
+        validate_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        validate_text_area = widgets.create_script_editor(validate_text_frame, yscrollcommand=validate_scrollbar.set)
+        validate_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        validate_scrollbar.config(command=validate_text_area.yview)
+        enable_text_context_menu(validate_text_area)
+
+        self.text_areas["validate.sh"] = validate_text_area
+        self.modified_files["validate.sh"] = False
+
         self.editor_sub_tab_index = {
             "execute.sh": self.editor_notebook.index(execute_sh_frame),
             "compile.sh": self.editor_notebook.index(compile_sh_frame),
+            "validate.sh": self.editor_notebook.index(validate_sh_frame),
         }
         self.editor_sub_tab_labels = {
             "execute.sh": "execute.sh",
             "compile.sh": "compile.sh (override)",
+            "validate.sh": "validate.sh",
         }
 
         # Build execute panel
@@ -247,6 +306,44 @@ class ConfigManagerApp(  # type: ignore
         self.after(100, self._maybe_open_wizard)
         self._start_modification_polling()
 
+    def _update_dot_dp_label(self, event: Optional["tk.Event[tk.Misc]"] = None) -> None:
+        """Truncate the .discopop path label to at most half the bottom bar's width.
+
+        If the full path does not fit, it is pruned from the left with a leading
+        ellipsis so the most specific part of the path stays visible. The full
+        path remains available via the mouse-over tooltip.
+        """
+        available = self.dot_dp_label.master.winfo_width()
+        if available <= 1:
+            return
+        max_width = available // 2
+        full = self.dot_dp_path
+        if self._dot_dp_font.measure(full) <= max_width:
+            self.dot_dp_label.config(text=full)
+            return
+
+        ellipsis = "…"
+        truncated = full
+        while truncated and self._dot_dp_font.measure(ellipsis + truncated) > max_width:
+            truncated = truncated[1:]
+        self.dot_dp_label.config(text=ellipsis + truncated)
+
+    def _set_window_icon(self) -> None:
+        """Set the DiscoPoP logo as the window / taskbar icon.
+
+        Uses ``iconphoto`` (the portable API: PNG via ``tk.PhotoImage``) with
+        ``default=True`` so child toplevels/dialogs inherit it too. The
+        PhotoImage is stored on ``self`` because Tk keeps only a weak reference
+        and would otherwise garbage-collect the image, silently dropping the
+        icon. A missing/unreadable file must not crash the GUI, hence the guard.
+        """
+        icon_path = os.path.join(os.path.dirname(__file__), "assets", "icon.png")
+        try:
+            self._window_icon = tk.PhotoImage(file=icon_path)
+            self.iconphoto(True, self._window_icon)
+        except tk.TclError:
+            pass
+
     def _setup_styles(self) -> None:
         """Single location for all shared ttk styles.
 
@@ -255,7 +352,7 @@ class ConfigManagerApp(  # type: ignore
         built (the Treeview and TNotebook.Tab styling used to be configured
         ad hoc from report_panel.py and compilation_editor.py).
         """
-        style = ThemedStyle(self, theme="scidblue")
+        style = ThemedStyle(self)
 
         style.configure(
             "TCombobox",
@@ -275,7 +372,6 @@ class ConfigManagerApp(  # type: ignore
         style.configure(widgets.STYLE_PRIMARY_BUTTON, font=(widgets.FONT_FAMILY, 11, "bold"))
         style.configure(widgets.STYLE_DANGER_BUTTON, foreground=widgets.STATUS_FAIL)
         style.map(widgets.STYLE_DANGER_BUTTON, foreground=[("disabled", widgets.STATUS_IDLE)])
-        style.configure(widgets.STYLE_SUCCESS_BUTTON, foreground=widgets.APPLIED_FG)
         style.configure(widgets.STYLE_ICON_BUTTON, relief="flat", borderwidth=0, padding=0)
 
         # Notebook tabs (previously configured globally from compilation_editor.py,

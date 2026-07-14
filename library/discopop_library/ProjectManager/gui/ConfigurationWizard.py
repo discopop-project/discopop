@@ -46,6 +46,7 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
             "cxxflags": "",
             "config_name": "default",
             "execute_sh": "",
+            "validate_sh": "",
             "derived_settings": {},
         }
         self._compile_sh_has_placeholder = False
@@ -70,13 +71,13 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
         nav_frame = ttk.Frame(main_frame)
         nav_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=(10, 0))
 
-        self.back_btn = ttk.Button(nav_frame, text="< Back", command=self._on_back)
+        self.back_btn = widgets.create_button(nav_frame, text="< Back", command=self._on_back)
         self.back_btn.pack(side=tk.LEFT, padx=5)
 
-        self.next_btn = ttk.Button(nav_frame, text="Next >", command=self._on_next)
+        self.next_btn = widgets.primary_button(nav_frame, text="Next >", command=self._on_next)
         self.next_btn.pack(side=tk.LEFT, padx=5)
 
-        self.cancel_btn = ttk.Button(nav_frame, text="Cancel", command=self._on_cancel)
+        self.cancel_btn = widgets.create_button(nav_frame, text="Cancel", command=self._on_cancel)
         self.cancel_btn.pack(side=tk.RIGHT, padx=5)
 
         content_frame = ttk.Frame(main_frame)
@@ -90,6 +91,7 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
             self._create_step_test_compilation(content_frame),
             self._create_step_derived_settings(content_frame),
             self._create_step_execute_sh(content_frame),
+            self._create_step_validate_sh(content_frame),
         ]
 
     def _show_step(self, step_index: int) -> None:
@@ -105,9 +107,11 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
             "Test Compilation",
             "Derived Settings",
             "Execution Script",
+            "Validation Script",
         ]
-        self.title(f"Configuration Assistant - Step {step_index + 1} of 7: {step_titles[step_index]}")
-        self.step_label.config(text=f"Step {step_index + 1} of 7: {step_titles[step_index]}")
+        total_steps = len(step_titles)
+        self.title(f"Configuration Assistant - Step {step_index + 1} of {total_steps}: {step_titles[step_index]}")
+        self.step_label.config(text=f"Step {step_index + 1} of {total_steps}: {step_titles[step_index]}")
 
         self.back_btn.config(state=tk.NORMAL if step_index > 0 else tk.DISABLED)
         if step_index < len(self.step_frames) - 1:
@@ -149,6 +153,14 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
         elif self.step_index == 5:
             self._save_derived_settings()
             self._show_step(self.step_index + 1)
+        elif self.step_index == 6:
+            config_name = self.config_name_entry.get().strip()
+            if not config_name:
+                show_error(self, "Invalid Configuration Name", "Configuration name cannot be empty.")
+                return
+            self.step_data["config_name"] = config_name
+            self.step_data["execute_sh"] = self.execute_sh_text.get(1.0, tk.END)
+            self._show_step(self.step_index + 1)
         else:
             self._show_step(self.step_index + 1)
 
@@ -162,13 +174,7 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
             self.destroy()
 
     def _on_finish(self) -> None:
-        config_name = self.config_name_entry.get().strip()
-        if not config_name:
-            show_error(self, "Invalid Configuration Name", "Configuration name cannot be empty.")
-            return
-
-        self.step_data["config_name"] = config_name
-        self.step_data["execute_sh"] = self.execute_sh_text.get(1.0, tk.END)
+        self.step_data["validate_sh"] = self.validate_sh_text.get(1.0, tk.END)
 
         try:
             self._finish_wizard()
@@ -335,6 +341,18 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
         with open(execute_sh_path, "w") as f:
             f.write(execute_sh_content)
         subprocess.run(["chmod", "+x", execute_sh_path], check=True)
+
+        # validate.sh is optional: only create it if the user provided more than
+        # an empty script / bare shebang.
+        validate_sh_content: str = str(self.step_data["validate_sh"])
+        validate_sh_meaningful = "\n".join(
+            line for line in validate_sh_content.splitlines() if line.strip() and not line.strip().startswith("#!")
+        ).strip()
+        if validate_sh_meaningful:
+            validate_sh_path: str = os.path.join(config_path, "validate.sh")
+            with open(validate_sh_path, "w") as f:
+                f.write(validate_sh_content)
+            subprocess.run(["chmod", "+x", validate_sh_path], check=True)
 
         initialize_configuration_files(self.arguments)
 
