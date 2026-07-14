@@ -122,12 +122,16 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
                 continue
             successor_contexts: List[Context] = []
             queue = self.task_graph.get_successors(tg_node)
+            visited_tg_nodes: Set[TGNode] = set(queue)
             while len(queue) > 0:
                 current = queue.pop()
                 if current.created_context is not None:
                     successor_contexts.append(current.created_context)
                     continue
-                queue += [nd for nd in self.task_graph.get_successors(current) if nd not in queue]
+                for nd in self.task_graph.get_successors(current):
+                    if nd not in visited_tg_nodes:
+                        visited_tg_nodes.add(nd)
+                        queue.append(nd)
             for succ_ctx in successor_contexts:
                 self.add_edge(
                     tg_node.created_context,
@@ -305,7 +309,7 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
                     else:
                         # no further step upwards possible. Use the current solution
                         pass
-            component_replacements_dict[comp] = list(set(component_replacements))
+            component_replacements_dict[comp] = list(dict.fromkeys(component_replacements))
 
         # calculate inverse component dictionary
         inverse_component_dict: Dict[Context, Tuple[Context, ...]] = dict()
@@ -715,13 +719,13 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
     def get_predecessors(self, node: Optional[Context]) -> List[Context]:
         if node is None:
             return []
-        predecessors = list(set([s for s, t in self.graph.in_edges(node)]))
+        predecessors = list(dict.fromkeys(s for s, t in self.graph.in_edges(node)))
         return predecessors
 
     def get_successors(self, node: Optional[Context]) -> List[Context]:
         if node is None:
             return []
-        successors = list(set([t for s, t in self.graph.out_edges(node)]))
+        successors = list(dict.fromkeys(t for s, t in self.graph.out_edges(node)))
         return successors
 
     def plot(self, highlight_nodes: Optional[List[Context]] = None) -> None:

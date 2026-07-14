@@ -106,7 +106,7 @@ class GPURegionInfo(PatternInfo):
                     # found entry node
                     entry_cus.append(contained_cu_id)
         # remove duplicates
-        entry_cus = list(set(entry_cus))
+        entry_cus = list(dict.fromkeys(entry_cus))
         return entry_cus
 
     def get_exit_cus(self, pet: PEGraphX) -> Tuple[List[str], List[str]]:
@@ -123,8 +123,8 @@ class GPURegionInfo(PatternInfo):
                     contained_exit_cus.append(contained_cu_id)
                     outside_cus.append(successor_id)
         # remove duplicates
-        contained_exit_cus = list(set(contained_exit_cus))
-        outside_cus = list(set(outside_cus))
+        contained_exit_cus = list(dict.fromkeys(contained_exit_cus))
+        outside_cus = list(dict.fromkeys(outside_cus))
         return contained_exit_cus, outside_cus
 
 
@@ -298,17 +298,17 @@ class GPURegions:
                 map_to_vars: List[str] = []
                 for loop_pattern in region_loop_patterns:
                     map_to_vars += [v.name for v in loop_pattern.map_type_to + loop_pattern.map_type_tofrom]
-                map_to_vars = list(set(map_to_vars))
+                map_to_vars = list(dict.fromkeys(map_to_vars))
 
                 map_from_vars: List[str] = []
                 for loop_pattern in region_loop_patterns:
                     map_from_vars += [v.name for v in loop_pattern.map_type_from + loop_pattern.map_type_tofrom]
-                map_from_vars = list(set(map_from_vars))
+                map_from_vars = list(dict.fromkeys(map_from_vars))
 
                 map_alloc_vars: List[str] = []
                 for loop_pattern in region_loop_patterns:
                     map_alloc_vars += [v.name for v in loop_pattern.map_type_alloc]
-                map_alloc_vars = list(set(map_alloc_vars))
+                map_alloc_vars = list(dict.fromkeys(map_alloc_vars))
 
                 map_to_from_vars = [var for var in map_to_vars if var in map_from_vars]
 
@@ -316,7 +316,7 @@ class GPURegions:
                 map_alloc_vars += [
                     var for var in map_from_vars if var not in consumed_vars + map_to_vars + map_alloc_vars
                 ]
-                map_alloc_vars = list(set(map_alloc_vars))
+                map_alloc_vars = list(dict.fromkeys(map_alloc_vars))
 
                 # store results
                 self.map_type_from_by_region[tuple(region)] = [
@@ -486,7 +486,7 @@ class GPURegions:
                         for child in direct_children(pet, pet.node_at(func_node_id)):
                             device_cu_ids.append(child.id)
 
-                device_cu_ids = list(set(device_cu_ids))
+                device_cu_ids = list(dict.fromkeys(device_cu_ids))
                 current_info = GPURegionInfo(
                     self.pet,
                     contained_loop_patterns,

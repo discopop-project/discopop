@@ -1493,7 +1493,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             # find all loops in function, sort them by location, and assign loopstate_positions.
             function_nodes = self.get_descendants(entry_point)
             loops = [n for n in function_nodes if isinstance(n, TGStartLoopNode)]
-            loops_pet_nodes = list(set([n.get_pet_node(self.pet) for n in loops]))
+            loops_pet_nodes = list(dict.fromkeys([n.get_pet_node(self.pet) for n in loops]))
             cleaned_loops_pet_nodes = [lpn for lpn in loops_pet_nodes if lpn is not None]
             sorted_loops_pet_nodes = sorted(cleaned_loops_pet_nodes, key=lambda x: x.start_line)
             # assign loopstate_positions to PET node ids
@@ -1626,7 +1626,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     loop_vars.append((dep.var_name, dep.memory_region))
 
             # remove duplicates
-            loop_vars = list(set(loop_vars))
+            loop_vars = list(dict.fromkeys(loop_vars))
             # save loop variables
             loop_ctx.loop_variables = loop_vars
 
@@ -1826,51 +1826,206 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
                 self.print_graph_statistics(self.graph, "post inlining")
 
-    def __add_branching_nodes(self) -> None:
-        logger.info("Adding branching nodes...")
-        # select branch parent nodes
-        branch_parent_nodes = [n for n in self.graph.nodes if len(self.get_successors(n)) > 1]
-        # select merge nodes
-        merge_nodes = [n for n in self.graph.nodes if len(self.get_predecessors(n)) > 1]
-        # add StartBranchParent nodes
+    def __add_branching_nodes_for_function(self, function_node: TGNode) -> None:
+        """Wraps every branch point (a node with more than one successor) together with its
+        immediate post-dominator (the unique point where all of its arms are guaranteed to
+        reconverge) in Start/EndBranchParent + per-arm Start/EndBranch markers.
+
+        Using dominance/post-dominance instead of a purely local in/out-degree heuristic
+        guarantees the inserted regions are properly nested (single-entry/single-exit). This
+        matters because later context assignment relies on a simple stack-based enter/exit
+        walk, which only produces a single, consistent enclosing context per node if the
+        regions it walks are properly nested - a purely local degree-based heuristic can
+        instead wrap unrelated, non-nested merge points (e.g. a loop's own exit converging
+        with an internal break) into the same marker, which silently corrupts context
+        assignment depending on graph traversal order.
+        """
+        scope: Set[TGNode] = set(self.get_descendants(function_node))
+        scope.add(function_node)
+
+        def scoped_successors(node: TGNode) -> List[TGNode]:
+            return [s for s in self.get_successors(node) if s in scope]
+
+        # forward dominator tree
+        dom_graph = nx.MultiDiGraph()
+        dom_graph.add_nodes_from(scope)
+        for node in scope:
+            for succ in scoped_successors(node):
+                dom_graph.add_edge(node, succ)
+        idom = nx.immediate_dominators(dom_graph, function_node)
+
+        # immediate post-dominator tree: reverse the graph and merge all sinks into one
+        # virtual exit, so post-dominance reduces to ordinary dominance from that exit
+        sinks = [node for node in scope if len(scoped_successors(node)) == 0]
+        pdom_graph = dom_graph.reverse(copy=True)
+        virtual_exit = object()
+        pdom_graph.add_node(virtual_exit)
+        for sink in sinks:
+            pdom_graph.add_edge(virtual_exit, sink)
+        ipdom = nx.immediate_dominators(pdom_graph, virtual_exit)
+
+        region_owner: Dict[TGNode, TGNode] = {}
+
+        def dom_depth(node: TGNode) -> int:
+            depth = 0
+            current = node
+            while current in idom and idom[current] != current:
+                current = idom[current]
+                depth += 1
+            return depth
+
+        def dominates(ancestor: TGNode, node: TGNode) -> bool:
+            # resolve synthetic wrapper nodes to the branch point they were created for, so
+            # nesting composes correctly regardless of the order regions are processed in
+            current = node
+            while current in region_owner:
+                current = region_owner[current]
+            if current == ancestor:
+                return True
+            while current in idom and idom[current] != current:
+                current = idom[current]
+                if current == ancestor:
+                    return True
+            return False
+
+        # process innermost (deepest) branch points first, so that by the time an
+        # enclosing branch point is handled, anything it contains has already been wrapped
+        branch_points = [node for node in scope if len(scoped_successors(node)) > 1]
+        branch_points.sort(key=dom_depth, reverse=True)
+
+        for n in branch_points:
+            m = ipdom.get(n)
+            if m is None or m is virtual_exit:
+                # every arm of this branch reaches the function's end without reconverging
+                # first - there is no internal merge point to close here
+                continue
+
+            start_branch_parent_node = TGStartBranchParentNode(n.pet_node_id, level=n.level, position=n.position)
+            self.add_node(start_branch_parent_node)
+            region_owner[start_branch_parent_node] = n
+            for succ in list(self.get_successors(n)):
+                self.graph.remove_edge(n, succ)
+                self.add_edge(start_branch_parent_node, succ)
+            self.add_edge(n, start_branch_parent_node)
+
+            end_branch_parent_node = TGEndBranchParentNode(m.pet_node_id, level=m.level, position=m.position)
+            self.add_node(end_branch_parent_node)
+            region_owner[end_branch_parent_node] = n
+            for pred in list(self.get_predecessors(m)):
+                if dominates(n, pred):
+                    self.graph.remove_edge(pred, m)
+                    self.add_edge(pred, end_branch_parent_node)
+            self.add_edge(end_branch_parent_node, m)
+
+            for succ in list(self.get_successors(start_branch_parent_node)):
+                start_branch_node = TGStartBranchNode(
+                    start_branch_parent_node.pet_node_id,
+                    level=start_branch_parent_node.level,
+                    position=start_branch_parent_node.position,
+                )
+                self.add_node(start_branch_node)
+                region_owner[start_branch_node] = n
+                self.graph.remove_edge(start_branch_parent_node, succ)
+                self.add_edge(start_branch_parent_node, start_branch_node)
+                self.add_edge(start_branch_node, succ)
+
+            for pred in list(self.get_predecessors(end_branch_parent_node)):
+                end_branch_node = TGEndBranchNode(
+                    end_branch_parent_node.pet_node_id,
+                    level=end_branch_parent_node.level,
+                    position=end_branch_parent_node.position,
+                )
+                self.add_node(end_branch_node)
+                region_owner[end_branch_node] = n
+                self.graph.remove_edge(pred, end_branch_parent_node)
+                self.add_edge(pred, end_branch_node)
+                self.add_edge(end_branch_node, end_branch_parent_node)
+
+    def __add_branching_nodes_fallback_cleanup(self) -> None:
+        """Safety net for cases the dominance-based pass above cannot resolve on its own -
+        chiefly, two independent (non-nested) branch points that happen to share the same
+        merge point. That pass only lets a branch point claim predecessors of its merge that
+        it actually dominates, so such siblings each keep their own EndBranchParent feeding
+        directly into the shared merge node, and a function where dominance computation
+        itself failed (see the try/except in __add_branching_nodes) is left entirely
+        unwrapped. Wrap any residual multi-successor/multi-predecessor node the same way
+        __add_branching_nodes used to unconditionally, so the graph-structure invariant
+        checked right after this call always holds.
+        """
+        remaining_branch_parent_nodes = [
+            n
+            for n in self.graph.nodes
+            if len(self.get_successors(n)) > 1 and not isinstance(n, TGStartBranchParentNode)
+        ]
+        remaining_merge_nodes = [
+            n
+            for n in self.graph.nodes
+            if len(self.get_predecessors(n)) > 1 and not isinstance(n, TGEndBranchParentNode)
+        ]
+        if len(remaining_branch_parent_nodes) == 0 and len(remaining_merge_nodes) == 0:
+            return
+        logger.warning(
+            "Dominance-based branching node insertion left "
+            + str(len(remaining_branch_parent_nodes))
+            + " unwrapped branch point(s) and "
+            + str(len(remaining_merge_nodes))
+            + " unwrapped merge point(s) (independent/non-nested control flow, or a function "
+            + "dominance computation failed on). Falling back to unconditional wrapping for "
+            + "these; results in this region may retain some run-to-run ordering variance."
+        )
+
         start_branch_parent_nodes: List[TGNode] = []
-        for bpn in branch_parent_nodes:
+        for bpn in remaining_branch_parent_nodes:
             start_branch_parent_node = TGStartBranchParentNode(bpn.pet_node_id, level=bpn.level, position=bpn.position)
             start_branch_parent_nodes.append(start_branch_parent_node)
             self.add_node(start_branch_parent_node)
-            for succ in self.get_successors(bpn):
+            for succ in list(self.get_successors(bpn)):
                 self.graph.remove_edge(bpn, succ)
                 self.add_edge(start_branch_parent_node, succ)
             self.add_edge(bpn, start_branch_parent_node)
 
-        # add EndBranchParent nodes
         end_branch_parent_nodes: List[TGNode] = []
-        for mn in merge_nodes:
+        for mn in remaining_merge_nodes:
             end_branch_parent_node = TGEndBranchParentNode(mn.pet_node_id, level=mn.level, position=mn.position)
             end_branch_parent_nodes.append(end_branch_parent_node)
             self.add_node(end_branch_parent_node)
-            for pred in self.get_predecessors(mn):
+            for pred in list(self.get_predecessors(mn)):
                 self.graph.remove_edge(pred, mn)
                 self.add_edge(pred, end_branch_parent_node)
             self.add_edge(end_branch_parent_node, mn)
 
-        # add StartBranch nodes
         for sbpn in start_branch_parent_nodes:
-            for succ in self.get_successors(sbpn):
+            for succ in list(self.get_successors(sbpn)):
                 start_branch_node = TGStartBranchNode(sbpn.pet_node_id, level=sbpn.level, position=sbpn.position)
                 self.add_node(start_branch_node)
                 self.graph.remove_edge(sbpn, succ)
                 self.add_edge(sbpn, start_branch_node)
                 self.add_edge(start_branch_node, succ)
 
-        # add EndBranch nodes
         for ebpn in end_branch_parent_nodes:
-            for pred in self.get_predecessors(ebpn):
+            for pred in list(self.get_predecessors(ebpn)):
                 end_branch_node = TGEndBranchNode(ebpn.pet_node_id, level=ebpn.level, position=ebpn.position)
                 self.add_node(end_branch_node)
                 self.graph.remove_edge(pred, ebpn)
                 self.add_edge(pred, end_branch_node)
                 self.add_edge(end_branch_node, ebpn)
+
+    def __add_branching_nodes(self) -> None:
+        logger.info("Adding branching nodes...")
+        for function_node in tqdm(
+            list(self.TGFunctionNode_pet_node_id_to_tg_node.values()), desc="Adding branching nodes per function"
+        ):
+            try:
+                self.__add_branching_nodes_for_function(function_node)
+            except nx.NetworkXError as e:
+                logger.warning(
+                    "Dominance-based branching node insertion failed for function "
+                    + function_node.get_label()
+                    + " ("
+                    + str(e)
+                    + "). Falling back to unconditional wrapping for its remaining branch/merge points."
+                )
+        self.__add_branching_nodes_fallback_cleanup()
 
         logger.info("--> validating amounts of node successors and predecessors...")
         for node in tqdm(self.graph.nodes):
@@ -2445,10 +2600,38 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         #        for state_id in state_mappings_dict:
         #            print("->", state_id, " -> ", state_mappings_dict[state_id])
 
-        def recursive_assignment(state_id: int, callstate: Tuple[str, ...], ctx: Context) -> bool:
+        def recursive_assignment(
+            state_id: int,
+            callstate: Tuple[str, ...],
+            ctx: Context,
+            memo: Dict[Tuple[int, Tuple[str, ...]], bool],
+        ) -> bool:
             """assigns state_id to the matching states.
             Returns True, if state_id was assigned to at least one Context.
-            Returns False otherwise."""
+            Returns False otherwise.
+
+            Results are memoized per state_id search on (context identity, incoming callstate).
+            The function is deterministic in that pair, and its only side effect (appending
+            state_id to matching contexts) is fully determined by it, so revisiting a cached pair
+            would merely re-append the identical state_id to the identical contexts. Memoization
+            therefore preserves the exact set of (context -> state_id) assignments while collapsing
+            the otherwise exponential re-traversal of shared subtrees (contexts are reachable both
+            directly via a parent's contained_contexts and via successor chains)."""
+            # memoize on the INCOMING callstate (before any in-function rewriting below), keyed by
+            # context identity. Different callstates reaching the same context are distinct keys.
+            memo_key = (id(ctx), callstate)
+            if memo_key in memo:
+                return memo[memo_key]
+            result = compute_assignment(state_id, callstate, ctx, memo)
+            memo[memo_key] = result
+            return result
+
+        def compute_assignment(
+            state_id: int,
+            callstate: Tuple[str, ...],
+            ctx: Context,
+            memo: Dict[Tuple[int, Tuple[str, ...]], bool],
+        ) -> bool:
             if len(callstate) == 0:
                 return False
 
@@ -2481,7 +2664,13 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     loopstate_position = parent_loop_ctx.loopstate_position
                     if loopstate_position is None:
                         raise ValueError("loopstate position is None")
-                    if int(loopstate_info[loopstate_position]) in ctx.loopstate_iteration_ids:
+                    #                    logger.debug("loopstate_info: " + loopstate_info)
+                    #                    logger.debug("loopstate_position: " + str(loopstate_position))
+
+                    if (
+                        loopstate_position + 1 <= len(loopstate_info)
+                        and int(loopstate_info[loopstate_position]) in ctx.loopstate_iteration_ids
+                    ):
                         # HIT LOOPSTATE
                         # replace iteration id with processed marker "4"
                         new_head = (
@@ -2538,16 +2727,18 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             # continue assignment with children
             ret_val = False
             for child in ctx.get_contained_contexts():
-                ret_val = ret_val or recursive_assignment(state_id, callstate, child)
+                ret_val = ret_val or recursive_assignment(state_id, callstate, child, memo)
             # continue assignment with successors
 
             if ctx.successor is not None:
 
-                ret_val = ret_val or recursive_assignment(state_id, callstate, ctx.successor)
+                ret_val = ret_val or recursive_assignment(state_id, callstate, ctx.successor, memo)
             return ret_val
 
         # assign state id to task_graph nodes
         logger.info("Assigning state ids to nodes...")
+        # entry points are independent of the processed state; compute them once.
+        entry_points: List[Context] = [c for c in self.contexts if isinstance(c, FunctionContext)]
         for state_id in tqdm(state_mappings_dict):
             #            print()
             #            print("Parsing state_id: ", state_id)
@@ -2561,8 +2752,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             ):
                 #                print("skipping due to call at the end.")
                 continue
-            # cleanup callstate
-            callstate = copy.deepcopy(smd_entry)
+            # cleanup callstate (shallow copy suffices: entries are immutable strings)
+            callstate = list(smd_entry)
             #            # cleanup callstate (remove call_<int> markers)
             #            to_be_removed: List[int] = []
             #            for idx in range(0, len(callstate)):
@@ -2588,12 +2779,14 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     del callstate[tbr]
 
             #            print("Clean CallState: ", callstate)
-            entry_points: List[Context] = [c for c in self.contexts if isinstance(c, FunctionContext)]
             callstate_tuple: Tuple[str, ...] = tuple(callstate)
+            # memoize (context, incoming callstate) -> result within this state's search only.
+            # See recursive_assignment for why this preserves the assignment side effects.
+            memo: Dict[Tuple[int, Tuple[str, ...]], bool] = {}
             could_be_assigned: bool = False
             for entry_point in entry_points:
                 could_be_assigned = could_be_assigned or recursive_assignment(
-                    int(state_id), callstate_tuple, entry_point
+                    int(state_id), callstate_tuple, entry_point, memo
                 )
 
     #            if not could_be_assigned:
@@ -2826,9 +3019,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs.
         state_mappings_dict is a mapping from stateIDs to callpaths."""
 
-        cache_key = (location, state_id)
-        if cache_key in lookup_cache:
-            return lookup_cache[cache_key]
+        #        cache_key = (location, state_id)
+        #        if cache_key in lookup_cache:
+        #            return lookup_cache[cache_key]
 
         contexts: Set[Context] = set()
         # check if location is an instructionID. If so, convert it to a lineID using the mappings_dict.
@@ -2849,27 +3042,16 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 contexts = set(location_to_work_contexts[location_lineid])
 
         # filter contexts for state_id compatibility
+        # `contexts` already holds exactly the WorkContexts whose code scope contains `location`
+        # (via the location_to_work_contexts spatial index), so only those need to be checked here.
         if state_id != "NO_STATE":
-            filtered_contexts: Set[Context] = set()
-            for ctx in self.contexts:
-                if type(ctx) != WorkContext:
-                    continue
-                if location in ctx.get_code_scope(pet):
-                    #                    if state_id == "28" or state_id == "29" or state_id == "30":
-                    #                        print("HERE: state_id: ", state_id, " CTX state ids: ", ctx.get_state_ids())
-                    if int(state_id) in ctx.get_state_ids():
-                        #                        if state_id == "28" or state_id == "29" or state_id == "30":
-                        #                            print("HERE: MATCH")
-                        filtered_contexts.add(ctx)
+            target_state_id = int(state_id)
+            filtered_contexts = {ctx for ctx in contexts if target_state_id in ctx.get_state_ids()}
 
-            #            if state_id == "28" or state_id == "29" or state_id == "30":
-            #                print("STATE ID: ", state_id)
-            #                print("CTXS: ", filtered_contexts)
-
-            lookup_cache[cache_key] = filtered_contexts
+            #            lookup_cache[cache_key] = filtered_contexts
             return filtered_contexts
 
-        lookup_cache[cache_key] = contexts
+        #        lookup_cache[cache_key] = contexts
         return contexts
 
     def __insert_data_dependencies_from_files(
@@ -3408,7 +3590,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def get_successors(self, node: Optional[TGNode]) -> List[TGNode]:
         if node is None:
             return []
-        successors = list(set([t for s, t in self.graph.out_edges(node)]))
+        successors = list(dict.fromkeys(t for s, t in self.graph.out_edges(node)))
         ## DEBUG
         #        if node.get_label() == "3:34" and len(successors) > 1:
         #            print("SUCCESSORS: ", str([c.get_label() for c in successors]))
@@ -3421,7 +3603,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def get_predecessors(self, node: Optional[TGNode]) -> List[TGNode]:
         if node is None:
             return []
-        predecessors = list(set([s for s, t in self.graph.in_edges(node)]))
+        predecessors = list(dict.fromkeys(s for s, t in self.graph.in_edges(node)))
         return predecessors
 
     def get_closest_predecessors_with_matching_pet_node_id(

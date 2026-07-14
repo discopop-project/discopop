@@ -411,11 +411,11 @@ def identify_dependencies_for_different_functions(
         if ts in out_dep_updates:
             for out_dep_var in out_dep_updates[ts]:
                 ts.out_dep.append(out_dep_var)
-            ts.out_dep = list(set(ts.out_dep))
+            ts.out_dep = list(dict.fromkeys(ts.out_dep))
         if ts in in_dep_updates:
             for in_dep_var in in_dep_updates[ts]:
                 ts.in_dep.append(in_dep_var)
-            ts.in_dep = list(set(ts.in_dep))
+            ts.in_dep = list(dict.fromkeys(ts.in_dep))
         result_suggestions.append(ts)
 
     return result_suggestions
@@ -495,7 +495,7 @@ def __get_recursive_calls_from_function(potential_children: List[Node], parent_f
         for e in child.recursive_function_calls:
             if e is not None:
                 recursive_function_calls.append(e)
-    recursive_function_calls = list(set(recursive_function_calls))
+    recursive_function_calls = list(dict.fromkeys(recursive_function_calls))
     return recursive_function_calls
 
 
@@ -637,7 +637,7 @@ def identify_dependencies_for_same_functions(
                                     int(param_entry_1[0])
                                 except ValueError:
                                     intersection.append(param_entry_1)
-                    intersection = list(set(intersection))
+                    intersection = list(dict.fromkeys(intersection))
                     # 6.2 get task suggestion corresponding to scf
                     for ts_2 in task_suggestions:
                         if ts_2 == ts_1:
@@ -684,7 +684,7 @@ def __perform_dependency_updates(
                         out_dep_var,
                     )
                 ts.out_dep.append(out_dep_var)
-            ts.out_dep = list(set(ts.out_dep))
+            ts.out_dep = list(dict.fromkeys(ts.out_dep))
         if ts in in_dep_updates:
             for in_dep_var, is_pessimistic in in_dep_updates[ts]:
                 if in_dep_var not in ts.in_dep and is_pessimistic:
@@ -695,7 +695,7 @@ def __perform_dependency_updates(
                         in_dep_var,
                     )
                 ts.in_dep.append(in_dep_var)
-            ts.in_dep = list(set(ts.in_dep))
+            ts.in_dep = list(dict.fromkeys(ts.in_dep))
         result_suggestions.append(ts)
     return result_suggestions
 
@@ -727,7 +727,7 @@ def get_alias_for_parameter_at_position(
     for cu in [pet.node_at(cuid) for cuid in [e[1] for e in out_edges(pet, function.id)]]:
         # iterate over children of CU and retrieve called functions
         called_functions = get_called_functions_recursively(pet, cu, [], called_function_cache)
-        called_functions = list(set(called_functions))
+        called_functions = list(dict.fromkeys(called_functions))
         # iterate over called functions
         for called_function in called_functions:
             # read line from source code (iterate over lines of CU to search for function call)
@@ -791,7 +791,7 @@ def check_dependence_of_task_pair(
             alias_entries_2 = []
             for alias_entry_2 in aliases[task_suggestion_2]:
                 alias_entries_2 += alias_entry_2
-            intersection = list(set([ae for ae in alias_entry if ae in alias_entries_2]))
+            intersection = list(dict.fromkeys([ae for ae in alias_entry if ae in alias_entries_2]))
             # get sink lines
             # (start and end line of task_sug_1's parent func)
             sink_lines_start = alias_entry[0][2].split(":")
@@ -818,7 +818,7 @@ def check_dependence_of_task_pair(
                         if raw_dep_entry[1] == intersecting_variable:
                             if raw_dep_entry[0] in sink_lines:
                                 dependencies.append(parameter)
-    dependencies = list(set(dependencies))
+    dependencies = list(dict.fromkeys(dependencies))
     # check if task suggestion_1 occurs prior to task_suggestion_2
     if task_suggestion_1._node.start_position().split(":")[0] == task_suggestion_2._node.start_position().split(":")[0]:
         # same file id
