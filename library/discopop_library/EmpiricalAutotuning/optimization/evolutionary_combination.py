@@ -21,6 +21,7 @@ from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeC
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_debug_stats
+from discopop_library.EmpiricalAutotuning.output.progress import get_active_reporter
 from discopop_library.HostpotLoader.utilities import get_patterns_by_hotspot_type
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -191,7 +192,7 @@ def perform_evolutionary_search(
 
     population, unused_maybes = __initialize(logger, population_size, patterns_by_hotspot_type)
     __calculate_fitness(
-        logger, population, reference_configuration, arguments, timeout_after, get_unique_configuration_id
+        logger, population, reference_configuration, arguments, timeout_after, get_unique_configuration_id, 0
     )
     selection_size = min(population_size, max(1, int(len(population) * 0.85)))
 
@@ -204,6 +205,9 @@ def perform_evolutionary_search(
     time_series_avg: List[float] = [get_average_fitness(population)]
     time_series_convergence_threshold: List[float] = [time_series_max[-1] * current_convergence_factor]
     plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
+    __emit_generation(
+        generation_counter, time_series_max[-1], time_series_avg[-1], time_series_convergence_threshold[-1]
+    )
 
     try:
         while not converged:
@@ -214,7 +218,13 @@ def perform_evolutionary_search(
             population = __mutate(logger, population, max(1, int(selection_size * mutations_factor)))
             generation_counter += 1
             __calculate_fitness(
-                logger, population, reference_configuration, arguments, timeout_after, get_unique_configuration_id
+                logger,
+                population,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                get_unique_configuration_id,
+                generation_counter,
             )
             population = __select(logger, population, selection_size)
             # update time series
@@ -256,6 +266,9 @@ def perform_evolutionary_search(
             # update and plot time series
             time_series_convergence_threshold.append(time_series_max[-1] * current_convergence_factor)
             plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
+            __emit_generation(
+                generation_counter, time_series_max[-1], time_series_avg[-1], time_series_convergence_threshold[-1]
+            )
 
             # check convergence
             if (
@@ -275,6 +288,9 @@ def perform_evolutionary_search(
         time_series_avg.append(get_average_fitness(population))
         time_series_convergence_threshold.append(time_series_max[-1] * current_convergence_factor)
         plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
+        __emit_generation(
+            generation_counter, time_series_max[-1], time_series_avg[-1], time_series_convergence_threshold[-1]
+        )
 
     population = __select(logger, population, selection_size)
     logger.info("Final population:\n" + __population_to_string(population))
@@ -286,6 +302,13 @@ def perform_evolutionary_search(
     print("--> Best combination: ", best_combination)
 
     return best_combination
+
+
+def __emit_generation(generation: int, max_fitness: float, avg_fitness: float, threshold: float) -> None:
+    """Emit a structured 'generation' progress event for the live GUI plot."""
+    reporter = get_active_reporter()
+    if reporter is not None:
+        reporter.generation(generation, max_fitness, avg_fitness, threshold, len(fitness_cache))
 
 
 def plot_time_series(
@@ -456,6 +479,7 @@ def __calculate_fitness(
     arguments: AutotunerArguments,
     timeout_after: float,
     get_unique_configuration_id: Callable[[], int],
+    generation: int,
 ) -> None:
     global fitness_cache
     global runtime_cache
@@ -487,15 +511,24 @@ def __calculate_fitness(
             arguments, timeout=timeout_after, thread_count=arguments.thread_count
         )
 
-        return_code_cache[entry] = cast(ExecutionResult, entry_to_configuration[entry].execution_result).return_code
-        if (
-            cast(ExecutionResult, entry_to_configuration[entry].execution_result).return_code != 0
-            or not cast(ExecutionResult, entry_to_configuration[entry].execution_result).result_valid
-            or not cast(ExecutionResult, entry_to_configuration[entry].execution_result).thread_sanitizer
-        ):
+        exec_res = cast(ExecutionResult, entry_to_configuration[entry].execution_result)
+        return_code_cache[entry] = exec_res.return_code
+        if exec_res.return_code != 0 or not exec_res.result_valid or not exec_res.thread_sanitizer:
             fitness_cache[entry] = 0.0
-        runtime = cast(ExecutionResult, entry_to_configuration[entry].execution_result).runtime
+        runtime = exec_res.runtime
         runtime_cache[entry] = runtime
+
+        # report this individual as a measurement for the live search plot
+        reporter = get_active_reporter()
+        if reporter is not None:
+            reporter.measurement(
+                list(entry),
+                exec_res.runtime,
+                exec_res.return_code,
+                exec_res.result_valid,
+                exec_res.thread_sanitizer,
+                generation=generation,
+            )
 
         if not arguments.skip_cleanup:
             entry_to_configuration[entry].deleteFolder()

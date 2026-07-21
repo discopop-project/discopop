@@ -37,6 +37,7 @@ class ProjectManagerArguments(GeneralArguments):
     label_prefix: str
     timeout_execution: Optional[float]
     timeout_compilation: Optional[float]
+    timeout_validation: Optional[float]
     # derived values
     dot_dp: str = ""
     project_dir: str = ""

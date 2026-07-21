@@ -37,8 +37,14 @@ from discopop_library.EmpiricalAutotuning.optimization.parallel_region_combinati
     execute_parallel_region_combination_with_refinement,
 )
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
+from discopop_library.EmpiricalAutotuning.output.progress import (
+    ProgressList,
+    ProgressReporter,
+    count_outcomes,
+    set_active_reporter,
+)
 from discopop_library.EmpiricalAutotuning.priorities import get_prioritized_configurations
-from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
+from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids, restrict_patterns_to_ids
 from discopop_library.FolderStructure.setup import setup_auto_tuner
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
@@ -61,16 +67,28 @@ def get_unique_configuration_id() -> int:
 
 def run(arguments: AutotunerArguments) -> None:
     logger.info("Starting discopop autotuner.")
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]] = []
+    # ``ProgressList`` emits a structured "measurement" progress event on every
+    # append, so all step-based algorithms report progress without any change.
+    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]] = ProgressList()
     statistics_graph = StatisticsGraph()
     statistics_step_num = 0
 
     setup_auto_tuner(os.getcwd())
     auto_tuner_dir = os.path.join(os.getcwd(), "auto_tuner")
 
+    # structured progress channel (stdout @@AT_PROGRESS lines + progress.jsonl)
+    progress_reporter = ProgressReporter(arguments.configuration, os.path.join(auto_tuner_dir, "progress.jsonl"))
+    set_active_reporter(progress_reporter)
+
     # get untuned reference result
     reference_configuration = CodeConfiguration(arguments.project_path, arguments.dot_dp_path, "par_settings.json")
     reference_configuration.execute(arguments, timeout=None, thread_count=arguments.thread_count, is_initial=True)
+    reference_result = cast(ExecutionResult, reference_configuration.execution_result)
+    progress_reporter.baseline(
+        reference_result.runtime,
+        reference_result.return_code == 0 and reference_result.result_valid and reference_result.thread_sanitizer,
+        arguments.thread_count,
+    )
     statistics_graph.set_root(
         reference_configuration.get_statistics_graph_label(),
         color=reference_configuration.get_statistics_graph_color(),
@@ -118,6 +136,10 @@ def run(arguments: AutotunerArguments) -> None:
 
     optimization_start_time = time.time()
     if arguments.suggestions is None:
+        if arguments.search_space is not None:
+            allowed_ids = {int(s) for s in arguments.search_space.split(",") if s.strip()}
+            kept = restrict_patterns_to_ids(detection_result, allowed_ids)
+            logger.info("Restricted optimization search space to suggestion ids: " + str(kept))
         if arguments.algorithm == 1:
             execute_linear_hotspot_combination(
                 detection_result,
@@ -299,3 +321,35 @@ def run(arguments: AutotunerArguments) -> None:
 
     # output statistics graph
     statistics_graph.output()
+
+    # emit the final result and persist the full measurement trace so the GUI can
+    # (re-)draw the search without re-running the autotuner.
+    valid_count, invalid_count, failed_count = count_outcomes(debug_stats)
+    progress_reporter.result(
+        best_suggestion_configuration[0],
+        speedup,
+        parallel_efficiency,
+        cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime,
+        valid_count,
+        invalid_count,
+        failed_count,
+        optimization_time_s,
+    )
+    measurements_path = os.path.join(auto_tuner_dir, "measurements.json")
+    with open(measurements_path, "w+") as f:
+        json.dump(
+            [
+                {
+                    "suggestions": [int(s) for s in entry[0]],
+                    "runtime": entry[1],
+                    "return_code": entry[2],
+                    "result_valid": entry[3],
+                    "thread_sanitizer": entry[4],
+                }
+                for entry in debug_stats
+            ],
+            f,
+            indent=4,
+        )
+    progress_reporter.close()
+    set_active_reporter(None)

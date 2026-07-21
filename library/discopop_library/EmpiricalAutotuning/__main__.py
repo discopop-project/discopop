@@ -27,6 +27,7 @@ def parse_args() -> AutotunerArguments:
     parser.add_argument("--dot-dp-path", type=str, default=os.getcwd(), help="Path to the .discopop folder. Default: $(cwd)")
     parser.add_argument("-c", "--config", default="tiny", help="Configurations to be used for the autotuning. Default: tiny")
     parser.add_argument("-s", "--suggestions", help="If specified, the comma separated list of suggestions will be applied and compared to the baseline.")
+    parser.add_argument("--search-space", dest="search_space", default=None, help="If specified, restrict the optimization algorithm's search space to this comma separated list of suggestion ids (and ranges are NOT expanded here; pass explicit ids). Ignored when -s/--suggestions is given.")
     parser.add_argument("-t", "--threads", type=int, default=non_null_default_core_count, help="Value of OMP_NUM_THREADS used during execution. Default: os.cpu_count()/2 = " + str(non_null_default_core_count))
     parser.add_argument("-ht", "--hotspot-types", type=str, default="yes,no,maybe", help="Hotspot types to be considered. If no hotspot information exists, all suggestions will be classified as 'yes'. Options: yes,no,maybe. Default: yes,no,maybe")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
@@ -53,6 +54,7 @@ def parse_args() -> AutotunerArguments:
         skip_cleanup=arguments.skip_cleanup,
         sanitize=arguments.sanitize,
         suggestions=arguments.suggestions,
+        search_space=arguments.search_space,
         allow_plots=arguments.plot,
         thread_count=arguments.threads,
         hotspot_types=arguments.hotspot_types,

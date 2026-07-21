@@ -19,8 +19,10 @@ from discopop_library.ProjectManager.configurations.compile_script import resolv
 from discopop_library.ProjectManager.configurations.copying import copy_configuration
 from discopop_library.ProjectManager.configurations.deletion import delete_configuration
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
+from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import show_warning
+from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
 from typing import Optional
 from tkinter import ttk
 
@@ -28,7 +30,7 @@ from tkinter import ttk
 class ExecutionMixin(ConfigManagerMixinBase):
     _execution_stop_event: threading.Event = threading.Event()
     _execution_process: Optional["subprocess.Popen[bytes]"] = None
-    stop_execution_button: Optional[ttk.Button] = None
+    stop_execution_button: Optional[RoundedButton] = None
 
     def _register_execution_process(self, p: "subprocess.Popen[bytes]") -> None:
         self._execution_process = p
@@ -38,34 +40,55 @@ class ExecutionMixin(ConfigManagerMixinBase):
         try:
             thread_count = self.thread_var.get()
             if thread_count < 1:
-                self._set_status("Error: Thread count must be >= 1", fg="red", reset_delay=3000)
+                self._set_status("Error: Thread count must be >= 1", fg=widgets.STATUS_FAIL, reset_delay=3000)
                 return False
             if thread_count > cpu_count:
                 self._set_status(
                     f"Warning: Thread count ({thread_count}) exceeds CPU count ({cpu_count})",
-                    fg="orange",
+                    fg=widgets.STATUS_STOP,
                     reset_delay=3000,
                 )
         except (ValueError, tk.TclError):
-            self._set_status("Error: Thread count must be a valid integer", fg="red", reset_delay=3000)
+            self._set_status("Error: Thread count must be a valid integer", fg=widgets.STATUS_FAIL, reset_delay=3000)
             return False
 
         try:
             timeout_exec = self.timeout_execution_var.get()
             if timeout_exec < 0:
-                self._set_status("Error: Execution timeout cannot be negative", fg="red", reset_delay=3000)
+                self._set_status(
+                    "Error: Execution timeout cannot be negative", fg=widgets.STATUS_FAIL, reset_delay=3000
+                )
                 return False
         except (ValueError, tk.TclError):
-            self._set_status("Error: Execution timeout must be a valid integer", fg="red", reset_delay=3000)
+            self._set_status(
+                "Error: Execution timeout must be a valid integer", fg=widgets.STATUS_FAIL, reset_delay=3000
+            )
             return False
 
         try:
             timeout_comp = self.timeout_compilation_var.get()
             if timeout_comp < 0:
-                self._set_status("Error: Compilation timeout cannot be negative", fg="red", reset_delay=3000)
+                self._set_status(
+                    "Error: Compilation timeout cannot be negative", fg=widgets.STATUS_FAIL, reset_delay=3000
+                )
                 return False
         except (ValueError, tk.TclError):
-            self._set_status("Error: Compilation timeout must be a valid integer", fg="red", reset_delay=3000)
+            self._set_status(
+                "Error: Compilation timeout must be a valid integer", fg=widgets.STATUS_FAIL, reset_delay=3000
+            )
+            return False
+
+        try:
+            timeout_val = self.timeout_validation_var.get()
+            if timeout_val < 0:
+                self._set_status(
+                    "Error: Validation timeout cannot be negative", fg=widgets.STATUS_FAIL, reset_delay=3000
+                )
+                return False
+        except (ValueError, tk.TclError):
+            self._set_status(
+                "Error: Validation timeout must be a valid integer", fg=widgets.STATUS_FAIL, reset_delay=3000
+            )
             return False
 
         return True
@@ -101,7 +124,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
 
-        self.status_label.config(text="⏳ Execution in progress...", foreground="#FF6B6B")
+        self.status_label.config(text="⏳ Execution in progress...", foreground=widgets.STATUS_BUSY)
 
         self.output_text.config(state=tk.NORMAL)
         self.output_text.delete("1.0", tk.END)
@@ -119,6 +142,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
         label_prefix = self.label_prefix_var.get()
         timeout_execution = self.timeout_execution_var.get()
         timeout_compilation = self.timeout_compilation_var.get()
+        timeout_validation = self.timeout_validation_var.get()
         log_level = self.log_level_var.get()
         suggestions_mode = self.suggestions_mode_var.get()
         assert self.current_config is not None
@@ -130,18 +154,14 @@ class ExecutionMixin(ConfigManagerMixinBase):
         args_copy.label_prefix = label_prefix
         args_copy.timeout_execution = timeout_execution
         args_copy.timeout_compilation = timeout_compilation
+        args_copy.timeout_validation = timeout_validation
         args_copy.log_level = log_level
 
         combined_ids: list[str] = []
 
         if suggestions_mode == "manual":
-            selection_path = os.path.join(args_copy.dot_dp, "project", "manager", "selected_suggestions.json")
-            try:
-                with open(selection_path, "r") as f:
-                    selection_data = json.load(f)
-                combined_ids += [sid for sid, patches in selection_data.get("selected", {}).items() if patches]
-            except (json.JSONDecodeError, IOError):
-                pass
+            if hasattr(self, "execute_suggestion_selector"):
+                combined_ids += self.execute_suggestion_selector.get_selected_ids()
 
         if suggestions_mode == "autotuner":
             results_path = os.path.join(args_copy.dot_dp, "auto_tuner", "results.json")
@@ -215,7 +235,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                         self.after(0, lambda e_msg=str(e): append_output(f"Error copying project: {e_msg}\n"))  # type: ignore
                         continue
 
-                self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground="#FF6B6B"))  # type: ignore
+                self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground=widgets.STATUS_BUSY))  # type: ignore
                 self.after(0, lambda: append_output("Compiling...\n"))  # type: ignore
                 compile_result = execute_configuration(
                     args_copy,
@@ -250,7 +270,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     self.after(0, lambda: append_output("Execution stopped by user.\n"))  # type: ignore
                     break
 
-                self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground="#FF6B6B"))  # type: ignore
+                self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground=widgets.STATUS_BUSY))  # type: ignore
                 self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
                 execute_result = execute_configuration(
                     args_copy,
@@ -275,6 +295,38 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     if stderr:
                         self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
 
+                    # optional output validation (auto-run when validate.sh exists),
+                    # applied only to the "real" runs (seq/par) — matching the CLI.
+                    validate_sh_path = os.path.join(config_path, "validate.sh")
+                    if mode in ("seq", "par") and os.path.exists(validate_sh_path):
+                        if self._execution_stop_event.is_set():
+                            self.after(0, lambda: append_output("Execution stopped by user.\n"))  # type: ignore
+                        else:
+                            self.after(0, lambda: self.status_label.config(text="⏳ Validating...", foreground=widgets.STATUS_BUSY))  # type: ignore
+                            self.after(0, lambda: append_output("Validating output...\n"))  # type: ignore
+                            validate_result = execute_configuration(
+                                args_copy,
+                                project_copy_path,
+                                config_path,
+                                settings_path,
+                                validate_sh_path,
+                                1 if mode == "seq" else thread_count,
+                                args_copy.timeout_validation,
+                                process_started_callback=self._register_execution_process,
+                            )
+                            self._execution_process = None
+
+                            if validate_result is None or validate_result[0] != 0:
+                                v_rc = validate_result[0] if validate_result else "None"
+                                self.after(0, lambda rc=v_rc: append_output(f"Validation FAILED (return code: {rc})\n"))  # type: ignore
+                            else:
+                                _, v_elapsed, v_stdout, v_stderr = validate_result
+                                self.after(0, lambda e=v_elapsed: append_output(f"Validation succeeded ({e:.2f}s)\n"))  # type: ignore
+                                if v_stdout:
+                                    self.after(0, lambda o=v_stdout: append_output(f"stdout: {o}\n"))  # type: ignore
+                                if v_stderr:
+                                    self.after(0, lambda e=v_stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+
                 if not inplace and not skip_cleanup:
                     try:
                         delete_configuration(args_copy, project_copy_path)
@@ -286,7 +338,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.inplace_var.set(False))  # type: ignore
-            self.after(0, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+            self.after(0, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
             self.after(0, lambda: self._refresh_config_list())  # type: ignore
             self.after(0, lambda: self._update_report_display())  # type: ignore
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
@@ -307,7 +359,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
 
-        self.status_label.config(text="⏳ Preparing pattern detection...", foreground="#FF6B6B")
+        self.status_label.config(text="⏳ Preparing pattern detection...", foreground=widgets.STATUS_BUSY)
 
         self.output_text.config(state=tk.NORMAL)
         self.output_text.delete("1.0", tk.END)
@@ -325,6 +377,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
         args_copy.label_prefix = ""
         args_copy.timeout_execution = self.timeout_execution_var.get()
         args_copy.timeout_compilation = self.timeout_compilation_var.get()
+        args_copy.timeout_validation = self.timeout_validation_var.get()
         args_copy.log_level = "INFO"
         args_copy.apply_suggestions = None
 
@@ -357,7 +410,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             compile_sh = resolve_compile_script_path(self.arguments.project_config_dir, current_config)
             shared_dp_settings = os.path.join(self.arguments.project_config_dir, "dp_settings.json")
 
-            self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground="#FF6B6B"))  # type: ignore
+            self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground=widgets.STATUS_BUSY))  # type: ignore
             self.after(0, lambda: append_output("Compiling...\n"))  # type: ignore
 
             compile_result = execute_configuration(
@@ -375,7 +428,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             if compile_result is None or compile_result[0] != 0:
                 ret_code = compile_result[0] if compile_result else "None"
                 self.after(0, lambda rc=ret_code: append_output(f"Compilation failed (return code: {rc})\n"))  # type: ignore
-                self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground="red"))  # type: ignore
+                self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground=widgets.STATUS_FAIL))  # type: ignore
             else:
                 ret_code, elapsed, stdout, stderr = compile_result
                 self.after(0, lambda e=elapsed: append_output(f"Compilation succeeded ({e:.2f}s)\n"))  # type: ignore
@@ -387,7 +440,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 if self._execution_stop_event.is_set():
                     self.after(0, lambda: append_output("Pattern detection preparation stopped by user.\n"))  # type: ignore
                 else:
-                    self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground="#FF6B6B"))  # type: ignore
+                    self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground=widgets.STATUS_BUSY))  # type: ignore
                     self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
 
                     execute_result = execute_configuration(
@@ -405,7 +458,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 if execute_result is None or execute_result[0] != 0:
                     ret_code = execute_result[0] if execute_result else "None"
                     self.after(0, lambda rc=ret_code: append_output(f"Execution failed (return code: {rc})\n"))  # type: ignore
-                    self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground="red"))  # type: ignore
+                    self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground=widgets.STATUS_FAIL))  # type: ignore
                 else:
                     ret_code, elapsed, stdout, stderr = execute_result
                     self.after(0, lambda e=elapsed: append_output(f"Execution succeeded ({e:.2f}s)\n"))  # type: ignore
@@ -420,7 +473,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
-            self.after(0, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+            self.after(0, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
             self.after(0, lambda: self._update_report_display())  # type: ignore
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
 
@@ -436,4 +489,4 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.prepare_pattern_detection_button.config(state="normal", text="Prepare Pattern Detection")
         if self.stop_execution_button is not None:
             self.stop_execution_button.config(state="disabled")
-        self.status_label.config(text="Stopping execution...", foreground="orange")
+        self.status_label.config(text="Stopping execution...", foreground=widgets.STATUS_STOP)

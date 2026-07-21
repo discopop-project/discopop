@@ -54,6 +54,7 @@ class FileEditorMixin(ConfigManagerMixinBase):
             self._set_sub_tab_modified(filename, False)
 
         self._load_compile_override()
+        self._load_validate_script()
         self.right_tabs.tab(self.editor_tab_index, text="Editor")
         self._update_execute_modes()
         self._update_report_display()
@@ -131,6 +132,78 @@ class FileEditorMixin(ConfigManagerMixinBase):
         self._load_compile_override()
         self._update_execute_modes()
         self._set_status("Removed compile.sh override for this configuration", fg="green", reset_delay=2000)
+
+    def _get_validate_script_path(self) -> str:
+        assert self.current_config is not None
+        return os.path.join(self.config_dir, self.current_config, "validate.sh")
+
+    def _load_validate_script(self) -> None:
+        if not self.current_config:
+            return
+
+        validate_path = self._get_validate_script_path()
+        text_area = self.text_areas["validate.sh"]
+
+        text_area.config(state=tk.NORMAL)
+        text_area.delete("1.0", tk.END)
+
+        has_validate = os.path.exists(validate_path)
+        if has_validate:
+            try:
+                with open(validate_path, "r") as f:
+                    text_area.insert("1.0", f.read())
+            except Exception as e:
+                text_area.insert("1.0", f"Error loading file: {e}")
+        else:
+            text_area.insert(
+                "1.0",
+                "# This configuration has no validate.sh.\n"
+                "# execute.sh alone determines correctness (its exit code).\n"
+                "# Click 'Add validate.sh' above to separate output validation from\n"
+                "# the timed execute.sh run: validate.sh re-runs the code and validates\n"
+                "# its output; a run then counts as correct only if BOTH execute.sh and\n"
+                "# validate.sh exit 0.\n",
+            )
+            text_area.config(state=tk.DISABLED)
+
+        self.modified_files["validate.sh"] = False
+        text_area.edit_modified(False)
+        self._set_sub_tab_modified("validate.sh", False)
+        self.validate_script_button.config(text="Remove validate.sh" if has_validate else "Add validate.sh")
+
+    def _toggle_validate_script(self) -> None:
+        if not self.current_config:
+            return
+
+        validate_path = self._get_validate_script_path()
+        if os.path.exists(validate_path):
+            self._remove_validate_script(validate_path)
+        else:
+            self._add_validate_script(validate_path)
+
+    def _add_validate_script(self, validate_path: str) -> None:
+        assert self.current_config is not None
+        seed_content = ""
+        execute_path = os.path.join(self.config_dir, self.current_config, "execute.sh")
+        if os.path.exists(execute_path):
+            with open(execute_path, "r") as f:
+                seed_content = f.read()
+
+        write_script_file(validate_path, seed_content)
+        self._load_validate_script()
+        self._set_status("Added validate.sh for this configuration", fg="green", reset_delay=2000)
+
+    def _remove_validate_script(self, validate_path: str) -> None:
+        if not ask_yes_no(
+            self,
+            "Remove validate.sh",
+            "Remove validate.sh for this configuration?\n\n" "Correctness will then be determined by execute.sh alone.",
+        ):
+            return
+
+        os.remove(validate_path)
+        self._load_validate_script()
+        self._set_status("Removed validate.sh for this configuration", fg="green", reset_delay=2000)
 
     def _validate_compile_script(self, file_path: str) -> None:
         try:

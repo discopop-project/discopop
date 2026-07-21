@@ -11,6 +11,9 @@ from tkinter import ttk, scrolledtext
 from typing import Any, Optional, Dict
 
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
+from discopop_library.ProjectManager.gui.suggestion_selector import SuggestionSelector
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip
 
 
@@ -32,17 +35,18 @@ class ConfigManagerMixinBase:
 
     # Left panel - configuration list
     listbox: tk.Listbox
-    new_button: ttk.Button
-    edit_compilation_button: ttk.Button
+    new_button: RoundedButton
+    edit_compilation_button: RoundedButton
 
     # Editor tab
     text_areas: Dict[str, tk.Text]
     modified_files: Dict[str, bool]
-    save_button: ttk.Button
+    save_button: RoundedButton
     editor_notebook: ttk.Notebook
     editor_sub_tab_index: Dict[str, int]
     editor_sub_tab_labels: Dict[str, str]
-    compile_override_button: ttk.Button
+    compile_override_button: RoundedButton
+    validate_script_button: RoundedButton
 
     # Pattern Detection tab
     pattern_detection_tab_index: int
@@ -54,17 +58,18 @@ class ConfigManagerMixinBase:
     label_prefix_var: tk.StringVar
     timeout_execution_var: tk.IntVar
     timeout_compilation_var: tk.IntVar
+    timeout_validation_var: tk.IntVar
     log_level_var: tk.StringVar
     inplace_var: tk.BooleanVar
     skip_cleanup_var: tk.BooleanVar
-    run_button: ttk.Button
-    prepare_pattern_detection_button: ttk.Button
+    run_button: RoundedButton
+    prepare_pattern_detection_button: RoundedButton
     output_text: scrolledtext.ScrolledText
-    generate_report_button: ttk.Button
+    generate_report_button: RoundedButton
 
     # Report panel elements
     results_tree: ttk.Treeview
-    view_report_button: ttk.Button
+    view_report_button: RoundedButton
 
     # Compilation editor
     compilation_editor_open: bool
@@ -75,15 +80,15 @@ class ConfigManagerMixinBase:
     compilation_tab_tooltips: Dict[int, tuple[str, Tooltip]]
     compilation_tooltip_timer: Optional[str]
     current_tooltip_tab: Optional[int]
-    test_compilation_button: ttk.Button
-    derive_compilation_button: ttk.Button
+    test_compilation_button: RoundedButton
+    derive_compilation_button: RoundedButton
     derive_button_tooltip: Optional[Tooltip]
     derive_button_tooltip_timer: Optional[str]
 
     # Pattern Detection panel elements
     explorer_output_text: Optional[scrolledtext.ScrolledText]
-    explorer_run_button: Optional[ttk.Button]
-    browse_suggestions_button: Optional[ttk.Button]
+    explorer_run_button: Optional[RoundedButton]
+    browse_suggestions_button: Optional[RoundedButton]
     explorer_running: bool
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]]
     jobs_var: Optional[tk.StringVar]
@@ -92,10 +97,11 @@ class ConfigManagerMixinBase:
     suggestions_mode_var: tk.StringVar
     suggestions_count_label: ttk.Label
     autotuner_suggestions_info_label: ttk.Label
+    execute_suggestion_selector: SuggestionSelector
 
     # Autotuning panel elements
     autotuning_output_text: Optional[scrolledtext.ScrolledText]
-    autotuning_run_button: Optional[ttk.Button]
+    autotuning_run_button: Optional[RoundedButton]
     autotuning_config_label: Optional[ttk.Label]
     autotuning_running: bool
     autotuning_threads_var: Optional[tk.StringVar]
@@ -104,17 +110,20 @@ class ConfigManagerMixinBase:
     autotuning_log_level_var: Optional[tk.StringVar]
     autotuning_suggestions_label: Optional[ttk.Label]
     autotuning_tab_index: int
+    autotuning_suggestions_mode_var: tk.StringVar
+    autotuner_search_space_selector: SuggestionSelector
+    autotuner_evaluate_selector: SuggestionSelector
 
     # Methods that mixins call on each other
     # Note: Methods from tk.Tk (after, after_cancel, bind, wait_window, update_idletasks)
     # are inherited at runtime and should not be defined here as stubs - they would
     # shadow the real implementations due to MRO
 
-    def _set_status(self, text: str, fg: str = "gray", *, reset_delay: Optional[int] = None) -> None:
+    def _set_status(self, text: str, fg: str = widgets.STATUS_IDLE, *, reset_delay: Optional[int] = None) -> None:
         """Set status label text and optionally schedule a reset to 'Ready' after reset_delay ms."""
         self.status_label.config(text=text, foreground=fg)
         if reset_delay is not None:
-            self.after(reset_delay, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+            self.after(reset_delay, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
 
     def _load_config(self) -> None:
         """Load configuration from disk."""

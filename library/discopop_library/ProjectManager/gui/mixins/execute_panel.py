@@ -12,6 +12,9 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any
 
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.widgets import caption_label
+from discopop_library.ProjectManager.gui.suggestion_selector import SuggestionSelector
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, bind_tooltip_hover
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 
@@ -121,7 +124,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         self.timeout_execution_var = tk.IntVar(value=3600)
         timeout_exec_entry = ttk.Entry(timeout_exec_frame, textvariable=self.timeout_execution_var, width=10)
         timeout_exec_entry.pack(side=tk.LEFT, padx=5)
-        ttk.Label(timeout_exec_frame, text="(0 = disabled)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+        caption_label(timeout_exec_frame, "(0 = disabled)").pack(side=tk.LEFT, padx=5)
 
         timeout_comp_frame = ttk.Frame(timeout_frame)
         timeout_comp_frame.pack(fill=tk.X, pady=3)
@@ -129,7 +132,15 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         self.timeout_compilation_var = tk.IntVar(value=3600)
         timeout_comp_entry = ttk.Entry(timeout_comp_frame, textvariable=self.timeout_compilation_var, width=10)
         timeout_comp_entry.pack(side=tk.LEFT, padx=5)
-        ttk.Label(timeout_comp_frame, text="(0 = disabled)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+        caption_label(timeout_comp_frame, "(0 = disabled)").pack(side=tk.LEFT, padx=5)
+
+        timeout_val_frame = ttk.Frame(timeout_frame)
+        timeout_val_frame.pack(fill=tk.X, pady=3)
+        ttk.Label(timeout_val_frame, text="Validation (s):", width=20, anchor=tk.W).pack(side=tk.LEFT)
+        self.timeout_validation_var = tk.IntVar(value=3600)
+        timeout_val_entry = ttk.Entry(timeout_val_frame, textvariable=self.timeout_validation_var, width=10)
+        timeout_val_entry.pack(side=tk.LEFT, padx=5)
+        caption_label(timeout_val_frame, "(0 = disabled, validate.sh only)").pack(side=tk.LEFT, padx=5)
 
         behavior_frame = ttk.LabelFrame(options_outer, text="Logging & Behavior", padding=5)
         behavior_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -141,7 +152,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         log_level_combo = ttk.Combobox(
             log_level_frame,
             textvariable=self.log_level_var,
-            values=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+            values=widgets.LOG_LEVEL_VALUES,
             state="readonly",
             width=10,
         )
@@ -195,6 +206,8 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
                 if self.label_prefix_var.get() == self._autotuner_prefix_auto_value:
                     self.label_prefix_var.set("")
                 self._autotuner_prefix_auto_value = ""
+            if hasattr(self, "execute_suggestion_selector"):
+                self.execute_suggestion_selector.set_enabled(mode == "manual")
 
         self.suggestions_mode_var.trace_add("write", _on_suggestions_mode_change)
 
@@ -220,17 +233,25 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         suggestions_info_row.pack(fill=tk.X, pady=(3, 0))
 
         self.suggestions_count_label = ttk.Label(
-            suggestions_info_row, text="No suggestions available", foreground="gray", font=("Arial", 8)
+            suggestions_info_row, text="No suggestions available", foreground="gray", font=widgets.FONT_CAPTION
         )
         self.suggestions_count_label.pack(side=tk.LEFT, padx=(20, 10))
 
-        self.browse_edit_suggestions_button = ttk.Button(
+        self.browse_edit_suggestions_button = widgets.create_button(
             suggestions_info_row,
             text="Browse / Edit →",
             command=self._open_suggestion_browser,
             state="disabled",
         )
         self.browse_edit_suggestions_button.pack(side=tk.LEFT)
+
+        self.execute_suggestion_selector = SuggestionSelector(
+            suggestions_frame,
+            self.arguments.dot_dp,
+            "execute",
+            on_change=self._update_execute_suggestion_count,
+        )
+        self.execute_suggestion_selector.pack(fill=tk.X, padx=(20, 5), pady=(3, 0))
 
         rb_autotuner = ttk.Radiobutton(
             suggestions_frame,
@@ -246,7 +267,7 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         autotuner_info_row.pack(fill=tk.X, pady=(3, 0))
 
         self.autotuner_suggestions_info_label = ttk.Label(
-            autotuner_info_row, text="No autotuner results available", foreground="gray", font=("Arial", 8)
+            autotuner_info_row, text="No autotuner results available", foreground="gray", font=widgets.FONT_CAPTION
         )
         self.autotuner_suggestions_info_label.pack(side=tk.LEFT, padx=(20, 10))
 
@@ -259,16 +280,21 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         def on_prepare_pattern_detection() -> None:
             self._prepare_pattern_detection()
 
+        # Horizontal divider separating the action buttons from the settings above.
+        ttk.Separator(left_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=5, pady=(8, 0))
+
         run_button_frame = ttk.Frame(left_frame)
         run_button_frame.pack(fill=tk.X, padx=0, pady=0)
 
-        self.run_button = ttk.Button(run_button_frame, text="Run", command=on_run, state="disabled", width=15)
+        self.run_button = widgets.primary_button(run_button_frame, text="Run", command=on_run, state="disabled")
         self.run_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.stop_execution_button = ttk.Button(run_button_frame, text="Stop", command=on_stop, state="disabled")
+        self.stop_execution_button = widgets.danger_button(
+            run_button_frame, text="Stop", command=on_stop, state="disabled"
+        )
         self.stop_execution_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.prepare_pattern_detection_button = ttk.Button(
+        self.prepare_pattern_detection_button = widgets.create_button(
             run_button_frame, text="Prepare Pattern Detection", command=on_prepare_pattern_detection, state="disabled"
         )
         self.prepare_pattern_detection_button.pack(side=tk.LEFT, padx=5, pady=5)
@@ -301,40 +327,42 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         _bind_scroll(options_outer)
         self._refresh_suggestion_selection_display()
 
+    def _update_execute_suggestion_count(self) -> None:
+        """Update the 'N of M selected' label from the Execute-tab selector."""
+        if not hasattr(self, "suggestions_count_label") or not hasattr(self, "execute_suggestion_selector"):
+            return
+        total = len(self.execute_suggestion_selector.get_available_ids())
+        selected = len(self.execute_suggestion_selector.get_selected_ids())
+        if total == 0:
+            self.suggestions_count_label.config(text="No suggestions available", foreground="gray")
+        else:
+            fg = "black" if selected > 0 else "gray"
+            self.suggestions_count_label.config(text=f"{selected} of {total} selected", foreground=fg)
+
     def _refresh_suggestion_selection_display(self) -> None:
         if not hasattr(self, "suggestions_count_label"):
             return
 
-        patch_gen_dir = os.path.join(self.arguments.dot_dp, "patch_generator")
-        selection_path = os.path.join(self.arguments.dot_dp, "project", "manager", "selected_suggestions.json")
+        if hasattr(self, "execute_suggestion_selector"):
+            self.execute_suggestion_selector.refresh()
+        total = (
+            len(self.execute_suggestion_selector.get_available_ids())
+            if hasattr(self, "execute_suggestion_selector")
+            else 0
+        )
 
-        total = 0
-        if os.path.isdir(patch_gen_dir):
-            for sid in os.listdir(patch_gen_dir):
-                sid_dir = os.path.join(patch_gen_dir, sid)
-                if os.path.isdir(sid_dir):
-                    total += sum(1 for f in os.listdir(sid_dir) if f.endswith(".patch"))
-
-        selected = 0
-        if os.path.exists(selection_path):
-            try:
-                with open(selection_path, "r") as f:
-                    data = json.load(f)
-                selected = sum(len(v) for v in data.get("selected", {}).values())
-            except (json.JSONDecodeError, IOError):
-                pass
-
+        self._update_execute_suggestion_count()
         if total == 0:
-            self.suggestions_count_label.config(text="No suggestions available", foreground="gray")
             self.apply_suggestions_rb.config(state="disabled")
             if self.suggestions_mode_var.get() == "manual":
                 self.suggestions_mode_var.set("none")
             self.browse_edit_suggestions_button.config(state="disabled")
         else:
-            fg = "black" if selected > 0 else "gray"
-            self.suggestions_count_label.config(text=f"{selected} of {total} selected", foreground=fg)
             self.apply_suggestions_rb.config(state="normal")
             self.browse_edit_suggestions_button.config(state="normal")
+
+        if hasattr(self, "execute_suggestion_selector"):
+            self.execute_suggestion_selector.set_enabled(total > 0 and self.suggestions_mode_var.get() == "manual")
 
         if hasattr(self, "autotuner_suggestions_info_label"):
             results_path = os.path.join(self.arguments.dot_dp, "auto_tuner", "results.json")

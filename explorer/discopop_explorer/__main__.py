@@ -8,13 +8,14 @@
 
 from argparse import ArgumentParser
 from pathlib import Path
+from typing import List, Optional
 from discopop_library.GlobalLogger.setup import setup_logger
 
 from discopop_library.PathManagement.PathManagement import get_path, get_path_or_none
 from discopop_explorer.discopop_explorer import ExplorerArguments, run
 
 
-def parse_args() -> ExplorerArguments:
+def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
     """Parse the arguments passed to the discopop_explorer"""
     parser = ArgumentParser(description="DiscoPoP Explorer")
     # all flags that are not considered stable should be added to the experimental_parser
@@ -121,7 +122,7 @@ def parse_args() -> ExplorerArguments:
     parser.add_argument("--visualize", action="store_true", help="Enable the visualizer.")
     # fmt: on
 
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(argv)
 
     # ensure that --cu-inst-res and --llvm-cxxfilt-path are set if --task-pattern is set
     if arguments.task_pattern and (arguments.cu_inst_res is None or arguments.llvm_cxxfilt_path is None):
