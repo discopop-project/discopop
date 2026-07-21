@@ -8,6 +8,7 @@
 
 import json
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -635,7 +636,10 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
 
     def _stop_autotuning(self) -> None:
         if self._autotuning_process is not None:
-            self._autotuning_process.terminate()
+            # Send SIGINT (not SIGTERM/terminate()) so the autotuner's search loop
+            # takes the same KeyboardInterrupt path as a manual Ctrl+C, letting it
+            # finish gracefully and save the best solution found so far.
+            self._autotuning_process.send_signal(signal.SIGINT)
         if self.autotuning_stop_button is not None:
             self.autotuning_stop_button.config(state="disabled")
         if hasattr(self, "_update_report_display"):
