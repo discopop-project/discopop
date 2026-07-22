@@ -9,6 +9,7 @@
 import logging
 import os
 import json
+import re
 import shutil
 import signal
 import subprocess
@@ -22,6 +23,39 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 PATH = str
 
 logger = logging.getLogger("ConfigurationManager")
+
+
+def _resolve_compiler(cmd: str, search_path: str) -> str:
+    """Resolve an unversioned clang/clang++ to an installed versioned binary.
+
+    Settings default CC/CXX to the unversioned ``clang``/``clang++`` names, but
+    many distributions only ship versioned binaries (e.g. ``clang-21``) with no
+    bare ``clang`` symlink. If ``cmd`` already resolves on ``search_path`` it is
+    returned unchanged; if it is a bare ``clang``/``clang++`` that does not
+    resolve, fall back to the highest ``clang-<N>``/``clang++-<N>`` found on
+    ``search_path``. Anything else is returned unchanged so the build fails with
+    its own error rather than being silently rewritten.
+    """
+    if shutil.which(cmd, path=search_path):
+        return cmd
+    if cmd not in ("clang", "clang++"):
+        return cmd
+    pattern = re.compile(re.escape(cmd) + r"-(\d+)$")
+    best: Optional[Tuple[int, str]] = None
+    for directory in (search_path or "").split(os.pathsep):
+        if not directory or not os.path.isdir(directory):
+            continue
+        try:
+            entries = os.listdir(directory)
+        except OSError:
+            continue
+        for name in entries:
+            match = pattern.match(name)
+            if match and shutil.which(name, path=search_path):
+                version = int(match.group(1))
+                if best is None or version > best[0]:
+                    best = (version, name)
+    return best[1] if best else cmd
 
 
 def execute_configuration(
@@ -83,6 +117,18 @@ def execute_configuration(
     venv_bin = os.path.dirname(sys.executable)
     if venv_bin not in my_env.get("PATH", ""):
         my_env["PATH"] = venv_bin + os.pathsep + my_env.get("PATH", "")
+
+    # Resolve unversioned clang/clang++ to an installed versioned binary when no
+    # bare clang is on PATH (common on distros shipping only clang-<N>). Done
+    # after PATH is finalized so the venv bin is included in the search.
+    for compiler_key in ("CC", "CXX"):
+        original = my_env.get(compiler_key, "")
+        if not original:
+            continue
+        resolved = _resolve_compiler(original, my_env.get("PATH", ""))
+        if resolved != original:
+            logger.info("Resolved %s=%s to %s (no bare %s on PATH)", compiler_key, original, resolved, original)
+            my_env[compiler_key] = resolved
 
     # print("MYENV:")
     # for key in my_env:
