@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "../../../../rtlib/calltree/CallTreeNode.hpp"
-#include "../../../../rtlib/calltree/CallTreeNodeType.hpp"
+#include "../../../../profiler/rtlib/calltree/CallTreeNode.hpp"
+#include "../../../../profiler/rtlib/calltree/CallTreeNodeType.hpp"
 
 class CallTreeNodeTest : public ::testing::Test {};
 

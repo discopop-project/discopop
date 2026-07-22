@@ -8,17 +8,26 @@
 
 import logging
 import os
+import shutil
 import signal
 import subprocess
 import sys
 import threading
 import tkinter as tk
 from tkinter import scrolledtext, ttk
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import quote
 
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, show_error, clean_ansi_output
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
-from discopop_library.ProjectManager.gui.widgets import create_styled_output_console
+from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
+from discopop_library.ProjectManager.gui.widgets import (
+    create_styled_output_console,
+    heading_label,
+    caption_label,
+    error_label,
+)
 
 logger = logging.getLogger("ExplorerIntegration")
 
@@ -26,14 +35,19 @@ logger = logging.getLogger("ExplorerIntegration")
 class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     explorer_running = False
     explorer_output_text: Optional[scrolledtext.ScrolledText] = None
-    explorer_run_button: Optional[ttk.Button] = None
-    explorer_stop_button: Optional[ttk.Button] = None
-    browse_suggestions_button: Optional[ttk.Button] = None
+    explorer_run_button: Optional[RoundedButton] = None
+    explorer_stop_button: Optional[RoundedButton] = None
+    browse_suggestions_button: Optional[RoundedButton] = None
+    show_in_vscode_button: Optional[RoundedButton] = None
     no_suggestions_label: Optional[ttk.Label] = None
     prerequisite_info_label: Optional[ttk.Label] = None
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
     jobs_var: Optional[tk.StringVar] = None
     collect_stats_var: Optional[tk.BooleanVar] = None
+    visualize_var: Optional[tk.BooleanVar] = None
+    explorer_visualization_frame: Optional[tk.Frame] = None
+    explorer_visualization_placeholder: Optional[ttk.Label] = None
+    pattern_detection_output_tabs: Optional[ttk.Notebook] = None
     _pattern_detection_tab_tooltip: Optional[Tooltip] = None
     _pattern_detection_tab_tooltip_timer: Optional[str] = None
     _pattern_detection_tab_tooltip_active_tab: Optional[int] = None
@@ -41,7 +55,13 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     _explorer_stopped: bool = False
 
     def _build_pattern_detection_panel(self, parent: tk.Widget) -> None:
-        main_paned = tk.PanedWindow(parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
+        self.pattern_detection_output_tabs = ttk.Notebook(parent)
+        self.pattern_detection_output_tabs.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
+
+        detection_tab = ttk.Frame(self.pattern_detection_output_tabs)
+        self.pattern_detection_output_tabs.add(detection_tab, text="Detection")
+
+        main_paned = tk.PanedWindow(detection_tab, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
         main_paned.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
 
         # Left panel - settings
@@ -56,7 +76,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         patterns_frame = ttk.Frame(settings_frame)
         patterns_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(patterns_frame, text="Pattern Types:", font=("Arial", 11, "bold")).pack(side=tk.LEFT, padx=5)
+        heading_label(patterns_frame, "Pattern Types:").pack(side=tk.LEFT, padx=5)
 
         self.pattern_types_vars = {}
         for pattern in ["reduction", "doall", "task"]:
@@ -69,41 +89,64 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         jobs_frame = ttk.Frame(settings_frame)
         jobs_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Label(jobs_frame, text="Threads:", font=("Arial", 11)).pack(side=tk.LEFT, padx=5)
+        ttk.Label(jobs_frame, text="Threads:", font=widgets.FONT_BODY).pack(side=tk.LEFT, padx=5)
         self.jobs_var = tk.StringVar(value="auto")
         jobs_combo = ttk.Combobox(
             jobs_frame,
             textvariable=self.jobs_var,
-            values=["auto", "1", "2", "4", "8", "16"],
+            values=widgets.THREAD_VALUES,
             width=10,
             state="readonly",
         )
         jobs_combo.pack(side=tk.LEFT, padx=5)
-        ttk.Label(jobs_frame, text="(auto = unlimited)", font=("Arial", 8)).pack(side=tk.LEFT, padx=5)
+        caption_label(jobs_frame, "(auto = unlimited)").pack(side=tk.LEFT, padx=5)
+
+        # Visualization option
+        visualize_frame = ttk.Frame(settings_frame)
+        visualize_frame.pack(fill=tk.X, pady=5)
+
+        self.visualize_var = tk.BooleanVar(value=False)
+        visualize_cb = ttk.Checkbutton(visualize_frame, text="Show graph visualization", variable=self.visualize_var)
+        visualize_cb.pack(side=tk.LEFT, padx=5)
+        caption_label(
+            visualize_frame,
+            "(runs in-process; UI is unresponsive while detection runs)",
+        ).pack(side=tk.LEFT, padx=5)
 
         # Buttons frame
         button_frame = ttk.Frame(left_frame)
         button_frame.pack(fill=tk.X, padx=0, pady=0)
 
-        self.explorer_run_button = ttk.Button(
+        self.explorer_run_button = widgets.primary_button(
             button_frame, text="Run Pattern Detection", command=self._run_pattern_detection, state="disabled"
         )
         self.explorer_run_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.explorer_stop_button = ttk.Button(
+        self.explorer_stop_button = widgets.danger_button(
             button_frame, text="Stop", command=self._stop_pattern_detection, state="disabled"
         )
         self.explorer_stop_button.pack(side=tk.LEFT, padx=5, pady=5)
 
-        self.browse_suggestions_button = ttk.Button(
-            button_frame, text="Browse Suggestions", command=self._open_suggestion_browser, state="disabled"
+        # Second row of buttons
+        button_frame_row2 = ttk.Frame(left_frame)
+        button_frame_row2.pack(fill=tk.X, padx=0, pady=0)
+
+        self.show_in_vscode_button = widgets.create_button(
+            button_frame_row2, text="Show Suggestions in VSCode", command=self._open_in_vscode, state="disabled"
+        )
+        self.show_in_vscode_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # Third row of buttons
+        button_frame_row3 = ttk.Frame(left_frame)
+        button_frame_row3.pack(fill=tk.X, padx=0, pady=0)
+
+        self.browse_suggestions_button = widgets.create_button(
+            button_frame_row3, text="Browse Suggestions", command=self._open_suggestion_browser, state="disabled"
         )
         self.browse_suggestions_button.pack(side=tk.LEFT, padx=5, pady=5)
 
         # No suggestions notification label
-        self.no_suggestions_label = ttk.Label(
-            left_frame, text="No patterns found.", foreground="#f38ba8", font=("Arial", 11)
-        )
+        self.no_suggestions_label = error_label(left_frame, "No patterns found.")
         self.no_suggestions_label.pack(anchor=tk.W, padx=5, pady=(5, 0))
 
         # Right panel - output
@@ -115,6 +158,19 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         self.explorer_output_text = create_styled_output_console(output_frame)
         self.explorer_output_text.pack(fill=tk.BOTH, expand=True)
+
+        # Graph Visualization tab - top-level, spans the full panel width
+        visualization_tab = ttk.Frame(self.pattern_detection_output_tabs)
+        self.pattern_detection_output_tabs.add(visualization_tab, text="Graph Visualization")
+
+        self.explorer_visualization_frame = tk.Frame(visualization_tab)
+        self.explorer_visualization_frame.pack(fill=tk.BOTH, expand=True)
+
+        self.explorer_visualization_placeholder = caption_label(
+            self.explorer_visualization_frame,
+            "Run pattern detection with 'Show graph visualization' enabled to see graphs here.",
+        )
+        self.explorer_visualization_placeholder.pack(expand=True)
 
         self._update_pattern_detection_ui()
         self._setup_pattern_detection_tab_tooltip()
@@ -179,6 +235,8 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         browse_ready = total_suggestions > 0
         if self.browse_suggestions_button is not None:
             self.browse_suggestions_button.config(state="normal" if browse_ready else "disabled")
+        if self.show_in_vscode_button is not None:
+            self.show_in_vscode_button.config(state="normal" if browse_ready else "disabled")
 
         detection_executed = self._check_pattern_detection_executed()
         patterns_found = self._check_patterns_found()
@@ -211,8 +269,62 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         SuggestionBrowserDialog(
             self,
             self.arguments.dot_dp,
-            on_selection_changed=self._refresh_suggestion_selection_display,
         )
+
+    def _open_in_vscode(self) -> None:
+        # The DiscoPoP VSCode extension activates on a workspace that *contains* a
+        # .discopop directory (activation event "workspaceContains:**/.discopop")
+        # and then focuses its sidebar view. We therefore open the project root
+        # (the parent of the .discopop directory), not the .discopop dir itself.
+        dot_dp = os.path.abspath(self.arguments.dot_dp)
+        project_root = os.path.dirname(dot_dp)
+
+        code_executable = shutil.which("code")
+        if code_executable is None:
+            show_error(
+                self,
+                "VSCode Not Found",
+                "Could not find the 'code' command on your PATH.\n\n"
+                "Install Visual Studio Code and, from within VSCode, run "
+                "'Shell Command: Install \"code\" command in PATH' to enable this feature.",
+            )
+            return
+
+        try:
+            subprocess.Popen(
+                [code_executable, project_root],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except OSError as e:
+            show_error(self, "Failed to open VSCode", f"Could not launch VSCode:\n{e}")
+            return
+
+        # Opening the folder alone only focuses the DiscoPoP sidebar on a *fresh*
+        # window (activation runs once). If the folder is already open, re-running
+        # `code` just refocuses the window without re-firing activation. Dispatching
+        # a URI to the extension's UriHandler focuses the sidebar on every
+        # invocation, so the button behaves consistently regardless of window state.
+        # The dotDiscopop/projectPath query tells the extension which configuration
+        # to select (creating a ViewOnly configuration for it if none exists).
+        focus_uri = (
+            "vscode://TUDarmstadt-LaboratoryforParallelProgramming.discopop/focus"
+            f"?dotDiscopop={quote(dot_dp, safe='')}&projectPath={quote(project_root, safe='')}"
+        )
+        try:
+            subprocess.Popen(
+                [code_executable, "--open-url", focus_uri],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except OSError:
+            # Best-effort: the folder is already opening; only the auto-focus is lost.
+            pass
+
+        self.status_label.config(text="Opening project in VSCode...", foreground=widgets.STATUS_BUSY)
+        self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
 
     def _check_explorer_prerequisites(self) -> bool:
         profiler_dir = os.path.join(self.arguments.dot_dp, "profiler")
@@ -256,13 +368,16 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         if self.explorer_run_button is not None:
             self.explorer_run_button.config(state="disabled", text="⟳ Running...")
 
+        visualize = self.visualize_var is not None and self.visualize_var.get()
+
         if self.explorer_stop_button is not None:
-            self.explorer_stop_button.config(state="normal")
+            # a visualized run blocks the main thread, so it cannot be interrupted by a button click
+            self.explorer_stop_button.config(state="disabled" if visualize else "normal")
 
         if self.no_suggestions_label is not None:
             self.no_suggestions_label.pack_forget()
 
-        self.status_label.config(text="⏳ Pattern detection in progress...", foreground="#FF6B6B")
+        self.status_label.config(text="⏳ Pattern detection in progress...", foreground=widgets.STATUS_BUSY)
 
         if self.explorer_output_text is not None:
             self.explorer_output_text.config(state=tk.NORMAL)
@@ -279,6 +394,13 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         def thread_safe_append(text: str) -> None:
             self.after(0, lambda: append_output(text))  # type: ignore
 
+        if visualize:
+            assert self.pattern_detection_output_tabs is not None
+            self.pattern_detection_output_tabs.select(1)
+            # let the "Running..." button state redraw before the blocking call starts
+            self.after(50, lambda: self._run_pattern_detection_in_process(append_output))  # type: ignore
+            return
+
         def thread_func() -> None:
             try:
                 thread_safe_append("Starting pattern detection...\n")
@@ -291,12 +413,50 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         thread = threading.Thread(target=thread_func, daemon=True)
         thread.start()
 
-    def _invoke_explorer(self, output_callback: Callable[[str], None]) -> None:
-        dot_discopop = self.arguments.dot_dp
-        project_path = dot_discopop
+    def _run_pattern_detection_in_process(self, output_callback: Callable[[str], None]) -> None:
+        output_callback("Starting pattern detection...\n")
+        error = False
+        try:
+            self._invoke_explorer_in_process(output_callback)
+        except Exception as e:
+            output_callback(f"\nError: {str(e)}\n")
+            error = True
+        self._on_pattern_detection_complete(error=error)
+        # The visualizer builds its matplotlib canvases while the Tk event loop is
+        # blocked by the in-process explorer run, so they were drawn before their
+        # widgets had a real size. Force geometry to settle and re-render now, once
+        # the event loop is running again, so the graphs appear without a manual
+        # window resize.
+        self.after(0, self._refresh_visualization_layout)  # type: ignore
 
-        output_callback("Loading explorer configuration...\n")
+    def _refresh_visualization_layout(self) -> None:
+        frame = self.explorer_visualization_frame
+        if frame is None:
+            return
+        try:
+            # process pending geometry work so widgets report their final size
+            frame.update_idletasks()
+        except tk.TclError:
+            return
+        self._redraw_embedded_canvases(frame)
 
+    def _redraw_embedded_canvases(self, widget: tk.Misc) -> None:
+        for child in widget.winfo_children():
+            self._redraw_embedded_canvases(child)
+        # matplotlib's FigureCanvasTkAgg widget is a tk Canvas that re-renders the
+        # figure at the correct resolution in its <Configure> handler. Synthesizing
+        # that event with the widget's now-correct size triggers the redraw that a
+        # manual window resize would otherwise be needed for.
+        if widget.winfo_class() == "Canvas":
+            width = widget.winfo_width()
+            height = widget.winfo_height()
+            if width > 1 and height > 1:
+                try:
+                    widget.event_generate("<Configure>", width=width, height=height)
+                except tk.TclError:
+                    pass
+
+    def _get_missing_required_explorer_files(self, project_path: str) -> List[str]:
         required_files = [
             os.path.join(project_path, "profiler", "Data.xml"),
             os.path.join(project_path, "profiler", "dynamic_dependencies.txt"),
@@ -304,7 +464,15 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             os.path.join(project_path, "profiler", "reduction.txt"),
             os.path.join(project_path, "FileMapping.txt"),
         ]
-        missing_files = [f for f in required_files if not os.path.exists(f)]
+        return [f for f in required_files if not os.path.exists(f)]
+
+    def _invoke_explorer(self, output_callback: Callable[[str], None]) -> None:
+        dot_discopop = self.arguments.dot_dp
+        project_path = dot_discopop
+
+        output_callback("Loading explorer configuration...\n")
+
+        missing_files = self._get_missing_required_explorer_files(project_path)
         if missing_files:
             output_callback("\nMissing required files:\n")
             for file_path in missing_files:
@@ -365,6 +533,83 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         if not self._explorer_stopped:
             output_callback("\nPattern detection completed.\n")
 
+    def _invoke_explorer_in_process(self, output_callback: Callable[[str], None]) -> None:
+        project_path = self.arguments.dot_dp
+
+        output_callback("Loading explorer configuration...\n")
+
+        missing_files = self._get_missing_required_explorer_files(project_path)
+        if missing_files:
+            output_callback("\nMissing required files:\n")
+            for file_path in missing_files:
+                output_callback(f"  - {file_path}\n")
+            raise RuntimeError("Missing required profiling data files")
+
+        assert self.pattern_types_vars is not None
+        assert self.jobs_var is not None
+        assert self.explorer_visualization_frame is not None
+
+        selected_patterns = [pattern for pattern, var in self.pattern_types_vars.items() if var.get()]
+        enable_patterns = ",".join(selected_patterns) if selected_patterns else "reduction,doall"
+        jobs_value = self.jobs_var.get()
+
+        output_callback("Configuration:\n")
+        output_callback(f"  Patterns: {enable_patterns}\n")
+        output_callback(f"  Threads: {jobs_value}\n")
+        output_callback("  Graph visualization: enabled\n\n")
+
+        # discard widgets from a previous visualized run; WithSidebar always builds
+        # a fresh layout into the given frame and never clears prior content itself
+        for child in self.explorer_visualization_frame.winfo_children():
+            child.destroy()
+
+        argv = [
+            "--path",
+            project_path,
+            "--enable-patterns",
+            enable_patterns,
+            "--log",
+            "WARNING",
+            "--visualize",
+        ]
+        if jobs_value != "auto":
+            argv.extend(["-j", jobs_value])
+
+        # lazy import: discopop_explorer is only needed for this in-process path,
+        # mirroring discopop_explorer's own lazy import of discopop_gui
+        from discopop_explorer.__main__ import parse_args
+        from discopop_explorer.discopop_explorer import run as run_explorer
+
+        arguments = parse_args(argv)
+        arguments.visualize_on = self.explorer_visualization_frame
+
+        class _TkConsoleWriter:
+            def __init__(self, callback: Callable[[str], None], widget: Any) -> None:
+                self._callback = callback
+                self._widget = widget
+
+            def write(self, text: str) -> None:
+                if text:
+                    self._callback(text)
+                    self._widget.update_idletasks()
+
+            def flush(self) -> None:
+                pass
+
+        output_callback("Running pattern detection...\n\n")
+
+        old_stdout = sys.stdout
+        sys.stdout = _TkConsoleWriter(output_callback, self)  # type: ignore[assignment]
+        try:
+            run_explorer(arguments)
+        except SystemExit as e:
+            raise RuntimeError(f"Explorer exited unexpectedly (code {e.code})") from e
+        finally:
+            sys.stdout = old_stdout
+
+        if not self._explorer_stopped:
+            output_callback("\nPattern detection completed.\n")
+
     def _update_pattern_detection_tab_state(self, enabled: bool) -> None:
         try:
             if enabled:
@@ -398,11 +643,11 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         self._refresh_suggestion_selection_display()
 
         if not error:
-            self.status_label.config(text="Pattern detection completed successfully", foreground="green")
-            self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+            self.status_label.config(text="Pattern detection completed successfully", foreground=widgets.STATUS_OK)
+            self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
         else:
-            self.status_label.config(text="Pattern detection failed", foreground="red")
-            self.after(3000, lambda: self.status_label.config(text="Ready", foreground="gray"))  # type: ignore
+            self.status_label.config(text="Pattern detection failed", foreground=widgets.STATUS_FAIL)
+            self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
 
     def _stop_pattern_detection(self) -> None:
         self._explorer_stopped = True
@@ -413,4 +658,4 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
                 self._explorer_process.terminate()
         if self.explorer_stop_button is not None:
             self.explorer_stop_button.config(state="disabled")
-        self.status_label.config(text="Stopping pattern detection...", foreground="orange")
+        self.status_label.config(text="Stopping pattern detection...", foreground=widgets.STATUS_STOP)

@@ -10,6 +10,7 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Callable, Optional
 
+from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 
 
@@ -25,7 +26,7 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
         button_frame = ttk.Frame(help_window)
         button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=(0, 10))
 
-        ok_button = ttk.Button(button_frame, text="OK", command=help_window.destroy)
+        ok_button = widgets.primary_button(button_frame, text="OK", command=help_window.destroy)
         ok_button.pack(side=tk.LEFT)
 
         main_frame = ttk.Frame(help_window)
@@ -34,7 +35,7 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
         scrollbar = ttk.Scrollbar(main_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        text = tk.Text(main_frame, wrap=tk.WORD, yscrollcommand=scrollbar.set, font=("TkDefaultFont", 11))
+        text = tk.Text(main_frame, wrap=tk.WORD, yscrollcommand=scrollbar.set, font=widgets.FONT_BODY)
         text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.config(command=text.yview)
 
@@ -58,6 +59,7 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
         help_commands: dict[str, Callable[[], None]] = {
             "compile.sh": self._show_compile_sh_help,
             "execute.sh": self._show_execute_sh_help,
+            "validate.sh": self._show_validate_sh_help,
             "seq_settings.json": self._show_seq_settings_help,
             "dp_settings.json": self._show_dp_settings_help,
             "hd_settings.json": self._show_hd_settings_help,
@@ -82,7 +84,11 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
             "$CXX $CXXFLAGS -o program main.cpp\n\n"
             "Notes:\n"
             "The DiscoPoP framework will set the compiler variables to appropriate values\n"
-            "during the instrumentation process."
+            "during the instrumentation process.\n\n"
+            "Per-configuration override:\n"
+            "Each configuration may define its own compile.sh (via the 'compile.sh (override)'\n"
+            "tab in the configuration editor). When present, it is used instead of this shared\n"
+            "script for that configuration only."
         )
         self._show_help_dialog("compile.sh Help", help_text)
 
@@ -105,6 +111,30 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
             "to collect performance data."
         )
         self._show_help_dialog("execute.sh Help", help_text)
+
+    def _show_validate_sh_help(self) -> None:
+        help_text = (
+            "Output Validation Script (validate.sh) — optional\n\n"
+            "Purpose:\n"
+            "The validate.sh script executes the application and validates its output. It is\n"
+            "run separately from the timed execute.sh run, so that validation work (e.g. a\n"
+            "diff against a reference output) does not pollute the runtime measurement.\n\n"
+            "Behavior:\n"
+            "  • Optional: if validate.sh does not exist, execute.sh alone determines\n"
+            "    correctness (its exit code), exactly as before.\n"
+            "  • When present, it is auto-run after a successful execute.sh, but only for\n"
+            "    the seq and par modes (dp/hd are profiling runs and are left untouched).\n"
+            "  • A run counts as correct only if BOTH execute.sh and validate.sh exit 0.\n\n"
+            "Requirements:\n"
+            "  • Should run the application built by compile.sh and check its output\n"
+            "  • Must return exit code 0 when the output is valid, non-zero otherwise\n"
+            "  • Must be executable from the project root directory\n\n"
+            "Example:\n"
+            "#!/bin/bash\n"
+            "./program <args> > output.out\n"
+            "diff output.out reference.out"
+        )
+        self._show_help_dialog("validate.sh Help", help_text)
 
     def _show_seq_settings_help(self) -> None:
         help_text = (

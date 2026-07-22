@@ -37,7 +37,6 @@ from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TPIType,
     TaskParallelismInfo,
 )
-from discopop_gui.Visualizers.WithSidebar import WithSidebar as VisualizerWithSideBar
 
 from discopop_explorer.utils import classify_loop_variables
 from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges

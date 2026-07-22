@@ -142,6 +142,25 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
         with open(os.path.join(output_path, "static_dependencies.txt"), "r") as static_dep_fd:
             static_dependency_lines = static_dep_fd.readlines()
 
+    # load instruction to lineID mapping for backwards compatibility
+    instruction_to_lineID_mapping: Dict[str, str] = dict()
+    if os.path.exists(os.path.join(output_path, "instructionID_to_lineID_mapping.txt")):
+        with open(os.path.join(output_path, "instructionID_to_lineID_mapping.txt"), "r") as f:
+            for line in f.readlines():
+                line = line.replace("\n", "")
+                if line.startswith("#") or len(line) == 0:
+                    continue
+                split_line = line.split(" ")
+                instruction_id = split_line[0]
+                line_id = split_line[1]
+                if line_id.startswith("*"):
+                    continue
+                line_id_split = line_id.split(":")
+                file_id = line_id_split[0]
+                line_num = line_id_split[1]
+                column_num = line_id_split[2]
+                instruction_to_lineID_mapping[instruction_id] = str(file_id) + ":" + str(line_num)
+
     for line in dep_fd.readlines() + static_dependency_lines:
         dep_fields = line.split()
         if dep_fields[1] == "BGN" and dep_fields[2] == "loop":
@@ -161,25 +180,6 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             )
         if len(dep_fields) < 4 or dep_fields[1] != "NOM":
             continue
-
-        # load instruction to lineID mapping for backwards compatibility
-        instruction_to_lineID_mapping: Dict[str, str] = dict()
-        if os.path.exists(os.path.join(output_path, "instructionID_to_lineID_mapping.txt")):
-            with open(os.path.join(output_path, "instructionID_to_lineID_mapping.txt"), "r") as f:
-                for line in f.readlines():
-                    line = line.replace("\n", "")
-                    if line.startswith("#") or len(line) == 0:
-                        continue
-                    split_line = line.split(" ")
-                    instruction_id = split_line[0]
-                    line_id = split_line[1]
-                    if line_id.startswith("*"):
-                        continue
-                    line_id_split = line_id.split(":")
-                    file_id = line_id_split[0]
-                    line_num = line_id_split[1]
-                    column_num = line_id_split[2]
-                    instruction_to_lineID_mapping[instruction_id] = str(file_id) + ":" + str(line_num)
 
         sink = dep_fields[0]
         # pairwise iteration over dependencies source
@@ -322,7 +322,7 @@ def possible_reduction(line: int, src_lines: List[str]) -> bool:
     bracket_b = src_line[0:pos].rfind("]")
     assert bracket_b != -1
 
-    rex_search_res = re.search("([A-Za-z0-9_]+)\[", src_line[0 : (bracket_a + 1)])
+    rex_search_res = re.search(r"([A-Za-z0-9_]+)\[", src_line[0 : (bracket_a + 1)])
     if not rex_search_res:
         return True
 

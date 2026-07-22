@@ -44,8 +44,19 @@ from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 
-from discopop_gui.Extendables.Plottable import Plottable
-from discopop_gui.Visualizers.Base import Base as Visualizer
+try:
+    from discopop_gui.Extendables.Plottable import Plottable
+    from discopop_gui.Visualizers.Base import Base as Visualizer
+except (ImportError, ModuleNotFoundError):
+
+    class Plottable:  # type: ignore[no-redef]
+        def __init__(self, visualizer: object = None) -> None:
+            pass
+
+        def plottable(self) -> bool:
+            return False
+
+    Visualizer = object  # type: ignore[assignment, misc]
 
 from discopop_explorer.utilities.PEGraphConstruction.parser import readlineToCUIdMap, writelineToCUIdMap
 from discopop_explorer.utilities.PEGraphConstruction.classes.LoopData import LoopData
@@ -320,7 +331,7 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                 p for p in source_parents if p.type == NodeType.LOOP if p not in source_immediate_loop_parents
             ]
 
-            common_loop_parents = list(set(sink_loop_parents + source_loop_parents))
+            common_loop_parents = list(dict.fromkeys(sink_loop_parents + source_loop_parents))
 
             for loop in sink_immediate_loop_parents:
                 if loop in source_immediate_loop_parents:
@@ -391,17 +402,27 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
 
         print("Calculating local metadata results for functions...")
         import tqdm  # type: ignore
-        from multiprocessing import Pool
         from discopop_explorer.parallel_utils import (
             pet_function_metadata_initialize_worker,
             pet_function_metadata_parse_func,
         )
 
         param_list = func_nodes
-        with Pool(initializer=pet_function_metadata_initialize_worker, initargs=(self,)) as pool:
-            tmp_result = list(
-                tqdm.tqdm(pool.imap_unordered(pet_function_metadata_parse_func, param_list), total=len(param_list))
-            )
+        # This computation is run serially in-process, on purpose - it used to fan out over a
+        # multiprocessing.Pool that passed the whole PEGraphX to every worker via initargs.
+        # Under fork, each worker's graph traversal dirties copy-on-write pages of the shared
+        # graph, so peak memory scaled linearly with the (uncapped, = os.cpu_count()) worker
+        # count - roughly one graph copy per core (measured 146MiB -> 1.1GiB at 8 workers on
+        # LULESH, and multi-GB OOM kills on many-core machines). The metadata computation is
+        # cheap (the per-function reachability pass is memoized and effectively O(N)), so the
+        # parallelism is not worth the OOM risk. Running serially never duplicates the graph
+        # and subsumes the previous zero-work early-exit (an empty param_list is just an empty
+        # loop). pet_function_metadata_initialize_worker binds the module-level graph handle
+        # that pet_function_metadata_parse_func reads, exactly as the pool initializer did.
+        pet_function_metadata_initialize_worker(self)
+        tmp_result: List[Tuple[NodeID, Any, Set[NodeID]]] = [
+            pet_function_metadata_parse_func(func_node) for func_node in tqdm.tqdm(param_list)
+        ]
         # calculate global result
         print("Calculating global result...")
         global_reachability_dict: Dict[NodeID, Set[NodeID]] = dict()

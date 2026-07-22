@@ -60,24 +60,34 @@ class FunctionNode(Node):
         return exit_cu_ids
 
     def calculate_reachability_pairs(self, pet: PEGraphX) -> Dict[NodeID, Set[NodeID]]:
+        children = cast(List[NodeID], self.children_cu_ids)
+        children_set = set(children)
+
+        # lazy, read-only view restricted to this function's own CUs and SUCCESSOR edges,
+        # instead of copying and successor-filtering the whole-program graph for every
+        # single function
+        def is_successor_edge(u: NodeID, v: NodeID, k: int) -> bool:
+            return cast(Dependency, pet.g.edges[u, v, k]["data"]).etype == EdgeType.SUCCESSOR
+
+        subgraph = nx.subgraph_view(pet.g, filter_node=lambda n: n in children_set, filter_edge=is_successor_edge)
+
+        # compute reachability bottom-up with memoization instead of one independent DFS per
+        # node (which is O(N) DFS traversals, each up to O(N) - i.e. O(N^2) time and memory
+        # for a function with N CUs): reachable(n) = {n} | union(reachable(succ) for succ in
+        # successors(n)). Process in reverse topological order of the SCC condensation (this
+        # handles local cycles/loops correctly - all members of one SCC share one reachable
+        # set) so each node's result is built once from its already-computed successors.
         reachability_pairs: Dict[NodeID, Set[NodeID]] = dict()
-        # create graph copy and remove all but successor edges
-        copied_graph = pet.g.copy()
-
-        # remove all but successor edges
-        to_be_removed = set()
-        for edge in copied_graph.edges:
-            edge_data = cast(Dependency, copied_graph.edges[edge]["data"])
-            if edge_data.etype != EdgeType.SUCCESSOR:
-                to_be_removed.add(edge)
-        for edge in to_be_removed:
-            copied_graph.remove_edge(edge[0], edge[1])
-
-        # calculate dfs successors for children CUs
-        for node_id in cast(List[NodeID], self.children_cu_ids):
-            reachability_pairs[node_id] = {node_id}
-            successors = [t for s, t in nx.dfs_tree(copied_graph, node_id).edges()]
-            reachability_pairs[node_id].update(successors)
+        condensation = nx.condensation(subgraph)
+        for scc_index in reversed(list(nx.topological_sort(condensation))):
+            members = condensation.nodes[scc_index]["members"]
+            combined: Set[NodeID] = set(members)
+            for member in members:
+                for succ in subgraph.successors(member):
+                    if succ not in members:
+                        combined.update(reachability_pairs[succ])
+            for member in members:
+                reachability_pairs[member] = combined
         return reachability_pairs
 
     def get_immediate_post_dominators(self, pet: PEGraphX) -> Dict[NodeID, NodeID]:

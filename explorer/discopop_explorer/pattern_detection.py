@@ -40,7 +40,10 @@ from discopop_library.ParallelRegionMerger.inflated_parallel_region_pattern impo
 from discopop_explorer.pattern_detectors.new_task_detector import run_detection as detect_tasking
 from discopop_explorer.pattern_detectors.new_do_all_detector import run_detection as detect_do_all_and_reduction_new
 
-from discopop_gui.Visualizers.Base import Base as Visualizer
+try:
+    from discopop_gui.Visualizers.Base import Base as Visualizer
+except (ImportError, ModuleNotFoundError):
+    Visualizer = object  # type: ignore[assignment, misc]
 
 
 class PatternDetectorX(object):
@@ -94,7 +97,9 @@ class PatternDetectorX(object):
         visualizer: Visualizer | None = None,
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
+        print("Loading AST...")
         self.ast_helper.load_ast_from_project(project_path)
+        print("   done.")
         # self.ast_helper.print_ast_structure()
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()

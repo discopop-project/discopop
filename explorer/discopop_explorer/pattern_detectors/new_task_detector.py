@@ -34,7 +34,10 @@ from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TaskParallelismInfo,
 )
 
-from discopop_gui.Visualizers.Base import Base as Visualizer
+try:
+    from discopop_gui.Visualizers.Base import Base as Visualizer
+except (ImportError, ModuleNotFoundError):
+    Visualizer = object  # type: ignore[assignment, misc]
 
 logger = logging.getLogger("Explorer").getChild("Tasking")
 
@@ -191,7 +194,7 @@ def identify_simple_tasking(
         for task in tpc.registered_tasks:
             task_scopes: List[LineID] = []
             task_scopes += task.get_code_scope(ctg.pet, inclusive=True)
-            task_scopes = list(set(task_scopes))
+            task_scopes = list(dict.fromkeys(task_scopes))
             #            task_scope_file_id = task_pet_node.file_id
             task_scope_line_nums = [get_line_num(ts) for ts in task_scopes if get_file_id(ts) == parent_scope_file_id]
             filtered_task_scope_line_nums = [

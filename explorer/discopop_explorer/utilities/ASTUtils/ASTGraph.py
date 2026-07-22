@@ -159,7 +159,14 @@ class ClangASTGraph:
 
             {"spellingLoc": {...}, "expansionLoc": {...}}
 
-        We prefer ``spellingLoc`` (the actual source text position).
+        ``spellingLoc`` points at the macro's replacement text — for a plain
+        object-like macro (e.g. ``M_PI``) that is inside the macro's
+        *definition*, which can be an entirely unrelated file (a system
+        header) and line number. ``expansionLoc`` points at the macro *use*
+        in the enclosing source file, which is always within a file our
+        callers can map back to a project source via FileMapping.txt and is
+        the location callers actually want when computing source ranges. We
+        therefore prefer ``expansionLoc``.
 
         Args:
             loc: Raw location or range-endpoint dictionary
@@ -167,10 +174,10 @@ class ClangASTGraph:
         Returns:
             Resolved location dictionary (may be the same object)
         """
-        if "spellingLoc" in loc:
-            return dict(loc["spellingLoc"])
         if "expansionLoc" in loc:
             return dict(loc["expansionLoc"])
+        if "spellingLoc" in loc:
+            return dict(loc["spellingLoc"])
         return loc
 
     @staticmethod

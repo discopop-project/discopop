@@ -40,7 +40,15 @@ python3 mcp_server/server.py --debug
 ## Run the Server
 
 ```bash
+# Default mode — used by Claude Code (proxy + auto-spawn + inline fallback)
+discopop_mcp_server
+
+# With debug logging
 discopop_mcp_server --debug
+
+# Persistent daemon — keeps analysis data (e.g. DetectionResult) in memory
+# between calls. Start this manually in a separate terminal for best performance.
+discopop_mcp_server --daemon
 ```
 
 Or directly:
@@ -48,6 +56,13 @@ Or directly:
 ```bash
 python3 server.py --debug
 ```
+
+> **Tip:** You do not need to start the daemon manually — the default mode will
+> attempt to spawn it automatically in a new terminal window on the **first
+> tool call**. No connection is made at startup, so idle sessions have no
+> overhead. Start the daemon manually when you want explicit control over its
+> lifetime or when running in a headless environment where auto-spawn is
+> unavailable. See [README.md](README.md#daemon-mode) for details.
 
 ## Configure Claude Code
 
