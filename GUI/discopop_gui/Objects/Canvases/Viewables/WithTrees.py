@@ -62,7 +62,10 @@ class WithTrees(ViewableCanvas):
         temp = self._highest_visual_node_ids.copy()
 
         for node_id in temp:
-            self.get_visual_node(node_id).set_highest_by_higher_order()
+            self.get_visual_node(node_id).update_highest_by_higher_order()
+
+        for node_id in self._highest_visual_node_ids:
+            self.get_visual_node(node_id).set_offset_by_higher_order(self._highest_visual_nodes_x_offset_data[node_id][0])
 
     def remove_highest_visual_node_id(self, visual_node_id : int) -> int:
         left_offset = self._highest_visual_nodes_x_offset_data[visual_node_id][1]
@@ -100,7 +103,7 @@ class WithTrees(ViewableCanvas):
                 self._highest_visual_nodes_x_offset_data[node_id] = (self._highest_visual_nodes_x_offset_data[node_id][0] + right_offset, self._highest_visual_nodes_x_offset_data[node_id][1], self._highest_visual_nodes_x_offset_data[node_id][2])
 
             if not node_id == highest_order_id:
-                self._visual_nodes[node_id].set_offset(self._highest_visual_nodes_x_offset_data[node_id][0])
+                self._visual_nodes[node_id].set_offset_by_higher_order(self._highest_visual_nodes_x_offset_data[node_id][0])
 
     def create_visual_node(self, id: int, highest : bool = False, state : str = "normal", x_offset : int = 0, y_offset : int = 0) -> bool:
         if id in self._visual_nodes:
@@ -224,4 +227,4 @@ class WithTrees(ViewableCanvas):
                 continue
 
             self.create_visual_node(node_id, highest = True)
-            self.get_visual_node(node_id).set_offset(self._highest_visual_nodes_x_offset_data[node_id][0])
+            self.get_visual_node(node_id).set_offset_by_higher_order(self._highest_visual_nodes_x_offset_data[node_id][0])

@@ -60,7 +60,17 @@ class TreeNode:
         if len(self._higher_order_hide_requests) > 0:
             self.visualize_higher_order_connections()
             self._higher_order_connections_shown = True
-            self.set_highest_by_lower_order()
+            highest_visible_id = self.get_highest_visible()
+            current_highest_id = self.get_current_highest()
+
+            if highest_visible_id is None or current_highest_id is None:
+                raise ValueError("No highest or visible nodes found when showing or hiding higher order connections.")
+            
+            if highest_visible_id != current_highest_id:
+                index = self._canvas.remove_highest_visual_node_id(current_highest_id)
+                self._canvas.get_visual_node(current_highest_id).set_highest(False)
+                self._canvas.add_highest_visual_node_id(highest_visible_id, index)
+                self._canvas.get_visual_node(highest_visible_id).set_highest(True)
         else:
             self.hide_higher_order_connections()
             self._higher_order_connections_shown = False
@@ -68,7 +78,8 @@ class TreeNode:
             for connection_id, __ in self._higher_order_connections.items():
                 self._canvas.get_visual_node(connection_id).set_lower_order_connections_shown(False)
 
-            self._canvas.update_highest_visual_nodes()
+            if self._highest == True:
+                self._canvas.update_highest_visual_nodes()
         
         return None
 
@@ -122,16 +133,22 @@ class TreeNode:
             for connection_id, __ in self._lower_order_connections.items():
                 self._canvas.get_visual_node(connection_id).set_higher_order_connections_shown(False)
 
-        self.set_offset(self._x_offset, self._y_offset)
+        self.set_offset_by_higher_order(self._x_offset, self._y_offset)
 
         if self._highest == False:
             for connection_id, edge in self._higher_order_connections.items():
-                if edge[1] == EdgeType.DEPENDENCY:
+                if not edge[1] == EdgeType.MAIN:
                     continue
 
-                self._canvas.get_visual_node(connection_id).request_x_space(self._base_node.id, self.get_x_space_needed())
+                space_needed = self.get_x_space_needed()
+
+                if space_needed is not None:
+                    self._canvas.get_visual_node(connection_id).request_x_space_by_lower_order(self._base_node.id, space_needed)
         else:
-            self._canvas.request_x_space(self._base_node.id, self.get_x_space_needed())
+            space_needed = self.get_x_space_needed()
+
+            if space_needed is not None:
+                self._canvas.request_x_space(self._base_node.id, space_needed)
 
         return None
 
@@ -171,7 +188,7 @@ class TreeNode:
             return self._base_node.id
         
         for connection_id, edge in self._higher_order_connections.items():
-            if edge[1] == EdgeType.DEPENDENCY:
+            if not edge[1] == EdgeType.MAIN:
                 continue
 
             connection = self._canvas.get_visual_node(connection_id)
@@ -189,7 +206,7 @@ class TreeNode:
             value = self._base_node.id
 
         for connection_id, edge in self._higher_order_connections.items():
-            if edge[1] == EdgeType.DEPENDENCY:
+            if not edge[1] == EdgeType.MAIN:
                 continue
 
             connection = self._canvas.get_visual_node(connection_id)
@@ -200,10 +217,36 @@ class TreeNode:
 
         return value
     
+    def get_x_space_needed(self) -> Tuple[int, int] | None:
+        space_needed_left = 0
+        space_needed_right = 0
+        left_set = False
+
+        for connection_id, x_offset_data in self._lower_order_x_offset_data.items():
+            if not self._lower_order_connections[connection_id][1] == EdgeType.MAIN:
+                continue
+            
+            connection = self._canvas.get_visual_node(connection_id)
+            space_needed = connection.get_x_space_needed()
+
+            if space_needed is None:
+                continue
+            
+            if left_set == False:
+                space_needed_left = space_needed[0] + abs(x_offset_data[0])
+                left_set = True
+            
+            space_needed_right = space_needed[1] + abs(x_offset_data[0])
+
+        if left_set == False and self._visible == False:
+            return None
+        
+        return (space_needed_left, space_needed_right)
+    
     def set_highest(self, value : bool) -> None:
         self._highest = value
     
-    def set_highest_by_higher_order(self, index : int | None = None) -> None:
+    def update_highest_by_higher_order(self, index : int | None = None) -> None:
         if self._visible == True and self._highest == True:
             return
         elif self._visible == False and self._highest == True:
@@ -217,23 +260,77 @@ class TreeNode:
             return
         
         for connection_id, edge in self._lower_order_connections.items():
-            if edge[1] == EdgeType.DEPENDENCY:
+            if not edge[1] == EdgeType.MAIN:
                 continue
             
-            self._canvas.get_visual_node(connection_id).set_highest_by_higher_order(index)
+            self._canvas.get_visual_node(connection_id).update_highest_by_higher_order(index)
 
-    def set_highest_by_lower_order(self) -> None:
-        highest_visible_id = self.get_highest_visible()
-        current_highest_id = self.get_current_highest()
+    def set_offset_by_higher_order(self, x_offset : int | None = None, y_offset : int | None = None, not_to_set : int | None = None) -> None:
+        if x_offset is None:
+            x_offset = self._x_offset
 
-        if highest_visible_id is None or current_highest_id is None:
-            raise ValueError("No highest or visible nodes found when showing or hiding higher order connections.")
+        if y_offset is None:
+            y_offset = self._y_offset
+
+        if self._visible == True:
+            self._x_offset = x_offset
+            self._y_offset = y_offset
+            self._canvas.coords_unscaled(self._oval_id, x_offset * TREE_NODES_SPACING - TREE_NODE_RADIUS, y_offset * TREE_NODES_SPACING - TREE_NODE_RADIUS, x_offset * TREE_NODES_SPACING + TREE_NODE_RADIUS, y_offset * TREE_NODES_SPACING + TREE_NODE_RADIUS)
+            self._canvas.coords_unscaled(self._text_id, x_offset * TREE_NODES_SPACING, y_offset * TREE_NODES_SPACING)
+
+        for connection_id, x_offset_data in self._lower_order_x_offset_data.items():
+            if connection_id == not_to_set:
+                continue
+
+            edge = self._lower_order_connections[connection_id]
+            y_offset_increase = 1 if self._visible == True else 0
+            self._canvas.get_visual_node(connection_id).set_offset_by_higher_order(x_offset + x_offset_data[0], y_offset + y_offset_increase)
+
+            if self._visible == True:
+                self._canvas.coords_unscaled(edge[0], x_offset * TREE_NODES_SPACING, y_offset * TREE_NODES_SPACING, (x_offset + x_offset_data[0]) * TREE_NODES_SPACING, (y_offset + y_offset_increase) * TREE_NODES_SPACING)
+
+        for connection_id, edge in self._higher_order_connections.items():
+            if edge[1] == EdgeType.DEPENDENCY and self._visible == True:
+                self._canvas.coords_unscaled(edge[0], self._canvas.get_visual_node(connection_id).get_location()[0], self._canvas.get_visual_node(connection_id).get_location()[1], x_offset * TREE_NODES_SPACING, y_offset * TREE_NODES_SPACING)
+
+        for connection_id, edge in self._lower_order_connections.items():
+            if edge[1] == EdgeType.DEPENDENCY and self._visible == True:
+                self._canvas.coords_unscaled(edge[0], x_offset * TREE_NODES_SPACING, y_offset * TREE_NODES_SPACING, self._canvas.get_visual_node(connection_id).get_location()[0], self._canvas.get_visual_node(connection_id).get_location()[1])
+    
+    def request_x_space_by_lower_order(self, lower_order_id : int, space_needed : Tuple[int, int]) -> None:
+        _ = self._lower_order_connections[lower_order_id]
         
-        if highest_visible_id != current_highest_id:
-            index = self._canvas.remove_highest_visual_node_id(current_highest_id)
-            self._canvas.get_visual_node(current_highest_id).set_highest(False)
-            self._canvas.add_highest_visual_node_id(highest_visible_id, index)
-            self._canvas.get_visual_node(highest_visible_id).set_highest(True)
+        left_offset = self._lower_order_x_offset_data[lower_order_id][1] - space_needed[0]
+        right_offset = space_needed[1] - self._lower_order_x_offset_data[lower_order_id][2]
+        space_needed_from_higher_order_left = 0
+        space_needed_from_higher_order_right = 0
+        flip = False
+
+        for i, (connection_id, __) in enumerate(self._lower_order_x_offset_data.items()):
+            if connection_id == lower_order_id:
+                self._lower_order_x_offset_data[connection_id] = (self._lower_order_x_offset_data[connection_id][0], space_needed[0], space_needed[1])
+                flip = True
+            elif flip == False:
+                self._lower_order_x_offset_data[connection_id] = (self._lower_order_x_offset_data[connection_id][0] + left_offset, self._lower_order_x_offset_data[connection_id][1], self._lower_order_x_offset_data[connection_id][2])
+            else:
+                self._lower_order_x_offset_data[connection_id] = (self._lower_order_x_offset_data[connection_id][0] + right_offset, self._lower_order_x_offset_data[connection_id][1], self._lower_order_x_offset_data[connection_id][2])
+
+            if i == 0:
+                space_needed_from_higher_order_left = abs(self._lower_order_x_offset_data[connection_id][0]) + self._lower_order_x_offset_data[connection_id][1]
+            if i == len(self._lower_order_x_offset_data) - 1:
+                space_needed_from_higher_order_right = abs(self._lower_order_x_offset_data[connection_id][0]) + self._lower_order_x_offset_data[connection_id][2]
+
+        self.set_offset_by_higher_order(self._x_offset, self._y_offset, lower_order_id)
+
+        if (self._highest == True):
+            self._canvas.request_x_space(self._base_node.id, (space_needed_from_higher_order_left, space_needed_from_higher_order_right))
+            return
+
+        for connection_id, edge in self._higher_order_connections.items():
+            if not edge[1] == EdgeType.MAIN:
+                continue
+
+            self._canvas.get_visual_node(connection_id).request_x_space_by_lower_order(self._base_node.id, (space_needed_from_higher_order_left, space_needed_from_higher_order_right))
 
     def set_higher_order_connections_shown(self, shown : bool) -> None:
         if (shown == False) and (len(self._higher_order_hide_requests) < len(self._higher_order_connections)):
@@ -262,8 +359,26 @@ class TreeNode:
         self._visible = True
         self._higher_order_connections_shown = True
 
+        if (self._highest == True and self._higher_order_connections[higher_order_id][1] == EdgeType.MAIN):
+            self._highest = False
+            self._canvas.remove_highest_visual_node_id(self._base_node.id)
+
         if (self._lower_order_connections_shown == True):
             self.visualize_lower_order_connections()
+
+        if not (self._higher_order_connections[higher_order_id][1] == EdgeType.MAIN):
+            current_highest_id = self.get_current_highest()
+
+            if current_highest_id is not None:
+                return
+            
+            highest_visible_id = self.get_highest_visible()
+
+            if highest_visible_id is None:
+                raise ValueError("No highest nodes found after dependency is shown.")
+            
+            self._canvas.add_highest_visual_node_id(highest_visible_id)
+            self._canvas.get_visual_node(highest_visible_id).set_highest(True)
 
     def visualize_by_lower_order(self, lower_order_id : int) -> None:
         self._lower_order_hide_requests.remove(lower_order_id)
@@ -274,6 +389,20 @@ class TreeNode:
 
         if (self._higher_order_connections_shown == True):
             self.visualize_higher_order_connections()
+
+        if not (self._lower_order_connections[lower_order_id][1] == EdgeType.MAIN):
+            current_highest_id = self.get_current_highest()
+
+            if current_highest_id is not None:
+                return
+            
+            highest_visible_id = self.get_highest_visible()
+
+            if highest_visible_id is None:
+                raise ValueError("No highest nodes found after dependency is shown.")
+            
+            self._canvas.add_highest_visual_node_id(highest_visible_id)
+            self._canvas.get_visual_node(highest_visible_id).set_highest(True)
 
     def hide_by_higher_order(self, higher_order_id : int) -> None:
         _ = self._higher_order_connections[higher_order_id]
@@ -310,88 +439,6 @@ class TreeNode:
             
             if (self._higher_order_connections_shown == True):
                 self.hide_higher_order_connections()
-
-    def set_offset(self, x_offset : int | None = None, y_offset : int | None = None, not_to_set : int | None = None) -> None:
-        if x_offset is None:
-            x_offset = self._x_offset
-
-        if y_offset is None:
-            y_offset = self._y_offset
-
-        if self._visible == True:
-            self._x_offset = x_offset
-            self._y_offset = y_offset
-            self._canvas.coords_unscaled(self._oval_id, x_offset * TREE_NODES_SPACING - TREE_NODE_RADIUS, y_offset * TREE_NODES_SPACING - TREE_NODE_RADIUS, x_offset * TREE_NODES_SPACING + TREE_NODE_RADIUS, y_offset * TREE_NODES_SPACING + TREE_NODE_RADIUS)
-            self._canvas.coords_unscaled(self._text_id, x_offset * TREE_NODES_SPACING, y_offset * TREE_NODES_SPACING)
-
-        for connection_id, x_offset_data in self._lower_order_x_offset_data.items():
-            if connection_id == not_to_set:
-                continue
-
-            edge = self._lower_order_connections[connection_id]
-            
-            if edge[1] == EdgeType.DEPENDENCY and self._visible == True:
-                self._canvas.coords_unscaled(edge[0], x_offset * TREE_NODES_SPACING, y_offset * TREE_NODES_SPACING, self._canvas.get_visual_node(connection_id).get_location()[0], self._canvas.get_visual_node(connection_id).get_location()[1])
-                continue
-            
-            y_offset_increase = 1 if self._visible == True else 0
-            self._canvas.get_visual_node(connection_id).set_offset(x_offset + x_offset_data[0], y_offset + y_offset_increase)
-
-            if self._visible == True:
-                self._canvas.coords_unscaled(edge[0], x_offset * TREE_NODES_SPACING, y_offset * TREE_NODES_SPACING, (x_offset + x_offset_data[0]) * TREE_NODES_SPACING, (y_offset + y_offset_increase) * TREE_NODES_SPACING)
-
-    def get_x_space_needed(self) -> Tuple[int, int]:
-        space_needed_left = 0
-        space_needed_right = 0
-
-        for i, (connection_id, x_offset_data) in enumerate(self._lower_order_x_offset_data.items()):
-            if self._lower_order_connections[connection_id][1] == EdgeType.DEPENDENCY:
-                continue
-            
-            connection = self._canvas.get_visual_node(connection_id)
-            space_needed = connection.get_x_space_needed()
-            
-            if i == 0:
-                space_needed_left = space_needed[0] + abs(x_offset_data[0])
-            if i == len(self._lower_order_x_offset_data) - 1:
-                space_needed_right = space_needed[1] + abs(x_offset_data[0])
-
-        return (space_needed_left, space_needed_right)
-    
-    def request_x_space(self, lower_order_id : int, space_needed : Tuple[int, int]) -> None:
-        _ = self._lower_order_connections[lower_order_id]
-        
-        left_offset = self._lower_order_x_offset_data[lower_order_id][1] - space_needed[0]
-        right_offset = space_needed[1] - self._lower_order_x_offset_data[lower_order_id][2]
-        space_needed_from_higher_order_left = 0
-        space_needed_from_higher_order_right = 0
-        flip = False
-
-        for i, (connection_id, __) in enumerate(self._lower_order_x_offset_data.items()):
-            if connection_id == lower_order_id:
-                self._lower_order_x_offset_data[connection_id] = (self._lower_order_x_offset_data[connection_id][0], space_needed[0], space_needed[1])
-                flip = True
-            elif flip == False:
-                self._lower_order_x_offset_data[connection_id] = (self._lower_order_x_offset_data[connection_id][0] + left_offset, self._lower_order_x_offset_data[connection_id][1], self._lower_order_x_offset_data[connection_id][2])
-            else:
-                self._lower_order_x_offset_data[connection_id] = (self._lower_order_x_offset_data[connection_id][0] + right_offset, self._lower_order_x_offset_data[connection_id][1], self._lower_order_x_offset_data[connection_id][2])
-
-            if i == 0:
-                space_needed_from_higher_order_left = abs(self._lower_order_x_offset_data[connection_id][0]) + self._lower_order_x_offset_data[connection_id][1]
-            if i == len(self._lower_order_x_offset_data) - 1:
-                space_needed_from_higher_order_right = abs(self._lower_order_x_offset_data[connection_id][0]) + self._lower_order_x_offset_data[connection_id][2]
-
-        self.set_offset(self._x_offset, self._y_offset, lower_order_id)
-
-        if (self._highest == True):
-            self._canvas.request_x_space(self._base_node.id, (space_needed_from_higher_order_left, space_needed_from_higher_order_right))
-            return
-
-        for connection_id, edge in self._higher_order_connections.items():
-            if edge[1] == EdgeType.DEPENDENCY:
-                continue
-
-            self._canvas.get_visual_node(connection_id).request_x_space(self._base_node.id, (space_needed_from_higher_order_left, space_needed_from_higher_order_right))
 
     def visualize_higher_order_connections(self) -> None:
         for connection_id in self._higher_order_hide_requests:
@@ -455,5 +502,8 @@ class TreeNode:
                 self._canvas.get_visual_node(connection_id).recursive_copy_to_canvas(canvas, self._base_node.id, cloned_edge)
 
         if higher_order_connection_id is not None and higher_order_edge is not None:
-            cloned_node.set_offset(0, 0)
-            canvas.request_x_space(higher_order_connection_id, cloned_node.get_x_space_needed())
+            cloned_node.set_offset_by_higher_order(0, 0)
+            space_needed = cloned_node.get_x_space_needed()
+
+            if space_needed is not None:
+                canvas.request_x_space(higher_order_connection_id, space_needed)
