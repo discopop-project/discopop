@@ -596,6 +596,11 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             def flush(self) -> None:
                 pass
 
+            def isatty(self) -> bool:
+                # libraries like tqdm probe isatty() to decide whether to emit
+                # terminal control codes; this replacement is not a terminal
+                return False
+
         output_callback("Running pattern detection...\n\n")
 
         old_stdout = sys.stdout
