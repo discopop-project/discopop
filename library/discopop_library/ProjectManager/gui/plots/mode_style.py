@@ -67,13 +67,13 @@ STATUS_COLORS: Dict[str, str] = {
 # Neutral / reference colours (baselines, ideal-linear lines, grid emphasis).
 REFERENCE_COLOR = "#8b919b"
 
-# Font sizes (points) for the embedded charts. Larger than the matplotlib default
-# so labels stay readable inside a compact panel canvas.
-AXIS_LABEL_SIZE = 18
-TICK_LABEL_SIZE = 15
-LEGEND_SIZE = 15
-ANNOTATION_SIZE = 15
-LEGEND_TITLE_SIZE = 16
+# Font sizes (points) for the embedded charts. Slightly larger than the matplotlib
+# default so labels stay readable inside a compact panel canvas.
+AXIS_LABEL_SIZE = 12
+TICK_LABEL_SIZE = 10
+LEGEND_SIZE = 10
+ANNOTATION_SIZE = 10
+LEGEND_TITLE_SIZE = 11
 
 # Marker sizes for the embedded charts.
 SCATTER_SIZE = 85  # scatter marker area (points^2) for the report charts
