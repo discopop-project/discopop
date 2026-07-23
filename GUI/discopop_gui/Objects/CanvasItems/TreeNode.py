@@ -41,7 +41,8 @@ class TreeNode:
         self._canvas.addtag_withtag("tree_node", self._text_id)
         self._canvas.tag_bind(self._oval_id, "<Button-1>", self._on_left_press)
         self._canvas.tag_bind(self._oval_id, "<Button-3>", self._on_right_press)
-
+        self._canvas.tag_bind(self._text_id, "<Button-1>", self._on_left_press)
+        self._canvas.tag_bind(self._text_id, "<Button-3>", self._on_right_press)
     def _on_show_or_hide_higher_order(self, _ : tk.Event) -> str | None:
         if len(self._higher_order_connections) < len(self._base_node.higher_order_connections):
             for base_node_connection, edge_type in self._base_node.higher_order_connections:
