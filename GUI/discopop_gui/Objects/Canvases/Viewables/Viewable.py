@@ -11,6 +11,7 @@ from __future__ import annotations
 import tkinter as tk
 from typing import Any
 
+from discopop_gui.Constants import TREE_NODES_SPACING
 from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Objects.CanvasItems.Popup import Popup
 
@@ -21,19 +22,19 @@ class Viewable(tk.Canvas):
 
         self._viewer_mode = viewer_mode
 
-        self._original_coordinates: dict[int, tuple[float, ...]] = {}
-        self._transform_scale: float = 1
-        self._transform_x: float = 0.0
-        self._transform_y: float = 0.0
+        self._original_coordinates : dict[int, tuple[float, ...]] = {}
+        self._transform_scale : float = 1
+        self._transform_x : float = 0.0
+        self._transform_y : float = 0.0
 
-        self._drag_start_x: float | None = None
-        self._drag_start_y: float | None = None
-        self._last_drag_x: float | None = None
-        self._last_drag_y: float | None = None
-        self._drag_rectangle_id: int | None = None
+        self._drag_start_x : float | None = None
+        self._drag_start_y : float | None = None
+        self._last_drag_x : float | None = None
+        self._last_drag_y : float | None = None
+        self._drag_rectangle_id : int | None = None
 
         self._popup = Popup(self)
-        self._popup_hide_threshold: float = 50.0
+        self._popup_hide_threshold : float = 50.0
 
         self.bind("<ButtonPress-1>", self._left_press)
         self.bind("<B1-Motion>", self._left_drag)
@@ -291,6 +292,10 @@ class Viewable(tk.Canvas):
 
     def get_viewer_mode(self) -> ViewerMode:
         return self._viewer_mode
+    
+    def coords_unscaled(self, item_id: int, *coords: float) -> None:
+        self._original_coordinates[item_id] = tuple(coords)
+        self._apply_transform_to_item(item_id)
 
     def set_viewer_mode(self, viewer_mode: ViewerMode) -> None:
         self._reset_drag_state()
