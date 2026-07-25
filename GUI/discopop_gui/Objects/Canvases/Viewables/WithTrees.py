@@ -37,12 +37,18 @@ class WithTrees(ViewableCanvas):
         self._highest_visual_node_ids : List[int] = []
         self._highest_visual_nodes_x_offset_data : Dict[int, Tuple[int, int, int]] = {}
 
-    def get_visual_node(self, id : int) -> VisualTreeNode:
-        return self._visual_nodes[id]
-    
-    def check_visual_node(self, id : int) -> bool:
-        return id in self._visual_nodes
-    
+    def check_visual_node(self, visual_node_id : int) -> bool:
+        return visual_node_id in self._visual_nodes
+
+    def check_highest_visual_node(self, visual_node_id : int) -> bool:
+        return visual_node_id in self._highest_visual_nodes_x_offset_data
+
+    def get_visual_node(self, visual_node_id : int) -> VisualTreeNode:
+        return self._visual_nodes[visual_node_id]
+
+    def get_highest_visual_node_index(self, visual_node_id : int) -> int:
+        return self._highest_visual_node_ids.index(visual_node_id)
+
     def add_highest_visual_node_id(self, visual_node_id : int, at_index : int | None = None) -> None:
         self._highest_visual_nodes_x_offset_data[visual_node_id] = (0, 0, 0)
 
@@ -137,7 +143,6 @@ class WithTrees(ViewableCanvas):
         self._visual_nodes[id] = VisualTreeNode(
             self,
             self._nodes[id],
-            highest,
             True if state == "normal" else False,
             self._popup,
             oval_id,
