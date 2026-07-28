@@ -89,11 +89,24 @@ def _build_task_graph(pet: PEGraphX, nodes: Sequence[TGNode] = ()) -> TaskGraph:
     dependency files and profiler output on disk) by constructing it directly
     and only setting the fields that pattern-detection code actually reads:
     .pet, .graph (a plain nx.MultiDiGraph of TGNode instances), and the
-    Plottable-required ._visualizer."""
+    Plottable-required ._visualizer.
+
+    The pet-node-id -> TGNode maps and level/position counters are reset per
+    instance just like TaskGraph.__init__ does, so that tests driving the
+    construction passes (__visit_pet, __break_cycles, ...) directly do not leak
+    nodes into each other via TaskGraph's class-level defaults."""
     tg = object.__new__(TaskGraph)
     tg._visualizer = None
     tg.pet = pet
     tg.graph = nx.MultiDiGraph()
+    tg.function_id_map = dict()
+    tg.TGNode_pet_node_id_to_tg_node = dict()
+    tg.TGFunctionNode_pet_node_id_to_tg_node = dict()
+    tg.TGStartFunctionNode_pet_node_id_to_tg_node = dict()
+    tg.TGEndFunctionNode_pet_node_id_to_tg_node = dict()
+    tg.contexts = []
+    tg.current_level = 0
+    tg.current_position = {0: 0}
     for node in nodes:
         tg.graph.add_node(node)
     return tg

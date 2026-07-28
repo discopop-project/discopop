@@ -115,6 +115,36 @@ usually harmless in isolation, but the same "unvalidated invariant" pattern as
 invariant 3, and a candidate root cause if a similar orphaned-node crash shows
 up again elsewhere in construction.
 
+## 6. Complete control flow after `__visit_pet`
+
+Every `EdgeType.SUCCESSOR` edge of the PET graph must have a counterpart in the
+TaskGraph once `__visit_pet` returns. The traversal creates an edge when it
+*visits the target*, taking the predecessor from the queue entry - so any
+successor that is deliberately not queued needs its edge added explicitly.
+`__visit_branching` must skip queueing already-visited successors (otherwise the
+traversal never terminates on cyclic control flow, since `__visit_CUNode`'s
+single-successor path queues unconditionally), which is exactly where an edge
+can get lost.
+
+This is the invariant `__break_cycles` depends on: it derives a loop's header,
+its iteration entry/exit points and its exit node purely from the shape of the
+cycle it finds. A missing exit edge makes the loop look exit-less, and the only
+node that then still matches the "one successor inside the cycle, one outside"
+header pattern is a branch *inside the loop body* - because `nx.find_cycle`
+returns a single simple cycle and therefore contains only one arm of that
+branch. The pass then anchors `TGStartLoopNode`/`TGEndLoopNode` at the wrong
+node, removes the wrong edge as the "back edge", leaves the real cycle in place
+for the crude fallback to sever, and the resulting `TGStartLoopNode` has zero
+predecessors and no path to its `TGEndLoopNode`. The symptom surfaces much
+later, in `__assign_loop_contexts`, as
+`ValueError("Could not determine loop end node for loop: ...")`.
+
+The shape that triggered this in practice (miniFE, via libstdc++'s
+`__insertion_sort`): a function whose early return shares its exit CU with the
+loop exit, plus an `if`/`else` inside the loop body. The early return reaches the
+exit CU first, so the loop header's exit edge targets an already-visited node.
+See `test_TaskGraph.py`.
+
 ## Where this bites in practice
 
 All of the invariants above are enforced (or silently violated) inside

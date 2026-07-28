@@ -155,6 +155,18 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
         self.pet = pet
         self.graph = nx.MultiDiGraph()
+        # shadow the class-level defaults with per-instance state: the construction passes
+        # look up previously created nodes in these maps, so sharing them between TaskGraph
+        # instances (e.g. two runs within one GUI session) would wire a fresh graph up to
+        # nodes belonging to the previous one
+        self.function_id_map = dict()
+        self.TGNode_pet_node_id_to_tg_node = dict()
+        self.TGFunctionNode_pet_node_id_to_tg_node = dict()
+        self.TGStartFunctionNode_pet_node_id_to_tg_node = dict()
+        self.TGEndFunctionNode_pet_node_id_to_tg_node = dict()
+        self.contexts = []
+        self.current_level = 0
+        self.current_position = {0: 0}
 
         # start processing
         self.__assign_function_ids(pet)
@@ -730,6 +742,20 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         for successor in direct_successors(self.pet, pet_node):
             if not self.node_registered(successor.id):
                 queue.append((node, successor))
+            else:
+                # The successor has already been visited, so it must not be queued again -
+                # doing so would make the traversal loop forever on cyclic control flow (the
+                # single-successor path in __visit_CUNode queues unconditionally, so a cycle
+                # only terminates because branch points stop re-visiting known nodes). The
+                # edge to it, however, is created by the *successor's* visit, and therefore
+                # still needs to be added here: dropping it silently deletes real control
+                # flow. The typical victim is a loop's exit edge whose target CU was already
+                # reached through an earlier, shorter path (e.g. an early return sharing the
+                # function's exit CU). __break_cycles then sees an exit-less cycle, mistakes
+                # a branch inside the loop body for the loop header and the other arm for the
+                # loop exit, and produces a TGStartLoopNode that cannot reach its
+                # TGEndLoopNode - which fails much later in __assign_loop_contexts.
+                self.add_edge(node, self.TGNode_pet_node_id_to_tg_node[successor.id])
 
         return queue
 
