@@ -1268,9 +1268,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
             if loop_end_node is None:
                 logger.warning("Could not determine loop end node for loop: " + node.get_label())
-                plt.ioff()  # type: ignore[attr-defined]
-                self.plot(highlight_nodes=[node])
-                plt.pause(1)  # type: ignore[attr-defined]
+                #                plt.ioff()  # type: ignore[attr-defined]
+                #                self.plot(highlight_nodes=[node])
+                #                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Could not determine loop end node for loop: " + node.get_label())
 
             # search general loop nodes
@@ -1330,9 +1330,10 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 try:
                     shortest_iteration_path = nx.shortest_path(self.graph, source=it_start, target=it_end)
                 except nx.NetworkXNoPath:
-                    plt.ioff()  # type: ignore[attr-defined]
-                    self.plot(highlight_nodes=[it_start, it_end])
-                    plt.pause(1)  # type: ignore[attr-defined]
+                    #                    plt.ioff()  # type: ignore[attr-defined]
+                    #                    self.plot(highlight_nodes=[it_start, it_end])
+                    #                    plt.pause(1)  # type: ignore[attr-defined]
+                    warnings.warn("Got nx.NetworkXNoPath exception.")
 
                 for path_node in shortest_iteration_path:
                     tmp_iteration_nodes.add(path_node)
@@ -2057,29 +2058,29 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             pred_count = len(self.get_predecessors(node))
             if isinstance(node, TGEndBranchParentNode) and pred_count == 0:
                 logger.error("Invalid graph structure: " + str(type(node)) + " has no predecessors!")
-                plt.ioff()  # type: ignore[attr-defined]
-                self.plot(highlight_nodes=[node])
-                plt.pause(1)  # type: ignore[attr-defined]
+                #                plt.ioff()  # type: ignore[attr-defined]
+                #                self.plot(highlight_nodes=[node])
+                #                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Invalid graph structure!")
             if isinstance(node, TGStartBranchParentNode) and succ_count == 0:
                 logger.error("Invalid graph structure: " + str(type(node)) + " has no successors!")
-                plt.ioff()  # type: ignore[attr-defined]
-                self.plot(highlight_nodes=[node])
-                plt.pause(1)  # type: ignore[attr-defined]
+                #                plt.ioff()  # type: ignore[attr-defined]
+                #                self.plot(highlight_nodes=[node])
+                #                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Invalid graph structure!")
             if succ_count < 2 and pred_count < 2:
                 continue
             if (succ_count >= 2) and (not isinstance(node, TGStartBranchParentNode)):
                 logger.error("Invalid node type: " + str(type(node)) + " with " + str(succ_count) + " successors!")
-                plt.ioff()  # type: ignore[attr-defined]
-                self.plot(highlight_nodes=[node])
-                plt.pause(1)  # type: ignore[attr-defined]
+                #                plt.ioff()  # type: ignore[attr-defined]
+                #                self.plot(highlight_nodes=[node])
+                #                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Invalid graph structure!")
             if (pred_count >= 2) and (not isinstance(node, TGEndBranchParentNode)):
                 logger.error("Invalid node type: " + str(type(node)) + " with " + str(pred_count) + " predecessors!")
-                plt.ioff()  # type: ignore[attr-defined]
-                self.plot(highlight_nodes=[node])
-                plt.pause(1)  # type: ignore[attr-defined]
+                #                plt.ioff()  # type: ignore[attr-defined]
+                #                self.plot(highlight_nodes=[node])
+                #                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Invalid graph structure!")
 
     def __add_work_nodes(self) -> None:
