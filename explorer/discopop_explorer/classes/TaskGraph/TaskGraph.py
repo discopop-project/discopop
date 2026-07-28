@@ -8,13 +8,14 @@
 
 import copy
 from collections import deque
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import random
 import signal
 import logging
 import sys
-from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Deque, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
@@ -73,6 +74,7 @@ from discopop_explorer.functions.PEGraph.traversal.children import get_entry_chi
 from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.functions.PEGraph.traversal.predecessors import direct_predecessors
 from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
+from discopop_explorer.utilities.general.graph_size_progress_plot import GraphSizeProgressPlot
 
 if os.environ.get("DISPLAY") or sys.platform in ("darwin", "win32"):
     try:
@@ -139,6 +141,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     current_position: Dict[LevelIndex, PositionIndex] = {0: 0}
     plotting_graph_buffer = None
     plotting_postions_buffer = None
+    # live console plot of the graph size, only set while a long-running construction step is active
+    size_progress_plot: Optional[GraphSizeProgressPlot] = None
 
     def __init__(
         self,
@@ -198,6 +202,31 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         if self.graph.has_edge(source, target):
             return
         self.graph.add_edge(source, target)
+
+    def __sample_graph_size(self, force: bool = False) -> None:
+        """Feed the current graph size to the live console plot, if one is active. Called
+        from hot loops, so the sizes are only determined if the plot actually wants a new
+        sample - counting the edges of a multigraph is linear in the amount of nodes."""
+        if self.size_progress_plot is None:
+            return
+        if not force and not self.size_progress_plot.sample_due():
+            return
+        self.size_progress_plot.sample(self.graph.number_of_nodes(), self.graph.number_of_edges(), force=force)
+
+    @contextmanager
+    def __graph_size_progress_plot(self, title: str) -> Iterator[None]:
+        """Show a console plot of the graph's amount of nodes and edges for the wrapped
+        construction step. Sampling happens via __sample_graph_size."""
+        plot = GraphSizeProgressPlot(title=title)
+        plot.open()
+        self.size_progress_plot = plot
+        try:
+            self.__sample_graph_size(force=True)
+            yield
+        finally:
+            self.__sample_graph_size(force=True)
+            self.size_progress_plot = None
+            plot.close()
 
     def __get_next_level(self) -> LevelIndex:
         buffer = self.current_level
@@ -1778,7 +1807,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         call_path_limit = 6
         call_path_depth = 0
         modification_found = True
-        with tqdm(total=call_path_limit, desc="Callpath depth") as progress_bar:
+        # the live plot is created before the progress bars on purpose: tqdm assigns the
+        # following bars the positions below it, so the plot stays at the top of the block
+        with (
+            self.__graph_size_progress_plot("TaskGraph size (inlining function calls)"),
+            tqdm(total=call_path_limit, desc="Callpath depth") as progress_bar,
+        ):
             while modification_found:
                 call_path_depth += 1
                 if call_path_depth >= call_path_limit:
@@ -1822,6 +1856,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             self.add_edge(fcn, inlined_entry)
                             self.add_edge(inlined_exit, succ)
                         modification_found = True
+                        self.__sample_graph_size()
 
                 progress_bar.update()
 
@@ -1966,6 +2001,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.add_edge(pred, end_branch_node)
                 self.add_edge(end_branch_node, end_branch_parent_node)
 
+            self.__sample_graph_size()
+
     def __add_branching_nodes_fallback_cleanup(self) -> None:
         """Safety net for cases the dominance-based pass above cannot resolve on its own -
         chiefly, two independent (non-nested) branch points that happen to share the same
@@ -2008,6 +2045,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.graph.remove_edge(bpn, succ)
                 self.add_edge(start_branch_parent_node, succ)
             self.add_edge(bpn, start_branch_parent_node)
+            self.__sample_graph_size()
 
         end_branch_parent_nodes: List[TGNode] = []
         for mn in remaining_merge_nodes:
@@ -2018,6 +2056,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.graph.remove_edge(pred, mn)
                 self.add_edge(pred, end_branch_parent_node)
             self.add_edge(end_branch_parent_node, mn)
+            self.__sample_graph_size()
 
         for sbpn in start_branch_parent_nodes:
             for succ in list(self.get_successors(sbpn)):
@@ -2026,6 +2065,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.graph.remove_edge(sbpn, succ)
                 self.add_edge(sbpn, start_branch_node)
                 self.add_edge(start_branch_node, succ)
+            self.__sample_graph_size()
 
         for ebpn in end_branch_parent_nodes:
             for pred in list(self.get_predecessors(ebpn)):
@@ -2034,23 +2074,28 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.graph.remove_edge(pred, ebpn)
                 self.add_edge(pred, end_branch_node)
                 self.add_edge(end_branch_node, ebpn)
+            self.__sample_graph_size()
 
     def __add_branching_nodes(self) -> None:
         logger.info("Adding branching nodes...")
-        for function_node in tqdm(
-            list(self.TGFunctionNode_pet_node_id_to_tg_node.values()), desc="Adding branching nodes per function"
-        ):
-            try:
-                self.__add_branching_nodes_for_function(function_node)
-            except nx.NetworkXError as e:
-                logger.warning(
-                    "Dominance-based branching node insertion failed for function "
-                    + function_node.get_label()
-                    + " ("
-                    + str(e)
-                    + "). Falling back to unconditional wrapping for its remaining branch/merge points."
-                )
-        self.__add_branching_nodes_fallback_cleanup()
+        # the live plot is created before the progress bar on purpose: tqdm assigns the
+        # following bars the positions below it, so the plot stays at the top of the block
+        with self.__graph_size_progress_plot("TaskGraph size (adding branching nodes)"):
+            for function_node in tqdm(
+                list(self.TGFunctionNode_pet_node_id_to_tg_node.values()), desc="Adding branching nodes per function"
+            ):
+                try:
+                    self.__add_branching_nodes_for_function(function_node)
+                except nx.NetworkXError as e:
+                    logger.warning(
+                        "Dominance-based branching node insertion failed for function "
+                        + function_node.get_label()
+                        + " ("
+                        + str(e)
+                        + "). Falling back to unconditional wrapping for its remaining branch/merge points."
+                    )
+                self.__sample_graph_size()
+            self.__add_branching_nodes_fallback_cleanup()
 
         logger.info("--> validating amounts of node successors and predecessors...")
         for node in tqdm(self.graph.nodes):
