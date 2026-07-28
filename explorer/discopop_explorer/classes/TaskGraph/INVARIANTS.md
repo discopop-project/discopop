@@ -145,6 +145,49 @@ loop exit, plus an `if`/`else` inside the loop body. The early return reaches th
 exit CU first, so the loop header's exit edge targets an already-visited node.
 See `test_TaskGraph.py`.
 
+## 7. Acyclic, two-sided `Context` relations
+
+The `Context` objects carry two relations, both built after the graph passes above:
+
+- **containment** — `parent_context` / `contained_contexts`, built by
+  `__calculate_context_nesting` (plus `__assign_branching_contexts` and
+  `__assign_loop_contexts`)
+- **succession** — `predecessor` / `successor`, built by
+  `__calculate_context_successions`
+
+Every traversal of them - in `Context` itself, in the pattern detectors, in
+`ContextTaskGraph` - assumes containment forms a forest and the successor chains
+are acyclic. Nothing in the building passes guarantees that: both assign
+`parent_context` / `successor` unconditionally, so the last write wins, and
+`__calculate_context_successions` dedupes its BFS on `(node, level)` while
+discarding the context stack, so a node reached twice at the same nesting level
+along different paths can be linked into two different sequences. An unbalanced
+Start/End pair (invariant 1) corrupts `current_level` and has the same effect.
+
+A cycle introduced that way stays invisible until some traversal walks it, which
+surfaces as a `RecursionError` or a hang arbitrarily far from the cause -
+originally in `Context.get_contained_contexts_in_sequence`, called per loop
+iteration from `new_do_all_detector`.
+
+`__validate_context_structure` runs directly after
+`__calculate_context_successions` and enforces this: it breaks cycles in both
+relations (logging an error, since a cycle always means one of the passes above
+is wrong) and reports links recorded on only one of their two ends, which it
+cannot repair unambiguously. `Context.add_contained_context`,
+`register_parent_context` and `register_successor_context` additionally refuse
+the cycles they can detect in constant/depth-bounded time; longer successor
+cycles are left to the validation pass, because scanning the chain on every
+registration would make building the relation quadratic.
+
+Independently of acyclicity, **the relations are also too large to traverse
+recursively**: successor chains grow with the amount of inlined code and
+containment nesting with the inlining depth, so any recursive walk hits Python's
+recursion limit on well-formed input alone. All traversals in `Context` are
+iterative for that reason. `get_contained_contexts_in_sequence` is additionally
+bounded to the region it was asked about, so a successor chain leaving that
+region cannot pull unrelated contexts (and their CUs) into a caller's result.
+See `Contexts/test_Context.py` and `test_TaskGraph.py`.
+
 ## Where this bites in practice
 
 All of the invariants above are enforced (or silently violated) inside
@@ -157,6 +200,7 @@ __visit_pet -> __break_cycles -> __fix_loop_structures -> __duplicate_loop_itera
   -> __assign_loopstate_positions_within_functions -> __inline_function_calls
   -> __add_branching_nodes -> __assign_contexts -> __assign_node_levels
   -> __calculate_context_nesting -> __calculate_context_successions
+  -> __validate_context_structure
 ```
 
 When debugging a "malformed graph" failure, first identify *which* invariant

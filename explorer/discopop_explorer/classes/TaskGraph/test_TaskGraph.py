@@ -13,12 +13,16 @@ TGStartBranchParentNode/TGEndBranchParentNode end up with zero successors/
 predecessors - an orphaned node that later crashed __calculate_context_nesting
 because it looks like a valid entry point despite being an "exit" marker.
 
-The remaining tests cover __visit_pet's control-flow reconstruction, where a
-dropped successor edge made __break_cycles misidentify a loop's header (see
-INVARIANTS.md, invariant 1)."""
+test_visit_pet_* / test_break_cycles_* cover __visit_pet's control-flow
+reconstruction, where a dropped successor edge made __break_cycles misidentify a
+loop's header (see INVARIANTS.md, invariant 1).
+
+test_validate_context_structure_* cover the Context relation checks that run
+after __calculate_context_successions."""
 
 from __future__ import annotations
 
+import logging
 from typing import Any, List, Sequence, Tuple
 
 import networkx as nx
@@ -26,6 +30,7 @@ import networkx as nx
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.Branching.TGEndBranchParentNode import TGEndBranchParentNode
 from discopop_explorer.classes.TaskGraph.Branching.TGStartBranchParentNode import TGStartBranchParentNode
+from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Loops.TGEndLoopNode import TGEndLoopNode
 from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
@@ -215,3 +220,103 @@ def test_assign_loop_contexts_finds_loop_end_node_for_loop_with_shared_exit_cu(
     _visit_pet(tg, pet)
     tg._TaskGraph__break_cycles()  # type: ignore[attr-defined]
     tg._TaskGraph__assign_loop_contexts()  # type: ignore[attr-defined]
+
+
+# --- context structure validation ---------------------------------------------------------
+
+
+def _nest_context(parent: Context, child: Context) -> None:
+    # bypasses add_contained_context/register_parent_context, which reject the cycles they can
+    # detect themselves - here the malformed structures those checks miss are built on purpose
+    parent.contained_contexts.add(child)
+    child.parent_context = parent
+
+
+def _validate_context_structure(tg: TaskGraph) -> None:
+    tg._TaskGraph__validate_context_structure()  # type: ignore[attr-defined]
+
+
+def test_validate_context_structure_breaks_containment_cycle(build_task_graph: Any, caplog: Any) -> None:
+    """A cycle in the containment relation makes every traversal of it diverge. The pass must
+    remove the edge closing it and say where it was."""
+    outer, middle, inner = Context(), Context(), Context()
+    _nest_context(outer, middle)
+    _nest_context(middle, inner)
+    _nest_context(inner, outer)  # closes the cycle
+    tg = build_task_graph(None)
+    tg.contexts = [outer, middle, inner]
+
+    with caplog.at_level(logging.ERROR, logger="Explorer"):
+        _validate_context_structure(tg)
+
+    assert outer not in inner.contained_contexts
+    assert outer.parent_context is None
+    assert outer.get_contained_contexts(inclusive=True) == {middle, inner}
+    assert "one of its own ancestors" in caplog.text
+
+
+def test_validate_context_structure_breaks_succession_cycle(build_task_graph: Any, caplog: Any) -> None:
+    """A cycle in the successor relation is not rejected on registration unless it is a
+    two-element one, so it has to be caught here."""
+    first, second, third = Context(), Context(), Context()
+    first.register_successor_context(second)
+    second.register_successor_context(third)
+    third.register_successor_context(first)  # closes the cycle
+    assert third.successor is first, "registration is expected to accept a cycle of this length"
+    tg = build_task_graph(None)
+    tg.contexts = [first, second, third]
+
+    with caplog.at_level(logging.ERROR, logger="Explorer"):
+        _validate_context_structure(tg)
+
+    assert third.successor is None
+    assert first.predecessor is None
+    assert "runs back into" in caplog.text
+
+
+def test_validate_context_structure_finds_contexts_not_in_the_contexts_list(build_task_graph: Any) -> None:
+    """self.contexts only holds what the __assign_*_contexts passes created themselves, so the
+    validation has to collect the contexts reachable from them as well."""
+    listed, unlisted_first, unlisted_second = Context(), Context(), Context()
+    _nest_context(listed, unlisted_first)
+    unlisted_first.register_successor_context(unlisted_second)
+    unlisted_second.successor = unlisted_first  # closes the cycle, bypassing the two-cycle check
+    tg = build_task_graph(None)
+    tg.contexts = [listed]
+
+    _validate_context_structure(tg)
+
+    assert unlisted_second.successor is None
+
+
+def test_validate_context_structure_reports_one_sided_links(build_task_graph: Any, caplog: Any) -> None:
+    """A containment or succession link recorded on only one of its two ends is not repaired -
+    which end is authoritative is not decidable here - but it must be reported."""
+    parent, child = Context(), Context()
+    parent.contained_contexts.add(child)  # child.parent_context stays None
+    tg = build_task_graph(None)
+    tg.contexts = [parent, child]
+
+    with caplog.at_level(logging.WARNING, logger="Explorer"):
+        _validate_context_structure(tg)
+
+    assert "one-sided containment" in caplog.text
+
+
+def test_validate_context_structure_accepts_a_well_formed_structure(build_task_graph: Any, caplog: Any) -> None:
+    loop, iteration_1, iteration_2, work = Context(), Context(), Context(), Context()
+    for iteration in (iteration_1, iteration_2):
+        loop.add_contained_context(iteration)
+        iteration.register_parent_context(loop)
+    iteration_1.add_contained_context(work)
+    work.register_parent_context(iteration_1)
+    iteration_1.register_successor_context(iteration_2)
+    tg = build_task_graph(None)
+    tg.contexts = [loop, iteration_1, iteration_2, work]
+
+    with caplog.at_level(logging.WARNING, logger="Explorer"):
+        _validate_context_structure(tg)
+
+    assert caplog.text == ""
+    assert iteration_1.successor is iteration_2
+    assert loop.get_contained_contexts(inclusive=True) == {iteration_1, iteration_2, work}

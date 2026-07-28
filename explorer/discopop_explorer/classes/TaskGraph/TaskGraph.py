@@ -200,6 +200,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         self.__assign_node_levels()
         self.__calculate_context_nesting()
         self.__calculate_context_successions()
+        self.__validate_context_structure()
         # self.__insert_pessimistic_data_dependencies()
         # self.__insert_data_dependencies()
         # self.__validate_data_dependencies()
@@ -1638,6 +1639,168 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     #       self.plot_context_graph()
     #       plt.pause(1)
     ## !DEBUG
+
+    def __collect_all_contexts(self) -> List[Context]:
+        """Returns every context reachable from self.contexts via any of the four relations, in a
+        deterministic order. self.contexts only holds the contexts the __assign_*_contexts passes
+        created themselves, so it is not necessarily complete."""
+        collected: Set[Context] = set()
+        queue: List[Context] = list(self.contexts)
+        collected.update(queue)
+        while len(queue) > 0:
+            current = queue.pop()
+            related: List[Optional[Context]] = [current.parent_context, current.successor, current.predecessor]
+            related += list(current.contained_contexts)
+            for ctx in related:
+                if ctx is not None and ctx not in collected:
+                    collected.add(ctx)
+                    queue.append(ctx)
+        return sorted(collected, key=lambda ctx: ctx.creation_index)
+
+    def __describe_context(self, context: Context) -> str:
+        """Identifies a context in a log message by its type and the source lines it covers."""
+        scope = context.get_code_scope(self.pet)
+        location = (scope[0] + ".." + scope[-1]) if len(scope) > 0 else "no source lines"
+        return type(context).__name__ + " (" + location + ")"
+
+    def __validate_context_structure(self) -> None:
+        """Checks the structural invariants of the Context relations that __calculate_context_nesting
+        and __calculate_context_successions build, and breaks cycles found in them.
+
+        Every traversal of these relations - in Context itself, in the pattern detectors, and in
+        ContextTaskGraph - assumes that containment forms a forest and that the successor chain is
+        acyclic. None of the passes building them enforces that: they set parent_context /
+        successor unconditionally, so the last write wins, and a node reached twice at the same
+        nesting level via different paths can be linked into two different sequences. A cycle
+        introduced that way is invisible until some traversal diverges, which surfaces as a
+        RecursionError or a hang far away from its cause.
+
+        Cycles are broken here (rather than raised) because a well-formed structure is what the
+        rest of the pipeline needs, and because the results for the unaffected parts of the program
+        stay valid. They are logged as errors, since they always indicate a defect in one of the
+        passes above. Inconsistencies that cannot be repaired unambiguously - a containment or
+        succession link that is only recorded on one of its two ends - are only counted and
+        reported."""
+        logger.info("Validating context structure...")
+        contexts = self.__collect_all_contexts()
+
+        broken_containment_edges = self.__break_containment_cycles(contexts)
+        broken_succession_links = self.__break_succession_cycles(contexts)
+        self.__report_context_relation_inconsistencies(contexts)
+
+        if broken_containment_edges > 0 or broken_succession_links > 0:
+            logger.error(
+                "Broke %d cyclic containment edge(s) and %d cyclic succession link(s) in the "
+                "context structure. This indicates a defect in __calculate_context_nesting / "
+                "__calculate_context_successions; results depending on the affected contexts "
+                "are unreliable.",
+                broken_containment_edges,
+                broken_succession_links,
+            )
+
+    def __break_containment_cycles(self, contexts: List[Context]) -> int:
+        """Detects cycles in the contained_contexts relation with an iterative depth-first search
+        and removes the edge closing each of them. Returns the number of removed edges."""
+        ON_STACK, FINISHED = 1, 2
+        state: Dict[Context, int] = dict()
+        removed = 0
+        for root in contexts:
+            if root in state:
+                continue
+            state[root] = ON_STACK
+            # (context, its not yet visited children); children are popped from the back
+            stack: List[Tuple[Context, List[Context]]] = [(root, self.__sorted_contexts(root.contained_contexts))]
+            while len(stack) > 0:
+                current, remaining_children = stack[-1]
+                if len(remaining_children) == 0:
+                    state[current] = FINISHED
+                    stack.pop()
+                    continue
+                child = remaining_children.pop()
+                child_state = state.get(child, 0)
+                if child_state == ON_STACK:
+                    # back edge: child is an ancestor of current on the current search path
+                    logger.error(
+                        "Context %s contains %s, which is one of its own ancestors. Removing the "
+                        "containment edge to keep the containment relation acyclic.",
+                        self.__describe_context(current),
+                        self.__describe_context(child),
+                    )
+                    current.contained_contexts.discard(child)
+                    if child.parent_context is current:
+                        child.parent_context = None
+                    removed += 1
+                elif child_state == 0:
+                    state[child] = ON_STACK
+                    stack.append((child, self.__sorted_contexts(child.contained_contexts)))
+                # FINISHED children are reached via a second, non-cyclic path - harmless here
+        return removed
+
+    def __break_succession_cycles(self, contexts: List[Context]) -> int:
+        """Detects cycles in the successor relation and clears the link closing each of them.
+        Every context has at most one successor, so following the chain from each context and
+        colouring the contexts on it visits every context once. Returns the number of cleared
+        links."""
+        ON_PATH, FINISHED = 1, 2
+        state: Dict[Context, int] = dict()
+        cleared = 0
+        for context in contexts:
+            if context in state:
+                continue
+            path: List[Context] = []
+            current: Optional[Context] = context
+            while current is not None and current not in state:
+                state[current] = ON_PATH
+                path.append(current)
+                current = current.successor
+            if current is not None and state[current] == ON_PATH:
+                # the chain ran back into a context of the path just walked
+                closing_context = path[-1]
+                logger.error(
+                    "The successor chain starting at %s runs back into %s. Clearing the closing "
+                    "link to keep the successor relation acyclic.",
+                    self.__describe_context(closing_context),
+                    self.__describe_context(current),
+                )
+                closing_context.successor = None
+                if current.predecessor is closing_context:
+                    current.predecessor = None
+                cleared += 1
+            for path_context in path:
+                state[path_context] = FINISHED
+        return cleared
+
+    def __report_context_relation_inconsistencies(self, contexts: List[Context]) -> None:
+        """Reports containment and succession links that are only recorded on one of their two
+        ends. These are not repaired: which of the two ends is the correct one is not decidable
+        here."""
+        one_sided_containment = 0
+        one_sided_succession = 0
+        for context in contexts:
+            for child in context.contained_contexts:
+                if child.parent_context is not context:
+                    one_sided_containment += 1
+            if context.parent_context is not None and context not in context.parent_context.contained_contexts:
+                one_sided_containment += 1
+            if context.successor is not None and context.successor.predecessor is not context:
+                one_sided_succession += 1
+            if context.predecessor is not None and context.predecessor.successor is not context:
+                one_sided_succession += 1
+        if one_sided_containment > 0 or one_sided_succession > 0:
+            logger.warning(
+                "Context structure contains %d one-sided containment and %d one-sided succession "
+                "link(s) out of %d contexts. Traversals starting from either end of such a link "
+                "see different structures.",
+                one_sided_containment,
+                one_sided_succession,
+                len(contexts),
+            )
+
+    @staticmethod
+    def __sorted_contexts(contexts: Set[Context]) -> List[Context]:
+        """contained_contexts is a set, so it has to be ordered explicitly wherever the result
+        depends on the iteration order."""
+        return sorted(contexts, key=lambda ctx: ctx.creation_index)
 
     def __determine_loop_variables(self) -> None:
         """determine loop variables."""
