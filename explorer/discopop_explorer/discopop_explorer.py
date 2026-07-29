@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 
 import pstats2  # type: ignore
 from pluginbase import PluginBase  # type: ignore
+from termcolor import colored
 from discopop_explorer.functions.PEGraph.output.json import dump_to_pickled_json
 from discopop_explorer.functions.PEGraph.output.gephi import dump_to_gephi_file
 from discopop_explorer.utilities.statistics.collect_statistics import collect_statistics
@@ -45,6 +46,7 @@ from discopop_library.Viewer.suggestions_view import print_suggestions_overview
 #    ExtrapInterpolatedMicrobench,
 # )
 from discopop_library.result_classes.DetectionResult import DetectionResult
+from discopop_library.StatusReporting.console import banner, stage, success
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.json_serializer import PatternBaseSerializer
 from discopop_explorer.utilities.PEGraphConstruction.parser import parse_inputs
@@ -147,7 +149,8 @@ def __run(
     module_name = "discopop"
     module_api_url = "https://api.github.com/repos/discopop-project/DiscoPoP/releases/latest"
     module_release_url = "https://github.com/discopop-project/DiscoPoP/releases"
-    check_for_updates(module_name, module_api_url, module_release_url)
+    with stage("Checking for updates"):
+        check_for_updates(module_name, module_api_url, module_release_url)
 
     visualizer = None
 
@@ -158,9 +161,9 @@ def __run(
 
         visualizer = Visualizer(visualize_on)
 
-    pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping), visualizer=visualizer)  # type: ignore
-    pet.validate()
-    print("PET CREATION FINISHED.")
+    with stage("Constructing PET graph"):
+        pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping), visualizer=visualizer)  # type: ignore
+        pet.validate()
 
     # synthesize disambiguation metadata for static dependencies
     #    if os.path.exists(os.path.join(dirname(abspath(cu_xml)), "dependency_metadata.txt")):
@@ -176,8 +179,8 @@ def __run(
 
     for plugin_name in plugins:
         p = plugin_source.load_plugin(plugin_name)
-        print("executing plugin before: " + plugin_name)
-        pet = p.run_before(pet)
+        with stage(f"Running plugin: {plugin_name}"):
+            pet = p.run_before(pet)
 
     pattern_detector = PatternDetectorX(pet)
 
@@ -250,48 +253,46 @@ def run(arguments: ExplorerArguments) -> None:
             )
             sys.exit(0)
 
-        print("Loading Hotspots...")
-
-        hotspots = load_hotspots(
-            HotspotLoaderArguments(
-                verbose=True,
-                dot_discopop_path=os.getcwd(),
-                get_loops=True,
-                get_functions=True,
-                get_YES=True,
-                get_MAYBE=True,
-                get_NO=False,
-                log_level=arguments.log_level,
-                write_log=arguments.write_log,
+        with stage("Loading hotspots"):
+            hotspots = load_hotspots(
+                HotspotLoaderArguments(
+                    verbose=True,
+                    dot_discopop_path=os.getcwd(),
+                    get_loops=True,
+                    get_functions=True,
+                    get_YES=True,
+                    get_MAYBE=True,
+                    get_NO=False,
+                    log_level=arguments.log_level,
+                    write_log=arguments.write_log,
+                )
             )
-        )
-
-        print("Done.")
 
         start = time.time()
 
-        res = __run(
-            arguments.project_path,
-            arguments.cu_xml_file,
-            arguments.dep_file,
-            arguments.loop_counter_file,
-            arguments.reduction_file,
-            arguments.plugins,
-            file_mapping=arguments.file_mapping_file,
-            cu_inst_result_file=arguments.cu_inst_result_file,
-            llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
-            discopop_build_path=arguments.discopop_build_path,
-            enable_patterns=arguments.enable_patterns,
-            enable_task_pattern=arguments.enable_task_pattern,
-            enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
-            hotspot_functions=hotspots,
-            load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
-            jobs=arguments.jobs,
-            enable_task_graph_plot=arguments.enable_task_graph_plot,
-            enable_context_graph_plot=arguments.enable_context_graph_plot,
-            enable_visualizer=arguments.enable_visualizer,
-            visualize_on=arguments.visualize_on,
-        )
+        with stage("Detecting patterns"):
+            res = __run(
+                arguments.project_path,
+                arguments.cu_xml_file,
+                arguments.dep_file,
+                arguments.loop_counter_file,
+                arguments.reduction_file,
+                arguments.plugins,
+                file_mapping=arguments.file_mapping_file,
+                cu_inst_result_file=arguments.cu_inst_result_file,
+                llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
+                discopop_build_path=arguments.discopop_build_path,
+                enable_patterns=arguments.enable_patterns,
+                enable_task_pattern=arguments.enable_task_pattern,
+                enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
+                hotspot_functions=hotspots,
+                load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
+                jobs=arguments.jobs,
+                enable_task_graph_plot=arguments.enable_task_graph_plot,
+                enable_context_graph_plot=arguments.enable_context_graph_plot,
+                enable_visualizer=arguments.enable_visualizer,
+                visualize_on=arguments.visualize_on,
+            )
 
         end = time.time()
 
@@ -327,40 +328,33 @@ def run(arguments: ExplorerArguments) -> None:
                 json.dump(res, f, indent=2, cls=PatternBaseSerializer)
 
         # create applicable patch files from the found suggestions
-        logger.info("executing discopop_patch_generator")
-        out = subprocess.check_output(["discopop_patch_generator"], cwd=arguments.project_path).decode("utf-8")
-        logger.debug("\t Out:\n" + out)
-        logger.info("\tDone.")
+        with stage("Generating parallelization patches"):
+            out = subprocess.check_output(["discopop_patch_generator"], cwd=arguments.project_path).decode("utf-8")
+            logger.debug("discopop_patch_generator output:\n" + out)
 
         # print suggestions overview for users
-        logger.info("printing suggestions overview")
-        print_suggestions_overview(
-            ViewerArguments(
-                log_level="WARNING", write_log=False, path=arguments.project_path, print_suggestions_overview=True
+        with stage("Printing suggestions overview"):
+            print_suggestions_overview(
+                ViewerArguments(
+                    log_level="WARNING", write_log=False, path=arguments.project_path, print_suggestions_overview=True
+                )
             )
-        )
-        logger.info("\tDone.")
 
+        banner("To browse the created parallelization suggestions")
         print(
-            """
-To browse the created parallelization suggestions:
-1. Open the DiscoPoP VSCode extension tab in VSCode
-2. Open the project configuration
-  - A new Configuration should have been created automatically,
-    if the .discopop folder was newly created.
-  - You can add a configuration manually via the following steps:
-    - Configurations -> '+' -> ViewOnly
-    - Select a name for the Configuration
-    - Provide the following path to the .discopop folder
-    ========\n"""
-            + "    "
-            + arguments.project_path
-            + """\n    ========
-3. Load results (clock-like icon)
-"""
+            "1. Open the DiscoPoP VSCode extension tab in VSCode\n"
+            "2. Open the project configuration\n"
+            "  - A new Configuration should have been created automatically,\n"
+            "    if the .discopop folder was newly created.\n"
+            "  - You can add a configuration manually via the following steps:\n"
+            "    - Configurations -> '+' -> ViewOnly\n"
+            "    - Select a name for the Configuration\n"
+            "    - Provide the following path to the .discopop folder\n"
+            f"      {colored(arguments.project_path, 'cyan', attrs=['bold'])}\n"
+            "3. Load results (clock-like icon)"
         )
 
-        print("Time taken for pattern detection: {0}".format(end - start))
+        success(f"Time taken for pattern detection: {end - start:.2f}s")
 
         #        # demonstration of Microbenchmark possibilities
         #        if arguments.microbench_file is not None:

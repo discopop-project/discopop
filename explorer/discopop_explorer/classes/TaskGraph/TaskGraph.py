@@ -8,20 +8,18 @@
 
 import copy
 from collections import deque
-from contextlib import contextmanager
 import os
 from pathlib import Path
 import random
 import signal
 import logging
 import sys
-from typing import Any, Deque, Dict, Iterator, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
 from matplotlib.axes import Axes
 from networkx import Graph
-from tqdm import tqdm  # type: ignore
 import matplotlib.lines as mlines
 
 from discopop_explorer.aliases.LineID import LineID
@@ -74,7 +72,7 @@ from discopop_explorer.functions.PEGraph.traversal.children import get_entry_chi
 from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.functions.PEGraph.traversal.predecessors import direct_predecessors
 from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
-from discopop_explorer.utilities.general.graph_size_progress_plot import GraphSizeProgressPlot
+from discopop_library.StatusReporting.console import progress, stage, warn
 
 if os.environ.get("DISPLAY") or sys.platform in ("darwin", "win32"):
     try:
@@ -141,8 +139,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     current_position: Dict[LevelIndex, PositionIndex] = {0: 0}
     plotting_graph_buffer = None
     plotting_postions_buffer = None
-    # live console plot of the graph size, only set while a long-running construction step is active
-    size_progress_plot: Optional[GraphSizeProgressPlot] = None
 
     def __init__(
         self,
@@ -169,12 +165,18 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         self.current_position = {0: 0}
 
         # start processing
-        self.__assign_function_ids(pet)
-        self.__construct_from_pet(pet)
-        self.__assign_state_ids(dynamic_dependency_file)
-        self.__insert_data_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
-        self.__determine_loop_variables()
-        self.__cleanup_loop_dependencies()
+        with stage("Assigning function ids", 1, total=6):
+            self.__assign_function_ids(pet)
+        with stage("Constructing TaskGraph structure", 2, total=6):
+            self.__construct_from_pet(pet)
+        with stage("Assigning state ids", 3, total=6):
+            self.__assign_state_ids(dynamic_dependency_file)
+        with stage("Inserting data dependencies", 4, total=6):
+            self.__insert_data_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
+        with stage("Determining loop variables", 5, total=6):
+            self.__determine_loop_variables()
+        with stage("Cleaning up loop dependencies", 6, total=6):
+            self.__cleanup_loop_dependencies()
 
     def __assign_function_ids(self, pet: PEGraphX) -> None:
         id = 0
@@ -184,23 +186,37 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Assigned function ids:\n" + str(self.function_id_map))
 
     def __construct_from_pet(self, pet: PEGraphX) -> None:
-        logger.info("Hello world!")
         # prepare function graphs without calling
-        self.__visit_pet(pet)
-        self.__break_cycles()
-        self.__fix_loop_structures()
-        self.__duplicate_loop_iterations()
-        self.__validate_graph_structure()
-        self.__add_work_nodes()
-        self.__assign_loopstate_positions_within_functions()
-        self.__inline_function_calls()
-        self.__add_branching_nodes()
+        with stage("Visiting PET nodes", 1, total=14):
+            self.__visit_pet(pet)
+        with stage("Breaking cycles", 2, total=14):
+            self.__break_cycles()
+        with stage("Fixing loop structures", 3, total=14):
+            self.__fix_loop_structures()
+        with stage("Duplicating loop iterations", 4, total=14):
+            self.__duplicate_loop_iterations()
+        with stage("Validating graph structure", 5, total=14):
+            self.__validate_graph_structure()
+        with stage("Adding work nodes", 6, total=14):
+            self.__add_work_nodes()
+        with stage("Assigning loop-state positions", 7, total=14):
+            self.__assign_loopstate_positions_within_functions()
+        with stage("Inlining function calls", 8, total=14):
+            self.__inline_function_calls()
+        with stage("Adding branching nodes", 9, total=14):
+            self.__add_branching_nodes()
 
-        self.__assign_contexts()  # assign contexts before inlining to keep runtime of branching context detection in check
-        self.__assign_node_levels()
-        self.__calculate_context_nesting()
-        self.__calculate_context_successions()
-        self.__validate_context_structure()
+        # assign contexts before inlining to keep runtime of branching context detection in check
+        with stage("Assigning contexts", 10, total=14):
+            self.__assign_contexts()
+        with stage("Assigning node levels", 11, total=14):
+            self.__assign_node_levels()
+        with stage("Calculating context nesting", 12, total=14):
+            self.__calculate_context_nesting()
+        with stage("Calculating context successions", 13, total=14):
+            self.__calculate_context_successions()
+        with stage("Validating context structure", 14, total=14):
+            self.__validate_context_structure()
         # self.__insert_pessimistic_data_dependencies()
         # self.__insert_data_dependencies()
         # self.__validate_data_dependencies()
@@ -215,31 +231,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         if self.graph.has_edge(source, target):
             return
         self.graph.add_edge(source, target)
-
-    def __sample_graph_size(self, force: bool = False) -> None:
-        """Feed the current graph size to the live console plot, if one is active. Called
-        from hot loops, so the sizes are only determined if the plot actually wants a new
-        sample - counting the edges of a multigraph is linear in the amount of nodes."""
-        if self.size_progress_plot is None:
-            return
-        if not force and not self.size_progress_plot.sample_due():
-            return
-        self.size_progress_plot.sample(self.graph.number_of_nodes(), self.graph.number_of_edges(), force=force)
-
-    @contextmanager
-    def __graph_size_progress_plot(self, title: str) -> Iterator[None]:
-        """Show a console plot of the graph's amount of nodes and edges for the wrapped
-        construction step. Sampling happens via __sample_graph_size."""
-        plot = GraphSizeProgressPlot(title=title)
-        plot.open()
-        self.size_progress_plot = plot
-        try:
-            self.__sample_graph_size(force=True)
-            yield
-        finally:
-            self.__sample_graph_size(force=True)
-            self.size_progress_plot = None
-            plot.close()
 
     def __get_next_level(self) -> LevelIndex:
         buffer = self.current_level
@@ -788,10 +779,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
     def __break_cycles(self) -> None:
         # search for cycles in each function and replace them with two distinct iteraions
-        logger.info("Breaking cycles...")
-
-        for function_node in self.TGFunctionNode_pet_node_id_to_tg_node.values():
-            logger.info("--> " + function_node.get_label())
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values(), desc="Breaking cycles"):
+            logger.debug("Breaking cycles in: " + function_node.get_label())
             # progress search if cycle can not be broken
             search_source: TGNode = function_node
             search_source_queue = self.get_descendants(function_node)
@@ -964,7 +953,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __fix_loop_structures(self, plot_problematic_loops: bool = False) -> None:
         # in case a loop contains a branch to a non-iteration node (e.g. via "break"- statement), delete this edge and cleanup the graph
         logger.info("Fixing loop structures...")
-        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             logger.info("--> " + function_node.get_label())
             modification_found = True
             while modification_found:
@@ -1019,7 +1008,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         if len(invalid_edges) == 0:
                             continue
                         # found problematic loop
-                        print("Invalid edges: ", [(e[0].get_label(), e[1].get_label()) for e in invalid_edges])
+                        warn("Invalid edges: " + str([(e[0].get_label(), e[1].get_label()) for e in invalid_edges]))
 
                         # show problematic loop
                         if plot_problematic_loops:
@@ -1082,7 +1071,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
     def __duplicate_loop_iterations(self, plot_progress: bool = False) -> None:
         logger.info("Duplicating loop iterations...")
-        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             logger.info("--> " + function_node.get_label())
             added_copies: Set[TGNode] = set()  # do not allow the re-copying of copies
             already_considered: Set[TGNode] = set()  # do not allo the re-copying of nodes
@@ -1205,7 +1194,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
     def __assign_function_contexts(self) -> None:
         logger.info("Assigning function contexts...")
-        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             descendants = self.get_descendants(function_node)
             function_start_nodes = [n for n in descendants if isinstance(n, TGStartFunctionNode)]
             for fsn in function_start_nodes:
@@ -1222,7 +1211,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("--> Selecting entry points...")
         start_branch_nodes: List[TGNode] = []
         start_branch_parent_nodes: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if isinstance(node, TGStartBranchNode):
                 start_branch_nodes.append(node)
             if isinstance(node, TGStartBranchParentNode):
@@ -1230,7 +1219,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
         # create individual branch context
         logger.info("--> Create branch contexts")
-        for sbn in tqdm(start_branch_nodes):
+        for sbn in progress(start_branch_nodes):
             # create Context
             branch_context = BranchContext()
             sbn.register_created_context(branch_context)
@@ -1270,7 +1259,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
         # create branching parent contexts
         logger.info("--> Create branch parent contexts...")
-        for sbpn in tqdm(start_branch_parent_nodes):
+        for sbpn in progress(start_branch_parent_nodes):
             branch_parent_context = BranchingParentContext()
             self.contexts.append(branch_parent_context)
             sbpn.created_context = branch_parent_context
@@ -1299,7 +1288,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __assign_loop_contexts(self) -> None:
         logger.info("Assigning loop contexts...")
 
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if not isinstance(node, TGStartLoopNode):
                 continue
 
@@ -1434,7 +1423,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __assign_work_contexts(self) -> None:
         logger.info("Assigning work contexts to nodes...")
 
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if not isinstance(node, TGStartWorkNode):
                 continue
             # create a new work context
@@ -1445,7 +1434,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __assign_inlined_function_contexts(self) -> None:
         logger.info("Assigning inlined function contexts to nodes...")
 
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if not isinstance(node, TGStartInlinedFunctionNode):
                 continue
             # create a new inlined function context
@@ -1456,16 +1445,16 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __assign_parent_contexts_to_nodes(self) -> None:
         # assigns each node the innermost context containing the node
         logger.info("Assigning parent contexts to nodes...")
-        #        for ctx in tqdm(self.contexts):
+        #        for ctx in progress(self.contexts):
         #            for node in ctx.get_contained_nodes(inclusive=False):
         #                node.add_parent_context(ctx)
         logger.info("--> classify entry points...")
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if len(self.get_predecessors(node)) == 0:
                 entry_points.append(node)
         logger.info("DFS parsing entry points...")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
             queue: List[Tuple[TGNode, Optional[Context]]] = []
             root_context = Context()
             # skip root node when initializing the queue
@@ -1541,11 +1530,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Assigning Loop state positions within functions...")
 
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if isinstance(node, TGFunctionNode):
                 entry_points.append(node)
         logger.info("--> Assigning loop state ids")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
             # loop state position corresponds to the position of the iteration count for the specific loop within the "_loopstate"-information in the callpaths reported by the profiler
             # find all loops in function, sort them by location, and assign loopstate_positions.
             function_nodes = self.get_descendants(entry_point)
@@ -1571,12 +1560,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Assigning context successions...")
         logger.info("--> classify entry points...")
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if self.graph.in_degree(node) == 0:
                 entry_points.append(node)
 
         logger.info("--> DFS parsing entry points...")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
             # initialize succession calculation
             queue: Deque[Tuple[TGNode, int, Tuple[Optional[Context], ...]]] = deque(
                 [(entry_point, 0, (None,))]
@@ -1681,7 +1670,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         passes above. Inconsistencies that cannot be repaired unambiguously - a containment or
         succession link that is only recorded on one of its two ends - are only counted and
         reported."""
-        logger.info("Validating context structure...")
         contexts = self.__collect_all_contexts()
 
         broken_containment_edges = self.__break_containment_cycles(contexts)
@@ -1704,7 +1692,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         ON_STACK, FINISHED = 1, 2
         state: Dict[Context, int] = dict()
         removed = 0
-        for root in contexts:
+        for root in progress(contexts, desc="Breaking containment cycles"):
             if root in state:
                 continue
             state[root] = ON_STACK
@@ -1744,7 +1732,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         ON_PATH, FINISHED = 1, 2
         state: Dict[Context, int] = dict()
         cleared = 0
-        for context in contexts:
+        for context in progress(contexts, desc="Breaking succession cycles"):
             if context in state:
                 continue
             path: List[Context] = []
@@ -1776,7 +1764,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         here."""
         one_sided_containment = 0
         one_sided_succession = 0
-        for context in contexts:
+        for context in progress(contexts, desc="Checking context relation consistency"):
             for child in context.contained_contexts:
                 if child.parent_context is not context:
                     one_sided_containment += 1
@@ -1807,11 +1795,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Determine loop variables...")
         logger.info("--> classify entry points...")
         entry_points: List[LoopParentContext] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if type(node.created_context) == LoopParentContext:
                 entry_points.append(node.created_context)
         logger.info("--> determine loop variables...")
-        for loop_ctx in tqdm(entry_points):
+        for loop_ctx in progress(entry_points):
             loop_header_ctx = self.get_loop_header_context(loop_ctx)
             #            print("LOOP HEADER CTX:", loop_header_ctx)
             if loop_header_ctx is None:
@@ -1854,11 +1842,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Cleaning loop dependencies...")
         logger.info("--> classify entry points...")
         entry_points: List[LoopParentContext] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if type(node.created_context) == LoopParentContext:
                 entry_points.append(node.created_context)
         logger.info("--> cleaning loop dependencies")
-        for loop_ctx in tqdm(entry_points):
+        for loop_ctx in progress(entry_points):
             # get contexts by iterations
             iteration_ctxs = [
                 c for c in loop_ctx.get_contained_contexts(inclusive=False) if type(c) == IterationContext
@@ -1895,12 +1883,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("--> classify entry points...")
 
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if len(self.get_predecessors(node)) == 0:
                 entry_points.append(node)
 
         logger.info("--> DFS parsing entry points...")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
 
             # initialize the nesting calculation
             queue: List[Tuple[TGNode, Optional[Context]]] = [(entry_point, None)]
@@ -1996,12 +1984,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         call_path_limit = 6
         call_path_depth = 0
         modification_found = True
-        # the live plot is created before the progress bars on purpose: tqdm assigns the
-        # following bars the positions below it, so the plot stays at the top of the block
-        with (
-            self.__graph_size_progress_plot("TaskGraph size (inlining function calls)"),
-            tqdm(total=call_path_limit, desc="Callpath depth") as progress_bar,
-        ):
+        with progress(total=call_path_limit, desc="Callpath depth") as progress_bar:
             while modification_found:
                 call_path_depth += 1
                 if call_path_depth >= call_path_limit:
@@ -2027,7 +2010,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     if not already_inlined:
                         filtered_calling_nodes.append(cn)
 
-                for fcn in tqdm(filtered_calling_nodes, desc="Open calls"):
+                for fcn in progress(filtered_calling_nodes, desc="Open calls"):
                     if fcn.pet_node_id is None:
                         continue
                     # duplicate inlined function body and insert it after the caller
@@ -2045,7 +2028,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             self.add_edge(fcn, inlined_entry)
                             self.add_edge(inlined_exit, succ)
                         modification_found = True
-                        self.__sample_graph_size()
 
                 progress_bar.update()
 
@@ -2190,8 +2172,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.add_edge(pred, end_branch_node)
                 self.add_edge(end_branch_node, end_branch_parent_node)
 
-            self.__sample_graph_size()
-
     def __add_branching_nodes_fallback_cleanup(self) -> None:
         """Safety net for cases the dominance-based pass above cannot resolve on its own -
         chiefly, two independent (non-nested) branch points that happen to share the same
@@ -2234,7 +2214,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.graph.remove_edge(bpn, succ)
                 self.add_edge(start_branch_parent_node, succ)
             self.add_edge(bpn, start_branch_parent_node)
-            self.__sample_graph_size()
 
         end_branch_parent_nodes: List[TGNode] = []
         for mn in remaining_merge_nodes:
@@ -2245,7 +2224,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.graph.remove_edge(pred, mn)
                 self.add_edge(pred, end_branch_parent_node)
             self.add_edge(end_branch_parent_node, mn)
-            self.__sample_graph_size()
 
         for sbpn in start_branch_parent_nodes:
             for succ in list(self.get_successors(sbpn)):
@@ -2254,7 +2232,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.graph.remove_edge(sbpn, succ)
                 self.add_edge(sbpn, start_branch_node)
                 self.add_edge(start_branch_node, succ)
-            self.__sample_graph_size()
 
         for ebpn in end_branch_parent_nodes:
             for pred in list(self.get_predecessors(ebpn)):
@@ -2263,31 +2240,24 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.graph.remove_edge(pred, ebpn)
                 self.add_edge(pred, end_branch_node)
                 self.add_edge(end_branch_node, ebpn)
-            self.__sample_graph_size()
 
     def __add_branching_nodes(self) -> None:
-        logger.info("Adding branching nodes...")
-        # the live plot is created before the progress bar on purpose: tqdm assigns the
-        # following bars the positions below it, so the plot stays at the top of the block
-        with self.__graph_size_progress_plot("TaskGraph size (adding branching nodes)"):
-            for function_node in tqdm(
-                list(self.TGFunctionNode_pet_node_id_to_tg_node.values()), desc="Adding branching nodes per function"
-            ):
-                try:
-                    self.__add_branching_nodes_for_function(function_node)
-                except nx.NetworkXError as e:
-                    logger.warning(
-                        "Dominance-based branching node insertion failed for function "
-                        + function_node.get_label()
-                        + " ("
-                        + str(e)
-                        + "). Falling back to unconditional wrapping for its remaining branch/merge points."
-                    )
-                self.__sample_graph_size()
-            self.__add_branching_nodes_fallback_cleanup()
+        for function_node in progress(
+            list(self.TGFunctionNode_pet_node_id_to_tg_node.values()), desc="Adding branching nodes per function"
+        ):
+            try:
+                self.__add_branching_nodes_for_function(function_node)
+            except nx.NetworkXError as e:
+                logger.warning(
+                    "Dominance-based branching node insertion failed for function "
+                    + function_node.get_label()
+                    + " ("
+                    + str(e)
+                    + "). Falling back to unconditional wrapping for its remaining branch/merge points."
+                )
+        self.__add_branching_nodes_fallback_cleanup()
 
-        logger.info("--> validating amounts of node successors and predecessors...")
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes, desc="Validating node successors/predecessors"):
             succ_count = len(self.get_successors(node))
             pred_count = len(self.get_predecessors(node))
             if isinstance(node, TGEndBranchParentNode) and pred_count == 0:
@@ -2320,14 +2290,14 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __add_work_nodes(self) -> None:
         logger.info("Adding work nodes...")
         work_nodes: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if type(node) == TGNode:
                 work_nodes.append(node)
 
         logger.info("--> classify context entry nodes")
         visited: Set[TGNode] = set()
         context_entry_nodes: Set[TGNode] = set()
-        for node in tqdm(work_nodes):
+        for node in progress(work_nodes):
             if node in visited:
                 continue
 
@@ -2356,7 +2326,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             context_entry_nodes.add(node)
 
         logger.info("--> inserting work start and end nodes...")
-        for node in tqdm(context_entry_nodes):
+        for node in progress(context_entry_nodes):
             # adding work start node
             start_work_node = TGStartWorkNode(node.pet_node_id, node.level, node.position)
             self.add_node(start_work_node)
@@ -2420,7 +2390,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Inserting pessimistic data dependencies (between all suitable nodes)...")
 
         # iterate over all edges in PET Graph
-        for source, target, dependency_dict in tqdm(self.pet.g.edges(data=True)):
+        for source, target, dependency_dict in progress(self.pet.g.edges(data=True)):
             dependency = cast(Dependency, dependency_dict["data"])
             # only consider DATA edges
             if dependency.etype != EdgeType.DATA:
@@ -2458,7 +2428,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Inserting data dependencies...")
 
         # iterate over all edges in PET Graph
-        for source, target, dependency_dict in tqdm(self.pet.g.edges(data=True)):
+        for source, target, dependency_dict in progress(self.pet.g.edges(data=True)):
             dependency = cast(Dependency, dependency_dict["data"])
             # only consider DATA edges
             if dependency.etype != EdgeType.DATA:
@@ -3010,7 +2980,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Assigning state ids to nodes...")
         # entry points are independent of the processed state; compute them once.
         entry_points: List[Context] = [c for c in self.contexts if isinstance(c, FunctionContext)]
-        for state_id in tqdm(state_mappings_dict):
+        for state_id in progress(state_mappings_dict):
             #            print()
             #            print("Parsing state_id: ", state_id)
             #            print("CallState: ", state_mappings_dict[state_id])
@@ -3080,7 +3050,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     #
     #         # assign state id to task_graph nodes
     #         logger.info("Assigning state ids to nodes...")
-    #         for state_id in tqdm(state_mappings_dict):
+    #         for state_id in progress(state_mappings_dict):
     #             print()
     #             print("Parsing state_id: ", state_id)
     #             # skip invalid states
@@ -3398,8 +3368,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         # insert data dependencies into graph
         # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
         logger.info("--> Inserting data dependencies: ")
-        for dep_type, dep_type_deps in tqdm(dependencies.items(), desc="Dependency types"):
-            for source_location, source_location_deps in tqdm(
+        for dep_type, dep_type_deps in progress(dependencies.items(), desc="Dependency types"):
+            for source_location, source_location_deps in progress(
                 dep_type_deps.items(), desc="Source locations", leave=False
             ):
                 for source_state_id, source_state_deps in source_location_deps.items():
@@ -3581,7 +3551,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         self.__print_context_statistics("Pre validation")
 
         logger.info("--> checking contexts...")
-        for ctx in tqdm(self.contexts):
+        for ctx in progress(self.contexts):
             # calculate initialized variables per context
             initialized_vars: Set[Tuple[str, Optional[MemoryRegion]]] = set()
             for node in ctx.get_contained_nodes():
@@ -3627,7 +3597,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Validating data dependencies using existing metadata...")
         invalid_deps: List[Tuple[Context, Context, Dependency]] = []
         valid_deps: Set[Tuple[Context, Context, Dependency]] = set()
-        for source_ctx in tqdm(self.contexts):
+        for source_ctx in progress(self.contexts):
             source_call_stack: Optional[List[Context]] = None  # only calculate, if it is required
             for target_ctx, dep in source_ctx.outgoing_dependencies:
                 # check if metadata exists

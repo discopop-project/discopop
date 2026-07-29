@@ -5,15 +5,18 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import logging
 from typing import Any, Dict, List
 import requests  # type: ignore
 from importlib.metadata import version  # type: ignore
 from packaging.version import Version  # type: ignore
-from termcolor import colored  # type: ignore
 import os
 import json
 from datetime import date
+from discopop_library.StatusReporting.console import warn
 from .notification_dialog import notify
+
+logger = logging.getLogger("UpdateNotifier")
 
 
 def run(module_name: str, module_api_url: str, module_release_url: str) -> None:
@@ -65,7 +68,7 @@ def register_current_module(modules_file: str, module_name: str, module_api_url:
 
 
 def setup_folder_structure(config_dir: str, auto_updater_dir: str, settings_file: str, modules_file: str) -> None:
-    print("Checking existence of " + config_dir)
+    logger.debug("Checking existence of " + config_dir)
     if not os.path.exists(config_dir):
         os.mkdir(config_dir)
     if not os.path.exists(auto_updater_dir):
@@ -81,7 +84,7 @@ def setup_folder_structure(config_dir: str, auto_updater_dir: str, settings_file
 
 
 def check_for_updates(modules_file: str, settings_file: str) -> None:
-    print("Checking for updates..")
+    logger.debug("Checking for updates")
     # load registered modules
     modules: Dict[str, Dict[str, Any]] = dict()
     with open(modules_file, "r") as f:
@@ -93,14 +96,14 @@ def check_for_updates(modules_file: str, settings_file: str) -> None:
         settings = json.load(f)
 
     for module in modules:
-        print("--", module)
+        logger.debug("Checking module: " + module)
         try:
             # get date stamp of last check
             if not enough_time_elapsed(modules[module]["last_checked"]):
-                print("\tskipped due to recent check.")
+                logger.debug("Skipped due to recent check.")
                 if "last_result" in modules[module]:
                     if len(modules[module]["last_result"]) > 0:
-                        print("\tLast result:", modules[module]["last_result"])
+                        logger.debug("Last result: " + modules[module]["last_result"])
                 continue
 
             # read current version
@@ -133,12 +136,12 @@ def check_for_updates(modules_file: str, settings_file: str) -> None:
 
             else:
                 modules[module]["last_result"] = "Up to date."
-                print("\tUp to date.")
+                logger.debug("Up to date.")
             # update last_checked timestamp
             modules[module]["last_checked"] = str(date.today())
 
         except Exception as ex:
-            print("\t" + colored("failed with: " + str(type(ex)) + ": " + str(ex), "yellow"))
+            warn(f"Update check for {module} failed with: {type(ex)}: {ex}")
 
     # write potentially updated modules to file
     tmp_modules_file = modules_file + ".tmp"
