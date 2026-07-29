@@ -13,6 +13,7 @@ from termcolor import colored
 from tqdm import tqdm  # type: ignore
 
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
+from discopop_library.StatusReporting.console import _RENDER_LOCK
 
 _LEVEL_COLORS = {
     logging.DEBUG: "dark_grey",
@@ -34,12 +35,15 @@ class _ColoredFormatter(logging.Formatter):
 
 
 class _TqdmLoggingHandler(logging.StreamHandler[TextIO]):
-    """Writes log records via `tqdm.write` instead of directly to the stream, so they do
-    not corrupt an active `tqdm` progress bar or spinner (see StatusReporting.console)."""
+    """Writes log records via `tqdm.write` instead of directly to the stream, so they do not
+    corrupt an active `tqdm` progress bar or spinner. The write is serialized against the
+    spinner renderer thread on the same lock it uses (see StatusReporting.console), since
+    otherwise a record emitted mid-redraw interleaves with the spinner's escape sequences."""
 
     def emit(self, record: logging.LogRecord) -> None:
         try:
-            tqdm.write(self.format(record), file=self.stream)
+            with _RENDER_LOCK:
+                tqdm.write(self.format(record), file=self.stream)
         except Exception:
             self.handleError(record)
 
