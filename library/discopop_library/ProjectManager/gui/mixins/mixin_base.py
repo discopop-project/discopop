@@ -70,6 +70,7 @@ class ConfigManagerMixinBase:
     # Report panel elements
     results_tree: ttk.Treeview
     view_report_button: RoundedButton
+    reload_report_button: RoundedButton
 
     # Compilation editor
     compilation_editor_open: bool

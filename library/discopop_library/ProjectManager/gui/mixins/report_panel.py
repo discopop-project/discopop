@@ -75,6 +75,11 @@ class ReportPanelMixin(ConfigManagerMixinBase):
         )
         self.view_report_button.pack(side=tk.LEFT, padx=5)
 
+        self.reload_report_button = widgets.create_button(
+            button_frame, text="⟳ Reload", command=self._update_report_display
+        )
+        self.reload_report_button.pack(side=tk.RIGHT, padx=5)
+
         # Results notebook: a permanent Table tab, on-demand plot tabs, and a
         # trailing "+" tab that opens the add-plot menu.
         self.report_notebook = ttk.Notebook(parent)
