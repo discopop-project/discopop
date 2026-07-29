@@ -100,7 +100,36 @@ Two concrete ways this invariant used to break in `__add_branching_nodes_for_fun
 control-flow subgraph into a DAG before any pass that relies on it (dominance
 for branching nodes, the context-nesting BFS) runs - loops are unrolled into
 two linear copies instead of kept as back-edges. All later passes assume no
-cycles remain; none of them re-check this.
+cycles remain and none of them re-checks it, so `__validate_graph_structure`
+does: it reports every remaining strongly connected component (and self-loop)
+with the function it belongs to, as an error, directly after loop unrolling.
+
+The consequences of a surviving cycle are severe and all of them surface far
+away from their cause: dominance-based region wrapping (invariant 2) is unsound,
+the context-nesting stack walk (invariant 1) assigns whichever enclosing context
+a path happens to arrive with, and `__calculate_context_successions` **does not
+terminate at all** if the cycle enters a different number of contexts than it
+leaves - it dedupes its traversal on `(node, level)`, so each lap around such a
+cycle shifts the level by the imbalance and produces a state it has not seen
+before. That last one presents as unbounded memory growth minutes later, with
+nothing pointing back here, which is what makes the check worth its runtime.
+
+Two ways this is known to break, both observable on LULESH:
+
+- **Cycles in detached control flow.** `__break_cycles` searches with
+  `nx.find_cycle(self.graph, source=<function node>)`, so it only ever sees
+  cycles reachable from a function entry node. It also removes edges and rewires
+  predecessors, and in doing so detaches a few hundred nodes from their function
+  root (~470 of 4600 on LULESH). Any cycle inside that detached part is
+  invisible to it and survives - which is exactly what happens since the
+  control-flow edges restored for invariant 6 made a few more cycles land there.
+  The detached nodes are a problem in their own right: their heads have no
+  predecessors, so invariant 1's BFS treats them as program entry points.
+- **The crude fallback gives up.** When no loop header/exit can be derived, the
+  fallback removes one edge and *adds* one (to an outside successor, or to the
+  function's exit node), which can create a new cycle, then advances
+  `search_source` to the next descendant rather than restarting the scan - and
+  `break`s out of the function entirely once that queue is exhausted.
 
 ## 5. `iteration_nodes` closure
 
@@ -196,7 +225,7 @@ and each one's correctness assumption depends on the previous ones having held:
 
 ```
 __visit_pet -> __break_cycles -> __fix_loop_structures -> __duplicate_loop_iterations
-  -> __validate_graph_structure (currently a no-op) -> __add_work_nodes
+  -> __validate_graph_structure (checks invariant 4) -> __add_work_nodes
   -> __assign_loopstate_positions_within_functions -> __inline_function_calls
   -> __add_branching_nodes -> __assign_contexts -> __assign_node_levels
   -> __calculate_context_nesting -> __calculate_context_successions

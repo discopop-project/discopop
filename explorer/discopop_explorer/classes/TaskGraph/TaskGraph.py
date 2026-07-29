@@ -35,6 +35,7 @@ from discopop_explorer.classes.TaskGraph.Branching.TGStartBranchParentNode impor
 from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchContext
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
+from discopop_explorer.classes.TaskGraph.Contexts.ContextStack import ContextStack
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
@@ -119,6 +120,9 @@ except (ImportError, ModuleNotFoundError):
     ViewableCanvasWithTrees = object  # type: ignore[assignment, misc]
 
 logger = logging.getLogger("Explorer")
+
+# how __validate_graph_structure refers to code that no function entry node reaches any more
+DETACHED_REGION = "a region not reachable from any function entry node"
 
 
 # Aliases
@@ -777,6 +781,49 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         warnings.warn("Not implemented!")
         return queue
 
+    def __find_loop_entry_node(self, function_node: TGNode, cycle_nodes: Set[TGNode]) -> Optional[TGNode]:
+        """The node a cycle is entered through: the first of its nodes reached when walking forward
+        from the function entry, which is also the node the back edges point back to.
+
+        Identifying it by its outgoing edges instead - "one successor inside the cycle, one outside"
+        - finds the loop's *condition* node, which is only the same node for a loop tested at its
+        top. As soon as the loop is rotated (`while` compiled with the test at the bottom, or a
+        `for` whose increment block precedes the test), the condition sits behind the entry node,
+        and treating it as the entry makes the edge from the entry node to it look like a back edge.
+        Removing that edge then severs the only way into the loop and detaches it, together with its
+        whole body, from the function - which is invisible until a later pass treats the detached
+        region as a program entry point of its own."""
+        queue: List[TGNode] = [function_node]
+        visited: Set[TGNode] = {function_node}
+        while len(queue) > 0:
+            current = queue.pop(0)
+            if current in cycle_nodes:
+                return current
+            for successor in self.get_successors(current):
+                if successor not in visited:
+                    visited.add(successor)
+                    queue.append(successor)
+        return None
+
+    def __find_loop_exit_edge(
+        self, entry_node: Optional[TGNode], cycle_nodes: Set[TGNode]
+    ) -> Tuple[Optional[TGNode], Optional[TGNode]]:
+        """The edge by which control leaves the cycle, as (source inside, target outside). Prefers
+        an edge starting at the entry node, so a loop tested at its top is restructured exactly as
+        before. Loops without any exit (`while (true)`) have none, and are left to the caller's
+        fallback."""
+        if entry_node is None:
+            return None, None
+        candidates: List[Tuple[TGNode, TGNode]] = []
+        for source in sorted(cycle_nodes, key=lambda node: node.get_label()):
+            for target in self.get_successors(source):
+                if target not in cycle_nodes:
+                    candidates.append((source, target))
+        for source, target in candidates:
+            if source is entry_node:
+                return source, target
+        return candidates[0] if len(candidates) > 0 else (None, None)
+
     def __break_cycles(self) -> None:
         # search for cycles in each function and replace them with two distinct iteraions
         for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values(), desc="Breaking cycles"):
@@ -798,48 +845,28 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     cycle_nodes.add(tpl[1])
 
                 # find entry node and exit node
-                entry_node: Optional[TGNode] = None
-                exit_node: Optional[TGNode] = None
-                iteration_entry_points: List[TGNode] = []
-                queue: List[TGNode] = [function_node]
-                visited: Set[TGNode] = set()
-                while len(queue) > 0:
-                    exit_node = None
-                    current = queue.pop(0)
-                    visited.add(current)
-                    #                    print("\nCurrent: ", current)
-                    #                    print("Cycle nodes: ", cycle_nodes)
-                    successors = self.get_successors(current)
-                    #                    print("IN CYCLE: ", current in cycle_nodes)
-                    #                    print("SUCC: ", len(successors))
-                    #                    print("---> ", successors)
+                entry_node = self.__find_loop_entry_node(function_node, cycle_nodes)
+                exit_source, exit_node = self.__find_loop_exit_edge(entry_node, cycle_nodes)
+                iteration_entry_points: List[TGNode] = [n for n in self.get_successors(entry_node) if n in cycle_nodes]
 
-                    if len(successors) > 1:
-                        if current in cycle_nodes:
+                # the edges back to the entry node end an iteration, and so does the edge leaving the
+                # loop when it starts at a node other than the entry node (a rotated loop, whose
+                # condition sits behind the entry node): both continue into the loop end marker
+                latches: List[TGNode] = [p for p in self.get_predecessors(entry_node) if p in cycle_nodes]
+                iteration_exit_points: List[TGNode] = list(latches)
+                if exit_source is not None and exit_source is not entry_node:
+                    iteration_exit_points.append(exit_source)
 
-                            found_successor_in_cycle = False
-                            for succ in successors:
-                                if succ in cycle_nodes:
-                                    found_successor_in_cycle = True
-                                if succ not in cycle_nodes:
-                                    exit_node = succ
-                                if exit_node is not None and found_successor_in_cycle:
-                                    break
-                            if exit_node is not None and found_successor_in_cycle:
-                                entry_node = current
-                                iteration_entry_points = [n for n in successors if n in cycle_nodes]
-                                break
-                        else:
-                            for succ in successors:
-                                if succ not in visited and succ not in queue:
-                                    queue.append(succ)
-                    elif len(successors) == 1:
-                        if successors[0] not in visited and successors[0] not in queue:
-                            queue.append(successors[0])
-                    else:
-                        continue
-
-                iteration_exit_points: List[TGNode] = [p for p in self.get_predecessors(entry_node) if p in cycle_nodes]
+                if entry_node is not None and len(latches) == len(self.get_predecessors(entry_node)):
+                    # every way into the entry node comes from inside the cycle, so removing the
+                    # latches below would detach the whole loop from its function - see the crude
+                    # fallback instead, which keeps it reachable
+                    logger.warning(
+                        "Refusing to restructure the loop at %s: all of its incoming edges come "
+                        "from inside the cycle, so it has no reachable entry.",
+                        entry_node.get_label(),
+                    )
+                    entry_node = None
 
                 #                print("Found entry node: ", entry_node.get_label() if entry_node is not None else "NONE")
                 #                print("Found exit node: ", exit_node.get_label() if exit_node is not None else "NONE")
@@ -852,9 +879,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     search_source = function_node
 
                     # break cycle
-                    for itexp in iteration_exit_points:
-                        self.graph.remove_edge(itexp, entry_node)
-                        logger.info("  --> Removed edge " + itexp.get_label() + " --> " + entry_node.get_label())
+                    for latch in latches:
+                        self.graph.remove_edge(latch, entry_node)
+                        logger.info("  --> Removed edge " + latch.get_label() + " --> " + entry_node.get_label())
 
                     # add loop start marking between entry_node and its predecessors
                     lsm = TGStartLoopNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
@@ -864,10 +891,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         self.add_edge(pred, lsm)
                     self.add_edge(lsm, entry_node)
 
-                    # add loop end marking between entry_node and exit_node
+                    # add loop end marking in front of exit_node. The edge leaving the loop starts at
+                    # exit_source, which is the entry node itself for a loop tested at its top and
+                    # the condition node behind it for a rotated one
                     lem = TGEndLoopNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
                     self.add_node(lem)
-                    self.graph.remove_edge(entry_node, exit_node)
+                    self.graph.remove_edge(exit_source, exit_node)
                     self.add_edge(entry_node, lem)
                     self.add_edge(lem, exit_node)
 
@@ -1567,15 +1596,20 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("--> DFS parsing entry points...")
         for entry_point in progress(entry_points):
             # initialize succession calculation
-            queue: Deque[Tuple[TGNode, int, Tuple[Optional[Context], ...]]] = deque(
-                [(entry_point, 0, (None,))]
-            )  # each position in the list corresponds to one level. Last position is always the last level
+            # per path: the context that most recently ended at the current level - the one a
+            # context entered next has to be registered behind - and the stack of the contexts the
+            # path is currently inside, which is what makes that context available again once the
+            # level is left. See ContextStack.
+            queue: Deque[Tuple[TGNode, int, Optional[Context], Optional[ContextStack]]] = deque(
+                [(entry_point, 0, None, None)]
+            )
             already_enqueued: Set[Tuple[TGNode, int]] = set()
             while len(queue) > 0:
-                current_node, current_level, current_predecessor_contexts_tuple = queue.popleft()
-                if len(current_predecessor_contexts_tuple) == 0:
+                current_node, current_level, preceding_context, open_contexts = queue.popleft()
+                if current_level < 0:
+                    # this path left more contexts than it entered, so there is no level left to
+                    # register successors at
                     continue
-                current_predecessor_contexts = list(current_predecessor_contexts_tuple)
                 # check for entering new context level
                 entered_context: Optional[Context] = None
                 if (
@@ -1590,13 +1624,13 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     entered_context = current_node.created_context
                 if entered_context is not None:
                     # connect previous context to entered context as successor
-                    if current_predecessor_contexts[-1] is not None:
-                        current_predecessor_contexts[-1].register_successor_context(entered_context)
-                    # update the dictionary of contexts
-                    current_predecessor_contexts[-1] = entered_context
+                    if preceding_context is not None:
+                        preceding_context.register_successor_context(entered_context)
+                    # the body of the entered context is a new level, in which nothing has ended yet
+                    open_contexts = ContextStack(entered_context, open_contexts)
+                    preceding_context = None
                     # update current context level
                     current_level += 1
-                    current_predecessor_contexts.append(None)
 
                 # check for exiting context level
                 exited_context: bool = False
@@ -1613,15 +1647,17 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 if exited_context:
                     # update current context level
                     current_level -= 1
-                    current_predecessor_contexts = current_predecessor_contexts[:-1]
+                    if open_contexts is not None:
+                        # back at the level the left context was entered at, where it is now the
+                        # context that most recently ended
+                        preceding_context = open_contexts.innermost
+                        open_contexts = open_contexts.enclosing
 
                 # add successors to the queue
                 for succ in self.graph.successors(current_node):
-                    # note: the insertion of the tuple (current_predecessor_contexts) into the queue is a quite severe bottleneck.
-                    queue_element = (succ, current_level, tuple(current_predecessor_contexts))
-                    if (queue_element[0], queue_element[1]) not in already_enqueued:
-                        queue.append(queue_element)
-                        already_enqueued.add((queue_element[0], queue_element[1]))
+                    if (succ, current_level) not in already_enqueued:
+                        queue.append((succ, current_level, preceding_context, open_contexts))
+                        already_enqueued.add((succ, current_level))
 
     ## DEBUG
     #       plt.ioff()
@@ -3826,7 +3862,114 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         return iteration_nodes
 
     def __validate_graph_structure(self) -> None:
-        warnings.warn("Not yet implemented!")
+        """Checks invariant 4 (see INVARIANTS.md): once __break_cycles and
+        __duplicate_loop_iterations have run, every function's control flow must be acyclic - loops
+        are unrolled into two linear iterations rather than kept as back edges. A remaining cycle
+        means one of those passes gave up on it; __break_cycles does so silently when it cannot
+        derive a loop header and its crude fallback runs out of search sources.
+
+        Every later pass assumes acyclicity and none of them re-checks it, so the failures a
+        remaining cycle causes surface far from here and look unrelated: dominance-based region
+        wrapping is unsound, the context-nesting stack machine assigns whichever enclosing context
+        a path happens to arrive with, and __calculate_context_successions does not terminate at
+        all if the cycle's context entries and exits do not balance - it keys its traversal on
+        (node, level), and each lap around such a cycle shifts the level by the imbalance, so every
+        lap is a state it has not seen yet. That one presents as unbounded memory growth minutes
+        later, which is what makes finding the cause from the symptom so expensive.
+
+        Reported rather than raised: the results for the functions containing the cycle are
+        unreliable either way, but the rest of the program is unaffected, and raising here would
+        stop projects that currently produce (partially) usable suggestions. Turn the summary into
+        a raise if a hard failure is preferred."""
+        logger.info("Validating graph structure...")
+        cyclic_components = [
+            component for component in nx.strongly_connected_components(self.graph) if len(component) > 1
+        ]
+        self_loops = list(nx.selfloop_edges(self.graph))
+        if len(cyclic_components) == 0 and len(self_loops) == 0:
+            return
+
+        enclosing_functions = self.__map_nodes_to_enclosing_functions()
+        for source, _ in self_loops:
+            logger.error(
+                "Node %s in %s has an edge to itself.",
+                source.get_label(),
+                enclosing_functions.get(source, DETACHED_REGION),
+            )
+        detached = 0
+        for component in cyclic_components:
+            logger.error(self.__describe_cyclic_component(component, enclosing_functions))
+            if all(node not in enclosing_functions for node in component):
+                detached += 1
+
+        logger.error(
+            "%d cyclic region(s) and %d self-loop(s) remain in the control flow after cycle "
+            "breaking and loop unrolling, violating invariant 4 (INVARIANTS.md). Results "
+            "depending on the affected code are unreliable, and context succession calculation "
+            "does not terminate at all on a cyclic region whose context entries and exits do not "
+            "balance.",
+            len(cyclic_components),
+            len(self_loops),
+        )
+        if detached > 0:
+            logger.error(
+                "%d of those cyclic region(s) are not reachable from any function entry node, "
+                "which is why they are still here: __break_cycles searches for cycles with "
+                "nx.find_cycle(source=<function node>) and therefore cannot see them. Whatever "
+                "detached them - it removes edges to break cycles and rewires predecessors - is "
+                "the place to look, not the cycle breaking itself.",
+                detached,
+            )
+
+    def __map_nodes_to_enclosing_functions(self) -> Dict[TGNode, str]:
+        """Maps each node to the label of the first TGFunctionNode it is reachable from. Only built
+        once a cycle has actually been found, since it costs one traversal per function."""
+        enclosing: Dict[TGNode, str] = dict()
+        for function_node in self.TGFunctionNode_pet_node_id_to_tg_node.values():
+            for node in self.get_descendants(function_node):
+                enclosing.setdefault(node, function_node.get_label())
+        return enclosing
+
+    def __describe_cyclic_component(self, component: Set[TGNode], enclosing_functions: Dict[TGNode, str]) -> str:
+        """Names the function a cyclic region belongs to and reports the property that decides
+        whether __calculate_context_successions can terminate on it: whether one lap around it
+        enters as many contexts as it leaves."""
+        functions = sorted({enclosing_functions.get(node, DETACHED_REGION) for node in component})
+        description = "Cyclic control flow in " + ", ".join(functions) + ": %d nodes" % len(component)
+        try:
+            cycle = nx.find_cycle(self.graph.subgraph(component), orientation="original")
+        except nx.NetworkXNoCycle:  # pragma: no cover - a component of size > 1 always has one
+            return description
+        entered = sum(1 for source, *_ in cycle if source.created_context is not None)
+        left = sum(1 for source, *_ in cycle if self.__is_context_exit(source))
+        description += ", example cycle of %d edges entering %d and leaving %d contexts" % (
+            len(cycle),
+            entered,
+            left,
+        )
+        if entered != left:
+            description += " (unbalanced by %d per lap - context succession calculation cannot terminate here)" % (
+                entered - left
+            )
+        description += ": " + " -> ".join(source.get_label() for source, *_ in cycle[:8])
+        if len(cycle) > 8:
+            description += " -> ..."
+        return description
+
+    @staticmethod
+    def __is_context_exit(node: TGNode) -> bool:
+        return isinstance(
+            node,
+            (
+                TGEndFunctionNode,
+                TGEndLoopNode,
+                TGEndIterationNode,
+                TGEndBranchParentNode,
+                TGEndBranchNode,
+                TGEndWorkNode,
+                TGEndInlinedFunctionNode,
+            ),
+        )
 
     def get_successors(self, node: Optional[TGNode]) -> List[TGNode]:
         if node is None:

@@ -17,6 +17,13 @@ test_visit_pet_* / test_break_cycles_* cover __visit_pet's control-flow
 reconstruction, where a dropped successor edge made __break_cycles misidentify a
 loop's header (see INVARIANTS.md, invariant 1).
 
+test_calculate_context_successions_* cover the pass that links sibling contexts
+into sequences, in particular that a context's sibling survives an arbitrarily
+nested context in between (that is what the ContextStack it carries is for).
+
+test_validate_graph_structure_* cover the acyclicity check that runs once cycle
+breaking and loop unrolling are done (INVARIANTS.md, invariant 4).
+
 test_validate_context_structure_* cover the Context relation checks that run
 after __calculate_context_successions."""
 
@@ -27,14 +34,19 @@ from typing import Any, List, Sequence, Tuple
 
 import networkx as nx
 
+from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.Branching.TGEndBranchParentNode import TGEndBranchParentNode
 from discopop_explorer.classes.TaskGraph.Branching.TGStartBranchParentNode import TGStartBranchParentNode
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Loops.TGEndLoopNode import TGEndLoopNode
 from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
+from discopop_explorer.classes.TaskGraph.RootNode import RootNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
+from discopop_explorer.classes.TaskGraph.TGFunctionNode import TGFunctionNode
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
+from discopop_explorer.classes.TaskGraph.Work.TGEndWorkNode import TGEndWorkNode
+from discopop_explorer.classes.TaskGraph.Work.TGStartWorkNode import TGStartWorkNode
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 
@@ -209,6 +221,83 @@ def test_break_cycles_anchors_loop_markers_at_the_loop_header(
     assert nx.has_path(tg.graph, start_loop, end_loop)
 
 
+# CU ids of the rotated loop built by _build_rotated_loop_pet
+R_ENTRY, R_HEADER, R_COND, R_BODY, R_LATCH, R_EXIT = "2:1", "2:2", "2:3", "2:4", "2:5", "2:6"
+
+# A loop whose test sits behind its entry node - what a `while` compiled with the test at the
+# bottom, or a `for` whose increment block precedes the test, looks like:
+#
+#   R_ENTRY -> R_HEADER -> R_COND -> R_BODY -> R_LATCH -> R_HEADER   (back edge)
+#                                       R_COND -> R_EXIT            (leaves the loop)
+#
+# R_HEADER is the loop entry (the back edge points at it, R_ENTRY enters it), while the branch
+# that leaves the loop belongs to R_COND. Deriving the entry node from the outgoing edges finds
+# R_COND, and then R_HEADER -> R_COND looks like the back edge.
+_ROTATED_LOOP_SUCCESSORS: Sequence[Tuple[str, str]] = (
+    (R_ENTRY, R_HEADER),
+    (R_HEADER, R_COND),
+    (R_COND, R_BODY),
+    (R_COND, R_EXIT),
+    (R_BODY, R_LATCH),
+    (R_LATCH, R_HEADER),
+)
+
+
+def _build_rotated_loop_pet(build_pet_graph: Any, make_node: Any) -> Any:
+    cu_ids = [R_ENTRY, R_HEADER, R_COND, R_BODY, R_LATCH, R_EXIT]
+    nodes = [make_node("2:0", NodeType.FUNC, name="main")]
+    nodes += [make_node(cu_id, NodeType.CU, name="cu") for cu_id in cu_ids]
+    edges: List[Tuple[str, str, EdgeType]] = [("2:0", cu_id, EdgeType.CHILD) for cu_id in cu_ids]
+    edges += [(source, target, EdgeType.SUCCESSOR) for source, target in _ROTATED_LOOP_SUCCESSORS]
+    return build_pet_graph(nodes, edges)
+
+
+def test_break_cycles_keeps_a_rotated_loop_attached_to_its_function(
+    build_pet_graph: Any, make_node: Any, build_task_graph: Any
+) -> None:
+    """The loop entry and the branch leaving the loop are different nodes here. Treating the branch
+    as the entry node makes the loop's own entry edge look like a back edge, and removing it leaves
+    the loop - with its whole body - unreachable from the function, which no later pass detects: it
+    only shows up as a region that acts like a second program entry point (~470 of 4600 nodes on
+    LULESH), and as cycles __break_cycles can no longer find because it searches from function
+    nodes."""
+    pet = _build_rotated_loop_pet(build_pet_graph, make_node)
+    tg = build_task_graph(pet)
+
+    _visit_pet(tg, pet)
+    tg._TaskGraph__break_cycles()  # type: ignore[attr-defined]
+
+    function_node = tg.TGFunctionNode_pet_node_id_to_tg_node["2:0"]
+    reachable = nx.descendants(tg.graph, function_node) | {function_node}
+    # RootNode sits above the functions rather than inside one, so it is never reachable from one
+    detached = [n.get_label() for n in tg.graph.nodes if not isinstance(n, RootNode) and n not in reachable]
+    assert detached == [], "these nodes are no longer reachable from the function entry"
+    assert nx.is_directed_acyclic_graph(tg.graph), "the cycle was not broken"
+
+    start_loop_nodes = [n for n in tg.graph.nodes if isinstance(n, TGStartLoopNode)]
+    assert [n.pet_node_id for n in start_loop_nodes] == [R_HEADER], "the loop entry is the back edge's target"
+    assert tg.get_predecessors(start_loop_nodes[0]) == [tg.TGNode_pet_node_id_to_tg_node[R_ENTRY]]
+
+    end_loop_nodes = [n for n in tg.graph.nodes if isinstance(n, TGEndLoopNode)]
+    assert tg.get_successors(end_loop_nodes[0]) == [tg.TGNode_pet_node_id_to_tg_node[R_EXIT]]
+    assert nx.has_path(tg.graph, start_loop_nodes[0], end_loop_nodes[0])
+
+
+def test_break_cycles_leaves_no_cycle_the_later_passes_could_not_see(
+    build_pet_graph: Any, make_node: Any, build_task_graph: Any
+) -> None:
+    """__break_cycles searches with nx.find_cycle(source=<function node>), so a cycle it detaches
+    from the function becomes invisible to it and survives - which is how the rotated loop above
+    used to leave cycles behind for __calculate_context_successions to diverge on."""
+    pet = _build_rotated_loop_pet(build_pet_graph, make_node)
+    tg = build_task_graph(pet)
+
+    _visit_pet(tg, pet)
+    tg._TaskGraph__break_cycles()  # type: ignore[attr-defined]
+
+    assert [c for c in nx.strongly_connected_components(tg.graph) if len(c) > 1] == []
+
+
 def test_assign_loop_contexts_finds_loop_end_node_for_loop_with_shared_exit_cu(
     build_pet_graph: Any, make_node: Any, build_task_graph: Any
 ) -> None:
@@ -220,6 +309,179 @@ def test_assign_loop_contexts_finds_loop_end_node_for_loop_with_shared_exit_cu(
     _visit_pet(tg, pet)
     tg._TaskGraph__break_cycles()  # type: ignore[attr-defined]
     tg._TaskGraph__assign_loop_contexts()  # type: ignore[attr-defined]
+
+
+# --- __calculate_context_successions ------------------------------------------------------
+
+
+def make_tg_node_for(pet_node_id: str) -> TGNode:
+    return TGNode(NodeID(pet_node_id), 0, 0)
+
+
+def _context_pair(name: str) -> Tuple[TGStartWorkNode, TGEndWorkNode, Context]:
+    """A Start/End node pair opening and closing one context, as the __assign_*_contexts passes
+    leave them behind. TGStartWorkNode/TGEndWorkNode stand in for any of the seven marker pairs -
+    the pass treats them all alike."""
+    context = Context()
+    start = TGStartWorkNode(NodeID(name), 0, 0)
+    start.register_created_context(context)
+    return start, TGEndWorkNode(NodeID(name), 0, 0), context
+
+
+def _chain(tg: TaskGraph, nodes: Sequence[TGNode]) -> None:
+    for source, target in zip(nodes, nodes[1:]):
+        tg.add_edge(source, target)
+
+
+def _calculate_context_successions(tg: TaskGraph) -> None:
+    # name-mangled private method - intentional, this is testing that method directly
+    tg._TaskGraph__calculate_context_successions()  # type: ignore[attr-defined]
+
+
+def test_calculate_context_successions_links_consecutive_siblings(build_task_graph: Any) -> None:
+    """Two contexts entered one after the other at the same nesting level form a sequence."""
+    first_start, first_end, first = _context_pair("1:1")
+    second_start, second_end, second = _context_pair("1:2")
+    nodes = [first_start, first_end, second_start, second_end]
+    tg = build_task_graph(None, nodes)
+    _chain(tg, nodes)
+
+    _calculate_context_successions(tg)
+
+    assert first.successor is second
+    assert second.predecessor is first
+    assert second.successor is None
+    assert first.predecessor is None
+
+
+def test_calculate_context_successions_keeps_the_sibling_across_a_nested_context(
+    build_task_graph: Any,
+) -> None:
+    """The context that follows "outer" is "sibling", even though "nested" was entered (and left)
+    in between: leaving a context returns to the level whose current context is the one just
+    left. Without that restore, "sibling" would be linked behind "nested" - a link across two
+    different nesting levels, which every traversal of the relation would then follow."""
+    outer_start, outer_end, outer = _context_pair("1:1")
+    nested_start, nested_end, nested = _context_pair("1:2")
+    sibling_start, sibling_end, sibling = _context_pair("1:3")
+    nodes = [outer_start, nested_start, nested_end, outer_end, sibling_start, sibling_end]
+    tg = build_task_graph(None, nodes)
+    _chain(tg, nodes)
+
+    _calculate_context_successions(tg)
+
+    assert outer.successor is sibling
+    assert sibling.predecessor is outer
+    assert nested.successor is None, "a context nested one level deeper is not a sibling"
+    assert nested.predecessor is None
+
+
+def test_calculate_context_successions_nests_arbitrarily_deep(build_task_graph: Any) -> None:
+    """The innermost context per level is tracked for every level, so the sibling of a context is
+    found again no matter how deeply nested the region between them is."""
+    depth = 50
+    pairs = [_context_pair("1:" + str(i)) for i in range(depth)]
+    tail_start, tail_end, tail = _context_pair("2:0")
+    starts = [start for start, _, _ in pairs]
+    ends = [end for _, end, _ in pairs]
+    # 0 contains 1 contains ... contains depth-1, then all of them close again
+    nodes = starts + list(reversed(ends)) + [tail_start, tail_end]
+    tg = build_task_graph(None, nodes)
+    _chain(tg, nodes)
+
+    _calculate_context_successions(tg)
+
+    outermost = pairs[0][2]
+    assert outermost.successor is tail, "the outermost context's sibling follows the whole nest"
+    assert all(context.successor is None for _, _, context in pairs[1:])
+
+
+def test_calculate_context_successions_ignores_paths_leaving_unentered_contexts(
+    build_task_graph: Any,
+) -> None:
+    """A path can start at an "end of context" marker - the entry points are just the nodes
+    without predecessors, and inlining leaves disconnected fragments behind. Such a path has no
+    level left to register anything at, and must be abandoned rather than relating contexts to
+    whatever happens to follow it."""
+    _, orphaned_end, _ = _context_pair("1:1")
+    first_start, first_end, first = _context_pair("1:2")
+    second_start, second_end, second = _context_pair("1:3")
+    nodes = [orphaned_end, first_start, first_end, second_start, second_end]
+    tg = build_task_graph(None, nodes)
+    _chain(tg, nodes)
+
+    _calculate_context_successions(tg)
+
+    assert first.successor is None
+    assert second.successor is None
+
+
+# --- graph structure validation -----------------------------------------------------------
+
+
+def _validate_graph_structure(tg: TaskGraph) -> None:
+    tg._TaskGraph__validate_graph_structure()  # type: ignore[attr-defined]
+
+
+def _register_function(tg: TaskGraph, function_node: TGFunctionNode) -> None:
+    # normally done by __visit_pet; __validate_graph_structure uses this map to name the function
+    # a cycle belongs to
+    tg.TGFunctionNode_pet_node_id_to_tg_node[function_node.pet_node_id] = function_node
+
+
+def test_validate_graph_structure_reports_a_remaining_cycle(build_task_graph: Any, caplog: Any) -> None:
+    """__break_cycles gives up silently when it cannot derive a loop header, and everything after
+    it assumes acyclicity. The check has to name the function so the cause is locatable here
+    instead of surfacing passes later."""
+    function_node = TGFunctionNode(NodeID("1:1"), 0, 0)
+    head = make_tg_node_for("1:2")
+    tail = make_tg_node_for("1:3")
+    tg = build_task_graph(None, [function_node, head, tail])
+    _register_function(tg, function_node)
+    tg.add_edge(function_node, head)
+    tg.add_edge(head, tail)
+    tg.add_edge(tail, head)  # back edge that should have been broken
+
+    with caplog.at_level(logging.ERROR, logger="Explorer"):
+        _validate_graph_structure(tg)
+
+    assert "Cyclic control flow" in caplog.text
+    assert function_node.get_label() in caplog.text
+    assert "invariant 4" in caplog.text
+
+
+def test_validate_graph_structure_reports_the_context_imbalance_of_a_cycle(build_task_graph: Any, caplog: Any) -> None:
+    """Whether the cycle enters as many contexts as it leaves is what decides whether
+    __calculate_context_successions terminates on it, so that is what gets reported."""
+    function_node = TGFunctionNode(NodeID("1:1"), 0, 0)
+    start, _, _ = _context_pair("1:2")  # entered, never left on the way around
+    body = make_tg_node_for("1:3")
+    tg = build_task_graph(None, [function_node, start, body])
+    _register_function(tg, function_node)
+    tg.add_edge(function_node, start)
+    tg.add_edge(start, body)
+    tg.add_edge(body, start)
+
+    with caplog.at_level(logging.ERROR, logger="Explorer"):
+        _validate_graph_structure(tg)
+
+    assert "entering 1 and leaving 0 contexts" in caplog.text
+    assert "cannot terminate" in caplog.text
+
+
+def test_validate_graph_structure_accepts_an_acyclic_graph(build_task_graph: Any, caplog: Any) -> None:
+    function_node = TGFunctionNode(NodeID("1:1"), 0, 0)
+    first = make_tg_node_for("1:2")
+    second = make_tg_node_for("1:3")
+    tg = build_task_graph(None, [function_node, first, second])
+    _register_function(tg, function_node)
+    tg.add_edge(function_node, first)
+    tg.add_edge(first, second)
+
+    with caplog.at_level(logging.WARNING, logger="Explorer"):
+        _validate_graph_structure(tg)
+
+    assert caplog.text == ""
 
 
 # --- context structure validation ---------------------------------------------------------
