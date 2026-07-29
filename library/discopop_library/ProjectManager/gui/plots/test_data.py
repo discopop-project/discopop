@@ -14,6 +14,7 @@ from discopop_library.ProjectManager.gui.plots.data import (
     parse_execution_results,
     parse_progress_jsonl,
     parse_progress_line,
+    split_progress_events,
     pareto_frontier,
 )
 
@@ -144,6 +145,35 @@ def test_parse_progress_line() -> None:
     assert parse_progress_line("INFO: some other stdout line") is None
     assert parse_progress_line("@@AT_PROGRESS {not valid json}") is None
     assert parse_progress_line("@@AT_PROGRESS [1, 2, 3]") is None  # not a dict
+
+
+def test_parse_progress_line_behind_unrelated_output() -> None:
+    """A bar redraw ends without a newline, so an event can share its line."""
+    line = '42%|####      | 5/12 [00:11<00:15]@@AT_PROGRESS {"event": "measurement", "index": 5}'
+    obj = parse_progress_line(line)
+    assert obj is not None and obj["index"] == 5
+
+
+def test_split_progress_events_separates_events_from_console_text() -> None:
+    line = '  7%|#         | 1/14@@AT_PROGRESS {"event": "measurement", "index": 1}\n'
+    events, residual = split_progress_events(line)
+    assert [e["index"] for e in events] == [1]
+    assert residual.strip() == "7%|#         | 1/14"
+
+
+def test_split_progress_events_multiple_events_in_one_line() -> None:
+    line = '@@AT_PROGRESS {"event": "baseline"}@@AT_PROGRESS {"event": "measurement", "index": 1}'
+    events, residual = split_progress_events(line)
+    assert [e["event"] for e in events] == ["baseline", "measurement"]
+    assert residual == ""
+
+
+def test_split_progress_events_keeps_non_events_as_output() -> None:
+    assert split_progress_events("INFO: plain line") == ([], "INFO: plain line")
+    events, residual = split_progress_events("@@AT_PROGRESS {not valid json}")
+    assert events == [] and residual == "@@AT_PROGRESS {not valid json}"
+    events, residual = split_progress_events("@@AT_PROGRESS [1, 2, 3]")  # not a dict
+    assert events == [] and residual == "@@AT_PROGRESS [1, 2, 3]"
 
 
 def test_parse_progress_jsonl() -> None:

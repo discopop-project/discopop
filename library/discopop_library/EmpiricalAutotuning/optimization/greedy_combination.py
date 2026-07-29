@@ -9,7 +9,7 @@
 from logging import Logger
 from typing import Callable, Dict, List, Tuple, cast
 
-from tqdm import tqdm  # type: ignore
+from discopop_library.EmpiricalAutotuning.output.bars import search_bar
 
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
@@ -65,7 +65,7 @@ def execute_greedy_combination(
     logger.info("Press CTRL+C to manually stop the search.")
 
     try:
-        for suggestion in tqdm(ordered_suggestions):
+        for suggestion in search_bar(ordered_suggestions, desc="Greedy search"):
             candidate = current_config + [suggestion]
 
             tmp_config = reference_configuration.create_copy(

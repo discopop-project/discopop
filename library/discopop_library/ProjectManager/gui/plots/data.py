@@ -168,20 +168,63 @@ def best_so_far(measurements: Sequence[Tuple[int, Optional[float], bool]]) -> Li
     return out
 
 
-def parse_progress_line(line: str) -> Optional[Dict[str, Any]]:
-    """Parse one ``@@AT_PROGRESS {json}`` stdout line into an event dict.
+_DECODER = json.JSONDecoder()
 
-    Returns None for lines without the prefix or with malformed JSON, so a caller
-    can filter progress events out of an interleaved stdout stream.
+
+def _decode_leading_event(text: str) -> Tuple[Optional[Dict[str, Any]], str]:
+    """Decode the JSON object at the start of ``text``; return it plus the rest.
+
+    Returns ``(None, text)`` when ``text`` does not start with a JSON object, so the
+    caller can treat the segment as ordinary output instead of an event.
     """
-    stripped = line.strip()
-    if not stripped.startswith(PROGRESS_PREFIX):
-        return None
+    stripped = text.lstrip()
+    offset = len(text) - len(stripped)
     try:
-        obj = json.loads(stripped[len(PROGRESS_PREFIX) :])
+        obj, end = _DECODER.raw_decode(stripped)
     except json.JSONDecodeError:
-        return None
-    return obj if isinstance(obj, dict) else None
+        return None, text
+    if not isinstance(obj, dict):
+        return None, text
+    return obj, text[offset + end :]
+
+
+def split_progress_events(line: str) -> Tuple[List[Dict[str, Any]], str]:
+    """Extract every progress event contained in one line of raw autotuner output.
+
+    A ``@@AT_PROGRESS`` payload does not necessarily start at a line boundary: the GUI
+    reads the autotuner's stdout and stderr merged into a single stream, and a progress
+    bar redrawing itself with a carriage return leaves its bar text as an unterminated
+    line, to which the next event is then appended (``"42%|##  |...@@AT_PROGRESS {...}"``).
+    Events are therefore searched for anywhere in the line; the remaining text is
+    returned separately so it can still be echoed to the console.
+    """
+    if PROGRESS_PREFIX not in line:
+        return [], line
+    events: List[Dict[str, Any]] = []
+    residual: List[str] = []
+    segments = line.split(PROGRESS_PREFIX)
+    residual.append(segments[0])
+    for segment in segments[1:]:
+        event, rest = _decode_leading_event(segment)
+        if event is None:
+            # not an event after all (malformed or non-object payload): keep as output
+            residual.append(PROGRESS_PREFIX + segment)
+        else:
+            events.append(event)
+            residual.append(rest)
+    return events, "".join(residual)
+
+
+def parse_progress_line(line: str) -> Optional[Dict[str, Any]]:
+    """Parse one ``@@AT_PROGRESS {json}`` output line into an event dict.
+
+    Returns None for lines without the prefix or with malformed JSON, so a caller can
+    filter progress events out of an interleaved stdout stream. Use
+    :func:`split_progress_events` when a line may carry an event that is preceded by
+    unrelated output.
+    """
+    events, _residual = split_progress_events(line)
+    return events[0] if events else None
 
 
 def parse_progress_jsonl(text: str) -> List[Dict[str, Any]]:
