@@ -84,6 +84,7 @@ class ExplorerArguments(GeneralArguments):
     llvm_cxxfilt_path: Optional[str]
     microbench_file: Optional[str]
     load_existing_doall_and_reduction_patterns: bool
+    ignore_dependency_states: bool
     collect_statistics: bool
     enable_pet_plot_file: Optional[str]  # None means no dump, otherwise the path
     enable_task_graph_plot: bool
@@ -144,6 +145,7 @@ def __run(
     enable_context_graph_plot: bool = False,
     enable_visualizer: bool = False,
     visualize_on: Optional["tk.Frame"] = None,
+    ignore_dependency_states: bool = False,
 ) -> DetectionResult:
     # check for updates
     module_name = "discopop"
@@ -219,6 +221,7 @@ def __run(
             enable_task_graph_plot,
             enable_context_graph_plot,
             visualizer,
+            ignore_dependency_states=ignore_dependency_states,
         )
 
     for plugin_name in plugins:
@@ -292,6 +295,7 @@ def run(arguments: ExplorerArguments) -> None:
                 enable_context_graph_plot=arguments.enable_context_graph_plot,
                 enable_visualizer=arguments.enable_visualizer,
                 visualize_on=arguments.visualize_on,
+                ignore_dependency_states=arguments.ignore_dependency_states,
             )
 
         end = time.time()

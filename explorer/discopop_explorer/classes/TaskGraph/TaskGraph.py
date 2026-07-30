@@ -11,6 +11,7 @@ from collections import deque
 import os
 from pathlib import Path
 import random
+import re
 import signal
 import logging
 import sys
@@ -124,6 +125,10 @@ logger = logging.getLogger("Explorer")
 # how __validate_graph_structure refers to code that no function entry node reaches any more
 DETACHED_REGION = "a region not reachable from any function entry node"
 
+# callpath state markers ("<line_id>@<state_id>") as emitted by the profiler into
+# dynamic_dependencies.txt. Removing them is what --ignore-dependency-states does.
+STATE_MARKER_PATTERN = re.compile(r"@\d+")
+
 
 # Aliases
 TGConstructionQueueElement = Tuple[Optional[TGNode], Union[PETNode, VisitorMarker]]  # (Predecessor, current element)
@@ -132,6 +137,9 @@ TGConstructionQueueElement = Tuple[Optional[TGNode], Union[PETNode, VisitorMarke
 class TaskGraph(Plottable, object):  # type: ignore[misc]
     pet: PEGraphX
     graph: nx.MultiDiGraph
+    # class-level default so instances created without __init__ (e.g. the test
+    # fixtures, which bypass it) still read as "states are interpreted"
+    ignore_dependency_states: bool = False
     root: TGNode
     function_id_map: Dict[PETNodeID, FunctionID] = dict()
     TGNode_pet_node_id_to_tg_node: Dict[PETNodeID, TGNode] = dict()
@@ -150,11 +158,13 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         dynamic_dependency_file: Optional[str] = None,
         static_dependency_file: Optional[str] = None,
         visualizer: Visualizer | None = None,
+        ignore_dependency_states: bool = False,
     ) -> None:
         super().__init__(visualizer)
 
         self.pet = pet
         self.graph = nx.MultiDiGraph()
+        self.ignore_dependency_states = ignore_dependency_states
         # shadow the class-level defaults with per-instance state: the construction passes
         # look up previously created nodes in these maps, so sharing them between TaskGraph
         # instances (e.g. two runs within one GUI session) would wire a fresh graph up to
@@ -2519,6 +2529,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     line = line.strip()
                     if line.startswith("#") or len(line) == 0:
                         continue
+                    if self.ignore_dependency_states:
+                        # Drop the callpath state markers before any of them is interpreted below.
+                        # Every source/sink then reads as NO_STATE, which also reclassifies the
+                        # affected dependencies from DYN_* to STAT_*.
+                        line = STATE_MARKER_PATTERN.sub("", line)
                     # split and sanitize line
                     line_split = [elem for elem in line.split(" ") if len(elem) > 0]
 

@@ -94,6 +94,7 @@ class PatternDetectorX(object):
         enable_task_graph_plot: bool,
         enable_context_graph_plot: bool,
         visualizer: Visualizer | None = None,
+        ignore_dependency_states: bool = False,
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
         with stage("Loading AST"):
@@ -110,7 +111,13 @@ class PatternDetectorX(object):
         dynamic_deps_file = dependencies
         static_deps_file = os.path.join(Path(dependencies).parent, "static_dependencies.txt")
         with stage("Constructing TaskGraph"):
-            task_graph = TaskGraph(self.pet, dynamic_deps_file, static_deps_file, visualizer)
+            task_graph = TaskGraph(
+                self.pet,
+                dynamic_deps_file,
+                static_deps_file,
+                visualizer,
+                ignore_dependency_states=ignore_dependency_states,
+            )
         if enable_task_graph_plot:
             task_graph.plot()
         #        if enable_context_graph_plot:
