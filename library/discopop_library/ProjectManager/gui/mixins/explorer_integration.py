@@ -31,6 +31,16 @@ from discopop_library.ProjectManager.gui.widgets import (
 
 logger = logging.getLogger("ExplorerIntegration")
 
+# Selectable interpretations of the profiled dependency data, as (value, label) pairs.
+# "no_states" runs the explorer with --ignore-dependency-states, i.e. it discards the
+# callpath state markers the profiler recorded in dynamic_dependencies.txt.
+DETECTION_MODES = [
+    ("default", "default (full states)"),
+    ("no_states", "no_states (states ignored)"),
+]
+DEFAULT_DETECTION_MODE = "default"
+NO_STATES_DETECTION_MODE = "no_states"
+
 
 class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     explorer_running = False
@@ -42,6 +52,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     no_suggestions_label: Optional[ttk.Label] = None
     prerequisite_info_label: Optional[ttk.Label] = None
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
+    detection_mode_var: Optional[tk.StringVar] = None
     jobs_var: Optional[tk.StringVar] = None
     collect_stats_var: Optional[tk.BooleanVar] = None
     visualize_var: Optional[tk.BooleanVar] = None
@@ -84,6 +95,32 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             self.pattern_types_vars[pattern] = var
             cb = ttk.Checkbutton(patterns_frame, text=pattern, variable=var)
             cb.pack(side=tk.LEFT, padx=5)
+
+        # Interpretation of the profiled dependency data
+        detection_mode_frame = ttk.Frame(settings_frame)
+        detection_mode_frame.pack(fill=tk.X, pady=5)
+
+        heading_label(detection_mode_frame, "Dependency Data:").pack(side=tk.TOP, anchor=tk.W, padx=5)
+
+        # below the label and stacked vertically, so the options read as a list
+        detection_mode_choices = ttk.Frame(detection_mode_frame)
+        detection_mode_choices.pack(side=tk.TOP, anchor=tk.W, padx=15)
+
+        self.detection_mode_var = tk.StringVar(value=DEFAULT_DETECTION_MODE)
+        for mode_value, mode_label in DETECTION_MODES:
+            ttk.Radiobutton(
+                detection_mode_choices,
+                text=mode_label,
+                variable=self.detection_mode_var,
+                value=mode_value,
+            ).pack(side=tk.TOP, anchor=tk.W)
+
+        caption_label(
+            settings_frame,
+            "'no_states' ignores the profiler's callpath state markers, which also reclassifies the\n"
+            "affected dependencies from dynamic to static. Re-running detection in either mode\n"
+            "replaces the existing suggestions.",
+        ).pack(anchor=tk.W, padx=10)
 
         # Jobs selection
         jobs_frame = ttk.Frame(settings_frame)
@@ -326,6 +363,10 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         self.status_label.config(text="Opening project in VSCode...", foreground=widgets.STATUS_BUSY)
         self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
 
+    def _ignore_dependency_states(self) -> bool:
+        """Whether the selected detection mode discards the callpath state markers."""
+        return self.detection_mode_var is not None and self.detection_mode_var.get() == NO_STATES_DETECTION_MODE
+
     def _check_explorer_prerequisites(self) -> bool:
         profiler_dir = os.path.join(self.arguments.dot_dp, "profiler")
         return os.path.isdir(profiler_dir)
@@ -485,10 +526,14 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         selected_patterns = [pattern for pattern, var in self.pattern_types_vars.items() if var.get()]
         enable_patterns = ",".join(selected_patterns) if selected_patterns else "reduction,doall"
         jobs_value = self.jobs_var.get()
+        ignore_states = self._ignore_dependency_states()
 
         output_callback("Configuration:\n")
         output_callback(f"  Patterns: {enable_patterns}\n")
-        output_callback(f"  Threads: {jobs_value}\n\n")
+        output_callback(f"  Threads: {jobs_value}\n")
+        output_callback(
+            f"  Dependency data: {NO_STATES_DETECTION_MODE if ignore_states else DEFAULT_DETECTION_MODE}\n\n"
+        )
 
         cmd = [
             sys.executable,
@@ -504,6 +549,9 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         if jobs_value != "auto":
             cmd.extend(["-j", jobs_value])
+
+        if ignore_states:
+            cmd.append("--ignore-dependency-states")
 
         output_callback("Running pattern detection...\n\n")
 
@@ -552,10 +600,12 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         selected_patterns = [pattern for pattern, var in self.pattern_types_vars.items() if var.get()]
         enable_patterns = ",".join(selected_patterns) if selected_patterns else "reduction,doall"
         jobs_value = self.jobs_var.get()
+        ignore_states = self._ignore_dependency_states()
 
         output_callback("Configuration:\n")
         output_callback(f"  Patterns: {enable_patterns}\n")
         output_callback(f"  Threads: {jobs_value}\n")
+        output_callback(f"  Dependency data: {NO_STATES_DETECTION_MODE if ignore_states else DEFAULT_DETECTION_MODE}\n")
         output_callback("  Graph visualization: enabled\n\n")
 
         # discard widgets from a previous visualized run; WithSidebar always builds
@@ -574,6 +624,8 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         ]
         if jobs_value != "auto":
             argv.extend(["-j", jobs_value])
+        if ignore_states:
+            argv.append("--ignore-dependency-states")
 
         # lazy import: discopop_explorer is only needed for this in-process path,
         # mirroring discopop_explorer's own lazy import of discopop_gui
