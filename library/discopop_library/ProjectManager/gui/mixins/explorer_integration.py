@@ -21,6 +21,7 @@ from urllib.parse import quote
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, show_error, clean_ansi_output
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.plots import hotspot_data
 from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
 from discopop_library.ProjectManager.gui.widgets import (
     create_styled_output_console,
@@ -51,6 +52,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     show_in_vscode_button: Optional[RoundedButton] = None
     no_suggestions_label: Optional[ttk.Label] = None
     prerequisite_info_label: Optional[ttk.Label] = None
+    hotspot_hint_frame: Optional[ttk.LabelFrame] = None
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
     detection_mode_var: Optional[tk.StringVar] = None
     jobs_var: Optional[tk.StringVar] = None
@@ -78,6 +80,13 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         # Left panel - settings
         left_frame = ttk.Frame(main_paned)
         main_paned.add(left_frame, minsize=650, width=650)
+
+        # Hotspot hint: an always-packed container that stays empty (and therefore
+        # invisible) while hotspot results exist, so the hint can be shown and hidden
+        # without disturbing the packing order of the frames below it.
+        hotspot_hint_container = ttk.Frame(left_frame)
+        hotspot_hint_container.pack(fill=tk.X, padx=0, pady=0)
+        self._build_hotspot_hint(hotspot_hint_container)
 
         # Settings frame
         settings_frame = ttk.LabelFrame(left_frame, text="Settings", padding=5)
@@ -212,6 +221,41 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         self._update_pattern_detection_ui()
         self._setup_pattern_detection_tab_tooltip()
 
+    def _build_hotspot_hint(self, parent: tk.Widget) -> None:
+        """Build the (initially hidden) 'no hotspot results' hint block."""
+        self.hotspot_hint_frame = ttk.LabelFrame(parent, text="Hotspot Information", padding=5)
+
+        ttk.Label(
+            self.hotspot_hint_frame,
+            text="⚠ No Hotspot Detection results available.",
+            font=widgets.FONT_BODY,
+            foreground=widgets.STATUS_STOP,
+            justify=tk.LEFT,
+        ).pack(anchor=tk.W, padx=5)
+
+        caption_label(
+            self.hotspot_hint_frame,
+            "Pattern detection restricts its analysis to the hot parts of the program when hotspot\n"
+            "information is available. Measuring hotspots first is therefore recommended: the\n"
+            "filtering it enables can speed up this step significantly.",
+            justify=tk.LEFT,
+        ).pack(anchor=tk.W, padx=5, pady=(2, 4))
+
+        widgets.create_button(
+            self.hotspot_hint_frame,
+            text="Go to Hotspot Detection",
+            command=lambda: self.right_tabs.select(self.hotspot_tab_index),
+        ).pack(anchor=tk.W, padx=5, pady=(0, 2))
+
+    def _update_hotspot_hint(self) -> None:
+        """Show the hint exactly while the explorer would find no hotspots to filter with."""
+        if self.hotspot_hint_frame is None:
+            return
+        if hotspot_data.hotspots_available_for_explorer(self.arguments.dot_dp):
+            self.hotspot_hint_frame.pack_forget()
+        else:
+            self.hotspot_hint_frame.pack(fill=tk.X, padx=5, pady=(5, 0))
+
     def _setup_pattern_detection_tab_tooltip(self) -> None:
         tooltip_text = (
             "Prerequisites not met:\n"
@@ -256,6 +300,8 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
     def _update_pattern_detection_ui(self) -> None:
         ready = self._check_explorer_prerequisites()
+
+        self._update_hotspot_hint()
 
         if self.explorer_run_button is not None:
             self.explorer_run_button.config(state="normal" if ready else "disabled")

@@ -368,3 +368,31 @@ argument and whose `light()` does not, measured through two configurations):
   package.
 * Measuring several configurations from a single click. The tab operates on the
   selected configuration; accumulating across inputs is *select, click, repeat*.
+
+---
+
+## 9. Follow-up — hotspot hint in the Pattern Detection tab
+
+Since hotspot results are optional but valuable, the Pattern Detection tab warns
+when there are none: the explorer loads `hotspot_detection/Hotspots.json` and,
+where it exists, restricts `calculateFunctionMetadata` to the hot functions, so
+its absence means analysing everything.
+
+* `hotspot_data.hotspots_available_for_explorer(dot_dp)` decides this the way
+  `HostpotLoader` does — file present *and* holding at least one `YES`/`MAYBE`
+  entry, since the loader is configured with `get_NO=False` and an all-`NO` file
+  therefore restricts nothing.
+* `explorer_integration._build_hotspot_hint` builds a "Hotspot Information"
+  block (warning line, explanation, `Go to Hotspot Detection` button) above the
+  Settings frame. It lives in a permanently packed, otherwise empty container so
+  showing and hiding it never reorders the frames below.
+* `_update_hotspot_hint` is called from `_update_pattern_detection_ui` and from
+  `_refresh_hotspot_results`, so running or clearing a measurement flips the hint
+  immediately. The latter call happens before the Pattern Detection panel is
+  built (the hotspot tab is created first), which the `None` check covers.
+
+Known limitation, not addressed here: `HostpotLoader` is invoked with
+`dot_discopop_path=os.getcwd()` rather than the explorer's `--path`. The
+subprocess run sets `cwd` to the `.discopop` directory and is therefore correct,
+but the in-process run used for `Show graph visualization` inherits the GUI's
+working directory and so may not find the hotspots the hint promises.

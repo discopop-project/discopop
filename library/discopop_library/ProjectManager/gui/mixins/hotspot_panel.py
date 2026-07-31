@@ -620,6 +620,10 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
             state["detail"].show_placeholder()
             self._render_hotspot_plot_tab(state)
         self._update_hotspot_ui()
+        # Results appearing (or being cleared) flips the "no hotspot results" hint in the
+        # Pattern Detection tab. That panel is built after this one, so the very first
+        # refresh happens before its widgets exist.
+        self._update_hotspot_hint()
 
     def _sort_hotspot_regions_by(self, column: str) -> None:
         current = self._hotspot_regions_sort

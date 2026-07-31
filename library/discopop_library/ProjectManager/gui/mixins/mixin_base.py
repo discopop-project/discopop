@@ -96,6 +96,7 @@ class ConfigManagerMixinBase:
     explorer_running: bool
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]]
     jobs_var: Optional[tk.StringVar]
+    hotspot_hint_frame: Optional[ttk.LabelFrame]
 
     # Apply Suggestions (Execute tab)
     suggestions_mode_var: tk.StringVar
@@ -272,6 +273,10 @@ class ConfigManagerMixinBase:
 
     def _run_pattern_detection(self) -> None:
         """Run the pattern detection."""
+        ...
+
+    def _update_hotspot_hint(self) -> None:
+        """Show or hide the 'no hotspot results' hint in the Pattern Detection tab."""
         ...
 
     def _update_pattern_detection_tab_state(self, enabled: bool) -> None:

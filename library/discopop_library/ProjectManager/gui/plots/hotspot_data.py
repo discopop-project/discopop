@@ -45,6 +45,9 @@ HOTNESS_MAYBE = "MAYBE"
 HOTNESS_NO = "NO"
 HOTNESS_ORDER = (HOTNESS_YES, HOTNESS_MAYBE, HOTNESS_NO)
 
+# Hotness values the explorer's HotspotLoader keeps (get_YES / get_MAYBE, get_NO=False).
+EXPLORER_RELEVANT_HOTNESS = (HOTNESS_YES, HOTNESS_MAYBE)
+
 # Code region kinds as written into cs_id.txt / Hotspots.json.
 KIND_LOOP = "LOOP"
 KIND_FUNCTION = "FUNCTION"
@@ -288,6 +291,28 @@ def parse_hotspots_json(data: Dict[str, Any], keys: Dict[int, RegionKey]) -> Lis
 
     regions.sort(key=lambda region: region.avg, reverse=True)
     return regions
+
+
+def hotspots_available_for_explorer(dot_dp: str) -> bool:
+    """Whether ``Hotspots.json`` holds hotspot information the explorer can use.
+
+    Mirrors :mod:`discopop_library.HostpotLoader`: it reads
+    ``hotspot_detection/Hotspots.json`` and keeps only the ``YES``/``MAYBE``
+    entries, so a missing file and a file that classifies every region as ``NO``
+    are equivalent from the explorer's point of view -- neither restricts the
+    analysis. Iterating over all top-level lists rather than ``code_regions``
+    alone matches the loader, which does the same.
+    """
+    data = load_json_file(hotspots_json_path(dot_dp))
+    if data is None:
+        return False
+    for entries in data.values():
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if isinstance(entry, dict) and str(entry.get("hotness", "")) in EXPLORER_RELEVANT_HOTNESS:
+                return True
+    return False
 
 
 def quadrant_thresholds(regions: Sequence[HotspotRegion]) -> Tuple[float, float]:

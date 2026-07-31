@@ -22,6 +22,7 @@ from discopop_library.ProjectManager.gui.plots.hotspot_data import (
     RegionKey,
     deserialize_log,
     hotness_counts,
+    hotspots_available_for_explorer,
     load_json_file,
     merge_external_runs,
     parse_cs_id,
@@ -197,6 +198,45 @@ def test_parse_hotspots_json_without_matching_ids_keeps_regions() -> None:
 def test_parse_hotspots_json_skips_entries_without_id() -> None:
     assert parse_hotspots_json({"code_regions": [{"typ": KIND_LOOP}]}, {}) == []
     assert parse_hotspots_json({}, {}) == []
+
+
+def _write_hotspots_json(dot_dp: Path, data: Dict[str, Any]) -> None:
+    target = dot_dp / "hotspot_detection"
+    target.mkdir(parents=True, exist_ok=True)
+    (target / "Hotspots.json").write_text(json.dumps(data))
+
+
+def test_hotspots_available_for_explorer(tmp_path: Path) -> None:
+    dot_dp = tmp_path / ".discopop"
+    # no file at all
+    assert not hotspots_available_for_explorer(str(dot_dp))
+
+    _write_hotspots_json(dot_dp, _hotspots_json())
+    assert hotspots_available_for_explorer(str(dot_dp))
+
+    # MAYBE alone is enough -- the loader asks for YES and MAYBE
+    _write_hotspots_json(dot_dp, {"code_regions": [{"csid": 1, "hotness": HOTNESS_MAYBE}]})
+    assert hotspots_available_for_explorer(str(dot_dp))
+
+
+def test_hotspots_available_for_explorer_ignores_cold_and_broken_files(tmp_path: Path) -> None:
+    dot_dp = tmp_path / ".discopop"
+
+    # everything cold: the loader keeps nothing, so this is as good as no results
+    _write_hotspots_json(
+        dot_dp,
+        {"code_regions": [{"csid": 1, "hotness": HOTNESS_NO}, {"csid": 2, "hotness": HOTNESS_NO}]},
+    )
+    assert not hotspots_available_for_explorer(str(dot_dp))
+
+    _write_hotspots_json(dot_dp, {"code_regions": []})
+    assert not hotspots_available_for_explorer(str(dot_dp))
+
+    # unreadable / unexpected content must not raise
+    (dot_dp / "hotspot_detection" / "Hotspots.json").write_text("{ truncated")
+    assert not hotspots_available_for_explorer(str(dot_dp))
+    _write_hotspots_json(dot_dp, {"code_regions": "not-a-list"})
+    assert not hotspots_available_for_explorer(str(dot_dp))
 
 
 def test_quadrant_thresholds_match_the_analyzers_means() -> None:
