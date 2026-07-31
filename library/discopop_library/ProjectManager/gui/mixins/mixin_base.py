@@ -64,6 +64,7 @@ class ConfigManagerMixinBase:
     skip_cleanup_var: tk.BooleanVar
     run_button: RoundedButton
     prepare_pattern_detection_button: RoundedButton
+    prepare_hotspot_detection_button: RoundedButton
     output_text: scrolledtext.ScrolledText
     generate_report_button: RoundedButton
 
@@ -168,6 +169,10 @@ class ConfigManagerMixinBase:
 
     def _prepare_pattern_detection(self) -> None:
         """Prepare for pattern detection with pre-configured parameters."""
+        ...
+
+    def _prepare_hotspot_detection(self) -> None:
+        """Prepare for hotspot detection and run the hotspot analyzer afterwards."""
         ...
 
     def _open_compilation_editor(self) -> None:

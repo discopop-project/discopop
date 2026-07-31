@@ -10,7 +10,9 @@ import copy
 import json
 import logging
 import os
+import shutil
 import subprocess
+import sys
 import threading
 import tkinter as tk
 
@@ -21,15 +23,18 @@ from discopop_library.ProjectManager.configurations.deletion import delete_confi
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
 from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
-from discopop_library.ProjectManager.gui.mixins.helpers import show_warning
+from discopop_library.ProjectManager.gui.mixins.helpers import clean_ansi_output, show_warning
 from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
-from typing import Optional
+from typing import Callable, Optional
 from tkinter import ttk
+
+HOTSPOT_ANALYZER = "discopop_hotspot_analyzer"
 
 
 class ExecutionMixin(ConfigManagerMixinBase):
     _execution_stop_event: threading.Event = threading.Event()
     _execution_process: Optional["subprocess.Popen[bytes]"] = None
+    _hotspot_analysis_process: Optional["subprocess.Popen[str]"] = None
     stop_execution_button: Optional[RoundedButton] = None
 
     def _register_execution_process(self, p: "subprocess.Popen[bytes]") -> None:
@@ -121,6 +126,8 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.stop_execution_button.config(state="normal")
 
         self.run_button.config(state="disabled", text="⟳ Running...")
+        self.prepare_pattern_detection_button.config(state="disabled")
+        self.prepare_hotspot_detection_button.config(state="disabled")
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
 
@@ -346,6 +353,38 @@ class ExecutionMixin(ConfigManagerMixinBase):
         threading.Thread(target=thread_func, daemon=True).start()
 
     def _prepare_pattern_detection(self) -> None:
+        self._prepare_inplace_run(
+            mode="dp",
+            settings_filename="dp_settings.json",
+            button=self.prepare_pattern_detection_button,
+            button_label="Prepare Pattern Detection",
+            status_noun="pattern detection",
+        )
+
+    def _prepare_hotspot_detection(self) -> None:
+        self._prepare_inplace_run(
+            mode="hd",
+            settings_filename="hd_settings.json",
+            button=self.prepare_hotspot_detection_button,
+            button_label="Use for Hotspot Detection",
+            status_noun="hotspot detection",
+            post_step=self._run_hotspot_analyzer,
+        )
+
+    def _prepare_inplace_run(
+        self,
+        mode: str,
+        settings_filename: str,
+        button: RoundedButton,
+        button_label: str,
+        status_noun: str,
+        post_step: Optional[Callable[[Callable[[str], None]], bool]] = None,
+    ) -> None:
+        """Compile and execute the selected configuration in ``mode`` with inplace execution.
+
+        ``post_step`` is invoked in the worker thread after a successful execution and receives
+        a callback that schedules output onto the GUI thread. It reports its own success.
+        """
         if not self.current_config:
             show_warning(self, "No Configuration Selected", "Please select a configuration first.")
             return
@@ -354,12 +393,15 @@ class ExecutionMixin(ConfigManagerMixinBase):
         if self.stop_execution_button is not None:
             self.stop_execution_button.config(state="normal")
 
-        self.prepare_pattern_detection_button.config(state="disabled", text="⟳ Preparing...")
+        # both preparation buttons compile and execute in-place, so neither may run concurrently
+        self.prepare_pattern_detection_button.config(state="disabled")
+        self.prepare_hotspot_detection_button.config(state="disabled")
+        button.config(state="disabled", text="⟳ Preparing...")
         self.run_button.config(state="disabled")
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
 
-        self.status_label.config(text="⏳ Preparing pattern detection...", foreground=widgets.STATUS_BUSY)
+        self.status_label.config(text=f"⏳ Preparing {status_noun}...", foreground=widgets.STATUS_BUSY)
 
         self.output_text.config(state=tk.NORMAL)
         self.output_text.delete("1.0", tk.END)
@@ -370,6 +412,10 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.output_text.insert(tk.END, text)
             self.output_text.see(tk.END)
             self.output_text.config(state="disabled")
+
+        def emit(text: str) -> None:
+            """Schedule ``text`` for display; safe to call from the worker thread."""
+            self.after(0, lambda t=text: append_output(t))  # type: ignore
 
         args_copy = copy.copy(self.arguments)
         args_copy.execute_inplace = True
@@ -401,23 +447,24 @@ class ExecutionMixin(ConfigManagerMixinBase):
         text_handler.setFormatter(formatter)
         root_logger.addHandler(text_handler)
 
-        logger = logging.getLogger("Prepare Pattern Detection")
+        logger = logging.getLogger(f"Prepare {status_noun.title()}")
+        failure_status = f"{status_noun.capitalize()} preparation failed"
 
         def thread_func() -> None:
-            logger.info(f"Starting pattern detection preparation for: {current_config}")
-            self.after(0, lambda: append_output("Compiling in 'dp' mode with inplace execution...\n\n"))  # type: ignore
+            logger.info(f"Starting {status_noun} preparation for: {current_config}")
+            emit(f"Compiling in '{mode}' mode with inplace execution...\n\n")
 
             compile_sh = resolve_compile_script_path(self.arguments.project_config_dir, current_config)
-            shared_dp_settings = os.path.join(self.arguments.project_config_dir, "dp_settings.json")
+            shared_settings = os.path.join(self.arguments.project_config_dir, settings_filename)
 
             self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground=widgets.STATUS_BUSY))  # type: ignore
-            self.after(0, lambda: append_output("Compiling...\n"))  # type: ignore
+            emit("Compiling...\n")
 
             compile_result = execute_configuration(
                 args_copy,
                 self.arguments.project_root,
                 config_path,
-                shared_dp_settings,
+                shared_settings,
                 compile_sh,
                 1,
                 args_copy.timeout_compilation,
@@ -425,29 +472,29 @@ class ExecutionMixin(ConfigManagerMixinBase):
             )
             self._execution_process = None
 
+            success = False
             if compile_result is None or compile_result[0] != 0:
                 ret_code = compile_result[0] if compile_result else "None"
-                self.after(0, lambda rc=ret_code: append_output(f"Compilation failed (return code: {rc})\n"))  # type: ignore
-                self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground=widgets.STATUS_FAIL))  # type: ignore
+                emit(f"Compilation failed (return code: {ret_code})\n")
             else:
                 ret_code, elapsed, stdout, stderr = compile_result
-                self.after(0, lambda e=elapsed: append_output(f"Compilation succeeded ({e:.2f}s)\n"))  # type: ignore
+                emit(f"Compilation succeeded ({elapsed:.2f}s)\n")
                 if stdout:
-                    self.after(0, lambda o=stdout: append_output(f"stdout: {o}\n"))  # type: ignore
+                    emit(f"stdout: {stdout}\n")
                 if stderr:
-                    self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+                    emit(f"stderr: {stderr}\n")
 
                 if self._execution_stop_event.is_set():
-                    self.after(0, lambda: append_output("Pattern detection preparation stopped by user.\n"))  # type: ignore
+                    emit(f"{status_noun.capitalize()} preparation stopped by user.\n")
                 else:
                     self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground=widgets.STATUS_BUSY))  # type: ignore
-                    self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
+                    emit("Executing...\n")
 
                     execute_result = execute_configuration(
                         args_copy,
                         self.arguments.project_root,
                         config_path,
-                        shared_dp_settings,
+                        shared_settings,
                         os.path.join(config_path, "execute.sh"),
                         1,
                         args_copy.timeout_execution,
@@ -455,38 +502,130 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     )
                     self._execution_process = None
 
-                if execute_result is None or execute_result[0] != 0:
-                    ret_code = execute_result[0] if execute_result else "None"
-                    self.after(0, lambda rc=ret_code: append_output(f"Execution failed (return code: {rc})\n"))  # type: ignore
-                    self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground=widgets.STATUS_FAIL))  # type: ignore
+                    if execute_result is None or execute_result[0] != 0:
+                        ret_code = execute_result[0] if execute_result else "None"
+                        emit(f"Execution failed (return code: {ret_code})\n")
+                    else:
+                        ret_code, elapsed, stdout, stderr = execute_result
+                        emit(f"Execution succeeded ({elapsed:.2f}s)\n")
+                        if stdout:
+                            emit(f"stdout: {stdout}\n")
+                        if stderr:
+                            emit(f"stderr: {stderr}\n")
+                        success = True
+
+            if success and post_step is not None:
+                if self._execution_stop_event.is_set():
+                    success = False
                 else:
-                    ret_code, elapsed, stdout, stderr = execute_result
-                    self.after(0, lambda e=elapsed: append_output(f"Execution succeeded ({e:.2f}s)\n"))  # type: ignore
-                    if stdout:
-                        self.after(0, lambda o=stdout: append_output(f"stdout: {o}\n"))  # type: ignore
-                    if stderr:
-                        self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+                    success = post_step(emit)
 
             if not self._execution_stop_event.is_set():
-                self.after(0, lambda: append_output("\n=== Pattern detection preparation complete ===\n"))  # type: ignore
-            self.after(0, lambda: self.prepare_pattern_detection_button.config(state=tk.NORMAL, text="Prepare Pattern Detection"))  # type: ignore
+                outcome = "complete" if success else "failed"
+                emit(f"\n=== {status_noun.capitalize()} preparation {outcome} ===\n")
+            self.after(0, lambda: button.config(state=tk.NORMAL, text=button_label))  # type: ignore
+            # recompute the button states, e.g. to re-enable the other preparation button
+            self.after(0, lambda: self._update_execute_modes())  # type: ignore
             self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
-            self.after(0, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
+            if success or self._execution_stop_event.is_set():
+                self.after(0, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
+            else:
+                self.after(0, lambda: self._set_status(failure_status, fg=widgets.STATUS_FAIL, reset_delay=3000))  # type: ignore
             self.after(0, lambda: self._update_report_display())  # type: ignore
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
 
         threading.Thread(target=thread_func, daemon=True).start()
 
+    def _run_hotspot_analyzer(self, emit: Callable[[str], None]) -> bool:
+        """Run ``discopop_hotspot_analyzer`` on the profiled hotspot data. Returns True on success.
+
+        Executed as a subprocess because the analyzer chdirs into the profiling data directory
+        and does not restore the working directory afterwards.
+        """
+        dot_dp = self.arguments.dot_dp
+        hotspot_dir = os.path.join(dot_dp, "hotspot_detection")
+        private_dir = os.path.join(hotspot_dir, "private")
+
+        if not os.path.isdir(private_dir):
+            emit(f"\nHotspot analysis skipped: no profiling data found at {private_dir}\n")
+            return False
+
+        result_files = [f for f in os.listdir(private_dir) if f.startswith("hotspot_result_") and f.endswith(".txt")]
+        if not result_files:
+            emit(f"\nHotspot analysis skipped: no hotspot_result_*.txt files found in {private_dir}\n")
+            return False
+        if not os.path.exists(os.path.join(private_dir, "cs_id.txt")):
+            emit(f"\nHotspot analysis skipped: cs_id.txt not found in {private_dir}\n")
+            return False
+
+        my_env = os.environ.copy()
+        venv_bin = os.path.dirname(sys.executable)
+        if venv_bin not in my_env.get("PATH", ""):
+            my_env["PATH"] = venv_bin + os.pathsep + my_env.get("PATH", "")
+        analyzer = shutil.which(HOTSPOT_ANALYZER, path=my_env["PATH"])
+        if analyzer is None:
+            emit(f"\nHotspot analysis skipped: {HOTSPOT_ANALYZER} not found on PATH.\n")
+            return False
+
+        emit(f"\nRunning hotspot analysis ({len(result_files)} profiled run(s) accumulated)...\n")
+
+        self._hotspot_analysis_process = subprocess.Popen(
+            [analyzer],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+            cwd=dot_dp,
+            env=my_env,
+            start_new_session=True,
+        )
+        process = self._hotspot_analysis_process
+        assert process.stdout is not None
+        for line in process.stdout:
+            cleaned = clean_ansi_output(line.rstrip("\n"))
+            if cleaned:
+                emit(cleaned + "\n")
+        process.wait()
+        returncode = process.returncode
+        self._hotspot_analysis_process = None
+
+        if returncode != 0:
+            emit(f"Hotspot analysis failed (return code: {returncode})\n")
+            return False
+
+        hotspots_json = os.path.join(hotspot_dir, "Hotspots.json")
+        try:
+            with open(hotspots_json, "r") as f:
+                code_regions = json.load(f).get("code_regions", [])
+        except (OSError, json.JSONDecodeError):
+            emit(f"Warning: hotspot analysis reported success, but {hotspots_json} could not be read.\n")
+            return True
+
+        hotness_counts = {"YES": 0, "MAYBE": 0, "NO": 0}
+        for region in code_regions:
+            hotness = region.get("hotness", "")
+            if hotness in hotness_counts:
+                hotness_counts[hotness] += 1
+        emit(
+            f"Hotspot analysis complete: {len(code_regions)} code regions "
+            f"(YES={hotness_counts['YES']}, MAYBE={hotness_counts['MAYBE']}, NO={hotness_counts['NO']})\n"
+        )
+        return True
+
     def _stop_execution(self) -> None:
         self._execution_stop_event.set()
         if self._execution_process is not None:
             self._execution_process.terminate()
+        if self._hotspot_analysis_process is not None:
+            self._hotspot_analysis_process.terminate()
         if self.run_button is not None:
             self.run_button.config(state="normal", text="Run")
         if self.prepare_pattern_detection_button is not None:
             self.prepare_pattern_detection_button.config(state="normal", text="Prepare Pattern Detection")
+        if self.prepare_hotspot_detection_button is not None:
+            self.prepare_hotspot_detection_button.config(state="normal", text="Use for Hotspot Detection")
         if self.stop_execution_button is not None:
             self.stop_execution_button.config(state="disabled")
         self.status_label.config(text="Stopping execution...", foreground=widgets.STATUS_STOP)
