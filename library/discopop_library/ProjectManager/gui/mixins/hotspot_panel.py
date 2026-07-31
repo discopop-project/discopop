@@ -53,7 +53,7 @@ from discopop_library.ProjectManager.gui.mixins.helpers import (
     show_warning,
 )
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
-from discopop_library.ProjectManager.gui.plots import embedding, hotspot_charts, hotspot_data
+from discopop_library.ProjectManager.gui.plots import demangle, embedding, hotspot_charts, hotspot_data
 from discopop_library.ProjectManager.gui.plots.hotspot_data import (
     HOTNESS_MAYBE,
     HOTNESS_NO,
@@ -485,7 +485,7 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
         return regions[labels.index(var.get())]
 
     def _region_choice_label(self, region: HotspotRegion) -> str:
-        name = f"  {region.key.name}" if region.key.name else ""
+        name = f"  {hotspot_charts.region_display_name(region)}" if region.key.name else ""
         return f"{region.key.location}{name}  ({region.avg:.4f}s, {region.hotness})"
 
     # ── selection ──────────────────────────────────────────────────────────────
@@ -515,7 +515,7 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
         runtimes = ", ".join(f"{value:.6f}" for value in region.runtimes) or "(none recorded)"
         fields = [
             ("Kind", region.key.kind),
-            ("Name", region.key.name or "(unnamed loop)"),
+            ("Name", hotspot_charts.region_display_name(region) if region.key.name else "(unnamed loop)"),
             ("File", region.key.path),
             ("Line", str(region.key.line)),
             ("Hotness", region.hotness),
@@ -601,6 +601,8 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
         keys = self._load_hotspot_region_keys()
         hotspots = hotspot_data.load_json_file(hotspot_data.hotspots_json_path(dot_dp))
         self._hotspot_regions = hotspot_data.parse_hotspots_json(hotspots, keys) if hotspots is not None else []
+        # one batched demangler call, rather than one per rendered row
+        demangle.prefetch(region.key.name for region in self._hotspot_regions if region.key.name)
 
         log = self._load_hotspot_log()
         indices = hotspot_data.result_file_indices(hotspot_data.private_dir(dot_dp))
@@ -677,7 +679,7 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
                     f"● {region.hotness}",
                     region.key.kind,
                     region.key.location,
-                    region.key.name or "-",
+                    hotspot_charts.region_display_name(region) if region.key.name else "-",
                     f"{region.avg:.6f}",
                     f"{region.share * 100:.2f} %",
                     f"{region.minimum:.6f}",

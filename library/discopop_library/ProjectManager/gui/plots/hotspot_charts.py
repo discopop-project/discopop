@@ -32,7 +32,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
-from discopop_library.ProjectManager.gui.plots import interaction, mode_style
+from discopop_library.ProjectManager.gui.plots import demangle, interaction, mode_style
 from discopop_library.ProjectManager.gui.plots.hotspot_data import (
     HOTNESS_MAYBE,
     HOTNESS_NO,
@@ -87,10 +87,17 @@ def top_regions(regions: Sequence[HotspotRegion], count: int) -> List[HotspotReg
     return ordered[: max(1, count)]
 
 
+def region_display_name(region: HotspotRegion) -> str:
+    """A region's readable name: demangled for functions, the location for loops."""
+    if not region.key.name:
+        return region.key.location
+    return demangle.demangle(region.key.name)
+
+
 def format_region_tooltip(region: HotspotRegion) -> str:
     """Multi-line hover text for a region."""
     lines = [
-        f"{region.key.kind}: {region.key.display_name()}",
+        f"{region.key.kind}: {region_display_name(region)}",
         f"Location: {region.key.location}",
         f"Hotness: {region.hotness}",
         f"Average: {region.avg:.6f}s",
@@ -301,7 +308,7 @@ def render_run_profile(
     ax.set_xticks(indices)
     ax.set_ylim(bottom=0)
     ax.set_title(
-        f"{region.key.display_name()}  ({region.key.location})",
+        f"{region_display_name(region)}  ({region.key.location})",
         fontsize=mode_style.LEGEND_TITLE_SIZE,
     )
 
