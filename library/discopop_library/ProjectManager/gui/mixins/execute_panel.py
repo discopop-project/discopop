@@ -280,9 +280,6 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         def on_prepare_pattern_detection() -> None:
             self._prepare_pattern_detection()
 
-        def on_prepare_hotspot_detection() -> None:
-            self._prepare_hotspot_detection()
-
         # Horizontal divider separating the action buttons from the settings above.
         ttk.Separator(left_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=5, pady=(8, 0))
 
@@ -306,17 +303,6 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
             "Runs the selected configuration in 'dp' mode with 'inplace' enabled.",
         )
         bind_tooltip_hover(self.prepare_pattern_detection_button, _prepare_tooltip, self)
-
-        self.prepare_hotspot_detection_button = widgets.create_button(
-            run_button_frame, text="Use for Hotspot Detection", command=on_prepare_hotspot_detection, state="disabled"
-        )
-        self.prepare_hotspot_detection_button.pack(side=tk.LEFT, padx=5, pady=5)
-        _hotspot_tooltip = Tooltip(
-            self.prepare_hotspot_detection_button,
-            "Runs the selected configuration in 'hd' mode with 'inplace' enabled,\n"
-            "then executes discopop_hotspot_analyzer to create Hotspots.json.",
-        )
-        bind_tooltip_hover(self.prepare_hotspot_detection_button, _hotspot_tooltip, self)
 
         # Right panel - output
         right_frame = ttk.Frame(main_paned)

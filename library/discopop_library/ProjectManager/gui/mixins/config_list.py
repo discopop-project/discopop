@@ -103,8 +103,6 @@ class ConfigListMixin(ConfigManagerMixinBase):
             self.run_button.config(state="disabled")
             if hasattr(self, "prepare_pattern_detection_button"):
                 self.prepare_pattern_detection_button.config(state="disabled")
-            if hasattr(self, "prepare_hotspot_detection_button"):
-                self.prepare_hotspot_detection_button.config(state="disabled")
             self.output_text.config(state=tk.NORMAL)
             self.output_text.delete("1.0", tk.END)
             self.output_text.config(state="disabled")
@@ -122,7 +120,6 @@ class ConfigListMixin(ConfigManagerMixinBase):
         shared_hd_settings = os.path.join(self.arguments.project_config_dir, "hd_settings.json")
         shared_par_settings = os.path.join(self.arguments.project_config_dir, "par_settings.json")
         execute_sh = os.path.join(config_path, "execute.sh")
-        hd_available = False
 
         for mode, settings_file in [
             ("seq", "seq_settings.json"),
@@ -146,14 +143,10 @@ class ConfigListMixin(ConfigManagerMixinBase):
             self.mode_checkbuttons[mode].config(state=state)
             if not exists:
                 self.mode_vars[mode].set(False)
-            if mode == "hd":
-                hd_available = exists
 
         self.run_button.config(state="normal")
         if hasattr(self, "prepare_pattern_detection_button"):
             self.prepare_pattern_detection_button.config(state="normal")
-        if hasattr(self, "prepare_hotspot_detection_button"):
-            self.prepare_hotspot_detection_button.config(state="normal" if hd_available else "disabled")
 
         reports_dir = os.path.join(self.arguments.project_dir, "reports")
         report_exists = False
