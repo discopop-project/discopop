@@ -10,7 +10,7 @@ directory for details.
 
 # Hotspot Detection Tab — Design & Implementation Plan
 
-Status: design approved; implementation not started.
+Status: implemented.
 
 Adds a **Hotspot Detection** tab to the DiscoPoP Project Manager GUI
 (`library/discopop_library/ProjectManager/gui`), positioned left of *Pattern
@@ -132,6 +132,12 @@ reached silently.
   carries a caption saying so; varying the input across configurations is what
   produces signal. Kept because repeated runs of an unstable benchmark do
   legitimately tighten `min`/`max`.
+* **Function names are displayed demangled, but keyed mangled.** `cs_id.txt`
+  records `Function::getName()`, i.e. the mangled symbol for C++. That is the
+  right basis for a region key (stable, unambiguous) but unreadable in a table,
+  so `plots/demangle.py` runs it through `llvm-cxxfilt` / `c++filt` for display
+  only — batched per refresh and cached, with the mangled name shown as-is when
+  no demangler is installed.
 * **`LOOP` region keys are `(path, line)`.** Loops have no name in `cs_id.txt`,
   so an edit that shifts a loop's line changes its key. This is strictly more
   stable than raw ids (which shift when any region anywhere is added or
@@ -165,6 +171,19 @@ reached silently.
 and runs produced through it appear as `(external)` in the Runs overview.
 
 ---
+
+## 2a. Shared extractions
+
+Two pieces were pulled out of existing code rather than duplicated, since the
+Report tab and this tab need identical behaviour:
+
+* `gui/plots/interaction.py` — the hover-tooltip and click-to-select hit-testing
+  formerly private to `report_charts.py`, now generic over the attached payload
+  and working in **display (pixel) space**. Data-space distances mixed axis units
+  and broke on a log-scaled axis, which the quadrant chart requires.
+* `gui/detail_bar.py` — the "Selection Details" side bar formerly built inline in
+  `report_panel.py`, now a `DetailBar` widget with an optional action-button area
+  (used here for "Show in VSCode").
 
 ## 3. Step 2 — `gui/plots/hotspot_data.py` (pure, Tk-free)
 
@@ -321,12 +340,21 @@ owned by this mixin.
   fingerprint stability and mismatch; external-run synthesis from mtimes.
 * `venv/bin/python -m mypy --config-file=mypy.ini -p discopop_library`
 * `venv/bin/python -m black -l 120 --check .`
-* End-to-end on `example/`: measure once, confirm one run recorded and
-  `Hotspots.json` regenerated; measure a second configuration and confirm the
-  run is *appended* without recompiling and the quadrant chart gains a real
-  `ratio` spread; edit a source and confirm the confirm-and-clear dialog fires;
-  confirm all four views populate and each carries its own selection.
 * `scripts/dev/run_ci_locally.sh`
+
+End-to-end results (a two-loop program whose `heavy()` scales with the input
+argument and whose `light()` does not, measured through two configurations):
+
+| Check | Result |
+|---|---|
+| First measurement | compiles (`build=none`), 1 run recorded |
+| Second measurement, other configuration | **compile skipped** (`build=current`), run appended |
+| `ratio` after two differing inputs | `heavy()` 0.86 vs `light()` 0.63 — not degenerate; YES/NO assigned accordingly |
+| Run log | both runs attributed to their configuration, region keys resolved and demangled |
+| Editing a source | `build=stale`, warning names the 2 runs that a re-instrumentation would discard |
+| Re-instrumenting | old runs discarded, fresh accumulation of 1, single-run warning shown |
+| Tampering with `cs_id.txt` | `build=mismatch` — the fingerprint guard catches it exactly |
+| `Clear Measurements` | `hotspot_detection/` removed, `FileMapping.txt` preserved, buttons re-gated |
 
 ---
 
