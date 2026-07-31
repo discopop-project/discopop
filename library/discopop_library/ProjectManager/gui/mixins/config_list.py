@@ -54,6 +54,8 @@ class ConfigListMixin(ConfigManagerMixinBase):
                     self._refresh_autotuning_suggestions_display()
                 if hasattr(self, "_refresh_suggestion_selection_display"):
                     self._refresh_suggestion_selection_display()
+                if hasattr(self, "_update_hotspot_config_display"):
+                    self._update_hotspot_config_display()
 
     def _on_config_selected(self, event: Optional[Any]) -> None:
         selection = self.listbox.curselection()
@@ -66,6 +68,8 @@ class ConfigListMixin(ConfigManagerMixinBase):
             self._refresh_autotuning_suggestions_display()
         if hasattr(self, "_refresh_suggestion_selection_display"):
             self._refresh_suggestion_selection_display()
+        if hasattr(self, "_update_hotspot_config_display"):
+            self._update_hotspot_config_display()
 
         try:
             current_tab_index = self.right_tabs.index(self.right_tabs.select())

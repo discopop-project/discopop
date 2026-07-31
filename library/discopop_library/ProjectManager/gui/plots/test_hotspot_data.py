@@ -25,6 +25,7 @@ from discopop_library.ProjectManager.gui.plots.hotspot_data import (
     load_json_file,
     merge_external_runs,
     parse_cs_id,
+    parse_file_mapping,
     parse_hotspot_result,
     parse_hotspots_json,
     quadrant_thresholds,
@@ -121,6 +122,21 @@ def test_resolve_keys_uses_file_mapping() -> None:
     assert keys[1] == RegionKey(path="/proj/lulesh.cc", line=1284, kind=KIND_LOOP, name="")
     assert keys[2].name == "CalcHourglass"
     assert keys[3].path == "/proj/util.cc"
+
+
+def test_parse_file_mapping() -> None:
+    text = "1\t/proj/main.cc\n2\t/proj/lulesh.cc\nno-tab-here\nx\t/proj/bad.cc\n3\t\n"
+    assert parse_file_mapping(text) == {1: "/proj/main.cc", 2: "/proj/lulesh.cc"}
+
+
+def test_parse_file_mapping_keeps_paths_that_no_longer_exist() -> None:
+    # The path is only displayed, so a deleted/moved file must still resolve
+    # rather than degrading the region to "file_<fid>".
+    assert parse_file_mapping("7\t/gone/removed.cc\n") == {7: "/gone/removed.cc"}
+
+
+def test_parse_file_mapping_later_entry_wins() -> None:
+    assert parse_file_mapping("1\t/a.cc\n1\t/b.cc\n") == {1: "/b.cc"}
 
 
 def test_resolve_keys_falls_back_for_unmapped_fid() -> None:

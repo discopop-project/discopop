@@ -166,6 +166,31 @@ def parse_cs_id(text: str) -> Dict[int, Tuple[str, int, int, str]]:
     return regions
 
 
+def parse_file_mapping(text: str) -> Dict[int, str]:
+    """Parse ``FileMapping.txt`` (``<fid>\\t<path>`` per line) into ``{fid: path}``.
+
+    Deliberately more tolerant than
+    :func:`discopop_library.PathManagement.PathManagement.load_file_mapping`,
+    which drops entries whose file no longer exists and warns about them. Here the
+    path is only ever displayed, so keeping it is strictly better than degrading a
+    region to ``file_<fid>``; and the file is appended to by the instrumentation
+    pass, so a later duplicate entry for an id wins.
+    """
+    mapping: Dict[int, str] = {}
+    for line in text.splitlines():
+        if "\t" not in line:
+            continue
+        raw_fid, _, path = line.partition("\t")
+        path = path.strip()
+        if not path:
+            continue
+        try:
+            mapping[int(raw_fid)] = path
+        except ValueError:
+            continue
+    return mapping
+
+
 def resolve_keys(
     cs_id: Dict[int, Tuple[str, int, int, str]],
     file_mapping: Dict[int, Any],
