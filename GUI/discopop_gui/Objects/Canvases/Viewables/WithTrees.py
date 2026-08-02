@@ -37,17 +37,11 @@ class WithTrees(ViewableCanvas):
         self._highest_visual_node_ids : List[int] = []
         self._highest_visual_nodes_x_offset_data : Dict[int, Tuple[int, int, int]] = {}
 
-    def check_visual_node(self, visual_node_id : int) -> bool:
-        return visual_node_id in self._visual_nodes
-
     def check_highest_visual_node(self, visual_node_id : int) -> bool:
         return visual_node_id in self._highest_visual_nodes_x_offset_data
 
     def get_visual_node(self, visual_node_id : int) -> VisualTreeNode:
         return self._visual_nodes[visual_node_id]
-
-    def get_highest_visual_node_index(self, visual_node_id : int) -> int:
-        return self._highest_visual_node_ids.index(visual_node_id)
 
     def add_highest_visual_node_id(self, visual_node_id : int, at_index : int | None = None) -> None:
         self._highest_visual_nodes_x_offset_data[visual_node_id] = (0, 0, 0)
@@ -59,19 +53,9 @@ class WithTrees(ViewableCanvas):
                 self._highest_visual_nodes_x_offset_data[node_id] = (self._highest_visual_nodes_x_offset_data[node_id][0] + 1, self._highest_visual_nodes_x_offset_data[node_id][1], self._highest_visual_nodes_x_offset_data[node_id][2])
             
             return
-        elif len(self._highest_visual_node_ids) > 0:
-            self._highest_visual_nodes_x_offset_data[visual_node_id] = (self._highest_visual_nodes_x_offset_data[self._highest_visual_node_ids[-1]][0] + 1, 0, 0)
-        
-        self._highest_visual_node_ids.append(visual_node_id)
-
-    def update_highest_visual_nodes(self) -> None:
-        temp = self._highest_visual_node_ids.copy()
-
-        for node_id in temp:
-            self.get_visual_node(node_id).update_highest_by_higher_order()
-
-        for node_id in self._highest_visual_node_ids:
-            self.get_visual_node(node_id).set_offset_by_higher_order(self._highest_visual_nodes_x_offset_data[node_id][0])
+        else:
+            at_index = len(self._highest_visual_node_ids)
+            self._highest_visual_node_ids.append(visual_node_id)
 
     def remove_highest_visual_node_id(self, visual_node_id : int) -> int:
         left_offset = self._highest_visual_nodes_x_offset_data[visual_node_id][1]
@@ -91,6 +75,8 @@ class WithTrees(ViewableCanvas):
         self._highest_visual_nodes_x_offset_data.pop(visual_node_id, None)
         return value
 
+    # TODO
+    
     def request_x_space(self, highest_order_id : int, space_needed : Tuple[int, int]) -> None:
         if highest_order_id not in self._highest_visual_nodes_x_offset_data:
             return
