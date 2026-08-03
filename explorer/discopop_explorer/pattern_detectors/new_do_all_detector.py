@@ -28,7 +28,9 @@ from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.pattern_detectors.clause_classification import filter_classifications, merge_classifications
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
+from discopop_explorer.pattern_detectors.loop_collapse_analysis import identify_collapsible_loop_nests
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     ParallelRegionInfo,
     TPIType,
@@ -53,6 +55,8 @@ def run_detection(
     result: List[DoAllInfo | ReductionInfo] = []
 
     result += identify_simple_doall_and_reduction(task_graph, ast_helper)
+    # collapsible nests are derived from the identified patterns, so this must run afterwards
+    result += identify_collapsible_loop_nests(task_graph, ast_helper, result)
 
     show_plot(task_graph)
 
@@ -609,13 +613,13 @@ def detect_doall_sharing_clauses(
     logger.debug("\tPRE MERGE: lastprivate: " + str(lastprivate))
     logger.debug("\tPRE MERGE: firstprivate: " + str(firstprivate))
     logger.debug("")
-    firstprivate, private, lastprivate, shared = __merge_classifications(firstprivate, private, lastprivate, shared)
+    firstprivate, private, lastprivate, shared = merge_classifications(firstprivate, private, lastprivate, shared)
     logger.debug("\tPOST MERGE: private: " + str(private))
     logger.debug("\tPOST MERGE: shared: " + str(shared))
     logger.debug("\tPOST MERGE: lastprivate: " + str(lastprivate))
     logger.debug("\tPOST MERGE: firstprivate: " + str(firstprivate))
     logger.debug("")
-    firstprivate, private, lastprivate, shared = __filter_classifications(
+    firstprivate, private, lastprivate, shared = filter_classifications(
         known_vars, firstprivate, private, lastprivate, shared
     )
     logger.debug("\tPOST FILTER: private: " + str(private))
@@ -625,75 +629,3 @@ def detect_doall_sharing_clauses(
     logger.debug("---------------------------- LOOP END --------------------")
     logger.debug("")
     return firstprivate, private, lastprivate, shared, firstwritten, init
-
-
-def __merge_classifications(
-    first_private: Set[str],
-    private: Set[str],
-    last_private: Set[str],
-    shared: Set[str],
-) -> Tuple[Set[str], Set[str], Set[str], Set[str]]:
-    new_first_private: Set[str] = set()
-    new_private: Set[str] = set()
-    new_last_private: Set[str] = set()
-    new_shared: Set[str] = set()
-
-    remove_from_private: Set[str] = set()
-    remove_from_first_private: Set[str] = set()
-    remove_from_last_private: Set[str] = set()
-    remove_from_shared: Set[str] = set()
-
-    # Rule 1: firstprivate is more restrictive than private
-    remove_from_private = first_private.intersection(private)
-    # Rule 2: lastprivate is more restrictive than private
-    remove_from_private = remove_from_private.union(last_private.intersection(private))
-    # Rule 3: shared is less restrictive than first_private or last_private
-    remove_from_shared = shared.intersection(first_private.union(last_private))
-    # Rule 4: if a variable is classifyable as shared and private, select shared.
-    remove_from_private = remove_from_private.union(shared.intersection(private))
-
-    new_first_private = first_private - remove_from_first_private
-    new_last_private = last_private - remove_from_last_private
-    new_private = private - remove_from_private
-    new_shared = shared - remove_from_shared
-
-    return new_first_private, new_private, new_last_private, new_shared
-
-
-def __filter_classifications(
-    known_vars: Set[str],
-    first_private: Set[str],
-    private: Set[str],
-    last_private: Set[str],
-    shared: Set[str],
-) -> Tuple[Set[str], Set[str], Set[str], Set[str]]:
-    new_first_private: Set[str] = set()
-    new_private: Set[str] = set()
-    new_last_private: Set[str] = set()
-    new_shared: Set[str] = set()
-
-    remove_from_private: Set[str] = set()
-    remove_from_first_private: Set[str] = set()
-    remove_from_last_private: Set[str] = set()
-    remove_from_shared: Set[str] = set()
-
-    # perform filtering
-    for var in first_private:
-        if var not in known_vars:
-            remove_from_first_private.add(var)
-    for var in private:
-        if var not in known_vars:
-            remove_from_private.add(var)
-    for var in last_private:
-        if var not in known_vars:
-            remove_from_last_private.add(var)
-    for var in shared:
-        if var not in known_vars:
-            remove_from_shared.add(var)
-
-    new_first_private = first_private - remove_from_first_private
-    new_last_private = last_private - remove_from_last_private
-    new_private = private - remove_from_private
-    new_shared = shared - remove_from_shared
-
-    return new_first_private, new_private, new_last_private, new_shared

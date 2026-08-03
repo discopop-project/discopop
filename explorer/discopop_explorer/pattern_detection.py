@@ -319,6 +319,8 @@ class PatternDetectorX(object):
             pt.reduction = [__get_red_var_obj_from_name(v) for v in pattern_dict["reduction"]]
             pt.scheduling_clause = pattern_dict["scheduling_clause"]
             pt.collapse_level = pattern_dict["collapse_level"]
+            # absent in pattern files written before the loop collapse analysis was introduced
+            pt.collapsed_pattern_ids = pattern_dict.get("collapsed_pattern_ids", [])
             res.patterns.do_all.append(pt)
 
         # unpack reduction
