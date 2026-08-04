@@ -58,6 +58,7 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
         """Get the help command for a given file"""
         help_commands: dict[str, Callable[[], None]] = {
             "compile.sh": self._show_compile_sh_help,
+            "compile_validate.sh": self._show_validation_compile_sh_help,
             "execute.sh": self._show_execute_sh_help,
             "validate.sh": self._show_validate_sh_help,
             "seq_settings.json": self._show_seq_settings_help,
@@ -88,9 +89,44 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
             "Per-configuration override:\n"
             "Each configuration may define its own compile.sh (via the 'compile.sh (override)'\n"
             "tab in the configuration editor). When present, it is used instead of this shared\n"
-            "script for that configuration only."
+            "script for that configuration only.\n\n"
+            "Separate build for validation:\n"
+            "This script builds the code that execute.sh runs. If validate.sh needs a\n"
+            "differently compiled binary, provide a compile_validate.sh in addition — see its\n"
+            "own help for details."
         )
         self._show_help_dialog("compile.sh Help", help_text)
+
+    def _show_validation_compile_sh_help(self) -> None:
+        help_text = (
+            "Validation Build Script (compile_validate.sh) — optional\n\n"
+            "Purpose:\n"
+            "compile.sh builds the code that execute.sh runs. When validate.sh requires a\n"
+            "differently compiled binary — for instance one built with extra checks, a\n"
+            "reference implementation, or an output-dumping flag — put those build\n"
+            "instructions into compile_validate.sh.\n\n"
+            "Behavior:\n"
+            "  • Optional: without it, validate.sh runs against the same build as execute.sh,\n"
+            "    exactly as before.\n"
+            "  • When present, it is run after the timed execute.sh run and before\n"
+            "    validate.sh, so the extra build never affects the measured runtime.\n"
+            "  • If the build fails, validate.sh is skipped and the run counts as invalid.\n"
+            "  • It is ignored for configurations that define no validate.sh, since there\n"
+            "    would be nothing to run against that build.\n\n"
+            "Resolution order (role before specificity):\n"
+            "  1. the configuration's own compile_validate.sh override\n"
+            "  2. the shared compile_validate.sh\n"
+            "  3. otherwise the compile script used for execute.sh\n"
+            "A shared compile_validate.sh therefore also applies to configurations that have\n"
+            "their own compile.sh override.\n\n"
+            "Requirements:\n"
+            "  • Same as compile.sh: use $CC / $CXX and $CFLAGS / $CXXFLAGS, exit 0 on success\n"
+            "  • Must be executable from the project root directory\n\n"
+            "Example:\n"
+            "#!/bin/bash\n"
+            "$CXX $CXXFLAGS -DVALIDATE_OUTPUT -o program main.cpp"
+        )
+        self._show_help_dialog("compile_validate.sh Help", help_text)
 
     def _show_execute_sh_help(self) -> None:
         help_text = (
@@ -124,7 +160,10 @@ class HelpDialogsMixin(ConfigManagerMixinBase):
             "    correctness (its exit code), exactly as before.\n"
             "  • When present, it is auto-run after a successful execute.sh, but only for\n"
             "    the seq and par modes (dp/hd are profiling runs and are left untouched).\n"
-            "  • A run counts as correct only if BOTH execute.sh and validate.sh exit 0.\n\n"
+            "  • A run counts as correct only if BOTH execute.sh and validate.sh exit 0.\n"
+            "  • If validation needs a different build than execute.sh, provide a\n"
+            "    compile_validate.sh; it is then compiled after the timed run and before\n"
+            "    validate.sh. See its own help for details.\n\n"
             "Requirements:\n"
             "  • Should run the application built by compile.sh and check its output\n"
             "  • Must return exit code 0 when the output is valid, non-zero otherwise\n"

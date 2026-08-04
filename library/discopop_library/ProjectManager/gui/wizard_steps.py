@@ -39,7 +39,8 @@ The wizard will help you with:
 3. Testing the compilation configuration
 4. Reviewing and accepting derived settings files
 5. Specifying the execution script and naming your configuration
-6. Optionally specifying an output validation script (validate.sh)
+6. Optionally specifying an output validation script (validate.sh), plus a separate
+   compilation script for it if validation needs a different build
 
 After completing this wizard, your project will be ready to use with DiscoPoP.
 
@@ -298,13 +299,43 @@ You can still proceed with the configuration, but keep this limitation in mind."
         hint = ttk.Label(frame, text=hint_text, font=widgets.FONT_BODY, justify=tk.LEFT)
         hint.pack(anchor=tk.W, padx=5, pady=(5, 10))
 
-        scrollbar = ttk.Scrollbar(frame)
+        validate_frame = ttk.LabelFrame(frame, text="validate.sh")
+        validate_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
+
+        scrollbar = ttk.Scrollbar(validate_frame)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.validate_sh_text = create_script_editor(frame, height=14, width=80, yscrollcommand=scrollbar.set)
+        self.validate_sh_text = create_script_editor(validate_frame, height=9, width=80, yscrollcommand=scrollbar.set)
         self.validate_sh_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         scrollbar.config(command=self.validate_sh_text.yview)
         enable_text_context_menu(self.validate_sh_text)
+
+        validate_compile_frame = ttk.LabelFrame(
+            frame, text="compile_validate.sh — only if validation needs a different build"
+        )
+        validate_compile_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
+
+        validate_compile_hint = ttk.Label(
+            validate_compile_frame,
+            text=(
+                "Leave empty to build validate.sh's code with compile.sh, as usual. If filled in, this\n"
+                "script is compiled after the timed execute.sh run and before validate.sh, so the extra\n"
+                "build never affects the measured runtime. Use $CC / $CXX and $CFLAGS / $CXXFLAGS."
+            ),
+            font=widgets.FONT_BODY,
+            justify=tk.LEFT,
+        )
+        validate_compile_hint.pack(anchor=tk.W, padx=5, pady=(5, 0))
+
+        validate_compile_scrollbar = ttk.Scrollbar(validate_compile_frame)
+        validate_compile_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.validate_compile_sh_text = create_script_editor(
+            validate_compile_frame, height=7, width=80, yscrollcommand=validate_compile_scrollbar.set
+        )
+        self.validate_compile_sh_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        validate_compile_scrollbar.config(command=self.validate_compile_sh_text.yview)
+        enable_text_context_menu(self.validate_compile_sh_text)
 
         return frame
 

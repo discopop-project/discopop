@@ -25,6 +25,7 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 from discopop_library.ProjectManager.configurations.compile_script import resolve_compile_script_path
 from discopop_library.ProjectManager.configurations.copying import copy_configuration
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
+from discopop_library.ProjectManager.configurations.validation import run_validation_phase
 
 logger = logging.getLogger("CodeConfiguration")
 
@@ -139,7 +140,6 @@ class CodeConfiguration(object):
         # optional validate.sh (run below) contributes to a configuration's
         # validity but never to its runtime.
         execute_sh_path = os.path.join(config_path, "execute.sh")
-        validate_sh_path = os.path.join(config_path, "validate.sh")
 
         # All settings files are now shared
         if self.settings_name in ["seq_settings.json", "dp_settings.json", "hd_settings.json", "par_settings.json"]:
@@ -169,20 +169,28 @@ class CodeConfiguration(object):
         # above stays purely the execute.sh time). validate.sh is skipped when
         # execute.sh already failed, or when no validate.sh is present (in which
         # case execute.sh's return code alone decides validity, as before).
+        # A configuration providing a compile_validate.sh is rebuilt for validation
+        # first; that build happens here, after the timed run, so it can never
+        # affect the measured runtime.
         result_valid = result_returncode == 0
-        if result_valid and os.path.exists(validate_sh_path):
-            validate_ret = execute_configuration(
+        if result_valid:
+            validation = run_validation_phase(
                 cm_args,
                 self.root_path,
                 config_path,
                 settings_path,
-                validate_sh_path,
                 thread_count,
-                timeout,
+                timeout_compilation=timeout,
+                timeout_validation=timeout,
             )
-            validate_returncode = 1 if validate_ret is None else validate_ret[0]
-            result_valid = validate_returncode == 0
-            logger.debug("Validation return code: " + str(validate_returncode))
+            if validation.compile_required and not validation.compile_successful:
+                logger.debug("Validation build failed; treating the configuration as invalid.")
+            result_valid = validation.verdict(result_valid)
+            if validation.applicable:
+                logger.debug(
+                    "Validation return code: "
+                    + str(validation.validate_result[0] if validation.validate_result else None)
+                )
         thread_sanitizer_valid = True
 
         # reporting

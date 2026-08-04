@@ -13,8 +13,11 @@ import tkinter as tk
 
 from discopop_library.ProjectManager.configurations.compile_script import (
     get_per_config_compile_script_path,
+    get_per_config_validation_compile_script_path,
     get_shared_compile_script_path,
+    resolve_compile_script_path,
 )
+from discopop_library.ProjectManager.configurations.validation import has_validate_script
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no, show_warning
 from discopop_library.ProjectManager.utilities.scriptFiles import write_script_file
@@ -55,6 +58,7 @@ class FileEditorMixin(ConfigManagerMixinBase):
 
         self._load_compile_override()
         self._load_validate_script()
+        self._load_validation_compile_override()
         self.right_tabs.tab(self.editor_tab_index, text="Editor")
         self._update_execute_modes()
         self._update_report_display()
@@ -191,6 +195,7 @@ class FileEditorMixin(ConfigManagerMixinBase):
 
         write_script_file(validate_path, seed_content)
         self._load_validate_script()
+        self._load_validation_compile_override()
         self._set_status("Added validate.sh for this configuration", fg="green", reset_delay=2000)
 
     def _remove_validate_script(self, validate_path: str) -> None:
@@ -203,7 +208,96 @@ class FileEditorMixin(ConfigManagerMixinBase):
 
         os.remove(validate_path)
         self._load_validate_script()
+        self._load_validation_compile_override()
         self._set_status("Removed validate.sh for this configuration", fg="green", reset_delay=2000)
+
+    def _load_validation_compile_override(self) -> None:
+        if not self.current_config:
+            return
+
+        validation_compile_path = get_per_config_validation_compile_script_path(
+            self.arguments.project_config_dir, self.current_config
+        )
+        text_area = self.text_areas["compile_validate.sh"]
+
+        text_area.config(state=tk.NORMAL)
+        text_area.delete("1.0", tk.END)
+
+        has_override = os.path.exists(validation_compile_path)
+        if has_override:
+            try:
+                with open(validation_compile_path, "r") as f:
+                    text_area.insert("1.0", f.read())
+            except Exception as e:
+                text_area.insert("1.0", f"Error loading file: {e}")
+        else:
+            text_area.insert(
+                "1.0",
+                "# This configuration has no compile_validate.sh override.\n"
+                "# validate.sh runs against the build produced by the compile script that\n"
+                "# execute.sh also uses.\n"
+                "# Click 'Add Override' above to build separately for validation: the override\n"
+                "# is compiled after the timed execute.sh run and before validate.sh, so it\n"
+                "# never affects the measured runtime. It is ignored while no validate.sh exists.\n",
+            )
+            text_area.config(state=tk.DISABLED)
+
+        # An override without a validate.sh has no effect; say so in the tab label
+        # rather than in the editor, so the note can never end up in the file.
+        ignored = has_override and not has_validate_script(os.path.join(self.config_dir, self.current_config))
+        self.editor_sub_tab_labels["compile_validate.sh"] = (
+            "compile_validate.sh (ignored)" if ignored else "compile_validate.sh (override)"
+        )
+
+        self.modified_files["compile_validate.sh"] = False
+        text_area.edit_modified(False)
+        self._set_sub_tab_modified("compile_validate.sh", False)
+        self.validation_compile_override_button.config(text="Remove Override" if has_override else "Add Override")
+
+    def _toggle_validation_compile_override(self) -> None:
+        if not self.current_config:
+            return
+
+        validation_compile_path = get_per_config_validation_compile_script_path(
+            self.arguments.project_config_dir, self.current_config
+        )
+        if os.path.exists(validation_compile_path):
+            self._remove_validation_compile_override(validation_compile_path)
+        else:
+            self._add_validation_compile_override(validation_compile_path)
+
+    def _add_validation_compile_override(self, validation_compile_path: str) -> None:
+        assert self.current_config is not None
+        if not has_validate_script(os.path.join(self.config_dir, self.current_config)):
+            show_warning(
+                self,
+                "No validate.sh",
+                "This configuration has no validate.sh, so a compile_validate.sh is ignored.\n\n"
+                "Add a validate.sh first to make the separate validation build take effect.",
+            )
+
+        seed_content = ""
+        source_path = resolve_compile_script_path(self.arguments.project_config_dir, self.current_config)
+        if os.path.exists(source_path):
+            with open(source_path, "r") as f:
+                seed_content = f.read()
+
+        write_script_file(validation_compile_path, seed_content)
+        self._load_validation_compile_override()
+        self._set_status("Added compile_validate.sh override for this configuration", fg="green", reset_delay=2000)
+
+    def _remove_validation_compile_override(self, validation_compile_path: str) -> None:
+        if not ask_yes_no(
+            self,
+            "Remove Override",
+            "Remove the compile_validate.sh override for this configuration?\n\n"
+            "validate.sh will then run against the same build as execute.sh.",
+        ):
+            return
+
+        os.remove(validation_compile_path)
+        self._load_validation_compile_override()
+        self._set_status("Removed compile_validate.sh override for this configuration", fg="green", reset_delay=2000)
 
     def _validate_compile_script(self, file_path: str) -> None:
         try:
@@ -258,9 +352,9 @@ class FileEditorMixin(ConfigManagerMixinBase):
         if saved_files:
             self._set_status(f"Saved {', '.join(saved_files)}", fg="green", reset_delay=2000)
 
-            if "compile.sh" in saved_files:
-                compile_path = os.path.join(config_path, "compile.sh")
-                self._validate_compile_script(compile_path)
+            for script_name in ("compile.sh", "compile_validate.sh"):
+                if script_name in saved_files:
+                    self._validate_compile_script(os.path.join(config_path, script_name))
         else:
             self._set_status("No changes to save")
 
