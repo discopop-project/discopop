@@ -8,23 +8,28 @@
 
 """The Hotspot Detection tab: run measurements and present the analysis.
 
-The tab enforces one invariant that the hotspot tooling depends on but does not
-itself guarantee: **compile once per accumulation, execute many times.**
+Accumulating runs is the whole point of the tab: ``ratio`` measures how a region's
+runtime varies with the input, and each configuration's ``execute.sh`` is its own
+input, so a single run leaves ``ratio`` at exactly ``0.5`` everywhere and hotness
+degenerates to "above-average runtime". Measuring several configurations is
+therefore what makes the analysis meaningful -- and configurations generally differ
+in their ``compile.sh``, so this must work across instrumented builds.
 
-``HotspotDetection.cpp`` appends to ``cs_id.txt`` and resumes region numbering
-from ``temp.txt``, and the runtime sizes its output by counting ``cs_id.txt``'s
-lines. Compiling into a non-empty ``private/`` directory therefore renumbers the
-regions while the previous runs' files keep the old numbering, and the analyzer --
-which joins purely by id -- silently mixes them: every region acquires a ``0.0``
-from the runs where it did not exist, ``roundMin`` turns that into ``1e-6``, and
-``ratio`` collapses to ~1.0 for everything, destroying the YES/MAYBE/NO
-distinction.
+Raw region ids cannot carry that across builds. ``HotspotDetection.cpp`` appends to
+``cs_id.txt`` and resumes numbering from ``temp.txt``, so a second compile gives the
+same source region a second id, and the runtime -- which sizes its output by
+counting ``cs_id.txt``'s lines -- writes ``0.0`` for every region belonging to a
+build other than its own. Handing that directly to the analyzer, which joins purely
+by id, is what destroys the YES/MAYBE/NO distinction: ``roundMin`` turns those zeros
+into ``1e-6`` and ``ratio`` collapses to ~1.0 for everything.
 
-So a compile happens only when it must (:func:`_hotspot_build_state`), and when it
-must while runs already exist, the user is asked to confirm discarding them. Runs
-otherwise simply accumulate, which is what makes ``ratio`` meaningful: it measures
-how a region's runtime varies with the input, and each configuration's
-``execute.sh`` is its own input.
+So ids are never used to combine anything. Each run's measurements are resolved to
+build-independent :class:`~...hotspot_data.RegionKey`\\ s (source path, line, kind,
+name) as soon as it completes and stored that way in the sidecar; before analysis
+all accumulated runs are renumbered into one canonical id space
+(:func:`~...hotspot_data.write_merged_analysis_input`) in which a region absent from
+a run is *omitted* rather than zeroed, so the analyzer averages it over the runs
+where it actually exists. Nothing is discarded on recompile; clearing is manual.
 """
 
 from __future__ import annotations
@@ -39,6 +44,7 @@ import subprocess
 import sys
 import threading
 import tkinter as tk
+from dataclasses import replace
 from tkinter import scrolledtext, ttk
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
@@ -562,9 +568,17 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
 
     # ── data loading and display ───────────────────────────────────────────────
 
-    def _load_hotspot_region_keys(self) -> Dict[int, hotspot_data.RegionKey]:
+    def _load_hotspot_region_keys(self, *, merged: bool = False) -> Dict[int, hotspot_data.RegionKey]:
+        """Resolve region ids to source locations.
+
+        Two id spaces exist and must not be confused. ``private/cs_id.txt`` is the
+        profiler's, in which the raw ``hotspot_result_<N>.txt`` files are written;
+        ``merged/cs_id.txt`` is the canonical one spanning all builds, in which
+        ``Hotspots.json`` is expressed. Pass ``merged=True`` for the latter.
+        """
         dot_dp = self.arguments.dot_dp
-        cs_id_text = self._read_text(hotspot_data.cs_id_path(dot_dp))
+        path = hotspot_data.merged_cs_id_path(dot_dp) if merged else hotspot_data.cs_id_path(dot_dp)
+        cs_id_text = self._read_text(path)
         if cs_id_text is None:
             return {}
         file_mapping_text = self._read_text(os.path.join(dot_dp, "FileMapping.txt")) or ""
@@ -598,7 +612,7 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
     def _refresh_hotspot_results(self) -> None:
         """Reload Hotspots.json and the run log, then refresh every view."""
         dot_dp = self.arguments.dot_dp
-        keys = self._load_hotspot_region_keys()
+        keys = self._load_hotspot_region_keys(merged=True)
         hotspots = hotspot_data.load_json_file(hotspot_data.hotspots_json_path(dot_dp))
         self._hotspot_regions = hotspot_data.parse_hotspots_json(hotspots, keys) if hotspots is not None else []
         # one batched demangler call, rather than one per rendered row
@@ -755,27 +769,28 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
                     newest = mtime
         return newest
 
-    def _hotspot_build_state(self) -> Tuple[str, str]:
-        """Whether the instrumented build can accept another run, and why not.
+    def _hotspot_compile_script_differs(self) -> bool:
+        """Whether the selected configuration needs its own instrumented build."""
+        current_config = self._hotspot_current_config()
+        log = self._load_hotspot_log()
+        if not current_config or not log.compile_script:
+            return False
+        expected = resolve_compile_script_path(self.arguments.project_config_dir, current_config)
+        return os.path.abspath(expected) != os.path.abspath(log.compile_script)
 
-        The fingerprint comparison is the guard that matters: it detects a build
-        that no longer matches the accumulated runs exactly, whereas the mtime
-        comparison only decides whether a recompile is *worth* doing.
+    def _hotspot_build_state(self) -> Tuple[str, str]:
+        """Whether the current build can serve another run directly, and why not.
+
+        A non-current state only means a recompile is needed first; it no longer
+        implies losing anything, since runs from separate builds are combined by
+        source location. ``BUILD_MISMATCH`` is the one case that warrants a
+        warning: the region set changed under the accumulated runs, which for a
+        source edit means their line numbers may no longer refer to the same code.
         """
         dot_dp = self.arguments.dot_dp
         cs_id = hotspot_data.cs_id_path(dot_dp)
         if not os.path.exists(cs_id):
             return (BUILD_NONE, "No instrumented build yet.")
-
-        log = self._load_hotspot_log()
-        if log.runs and log.region_fingerprint:
-            current = self._current_region_fingerprint()
-            if current is not None and current != log.region_fingerprint:
-                return (
-                    BUILD_MISMATCH,
-                    "The instrumented build no longer matches the accumulated runs "
-                    "(the code regions changed). They cannot be combined.",
-                )
 
         try:
             build_mtime = os.path.getmtime(cs_id)
@@ -783,16 +798,16 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
             return (BUILD_NONE, "No instrumented build yet.")
         newest_source = self._newest_source_mtime()
         if newest_source is not None and newest_source > build_mtime:
-            return (BUILD_STALE, "Sources changed since the instrumented build was made.")
+            return (
+                BUILD_MISMATCH,
+                "Sources changed since the instrumented build was made.",
+            )
 
-        current_config = self._hotspot_current_config()
-        if current_config and log.compile_script:
-            expected = resolve_compile_script_path(self.arguments.project_config_dir, current_config)
-            if os.path.abspath(expected) != os.path.abspath(log.compile_script):
-                return (
-                    BUILD_STALE,
-                    "This configuration uses a different compile.sh than the current build.",
-                )
+        if self._hotspot_compile_script_differs():
+            return (
+                BUILD_STALE,
+                "This configuration uses a different compile.sh, so it will be instrumented separately.",
+            )
         return (BUILD_CURRENT, "")
 
     def _update_hotspot_ui(self) -> None:
@@ -812,8 +827,8 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
         build_text = {
             BUILD_CURRENT: "Instrumented build: current",
             BUILD_NONE: "Instrumented build: none (will be compiled)",
-            BUILD_STALE: "Instrumented build: stale (will be recompiled)",
-            BUILD_MISMATCH: "Instrumented build: does not match the accumulated runs",
+            BUILD_STALE: "Instrumented build: this configuration will be instrumented separately",
+            BUILD_MISMATCH: "Instrumented build: stale (will be recompiled)",
         }[state]
         build_color = widgets.STATUS_OK if state == BUILD_CURRENT else widgets.STATUS_STOP
         if self.hotspot_build_label is not None:
@@ -837,8 +852,12 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
 
         if self.hotspot_warning_label is not None:
             warnings: List[str] = []
-            if state != BUILD_CURRENT and runs:
-                warnings.append(f"⚠ {detail}\n  Running a measurement will discard the {len(runs)} recorded run(s).")
+            if state == BUILD_MISMATCH and runs:
+                warnings.append(
+                    f"⚠ {detail}\n  The {len(runs)} recorded run(s) are kept, but regions that moved are\n"
+                    "  matched by source line and may no longer line up. Use 'Clear Measurements'\n"
+                    "  to start over if the sources changed substantially."
+                )
             if len(runs) == 1:
                 warnings.append(
                     "⚠ Only one run accumulated: every ratio is 0.5, so hotness reduces to\n"
@@ -902,23 +921,8 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
             show_warning(self, "No Configuration Selected", "Please select a configuration first.")
             return
 
-        state, detail = self._hotspot_build_state()
+        state, _detail = self._hotspot_build_state()
         needs_compile = force_compile or state != BUILD_CURRENT
-        run_count = len(self._hotspot_runs or [])
-
-        # Compiling renumbers the code regions, so accumulated runs cannot survive
-        # it. Never discard them without asking.
-        if needs_compile and run_count:
-            reason = detail or "Re-instrumenting renumbers the code regions."
-            if not ask_yes_no(
-                self,
-                "Re-instrument?",
-                f"{reason}\n\n"
-                f"Re-instrumenting renumbers the code regions, so the {run_count} accumulated "
-                "run(s) cannot be combined with new ones and will be discarded.\n\n"
-                "Proceed?",
-            ):
-                return
 
         repetitions = 1
         if execute_runs and self.hotspot_repetitions_var is not None:
@@ -997,9 +1001,13 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
         log = self._load_hotspot_log()
 
         if needs_compile:
-            self._hotspot_emit("Clearing previous measurements (re-instrumentation renumbers code regions)...\n")
-            self._delete_hotspot_dir()
-            log = MeasurementLog()
+            # The accumulated runs are deliberately kept. The pass appends to
+            # cs_id.txt and resumes numbering from temp.txt, so the new build's
+            # regions get fresh ids alongside the old ones and the runtime picks the
+            # next free hotspot_result_<N>.txt -- nothing that the previous runs
+            # refer to is overwritten. The analysis joins them by source location.
+            if log.runs:
+                self._hotspot_emit(f"Keeping the {len(log.runs)} accumulated run(s); they will be combined.\n")
 
             self.after(0, lambda: self.status_label.config(text="⏳ Instrumenting...", foreground=widgets.STATUS_BUSY))  # type: ignore
             self._hotspot_emit(f"Compiling '{config_name}' in 'hd' mode (inplace)...\n")
@@ -1031,12 +1039,9 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
                     "Warning: no code regions were instrumented (cs_id.txt is missing or empty).\n"
                     "Check that the configuration compiles with the hotspot detection wrappers.\n"
                 )
-            log = MeasurementLog(
-                region_fingerprint=fingerprint,
-                instrumented_at=_timestamp(),
-                compile_script=os.path.abspath(compile_sh),
-                runs=[],
-            )
+            log.region_fingerprint = fingerprint
+            log.instrumented_at = _timestamp()
+            log.compile_script = os.path.abspath(compile_sh)
             self._save_hotspot_log(log)
 
         if self._hotspot_stop_event.is_set():
@@ -1151,8 +1156,40 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
 
         threading.Thread(target=thread_func, daemon=True).start()
 
+    def _runs_for_analysis(self) -> List[MeasurementRun]:
+        """The accumulated runs, each with its per-region measurements resolved.
+
+        Read from the sidecar rather than from ``self._hotspot_runs``: that
+        attribute mirrors the *rendered* state and is only refreshed once the
+        worker finishes, so a measurement in progress would analyze the runs as
+        they were before it started.
+
+        Runs the GUI recorded itself already carry ``regions``; externally
+        produced ones (Execute tab, CLI, MCP server) are resolved from their raw
+        result file here so they contribute to the analysis like any other run.
+        """
+        dot_dp = self.arguments.dot_dp
+        private = hotspot_data.private_dir(dot_dp)
+        log = self._load_hotspot_log()
+        keys = self._load_hotspot_region_keys()
+        runs: List[MeasurementRun] = []
+        for run in hotspot_data.merge_external_runs(log, hotspot_data.result_file_indices(private)):
+            if not run.regions:
+                run = replace(run, regions=self._resolve_run_regions(private, run.index, keys))
+            if run.regions:
+                runs.append(run)
+        return runs
+
     def _invoke_hotspot_analyzer(self) -> bool:
         """Run ``discopop_hotspot_analyzer`` over the accumulated runs.
+
+        The analyzer is not pointed at ``private/`` directly. Region ids there are
+        only unique within one instrumented build, so runs from two configurations
+        would be joined by ids that mean different things. Instead every
+        accumulated run is renumbered into one canonical id space keyed by source
+        location (:func:`hotspot_data.write_merged_analysis_input`) and the
+        analyzer reads that -- which is what lets several configurations be
+        combined into one hotness verdict.
 
         Executed as a subprocess because the analyzer chdirs into the profiling
         data directory and does not restore the working directory afterwards.
@@ -1163,13 +1200,26 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
         if not os.path.isdir(private):
             self._hotspot_emit(f"\nAnalysis skipped: no profiling data found at {private}\n")
             return False
-        indices = hotspot_data.result_file_indices(private)
-        if not indices:
-            self._hotspot_emit(f"\nAnalysis skipped: no hotspot_result_*.txt files in {private}\n")
+        runs = self._runs_for_analysis()
+        if not runs:
+            self._hotspot_emit("\nAnalysis skipped: no accumulated runs with measurements.\n")
             return False
-        if not os.path.exists(os.path.join(private, "cs_id.txt")):
-            self._hotspot_emit(f"\nAnalysis skipped: cs_id.txt not found in {private}\n")
+
+        file_mapping = hotspot_data.parse_file_mapping(self._read_text(os.path.join(dot_dp, "FileMapping.txt")) or "")
+        merged = hotspot_data.merged_dir(dot_dp)
+        try:
+            region_count = hotspot_data.write_merged_analysis_input(runs, file_mapping, merged)
+        except OSError as e:
+            self._hotspot_emit(f"\nAnalysis skipped: could not write merged analysis input: {e}\n")
             return False
+        if not region_count:
+            self._hotspot_emit("\nAnalysis skipped: the accumulated runs contain no known code regions.\n")
+            return False
+        configs = sorted({run.config for run in runs if run.config})
+        self._hotspot_emit(
+            f"\nMerged {len(runs)} run(s) over {region_count} code region(s)"
+            + (f" from configuration(s): {', '.join(configs)}\n" if configs else "\n")
+        )
 
         my_env = os.environ.copy()
         venv_bin = os.path.dirname(sys.executable)
@@ -1181,10 +1231,10 @@ class HotspotPanelMixin(ConfigManagerMixinBase):
             return False
 
         self.after(0, lambda: self.status_label.config(text="⏳ Analyzing...", foreground=widgets.STATUS_BUSY))  # type: ignore
-        self._hotspot_emit(f"\nRunning hotspot analysis over {len(indices)} accumulated run(s)...\n")
+        self._hotspot_emit(f"Running hotspot analysis over {len(runs)} accumulated run(s)...\n")
 
         self._hotspot_analysis_process = subprocess.Popen(
-            [analyzer],
+            [analyzer, "--input-dir", hotspot_data.MERGED_DIRNAME],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
             text=True,

@@ -24,11 +24,19 @@ Three artefacts of the hotspot detection tooling are read:
 Regions are identified by a resolved :class:`RegionKey` (source path, line, kind
 and name) rather than by the raw numeric id. Ids are only stable within one
 instrumented build: the pass appends to ``cs_id.txt`` and resumes numbering from
-``temp.txt``, so a second compile renumbers everything. ``fid`` is not usable as
-a key either, since ``FileMapping.txt`` is appended and its ids depend on compile
-order. :func:`region_fingerprint` turns the resolved key set into a hash that the
-GUI stores alongside its accumulated runs, so a build that no longer matches
-those runs is detected exactly rather than guessed at from file mtimes.
+``temp.txt``, so a second compile gives the same source region a second id.
+``fid`` is not usable as a key either, since ``FileMapping.txt`` is appended and
+its ids depend on compile order. :func:`region_fingerprint` turns the resolved key
+set into a hash the GUI stores alongside its accumulated runs, so a change in
+which regions a build contains is detected exactly rather than guessed at from
+file mtimes.
+
+Because ``RegionKey`` is build-independent, runs from *different* instrumented
+builds -- i.e. different configurations, which is what makes the ``ratio``
+criterion meaningful -- can be combined: :func:`write_merged_analysis_input`
+renumbers every accumulated run into one canonical id space derived from the
+union of their region keys, which the analyzer can then process as a single
+measurement series.
 """
 
 from __future__ import annotations
@@ -56,6 +64,7 @@ KIND_FUNCTION = "FUNCTION"
 _CS_ID_KINDS = {"loop": KIND_LOOP, "func": KIND_FUNCTION}
 
 SIDECAR_FILENAME = "measurement_runs.json"
+MERGED_DIRNAME = "merged"
 _FINGERPRINT_PREFIX = "sha1:"
 
 
@@ -77,6 +86,32 @@ class RegionKey:
         """``path:line:KIND[:name]`` -- the form stored in the sidecar."""
         base = f"{self.path}:{self.line}:{self.kind}"
         return f"{base}:{self.name}" if self.name else base
+
+    @staticmethod
+    def deserialize(text: str) -> Optional["RegionKey"]:
+        """Invert :meth:`serialize`, or ``None`` if ``text`` is not a region key.
+
+        Paths may contain colons, so the split is anchored on the ``KIND`` token
+        rather than on a field count: the first ``LOOP``/``FUNCTION`` preceded by
+        an integer delimits ``path``, ``line`` and the optional trailing ``name``.
+        Scanning left to right resolves the (pathological) case of a function
+        whose own name contains ``:LOOP``.
+        """
+        parts = text.split(":")
+        for position in range(1, len(parts)):
+            if parts[position] not in (KIND_LOOP, KIND_FUNCTION):
+                continue
+            try:
+                line = int(parts[position - 1])
+            except ValueError:
+                continue
+            return RegionKey(
+                path=":".join(parts[: position - 1]),
+                line=line,
+                kind=parts[position],
+                name=":".join(parts[position + 1 :]),
+            )
+        return None
 
     @property
     def location(self) -> str:
@@ -407,6 +442,101 @@ def serialize_log(log: MeasurementLog) -> Dict[str, Any]:
     }
 
 
+# ---------------------------------------------------------------------------
+# the merged (cross-build) analyzer input
+# ---------------------------------------------------------------------------
+
+
+def invert_file_mapping(file_mapping: Dict[int, Any]) -> Dict[str, int]:
+    """``{path: fid}`` from a ``{fid: path}`` mapping, lowest fid winning.
+
+    ``FileMapping.txt`` is appended to by the instrumentation pass, so the same
+    path can appear under several ids; the lowest is the one the earliest build
+    used and is as good as any for identifying the file downstream.
+    """
+    inverted: Dict[str, int] = {}
+    for fid, path in sorted(file_mapping.items()):
+        inverted.setdefault(str(path), fid)
+    return inverted
+
+
+def _fid_for_path(path: str, inverted_mapping: Dict[str, int]) -> int:
+    """The ``FileMapping`` id for ``path``, or 0 if it cannot be determined.
+
+    Recognises the ``file_<fid>`` placeholder :func:`resolve_keys` substitutes
+    for an unmapped id, so a region resolved against a partial ``FileMapping``
+    still reaches the explorer with its original ``fid``.
+    """
+    fid = inverted_mapping.get(path)
+    if fid is not None:
+        return fid
+    if path.startswith("file_"):
+        try:
+            return int(path[len("file_") :])
+        except ValueError:
+            return 0
+    return 0
+
+
+def canonical_region_keys(runs: Sequence[MeasurementRun]) -> List[RegionKey]:
+    """The union of the region keys measured by ``runs``, in a stable order.
+
+    This is the id space the merged analysis is expressed in: one entry per
+    *source* region rather than per (build, region) pair, which is what lets runs
+    from separately instrumented builds be combined at all.
+    """
+    keys = {
+        key
+        for run in runs
+        for key in (RegionKey.deserialize(serialized) for serialized in run.regions)
+        if key is not None
+    }
+    return sorted(keys, key=lambda key: (key.path, key.line, key.kind, key.name))
+
+
+def write_merged_analysis_input(
+    runs: Sequence[MeasurementRun],
+    file_mapping: Dict[int, Any],
+    dest_dir: str,
+) -> int:
+    """Render ``runs`` as a single-id-space analyzer input in ``dest_dir``.
+
+    Writes a ``cs_id.txt`` numbering every region of :func:`canonical_region_keys`
+    from 1, plus one contiguous ``hotspot_result_<i>.txt`` per run. Regions the
+    run did not measure are **omitted** rather than written as ``0.0``: the
+    analyzer averages over the lines a region actually has, so omission is what
+    makes a region absent from one build count as missing data instead of as a
+    zero that collapses its ``min``/``max`` ratio.
+
+    Returns the number of canonical regions written.
+    """
+    keys = canonical_region_keys(runs)
+    ids = {key.serialize(): position + 1 for position, key in enumerate(keys)}
+    inverted_mapping = invert_file_mapping(file_mapping)
+
+    os.makedirs(dest_dir, exist_ok=True)
+    for stale in os.listdir(dest_dir):
+        if stale.startswith("hotspot_result_") and stale.endswith(".txt"):
+            os.remove(os.path.join(dest_dir, stale))
+
+    with open(os.path.join(dest_dir, "cs_id.txt"), "w") as f:
+        for key in keys:
+            fid = _fid_for_path(key.path, inverted_mapping)
+            if key.kind == KIND_FUNCTION:
+                f.write(f"{ids[key.serialize()]} func {key.line} {fid} {key.name}\n")
+            else:
+                f.write(f"{ids[key.serialize()]} loop {key.line} {fid}\n")
+
+    for position, run in enumerate(sorted(runs, key=lambda run: run.index)):
+        with open(os.path.join(dest_dir, f"hotspot_result_{position}.txt"), "w") as f:
+            for serialized, runtime in sorted(run.regions.items()):
+                csid = ids.get(serialized)
+                if csid is not None:
+                    f.write(f"{csid} {runtime:.9f}\n")
+
+    return len(keys)
+
+
 def merge_external_runs(log: MeasurementLog, known_indices: Sequence[int]) -> List[MeasurementRun]:
     """The runs present on disk, with unrecorded indices synthesized as external.
 
@@ -435,8 +565,22 @@ def private_dir(dot_dp: str) -> str:
     return os.path.join(hotspot_dir(dot_dp), "private")
 
 
+def merged_dir(dot_dp: str) -> str:
+    """Where the cross-build analyzer input is rendered.
+
+    Kept separate from ``private/``, which belongs to the instrumentation pass and
+    the runtime: they append to its ``cs_id.txt`` and resume region numbering from
+    its ``temp.txt``, so it must not be rewritten by the GUI.
+    """
+    return os.path.join(hotspot_dir(dot_dp), MERGED_DIRNAME)
+
+
 def cs_id_path(dot_dp: str) -> str:
     return os.path.join(private_dir(dot_dp), "cs_id.txt")
+
+
+def merged_cs_id_path(dot_dp: str) -> str:
+    return os.path.join(merged_dir(dot_dp), "cs_id.txt")
 
 
 def hotspots_json_path(dot_dp: str) -> str:
