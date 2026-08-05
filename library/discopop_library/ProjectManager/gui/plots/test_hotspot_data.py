@@ -20,9 +20,11 @@ from discopop_library.ProjectManager.gui.plots.hotspot_data import (
     MeasurementLog,
     MeasurementRun,
     RegionKey,
+    canonical_region_keys,
     deserialize_log,
     hotness_counts,
     hotspots_available_for_explorer,
+    invert_file_mapping,
     load_json_file,
     merge_external_runs,
     parse_cs_id,
@@ -35,6 +37,7 @@ from discopop_library.ProjectManager.gui.plots.hotspot_data import (
     resolve_keys,
     result_file_indices,
     serialize_log,
+    write_merged_analysis_input,
 )
 
 # cs_id.txt as the instrumentation pass writes it: 4 fields for loops
@@ -310,6 +313,78 @@ def test_merge_external_runs_synthesizes_unrecorded_indices() -> None:
     assert [run.index for run in merged] == [0, 1]
     assert merged[0].config == "small" and not merged[0].is_external
     assert merged[1].is_external
+
+
+# ---------------------------------------------------------------------------
+# the merged (cross-build) analyzer input
+# ---------------------------------------------------------------------------
+
+
+def test_region_key_serialize_round_trip() -> None:
+    for key in (
+        RegionKey(path="/p/a.cc", line=12, kind=KIND_LOOP),
+        RegionKey(path="/p/a.cc", line=12, kind=KIND_FUNCTION, name="main"),
+        # a Windows-style path and a C++ symbol both contain colons, so the split
+        # cannot rely on a field count
+        RegionKey(path="C:/p/a.cc", line=3, kind=KIND_FUNCTION, name="ns::f(int)"),
+    ):
+        assert RegionKey.deserialize(key.serialize()) == key
+
+
+def test_region_key_deserialize_rejects_non_keys() -> None:
+    assert RegionKey.deserialize("not a key") is None
+    assert RegionKey.deserialize("/p/a.cc:notanumber:LOOP") is None
+    assert RegionKey.deserialize("") is None
+
+
+def test_invert_file_mapping_prefers_the_lowest_fid() -> None:
+    # FileMapping.txt is appended to, so one path can hold several ids.
+    assert invert_file_mapping({2: "/p/a.cc", 1: "/p/a.cc", 3: "/p/b.cc"}) == {"/p/a.cc": 1, "/p/b.cc": 3}
+
+
+def test_canonical_region_keys_unions_runs_and_skips_junk() -> None:
+    runs = [
+        MeasurementRun(index=0, regions={"/p/b.cc:9:LOOP": 1.0, "/p/a.cc:1:LOOP": 2.0}),
+        MeasurementRun(index=1, regions={"/p/a.cc:1:LOOP": 3.0, "/p/a.cc:5:FUNCTION:f": 4.0, "junk": 5.0}),
+    ]
+    keys = canonical_region_keys(runs)
+    assert [key.serialize() for key in keys] == ["/p/a.cc:1:LOOP", "/p/a.cc:5:FUNCTION:f", "/p/b.cc:9:LOOP"]
+
+
+def test_write_merged_analysis_input_builds_one_id_space(tmp_path: Path) -> None:
+    """The same source region measured by two builds becomes one canonical id."""
+    runs = [
+        MeasurementRun(index=0, config="tiny", regions={"/p/a.cc:1:LOOP": 0.5, "/p/a.cc:7:FUNCTION:main": 1.0}),
+        MeasurementRun(index=3, config="medium", regions={"/p/a.cc:1:LOOP": 9.0}),
+    ]
+    count = write_merged_analysis_input(runs, {2: "/p/a.cc"}, str(tmp_path))
+    assert count == 2
+
+    # cs_id.txt numbers from 1 and carries the real fid, so the explorer's
+    # HostpotLoader resolves the region to the right file.
+    assert (tmp_path / "cs_id.txt").read_text().splitlines() == ["1 loop 1 2", "2 func 7 2 main"]
+
+    # Runs are renumbered contiguously from 0 in run order, regardless of the
+    # sparse on-disk indices they came from.
+    assert sorted(p.name for p in tmp_path.glob("hotspot_result_*.txt")) == [
+        "hotspot_result_0.txt",
+        "hotspot_result_1.txt",
+    ]
+    assert parse_hotspot_result((tmp_path / "hotspot_result_0.txt").read_text()) == {1: 0.5, 2: 1.0}
+    # The region absent from the second run is omitted rather than written as 0.0:
+    # the analyzer averages over the lines present, so omission means "not
+    # measured" instead of a zero that would collapse min/max.
+    assert parse_hotspot_result((tmp_path / "hotspot_result_1.txt").read_text()) == {1: 9.0}
+
+
+def test_write_merged_analysis_input_keeps_unmapped_fid_and_clears_stale(tmp_path: Path) -> None:
+    (tmp_path / "hotspot_result_7.txt").write_text("1 1.0\n")
+    runs = [MeasurementRun(index=0, regions={"file_4:1:LOOP": 0.5})]
+    write_merged_analysis_input(runs, {}, str(tmp_path))
+    # resolve_keys' file_<fid> placeholder still yields the original fid
+    assert (tmp_path / "cs_id.txt").read_text().splitlines() == ["1 loop 1 4"]
+    # a leftover result file from a longer previous series must not be analyzed
+    assert sorted(p.name for p in tmp_path.glob("hotspot_result_*.txt")) == ["hotspot_result_0.txt"]
 
 
 # ---------------------------------------------------------------------------

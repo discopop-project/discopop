@@ -10,7 +10,7 @@ import os.path
 import numpy as np
 import json
 import sys
-from typing import List, Optional
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 
 inf = float("inf")
@@ -18,7 +18,16 @@ inf = float("inf")
 
 @dataclass
 class HotspotAnalyzerArguments(object):
-    """Container Class for the arguments passed to the hotspot analyzer"""
+    """Container Class for the arguments passed to the hotspot analyzer
+
+    ``input_dir`` names the directory holding ``cs_id.txt`` and the
+    ``hotspot_result_<N>.txt`` files, relative to ``hotspot_detection/``. It
+    defaults to ``private`` -- the profiler's own output -- and exists so a caller
+    can supply a pre-merged measurement series instead, whose region ids span
+    several instrumented builds.
+    """
+
+    input_dir: str = "private"
 
     def __post_init__(self) -> None:
         self.__validate()
@@ -26,6 +35,10 @@ class HotspotAnalyzerArguments(object):
     def __validate(self) -> None:
         """Validate the arguments passed to the hotspot analyzer, e.g check if given files exist"""
         validation_failure = False
+
+        if os.path.isabs(self.input_dir) or os.path.pardir in self.input_dir.split(os.sep):
+            print(f"--input-dir must be a relative path inside hotspot_detection/: {self.input_dir}")
+            validation_failure = True
 
         if validation_failure:
             print("Exiting...")
@@ -117,7 +130,7 @@ def __print_cs_list(list: List[cs]) -> None:
             str(x.typ).ljust(6),
             str(x.csid).ljust(2),
             str(x.fid).ljust(2),
-            "{:10.7f}".format(x.runtimes[0]),
+            "{:10.7f}".format(x.runtimes[0] if x.runtimes else 0.0),
             "avr:" + "{:10.7f}".format(x.avr),
             "sum:" + "{:10.7f}".format(x.sum),
             f"ratio:{x.ratio} min:{x.minVal} max:{x.maxVal} topAvr:{x.topAvr} topRatio:{x.topRatio}",
@@ -131,7 +144,7 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
     print("DiscoPoP Dir: ", discopop_dir)
     # enter hotspot_detection/private folder
     hotspot_detection_dir = os.path.join(discopop_dir, "hotspot_detection")
-    hotspot_detection_private_dir = os.path.join(hotspot_detection_dir, "private")
+    hotspot_detection_private_dir = os.path.join(hotspot_detection_dir, arguments.input_dir)
     if not os.path.exists(hotspot_detection_dir):
         raise FileNotFoundError(
             "Static analysis and profiling results not found: Please execute the static analysis and profiling!"
@@ -144,12 +157,6 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
 
     ## CS LIST
     cslist: List[cs] = []
-
-    def findCs(iid: int) -> Optional[cs]:
-        for x in cslist:
-            if x.csid == iid:
-                return x
-        return None
 
     def getHots(bl: bool) -> List[cs]:
         Hots = []
@@ -165,13 +172,33 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
         return hotSum
 
     ## READ FILES
-    print("Reading hotspot results... ", end="")
-    idfile = open("hotspot_result_0.txt", "r")
-    for line in idfile:
-        c = cs(int(line.split()[0]))
-        cslist.append(c)
-    idfile.close()
+    # cs_id.txt seeds the region list, rather than hotspot_result_0.txt: a region
+    # need not be present in every run (it may belong to a build that a later
+    # configuration did not instrument), and seeding from one run would drop it.
+    print("Reading cs_id.txt ... ", end="")
+    csIndex: Dict[int, cs] = {}
+    csfile = open("cs_id.txt", "r")
+    for line in csfile:
+        temp = []
+        for word in line.split():
+            temp.append(word)
+        if len(temp) < 4:
+            continue
 
+        csid = int(temp[0])
+        tempCs = csIndex.get(csid)
+        if tempCs is None:
+            tempCs = cs(csid)
+            csIndex[csid] = tempCs
+            cslist.append(tempCs)
+        if temp[1] == "func":
+            tempCs.addInfo("FUNCTION", int(temp[2]), int(temp[3]), temp[4] if len(temp) > 4 else "")
+        if temp[1] == "loop":
+            tempCs.addInfo("LOOP", int(temp[2]), int(temp[3]), "")
+    csfile.close()
+    print("Done.")
+
+    print("Reading hotspot results... ", end="")
     i = 0
     resultNum = 0
     minData = inf
@@ -189,27 +216,11 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
             temp = []
             for word in line.split():
                 temp.append(word)
-            tempCs = findCs(int(temp[0]))
+            tempCs = csIndex.get(int(temp[0]))
             if tempCs:
                 tempCs.addData(float(temp[1]))
         dataFile.close()
 
-    print("Done.")
-
-    print("Reading cs_id.txt ... ", end="")
-    csfile = open("cs_id.txt", "r")
-    for line in csfile:
-        temp = []
-        for word in line.split():
-            temp.append(word)
-
-        tempCs = findCs(int(temp[0]))
-        if tempCs:
-            if temp[1] == "func":
-                tempCs.addInfo("FUNCTION", int(temp[2]), int(temp[3]), temp[4])
-            if temp[1] == "loop":
-                tempCs.addInfo("LOOP", int(temp[2]), int(temp[3]), "")
-    csfile.close()
     print("Done.")
 
     ## CALCULATE
@@ -226,7 +237,11 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
 
     print("Calculate Averages ... ", end="")
     for j in cslist:
-        j.calAvr()
+        # A region with no measurements at all is not averageable. This happens
+        # for regions that exist in the id table but were never entered by any
+        # run, and is filtered out below along with the all-zero ones.
+        if j.runtimes:
+            j.calAvr()
     print("Done.")
 
     for m in cslist:

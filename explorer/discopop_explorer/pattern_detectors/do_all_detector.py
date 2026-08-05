@@ -59,6 +59,11 @@ class DoAllInfo(PatternInfo):
         self.reduction = r
         self.scheduling_clause = "static"
         self.collapse_level = 1
+        # pattern ids of the do-all patterns which have been folded into this one by the loop
+        # collapse analysis, outermost first. Empty for every non-collapsed pattern.
+        # Applying this pattern excludes applying any of them: inserting a pragma between two
+        # collapsed loops does not compile.
+        self.collapsed_pattern_ids: List[int] = []
         self.pattern_tag = self.get_tag()
 
         # determine affected cu and line ids
@@ -97,7 +102,10 @@ class DoAllInfo(PatternInfo):
         result += f"s({[v.name for v in self.shared]})_"
         result += f"fp({[v.name for v in self.first_private]})_"
         result += f"r({[v.name for v in self.reduction]})_"
-        result += f"lp({[v.name for v in self.last_private]})"
+        result += f"lp({[v.name for v in self.last_private]})_"
+        # the collapse level distinguishes patterns which target the same loop but fold in a
+        # different number of nested loops, and which may carry identical clauses
+        result += f"c({self.collapse_level})"
         return result
 
 

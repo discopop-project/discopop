@@ -73,8 +73,13 @@ avoids it by `shutil.rmtree`-ing `.discopop/hotspot_detection` before
 instrumenting; the documented CLI flow avoids it by compiling once and
 re-executing many times.
 
-**Therefore: compile once per accumulation, execute many times.** This is the
-invariant the tab enforces.
+**Therefore raw ids are never used to combine runs.** But this is a property of
+the *id space*, not of the measurements: `RegionKey` (path, line, kind, name) is
+build-independent, so the same source region is recognisable across builds. Since
+a meaningful `ratio` requires several configurations — and configurations
+generally differ in their `compile.sh` — the tab must combine builds, and does so
+by renumbering every accumulated run into one canonical id space before analysis
+(§1c). Discarding runs on recompile would defeat the tab's purpose.
 
 **`fid` is resolvable but is not a stable key.** `addFileName`
 (`HotspotDetection.cpp:248`), which would write malformed lines, is dead code —
@@ -99,8 +104,8 @@ configuration overwrite each other. A separate sidecar log is required.
 | Tab gating | Always enabled — it produces the data, so gating it would deadlock. Unmet prerequisites disable the run button with an inline reason. |
 | Launch scope | The configuration selected in the left panel; repeat count (default **1**). |
 | Compile policy | Compile **only when needed**; otherwise execute only and append a run. |
-| Re-instrumenting with runs present | Confirmation dialog naming the number of runs discarded, then clear + compile. |
-| Clearing | Explicit `Clear Measurements` button (confirm dialog). No automatic wipe. |
+| Re-instrumenting with runs present | Runs are **kept and combined** across builds (§1c). `private/` is never wiped, so the pass appends fresh ids and the runtime picks the next free result index; nothing the old runs refer to is touched. |
+| Clearing | Only ever explicit: the `Clear Measurements` button (confirm dialog). No automatic wipe, on any path. |
 | Result views | Four, in a Report-style notebook: permanent tabs plus a `＋` menu adding closable chart tabs. |
 | Selection | Per-tab, exactly as `report_panel.py`; each results tab owns a Selection Details bar. |
 | Run log | `.discopop/hotspot_detection/measurement_runs.json`, regions stored by resolved key. |
@@ -111,22 +116,47 @@ configuration overwrite each other. A separate sidecar log is required.
 * project sources are newer than `cs_id.txt`, or
 * the selected configuration's resolved `compile.sh` differs from the one
   recorded for the current build, or
-* the user presses `Re-instrument`, or
-* **the region fingerprint no longer matches** (see below).
+* the user presses `Re-instrument`.
 
-Mtimes only *decide whether to compile*. Correctness rests on the fingerprint.
+A compile no longer costs anything: the accumulated runs survive it (§1c).
 
-### 1b. The region fingerprint (exact guard)
+### 1b. The region fingerprint
 
 The sidecar records `region_fingerprint`: a stable hash over the sorted resolved
-region keys parsed from `cs_id.txt` at instrumentation time. Before appending a
-run, the fingerprint is recomputed from the current `cs_id.txt`; a mismatch
-means the build no longer matches the accumulated runs (e.g. the user rebuilt
-outside the GUI) and is routed to the confirm-and-clear path. This replaces
-mtime heuristics as the safety net, so the corruption described in §0 cannot be
-reached silently.
+region keys parsed from `cs_id.txt` at instrumentation time. It no longer gates
+anything — combining runs is safe by construction — but a mismatch against the
+current `cs_id.txt` still indicates the region set changed under the accumulated
+runs. Paired with a source-mtime change that means line numbers may no longer
+denote the same code, which the Status panel warns about while leaving the
+decision (keep accumulating, or `Clear Measurements`) to the user.
 
-### 1c. Accepted limitations
+### 1c. Combining runs across instrumented builds
+
+Ids from two builds are incomparable, so `_invoke_hotspot_analyzer` never points
+the analyzer at `private/`. Instead:
+
+1. every run's measurements are resolved to `RegionKey`s and stored that way in
+   the sidecar as soon as the run completes (external runs — Execute tab, CLI,
+   MCP server — are resolved from their raw file at analysis time);
+2. `write_merged_analysis_input` renumbers the union of those keys from 1 into
+   `hotspot_detection/merged/`, writing a canonical `cs_id.txt` (with real `fid`s,
+   inverted from `FileMapping.txt`, so the explorer's `HostpotLoader` still
+   resolves regions) plus one contiguous `hotspot_result_<i>.txt` per run;
+3. the analyzer runs over that directory (`--input-dir merged`).
+
+The load-bearing detail is that a region **absent** from a run is *omitted* from
+that run's file rather than written as `0.0`. `calAvr`/`calMin`/`calMax` iterate
+`runtimes`, so omission means "not measured in this run" — which is what averts
+exactly the §0 corruption, where a zero from a build the region did not belong to
+drags `minVal` to `1e-6` and pins `ratio` at ~1.0. Correspondingly the analyzer
+seeds its region list from `cs_id.txt` rather than from run 0, so a region missing
+from the first run is not dropped.
+
+`Hotspots.json` is therefore expressed in the *canonical* id space, and the
+Regions tab resolves it against `merged/cs_id.txt` — not `private/cs_id.txt`,
+whose ids mean something else.
+
+### 1d. Accepted limitations
 
 * **Repetitions only narrow measurement noise.** The spinner defaults to 1 and
   carries a caption saying so; varying the input across configurations is what
