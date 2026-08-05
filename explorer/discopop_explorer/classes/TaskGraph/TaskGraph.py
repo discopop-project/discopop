@@ -9,8 +9,6 @@
 import copy
 from collections import deque
 import os
-import sys
-from collections import defaultdict
 from pathlib import Path
 import random
 import re
@@ -2847,12 +2845,15 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         warnings.warn(
             "TODO: stateID to callpath mapping might get really big. Implement this more scalable / resilient."
         )
-        # collect used state ids from dynamic_dependency_file
+        # collect used state ids from dynamic_dependency_file.
+        # both source and sink state ids are looked up during dependency insertion
+        # (see __insert_data_dependencies_from_files), so both have to be collected here.
         deps = self.__read_dependencies_from_files(dynamic_dependency_file, None)
         used_state_ids: Set[str] = set()
         for dep_type, dep_type_deps in deps.items():
             for source_location, source_location_deps in dep_type_deps.items():
                 for source_state_id, source_state_deps in source_location_deps.items():
+                    used_state_ids.add(source_state_id)
                     for sink_location, sink_location_deps in source_state_deps.items():
                         for sink_state_id, var_infos in sink_location_deps.items():
                             used_state_ids.add(sink_state_id)
@@ -2860,28 +2861,79 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         # delete deps to free memory
         del deps
 
+        state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
+        if not os.path.exists(state_mappings_file):
+            return dict()
+
+        # The profiler writes the callpaths as a prefix tree, one node per line in the format
+        # "<state_id> <parent_state_id> <label>" (see DiscoPoP::save_enumerated_paths). The root
+        # node references itself as its parent and carries no callpath label. Lines are emitted in
+        # nondeterministic order (the writer accumulates them via an OpenMP reduction), so the tree
+        # has to be read in full before any callpath can be reconstructed.
+        prefix_tree: Dict[str, Tuple[str, str]] = dict()  # {state_id: (parent_state_id, label)}
+        with open(state_mappings_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("#") or len(line) == 0:
+                    continue
+                line_split = [elem for elem in line.split(" ") if len(elem) > 0]
+                if len(line_split) < 3:
+                    continue
+                state_id = line_split[0]
+                parent_state_id = line_split[1]
+                # labels are not supposed to contain spaces, join defensively.
+                # they repeat heavily across states (function names, call markers), so intern them.
+                label = sys.intern(" ".join(line_split[2:]))
+                prefix_tree[state_id] = (parent_state_id, label)
+        if len(prefix_tree) == 0:
+            warnings.warn(
+                "No callpaths could be read from " + state_mappings_file + ". "
+                "Expected the prefix tree format '<state_id> <parent_state_id> <label>'. "
+                "State ids will not be assigned, which suppresses data dependencies."
+            )
+
+        # resolved caches the callpaths of the visited states' ancestors, so states sharing a prefix
+        # walk it only once. It is deliberately not merged into the returned dictionary, as that
+        # would re-introduce the unused states which used_state_ids filters out.
+        resolved: Dict[str, List[str]] = dict()
+
+        def resolve(state_id: str) -> List[str]:
+            """reconstructs the callpath of state_id, ordered from the root to the state itself."""
+            # walk upwards until the root, an already resolved ancestor or an unknown state is hit
+            pending: List[Tuple[str, str]] = []  # [(state_id, label)], ordered from state_id upwards
+            visited: Set[str] = set()
+            callpath: List[str] = []
+            current = state_id
+            while current not in visited:
+                visited.add(current)  # guards against self references / cycles in malformed input
+                if current in resolved:
+                    callpath = resolved[current]
+                    break
+                if current not in prefix_tree:
+                    # unknown ancestor (e.g. truncated mapping file). treat it as the root.
+                    break
+                parent_state_id, label = prefix_tree[current]
+                if parent_state_id == current:
+                    # the root references itself and carries no callpath label
+                    break
+                pending.append((current, label))
+                current = parent_state_id
+            # walk back down, caching the callpath of every state passed along the way
+            for pending_state_id, pending_label in reversed(pending):
+                callpath = callpath + [pending_label]
+                resolved[pending_state_id] = callpath
+            return callpath
+
         # create state_mappings_dict
         state_mappings_dict: Dict[str, List[str]] = dict()  # {stateID: callpath}
-        state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
-        if os.path.exists(state_mappings_file):
-            with open(state_mappings_file, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("#") or len(line) == 0:
-                        continue
-                    line_split = [elem for elem in line.split(" ") if len(elem) > 0]
-                    if len(line_split) < 2:
-                        continue
-                    state_id = line_split[0]
-                    # filter state_id for seen state ids
-                    if state_id not in used_state_ids:
-                        continue
-                    raw_callpath = line_split[1]
-                    if "-->" in raw_callpath:
-                        callpath = raw_callpath.split("-->")
-                    else:
-                        callpath = [raw_callpath]
-                    state_mappings_dict[state_id] = callpath
+        for state_id in used_state_ids:
+            if state_id not in prefix_tree:
+                continue
+            callpath = resolve(state_id)
+            if len(callpath) == 0:
+                # the root state does not describe a callpath
+                continue
+            state_mappings_dict[state_id] = callpath
         return state_mappings_dict
 
     def __assign_state_ids(self, dynamic_dependency_file: Optional[str]) -> None:
@@ -3312,7 +3364,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     ) -> Set[Context]:
         """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs.
         state_mappings_dict is a mapping from stateIDs to callpaths.
-        line_to_work_contexts is a reverse index {lineID: WorkContexts whose code scope contains it},
+        location_to_work_contexts is a reverse index {lineID: WorkContexts whose code scope contains it},
         built once per dependency-insertion pass (see __insert_data_dependencies_from_files)."""
 
         #        cache_key = (location, state_id)
