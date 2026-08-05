@@ -107,3 +107,27 @@ def test_ingest_evolutionary_generations() -> None:
     assert len(model.generations) == 2
     assert model.generations[1].max_fitness == 2.0
     assert model.measurements[0].generation == 0
+
+
+def test_generation_ingests_measured_average() -> None:
+    events: List[Dict[str, Any]] = [
+        {
+            "event": "generation",
+            "generation": 1,
+            "max_fitness": 2.0,
+            "avg_fitness": 1.5,
+            "threshold": 1.7,
+            "generation_avg_fitness": 0.8,
+        }
+    ]
+    model = ProgressModel.from_events(events)
+    assert model.generations[0].generation_avg_fitness == 0.8
+
+
+def test_generation_without_measured_average_stays_none() -> None:
+    """Runs recorded before the measured average existed must still load."""
+    events: List[Dict[str, Any]] = [
+        {"event": "generation", "generation": 0, "max_fitness": 1.0, "avg_fitness": 0.8, "threshold": 0.85}
+    ]
+    model = ProgressModel.from_events(events)
+    assert model.generations[0].generation_avg_fitness is None

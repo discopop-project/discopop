@@ -13,8 +13,12 @@
 summary tile values and the data the chart needs. :func:`render` draws into a
 matplotlib figure, adapting to the algorithm:
 
-* if generation events are present (evolutionary) -> max / average / convergence
-  threshold lines per generation with individuals scattered by validity;
+* if generation events are present (evolutionary) -> best-so-far / population
+  average / measured average / convergence threshold lines per generation, with
+  the individuals measured in each generation scattered by validity. Note that
+  the population average covers the surviving population while the measured
+  average covers exactly the scattered points, so only the latter is expected to
+  run through the middle of the dots;
 * otherwise (greedy / coordinate descent / measure-only) -> the best-so-far
   speedup line with each measured configuration scattered by validity.
 
@@ -47,6 +51,9 @@ class Generation:
     max_fitness: float
     avg_fitness: float
     threshold: float
+    # Average over the individuals measured in this generation -- exactly the points
+    # scattered for it. ``None`` for runs recorded before this field existed.
+    generation_avg_fitness: Optional[float] = None
 
 
 @dataclass
@@ -84,6 +91,11 @@ class ProgressModel:
                     max_fitness=float(event["max_fitness"]),
                     avg_fitness=float(event["avg_fitness"]),
                     threshold=float(event["threshold"]),
+                    generation_avg_fitness=(
+                        float(event["generation_avg_fitness"])
+                        if event.get("generation_avg_fitness") is not None
+                        else None
+                    ),
                 )
             )
         elif kind == "result":
@@ -220,7 +232,21 @@ def _render_generations(ax: Any, model: ProgressModel) -> None:
     gens = model.generations
     gx = [g.generation for g in gens]
     ax.plot(gx, [g.max_fitness for g in gens], color=mode_style.CONFIG_PALETTE[0], linewidth=2.2, label="best (max)")
-    ax.plot(gx, [g.avg_fitness for g in gens], color=mode_style.CONFIG_PALETTE[2], linewidth=2.0, label="average")
+    ax.plot(
+        gx, [g.avg_fitness for g in gens], color=mode_style.CONFIG_PALETTE[2], linewidth=2.0, label="population avg"
+    )
+    # Average over the individuals measured per generation -- the line the scattered
+    # points are actually distributed around. Older runs have no such data.
+    measured_avg = [(g.generation, g.generation_avg_fitness) for g in gens if g.generation_avg_fitness is not None]
+    if measured_avg:
+        ax.plot(
+            [p[0] for p in measured_avg],
+            [p[1] for p in measured_avg],
+            color=mode_style.CONFIG_PALETTE[6],
+            linewidth=1.8,
+            linestyle=":",
+            label="measured avg",
+        )
     ax.plot(
         gx,
         [g.threshold for g in gens],
