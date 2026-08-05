@@ -9,6 +9,8 @@
 import copy
 from collections import deque
 import os
+import sys
+from collections import defaultdict
 from pathlib import Path
 import random
 import re
@@ -3309,7 +3311,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         lookup_cache: Dict[Tuple[str, str], Set[Context]],
     ) -> Set[Context]:
         """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs.
-        state_mappings_dict is a mapping from stateIDs to callpaths."""
+        state_mappings_dict is a mapping from stateIDs to callpaths.
+        line_to_work_contexts is a reverse index {lineID: WorkContexts whose code scope contains it},
+        built once per dependency-insertion pass (see __insert_data_dependencies_from_files)."""
 
         #        cache_key = (location, state_id)
         #        if cache_key in lookup_cache:

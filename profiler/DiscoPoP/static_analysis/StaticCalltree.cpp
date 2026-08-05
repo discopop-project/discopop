@@ -18,15 +18,8 @@ void StaticCalltreeNode::print(){
     std::cout << "Node: ID: " << node_id << " Type: " << type << " Name: " << functionName << " instructionID: " << instructionID << "\n";
 }
 
-std::string StaticCalltreeNode::get_label(){
-    if(type == 0){
-        // function
-        return functionName;
-    }
-    else{
-        // call instruction
-        return "call_" + std::to_string(instructionID);
-    }
+const std::string& StaticCalltreeNode::get_label(){
+    return label;
 }
 
 bool StaticCalltreeNode::get_type(){

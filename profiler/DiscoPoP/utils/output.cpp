@@ -83,11 +83,11 @@ string DiscoPoP::getChildrenNodesString(Node *root) {
 }
 
 void DiscoPoP::printData(Node *root) {
-  *outCUs << "<Nodes>" << endl << endl;
+  *outCUs << "<Nodes>" << "\n" << "\n";
 
   printTree(root, true);
 
-  *outCUs << "</Nodes>" << endl << endl << endl;
+  *outCUs << "</Nodes>" << "\n" << "\n" << "\n";
 
   closeOutputFiles();
 }
@@ -117,66 +117,66 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
             << " name=\"" << xmlEscape(root->name) << "\""
             << " startsAtLine = \"" << start << "\""
             << " endsAtLine = \"" << dputil::decodeLID(root->endLine) << "\""
-            << ">" << endl;
-    *outCUs << "\t\t<childrenNodes>" << getChildrenNodesString(root) << "</childrenNodes>" << endl;
+            << ">" << "\n";
+    *outCUs << "\t\t<childrenNodes>" << getChildrenNodesString(root) << "</childrenNodes>" << "\n";
     if (root->type == nodeTypes::func || root->type == nodeTypes::dummy) {
-      *outCUs << "\t\t<funcArguments>" << endl;
+      *outCUs << "\t\t<funcArguments>" << "\n";
       for (auto ai : root->argumentsList) {
         *outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
                 << " defLine=\"" << xmlEscape(ai.defLine) << "\""
                 << " accessMode=\"" << (ai.readAccess ? "R" : "") << (ai.writeAccess ? "W" : "") << "\">"
-                << xmlEscape(ai.name) << "</arg>" << endl;
+                << xmlEscape(ai.name) << "</arg>" << "\n";
       }
-      *outCUs << "\t\t</funcArguments>" << endl;
+      *outCUs << "\t\t</funcArguments>" << "\n";
 
       string rlVals = "";
       for (auto rl : root->returnLines) {
         rlVals += dputil::decodeLID(rl) + ", ";
       }
-      *outCUs << "\t\t<funcReturnLines>" << rlVals << "</funcReturnLines>" << endl;
+      *outCUs << "\t\t<funcReturnLines>" << rlVals << "</funcReturnLines>" << "\n";
     }
 
     if (root->type == nodeTypes::cu) {
       CU *cu = static_cast<CU *>(root);
-      *outCUs << "\t\t<BasicBlockID>" << cu->BBID << "</BasicBlockID>" << endl;
-      *outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>" << endl;
-      *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize << "</writeDataSize>" << endl;
-      *outCUs << "\t\t<performsFileIO>" << cu->performsFileIO << "</performsFileIO>" << endl;
+      *outCUs << "\t\t<BasicBlockID>" << cu->BBID << "</BasicBlockID>" << "\n";
+      *outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>" << "\n";
+      *outCUs << "\t\t<writeDataSize>" << cu->writeDataSize << "</writeDataSize>" << "\n";
+      *outCUs << "\t\t<performsFileIO>" << cu->performsFileIO << "</performsFileIO>" << "\n";
 
-      *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount << "</instructionsCount>" << endl;
+      *outCUs << "\t\t<instructionsCount>" << cu->instructionsCount << "</instructionsCount>" << "\n";
       *outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">"
-              << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << endl;
+              << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << "\n";
       *outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">"
-              << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << endl;
+              << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << "\n";
       *outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">"
-              << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << endl;
+              << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << "\n";
       *outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\">"
-              << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << endl;
-      *outCUs << "\t\t<successors>" << endl;
+              << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << "\n";
+      *outCUs << "\t\t<successors>" << "\n";
       for (auto sucCUi : cu->successorCUs) {
-        *outCUs << "\t\t\t<CU>" << sucCUi << "</CU>" << endl;
+        *outCUs << "\t\t\t<CU>" << sucCUi << "</CU>" << "\n";
       }
-      *outCUs << "\t\t</successors>" << endl;
+      *outCUs << "\t\t</successors>" << "\n";
 
-      *outCUs << "\t\t<localVariables>" << endl;
+      *outCUs << "\t\t<localVariables>" << "\n";
       for (auto lvi : cu->localVariableNames) {
         *outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\""
                 << " defLine=\"" << xmlEscape(lvi.defLine) << "\""
                 << " accessMode=\"" << (lvi.readAccess ? "R" : "") << (lvi.writeAccess ? "W" : "") << "\">"
-                << xmlEscape(lvi.name) << "</local>" << endl;
+                << xmlEscape(lvi.name) << "</local>" << "\n";
       }
-      *outCUs << "\t\t</localVariables>" << endl;
+      *outCUs << "\t\t</localVariables>" << "\n";
 
-      *outCUs << "\t\t<globalVariables>" << endl;
+      *outCUs << "\t\t<globalVariables>" << "\n";
       for (auto gvi : cu->globalVariableNames) {
         *outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\""
                 << " defLine=\"" << xmlEscape(gvi.defLine) << "\""
                 << " accessMode=\"" << (gvi.readAccess ? "R" : "") << (gvi.writeAccess ? "W" : "") << "\">"
-                << xmlEscape(gvi.name) << "</global>" << endl;
+                << xmlEscape(gvi.name) << "</global>" << "\n";
       }
-      *outCUs << "\t\t</globalVariables>" << endl;
+      *outCUs << "\t\t</globalVariables>" << "\n";
 
-      *outCUs << "\t\t<callsNode>" << endl;
+      *outCUs << "\t\t<callsNode>" << "\n";
       for (auto i : (cu->callLineTofunctionMap)) {
         int idx = 0;  // for correctly accessing callLineToCallInstructionMap's value
         for (auto ii : i.second) {
@@ -196,10 +196,10 @@ void DiscoPoP::printNode(Node *root, bool isRoot) {
           idx++;
         }
       }
-      *outCUs << "\t\t</callsNode>" << endl;
+      *outCUs << "\t\t</callsNode>" << "\n";
     }
 
-    *outCUs << "\t</Node>" << endl << endl;
+    *outCUs << "\t</Node>" << "\n" << "\n";
   }
 }
 

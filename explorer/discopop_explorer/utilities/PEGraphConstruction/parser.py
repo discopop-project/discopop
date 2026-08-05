@@ -29,12 +29,13 @@ lineToCUIdMap = defaultdict(set)  # type: ignore
 
 
 def __parse_xml_input(xml_fd: TextIOWrapper) -> Dict[str, ObjectifiedElement]:
-    xml_content = ""
-    for line in xml_fd.readlines():
-        if not (line.rstrip().endswith("</Nodes>") or line.rstrip().endswith("<Nodes>")):
-            xml_content = xml_content + line
+    lines = []
+    for line in xml_fd:
+        stripped = line.rstrip()
+        if not (stripped.endswith("</Nodes>") or stripped.endswith("<Nodes>")):
+            lines.append(line)
 
-    xml_content = "<Nodes>{0}</Nodes>".format(xml_content)
+    xml_content = "<Nodes>{0}</Nodes>".format("".join(lines))
 
     parsed_cu = objectify.fromstring(xml_content)
     cu_dict = dict()
