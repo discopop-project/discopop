@@ -115,6 +115,7 @@ class ToolContext:
             label_prefix="mcp",
             timeout_execution=float(timeout_seconds) if timeout_seconds is not None else None,
             timeout_compilation=float(timeout_seconds) if timeout_seconds is not None else None,
+            timeout_validation=float(timeout_seconds) if timeout_seconds is not None else None,
             log_level="WARNING",
             write_log=False,
         )
