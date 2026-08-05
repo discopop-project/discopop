@@ -39,8 +39,13 @@ for _v in 22 21 20 19; do
     fi
 done
 if [ -z "$LLVM_CLANG" ]; then
-    echo "ERROR: No supported clang version (19-22) found in PATH"
-    exit 1
+    if command -v clang &> /dev/null && command -v clang++ &> /dev/null; then
+        LLVM_CLANG=$(which clang)
+        LLVM_CLANGPP=$(which clang++)
+    else
+        echo "ERROR: No supported clang version (19-22) found in PATH"
+        exit 1
+    fi
 fi
 MPI_INCLUDES="$(mpicc -showme:compile)"
 

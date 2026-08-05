@@ -17,6 +17,9 @@ class FunctionContext(Context):
         self.parent_function = parent_function
         super().__init__()
 
+    def is_function_context(self) -> bool:
+        return True
+
     def get_plot_border_color(self) -> str:
         return "b"
 
@@ -24,4 +27,6 @@ class FunctionContext(Context):
         return "lightgrey"
 
     def get_label(self) -> str:
-        return "Function " + str(self.parent_function)
+        label = "Function " + str(self.parent_function)
+        label += "\nstate_ids: " + str(self.get_state_ids())
+        return label

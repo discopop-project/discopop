@@ -20,6 +20,7 @@ from discopop_explorer.functions.PEGraph.queries.variables import get_variables
 from discopop_explorer.functions.PEGraph.traversal.parent import get_all_parent_functions, get_parent_function
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
+from discopop_library.StatusReporting.console import progress
 
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
@@ -58,6 +59,11 @@ class DoAllInfo(PatternInfo):
         self.reduction = r
         self.scheduling_clause = "static"
         self.collapse_level = 1
+        # pattern ids of the do-all patterns which have been folded into this one by the loop
+        # collapse analysis, outermost first. Empty for every non-collapsed pattern.
+        # Applying this pattern excludes applying any of them: inserting a pragma between two
+        # collapsed loops does not compile.
+        self.collapsed_pattern_ids: List[int] = []
         self.pattern_tag = self.get_tag()
 
         # determine affected cu and line ids
@@ -96,7 +102,10 @@ class DoAllInfo(PatternInfo):
         result += f"s({[v.name for v in self.shared]})_"
         result += f"fp({[v.name for v in self.first_private]})_"
         result += f"r({[v.name for v in self.reduction]})_"
-        result += f"lp({[v.name for v in self.last_private]})"
+        result += f"lp({[v.name for v in self.last_private]})_"
+        # the collapse level distinguishes patterns which target the same loop but fold in a
+        # different number of nested loops, and which may carry identical clauses
+        result += f"c({self.collapse_level})"
         return result
 
 
@@ -114,8 +123,6 @@ def run_detection(
     :param pet: PET graph
     :return: List of detected pattern info
     """
-    import tqdm  # type: ignore
-
     global global_pet
     global_pet = pet
     result: List[DoAllInfo] = []
@@ -126,24 +133,19 @@ def run_detection(
     ## !DEBUG
 
     # remove reduction loops
-    print("ASDF: ", [r.node_id for r in reduction_info])
-    print("Nodes: ", [n.start_position() for n in nodes])
-    print("pre:", len(nodes))
     nodes = [n for n in nodes if n.id not in [r.node_id for r in reduction_info]]
-    print("post:", len(nodes))
 
     nodes = cast(List[LoopNode], filter_for_hotspots(pet, cast(List[Node], nodes), hotspots))
 
     param_list = [(node) for node in nodes]
     if jobs is None or jobs > 1:
         with Pool(initializer=__initialize_worker, initargs=(pet,)) as pool:
-            tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
+            tmp_result = list(progress(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
         for local_result in tmp_result:
             result += local_result
     else:
         for param_tpl in param_list:
             result += __check_node(param_tpl)
-    print("GLOBAL RES: ", [r.start_line for r in result])
 
     for pattern in result:
         pattern.get_workload(pet)

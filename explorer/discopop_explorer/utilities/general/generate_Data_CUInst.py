@@ -31,11 +31,11 @@ def __collect_children_ids(pet: PEGraphX, parent_id: NodeID, children_ids: List[
         # this id has already been processed. No need to go through it again
         return children_ids
     children_ids.append(parent_id)
-    children_ids = list(set(children_ids))
+    children_ids = list(dict.fromkeys(children_ids))
     # collect all of its children
     for child_node in direct_children_or_called_nodes(pet, pet.node_at(parent_id)):
         children_ids += __collect_children_ids(pet, child_node.id, children_ids)
-        children_ids = list(set(children_ids))
+        children_ids = list(dict.fromkeys(children_ids))
     return children_ids
 
 

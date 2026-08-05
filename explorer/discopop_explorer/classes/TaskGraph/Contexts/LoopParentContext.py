@@ -32,4 +32,4 @@ class LoopParentContext(Context):
         return "cyan"
 
     def get_label(self) -> str:
-        return "LoopParent " + str(self.parent_loop)
+        return "LoopParent " + str(self.parent_loop) + "\nstate_ids: " + str(self.get_state_ids())

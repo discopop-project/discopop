@@ -156,8 +156,11 @@ void __dp_finalize(LID lid) {
   // End HA
 
   delete function_manager;
+  function_manager = nullptr;
   delete loop_manager;
+  loop_manager = nullptr;
   delete call_state_graph;
+  call_state_graph = nullptr;
 
 #ifdef DP_CALLTREE_PROFILING
   // delete call_tree;

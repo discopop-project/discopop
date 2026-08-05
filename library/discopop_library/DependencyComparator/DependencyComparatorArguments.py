@@ -12,8 +12,10 @@ from dataclasses import dataclass
 class DependencyComparatorArguments(object):
     """Container Class for the arguments passed to the discopop_dependency_comparator"""
 
-    gold_standard: str
-    test_set: str
+    gold_standard_dynamic: str
+    gold_standard_static: str
+    test_set_dynamic: str
+    test_set_static: str
     output: str
     verbose: bool
 

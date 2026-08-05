@@ -13,7 +13,7 @@ from matplotlib import pyplot as plt
 import networkx as nx  # type: ignore
 from matplotlib.axes import Axes
 from networkx import Graph
-from tqdm import tqdm  # type: ignore
+
 from discopop_explorer.classes.ContextTaskGraph.classes.edges import (
     CTGEdgeInfo,
     CTGEdgeType,
@@ -65,19 +65,33 @@ from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import (
 )
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
-from discopop_gui.Extendables.Plottable import Plottable
-from discopop_gui.Visualizers.Base import Base as Visualizer
-from termcolor import cprint
+
+try:
+    from discopop_gui.Extendables.Plottable import Plottable
+    from discopop_gui.Visualizers.Base import Base as Visualizer
+except (ImportError, ModuleNotFoundError):
+
+    class Plottable:  # type: ignore[no-redef]
+        def __init__(self, visualizer: object = None) -> None:
+            pass
+
+        def plottable(self) -> bool:
+            return False
+
+    Visualizer = object  # type: ignore[assignment, misc]
+
 import matplotlib.lines as mlines
 import plotille  # type: ignore
+
 from discopop_explorer.classes.ContextTaskGraph.modifications.computationally_expensive.transitive_reduction import (
     transitive_reduction,
 )
+from discopop_library.StatusReporting.console import progress, stage
 
 logger = logging.getLogger("Explorer")
 
 
-class ContextTaskGraph(Plottable, object):
+class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
     pet: PEGraphX
     task_graph: TaskGraph
     graph: nx.DiGraph
@@ -92,13 +106,12 @@ class ContextTaskGraph(Plottable, object):
         self.task_graph = task_graph
         self.graph = nx.MultiDiGraph()
         # start processing
-        self.__construct_from_task_graph()
+        with stage("Constructing ContextTaskGraph"):
+            self.__construct_from_task_graph()
 
     def __construct_from_task_graph(self) -> None:
         """convert the given task graph to a ContextTaskGraph for Task detection. The created graph will be used to determine Forks, Barriers, and Tasks."""
-        logger.info("Constructing ContextTaskGraph...")
-        logger.info("--> Add context nodes...")
-        for ctx in tqdm(self.task_graph.contexts):
+        for ctx in progress(self.task_graph.contexts, desc="Adding context nodes"):
             self.add_node(ctx)
 
         # add edges based on task graph successors
@@ -107,12 +120,16 @@ class ContextTaskGraph(Plottable, object):
                 continue
             successor_contexts: List[Context] = []
             queue = self.task_graph.get_successors(tg_node)
+            visited_tg_nodes: Set[TGNode] = set(queue)
             while len(queue) > 0:
                 current = queue.pop()
                 if current.created_context is not None:
                     successor_contexts.append(current.created_context)
                     continue
-                queue += [nd for nd in self.task_graph.get_successors(current) if nd not in queue]
+                for nd in self.task_graph.get_successors(current):
+                    if nd not in visited_tg_nodes:
+                        visited_tg_nodes.add(nd)
+                        queue.append(nd)
             for succ_ctx in successor_contexts:
                 self.add_edge(
                     tg_node.created_context,
@@ -290,7 +307,7 @@ class ContextTaskGraph(Plottable, object):
                     else:
                         # no further step upwards possible. Use the current solution
                         pass
-            component_replacements_dict[comp] = list(set(component_replacements))
+            component_replacements_dict[comp] = list(dict.fromkeys(component_replacements))
 
         # calculate inverse component dictionary
         inverse_component_dict: Dict[Context, Tuple[Context, ...]] = dict()
@@ -299,7 +316,7 @@ class ContextTaskGraph(Plottable, object):
                 inverse_component_dict[ctx] = comp
 
         #  - add intra-component dependency edges
-        for ctx in tqdm(self.graph.nodes):
+        for ctx in progress(self.graph.nodes):
             ctx_parent_component = inverse_component_dict[ctx]
             for sink_ctx, dep in ctx.outgoing_dependencies:
                 sink_ctx_parent_component = inverse_component_dict[sink_ctx]
@@ -312,7 +329,7 @@ class ContextTaskGraph(Plottable, object):
 
         #  - add inter-component dependency edges (to and from replacement nodes)
         logger.debug("--> Add inter-component dependency edges (inward)")
-        for ctx in tqdm(self.graph.nodes):
+        for ctx in progress(self.graph.nodes):
             ctx_parent_component = inverse_component_dict[ctx]
             for sink_ctx, dep in ctx.outgoing_dependencies:
                 sink_ctx_parent_component = inverse_component_dict[sink_ctx]
@@ -344,7 +361,7 @@ class ContextTaskGraph(Plottable, object):
                     )
 
         logger.debug("--> Add inter-component dependency edges (outward)")
-        for ctx in tqdm(self.graph.nodes):
+        for ctx in progress(self.graph.nodes):
             ctx_parent_component = inverse_component_dict[ctx]
             for sink_ctx, dep in ctx.outgoing_dependencies:
                 sink_ctx_parent_component = inverse_component_dict[sink_ctx]
@@ -379,7 +396,7 @@ class ContextTaskGraph(Plottable, object):
         # add contained edges. absence of all successor edges might allow searching for parallelism
         if True:
             logger.info("--> Add contained edges...")
-            for ctx in tqdm(self.task_graph.contexts):
+            for ctx in progress(self.task_graph.contexts):
                 for sink_ctx in ctx.get_contained_contexts():
                     # check if sink_ctx is an entry to a successor sequence
                     if sink_ctx.predecessor is None:
@@ -403,7 +420,7 @@ class ContextTaskGraph(Plottable, object):
         return
 
         logger.info("--> Add dependencies on called functions...")
-        for ctx in tqdm(self.task_graph.contexts):
+        for ctx in progress(self.task_graph.contexts):
             for sink_ctx in ctx.get_contained_contexts():
                 if isinstance(sink_ctx, InlinedFunctionContext):
                     self.add_edge(ctx, sink_ctx, edge_info=CTGEdgeInfo(CTGEdgeType.CONTROL))
@@ -411,7 +428,7 @@ class ContextTaskGraph(Plottable, object):
         # TODO Branching durch WORK knoten ersetzen. Branches individuell analysieren
         logger.info("--> Add dependencies to force synchronization at exit nodes via synthetic landing pads...")
         required_synthetic_landing_pads: List[List[Context]] = []
-        for ctx in tqdm(self.graph.nodes):
+        for ctx in progress(self.graph.nodes):
             # filter for entry nodes
             ## TODO: REMOVE THE INSTANCE CHECKS, make sure the graph structure is correct!
             if len(self.get_predecessors(ctx)) != 0 or not (
@@ -469,7 +486,7 @@ class ContextTaskGraph(Plottable, object):
         # TODO: consider plot of graph statistics over time (nodes, edges, depth?)
         # TODO: Consider adding a plot for the distrbution of found patterns over time / simplification step.
         # TODO: Consider plotting online statistics (especially interesting for larger software)
-        self.__print_graph_statistics("Pre simplification", color="yellow")
+        self.__print_graph_statistics("Pre simplification")
 
         outer_modification_applied = True
         while outer_modification_applied:
@@ -484,9 +501,9 @@ class ContextTaskGraph(Plottable, object):
                     # split control sequences into tasks
                     stcs_res, identified_tasks = split_taskable_control_sequence(self, identified_tasks)
                     if stcs_res:
-                        self.__print_graph_statistics("Post split taskable work sequence", color="yellow")
+                        self.__print_graph_statistics("Post split taskable work sequence")
                     else:
-                        cprint("-> No effect: split taskable work sequence", "yellow")
+                        logger.debug("No effect: split taskable work sequence")
                     inner_modification_applied = inner_modification_applied or stcs_res
                     statistics_time_series_x_values.append(statistics_current_step)
                     statistics_current_step += 1
@@ -497,9 +514,9 @@ class ContextTaskGraph(Plottable, object):
                     if True:
                         rttr_res = replace_trivial_task_region(self)
                         if rttr_res:
-                            self.__print_graph_statistics("Post replace trivial task region", color="yellow")
+                            self.__print_graph_statistics("Post replace trivial task region")
                         else:
-                            cprint("-> No effect: replace trivial task region", "yellow")
+                            logger.debug("No effect: replace trivial task region")
                         inner_modification_applied = inner_modification_applied or rttr_res
                         statistics_time_series_x_values.append(statistics_current_step)
                         statistics_current_step += 1
@@ -517,7 +534,7 @@ class ContextTaskGraph(Plottable, object):
                             "Post merge only-childs without successors with parents", color="yellow"
                         )
                     else:
-                        cprint("-> No effect: merge only-childs without successors with parents", "yellow")
+                        logger.debug("No effect: merge only-childs without successors with parents")
                     inner_modification_applied = inner_modification_applied or mocwos_res
                     statistics_time_series_x_values.append(statistics_current_step)
                     statistics_current_step += 1
@@ -533,13 +550,9 @@ class ContextTaskGraph(Plottable, object):
                     if css_res:
                         self.__print_graph_statistics(
                             "Post trivial_control sequence simplification",
-                            color="yellow",
                         )
                     else:
-                        cprint(
-                            "-> No effect: trivial_control sequence simplification",
-                            "yellow",
-                        )
+                        logger.debug("No effect: trivial_control sequence simplification")
                     inner_modification_applied = inner_modification_applied or css_res
                     statistics_time_series_x_values.append(statistics_current_step)
                     statistics_current_step += 1
@@ -549,9 +562,9 @@ class ContextTaskGraph(Plottable, object):
                 if True:
                     bt_res = break_triangles(self)
                     if bt_res:
-                        self.__print_graph_statistics("Post break triangles", color="yellow")
+                        self.__print_graph_statistics("Post break triangles")
                     else:
-                        cprint("-> No effect: break triangles", "yellow")
+                        logger.debug("No effect: break triangles")
                     inner_modification_applied = inner_modification_applied or bt_res
                     statistics_time_series_x_values.append(statistics_current_step)
                     statistics_current_step += 1
@@ -561,9 +574,9 @@ class ContextTaskGraph(Plottable, object):
                 if True:
                     rtbr_res = replace_trivial_branched_region(self)
                     if rtbr_res:
-                        self.__print_graph_statistics("Post replace trivial branched regions", color="yellow")
+                        self.__print_graph_statistics("Post replace trivial branched regions")
                     else:
-                        cprint("-> No effect: replace trivial branched regions", "yellow")
+                        logger.debug("No effect: replace trivial branched regions")
                     inner_modification_applied = inner_modification_applied or rtbr_res
                     statistics_time_series_x_values.append(statistics_current_step)
                     statistics_current_step += 1
@@ -582,9 +595,9 @@ class ContextTaskGraph(Plottable, object):
             if False:
                 rre_res = transitive_reduction(self)
                 if rre_res:
-                    self.__print_graph_statistics("Post remove redundant edges", color="yellow")
+                    self.__print_graph_statistics("Post remove redundant edges")
                 else:
-                    cprint("-> No effect: remove redundant edges", "yellow")
+                    logger.debug("No effect: remove redundant edges")
                 outer_modification_applied = outer_modification_applied or rre_res
                 statistics_time_series_x_values.append(statistics_current_step)
                 statistics_current_step += 1
@@ -594,9 +607,9 @@ class ContextTaskGraph(Plottable, object):
             if True:
                 ptr_res = partial_transitive_reduction(self)
                 if ptr_res:
-                    self.__print_graph_statistics("Post partial transitive reduction", color="yellow")
+                    self.__print_graph_statistics("Post partial transitive reduction")
                 else:
-                    cprint("-> No effect: partial transitive reduction", "yellow")
+                    logger.debug("No effect: partial transitive reduction")
                 outer_modification_applied = outer_modification_applied or ptr_res
                 statistics_time_series_x_values.append(statistics_current_step)
                 statistics_current_step += 1
@@ -607,9 +620,9 @@ class ContextTaskGraph(Plottable, object):
             if True:
                 moc_res = merge_only_childs_with_parents(self)
                 if moc_res:
-                    self.__print_graph_statistics("Post merge only-childs with parents", color="yellow")
+                    self.__print_graph_statistics("Post merge only-childs with parents")
                 else:
-                    cprint("-> No effect: merge only-childs with parents", "yellow")
+                    logger.debug("No effect: merge only-childs with parents")
                 outer_modification_applied = outer_modification_applied or moc_res
                 statistics_time_series_x_values.append(statistics_current_step)
                 statistics_current_step += 1
@@ -619,7 +632,7 @@ class ContextTaskGraph(Plottable, object):
             # add epoch marker to plot
             statistics_time_series_outer_epoch_markers.append(statistics_current_step)
 
-        self.__print_graph_statistics("Post simplification", color="yellow")
+        self.__print_graph_statistics("Post simplification")
 
         # OLD IMPLEMENTATION. BREAK TRIANGLES IS SIMPLER AND MORE ELEGANT
         # self.__replace_triangles()
@@ -685,28 +698,19 @@ class ContextTaskGraph(Plottable, object):
             fig.axvline(x=inner_epoch_marker / max_x_val, ymin=0, ymax=1)
         print(fig.show(legend=True))
 
-    def __print_graph_statistics(self, label: str = "", color: str = "yellow") -> None:
-        # logger.info("####################")
-        # logger.info("# Graph statistics: " + label)
-        # logger.info("# Node count: " + str(len(self.graph.nodes)))
-        # logger.info("# Edge count:  " + str(len(self.graph.edges)))
-        # logger.info("####################")
-        cprint("####################", color)
-        cprint("# Graph statistics: " + label, color)
-        cprint("# Node count: " + str(len(self.graph.nodes)), color)
-        cprint("# Edge count:  " + str(len(self.graph.edges)), color)
-        cprint("####################", color)
+    def __print_graph_statistics(self, label: str = "") -> None:
+        logger.debug(f"Graph statistics ({label}): {len(self.graph.nodes)} nodes, {len(self.graph.edges)} edges")
 
     def get_predecessors(self, node: Optional[Context]) -> List[Context]:
         if node is None:
             return []
-        predecessors = list(set([s for s, t in self.graph.in_edges(node)]))
+        predecessors = list(dict.fromkeys(s for s, t in self.graph.in_edges(node)))
         return predecessors
 
     def get_successors(self, node: Optional[Context]) -> List[Context]:
         if node is None:
             return []
-        successors = list(set([t for s, t in self.graph.out_edges(node)]))
+        successors = list(dict.fromkeys(t for s, t in self.graph.out_edges(node)))
         return successors
 
     def plot(self, highlight_nodes: Optional[List[Context]] = None) -> None:

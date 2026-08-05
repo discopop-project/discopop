@@ -42,6 +42,7 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
         d.dtype = DepType[dep.type]
     d.var_name = dep.var_name
     d.memory_region = dep.memory_region
+    d.is_gep_result_dependency = dep.is_gep_result_dependency
 
     # parse metadata
     if dep.metadata is None:
@@ -115,7 +116,7 @@ def parse_cu(node: ObjectifiedElement) -> Node:
             n.return_instructions_count = int(getattr(node, "returnInstructions").get("count"))
         if hasattr(node.callsNode, "nodeCalled"):
             n.node_calls = [
-                {"cuid": v.text, "atLine": v.get("atLine")}
+                {"cuid": v.text, "atLine": v.get("atLine"), "callInstId": v.get("callInstId")}
                 for v in getattr(node.callsNode, "nodeCalled")
                 if v.get("atLine") is not None
             ]

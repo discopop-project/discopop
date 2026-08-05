@@ -334,7 +334,7 @@ def __identify_atomic_or_critical_sections(
     :param selector: True: identify atomic sections. False: identify critical sections
     """
     # remove potential duplicates from found cus
-    found_cus = list(set(found_cus))
+    found_cus = list(dict.fromkeys(found_cus))
     # get lists of combinable cus by checking successor relation
     combinations = []
     for cu in found_cus:

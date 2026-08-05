@@ -8,13 +8,14 @@
 
 from argparse import ArgumentParser
 from pathlib import Path
+from typing import List, Optional
 from discopop_library.GlobalLogger.setup import setup_logger
 
 from discopop_library.PathManagement.PathManagement import get_path, get_path_or_none
 from discopop_explorer.discopop_explorer import ExplorerArguments, run
 
 
-def parse_args() -> ExplorerArguments:
+def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
     """Parse the arguments passed to the discopop_explorer"""
     parser = ArgumentParser(description="DiscoPoP Explorer")
     # all flags that are not considered stable should be added to the experimental_parser
@@ -69,8 +70,8 @@ def parse_args() -> ExplorerArguments:
         help="Dump DetectionResult object to JSON file. If a path is given, the DetectionResult object is written to the given file, otherwise to detection_result_dump.json. Contents are equivalent to the json output. NOTE: This dump contains a dump of the PET Graph!",
     )
     parser.add_argument(
-        "--enable-patterns", type=str, nargs="?", default="reduction,doall",
-        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,pipeline,geodec,simplegpu. Default: reduction,doall",
+        "--enable-patterns", type=str, nargs="?", default="reduction,doall,task",
+        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,task,pipeline,geodec,simplegpu. Default: reduction,doall,task",
     )
     parser.add_argument("--load-existing-doall-and-reduction-patterns", action="store_true", help="Skip pattern detection and insert existing patterns.json contents into the created detection_result.json")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
@@ -106,7 +107,11 @@ def parse_args() -> ExplorerArguments:
         help="Path to llvm-cxxfilt executable. Required for task pattern detector if non-standard path should be used.",
     )
     experimental_parser.add_argument(
-        "--disable-statistics", action="store_false", help="Disable the calculation and storing of statistics for code and generated suggestions."
+        "--enable-statistics", action="store_true", help="Enable the calculation and storing of statistics for code and generated suggestions."
+    )
+    experimental_parser.add_argument(
+        "--ignore-dependency-states", action="store_true",
+        help="Ignore the callpath state markers (\"@<state_id>\") contained in the dependency data. Dependencies are then interpreted as if the profiler had not distinguished between callpath states, which also reclassifies the affected dependencies from dynamic to static. Useful to compare pattern detection with and without state information.",
     )
     experimental_parser.add_argument(
         "--plot-pet", type=str, nargs="?", default=None, const="explorer/pet_plot.gexf",
@@ -121,7 +126,7 @@ def parse_args() -> ExplorerArguments:
     parser.add_argument("--visualize", action="store_true", help="Enable the visualizer.")
     # fmt: on
 
-    arguments = parser.parse_args()
+    arguments = parser.parse_args(argv)
 
     # ensure that --cu-inst-res and --llvm-cxxfilt-path are set if --task-pattern is set
     if arguments.task_pattern and (arguments.cu_inst_res is None or arguments.llvm_cxxfilt_path is None):
@@ -172,12 +177,14 @@ def parse_args() -> ExplorerArguments:
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
         load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
-        collect_statistics=arguments.disable_statistics,
+        ignore_dependency_states=arguments.ignore_dependency_states,
+        collect_statistics=arguments.enable_statistics,
         jobs=arguments.jobs,
         enable_pet_plot_file=arguments.plot_pet,
         enable_task_graph_plot=arguments.plot_task_graph,
         enable_context_graph_plot=arguments.plot_context_graph,
         enable_visualizer=arguments.visualize,
+        visualize_on=None,
     )
 
 

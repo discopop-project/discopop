@@ -46,5 +46,8 @@ version = {file = "VERSION"}
 where = ["."]
 include = ["discopop_gui*"]
 
+[tool.setuptools.package-data]
+"discopop_gui" = ["py.typed"]
+
 [tool.setuptools]
 zip-safe = true

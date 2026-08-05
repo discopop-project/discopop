@@ -94,8 +94,8 @@ def replace_triangles(ctg: ContextTaskGraph) -> None:
                 + ctg.get_successors(triangle_nodes[1])
             ]
             # -> remove duplicates
-            raw_outside_predecessors = list(set(raw_outside_predecessors))
-            raw_outside_successors = list(set(raw_outside_successors))
+            raw_outside_predecessors = list(dict.fromkeys(raw_outside_predecessors))
+            raw_outside_successors = list(dict.fromkeys(raw_outside_successors))
             # -> cleanup
             outside_predecessors = [
                 n

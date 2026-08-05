@@ -52,11 +52,19 @@ set(DiscoPoP_SOURCES
 
 set(CMAKE_CXX_FLAGS
         "-O2 -std=c++17 -pthread -fno-rtti -fPIE -fPIC")
+# DISCOPOP_BOOST_INCLUDE_DIR is set by the top-level CMakeLists.
+# Appending here because set(CMAKE_CXX_FLAGS) above replaces all flags and
+# target_include_directories / include_directories are not reliable after it.
+if(DISCOPOP_BOOST_INCLUDE_DIR)
+    string(APPEND CMAKE_CXX_FLAGS " -I${DISCOPOP_BOOST_INCLUDE_DIR}")
+endif()
 
 # add_custom_target(DiscoPoP)
 
 add_library(DiscoPoP_RT STATIC
         ${DiscoPoP_SOURCES})
+
+target_link_libraries(DiscoPoP_RT PRIVATE Boost::headers)
 
 # forward compiler flags
 if(DEFINED DP_PTHREAD_COMPATIBILITY_MODE)

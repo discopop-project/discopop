@@ -31,7 +31,7 @@ def rollback_patches(
     """
     retval = -1  # -1 -> nothing seen so far
     # get list of applicable suggestions
-    applicable_suggestions = [name for name in os.listdir(patch_generator_dir)]
+    applicable_suggestions = sorted(os.listdir(patch_generator_dir))
 
     # get already applied suggestions
     with open(applied_suggestions_file, "r") as f:
@@ -81,7 +81,7 @@ def __rollback_file_patches(
     file_mapping: Dict[int, Path], suggestion_id: str, patch_generator_dir: str, arguments: PatchApplicatorArguments
 ) -> bool:
     # get a list of patches for the given suggestion
-    patch_files = os.listdir(os.path.join(patch_generator_dir, suggestion_id))
+    patch_files = sorted(os.listdir(os.path.join(patch_generator_dir, suggestion_id)))
     if arguments.verbose:
         print("\tFound patch files:", patch_files)
 

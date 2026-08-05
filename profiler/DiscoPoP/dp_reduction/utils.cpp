@@ -160,6 +160,34 @@ bool DiscoPoP::dp_reduction_sanityCheck(BasicBlock *BB, int file_id) {
 //'add -1')
 char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction *instr) {
   unsigned opcode = instr->getOpcode();
+  if(opcode == llvm::Instruction::Call){
+    // check for calls to relevant arithmetic intrinsic functions (fma, fmuladd)
+    // full list of arithmetic intrinsics:
+    //llvm.sqrt, llvm.fabs, llvm.powi, llvm.pow, llvm.exp, llvm.exp2, llvm.log, llvm.log2, llvm.log10, llvm.sin, llvm.cos
+    //llvm.floor, llvm.ceil, llvm.trunc, llvm.rint, llvm.nearbyint, llvm.round, llvm.fma, llvm.fmuladd
+    CallInst* call = dyn_cast<CallInst>(instr);
+    Function* callee = call->getCalledFunction();
+    if(callee && callee->getName().starts_with("llvm.")){
+      // check for relevant arithmentic intrinsics which allow a specific handling
+      StringRef intrinsicName = callee->getName();
+      if (intrinsicName.contains("fma") || intrinsicName.contains("fmuladd")){
+        bool any_operand_is_negative_constant = false;
+        if (instr->getNumOperands() >= 1) {
+          for(auto i = 1; i < instr->getNumOperands(); ++i){
+            Value *rhs_value = instr->getOperand(i);
+            if (isa<ConstantInt>(rhs_value)) {
+              any_operand_is_negative_constant = cast<ConstantInt>(rhs_value)->isNegative();
+            }
+          }
+        }
+
+        if (any_operand_is_negative_constant)
+          return '-';
+        else
+          return '+';
+      }
+    }
+  }
 
   if (opcode == llvm::Instruction::Add || opcode == llvm::Instruction::FAdd) {
     bool operand_is_negative_constant = false;

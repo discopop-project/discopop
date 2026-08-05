@@ -532,7 +532,11 @@ void *processFirstAccessQueue(void *arg) {
 #endif
 
   if (DP_DEBUG) {
+#ifdef __linux__
     cout << "thread " << id << " on core " << sched_getcpu() << " exits... \n";
+#else
+    cout << "thread " << id << " exits... \n";
+#endif
   }
 
   pthread_exit(NULL);
@@ -625,7 +629,11 @@ void *processSecondAccessQueue(void *arg) {
   mergeDeps();
 
   if (DP_DEBUG) {
+#ifdef __linux__
     cout << "thread " << id << " processing secondAccessQueue on core " << sched_getcpu() << " exits... \n";
+#else
+    cout << "thread " << id << " processing secondAccessQueue exits... \n";
+#endif
   }
 
   pthread_exit(NULL);

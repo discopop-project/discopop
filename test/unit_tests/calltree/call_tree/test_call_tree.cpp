@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "../../../../rtlib/calltree/CallTree.hpp"
-#include "../../../../rtlib/calltree/CallTreeGlobals.hpp"
+#include "../../../../profiler/rtlib/calltree/CallTree.hpp"
+#include "../../../../profiler/rtlib/calltree/CallTreeGlobals.hpp"
 
 #include <cstdint>
 #include <vector>

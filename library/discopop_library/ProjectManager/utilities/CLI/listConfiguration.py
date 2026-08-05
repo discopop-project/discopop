@@ -12,9 +12,14 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 import logging
 from tabulate import tabulate  # type: ignore
 
+from discopop_library.ProjectManager.configurations.compile_script import (
+    resolve_compile_script_path,
+    validation_needs_separate_compile,
+)
 from discopop_library.ProjectManager.configurations.copying import copy_configuration
 from discopop_library.ProjectManager.configurations.deletion import delete_configuration
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
+from discopop_library.ProjectManager.configurations.validation import has_validate_script, run_validation_phase
 
 logger = logging.getLogger("ConfigurationManager")
 
@@ -116,27 +121,47 @@ def show_configurations_with_execution(
         seq_settings_exist = False
         seq_compile_successful = False
         seq_execute_successful = False
+        seq_validate_compile_successful = False
+        seq_validate_successful = False
         par_settings_exist = False
         par_compile_successful = False
         par_execute_successful = False
+        par_validate_compile_successful = False
+        par_validate_successful = False
+        # validate.sh is an optional, per-config script that re-runs the code and
+        # validates its output, separated from the timed execute.sh run. It is only
+        # applied to the "real" runs (seq/par); dp/hd are profiling modes where
+        # re-running the instrumented binary would regenerate profiling data.
+        validate_sh_exists = has_validate_script(config)
+        # validate.sh may require its own build, in which case the validation phase
+        # recompiles after the timed execute.sh run. A compile_validate.sh without a
+        # validate.sh is ignored, hence the conjunction.
+        validate_compile_required = validate_sh_exists and validation_needs_separate_compile(
+            arguments.project_config_dir, os.path.basename(config)
+        )
 
         # collect overview information
+        compile_sh = resolve_compile_script_path(arguments.project_config_dir, os.path.basename(config))
+        shared_dp_settings = os.path.join(arguments.project_config_dir, "dp_settings.json")
+        shared_hd_settings = os.path.join(arguments.project_config_dir, "hd_settings.json")
+        shared_seq_settings = os.path.join(arguments.project_config_dir, "seq_settings.json")
+        shared_par_settings = os.path.join(arguments.project_config_dir, "par_settings.json")
+
         # --> dp
-        dp_settings = os.path.join(config, "dp_settings.json")
-        dp_settings_exist = os.path.exists(dp_settings)
+        dp_settings_exist = os.path.exists(shared_dp_settings)
         if __is_selected(config_restrictions, config, "dp"):
             dp_project_path = (
                 arguments.project_root
                 if arguments.execute_inplace
-                else copy_configuration(arguments, config, dp_settings)
+                else copy_configuration(arguments, config, shared_dp_settings)
             )
 
             ret = execute_configuration(
                 arguments,
                 dp_project_path,
                 config,
-                dp_settings,
-                os.path.join(config, "compile.sh"),
+                shared_dp_settings,
+                compile_sh,
                 __get_thread_count(config, "dp", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -147,7 +172,7 @@ def show_configurations_with_execution(
                     arguments,
                     dp_project_path,
                     config,
-                    dp_settings,
+                    shared_dp_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "dp", config_thread_counts),
                     arguments.timeout_execution,
@@ -156,21 +181,20 @@ def show_configurations_with_execution(
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, dp_project_path)
         # --> hd
-        hd_settings = os.path.join(config, "hd_settings.json")
-        hd_settings_exist = os.path.exists(hd_settings)
+        hd_settings_exist = os.path.exists(shared_hd_settings)
         if __is_selected(config_restrictions, config, "hd"):
             hd_project_path = (
                 arguments.project_root
                 if arguments.execute_inplace
-                else copy_configuration(arguments, config, hd_settings)
+                else copy_configuration(arguments, config, shared_hd_settings)
             )
 
             ret = execute_configuration(
                 arguments,
                 hd_project_path,
                 config,
-                hd_settings,
-                os.path.join(config, "compile.sh"),
+                shared_hd_settings,
+                compile_sh,
                 __get_thread_count(config, "hd", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -181,7 +205,7 @@ def show_configurations_with_execution(
                     arguments,
                     hd_project_path,
                     config,
-                    hd_settings,
+                    shared_hd_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "hd", config_thread_counts),
                     arguments.timeout_execution,
@@ -190,20 +214,19 @@ def show_configurations_with_execution(
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, hd_project_path)
         # --> seq
-        seq_settings = os.path.join(config, "seq_settings.json")
-        seq_settings_exist = os.path.exists(seq_settings)
+        seq_settings_exist = os.path.exists(shared_seq_settings)
         if __is_selected(config_restrictions, config, "seq"):
             seq_project_path = (
                 arguments.project_root
                 if arguments.execute_inplace
-                else copy_configuration(arguments, config, seq_settings)
+                else copy_configuration(arguments, config, shared_seq_settings)
             )
             ret = execute_configuration(
                 arguments,
                 seq_project_path,
                 config,
-                seq_settings,
-                os.path.join(config, "compile.sh"),
+                shared_seq_settings,
+                compile_sh,
                 __get_thread_count(config, "seq", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -214,29 +237,45 @@ def show_configurations_with_execution(
                     arguments,
                     seq_project_path,
                     config,
-                    seq_settings,
+                    shared_seq_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "seq", config_thread_counts),
                     arguments.timeout_execution,
                 )
                 seq_execute_successful = ret is not None and ret[0] == 0
+
+                # optional output validation (auto-run when validate.sh exists);
+                # no validate.sh => execute.sh alone decides correctness
+                if seq_execute_successful:
+                    seq_validation = run_validation_phase(
+                        arguments,
+                        seq_project_path,
+                        config,
+                        shared_seq_settings,
+                        __get_thread_count(config, "seq", config_thread_counts),
+                        timeout_compilation=arguments.timeout_compilation,
+                        timeout_validation=arguments.timeout_validation,
+                    )
+                    seq_validate_compile_successful = (
+                        not seq_validation.compile_required or seq_validation.compile_successful
+                    )
+                    seq_validate_successful = seq_validation.verdict(seq_execute_successful)
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, seq_project_path)
         # --> par
-        par_settings = os.path.join(config, "par_settings.json")
-        par_settings_exist = os.path.exists(par_settings)
+        par_settings_exist = os.path.exists(shared_par_settings)
         if __is_selected(config_restrictions, config, "par"):
             par_project_path = (
                 arguments.project_root
                 if arguments.execute_inplace
-                else copy_configuration(arguments, config, par_settings)
+                else copy_configuration(arguments, config, shared_par_settings)
             )
             ret = execute_configuration(
                 arguments,
                 par_project_path,
                 config,
-                par_settings,
-                os.path.join(config, "compile.sh"),
+                shared_par_settings,
+                compile_sh,
                 __get_thread_count(config, "par", config_thread_counts),
                 arguments.timeout_compilation,
             )
@@ -247,12 +286,29 @@ def show_configurations_with_execution(
                     arguments,
                     par_project_path,
                     config,
-                    par_settings,
+                    shared_par_settings,
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "par", config_thread_counts),
                     arguments.timeout_execution,
                 )
                 par_execute_successful = ret is not None and ret[0] == 0
+
+                # optional output validation (auto-run when validate.sh exists);
+                # no validate.sh => execute.sh alone decides correctness
+                if par_execute_successful:
+                    par_validation = run_validation_phase(
+                        arguments,
+                        par_project_path,
+                        config,
+                        shared_par_settings,
+                        __get_thread_count(config, "par", config_thread_counts),
+                        timeout_compilation=arguments.timeout_compilation,
+                        timeout_validation=arguments.timeout_validation,
+                    )
+                    par_validate_compile_successful = (
+                        not par_validation.compile_required or par_validation.compile_successful
+                    )
+                    par_validate_successful = par_validation.verdict(par_execute_successful)
             if not (arguments.skip_cleanup or arguments.execute_inplace):
                 delete_configuration(arguments, par_project_path)
 
@@ -283,10 +339,30 @@ def show_configurations_with_execution(
             overview_cell_contents += "(PASS) seq - settings\n" if seq_settings_exist else "(M) seq - settings\n"
             overview_cell_contents += "(PASS) seq - compile\n" if seq_compile_successful else "(F) seq - compile\n"
             overview_cell_contents += "(PASS) seq - execute\n" if seq_execute_successful else "(F) seq - execute\n"
+            if validate_compile_required:
+                overview_cell_contents += (
+                    "(PASS) seq - validate-compile\n"
+                    if seq_validate_compile_successful
+                    else "(F) seq - validate-compile\n"
+                )
+            if validate_sh_exists:
+                overview_cell_contents += (
+                    "(PASS) seq - validate\n" if seq_validate_successful else "(F) seq - validate\n"
+                )
         if __is_selected(config_restrictions, config, "par"):
             overview_cell_contents += "(PASS) par - settings\n" if par_settings_exist else "(M) par - settings\n"
             overview_cell_contents += "(PASS) par - compile\n" if par_compile_successful else "(F) par - compile\n"
             overview_cell_contents += "(PASS) par - execute\n" if par_execute_successful else "(F) par - execute\n"
+            if validate_compile_required:
+                overview_cell_contents += (
+                    "(PASS) par - validate-compile\n"
+                    if par_validate_compile_successful
+                    else "(F) par - validate-compile\n"
+                )
+            if validate_sh_exists:
+                overview_cell_contents += (
+                    "(PASS) par - validate\n" if par_validate_successful else "(F) par - validate\n"
+                )
         # --> autotuner
         if compatibility[config]["autotuner"]:
             autotuner_cell_contents = "PASS "

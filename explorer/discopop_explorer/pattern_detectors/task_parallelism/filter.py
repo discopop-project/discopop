@@ -71,7 +71,7 @@ def __filter_data_sharing_clauses_suppress_shared_loop_index(
             for parent_loop in parent_loops:
                 if is_loop_index2(pet, parent_loop, var):
                     to_be_removed.append(var)
-        to_be_removed = list(set(to_be_removed))
+        to_be_removed = list(dict.fromkeys(to_be_removed))
         suggestion.shared = [v for v in suggestion.shared if v not in to_be_removed]
     return suggestions
 
@@ -105,9 +105,9 @@ def __filter_data_sharing_clauses_by_function(
         __filter_shared_clauses(suggestion, parent_function, var_def_line_dict)
 
         # remove duplicates and .addr suffix from variable names
-        suggestion.shared = list(set([v.replace(".addr", "") for v in suggestion.shared]))
-        suggestion.private = list(set([v.replace(".addr", "") for v in suggestion.private]))
-        suggestion.first_private = list(set([v.replace(".addr", "") for v in suggestion.first_private]))
+        suggestion.shared = list(dict.fromkeys([v.replace(".addr", "") for v in suggestion.shared]))
+        suggestion.private = list(dict.fromkeys([v.replace(".addr", "") for v in suggestion.private]))
+        suggestion.first_private = list(dict.fromkeys([v.replace(".addr", "") for v in suggestion.first_private]))
 
         # remove duplicates (variable occurring in different classes)
         remove_from_first_private = []
@@ -120,8 +120,8 @@ def __filter_data_sharing_clauses_by_function(
         for var in suggestion.private:
             if var in suggestion.first_private:
                 remove_from_first_private.append(var)
-        remove_from_first_private = list(set(remove_from_first_private))
-        remove_from_private = list(set(remove_from_private))
+        remove_from_first_private = list(dict.fromkeys(remove_from_first_private))
+        remove_from_private = list(dict.fromkeys(remove_from_private))
         remove_from_private = [var for var in remove_from_private if var not in remove_from_first_private]
         suggestion.private = [var for var in suggestion.private if var not in remove_from_private]
         suggestion.first_private = [var for var in suggestion.first_private if var not in remove_from_first_private]
@@ -159,7 +159,7 @@ def __filter_shared_clauses(
             pass
         if not is_valid:
             to_be_removed.append(var)
-    to_be_removed = list(set(to_be_removed))
+    to_be_removed = list(dict.fromkeys(to_be_removed))
     suggestion.shared = [v for v in suggestion.shared if not v.replace(".addr", "") in to_be_removed]
 
 
@@ -198,7 +198,7 @@ def __filter_private_clauses(
             pass
         if not is_valid:
             to_be_removed.append(var)
-    to_be_removed = list(set(to_be_removed))
+    to_be_removed = list(dict.fromkeys(to_be_removed))
     suggestion.private = [v for v in suggestion.private if not v.replace(".addr", "") in to_be_removed]
 
 
@@ -229,7 +229,7 @@ def __filter_firstprivate_clauses(
             pass
         if not is_valid:
             to_be_removed.append(var)
-    to_be_removed = list(set(to_be_removed))
+    to_be_removed = list(dict.fromkeys(to_be_removed))
     suggestion.first_private = [v for v in suggestion.first_private if not v.replace(".addr", "") in to_be_removed]
 
 
@@ -348,7 +348,7 @@ def __filter_sharing_clause(
                 # check if task suggestion cu is reachable from parent via child edges
                 if not check_reachability(pet, suggestion._node, parent_cu, [EdgeType.CHILD]):
                     to_be_removed.append(var)
-        to_be_removed = list(set(to_be_removed))
+        to_be_removed = list(dict.fromkeys(to_be_removed))
         if target_clause_list == "FP":
             suggestion.first_private = [v for v in suggestion.first_private if v not in to_be_removed]
         elif target_clause_list == "PR":
@@ -415,9 +415,9 @@ def remove_duplicate_data_sharing_clauses(suggestions: List[PatternInfo]) -> Lis
         if not type(s) == TaskParallelismInfo:
             result.append(s)
         else:
-            s.in_dep = list(set(s.in_dep))
-            s.out_dep = list(set(s.out_dep))
-            s.in_out_dep = list(set(s.in_out_dep))
+            s.in_dep = list(dict.fromkeys(s.in_dep))
+            s.out_dep = list(dict.fromkeys(s.out_dep))
+            s.in_out_dep = list(dict.fromkeys(s.in_out_dep))
             result.append(s)
     return result
 
@@ -482,7 +482,7 @@ def __filter_in_dependencies(
         if not is_valid:
             modification_found = True
             to_be_removed.append(var)
-    to_be_removed = list(set(to_be_removed))
+    to_be_removed = list(dict.fromkeys(to_be_removed))
     suggestion.in_dep = [v for v in suggestion.in_dep if not v.replace(".addr", "") in to_be_removed]
     return modification_found
 
@@ -547,7 +547,7 @@ def __filter_out_dependencies(
         if not is_valid:
             to_be_removed.append(var)
             modification_found = True
-    to_be_removed = list(set(to_be_removed))
+    to_be_removed = list(dict.fromkeys(to_be_removed))
     suggestion.out_dep = [v for v in suggestion.out_dep if not v.replace(".addr", "") in to_be_removed]
     return modification_found
 
@@ -642,11 +642,11 @@ def __filter_in_out_dependencies(
                         elif prior_out_exists and not successive_in_exists:
                             # depend in
                             suggestion.in_dep.append(var)
-                            suggestion.in_dep = list(set(suggestion.in_dep))
+                            suggestion.in_dep = list(dict.fromkeys(suggestion.in_dep))
                         elif not prior_out_exists and successive_in_exists:
                             # depend out
                             suggestion.out_dep.append(var)
-                            suggestion.out_dep = list(set(suggestion.out_dep))
+                            suggestion.out_dep = list(dict.fromkeys(suggestion.out_dep))
                 else:
                     pass
         except ValueError:
@@ -654,7 +654,7 @@ def __filter_in_out_dependencies(
         if not is_valid:
             to_be_removed.append(var)
             modification_found = True
-    to_be_removed = list(set(to_be_removed))
+    to_be_removed = list(dict.fromkeys(to_be_removed))
     suggestion.in_out_dep = [v for v in suggestion.in_out_dep if not v.replace(".addr", "") in to_be_removed]
     return modification_found
 
@@ -729,7 +729,7 @@ def filter_data_depend_clauses(
                 suggestion.in_dep.remove(v)
                 suggestion.out_dep.remove(v)
                 suggestion.in_out_dep.append(v)
-            suggestion.in_out_dep = list(set(suggestion.in_out_dep))
+            suggestion.in_out_dep = list(dict.fromkeys(suggestion.in_out_dep))
             # correct in_out vars (remove from in and out)
             for v in suggestion.in_out_dep:
                 if v in suggestion.in_dep:

@@ -257,7 +257,7 @@ def extend_data_lifespan(
                     if subtree_node.id not in [cu_id for cu_id in live_data[mem_reg]]:
                         new_entries.append((mem_reg, subtree_node.id))
 
-            new_entries = list(set(new_entries))
+            new_entries = list(dict.fromkeys(new_entries))
             if len(new_entries) > 0:
                 modification_found = True
             for mem_reg, new_cu_id in new_entries:
@@ -267,7 +267,7 @@ def extend_data_lifespan(
 
     # remove duplicates
     for mem_reg in live_data:
-        live_data[mem_reg] = list(set(live_data[mem_reg]))
+        live_data[mem_reg] = list(dict.fromkeys(live_data[mem_reg]))
 
     print("\tDone.", file=sys.stderr)
     return live_data

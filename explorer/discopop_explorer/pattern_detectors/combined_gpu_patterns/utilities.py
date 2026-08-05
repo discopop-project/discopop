@@ -71,7 +71,7 @@ def prepare_liveness_metadata(
 
     # remove duplicates
     for mem_reg in meta_liveness:
-        meta_liveness[mem_reg] = list(set(meta_liveness[mem_reg]))
+        meta_liveness[mem_reg] = list(dict.fromkeys(meta_liveness[mem_reg]))
     # if read and write entries for the same line number exist, remove the read access
     for mem_reg in meta_liveness:
         to_be_removed: Set[str] = set()

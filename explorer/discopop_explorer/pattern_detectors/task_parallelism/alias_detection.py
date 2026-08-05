@@ -238,7 +238,7 @@ def __add_alias_information(
                                 # second level alias found
                                 aliases += inner_statement_result
                     aliases += statement_result
-            aliases = list(set(aliases))
+            aliases = list(dict.fromkeys(aliases))
             function_information["aliases"].append(aliases)
         result_list.append(function_information)
     return result_list

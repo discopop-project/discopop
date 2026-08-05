@@ -33,11 +33,17 @@ dependencies = [
     "discopop-library>=0.0.1a4",
     "discopop-gui>=0.0.1a2",
     "discopop-explorer>=0.0.1a2",
+    "discopop-mcp-server>=0.0.1a1",
+    "discopop-hotspot-detection>=0.0.1a1",
     "mypy", "black", "data-science-types"
 ]
 
 [project.urls]
 Homepage = "https://www.discopop.tu-darmstadt.de/"
+
+[tool.black]
+line-length = 120
+target-version = ["py313"]
 
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}

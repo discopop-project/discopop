@@ -26,7 +26,7 @@ namespace __dp {
 extern "C" {
 
 void __dp_loop_output() {
-  if (loop_manager->is_done()) {
+  if (loop_manager == nullptr || loop_manager->is_done()) {
     return;
   }
 
@@ -39,7 +39,11 @@ void __dp_loop_output() {
   // get meta information about the loops
   std::vector<loop_info_t> loop_infos;
   loop_infos.push_back(loop_info_t()); // dummy
-  std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+  const char *discopop_profiler_env = getenv("DOT_DISCOPOP_PROFILER");
+  if (discopop_profiler_env == NULL) {
+    return;
+  }
+  std::string tmp(discopop_profiler_env);
   tmp += "/loop_meta.txt";
   ifile.open(tmp.data());
   while (std::getline(ifile, line)) {
@@ -52,7 +56,7 @@ void __dp_loop_output() {
   ifile.close();
 
   // output information about the loops
-  std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
+  std::string tmp2(discopop_profiler_env);
   tmp2 += "/loop_counter_output.txt";
   ofile.open(tmp2.data());
   const auto &loop_counters = loop_manager->get_loop_counters();

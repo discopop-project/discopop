@@ -74,6 +74,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
 
 
   vector<CU *> CUVector;
+  Node *root = new Node;
   set<string> globalVariablesSet; // list of variables which appear in more than
   // one basic block
   map<string, vector<CU *>> BBIDToCUIDsMap;
@@ -87,7 +88,6 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
   // CUGenerationgetAna
   {
     /********************* Initialize root values ***************************/
-    Node *root = new Node;
     root->name = F.getName().str();
     root->type = nodeTypes::func;
 
@@ -146,11 +146,11 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
 
     // printOriginalVariables(originalVariablesSet);
 
-    printData(root);
+    /*printData(root);
 
     for (auto i : CUVector) {
       delete (i);
-    }
+    }*/
   }
   // CUGeneration end
 
@@ -181,6 +181,16 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     }
   }
   // DPInstrumentation end
+
+  // Print CU Graph
+  {
+    printData(root);
+
+    for (auto i : CUVector) {
+      delete (i);
+    }
+  }
+  // Print CU Graph end
 
   // DPInstrumentationOmission
   {

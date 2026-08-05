@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Callable
+from typing import Callable, List
 import tkinter as tk
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
@@ -18,6 +18,7 @@ from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
 from discopop_gui.Enums.ViewerMode import ViewerMode as CanvasViewerMode
 from discopop_gui.Exceptions.VisualizerNotDefined import VisualizerNotDefined
 from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
+
 
 class Plottable:
     def __init__(self, visualizer: Base | None = None) -> None:
@@ -41,7 +42,7 @@ class Plottable:
 
         if rows < 1 or columns < 1:
             raise ValueError("Rows and columns must be >= 1")
-        
+
         def frame_builder(parent: tk.Misc) -> MultiFrame:
             return MultiFrame(parent)
 
@@ -53,7 +54,7 @@ class Plottable:
         for column in range(columns):
             frame.grid_columnconfigure(column, weight=1)
 
-        inner_frames = []
+        inner_frames : List[tk.Frame] = []
 
         for i in range(rows * columns):
             row = i // columns
@@ -107,26 +108,26 @@ class Plottable:
         frame.grid_columnconfigure(0, weight=1)
 
         return axes
-    
+
     def create_plottable_canvas(self, name: str) -> ViewableCanvasWithTrees:
         if self._visualizer is None:
             raise VisualizerNotDefined()
         
-        def canvas_builder(parent : CanvasViewer, canvas_viewer_mode : CanvasViewerMode):
-            return ViewableCanvasWithTrees(parent, canvas_viewer_mode, bg="white")
+        def canvas_builder(parent : tk.Frame, canvas_viewer : CanvasViewer[ViewableCanvasWithTrees], canvas_viewer_mode : CanvasViewerMode) -> ViewableCanvasWithTrees:
+            return ViewableCanvasWithTrees(parent, canvas_viewer, canvas_viewer_mode, bg="white")
         
         def frame_builder(parent : tk.Misc) -> CanvasViewer[ViewableCanvasWithTrees]:
             return CanvasViewer(parent, canvas_builder)
 
         frame = self._visualizer.create_frame(name, frame_builder)
 
-        canvas = frame.getCanvas()
+        canvas = frame.get_canvas(frame.add_canvas())
         
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
 
         return canvas
-    
+
     def create_multi_plot(self, name: str, inner_plot_titles: list[str], rows: int, columns: int) -> list[Axes]:
         self.create_multi_frame(name, rows, columns)
         axeses = []

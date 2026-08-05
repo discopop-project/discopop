@@ -72,7 +72,7 @@ def run(arguments: SanityCheckerArguments) -> None:
     # load suggestions
     with open(os.path.join(arguments.dot_dp_path, "explorer", "detection_result_dump.json"), "r") as f:
         tmp_str = f.read()
-    detection_result: DetectionResult = jsonpickle.decode(tmp_str)
+    detection_result: DetectionResult = jsonpickle.decode(tmp_str, keys=True)
     logger.debug("loaded suggestions")
 
     # load hotspot information and classify suggestions

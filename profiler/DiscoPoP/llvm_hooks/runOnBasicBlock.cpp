@@ -57,7 +57,20 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
     MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+to_string(llvm_ir_instruction_id)));
     BI->setMetadata("dp.md.instr.id", N);
     // fill instructionID to lineID mapping file
-    *instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << decodeLID(getLID(&*BI, fileID)) << "\n";
+    const DebugLoc &location = BI->getDebugLoc();
+    uint32_t lno = 0;
+    uint32_t colno = 0;
+    if (location) {
+      lno = location.getLine();
+      colno = location.getCol();
+    } else if (isa<AllocaInst>(BI) || isa<StoreInst>(BI)) {
+      lno = BI->getFunction()->getSubprogram()->getLine();
+    }
+    if(lno != 0){
+      *instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << to_string(fileID) << ":" << to_string(lno) << ":" << to_string(colno) << "\n";
+    } else{
+      *instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << "*" << "\n";
+    }
 
     if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
       assert(DI->getOperand(0));

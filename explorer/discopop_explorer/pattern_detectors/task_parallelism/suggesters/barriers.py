@@ -174,7 +174,7 @@ def detect_barrier_suggestions(pet: PEGraphX, suggestions: List[PatternInfo]) ->
                 queue.append(pet.node_at(e[1]))
             for e in in_dep_edges:
                 queue.append(pet.node_at(e[0]))
-            queue = list(set(queue))
+            queue = list(dict.fromkeys(queue))
 
     return suggestions
 
@@ -508,5 +508,5 @@ def suggest_missing_barriers_for_global_vars(pet: PEGraphX, suggestions: List[Pa
                 for s, t, e in out_edges(pet, pet.node_at(succ_edge[1]).id)
                 if e.etype == EdgeType.SUCCESSOR and pet.node_at(t) != pet.node_at(succ_edge[1])
             ]
-            queue = list(set(queue + target_out_succ_edges))
+            queue = list(dict.fromkeys(queue + target_out_succ_edges))
     return suggestions

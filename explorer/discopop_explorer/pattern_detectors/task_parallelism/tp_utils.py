@@ -57,7 +57,7 @@ def demangle(mangled_name: str) -> str:
             out = out_bytes.decode("UTF-8")
             out = out.replace("\n", "")
             demangling_cache[mangled_name] = out
-            return out
+            return str(out)
     except FileNotFoundError:
         raise ValueError(
             "Executable '" + llvm_cxxfilt_path + "' not found." + " Check or supply --llvm-cxxfilt-path parameter."
@@ -618,7 +618,7 @@ def detect_mw_types(pet: PEGraphX, main_node: Node) -> None:
                     # remove entries which occur less than two times
                     raw_targets = [t for t in raw_targets if raw_targets.count(t) > 1]
                     # remove duplicates from list
-                    raw_targets = list(set(raw_targets))
+                    raw_targets = list(dict.fromkeys(raw_targets))
                     # if elements remaining, mark other_node as BARRIER
                     if len(raw_targets) > 0:
                         other_node.mw_type = MWType.BARRIER

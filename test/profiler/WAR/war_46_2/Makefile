@@ -11,3 +11,4 @@ execute:
 clean:
 	rm -rf .discopop
 	rm -f instrumented.exe
+	rm -f instrumented.ll

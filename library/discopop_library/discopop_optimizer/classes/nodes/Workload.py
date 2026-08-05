@@ -128,7 +128,7 @@ class Workload(GenericNode):
             # filter for called FunctionRoots
             called_function_nodes = [fr for fr in all_function_nodes if str(fr.original_cu_id) in called_cu_ids]
             # remove duplicates
-            called_function_nodes = list(set(called_function_nodes))
+            called_function_nodes = list(dict.fromkeys(called_function_nodes))
             # add costs of called function nodes to total costs
             for called_function_root in called_function_nodes:
                 total_costs = total_costs.parallelizable_plus_combine(

@@ -33,4 +33,4 @@ class IterationContext(Context):
         return "green"
 
     def get_label(self) -> str:
-        return "Iteration " + str(self.loopstate_iteration_ids)
+        return "Iteration " + str(self.loopstate_iteration_ids) + "\nstate_ids: " + str(self.get_state_ids())

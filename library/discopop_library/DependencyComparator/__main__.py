@@ -20,12 +20,20 @@ def parse_args() -> DependencyComparatorArguments:
 
     # fmt: off
     parser.add_argument(
-        "-g", "--gold-standard", type=str, default="None",
+        "-g", "--gold-standard-dynamic", type=str, default="None",
         help="Dynamic dependency file for reference."
     )
     parser.add_argument(
-        "-t", "--test-set", type=str, default="None",
+        "-gs", "--gold-standard-static", type=str, default="None",
+        help="Static dependency file for reference."
+    )
+    parser.add_argument(
+        "-t", "--test-set-dynamic", type=str, default="None",
         help="Dynamic dependency files under test."
+    )
+    parser.add_argument(
+        "-ts", "--test-set-static", type=str, default="None",
+        help="Static dependency files under test."
     )
     parser.add_argument(
         "-o", "--output", type=str, default="None",
@@ -40,8 +48,10 @@ def parse_args() -> DependencyComparatorArguments:
     arguments = parser.parse_args()
 
     return DependencyComparatorArguments(
-        gold_standard=arguments.gold_standard,
-        test_set=arguments.test_set,
+        gold_standard_dynamic=arguments.gold_standard_dynamic,
+        gold_standard_static=arguments.gold_standard_static,
+        test_set_dynamic=arguments.test_set_dynamic,
+        test_set_static=arguments.test_set_static,
         output=arguments.output,
         verbose=arguments.verbose,
     )

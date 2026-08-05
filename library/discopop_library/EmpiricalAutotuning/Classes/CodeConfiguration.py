@@ -22,8 +22,10 @@ from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
 from discopop_library.PatchApplicator.patch_applicator import run as apply_patches
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.configurations.compile_script import resolve_compile_script_path
 from discopop_library.ProjectManager.configurations.copying import copy_configuration
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
+from discopop_library.ProjectManager.configurations.validation import run_validation_phase
 
 logger = logging.getLogger("CodeConfiguration")
 
@@ -74,18 +76,30 @@ class CodeConfiguration(object):
             apply_suggestions=None,
             reset=False,
             reset_execution_results=False,
+            gui=False,
             label_prefix="",
             timeout_compilation=timeout,
             timeout_execution=timeout,
+            timeout_validation=timeout,
         )
 
         compilation_successful = True
+        project_config_dir = os.path.join(self.config_dot_dp_path, "project", "configs")
+        config_path = os.path.join(project_config_dir, arguments.configuration)
+        compile_sh = resolve_compile_script_path(project_config_dir, arguments.configuration)
+
+        # All settings files are now shared
+        if self.settings_name in ["seq_settings.json", "dp_settings.json", "hd_settings.json", "par_settings.json"]:
+            settings_path = os.path.join(self.config_dot_dp_path, "project", "configs", self.settings_name)
+        else:
+            settings_path = os.path.join(config_path, self.settings_name)
+
         ret = execute_configuration(
             cm_args,
             self.root_path,
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration),
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, self.settings_name),
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, "compile.sh"),
+            config_path,
+            settings_path,
+            compile_sh,
             thread_count,
             timeout,
         )
@@ -114,17 +128,31 @@ class CodeConfiguration(object):
             apply_suggestions=None,
             reset=False,
             reset_execution_results=False,
+            gui=False,
             label_prefix="",
             timeout_compilation=timeout,
             timeout_execution=timeout,
+            timeout_validation=timeout,
         )
+
+        config_path = os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration)
+        # Only execute.sh is timed and counted towards the measured runtime. An
+        # optional validate.sh (run below) contributes to a configuration's
+        # validity but never to its runtime.
+        execute_sh_path = os.path.join(config_path, "execute.sh")
+
+        # All settings files are now shared
+        if self.settings_name in ["seq_settings.json", "dp_settings.json", "hd_settings.json", "par_settings.json"]:
+            settings_path = os.path.join(self.config_dot_dp_path, "project", "configs", self.settings_name)
+        else:
+            settings_path = os.path.join(config_path, self.settings_name)
 
         ret = execute_configuration(
             cm_args,
             self.root_path,
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration),
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, self.settings_name),
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, "execute.sh"),
+            config_path,
+            settings_path,
+            execute_sh_path,
             thread_count,
             timeout,
         )
@@ -134,8 +162,35 @@ class CodeConfiguration(object):
         else:
             result_returncode, required_time, out, err = ret
 
-        # DUMMY VALUES
+        # A configuration is valid only if execute.sh succeeded AND, when an
+        # optional validate.sh exists, it also succeeds. validate.sh re-runs the
+        # code and validates its output; it is executed separately here so its
+        # duration is never counted towards required_time (the measured runtime
+        # above stays purely the execute.sh time). validate.sh is skipped when
+        # execute.sh already failed, or when no validate.sh is present (in which
+        # case execute.sh's return code alone decides validity, as before).
+        # A configuration providing a compile_validate.sh is rebuilt for validation
+        # first; that build happens here, after the timed run, so it can never
+        # affect the measured runtime.
         result_valid = result_returncode == 0
+        if result_valid:
+            validation = run_validation_phase(
+                cm_args,
+                self.root_path,
+                config_path,
+                settings_path,
+                thread_count,
+                timeout_compilation=timeout,
+                timeout_validation=timeout,
+            )
+            if validation.compile_required and not validation.compile_successful:
+                logger.debug("Validation build failed; treating the configuration as invalid.")
+            result_valid = validation.verdict(result_valid)
+            if validation.applicable:
+                logger.debug(
+                    "Validation return code: "
+                    + str(validation.validate_result[0] if validation.validate_result else None)
+                )
         thread_sanitizer_valid = True
 
         # reporting
@@ -165,14 +220,24 @@ class CodeConfiguration(object):
             apply_suggestions=None,
             reset=False,
             reset_execution_results=False,
+            gui=False,
             label_prefix="",
             timeout_compilation=None,
             timeout_execution=None,
+            timeout_validation=None,
         )
+        # Settings files are now shared
+        if settings_name in ["seq_settings.json", "dp_settings.json", "hd_settings.json", "par_settings.json"]:
+            settings_path = os.path.join(self.config_dot_dp_path, "project", "configs", settings_name)
+        else:
+            settings_path = os.path.join(
+                self.config_dot_dp_path, "project", "configs", arguments.configuration, settings_name
+            )
+
         dest_path = copy_configuration(
             cm_args,
             arguments.configuration,
-            os.path.join(self.config_dot_dp_path, "project", "configs", arguments.configuration, settings_name),
+            settings_path,
             get_new_configuration_id(),
         )
         new_dot_discopop_path = os.path.join(dest_path, ".discopop")

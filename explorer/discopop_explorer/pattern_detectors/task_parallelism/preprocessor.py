@@ -46,7 +46,7 @@ def cu_xml_preprocessing(cu_xml: str) -> str:
             inner_iteration = True
             remaining_recursive_call_in_parent = False
             while inner_iteration:
-                used_node_ids = list(set(used_node_ids + self_added_node_ids))
+                used_node_ids = list(dict.fromkeys(used_node_ids + self_added_node_ids))
 
                 if node.get("type") == "0":  # iterate over CU nodes
                     # find CU nodes with > 1 recursiveFunctionCalls in own code region

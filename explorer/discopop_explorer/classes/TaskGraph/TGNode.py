@@ -23,6 +23,7 @@ class TGNode(object):
     position: PositionIndex  # for plotting
     parent_context: Set[Context]
     created_context: Optional[Context]
+    state_id: Optional[int]
 
     def __init__(self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex):
         self.pet_node_id = pet_node_id
@@ -30,6 +31,7 @@ class TGNode(object):
         self.position = position
         self.parent_context = set()
         self.created_context = None
+        self.state_id = None
 
     def get_label(self) -> str:
         return str(self.pet_node_id)

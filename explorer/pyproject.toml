@@ -30,7 +30,6 @@ classifiers = [
 ]
 dependencies = [
     "discopop-library",
-    "alive_progress",
     "filelock",
     "jsonpickle",
     "lxml>=4.3.3",

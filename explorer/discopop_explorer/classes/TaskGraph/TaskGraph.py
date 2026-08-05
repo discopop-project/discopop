@@ -7,21 +7,23 @@
 # directory for details.
 
 import copy
+from collections import deque
 import os
 import sys
 from collections import defaultdict
 from pathlib import Path
 import random
+import re
 import signal
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple, Union, cast
+import sys
+from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
-import tkinter as tk
 from matplotlib.axes import Axes
 from networkx import Graph
-from tqdm import tqdm  # type: ignore
+import matplotlib.lines as mlines
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
@@ -36,6 +38,7 @@ from discopop_explorer.classes.TaskGraph.Branching.TGStartBranchParentNode impor
 from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchContext
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
+from discopop_explorer.classes.TaskGraph.Contexts.ContextStack import ContextStack
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
@@ -64,13 +67,26 @@ from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
 from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
-from discopop_explorer.functions.PEGraph.traversal.called_functions import get_called_nodes
+from discopop_explorer.functions.PEGraph.traversal.called_functions import (
+    get_call_instruction_id,
+    get_called_node_ids,
+    get_called_nodes,
+)
 from discopop_explorer.functions.PEGraph.traversal.children import get_entry_child
 from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.functions.PEGraph.traversal.predecessors import direct_predecessors
 from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
+from discopop_library.StatusReporting.console import progress, stage, warn
 
-matplotlib.use("TkAgg")
+if os.environ.get("DISPLAY") or sys.platform in ("darwin", "win32"):
+    try:
+        matplotlib.use("TkAgg")
+    except Exception:
+        matplotlib.use("Agg")
+else:
+    # no display available (e.g. headless server via ssh): avoid an interactive
+    # backend, which would crash as soon as a figure is created
+    matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # type: ignore
 from matplotlib.patches import Rectangle
 
@@ -88,22 +104,44 @@ from discopop_explorer.classes.TaskGraph.Aliases import (
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from discopop_gui.Extendables.Plottable import Plottable
-from discopop_gui.Visualizers.Base import Base as Visualizer
-from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
+try:
+    from discopop_gui.Enums.EdgeType import EdgeType as TreeEdgeType
+    from discopop_gui.Extendables.Plottable import Plottable
+    from discopop_gui.Visualizers.Base import Base as Visualizer
+    from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
+except (ImportError, ModuleNotFoundError):
+
+    class Plottable:  # type: ignore[no-redef]
+        def __init__(self, visualizer: object = None) -> None:
+            pass
+
+        def plottable(self) -> bool:
+            return False
+
+    Visualizer = object  # type: ignore[assignment, misc]
+    ViewableCanvasWithTrees = object  # type: ignore[assignment, misc]
 
 logger = logging.getLogger("Explorer")
+
+# how __validate_graph_structure refers to code that no function entry node reaches any more
+DETACHED_REGION = "a region not reachable from any function entry node"
+
+# callpath state markers ("<line_id>@<state_id>") as emitted by the profiler into
+# dynamic_dependencies.txt. Removing them is what --ignore-dependency-states does.
+STATE_MARKER_PATTERN = re.compile(r"@\d+")
 
 
 # Aliases
 TGConstructionQueueElement = Tuple[Optional[TGNode], Union[PETNode, VisitorMarker]]  # (Predecessor, current element)
 
 
-class TaskGraph(Plottable, object):
+class TaskGraph(Plottable, object):  # type: ignore[misc]
     pet: PEGraphX
     graph: nx.MultiDiGraph
+    # class-level default so instances created without __init__ (e.g. the test
+    # fixtures, which bypass it) still read as "states are interpreted"
+    ignore_dependency_states: bool = False
     root: TGNode
     function_id_map: Dict[PETNodeID, FunctionID] = dict()
     TGNode_pet_node_id_to_tg_node: Dict[PETNodeID, TGNode] = dict()
@@ -113,7 +151,6 @@ class TaskGraph(Plottable, object):
     contexts: List[Context] = []
     current_level: LevelIndex = 0
     current_position: Dict[LevelIndex, PositionIndex] = {0: 0}
-    plotting_axis = None  # type: ignore
     plotting_graph_buffer = None
     plotting_postions_buffer = None
 
@@ -123,25 +160,39 @@ class TaskGraph(Plottable, object):
         dynamic_dependency_file: Optional[str] = None,
         static_dependency_file: Optional[str] = None,
         visualizer: Visualizer | None = None,
+        ignore_dependency_states: bool = False,
     ) -> None:
         super().__init__(visualizer)
 
         self.pet = pet
         self.graph = nx.MultiDiGraph()
+        self.ignore_dependency_states = ignore_dependency_states
+        # shadow the class-level defaults with per-instance state: the construction passes
+        # look up previously created nodes in these maps, so sharing them between TaskGraph
+        # instances (e.g. two runs within one GUI session) would wire a fresh graph up to
+        # nodes belonging to the previous one
+        self.function_id_map = dict()
+        self.TGNode_pet_node_id_to_tg_node = dict()
+        self.TGFunctionNode_pet_node_id_to_tg_node = dict()
+        self.TGStartFunctionNode_pet_node_id_to_tg_node = dict()
+        self.TGEndFunctionNode_pet_node_id_to_tg_node = dict()
+        self.contexts = []
+        self.current_level = 0
+        self.current_position = {0: 0}
 
-        # define updating plot window
-        fig1 = plt.figure(1)
-        self.plotting_axis = fig1.add_subplot(1, 1, 1)
-        plt.ion()  # type: ignore[attr-defined]
         # start processing
-        self.__assign_function_ids(pet)
-        self.__construct_from_pet(pet)
-        self.__insert_data_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
-        self.__determine_loop_variables()
-        self.__cleanup_loop_dependencies()
-        print("Waiting for user to close the Window...")
-        # plt.show(block=True)
-        plt.ioff()  # type: ignore[attr-defined]
+        with stage("Assigning function ids", 1, total=6):
+            self.__assign_function_ids(pet)
+        with stage("Constructing TaskGraph structure", 2, total=6):
+            self.__construct_from_pet(pet)
+        with stage("Assigning state ids", 3, total=6):
+            self.__assign_state_ids(dynamic_dependency_file)
+        with stage("Inserting data dependencies", 4, total=6):
+            self.__insert_data_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
+        with stage("Determining loop variables", 5, total=6):
+            self.__determine_loop_variables()
+        with stage("Cleaning up loop dependencies", 6, total=6):
+            self.__cleanup_loop_dependencies()
 
     def __assign_function_ids(self, pet: PEGraphX) -> None:
         id = 0
@@ -151,22 +202,37 @@ class TaskGraph(Plottable, object):
         logger.info("Assigned function ids:\n" + str(self.function_id_map))
 
     def __construct_from_pet(self, pet: PEGraphX) -> None:
-        logger.info("Hello world!")
         # prepare function graphs without calling
-        self.__visit_pet(pet)
-        self.__break_cycles()
-        self.__fix_loop_structures()
-        self.__duplicate_loop_iterations()
-        self.__validate_graph_structure()
-        self.__add_work_nodes()
-        self.__assign_loopstate_positions_within_functions()
-        self.__inline_function_calls()
-        self.__add_branching_nodes()
+        with stage("Visiting PET nodes", 1, total=14):
+            self.__visit_pet(pet)
+        with stage("Breaking cycles", 2, total=14):
+            self.__break_cycles()
+        with stage("Fixing loop structures", 3, total=14):
+            self.__fix_loop_structures()
+        with stage("Duplicating loop iterations", 4, total=14):
+            self.__duplicate_loop_iterations()
+        with stage("Validating graph structure", 5, total=14):
+            self.__validate_graph_structure()
+        with stage("Adding work nodes", 6, total=14):
+            self.__add_work_nodes()
+        with stage("Assigning loop-state positions", 7, total=14):
+            self.__assign_loopstate_positions_within_functions()
+        with stage("Inlining function calls", 8, total=14):
+            self.__inline_function_calls()
+        with stage("Adding branching nodes", 9, total=14):
+            self.__add_branching_nodes()
 
-        self.__assign_contexts()  # assign contexts before inlining to keep runtime of branching context detection in check
-        self.__assign_node_levels()
-        self.__calculate_context_nesting()
-        self.__calculate_context_successions()
+        # assign contexts before inlining to keep runtime of branching context detection in check
+        with stage("Assigning contexts", 10, total=14):
+            self.__assign_contexts()
+        with stage("Assigning node levels", 11, total=14):
+            self.__assign_node_levels()
+        with stage("Calculating context nesting", 12, total=14):
+            self.__calculate_context_nesting()
+        with stage("Calculating context successions", 13, total=14):
+            self.__calculate_context_successions()
+        with stage("Validating context structure", 14, total=14):
+            self.__validate_context_structure()
         # self.__insert_pessimistic_data_dependencies()
         # self.__insert_data_dependencies()
         # self.__validate_data_dependencies()
@@ -444,6 +510,22 @@ class TaskGraph(Plottable, object):
                 labels[ctx] = ctx.get_label()
         nx.draw_networkx_labels(ctx_graph, positions, labels, font_size=7, ax=axis)
 
+        # define legend
+        black_line = mlines.Line2D([], [], color="black", markersize=15, label="contained")  # marker='*',
+        red_line = mlines.Line2D([], [], color="red", markersize=15, label="dynamic dep")  # marker='*',
+        blue_line = mlines.Line2D([], [], color="blue", markersize=15, label="static dep")  # marker='*',
+        green_line = mlines.Line2D(
+            [],
+            [],
+            color="green",
+            markersize=15,
+            label="successor",
+        )  # marker='*',
+
+        axis.legend(
+            loc="upper left", handles=[black_line, red_line, blue_line, green_line]
+        )  # labels=["control", "data", "control + data", "imaginary"], labelcolor=["black", "red", "blue", "green"], )
+
     def plot_context_debug_graph(self, axis: Axes) -> None:
         logger.info("Plotting context debug graph...")
 
@@ -490,108 +572,38 @@ class TaskGraph(Plottable, object):
     def new_plot_context_debug_graph(self, canvas: ViewableCanvasWithTrees) -> None:
         logger.info("Plotting context debug graph...")
 
-        canvas.delete("all")
-
         ctx_graph = nx.MultiDiGraph()
 
         for ctx in self.contexts:
             ctx_graph.add_node(ctx)
-            for ctx_cont_node in ctx.contained_nodes:
-                ctx_graph.add_node(ctx_cont_node)
 
-        contained_edges = []
+            for node in ctx.contained_nodes:
+                ctx_graph.add_node(node)
 
         for ctx in self.contexts:
             for contained_ctx in ctx.contained_contexts:
-                ctx_graph.add_edge(ctx, contained_ctx)
-                contained_edges.append((ctx, contained_ctx))
-            for ctx_cont_node in ctx.contained_nodes:
-                ctx_graph.add_edge(ctx, ctx_cont_node)
-                contained_edges.append((ctx, ctx_cont_node))
+                ctx_graph.add_edge(
+                    ctx,
+                    contained_ctx,
+                    edge_type=TreeEdgeType.MAIN,
+                )
 
-        dependency_edges = []
+            for node in ctx.contained_nodes:
+                ctx_graph.add_edge(
+                    ctx,
+                    node,
+                    edge_type=TreeEdgeType.MAIN,
+                )
 
         for ctx in self.contexts:
-            for deps in ctx.outgoing_dependencies:
-                dependency_edges.append((ctx, deps[0]))
+            for dep in ctx.outgoing_dependencies:
+                ctx_graph.add_edge(
+                    ctx,
+                    dep[0],
+                    edge_type=TreeEdgeType.DEPENDENCY,
+                )
 
-        positions = nx.nx_pydot.pydot_layout(ctx_graph, prog="dot")
-
-        if not positions:
-            return
-
-        canvas.update_idletasks()
-        canvas_width = canvas.winfo_width()
-        canvas_height = canvas.winfo_height()
-
-        if canvas_width <= 1:
-            canvas_width = int(canvas.cget("width"))
-        if canvas_height <= 1:
-            canvas_height = int(canvas.cget("height"))
-
-        padding = 40
-        node_radius = 18
-
-        xs = [pos[0] for pos in positions.values()]
-        ys = [pos[1] for pos in positions.values()]
-
-        min_x, max_x = min(xs), max(xs)
-        min_y, max_y = min(ys), max(ys)
-
-        x_span = max(max_x - min_x, 1)
-        y_span = max(max_y - min_y, 1)
-
-        scaled_positions = {}
-
-        for node, (x, y) in positions.items():
-            sx = padding + ((x - min_x) / x_span) * (canvas_width - (2 * padding))
-            sy = padding + (1 - ((y - min_y) / y_span)) * (canvas_height - (2 * padding))
-            scaled_positions[node] = (sx, sy)
-
-        node_ids = {}
-
-        for node in ctx_graph.nodes:
-            x, y = scaled_positions[node]
-
-            fill_color = "orange" if node in self.contexts else "cyan"
-
-            node_ids[node] = canvas.create_node(
-                x,
-                y,
-                node.get_label(),
-                fill_color,
-            )
-
-        for src, dst in contained_edges:
-            x1, y1 = scaled_positions[src]
-            x2, y2 = scaled_positions[dst]
-
-            canvas.add_dependency(
-                node_ids[src],
-                node_ids[dst],
-                x1,
-                y1,
-                x2,
-                y2,
-                fill="black",
-                width=1,
-            )
-
-        for src, dst in dependency_edges:
-            x1, y1 = scaled_positions[src]
-            x2, y2 = scaled_positions[dst]
-
-            canvas.add_dependency(
-                node_ids[src],
-                node_ids[dst],
-                x1,
-                y1,
-                x2,
-                y2,
-                fill="red",
-                width=2,
-                arrow="last",
-            )
+        canvas.build_trees(ctx_graph)
 
     def __get_or_insert_TGNode(self, pet_node_id: PETNodeID, level: LevelIndex, position: PositionIndex) -> TGNode:
         if pet_node_id is not None:
@@ -738,6 +750,20 @@ class TaskGraph(Plottable, object):
         for successor in direct_successors(self.pet, pet_node):
             if not self.node_registered(successor.id):
                 queue.append((node, successor))
+            else:
+                # The successor has already been visited, so it must not be queued again -
+                # doing so would make the traversal loop forever on cyclic control flow (the
+                # single-successor path in __visit_CUNode queues unconditionally, so a cycle
+                # only terminates because branch points stop re-visiting known nodes). The
+                # edge to it, however, is created by the *successor's* visit, and therefore
+                # still needs to be added here: dropping it silently deletes real control
+                # flow. The typical victim is a loop's exit edge whose target CU was already
+                # reached through an earlier, shorter path (e.g. an early return sharing the
+                # function's exit CU). __break_cycles then sees an exit-less cycle, mistakes
+                # a branch inside the loop body for the loop header and the other arm for the
+                # loop exit, and produces a TGStartLoopNode that cannot reach its
+                # TGEndLoopNode - which fails much later in __assign_loop_contexts.
+                self.add_edge(node, self.TGNode_pet_node_id_to_tg_node[successor.id])
 
         return queue
 
@@ -767,12 +793,53 @@ class TaskGraph(Plottable, object):
         warnings.warn("Not implemented!")
         return queue
 
+    def __find_loop_entry_node(self, function_node: TGNode, cycle_nodes: Set[TGNode]) -> Optional[TGNode]:
+        """The node a cycle is entered through: the first of its nodes reached when walking forward
+        from the function entry, which is also the node the back edges point back to.
+
+        Identifying it by its outgoing edges instead - "one successor inside the cycle, one outside"
+        - finds the loop's *condition* node, which is only the same node for a loop tested at its
+        top. As soon as the loop is rotated (`while` compiled with the test at the bottom, or a
+        `for` whose increment block precedes the test), the condition sits behind the entry node,
+        and treating it as the entry makes the edge from the entry node to it look like a back edge.
+        Removing that edge then severs the only way into the loop and detaches it, together with its
+        whole body, from the function - which is invisible until a later pass treats the detached
+        region as a program entry point of its own."""
+        queue: List[TGNode] = [function_node]
+        visited: Set[TGNode] = {function_node}
+        while len(queue) > 0:
+            current = queue.pop(0)
+            if current in cycle_nodes:
+                return current
+            for successor in self.get_successors(current):
+                if successor not in visited:
+                    visited.add(successor)
+                    queue.append(successor)
+        return None
+
+    def __find_loop_exit_edge(
+        self, entry_node: Optional[TGNode], cycle_nodes: Set[TGNode]
+    ) -> Tuple[Optional[TGNode], Optional[TGNode]]:
+        """The edge by which control leaves the cycle, as (source inside, target outside). Prefers
+        an edge starting at the entry node, so a loop tested at its top is restructured exactly as
+        before. Loops without any exit (`while (true)`) have none, and are left to the caller's
+        fallback."""
+        if entry_node is None:
+            return None, None
+        candidates: List[Tuple[TGNode, TGNode]] = []
+        for source in sorted(cycle_nodes, key=lambda node: node.get_label()):
+            for target in self.get_successors(source):
+                if target not in cycle_nodes:
+                    candidates.append((source, target))
+        for source, target in candidates:
+            if source is entry_node:
+                return source, target
+        return candidates[0] if len(candidates) > 0 else (None, None)
+
     def __break_cycles(self) -> None:
         # search for cycles in each function and replace them with two distinct iteraions
-        logger.info("Breaking cycles...")
-
-        for function_node in self.TGFunctionNode_pet_node_id_to_tg_node.values():
-            logger.info("--> " + function_node.get_label())
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values(), desc="Breaking cycles"):
+            logger.debug("Breaking cycles in: " + function_node.get_label())
             # progress search if cycle can not be broken
             search_source: TGNode = function_node
             search_source_queue = self.get_descendants(function_node)
@@ -790,48 +857,28 @@ class TaskGraph(Plottable, object):
                     cycle_nodes.add(tpl[1])
 
                 # find entry node and exit node
-                entry_node: Optional[TGNode] = None
-                exit_node: Optional[TGNode] = None
-                iteration_entry_points: List[TGNode] = []
-                queue: List[TGNode] = [function_node]
-                visited: Set[TGNode] = set()
-                while len(queue) > 0:
-                    exit_node = None
-                    current = queue.pop(0)
-                    visited.add(current)
-                    #                    print("\nCurrent: ", current)
-                    #                    print("Cycle nodes: ", cycle_nodes)
-                    successors = self.get_successors(current)
-                    #                    print("IN CYCLE: ", current in cycle_nodes)
-                    #                    print("SUCC: ", len(successors))
-                    #                    print("---> ", successors)
+                entry_node = self.__find_loop_entry_node(function_node, cycle_nodes)
+                exit_source, exit_node = self.__find_loop_exit_edge(entry_node, cycle_nodes)
+                iteration_entry_points: List[TGNode] = [n for n in self.get_successors(entry_node) if n in cycle_nodes]
 
-                    if len(successors) > 1:
-                        if current in cycle_nodes:
+                # the edges back to the entry node end an iteration, and so does the edge leaving the
+                # loop when it starts at a node other than the entry node (a rotated loop, whose
+                # condition sits behind the entry node): both continue into the loop end marker
+                latches: List[TGNode] = [p for p in self.get_predecessors(entry_node) if p in cycle_nodes]
+                iteration_exit_points: List[TGNode] = list(latches)
+                if exit_source is not None and exit_source is not entry_node:
+                    iteration_exit_points.append(exit_source)
 
-                            found_successor_in_cycle = False
-                            for succ in successors:
-                                if succ in cycle_nodes:
-                                    found_successor_in_cycle = True
-                                if succ not in cycle_nodes:
-                                    exit_node = succ
-                                if exit_node is not None and found_successor_in_cycle:
-                                    break
-                            if exit_node is not None and found_successor_in_cycle:
-                                entry_node = current
-                                iteration_entry_points = [n for n in successors if n in cycle_nodes]
-                                break
-                        else:
-                            for succ in successors:
-                                if succ not in visited and succ not in queue:
-                                    queue.append(succ)
-                    elif len(successors) == 1:
-                        if successors[0] not in visited and successors[0] not in queue:
-                            queue.append(successors[0])
-                    else:
-                        continue
-
-                iteration_exit_points: List[TGNode] = [p for p in self.get_predecessors(entry_node) if p in cycle_nodes]
+                if entry_node is not None and len(latches) == len(self.get_predecessors(entry_node)):
+                    # every way into the entry node comes from inside the cycle, so removing the
+                    # latches below would detach the whole loop from its function - see the crude
+                    # fallback instead, which keeps it reachable
+                    logger.warning(
+                        "Refusing to restructure the loop at %s: all of its incoming edges come "
+                        "from inside the cycle, so it has no reachable entry.",
+                        entry_node.get_label(),
+                    )
+                    entry_node = None
 
                 #                print("Found entry node: ", entry_node.get_label() if entry_node is not None else "NONE")
                 #                print("Found exit node: ", exit_node.get_label() if exit_node is not None else "NONE")
@@ -844,9 +891,9 @@ class TaskGraph(Plottable, object):
                     search_source = function_node
 
                     # break cycle
-                    for itexp in iteration_exit_points:
-                        self.graph.remove_edge(itexp, entry_node)
-                        logger.info("  --> Removed edge " + itexp.get_label() + " --> " + entry_node.get_label())
+                    for latch in latches:
+                        self.graph.remove_edge(latch, entry_node)
+                        logger.info("  --> Removed edge " + latch.get_label() + " --> " + entry_node.get_label())
 
                     # add loop start marking between entry_node and its predecessors
                     lsm = TGStartLoopNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
@@ -856,10 +903,12 @@ class TaskGraph(Plottable, object):
                         self.add_edge(pred, lsm)
                     self.add_edge(lsm, entry_node)
 
-                    # add loop end marking between entry_node and exit_node
+                    # add loop end marking in front of exit_node. The edge leaving the loop starts at
+                    # exit_source, which is the entry node itself for a loop tested at its top and
+                    # the condition node behind it for a rotated one
                     lem = TGEndLoopNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
                     self.add_node(lem)
-                    self.graph.remove_edge(entry_node, exit_node)
+                    self.graph.remove_edge(exit_source, exit_node)
                     self.add_edge(entry_node, lem)
                     self.add_edge(lem, exit_node)
 
@@ -871,9 +920,9 @@ class TaskGraph(Plottable, object):
                         ism = TGStartIterationNode(
                             itenp.pet_node_id, itenp.level, itenp.position, entry_node.pet_node_id
                         )
-                        ism.loopstate_iteration_ids = [
-                            0
-                        ]  # loop iterations will be duplicated later. loopstate_ids will be overwritten / set then.
+                        # ism.loopstate_iteration_ids = [
+                        #   0
+                        # ]  # loop iterations will be duplicated later. loopstate_ids will be overwritten / set then.
 
                         ism_list.append(ism)
                         self.add_node(ism)
@@ -945,7 +994,7 @@ class TaskGraph(Plottable, object):
     def __fix_loop_structures(self, plot_problematic_loops: bool = False) -> None:
         # in case a loop contains a branch to a non-iteration node (e.g. via "break"- statement), delete this edge and cleanup the graph
         logger.info("Fixing loop structures...")
-        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             logger.info("--> " + function_node.get_label())
             modification_found = True
             while modification_found:
@@ -1000,7 +1049,7 @@ class TaskGraph(Plottable, object):
                         if len(invalid_edges) == 0:
                             continue
                         # found problematic loop
-                        print("Invalid edges: ", [(e[0].get_label(), e[1].get_label()) for e in invalid_edges])
+                        warn("Invalid edges: " + str([(e[0].get_label(), e[1].get_label()) for e in invalid_edges]))
 
                         # show problematic loop
                         if plot_problematic_loops:
@@ -1063,7 +1112,7 @@ class TaskGraph(Plottable, object):
 
     def __duplicate_loop_iterations(self, plot_progress: bool = False) -> None:
         logger.info("Duplicating loop iterations...")
-        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             logger.info("--> " + function_node.get_label())
             added_copies: Set[TGNode] = set()  # do not allow the re-copying of copies
             already_considered: Set[TGNode] = set()  # do not allo the re-copying of nodes
@@ -1157,6 +1206,7 @@ class TaskGraph(Plottable, object):
                         )
 
                         # set loopstate_iterations_ids sucht that both iteration nodes react to different loopsate information during dependency creation
+                        # print("sin.loopstate_iteration_ids: ", sin.loopstate_iteration_ids)
                         if sin.loopstate_iteration_ids is None:
                             sin.set_loopstate_iteration_ids([1])
                         if cast(TGStartIterationNode, copied_iteration_entry).loopstate_iteration_ids is None:
@@ -1185,7 +1235,7 @@ class TaskGraph(Plottable, object):
 
     def __assign_function_contexts(self) -> None:
         logger.info("Assigning function contexts...")
-        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             descendants = self.get_descendants(function_node)
             function_start_nodes = [n for n in descendants if isinstance(n, TGStartFunctionNode)]
             for fsn in function_start_nodes:
@@ -1202,7 +1252,7 @@ class TaskGraph(Plottable, object):
         logger.info("--> Selecting entry points...")
         start_branch_nodes: List[TGNode] = []
         start_branch_parent_nodes: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if isinstance(node, TGStartBranchNode):
                 start_branch_nodes.append(node)
             if isinstance(node, TGStartBranchParentNode):
@@ -1210,7 +1260,7 @@ class TaskGraph(Plottable, object):
 
         # create individual branch context
         logger.info("--> Create branch contexts")
-        for sbn in tqdm(start_branch_nodes):
+        for sbn in progress(start_branch_nodes):
             # create Context
             branch_context = BranchContext()
             sbn.register_created_context(branch_context)
@@ -1250,7 +1300,7 @@ class TaskGraph(Plottable, object):
 
         # create branching parent contexts
         logger.info("--> Create branch parent contexts...")
-        for sbpn in tqdm(start_branch_parent_nodes):
+        for sbpn in progress(start_branch_parent_nodes):
             branch_parent_context = BranchingParentContext()
             self.contexts.append(branch_parent_context)
             sbpn.created_context = branch_parent_context
@@ -1279,7 +1329,7 @@ class TaskGraph(Plottable, object):
     def __assign_loop_contexts(self) -> None:
         logger.info("Assigning loop contexts...")
 
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if not isinstance(node, TGStartLoopNode):
                 continue
 
@@ -1304,9 +1354,9 @@ class TaskGraph(Plottable, object):
 
             if loop_end_node is None:
                 logger.warning("Could not determine loop end node for loop: " + node.get_label())
-                plt.ioff()  # type: ignore[attr-defined]
-                self.plot(highlight_nodes=[node])
-                plt.pause(1)  # type: ignore[attr-defined]
+                #                plt.ioff()  # type: ignore[attr-defined]
+                #                self.plot(highlight_nodes=[node])
+                #                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Could not determine loop end node for loop: " + node.get_label())
 
             # search general loop nodes
@@ -1366,9 +1416,10 @@ class TaskGraph(Plottable, object):
                 try:
                     shortest_iteration_path = nx.shortest_path(self.graph, source=it_start, target=it_end)
                 except nx.NetworkXNoPath:
-                    plt.ioff()  # type: ignore[attr-defined]
-                    self.plot(highlight_nodes=[it_start, it_end])
-                    plt.pause(1)  # type: ignore[attr-defined]
+                    #                    plt.ioff()  # type: ignore[attr-defined]
+                    #                    self.plot(highlight_nodes=[it_start, it_end])
+                    #                    plt.pause(1)  # type: ignore[attr-defined]
+                    warnings.warn("Got nx.NetworkXNoPath exception.")
 
                 for path_node in shortest_iteration_path:
                     tmp_iteration_nodes.add(path_node)
@@ -1398,7 +1449,11 @@ class TaskGraph(Plottable, object):
             # create iteration contexts
             for pair in pair_iteration_nodes:
                 if pair[0].loopstate_iteration_ids is None:
-                    raise ValueError("TGStartIterationNode: loopstate iteration ids not set. Node: ", pair[0])
+                    warnings.warn(
+                        "Applied fix: set previously unspecified loopstate iteration id of " + str(pair[0]) + "to [0]."
+                    )
+                    pair[0].loopstate_iteration_ids = [0]
+                    # raise ValueError("TGStartIterationNode: loopstate iteration ids not set. Node: ", pair[0])
                 iteration_context = IterationContext(loop_context, pair[0].loopstate_iteration_ids)
                 pair[0].register_created_context(iteration_context)
                 #                for iteration_node in pair_iteration_nodes[pair]:
@@ -1409,7 +1464,7 @@ class TaskGraph(Plottable, object):
     def __assign_work_contexts(self) -> None:
         logger.info("Assigning work contexts to nodes...")
 
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if not isinstance(node, TGStartWorkNode):
                 continue
             # create a new work context
@@ -1420,27 +1475,27 @@ class TaskGraph(Plottable, object):
     def __assign_inlined_function_contexts(self) -> None:
         logger.info("Assigning inlined function contexts to nodes...")
 
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if not isinstance(node, TGStartInlinedFunctionNode):
                 continue
             # create a new inlined function context
-            inlined_function_context = InlinedFunctionContext()
+            inlined_function_context = InlinedFunctionContext(call_instruction_id=node.call_instruction_id)
             node.register_created_context(inlined_function_context)
             self.contexts.append(inlined_function_context)
 
     def __assign_parent_contexts_to_nodes(self) -> None:
         # assigns each node the innermost context containing the node
         logger.info("Assigning parent contexts to nodes...")
-        #        for ctx in tqdm(self.contexts):
+        #        for ctx in progress(self.contexts):
         #            for node in ctx.get_contained_nodes(inclusive=False):
         #                node.add_parent_context(ctx)
         logger.info("--> classify entry points...")
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if len(self.get_predecessors(node)) == 0:
                 entry_points.append(node)
         logger.info("DFS parsing entry points...")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
             queue: List[Tuple[TGNode, Optional[Context]]] = []
             root_context = Context()
             # skip root node when initializing the queue
@@ -1516,16 +1571,16 @@ class TaskGraph(Plottable, object):
         logger.info("Assigning Loop state positions within functions...")
 
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if isinstance(node, TGFunctionNode):
                 entry_points.append(node)
         logger.info("--> Assigning loop state ids")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
             # loop state position corresponds to the position of the iteration count for the specific loop within the "_loopstate"-information in the callpaths reported by the profiler
             # find all loops in function, sort them by location, and assign loopstate_positions.
             function_nodes = self.get_descendants(entry_point)
             loops = [n for n in function_nodes if isinstance(n, TGStartLoopNode)]
-            loops_pet_nodes = list(set([n.get_pet_node(self.pet) for n in loops]))
+            loops_pet_nodes = list(dict.fromkeys([n.get_pet_node(self.pet) for n in loops]))
             cleaned_loops_pet_nodes = [lpn for lpn in loops_pet_nodes if lpn is not None]
             sorted_loops_pet_nodes = sorted(cleaned_loops_pet_nodes, key=lambda x: x.start_line)
             # assign loopstate_positions to PET node ids
@@ -1546,22 +1601,27 @@ class TaskGraph(Plottable, object):
         logger.info("Assigning context successions...")
         logger.info("--> classify entry points...")
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
-            if len(self.get_predecessors(node)) == 0:
+        for node in progress(self.graph.nodes):
+            if self.graph.in_degree(node) == 0:
                 entry_points.append(node)
 
         logger.info("--> DFS parsing entry points...")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
             # initialize succession calculation
-            queue: List[Tuple[TGNode, int, Tuple[Optional[Context], ...]]] = [
-                (entry_point, 0, (None,))
-            ]  # each position in the list corresponds to one level. Last position is always the last level
+            # per path: the context that most recently ended at the current level - the one a
+            # context entered next has to be registered behind - and the stack of the contexts the
+            # path is currently inside, which is what makes that context available again once the
+            # level is left. See ContextStack.
+            queue: Deque[Tuple[TGNode, int, Optional[Context], Optional[ContextStack]]] = deque(
+                [(entry_point, 0, None, None)]
+            )
             already_enqueued: Set[Tuple[TGNode, int]] = set()
             while len(queue) > 0:
-                current_node, current_level, current_predecessor_contexts_tuple = queue.pop(0)
-                if len(current_predecessor_contexts_tuple) == 0:
+                current_node, current_level, preceding_context, open_contexts = queue.popleft()
+                if current_level < 0:
+                    # this path left more contexts than it entered, so there is no level left to
+                    # register successors at
                     continue
-                current_predecessor_contexts = list(current_predecessor_contexts_tuple)
                 # check for entering new context level
                 entered_context: Optional[Context] = None
                 if (
@@ -1576,13 +1636,13 @@ class TaskGraph(Plottable, object):
                     entered_context = current_node.created_context
                 if entered_context is not None:
                     # connect previous context to entered context as successor
-                    if current_predecessor_contexts[-1] is not None:
-                        current_predecessor_contexts[-1].register_successor_context(entered_context)
-                    # update the dictionary of contexts
-                    current_predecessor_contexts[-1] = entered_context
+                    if preceding_context is not None:
+                        preceding_context.register_successor_context(entered_context)
+                    # the body of the entered context is a new level, in which nothing has ended yet
+                    open_contexts = ContextStack(entered_context, open_contexts)
+                    preceding_context = None
                     # update current context level
                     current_level += 1
-                    current_predecessor_contexts.append(None)
 
                 # check for exiting context level
                 exited_context: bool = False
@@ -1599,15 +1659,17 @@ class TaskGraph(Plottable, object):
                 if exited_context:
                     # update current context level
                     current_level -= 1
-                    current_predecessor_contexts = current_predecessor_contexts[:-1]
+                    if open_contexts is not None:
+                        # back at the level the left context was entered at, where it is now the
+                        # context that most recently ended
+                        preceding_context = open_contexts.innermost
+                        open_contexts = open_contexts.enclosing
 
                 # add successors to the queue
-                for succ in self.get_successors(current_node):
-                    # note: the insertion of the tuple (current_predecessor_contexts) into the queue is a quite severe bottleneck.
-                    queue_element = (succ, current_level, tuple(current_predecessor_contexts))
-                    if (queue_element[0], queue_element[1]) not in already_enqueued:
-                        queue.append(queue_element)
-                        already_enqueued.add((queue_element[0], queue_element[1]))
+                for succ in self.graph.successors(current_node):
+                    if (succ, current_level) not in already_enqueued:
+                        queue.append((succ, current_level, preceding_context, open_contexts))
+                        already_enqueued.add((succ, current_level))
 
     ## DEBUG
     #       plt.ioff()
@@ -1615,22 +1677,187 @@ class TaskGraph(Plottable, object):
     #       plt.pause(1)
     ## !DEBUG
 
+    def __collect_all_contexts(self) -> List[Context]:
+        """Returns every context reachable from self.contexts via any of the four relations, in a
+        deterministic order. self.contexts only holds the contexts the __assign_*_contexts passes
+        created themselves, so it is not necessarily complete."""
+        collected: Set[Context] = set()
+        queue: List[Context] = list(self.contexts)
+        collected.update(queue)
+        while len(queue) > 0:
+            current = queue.pop()
+            related: List[Optional[Context]] = [current.parent_context, current.successor, current.predecessor]
+            related += list(current.contained_contexts)
+            for ctx in related:
+                if ctx is not None and ctx not in collected:
+                    collected.add(ctx)
+                    queue.append(ctx)
+        return sorted(collected, key=lambda ctx: ctx.creation_index)
+
+    def __describe_context(self, context: Context) -> str:
+        """Identifies a context in a log message by its type and the source lines it covers."""
+        scope = context.get_code_scope(self.pet)
+        location = (scope[0] + ".." + scope[-1]) if len(scope) > 0 else "no source lines"
+        return type(context).__name__ + " (" + location + ")"
+
+    def __validate_context_structure(self) -> None:
+        """Checks the structural invariants of the Context relations that __calculate_context_nesting
+        and __calculate_context_successions build, and breaks cycles found in them.
+
+        Every traversal of these relations - in Context itself, in the pattern detectors, and in
+        ContextTaskGraph - assumes that containment forms a forest and that the successor chain is
+        acyclic. None of the passes building them enforces that: they set parent_context /
+        successor unconditionally, so the last write wins, and a node reached twice at the same
+        nesting level via different paths can be linked into two different sequences. A cycle
+        introduced that way is invisible until some traversal diverges, which surfaces as a
+        RecursionError or a hang far away from its cause.
+
+        Cycles are broken here (rather than raised) because a well-formed structure is what the
+        rest of the pipeline needs, and because the results for the unaffected parts of the program
+        stay valid. They are logged as errors, since they always indicate a defect in one of the
+        passes above. Inconsistencies that cannot be repaired unambiguously - a containment or
+        succession link that is only recorded on one of its two ends - are only counted and
+        reported."""
+        contexts = self.__collect_all_contexts()
+
+        broken_containment_edges = self.__break_containment_cycles(contexts)
+        broken_succession_links = self.__break_succession_cycles(contexts)
+        self.__report_context_relation_inconsistencies(contexts)
+
+        if broken_containment_edges > 0 or broken_succession_links > 0:
+            logger.error(
+                "Broke %d cyclic containment edge(s) and %d cyclic succession link(s) in the "
+                "context structure. This indicates a defect in __calculate_context_nesting / "
+                "__calculate_context_successions; results depending on the affected contexts "
+                "are unreliable.",
+                broken_containment_edges,
+                broken_succession_links,
+            )
+
+    def __break_containment_cycles(self, contexts: List[Context]) -> int:
+        """Detects cycles in the contained_contexts relation with an iterative depth-first search
+        and removes the edge closing each of them. Returns the number of removed edges."""
+        ON_STACK, FINISHED = 1, 2
+        state: Dict[Context, int] = dict()
+        removed = 0
+        for root in progress(contexts, desc="Breaking containment cycles"):
+            if root in state:
+                continue
+            state[root] = ON_STACK
+            # (context, its not yet visited children); children are popped from the back
+            stack: List[Tuple[Context, List[Context]]] = [(root, self.__sorted_contexts(root.contained_contexts))]
+            while len(stack) > 0:
+                current, remaining_children = stack[-1]
+                if len(remaining_children) == 0:
+                    state[current] = FINISHED
+                    stack.pop()
+                    continue
+                child = remaining_children.pop()
+                child_state = state.get(child, 0)
+                if child_state == ON_STACK:
+                    # back edge: child is an ancestor of current on the current search path
+                    logger.error(
+                        "Context %s contains %s, which is one of its own ancestors. Removing the "
+                        "containment edge to keep the containment relation acyclic.",
+                        self.__describe_context(current),
+                        self.__describe_context(child),
+                    )
+                    current.contained_contexts.discard(child)
+                    if child.parent_context is current:
+                        child.parent_context = None
+                    removed += 1
+                elif child_state == 0:
+                    state[child] = ON_STACK
+                    stack.append((child, self.__sorted_contexts(child.contained_contexts)))
+                # FINISHED children are reached via a second, non-cyclic path - harmless here
+        return removed
+
+    def __break_succession_cycles(self, contexts: List[Context]) -> int:
+        """Detects cycles in the successor relation and clears the link closing each of them.
+        Every context has at most one successor, so following the chain from each context and
+        colouring the contexts on it visits every context once. Returns the number of cleared
+        links."""
+        ON_PATH, FINISHED = 1, 2
+        state: Dict[Context, int] = dict()
+        cleared = 0
+        for context in progress(contexts, desc="Breaking succession cycles"):
+            if context in state:
+                continue
+            path: List[Context] = []
+            current: Optional[Context] = context
+            while current is not None and current not in state:
+                state[current] = ON_PATH
+                path.append(current)
+                current = current.successor
+            if current is not None and state[current] == ON_PATH:
+                # the chain ran back into a context of the path just walked
+                closing_context = path[-1]
+                logger.error(
+                    "The successor chain starting at %s runs back into %s. Clearing the closing "
+                    "link to keep the successor relation acyclic.",
+                    self.__describe_context(closing_context),
+                    self.__describe_context(current),
+                )
+                closing_context.successor = None
+                if current.predecessor is closing_context:
+                    current.predecessor = None
+                cleared += 1
+            for path_context in path:
+                state[path_context] = FINISHED
+        return cleared
+
+    def __report_context_relation_inconsistencies(self, contexts: List[Context]) -> None:
+        """Reports containment and succession links that are only recorded on one of their two
+        ends. These are not repaired: which of the two ends is the correct one is not decidable
+        here."""
+        one_sided_containment = 0
+        one_sided_succession = 0
+        for context in progress(contexts, desc="Checking context relation consistency"):
+            for child in context.contained_contexts:
+                if child.parent_context is not context:
+                    one_sided_containment += 1
+            if context.parent_context is not None and context not in context.parent_context.contained_contexts:
+                one_sided_containment += 1
+            if context.successor is not None and context.successor.predecessor is not context:
+                one_sided_succession += 1
+            if context.predecessor is not None and context.predecessor.successor is not context:
+                one_sided_succession += 1
+        if one_sided_containment > 0 or one_sided_succession > 0:
+            logger.warning(
+                "Context structure contains %d one-sided containment and %d one-sided succession "
+                "link(s) out of %d contexts. Traversals starting from either end of such a link "
+                "see different structures.",
+                one_sided_containment,
+                one_sided_succession,
+                len(contexts),
+            )
+
+    @staticmethod
+    def __sorted_contexts(contexts: Set[Context]) -> List[Context]:
+        """contained_contexts is a set, so it has to be ordered explicitly wherever the result
+        depends on the iteration order."""
+        return sorted(contexts, key=lambda ctx: ctx.creation_index)
+
     def __determine_loop_variables(self) -> None:
         """determine loop variables."""
         logger.info("Determine loop variables...")
         logger.info("--> classify entry points...")
         entry_points: List[LoopParentContext] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if type(node.created_context) == LoopParentContext:
                 entry_points.append(node.created_context)
         logger.info("--> determine loop variables...")
-        for loop_ctx in tqdm(entry_points):
+        for loop_ctx in progress(entry_points):
             loop_header_ctx = self.get_loop_header_context(loop_ctx)
+            #            print("LOOP HEADER CTX:", loop_header_ctx)
             if loop_header_ctx is None:
                 continue
             # identify loop variables by checking for RAW dependencies between loop body and loop header
             loop_iteration_ctxs = loop_ctx.get_contained_contexts(inclusive=True)
             loop_vars: List[Tuple[str, MemoryRegion]] = []
+            #            print("LOOP IT CTXS: ", loop_iteration_ctxs)
+            #            print("LOOP HEADER OUTDEPS: ", loop_header_ctx.outgoing_dependencies)
+            #            print("LOOP HEADER INDEPS: ", loop_header_ctx.incoming_dependencies)
             for target_ctx, dep in loop_header_ctx.outgoing_dependencies:
                 if dep is None or dep.etype != EdgeType.DATA:
                     continue
@@ -1639,11 +1866,22 @@ class TaskGraph(Plottable, object):
                     continue
                 if dep.var_name is None or dep.memory_region is None:
                     continue
-
                 if target_ctx in loop_iteration_ctxs:
                     loop_vars.append((dep.var_name, dep.memory_region))
+
+            for source_ctx, dep in loop_header_ctx.incoming_dependencies:
+                if dep is None or dep.etype != EdgeType.DATA:
+                    continue
+                # only consider RAW dependencies
+                if dep.dtype != DepType.RAW:
+                    continue
+                if dep.var_name is None or dep.memory_region is None:
+                    continue
+                if source_ctx in loop_iteration_ctxs:
+                    loop_vars.append((dep.var_name, dep.memory_region))
+
             # remove duplicates
-            loop_vars = list(set(loop_vars))
+            loop_vars = list(dict.fromkeys(loop_vars))
             # save loop variables
             loop_ctx.loop_variables = loop_vars
 
@@ -1652,11 +1890,11 @@ class TaskGraph(Plottable, object):
         logger.info("Cleaning loop dependencies...")
         logger.info("--> classify entry points...")
         entry_points: List[LoopParentContext] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if type(node.created_context) == LoopParentContext:
                 entry_points.append(node.created_context)
         logger.info("--> cleaning loop dependencies")
-        for loop_ctx in tqdm(entry_points):
+        for loop_ctx in progress(entry_points):
             # get contexts by iterations
             iteration_ctxs = [
                 c for c in loop_ctx.get_contained_contexts(inclusive=False) if type(c) == IterationContext
@@ -1693,12 +1931,12 @@ class TaskGraph(Plottable, object):
         logger.info("--> classify entry points...")
 
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if len(self.get_predecessors(node)) == 0:
                 entry_points.append(node)
 
         logger.info("--> DFS parsing entry points...")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
 
             # initialize the nesting calculation
             queue: List[Tuple[TGNode, Optional[Context]]] = [(entry_point, None)]
@@ -1756,7 +1994,7 @@ class TaskGraph(Plottable, object):
                     else:
                         # empty parent context can happen at the root level of the graph. All other cases are invalid.
                         if current_context.parent_context is None:
-                            print("TYPE: ", type(current_context))
+                            #                            print("TYPE: ", type(current_context))
                             if type(current_context) != Context:
                                 raise ValueError(
                                     "Current.parent_context must not be None, as context must not be None during processing!"
@@ -1794,7 +2032,7 @@ class TaskGraph(Plottable, object):
         call_path_limit = 6
         call_path_depth = 0
         modification_found = True
-        with tqdm(total=call_path_limit, desc="Callpath depth") as progress_bar:
+        with progress(total=call_path_limit, desc="Callpath depth") as progress_bar:
             while modification_found:
                 call_path_depth += 1
                 if call_path_depth >= call_path_limit:
@@ -1820,15 +2058,18 @@ class TaskGraph(Plottable, object):
                     if not already_inlined:
                         filtered_calling_nodes.append(cn)
 
-                for fcn in tqdm(filtered_calling_nodes, desc="Open calls"):
+                for fcn in progress(filtered_calling_nodes, desc="Open calls"):
                     if fcn.pet_node_id is None:
                         continue
                     # duplicate inlined function body and insert it after the caller
-                    called_functions_pet_nodes = get_called_nodes(self.pet, self.pet.node_at(fcn.pet_node_id))
-                    for cf_pet_node in called_functions_pet_nodes:
-                        function_entry = self.TGFunctionNode_pet_node_id_to_tg_node[cf_pet_node.id]
-                        #                        logger.info("--> function entry: " + function_entry.get_label())
-                        inlined_entry, inlined_exit = self.__duplicate_inlined_function(function_entry, fcn.pet_node_id)
+                    caller = self.pet.node_at(fcn.pet_node_id)
+                    called_functions_pet_node_ids = get_called_node_ids(self.pet, caller)
+                    for cf_pet_node_id in called_functions_pet_node_ids:
+                        call_instruction_id = get_call_instruction_id(caller, self.pet.node_at(cf_pet_node_id))
+                        function_entry = self.TGFunctionNode_pet_node_id_to_tg_node[cf_pet_node_id]
+                        inlined_entry, inlined_exit = self.__duplicate_inlined_function(
+                            function_entry, fcn.pet_node_id, call_instruction_id
+                        )
                         # connect edges
                         for succ in self.get_successors(fcn):
                             self.graph.remove_edge(fcn, succ)
@@ -1840,82 +2081,271 @@ class TaskGraph(Plottable, object):
 
                 self.print_graph_statistics(self.graph, "post inlining")
 
-    def __add_branching_nodes(self) -> None:
-        logger.info("Adding branching nodes...")
-        # select branch parent nodes
-        branch_parent_nodes = [n for n in self.graph.nodes if len(self.get_successors(n)) > 1]
-        # select merge nodes
-        merge_nodes = [n for n in self.graph.nodes if len(self.get_predecessors(n)) > 1]
-        # add StartBranchParent nodes
+    def __add_branching_nodes_for_function(self, function_node: TGNode) -> None:
+        """Wraps every branch point (a node with more than one successor) together with its
+        immediate post-dominator (the unique point where all of its arms are guaranteed to
+        reconverge) in Start/EndBranchParent + per-arm Start/EndBranch markers.
+
+        Using dominance/post-dominance instead of a purely local in/out-degree heuristic
+        guarantees the inserted regions are properly nested (single-entry/single-exit). This
+        matters because later context assignment relies on a simple stack-based enter/exit
+        walk, which only produces a single, consistent enclosing context per node if the
+        regions it walks are properly nested - a purely local degree-based heuristic can
+        instead wrap unrelated, non-nested merge points (e.g. a loop's own exit converging
+        with an internal break) into the same marker, which silently corrupts context
+        assignment depending on graph traversal order.
+        """
+        scope: Set[TGNode] = set(self.get_descendants(function_node))
+        scope.add(function_node)
+
+        def scoped_successors(node: TGNode) -> List[TGNode]:
+            return [s for s in self.get_successors(node) if s in scope]
+
+        # forward dominator tree
+        dom_graph = nx.MultiDiGraph()
+        dom_graph.add_nodes_from(scope)
+        for node in scope:
+            for succ in scoped_successors(node):
+                dom_graph.add_edge(node, succ)
+        idom = nx.immediate_dominators(dom_graph, function_node)
+
+        # immediate post-dominator tree: reverse the graph and merge all sinks into one
+        # virtual exit, so post-dominance reduces to ordinary dominance from that exit
+        sinks = [node for node in scope if len(scoped_successors(node)) == 0]
+        pdom_graph = dom_graph.reverse(copy=True)
+        virtual_exit = object()
+        pdom_graph.add_node(virtual_exit)
+        for sink in sinks:
+            pdom_graph.add_edge(virtual_exit, sink)
+        ipdom = nx.immediate_dominators(pdom_graph, virtual_exit)
+
+        region_owner: Dict[TGNode, TGNode] = {}
+
+        def dom_depth(node: TGNode) -> int:
+            depth = 0
+            current = node
+            while current in idom and idom[current] != current:
+                current = idom[current]
+                depth += 1
+            return depth
+
+        def dominates(ancestor: TGNode, node: TGNode) -> bool:
+            # resolve synthetic wrapper nodes to the branch point they were created for, so
+            # nesting composes correctly regardless of the order regions are processed in
+            current = node
+            while current in region_owner:
+                current = region_owner[current]
+            if current == ancestor:
+                return True
+            while current in idom and idom[current] != current:
+                current = idom[current]
+                if current == ancestor:
+                    return True
+            return False
+
+        # process innermost (deepest) branch points first, so that by the time an
+        # enclosing branch point is handled, anything it contains has already been wrapped
+        branch_points = [node for node in scope if len(scoped_successors(node)) > 1]
+        branch_points.sort(key=dom_depth, reverse=True)
+
+        for n in branch_points:
+            m = ipdom.get(n)
+            if m is None or m is virtual_exit:
+                # every arm of this branch reaches the function's end without reconverging
+                # first - there is no internal merge point to close here
+                continue
+
+            # m can be a convergence point shared with another, non-nested branch (e.g. an
+            # independent early exit that happens to reconverge at the same place). Check
+            # up front whether n actually owns any of m's current predecessors: if none are
+            # dominated by n, wrapping here would create an EndBranchParent with zero
+            # predecessors - an orphaned node with no way to ever be entered, which later
+            # crashes context nesting since it looks like a valid entry point starting
+            # mid-context. Leave n entirely unwrapped in that case and let
+            # __add_branching_nodes_fallback_cleanup, which is designed for exactly this
+            # situation, wrap it unconditionally instead.
+            claimed_preds = [pred for pred in self.get_predecessors(m) if dominates(n, pred)]
+            if len(claimed_preds) == 0:
+                continue
+
+            start_branch_parent_node = TGStartBranchParentNode(n.pet_node_id, level=n.level, position=n.position)
+            self.add_node(start_branch_parent_node)
+            region_owner[start_branch_parent_node] = n
+            for succ in list(self.get_successors(n)):
+                self.graph.remove_edge(n, succ)
+                self.add_edge(start_branch_parent_node, succ)
+            self.add_edge(n, start_branch_parent_node)
+
+            end_branch_parent_node = TGEndBranchParentNode(m.pet_node_id, level=m.level, position=m.position)
+            self.add_node(end_branch_parent_node)
+            region_owner[end_branch_parent_node] = n
+            for pred in claimed_preds:
+                # n trivially dominates itself, so n can be one of its own arms feeding
+                # directly into m (e.g. an "if" with no "else"). claimed_preds was snapshotted
+                # before the successor-rewiring loop above, which unconditionally retargets all
+                # of n's own outgoing edges (including a direct n->m arm) to
+                # start_branch_parent_node - so by now that's the live stand-in for n's own
+                # contribution, not n itself. Removing (n, m) again would raise NetworkXError
+                # (the edge is already gone) and abort this function's wrapping partway
+                # through, leaving end_branch_parent_node behind with whatever predecessors
+                # happened to be wired before the abort - possibly zero.
+                actual_pred = start_branch_parent_node if pred == n else pred
+                if not self.graph.has_edge(actual_pred, m):
+                    continue
+                self.graph.remove_edge(actual_pred, m)
+                self.add_edge(actual_pred, end_branch_parent_node)
+            self.add_edge(end_branch_parent_node, m)
+
+            for succ in list(self.get_successors(start_branch_parent_node)):
+                start_branch_node = TGStartBranchNode(
+                    start_branch_parent_node.pet_node_id,
+                    level=start_branch_parent_node.level,
+                    position=start_branch_parent_node.position,
+                )
+                self.add_node(start_branch_node)
+                region_owner[start_branch_node] = n
+                self.graph.remove_edge(start_branch_parent_node, succ)
+                self.add_edge(start_branch_parent_node, start_branch_node)
+                self.add_edge(start_branch_node, succ)
+
+            for pred in list(self.get_predecessors(end_branch_parent_node)):
+                end_branch_node = TGEndBranchNode(
+                    end_branch_parent_node.pet_node_id,
+                    level=end_branch_parent_node.level,
+                    position=end_branch_parent_node.position,
+                )
+                self.add_node(end_branch_node)
+                region_owner[end_branch_node] = n
+                self.graph.remove_edge(pred, end_branch_parent_node)
+                self.add_edge(pred, end_branch_node)
+                self.add_edge(end_branch_node, end_branch_parent_node)
+
+    def __add_branching_nodes_fallback_cleanup(self) -> None:
+        """Safety net for cases the dominance-based pass above cannot resolve on its own -
+        chiefly, two independent (non-nested) branch points that happen to share the same
+        merge point. That pass only lets a branch point claim predecessors of its merge that
+        it actually dominates, so such siblings each keep their own EndBranchParent feeding
+        directly into the shared merge node, and a function where dominance computation
+        itself failed (see the try/except in __add_branching_nodes) is left entirely
+        unwrapped. Wrap any residual multi-successor/multi-predecessor node the same way
+        __add_branching_nodes used to unconditionally, so the graph-structure invariant
+        checked right after this call always holds.
+        """
+        remaining_branch_parent_nodes = [
+            n
+            for n in self.graph.nodes
+            if len(self.get_successors(n)) > 1 and not isinstance(n, TGStartBranchParentNode)
+        ]
+        remaining_merge_nodes = [
+            n
+            for n in self.graph.nodes
+            if len(self.get_predecessors(n)) > 1 and not isinstance(n, TGEndBranchParentNode)
+        ]
+        if len(remaining_branch_parent_nodes) == 0 and len(remaining_merge_nodes) == 0:
+            return
+        logger.warning(
+            "Dominance-based branching node insertion left "
+            + str(len(remaining_branch_parent_nodes))
+            + " unwrapped branch point(s) and "
+            + str(len(remaining_merge_nodes))
+            + " unwrapped merge point(s) (independent/non-nested control flow, or a function "
+            + "dominance computation failed on). Falling back to unconditional wrapping for "
+            + "these; results in this region may retain some run-to-run ordering variance."
+        )
+
         start_branch_parent_nodes: List[TGNode] = []
-        for bpn in branch_parent_nodes:
+        for bpn in remaining_branch_parent_nodes:
             start_branch_parent_node = TGStartBranchParentNode(bpn.pet_node_id, level=bpn.level, position=bpn.position)
             start_branch_parent_nodes.append(start_branch_parent_node)
             self.add_node(start_branch_parent_node)
-            for succ in self.get_successors(bpn):
+            for succ in list(self.get_successors(bpn)):
                 self.graph.remove_edge(bpn, succ)
                 self.add_edge(start_branch_parent_node, succ)
             self.add_edge(bpn, start_branch_parent_node)
 
-        # add EndBranchParent nodes
         end_branch_parent_nodes: List[TGNode] = []
-        for mn in merge_nodes:
+        for mn in remaining_merge_nodes:
             end_branch_parent_node = TGEndBranchParentNode(mn.pet_node_id, level=mn.level, position=mn.position)
             end_branch_parent_nodes.append(end_branch_parent_node)
             self.add_node(end_branch_parent_node)
-            for pred in self.get_predecessors(mn):
+            for pred in list(self.get_predecessors(mn)):
                 self.graph.remove_edge(pred, mn)
                 self.add_edge(pred, end_branch_parent_node)
             self.add_edge(end_branch_parent_node, mn)
 
-        # add StartBranch nodes
         for sbpn in start_branch_parent_nodes:
-            for succ in self.get_successors(sbpn):
+            for succ in list(self.get_successors(sbpn)):
                 start_branch_node = TGStartBranchNode(sbpn.pet_node_id, level=sbpn.level, position=sbpn.position)
                 self.add_node(start_branch_node)
                 self.graph.remove_edge(sbpn, succ)
                 self.add_edge(sbpn, start_branch_node)
                 self.add_edge(start_branch_node, succ)
 
-        # add EndBranch nodes
         for ebpn in end_branch_parent_nodes:
-            for pred in self.get_predecessors(ebpn):
+            for pred in list(self.get_predecessors(ebpn)):
                 end_branch_node = TGEndBranchNode(ebpn.pet_node_id, level=ebpn.level, position=ebpn.position)
                 self.add_node(end_branch_node)
                 self.graph.remove_edge(pred, ebpn)
                 self.add_edge(pred, end_branch_node)
                 self.add_edge(end_branch_node, ebpn)
 
-        logger.info("--> validating amounts of node successors and predecessors...")
-        for node in tqdm(self.graph.nodes):
+    def __add_branching_nodes(self) -> None:
+        for function_node in progress(
+            list(self.TGFunctionNode_pet_node_id_to_tg_node.values()), desc="Adding branching nodes per function"
+        ):
+            try:
+                self.__add_branching_nodes_for_function(function_node)
+            except nx.NetworkXError as e:
+                logger.warning(
+                    "Dominance-based branching node insertion failed for function "
+                    + function_node.get_label()
+                    + " ("
+                    + str(e)
+                    + "). Falling back to unconditional wrapping for its remaining branch/merge points."
+                )
+        self.__add_branching_nodes_fallback_cleanup()
+
+        for node in progress(self.graph.nodes, desc="Validating node successors/predecessors"):
             succ_count = len(self.get_successors(node))
             pred_count = len(self.get_predecessors(node))
+            if isinstance(node, TGEndBranchParentNode) and pred_count == 0:
+                logger.error("Invalid graph structure: " + str(type(node)) + " has no predecessors!")
+                #                plt.ioff()  # type: ignore[attr-defined]
+                #                self.plot(highlight_nodes=[node])
+                #                plt.pause(1)  # type: ignore[attr-defined]
+                raise ValueError("Invalid graph structure!")
+            if isinstance(node, TGStartBranchParentNode) and succ_count == 0:
+                logger.error("Invalid graph structure: " + str(type(node)) + " has no successors!")
+                #                plt.ioff()  # type: ignore[attr-defined]
+                #                self.plot(highlight_nodes=[node])
+                #                plt.pause(1)  # type: ignore[attr-defined]
+                raise ValueError("Invalid graph structure!")
             if succ_count < 2 and pred_count < 2:
                 continue
             if (succ_count >= 2) and (not isinstance(node, TGStartBranchParentNode)):
                 logger.error("Invalid node type: " + str(type(node)) + " with " + str(succ_count) + " successors!")
-                plt.ioff()  # type: ignore[attr-defined]
-                self.plot(highlight_nodes=[node])
-                plt.pause(1)  # type: ignore[attr-defined]
+                #                plt.ioff()  # type: ignore[attr-defined]
+                #                self.plot(highlight_nodes=[node])
+                #                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Invalid graph structure!")
             if (pred_count >= 2) and (not isinstance(node, TGEndBranchParentNode)):
                 logger.error("Invalid node type: " + str(type(node)) + " with " + str(pred_count) + " predecessors!")
-                plt.ioff()  # type: ignore[attr-defined]
-                self.plot(highlight_nodes=[node])
-                plt.pause(1)  # type: ignore[attr-defined]
+                #                plt.ioff()  # type: ignore[attr-defined]
+                #                self.plot(highlight_nodes=[node])
+                #                plt.pause(1)  # type: ignore[attr-defined]
                 raise ValueError("Invalid graph structure!")
 
     def __add_work_nodes(self) -> None:
         logger.info("Adding work nodes...")
         work_nodes: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if type(node) == TGNode:
                 work_nodes.append(node)
 
         logger.info("--> classify context entry nodes")
         visited: Set[TGNode] = set()
         context_entry_nodes: Set[TGNode] = set()
-        for node in tqdm(work_nodes):
+        for node in progress(work_nodes):
             if node in visited:
                 continue
 
@@ -1944,7 +2374,7 @@ class TaskGraph(Plottable, object):
             context_entry_nodes.add(node)
 
         logger.info("--> inserting work start and end nodes...")
-        for node in tqdm(context_entry_nodes):
+        for node in progress(context_entry_nodes):
             # adding work start node
             start_work_node = TGStartWorkNode(node.pet_node_id, node.level, node.position)
             self.add_node(start_work_node)
@@ -1975,11 +2405,11 @@ class TaskGraph(Plottable, object):
                 self.add_edge(end_work_node, succ)
 
     def __duplicate_inlined_function(
-        self, inlined_function: TGFunctionNode, inlining_pet_node_id: PETNodeID
+        self, inlined_function: TGFunctionNode, inlining_pet_node_id: PETNodeID, call_instruction_id: Optional[int]
     ) -> Tuple[TGStartInlinedFunctionNode, TGEndInlinedFunctionNode]:
 
         # initialize entry and exit nodes
-        entry = TGStartInlinedFunctionNode(inlining_pet_node_id, 0, 0)
+        entry = TGStartInlinedFunctionNode(inlining_pet_node_id, 0, 0, call_instruction_id)
         exit = TGEndInlinedFunctionNode(inlining_pet_node_id, 0, 0)
         self.add_node(entry)
         self.add_node(exit)
@@ -2008,7 +2438,7 @@ class TaskGraph(Plottable, object):
         logger.info("Inserting pessimistic data dependencies (between all suitable nodes)...")
 
         # iterate over all edges in PET Graph
-        for source, target, dependency_dict in tqdm(self.pet.g.edges(data=True)):
+        for source, target, dependency_dict in progress(self.pet.g.edges(data=True)):
             dependency = cast(Dependency, dependency_dict["data"])
             # only consider DATA edges
             if dependency.etype != EdgeType.DATA:
@@ -2046,7 +2476,7 @@ class TaskGraph(Plottable, object):
         logger.info("Inserting data dependencies...")
 
         # iterate over all edges in PET Graph
-        for source, target, dependency_dict in tqdm(self.pet.g.edges(data=True)):
+        for source, target, dependency_dict in progress(self.pet.g.edges(data=True)):
             dependency = cast(Dependency, dependency_dict["data"])
             # only consider DATA edges
             if dependency.etype != EdgeType.DATA:
@@ -2101,6 +2531,11 @@ class TaskGraph(Plottable, object):
                     line = line.strip()
                     if line.startswith("#") or len(line) == 0:
                         continue
+                    if self.ignore_dependency_states:
+                        # Drop the callpath state markers before any of them is interpreted below.
+                        # Every source/sink then reads as NO_STATE, which also reclassifies the
+                        # affected dependencies from DYN_* to STAT_*.
+                        line = STATE_MARKER_PATTERN.sub("", line)
                     # split and sanitize line
                     line_split = [elem for elem in line.split(" ") if len(elem) > 0]
 
@@ -2407,19 +2842,482 @@ class TaskGraph(Plottable, object):
                     del dependencies[dep_type]
         return dependencies
 
+    def __get_state_mappings_from_file(self, dynamic_dependency_file: str) -> Dict[str, List[str]]:
+        """Returns a dictionary mapping state ids to callpaths. Contained elements are filtered to only include these states which are used in dynamic_dependency_file."""
+        warnings.warn(
+            "TODO: stateID to callpath mapping might get really big. Implement this more scalable / resilient."
+        )
+        # collect used state ids from dynamic_dependency_file
+        deps = self.__read_dependencies_from_files(dynamic_dependency_file, None)
+        used_state_ids: Set[str] = set()
+        for dep_type, dep_type_deps in deps.items():
+            for source_location, source_location_deps in dep_type_deps.items():
+                for source_state_id, source_state_deps in source_location_deps.items():
+                    for sink_location, sink_location_deps in source_state_deps.items():
+                        for sink_state_id, var_infos in sink_location_deps.items():
+                            used_state_ids.add(sink_state_id)
+        # print("SEEN_STATE_IDS: ", used_state_ids)
+        # delete deps to free memory
+        del deps
+
+        # create state_mappings_dict
+        state_mappings_dict: Dict[str, List[str]] = dict()  # {stateID: callpath}
+        state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
+        if os.path.exists(state_mappings_file):
+            with open(state_mappings_file, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("#") or len(line) == 0:
+                        continue
+                    line_split = [elem for elem in line.split(" ") if len(elem) > 0]
+                    if len(line_split) < 2:
+                        continue
+                    state_id = line_split[0]
+                    # filter state_id for seen state ids
+                    if state_id not in used_state_ids:
+                        continue
+                    raw_callpath = line_split[1]
+                    if "-->" in raw_callpath:
+                        callpath = raw_callpath.split("-->")
+                    else:
+                        callpath = [raw_callpath]
+                    state_mappings_dict[state_id] = callpath
+        return state_mappings_dict
+
+    def __assign_state_ids(self, dynamic_dependency_file: Optional[str]) -> None:
+        """attaches state ids to Context nodes."""
+        # read stateID to callpath mapping. States are filtered for observed states in dynamic dependency file to compress map slightly
+        if dynamic_dependency_file is None:
+            raise ValueError("Invalid Path!")
+        state_mappings_dict = self.__get_state_mappings_from_file(dynamic_dependency_file)
+        #        print("state_mappings_dict: ")
+        #        for state_id in state_mappings_dict:
+        #            print("->", state_id, " -> ", state_mappings_dict[state_id])
+
+        def recursive_assignment(
+            state_id: int,
+            callstate: Tuple[str, ...],
+            ctx: Context,
+            memo: Dict[Tuple[int, Tuple[str, ...]], bool],
+        ) -> bool:
+            """assigns state_id to the matching states.
+            Returns True, if state_id was assigned to at least one Context.
+            Returns False otherwise.
+
+            Results are memoized per state_id search on (context identity, incoming callstate).
+            The function is deterministic in that pair, and its only side effect (appending
+            state_id to matching contexts) is fully determined by it, so revisiting a cached pair
+            would merely re-append the identical state_id to the identical contexts. Memoization
+            therefore preserves the exact set of (context -> state_id) assignments while collapsing
+            the otherwise exponential re-traversal of shared subtrees (contexts are reachable both
+            directly via a parent's contained_contexts and via successor chains)."""
+            # memoize on the INCOMING callstate (before any in-function rewriting below), keyed by
+            # context identity. Different callstates reaching the same context are distinct keys.
+            memo_key = (id(ctx), callstate)
+            if memo_key in memo:
+                return memo[memo_key]
+            result = compute_assignment(state_id, callstate, ctx, memo)
+            memo[memo_key] = result
+            return result
+
+        def compute_assignment(
+            state_id: int,
+            callstate: Tuple[str, ...],
+            ctx: Context,
+            memo: Dict[Tuple[int, Tuple[str, ...]], bool],
+        ) -> bool:
+            if len(callstate) == 0:
+                return False
+
+            if isinstance(ctx, FunctionContext):
+                if "_loopstate" in callstate[0]:
+                    # remove leading loopstate entries
+                    callstate = tuple(
+                        v for v in callstate if not ("_loopstate" in v and v.split("_loopstate")[1].isdigit())
+                    )
+
+                if ctx.parent_function is None:
+                    raise ValueError("parent_function is None!")
+
+                if len(callstate) > 0 and self.pet.node_at(ctx.parent_function).name == callstate[0]:
+                    # HIT
+                    callstate = callstate[1:]
+                else:
+                    # MISS
+                    return False
+            elif isinstance(ctx, IterationContext):
+                if "_loopstate" in callstate[0]:
+                    # check for matching loopstate id
+                    # get current loopstate_info
+                    loopstate_info = callstate[0].split("_loopstate")[1]
+                    # check if parent is LoopParentContext. if not, MISS
+                    if not isinstance(ctx.parent_context, LoopParentContext):
+                        return False
+                    # get loopstate_position
+                    parent_loop_ctx = ctx.parent_context
+                    loopstate_position = parent_loop_ctx.loopstate_position
+                    if loopstate_position is None:
+                        raise ValueError("loopstate position is None")
+                    #                    logger.debug("loopstate_info: " + loopstate_info)
+                    #                    logger.debug("loopstate_position: " + str(loopstate_position))
+
+                    if (
+                        loopstate_position + 1 <= len(loopstate_info)
+                        and int(loopstate_info[loopstate_position]) in ctx.loopstate_iteration_ids
+                    ):
+                        # HIT LOOPSTATE
+                        # replace iteration id with processed marker "4"
+                        new_head = (
+                            callstate[0][: callstate[0].index("_loopstate") + len("_loopstate") + loopstate_position]
+                            + "4"
+                            + callstate[0][
+                                callstate[0].index("_loopstate") + 1 + loopstate_position + len("_loopstate") :
+                            ]
+                        )
+                        callstate = (new_head,) + callstate[1:]
+                        # check if search along this path is finished
+                        if (
+                            len(callstate) == 1
+                            and "0" not in callstate[0].split("_loopstate")[1]
+                            and "1" not in callstate[0].split("_loopstate")[1]
+                            and "2" not in callstate[0].split("_loopstate")[1]
+                        ):
+                            # trigger setting of state id
+                            callstate = callstate[1:]
+                    else:
+                        # missed loop state. continue search with successors
+                        pass
+                else:
+                    # MISS (invalid)
+                    return False
+            elif isinstance(ctx, InlinedFunctionContext):
+                if callstate[0].startswith("call_") and callstate[0][5:].isdigit():
+                    # check for matching CallInstruction ID
+                    call_instruction_id = int(callstate[0][5:])
+                    #                    print(
+                    #                        "FOUND InlinedFunctionContext "
+                    #                        + str(ctx)
+                    #                        + " at current callstate: "
+                    #                        + str(callstate)
+                    #                        + " with callInstID: "
+                    #                        + str(ctx.call_instruction_id)
+                    #                    )
+                    if call_instruction_id == ctx.call_instruction_id:
+                        # HIT CALL
+                        callstate = callstate[1:]
+                    else:
+                        # MISS (invalid)
+                        return False
+                else:
+                    # MISS (invalid)
+                    return False
+
+            # set state_id if necessary
+            if len(callstate) == 0:
+                ctx.state_ids.append(state_id)
+                logger.debug("ADD state_id:" + str(state_id) + " to ctx: " + str(ctx))
+                return True
+
+            # continue assignment with children
+            ret_val = False
+            for child in ctx.get_contained_contexts():
+                ret_val = ret_val or recursive_assignment(state_id, callstate, child, memo)
+            # continue assignment with successors
+
+            if ctx.successor is not None:
+
+                ret_val = ret_val or recursive_assignment(state_id, callstate, ctx.successor, memo)
+            return ret_val
+
+        # assign state id to task_graph nodes
+        logger.info("Assigning state ids to nodes...")
+        # entry points are independent of the processed state; compute them once.
+        entry_points: List[Context] = [c for c in self.contexts if isinstance(c, FunctionContext)]
+        for state_id in progress(state_mappings_dict):
+            #            print()
+            #            print("Parsing state_id: ", state_id)
+            #            print("CallState: ", state_mappings_dict[state_id])
+            smd_entry = state_mappings_dict[state_id]
+            # skip callstate ending with call element
+            if (
+                len(state_mappings_dict[state_id]) > 0
+                and smd_entry[-1].startswith("call_")
+                and smd_entry[-1].split("call_")[1].isdigit()
+            ):
+                #                print("skipping due to call at the end.")
+                continue
+            # cleanup callstate (shallow copy suffices: entries are immutable strings)
+            callstate = list(smd_entry)
+            #            # cleanup callstate (remove call_<int> markers)
+            #            to_be_removed: List[int] = []
+            #            for idx in range(0, len(callstate)):
+            #                if callstate[idx].startswith("call_") and callstate[idx].split("call_")[1].isdigit():
+            #                    to_be_removed.append(idx)
+            #            for idx in sorted(to_be_removed, reverse=True):
+            #                del callstate[idx]
+            # cleanup callstate (compress multiple successive loopstates)
+            if len(callstate) > 0:
+                loopstate_indices: List[int] = []
+                for idx in range(0, len(callstate)):
+                    if "_loopstate" in callstate[idx]:
+                        loopstate_indices.append(idx)
+                to_be_removed: List[int] = []
+                for idx, val in enumerate(loopstate_indices):
+                    if idx >= len(loopstate_indices) - 1:
+                        continue
+                    # check next registered loopstate info is a direct successor of the current one.
+                    # if so, the current enty can be omitted
+                    if val + 1 == loopstate_indices[idx + 1]:
+                        to_be_removed.append(val)
+                for tbr in sorted(to_be_removed, reverse=True):
+                    del callstate[tbr]
+
+            #            print("Clean CallState: ", callstate)
+            callstate_tuple: Tuple[str, ...] = tuple(callstate)
+            # memoize (context, incoming callstate) -> result within this state's search only.
+            # See recursive_assignment for why this preserves the assignment side effects.
+            memo: Dict[Tuple[int, Tuple[str, ...]], bool] = {}
+            could_be_assigned: bool = False
+            for entry_point in entry_points:
+                could_be_assigned = could_be_assigned or recursive_assignment(
+                    int(state_id), callstate_tuple, entry_point, memo
+                )
+
+    #            if not could_be_assigned:
+    #                print("-> Not assigned!")
+
+    #        ax = self.create_plot("Context Graph")
+    #        self.plot_context_graph(ax)
+    #        self.run_visualizer()
+
+    #        import sys
+    #        sys.exit(0)
+
+    #     def __old_assign_state_ids(self, dynamic_dependency_file: Optional[str]) -> None:
+    #         """attaches state ids to Context nodes."""
+    #         # read stateID to callpath mapping
+    #         state_mappings_dict = self.__get_state_mappings_from_file(dynamic_dependency_file)
+    #         print("state_mappings_dict: ")
+    #         for state_id in state_mappings_dict:
+    #             print("->", state_id, " -> ", state_mappings_dict[state_id])
+    #
+    #         # assign state id to task_graph nodes
+    #         logger.info("Assigning state ids to nodes...")
+    #         for state_id in progress(state_mappings_dict):
+    #             print()
+    #             print("Parsing state_id: ", state_id)
+    #             # skip invalid states
+    #             if (
+    #                 len(state_mappings_dict[state_id]) > 0
+    #                 and state_mappings_dict[state_id][-1].startswith("call_")
+    #                 and state_mappings_dict[state_id][-1].split("call_")[1].isdigit()
+    #             ):
+    #                 # skip state ending with call
+    #                 print("--> skip due to last element being a call.")
+    #                 continue
+    #             # search for first match along each path and set the state_id
+    #             queue: List[Tuple[TGNode, list[str]]] = [
+    #                 (self.root, state_mappings_dict[state_id])
+    #             ]  # queue necessary to handle branching
+    #             while len(queue) > 0:
+    #                 current_node, remaining_path = queue.pop()
+    #                 # cleanup remaining_path (remove leading call_<int> markers)
+    #                 while (
+    #                     len(remaining_path) > 0
+    #                     and remaining_path[0].startswith("call_")
+    #                     and remaining_path[0].split("call_")[1].isdigit()
+    #                 ):
+    #                     del remaining_path[0]
+    #                 # cleanup remaining_path (compress multiple successive loopstates)
+    #                 if len(remaining_path) > 0:
+    #                     loopstate_indices: List[int] = []
+    #                     for idx in range(0, len(remaining_path)):
+    #                         if "_loopstate" in remaining_path[idx]:
+    #                             loopstate_indices.append(idx)
+    #                     to_be_removed: List[int] = []
+    #                     for idx, val in enumerate(loopstate_indices):
+    #                         if idx >= len(loopstate_indices) - 1:
+    #                             continue
+    #                         # check next registered loopstate info is a direct successor of the current one.
+    #                         # if so, the current enty can be omitted
+    #                         if val + 1 == loopstate_indices[idx + 1]:
+    #                             to_be_removed.append(val)
+    #                     for tbr in sorted(to_be_removed, reverse=True):
+    #                         del remaining_path[tbr]
+    #
+    #                 print("candidate: ", current_node, "remaining path:", remaining_path)
+    #
+    #                 if len(remaining_path) == 0:
+    #                     # end of search along this path
+    #                     continue
+    #
+    #                 # check if current_node qualifies for a state hit.
+    #                 is_candidate = isinstance(current_node, TGFunctionNode) or isinstance(
+    #                     current_node, TGStartIterationNode
+    #                 )
+    #
+    #                 if is_candidate:
+    #                     # check for potential hit
+    #                     print("remaining_path[0]: ", remaining_path)
+    #                     if isinstance(current_node, TGFunctionNode):
+    #                         # cleanup leading loopstate
+    #                         while (
+    #                             len(remaining_path) > 0
+    #                             and "_loopstate" in remaining_path[0]
+    #                             and remaining_path[0].split("_loopstate")[1].isdigit()
+    #                         ):
+    #                             del remaining_path[0]
+    #
+    #                         if len(remaining_path) == 0:
+    #                             continue
+    #
+    #                         if cast(TGFunctionNode, current_node).get_pet_node(self.pet).name == remaining_path[0]:
+    #                             # hit
+    #                             del remaining_path[0]
+    #                             if len(remaining_path) == 0:
+    #                                 if current_node.state_id is not None:
+    #                                     # keep longer path
+    #                                     if len(state_mappings_dict[state_id]) > len(
+    #                                         state_mappings_dict[current_node.state_id]
+    #                                     ):
+    #                                         pass
+    #                                     else:
+    #                                         print(
+    #                                             "Skipped overwrite: "
+    #                                             + str(current_node.state_id)
+    #                                             + " with "
+    #                                             + str(state_id)
+    #                                         )
+    #                                         continue
+    #                                 current_node.state_id = state_id
+    #                                 print("set state_id: ", state_id, " to node: ", current_node)
+    #                                 # hit. stop search along this path
+    #                                 continue
+    #                         else:
+    #                             # not a hit. stop search along this path.
+    #                             warnings.warn(
+    #                                 "WARN 0: State_id: "
+    #                                 + str(state_id)
+    #                                 + " could not be assigned to a node."
+    #                                 #                                + "\nPath: "
+    #                                 #                                + str(state_mappings_dict[state_id])
+    #                             )
+    #                             continue
+    #                     elif isinstance(current_node, TGStartIterationNode):
+    #                         if not "_loopstate" in remaining_path[0]:
+    #                             # not a hit. stop search along this path.
+    #                             warnings.warn(
+    #                                 "WARN 1: State_id: "
+    #                                 + str(state_id)
+    #                                 + " could not be assigned to a node."
+    #                                 #                                + "\nPath: "
+    #                                 #                                + str(state_mappings_dict[state_id])
+    #                             )
+    #                             print("queue len: ", len(queue))
+    #                             continue
+    #                         else:
+    #                             # check for matching loopstate id
+    #                             # get current loopstate_info
+    #                             loopstate_info = remaining_path[0].split("_loopstate")[1]
+    #                             # get loopstate_position
+    #                             print("parentCTX: ", cast(TGStartIterationNode, current_node).parent_context)
+    #                             parent_ctxs = cast(TGStartIterationNode, current_node).parent_context
+    #                             if len(parent_ctxs) == 0:
+    #                                 continue
+    #                             iter_ctx = cast(IterationContext, list(parent_ctxs)[0])
+    #                             if iter_ctx.parent_context is None:
+    #                                 continue
+    #                             parent_loop_ctx = cast(LoopParentContext, iter_ctx.parent_context)
+    #                             loopstate_position = parent_loop_ctx.loopstate_position
+    #                             print("loopstate position: ", loopstate_position)
+    #                             print(
+    #                                 "loopstate iteration ids: ",
+    #                                 cast(
+    #                                     IterationContext, cast(TGStartIterationNode, current_node)
+    #                                 ).loopstate_iteration_ids,
+    #                             )
+    #                             print("loopstate_info: ", loopstate_info)
+    #                             # if loopstate_iteraton at the current index is 3, the loop should not be entered. Some mismatch occured
+    #                             if loopstate_info[loopstate_position] == "3":
+    #                                 # continue search with successors of current loop
+    #                                 if parent_loop_ctx.successor is None:
+    #                                     continue
+    #                                 for succ_node in parent_loop_ctx.successor.contained_nodes:
+    #                                     queue.append((succ_node, remaining_path))
+    #                                 print("-> Skipped loop body due to loopstate 3")
+    #                                 continue
+    #
+    #                             # find the IterationContext child of the parent_loop_ctx which matches the loopstate_iteration at the current index. Proceed processing there to skip previous iteration bodies.
+    #                             if int(loopstate_info[loopstate_position]) in loopstate_indices:
+    #                                 # iter_ctx targets current loopstate. nothing to do.
+    #                                 pass
+    #                             else:
+    #                                 # check next loop iteration
+    #                                 if iter_ctx.successor is not None:
+    #                                     if isinstance(iter_ctx.successor, IterationContext):
+    #                                         for succ_node in iter_ctx.successor.contained_nodes:
+    #                                             queue.append((succ_node, remaining_path))
+    #                                             continue
+    #                                 # continue with successor of parent loop
+    #                                 # continue search with successors of current loop
+    #                                 if parent_loop_ctx.successor is None:
+    #                                     continue
+    #                                 for succ_node in parent_loop_ctx.successor.contained_nodes:
+    #                                     queue.append((succ_node, remaining_path))
+    #                                 print("-> Skipped loop body")
+    #                                 continue
+    #
+    #                             #                                if isinstance(IterationContext)
+    #                             #
+    #                             #                                # search in children on parent_loop_ctx for matchin loopstate_index
+    #                             #                                for child in parent_loop_ctx.get_contained_contexts():
+    #                             #                                    if (
+    #                             #                                        isinstance(child, IterationContext)
+    #                             #                                        and int(loopstate_info[loopstate_position]) in child.loopstate_iteration_ids
+    #                             #                                    ):
+    #                             #                                        iter_ctx = child
+    #                             #                                        break
+    #                             # print("iterCTX: ", iter_ctx)
+    #
+    #                             # set state id
+    #                             for n in iter_ctx.get_contained_nodes():
+    #                                 if n.state_id is not None:
+    #                                     # keep longer path
+    #                                     if len(state_mappings_dict[state_id]) > len(state_mappings_dict[n.state_id]):
+    #                                         pass
+    #                                     else:
+    #                                         print("Skipped overwrite: " + str(n.state_id) + " with " + str(state_id))
+    #                                         continue
+    #                                 n.state_id = state_id
+    #                                 print("set state_id: ", state_id, " to node: ", n)
+    #
+    #                             # since loopstate encodes information on multiple entered loops, it may not be discarded by the processed TGStartIterationNode.
+    #                             # successive TGFunctionNode encounters will cleanup leading loopstates in the remaining_path
+    #
+    #                 # continue search with successors
+    #                 for succ in self.get_successors(current_node):
+    #                     queue.append((succ, copy.deepcopy(remaining_path)))
+    #         plt.ioff()
+    #         self.plot()
+
     def __get_work_contexts_by_location_and_state_id(
         self,
         pet: PEGraphX,
         location: str,
         state_id: str,
         instructionID_mappings_dict: Dict[str, str],
-        state_mappings_dict: Dict[str, Tuple[str, ...]],
-        line_to_work_contexts: Dict[LineID, Set[Context]],
+        state_mappings_dict: Dict[str, List[str]],
+        location_to_work_contexts: Dict[LineID, Set[WorkContext]],
+        lookup_cache: Dict[Tuple[str, str], Set[Context]],
     ) -> Set[Context]:
         """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs.
         state_mappings_dict is a mapping from stateIDs to callpaths.
         line_to_work_contexts is a reverse index {lineID: WorkContexts whose code scope contains it},
         built once per dependency-insertion pass (see __insert_data_dependencies_from_files)."""
+
+        #        cache_key = (location, state_id)
+        #        if cache_key in lookup_cache:
+        #            return lookup_cache[cache_key]
 
         contexts: Set[Context] = set()
         # check if location is an instructionID. If so, convert it to a lineID using the mappings_dict.
@@ -2436,190 +3334,20 @@ class TaskGraph(Plottable, object):
             line_num = location_split[1]
             location_lineid = LineID(file_id + ":" + line_num)
 
-            # lookup instead of rebuilding code scope on each call.
-            contexts.update(line_to_work_contexts.get(location_lineid, set()))
+            if location_lineid in location_to_work_contexts:
+                contexts = set(location_to_work_contexts[location_lineid])
 
         # filter contexts for state_id compatibility
+        # `contexts` already holds exactly the WorkContexts whose code scope contains `location`
+        # (via the location_to_work_contexts spatial index), so only those need to be checked here.
         if state_id != "NO_STATE":
-            if state_id in state_mappings_dict:
-                # state_mappings_dict stores an immutable tuple of interned strings shared
-                # across states; this function mutates its callpath (see `del callpath[...]`
-                # below), so take a private shallow list copy. Elements are immutable, so a
-                # shallow copy is sufficient (and far cheaper than the previous deepcopy).
-                callpath = list(state_mappings_dict[state_id])
+            target_state_id = int(state_id)
+            filtered_contexts = {ctx for ctx in contexts if target_state_id in ctx.get_state_ids()}
 
-                filtered_contexts: Set[Context] = set()
+            #            lookup_cache[cache_key] = filtered_contexts
+            return filtered_contexts
 
-                for ctx in contexts:
-                    # determine ancestors
-                    ancestors = ctx.get_ancestor_contexts()
-                    # traverse ancestors and convert them into a callpath compatible representation.
-                    ctx_callpath: List[str] = []
-                    last_ancestor_was_inlined_function_marker = False
-                    last_called_function = None
-
-                    loopstate_violation_found = False
-                    # mutable working copy (loopstate entries are deleted below); a shallow
-                    # list copy is sufficient since the elements are immutable strings.
-                    loopstate_callpath_copy = list(callpath)
-                    current_loopstate_info = [elem for elem in loopstate_callpath_copy if "_loopstate" in elem]
-                    for ancestor in ancestors:
-                        if isinstance(ancestor, FunctionContext):
-                            last_ancestor_was_inlined_function_marker = False
-                            if ancestor.parent_function is not None:
-                                ctx_callpath.insert(0, pet.node_at(ancestor.parent_function).name)
-                                last_called_function = ancestor.parent_function
-                                # function contexts trigger the invalidation and loading of a new loopstate, as they effectively end the "scope"
-                                # remove loopstate entry from callpath to allow analysis of ancestor iterations, and make size of callpath and ctx_callpath comparable for later check.
-                                # cleanup callpath loopstates at the end of the callpath
-                                found_loopstate = False
-                                search_index = len(loopstate_callpath_copy) - 1
-                                to_be_removed: List[int] = []
-                                while search_index >= 0:
-                                    if not found_loopstate:
-                                        if "_loopstate" in loopstate_callpath_copy[search_index]:
-                                            # found last loopstate entry. continue search with previous element.
-                                            # last loopstate entry shall not be removed from the
-                                            to_be_removed.append(search_index)
-                                            found_loopstate = True
-                                            search_index -= 1
-                                            continue
-                                        else:
-                                            # continue search for last loopstate entry
-                                            search_index -= 1
-                                    else:
-                                        if "_loopstate" in loopstate_callpath_copy[search_index]:
-                                            # found a next loopstate entry. register for deletion and continue search with previous element
-                                            to_be_removed.append(search_index)
-                                            search_index -= 1
-                                        else:
-                                            # did not find a next loopstate entry. stop the search
-                                            break
-                                # delete loopstate elements
-                                for (
-                                    tbr
-                                ) in (
-                                    to_be_removed
-                                ):  # indices are already in decreasing order. Thus, deletion in order is safe.
-                                    del loopstate_callpath_copy[tbr]
-
-                            continue
-                        if isinstance(ancestor, InlinedFunctionContext):
-                            last_ancestor_was_inlined_function_marker = True
-                            continue
-                        if isinstance(ancestor, WorkContext):
-                            if last_ancestor_was_inlined_function_marker:
-                                # get the lineID from the call
-                                potential_contained_calls = ancestor.get_contained_calls(self.pet)
-                                potential_contained_calls = [
-                                    call for call in potential_contained_calls if call[0] == last_called_function
-                                ]
-                                # get candidate calls from callpath
-                                candidate_calls = [entry for entry in callpath if entry.startswith("call_")]
-                                for candidate_call in candidate_calls:
-                                    # get instruction id
-                                    instruction_id = candidate_call[5:]
-                                    if not instruction_id.isnumeric():
-                                        continue
-                                    # get lineID from instruction id
-                                    if instruction_id in instructionID_mappings_dict:
-                                        line_id = instructionID_mappings_dict[instruction_id]
-                                        if line_id in [call[1] for call in potential_contained_calls]:
-                                            ctx_callpath.insert(0, candidate_call)
-                                            break
-                            else:
-                                # unspecific, skip
-                                continue
-                        warnings.warn(
-                            "TODO: add check for Loop iteration here, and add loop identifier and loop state to iteration Contexts."
-                        )
-                        if isinstance(ancestor, IterationContext):
-                            # find last loopstate information in callpath
-                            if len(current_loopstate_info) == 0:
-                                # non-matching callpath. ctx is not a valid candidate
-                                loopstate_violation_found = True
-                                continue
-                            relevant_loopstate_position = cast(
-                                LoopParentContext, ancestor.belongs_to_context
-                            ).loopstate_position
-                            if relevant_loopstate_position is None:
-                                warnings.warn(
-                                    "Invalid LoopParentContext. Property 'loopstate_position' is None. Context: "
-                                    + str(ancestor.belongs_to_context)
-                                )
-                                continue
-                            if len(current_loopstate_info) == 0:
-                                raise ValueError("No loopstate found for IterationContext: ", ancestor)
-                            if ancestor.loopstate_iteration_ids is None:
-                                raise ValueError(
-                                    "Loopstate iteration ids are not registered. Value is None. IterationContext: ",
-                                    ancestor,
-                                )
-                            if len(ancestor.loopstate_iteration_ids) == 0:
-                                raise ValueError(
-                                    "No loopstate iteration ids registered for IterationContext: ", ancestor
-                                )
-                            last_loopstate_info = current_loopstate_info[-1]
-                            # get loopstate for checking
-                            full_loopstate = last_loopstate_info.split("_loopstate")[1]
-                            if relevant_loopstate_position + 1 > len(full_loopstate):
-                                warnings.warn(
-                                    "Loopstate "
-                                    + full_loopstate
-                                    + " does not allow lookup at position "
-                                    + str(relevant_loopstate_position)
-                                    + " due to length limitation. Skipping candidate."
-                                )
-                                continue
-                            unpacked_loopstate = int(full_loopstate[relevant_loopstate_position])
-
-                            # check for match
-                            if unpacked_loopstate not in ancestor.loopstate_iteration_ids:
-                                # ancestor does not target the unpacked loopstate
-                                loopstate_violation_found = True
-                            else:
-                                ctx_callpath.insert(0, last_loopstate_info)
-
-                            last_ancestor_was_inlined_function_marker = False
-
-                        if isinstance(ancestor, Context):
-                            # unspecific, skip
-                            last_ancestor_was_inlined_function_marker = False
-                            continue
-                        else:
-                            warnings.warn("Not yet implemented: unknown ancestor context type: " + str(type(ancestor)))
-                            last_ancestor_was_inlined_function_marker = False
-
-                    # compress sequences of loopstate information in callpath before checking for equivalence
-                    to_be_removed = []
-                    for i in range(1, len(callpath)):
-                        if "_loopstate" in callpath[i - 1] and "_loopstate" in callpath[i]:
-                            to_be_removed.append(i - 1)
-                    for tbr in sorted(to_be_removed, reverse=True):
-                        del callpath[tbr]
-
-                    # compress sequences of loopstate information in ctx_callpath before checking for equivalence
-                    to_be_removed = []
-                    for i in range(1, len(ctx_callpath)):
-                        if "_loopstate" in ctx_callpath[i - 1] and "_loopstate" in ctx_callpath[i]:
-                            to_be_removed.append(i - 1)
-                    for tbr in sorted(to_be_removed, reverse=True):
-                        del ctx_callpath[tbr]
-
-                    # check equality of callpath and ctx_callpath
-                    if len(callpath) != len(ctx_callpath):
-                        continue
-
-                    equal = True
-                    for i in range(0, len(callpath)):
-                        if callpath[i] != ctx_callpath[i]:
-                            equal = False
-                            break
-                    if equal and not loopstate_violation_found:
-                        filtered_contexts.add(ctx)
-
-                return filtered_contexts
-
+        #        lookup_cache[cache_key] = contexts
         return contexts
 
     def __insert_data_dependencies_from_files(
@@ -2668,79 +3396,35 @@ class TaskGraph(Plottable, object):
                     line_split = [elem for elem in line.split(" ") if len(elem) > 0]
                     instruction_id = line_split[0]
                     line_id = line_split[1]
-                    mappings_dict[instruction_id] = line_id
-
-        # read stateID to callpath mapping (prefix tree format: <NodeID> <ParentID> <Label>)
-        # the mapping file can list a large amount of stateIDs, but only stateIDs that are
-        # referenced as a source or sink in `dependencies` are looked up. So, we collect that
-        # working set first and reconstruct callpaths only for those, so the resident dict
-        # only holds what is used. Callpath components (e.g. "call_123", "..._loopstate_...")
-        # repeat heavily across states, so we intern each component and store immutable,
-        # canonicalized tuples.
-        needed_state_ids: Set[str] = set()
-        for dep_type_deps in dependencies.values():
-            for source_location_deps in dep_type_deps.values():
-                for source_state_id, source_state_deps in source_location_deps.items():
-                    needed_state_ids.add(source_state_id)
-                    for sink_location_deps in source_state_deps.values():
-                        needed_state_ids.update(sink_location_deps.keys())
-
-        state_mappings_dict: Dict[str, Tuple[str, ...]] = dict()  # {stateID: callpath}
-        canonical_callpaths: Dict[Tuple[str, ...], Tuple[str, ...]] = dict()
-        state_mappings_file = os.path.join(Path(str(dynamic_dependency_file)).parent, "stateID_to_callpath_mapping.txt")
-        if os.path.exists(state_mappings_file):
-            # first pass: collect the prefix tree as {node_id: (parent_id, label)}
-            prefix_tree: Dict[str, Tuple[str, str]] = dict()
-            with open(state_mappings_file, "r") as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith("#") or len(line) == 0:
+                    if line_id.startswith("*"):
                         continue
-                    line_split = [elem for elem in line.split(" ") if len(elem) > 0]
-                    if len(line_split) < 3:
-                        continue
-                    node_id = line_split[0]
-                    parent_id = line_split[1]
-                    # labels shouldn't contain spaces, but join just in case
-                    label = sys.intern(" ".join(line_split[2:]))
-                    prefix_tree[node_id] = (parent_id, label)
+                    line_id_split = line_id.split(":")
+                    file_id = line_id_split[0]
+                    line_num = line_id_split[1]
+                    column_num = line_id_split[2]
+                    mappings_dict[instruction_id] = str(file_id) + ":" + str(line_num)
 
-            # second pass: reconstruct the full callpath (root -> node order), but only for
-            # the stateIDs that are actually looked up. Each callpath is interned and
-            # canonicalized so repeated paths share memory.
-            for state_id in needed_state_ids:
-                if state_id in state_mappings_dict or state_id not in prefix_tree:
-                    continue
-                labels: List[str] = []
-                current = state_id
-                visited: Set[str] = set()
-                while current in prefix_tree and current not in visited:
-                    visited.add(current)
-                    cur_parent_id, cur_label = prefix_tree[current]
-                    # the root node points to itself, it carries no callpath label
-                    if cur_parent_id == current:
-                        break
-                    labels.append(cur_label)
-                    current = cur_parent_id
-                callpath = tuple(reversed(labels))
-                callpath = canonical_callpaths.setdefault(callpath, callpath)
-                state_mappings_dict[state_id] = callpath
+        # read stateID to callpath mapping
+        if dynamic_dependency_file is None:
+            raise ValueError("dynamic_dependency_file may not be None!")
+        state_mappings_dict = self.__get_state_mappings_from_file(dynamic_dependency_file)
 
-        # Build a reverse index {lineID: WorkContexts whose code scope contains it} once.
-        # The per-location context lookup below used to scan every context and rebuild its
-        # code scope on each of the millions of calls; the index turns that into one O(1)
-        # dict lookup and computes each context's code scope exactly once.
-        line_to_work_contexts: Dict[LineID, Set[Context]] = defaultdict(set)
-        for context in self.contexts:
-            if isinstance(context, WorkContext):
-                for line_id in context.get_code_scope(self.pet):
-                    line_to_work_contexts[line_id].add(context)
+        # build spatial index: LineID -> Set[WorkContext]
+        location_to_work_contexts: Dict[LineID, Set[WorkContext]] = {}
+        for _ctx in self.contexts:
+            if not isinstance(_ctx, WorkContext):
+                continue
+            for _line_id in _ctx.get_code_scope(self.pet):
+                location_to_work_contexts.setdefault(_line_id, set()).add(_ctx)
+
+        # cache for repeated (location, state_id) lookups
+        _context_lookup_cache: Dict[Tuple[str, str], Set[Context]] = {}
 
         # insert data dependencies into graph
         # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
         logger.info("--> Inserting data dependencies: ")
-        for dep_type, dep_type_deps in tqdm(dependencies.items(), desc="Dependency types"):
-            for source_location, source_location_deps in tqdm(
+        for dep_type, dep_type_deps in progress(dependencies.items(), desc="Dependency types"):
+            for source_location, source_location_deps in progress(
                 dep_type_deps.items(), desc="Source locations", leave=False
             ):
                 for source_state_id, source_state_deps in source_location_deps.items():
@@ -2752,7 +3436,8 @@ class TaskGraph(Plottable, object):
                         source_state_id,
                         mappings_dict,
                         state_mappings_dict,
-                        line_to_work_contexts,
+                        location_to_work_contexts,
+                        _context_lookup_cache,
                     )
                     for sink_location, sink_location_deps in source_state_deps.items():
                         for sink_state_id, var_infos in sink_location_deps.items():
@@ -2764,7 +3449,8 @@ class TaskGraph(Plottable, object):
                                 sink_state_id,
                                 mappings_dict,
                                 state_mappings_dict,
-                                line_to_work_contexts,
+                                location_to_work_contexts,
+                                _context_lookup_cache,
                             )
 
                             # handle static and dynamic dependencies separately
@@ -2776,21 +3462,15 @@ class TaskGraph(Plottable, object):
                                 for source_ctx in source_contexts:
                                     for target_ctx in target_contexts:
                                         if source_ctx == target_ctx:
+                                            # print("SKIPPING POTENTIAL DEP: ", dep_type, var_infos)
                                             continue
                                         # check for shared closest function parent
-                                        source_parent_function_ctxs = [
-                                            c for c in source_ctx.get_ancestor_contexts() if type(c) == FunctionContext
-                                        ]
-                                        target_parent_function_ctxs = [
-                                            c for c in target_ctx.get_ancestor_contexts() if type(c) == FunctionContext
-                                        ]
-                                        if (
-                                            len(source_parent_function_ctxs) == 0
-                                            or len(target_parent_function_ctxs) == 0
-                                        ):
+                                        source_closest_fn = source_ctx.get_closest_function_ancestor()
+                                        target_closest_fn = target_ctx.get_closest_function_ancestor()
+                                        if source_closest_fn is None or target_closest_fn is None:
                                             # no shared parent function context can exist
                                             continue
-                                        if source_parent_function_ctxs[0] != target_parent_function_ctxs[0]:
+                                        if source_closest_fn != target_closest_fn:
                                             # closest parent function contexts are not equal.
                                             # static dependencies are only valid within a functions scope.
                                             continue
@@ -2866,7 +3546,45 @@ class TaskGraph(Plottable, object):
                                             # ignore INIT as there is no data flow
                                             if dependency.dtype == DepType.INIT:
                                                 continue
+                                            # prevent false positive dependencies in case of same iterations by checking for same ancestors
+                                            # TODO: add states to contexts to allow a more robust search in __get_work_contexts_by_location_and_state_id
+                                            # TODO: The fact the following condition is necessary is a result of incorrect behavior of __get_work_contexts_by_location_and_state_id, which should be fixed!
+                                            if source_state_id == sink_state_id:
+                                                source_ancs = source_ctx.get_ancestor_contexts()
+                                                target_ancs = target_ctx.get_ancestor_contexts()
+                                                # prune ancestors to closest iteration context and check for equality to ensure source and target are located in the same iteration.
+                                                while len(source_ancs) > 0:
+                                                    if isinstance(source_ancs[0], IterationContext):
+                                                        break
+                                                    del source_ancs[0]
+                                                while len(target_ancs) > 0:
+                                                    if isinstance(target_ancs[0], IterationContext):
+                                                        break
+                                                    del target_ancs[0]
+                                                if source_ancs != target_ancs:
+                                                    continue
 
+                                            if dependency.var_name == "error":
+                                                print(
+                                                    "REGISTER DEP: ",
+                                                    source_ctx,
+                                                    target_ctx,
+                                                    dependency.dtype,
+                                                    dependency.source_line,
+                                                    dependency.sink_line,
+                                                    dependency.var_name,
+                                                )
+                                                print("source: ", source_ctx)
+                                                print("source_ancs: ", source_ctx.get_ancestor_contexts())
+                                                print("sink: ", target_ctx)
+                                                print("sink ancs:", target_ctx.get_ancestor_contexts())
+                                                print("source_state: ", source_state_id)
+                                                print("sink_state: ", sink_state_id)
+                                                print("source_location: ", source_location)
+                                                print("sink_location: ", sink_location)
+                                                print("source_states: ", source_ctx.get_state_ids())
+                                                print("sink_states: ", target_ctx.get_state_ids())
+                                                print()
                                             source_ctx.register_outgoing_dependency(target_ctx, dependency)
 
         logger.info(
@@ -2888,7 +3606,7 @@ class TaskGraph(Plottable, object):
         self.__print_context_statistics("Pre validation")
 
         logger.info("--> checking contexts...")
-        for ctx in tqdm(self.contexts):
+        for ctx in progress(self.contexts):
             # calculate initialized variables per context
             initialized_vars: Set[Tuple[str, Optional[MemoryRegion]]] = set()
             for node in ctx.get_contained_nodes():
@@ -2934,7 +3652,7 @@ class TaskGraph(Plottable, object):
         logger.info("Validating data dependencies using existing metadata...")
         invalid_deps: List[Tuple[Context, Context, Dependency]] = []
         valid_deps: Set[Tuple[Context, Context, Dependency]] = set()
-        for source_ctx in tqdm(self.contexts):
+        for source_ctx in progress(self.contexts):
             source_call_stack: Optional[List[Context]] = None  # only calculate, if it is required
             for target_ctx, dep in source_ctx.outgoing_dependencies:
                 # check if metadata exists
@@ -3163,12 +3881,119 @@ class TaskGraph(Plottable, object):
         return iteration_nodes
 
     def __validate_graph_structure(self) -> None:
-        warnings.warn("Not yet implemented!")
+        """Checks invariant 4 (see INVARIANTS.md): once __break_cycles and
+        __duplicate_loop_iterations have run, every function's control flow must be acyclic - loops
+        are unrolled into two linear iterations rather than kept as back edges. A remaining cycle
+        means one of those passes gave up on it; __break_cycles does so silently when it cannot
+        derive a loop header and its crude fallback runs out of search sources.
+
+        Every later pass assumes acyclicity and none of them re-checks it, so the failures a
+        remaining cycle causes surface far from here and look unrelated: dominance-based region
+        wrapping is unsound, the context-nesting stack machine assigns whichever enclosing context
+        a path happens to arrive with, and __calculate_context_successions does not terminate at
+        all if the cycle's context entries and exits do not balance - it keys its traversal on
+        (node, level), and each lap around such a cycle shifts the level by the imbalance, so every
+        lap is a state it has not seen yet. That one presents as unbounded memory growth minutes
+        later, which is what makes finding the cause from the symptom so expensive.
+
+        Reported rather than raised: the results for the functions containing the cycle are
+        unreliable either way, but the rest of the program is unaffected, and raising here would
+        stop projects that currently produce (partially) usable suggestions. Turn the summary into
+        a raise if a hard failure is preferred."""
+        logger.info("Validating graph structure...")
+        cyclic_components = [
+            component for component in nx.strongly_connected_components(self.graph) if len(component) > 1
+        ]
+        self_loops = list(nx.selfloop_edges(self.graph))
+        if len(cyclic_components) == 0 and len(self_loops) == 0:
+            return
+
+        enclosing_functions = self.__map_nodes_to_enclosing_functions()
+        for source, _ in self_loops:
+            logger.error(
+                "Node %s in %s has an edge to itself.",
+                source.get_label(),
+                enclosing_functions.get(source, DETACHED_REGION),
+            )
+        detached = 0
+        for component in cyclic_components:
+            logger.error(self.__describe_cyclic_component(component, enclosing_functions))
+            if all(node not in enclosing_functions for node in component):
+                detached += 1
+
+        logger.error(
+            "%d cyclic region(s) and %d self-loop(s) remain in the control flow after cycle "
+            "breaking and loop unrolling, violating invariant 4 (INVARIANTS.md). Results "
+            "depending on the affected code are unreliable, and context succession calculation "
+            "does not terminate at all on a cyclic region whose context entries and exits do not "
+            "balance.",
+            len(cyclic_components),
+            len(self_loops),
+        )
+        if detached > 0:
+            logger.error(
+                "%d of those cyclic region(s) are not reachable from any function entry node, "
+                "which is why they are still here: __break_cycles searches for cycles with "
+                "nx.find_cycle(source=<function node>) and therefore cannot see them. Whatever "
+                "detached them - it removes edges to break cycles and rewires predecessors - is "
+                "the place to look, not the cycle breaking itself.",
+                detached,
+            )
+
+    def __map_nodes_to_enclosing_functions(self) -> Dict[TGNode, str]:
+        """Maps each node to the label of the first TGFunctionNode it is reachable from. Only built
+        once a cycle has actually been found, since it costs one traversal per function."""
+        enclosing: Dict[TGNode, str] = dict()
+        for function_node in self.TGFunctionNode_pet_node_id_to_tg_node.values():
+            for node in self.get_descendants(function_node):
+                enclosing.setdefault(node, function_node.get_label())
+        return enclosing
+
+    def __describe_cyclic_component(self, component: Set[TGNode], enclosing_functions: Dict[TGNode, str]) -> str:
+        """Names the function a cyclic region belongs to and reports the property that decides
+        whether __calculate_context_successions can terminate on it: whether one lap around it
+        enters as many contexts as it leaves."""
+        functions = sorted({enclosing_functions.get(node, DETACHED_REGION) for node in component})
+        description = "Cyclic control flow in " + ", ".join(functions) + ": %d nodes" % len(component)
+        try:
+            cycle = nx.find_cycle(self.graph.subgraph(component), orientation="original")
+        except nx.NetworkXNoCycle:  # pragma: no cover - a component of size > 1 always has one
+            return description
+        entered = sum(1 for source, *_ in cycle if source.created_context is not None)
+        left = sum(1 for source, *_ in cycle if self.__is_context_exit(source))
+        description += ", example cycle of %d edges entering %d and leaving %d contexts" % (
+            len(cycle),
+            entered,
+            left,
+        )
+        if entered != left:
+            description += " (unbalanced by %d per lap - context succession calculation cannot terminate here)" % (
+                entered - left
+            )
+        description += ": " + " -> ".join(source.get_label() for source, *_ in cycle[:8])
+        if len(cycle) > 8:
+            description += " -> ..."
+        return description
+
+    @staticmethod
+    def __is_context_exit(node: TGNode) -> bool:
+        return isinstance(
+            node,
+            (
+                TGEndFunctionNode,
+                TGEndLoopNode,
+                TGEndIterationNode,
+                TGEndBranchParentNode,
+                TGEndBranchNode,
+                TGEndWorkNode,
+                TGEndInlinedFunctionNode,
+            ),
+        )
 
     def get_successors(self, node: Optional[TGNode]) -> List[TGNode]:
         if node is None:
             return []
-        successors = list(set([t for s, t in self.graph.out_edges(node)]))
+        successors = list(dict.fromkeys(t for s, t in self.graph.out_edges(node)))
         ## DEBUG
         #        if node.get_label() == "3:34" and len(successors) > 1:
         #            print("SUCCESSORS: ", str([c.get_label() for c in successors]))
@@ -3181,7 +4006,7 @@ class TaskGraph(Plottable, object):
     def get_predecessors(self, node: Optional[TGNode]) -> List[TGNode]:
         if node is None:
             return []
-        predecessors = list(set([s for s, t in self.graph.in_edges(node)]))
+        predecessors = list(dict.fromkeys(s for s, t in self.graph.in_edges(node)))
         return predecessors
 
     def get_closest_predecessors_with_matching_pet_node_id(

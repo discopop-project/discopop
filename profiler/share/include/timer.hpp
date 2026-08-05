@@ -242,16 +242,19 @@ public:
     // The time is printed with 24 interesting characters followed by '\n'
     constexpr auto size_of_date_string = 24;
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
     time_t raw_time = 0;
+    struct tm time_info;
+
+    // Need some more space for '\n' and other checks
+    char char_buff[size_of_date_string + 3];
+
     time(&raw_time);
-    // NOLINTNEXTLINE
-    struct tm *time_info = localtime(&raw_time);
-    // NOLINTNEXTLINE
-    char *string = asctime(time_info);
+    localtime_r(&raw_time, &time_info);
+    asctime_r(&time_info, char_buff);
 
     // Avoid '\n'
-    return std::string(string, size_of_date_string);
+    return std::string(char_buff, size_of_date_string);
 #else
     time_t raw_time = 0;
     struct tm time_info;

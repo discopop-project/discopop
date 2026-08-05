@@ -10,17 +10,17 @@ import copy
 from logging import Logger
 from multiprocessing.pool import Pool
 import random
-import sys
-from typing import Callable, Dict, List, Set, Tuple, cast
+from typing import Callable, Dict, Iterable, List, Optional, Set, Tuple, cast
 
 from tabulate import tabulate  # type: ignore
-from tqdm import tqdm  # type: ignore
+from discopop_library.EmpiricalAutotuning.output.bars import search_bar
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_debug_stats
+from discopop_library.EmpiricalAutotuning.output.progress import get_active_reporter
 from discopop_library.HostpotLoader.utilities import get_patterns_by_hotspot_type
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -35,8 +35,21 @@ CHROMOSOME = Tuple[int, ...]
 fitness_cache: Dict[CHROMOSOME, FITNESS] = dict()
 runtime_cache: Dict[CHROMOSOME, float] = dict()
 return_code_cache: Dict[CHROMOSOME, int] = dict()
-best_execution_time: float = sys.float_info.max
-worst_execution_time: float = 0.0
+# A chromosome is valid only if it ran (return code 0) AND passed both the result
+# validation and the thread sanitizer check. Only valid chromosomes may earn a
+# non-zero fitness -- a fast but incorrect parallelization must never win.
+validity_cache: Dict[CHROMOSOME, bool] = dict()
+
+
+def canonical_chromosome(genes: Iterable[int]) -> CHROMOSOME:
+    """Normalize a set of suggestion ids into a chromosome.
+
+    A chromosome is a *set* of suggestions: (1, 2) and (2, 1) describe the same
+    parallelization. Sorting and de-duplicating on construction makes the caches
+    hit for such pairs instead of compiling and executing the same configuration
+    twice under two different keys.
+    """
+    return tuple(sorted(set(genes)))
 
 
 def execute_evolutionary_combination(
@@ -56,13 +69,14 @@ def execute_evolutionary_combination(
     # - initialize population with all YES suggestions
     # - fill the population until population size K with MAYBE suggestions
     # - upon selection, fill population with MAYBE suggestions until all were used once
-    # - after all were used, fill population with random combination
+    # - once all MAYBEs were used, the population is grown by crossover and mutation only;
+    #   no random combinations are injected, since every new individual costs a full
+    #   compile-and-execute cycle
     # --> In theory, this apporach should allow a refinement of YES suggestion combinations independent of the added MAYBE's,
     #     and increase result quality in general in case of early termination
 
     logger.info("Executing evolutionary combination.")
 
-    # time limited reverse greedy search in hotspot parallelizations
     patterns_by_hotspot_type = get_patterns_by_hotspot_type(detection_result, hotspot_information)
     logger.debug("Patterns by hotspot type")
     logger.debug(str(patterns_by_hotspot_type))
@@ -74,7 +88,13 @@ def execute_evolutionary_combination(
         patterns_by_hotspot_type[HotspotType.NO] = []
 
     search_result = perform_evolutionary_search(
-        patterns_by_hotspot_type, logger, reference_configuration, arguments, timeout_after, get_unique_configuration_id
+        patterns_by_hotspot_type,
+        logger,
+        reference_configuration,
+        arguments,
+        timeout_after,
+        get_unique_configuration_id,
+        time_limit_s,
     )
 
     # execute best combination to save results
@@ -172,7 +192,16 @@ def perform_evolutionary_search(
     arguments: AutotunerArguments,
     timeout_after: float,
     get_unique_configuration_id: Callable[[], int],
+    time_limit_s: Optional[int] = None,
 ) -> Tuple[int, ...]:
+    """Search for the best combination of suggestions.
+
+    The search ends on convergence, on ``KeyboardInterrupt``, or once ``time_limit_s``
+    seconds have elapsed. The time limit is checked between generations, so a run may
+    overshoot it by up to the duration of one generation -- an individual generation is
+    never cut short, because a partially measured generation would report misleading
+    statistics.
+    """
     ### SETTINGS
     population_size = max(10, len(patterns_by_hotspot_type[HotspotType.YES]) * 2)
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
@@ -190,10 +219,10 @@ def perform_evolutionary_search(
     ## end statistics
 
     population, unused_maybes = __initialize(logger, population_size, patterns_by_hotspot_type)
-    __calculate_fitness(
-        logger, population, reference_configuration, arguments, timeout_after, get_unique_configuration_id
+    evaluated = __calculate_fitness(
+        logger, population, reference_configuration, arguments, timeout_after, get_unique_configuration_id, 0
     )
-    selection_size = min(population_size, max(1, int(len(population) * 0.85)))
+    selection_size = min(population_size, max(1, int(len(population) * selection_strength)))
 
     generation_counter = 0
     converged = False
@@ -201,26 +230,54 @@ def perform_evolutionary_search(
 
     time_series_x_values: List[int] = [generation_counter]
     time_series_max: List[float] = [get_maximum_fitness()]
+    # average over the current population -- drives the convergence criterion
     time_series_avg: List[float] = [get_average_fitness(population)]
+    # average over the individuals measured in this generation -- this is exactly the
+    # set of points scattered in the GUI plot, so the two are directly comparable
+    time_series_generation_avg: List[float] = [get_average_fitness(evaluated)]
     time_series_convergence_threshold: List[float] = [time_series_max[-1] * current_convergence_factor]
-    plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
+    plot_time_series(
+        time_series_x_values,
+        time_series_max,
+        time_series_avg,
+        time_series_generation_avg,
+        time_series_convergence_threshold,
+    )
+    __emit_generation(
+        generation_counter,
+        time_series_max[-1],
+        time_series_avg[-1],
+        time_series_convergence_threshold[-1],
+        time_series_generation_avg[-1],
+    )
 
+    search_start_time = time.time()
     try:
         while not converged:
+            if time_limit_s is not None and time.time() - search_start_time > time_limit_s:
+                logger.info("Reached the search time limit of " + str(time_limit_s) + "s. Stopping.")
+                break
             logger.info("\nGeneration: " + str(generation_counter))
 
             population, unused_maybes = __fill_population(logger, population, population_size, unused_maybes)
             population = __crossover(logger, population, max(1, int(selection_size * crossover_factor)))
             population = __mutate(logger, population, max(1, int(selection_size * mutations_factor)))
             generation_counter += 1
-            __calculate_fitness(
-                logger, population, reference_configuration, arguments, timeout_after, get_unique_configuration_id
+            evaluated = __calculate_fitness(
+                logger,
+                population,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                get_unique_configuration_id,
+                generation_counter,
             )
             population = __select(logger, population, selection_size)
             # update time series
             time_series_x_values.append(generation_counter)
             time_series_max.append(get_maximum_fitness())
             time_series_avg.append(get_average_fitness(population))
+            time_series_generation_avg.append(get_average_fitness(evaluated))
 
             # update statistics
 
@@ -255,7 +312,20 @@ def perform_evolutionary_search(
 
             # update and plot time series
             time_series_convergence_threshold.append(time_series_max[-1] * current_convergence_factor)
-            plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
+            plot_time_series(
+                time_series_x_values,
+                time_series_max,
+                time_series_avg,
+                time_series_generation_avg,
+                time_series_convergence_threshold,
+            )
+            __emit_generation(
+                generation_counter,
+                time_series_max[-1],
+                time_series_avg[-1],
+                time_series_convergence_threshold[-1],
+                time_series_generation_avg[-1],
+            )
 
             # check convergence
             if (
@@ -273,25 +343,64 @@ def perform_evolutionary_search(
         time_series_x_values.append(generation_counter)
         time_series_max.append(get_maximum_fitness())
         time_series_avg.append(get_average_fitness(population))
+        time_series_generation_avg.append(get_average_fitness(evaluated))
         time_series_convergence_threshold.append(time_series_max[-1] * current_convergence_factor)
-        plot_time_series(time_series_x_values, time_series_max, time_series_avg, time_series_convergence_threshold)
+        plot_time_series(
+            time_series_x_values,
+            time_series_max,
+            time_series_avg,
+            time_series_generation_avg,
+            time_series_convergence_threshold,
+        )
+        __emit_generation(
+            generation_counter,
+            time_series_max[-1],
+            time_series_avg[-1],
+            time_series_convergence_threshold[-1],
+            time_series_generation_avg[-1],
+        )
 
     population = __select(logger, population, selection_size)
     logger.info("Final population:\n" + __population_to_string(population))
     logger.info("Generations: " + str(generation_counter))
 
-    for key in {k: v for k, v in sorted(fitness_cache.items(), key=lambda item: item[1], reverse=True)}:
-        best_combination = key
-        break
+    # The all-time archive decides the reported best combination. Since invalid
+    # chromosomes score 0.0, an empty result here means no valid combination was
+    # found at all -- report the empty combination rather than an arbitrary one.
+    best_combination: CHROMOSOME = tuple()
+    best_fitness = 0.0
+    for key, fitness in fitness_cache.items():
+        if fitness > best_fitness:
+            best_fitness = fitness
+            best_combination = key
+    if best_fitness <= 0.0:
+        logger.warning("No valid combination found during the evolutionary search.")
     print("--> Best combination: ", best_combination)
 
     return best_combination
+
+
+def __emit_generation(
+    generation: int, max_fitness: float, avg_fitness: float, threshold: float, generation_avg_fitness: float
+) -> None:
+    """Emit a structured 'generation' progress event for the live GUI plot."""
+    reporter = get_active_reporter()
+    if reporter is not None:
+        reporter.generation(
+            generation,
+            max_fitness,
+            avg_fitness,
+            threshold,
+            len(fitness_cache),
+            generation_avg_fitness=generation_avg_fitness,
+        )
 
 
 def plot_time_series(
     time_series_x_values: List[int],
     time_series_max: List[float],
     time_series_avg: List[float],
+    time_series_generation_avg: List[float],
     time_series_convergence_threshold: List[float],
 ) -> None:
     fig = plotille.Figure()
@@ -300,7 +409,14 @@ def plot_time_series(
     fig.x_label = "Generation"
     fig.y_label = "Fitness (speedup)"
     fig.plot(time_series_x_values, time_series_max, interp="linear", lc="green", label="Maximum fitness")
-    fig.plot(time_series_x_values, time_series_avg, interp="linear", lc="cyan", label="Average fitness")
+    fig.plot(time_series_x_values, time_series_avg, interp="linear", lc="cyan", label="Population average")
+    fig.plot(
+        time_series_x_values,
+        time_series_generation_avg,
+        interp="linear",
+        lc="magenta",
+        label="Generation average (measured)",
+    )
     fig.plot(
         time_series_x_values,
         time_series_convergence_threshold,
@@ -332,40 +448,65 @@ def get_average_fitness(population: List[CHROMOSOME]) -> float:
 
 
 def __mutate(logger: Logger, population: List[CHROMOSOME], mutations_count: int) -> List[CHROMOSOME]:
-    # get list of known genes
+    # get list of known genes; sorted so that a run is reproducible for a fixed seed
     known_genes_set: Set[int] = set()
     for entry in fitness_cache:
         for gene in entry:
             known_genes_set.add(gene)
-    known_genes = list(known_genes_set)
+    known_genes = sorted(known_genes_set)
+    if not known_genes or not population:
+        logger.debug("Nothing to mutate.")
+        return population
+
+    # mutate the individuals that entered this generation, not the offspring created here
+    parents = list(population)
 
     # perform mutations
     for i in range(0, mutations_count):
-        element_1 = list(random.choice(population))
-        index = random.randint(0, len(known_genes) - 1)
-        target_gene = known_genes[index]
+        element_1 = list(random.choice(parents))
+        target_gene = random.choice(known_genes)
         if target_gene in element_1:
             element_1.remove(target_gene)
         else:
             element_1.append(target_gene)
-        population.append(tuple(element_1))
+        population.append(canonical_chromosome(element_1))
 
     logger.debug("Mutated population:\n" + __population_to_string(population))
     return population
 
 
 def __crossover(logger: Logger, population: List[CHROMOSOME], crossover_count: int) -> List[CHROMOSOME]:
+    """Produce offspring by two-point and uniform crossover.
+
+    Each pair of parents yields three children: two from a two-point crossover that
+    swaps the genes inside the cut window while each child *keeps its own parent's
+    genes outside the window*, and one from uniform crossover (shared genes are
+    inherited, differing genes are decided by a coin flip).
+
+    The gene axis is the sorted list of genes present in the population. Sorting
+    matters: cut points index into this axis, so an unstable ordering (as produced by
+    iterating a set) would make the two-point crossover cut at arbitrary, run-dependent
+    positions.
+    """
     logger.debug("Performing " + str(crossover_count) + " crossovers on population.")
-    # get list of known genes
-    known_genes: Set[int] = set()
+    # gene axis: every gene present in the population, in a stable order
+    known_genes_set: Set[int] = set()
     for entry in population:
         for gene in entry:
-            known_genes.add(gene)
+            known_genes_set.add(gene)
+    known_genes = sorted(known_genes_set)
+    if not known_genes or not population:
+        logger.debug("Nothing to cross over.")
+        return population
+
+    # cross the individuals that entered this generation, not the offspring created here
+    parents = list(population)
+
     # perform crossover
     for i in range(0, crossover_count):
         # selection
-        element_1 = random.choice(population)
-        element_2 = random.choice(population)
+        element_1 = random.choice(parents)
+        element_2 = random.choice(parents)
         # determine crossover points
         cp1 = random.randint(0, len(known_genes))
         cp2 = random.randint(0, len(known_genes))
@@ -383,14 +524,20 @@ def __crossover(logger: Logger, population: List[CHROMOSOME], crossover_count: i
         new_element_1: List[int] = []
         new_element_2: List[int] = []
         new_element_3: List[int] = []
-        for idx, gene in enumerate(list(known_genes)):
-            # pure crossover
-            if idx >= cp1 and idx < cp2:
-                if gene in element_1:
-                    new_element_2.append(gene)
+        for idx, gene in enumerate(known_genes):
+            # two-point crossover: inside the window the parents swap their genes,
+            # outside of it each child keeps the genes of its own parent
+            if cp1 <= idx < cp2:
                 if gene in element_2:
                     new_element_1.append(gene)
-            # majority voting for child 3
+                if gene in element_1:
+                    new_element_2.append(gene)
+            else:
+                if gene in element_1:
+                    new_element_1.append(gene)
+                if gene in element_2:
+                    new_element_2.append(gene)
+            # uniform crossover for child 3
             if gene in element_1 and gene in element_2:
                 new_element_3.append(gene)
             elif gene not in element_1 and gene not in element_2:
@@ -398,9 +545,9 @@ def __crossover(logger: Logger, population: List[CHROMOSOME], crossover_count: i
             elif bool(random.getrandbits(1)):
                 new_element_3.append(gene)
 
-        population.append(tuple(new_element_1))
-        population.append(tuple(new_element_2))
-        population.append(tuple(new_element_3))
+        population.append(canonical_chromosome(new_element_1))
+        population.append(canonical_chromosome(new_element_2))
+        population.append(canonical_chromosome(new_element_3))
 
     logger.debug("Crossed-over population:\n" + __population_to_string(population))
 
@@ -410,36 +557,39 @@ def __crossover(logger: Logger, population: List[CHROMOSOME], crossover_count: i
 def __fill_population(
     logger: Logger, population: List[CHROMOSOME], population_size: int, unused_maybes: List[int]
 ) -> Tuple[List[CHROMOSOME], List[int]]:
+    """Top the population up with MAYBE suggestions that have not been tried yet.
+
+    Once every MAYBE has been used, the population is only grown by crossover and
+    mutation: injecting random combinations here would cost a full compile-and-execute
+    cycle per individual and per generation.
+    """
     logger.debug("Filling population to " + str(population_size) + " Elements.")
-    if len(unused_maybes) > 0:
-        while len(population) < population_size and len(unused_maybes) > 0:
-            population.append((unused_maybes.pop(),))
-
-    # get list of known genes
-    known_genes: Set[int] = set()
-    for entry in fitness_cache:
-        for gene in entry:
-            known_genes.add(gene)
-
-    #    while len(population) < population_size:
-    #        new_elem_list: List[int] = []
-    #        for gene in list(known_genes):
-    #            if bool(random.getrandbits(1)):
-    #                new_elem_list.append(gene)
-    #        population.append(tuple(new_elem_list))
+    # pop from the front, so that the higher-priority MAYBEs are tried first
+    while len(population) < population_size and len(unused_maybes) > 0:
+        population.append(canonical_chromosome([unused_maybes.pop(0)]))
 
     logger.debug("Filled population:\n" + __population_to_string(population))
     return population, unused_maybes
 
 
 def __select(logger: Logger, population: List[CHROMOSOME], selection_size: int) -> List[CHROMOSOME]:
-    global fitness_cache
-    selection: List[CHROMOSOME] = []
+    """Survivor selection: keep the fittest ``selection_size`` members of ``population``.
 
-    for key in {k: v for k, v in sorted(fitness_cache.items(), key=lambda item: item[1], reverse=True)}:
-        if len(selection) >= selection_size:
-            break
-        selection.append(key)
+    ``population`` always contains the previous generation's survivors (nothing is
+    ever removed from it before this point), so this is a (mu+lambda) elitist
+    selection and the best individual is preserved across generations.
+
+    Note that selection deliberately does *not* draw from the global
+    ``fitness_cache``: that cache is the all-time archive used to report the final
+    best combination, and resurrecting arbitrary history into the population would
+    turn every population statistic (in particular the average fitness plotted for
+    the user) into an archive statistic that no longer describes any generation.
+    """
+    global fitness_cache
+    # de-duplicate while preserving order, then rank by fitness
+    unique_population = list(dict.fromkeys(population))
+    ranked = sorted(unique_population, key=lambda chromosome: fitness_cache.get(chromosome, 0.0), reverse=True)
+    selection: List[CHROMOSOME] = ranked[:selection_size]
 
     logger.info("Selected:\n " + __population_to_string(selection))
 
@@ -456,15 +606,20 @@ def __calculate_fitness(
     arguments: AutotunerArguments,
     timeout_after: float,
     get_unique_configuration_id: Callable[[], int],
-) -> None:
+    generation: int,
+) -> List[CHROMOSOME]:
+    """Measure every not-yet-known member of ``population`` and update the caches.
+
+    Returns the chromosomes that were newly evaluated in this call, i.e. exactly
+    those reported as ``measurement`` progress events for ``generation``.
+    """
     global fitness_cache
     global runtime_cache
-    global best_execution_time
-    global worst_execution_time
+    global validity_cache
     global entry_to_configuration
     logger.info("Calculating fitness...")
     logger.info("--- Removing duplicates")
-    population_wo_duplicates = list(set(population))
+    population_wo_duplicates = list(dict.fromkeys(population))
 
     compilation_successful: Dict[CHROMOSOME, bool] = dict()
 
@@ -479,55 +634,78 @@ def __calculate_fitness(
     )
 
     logger.info("--- Executing population")
-    for entry in tqdm([p for p in population_wo_duplicates if p not in fitness_cache]):
+    newly_evaluated: List[CHROMOSOME] = []
+    for entry in search_bar(
+        [p for p in population_wo_duplicates if p not in fitness_cache], desc="Executing population"
+    ):
         if entry not in compilation_successful or not compilation_successful[entry]:
+            # A configuration that does not build is a failed evaluation, not a
+            # non-event: record it so it scores 0.0 and shows up in the search plot.
+            return_code_cache[entry] = 1
+            validity_cache[entry] = False
+            newly_evaluated.append(entry)
+            reporter = get_active_reporter()
+            if reporter is not None:
+                reporter.measurement(list(entry), 0.0, 1, False, False, generation=generation)
             continue
 
         entry_to_configuration[entry].execute_only(
             arguments, timeout=timeout_after, thread_count=arguments.thread_count
         )
 
-        return_code_cache[entry] = cast(ExecutionResult, entry_to_configuration[entry].execution_result).return_code
-        if (
-            cast(ExecutionResult, entry_to_configuration[entry].execution_result).return_code != 0
-            or not cast(ExecutionResult, entry_to_configuration[entry].execution_result).result_valid
-            or not cast(ExecutionResult, entry_to_configuration[entry].execution_result).thread_sanitizer
-        ):
-            fitness_cache[entry] = 0.0
-        runtime = cast(ExecutionResult, entry_to_configuration[entry].execution_result).runtime
+        exec_res = cast(ExecutionResult, entry_to_configuration[entry].execution_result)
+        return_code_cache[entry] = exec_res.return_code
+        validity_cache[entry] = exec_res.return_code == 0 and exec_res.result_valid and exec_res.thread_sanitizer
+        runtime = exec_res.runtime
         runtime_cache[entry] = runtime
+        newly_evaluated.append(entry)
+
+        # report this individual as a measurement for the live search plot
+        reporter = get_active_reporter()
+        if reporter is not None:
+            reporter.measurement(
+                list(entry),
+                exec_res.runtime,
+                exec_res.return_code,
+                exec_res.result_valid,
+                exec_res.thread_sanitizer,
+                generation=generation,
+            )
 
         if not arguments.skip_cleanup:
             entry_to_configuration[entry].deleteFolder()
             del entry_to_configuration[entry]
 
     logger.info("--- Cleanup ")
-    for entry in tqdm(entry_to_configuration):
+    for entry in search_bar(entry_to_configuration, desc="Cleanup"):
         if not arguments.skip_cleanup:
             entry_to_configuration[entry].deleteFolder()
     entry_to_configuration.clear()
 
-    # find new best and worst runtime
-    for key in population_wo_duplicates:
-        if key not in runtime_cache:
-            continue
-        if runtime_cache[key] < best_execution_time:
-            best_execution_time = runtime_cache[key]
-        if runtime_cache[key] > worst_execution_time:
-            worst_execution_time = runtime_cache[key]
-
     # update fitness
+    reference_runtime = cast(ExecutionResult, reference_configuration.execution_result).runtime
     for key in population_wo_duplicates:
-        if key in return_code_cache:
-            if return_code_cache[key] == 0:
-                fitness_cache[key] = (
-                    cast(ExecutionResult, reference_configuration.execution_result).runtime / runtime_cache[key]
-                )
-            else:
-                fitness_cache[key] = 0.0
-        else:
-            fitness_cache[key] = 0.0
+        fitness_cache[key] = get_fitness(key, reference_runtime)
     logger.info("Calculated fitness:\n" + __population_to_string(population))
+
+    return newly_evaluated
+
+
+def get_fitness(chromosome: CHROMOSOME, reference_runtime: float) -> FITNESS:
+    """Fitness of ``chromosome``: its speedup over the reference, or 0.0 if invalid.
+
+    A chromosome that did not run, did not produce a correct result or tripped the
+    thread sanitizer scores 0.0 -- it must never be selected, reported as the best
+    combination, or raise the average fitness shown to the user.
+    """
+    global runtime_cache
+    global validity_cache
+    if not validity_cache.get(chromosome, False):
+        return 0.0
+    runtime = runtime_cache.get(chromosome, 0.0)
+    if runtime <= 0.0:
+        return 0.0
+    return reference_runtime / runtime
 
 
 def __compile_population(
@@ -543,7 +721,7 @@ def __compile_population(
     logger.info("--- Compiling population")
 
     logger.info("----- Prepare code")
-    for entry in tqdm(population):
+    for entry in search_bar(population, desc="Preparing code"):
         if entry in fitness_cache:
             continue
         entry_to_configuration[entry] = reference_configuration.create_copy(
@@ -559,7 +737,11 @@ def __compile_population(
         param_list.append((entry, copy.deepcopy(arguments), timeout_after))
     with Pool() as pool:
         # local_results = list(tqdm(pool.imap_unordered(__compile_configuration, param_list), total=len(param_list)))
-        local_results = list(tqdm(pool.imap_unordered(__compile_configuration, param_list), total=len(param_list)))
+        local_results = list(
+            search_bar(
+                pool.imap_unordered(__compile_configuration, param_list), total=len(param_list), desc="Compiling"
+            )
+        )
 
     # merge local into global result
     for local in local_results:
@@ -568,12 +750,18 @@ def __compile_population(
 
 
 def __compile_configuration(args: Tuple[CHROMOSOME, AutotunerArguments, float]) -> Tuple[CHROMOSOME, bool]:
+    """Build one configuration. Runs in a ``Pool`` worker.
+
+    Only the returned flag makes it back to the parent process: ``compile_only`` also
+    records a failure on the ``CodeConfiguration`` object, but that mutation happens on
+    the worker's copy and is lost. The parent therefore has to rely on this flag to
+    tell whether the build produced a binary worth executing.
+    """
     global entry_to_configuration
     configuration, arguments, timeout_after = args
     compilation_successful = entry_to_configuration[configuration].compile_only(
         arguments, timeout=timeout_after, thread_count=arguments.thread_count
     )
-    compilation_successful = True
     return configuration, compilation_successful
 
 
@@ -583,20 +771,17 @@ def __initialize(
     population: List[CHROMOSOME] = []
     # add all YES suggestions
     for suggestion_id in patterns_by_hotspot_type[HotspotType.YES]:
-        population.append((suggestion_id,))
-    # fill with MAYBE suggestions
-    unused_maybes: List[int] = patterns_by_hotspot_type[HotspotType.MAYBE]
-    for suggestion_id in patterns_by_hotspot_type[HotspotType.MAYBE]:
-        if len(population) < population_size:
-            population.append((suggestion_id,))
-            if suggestion_id in unused_maybes:
-                unused_maybes.remove(suggestion_id)
-        else:
-            break
+        population.append(canonical_chromosome([suggestion_id]))
+    # fill with MAYBE suggestions. ``unused_maybes`` must be a copy: it is consumed
+    # below and later by __fill_population, and mutating the caller's list while
+    # iterating it used to make the loop skip every second MAYBE.
+    unused_maybes: List[int] = list(patterns_by_hotspot_type[HotspotType.MAYBE])
+    while len(population) < population_size and len(unused_maybes) > 0:
+        population.append(canonical_chromosome([unused_maybes.pop(0)]))
     # fill with NO suggestions
     for suggestion_id in patterns_by_hotspot_type[HotspotType.NO]:
         if len(population) < population_size:
-            population.append((suggestion_id,))
+            population.append(canonical_chromosome([suggestion_id]))
         else:
             break
 

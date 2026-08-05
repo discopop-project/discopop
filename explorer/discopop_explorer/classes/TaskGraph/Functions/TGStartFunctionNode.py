@@ -12,4 +12,4 @@ class TGStartFunctionNode(TGNode):
     pass
 
     def get_label(self) -> str:
-        return "Start FN " + str(self.pet_node_id)
+        return "Start FN " + str(self.pet_node_id) + "\nstate: " + str(self.state_id)

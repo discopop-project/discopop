@@ -36,9 +36,22 @@ def run(arguments: ProjectManagerArguments) -> None:
         print("Initializing project directory:", arguments.dot_dp)
         initialize_directories(arguments)
         initialize_configuration_files(arguments)
+        if not arguments.gui:
+            return
+
+    if arguments.gui:
+        # Auto-initialize if not already initialized (user doesn't need --init flag)
+        if not os.path.exists(arguments.dot_dp):
+            print("Initializing project directory:", arguments.dot_dp)
+            initialize_directories(arguments)
+            initialize_configuration_files(arguments)
+
+        from discopop_library.ProjectManager.gui.ConfigManagerApp import run_gui
+
+        run_gui(arguments)
         return
 
-    derive_settings_files(arguments)
+    derive_settings_files(arguments.project_config_dir)
 
     if arguments.list:
         show_configurations_without_execution(arguments)

@@ -361,6 +361,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
               i->instructionsLineNumbers.insert(lid);
               i->childrenNodes.push_back(n);
               i->callLineTofunctionMap[lid].push_back(n);
+              i->callLineToCallInstructionMap[lid].push_back(&(*instruction));
               break;
             }
           }
