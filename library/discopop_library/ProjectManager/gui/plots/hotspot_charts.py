@@ -109,7 +109,13 @@ def format_region_tooltip(region: HotspotRegion) -> str:
     return "\n".join(lines)
 
 
-def _hotness_kind_legends(ax: Any, hotnesses: Sequence[str], kinds: Sequence[str]) -> None:
+def _hotness_kind_legends(ax: Any, hotnesses: Sequence[str], kinds: Sequence[str], outside: bool = False) -> None:
+    """Colour (hotness) and marker (kind) keys for a chart.
+
+    ``outside`` puts them in a horizontal strip below the axes instead of into the
+    upper-left / lower-right corners. The quadrant chart needs that: its corners
+    carry the quadrant names, which an in-axes legend would cover.
+    """
     from matplotlib.lines import Line2D
     from matplotlib.patches import Patch
 
@@ -117,6 +123,29 @@ def _hotness_kind_legends(ax: Any, hotnesses: Sequence[str], kinds: Sequence[str
     kind_handles = [
         Line2D([], [], marker=kind_marker(k), color="0.35", linestyle="None", label=k.title()) for k in kinds
     ]
+    if outside:
+        # Figure-level "outside" locations are the ones constrained layout reserves
+        # space for, so the strip cannot be clipped by the canvas edge.
+        figure = ax.get_figure()
+        if hotness_handles:
+            first = figure.legend(
+                handles=hotness_handles,
+                title="hotness",
+                loc="outside lower left",
+                ncols=len(hotness_handles),
+                fontsize=mode_style.LEGEND_SIZE,
+            )
+            mode_style.style_legend(first)
+        if kind_handles:
+            second = figure.legend(
+                handles=kind_handles,
+                title="kind",
+                loc="outside lower right",
+                ncols=len(kind_handles),
+                fontsize=mode_style.LEGEND_SIZE,
+            )
+            mode_style.style_legend(second)
+        return
     if hotness_handles:
         first = ax.legend(handles=hotness_handles, title="hotness", loc="upper left", fontsize=mode_style.LEGEND_SIZE)
         mode_style.style_legend(first)
@@ -174,7 +203,7 @@ def render_quadrant(
     ax.axhline(mean_ratio, color=mode_style.REFERENCE_COLOR, linestyle="--", linewidth=1.3, zorder=2)
 
     ax.set_xlabel("Average runtime (s, log scale)")
-    ax.set_ylabel("Input sensitivity  ratio = 1/((min/max)+1)")
+    ax.set_ylabel("Input sensitivity ratio")
 
     if degenerate:
         # Do not dress a single run up as a two-dimensional result.
@@ -209,7 +238,7 @@ def render_quadrant(
 
     hotnesses = [h for h in (HOTNESS_YES, HOTNESS_MAYBE, HOTNESS_NO) if any(r.hotness == h for r in plotted)]
     kinds = sorted({region.key.kind for region in plotted})
-    _hotness_kind_legends(ax, hotnesses, kinds)
+    _hotness_kind_legends(ax, hotnesses, kinds, outside=True)
     mode_style.style_axes(ax)
     interaction.setup_interaction(figure, format_region_tooltip, on_select)
 
