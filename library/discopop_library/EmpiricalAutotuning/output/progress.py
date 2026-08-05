@@ -114,18 +114,33 @@ class ProgressReporter:
         self._emit(obj)
 
     def generation(
-        self, generation: int, max_fitness: float, avg_fitness: float, threshold: float, evaluated: int
+        self,
+        generation: int,
+        max_fitness: float,
+        avg_fitness: float,
+        threshold: float,
+        evaluated: int,
+        generation_avg_fitness: Optional[float] = None,
     ) -> None:
-        self._emit(
-            {
-                "event": "generation",
-                "generation": int(generation),
-                "max_fitness": round(max_fitness, 4),
-                "avg_fitness": round(avg_fitness, 4),
-                "threshold": round(threshold, 4),
-                "evaluated": int(evaluated),
-            }
-        )
+        """Summarize one evolutionary generation.
+
+        ``avg_fitness`` is the average over the surviving population, whereas
+        ``generation_avg_fitness`` averages only the individuals actually measured
+        in this generation -- i.e. exactly those reported as ``measurement`` events
+        carrying this ``generation``, so it is directly comparable to the scattered
+        points in the GUI plot.
+        """
+        obj: Dict[str, Any] = {
+            "event": "generation",
+            "generation": int(generation),
+            "max_fitness": round(max_fitness, 4),
+            "avg_fitness": round(avg_fitness, 4),
+            "threshold": round(threshold, 4),
+            "evaluated": int(evaluated),
+        }
+        if generation_avg_fitness is not None:
+            obj["generation_avg_fitness"] = round(generation_avg_fitness, 4)
+        self._emit(obj)
 
     def result(
         self,

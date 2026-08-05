@@ -102,3 +102,24 @@ def test_count_outcomes() -> None:
         ([4], 1.0, 1, False, False, "p4"),  # failed (non-zero return code)
     ]
     assert count_outcomes(debug_stats) == (2, 2, 1)
+
+
+def test_generation_event_carries_the_measured_average(tmp_path: Path) -> None:
+    jsonl = os.path.join(tmp_path, "progress.jsonl")
+    reporter = ProgressReporter("tiny", jsonl)
+    reporter.generation(2, 3.0, 2.0, 2.7, 17, generation_avg_fitness=1.25)
+    reporter.close()
+
+    event = _read_jsonl(jsonl)[0]
+    assert event["event"] == "generation"
+    assert event["avg_fitness"] == 2.0
+    assert event["generation_avg_fitness"] == 1.25
+
+
+def test_generation_event_omits_the_measured_average_when_unknown(tmp_path: Path) -> None:
+    jsonl = os.path.join(tmp_path, "progress.jsonl")
+    reporter = ProgressReporter("tiny", jsonl)
+    reporter.generation(0, 1.0, 1.0, 1.0, 3)
+    reporter.close()
+
+    assert "generation_avg_fitness" not in _read_jsonl(jsonl)[0]
