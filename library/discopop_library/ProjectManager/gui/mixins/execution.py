@@ -19,6 +19,7 @@ from discopop_library.ProjectManager.configurations.compile_script import resolv
 from discopop_library.ProjectManager.configurations.copying import copy_configuration
 from discopop_library.ProjectManager.configurations.deletion import delete_configuration
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
+from discopop_library.ProjectManager.configurations.validation import has_validate_script, run_validation_phase
 from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import show_warning
@@ -297,35 +298,57 @@ class ExecutionMixin(ConfigManagerMixinBase):
 
                     # optional output validation (auto-run when validate.sh exists),
                     # applied only to the "real" runs (seq/par) — matching the CLI.
-                    validate_sh_path = os.path.join(config_path, "validate.sh")
-                    if mode in ("seq", "par") and os.path.exists(validate_sh_path):
-                        if self._execution_stop_event.is_set():
-                            self.after(0, lambda: append_output("Execution stopped by user.\n"))  # type: ignore
-                        else:
-                            self.after(0, lambda: self.status_label.config(text="⏳ Validating...", foreground=widgets.STATUS_BUSY))  # type: ignore
-                            self.after(0, lambda: append_output("Validating output...\n"))  # type: ignore
-                            validate_result = execute_configuration(
-                                args_copy,
-                                project_copy_path,
-                                config_path,
-                                settings_path,
-                                validate_sh_path,
-                                1 if mode == "seq" else thread_count,
-                                args_copy.timeout_validation,
-                                process_started_callback=self._register_execution_process,
-                            )
-                            self._execution_process = None
+                    if mode in ("seq", "par") and has_validate_script(config_path):
 
-                            if validate_result is None or validate_result[0] != 0:
-                                v_rc = validate_result[0] if validate_result else "None"
-                                self.after(0, lambda rc=v_rc: append_output(f"Validation FAILED (return code: {rc})\n"))  # type: ignore
+                        def report_step(status: str, message: str) -> None:
+                            self.after(0, lambda: self.status_label.config(text=status, foreground=widgets.STATUS_BUSY))  # type: ignore
+                            self.after(0, lambda: append_output(message))  # type: ignore
+
+                        validation = run_validation_phase(
+                            args_copy,
+                            project_copy_path,
+                            config_path,
+                            settings_path,
+                            1 if mode == "seq" else thread_count,
+                            timeout_compilation=args_copy.timeout_compilation,
+                            timeout_validation=args_copy.timeout_validation,
+                            process_started_callback=self._register_execution_process,
+                            on_compile_start=lambda _script: report_step(
+                                "⏳ Compiling for validation...", "Compiling for validation...\n"
+                            ),
+                            on_validate_start=lambda _script: report_step("⏳ Validating...", "Validating output...\n"),
+                            should_abort=self._execution_stop_event.is_set,
+                        )
+                        self._execution_process = None
+
+                        if validation.compile_required:
+                            if validation.compile_successful:
+                                assert validation.compile_result is not None
+                                _, c_elapsed, c_stdout, c_stderr = validation.compile_result
+                                self.after(0, lambda e=c_elapsed: append_output(f"Validation build succeeded ({e:.2f}s)\n"))  # type: ignore
+                                if c_stdout:
+                                    self.after(0, lambda o=c_stdout: append_output(f"stdout: {o}\n"))  # type: ignore
+                                if c_stderr:
+                                    self.after(0, lambda e=c_stderr: append_output(f"stderr: {e}\n"))  # type: ignore
                             else:
-                                _, v_elapsed, v_stdout, v_stderr = validate_result
-                                self.after(0, lambda e=v_elapsed: append_output(f"Validation succeeded ({e:.2f}s)\n"))  # type: ignore
-                                if v_stdout:
-                                    self.after(0, lambda o=v_stdout: append_output(f"stdout: {o}\n"))  # type: ignore
-                                if v_stderr:
-                                    self.after(0, lambda e=v_stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+                                c_rc = validation.compile_result[0] if validation.compile_result else "None"
+                                self.after(0, lambda rc=c_rc: append_output(f"Validation build FAILED (return code: {rc})\n"))  # type: ignore
+
+                        if validation.aborted:
+                            self.after(0, lambda: append_output("Execution stopped by user.\n"))  # type: ignore
+                        elif validation.compile_required and not validation.compile_successful:
+                            self.after(0, lambda: append_output("Validation skipped: its build failed.\n"))  # type: ignore
+                        elif not validation.validate_successful:
+                            v_rc = validation.validate_result[0] if validation.validate_result else "None"
+                            self.after(0, lambda rc=v_rc: append_output(f"Validation FAILED (return code: {rc})\n"))  # type: ignore
+                        else:
+                            assert validation.validate_result is not None
+                            _, v_elapsed, v_stdout, v_stderr = validation.validate_result
+                            self.after(0, lambda e=v_elapsed: append_output(f"Validation succeeded ({e:.2f}s)\n"))  # type: ignore
+                            if v_stdout:
+                                self.after(0, lambda o=v_stdout: append_output(f"stdout: {o}\n"))  # type: ignore
+                            if v_stderr:
+                                self.after(0, lambda e=v_stderr: append_output(f"stderr: {e}\n"))  # type: ignore
 
                 if not inplace and not skip_cleanup:
                     try:

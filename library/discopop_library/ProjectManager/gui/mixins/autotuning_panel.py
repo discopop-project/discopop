@@ -117,16 +117,10 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         threads_row = ttk.Frame(settings_frame)
         threads_row.pack(fill=tk.X, pady=5)
         ttk.Label(threads_row, text="Threads:", font=widgets.FONT_BODY).pack(side=tk.LEFT, padx=5)
-        self.autotuning_threads_var = tk.StringVar(value="auto")
-        threads_combo = ttk.Combobox(
-            threads_row,
-            textvariable=self.autotuning_threads_var,
-            values=widgets.THREAD_VALUES,
-            width=10,
-            state="readonly",
-        )
+        self.autotuning_threads_var = tk.StringVar(value=widgets.THREAD_AUTO)
+        threads_combo = widgets.thread_selector(threads_row, self.autotuning_threads_var)
         threads_combo.pack(side=tk.LEFT, padx=5)
-        caption_label(threads_row, "(auto = CPU count / 2)").pack(side=tk.LEFT, padx=5)
+        caption_label(threads_row, "(auto = CPU count / 2; custom counts can be typed)").pack(side=tk.LEFT, padx=5)
 
         # Hotspot types
         hotspot_frame = ttk.Frame(settings_frame)
@@ -535,7 +529,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         selected_hotspot_types = [htype for htype, var in self.autotuning_hotspot_types_vars.items() if var.get()]
         hotspot_types = ",".join(selected_hotspot_types) if selected_hotspot_types else "yes,no,maybe"
 
-        threads_value = self.autotuning_threads_var.get()
+        threads_value = widgets.thread_value(self.autotuning_threads_var)
         algorithm_description = self.autotuning_algorithm_var.get()
         algorithm_value = self.autotuning_algorithm_map.get(algorithm_description, "0")
         log_level = self.autotuning_log_level_var.get()

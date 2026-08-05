@@ -136,16 +136,10 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         jobs_frame.pack(fill=tk.X, pady=5)
 
         ttk.Label(jobs_frame, text="Threads:", font=widgets.FONT_BODY).pack(side=tk.LEFT, padx=5)
-        self.jobs_var = tk.StringVar(value="auto")
-        jobs_combo = ttk.Combobox(
-            jobs_frame,
-            textvariable=self.jobs_var,
-            values=widgets.THREAD_VALUES,
-            width=10,
-            state="readonly",
-        )
+        self.jobs_var = tk.StringVar(value=widgets.THREAD_AUTO)
+        jobs_combo = widgets.thread_selector(jobs_frame, self.jobs_var)
         jobs_combo.pack(side=tk.LEFT, padx=5)
-        caption_label(jobs_frame, "(auto = unlimited)").pack(side=tk.LEFT, padx=5)
+        caption_label(jobs_frame, "(auto = unlimited; custom counts can be typed)").pack(side=tk.LEFT, padx=5)
 
         # Visualization option
         visualize_frame = ttk.Frame(settings_frame)
@@ -571,7 +565,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         selected_patterns = [pattern for pattern, var in self.pattern_types_vars.items() if var.get()]
         enable_patterns = ",".join(selected_patterns) if selected_patterns else "reduction,doall"
-        jobs_value = self.jobs_var.get()
+        jobs_value = widgets.thread_value(self.jobs_var)
         ignore_states = self._ignore_dependency_states()
 
         output_callback("Configuration:\n")
@@ -645,7 +639,7 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         selected_patterns = [pattern for pattern, var in self.pattern_types_vars.items() if var.get()]
         enable_patterns = ",".join(selected_patterns) if selected_patterns else "reduction,doall"
-        jobs_value = self.jobs_var.get()
+        jobs_value = widgets.thread_value(self.jobs_var)
         ignore_states = self._ignore_dependency_states()
 
         output_callback("Configuration:\n")

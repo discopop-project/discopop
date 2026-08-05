@@ -47,6 +47,7 @@ class ConfigManagerMixinBase:
     editor_sub_tab_labels: Dict[str, str]
     compile_override_button: RoundedButton
     validate_script_button: RoundedButton
+    validation_compile_override_button: RoundedButton
 
     # Pattern Detection tab
     pattern_detection_tab_index: int
@@ -86,6 +87,7 @@ class ConfigManagerMixinBase:
     current_tooltip_tab: Optional[int]
     test_compilation_button: RoundedButton
     derive_compilation_button: RoundedButton
+    shared_validation_compile_button: RoundedButton
     derive_button_tooltip: Optional[Tooltip]
     derive_button_tooltip_timer: Optional[str]
 

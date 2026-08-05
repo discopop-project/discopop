@@ -15,11 +15,15 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Optional, Any, Dict, List, Union
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.configurations.compile_script import (
+    get_per_config_validation_compile_script_path,
+)
 from discopop_library.ProjectManager.utilities.initializeFiles import (
     initial_settings_content,
     initial_script_content,
     initialize_configuration_files,
 )
+from discopop_library.ProjectManager.utilities.scriptFiles import write_script_file
 from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.widgets import create_styled_output_console, heading_label
 from discopop_library.ProjectManager.gui.wizard_steps import WizardStepsMixin
@@ -47,6 +51,7 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
             "config_name": "default",
             "execute_sh": "",
             "validate_sh": "",
+            "validate_compile_sh": "",
             "derived_settings": {},
         }
         self._compile_sh_has_placeholder = False
@@ -175,6 +180,7 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
 
     def _on_finish(self) -> None:
         self.step_data["validate_sh"] = self.validate_sh_text.get(1.0, tk.END)
+        self.step_data["validate_compile_sh"] = self.validate_compile_sh_text.get(1.0, tk.END)
 
         try:
             self._finish_wizard()
@@ -345,17 +351,32 @@ class ConfigurationWizard(WizardStepsMixin, tk.Toplevel):  # type: ignore
         # validate.sh is optional: only create it if the user provided more than
         # an empty script / bare shebang.
         validate_sh_content: str = str(self.step_data["validate_sh"])
-        validate_sh_meaningful = "\n".join(
-            line for line in validate_sh_content.splitlines() if line.strip() and not line.strip().startswith("#!")
-        ).strip()
-        if validate_sh_meaningful:
+        if self.__is_meaningful_script(validate_sh_content):
             validate_sh_path: str = os.path.join(config_path, "validate.sh")
             with open(validate_sh_path, "w") as f:
                 f.write(validate_sh_content)
             subprocess.run(["chmod", "+x", validate_sh_path], check=True)
+
+            # compile_validate.sh is equally optional, and pointless without a
+            # validate.sh to run against its build -- hence the nesting.
+            validate_compile_sh_content: str = str(self.step_data["validate_compile_sh"])
+            if self.__is_meaningful_script(validate_compile_sh_content):
+                write_script_file(
+                    get_per_config_validation_compile_script_path(self.arguments.project_config_dir, config_name),
+                    validate_compile_sh_content,
+                )
 
         initialize_configuration_files(self.arguments)
 
         self.result = config_name
         self.grab_release()
         self.destroy()
+
+    @staticmethod
+    def __is_meaningful_script(content: str) -> bool:
+        """Whether the user actually filled in an optional script editor."""
+        return bool(
+            "\n".join(
+                line for line in content.splitlines() if line.strip() and not line.strip().startswith("#!")
+            ).strip()
+        )

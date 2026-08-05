@@ -9,14 +9,17 @@
 import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from mcp.types import TextContent, Tool, ToolAnnotations
 
 from discopop_library.ProjectManager.configurations.compile_script import (
     get_per_config_compile_script_path,
+    get_per_config_validation_compile_script_path,
     get_shared_compile_script_path,
+    get_shared_validation_compile_script_path,
 )
+from discopop_library.ProjectManager.configurations.validation import VALIDATE_SCRIPT_NAME
 from discopop_library.ProjectManager.utilities.scriptFiles import write_script_file
 from mcp_server.tools.helpers import ToolContext
 
@@ -56,6 +59,13 @@ TOOL = Tool(
         "configuration override that only applies to that one configuration (e.g. when a "
         "configuration needs different compile-time parameters). "
         "\n\n"
+        "Pass purpose='validate' to set compile_validate.sh instead: the build used by a "
+        "configuration's validate.sh when validation needs a differently compiled binary "
+        "than the timed execute.sh run. It is compiled after execute.sh and before "
+        "validate.sh, so it never affects the measured runtime, and it is ignored for "
+        "configurations that have no validate.sh (see create_execution_configuration). "
+        "Without it, validate.sh runs against the execute.sh build. "
+        "\n\n"
         "After setting the compile script, call create_execution_configuration to define "
         "how to run the compiled binary."
     ),
@@ -87,6 +97,18 @@ TOOL = Tool(
                     "compile.sh used by every configuration without its own override."
                 ),
             },
+            "purpose": {
+                "type": "string",
+                "enum": ["execute", "validate"],
+                "description": (
+                    "Which build this script defines. 'execute' (the default) writes "
+                    "compile.sh, the build that execute.sh runs against. 'validate' writes "
+                    "compile_validate.sh, an optional separate build for validate.sh. A "
+                    "compile_validate.sh takes precedence over a per-configuration compile.sh "
+                    "override, i.e. the shared one also applies to configurations that have "
+                    "their own compile.sh."
+                ),
+            },
         },
         "required": ["project_path", "script_body"],
         "additionalProperties": False,
@@ -94,11 +116,36 @@ TOOL = Tool(
 )
 
 
+def __describe_validation_scope(configs_dir: Path, config_name: Optional[str]) -> dict[str, Any]:
+    """Which configurations a compile_validate.sh takes effect for.
+
+    A validation build is only used by configurations that define a validate.sh,
+    so reporting both lists makes an inert script obvious to the caller.
+    """
+    if config_name:
+        candidates = [config_name]
+    else:
+        candidates = sorted(entry.name for entry in configs_dir.iterdir() if entry.is_dir())
+    used_by = [name for name in candidates if (configs_dir / name / VALIDATE_SCRIPT_NAME).exists()]
+    return {
+        "used_by": used_by,
+        "ignored_for": [name for name in candidates if name not in used_by],
+    }
+
+
 def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
     try:
         project_path = arguments.get("project_path", "")
         script_body = arguments.get("script_body", "")
         config_name = arguments.get("config_name")
+        purpose = arguments.get("purpose", "execute")
+
+        if purpose not in ("execute", "validate"):
+            return ctx.error(
+                f"Invalid purpose '{purpose}'. Must be 'execute' or 'validate'.",
+                project_path,
+                "set_compile_script",
+            )
 
         configs_dir = Path(project_path) / ".discopop" / "project" / "configs"
         if not configs_dir.exists():
@@ -112,7 +159,12 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                     project_path,
                     "set_compile_script",
                 )
-            compile_sh = Path(get_per_config_compile_script_path(str(configs_dir), config_name))
+            if purpose == "validate":
+                compile_sh = Path(get_per_config_validation_compile_script_path(str(configs_dir), config_name))
+            else:
+                compile_sh = Path(get_per_config_compile_script_path(str(configs_dir), config_name))
+        elif purpose == "validate":
+            compile_sh = Path(get_shared_validation_compile_script_path(str(configs_dir)))
         else:
             compile_sh = Path(get_shared_compile_script_path(str(configs_dir)))
 
@@ -123,9 +175,12 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             "status": "success",
             "project_path": project_path,
             "path": str(compile_sh),
+            "purpose": purpose,
         }
         if config_name:
             result["config_name"] = config_name
+        if purpose == "validate":
+            result["applies_to"] = __describe_validation_scope(configs_dir, config_name)
         ctx.log_response("set_compile_script", result)
         return [TextContent(type="text", text=json.dumps(result))]
 

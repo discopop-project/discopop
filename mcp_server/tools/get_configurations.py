@@ -13,9 +13,21 @@ from typing import Any, Optional
 
 from mcp.types import TextContent, Tool, ToolAnnotations
 
+from discopop_library.ProjectManager.configurations.compile_script import (
+    COMPILE_SCRIPT_NAME,
+    VALIDATION_COMPILE_SCRIPT_NAME,
+    get_shared_compile_script_path,
+    get_shared_validation_compile_script_path,
+)
+from discopop_library.ProjectManager.configurations.validation import VALIDATE_SCRIPT_NAME
 from mcp_server.tools.helpers import ToolContext
 
 logger = logging.getLogger("discopop-mcp")
+
+
+def __read_if_present(path: Path) -> Optional[str]:
+    return path.read_text() if path.exists() else None
+
 
 TOOL = Tool(
     name="get_configurations",
@@ -30,12 +42,18 @@ TOOL = Tool(
         "\n\n"
         "Returns:\n"
         "  - compile_script: content of .discopop/project/configs/compile.sh, or null if absent\n"
+        "  - validation_compile_script: content of the shared compile_validate.sh, or null if "
+        "absent (absent is the normal case: validate.sh then uses the compile.sh build)\n"
         "  - settings: contents of seq_settings.json and dp_settings.json, if present\n"
-        "  - configurations: list of named configurations, each with its execute.sh content\n"
+        "  - configurations: list of named configurations, each with its execute.sh content plus\n"
+        "    any per-configuration overrides — compile_script_override, validate_script and\n"
+        "    validation_compile_script, each null when the configuration does not define it\n"
         "\n"
         "Example output:\n"
         '  {"status":"success","compile_script":"#!/bin/bash\\n$CXX $CXXFLAGS main.cpp -o myapp\\n",'
-        '"configurations":[{"name":"default","execute_script":"#!/bin/bash\\n./myapp\\n"}]}'
+        '"validation_compile_script":null,'
+        '"configurations":[{"name":"default","execute_script":"#!/bin/bash\\n./myapp\\n",'
+        '"compile_script_override":null,"validate_script":null,"validation_compile_script":null}]}'
     ),
     inputSchema={
         "type": "object",
@@ -57,10 +75,8 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         p = Path(project_path)
         configs_dir = p / ".discopop" / "project" / "configs"
 
-        compile_script: Optional[str] = None
-        compile_sh = configs_dir / "compile.sh"
-        if compile_sh.exists():
-            compile_script = compile_sh.read_text()
+        compile_script = __read_if_present(Path(get_shared_compile_script_path(str(configs_dir))))
+        validation_compile_script = __read_if_present(Path(get_shared_validation_compile_script_path(str(configs_dir))))
 
         settings: dict[str, Any] = {}
         for key, filename in [("seq", "seq_settings.json"), ("dp", "dp_settings.json")]:
@@ -73,11 +89,13 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             for config_dir in sorted(configs_dir.iterdir()):
                 if not config_dir.is_dir():
                     continue
-                execute_sh = config_dir / "execute.sh"
                 configurations.append(
                     {
                         "name": config_dir.name,
-                        "execute_script": execute_sh.read_text() if execute_sh.exists() else None,
+                        "execute_script": __read_if_present(config_dir / "execute.sh"),
+                        "compile_script_override": __read_if_present(config_dir / COMPILE_SCRIPT_NAME),
+                        "validate_script": __read_if_present(config_dir / VALIDATE_SCRIPT_NAME),
+                        "validation_compile_script": __read_if_present(config_dir / VALIDATION_COMPILE_SCRIPT_NAME),
                     }
                 )
 
@@ -85,6 +103,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             "status": "success",
             "project_path": project_path,
             "compile_script": compile_script,
+            "validation_compile_script": validation_compile_script,
             "settings": settings,
             "configurations": configurations,
         }

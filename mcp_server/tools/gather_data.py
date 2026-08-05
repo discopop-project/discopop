@@ -17,6 +17,7 @@ from typing import Any, Optional
 
 from mcp.types import TextContent, Tool
 
+from discopop_library.ProjectManager.configurations.compile_script import resolve_compile_script_path
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
 from mcp_server.tools.helpers import ToolContext
 
@@ -106,18 +107,19 @@ def _hotspot_instrument(
 ) -> dict[str, Any]:
     p = Path(project_path)
     configs_dir = p / ".discopop" / "project" / "configs"
-    compile_sh = configs_dir / "compile.sh"
     hd_settings = configs_dir / "hd_settings.json"
     hotspot_dir = p / ".discopop" / "hotspot_detection"
     private_dir = hotspot_dir / "private"
     config_dir = configs_dir / config_name
 
+    if not config_dir.exists():
+        return {"status": "error", "message": f"Configuration '{config_name}' not found."}
+    # honours a per-configuration compile.sh override, falling back to the shared script
+    compile_sh = Path(resolve_compile_script_path(str(configs_dir), config_name))
     if not compile_sh.exists():
         return {"status": "error", "message": "compile.sh not found. Run set_compile_script first."}
     if not hd_settings.exists():
         return {"status": "error", "message": "hd_settings.json not found. Run initialize_discopop_directory first."}
-    if not config_dir.exists():
-        return {"status": "error", "message": f"Configuration '{config_name}' not found."}
 
     if not force and private_dir.exists():
         result_files = list(private_dir.glob("hotspot_result_*.txt"))
@@ -139,7 +141,8 @@ def _hotspot_instrument(
     ctx.log_action(
         project_path,
         "gather_data",
-        f"Hotspot instrumentation: compile.sh via hd_settings, config='{config_name}', timeout={timeout_seconds}s",
+        f"Hotspot instrumentation: {compile_sh} via hd_settings, config='{config_name}', "
+        f"timeout={timeout_seconds}s",
     )
     original_cwd = os.getcwd()
     try:
@@ -348,18 +351,19 @@ def _instrument_project(
 ) -> dict[str, Any]:
     p = Path(project_path)
     configs_dir = p / ".discopop" / "project" / "configs"
-    compile_sh = configs_dir / "compile.sh"
     dp_settings = configs_dir / "dp_settings.json"
     profiler_dir = p / ".discopop" / "profiler"
     data_xml = profiler_dir / "Data.xml"
     config_dir = configs_dir / config_name
 
+    if not config_dir.exists():
+        return {"status": "error", "message": f"Configuration '{config_name}' not found."}
+    # honours a per-configuration compile.sh override, falling back to the shared script
+    compile_sh = Path(resolve_compile_script_path(str(configs_dir), config_name))
     if not compile_sh.exists():
         return {"status": "error", "message": "compile.sh not found. Run set_compile_script first."}
     if not dp_settings.exists():
         return {"status": "error", "message": "dp_settings.json not found. Run initialize_discopop_directory first."}
-    if not config_dir.exists():
-        return {"status": "error", "message": f"Configuration '{config_name}' not found."}
 
     if not force and data_xml.exists():
         result_mtime = data_xml.stat().st_mtime
@@ -378,7 +382,7 @@ def _instrument_project(
     ctx.log_action(
         project_path,
         "gather_data",
-        f"Instrumentation: compile.sh via dp_settings, config='{config_name}', timeout={timeout_seconds}s",
+        f"Instrumentation: {compile_sh} via dp_settings, config='{config_name}', timeout={timeout_seconds}s",
     )
     original_cwd = os.getcwd()
     try:

@@ -13,8 +13,14 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Any, Optional
 
+from discopop_library.ProjectManager.configurations.compile_script import (
+    VALIDATION_COMPILE_SCRIPT_NAME,
+    get_shared_compile_script_path,
+    get_shared_validation_compile_script_path,
+)
 from discopop_library.ProjectManager.gui.mixins.helpers import (
     Tooltip,
+    ask_yes_no,
     show_warning,
     show_error,
     enable_text_context_menu,
@@ -26,12 +32,28 @@ from discopop_library.ProjectManager.gui.widgets import (
     create_styled_output_console,
     create_script_editor,
 )
+from discopop_library.ProjectManager.utilities.scriptFiles import write_script_file
 
 BASE_FILES = ["compile.sh", "execute.sh", "seq_settings.json"]
 DERIVED_FILES = ["dp_settings.json", "hd_settings.json", "par_settings.json"]
+# Shared scripts that are absent by default and created on demand.
+OPTIONAL_FILES = [VALIDATION_COMPILE_SCRIPT_NAME]
+
+OPTIONAL_FILE_PLACEHOLDERS = {
+    VALIDATION_COMPILE_SCRIPT_NAME: (
+        "# This project has no shared compile_validate.sh.\n"
+        "# validate.sh runs against the build produced by compile.sh.\n"
+        "# Click 'Add' above to build separately for validation: the script is compiled\n"
+        "# after the timed execute.sh run and before validate.sh, so it never affects the\n"
+        "# measured runtime. It applies to every configuration that does not define its own\n"
+        "# compile_validate.sh override, and is ignored for configurations without a\n"
+        "# validate.sh.\n"
+    )
+}
 
 TAB_TOOLTIPS = {
     "compile.sh": "Compilation instructions",
+    VALIDATION_COMPILE_SCRIPT_NAME: "Optional: separate compilation instructions for validate.sh runs",
     "execute.sh": "Execution instructions",
     "seq_settings.json": "Settings for sequential execution",
     "dp_settings.json": "Settings for DiscoPoP instrumented execution",
@@ -135,6 +157,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
 
         compilation_files = [
             "compile.sh",
+            VALIDATION_COMPILE_SCRIPT_NAME,
             "seq_settings.json",
             "dp_settings.json",
             "hd_settings.json",
@@ -167,6 +190,12 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             if help_command:
                 help_button = widgets.create_button(header_frame, text="Help", command=help_command)
                 help_button.pack(side=tk.RIGHT, padx=5)
+
+            if filename == VALIDATION_COMPILE_SCRIPT_NAME:
+                self.shared_validation_compile_button = widgets.create_button(
+                    header_frame, text="Add", command=self._toggle_shared_validation_compile_script
+                )
+                self.shared_validation_compile_button.pack(side=tk.RIGHT, padx=5)
 
             text_frame = ttk.Frame(frame)
             text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -243,9 +272,11 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
         for filename in self.compilation_text_areas:
             file_path = os.path.join(comp_dir, filename)
             text_area = self.compilation_text_areas[filename]
+            text_area.config(state=tk.NORMAL)
             text_area.delete("1.0", tk.END)
+            exists = os.path.exists(file_path)
 
-            if os.path.exists(file_path):
+            if exists:
                 try:
                     with open(file_path, "r") as f:
                         content = f.read()
@@ -254,11 +285,49 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
                         text_area.insert("1.0", content)
                 except Exception as e:
                     text_area.insert("1.0", f"Error loading file: {e}")
+            elif filename in OPTIONAL_FILES:
+                # Absent by default: keep the editor read-only so saving cannot
+                # create the file from placeholder text.
+                text_area.insert("1.0", OPTIONAL_FILE_PLACEHOLDERS[filename])
+                text_area.config(state=tk.DISABLED)
             else:
                 text_area.insert("1.0", f"File not found: {file_path}")
 
             self.compilation_modified_files[filename] = False
             text_area.edit_modified(False)
+
+        if hasattr(self, "shared_validation_compile_button"):
+            shared_exists = os.path.exists(get_shared_validation_compile_script_path(comp_dir))
+            self.shared_validation_compile_button.config(text="Remove" if shared_exists else "Add")
+
+    def _toggle_shared_validation_compile_script(self) -> None:
+        comp_dir = self.arguments.project_config_dir
+        script_path = get_shared_validation_compile_script_path(comp_dir)
+
+        if os.path.exists(script_path):
+            if not ask_yes_no(
+                self,
+                "Remove compile_validate.sh",
+                "Remove the shared compile_validate.sh?\n\n"
+                "validate.sh will then run against the same build as execute.sh, unless a\n"
+                "configuration defines its own compile_validate.sh override.",
+            ):
+                return
+            os.remove(script_path)
+            self._load_compilation_files()
+            self._set_status("Removed shared compile_validate.sh", fg=widgets.STATUS_OK, reset_delay=2000)
+            return
+
+        seed_content = ""
+        shared_compile_path = get_shared_compile_script_path(comp_dir)
+        if os.path.exists(shared_compile_path):
+            with open(shared_compile_path, "r") as f:
+                seed_content = f.read()
+
+        os.makedirs(comp_dir, exist_ok=True)
+        write_script_file(script_path, seed_content)
+        self._load_compilation_files()
+        self._set_status("Added shared compile_validate.sh", fg=widgets.STATUS_OK, reset_delay=2000)
 
     def _save_compilation_files(self) -> None:
         comp_dir = self.arguments.project_config_dir
