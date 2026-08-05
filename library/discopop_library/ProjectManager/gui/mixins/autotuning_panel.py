@@ -129,7 +129,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
 
         self.autotuning_hotspot_types_vars = {}
         for htype in ["yes", "no", "maybe"]:
-            var = tk.BooleanVar(value=htype in ["yes", "no"])
+            var = tk.BooleanVar(value=htype == "yes")
             self.autotuning_hotspot_types_vars[htype] = var
             cb = ttk.Checkbutton(hotspot_frame, text=htype.upper(), variable=var)
             cb.pack(side=tk.LEFT, padx=20)
