@@ -47,14 +47,13 @@ int32_t getFileID(string fileMapping, string fullPathName) {
     return 0;
   }
 
-  // Load FileMapping.txt once per process into an in-memory cache. getFileID is
-  // called per-instruction, so re-reading the file on every call dominates the
-  // pass runtime. After the initial load all lookups are served from memory and
-  // only newly seen files trigger a (single) append to disk.
+  // Keep FileMapping.txt in an in-memory cache. getFileID is called per-instruction, so
+  // re-reading the file on every call dominates the pass runtime.
   static std::map<std::string, int32_t> fileIdCache;
   static int32_t nextFileId = 1;
   static bool fileMappingLoaded = false;
-  if (!fileMappingLoaded) {
+
+  auto loadFileMapping = [&]() {
     fstream fileMappingFile;
     fileMappingFile.open(FileMappingPath.data(), ios::in);
     if (fileMappingFile) {
@@ -74,6 +73,10 @@ int32_t getFileID(string fileMapping, string fullPathName) {
       fileMappingFile.close();
     }
     fileMappingLoaded = true;
+  };
+
+  if (!fileMappingLoaded) {
+    loadFileMapping();
   }
 
   // hot path: in-memory lookup, no file I/O
@@ -82,7 +85,20 @@ int32_t getFileID(string fileMapping, string fullPathName) {
     return cached->second;
   }
 
-  // miss: assign a new id, persist it once, and cache it
+  // Miss. FileMapping.txt is shared by all compiler processes of a build and is not
+  // necessarily pre-generated (see the dp-fmap script), so a file unknown to this process may
+  // well have been registered by a concurrently running one in the meantime. Re-read the file
+  // before handing out a new id, otherwise two processes assign the same id to different
+  // files. Only the miss path pays for this, the cached lookups above stay free.
+  // NOTE: the append below remains racy - two processes missing at the same time still end up
+  // with the same id. Removing that window requires locking the file.
+  loadFileMapping();
+  cached = fileIdCache.find(fullPathName);
+  if (cached != fileIdCache.end()) {
+    return cached->second;
+  }
+
+  // still unknown: assign a new id, persist it once, and cache it
   int32_t tempfid = nextFileId++;
   fstream fileMappingFile;
   fileMappingFile.open(FileMappingPath.data(), std::ios_base::app);

@@ -88,6 +88,10 @@ bool DiscoPoP::doInitialization(Module &M) {
 
   // CallpathStateID assignment
   {
+    // Unlike InstructionIDCounter above, the persisted CallpathStateIDCounter holds the next FREE
+    // id rather than the last used one (runOnModule stores the path tree's next free id), so it is
+    // used as-is. A value of 0 means no module has been processed yet; ids then start at 1, as 0 is
+    // reserved for debugging and initialization purposes.
     CallpathStateIDCounter = 0;
     initializeCallpathStateIDCounter();
     if (CallpathStateIDCounter == 0) {
@@ -95,7 +99,6 @@ bool DiscoPoP::doInitialization(Module &M) {
     } else {
       unique_callpath_state_id = CallpathStateIDCounter;
     }
-    //unique_callpath_state_id = CallpathStateIDCounter + 1;
   }
 
 
