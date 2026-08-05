@@ -28,7 +28,7 @@ from discopop_library.ProjectManager.gui.widgets import (
 )
 from discopop_library.ProjectManager.gui.plots import autotuning_chart, embedding
 from discopop_library.ProjectManager.gui.plots.autotuning_chart import ProgressModel
-from discopop_library.ProjectManager.gui.plots.data import parse_progress_jsonl, parse_progress_line
+from discopop_library.ProjectManager.gui.plots.data import parse_progress_jsonl, split_progress_events
 
 logger_name = "AutotuningPanel"
 
@@ -596,12 +596,13 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         assert self._autotuning_process.stdout is not None
         for line in self._autotuning_process.stdout:
             # Structured progress events drive the live plot and are kept out of the
-            # console; everything else is echoed to the console as before.
-            event = parse_progress_line(line)
-            if event is not None:
+            # console; everything else is echoed to the console as before. Events are
+            # extracted from anywhere in the line: stdout and stderr share one stream,
+            # so a progress bar redraw can leave its bar text in front of an event.
+            events, residual = split_progress_events(line)
+            for event in events:
                 self.after(0, lambda e=event: self._on_autotuning_progress(e))  # type: ignore
-                continue
-            cleaned = clean_ansi_output(line.rstrip("\n"))
+            cleaned = clean_ansi_output(residual.rstrip("\n"))
             if cleaned:
                 output_callback(cleaned + "\n")
 
@@ -615,6 +616,10 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
 
     def _on_autotuning_complete(self, error: bool = False) -> None:
         self.autotuning_running = False
+
+        # progress.jsonl is the authoritative record of the finished run: rebuild the
+        # plot from it, so the final view is complete even if a live event was lost.
+        self._load_autotuning_progress_from_file()
 
         if self.autotuning_run_button is not None:
             self.autotuning_run_button.config(state="normal", text="Run Autotuning")

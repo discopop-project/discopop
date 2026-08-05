@@ -20,6 +20,7 @@ from discopop_explorer.functions.PEGraph.queries.variables import get_variables
 from discopop_explorer.functions.PEGraph.traversal.parent import get_all_parent_functions, get_parent_function
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
+from discopop_library.StatusReporting.console import progress
 
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.classes.PEGraph.PEGraphX import (
@@ -108,8 +109,6 @@ def run_detection(
     :param pet: PET graph
     :return: List of detected pattern info
     """
-    import tqdm  # type: ignore
-
     global global_pet
     global_pet = pet
     result: List[ReductionInfo] = []
@@ -124,13 +123,12 @@ def run_detection(
     param_list = [(node) for node in nodes]
     if jobs is None or jobs > 1:
         with Pool(processes=jobs, initializer=__initialize_worker, initargs=(pet,)) as pool:
-            tmp_result = list(tqdm.tqdm(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
+            tmp_result = list(progress(pool.imap_unordered(__check_node, param_list), total=len(param_list)))
         for local_result in tmp_result:
             result += local_result
     else:
         for param_tpl in param_list:
             result += __check_node(param_tpl)
-    print("GLOBAL RES: ", [r.start_line for r in result])
 
     for pattern in result:
         pattern.get_workload(pet)

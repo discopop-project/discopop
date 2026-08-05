@@ -9,9 +9,6 @@ import logging
 import threading
 from typing import Dict, List, Optional, Set, Tuple, cast
 
-from tqdm import tqdm  # type: ignore
-
-
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
@@ -68,22 +65,22 @@ def show_plot(tg: TaskGraph) -> None:
 
     def draw_plots() -> None:
         ax = tg.create_plot("Context Graph")
-        print("Plotting task graph (context graph)...")
+        logger.debug("Plotting task graph (context graph)...")
         if len(tg.graph.nodes()) < 500:
             tg.plot_context_graph(ax)
 
         ax2 = tg.create_plot("Context Debug Graph")
-        print("Plotting task graph (context debug graph)...")
+        logger.debug("Plotting task graph (context debug graph)...")
         if len(tg.graph.nodes()) < 500:
             tg.plot_context_debug_graph(ax2)
 
         ax3 = tg.create_plot("Task Graph")
-        print("Plotting task graph...")
+        logger.debug("Plotting task graph...")
         if len(tg.graph.nodes()) < 500:
             tg.update_plot(ax3)
 
     def on_filter(filter_text: str) -> None:
-        print("Filter text:", filter_text)
+        logger.debug("Filter text: " + filter_text)
 
         # Extra processing here
 

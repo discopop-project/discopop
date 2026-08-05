@@ -7,8 +7,9 @@
 # directory for details.
 from __future__ import annotations
 
+import itertools
 import logging
-from typing import Dict, List, Optional, Set, Tuple, TYPE_CHECKING
+from typing import Dict, Iterator, List, Optional, Set, Tuple, TYPE_CHECKING
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
@@ -32,6 +33,12 @@ class Context(object):
     outgoing_dependencies: Set[Tuple[Context, Dependency]]
     incoming_dependencies: Set[Tuple[Context, Dependency]]
     state_ids: List[int]
+    creation_index: int
+
+    # contained_contexts is a set, so iterating it is not reproducible across runs. Contexts
+    # are created in a deterministic order during TaskGraph construction, which makes this
+    # counter a stable sort key wherever a deterministic context order is required.
+    _creation_counter: Iterator[int] = itertools.count()
 
     def __init__(self) -> None:
         self.contained_nodes = []
@@ -42,6 +49,7 @@ class Context(object):
         self.outgoing_dependencies = set()
         self.incoming_dependencies = set()
         self.state_ids = []
+        self.creation_index = next(Context._creation_counter)
 
     def get_contained_nodes(self, inclusive: bool = False) -> List[TGNode]:
         """
@@ -50,10 +58,20 @@ class Context(object):
         """
         if not inclusive:
             return self.contained_nodes
+        # iterative with a visited set: the containment relation is only supposed to form a
+        # forest, but nothing enforces that at runtime (see __validate_context_structure),
+        # and recursing into a cycle - or merely into a deeply nested structure - exceeds
+        # Python's recursion limit
         nodes: List[TGNode] = []
-        nodes += self.contained_nodes
-        for ctx in self.contained_contexts:
-            nodes += ctx.get_contained_nodes(inclusive=True)
+        visited: Set[Context] = {self}
+        stack: List[Context] = [self]
+        while len(stack) > 0:
+            current = stack.pop()
+            nodes += current.contained_nodes
+            for ctx in current.contained_contexts:
+                if ctx not in visited:
+                    visited.add(ctx)
+                    stack.append(ctx)
         return nodes
 
     def get_contained_contexts(self, inclusive: bool = False) -> Set[Context]:
@@ -63,30 +81,72 @@ class Context(object):
         """
         if not inclusive:
             return self.contained_contexts
+        # iterative with a visited set, see get_contained_nodes
         result: Set[Context] = set()
-        result = result.union(self.contained_contexts)
-        for ctx in self.contained_contexts:
-            result = result.union(ctx.get_contained_contexts(inclusive=True))
+        stack: List[Context] = [self]
+        while len(stack) > 0:
+            current = stack.pop()
+            for ctx in current.contained_contexts:
+                if ctx not in result and ctx != self:
+                    result.add(ctx)
+                    stack.append(ctx)
         return result
 
-    def get_contained_contexts_in_sequence(self, pet: PEGraphX, is_entry: bool = True) -> List[Context]:
-        """enumerates contained contexts in their sequence of occurrence in the program"""
-        result: List[Context] = []
-        if not is_entry:
-            result.append(self)
-        for ctx in self.contained_contexts:
-            if ctx.predecessor is None:
-                # entry of a sequence
-                # result.append(ctx)
-                result += ctx.get_contained_contexts_in_sequence(pet, is_entry=False)
+    def get_sequence_entry_contexts(self) -> List[Context]:
+        """Returns the directly contained contexts which start a sequence, i.e. which have no
+        predecessor, in a deterministic order."""
+        return sorted(
+            [ctx for ctx in self.contained_contexts if ctx.predecessor is None],
+            key=lambda ctx: ctx.creation_index,
+        )
 
-        #        print("FOLLOWING SUCCESSOR OF: ", self.get_code_scope(pet))
-        #        print("result: ", result)
-        if not is_entry:
-            if self.successor is not None:
-                #                print("--> TRUE")
-                result += self.successor.get_contained_contexts_in_sequence(pet, is_entry=False)
-        #        print("-> FALSE")
+    def get_contained_contexts_in_sequence(self, pet: PEGraphX, is_entry: bool = True) -> List[Context]:
+        """enumerates contained contexts in their sequence of occurrence in the program.
+
+        The enumeration is a pre-order walk: a context is reported before the contexts it
+        contains, and those before its successor.
+
+        Implemented iteratively and bounded to the region it was asked about on purpose. Both
+        relations it follows are unbounded in size - the successor relation is a chain whose
+        length grows with the amount of inlined code, and containment nesting grows with the
+        inlining depth - so recursing along them exceeds Python's recursion limit even for a
+        well-formed structure. Neither relation is guaranteed to be acyclic either (see
+        __validate_context_structure), which would make a recursive walk diverge outright.
+
+        The region bound additionally keeps the walk inside what the caller asked for: nothing
+        stops a successor chain from leaving the enclosing context if the structure is
+        malformed, in which case the result would contain contexts (and, via their nodes, CUs)
+        from unrelated parts of the program."""
+        region = self if is_entry else self.parent_context
+        contexts_in_region: Optional[Set[Context]] = None
+        if region is not None:
+            contexts_in_region = region.get_contained_contexts(inclusive=True)
+            contexts_in_region.add(region)
+
+        result: List[Context] = []
+        visited: Set[Context] = set()
+        # LIFO: to report a context's contained contexts before its successor, the successor
+        # is pushed first and the contained contexts are pushed in reverse order
+        stack: List[Context] = [self] if not is_entry else list(reversed(self.get_sequence_entry_contexts()))
+        while len(stack) > 0:
+            current = stack.pop()
+            if current in visited:
+                continue
+            visited.add(current)
+            result.append(current)
+
+            successor = current.successor
+            if successor is not None:
+                if contexts_in_region is not None and successor not in contexts_in_region:
+                    if logger.isEnabledFor(logging.DEBUG):
+                        logger.debug(
+                            "Successor of context %s leaves the enclosing region %s - not following it.",
+                            current.get_label(),
+                            region.get_label() if region is not None else "None",
+                        )
+                else:
+                    stack.append(successor)
+            stack += reversed(current.get_sequence_entry_contexts())
         return result
 
     def add_node(self, node: TGNode) -> None:
@@ -96,17 +156,48 @@ class Context(object):
         if context == self:
             # do not allow the creation of self-containing relations
             return
+        if context in self.get_ancestor_contexts():
+            # containment must form a forest: adding an ancestor as a contained context would
+            # close a cycle, which makes every traversal of the containment relation diverge
+            logger.warning(
+                "Refused to register context %s as contained in %s: it is already an ancestor "
+                "of it, which would make the containment relation cyclic.",
+                context.get_label(),
+                self.get_label(),
+            )
+            return
         self.contained_contexts.add(context)
 
     def register_parent_context(self, context: Context) -> None:
         if context == self:
             # do not allow the creation of self-parenting relations
             return
+        if context is not None and self in context.get_ancestor_contexts():
+            # see add_contained_context
+            logger.warning(
+                "Refused to register context %s as the parent of %s: it is already a descendant "
+                "of it, which would make the containment relation cyclic.",
+                context.get_label(),
+                self.get_label(),
+            )
+            return
         self.parent_context = context
 
     def register_successor_context(self, context: Context) -> None:
         if context == self:
             # do not allow the creation of self-succession relations
+            return
+        if context.successor == self:
+            # closing a two-element cycle in the successor relation. Longer cycles are not
+            # rejected here - following the chain to look for one is linear in its length and
+            # would make building the relation quadratic - they are reported (and broken) by
+            # __validate_context_structure instead
+            logger.warning(
+                "Refused to register context %s as the successor of %s: it is already its "
+                "predecessor, which would make the successor relation cyclic.",
+                context.get_label(),
+                self.get_label(),
+            )
             return
         self.successor = context
         context.predecessor = self

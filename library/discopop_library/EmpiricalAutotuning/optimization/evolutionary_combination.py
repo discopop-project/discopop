@@ -14,7 +14,7 @@ import sys
 from typing import Callable, Dict, List, Set, Tuple, cast
 
 from tabulate import tabulate  # type: ignore
-from tqdm import tqdm  # type: ignore
+from discopop_library.EmpiricalAutotuning.output.bars import search_bar
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
@@ -503,7 +503,9 @@ def __calculate_fitness(
     )
 
     logger.info("--- Executing population")
-    for entry in tqdm([p for p in population_wo_duplicates if p not in fitness_cache]):
+    for entry in search_bar(
+        [p for p in population_wo_duplicates if p not in fitness_cache], desc="Executing population"
+    ):
         if entry not in compilation_successful or not compilation_successful[entry]:
             continue
 
@@ -535,7 +537,7 @@ def __calculate_fitness(
             del entry_to_configuration[entry]
 
     logger.info("--- Cleanup ")
-    for entry in tqdm(entry_to_configuration):
+    for entry in search_bar(entry_to_configuration, desc="Cleanup"):
         if not arguments.skip_cleanup:
             entry_to_configuration[entry].deleteFolder()
     entry_to_configuration.clear()
@@ -576,7 +578,7 @@ def __compile_population(
     logger.info("--- Compiling population")
 
     logger.info("----- Prepare code")
-    for entry in tqdm(population):
+    for entry in search_bar(population, desc="Preparing code"):
         if entry in fitness_cache:
             continue
         entry_to_configuration[entry] = reference_configuration.create_copy(
@@ -592,7 +594,11 @@ def __compile_population(
         param_list.append((entry, copy.deepcopy(arguments), timeout_after))
     with Pool() as pool:
         # local_results = list(tqdm(pool.imap_unordered(__compile_configuration, param_list), total=len(param_list)))
-        local_results = list(tqdm(pool.imap_unordered(__compile_configuration, param_list), total=len(param_list)))
+        local_results = list(
+            search_bar(
+                pool.imap_unordered(__compile_configuration, param_list), total=len(param_list), desc="Compiling"
+            )
+        )
 
     # merge local into global result
     for local in local_results:

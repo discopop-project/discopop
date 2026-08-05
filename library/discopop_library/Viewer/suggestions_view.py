@@ -10,6 +10,7 @@ import logging
 import os
 from typing import Dict, List, Set
 from discopop_library.PathManagement.PathManagement import load_file_mapping
+from discopop_library.StatusReporting.console import banner
 from discopop_library.Viewer.ViewerArguments import ViewerArguments
 
 logger = logging.getLogger("Viewer").getChild("Suggestions").getChild("Print")
@@ -47,23 +48,14 @@ def print_suggestions_overview(arguments: ViewerArguments) -> None:
             files_to_suggestions_map[int(file_id)].add(int(suggestion_id))
     file_mapping = load_file_mapping(os.path.join(arguments.path, "FileMapping.txt"))
 
-    print("########################")
-    print()
-    print("Suggestion IDs by files:")
-    print("---------------------")
+    banner("Suggestion IDs by files")
     for key_file_id in files_to_suggestions_map:
         print("==> " + str(file_mapping[key_file_id]))
         for val_suggestion_id in files_to_suggestions_map[key_file_id]:
             print("|---> " + str(val_suggestion_id))
-    print()
-    print("########################")
-    print()
-    print("Files by Suggestion IDs:")
-    print("---------------------")
+
+    banner("Files by Suggestion IDs")
     for key_suggestion_id in suggestion_to_files_map:
         print("==> " + str(key_suggestion_id))
         for file_id_key in suggestion_to_files_map[key_suggestion_id]:
             print("|---> " + str(file_mapping[file_id_key]))
-
-    print()
-    print("########################")

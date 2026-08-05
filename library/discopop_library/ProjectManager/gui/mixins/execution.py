@@ -24,7 +24,6 @@ from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerM
 from discopop_library.ProjectManager.gui.mixins.helpers import show_warning
 from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
 from typing import Optional
-from tkinter import ttk
 
 
 class ExecutionMixin(ConfigManagerMixinBase):
@@ -121,6 +120,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.stop_execution_button.config(state="normal")
 
         self.run_button.config(state="disabled", text="⟳ Running...")
+        self.prepare_pattern_detection_button.config(state="disabled")
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
 
@@ -346,6 +346,23 @@ class ExecutionMixin(ConfigManagerMixinBase):
         threading.Thread(target=thread_func, daemon=True).start()
 
     def _prepare_pattern_detection(self) -> None:
+        self._prepare_inplace_run(
+            mode="dp",
+            settings_filename="dp_settings.json",
+            button=self.prepare_pattern_detection_button,
+            button_label="Prepare Pattern Detection",
+            status_noun="pattern detection",
+        )
+
+    def _prepare_inplace_run(
+        self,
+        mode: str,
+        settings_filename: str,
+        button: RoundedButton,
+        button_label: str,
+        status_noun: str,
+    ) -> None:
+        """Compile and execute the selected configuration in ``mode`` with inplace execution."""
         if not self.current_config:
             show_warning(self, "No Configuration Selected", "Please select a configuration first.")
             return
@@ -354,12 +371,12 @@ class ExecutionMixin(ConfigManagerMixinBase):
         if self.stop_execution_button is not None:
             self.stop_execution_button.config(state="normal")
 
-        self.prepare_pattern_detection_button.config(state="disabled", text="⟳ Preparing...")
+        button.config(state="disabled", text="⟳ Preparing...")
         self.run_button.config(state="disabled")
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
 
-        self.status_label.config(text="⏳ Preparing pattern detection...", foreground=widgets.STATUS_BUSY)
+        self.status_label.config(text=f"⏳ Preparing {status_noun}...", foreground=widgets.STATUS_BUSY)
 
         self.output_text.config(state=tk.NORMAL)
         self.output_text.delete("1.0", tk.END)
@@ -370,6 +387,10 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.output_text.insert(tk.END, text)
             self.output_text.see(tk.END)
             self.output_text.config(state="disabled")
+
+        def emit(text: str) -> None:
+            """Schedule ``text`` for display; safe to call from the worker thread."""
+            self.after(0, lambda t=text: append_output(t))  # type: ignore
 
         args_copy = copy.copy(self.arguments)
         args_copy.execute_inplace = True
@@ -401,23 +422,24 @@ class ExecutionMixin(ConfigManagerMixinBase):
         text_handler.setFormatter(formatter)
         root_logger.addHandler(text_handler)
 
-        logger = logging.getLogger("Prepare Pattern Detection")
+        logger = logging.getLogger(f"Prepare {status_noun.title()}")
+        failure_status = f"{status_noun.capitalize()} preparation failed"
 
         def thread_func() -> None:
-            logger.info(f"Starting pattern detection preparation for: {current_config}")
-            self.after(0, lambda: append_output("Compiling in 'dp' mode with inplace execution...\n\n"))  # type: ignore
+            logger.info(f"Starting {status_noun} preparation for: {current_config}")
+            emit(f"Compiling in '{mode}' mode with inplace execution...\n\n")
 
             compile_sh = resolve_compile_script_path(self.arguments.project_config_dir, current_config)
-            shared_dp_settings = os.path.join(self.arguments.project_config_dir, "dp_settings.json")
+            shared_settings = os.path.join(self.arguments.project_config_dir, settings_filename)
 
             self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground=widgets.STATUS_BUSY))  # type: ignore
-            self.after(0, lambda: append_output("Compiling...\n"))  # type: ignore
+            emit("Compiling...\n")
 
             compile_result = execute_configuration(
                 args_copy,
                 self.arguments.project_root,
                 config_path,
-                shared_dp_settings,
+                shared_settings,
                 compile_sh,
                 1,
                 args_copy.timeout_compilation,
@@ -425,29 +447,29 @@ class ExecutionMixin(ConfigManagerMixinBase):
             )
             self._execution_process = None
 
+            success = False
             if compile_result is None or compile_result[0] != 0:
                 ret_code = compile_result[0] if compile_result else "None"
-                self.after(0, lambda rc=ret_code: append_output(f"Compilation failed (return code: {rc})\n"))  # type: ignore
-                self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground=widgets.STATUS_FAIL))  # type: ignore
+                emit(f"Compilation failed (return code: {ret_code})\n")
             else:
                 ret_code, elapsed, stdout, stderr = compile_result
-                self.after(0, lambda e=elapsed: append_output(f"Compilation succeeded ({e:.2f}s)\n"))  # type: ignore
+                emit(f"Compilation succeeded ({elapsed:.2f}s)\n")
                 if stdout:
-                    self.after(0, lambda o=stdout: append_output(f"stdout: {o}\n"))  # type: ignore
+                    emit(f"stdout: {stdout}\n")
                 if stderr:
-                    self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+                    emit(f"stderr: {stderr}\n")
 
                 if self._execution_stop_event.is_set():
-                    self.after(0, lambda: append_output("Pattern detection preparation stopped by user.\n"))  # type: ignore
+                    emit(f"{status_noun.capitalize()} preparation stopped by user.\n")
                 else:
                     self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground=widgets.STATUS_BUSY))  # type: ignore
-                    self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
+                    emit("Executing...\n")
 
                     execute_result = execute_configuration(
                         args_copy,
                         self.arguments.project_root,
                         config_path,
-                        shared_dp_settings,
+                        shared_settings,
                         os.path.join(config_path, "execute.sh"),
                         1,
                         args_copy.timeout_execution,
@@ -455,25 +477,30 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     )
                     self._execution_process = None
 
-                if execute_result is None or execute_result[0] != 0:
-                    ret_code = execute_result[0] if execute_result else "None"
-                    self.after(0, lambda rc=ret_code: append_output(f"Execution failed (return code: {rc})\n"))  # type: ignore
-                    self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground=widgets.STATUS_FAIL))  # type: ignore
-                else:
-                    ret_code, elapsed, stdout, stderr = execute_result
-                    self.after(0, lambda e=elapsed: append_output(f"Execution succeeded ({e:.2f}s)\n"))  # type: ignore
-                    if stdout:
-                        self.after(0, lambda o=stdout: append_output(f"stdout: {o}\n"))  # type: ignore
-                    if stderr:
-                        self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+                    if execute_result is None or execute_result[0] != 0:
+                        ret_code = execute_result[0] if execute_result else "None"
+                        emit(f"Execution failed (return code: {ret_code})\n")
+                    else:
+                        ret_code, elapsed, stdout, stderr = execute_result
+                        emit(f"Execution succeeded ({elapsed:.2f}s)\n")
+                        if stdout:
+                            emit(f"stdout: {stdout}\n")
+                        if stderr:
+                            emit(f"stderr: {stderr}\n")
+                        success = True
 
             if not self._execution_stop_event.is_set():
-                self.after(0, lambda: append_output("\n=== Pattern detection preparation complete ===\n"))  # type: ignore
-            self.after(0, lambda: self.prepare_pattern_detection_button.config(state=tk.NORMAL, text="Prepare Pattern Detection"))  # type: ignore
+                outcome = "complete" if success else "failed"
+                emit(f"\n=== {status_noun.capitalize()} preparation {outcome} ===\n")
+            self.after(0, lambda: button.config(state=tk.NORMAL, text=button_label))  # type: ignore
+            self.after(0, lambda: self._update_execute_modes())  # type: ignore
             self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
-            self.after(0, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
+            if success or self._execution_stop_event.is_set():
+                self.after(0, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
+            else:
+                self.after(0, lambda: self._set_status(failure_status, fg=widgets.STATUS_FAIL, reset_delay=3000))  # type: ignore
             self.after(0, lambda: self._update_report_display())  # type: ignore
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
 

@@ -11,6 +11,7 @@ from collections import deque
 import os
 from pathlib import Path
 import random
+import re
 import signal
 import logging
 import sys
@@ -20,7 +21,6 @@ import networkx as nx  # type: ignore
 import matplotlib
 from matplotlib.axes import Axes
 from networkx import Graph
-from tqdm import tqdm  # type: ignore
 import matplotlib.lines as mlines
 
 from discopop_explorer.aliases.LineID import LineID
@@ -36,6 +36,7 @@ from discopop_explorer.classes.TaskGraph.Branching.TGStartBranchParentNode impor
 from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchContext
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
+from discopop_explorer.classes.TaskGraph.Contexts.ContextStack import ContextStack
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
@@ -73,6 +74,7 @@ from discopop_explorer.functions.PEGraph.traversal.children import get_entry_chi
 from discopop_explorer.functions.PEGraph.traversal.parent import get_parent_function
 from discopop_explorer.functions.PEGraph.traversal.predecessors import direct_predecessors
 from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
+from discopop_library.StatusReporting.console import progress, stage, warn
 
 if os.environ.get("DISPLAY") or sys.platform in ("darwin", "win32"):
     try:
@@ -120,6 +122,13 @@ except (ImportError, ModuleNotFoundError):
 
 logger = logging.getLogger("Explorer")
 
+# how __validate_graph_structure refers to code that no function entry node reaches any more
+DETACHED_REGION = "a region not reachable from any function entry node"
+
+# callpath state markers ("<line_id>@<state_id>") as emitted by the profiler into
+# dynamic_dependencies.txt. Removing them is what --ignore-dependency-states does.
+STATE_MARKER_PATTERN = re.compile(r"@\d+")
+
 
 # Aliases
 TGConstructionQueueElement = Tuple[Optional[TGNode], Union[PETNode, VisitorMarker]]  # (Predecessor, current element)
@@ -128,6 +137,9 @@ TGConstructionQueueElement = Tuple[Optional[TGNode], Union[PETNode, VisitorMarke
 class TaskGraph(Plottable, object):  # type: ignore[misc]
     pet: PEGraphX
     graph: nx.MultiDiGraph
+    # class-level default so instances created without __init__ (e.g. the test
+    # fixtures, which bypass it) still read as "states are interpreted"
+    ignore_dependency_states: bool = False
     root: TGNode
     function_id_map: Dict[PETNodeID, FunctionID] = dict()
     TGNode_pet_node_id_to_tg_node: Dict[PETNodeID, TGNode] = dict()
@@ -146,19 +158,39 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         dynamic_dependency_file: Optional[str] = None,
         static_dependency_file: Optional[str] = None,
         visualizer: Visualizer | None = None,
+        ignore_dependency_states: bool = False,
     ) -> None:
         super().__init__(visualizer)
 
         self.pet = pet
         self.graph = nx.MultiDiGraph()
+        self.ignore_dependency_states = ignore_dependency_states
+        # shadow the class-level defaults with per-instance state: the construction passes
+        # look up previously created nodes in these maps, so sharing them between TaskGraph
+        # instances (e.g. two runs within one GUI session) would wire a fresh graph up to
+        # nodes belonging to the previous one
+        self.function_id_map = dict()
+        self.TGNode_pet_node_id_to_tg_node = dict()
+        self.TGFunctionNode_pet_node_id_to_tg_node = dict()
+        self.TGStartFunctionNode_pet_node_id_to_tg_node = dict()
+        self.TGEndFunctionNode_pet_node_id_to_tg_node = dict()
+        self.contexts = []
+        self.current_level = 0
+        self.current_position = {0: 0}
 
         # start processing
-        self.__assign_function_ids(pet)
-        self.__construct_from_pet(pet)
-        self.__assign_state_ids(dynamic_dependency_file)
-        self.__insert_data_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
-        self.__determine_loop_variables()
-        self.__cleanup_loop_dependencies()
+        with stage("Assigning function ids", 1, total=6):
+            self.__assign_function_ids(pet)
+        with stage("Constructing TaskGraph structure", 2, total=6):
+            self.__construct_from_pet(pet)
+        with stage("Assigning state ids", 3, total=6):
+            self.__assign_state_ids(dynamic_dependency_file)
+        with stage("Inserting data dependencies", 4, total=6):
+            self.__insert_data_dependencies_from_files(dynamic_dependency_file, static_dependency_file)
+        with stage("Determining loop variables", 5, total=6):
+            self.__determine_loop_variables()
+        with stage("Cleaning up loop dependencies", 6, total=6):
+            self.__cleanup_loop_dependencies()
 
     def __assign_function_ids(self, pet: PEGraphX) -> None:
         id = 0
@@ -168,22 +200,37 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Assigned function ids:\n" + str(self.function_id_map))
 
     def __construct_from_pet(self, pet: PEGraphX) -> None:
-        logger.info("Hello world!")
         # prepare function graphs without calling
-        self.__visit_pet(pet)
-        self.__break_cycles()
-        self.__fix_loop_structures()
-        self.__duplicate_loop_iterations()
-        self.__validate_graph_structure()
-        self.__add_work_nodes()
-        self.__assign_loopstate_positions_within_functions()
-        self.__inline_function_calls()
-        self.__add_branching_nodes()
+        with stage("Visiting PET nodes", 1, total=14):
+            self.__visit_pet(pet)
+        with stage("Breaking cycles", 2, total=14):
+            self.__break_cycles()
+        with stage("Fixing loop structures", 3, total=14):
+            self.__fix_loop_structures()
+        with stage("Duplicating loop iterations", 4, total=14):
+            self.__duplicate_loop_iterations()
+        with stage("Validating graph structure", 5, total=14):
+            self.__validate_graph_structure()
+        with stage("Adding work nodes", 6, total=14):
+            self.__add_work_nodes()
+        with stage("Assigning loop-state positions", 7, total=14):
+            self.__assign_loopstate_positions_within_functions()
+        with stage("Inlining function calls", 8, total=14):
+            self.__inline_function_calls()
+        with stage("Adding branching nodes", 9, total=14):
+            self.__add_branching_nodes()
 
-        self.__assign_contexts()  # assign contexts before inlining to keep runtime of branching context detection in check
-        self.__assign_node_levels()
-        self.__calculate_context_nesting()
-        self.__calculate_context_successions()
+        # assign contexts before inlining to keep runtime of branching context detection in check
+        with stage("Assigning contexts", 10, total=14):
+            self.__assign_contexts()
+        with stage("Assigning node levels", 11, total=14):
+            self.__assign_node_levels()
+        with stage("Calculating context nesting", 12, total=14):
+            self.__calculate_context_nesting()
+        with stage("Calculating context successions", 13, total=14):
+            self.__calculate_context_successions()
+        with stage("Validating context structure", 14, total=14):
+            self.__validate_context_structure()
         # self.__insert_pessimistic_data_dependencies()
         # self.__insert_data_dependencies()
         # self.__validate_data_dependencies()
@@ -701,6 +748,20 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         for successor in direct_successors(self.pet, pet_node):
             if not self.node_registered(successor.id):
                 queue.append((node, successor))
+            else:
+                # The successor has already been visited, so it must not be queued again -
+                # doing so would make the traversal loop forever on cyclic control flow (the
+                # single-successor path in __visit_CUNode queues unconditionally, so a cycle
+                # only terminates because branch points stop re-visiting known nodes). The
+                # edge to it, however, is created by the *successor's* visit, and therefore
+                # still needs to be added here: dropping it silently deletes real control
+                # flow. The typical victim is a loop's exit edge whose target CU was already
+                # reached through an earlier, shorter path (e.g. an early return sharing the
+                # function's exit CU). __break_cycles then sees an exit-less cycle, mistakes
+                # a branch inside the loop body for the loop header and the other arm for the
+                # loop exit, and produces a TGStartLoopNode that cannot reach its
+                # TGEndLoopNode - which fails much later in __assign_loop_contexts.
+                self.add_edge(node, self.TGNode_pet_node_id_to_tg_node[successor.id])
 
         return queue
 
@@ -730,12 +791,53 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         warnings.warn("Not implemented!")
         return queue
 
+    def __find_loop_entry_node(self, function_node: TGNode, cycle_nodes: Set[TGNode]) -> Optional[TGNode]:
+        """The node a cycle is entered through: the first of its nodes reached when walking forward
+        from the function entry, which is also the node the back edges point back to.
+
+        Identifying it by its outgoing edges instead - "one successor inside the cycle, one outside"
+        - finds the loop's *condition* node, which is only the same node for a loop tested at its
+        top. As soon as the loop is rotated (`while` compiled with the test at the bottom, or a
+        `for` whose increment block precedes the test), the condition sits behind the entry node,
+        and treating it as the entry makes the edge from the entry node to it look like a back edge.
+        Removing that edge then severs the only way into the loop and detaches it, together with its
+        whole body, from the function - which is invisible until a later pass treats the detached
+        region as a program entry point of its own."""
+        queue: List[TGNode] = [function_node]
+        visited: Set[TGNode] = {function_node}
+        while len(queue) > 0:
+            current = queue.pop(0)
+            if current in cycle_nodes:
+                return current
+            for successor in self.get_successors(current):
+                if successor not in visited:
+                    visited.add(successor)
+                    queue.append(successor)
+        return None
+
+    def __find_loop_exit_edge(
+        self, entry_node: Optional[TGNode], cycle_nodes: Set[TGNode]
+    ) -> Tuple[Optional[TGNode], Optional[TGNode]]:
+        """The edge by which control leaves the cycle, as (source inside, target outside). Prefers
+        an edge starting at the entry node, so a loop tested at its top is restructured exactly as
+        before. Loops without any exit (`while (true)`) have none, and are left to the caller's
+        fallback."""
+        if entry_node is None:
+            return None, None
+        candidates: List[Tuple[TGNode, TGNode]] = []
+        for source in sorted(cycle_nodes, key=lambda node: node.get_label()):
+            for target in self.get_successors(source):
+                if target not in cycle_nodes:
+                    candidates.append((source, target))
+        for source, target in candidates:
+            if source is entry_node:
+                return source, target
+        return candidates[0] if len(candidates) > 0 else (None, None)
+
     def __break_cycles(self) -> None:
         # search for cycles in each function and replace them with two distinct iteraions
-        logger.info("Breaking cycles...")
-
-        for function_node in self.TGFunctionNode_pet_node_id_to_tg_node.values():
-            logger.info("--> " + function_node.get_label())
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values(), desc="Breaking cycles"):
+            logger.debug("Breaking cycles in: " + function_node.get_label())
             # progress search if cycle can not be broken
             search_source: TGNode = function_node
             search_source_queue = self.get_descendants(function_node)
@@ -753,48 +855,28 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     cycle_nodes.add(tpl[1])
 
                 # find entry node and exit node
-                entry_node: Optional[TGNode] = None
-                exit_node: Optional[TGNode] = None
-                iteration_entry_points: List[TGNode] = []
-                queue: List[TGNode] = [function_node]
-                visited: Set[TGNode] = set()
-                while len(queue) > 0:
-                    exit_node = None
-                    current = queue.pop(0)
-                    visited.add(current)
-                    #                    print("\nCurrent: ", current)
-                    #                    print("Cycle nodes: ", cycle_nodes)
-                    successors = self.get_successors(current)
-                    #                    print("IN CYCLE: ", current in cycle_nodes)
-                    #                    print("SUCC: ", len(successors))
-                    #                    print("---> ", successors)
+                entry_node = self.__find_loop_entry_node(function_node, cycle_nodes)
+                exit_source, exit_node = self.__find_loop_exit_edge(entry_node, cycle_nodes)
+                iteration_entry_points: List[TGNode] = [n for n in self.get_successors(entry_node) if n in cycle_nodes]
 
-                    if len(successors) > 1:
-                        if current in cycle_nodes:
+                # the edges back to the entry node end an iteration, and so does the edge leaving the
+                # loop when it starts at a node other than the entry node (a rotated loop, whose
+                # condition sits behind the entry node): both continue into the loop end marker
+                latches: List[TGNode] = [p for p in self.get_predecessors(entry_node) if p in cycle_nodes]
+                iteration_exit_points: List[TGNode] = list(latches)
+                if exit_source is not None and exit_source is not entry_node:
+                    iteration_exit_points.append(exit_source)
 
-                            found_successor_in_cycle = False
-                            for succ in successors:
-                                if succ in cycle_nodes:
-                                    found_successor_in_cycle = True
-                                if succ not in cycle_nodes:
-                                    exit_node = succ
-                                if exit_node is not None and found_successor_in_cycle:
-                                    break
-                            if exit_node is not None and found_successor_in_cycle:
-                                entry_node = current
-                                iteration_entry_points = [n for n in successors if n in cycle_nodes]
-                                break
-                        else:
-                            for succ in successors:
-                                if succ not in visited and succ not in queue:
-                                    queue.append(succ)
-                    elif len(successors) == 1:
-                        if successors[0] not in visited and successors[0] not in queue:
-                            queue.append(successors[0])
-                    else:
-                        continue
-
-                iteration_exit_points: List[TGNode] = [p for p in self.get_predecessors(entry_node) if p in cycle_nodes]
+                if entry_node is not None and len(latches) == len(self.get_predecessors(entry_node)):
+                    # every way into the entry node comes from inside the cycle, so removing the
+                    # latches below would detach the whole loop from its function - see the crude
+                    # fallback instead, which keeps it reachable
+                    logger.warning(
+                        "Refusing to restructure the loop at %s: all of its incoming edges come "
+                        "from inside the cycle, so it has no reachable entry.",
+                        entry_node.get_label(),
+                    )
+                    entry_node = None
 
                 #                print("Found entry node: ", entry_node.get_label() if entry_node is not None else "NONE")
                 #                print("Found exit node: ", exit_node.get_label() if exit_node is not None else "NONE")
@@ -807,9 +889,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     search_source = function_node
 
                     # break cycle
-                    for itexp in iteration_exit_points:
-                        self.graph.remove_edge(itexp, entry_node)
-                        logger.info("  --> Removed edge " + itexp.get_label() + " --> " + entry_node.get_label())
+                    for latch in latches:
+                        self.graph.remove_edge(latch, entry_node)
+                        logger.info("  --> Removed edge " + latch.get_label() + " --> " + entry_node.get_label())
 
                     # add loop start marking between entry_node and its predecessors
                     lsm = TGStartLoopNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
@@ -819,10 +901,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         self.add_edge(pred, lsm)
                     self.add_edge(lsm, entry_node)
 
-                    # add loop end marking between entry_node and exit_node
+                    # add loop end marking in front of exit_node. The edge leaving the loop starts at
+                    # exit_source, which is the entry node itself for a loop tested at its top and
+                    # the condition node behind it for a rotated one
                     lem = TGEndLoopNode(entry_node.pet_node_id, entry_node.level, entry_node.position)
                     self.add_node(lem)
-                    self.graph.remove_edge(entry_node, exit_node)
+                    self.graph.remove_edge(exit_source, exit_node)
                     self.add_edge(entry_node, lem)
                     self.add_edge(lem, exit_node)
 
@@ -908,7 +992,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __fix_loop_structures(self, plot_problematic_loops: bool = False) -> None:
         # in case a loop contains a branch to a non-iteration node (e.g. via "break"- statement), delete this edge and cleanup the graph
         logger.info("Fixing loop structures...")
-        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             logger.info("--> " + function_node.get_label())
             modification_found = True
             while modification_found:
@@ -963,7 +1047,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         if len(invalid_edges) == 0:
                             continue
                         # found problematic loop
-                        print("Invalid edges: ", [(e[0].get_label(), e[1].get_label()) for e in invalid_edges])
+                        warn("Invalid edges: " + str([(e[0].get_label(), e[1].get_label()) for e in invalid_edges]))
 
                         # show problematic loop
                         if plot_problematic_loops:
@@ -1026,7 +1110,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
     def __duplicate_loop_iterations(self, plot_progress: bool = False) -> None:
         logger.info("Duplicating loop iterations...")
-        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             logger.info("--> " + function_node.get_label())
             added_copies: Set[TGNode] = set()  # do not allow the re-copying of copies
             already_considered: Set[TGNode] = set()  # do not allo the re-copying of nodes
@@ -1149,7 +1233,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
     def __assign_function_contexts(self) -> None:
         logger.info("Assigning function contexts...")
-        for function_node in tqdm(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
+        for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values()):
             descendants = self.get_descendants(function_node)
             function_start_nodes = [n for n in descendants if isinstance(n, TGStartFunctionNode)]
             for fsn in function_start_nodes:
@@ -1166,7 +1250,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("--> Selecting entry points...")
         start_branch_nodes: List[TGNode] = []
         start_branch_parent_nodes: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if isinstance(node, TGStartBranchNode):
                 start_branch_nodes.append(node)
             if isinstance(node, TGStartBranchParentNode):
@@ -1174,7 +1258,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
         # create individual branch context
         logger.info("--> Create branch contexts")
-        for sbn in tqdm(start_branch_nodes):
+        for sbn in progress(start_branch_nodes):
             # create Context
             branch_context = BranchContext()
             sbn.register_created_context(branch_context)
@@ -1214,7 +1298,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
         # create branching parent contexts
         logger.info("--> Create branch parent contexts...")
-        for sbpn in tqdm(start_branch_parent_nodes):
+        for sbpn in progress(start_branch_parent_nodes):
             branch_parent_context = BranchingParentContext()
             self.contexts.append(branch_parent_context)
             sbpn.created_context = branch_parent_context
@@ -1243,7 +1327,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __assign_loop_contexts(self) -> None:
         logger.info("Assigning loop contexts...")
 
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if not isinstance(node, TGStartLoopNode):
                 continue
 
@@ -1378,7 +1462,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __assign_work_contexts(self) -> None:
         logger.info("Assigning work contexts to nodes...")
 
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if not isinstance(node, TGStartWorkNode):
                 continue
             # create a new work context
@@ -1389,7 +1473,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __assign_inlined_function_contexts(self) -> None:
         logger.info("Assigning inlined function contexts to nodes...")
 
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if not isinstance(node, TGStartInlinedFunctionNode):
                 continue
             # create a new inlined function context
@@ -1400,16 +1484,16 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __assign_parent_contexts_to_nodes(self) -> None:
         # assigns each node the innermost context containing the node
         logger.info("Assigning parent contexts to nodes...")
-        #        for ctx in tqdm(self.contexts):
+        #        for ctx in progress(self.contexts):
         #            for node in ctx.get_contained_nodes(inclusive=False):
         #                node.add_parent_context(ctx)
         logger.info("--> classify entry points...")
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if len(self.get_predecessors(node)) == 0:
                 entry_points.append(node)
         logger.info("DFS parsing entry points...")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
             queue: List[Tuple[TGNode, Optional[Context]]] = []
             root_context = Context()
             # skip root node when initializing the queue
@@ -1485,11 +1569,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Assigning Loop state positions within functions...")
 
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if isinstance(node, TGFunctionNode):
                 entry_points.append(node)
         logger.info("--> Assigning loop state ids")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
             # loop state position corresponds to the position of the iteration count for the specific loop within the "_loopstate"-information in the callpaths reported by the profiler
             # find all loops in function, sort them by location, and assign loopstate_positions.
             function_nodes = self.get_descendants(entry_point)
@@ -1515,22 +1599,27 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Assigning context successions...")
         logger.info("--> classify entry points...")
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if self.graph.in_degree(node) == 0:
                 entry_points.append(node)
 
         logger.info("--> DFS parsing entry points...")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
             # initialize succession calculation
-            queue: Deque[Tuple[TGNode, int, Tuple[Optional[Context], ...]]] = deque(
-                [(entry_point, 0, (None,))]
-            )  # each position in the list corresponds to one level. Last position is always the last level
+            # per path: the context that most recently ended at the current level - the one a
+            # context entered next has to be registered behind - and the stack of the contexts the
+            # path is currently inside, which is what makes that context available again once the
+            # level is left. See ContextStack.
+            queue: Deque[Tuple[TGNode, int, Optional[Context], Optional[ContextStack]]] = deque(
+                [(entry_point, 0, None, None)]
+            )
             already_enqueued: Set[Tuple[TGNode, int]] = set()
             while len(queue) > 0:
-                current_node, current_level, current_predecessor_contexts_tuple = queue.popleft()
-                if len(current_predecessor_contexts_tuple) == 0:
+                current_node, current_level, preceding_context, open_contexts = queue.popleft()
+                if current_level < 0:
+                    # this path left more contexts than it entered, so there is no level left to
+                    # register successors at
                     continue
-                current_predecessor_contexts = list(current_predecessor_contexts_tuple)
                 # check for entering new context level
                 entered_context: Optional[Context] = None
                 if (
@@ -1545,13 +1634,13 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     entered_context = current_node.created_context
                 if entered_context is not None:
                     # connect previous context to entered context as successor
-                    if current_predecessor_contexts[-1] is not None:
-                        current_predecessor_contexts[-1].register_successor_context(entered_context)
-                    # update the dictionary of contexts
-                    current_predecessor_contexts[-1] = entered_context
+                    if preceding_context is not None:
+                        preceding_context.register_successor_context(entered_context)
+                    # the body of the entered context is a new level, in which nothing has ended yet
+                    open_contexts = ContextStack(entered_context, open_contexts)
+                    preceding_context = None
                     # update current context level
                     current_level += 1
-                    current_predecessor_contexts.append(None)
 
                 # check for exiting context level
                 exited_context: bool = False
@@ -1568,15 +1657,17 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 if exited_context:
                     # update current context level
                     current_level -= 1
-                    current_predecessor_contexts = current_predecessor_contexts[:-1]
+                    if open_contexts is not None:
+                        # back at the level the left context was entered at, where it is now the
+                        # context that most recently ended
+                        preceding_context = open_contexts.innermost
+                        open_contexts = open_contexts.enclosing
 
                 # add successors to the queue
                 for succ in self.graph.successors(current_node):
-                    # note: the insertion of the tuple (current_predecessor_contexts) into the queue is a quite severe bottleneck.
-                    queue_element = (succ, current_level, tuple(current_predecessor_contexts))
-                    if (queue_element[0], queue_element[1]) not in already_enqueued:
-                        queue.append(queue_element)
-                        already_enqueued.add((queue_element[0], queue_element[1]))
+                    if (succ, current_level) not in already_enqueued:
+                        queue.append((succ, current_level, preceding_context, open_contexts))
+                        already_enqueued.add((succ, current_level))
 
     ## DEBUG
     #       plt.ioff()
@@ -1584,16 +1675,177 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     #       plt.pause(1)
     ## !DEBUG
 
+    def __collect_all_contexts(self) -> List[Context]:
+        """Returns every context reachable from self.contexts via any of the four relations, in a
+        deterministic order. self.contexts only holds the contexts the __assign_*_contexts passes
+        created themselves, so it is not necessarily complete."""
+        collected: Set[Context] = set()
+        queue: List[Context] = list(self.contexts)
+        collected.update(queue)
+        while len(queue) > 0:
+            current = queue.pop()
+            related: List[Optional[Context]] = [current.parent_context, current.successor, current.predecessor]
+            related += list(current.contained_contexts)
+            for ctx in related:
+                if ctx is not None and ctx not in collected:
+                    collected.add(ctx)
+                    queue.append(ctx)
+        return sorted(collected, key=lambda ctx: ctx.creation_index)
+
+    def __describe_context(self, context: Context) -> str:
+        """Identifies a context in a log message by its type and the source lines it covers."""
+        scope = context.get_code_scope(self.pet)
+        location = (scope[0] + ".." + scope[-1]) if len(scope) > 0 else "no source lines"
+        return type(context).__name__ + " (" + location + ")"
+
+    def __validate_context_structure(self) -> None:
+        """Checks the structural invariants of the Context relations that __calculate_context_nesting
+        and __calculate_context_successions build, and breaks cycles found in them.
+
+        Every traversal of these relations - in Context itself, in the pattern detectors, and in
+        ContextTaskGraph - assumes that containment forms a forest and that the successor chain is
+        acyclic. None of the passes building them enforces that: they set parent_context /
+        successor unconditionally, so the last write wins, and a node reached twice at the same
+        nesting level via different paths can be linked into two different sequences. A cycle
+        introduced that way is invisible until some traversal diverges, which surfaces as a
+        RecursionError or a hang far away from its cause.
+
+        Cycles are broken here (rather than raised) because a well-formed structure is what the
+        rest of the pipeline needs, and because the results for the unaffected parts of the program
+        stay valid. They are logged as errors, since they always indicate a defect in one of the
+        passes above. Inconsistencies that cannot be repaired unambiguously - a containment or
+        succession link that is only recorded on one of its two ends - are only counted and
+        reported."""
+        contexts = self.__collect_all_contexts()
+
+        broken_containment_edges = self.__break_containment_cycles(contexts)
+        broken_succession_links = self.__break_succession_cycles(contexts)
+        self.__report_context_relation_inconsistencies(contexts)
+
+        if broken_containment_edges > 0 or broken_succession_links > 0:
+            logger.error(
+                "Broke %d cyclic containment edge(s) and %d cyclic succession link(s) in the "
+                "context structure. This indicates a defect in __calculate_context_nesting / "
+                "__calculate_context_successions; results depending on the affected contexts "
+                "are unreliable.",
+                broken_containment_edges,
+                broken_succession_links,
+            )
+
+    def __break_containment_cycles(self, contexts: List[Context]) -> int:
+        """Detects cycles in the contained_contexts relation with an iterative depth-first search
+        and removes the edge closing each of them. Returns the number of removed edges."""
+        ON_STACK, FINISHED = 1, 2
+        state: Dict[Context, int] = dict()
+        removed = 0
+        for root in progress(contexts, desc="Breaking containment cycles"):
+            if root in state:
+                continue
+            state[root] = ON_STACK
+            # (context, its not yet visited children); children are popped from the back
+            stack: List[Tuple[Context, List[Context]]] = [(root, self.__sorted_contexts(root.contained_contexts))]
+            while len(stack) > 0:
+                current, remaining_children = stack[-1]
+                if len(remaining_children) == 0:
+                    state[current] = FINISHED
+                    stack.pop()
+                    continue
+                child = remaining_children.pop()
+                child_state = state.get(child, 0)
+                if child_state == ON_STACK:
+                    # back edge: child is an ancestor of current on the current search path
+                    logger.error(
+                        "Context %s contains %s, which is one of its own ancestors. Removing the "
+                        "containment edge to keep the containment relation acyclic.",
+                        self.__describe_context(current),
+                        self.__describe_context(child),
+                    )
+                    current.contained_contexts.discard(child)
+                    if child.parent_context is current:
+                        child.parent_context = None
+                    removed += 1
+                elif child_state == 0:
+                    state[child] = ON_STACK
+                    stack.append((child, self.__sorted_contexts(child.contained_contexts)))
+                # FINISHED children are reached via a second, non-cyclic path - harmless here
+        return removed
+
+    def __break_succession_cycles(self, contexts: List[Context]) -> int:
+        """Detects cycles in the successor relation and clears the link closing each of them.
+        Every context has at most one successor, so following the chain from each context and
+        colouring the contexts on it visits every context once. Returns the number of cleared
+        links."""
+        ON_PATH, FINISHED = 1, 2
+        state: Dict[Context, int] = dict()
+        cleared = 0
+        for context in progress(contexts, desc="Breaking succession cycles"):
+            if context in state:
+                continue
+            path: List[Context] = []
+            current: Optional[Context] = context
+            while current is not None and current not in state:
+                state[current] = ON_PATH
+                path.append(current)
+                current = current.successor
+            if current is not None and state[current] == ON_PATH:
+                # the chain ran back into a context of the path just walked
+                closing_context = path[-1]
+                logger.error(
+                    "The successor chain starting at %s runs back into %s. Clearing the closing "
+                    "link to keep the successor relation acyclic.",
+                    self.__describe_context(closing_context),
+                    self.__describe_context(current),
+                )
+                closing_context.successor = None
+                if current.predecessor is closing_context:
+                    current.predecessor = None
+                cleared += 1
+            for path_context in path:
+                state[path_context] = FINISHED
+        return cleared
+
+    def __report_context_relation_inconsistencies(self, contexts: List[Context]) -> None:
+        """Reports containment and succession links that are only recorded on one of their two
+        ends. These are not repaired: which of the two ends is the correct one is not decidable
+        here."""
+        one_sided_containment = 0
+        one_sided_succession = 0
+        for context in progress(contexts, desc="Checking context relation consistency"):
+            for child in context.contained_contexts:
+                if child.parent_context is not context:
+                    one_sided_containment += 1
+            if context.parent_context is not None and context not in context.parent_context.contained_contexts:
+                one_sided_containment += 1
+            if context.successor is not None and context.successor.predecessor is not context:
+                one_sided_succession += 1
+            if context.predecessor is not None and context.predecessor.successor is not context:
+                one_sided_succession += 1
+        if one_sided_containment > 0 or one_sided_succession > 0:
+            logger.warning(
+                "Context structure contains %d one-sided containment and %d one-sided succession "
+                "link(s) out of %d contexts. Traversals starting from either end of such a link "
+                "see different structures.",
+                one_sided_containment,
+                one_sided_succession,
+                len(contexts),
+            )
+
+    @staticmethod
+    def __sorted_contexts(contexts: Set[Context]) -> List[Context]:
+        """contained_contexts is a set, so it has to be ordered explicitly wherever the result
+        depends on the iteration order."""
+        return sorted(contexts, key=lambda ctx: ctx.creation_index)
+
     def __determine_loop_variables(self) -> None:
         """determine loop variables."""
         logger.info("Determine loop variables...")
         logger.info("--> classify entry points...")
         entry_points: List[LoopParentContext] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if type(node.created_context) == LoopParentContext:
                 entry_points.append(node.created_context)
         logger.info("--> determine loop variables...")
-        for loop_ctx in tqdm(entry_points):
+        for loop_ctx in progress(entry_points):
             loop_header_ctx = self.get_loop_header_context(loop_ctx)
             #            print("LOOP HEADER CTX:", loop_header_ctx)
             if loop_header_ctx is None:
@@ -1636,11 +1888,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Cleaning loop dependencies...")
         logger.info("--> classify entry points...")
         entry_points: List[LoopParentContext] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if type(node.created_context) == LoopParentContext:
                 entry_points.append(node.created_context)
         logger.info("--> cleaning loop dependencies")
-        for loop_ctx in tqdm(entry_points):
+        for loop_ctx in progress(entry_points):
             # get contexts by iterations
             iteration_ctxs = [
                 c for c in loop_ctx.get_contained_contexts(inclusive=False) if type(c) == IterationContext
@@ -1677,12 +1929,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("--> classify entry points...")
 
         entry_points: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if len(self.get_predecessors(node)) == 0:
                 entry_points.append(node)
 
         logger.info("--> DFS parsing entry points...")
-        for entry_point in tqdm(entry_points):
+        for entry_point in progress(entry_points):
 
             # initialize the nesting calculation
             queue: List[Tuple[TGNode, Optional[Context]]] = [(entry_point, None)]
@@ -1778,7 +2030,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         call_path_limit = 6
         call_path_depth = 0
         modification_found = True
-        with tqdm(total=call_path_limit, desc="Callpath depth") as progress_bar:
+        with progress(total=call_path_limit, desc="Callpath depth") as progress_bar:
             while modification_found:
                 call_path_depth += 1
                 if call_path_depth >= call_path_limit:
@@ -1804,7 +2056,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     if not already_inlined:
                         filtered_calling_nodes.append(cn)
 
-                for fcn in tqdm(filtered_calling_nodes, desc="Open calls"):
+                for fcn in progress(filtered_calling_nodes, desc="Open calls"):
                     if fcn.pet_node_id is None:
                         continue
                     # duplicate inlined function body and insert it after the caller
@@ -2036,8 +2288,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.add_edge(end_branch_node, ebpn)
 
     def __add_branching_nodes(self) -> None:
-        logger.info("Adding branching nodes...")
-        for function_node in tqdm(
+        for function_node in progress(
             list(self.TGFunctionNode_pet_node_id_to_tg_node.values()), desc="Adding branching nodes per function"
         ):
             try:
@@ -2052,8 +2303,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 )
         self.__add_branching_nodes_fallback_cleanup()
 
-        logger.info("--> validating amounts of node successors and predecessors...")
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes, desc="Validating node successors/predecessors"):
             succ_count = len(self.get_successors(node))
             pred_count = len(self.get_predecessors(node))
             if isinstance(node, TGEndBranchParentNode) and pred_count == 0:
@@ -2086,14 +2336,14 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __add_work_nodes(self) -> None:
         logger.info("Adding work nodes...")
         work_nodes: List[TGNode] = []
-        for node in tqdm(self.graph.nodes):
+        for node in progress(self.graph.nodes):
             if type(node) == TGNode:
                 work_nodes.append(node)
 
         logger.info("--> classify context entry nodes")
         visited: Set[TGNode] = set()
         context_entry_nodes: Set[TGNode] = set()
-        for node in tqdm(work_nodes):
+        for node in progress(work_nodes):
             if node in visited:
                 continue
 
@@ -2122,7 +2372,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             context_entry_nodes.add(node)
 
         logger.info("--> inserting work start and end nodes...")
-        for node in tqdm(context_entry_nodes):
+        for node in progress(context_entry_nodes):
             # adding work start node
             start_work_node = TGStartWorkNode(node.pet_node_id, node.level, node.position)
             self.add_node(start_work_node)
@@ -2186,7 +2436,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Inserting pessimistic data dependencies (between all suitable nodes)...")
 
         # iterate over all edges in PET Graph
-        for source, target, dependency_dict in tqdm(self.pet.g.edges(data=True)):
+        for source, target, dependency_dict in progress(self.pet.g.edges(data=True)):
             dependency = cast(Dependency, dependency_dict["data"])
             # only consider DATA edges
             if dependency.etype != EdgeType.DATA:
@@ -2224,7 +2474,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Inserting data dependencies...")
 
         # iterate over all edges in PET Graph
-        for source, target, dependency_dict in tqdm(self.pet.g.edges(data=True)):
+        for source, target, dependency_dict in progress(self.pet.g.edges(data=True)):
             dependency = cast(Dependency, dependency_dict["data"])
             # only consider DATA edges
             if dependency.etype != EdgeType.DATA:
@@ -2279,6 +2529,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     line = line.strip()
                     if line.startswith("#") or len(line) == 0:
                         continue
+                    if self.ignore_dependency_states:
+                        # Drop the callpath state markers before any of them is interpreted below.
+                        # Every source/sink then reads as NO_STATE, which also reclassifies the
+                        # affected dependencies from DYN_* to STAT_*.
+                        line = STATE_MARKER_PATTERN.sub("", line)
                     # split and sanitize line
                     line_split = [elem for elem in line.split(" ") if len(elem) > 0]
 
@@ -2776,7 +3031,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Assigning state ids to nodes...")
         # entry points are independent of the processed state; compute them once.
         entry_points: List[Context] = [c for c in self.contexts if isinstance(c, FunctionContext)]
-        for state_id in tqdm(state_mappings_dict):
+        for state_id in progress(state_mappings_dict):
             #            print()
             #            print("Parsing state_id: ", state_id)
             #            print("CallState: ", state_mappings_dict[state_id])
@@ -2846,7 +3101,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     #
     #         # assign state id to task_graph nodes
     #         logger.info("Assigning state ids to nodes...")
-    #         for state_id in tqdm(state_mappings_dict):
+    #         for state_id in progress(state_mappings_dict):
     #             print()
     #             print("Parsing state_id: ", state_id)
     #             # skip invalid states
@@ -3164,8 +3419,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         # insert data dependencies into graph
         # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
         logger.info("--> Inserting data dependencies: ")
-        for dep_type, dep_type_deps in tqdm(dependencies.items(), desc="Dependency types"):
-            for source_location, source_location_deps in tqdm(
+        for dep_type, dep_type_deps in progress(dependencies.items(), desc="Dependency types"):
+            for source_location, source_location_deps in progress(
                 dep_type_deps.items(), desc="Source locations", leave=False
             ):
                 for source_state_id, source_state_deps in source_location_deps.items():
@@ -3347,7 +3602,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         self.__print_context_statistics("Pre validation")
 
         logger.info("--> checking contexts...")
-        for ctx in tqdm(self.contexts):
+        for ctx in progress(self.contexts):
             # calculate initialized variables per context
             initialized_vars: Set[Tuple[str, Optional[MemoryRegion]]] = set()
             for node in ctx.get_contained_nodes():
@@ -3393,7 +3648,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Validating data dependencies using existing metadata...")
         invalid_deps: List[Tuple[Context, Context, Dependency]] = []
         valid_deps: Set[Tuple[Context, Context, Dependency]] = set()
-        for source_ctx in tqdm(self.contexts):
+        for source_ctx in progress(self.contexts):
             source_call_stack: Optional[List[Context]] = None  # only calculate, if it is required
             for target_ctx, dep in source_ctx.outgoing_dependencies:
                 # check if metadata exists
@@ -3622,7 +3877,114 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         return iteration_nodes
 
     def __validate_graph_structure(self) -> None:
-        warnings.warn("Not yet implemented!")
+        """Checks invariant 4 (see INVARIANTS.md): once __break_cycles and
+        __duplicate_loop_iterations have run, every function's control flow must be acyclic - loops
+        are unrolled into two linear iterations rather than kept as back edges. A remaining cycle
+        means one of those passes gave up on it; __break_cycles does so silently when it cannot
+        derive a loop header and its crude fallback runs out of search sources.
+
+        Every later pass assumes acyclicity and none of them re-checks it, so the failures a
+        remaining cycle causes surface far from here and look unrelated: dominance-based region
+        wrapping is unsound, the context-nesting stack machine assigns whichever enclosing context
+        a path happens to arrive with, and __calculate_context_successions does not terminate at
+        all if the cycle's context entries and exits do not balance - it keys its traversal on
+        (node, level), and each lap around such a cycle shifts the level by the imbalance, so every
+        lap is a state it has not seen yet. That one presents as unbounded memory growth minutes
+        later, which is what makes finding the cause from the symptom so expensive.
+
+        Reported rather than raised: the results for the functions containing the cycle are
+        unreliable either way, but the rest of the program is unaffected, and raising here would
+        stop projects that currently produce (partially) usable suggestions. Turn the summary into
+        a raise if a hard failure is preferred."""
+        logger.info("Validating graph structure...")
+        cyclic_components = [
+            component for component in nx.strongly_connected_components(self.graph) if len(component) > 1
+        ]
+        self_loops = list(nx.selfloop_edges(self.graph))
+        if len(cyclic_components) == 0 and len(self_loops) == 0:
+            return
+
+        enclosing_functions = self.__map_nodes_to_enclosing_functions()
+        for source, _ in self_loops:
+            logger.error(
+                "Node %s in %s has an edge to itself.",
+                source.get_label(),
+                enclosing_functions.get(source, DETACHED_REGION),
+            )
+        detached = 0
+        for component in cyclic_components:
+            logger.error(self.__describe_cyclic_component(component, enclosing_functions))
+            if all(node not in enclosing_functions for node in component):
+                detached += 1
+
+        logger.error(
+            "%d cyclic region(s) and %d self-loop(s) remain in the control flow after cycle "
+            "breaking and loop unrolling, violating invariant 4 (INVARIANTS.md). Results "
+            "depending on the affected code are unreliable, and context succession calculation "
+            "does not terminate at all on a cyclic region whose context entries and exits do not "
+            "balance.",
+            len(cyclic_components),
+            len(self_loops),
+        )
+        if detached > 0:
+            logger.error(
+                "%d of those cyclic region(s) are not reachable from any function entry node, "
+                "which is why they are still here: __break_cycles searches for cycles with "
+                "nx.find_cycle(source=<function node>) and therefore cannot see them. Whatever "
+                "detached them - it removes edges to break cycles and rewires predecessors - is "
+                "the place to look, not the cycle breaking itself.",
+                detached,
+            )
+
+    def __map_nodes_to_enclosing_functions(self) -> Dict[TGNode, str]:
+        """Maps each node to the label of the first TGFunctionNode it is reachable from. Only built
+        once a cycle has actually been found, since it costs one traversal per function."""
+        enclosing: Dict[TGNode, str] = dict()
+        for function_node in self.TGFunctionNode_pet_node_id_to_tg_node.values():
+            for node in self.get_descendants(function_node):
+                enclosing.setdefault(node, function_node.get_label())
+        return enclosing
+
+    def __describe_cyclic_component(self, component: Set[TGNode], enclosing_functions: Dict[TGNode, str]) -> str:
+        """Names the function a cyclic region belongs to and reports the property that decides
+        whether __calculate_context_successions can terminate on it: whether one lap around it
+        enters as many contexts as it leaves."""
+        functions = sorted({enclosing_functions.get(node, DETACHED_REGION) for node in component})
+        description = "Cyclic control flow in " + ", ".join(functions) + ": %d nodes" % len(component)
+        try:
+            cycle = nx.find_cycle(self.graph.subgraph(component), orientation="original")
+        except nx.NetworkXNoCycle:  # pragma: no cover - a component of size > 1 always has one
+            return description
+        entered = sum(1 for source, *_ in cycle if source.created_context is not None)
+        left = sum(1 for source, *_ in cycle if self.__is_context_exit(source))
+        description += ", example cycle of %d edges entering %d and leaving %d contexts" % (
+            len(cycle),
+            entered,
+            left,
+        )
+        if entered != left:
+            description += " (unbalanced by %d per lap - context succession calculation cannot terminate here)" % (
+                entered - left
+            )
+        description += ": " + " -> ".join(source.get_label() for source, *_ in cycle[:8])
+        if len(cycle) > 8:
+            description += " -> ..."
+        return description
+
+    @staticmethod
+    def __is_context_exit(node: TGNode) -> bool:
+        return isinstance(
+            node,
+            (
+                TGEndFunctionNode,
+                TGEndLoopNode,
+                TGEndIterationNode,
+                TGEndBranchParentNode,
+                TGEndBranchNode,
+                TGEndWorkNode,
+                TGEndInlinedFunctionNode,
+            ),
+        )
 
     def get_successors(self, node: Optional[TGNode]) -> List[TGNode]:
         if node is None:

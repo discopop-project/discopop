@@ -38,6 +38,7 @@ from discopop_library.ProjectManager.gui.mixins.report import ReportMixin
 from discopop_library.ProjectManager.gui.mixins.help_dialogs import HelpDialogsMixin
 from discopop_library.ProjectManager.gui.mixins.wizard_launcher import WizardLauncherMixin
 from discopop_library.ProjectManager.gui.mixins.explorer_integration import ExplorerIntegrationMixin
+from discopop_library.ProjectManager.gui.mixins.hotspot_panel import HotspotPanelMixin
 from discopop_library.ProjectManager.gui.mixins.autotuning_panel import AutotuningPanelMixin
 from discopop_library.ProjectManager.gui.widgets import CATPPUCCIN_CYAN
 
@@ -54,6 +55,7 @@ class ConfigManagerApp(  # type: ignore
     HelpDialogsMixin,
     WizardLauncherMixin,
     ExplorerIntegrationMixin,
+    HotspotPanelMixin,
     AutotuningPanelMixin,
     tk.Tk,
 ):
@@ -150,6 +152,13 @@ class ConfigManagerApp(  # type: ignore
         report_tab_frame = ttk.Frame(self.right_tabs)
         self.right_tabs.add(report_tab_frame, text="Report")
         self._build_report_panel(report_tab_frame)
+
+        # Hotspot Detection tab (left of Pattern Detection: hotspots are measured
+        # before, and feed into, the optimizer and the autotuner)
+        hotspot_frame = ttk.Frame(self.right_tabs)
+        self.right_tabs.add(hotspot_frame, text="Hotspot Detection")
+        self.hotspot_tab_index = self.right_tabs.index(hotspot_frame)
+        self._build_hotspot_panel(hotspot_frame)
 
         # Pattern Detection tab
         pattern_detection_frame = ttk.Frame(self.right_tabs)

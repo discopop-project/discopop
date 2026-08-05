@@ -110,6 +110,10 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
         "--enable-statistics", action="store_true", help="Enable the calculation and storing of statistics for code and generated suggestions."
     )
     experimental_parser.add_argument(
+        "--ignore-dependency-states", action="store_true",
+        help="Ignore the callpath state markers (\"@<state_id>\") contained in the dependency data. Dependencies are then interpreted as if the profiler had not distinguished between callpath states, which also reclassifies the affected dependencies from dynamic to static. Useful to compare pattern detection with and without state information.",
+    )
+    experimental_parser.add_argument(
         "--plot-pet", type=str, nargs="?", default=None, const="explorer/pet_plot.gexf",
         help="Plots PET as a GEXF file. If a path is given (file extension has to be .gexf), the PET Graph is written to the given file, otherwise to pet_plot.gexf"
     )
@@ -173,6 +177,7 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
         load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,
+        ignore_dependency_states=arguments.ignore_dependency_states,
         collect_statistics=arguments.enable_statistics,
         jobs=arguments.jobs,
         enable_pet_plot_file=arguments.plot_pet,

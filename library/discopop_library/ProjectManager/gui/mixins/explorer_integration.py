@@ -21,6 +21,7 @@ from urllib.parse import quote
 from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, show_error, clean_ansi_output
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.plots import hotspot_data
 from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
 from discopop_library.ProjectManager.gui.widgets import (
     create_styled_output_console,
@@ -30,6 +31,16 @@ from discopop_library.ProjectManager.gui.widgets import (
 )
 
 logger = logging.getLogger("ExplorerIntegration")
+
+# Selectable interpretations of the profiled dependency data, as (value, label) pairs.
+# "no_states" runs the explorer with --ignore-dependency-states, i.e. it discards the
+# callpath state markers the profiler recorded in dynamic_dependencies.txt.
+DETECTION_MODES = [
+    ("default", "default (full states)"),
+    ("no_states", "no_states (states ignored)"),
+]
+DEFAULT_DETECTION_MODE = "default"
+NO_STATES_DETECTION_MODE = "no_states"
 
 
 class ExplorerIntegrationMixin(ConfigManagerMixinBase):
@@ -41,7 +52,9 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
     show_in_vscode_button: Optional[RoundedButton] = None
     no_suggestions_label: Optional[ttk.Label] = None
     prerequisite_info_label: Optional[ttk.Label] = None
+    hotspot_hint_frame: Optional[ttk.LabelFrame] = None
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
+    detection_mode_var: Optional[tk.StringVar] = None
     jobs_var: Optional[tk.StringVar] = None
     collect_stats_var: Optional[tk.BooleanVar] = None
     visualize_var: Optional[tk.BooleanVar] = None
@@ -68,6 +81,13 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         left_frame = ttk.Frame(main_paned)
         main_paned.add(left_frame, minsize=650, width=650)
 
+        # Hotspot hint: an always-packed container that stays empty (and therefore
+        # invisible) while hotspot results exist, so the hint can be shown and hidden
+        # without disturbing the packing order of the frames below it.
+        hotspot_hint_container = ttk.Frame(left_frame)
+        hotspot_hint_container.pack(fill=tk.X, padx=0, pady=0)
+        self._build_hotspot_hint(hotspot_hint_container)
+
         # Settings frame
         settings_frame = ttk.LabelFrame(left_frame, text="Settings", padding=5)
         settings_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -84,6 +104,32 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
             self.pattern_types_vars[pattern] = var
             cb = ttk.Checkbutton(patterns_frame, text=pattern, variable=var)
             cb.pack(side=tk.LEFT, padx=5)
+
+        # Interpretation of the profiled dependency data
+        detection_mode_frame = ttk.Frame(settings_frame)
+        detection_mode_frame.pack(fill=tk.X, pady=5)
+
+        heading_label(detection_mode_frame, "Dependency Data:").pack(side=tk.TOP, anchor=tk.W, padx=5)
+
+        # below the label and stacked vertically, so the options read as a list
+        detection_mode_choices = ttk.Frame(detection_mode_frame)
+        detection_mode_choices.pack(side=tk.TOP, anchor=tk.W, padx=15)
+
+        self.detection_mode_var = tk.StringVar(value=DEFAULT_DETECTION_MODE)
+        for mode_value, mode_label in DETECTION_MODES:
+            ttk.Radiobutton(
+                detection_mode_choices,
+                text=mode_label,
+                variable=self.detection_mode_var,
+                value=mode_value,
+            ).pack(side=tk.TOP, anchor=tk.W)
+
+        caption_label(
+            settings_frame,
+            "'no_states' ignores the profiler's callpath state markers, which also reclassifies the\n"
+            "affected dependencies from dynamic to static. Re-running detection in either mode\n"
+            "replaces the existing suggestions.",
+        ).pack(anchor=tk.W, padx=10)
 
         # Jobs selection
         jobs_frame = ttk.Frame(settings_frame)
@@ -175,6 +221,41 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         self._update_pattern_detection_ui()
         self._setup_pattern_detection_tab_tooltip()
 
+    def _build_hotspot_hint(self, parent: tk.Widget) -> None:
+        """Build the (initially hidden) 'no hotspot results' hint block."""
+        self.hotspot_hint_frame = ttk.LabelFrame(parent, text="Hotspot Information", padding=5)
+
+        ttk.Label(
+            self.hotspot_hint_frame,
+            text="⚠ No Hotspot Detection results available.",
+            font=widgets.FONT_BODY,
+            foreground=widgets.STATUS_STOP,
+            justify=tk.LEFT,
+        ).pack(anchor=tk.W, padx=5)
+
+        caption_label(
+            self.hotspot_hint_frame,
+            "Pattern detection restricts its analysis to the hot parts of the program when hotspot\n"
+            "information is available. Measuring hotspots first is therefore recommended: the\n"
+            "filtering it enables can speed up this step significantly.",
+            justify=tk.LEFT,
+        ).pack(anchor=tk.W, padx=5, pady=(2, 4))
+
+        widgets.create_button(
+            self.hotspot_hint_frame,
+            text="Go to Hotspot Detection",
+            command=lambda: self.right_tabs.select(self.hotspot_tab_index),
+        ).pack(anchor=tk.W, padx=5, pady=(0, 2))
+
+    def _update_hotspot_hint(self) -> None:
+        """Show the hint exactly while the explorer would find no hotspots to filter with."""
+        if self.hotspot_hint_frame is None:
+            return
+        if hotspot_data.hotspots_available_for_explorer(self.arguments.dot_dp):
+            self.hotspot_hint_frame.pack_forget()
+        else:
+            self.hotspot_hint_frame.pack(fill=tk.X, padx=5, pady=(5, 0))
+
     def _setup_pattern_detection_tab_tooltip(self) -> None:
         tooltip_text = (
             "Prerequisites not met:\n"
@@ -219,6 +300,8 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
     def _update_pattern_detection_ui(self) -> None:
         ready = self._check_explorer_prerequisites()
+
+        self._update_hotspot_hint()
 
         if self.explorer_run_button is not None:
             self.explorer_run_button.config(state="normal" if ready else "disabled")
@@ -325,6 +408,10 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         self.status_label.config(text="Opening project in VSCode...", foreground=widgets.STATUS_BUSY)
         self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
+
+    def _ignore_dependency_states(self) -> bool:
+        """Whether the selected detection mode discards the callpath state markers."""
+        return self.detection_mode_var is not None and self.detection_mode_var.get() == NO_STATES_DETECTION_MODE
 
     def _check_explorer_prerequisites(self) -> bool:
         profiler_dir = os.path.join(self.arguments.dot_dp, "profiler")
@@ -485,10 +572,14 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         selected_patterns = [pattern for pattern, var in self.pattern_types_vars.items() if var.get()]
         enable_patterns = ",".join(selected_patterns) if selected_patterns else "reduction,doall"
         jobs_value = self.jobs_var.get()
+        ignore_states = self._ignore_dependency_states()
 
         output_callback("Configuration:\n")
         output_callback(f"  Patterns: {enable_patterns}\n")
-        output_callback(f"  Threads: {jobs_value}\n\n")
+        output_callback(f"  Threads: {jobs_value}\n")
+        output_callback(
+            f"  Dependency data: {NO_STATES_DETECTION_MODE if ignore_states else DEFAULT_DETECTION_MODE}\n\n"
+        )
 
         cmd = [
             sys.executable,
@@ -504,6 +595,9 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
 
         if jobs_value != "auto":
             cmd.extend(["-j", jobs_value])
+
+        if ignore_states:
+            cmd.append("--ignore-dependency-states")
 
         output_callback("Running pattern detection...\n\n")
 
@@ -552,10 +646,12 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         selected_patterns = [pattern for pattern, var in self.pattern_types_vars.items() if var.get()]
         enable_patterns = ",".join(selected_patterns) if selected_patterns else "reduction,doall"
         jobs_value = self.jobs_var.get()
+        ignore_states = self._ignore_dependency_states()
 
         output_callback("Configuration:\n")
         output_callback(f"  Patterns: {enable_patterns}\n")
         output_callback(f"  Threads: {jobs_value}\n")
+        output_callback(f"  Dependency data: {NO_STATES_DETECTION_MODE if ignore_states else DEFAULT_DETECTION_MODE}\n")
         output_callback("  Graph visualization: enabled\n\n")
 
         # discard widgets from a previous visualized run; WithSidebar always builds
@@ -574,6 +670,8 @@ class ExplorerIntegrationMixin(ConfigManagerMixinBase):
         ]
         if jobs_value != "auto":
             argv.extend(["-j", jobs_value])
+        if ignore_states:
+            argv.append("--ignore-dependency-states")
 
         # lazy import: discopop_explorer is only needed for this in-process path,
         # mirroring discopop_explorer's own lazy import of discopop_gui
