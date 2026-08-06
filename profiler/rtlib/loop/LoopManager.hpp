@@ -182,7 +182,10 @@ private:
   LoopTable loopStack; // loop stack tracking
   LoopRecords loops;   // loop merging
   LoopCounter lc;      // loop counter
-  bool alreadyDone;
+  // must be initialized: is_done() gates __dp_loop_incr and __dp_loop_output, so reading
+  // indeterminate heap memory here silently disables loop counting and, with it, the
+  // callstate transitions that distinguish loop iterations in the recorded dependencies.
+  bool alreadyDone = false;
 };
 
 } // namespace __dp

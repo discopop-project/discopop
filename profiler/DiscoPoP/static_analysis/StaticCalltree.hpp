@@ -26,13 +26,17 @@ class StaticCalltreeNode {
 //        TODO: other types for loop iterations might be a good idea!
         std::string functionName;
         int32_t instructionID;
+        std::string label;  // precomputed once in the constructor; see get_label()
 
     public:
         std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> successors;  // first element of the pairs is the trigger instructionID for the transition
         std::vector<StaticCalltreeNode*> predecessors;
-        StaticCalltreeNode(uint32_t node_id_arg, bool type_arg, std::string functionName_arg, int32_t instructionID_arg):node_id(node_id_arg),type(type_arg),functionName(functionName_arg),instructionID(instructionID_arg){};
+        StaticCalltreeNode(uint32_t node_id_arg, bool type_arg, std::string functionName_arg, int32_t instructionID_arg):node_id(node_id_arg),type(type_arg),functionName(functionName_arg),instructionID(instructionID_arg){
+            // type 0: function -> functionName; type 1: call instruction -> "call_<instructionID>"
+            label = type ? ("call_" + std::to_string(instructionID)) : functionName;
+        };
         void print();
-        std::string get_label();
+        const std::string& get_label();
         bool get_type();
         void register_successor(StaticCalltreeNode* succ, int32_t trigger_instructionID);
 };

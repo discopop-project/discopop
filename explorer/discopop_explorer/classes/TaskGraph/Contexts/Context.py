@@ -47,6 +47,9 @@ class Context(object):
         self.successor = None
         self.predecessor = None
         self.outgoing_dependencies = set()
+        # cache for get_code_scope(inclusive=False); only depends on self.contained_nodes,
+        # which is mutated solely via add_node (where the cache is invalidated).
+        self._code_scope_cache: Optional[List[LineID]] = None
         self.incoming_dependencies = set()
         self.state_ids = []
         self.creation_index = next(Context._creation_counter)
@@ -151,6 +154,7 @@ class Context(object):
 
     def add_node(self, node: TGNode) -> None:
         self.contained_nodes.append(node)
+        self._code_scope_cache = None  # invalidate cached code scope
 
     def add_contained_context(self, context: Context) -> None:
         if context == self:
@@ -358,6 +362,11 @@ class Context(object):
 
     def get_code_scope(self, pet: PEGraphX, inclusive: bool = False) -> List[LineID]:
         """returns a list of code scopes contained in the context."""
+        # The inclusive=False scope depends only on self.contained_nodes and is computed
+        # repeatedly (once per dependency lookup), so cache it. The inclusive=True scope
+        # also depends on descendant contexts and is left uncached.
+        if not inclusive and self._code_scope_cache is not None:
+            return self._code_scope_cache
         scope: List[LineID] = []
         for node in self.get_contained_nodes(inclusive=inclusive):
             pet_node = node.get_pet_node(pet)
@@ -365,13 +374,16 @@ class Context(object):
                 continue
             for i in range(pet_node.start_line, pet_node.end_line + 1):
                 scope.append(LineID(str(pet_node.file_id) + ":" + str(i)))
+        # remove duplicates
         result = list(dict.fromkeys(scope))
+        if not inclusive:
+            self._code_scope_cache = result
         return result
 
     def get_defined_variables(self, pet: PEGraphX) -> List[Tuple[str, LineID]]:
         """returns a list of defined variables in the context as tuples of (variable name, lineID)."""
         defined_vars: List[Tuple[str, LineID]] = []
-        code_scope = self.get_code_scope(pet)
+        code_scope = set(self.get_code_scope(pet))
         for node in self.contained_nodes:
             pet_node = node.get_pet_node(pet)
             if pet_node is None:
