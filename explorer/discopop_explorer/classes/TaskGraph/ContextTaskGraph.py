@@ -7,7 +7,8 @@
 # directory for details.
 
 import logging
-from typing import Dict, List, Optional, Set, Tuple, cast
+from collections import deque
+from typing import Deque, Dict, List, Optional, Set, Tuple, cast
 import warnings
 from matplotlib import pyplot as plt
 import networkx as nx  # type: ignore
@@ -139,7 +140,7 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
 
         # Extract branched sections
         if False:
-            raw_branching_contexts: List[Context] = []
+            raw_branching_contexts: Deque[Context] = deque()
             for node in self.graph.nodes():
                 if isinstance(node, BranchingParentContext):
                     raw_branching_contexts.append(node)
@@ -147,7 +148,7 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
             finished_branching_context: List[Context] = []
             replacements: Dict[Context, Context] = dict()
             while len(raw_branching_contexts) > 0:
-                current_branching_context = raw_branching_contexts.pop(0)
+                current_branching_context = raw_branching_contexts.popleft()
                 # skip, if current_branching_context contains branching contexts
                 contained_contexts = current_branching_context.get_contained_contexts(inclusive=True)
                 contains_branched_section = (
@@ -276,10 +277,10 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
         for comp in component_entry_points:
             entry_point = component_entry_points[comp]
             component_replacements: List[Context] = []
-            replacement_candidates: List[Context] = [entry_point]
+            replacement_candidates: Deque[Context] = deque([entry_point])
             visited: List[Context] = []
             while len(replacement_candidates) > 0:
-                candidate = replacement_candidates.pop(0)
+                candidate = replacement_candidates.popleft()
                 visited.append(candidate)
 
                 # check if candidate is instance of WorkNode and not a trivial solution

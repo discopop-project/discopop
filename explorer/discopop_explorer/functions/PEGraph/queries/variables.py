@@ -6,7 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from __future__ import annotations
-from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Set, cast
+from collections import deque
+from typing import TYPE_CHECKING, Deque, Dict, List, Optional, Sequence, Set, cast
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
@@ -24,10 +25,10 @@ from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 def get_variable(pet: PEGraphX, root_node_id: NodeID, var_name: str) -> Optional[Variable]:
     """Search for the type of the given variable by BFS searching through successor edges in reverse, starting from
     the given root node, and checking the global and local vars of each encountered CU node."""
-    queue: List[NodeID] = [root_node_id]
+    queue: Deque[NodeID] = deque([root_node_id])
     visited: Set[NodeID] = set()
     while queue:
-        current = queue.pop(0)
+        current = queue.popleft()
         current_node = cast(CUNode, pet.node_at(current))
         visited.add(current)
         variables = current_node.local_vars + current_node.global_vars
