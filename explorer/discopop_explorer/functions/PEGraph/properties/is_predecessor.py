@@ -6,7 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import List
+from collections import deque
+from typing import Deque, List
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.enums.EdgeType import EdgeType
@@ -34,10 +35,10 @@ def is_predecessor(pet: PEGraphX, source_id: NodeID, target_id: NodeID) -> bool:
         target_id = direct_children(pet, target_node)[0].id
 
     # perform a bfs search for target
-    queue: List[NodeID] = [source_id]
+    queue: Deque[NodeID] = deque([source_id])
     visited: List[NodeID] = []
     while queue:
-        current = queue.pop(0)
+        current = queue.popleft()
         if current == target_id:
             return True
         visited.append(current)

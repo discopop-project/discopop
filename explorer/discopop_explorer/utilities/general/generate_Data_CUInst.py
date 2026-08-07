@@ -6,8 +6,9 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from collections import deque
 from io import TextIOWrapper
-from typing import List, cast, TextIO
+from typing import Deque, List, cast, TextIO
 
 from discopop_explorer.classes.PEGraph.PEGraphX import (
     PEGraphX,
@@ -71,10 +72,10 @@ def __recursive_function_called_multiple_times_inside_function(pet: PEGraphX, re
         # 2. check if multiple calls to recursive function exist in tmp_func_cus body
         # by listing cu nodes in function body.
         # get cu's inside function by traversing child edges
-        queue: List[Node] = [tmp_func_cu]
+        queue: Deque[Node] = deque([tmp_func_cu])
         contained_cus: List[Node] = []
         while len(queue) > 0:
-            cur_cu = queue.pop(0)
+            cur_cu = queue.popleft()
             if __line_contained_in_region(
                 cur_cu.start_position(), tmp_func_cu.start_position(), tmp_func_cu.end_position()
             ) and __line_contained_in_region(

@@ -7,7 +7,8 @@
 # directory for details.
 
 import copy
-from typing import List, Tuple, cast
+from collections import deque
+from typing import Deque, List, Tuple, cast
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
@@ -34,9 +35,9 @@ def check_reachability_and_get_path_nodes(
         return False, []
 
     visited: List[NodeID] = []
-    queue: List[Tuple[CUNode, List[CUNode]]] = [(target, [])]
+    queue: Deque[Tuple[CUNode, List[CUNode]]] = deque([(target, [])])
     while len(queue) > 0:
-        cur_node, cur_path = queue.pop(0)
+        cur_node, cur_path = queue.popleft()
         visited.append(cur_node.id)
         tmp_list = [(s, t, e) for s, t, e in in_edges(pet, cur_node.id) if s not in visited and e.etype in edge_types]
         for e in tmp_list:
@@ -59,14 +60,16 @@ def get_path_nodes_between(pet: PEGraphX, target: CUNode, source: CUNode, edge_t
     :return: List of encountered nodes"""
 
     visited: List[NodeID] = []
-    queue: List[Tuple[CUNode, List[CUNode]]] = [
-        (cast(CUNode, pet.node_at(t)), [])
-        for s, t, d in out_edges(pet, source.id, edge_types)
-        if type(pet.node_at(t)) == CUNode
-    ]
+    queue: Deque[Tuple[CUNode, List[CUNode]]] = deque(
+        [
+            (cast(CUNode, pet.node_at(t)), [])
+            for s, t, d in out_edges(pet, source.id, edge_types)
+            if type(pet.node_at(t)) == CUNode
+        ]
+    )
 
     while len(queue) > 0:
-        cur_node, cur_path = queue.pop(0)
+        cur_node, cur_path = queue.popleft()
         visited.append(cur_node.id)
         tmp_list = [(s, t, e) for s, t, e in out_edges(pet, cur_node.id) if t not in visited and e.etype in edge_types]
         for e in tmp_list:

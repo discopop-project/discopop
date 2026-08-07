@@ -661,18 +661,18 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
         functions = all_nodes(self.pet, FunctionNode)
 
-        queue: List[TGConstructionQueueElement] = [(root, pet_root)] + [(None, func) for func in functions]
+        queue: Deque[TGConstructionQueueElement] = deque([(root, pet_root)] + [(None, func) for func in functions])
 
         while len(queue) > 0:
-            predecessor, current = queue.pop(0)
+            predecessor, current = queue.popleft()
             if isinstance(current, VisitorMarker):
                 queue = self.__visit_marker(predecessor, current, queue)
             else:
                 queue = self.__visit_node(predecessor, current, queue)
 
     def __visit_node(
-        self, predecessor: Optional[TGNode], pet_node: PETNode, queue: List[TGConstructionQueueElement]
-    ) -> List[TGConstructionQueueElement]:
+        self, predecessor: Optional[TGNode], pet_node: PETNode, queue: Deque[TGConstructionQueueElement]
+    ) -> Deque[TGConstructionQueueElement]:
         if pet_node.type == NodeType.CU:
             queue = self.__visit_CUNode(predecessor, pet_node, queue)
         elif pet_node.type == NodeType.FUNC:
@@ -684,15 +684,15 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         return queue
 
     def __visit_marker(
-        self, predecessor: Optional[TGNode], marker: VisitorMarker, queue: List[TGConstructionQueueElement]
-    ) -> List[TGConstructionQueueElement]:
+        self, predecessor: Optional[TGNode], marker: VisitorMarker, queue: Deque[TGConstructionQueueElement]
+    ) -> Deque[TGConstructionQueueElement]:
         if isinstance(marker, EndFunctionMarker):
             queue = self.__visit_EndFunctionMarker(predecessor, marker, queue)
         return queue
 
     def __visit_EndFunctionMarker(
-        self, predecessor: Optional[TGNode], marker: EndFunctionMarker, queue: List[TGConstructionQueueElement]
-    ) -> List[TGConstructionQueueElement]:
+        self, predecessor: Optional[TGNode], marker: EndFunctionMarker, queue: Deque[TGConstructionQueueElement]
+    ) -> Deque[TGConstructionQueueElement]:
         #        self.context_stack.remove(marker.context)
         node = self.__get_or_insert_TGEndFunctionNode(
             marker.function_node, self.__get_next_level(), self.__get_next_position(self.__get_current_level())
@@ -702,8 +702,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         return queue
 
     def __visit_CUNode(
-        self, predecessor: Optional[TGNode], pet_node: PETNode, queue: List[TGConstructionQueueElement]
-    ) -> List[TGConstructionQueueElement]:
+        self, predecessor: Optional[TGNode], pet_node: PETNode, queue: Deque[TGConstructionQueueElement]
+    ) -> Deque[TGConstructionQueueElement]:
         successors = direct_successors(self.pet, pet_node)
         if len(successors) > 1:
             return self.__visit_branching(predecessor, pet_node, queue)
@@ -737,8 +737,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         return queue
 
     def __visit_branching(
-        self, predecessor: Optional[TGNode], pet_node: PETNode, queue: List[TGConstructionQueueElement]
-    ) -> List[TGConstructionQueueElement]:
+        self, predecessor: Optional[TGNode], pet_node: PETNode, queue: Deque[TGConstructionQueueElement]
+    ) -> Deque[TGConstructionQueueElement]:
         node = self.__get_or_insert_TGNode(
             pet_node.id, self.__get_next_level(), self.__get_next_position(self.__get_current_level())
         )
@@ -766,8 +766,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         return queue
 
     def __visit_FunctionNode(
-        self, predecessor: Optional[TGNode], pet_node: PETNode, queue: List[TGConstructionQueueElement]
-    ) -> List[TGConstructionQueueElement]:
+        self, predecessor: Optional[TGNode], pet_node: PETNode, queue: Deque[TGConstructionQueueElement]
+    ) -> Deque[TGConstructionQueueElement]:
 
         func_node = self.__get_or_insert_TGFunctionNode(
             pet_node.id, self.__get_current_level(), self.__get_next_position(self.__get_current_level())
@@ -786,8 +786,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         return queue
 
     def __visit_LoopNode(
-        self, predecessor: Optional[TGNode], pet_node: PETNode, queue: List[TGConstructionQueueElement]
-    ) -> List[TGConstructionQueueElement]:
+        self, predecessor: Optional[TGNode], pet_node: PETNode, queue: Deque[TGConstructionQueueElement]
+    ) -> Deque[TGConstructionQueueElement]:
         warnings.warn("Not implemented!")
         return queue
 
@@ -803,10 +803,10 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         Removing that edge then severs the only way into the loop and detaches it, together with its
         whole body, from the function - which is invisible until a later pass treats the detached
         region as a program entry point of its own."""
-        queue: List[TGNode] = [function_node]
+        queue: Deque[TGNode] = deque([function_node])
         visited: Set[TGNode] = {function_node}
         while len(queue) > 0:
-            current = queue.pop(0)
+            current = queue.popleft()
             if current in cycle_nodes:
                 return current
             for successor in self.get_successors(current):
@@ -840,7 +840,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             logger.debug("Breaking cycles in: " + function_node.get_label())
             # progress search if cycle can not be broken
             search_source: TGNode = function_node
-            search_source_queue = self.get_descendants(function_node)
+            search_source_queue = deque(self.get_descendants(function_node))
 
             while True:
                 # find cycle
@@ -885,7 +885,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
                 if entry_node is not None and exit_node is not None:
                     # cycle can be broken. Reset search point for cycle search
-                    search_source_queue = self.get_descendants(function_node)
+                    search_source_queue = deque(self.get_descendants(function_node))
                     search_source = function_node
 
                     # break cycle
@@ -985,7 +985,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
                     # progress search
                     if len(search_source_queue) > 0:
-                        search_source = search_source_queue.pop(0)
+                        search_source = search_source_queue.popleft()
                     else:
                         break
 
@@ -1090,9 +1090,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
                         # cleanup the graph by deleting nodes with no incoming edges
                         for _, invalid_edge_target in invalid_edges:
-                            queue: List[TGNode] = [invalid_edge_target]
+                            queue: Deque[TGNode] = deque([invalid_edge_target])
                             while len(queue) > 0:
-                                current = queue.pop(0)
+                                current = queue.popleft()
                                 if not self.graph.has_node(current):
                                     continue
                                 predecessors = self.get_predecessors(current)
@@ -1333,10 +1333,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
             # search corresponding loop end node
             loop_end_node: Optional[TGNode] = None
-            queue: List[Tuple[TGNode, int]] = [(node, -1)]  # integer counts entered equivalent loops due to inlining
+            queue: Deque[Tuple[TGNode, int]] = deque(
+                [(node, -1)]
+            )  # integer counts entered equivalent loops due to inlining
             visited: Set[TGNode] = {node}
             while len(queue) > 0:
-                current, entered_equivalent_loops = queue.pop(0)
+                current, entered_equivalent_loops = queue.popleft()
                 if isinstance(current, TGEndLoopNode) and (node.pet_node_id == current.pet_node_id):
                     if entered_equivalent_loops == 0:
                         loop_end_node = current
@@ -1379,12 +1381,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             valid_pairs: List[Tuple[TGStartIterationNode, TGEndIterationNode]] = []
             for it_start in iteration_starts:
                 it_end: Optional[TGNode] = None
-                it_queue: List[Tuple[TGNode, int]] = [
-                    (it_start, -1)
-                ]  # integer counts entered equivalent loops due to inlining
+                it_queue: Deque[Tuple[TGNode, int]] = deque(
+                    [(it_start, -1)]
+                )  # integer counts entered equivalent loops due to inlining
                 it_visited: Set[TGNode] = {it_start}
                 while len(it_queue) > 0:
-                    current, entered_equivalent_iterations = it_queue.pop(0)
+                    current, entered_equivalent_iterations = it_queue.popleft()
                     if isinstance(current, TGEndIterationNode) and (
                         cast(TGStartIterationNode, it_start).parent_loop_pet_node_id == current.parent_loop_pet_node_id
                     ):
@@ -1494,17 +1496,17 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 entry_points.append(node)
         logger.info("DFS parsing entry points...")
         for entry_point in progress(entry_points):
-            queue: List[Tuple[TGNode, Optional[Context]]] = []
+            queue: Deque[Tuple[TGNode, Optional[Context]]] = deque()
             root_context = Context()
             # skip root node when initializing the queue
             if isinstance(entry_point, RootNode):
                 for succ in self.get_successors(entry_point):
                     queue.append((succ, root_context))
             else:
-                queue = [(entry_point, root_context)]
+                queue = deque([(entry_point, root_context)])
             already_enqueued: Set[Tuple[TGNode, Optional[Context]]] = set()
             while len(queue) > 0:
-                current_node, current_parent_context = queue.pop(0)
+                current_node, current_parent_context = queue.popleft()
                 # check if a new context is entered
                 entered_context: Optional[Context] = None
                 if (
@@ -1937,10 +1939,10 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         for entry_point in progress(entry_points):
 
             # initialize the nesting calculation
-            queue: List[Tuple[TGNode, Optional[Context]]] = [(entry_point, None)]
+            queue: Deque[Tuple[TGNode, Optional[Context]]] = deque([(entry_point, None)])
             already_enqueued: Set[Tuple[TGNode, Optional[Context]]] = {(entry_point, None)}
             while len(queue) > 0:
-                current_node, current_context = queue.pop(0)
+                current_node, current_context = queue.popleft()
 
                 # check for entering a new contexts
                 entered_context: Optional[Context] = None
@@ -2904,8 +2906,16 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             visited: Set[str] = set()
             callpath: List[str] = []
             current = state_id
-            while current not in visited:
-                visited.add(current)  # guards against self references / cycles in malformed input
+            hit_cycle = False
+            while True:
+                if current in visited:
+                    # self reference / cycle in malformed input. the walk has to be cut here, and
+                    # the cut lands wherever the walk happened to start, so the resulting callpath
+                    # is specific to state_id and must not be cached for the states passed on the
+                    # way (see below).
+                    hit_cycle = True
+                    break
+                visited.add(current)
                 if current in resolved:
                     callpath = resolved[current]
                     break
@@ -2918,10 +2928,14 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     break
                 pending.append((current, label))
                 current = parent_state_id
-            # walk back down, caching the callpath of every state passed along the way
+            # walk back down, caching the callpath of every state passed along the way. Callpaths
+            # cut short by a cycle are not cached: caching them would hand a state the prefix of
+            # whichever walk reached it first, making the result depend on the order in which the
+            # states are resolved (used_state_ids is a set, so that order varies per process).
             for pending_state_id, pending_label in reversed(pending):
                 callpath = callpath + [pending_label]
-                resolved[pending_state_id] = callpath
+                if not hit_cycle:
+                    resolved[pending_state_id] = callpath
             return callpath
 
         # create state_mappings_dict
@@ -3913,11 +3927,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __get_iteration_nodes(
         self, iteration_entry: TGStartIterationNode, iteration_exit: TGEndIterationNode
     ) -> Set[TGNode]:
-        queue: List[TGNode] = [iteration_entry]
+        queue: Deque[TGNode] = deque([iteration_entry])
         visited: Set[TGNode] = set()
         iteration_nodes: Set[TGNode] = set()
         while len(queue) > 0:
-            current_source = queue.pop(0)
+            current_source = queue.popleft()
             visited.add(current_source)
             if nx.has_path(self.graph, current_source, iteration_exit):
                 iteration_nodes.add(current_source)
