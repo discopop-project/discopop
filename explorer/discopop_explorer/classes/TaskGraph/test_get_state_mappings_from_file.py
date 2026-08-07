@@ -121,19 +121,23 @@ def test_unparsable_mapping_file_warns_instead_of_failing_silently(
 @pytest.mark.parametrize(  # type: ignore[misc]
     ("mapping_contents", "expected"),
     [
-        # parent that is not part of the tree: treated as the root
-        ("24 999 orphan\n", ["orphan"]),
-        # two states referencing each other: must terminate rather than loop forever
-        ("24 27 first\n27 24 second\n", ["second", "first"]),
+        # parent that is not part of the tree: treated as the root. State 27 is observed but
+        # absent from the tree, so it carries no callpath at all.
+        ("24 999 orphan\n", {"24": ["orphan"]}),
+        # two states referencing each other: must terminate rather than loop forever. Neither of
+        # them is the root, so each callpath is cut where its own walk started. Both are asserted
+        # to pin that the result does not depend on the order in which the states are resolved -
+        # that order comes from a set of state ids and therefore varies with PYTHONHASHSEED.
+        ("24 27 first\n27 24 second\n", {"24": ["second", "first"], "27": ["first", "second"]}),
     ],
     ids=["unknown_parent", "cyclic_parents"],
 )
 def test_malformed_prefix_tree_terminates(
-    build_task_graph: Any, build_pet_graph: Any, tmp_path: Any, mapping_contents: str, expected: List[str]
+    build_task_graph: Any, build_pet_graph: Any, tmp_path: Any, mapping_contents: str, expected: Dict[str, List[str]]
 ) -> None:
     dep_file = tmp_path / "dynamic_dependencies.txt"
     dep_file.write_text(DEP_FILE_CONTENTS)
     (tmp_path / "stateID_to_callpath_mapping.txt").write_text(mapping_contents)
     tg = build_task_graph(build_pet_graph([]))
 
-    assert _get_state_mappings(tg, str(dep_file))["24"] == expected
+    assert _get_state_mappings(tg, str(dep_file)) == expected
