@@ -180,33 +180,39 @@ def identify_simple_doall_and_reduction(
                         else:
                             # check if dep.origin is static. If so, give it a "second chance", which is tested after classifying variables in the loop.
                             # --> In this case it is a valid doall, if the variable is firstwritten inside the loop
-                            logger.debug(
-                                "Prevents doall: "
-                                + str(dep.dtype)
-                                + " "
-                                + str(dep.source_line)
-                                + " "
-                                + str(dep.sink_line)
-                                + " "
-                                + str(dep.var_name)
-                                + " "
-                                + str(dep.memory_region)
-                                + " "
-                                + "origin: "
-                                + str(dep.origin)
-                                + " "
-                                + "source: "
-                                + str(subnode.get_code_scope(tg.pet, inclusive=True))
-                                + " "
-                                + "out_dep_target: "
-                                + str(out_dep_target.get_code_scope(tg.pet, inclusive=True))
-                                + " "
-                                + "source_ctx: "
-                                + str(ic_source)
-                                + " "
-                                + "target_ctx: "
-                                + str(out_dep_target)
-                            )
+                            # the message is built eagerly, and get_code_scope(inclusive=True) is the
+                            # uncached, fully recursive variant. Building it unconditionally in this
+                            # innermost loop dominated the whole analysis (measured on LULESH: 88s of
+                            # a 146s run, 120M LineID objects), so it is only assembled when a DEBUG
+                            # handler will actually consume it.
+                            if logger.isEnabledFor(logging.DEBUG):
+                                logger.debug(
+                                    "Prevents doall: "
+                                    + str(dep.dtype)
+                                    + " "
+                                    + str(dep.source_line)
+                                    + " "
+                                    + str(dep.sink_line)
+                                    + " "
+                                    + str(dep.var_name)
+                                    + " "
+                                    + str(dep.memory_region)
+                                    + " "
+                                    + "origin: "
+                                    + str(dep.origin)
+                                    + " "
+                                    + "source: "
+                                    + str(subnode.get_code_scope(tg.pet, inclusive=True))
+                                    + " "
+                                    + "out_dep_target: "
+                                    + str(out_dep_target.get_code_scope(tg.pet, inclusive=True))
+                                    + " "
+                                    + "source_ctx: "
+                                    + str(ic_source)
+                                    + " "
+                                    + "target_ctx: "
+                                    + str(out_dep_target)
+                                )
                             if dep.origin == DepOrigin.DYNAMIC_ANALYSIS:
                                 # dependency is trustworthy and definitely breaks doall
                                 dependency_found = True
