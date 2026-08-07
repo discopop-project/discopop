@@ -2906,8 +2906,16 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             visited: Set[str] = set()
             callpath: List[str] = []
             current = state_id
-            while current not in visited:
-                visited.add(current)  # guards against self references / cycles in malformed input
+            hit_cycle = False
+            while True:
+                if current in visited:
+                    # self reference / cycle in malformed input. the walk has to be cut here, and
+                    # the cut lands wherever the walk happened to start, so the resulting callpath
+                    # is specific to state_id and must not be cached for the states passed on the
+                    # way (see below).
+                    hit_cycle = True
+                    break
+                visited.add(current)
                 if current in resolved:
                     callpath = resolved[current]
                     break
@@ -2920,10 +2928,14 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     break
                 pending.append((current, label))
                 current = parent_state_id
-            # walk back down, caching the callpath of every state passed along the way
+            # walk back down, caching the callpath of every state passed along the way. Callpaths
+            # cut short by a cycle are not cached: caching them would hand a state the prefix of
+            # whichever walk reached it first, making the result depend on the order in which the
+            # states are resolved (used_state_ids is a set, so that order varies per process).
             for pending_state_id, pending_label in reversed(pending):
                 callpath = callpath + [pending_label]
-                resolved[pending_state_id] = callpath
+                if not hit_cycle:
+                    resolved[pending_state_id] = callpath
             return callpath
 
         # create state_mappings_dict
