@@ -37,6 +37,9 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
         queue: List[Context] = list(ctg.graph.nodes())
         while len(queue) > 0:
             node = queue.pop()
+            # a sequence replaced earlier in this scan may have consumed the node
+            if node not in ctg.graph:
+                continue
             # check if node is a valid sequence entry
             predecessors = ctg.get_predecessors(node)
             successors = ctg.get_successors(node)
@@ -171,14 +174,23 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
             for succ, info in out_edges_with_info:
                 for info_elem in info:
                     ctg.add_edge(combined_context_node, succ, info_elem)
-            # delete sequence nodes
+            # delete sequence nodes. They may still sit in the queue; the staleness check at the
+            # top of the scan skips them, which is cheaper than the O(len(queue)) list removal
+            # this used to perform per sequence element.
             for seq_elem in sequence:
-                if seq_elem in queue:
-                    queue.remove(seq_elem)
                 ctg.graph.remove_node(seq_elem)
             sequences_replaced = True
             modification_applied = True
 
-            if sequences_replaced:
-                break
+            # Keep scanning rather than restarting. Rebuilding list(ctg.graph.nodes()) after every
+            # single replacement made the pass O(replacements * |V|). Completeness is unaffected:
+            # the enclosing "while sequences_replaced" loop still runs to a fixpoint over the whole
+            # graph, so a candidate that only becomes valid because of this replacement - for
+            # instance a predecessor that can now extend its sequence through the new node - is
+            # picked up by the next scan.
+            #
+            # The new node is pushed last so that it is the very next node examined, matching the
+            # previous behaviour where it was the newest, and therefore first popped, node of the
+            # rebuilt queue.
+            queue.append(combined_context_node)
     return modification_applied
