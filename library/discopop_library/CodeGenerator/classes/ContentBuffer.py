@@ -103,8 +103,13 @@ class ContentBuffer(object):
         if pragma.file_id != self.file_id:
             return True  # incorrect target file, ignore the pragma
 
-        # create backup of ContentBuffer
-        backup_lines = copy.deepcopy(self.lines)
+        # Create a backup of the ContentBuffer so a failed insertion can be rolled back.
+        # Both rollback paths below require a compilation check to have run: child pragmas are always
+        # added with skip_compilation_check=True and can therefore never report failure, so a call
+        # that skips the check cannot return False either. Deep-copying every Line of the file on
+        # every single insertion dominated the patch generator (measured on LULESH with task
+        # patterns: 22.9s of a 32.0s run), so the backup is only taken when it can be consumed.
+        backup_lines = copy.deepcopy(self.lines) if not skip_compilation_check else None
         backup_max_line_num = self.max_line_num
         backup_file_id = self.file_id
         backup_next_free_region_id = self.next_free_region_id
@@ -119,7 +124,7 @@ class ContentBuffer(object):
             pragma_line.content = ""
 
         pragma_line.content += pragma.pragma_str
-        pragma_line.belongs_to_regions = copy.deepcopy(parent_regions)
+        pragma_line.belongs_to_regions = list(parent_regions)
         # create new region if necessary
         if len(pragma.children) > 0:
             region_id = self.__get_next_free_region_id()
@@ -142,12 +147,14 @@ class ContentBuffer(object):
             pragma.start_line if pragma.pragma_position == PragmaPosition.BEFORE_START else pragma.start_line + 1
         )
         tmp_end_line = pragma.end_line + 1
-        for line_num in range(tmp_start_line, tmp_end_line):
-            for line in self.lines:
-                if line.line_num == line_num:
-                    line.belongs_to_regions += [
-                        n for n in pragma_line.belongs_to_regions if n not in line.belongs_to_regions
-                    ]
+        # A single pass over self.lines, instead of rescanning all of them once per line number in
+        # the pragma's span. The nested variant was O(span * |lines|) - 33.8M iterations, ~7.4s, on
+        # LULESH with task patterns, whose spans average 251 lines. Lines inserted for pragmas carry
+        # line_num=None and were never matched by the previous equality check either, hence the guard.
+        new_regions = pragma_line.belongs_to_regions
+        for line in self.lines:
+            if line.line_num is not None and tmp_start_line <= line.line_num < tmp_end_line:
+                line.belongs_to_regions += [n for n in new_regions if n not in line.belongs_to_regions]
 
         # append children to lines (mark as contained in region)
         for child_pragma in pragma.children:
@@ -166,6 +173,7 @@ class ContentBuffer(object):
 
             if not successful:
                 print(self.compile_result_buffer)
+                assert backup_lines is not None, "rollback requested, but no backup was taken"
                 self.lines = backup_lines
                 self.next_free_region_id = backup_next_free_region_id
                 self.file_id = backup_file_id
@@ -241,6 +249,7 @@ class ContentBuffer(object):
 
         # if not, reset ContentBuffer to the backup and return False
         if not compilation_successful:
+            assert backup_lines is not None, "rollback requested, but no backup was taken"
             self.lines = backup_lines
             self.next_free_region_id = backup_next_free_region_id
             self.file_id = backup_file_id
