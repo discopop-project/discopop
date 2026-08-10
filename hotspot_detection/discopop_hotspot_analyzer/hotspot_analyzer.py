@@ -13,6 +13,8 @@ import sys
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 
+from .region_keys import merged_dir, render_merged_analysis_input
+
 inf = float("inf")
 
 
@@ -25,9 +27,26 @@ class HotspotAnalyzerArguments(object):
     defaults to ``private`` -- the profiler's own output -- and exists so a caller
     can supply a pre-merged measurement series instead, whose region ids span
     several instrumented builds.
+
+    ``merge_runs`` renumbers the profiler's runs into one canonical,
+    build-independent id space before analyzing them (see
+    :mod:`~discopop_hotspot_analyzer.region_keys`). On by default, because region
+    ids in ``private/`` are only unique within one instrumented build: analyzing
+    it directly joins measurements of different regions as soon as the project
+    was compiled more than once. It only applies to the default ``input_dir`` --
+    a caller naming one explicitly has already prepared the series it wants
+    analyzed, and gets it analyzed verbatim.
     """
 
-    input_dir: str = "private"
+    DEFAULT_INPUT_DIR = "private"
+
+    input_dir: str = DEFAULT_INPUT_DIR
+    merge_runs: bool = True
+
+    @property
+    def merges_runs(self) -> bool:
+        """Whether this invocation renumbers the runs before analyzing them."""
+        return self.merge_runs and self.input_dir == self.DEFAULT_INPUT_DIR
 
     def __post_init__(self) -> None:
         self.__validate()
@@ -153,6 +172,21 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
         raise FileNotFoundError(
             "Static analysis and profiling results not found: Please execute the static analysis and profiling!"
         )
+
+    # Region ids are only unique within one instrumented build, so the runs are
+    # renumbered into one canonical id space keyed by source location before
+    # being joined. Without this, a project compiled twice (which is what running
+    # two configurations amounts to) has its second build's ids appended to
+    # cs_id.txt, and each run contributes 0.0 for every id it does not know --
+    # which the analyzer would read as a real measurement.
+    if arguments.merges_runs:
+        merged_regions = render_merged_analysis_input(discopop_dir)
+        if merged_regions is None:
+            print("Merging runs: nothing to merge, analyzing " + arguments.input_dir + " as-is.")
+        else:
+            print(f"Merging runs: {merged_regions} code regions across builds.")
+            hotspot_detection_private_dir = merged_dir(discopop_dir)
+
     os.chdir(hotspot_detection_private_dir)
 
     ## CS LIST

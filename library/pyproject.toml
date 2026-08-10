@@ -29,6 +29,9 @@ classifiers = [
     "Topic :: Software Development",
 ]
 dependencies = [
+    # the Project Manager GUI's hotspot tab identifies code regions with the
+    # region-key helpers that live next to the instrumentation pass writing them
+    "discopop-hotspot-detection>=0.0.1a1",
     "extrap",
     "filelock",
     "jsonpickle",

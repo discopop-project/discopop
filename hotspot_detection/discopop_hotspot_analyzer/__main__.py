@@ -20,8 +20,15 @@ def parse_args() -> HotspotAnalyzerArguments:
         help="Directory inside hotspot_detection/ holding cs_id.txt and the "
         "hotspot_result_<N>.txt files to analyze. Default: private",
     )
+    parser.add_argument(
+        "--no-merge-runs",
+        action="store_true",
+        help="Analyze the input directory verbatim instead of first renumbering its runs "
+        "into one build-independent id space. Region ids are only unique within a single "
+        "instrumented build, so this is only correct for a project compiled exactly once.",
+    )
     arguments = parser.parse_args()
-    return HotspotAnalyzerArguments(input_dir=arguments.input_dir)
+    return HotspotAnalyzerArguments(input_dir=arguments.input_dir, merge_runs=not arguments.no_merge_runs)
 
 
 def main() -> None:
