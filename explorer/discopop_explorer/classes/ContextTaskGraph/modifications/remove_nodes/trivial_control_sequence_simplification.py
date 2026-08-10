@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 import logging
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Set, Tuple
 
 from discopop_explorer.classes.ContextTaskGraph.classes.edges import CTGEdgeInfo, CTGEdgeType
 from discopop_explorer.classes.ContextTaskGraph.classes.CombinedContext import CombinedContext
@@ -60,9 +60,17 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
             sequence: List[Context] = [node]
             node_succesors = ctg.get_successors(node)
 
-            # construct the longest possible sequence
+            # construct the longest possible sequence.
+            # The walk follows CONTROL edges, which are not guaranteed to be acyclic, so it is
+            # bounded by the set of nodes it has already placed in the sequence. Without that
+            # bound a control cycle whose members each have exactly one control predecessor and
+            # one control successor would extend the sequence forever.
             current: Optional[Context] = node_succesors[0]
+            sequence_members: Set[Context] = {node}
             while current is not None:
+                if current in sequence_members:
+                    # closing a cycle - the sequence ends here
+                    break
                 # ensure current is of either allowed type of sequence members
                 if not (
                     isinstance(current, WorkContext) or isinstance(current, CombinedContext)
@@ -87,6 +95,7 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
                 if len(control_edge_successors) != 1:
                     # end of the current sequence, but a valid member
                     sequence.append(current)
+                    sequence_members.add(current)
                     break
                 # ensure sequence members share a common parent
                 # Note: too pessimistic to allow full reduction, but required to simplify reasoning about the results
@@ -95,6 +104,7 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
 
                 # valid sequence member
                 sequence.append(current)
+                sequence_members.add(current)
 
                 # ensure existing control edge to successor
                 if (

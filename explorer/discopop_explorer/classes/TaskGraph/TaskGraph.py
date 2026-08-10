@@ -2382,8 +2382,13 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 self.graph.remove_edge(pred, node)
                 self.add_edge(pred, start_work_node)
             self.add_edge(start_work_node, node)
-            # find work exit
+            # find work exit.
+            # __break_cycles has run by this point, so the successor chain is supposed to be
+            # acyclic - but the walk must not depend on that: a single surviving cycle of
+            # plain TGNodes would make it loop forever. The visited set bounds it to the
+            # number of nodes in the graph.
             last_work_node = node
+            visited_work_nodes: Set[TGNode] = {node}
             while True:
                 successors = self.get_successors(last_work_node)
                 if (
@@ -2393,6 +2398,16 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     or successors[0] in context_entry_nodes
                 ):
                     break
+                if successors[0] in visited_work_nodes:
+                    logger.warning(
+                        "Cycle detected while searching for the work exit of "
+                        + str(node)
+                        + ". Ending the work region at "
+                        + str(last_work_node)
+                        + "."
+                    )
+                    break
+                visited_work_nodes.add(successors[0])
                 last_work_node = successors[0]
             # insert work end node after last_work_node
             successors = self.get_successors(last_work_node)
