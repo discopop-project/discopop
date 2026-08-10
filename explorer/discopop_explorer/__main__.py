@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import List, Optional
 from discopop_library.GlobalLogger.setup import setup_logger
 
+from discopop_library.HostpotLoader.HotspotType import parse_hotspot_types
 from discopop_library.PathManagement.PathManagement import get_path, get_path_or_none
 from discopop_explorer.discopop_explorer import ExplorerArguments, run
 
@@ -73,6 +74,10 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
         "--enable-patterns", type=str, nargs="?", default="reduction,doall,task",
         help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,task,pipeline,geodec,simplegpu. Default: reduction,doall,task",
     )
+    parser.add_argument(
+        "--hotspot-types", type=str, default="yes,maybe",
+        help="Comma-separated list of hotspot types whose code regions are considered during the analysis. Only takes effect if hotspot information exists (hotspot_detection/Hotspots.json); without it, the whole program is analyzed. Options: yes,no,maybe. Default: yes,maybe",
+    )
     parser.add_argument("--load-existing-doall-and-reduction-patterns", action="store_true", help="Skip pattern detection and insert existing patterns.json contents into the created detection_result.json")
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
@@ -132,6 +137,11 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
     if arguments.task_pattern and (arguments.cu_inst_res is None or arguments.llvm_cxxfilt_path is None):
         parser.error("--task-pattern requires --cu-inst-res and --llvm-cxxfilt-path to be set")
 
+    try:
+        hotspot_types = parse_hotspot_types(arguments.hotspot_types)
+    except ValueError as error:
+        parser.error("--hotspot-types: " + str(error) + " Options: yes,no,maybe")
+
     # ensure that --cu-xml, --dep-file, --loop-counter, --reduction are set if --generate-data-cu-inst is set
     # NOTE: no need to check, the defaults got us covered
     # if arguments.generate_data_cu_inst is not None and (arguments.cu_xml is None or arguments.dep_file is None or arguments.loop_counter is None or arguments.reduction is None):
@@ -163,6 +173,7 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
         reduction_file=arguments.reduction,
         file_mapping_file=arguments.fmap,
         plugins=arguments.plugins,
+        hotspot_types=hotspot_types,
         enable_task_pattern=arguments.task_pattern,
         #        detect_scheduling_clauses=arguments.detect_scheduling_clauses,
         detect_scheduling_clauses=False,
