@@ -377,12 +377,20 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                         if entry[2] == HotspotNodeType.FUNCTION:
                             all_hotspot_functions.add((entry[0], entry[3]))
 
-                filtered_func_nodes = [
-                    func_node
-                    for func_node in func_nodes
-                    if (func_node.file_id, func_node.name) in all_hotspot_functions
-                ]
-                func_nodes = filtered_func_nodes
+                # An empty set of hotspot functions means "nothing is known about which
+                # functions are hot", not "no function is hot" - the hotspot loader returns
+                # an empty dict when hotspot_detection/Hotspots.json is absent, and even a
+                # present file may classify only LOOP regions in the requested hotspot
+                # types. Filtering against the empty set in those cases would drop every
+                # function and leave the graph without any reachability metadata, so keep
+                # all functions instead. Mirrors the same guard in utils.filter_for_hotspots.
+                if all_hotspot_functions:
+                    filtered_func_nodes = [
+                        func_node
+                        for func_node in func_nodes
+                        if (func_node.file_id, func_node.name) in all_hotspot_functions
+                    ]
+                    func_nodes = filtered_func_nodes
 
         from discopop_explorer.parallel_utils import (
             pet_function_metadata_initialize_worker,
