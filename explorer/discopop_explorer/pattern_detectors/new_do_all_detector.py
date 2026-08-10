@@ -44,6 +44,7 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases i
 from discopop_explorer.enums.DepOrigin import DepOrigin
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 from discopop_explorer.utilities.ASTUtils.ASTPatternDetectionIntegration import ASTPatternDetectionHelper
+from discopop_library.StatusReporting.console import progress, stage
 
 logger = logging.getLogger("Explorer").getChild("DoAll")
 
@@ -54,9 +55,11 @@ def run_detection(
     logger.info("Starting new do_all and reduction detection...")
     result: List[DoAllInfo | ReductionInfo] = []
 
-    result += identify_simple_doall_and_reduction(task_graph, ast_helper)
+    with stage("Identifying doall and reduction loops", 1, total=2):
+        result += identify_simple_doall_and_reduction(task_graph, ast_helper)
     # collapsible nests are derived from the identified patterns, so this must run afterwards
-    result += identify_collapsible_loop_nests(task_graph, ast_helper, result)
+    with stage("Identifying collapsible loop nests", 2, total=2):
+        result += identify_collapsible_loop_nests(task_graph, ast_helper, result)
 
     show_plot(task_graph)
 
@@ -112,7 +115,13 @@ def identify_simple_doall_and_reduction(
 
     prevented_loops: Set[NodeID] = set()
 
-    for node in tg.graph.nodes():
+    # collect the candidates up front so the scan has a known length and can report progress.
+    # This pass used to run without any output at all, which on large inputs (deeply nested,
+    # heavily duplicated loop nests) is indistinguishable from a hang. The order of
+    # tg.graph.nodes() is preserved, so the detection result is unaffected.
+    loop_parent_nodes = [n for n in tg.graph.nodes() if isinstance(n.created_context, LoopParentContext)]
+
+    for node in progress(loop_parent_nodes, desc="Checking loops for doall/reduction"):
         # check if node is LoopParent
         if not isinstance(node.created_context, LoopParentContext):
             continue
