@@ -217,6 +217,38 @@ bounded to the region it was asked about, so a successor chain leaving that
 region cannot pull unrelated contexts (and their CUs) into a caller's result.
 See `Contexts/test_Context.py` and `test_TaskGraph.py`.
 
+## 8. One set of loop/iteration markers per loop
+
+`__break_cycles` wraps each loop in exactly one `TGStartLoopNode`/`TGEndLoopNode`
+pair, with one `TGStartIterationNode` per iteration entry point and one
+`TGEndIterationNode` per iteration exit point in between. Two Start markers of
+the same kind for the same PET node must never end up nested inside each other -
+`__assign_loop_contexts` pairs an iteration start with its end by walking forward
+and counting equivalent nodes on the way, and a second start it reaches before
+that end has no matching end to consume, which raises
+`ValueError("Invalid iteration structure found at node: ...")`.
+
+Keeping this to one wrapping requires **all of a loop's back edges to be cut in
+the same restructuring step**, and that is what makes it fragile: `nx.find_cycle`
+returns a *single simple cycle*, so a loop with more than one latch - a
+`continue`, or a nested loop whose exit branches back to the outer condition -
+appears as several distinct cycles, and the nodes of the one that gets returned
+contain only one of the latches. Restructuring from those nodes alone leaves the
+loop's other back edges intact, the very same loop is found again on the next
+pass, and it is wrapped a second time - this time with the previous
+`TGStartLoopNode` as its "header", so the duplicate markers nest.
+
+`__break_cycles` therefore widens the cycle it found to its whole strongly
+connected component (`__get_cyclic_region`) before deriving anything from it.
+For a loop that is the loop with everything nested inside it, which makes all of
+its latches predecessors of the header *within the region* and - just as
+importantly - restricts the exit-edge candidates to edges that really do leave
+the loop, rather than including body edges that merely leave the one cycle found.
+
+The shape that triggered this in practice (rodinia kmeans, `kmeans_clustering`'s
+outer loop): a `for` loop whose body both `continue`s and contains a nested loop
+whose exit leads back to the outer loop's condition. See `test_TaskGraph.py`.
+
 ## Where this bites in practice
 
 All of the invariants above are enforced (or silently violated) inside

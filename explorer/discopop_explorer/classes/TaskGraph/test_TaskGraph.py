@@ -15,7 +15,10 @@ because it looks like a valid entry point despite being an "exit" marker.
 
 test_visit_pet_* / test_break_cycles_* cover __visit_pet's control-flow
 reconstruction, where a dropped successor edge made __break_cycles misidentify a
-loop's header (see INVARIANTS.md, invariant 1).
+loop's header (see INVARIANTS.md, invariant 1), and __break_cycles' loop
+restructuring itself: that a rotated loop stays attached to its function, and
+that a loop with several back edges is wrapped only once (INVARIANTS.md,
+invariant 8).
 
 test_calculate_context_successions_* cover the pass that links sibling contexts
 into sequences, in particular that a context's sibling survives an arbitrarily
@@ -40,6 +43,7 @@ from discopop_explorer.classes.TaskGraph.Branching.TGEndBranchParentNode import 
 from discopop_explorer.classes.TaskGraph.Branching.TGStartBranchParentNode import TGStartBranchParentNode
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Loops.TGEndLoopNode import TGEndLoopNode
+from discopop_explorer.classes.TaskGraph.Loops.TGEndtIterationNode import TGEndIterationNode
 from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
 from discopop_explorer.classes.TaskGraph.RootNode import RootNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
@@ -304,6 +308,93 @@ def test_assign_loop_contexts_finds_loop_end_node_for_loop_with_shared_exit_cu(
     """End-to-end guard for the failure this shape used to produce far away from its cause:
     ValueError("Could not determine loop end node for loop: ...") in __assign_loop_contexts."""
     pet = _build_loop_with_shared_exit_pet(build_pet_graph, make_node)
+    tg = build_task_graph(pet)
+
+    _visit_pet(tg, pet)
+    tg._TaskGraph__break_cycles()  # type: ignore[attr-defined]
+    tg._TaskGraph__assign_loop_contexts()  # type: ignore[attr-defined]
+
+
+# CU ids of the two-back-edge loop built by _build_multi_latch_loop_pet
+M_ENTRY, M_HEADER, M_COND, M_BODY = "3:1", "3:2", "3:3", "3:4"
+M_LATCH_A, M_INNER, M_INNER_BODY, M_LATCH_B, M_EXIT = "3:5", "3:6", "3:7", "3:8", "3:9"
+
+# A loop with two back edges to the same header, the second one behind a nested loop - the shape
+# of kmeans_clustering's outer loop:
+#
+#   for (...) {                     M_HEADER, M_COND (exits to M_EXIT)
+#     if (...) continue;            M_BODY -> M_LATCH_A -> M_HEADER   (back edge 1)
+#     for (...) { ... }             M_INNER, M_INNER_BODY             (nested loop)
+#   }                               M_LATCH_B -> M_HEADER             (back edge 2)
+#
+# nx.find_cycle returns exactly one of the two cycles through M_HEADER, and the nodes of that one
+# cycle contain only one of the two back edges.
+_MULTI_LATCH_LOOP_SUCCESSORS: Sequence[Tuple[str, str]] = (
+    (M_ENTRY, M_HEADER),
+    (M_HEADER, M_COND),
+    (M_COND, M_BODY),
+    (M_COND, M_EXIT),
+    (M_BODY, M_LATCH_A),
+    (M_BODY, M_INNER),
+    (M_LATCH_A, M_HEADER),
+    (M_INNER, M_INNER_BODY),
+    (M_INNER, M_LATCH_B),
+    (M_INNER_BODY, M_INNER),
+    (M_LATCH_B, M_HEADER),
+)
+
+
+def _build_multi_latch_loop_pet(build_pet_graph: Any, make_node: Any) -> Any:
+    cu_ids = [M_ENTRY, M_HEADER, M_COND, M_BODY, M_LATCH_A, M_INNER, M_INNER_BODY, M_LATCH_B, M_EXIT]
+    nodes = [make_node("3:0", NodeType.FUNC, name="main")]
+    nodes += [make_node(cu_id, NodeType.CU, name="cu") for cu_id in cu_ids]
+    edges: List[Tuple[str, str, EdgeType]] = [("3:0", cu_id, EdgeType.CHILD) for cu_id in cu_ids]
+    edges += [(source, target, EdgeType.SUCCESSOR) for source, target in _MULTI_LATCH_LOOP_SUCCESSORS]
+    return build_pet_graph(nodes, edges)
+
+
+def test_break_cycles_wraps_a_loop_with_several_back_edges_only_once(
+    build_pet_graph: Any, make_node: Any, build_task_graph: Any
+) -> None:
+    """Restructuring only the single cycle nx.find_cycle returns leaves the loop's other back edges
+    in place, so the same loop is found again on the next pass and wrapped a second time - producing
+    two TGStartLoopNode/TGEndLoopNode pairs and two nested TGStartIterationNodes for one loop."""
+    pet = _build_multi_latch_loop_pet(build_pet_graph, make_node)
+    tg = build_task_graph(pet)
+
+    _visit_pet(tg, pet)
+    tg._TaskGraph__break_cycles()  # type: ignore[attr-defined]
+
+    for header in (M_HEADER, M_INNER):
+        assert len([n for n in tg.graph.nodes if isinstance(n, TGStartLoopNode) and n.pet_node_id == header]) == 1, (
+            "the loop at " + header + " must be wrapped in exactly one TGStartLoopNode"
+        )
+        assert len([n for n in tg.graph.nodes if isinstance(n, TGEndLoopNode) and n.pet_node_id == header]) == 1, (
+            "the loop at " + header + " must be wrapped in exactly one TGEndLoopNode"
+        )
+
+    # both back edges end an iteration of the outer loop
+    outer_iteration_ends = [
+        n
+        for n in tg.graph.nodes
+        if isinstance(n, TGEndIterationNode) and n.parent_loop_pet_node_id == M_HEADER  # type: ignore[attr-defined]
+    ]
+    assert sorted(str(n.pet_node_id) for n in outer_iteration_ends) == sorted([M_LATCH_A, M_LATCH_B, M_COND])
+
+    assert nx.is_directed_acyclic_graph(tg.graph), "the cycles were not broken"
+    function_node = tg.TGFunctionNode_pet_node_id_to_tg_node["3:0"]
+    reachable = nx.descendants(tg.graph, function_node) | {function_node}
+    detached = [n.get_label() for n in tg.graph.nodes if not isinstance(n, RootNode) and n not in reachable]
+    assert detached == [], "these nodes are no longer reachable from the function entry"
+
+
+def test_assign_loop_contexts_accepts_a_loop_with_several_back_edges(
+    build_pet_graph: Any, make_node: Any, build_task_graph: Any
+) -> None:
+    """End-to-end guard for the failure the double wrapping produced far away from its cause:
+    ValueError("Invalid iteration structure found at node: ...") in __assign_loop_contexts, from the
+    two nested TGStartIterationNodes belonging to the same loop."""
+    pet = _build_multi_latch_loop_pet(build_pet_graph, make_node)
     tg = build_task_graph(pet)
 
     _visit_pet(tg, pet)

@@ -834,6 +834,15 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 return source, target
         return candidates[0] if len(candidates) > 0 else (None, None)
 
+    def __get_cyclic_region(self, node: TGNode) -> Set[TGNode]:
+        """Every node lying on a cycle through `node`: the nodes it reaches which also reach it back,
+        i.e. the strongly connected component it belongs to. For a loop this is the whole loop -
+        including everything nested inside it - rather than the single path `nx.find_cycle` returns,
+        so all of its back edges and all of its exits are visible at once."""
+        region: Set[TGNode] = nx.descendants(self.graph, node) & nx.ancestors(self.graph, node)
+        region.add(node)
+        return region
+
     def __break_cycles(self) -> None:
         # search for cycles in each function and replace them with two distinct iteraions
         for function_node in progress(self.TGFunctionNode_pet_node_id_to_tg_node.values(), desc="Breaking cycles"):
@@ -849,10 +858,15 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 except nx.NetworkXNoCycle:
                     # no further cycles in function
                     break
-                cycle_nodes: Set[TGNode] = set()
-                for tpl in cycle:
-                    cycle_nodes.add(tpl[0])
-                    cycle_nodes.add(tpl[1])
+                # a loop with more than one back edge - a "continue", or a nested loop whose exit
+                # branches back to the outer condition - consists of several distinct cycles, and
+                # nx.find_cycle returns just one of them. Restructuring that one alone would leave
+                # the loop's remaining back edges in place, so the very same loop is found again on
+                # the next pass and wrapped a second time, nesting duplicate loop and iteration
+                # markers for one PET node inside each other. Widening the cycle to its strongly
+                # connected component keeps the loop a single unit: all of its latches are cut
+                # together, and only edges truly leaving the loop are considered as its exit.
+                cycle_nodes: Set[TGNode] = self.__get_cyclic_region(cycle[0][0])
 
                 # find entry node and exit node
                 entry_node = self.__find_loop_entry_node(function_node, cycle_nodes)
