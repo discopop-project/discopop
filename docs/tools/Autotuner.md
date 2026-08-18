@@ -11,14 +11,32 @@ nav_order: 7
 
 ## Purpose
 Identify the best configuration of parallel code which is achievable by applying a combination of the parallelization suggestion found by the [DiscoPoP Explorer](../tools/Explorer.md) or [optimizer](../tools/Optimizer.md). Internally, the [DiscoPoP patch applicator](../tools/Patch_applicator.md) is used to create different parallel codes, which will be compiled, executed, and evaluated based on the observed execution time and result validity.
-To find a beneficial configuration in a comparatively short amount of time, a greedy search is performed as described in the following.
-- Initialize the "best_configuration" as the sequential code
-- Focus on identified hotspots, followed by code regions which might be hotspots, and lastly coldspots
-- Sort the loops in each category in descending order by their average runtime, thus focusing on "more important" loops wrt. execution time first
-- For each loop, create a parallel version of the code for each suggestion applicable to this loop
-- Compile the parallel code, execute, and verify it.
-- Select the best parallel code and and save it as the new best_configuration
-- Continue with the next loop, and successively hotspot category
+
+## Search algorithms
+The search algorithm is selected with `-A/--algorithm`. Note that the default, `-A 0`, does **not** combine suggestions: it measures every suggestion on its own.
+
+| `-A` | Algorithm | Notes |
+|------|-----------|-------|
+| `0`  | No combination (measure only) | Default. Measures each suggestion individually. |
+| `1`  | Linear combination | Accumulates suggestions that keep the result valid; does not require a speedup. |
+| `3`  | Evolutionary combination | Genetic search. Uses randomness, so results are not reproducible. |
+| `4`  | Greedy forward search | One pass over all suggestions, `O(N)` evaluations. |
+| `5`  | Coordinate descent | Repeated bit-flip passes until no pass improves the runtime. |
+| `6`  | Hotspot-guided region descent | Deterministic. Requires hotspot detection results. |
+
+### Hotspot-guided region descent (`-A 6`)
+This algorithm spends its measurements on the code regions that dominate the measured runtime, and makes every decision from sorted data so that two runs on a machine with stable timings produce the same sequence of measured configurations.
+
+- Require hotspot detection results. Without `Hotspots.json` the algorithm stops with a message instead of falling back to treating every suggestion as a hotspot.
+- Collect the hot loops of the requested `--hotspot-types` and the suggestions that parallelize them. Loops whose longest measured run is below `--hs-min-share` of the hottest loop's are dropped, so a cold loop never costs a compile-and-execute cycle.
+- Rank the remaining regions by hotspot class (`YES`, then `MAYBE`, then `NO`) and, within a class, by their longest measured run. The class already combines both quantities of interest: the hotspot detection derives it from the region's average runtime *and* its scaling behaviour across the profiled input sizes. The longest run is preferred over the average because it describes the largest-input regime, which is where parallel speedup matters.
+- Arrange the regions into a nesting forest and try the outermost region of each nest first. Hotspot runtimes are inclusive, so a hot loop and the loops nested inside it report nearly the same time; accepting the outer one therefore skips its whole subtree, which avoids nested parallel regions and the measurements they would cost. Only if the outer region does not pay off does the search descend one level.
+- Accept a suggestion only if the code stays valid *and* the runtime improves by more than `--noise-threshold`. Every configuration is measured at most once and remembered, so measurement noise below the threshold cannot flip a decision.
+- Finally, re-check whether any accepted suggestion can be removed again -- a suggestion accepted early was judged against a smaller configuration than the final one. Disable this pass with `--skip-removal-pass`.
+
+`--max-measurements` caps the number of compile-and-execute cycles. Note that a search stopped by that cap, by the internal time limit or by `CTRL+C` is no longer reproducible, and the tuner says so in its log.
+
+For meaningful scaling information the hotspot detection should be run for at least two input sizes. With a single run the scaling ratio is constant, the hotspot classification degenerates to a single threshold on the average runtime, and the ranking reduces to plain descending runtime order. The tuner warns when it detects this.
 
 ## Required input
 - `Parallel patterns` in the form of a `JSON` file, created by the [Explorer](Explorer.md)

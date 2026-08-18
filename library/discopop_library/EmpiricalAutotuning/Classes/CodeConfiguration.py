@@ -252,8 +252,14 @@ class CodeConfiguration(object):
         shutil.rmtree(self.root_path)
         logger.debug("Deleted " + self.root_path)
 
-    def apply_suggestions(self, arguments: AutotunerArguments, suggestion_ids: List[SUGGESTION_ID]) -> None:
-        """Applies the given suggestion to the code configuration via discopop_patch_applicator"""
+    def apply_suggestions(self, arguments: AutotunerArguments, suggestion_ids: List[SUGGESTION_ID]) -> int:
+        """Applies the given suggestion to the code configuration via discopop_patch_applicator
+
+        Returns the patch applicator's return code: 0 if every patch was applied, 1 if
+        nothing was applied and 2 if only some of them were. Callers that combine
+        suggestions should check it -- a conflicting patch otherwise yields a
+        configuration that is measured as if the suggestions had been applied.
+        """
         sub_logger = logger.getChild("apply_suggestions")
 
         sub_logger.debug("Applying patch applicator for: " + str(suggestion_ids))
@@ -273,6 +279,7 @@ class CodeConfiguration(object):
             sub_logger.debug("Got Exception during call to patch applicator.")
             os.chdir(save_dir)
             raise ex
+        return ret_val
 
     def get_statistics_graph_label(self) -> str:
         res_str = "" + self.root_path + "\n"

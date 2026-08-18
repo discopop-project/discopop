@@ -33,6 +33,12 @@ class AutotunerArguments(GeneralArguments):
     hotspot_types: str = ""
     algorithm: int = 0
     search_space: Optional[str] = None
+    # Tuning knobs of the hotspot-guided region descent (-A 6). Defaults are chosen so
+    # the algorithm can be run without any of them.
+    noise_threshold: float = 0.02
+    hs_min_share: float = 0.01
+    max_measurements: int = 0
+    skip_removal_pass: bool = False
 
     def __post_init__(self) -> None:
         self.project_path = str(Path(self.dot_dp_path).parent.absolute())

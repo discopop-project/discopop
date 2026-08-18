@@ -145,6 +145,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
             ("3", "Evolutionary combination"),
             ("4", "Greedy combination"),
             ("5", "Coordinate descent combination"),
+            ("6", "Hotspot-guided region descent"),
         ]
         self.autotuning_algorithm_map = {opt[1]: opt[0] for opt in algo_options}
         algo_combo = ttk.Combobox(algo_frame, textvariable=self.autotuning_algorithm_var, state="readonly", width=40)

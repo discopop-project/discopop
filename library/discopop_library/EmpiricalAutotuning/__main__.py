@@ -33,7 +33,11 @@ def parse_args() -> AutotunerArguments:
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     parser.add_argument("-p", "--plot", action="store_true", help="Allow the creation of interactive plots.")
-    parser.add_argument("-A", "--algorithm", type=int, default=0, help="Optimization algorithm. Values: 0: no combination of suggestions. 1: linear combination. 3: evolutionary combination. 4: greedy forward search (O(N) evaluations). 5: coordinate descent / bit-flip local search. Default: 0.")
+    parser.add_argument("-A", "--algorithm", type=int, default=0, help="Optimization algorithm. Values: 0: no combination of suggestions. 1: linear combination. 3: evolutionary combination. 4: greedy forward search (O(N) evaluations). 5: coordinate descent / bit-flip local search. 6: hotspot-guided region descent (deterministic, requires hotspot detection results). Default: 0.")
+    parser.add_argument("--noise-threshold", dest="noise_threshold", type=float, default=0.02, help="[-A 6] Relative runtime improvement a suggestion must achieve to be accepted, e.g. 0.02 for 2 percent. Larger values make the search more robust against measurement noise. Default: 0.02")
+    parser.add_argument("--hs-min-share", dest="hs_min_share", type=float, default=0.01, help="[-A 6] Ignore hot loops whose longest measured run is below this fraction of the hottest loop's. Default: 0.01")
+    parser.add_argument("--max-measurements", dest="max_measurements", type=int, default=0, help="[-A 6] Stop the search after this many compile-and-execute cycles. 0 disables the limit. Note that a search stopped by this limit is no longer reproducible. Default: 0")
+    parser.add_argument("--skip-removal-pass", dest="skip_removal_pass", action="store_true", help="[-A 6] Skip the final pass that checks whether an accepted suggestion can be removed again.")
 #    parser.add_argument("--project-path", type=str, default=os.getcwd(), help="Root path of the project to be tuned. \
 #                        Important: Project root will be copied multiple times! It has to contain the executable scripts DP_COMPILER.sh and DP_EXECUTE.sh! \
 #                        DP_COMPILER.sh must allow the inclusion of OpenMP pragmas into the code. \
@@ -59,6 +63,10 @@ def parse_args() -> AutotunerArguments:
         thread_count=arguments.threads,
         hotspot_types=arguments.hotspot_types,
         algorithm=arguments.algorithm,
+        noise_threshold=arguments.noise_threshold,
+        hs_min_share=arguments.hs_min_share,
+        max_measurements=arguments.max_measurements,
+        skip_removal_pass=arguments.skip_removal_pass,
     )
 
 

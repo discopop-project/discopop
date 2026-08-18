@@ -27,6 +27,9 @@ from discopop_library.EmpiricalAutotuning.optimization.coordinate_descent_combin
 )
 from discopop_library.EmpiricalAutotuning.optimization.evolutionary_combination import execute_evolutionary_combination
 from discopop_library.EmpiricalAutotuning.optimization.greedy_combination import execute_greedy_combination
+from discopop_library.EmpiricalAutotuning.optimization.hotspot_guided_combination import (
+    execute_hotspot_guided_combination,
+)
 from discopop_library.EmpiricalAutotuning.optimization.linear_hotspot_combination import (
     execute_linear_hotspot_combination,
 )
@@ -190,6 +193,18 @@ def run(arguments: AutotunerArguments) -> None:
             )
         elif arguments.algorithm == 5:
             execute_coordinate_descent_combination(
+                detection_result,
+                hotspot_information,
+                logger,
+                time_limit_s,
+                reference_configuration,
+                arguments,
+                timeout_after,
+                debug_stats,
+                get_unique_configuration_id,
+            )
+        elif arguments.algorithm == 6:
+            execute_hotspot_guided_combination(
                 detection_result,
                 hotspot_information,
                 logger,
