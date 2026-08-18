@@ -29,6 +29,7 @@ from discopop_library.ProjectManager.gui.widgets import (
 from discopop_library.ProjectManager.gui.plots import autotuning_chart, embedding
 from discopop_library.ProjectManager.gui.plots.autotuning_chart import ProgressModel
 from discopop_library.ProjectManager.gui.plots.data import parse_progress_jsonl, split_progress_events
+from discopop_library.ProjectManager.gui.plots.hotspot_data import hotspots_available_for_explorer
 
 logger_name = "AutotuningPanel"
 
@@ -43,6 +44,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
     autotuning_hotspot_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
     autotuning_algorithm_var: Optional[tk.StringVar] = None
     autotuning_algorithm_map: Dict[str, str] = {}
+    autotuning_algorithm_hint: Optional[ttk.Label] = None
     autotuning_log_level_var: Optional[tk.StringVar] = None
     autotuning_suggestions_label: Optional[ttk.Label] = None
     _autotuning_tab_tooltip: Optional[Any] = None
@@ -138,7 +140,9 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         algo_frame = ttk.Frame(settings_frame)
         algo_frame.pack(fill=tk.X, pady=5)
         heading_label(algo_frame, "Algorithm:").pack(anchor=tk.W, padx=5)
-        self.autotuning_algorithm_var = tk.StringVar(value="Evolutionary combination")
+        # Default to the deterministic search: repeating a tuning run reproduces its
+        # decisions, which the randomized evolutionary search cannot promise.
+        self.autotuning_algorithm_var = tk.StringVar(value="Hotspot-guided region descent")
         algo_options = [
             ("0", "No combination (measure only)"),
             ("1", "Linear combination"),
@@ -152,6 +156,14 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         algo_combo["values"] = [opt[1] for opt in algo_options]
         algo_combo.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
         self.autotuning_algorithm_combo = algo_combo
+
+        # The default algorithm stops immediately when no hotspot detection results
+        # exist, so say that here rather than letting the run fail for a reason that
+        # is only visible in the console output.
+        self.autotuning_algorithm_hint = caption_label(algo_frame, "")
+        self.autotuning_algorithm_hint.pack(anchor=tk.W, padx=5)
+        algo_combo.bind("<<ComboboxSelected>>", lambda _event: self._update_algorithm_hint())
+        self._update_algorithm_hint()
 
         # Log level
         loglevel_frame = ttk.Frame(settings_frame)
@@ -293,6 +305,34 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         self._setup_autotuning_tab_tooltip()
         # show the last run (if any) so the plot is not empty on open
         self._load_autotuning_progress_from_file()
+
+    def _update_algorithm_hint(self) -> None:
+        """Warn when the selected algorithm needs hotspot data the project lacks.
+
+        Only the hotspot-guided descent hard-requires ``Hotspots.json``; it aborts
+        without measuring anything when none exists. Since it is the default, a
+        project that never ran hotspot detection would otherwise look as though the
+        tuner simply did nothing.
+        """
+        hint = getattr(self, "autotuning_algorithm_hint", None)
+        if hint is None or self.autotuning_algorithm_var is None:
+            return
+
+        selected = self.autotuning_algorithm_map.get(self.autotuning_algorithm_var.get(), "0")
+        if selected != "6":
+            hint.config(text="", foreground=widgets.STATUS_IDLE)
+            return
+
+        if hotspots_available_for_explorer(self.arguments.dot_dp):
+            hint.config(
+                text="Ranks hot code regions by their measured runtime. Reproducible across runs.",
+                foreground=widgets.STATUS_IDLE,
+            )
+        else:
+            hint.config(
+                text="No hotspot detection results found - run Hotspot Detection first, " "or pick another algorithm.",
+                foreground=widgets.STATUS_FAIL,
+            )
 
     def _update_autotuning_ui(self) -> None:
         if self.autotuning_run_button is not None:
