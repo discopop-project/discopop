@@ -100,11 +100,19 @@ class PatternDetectorX(object):
         with stage("Loading AST"):
             self.ast_helper.load_ast_from_project(project_path)
         # self.ast_helper.print_ast_structure()
-        self.__merge(False, True)
-        self.pet.map_static_and_dynamic_dependencies()
-        self.pet.calculateFunctionMetadata(hotspots)
-        self.pet.calculateLoopMetadata()
-        self.pet.enforce_single_function_exit_node()
+        # These five passes prepare the PET graph and used to run without any progress output,
+        # which made them invisible in the timing breakdown - on larger inputs they dominate
+        # pattern detection.
+        with stage("Merging CU nodes", 1, total=5):
+            self.__merge(False, True)
+        with stage("Mapping static and dynamic dependencies", 2, total=5):
+            self.pet.map_static_and_dynamic_dependencies()
+        with stage("Calculating function metadata", 3, total=5):
+            self.pet.calculateFunctionMetadata(hotspots)
+        with stage("Calculating loop metadata", 4, total=5):
+            self.pet.calculateLoopMetadata()
+        with stage("Enforcing single function exit nodes", 5, total=5):
+            self.pet.enforce_single_function_exit_node()
         res = DetectionResult(self.pet)
 
         # create TaskGraph from pet
