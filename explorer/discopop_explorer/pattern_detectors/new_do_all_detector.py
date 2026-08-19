@@ -7,7 +7,7 @@
 # directory for details.
 import logging
 import threading
-from typing import Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
@@ -109,6 +109,11 @@ def identify_simple_doall_and_reduction(
     Implementation is fundamentally similar to the original doall detector, but implemented in a more maintainable fashion.
     Checks for clean doall opportunities."""
     patterns: List[DoAllInfo | ReductionInfo] = []
+    # everything a pattern's tag is derived from, for the patterns collected in `patterns` - see
+    # the duplicate check below. Kept alongside the tags themselves, which are only known once a
+    # pattern has been built.
+    known_pattern_keys: Set[Tuple[Any, ...]] = set()
+    known_pattern_tags: Set[str] = set()
     logger.info("Identifying trivial doall suggestions.")
 
     show_plot(tg)
@@ -270,7 +275,17 @@ def identify_simple_doall_and_reduction(
         # Register a pattern
         pattern: DoAllInfo | ReductionInfo
         if len(reduction) == 0:
-            # register DoAll pattern
+            # register DoAll pattern.
+            # prevent duplicates. Necessary since multiple copies of the same loop might exist.
+            # A DoAllInfo's tag is a function of the node it is built from, so a node which already
+            # contributed a pattern is bound to produce the same tag again. Recognizing that before
+            # the construction matters: building the pattern first means running the full loop
+            # variable classification and taking the file lock for a pattern id, only to discard
+            # the result.
+            doall_key = ("DoAllInfo", node.pet_node_id)
+            if doall_key in known_pattern_keys:
+                continue
+            known_pattern_keys.add(doall_key)
             pattern = DoAllInfo(tg.pet, tg.pet.node_at(node.pet_node_id))
             pattern.first_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate]
             pattern.private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in private]
@@ -305,6 +320,16 @@ def identify_simple_doall_and_reduction(
 
             if node.created_context.parent_loop is None:
                 continue
+            # as above. A ReductionInfo's tag additionally covers the reduction variables, which
+            # are the only clauses passed to the constructor.
+            reduction_key = (
+                "ReductionInfo",
+                node.created_context.parent_loop,
+                tuple((v.operation, v.name) for v in reduction_vars),
+            )
+            if reduction_key in known_pattern_keys:
+                continue
+            known_pattern_keys.add(reduction_key)
             pattern = ReductionInfo(tg.pet, tg.pet.node_at(node.created_context.parent_loop), reduction=reduction_vars)
             pattern.first_private = [
                 Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate if v not in reduction
@@ -319,9 +344,11 @@ def identify_simple_doall_and_reduction(
                 Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in shared if v not in reduction
             ]
 
-        # prevent duplicates. Necessary since multiple copies of the same loop might exist
-        if pattern.pattern_tag in [p.pattern_tag for p in patterns]:
+        # two different nodes can still collide on a tag, so the exact check remains - it is just
+        # no longer the one which every duplicate has to be built for.
+        if pattern.pattern_tag in known_pattern_tags:
             continue
+        known_pattern_tags.add(pattern.pattern_tag)
         patterns.append(pattern)
 
     # clean patterns agains prevented loops
