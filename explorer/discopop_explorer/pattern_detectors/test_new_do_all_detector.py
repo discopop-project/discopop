@@ -20,6 +20,7 @@ from discopop_explorer.enums.DepOrigin import DepOrigin
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
+from discopop_explorer.functions.PEGraph.queries.data_edge_index import DataEdgeIndex
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.new_do_all_detector import identify_simple_doall_and_reduction
 from discopop_explorer.utilities.ASTUtils.ASTPatternDetectionIntegration import ASTPatternDetectionHelper
@@ -77,7 +78,7 @@ def test_identify_simple_doall_detected_without_inter_iteration_dependencies(
     tg, loop, loop_ctx, work1, work2 = _build_two_iteration_loop(
         make_node, build_pet_graph, build_task_graph, make_tg_node
     )
-    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
     assert len(patterns) == 1
     assert isinstance(patterns[0], DoAllInfo)
     assert patterns[0].node_id == loop.id
@@ -101,7 +102,7 @@ def test_identify_simple_doall_allows_war_dependency_between_iterations(
     dep.origin = DepOrigin.DYNAMIC_ANALYSIS
     work1.register_outgoing_dependency(work2, dep)
 
-    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
     assert len(patterns) == 1
     assert isinstance(patterns[0], DoAllInfo)
 
@@ -122,7 +123,7 @@ def test_identify_simple_doall_prevented_by_dynamic_cross_iteration_dependency(
     dep.origin = DepOrigin.DYNAMIC_ANALYSIS
     work1.register_outgoing_dependency(work2, dep)
 
-    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
     assert patterns == []
 
 
@@ -144,7 +145,7 @@ def test_identify_simple_doall_allows_dependency_on_loop_variable(
     loop_ctx.loop_variables = [("i", "M_I")]  # type: ignore[list-item]
     work1.register_outgoing_dependency(work2, dep)
 
-    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
     assert len(patterns) == 1
     assert isinstance(patterns[0], DoAllInfo)
 
@@ -188,7 +189,7 @@ def test_identify_simple_reduction_dependency_currently_only_prevents_doall(
     dep.origin = DepOrigin.DYNAMIC_ANALYSIS
     work1.register_outgoing_dependency(work2, dep)
 
-    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
     assert patterns == []
 
 
@@ -247,7 +248,7 @@ def test_identify_simple_doall_allows_static_dependency_first_written_inside_loo
     tg_loop.register_created_context(loop_ctx)
     tg = build_task_graph(pet, [tg_loop])
 
-    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
     assert len(patterns) == 1
     assert isinstance(patterns[0], DoAllInfo)
 
@@ -268,7 +269,7 @@ def test_identify_simple_doall_skips_loops_with_fewer_than_two_iterations(
     tg_loop.register_created_context(loop_ctx)
     tg = build_task_graph(pet, [tg_loop])
 
-    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
     assert patterns == []
 
 
@@ -304,5 +305,5 @@ def test_identify_simple_doall_skips_loop_with_exactly_one_iteration(
     tg_loop.register_created_context(loop_ctx)
     tg = build_task_graph(pet, [tg_loop])
 
-    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper())
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
     assert patterns == []

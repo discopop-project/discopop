@@ -5,14 +5,15 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
+import itertools
 import logging
-import threading
 from typing import Any, Dict, List, Optional, Set, Tuple, cast
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
+from discopop_explorer.classes.TaskGraph.Aliases import PETNodeID
 from discopop_explorer.classes.TaskGraph.ContextTaskGraph import ContextTaskGraph
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
@@ -38,7 +39,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.classes import (
 )
 
 from discopop_explorer.utils import classify_loop_variables
-from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.data_edge_index import DataEdgeIndex
 from discopop_explorer.classes.variable import Variable
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import MemoryRegion, VarName
 from discopop_explorer.enums.DepOrigin import DepOrigin
@@ -54,9 +55,11 @@ def run_detection(
 ) -> List[DoAllInfo | ReductionInfo]:
     logger.info("Starting new do_all and reduction detection...")
     result: List[DoAllInfo | ReductionInfo] = []
+    # built once, since the PET graph is not modified during pattern detection
+    data_edges = DataEdgeIndex(pet)
 
     with stage("Identifying doall and reduction loops", 1, total=2):
-        result += identify_simple_doall_and_reduction(task_graph, ast_helper)
+        result += identify_simple_doall_and_reduction(task_graph, ast_helper, data_edges)
     # collapsible nests are derived from the identified patterns, so this must run afterwards
     with stage("Identifying collapsible loop nests", 2, total=2):
         result += identify_collapsible_loop_nests(task_graph, ast_helper, result)
@@ -102,8 +105,62 @@ def show_plot(tg: TaskGraph) -> None:
     tg.run_visualizer()
 
 
+def collect_reduction_variables(
+    reduction_info: List[Tuple[Context, Context, Dependency, Dict[str, str]]],
+) -> List[Variable]:
+    """builds the deduplicated list of reduction variables described by the reduction
+    dependencies which were found for a loop candidate. Depends only on the dependency scan,
+    not on the variable classification."""
+    reduction_vars: List[Variable] = []
+    known_names: Set[VarName] = set()
+    for ri in reduction_info:
+        if ri[2].var_name is None:
+            continue
+        var = Variable(type="unknown", name=VarName(ri[2].var_name), defLine="LineNotFound")
+        # correct operation
+        red_op = ri[3]["operation"]
+        logger.debug("RED OP: " + red_op + " var: " + var.name)
+        if red_op == ">":
+            red_op = "max"
+        if red_op == "<":
+            red_op = "min"
+        var.operation = red_op
+        # prevent duplicates
+        if var.name in known_names:
+            continue
+        known_names.add(var.name)
+        reduction_vars.append(var)
+    return reduction_vars
+
+
+def get_pattern_key(
+    pet_node_id: PETNodeID, loop_parent_ctx: LoopParentContext, reduction_vars: List[Variable]
+) -> Optional[Tuple[Any, ...]]:
+    """the key identifying the pattern which a loop candidate would register, or None if it
+    cannot register one.
+
+    Multiple copies of the same loop exist in the task graph, and a copy whose key has already
+    been seen contributes nothing. Everything the key is derived from is known as soon as the
+    dependency scan is done - the variable classification only supplies clauses, which are
+    assigned to the pattern after its construction - so the duplicate check can, and does, run
+    before the classification."""
+    if len(reduction_vars) == 0:
+        # a DoAllInfo is a function of the node it is built from
+        return ("DoAllInfo", pet_node_id)
+    if loop_parent_ctx.parent_loop is None:
+        # no node to attach a ReductionInfo to
+        return None
+    # a ReductionInfo additionally covers the reduction variables, which are the only clauses
+    # passed to its constructor
+    return (
+        "ReductionInfo",
+        loop_parent_ctx.parent_loop,
+        tuple((v.operation, v.name) for v in reduction_vars),
+    )
+
+
 def identify_simple_doall_and_reduction(
-    tg: TaskGraph, ast_helper: ASTPatternDetectionHelper
+    tg: TaskGraph, ast_helper: ASTPatternDetectionHelper, data_edges: DataEdgeIndex
 ) -> List[DoAllInfo | ReductionInfo]:
     """Analyzes the results of the graph simplification and create simple doall patterns.
     Implementation is fundamentally similar to the original doall detector, but implemented in a more maintainable fashion.
@@ -119,6 +176,18 @@ def identify_simple_doall_and_reduction(
     show_plot(tg)
 
     prevented_loops: Set[NodeID] = set()
+    # candidate accounting, reported once at the end. The variable classification is by far the
+    # most expensive part of a candidate, so the ratio of classified to skipped candidates is
+    # what tells whether this pass is doing avoidable work.
+    counts: Dict[str, int] = {
+        "candidates": 0,
+        "skipped_prevented": 0,
+        "skipped_too_few_iterations": 0,
+        "skipped_dependency_found": 0,
+        "skipped_before_classification": 0,
+        "classified": 0,
+        "discarded_after_classification": 0,
+    }
 
     # collect the candidates up front so the scan has a known length and can report progress.
     # This pass used to run without any output at all, which on large inputs (deeply nested,
@@ -130,65 +199,98 @@ def identify_simple_doall_and_reduction(
         # check if node is LoopParent
         if not isinstance(node.created_context, LoopParentContext):
             continue
+        counts["candidates"] += 1
         # check if loop is not already preventedvariables
         if node.pet_node_id in prevented_loops:
+            counts["skipped_prevented"] += 1
             continue
         # get child iterations
         iteration_contexts = [
             ctx for ctx in node.created_context.get_contained_contexts() if isinstance(ctx, IterationContext)
         ]
         if len(iteration_contexts) < 2:
+            counts["skipped_too_few_iterations"] += 1
             continue
         # get subtrees of iteration contexts
         subtrees: Dict[IterationContext, Set[Context]] = dict()
-        for ic in iteration_contexts:
+        # The iteration each context belongs to. Replaces building, per source iteration, the
+        # union of every other iteration's subtree: deciding whether a dependency crosses
+        # iterations is then an integer comparison instead of a set membership test against a
+        # set which had to be assembled first - quadratically often in the iteration count.
+        # A context which belongs to more than one iteration (only reachable through a malformed
+        # containment relation) was part of every one of those unions, so it counts as
+        # cross-iteration regardless of where the dependency starts.
+        iteration_index_of: Dict[Context, int] = dict()
+        shared_by_iterations: Set[Context] = set()
+        for source_index, ic in enumerate(iteration_contexts):
             subtrees[ic] = ic.get_contained_contexts(inclusive=True)
+            # the iteration context itself is a valid target, but not a source - as before
+            for ctx in itertools.chain((ic,), subtrees[ic]):
+                if iteration_index_of.setdefault(ctx, source_index) != source_index:
+                    shared_by_iterations.add(ctx)
         # get loop variables for later check
         loop_variables = node.created_context.loop_variables
+        # tested once per dependency below, so not as the list it is stored as
+        loop_variable_keys = set(loop_variables)
+        # The reduction lines which could apply to this loop, per variable name. The loop_line
+        # condition only involves the candidate, so it is evaluated here rather than per
+        # dependency, and the remaining conditions become a lookup by variable name.
+        loop_code_scope = node.created_context.get_code_scope_set(tg.pet)
+        reduction_lines_by_var: Dict[str, Set[LineID]] = dict()
+        for red_var_dict in tg.pet.reduction_vars:
+            if red_var_dict["loop_line"] in loop_code_scope:
+                reduction_lines_by_var.setdefault(red_var_dict["name"], set()).add(
+                    LineID(red_var_dict["reduction_line"])
+                )
         # check for dependencies
         dependency_found = False
         reduction_info: List[Tuple[Context, Context, Dependency, Dict[str, str]]] = []
         potential_breaking_dependencies: List[Tuple[Context, Context, Dependency]] = []
-        for ic_source in iteration_contexts:
-            # collect nodes from other iterations
-            other_iterations_subnodes: Set[Context] = set()
-            for ic_other in iteration_contexts:
-                if ic_source == ic_other:
-                    continue
-                other_iterations_subnodes.add(ic_other)
-                other_iterations_subnodes = other_iterations_subnodes.union(subtrees[ic_other])
+        for source_index, ic_source in enumerate(iteration_contexts):
             # check for do-all preventing dependencies
             for subnode in subtrees[ic_source]:
+                # only needed for reduction candidates, and then at most once per subnode
+                subnode_code_scope: Optional[Set[LineID]] = None
                 for out_dep_target, dep in subnode.outgoing_dependencies:
                     # WAR dependencies between iterations are non-critical, as they overwrite data and thus can be privatized
                     if dep.etype == EdgeType.DATA and dep.dtype == DepType.WAR:
                         continue
 
-                    if out_dep_target in other_iterations_subnodes:
-                        # check if the preventing dependency is a reduction dependency.
+                    if out_dep_target in shared_by_iterations:
+                        crosses_iterations = True
+                    else:
+                        target_iteration_index = iteration_index_of.get(out_dep_target)
+                        crosses_iterations = (
+                            target_iteration_index is not None and target_iteration_index != source_index
+                        )
+                    if crosses_iterations:
+                        # check if the preventing dependency is a reduction dependency: does a
+                        # reduction of this variable happen on a line which both ends of the
+                        # dependency cover?
                         is_reduction_dependency = False
-                        for red_var_dict in tg.pet.reduction_vars:
-                            # check for correct parent loop
-                            if red_var_dict["loop_line"] not in node.created_context.get_code_scope(tg.pet):
-                                continue
-                            # check for variable name
-                            if red_var_dict["name"] != dep.var_name:
-                                continue
-                            # check for source code position
-                            if red_var_dict["reduction_line"] not in subnode.get_code_scope(tg.pet):
-                                continue
-                            if red_var_dict["reduction_line"] not in out_dep_target.get_code_scope(tg.pet):
-                                continue
-                            # all of the previous requirements are met
-                            is_reduction_dependency = True
+                        candidate_reduction_lines = reduction_lines_by_var.get(dep.var_name)  # type: ignore[arg-type]
+                        if candidate_reduction_lines is not None:
+                            if subnode_code_scope is None:
+                                subnode_code_scope = subnode.get_code_scope_set(tg.pet)
+                            target_code_scope = out_dep_target.get_code_scope_set(tg.pet)
+                            for reduction_line in candidate_reduction_lines:
+                                if reduction_line in subnode_code_scope and reduction_line in target_code_scope:
+                                    is_reduction_dependency = True
+                                    break
                         if is_reduction_dependency:
                             # not a valid doall loop
-                            reduction_info.append((subnode, out_dep_target, dep, red_var_dict))
+                            # NOTE: the reduction operation reported here is the one of the LAST
+                            # entry of pet.reduction_vars, not the one of the entry which matched.
+                            # The original loop over pet.reduction_vars had no break, so the
+                            # variable it bound always ended up holding the last entry. Preserved
+                            # deliberately to keep this refactoring behaviour-neutral; see the
+                            # note in the accompanying report.
+                            reduction_info.append((subnode, out_dep_target, dep, tg.pet.reduction_vars[-1]))
                         #                            dependency_found = True
                         #                            break
 
                         # check for and allow accesses to the loop variable
-                        if (dep.var_name, dep.memory_region) in loop_variables or is_reduction_dependency:
+                        if (dep.var_name, dep.memory_region) in loop_variable_keys or is_reduction_dependency:
                             # dependency on loop variable or reduction variable
                             pass
                         else:
@@ -242,20 +344,38 @@ def identify_simple_doall_and_reduction(
         if dependency_found:
             # node is not a valid doall loop
             prevented_loops.add(node.pet_node_id)
+            counts["skipped_dependency_found"] += 1
             continue
+
+        # Determine which pattern this candidate would register. Both the reduction variables
+        # and the resulting key follow from the dependency scan alone (see get_pattern_key), so
+        # a redundant copy of a loop can be recognized here instead of after the classification.
+        reduction_vars = collect_reduction_variables(reduction_info)
+        reduction: Set[str] = set([str(v.name) for v in reduction_vars])
+        pattern_key = get_pattern_key(node.pet_node_id, node.created_context, reduction_vars)
+        if pattern_key is None or pattern_key in known_pattern_keys:
+            # Nothing to register. The classification is still needed when static dependencies
+            # are pending, because the second chance check below consumes its firstwritten /
+            # init sets and can mark this loop as prevented - which retroactively invalidates
+            # the pattern registered by another copy of it.
+            if len(potential_breaking_dependencies) == 0:
+                counts["skipped_before_classification"] += 1
+                continue
+
         # get contexts contained in loopparent for later check
         loopparent_contained_ctxs = node.created_context.get_contained_contexts(inclusive=True)
         # node is a valid doall loop. Detect data sharing clauses
         logger.debug("CURRENT LOOP: " + str(node.created_context.get_code_scope(tg.pet)))
+        counts["classified"] += 1
         firstprivate, private, lastprivate, shared, firstwritten, init = detect_doall_sharing_clauses(
             tg.pet,
             ast_helper,
+            data_edges,
             node.pet_node_id,
             iteration_contexts,
             loopparent_contained_ctxs,
             set([v[0] for v in loop_variables]),
         )
-        reduction: Set[str] = set([ri[2].var_name for ri in reduction_info if ri[2].var_name is not None])
         # check potential_breaking_dependencies for cases which actually prevent doall
         for src_ctx, dst_ctx, dep in potential_breaking_dependencies:
             if dep.var_name not in firstwritten.union(init).union(reduction):
@@ -273,63 +393,22 @@ def identify_simple_doall_and_reduction(
         #    )
 
         # Register a pattern
+        if pattern_key is None or pattern_key in known_pattern_keys:
+            # duplicate or unregistrable, as determined before the classification
+            counts["discarded_after_classification"] += 1
+            continue
+        known_pattern_keys.add(pattern_key)
         pattern: DoAllInfo | ReductionInfo
         if len(reduction) == 0:
-            # register DoAll pattern.
-            # prevent duplicates. Necessary since multiple copies of the same loop might exist.
-            # A DoAllInfo's tag is a function of the node it is built from, so a node which already
-            # contributed a pattern is bound to produce the same tag again. Recognizing that before
-            # the construction matters: building the pattern first means running the full loop
-            # variable classification and taking the file lock for a pattern id, only to discard
-            # the result.
-            doall_key = ("DoAllInfo", node.pet_node_id)
-            if doall_key in known_pattern_keys:
-                continue
-            known_pattern_keys.add(doall_key)
+            # register DoAll pattern
             pattern = DoAllInfo(tg.pet, tg.pet.node_at(node.pet_node_id))
             pattern.first_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate]
             pattern.private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in private]
             pattern.last_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in lastprivate]
             pattern.shared = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in shared]
         else:
-            # register reduction pattern
-            reduction_vars: List[Variable] = []
-            for ri in reduction_info:
-                if ri[2].var_name is None:
-                    continue
-                var = Variable(type="unknown", name=VarName(ri[2].var_name), defLine="LineNotFound")
-                # correct operation
-                red_op = ri[3]["operation"]
-                logger.debug("RED OP: " + red_op + " var: " + var.name)
-                if red_op == ">":
-                    red_op = "max"
-                if red_op == "<":
-                    red_op = "min"
-                var.operation = red_op
-                # prevent duplicates
-                duplicate = False
-
-                for elem in reduction_vars:
-                    if "name" not in var.__dict__ or "name" not in elem.__dict__:
-                        continue
-                    if var.__dict__["name"] == elem.__dict__["name"]:
-                        duplicate = True
-                        break
-                if not duplicate:
-                    reduction_vars.append(var)
-
-            if node.created_context.parent_loop is None:
-                continue
-            # as above. A ReductionInfo's tag additionally covers the reduction variables, which
-            # are the only clauses passed to the constructor.
-            reduction_key = (
-                "ReductionInfo",
-                node.created_context.parent_loop,
-                tuple((v.operation, v.name) for v in reduction_vars),
-            )
-            if reduction_key in known_pattern_keys:
-                continue
-            known_pattern_keys.add(reduction_key)
+            # register reduction pattern. get_pattern_key rejected a missing parent loop already.
+            assert node.created_context.parent_loop is not None
             pattern = ReductionInfo(tg.pet, tg.pet.node_at(node.created_context.parent_loop), reduction=reduction_vars)
             pattern.first_private = [
                 Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate if v not in reduction
@@ -351,6 +430,8 @@ def identify_simple_doall_and_reduction(
         known_pattern_tags.add(pattern.pattern_tag)
         patterns.append(pattern)
 
+    logger.info("Doall/reduction candidates: " + ", ".join(k + "=" + str(v) for k, v in counts.items()))
+
     # clean patterns agains prevented loops
     patterns = [p for p in patterns if p.node_id not in prevented_loops]
 
@@ -360,6 +441,7 @@ def identify_simple_doall_and_reduction(
 def detect_doall_sharing_clauses(
     pet: PEGraphX,
     ast_helper: ASTPatternDetectionHelper,
+    data_edges: DataEdgeIndex,
     loop_node_id: NodeID,
     iteration_contexts: List[IterationContext],
     loopparent_contained_ctxs: Set[Context],
@@ -451,8 +533,8 @@ def detect_doall_sharing_clauses(
         data_outgoing: Set[str] = set()
 
         for cu_node_id in contained_cu_node_ids_in_sequence:
-            incoming_deps = in_edges(pet, cu_node_id, EdgeType.DATA)
-            outgoing_deps = out_edges(pet, cu_node_id, EdgeType.DATA)
+            incoming_deps = data_edges.in_edges(cu_node_id)
+            outgoing_deps = data_edges.out_edges(cu_node_id)
 
             # TODO:# filter incoming and outgoing deps to ignore nodes within the parent loop
             # TODO: ignore variables defined inside the loop

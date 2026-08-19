@@ -50,6 +50,7 @@ class Context(object):
         # cache for get_code_scope(inclusive=False); only depends on self.contained_nodes,
         # which is mutated solely via add_node (where the cache is invalidated).
         self._code_scope_cache: Optional[List[LineID]] = None
+        self._code_scope_set_cache: Optional[Set[LineID]] = None
         self.incoming_dependencies = set()
         self.state_ids = []
         self.creation_index = next(Context._creation_counter)
@@ -155,6 +156,7 @@ class Context(object):
     def add_node(self, node: TGNode) -> None:
         self.contained_nodes.append(node)
         self._code_scope_cache = None  # invalidate cached code scope
+        self._code_scope_set_cache = None
 
     def add_contained_context(self, context: Context) -> None:
         if context == self:
@@ -379,6 +381,18 @@ class Context(object):
         if not inclusive:
             self._code_scope_cache = result
         return result
+
+    def get_code_scope_set(self, pet: PEGraphX, inclusive: bool = False) -> Set[LineID]:
+        """the code scope of the context as a set, for callers which only test membership.
+
+        get_code_scope returns a list, and the do-all analysis tests line membership in it once
+        per dependency, which is a linear scan each time. The inclusive=False variant is cached
+        like the list it is derived from."""
+        if inclusive:
+            return set(self.get_code_scope(pet, inclusive=True))
+        if self._code_scope_set_cache is None:
+            self._code_scope_set_cache = set(self.get_code_scope(pet))
+        return self._code_scope_set_cache
 
     def get_defined_variables(self, pet: PEGraphX) -> List[Tuple[str, LineID]]:
         """returns a list of defined variables in the context as tuples of (variable name, lineID)."""
