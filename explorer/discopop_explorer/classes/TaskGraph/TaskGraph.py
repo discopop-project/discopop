@@ -15,7 +15,7 @@ import re
 import signal
 import logging
 import sys
-from typing import Any, Deque, Dict, List, Optional, Set, Tuple, Union, cast
+from typing import Any, Deque, Dict, FrozenSet, List, Optional, Set, Tuple, Union, cast
 import warnings
 import networkx as nx  # type: ignore
 import matplotlib
@@ -3404,11 +3404,13 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         state_mappings_dict: Dict[str, List[str]],
         location_to_work_contexts: Dict[LineID, Set[WorkContext]],
         lookup_cache: Dict[Tuple[str, str], Set[Context]],
+        state_ids_cache: Dict[Context, FrozenSet[int]],
     ) -> Set[Context]:
         """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs.
         state_mappings_dict is a mapping from stateIDs to callpaths.
         location_to_work_contexts is a reverse index {lineID: WorkContexts whose code scope contains it},
-        built once per dependency-insertion pass (see __insert_data_dependencies_from_files)."""
+        built once per dependency-insertion pass (see __insert_data_dependencies_from_files).
+        state_ids_cache memoizes get_state_ids per context for the duration of that pass."""
 
         #        cache_key = (location, state_id)
         #        if cache_key in lookup_cache:
@@ -3437,7 +3439,18 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         # (via the location_to_work_contexts spatial index), so only those need to be checked here.
         if state_id != "NO_STATE":
             target_state_id = int(state_id)
-            filtered_contexts = {ctx for ctx in contexts if target_state_id in ctx.get_state_ids()}
+            # get_state_ids walks the ancestor chain of every context whose own state ids are
+            # empty, and returns a list which is then scanned linearly. Both used to happen once
+            # per candidate context per dependency; the state ids are assigned before dependencies
+            # are inserted, so they are memoized as sets for the duration of the pass.
+            filtered_contexts: Set[Context] = set()
+            for ctx in contexts:
+                cached_state_ids = state_ids_cache.get(ctx)
+                if cached_state_ids is None:
+                    cached_state_ids = frozenset(ctx.get_state_ids())
+                    state_ids_cache[ctx] = cached_state_ids
+                if target_state_id in cached_state_ids:
+                    filtered_contexts.add(ctx)
 
             #            lookup_cache[cache_key] = filtered_contexts
             return filtered_contexts
@@ -3514,11 +3527,50 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
         # cache for repeated (location, state_id) lookups
         _context_lookup_cache: Dict[Tuple[str, str], Set[Context]] = {}
+        # see __get_work_contexts_by_location_and_state_id
+        _state_ids_cache: Dict[Context, FrozenSet[int]] = {}
 
         # insert data dependencies into graph
         # ignores WAW dependencies, as they do not represent data flow and thus are not relevant for the TaskGraph.
         logger.info("--> Inserting data dependencies: ")
+        # Everything derived from dep_type is invariant for the whole block below. It used to be
+        # recomputed for every (source context, target context, variable) triple.
+        #
+        # The two caches below hold values which are a function of a single context, but which
+        # used to be recomputed per pair of contexts - and, for the ancestors, per variable.
+        # Sampling the thread stacks of this pass showed most of its time inside
+        # get_closest_function_ancestor and get_ancestor_contexts. They are valid for the
+        # duration of this pass: inserting dependencies does not change the containment relation.
+        closest_function_ancestor_cache: Dict[Context, Optional[Context]] = {}
+        iteration_ancestors_cache: Dict[Context, List[Context]] = {}
+
+        def closest_function_ancestor(ctx: Context) -> Optional[Context]:
+            if ctx not in closest_function_ancestor_cache:
+                closest_function_ancestor_cache[ctx] = ctx.get_closest_function_ancestor()
+            return closest_function_ancestor_cache[ctx]
+
+        def ancestors_from_closest_iteration(ctx: Context) -> List[Context]:
+            """the context's ancestors, pruned to start at the closest enclosing iteration context"""
+            cached = iteration_ancestors_cache.get(ctx)
+            if cached is None:
+                cached = ctx.get_ancestor_contexts()
+                while len(cached) > 0 and not isinstance(cached[0], IterationContext):
+                    del cached[0]
+                iteration_ancestors_cache[ctx] = cached
+            return cached
+
         for dep_type, dep_type_deps in progress(dependencies.items(), desc="Dependency types"):
+            is_static_dep_type = dep_type.startswith("STAT_")
+            # remove the DYN_ or STAT_ prefix from dep_type to get the actual dependency type
+            clean_dep_type = dep_type.replace("STAT_" if is_static_dep_type else "DYN_", "")
+            dep_type_enum_obj = DepType[clean_dep_type] if clean_dep_type in DepType.__members__ else None
+            # ignore WAW and INIT, as there is no data flow. Nothing below registers anything for
+            # them, so the whole dependency type is skipped here - the check used to sit at the
+            # innermost level, once the ancestry of every pair of contexts had been computed.
+            if dep_type_enum_obj == DepType.WAW or dep_type_enum_obj == DepType.INIT:
+                continue
+            dep_origin = DepOrigin.STATIC_ANALYSIS if is_static_dep_type else DepOrigin.DYNAMIC_ANALYSIS
+
             for source_location, source_location_deps in progress(
                 dep_type_deps.items(), desc="Source locations", leave=False
             ):
@@ -3533,6 +3585,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         state_mappings_dict,
                         location_to_work_contexts,
                         _context_lookup_cache,
+                        _state_ids_cache,
                     )
                     for sink_location, sink_location_deps in source_state_deps.items():
                         for sink_state_id, var_infos in sink_location_deps.items():
@@ -3546,23 +3599,36 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                 state_mappings_dict,
                                 location_to_work_contexts,
                                 _context_lookup_cache,
+                                _state_ids_cache,
                             )
+                            # the variable name and the memory region depend on the entry alone,
+                            # but used to be parsed again for every pair of contexts
+                            parsed_var_infos: List[Tuple[str, Optional[MemoryRegion]]] = [
+                                (
+                                    var_info if "(" not in var_info else var_info.split("(")[0],
+                                    None if "(" not in var_info else MemoryRegion(var_info.split("(")[1].strip(")")),
+                                )
+                                for var_info in var_infos
+                            ]
 
                             # handle static and dynamic dependencies separately
-                            if dep_type.startswith("STAT_"):
+                            if is_static_dep_type:
                                 # static dependencies must not leave the current function scope
                                 # source and target have to share a parent function context.
 
                                 # TODO (or consider other branches)
                                 for source_ctx in source_contexts:
+                                    # check for shared closest function parent
+                                    source_closest_fn = closest_function_ancestor(source_ctx)
+                                    if source_closest_fn is None:
+                                        # no shared parent function context can exist
+                                        continue
                                     for target_ctx in target_contexts:
                                         if source_ctx == target_ctx:
                                             # print("SKIPPING POTENTIAL DEP: ", dep_type, var_infos)
                                             continue
-                                        # check for shared closest function parent
-                                        source_closest_fn = source_ctx.get_closest_function_ancestor()
-                                        target_closest_fn = target_ctx.get_closest_function_ancestor()
-                                        if source_closest_fn is None or target_closest_fn is None:
+                                        target_closest_fn = closest_function_ancestor(target_ctx)
+                                        if target_closest_fn is None:
                                             # no shared parent function context can exist
                                             continue
                                         if source_closest_fn != target_closest_fn:
@@ -3570,94 +3636,38 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                             # static dependencies are only valid within a functions scope.
                                             continue
 
-                                        for var_info in var_infos:
-                                            var_name = var_info if "(" not in var_info else var_info.split("(")[0]
-                                            memory_region = (
-                                                None
-                                                if "(" not in var_info
-                                                else MemoryRegion(var_info.split("(")[1].strip(")"))
-                                            )
-                                            # remove DYN_ or STAT_ prefix from dep_type to get the actual dependency type
-                                            clean_dep_type = dep_type.replace("STAT_", "")
-                                            dep_type_enum_obj = (
-                                                DepType[clean_dep_type]
-                                                if clean_dep_type in DepType.__members__
-                                                else None
-                                            )
+                                        for var_name, memory_region in parsed_var_infos:
                                             dependency = Dependency(type=EdgeType.DATA)
-
                                             dependency.dtype = dep_type_enum_obj
                                             dependency.var_name = var_name
                                             dependency.memory_region = memory_region
-                                            dependency.origin = (
-                                                DepOrigin.STATIC_ANALYSIS
-                                                if dep_type.startswith("STAT_")
-                                                else DepOrigin.DYNAMIC_ANALYSIS
-                                            )
-
-                                            # ignore WAW, as there is no data flow
-                                            if dependency.dtype == DepType.WAW:
-                                                continue
-                                            # ignore INIT as there is no data flow
-                                            if dependency.dtype == DepType.INIT:
-                                                continue
+                                            dependency.origin = dep_origin
 
                                             source_ctx.register_outgoing_dependency(target_ctx, dependency)
                             else:
                                 # dynamic dependencies are allowed to leave the current function
                                 # register dependencies between all pairs of source and target contexts
+                                #
+                                # prevent false positive dependencies in case of same iterations by checking for same ancestors
+                                # TODO: add states to contexts to allow a more robust search in __get_work_contexts_by_location_and_state_id
+                                # TODO: The fact the following condition is necessary is a result of incorrect behavior of __get_work_contexts_by_location_and_state_id, which should be fixed!
+                                same_state = source_state_id == sink_state_id
                                 for source_ctx in source_contexts:
+                                    source_ancs = ancestors_from_closest_iteration(source_ctx) if same_state else []
                                     for target_ctx in target_contexts:
                                         if source_ctx == target_ctx:
                                             continue
-                                        for var_info in var_infos:
-                                            var_name = var_info if "(" not in var_info else var_info.split("(")[0]
-                                            memory_region = (
-                                                None
-                                                if "(" not in var_info
-                                                else MemoryRegion(var_info.split("(")[1].strip(")"))
-                                            )
-                                            # remove DYN_ or STAT_ prefix from dep_type to get the actual dependency type
-                                            clean_dep_type = dep_type.replace("DYN_", "")
-                                            dep_type_enum_obj = (
-                                                DepType[clean_dep_type]
-                                                if clean_dep_type in DepType.__members__
-                                                else None
-                                            )
+                                        if same_state:
+                                            # both pruned to their closest iteration context, so that
+                                            # source and target are required to be in the same iteration
+                                            if source_ancs != ancestors_from_closest_iteration(target_ctx):
+                                                continue
+                                        for var_name, memory_region in parsed_var_infos:
                                             dependency = Dependency(type=EdgeType.DATA)
-
                                             dependency.dtype = dep_type_enum_obj
                                             dependency.var_name = var_name
                                             dependency.memory_region = memory_region
-                                            dependency.origin = (
-                                                DepOrigin.STATIC_ANALYSIS
-                                                if dep_type.startswith("STAT_")
-                                                else DepOrigin.DYNAMIC_ANALYSIS
-                                            )
-
-                                            # ignore WAW, as there is no data flow
-                                            if dependency.dtype == DepType.WAW:
-                                                continue
-                                            # ignore INIT as there is no data flow
-                                            if dependency.dtype == DepType.INIT:
-                                                continue
-                                            # prevent false positive dependencies in case of same iterations by checking for same ancestors
-                                            # TODO: add states to contexts to allow a more robust search in __get_work_contexts_by_location_and_state_id
-                                            # TODO: The fact the following condition is necessary is a result of incorrect behavior of __get_work_contexts_by_location_and_state_id, which should be fixed!
-                                            if source_state_id == sink_state_id:
-                                                source_ancs = source_ctx.get_ancestor_contexts()
-                                                target_ancs = target_ctx.get_ancestor_contexts()
-                                                # prune ancestors to closest iteration context and check for equality to ensure source and target are located in the same iteration.
-                                                while len(source_ancs) > 0:
-                                                    if isinstance(source_ancs[0], IterationContext):
-                                                        break
-                                                    del source_ancs[0]
-                                                while len(target_ancs) > 0:
-                                                    if isinstance(target_ancs[0], IterationContext):
-                                                        break
-                                                    del target_ancs[0]
-                                                if source_ancs != target_ancs:
-                                                    continue
+                                            dependency.origin = dep_origin
 
                                             if dependency.var_name == "error":
                                                 print(
