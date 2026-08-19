@@ -7,7 +7,7 @@
 # directory for details.
 import itertools
 import logging
-from typing import Any, Dict, List, Optional, Set, Tuple, cast
+from typing import Any, Dict, FrozenSet, List, Optional, Set, Tuple, cast
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
@@ -174,6 +174,8 @@ def identify_simple_doall_and_reduction(
     # the duplicate check below. Kept alongside the tags themselves, which are only known once a
     # pattern has been built.
     known_pattern_keys: Set[Tuple[Any, ...]] = set()
+    # shared by every candidate, see detect_doall_sharing_clauses
+    clause_cache: Dict[ClauseCacheKey, SharingClauses] = dict()
     known_pattern_tags: Set[str] = set()
     logger.info("Identifying trivial doall suggestions.")
 
@@ -384,6 +386,7 @@ def identify_simple_doall_and_reduction(
             iteration_contexts,
             loopparent_contained_ctxs,
             set([v[0] for v in loop_variables]),
+            clause_cache,
         )
         # check potential_breaking_dependencies for cases which actually prevent doall
         for src_ctx, dst_ctx, dep in potential_breaking_dependencies:
@@ -459,6 +462,12 @@ def identify_simple_doall_and_reduction(
     return patterns
 
 
+SharingClauses = Tuple[Set[str], Set[str], Set[str], Set[str], Set[str], Set[str]]
+# what the classification of a loop's variables actually depends on: the loop's CU, the CU
+# sequence of each of its iterations, the CUs of the enclosing loop parent and the loop variables
+ClauseCacheKey = Tuple[NodeID, Tuple[Tuple[NodeID, ...], ...], FrozenSet[NodeID], FrozenSet[str]]
+
+
 def detect_doall_sharing_clauses(
     pet: PEGraphX,
     ast_helper: ASTPatternDetectionHelper,
@@ -467,10 +476,16 @@ def detect_doall_sharing_clauses(
     iteration_contexts: List[IterationContext],
     loopparent_contained_ctxs: Set[Context],
     loop_variables: Set[str],
-) -> Tuple[Set[str], Set[str], Set[str], Set[str], Set[str], Set[str]]:
+    clause_cache: Dict[ClauseCacheKey, SharingClauses],
+) -> SharingClauses:
     """classifies variables used inside the iterations and returns the OpenMP data sharing clauses in the following structure:
     (firstprivate, private, lastprivate, shared, firstwritten, init)
     firstwritten and init are not data sharing clauses, but required to validate potential doall-breaking dependencies originating from static information.
+
+    The result is memoized in clause_cache. The classification reaches the contexts it is given
+    only to read the CU sequences out of them, so it is a function of those sequences - and the
+    task graph holds one copy of a loop per dynamic execution of it, all of which project onto the
+    same sequences. The returned sets are shared with the cache and must not be modified.
     """
     logger.debug("-------------------- LOOP START ---------------------")
     # Initialization
@@ -478,9 +493,28 @@ def detect_doall_sharing_clauses(
     contained_tg_nodes_in_loopparent: List[TGNode] = []
     for ctx in loopparent_contained_ctxs:
         contained_tg_nodes_in_loopparent += ctx.contained_nodes
-    contained_cu_node_ids_in_loopparent = set(
+    contained_cu_node_ids_in_loopparent = frozenset(
         [tg.pet_node_id for tg in contained_tg_nodes_in_loopparent if tg.pet_node_id is not None]
     )
+
+    # the CU sequence of every iteration, in execution order - the firstread / firstwritten
+    # classification depends on that order
+    cu_sequences: List[List[NodeID]] = []
+    for it_ctx in iteration_contexts:
+        contained_tg_nodes_in_sequence: List[TGNode] = []
+        for ctx in it_ctx.get_contained_contexts_in_sequence(pet):
+            contained_tg_nodes_in_sequence += ctx.contained_nodes
+        cu_sequences.append([tg.pet_node_id for tg in contained_tg_nodes_in_sequence if tg.pet_node_id is not None])
+
+    cache_key: ClauseCacheKey = (
+        loop_node_id,
+        tuple(tuple(sequence) for sequence in cu_sequences),
+        contained_cu_node_ids_in_loopparent,
+        frozenset(loop_variables),
+    )
+    cached_clauses = clause_cache.get(cache_key)
+    if cached_clauses is not None:
+        return cached_clauses
 
     # get known variables for source location from AST
     file_id = pet.node_at(loop_node_id).file_id
@@ -488,6 +522,16 @@ def detect_doall_sharing_clauses(
 
     known_vars_with_types = ast_helper.get_variables_at_location(file_id, line_num)
     known_vars = set([v[0] for v in known_vars_with_types])
+    # names of the known variables of pointer or reference type. The types do not depend on the
+    # dependency they are looked up for, so this is determined once per loop. Scanning the list of
+    # typed variables per dependency instead dominated the entire analysis.
+    known_ptr_type_vars = set(
+        [
+            name
+            for name, type_str in known_vars_with_types
+            if type_str is not None and ("*" in type_str or "&" in type_str)
+        ]
+    )
 
     # shared:
     # - no dependency between iterations
@@ -521,18 +565,8 @@ def detect_doall_sharing_clauses(
     gep_result_access: Set[str] = set()
     ptr_type_access: Set[str] = set()
 
-    for it_ctx in iteration_contexts:
-        contained_contexts_in_sequence = it_ctx.get_contained_contexts_in_sequence(pet)
-        #        print("contained CTXs in sequence: ", [c.get_code_scope(pet) for c in contained_contexts_in_sequence])
-        contained_tg_nodes_in_sequence: List[TGNode] = []
-        for ctx in contained_contexts_in_sequence:
-            contained_tg_nodes_in_sequence += ctx.contained_nodes
-        #        print("contained tg nodes in sequence: ", [(n, n.pet_node_id) for n in contained_tg_nodes_in_sequence])
-        contained_cu_node_ids_in_sequence = [
-            tg.pet_node_id for tg in contained_tg_nodes_in_sequence if tg.pet_node_id is not None
-        ]
-        #        print("contained cu nodes in sequence: ", contained_cu_node_ids_in_sequence)
-        # the list above is iterated in order below - the firstread / firstwritten classification
+    for contained_cu_node_ids_in_sequence in cu_sequences:
+        # the list is iterated in order below - the firstread / firstwritten classification
         # depends on it - so it stays a list. Membership is tested once per dependency, which is a
         # linear scan on a list, so keep a set alongside it for that.
         contained_cu_node_ids_in_sequence_set = set(contained_cu_node_ids_in_sequence)
@@ -580,13 +614,8 @@ def detect_doall_sharing_clauses(
                 if dep.is_gep_result_dependency:
                     gep_result_access.add(dep.var_name)
                 # check if dep is access to pointer or reference type
-                if dep.var_name in known_vars:
-                    for tmp_var_name, type_str in known_vars_with_types:
-                        if type_str is None:
-                            continue
-                        if tmp_var_name == dep.var_name:
-                            if "*" in type_str or "&" in type_str:
-                                ptr_type_access.add(dep.var_name)
+                if dep.var_name in known_ptr_type_vars:
+                    ptr_type_access.add(dep.var_name)
 
                 if dep.dtype == DepType.RAW:
                     if dep.var_name not in written:
@@ -775,4 +804,6 @@ def detect_doall_sharing_clauses(
     logger.debug("\tPOST FILTER: firstprivate: " + str(firstprivate))
     logger.debug("---------------------------- LOOP END --------------------")
     logger.debug("")
-    return firstprivate, private, lastprivate, shared, firstwritten, init
+    result: SharingClauses = (firstprivate, private, lastprivate, shared, firstwritten, init)
+    clause_cache[cache_key] = result
+    return result
