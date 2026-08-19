@@ -241,20 +241,30 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
 
             # for outgoing dependencies, the scope must be equal
             # as a result, comparing variable names to match memory regions is valid
-            for _, _, d1 in out_deps:
-                for _, _, d2 in out_deps:
-                    if d1.var_name == d2.var_name:
-                        if d1.memory_region != d2.memory_region:
-                            if d1.memory_region is None or d2.memory_region is None:
-                                continue
-                            if d1.memory_region.startswith("GEPRESULT_") or d2.memory_region.startswith("GEPRESULT_"):
-                                continue
-                            if d1.memory_region not in mem_reg_mappings:
-                                mem_reg_mappings[d1.memory_region] = set()
-                            if d2.memory_region not in mem_reg_mappings:
-                                mem_reg_mappings[d2.memory_region] = set()
-                            mem_reg_mappings[d1.memory_region].add(d2.memory_region)
-                            mem_reg_mappings[d2.memory_region].add(d1.memory_region)
+            #
+            # Grouped by variable name rather than compared pairwise: the pairwise loop was
+            # quadratic in the number of a CU's outgoing dependencies, and on larger inputs that
+            # dominated the entire pattern detection - 142s of a 435s run on NPB MG, with the
+            # sampled stack sitting on the inner comparison. Every pair which agrees on the
+            # variable name and differs in the memory region maps the two regions onto each
+            # other, so per variable only the set of memory regions it is accessed through
+            # matters. A region which is None or a GEPRESULT_ is never mapped in either
+            # direction, so it is dropped up front.
+            regions_per_var: Dict[Optional[str], Set[MemoryRegion]] = dict()
+            for _, _, dep in out_deps:
+                if dep.memory_region is None or dep.memory_region.startswith("GEPRESULT_"):
+                    continue
+                regions_per_var.setdefault(dep.var_name, set()).add(dep.memory_region)
+            for regions in regions_per_var.values():
+                if len(regions) < 2:
+                    # no region to map onto - the pairwise loop did not create an entry either
+                    continue
+                for memory_region in regions:
+                    others = regions.difference({memory_region})
+                    if memory_region in mem_reg_mappings:
+                        mem_reg_mappings[memory_region].update(others)
+                    else:
+                        mem_reg_mappings[memory_region] = others
 
         # create copies of static dependency edges for all dynamic mappings
         for node_id in progress([n.id for n in all_nodes(self, CUNode)], desc="Instantiating static dependencies"):
@@ -460,35 +470,44 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
             print("Cleaning dependencies done.")
 
         # cleanup dependencies II : only consider the Intra-iteration dependencies with the highest level
-        to_be_removed = []
+        #
+        # Grouped rather than compared pairwise, see map_static_and_dynamic_dependencies. A
+        # dependency is superseded exactly when another one it agrees with on all of the fields
+        # below carries a higher intra-iteration level, so per group only the highest level
+        # matters. The pairwise loop reported the same dependency once per higher-level partner;
+        # the duplicates were dropped when the edge keys were resolved, and reporting each
+        # superseded dependency once instead saves that resolution work as well.
+        superseded_deps: List[Tuple[NodeID, NodeID, Dependency]] = []
         for cu_node in progress(all_nodes(self, CUNode), desc="Cleaning duplicated dependencies"):
             out_deps = out_edges(self, cu_node.id, EdgeType.DATA)
-            for dep_1 in out_deps:
-                for dep_2 in out_deps:
-                    if dep_1 == dep_2:
-                        continue
-                    if (
-                        dep_1[2].dtype == dep_2[2].dtype
-                        and dep_1[2].etype == dep_2[2].etype
-                        and dep_1[2].memory_region == dep_2[2].memory_region
-                        and dep_1[2].sink_line == dep_2[2].sink_line
-                        and dep_1[2].source_line == dep_2[2].source_line
-                        and dep_1[2].var_name == dep_2[2].var_name
-                        and dep_1[2].intra_iteration
-                        and dep_2[2].intra_iteration
-                    ):
-                        if dep_1[2].intra_iteration_level < dep_2[2].intra_iteration_level:
-                            # dep_2 originated from a deeper nesting level. Remove less specific duplicate dep_1.
-                            to_be_removed.append(dep_1)
+            # the target node is deliberately not part of the key: the pairwise loop compared
+            # only the dependencies themselves, so it also related edges to different targets
+            grouped_deps: Dict[Tuple[Any, ...], List[Tuple[NodeID, NodeID, Dependency]]] = dict()
+            for dep in out_deps:
+                if not dep[2].intra_iteration:
+                    continue
+                group_key = (
+                    dep[2].dtype,
+                    dep[2].etype,
+                    dep[2].memory_region,
+                    dep[2].sink_line,
+                    dep[2].source_line,
+                    dep[2].var_name,
+                )
+                grouped_deps.setdefault(group_key, []).append(dep)
+            for group in grouped_deps.values():
+                if len(group) < 2:
+                    continue
+                deepest_level = max(dep[2].intra_iteration_level for dep in group)
+                # dependencies from a shallower nesting level are less specific duplicates
+                superseded_deps += [dep for dep in group if dep[2].intra_iteration_level < deepest_level]
 
-        to_be_removed_with_keys = []
-        for dep in to_be_removed:
-            graph_edges = self.g.out_edges(dep[0], keys=True, data="data")
-
-            for s, t, key, data in graph_edges:
+        edges_to_remove: Set[Tuple[NodeID, NodeID, int]] = set()
+        for dep in superseded_deps:
+            for s, t, key, data in self.g.out_edges(dep[0], keys=True, data="data"):
                 if dep[0] == s and dep[1] == t and dep[2] == data:
-                    to_be_removed_with_keys.append((s, t, key))
-        for edge in set(to_be_removed_with_keys):
+                    edges_to_remove.add((s, t, key))
+        for edge in edges_to_remove:
             self.g.remove_edge(edge[0], edge[1], edge[2])
 
     def calculateLoopMetadata(self) -> None:
