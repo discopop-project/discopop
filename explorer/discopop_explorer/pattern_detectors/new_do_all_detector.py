@@ -402,6 +402,16 @@ def detect_doall_sharing_clauses(
             tg.pet_node_id for tg in contained_tg_nodes_in_sequence if tg.pet_node_id is not None
         ]
         #        print("contained cu nodes in sequence: ", contained_cu_node_ids_in_sequence)
+        # the list above is iterated in order below - the firstread / firstwritten classification
+        # depends on it - so it stays a list. Membership is tested once per dependency, which is a
+        # linear scan on a list, so keep a set alongside it for that.
+        contained_cu_node_ids_in_sequence_set = set(contained_cu_node_ids_in_sequence)
+        # CUs of the enclosing loop which are not part of this iteration's sequence. Both operands
+        # are invariant for the whole iteration context, so this is computed once here. Written
+        # inside the dependency filters below it would be re-evaluated for every single dependency
+        # (a comprehension's condition is not loop-invariant-hoisted), which dominated the entire
+        # do-all detection.
+        cu_node_ids_outside_sequence = contained_cu_node_ids_in_loopparent - contained_cu_node_ids_in_sequence_set
 
         # -> get lists of firstwritten, firstread, written, read, read_in, read_out for all iterations.
         # -> use the gathered lists to determine sharing clauses after the loop over iteration contexts
@@ -420,16 +430,8 @@ def detect_doall_sharing_clauses(
             # TODO:# filter incoming and outgoing deps to ignore nodes within the parent loop
             # TODO: ignore variables defined inside the loop
             # reasone: remove data sharing clauses correlating to loop headers etc.
-            incoming_deps = [
-                d
-                for d in incoming_deps
-                if d[0] not in contained_cu_node_ids_in_loopparent - set(contained_cu_node_ids_in_sequence)
-            ]
-            outgoing_deps = [
-                d
-                for d in outgoing_deps
-                if d[1] not in contained_cu_node_ids_in_loopparent - set(contained_cu_node_ids_in_sequence)
-            ]
+            incoming_deps = [d for d in incoming_deps if d[0] not in cu_node_ids_outside_sequence]
+            outgoing_deps = [d for d in outgoing_deps if d[1] not in cu_node_ids_outside_sequence]
 
             # outgoing
             #   RAW: cu reads
@@ -460,7 +462,7 @@ def detect_doall_sharing_clauses(
                     if dep.var_name not in written:
                         firstread.add(dep.var_name)
                     read.add(dep.var_name)
-                    if dst not in contained_cu_node_ids_in_sequence:
+                    if dst not in contained_cu_node_ids_in_sequence_set:
                         data_incoming.add(dep.var_name)
                 elif dep.dtype == DepType.WAR:
                     if dep.var_name not in read:
@@ -485,7 +487,7 @@ def detect_doall_sharing_clauses(
                     if dep.var_name not in read:
                         it_firstwritten.add(dep.var_name)
                     written.add(dep.var_name)
-                    if src not in contained_cu_node_ids_in_sequence:
+                    if src not in contained_cu_node_ids_in_sequence_set:
                         data_outgoing.add(dep.var_name)
                 elif dep.dtype == DepType.WAR:
                     if dep.var_name not in written:
