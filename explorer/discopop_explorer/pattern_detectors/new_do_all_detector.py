@@ -113,7 +113,11 @@ def collect_reduction_variables(
     not on the variable classification."""
     reduction_vars: List[Variable] = []
     known_names: Set[VarName] = set()
-    for ri in reduction_info:
+    # reduction_info is filled while iterating sets of contexts and dependencies, so its order
+    # is not reproducible across runs. It is only ever used to derive the reduction variables,
+    # which go into the pattern's clauses and its duplicate key, so sorting them by name here
+    # makes both reproducible.
+    for ri in sorted(reduction_info, key=lambda ri: (ri[2].var_name or "")):
         if ri[2].var_name is None:
             continue
         var = Variable(type="unknown", name=VarName(ri[2].var_name), defLine="LineNotFound")
@@ -204,10 +208,15 @@ def identify_simple_doall_and_reduction(
         if node.pet_node_id in prevented_loops:
             counts["skipped_prevented"] += 1
             continue
-        # get child iterations
-        iteration_contexts = [
-            ctx for ctx in node.created_context.get_contained_contexts() if isinstance(ctx, IterationContext)
-        ]
+        # get child iterations. Sorted, because get_contained_contexts returns a set: contexts
+        # are hashed by identity, so its iteration order follows memory addresses and varies
+        # between runs. The order is observable - detect_doall_sharing_clauses accumulates
+        # gep_result_access / ptr_type_access across iterations and classifies each iteration
+        # against the accumulated state - so an arbitrary order makes the clauses irreproducible.
+        iteration_contexts = sorted(
+            (ctx for ctx in node.created_context.get_contained_contexts() if isinstance(ctx, IterationContext)),
+            key=lambda ctx: ctx.creation_index,
+        )
         if len(iteration_contexts) < 2:
             counts["skipped_too_few_iterations"] += 1
             continue
@@ -402,25 +411,37 @@ def identify_simple_doall_and_reduction(
         if len(reduction) == 0:
             # register DoAll pattern
             pattern = DoAllInfo(tg.pet, tg.pet.node_at(node.pet_node_id))
-            pattern.first_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate]
-            pattern.private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in private]
-            pattern.last_private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in lastprivate]
-            pattern.shared = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in shared]
+            pattern.first_private = [
+                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in sorted(firstprivate)
+            ]
+            pattern.private = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in sorted(private)]
+            pattern.last_private = [
+                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in sorted(lastprivate)
+            ]
+            pattern.shared = [Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in sorted(shared)]
         else:
             # register reduction pattern. get_pattern_key rejected a missing parent loop already.
             assert node.created_context.parent_loop is not None
             pattern = ReductionInfo(tg.pet, tg.pet.node_at(node.created_context.parent_loop), reduction=reduction_vars)
             pattern.first_private = [
-                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in firstprivate if v not in reduction
+                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN")
+                for v in sorted(firstprivate)
+                if v not in reduction
             ]
             pattern.private = [
-                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in private if v not in reduction
+                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN")
+                for v in sorted(private)
+                if v not in reduction
             ]
             pattern.last_private = [
-                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in lastprivate if v not in reduction
+                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN")
+                for v in sorted(lastprivate)
+                if v not in reduction
             ]
             pattern.shared = [
-                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN") for v in shared if v not in reduction
+                Variable(type="UNKNOWN", name=VarName(v), defLine="UNKNOWN")
+                for v in sorted(shared)
+                if v not in reduction
             ]
 
         # two different nodes can still collide on a tag, so the exact check remains - it is just
