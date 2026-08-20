@@ -19,7 +19,7 @@ from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no
 from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.detail_bar import DetailBar
 from discopop_library.ProjectManager.gui.widgets import danger_button
-from discopop_library.ProjectManager.gui.plots import embedding, report_charts
+from discopop_library.ProjectManager.gui.plots import embedding, mode_style, report_charts
 from discopop_library.ProjectManager.gui.plots.data import ExecutionRecord, parse_execution_results
 
 # Chart types offered by the "+" tab. Each entry: default state + a title stem.
@@ -116,6 +116,7 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             "Setting",
             "Label",
             "Applied Suggestions",
+            "Not Applied",
             "Threads",
             "Status",
             "Time",
@@ -131,6 +132,7 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             "Setting": 70,
             "Label": 85,
             "Applied Suggestions": 90,
+            "Not Applied": 90,
             "Threads": 65,
             "Status": 70,
             "Time": 65,
@@ -145,6 +147,13 @@ class ReportPanelMixin(ConfigManagerMixinBase):
         self.report_tree.tag_configure("oddrow", background=widgets.TREE_ODD_ROW)
         # validity / best-row emphasis
         self.report_tree.tag_configure("failed", foreground=widgets.STATUS_FAIL)
+        # a skipped run (suggestions not applied) is neither a failure nor a result:
+        # give it its own emphasis so it cannot be confused with either
+        self.report_tree.tag_configure(
+            "not_applied",
+            foreground=mode_style.status_color(mode_style.NOT_APPLIED_STATUS),
+            background="#f3e6f7",
+        )
         self.report_tree.tag_configure("best", background="#d6ebd5")
 
         self.report_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -195,7 +204,9 @@ class ReportPanelMixin(ConfigManagerMixinBase):
         for idx, r in enumerate(records):
             row_index = len(self.report_tree.get_children())
             tags: List[str] = ["evenrow" if row_index % 2 == 0 else "oddrow"]
-            if not r.valid:
+            if r.application_failed:
+                tags.append("not_applied")
+            elif not r.valid:
                 tags.append("failed")
             if best_ids.get(r.config) == idx:
                 tags.append("best")
@@ -205,7 +216,12 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             setting_str = r.mode if (r.config, r.script, r.mode) != (prev_config, prev_script, prev_setting) else ""
             prev_config, prev_script, prev_setting = r.config, r.script, r.mode
 
-            status = "✓ valid" if r.valid else ("⧗ timeout" if r.timeout else "✗ failed")
+            status = report_charts.record_status_text(r)
+            not_applied_str = (
+                textwrap.shorten(str(r.failed_suggestions or r.requested_suggestions), width=20, placeholder="...]")
+                if r.application_failed
+                else "-"
+            )
             self.report_tree.insert(
                 "",
                 "end",
@@ -215,9 +231,11 @@ class ReportPanelMixin(ConfigManagerMixinBase):
                     setting_str,
                     r.label,
                     textwrap.shorten(str(r.applied_suggestions), width=20, placeholder="...]"),
+                    not_applied_str,
                     str(r.thread_count),
                     status,
-                    str(r.time),
+                    # a skipped run has no runtime to show
+                    str(r.time) if r.has_measurement else "-",
                     "-" if r.speedup is None else str(round(r.speedup, 3)),
                     "-" if r.efficiency is None else str(round(r.efficiency, 3)),
                 ),
@@ -296,15 +314,21 @@ class ReportPanelMixin(ConfigManagerMixinBase):
     # ── the always-visible detail bar ───────────────────────────────────────────
 
     def _on_plot_record_selected(self, state: Dict[str, Any], record: ExecutionRecord) -> None:
-        status = "✓ valid" if record.valid else ("⧗ timeout" if record.timeout else "✗ failed")
         fields = [
             ("Config", record.config),
             ("Mode", record.mode),
             ("Suggestions", str(record.applied_suggestions) if record.applied_suggestions else "(none)"),
             ("Threads", str(record.thread_count)),
-            ("Runtime", f"{record.time:.3f} s"),
-            ("Status", status),
+            ("Runtime", f"{record.time:.3f} s" if record.has_measurement else "not executed"),
+            ("Status", report_charts.record_status_text(record)),
         ]
+        if record.application_failed:
+            fields.append(
+                (
+                    "Not applied",
+                    str(record.failed_suggestions or record.requested_suggestions) or "(unknown)",
+                )
+            )
         if record.speedup is not None:
             fields.append(("Speedup", f"{record.speedup:.3f}×"))
         if record.efficiency is not None:

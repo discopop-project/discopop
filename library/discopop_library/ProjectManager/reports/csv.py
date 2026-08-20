@@ -13,6 +13,7 @@ from typing import Any, Dict, List
 from tabulate import tabulate  # type: ignore
 
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.reports import entries
 
 
 def generate_csv_report(arguments: ProjectManagerArguments, timestamp: str) -> None:
@@ -48,7 +49,7 @@ def __create_csv(arguments: ProjectManagerArguments, execution_results: Dict[str
                 seq_runtime: float = -1.0
                 if "seq_settings.json" in execution_results[configuration][script]:
                     for execution in execution_results[configuration][script]["seq_settings.json"]:
-                        if execution["code"] == 0:
+                        if execution["code"] == 0 and entries.was_executed(execution):
                             seq_runtime = execution["time"]
 
                 for execution in execution_results[configuration][script][setting]:
@@ -58,14 +59,13 @@ def __create_csv(arguments: ProjectManagerArguments, execution_results: Dict[str
                     thread_counts_string = ""
                     speedup_string = ""
                     efficiency_string = ""
-                    applied_suggestions_string += str(execution["applied_suggestions"]) + ";"
+                    applied_suggestions_string += entries.applied_suggestions_text(execution) + ";"
                     return_codes_string += str(execution["code"]) + ";"
-                    times_string += str(execution["time"]) + ";"
+                    times_string += entries.runtime_text(execution) + ";"
                     thread_counts_string += str(execution["thread_count"]) + ";"
-                    speedup = seq_runtime / execution["time"]
-                    speedup_string += str(round(speedup, 3)) + ";"
-                    efficiency = speedup / execution["thread_count"]
-                    efficiency_string += str(round(efficiency, 3)) + ";"
+                    # a skipped run has no runtime; "-" instead of a division by zero
+                    speedup_string += entries.format_metric(entries.speedup_of(seq_runtime, execution)) + ";"
+                    efficiency_string += entries.format_metric(entries.efficiency_of(seq_runtime, execution)) + ";"
                     label_string = (execution["label"] + ";") if "label" in execution else ";"
 
                     clean_setting_str = setting.replace("_settings.json", "") + ";"

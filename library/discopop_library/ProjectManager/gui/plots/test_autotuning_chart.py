@@ -64,7 +64,7 @@ def test_ingest_greedy_counts_and_best() -> None:
     assert len(model.measurements) == 4
     assert model.thread_count == 8
     assert model.best_speedup() == 2.5
-    assert model.counts() == (2, 1, 1)  # valid, invalid, failed
+    assert model.counts() == (2, 1, 1, 0)  # valid, invalid, failed, not applied
     assert model.result is not None and model.result["suggestions"] == [3]
 
 
@@ -131,3 +131,57 @@ def test_generation_without_measured_average_stays_none() -> None:
     ]
     model = ProgressModel.from_events(events)
     assert model.generations[0].generation_avg_fitness is None
+
+
+def _not_applied_event(index: int, suggestion: int) -> Dict[str, Any]:
+    """A measurement event for a configuration whose patches did not apply."""
+    return {
+        "event": "measurement",
+        "index": index,
+        "suggestions": [suggestion],
+        "runtime": 0.0,
+        "return_code": 0,
+        "valid": False,
+        "tsan": False,
+        "speedup": None,
+        "application_failed": True,
+        "failed_suggestions": [suggestion],
+    }
+
+
+def test_unpatched_configuration_is_its_own_status_and_never_wins() -> None:
+    events = _greedy_events() + [_not_applied_event(5, 27)]
+    model = ProgressModel.from_events(events)
+    skipped = model.measurements[-1]
+    assert skipped.status == "not_applied" and skipped.application_failed
+    assert skipped.failed_suggestions == [27]
+    # counted separately from invalid (which is what return_code 0 + invalid would be)
+    assert model.counts() == (2, 1, 1, 1)
+    # and it can never be reported as the best configuration
+    assert model.best_speedup() == 2.5
+
+
+def test_not_applied_warning_names_the_affected_suggestions() -> None:
+    model = ProgressModel.from_events(_greedy_events() + [_not_applied_event(5, 27)])
+    warning = model.not_applied_warning()
+    assert warning is not None and "27" in warning and "1 configuration" in warning
+    assert len(model.not_applied_measurements()) == 1
+
+
+def test_no_warning_when_every_configuration_was_patched() -> None:
+    assert ProgressModel.from_events(_greedy_events()).not_applied_warning() is None
+
+
+def test_not_applied_tile_is_shown() -> None:
+    tiles = dict(ProgressModel.from_events(_greedy_events() + [_not_applied_event(5, 27)]).summary_tiles())
+    assert tiles["Not applied"] == "1"
+    # a skipped configuration is not folded into the invalid/failed counts
+    assert tiles["Invalid / failed"] == "1 / 1"
+
+
+def test_failed_suggestions_alone_marks_a_measurement_as_not_applied() -> None:
+    """A run whose payload predates the explicit flag but lists failed suggestions."""
+    event = _not_applied_event(5, 27)
+    del event["application_failed"]
+    model = ProgressModel.from_events([event])
+    assert model.measurements[0].status == "not_applied"

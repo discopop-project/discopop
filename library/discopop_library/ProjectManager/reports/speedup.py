@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from tabulate import tabulate  # type: ignore
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.reports import entries
 
 import logging
 import matplotlib.pyplot as plt
@@ -51,11 +52,14 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
                 seq_runtime: float = -1.0
                 if "seq_settings.json" in execution_results[configuration][script]:
                     for execution in execution_results[configuration][script]["seq_settings.json"]:
-                        if execution["code"] == 0:
+                        if execution["code"] == 0 and entries.was_executed(execution):
                             seq_runtime = execution["time"]
 
                 best_values_by_label: Dict[str, Dict[str, Any]] = dict()
                 for execution in execution_results[configuration][script][setting]:
+                    # a skipped run (suggestions not applied) is not a measurement
+                    if not entries.was_executed(execution):
+                        continue
                     label = execution["label"] if "label" in execution else ""
                     if label not in best_values_by_label:
                         best_values_by_label[label] = dict()

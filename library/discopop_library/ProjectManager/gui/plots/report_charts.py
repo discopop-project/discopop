@@ -9,7 +9,13 @@
 """Chart renderers for the Report tab, driven by :class:`ExecutionRecord`s.
 
 Three chart types share the encoding language from :mod:`mode_style` (colour =
-configuration, marker/dash = execution mode, fill = validity):
+configuration, marker/dash = execution mode, fill = validity).
+
+Records whose parallelization suggestions could not be applied carry no measurement
+(the run was skipped instead of executed on the unmodified code), so they are excluded
+from every metric here and surfaced as an explicit in-chart warning plus a dedicated
+row in the Report table -- never silently dropped, and never plotted as a parallel run
+that happened to reach no speedup:
 
 * :func:`render_pareto`  -- trade-off scatter of every measured run;
 * :func:`render_scaling` -- one line per (config, mode) across thread counts;
@@ -64,11 +70,15 @@ def more_is_better(metric: str) -> bool:
 
 
 def best_of(records: Sequence[ExecutionRecord], metric: str) -> Dict[Tuple[str, str], ExecutionRecord]:
-    """Best *valid* record per (config, mode) by ``metric`` (max, or min for runtime)."""
+    """Best *valid* record per (config, mode) by ``metric`` (max, or min for runtime).
+
+    Records without a measurement (suggestions not applied, so the run was skipped)
+    are never candidates: they hold no runtime to compare.
+    """
     prefer_max = more_is_better(metric)
     best: Dict[Tuple[str, str], ExecutionRecord] = {}
     for record in records:
-        if not record.valid:
+        if not record.valid or not record.has_measurement:
             continue
         value = metric_value(record, metric)
         if value is None:
@@ -85,6 +95,15 @@ def best_of(records: Sequence[ExecutionRecord], metric: str) -> Dict[Tuple[str, 
     return best
 
 
+def record_status_text(record: ExecutionRecord) -> str:
+    """The record's status as shown in tooltips, the detail bar and the table."""
+    if record.application_failed:
+        return "⚠ not applied"
+    if record.valid:
+        return "✓ valid"
+    return "⧗ timeout" if record.timeout else "✗ failed"
+
+
 def _format_record_tooltip(record: ExecutionRecord) -> str:
     """Format an ExecutionRecord as a multi-line tooltip string."""
     lines = [
@@ -92,15 +111,55 @@ def _format_record_tooltip(record: ExecutionRecord) -> str:
         f"Mode: {record.mode}",
         f"Suggestions: {record.applied_suggestions if record.applied_suggestions else '(none)'}",
         f"Threads: {record.thread_count}",
-        f"Runtime: {record.time:.3f}s",
     ]
+    if record.has_measurement:
+        lines.append(f"Runtime: {record.time:.3f}s")
     if record.speedup is not None:
         lines.append(f"Speedup: {record.speedup:.3f}×")
     if record.efficiency is not None:
         lines.append(f"Efficiency: {record.efficiency:.3f}")
-    status = "✓ valid" if record.valid else ("⧗ timeout" if record.timeout else "✗ failed")
-    lines.append(f"Status: {status}")
+    lines.append(f"Status: {record_status_text(record)}")
+    if record.application_failed:
+        lines.append(f"Not applied: {record.failed_suggestions if record.failed_suggestions else '(unknown)'}")
+        lines.append("Not executed - the code was unmodified.")
     return "\n".join(lines)
+
+
+def not_applied_records(records: Sequence[ExecutionRecord]) -> List[ExecutionRecord]:
+    """Records that were skipped because their suggestions could not be applied."""
+    return [r for r in records if r.application_failed]
+
+
+def not_applied_note(records: Sequence[ExecutionRecord]) -> Optional[str]:
+    """Warning text for charts, or None when every requested patch was applied."""
+    skipped = not_applied_records(records)
+    if not skipped:
+        return None
+    ids = sorted({s for r in skipped for s in (r.failed_suggestions or r.requested_suggestions)})
+    return (
+        "⚠ "
+        + str(len(skipped))
+        + " run(s) not shown: suggestions could not be applied"
+        + (" (" + ", ".join(str(i) for i in ids) + ")" if ids else "")
+        + " - see Table"
+    )
+
+
+def _annotate_not_applied(ax: Any, records: Sequence[ExecutionRecord]) -> None:
+    """Make skipped runs visible in a chart that cannot plot them."""
+    note = not_applied_note(records)
+    if note is None:
+        return
+    ax.text(
+        0.99,
+        0.01,
+        note,
+        transform=ax.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=mode_style.ANNOTATION_SIZE,
+        color=mode_style.status_color(mode_style.NOT_APPLIED_STATUS),
+    )
 
 
 def _empty(ax: Any, message: str = "No execution results yet") -> None:
@@ -144,6 +203,10 @@ def render_pareto(
 
     rows = [r for r in records if r.config == config_filter or config_filter in (None, "all")]
     rows = [r for r in rows if not r.timeout]
+    # skipped runs have no coordinates to plot; they are reported by the annotation
+    # below and listed in full in the Table tab
+    chart_records = rows
+    rows = [r for r in rows if r.has_measurement]
     if valid_only:
         rows = [r for r in rows if r.valid]
     points: List[Tuple[ExecutionRecord, float, float]] = []
@@ -155,6 +218,7 @@ def render_pareto(
         points.append((r, x, y))
     if not points:
         _empty(ax)
+        _annotate_not_applied(ax, chart_records)
         return
 
     colors = mode_style.assign_config_colors([r.config for r in records])
@@ -215,6 +279,7 @@ def render_pareto(
     configs = sorted({r.config for r, _x, _y in points})
     modes = sorted({r.mode for r, _x, _y in points})
     _config_mode_legends(ax, configs, modes, colors)
+    _annotate_not_applied(ax, chart_records)
     mode_style.style_axes(ax)
     _setup_record_interaction(figure, on_select)
 
@@ -230,9 +295,11 @@ def render_scaling(
     figure.clear()
     ax = figure.add_subplot(111)
 
-    rows = [r for r in records if (config_filter in (None, "all") or r.config == config_filter) and r.valid]
+    candidates = [r for r in records if config_filter in (None, "all") or r.config == config_filter]
+    rows = [r for r in candidates if r.valid and r.has_measurement]
     if not rows:
         _empty(ax)
+        _annotate_not_applied(ax, candidates)
         return
 
     colors = mode_style.assign_config_colors([r.config for r in records])
@@ -281,6 +348,7 @@ def render_scaling(
     configs = sorted({c for (c, _m) in series})
     modes = sorted({m for (_c, m) in series})
     _config_mode_legends(ax, configs, modes, colors)
+    _annotate_not_applied(ax, candidates)
     mode_style.style_axes(ax)
     _setup_record_interaction(figure, on_select)
 
@@ -297,6 +365,7 @@ def render_bars(
     best = best_of(records, metric)
     if not best:
         _empty(ax, "No valid execution results yet")
+        _annotate_not_applied(ax, records)
         return
 
     configs = sorted({config for (config, _mode) in best})
@@ -334,5 +403,6 @@ def render_bars(
     ax.set_xlabel("Configuration")
     legend = ax.legend(title="mode", fontsize=mode_style.LEGEND_SIZE)
     mode_style.style_legend(legend)
+    _annotate_not_applied(ax, records)
     mode_style.style_axes(ax)
     _setup_record_interaction(figure, on_select)

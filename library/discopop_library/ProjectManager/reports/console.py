@@ -13,6 +13,7 @@ from typing import Any, Dict
 from tabulate import tabulate  # type: ignore
 
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.reports import entries
 
 
 def print_console_report(arguments: ProjectManagerArguments, timestamp: str) -> None:
@@ -59,20 +60,20 @@ def __print_table(execution_results: Dict[str, Any], timestamp: str) -> None:
                 seq_runtime: float = -1.0
                 if "seq_settings.json" in execution_results[configuration][script]:
                     for execution in execution_results[configuration][script]["seq_settings.json"]:
-                        if execution["code"] == 0:
+                        if execution["code"] == 0 and entries.was_executed(execution):
                             seq_runtime = execution["time"]
 
                 for execution in execution_results[configuration][script][setting]:
                     applied_suggestions_string += (
-                        textwrap.shorten(str(execution["applied_suggestions"]), width=20, placeholder="...]") + "\n"
+                        textwrap.shorten(entries.applied_suggestions_text(execution), width=32, placeholder="...]")
+                        + "\n"
                     )
                     return_codes_string += str(execution["code"]) + "\n"
-                    times_string += str(execution["time"]) + "\n"
+                    times_string += entries.runtime_text(execution) + "\n"
                     thread_counts_string += str(execution["thread_count"]) + "\n"
-                    speedup = seq_runtime / execution["time"]
-                    speedup_string += str(round(speedup, 3)) + "\n"
-                    efficiency = speedup / execution["thread_count"]
-                    efficiency_string += str(round(efficiency, 3)) + "\n"
+                    # a skipped run has no runtime; "-" instead of a division by zero
+                    speedup_string += entries.format_metric(entries.speedup_of(seq_runtime, execution)) + "\n"
+                    efficiency_string += entries.format_metric(entries.efficiency_of(seq_runtime, execution)) + "\n"
                     label_string += (execution["label"] + "\n") if "label" in execution else "\n"
 
                 if configuration_first_occurrence:

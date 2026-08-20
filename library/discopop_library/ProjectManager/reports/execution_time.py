@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from tabulate import tabulate  # type: ignore
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.reports import entries
 
 import logging
 import matplotlib.pyplot as plt
@@ -48,6 +49,9 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
                 times_string = ""
                 best_values_by_label: Dict[str, Dict[str, Any]] = dict()
                 for execution in execution_results[configuration][script][setting]:
+                    # a skipped run (suggestions not applied) is not a measurement
+                    if not entries.was_executed(execution):
+                        continue
                     label = execution["label"] if "label" in execution else ""
                     if label not in best_values_by_label:
                         best_values_by_label[label] = dict()
@@ -65,8 +69,12 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
                             best_values_by_label[label]["best_execution_time"] = execution["time"]
                             best_values_by_label[label]["best_thread_count"] = execution["thread_count"]
 
-                if best_values_by_label[label]["best_execution_time"] is None:
-                    best_values_by_label[label]["best_execution_time"] = 0.0
+                # Default every label that produced no usable measurement. This used to
+                # rely on the loop variable leaking out of the loop above, which breaks
+                # as soon as a setting contains no measured execution at all.
+                for known_label in best_values_by_label:
+                    if best_values_by_label[known_label]["best_execution_time"] is None:
+                        best_values_by_label[known_label]["best_execution_time"] = 0.0
 
                 clean_setting_str = setting.replace("_settings.json", "")
 

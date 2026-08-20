@@ -9,12 +9,16 @@
 from discopop_library.ProjectManager.gui.plots.mode_style import (
     CONFIG_PALETTE,
     DEFAULT_MARKER,
+    NOT_APPLIED_STATUS,
+    STATUS_ORDER,
     assign_config_colors,
     autotuner_status,
     execution_status,
     mode_dashes,
     mode_marker,
     status_color,
+    status_label,
+    status_marker,
 )
 
 
@@ -53,10 +57,26 @@ def test_status_colors() -> None:
     assert status_color("nonsense") == status_color("failed")  # safe fallback
 
 
+def test_not_applied_is_visually_distinct_from_every_other_status() -> None:
+    # a skipped run must be distinguishable from both a failure and a slow success
+    colors = {status: status_color(status) for status in STATUS_ORDER}
+    assert len(set(colors.values())) == len(STATUS_ORDER)
+    # and additionally carries its own marker, since it has no measurement to plot
+    assert status_marker(NOT_APPLIED_STATUS) != status_marker("valid")
+    assert status_marker("nonsense") == "o"
+    assert "not applied" in status_label(NOT_APPLIED_STATUS)
+
+
 def test_execution_status() -> None:
     assert execution_status(valid=True) == "valid"
     assert execution_status(valid=False) == "failed"
     assert execution_status(valid=False, timeout=True) == "failed"
+
+
+def test_execution_status_reports_an_unapplied_run_as_its_own_state() -> None:
+    # application_failed wins over every other flag: the run never happened
+    assert execution_status(valid=False, application_failed=True) == NOT_APPLIED_STATUS
+    assert execution_status(valid=True, application_failed=True) == NOT_APPLIED_STATUS
 
 
 def test_autotuner_status() -> None:
@@ -64,3 +84,8 @@ def test_autotuner_status() -> None:
     assert autotuner_status(0, False, True) == "invalid"
     assert autotuner_status(0, True, False) == "invalid"
     assert autotuner_status(1, False, False) == "failed"
+
+
+def test_autotuner_status_reports_an_unpatched_configuration_separately() -> None:
+    # would otherwise read as "invalid" (return code 0, result not valid)
+    assert autotuner_status(0, False, False, application_failed=True) == NOT_APPLIED_STATUS

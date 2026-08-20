@@ -16,15 +16,20 @@ import tkinter as tk
 
 
 from discopop_library.ProjectManager.configurations.compile_script import resolve_compile_script_path
-from discopop_library.ProjectManager.configurations.copying import copy_configuration
+from discopop_library.PatchApplicator.PatchApplicationResult import clear_application_result
+from discopop_library.ProjectManager.configurations.copying import (
+    copy_configuration,
+    get_application_result,
+    patch_applicator_dir_of,
+)
 from discopop_library.ProjectManager.configurations.deletion import delete_configuration
-from discopop_library.ProjectManager.configurations.execution import execute_configuration
+from discopop_library.ProjectManager.configurations.execution import execute_configuration, record_skipped_execution
 from discopop_library.ProjectManager.configurations.validation import has_validate_script, run_validation_phase
 from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import show_warning
 from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
-from typing import Optional
+from typing import Any, Optional
 
 
 class ExecutionMixin(ConfigManagerMixinBase):
@@ -194,7 +199,14 @@ class ExecutionMixin(ConfigManagerMixinBase):
         logger = logging.getLogger("Execute")
         logger.info(f"Starting execution of configuration: {current_config}")
 
+        # modes whose run was skipped because their patches could not be applied
+        application_failures: list[tuple[str, Any]] = []
+
         def thread_func() -> None:
+            if inplace:
+                # the project root's .discopop survives between runs; a result recorded
+                # by an earlier apply must not be attributed to this run
+                clear_application_result(patch_applicator_dir_of(self.arguments.project_root))
             if inplace and args_copy.apply_suggestions:
                 self.after(  # type: ignore
                     0,
@@ -234,6 +246,44 @@ class ExecutionMixin(ConfigManagerMixinBase):
                         project_copy_path = copy_configuration(args_copy, config_path, settings_path)
                     except Exception as e:
                         self.after(0, lambda e_msg=str(e): append_output(f"Error copying project: {e_msg}\n"))  # type: ignore
+                        continue
+
+                    # A failed patch application leaves the copy holding the ORIGINAL
+                    # code. Compiling and running it would produce a measurement that
+                    # looks like a parallel configuration without a speedup, so the run
+                    # is skipped and recorded as such instead.
+                    application_result = get_application_result(project_copy_path)
+                    if application_result is not None and application_result.failure:
+                        summary = application_result.summary()
+                        failed_ids = ", ".join(application_result.unapplied)
+                        self.after(  # type: ignore
+                            0,
+                            lambda s=summary, ids=failed_ids: append_output(
+                                "\n⚠ SUGGESTION APPLICATION FAILED for: "
+                                + ids
+                                + "\n  "
+                                + s
+                                + "\n  Skipping this run: executing the copy would measure the UNMODIFIED code.\n"
+                            ),
+                        )
+                        try:
+                            record_skipped_execution(
+                                args_copy,
+                                project_copy_path,
+                                config_path,
+                                settings_path,
+                                os.path.join(config_path, "execute.sh"),
+                                1 if mode == "seq" else thread_count,
+                                application_result,
+                            )
+                        except Exception as e:
+                            self.after(0, lambda e_msg=str(e): append_output(f"Error recording skipped run: {e_msg}\n"))  # type: ignore
+                        application_failures.append((mode, application_result))
+                        if not skip_cleanup:
+                            try:
+                                delete_configuration(args_copy, project_copy_path)
+                            except Exception:
+                                pass
                         continue
 
                 self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground=widgets.STATUS_BUSY))  # type: ignore
@@ -356,12 +406,47 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     except Exception:
                         pass
 
+            if application_failures:
+                modes_str = ", ".join(mode for mode, _res in application_failures)
+                details = "\n\n".join(mode + ": " + res.summary() for mode, res in application_failures)
+                self.after(  # type: ignore
+                    0,
+                    lambda: append_output(
+                        "\n⚠ "
+                        + str(len(application_failures))
+                        + " run(s) were SKIPPED because their suggestions could not be applied ("
+                        + modes_str
+                        + ").\n  They appear as '⚠ not applied' in the Report tab.\n"
+                    ),
+                )
+                self.after(  # type: ignore
+                    0,
+                    lambda: show_warning(
+                        self,
+                        "Suggestion Application Failed",
+                        "The selected parallelization suggestions could not be applied.\n\n"
+                        + details
+                        + "\n\nThe affected runs were skipped, because executing them would have "
+                        "measured the unmodified sequential code. They are recorded as "
+                        "'not applied' in the Report tab so they can be told apart from a "
+                        "parallel run without a speedup.",
+                    ),
+                )
+
             self.after(0, lambda: append_output("\n=== Execution complete ===\n"))  # type: ignore
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL, text="Run"))  # type: ignore
             self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.inplace_var.set(False))  # type: ignore
-            self.after(0, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
+            if application_failures:
+                self.after(  # type: ignore
+                    0,
+                    lambda: self.status_label.config(
+                        text="⚠ Suggestion application failed", foreground=widgets.STATUS_FAIL
+                    ),
+                )
+            else:
+                self.after(0, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
             self.after(0, lambda: self._refresh_config_list())  # type: ignore
             self.after(0, lambda: self._update_report_display())  # type: ignore
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
@@ -451,6 +536,8 @@ class ExecutionMixin(ConfigManagerMixinBase):
         def thread_func() -> None:
             logger.info(f"Starting {status_noun} preparation for: {current_config}")
             emit(f"Compiling in '{mode}' mode with inplace execution...\n\n")
+            # this always runs inplace; see the note in _run_execution
+            clear_application_result(patch_applicator_dir_of(self.arguments.project_root))
 
             compile_sh = resolve_compile_script_path(self.arguments.project_config_dir, current_config)
             shared_settings = os.path.join(self.arguments.project_config_dir, settings_filename)

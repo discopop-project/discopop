@@ -22,10 +22,11 @@ Two data sources are handled:
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 from discopop_library.EmpiricalAutotuning.output.progress import PROGRESS_PREFIX
+from discopop_library.ProjectManager.gui.plots import mode_style
 
 _SETTINGS_SUFFIX = "_settings.json"
 
@@ -46,6 +47,24 @@ class ExecutionRecord:
     valid: bool  # ran successfully (return code 0 and not timed out)
     speedup: Optional[float]  # seq-baseline time / this time (same config+script)
     efficiency: Optional[float]  # speedup / thread_count
+    # Suggestion application bookkeeping. ``application_failed`` marks a record that is
+    # *not* a measurement: the requested patches never reached the code, so the run was
+    # skipped rather than executed on the unmodified sources. Such a record carries no
+    # runtime, speedup or efficiency and must be kept out of every metric aggregation.
+    requested_suggestions: List[int] = field(default_factory=list)
+    failed_suggestions: List[int] = field(default_factory=list)
+    application_failed: bool = False
+    executed: bool = True
+
+    @property
+    def status(self) -> str:
+        """Status key for :mod:`mode_style` (valid / failed / not_applied)."""
+        return mode_style.execution_status(self.valid, self.timeout, self.application_failed)
+
+    @property
+    def has_measurement(self) -> bool:
+        """False for records that were never run (e.g. unapplied suggestions)."""
+        return self.executed and not self.application_failed
 
 
 def mode_of_setting(setting: str) -> str:
@@ -55,10 +74,19 @@ def mode_of_setting(setting: str) -> str:
     return setting
 
 
+def _was_executed(execution: Dict[str, Any]) -> bool:
+    """False for a placeholder entry recorded instead of an actual run."""
+    if execution.get("suggestion_application_failed", False):
+        return False
+    return bool(execution.get("executed", True))
+
+
 def _best_valid_runtime(executions: Sequence[Dict[str, Any]]) -> Optional[float]:
     """Best (smallest) runtime among valid (code 0, no timeout) executions, or None."""
     best: Optional[float] = None
     for execution in executions:
+        if not _was_executed(execution):
+            continue
         if execution.get("code") == 0 and not execution.get("timeout_expired", False):
             time = execution.get("time")
             if time is not None and (best is None or time < best):
@@ -82,7 +110,10 @@ def _unsuggested_runtime(executions: Sequence[Dict[str, Any]]) -> Optional[float
     Used as the baseline when no ``seq_settings.json`` group exists (autotuner runs
     write only the explored ``par`` combinations, never a sequential baseline).
     """
-    unsuggested = [e for e in executions if not e.get("applied_suggestions")]
+    # A run whose suggestions failed to apply also has an empty applied set, but it is
+    # not a baseline measurement -- it is not a measurement at all. Including it would
+    # let an unapplied configuration define the reference every speedup is divided by.
+    unsuggested = [e for e in executions if not e.get("applied_suggestions") and _was_executed(e)]
     if not unsuggested:
         return None
     return _best_valid_runtime(unsuggested)
@@ -108,8 +139,17 @@ def parse_execution_results(data: Dict[str, Any]) -> List[ExecutionRecord]:
                     timeout = bool(execution.get("timeout_expired", False))
                     time = float(execution.get("time", 0.0))
                     thread_count = int(execution.get("thread_count", 1))
-                    valid = code == 0 and not timeout
-                    speedup = baseline_runtime / time if (baseline_runtime is not None and time > 0) else None
+                    executed = _was_executed(execution)
+                    failed_suggestions = [int(s) for s in execution.get("failed_suggestions", [])]
+                    application_failed = bool(execution.get("suggestion_application_failed", False)) or bool(
+                        failed_suggestions
+                    )
+                    valid = code == 0 and not timeout and executed
+                    # a skipped run has no runtime, hence no speedup to report
+                    if executed and baseline_runtime is not None and time > 0:
+                        speedup: Optional[float] = baseline_runtime / time
+                    else:
+                        speedup = None
                     efficiency = speedup / thread_count if (speedup is not None and thread_count > 0) else None
                     records.append(
                         ExecutionRecord(
@@ -125,6 +165,10 @@ def parse_execution_results(data: Dict[str, Any]) -> List[ExecutionRecord]:
                             valid=valid,
                             speedup=speedup,
                             efficiency=efficiency,
+                            requested_suggestions=[int(s) for s in execution.get("requested_suggestions", [])],
+                            failed_suggestions=failed_suggestions,
+                            application_failed=application_failed,
+                            executed=executed,
                         )
                     )
     return records
