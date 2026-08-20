@@ -97,5 +97,5 @@ def from_optimizer_output(
     os.mkdir(suggestion_folder_path)
     for file_id in file_id_to_patches:
         patch_path = os.path.join(suggestion_folder_path, str(file_id) + ".patch")
-        with open(patch_path, "w") as f:
+        with open(patch_path, "w", newline="") as f:
             f.write(file_id_to_patches[file_id])
