@@ -10,6 +10,7 @@ from logging import Logger
 import subprocess
 from typing import Callable, Dict, List, Set, Tuple, cast
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
+from discopop_library.EmpiricalAutotuning.output.progress import DebugStatEntry
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
@@ -32,7 +33,7 @@ def check_single_combination(
     reference_configuration: CodeConfiguration,
     arguments: AutotunerArguments,
     timeout_after: float,
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]],
+    debug_stats: List[DebugStatEntry],
     get_unique_configuration_id: Callable[[], int],
     applied_suggestions: list[int],
 ) -> None:
@@ -64,6 +65,7 @@ def check_single_combination(
                 cast(ExecutionResult, tmp_config.execution_result).result_valid,
                 cast(ExecutionResult, tmp_config.execution_result).thread_sanitizer,
                 tmp_config.root_path,
+                cast(ExecutionResult, tmp_config.execution_result).failed_suggestions,
             )
         )
 
@@ -126,6 +128,7 @@ def check_single_combination(
             cast(ExecutionResult, cleaned_config.execution_result).result_valid,
             cast(ExecutionResult, cleaned_config.execution_result).thread_sanitizer,
             cleaned_config.root_path,
+            cast(ExecutionResult, cleaned_config.execution_result).failed_suggestions,
         )
     )
 

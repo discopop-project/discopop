@@ -15,6 +15,7 @@ import pytest
 
 from discopop_library.EmpiricalAutotuning.output.progress import (
     PROGRESS_PREFIX,
+    DebugStatEntry,
     ProgressList,
     ProgressReporter,
     count_outcomes,
@@ -73,7 +74,7 @@ def test_progress_list_emits_on_append(tmp_path: Path, capsys: "pytest.CaptureFi
     set_active_reporter(reporter)
     try:
         stats = ProgressList()
-        stats.append(([3, 7], 5.0, 0, True, True, "/tmp/x"))
+        stats.append(([3, 7], 5.0, 0, True, True, "/tmp/x", []))
         assert len(stats) == 1  # behaves like a list
     finally:
         set_active_reporter(None)
@@ -89,19 +90,20 @@ def test_progress_list_is_noop_without_active_reporter() -> None:
     set_active_reporter(None)
     assert get_active_reporter() is None
     stats = ProgressList()
-    stats.append(([1], 1.0, 0, True, True, "/tmp/x"))  # must not raise
+    stats.append(([1], 1.0, 0, True, True, "/tmp/x", []))  # must not raise
     assert len(stats) == 1
 
 
 def test_count_outcomes() -> None:
-    debug_stats = [
-        ([], 10.0, 0, True, True, "p0"),  # valid
-        ([1], 5.0, 0, True, True, "p1"),  # valid
-        ([2], 6.0, 0, False, True, "p2"),  # invalid (result check failed)
-        ([3], 7.0, 0, True, False, "p3"),  # invalid (tsan failed)
-        ([4], 1.0, 1, False, False, "p4"),  # failed (non-zero return code)
+    debug_stats: List[DebugStatEntry] = [
+        ([], 10.0, 0, True, True, "p0", []),  # valid
+        ([1], 5.0, 0, True, True, "p1", []),  # valid
+        ([2], 6.0, 0, False, True, "p2", []),  # invalid (result check failed)
+        ([3], 7.0, 0, True, False, "p3", []),  # invalid (tsan failed)
+        ([4], 1.0, 1, False, False, "p4", []),  # failed (non-zero return code)
+        ([5], 0.0, 0, False, False, "p5", [5]),  # not applied (patch did not apply)
     ]
-    assert count_outcomes(debug_stats) == (2, 2, 1)
+    assert count_outcomes(debug_stats) == (2, 2, 1, 1)
 
 
 def test_generation_event_carries_the_measured_average(tmp_path: Path) -> None:

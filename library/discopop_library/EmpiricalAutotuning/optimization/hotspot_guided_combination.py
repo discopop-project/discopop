@@ -38,6 +38,7 @@ from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeC
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
+from discopop_library.EmpiricalAutotuning.output.progress import DebugStatEntry
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType, parse_hotspot_types
 from discopop_library.HostpotLoader.detailed_hotspot_loader import (
@@ -465,7 +466,7 @@ def _evaluate(
     arguments: AutotunerArguments,
     timeout_after: float,
     get_unique_configuration_id: Callable[[], int],
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]],
+    debug_stats: List[DebugStatEntry],
     logger: Logger,
     deadline: Optional[float],
 ) -> Tuple[float, bool]:
@@ -491,15 +492,16 @@ def _evaluate(
     # A conflicting patch would otherwise be measured as if it had been applied, which
     # would make a rejected suggestion look merely useless instead of inapplicable.
     patch_result = tmp_config.apply_suggestions(arguments, list(configuration))
-    if patch_result != 0:
+    if patch_result is not None and patch_result.failure:
         logger.info(
             "Could not apply suggestions "
             + str(list(configuration))
-            + " (patch applicator returned "
-            + str(patch_result)
-            + "); treating the configuration as failed."
+            + ". "
+            + patch_result.summary()
+            + " Treating the configuration as failed."
         )
-        debug_stats.append((list(configuration), 0.0, 1, False, False, tmp_config.root_path))
+        failed_suggestions = patch_result.unapplied_ids
+        debug_stats.append((list(configuration), 0.0, 1, False, False, tmp_config.root_path, failed_suggestions))
         if not arguments.skip_cleanup:
             tmp_config.deleteFolder()
         cache.store(configuration, 0.0, False)
@@ -518,6 +520,7 @@ def _evaluate(
             exec_res.result_valid,
             exec_res.thread_sanitizer,
             tmp_config.root_path,
+            exec_res.failed_suggestions,
         )
     )
     is_valid = exec_res.return_code == 0 and exec_res.result_valid and exec_res.thread_sanitizer
@@ -533,7 +536,7 @@ def execute_hotspot_guided_combination(
     reference_configuration: CodeConfiguration,
     arguments: AutotunerArguments,
     timeout_after: float,
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]],
+    debug_stats: List[DebugStatEntry],
     get_unique_configuration_id: Callable[[], int],
 ) -> None:
     logger.info("Executing hotspot-guided region descent.")

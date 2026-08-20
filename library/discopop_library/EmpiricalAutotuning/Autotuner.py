@@ -41,11 +41,13 @@ from discopop_library.EmpiricalAutotuning.optimization.parallel_region_combinati
 )
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
 from discopop_library.EmpiricalAutotuning.output.progress import (
+    DebugStatEntry,
     ProgressList,
     ProgressReporter,
     count_outcomes,
     set_active_reporter,
 )
+from discopop_library.PatchApplicator.PatchApplicationResult import clear_application_result
 from discopop_library.EmpiricalAutotuning.priorities import get_prioritized_configurations
 from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids, restrict_patterns_to_ids
 from discopop_library.FolderStructure.setup import setup_auto_tuner
@@ -72,12 +74,15 @@ def run(arguments: AutotunerArguments) -> None:
     logger.info("Starting discopop autotuner.")
     # ``ProgressList`` emits a structured "measurement" progress event on every
     # append, so all step-based algorithms report progress without any change.
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]] = ProgressList()
+    debug_stats: List[DebugStatEntry] = ProgressList()
     statistics_graph = StatisticsGraph()
     statistics_step_num = 0
 
     setup_auto_tuner(os.getcwd())
     auto_tuner_dir = os.path.join(os.getcwd(), "auto_tuner")
+    # a result left over from an earlier apply must not be attributed to this run's
+    # reference measurement, which applies no suggestions at all
+    clear_application_result(os.path.join(arguments.dot_dp_path, "patch_applicator"))
 
     # structured progress channel (stdout @@AT_PROGRESS lines + progress.jsonl)
     progress_reporter = ProgressReporter(arguments.configuration, os.path.join(auto_tuner_dir, "progress.jsonl"))
@@ -106,6 +111,7 @@ def run(arguments: AutotunerArguments) -> None:
             cast(ExecutionResult, reference_configuration.execution_result).result_valid,
             cast(ExecutionResult, reference_configuration.execution_result).thread_sanitizer,
             reference_configuration.root_path,
+            cast(ExecutionResult, reference_configuration.execution_result).failed_suggestions,
         )
     )
 
@@ -250,7 +256,17 @@ def run(arguments: AutotunerArguments) -> None:
                 sibling_config = reference_configuration.create_copy(
                     arguments, "par_settings.json", get_unique_configuration_id
                 )
-                sibling_config.apply_suggestions(arguments, stat_entry[0])
+                application = sibling_config.apply_suggestions(arguments, stat_entry[0])
+                if application is not None and application.failure:
+                    # re-applying the winning combination failed, so this folder holds
+                    # the unmodified code; reporting it as the result would claim a
+                    # parallelization that is not in the code
+                    logger.error(
+                        "Could not re-apply the best combination " + str(stat_entry[0]) + ": " + application.summary()
+                    )
+                    if not arguments.skip_cleanup:
+                        sibling_config.deleteFolder()
+                    continue
                 sibling_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
                 best_suggestion_configuration = (stat_entry[0], sibling_config)
                 if not arguments.skip_cleanup:
@@ -262,7 +278,17 @@ def run(arguments: AutotunerArguments) -> None:
                 sibling_config = reference_configuration.create_copy(
                     arguments, "par_settings.json", get_unique_configuration_id
                 )
-                sibling_config.apply_suggestions(arguments, stat_entry[0])
+                application = sibling_config.apply_suggestions(arguments, stat_entry[0])
+                if application is not None and application.failure:
+                    # re-applying the winning combination failed, so this folder holds
+                    # the unmodified code; reporting it as the result would claim a
+                    # parallelization that is not in the code
+                    logger.error(
+                        "Could not re-apply the best combination " + str(stat_entry[0]) + ": " + application.summary()
+                    )
+                    if not arguments.skip_cleanup:
+                        sibling_config.deleteFolder()
+                    continue
                 sibling_config.execute(arguments, timeout=timeout_after, thread_count=arguments.thread_count)
                 best_suggestion_configuration = (stat_entry[0], sibling_config)
                 if not arguments.skip_cleanup:
@@ -294,10 +320,12 @@ def run(arguments: AutotunerArguments) -> None:
                 break
 
     # calculate result statistics
-    speedup = (
-        cast(ExecutionResult, reference_configuration.execution_result).runtime
-        / cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime
-    )
+    best_runtime = cast(ExecutionResult, best_suggestion_configuration[1].execution_result).runtime
+    if best_runtime > 0:
+        speedup = cast(ExecutionResult, reference_configuration.execution_result).runtime / best_runtime
+    else:
+        # no measurement exists (e.g. every candidate's patches failed to apply)
+        speedup = 1.0
     parallel_efficiency = speedup * (1 / arguments.thread_count)
 
     # show result and statistics
@@ -330,6 +358,7 @@ def run(arguments: AutotunerArguments) -> None:
         results_dict[arguments.configuration]["time"] = cast(
             ExecutionResult, best_suggestion_configuration[1].execution_result
         ).runtime
+        results_dict[arguments.configuration]["not_applied_count"] = count_outcomes(debug_stats)[3]
 
         with open(results_json_path, "w+") as f:
             json.dump(results_dict, f, sort_keys=True, indent=4)
@@ -339,7 +368,14 @@ def run(arguments: AutotunerArguments) -> None:
 
     # emit the final result and persist the full measurement trace so the GUI can
     # (re-)draw the search without re-running the autotuner.
-    valid_count, invalid_count, failed_count = count_outcomes(debug_stats)
+    valid_count, invalid_count, failed_count, not_applied_count = count_outcomes(debug_stats)
+    if not_applied_count:
+        logger.error(
+            str(not_applied_count)
+            + " of "
+            + str(len(debug_stats))
+            + " configurations could not be patched and were therefore not measured."
+        )
     progress_reporter.result(
         best_suggestion_configuration[0],
         speedup,
@@ -349,6 +385,7 @@ def run(arguments: AutotunerArguments) -> None:
         invalid_count,
         failed_count,
         optimization_time_s,
+        not_applied_count=not_applied_count,
     )
     measurements_path = os.path.join(auto_tuner_dir, "measurements.json")
     with open(measurements_path, "w+") as f:

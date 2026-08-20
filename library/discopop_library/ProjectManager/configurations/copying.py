@@ -13,11 +13,30 @@ from pathlib import Path
 import shutil
 from typing import List, Optional
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.PatchApplicator.PatchApplicationResult import (
+    PatchApplicationResult,
+    clear_application_result,
+    read_application_result,
+)
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
-from discopop_library.PatchApplicator.patch_applicator import run as apply_suggestions
+from discopop_library.PatchApplicator.patch_applicator import run_with_result as apply_suggestions
 
 PATH = str
 logger = logging.getLogger("ConfigurationManager")
+
+
+def patch_applicator_dir_of(project_copy_path: PATH) -> PATH:
+    """The ``patch_applicator`` directory inside a project copy's ``.discopop``."""
+    return os.path.join(project_copy_path, ".discopop", "patch_applicator")
+
+
+def get_application_result(project_copy_path: PATH) -> Optional[PatchApplicationResult]:
+    """The suggestion application outcome recorded for a project copy, if any.
+
+    Returned as written by :func:`copy_configuration`; ``None`` means no suggestions
+    were requested for this copy.
+    """
+    return read_application_result(patch_applicator_dir_of(project_copy_path))
 
 
 def copy_configuration(
@@ -88,7 +107,19 @@ def copy_configuration(
         )
         home_dir = os.getcwd()
         os.chdir(dp_folder_path)
-        apply_suggestions(pa_args)
-        os.chdir(home_dir)
+        try:
+            _retval, application_result = apply_suggestions(pa_args)
+        finally:
+            os.chdir(home_dir)
+        # A failed application leaves the copy holding the *original*, sequential
+        # code. Callers must be able to see that instead of measuring it as if it
+        # were parallelized, so the outcome is logged here and persisted by the
+        # patch applicator for later consumers (see get_application_result).
+        if application_result is not None and application_result.failure:
+            logger.error("Suggestion application incomplete: " + application_result.summary())
+    else:
+        # the copy inherits the source project's .discopop; a result file left over
+        # from an earlier run must not be mistaken for this copy's outcome
+        clear_application_result(patch_applicator_dir_of(project_copy_path))
 
     return project_copy_path

@@ -14,13 +14,20 @@ import shutil
 import signal
 import subprocess
 import time
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from filelock import FileLock
 
+from discopop_library.PatchApplicator.PatchApplicationResult import PatchApplicationResult, read_application_result
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
 
 PATH = str
+
+# Return code stored for a run that was never started because the requested
+# parallelization suggestions could not be applied. It is deliberately not 0: such a
+# record carries no measurement, and treating it as a successful run would report the
+# unmodified sequential code as a parallel configuration without a speedup.
+NOT_EXECUTED_RETURN_CODE = -1
 
 logger = logging.getLogger("ConfigurationManager")
 
@@ -82,11 +89,9 @@ def execute_configuration(
     project_copy_dp_path = os.path.join(project_copy_root_path, ".discopop")
 
     # get applied suggestions
-    applied_suggestions_file = os.path.join(project_copy_dp_path, "patch_applicator", "applied_suggestions.json")
-    applied_suggestions: List[int] = []
-    if os.path.exists(applied_suggestions_file):
-        with open(applied_suggestions_file, "r") as f:
-            applied_suggestions = json.load(f)["applied"]
+    applied_suggestions = read_applied_suggestions(project_copy_dp_path)
+    # ... and whether all *requested* suggestions actually made it into the code
+    application_result = read_application_result(os.path.join(project_copy_dp_path, "patch_applicator"))
 
     # load environment settings
     logger.debug(
@@ -178,11 +183,79 @@ def execute_configuration(
     logger.debug("-> elapsed time: " + str(elapsed) + "s")
 
     # save execution results
+    _store_execution_result(
+        arguments,
+        config_name,
+        script_name,
+        settings_name,
+        applied_suggestions,
+        application_result,
+        {
+            "code": p.returncode,
+            "stdout": stdout.decode("utf-8") if not timeout_expired else "",
+            "stderr": stderr.decode("utf-8") if not timeout_expired else "",
+            "timeout_expired": timeout_expired,
+            "time": elapsed,
+            "thread_count": thread_count,
+            "executed": True,
+        },
+    )
+
+    os.chdir(home_dir)
+
+    return (
+        p.returncode,
+        elapsed,
+        stdout.decode("utf-8") if not timeout_expired else "",
+        stderr.decode("utf-8") if not timeout_expired else "",
+    )
+
+
+def read_applied_suggestions(dot_discopop_path: PATH) -> List[int]:
+    """The suggestion ids the patch applicator actually put into the code."""
+    applied_suggestions_file = os.path.join(dot_discopop_path, "patch_applicator", "applied_suggestions.json")
+    if not os.path.exists(applied_suggestions_file):
+        return []
+    try:
+        with open(applied_suggestions_file, "r") as f:
+            applied: List[int] = json.load(f)["applied"]
+            return applied
+    except (OSError, json.JSONDecodeError, KeyError):
+        return []
+
+
+def _execution_label(arguments: ProjectManagerArguments) -> str:
+    label: str = "" + arguments.label_prefix
+    if arguments.apply_suggestions == "auto":
+        label += "auto"
+    if arguments.apply_suggestions == "prm":
+        label += "prm"
+    return label
+
+
+def _store_execution_result(
+    arguments: ProjectManagerArguments,
+    config_name: str,
+    script_name: str,
+    settings_name: str,
+    applied_suggestions: List[int],
+    application_result: Optional[PatchApplicationResult],
+    measurement: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Append one entry to ``execution_results.json``, replacing an equivalent one.
+
+    ``requested_suggestions`` / ``failed_suggestions`` /
+    ``suggestion_application_failed`` are stored next to the measurement so every
+    consumer (Report tab, PDF/CSV reports) can tell a genuine measurement apart from
+    a run of unmodified code. They are also part of the duplicate key: otherwise a
+    failed application -- whose ``applied_suggestions`` is empty -- would overwrite
+    the configuration's real no-suggestion baseline entry.
+    """
     lock = FileLock(os.path.join(arguments.project_dir, "execution_results.json.lock"))
     with lock:
 
         execution_results_path = os.path.join(arguments.project_dir, "execution_results.json")
-        execution_results = dict()
+        execution_results: Dict[str, Any] = dict()
         if os.path.exists(execution_results_path):
             with open(execution_results_path, "r") as f:
                 execution_results = json.load(f)
@@ -194,29 +267,31 @@ def execute_configuration(
         if settings_name not in execution_results[config_name][script_name]:
             execution_results[config_name][script_name][settings_name] = []
 
-        label: str = "" + arguments.label_prefix
-        if arguments.apply_suggestions == "auto":
-            label += "auto"
-        if arguments.apply_suggestions == "prm":
-            label += "prm"
+        label = _execution_label(arguments)
+        requested_suggestions = [int(s) for s in application_result.requested] if application_result is not None else []
+        failed_suggestions = [int(s) for s in application_result.unapplied] if application_result is not None else []
 
-        result_dict = {
+        result_dict: Dict[str, Any] = {
             "applied_suggestions": applied_suggestions,
-            "code": p.returncode,
-            "stdout": stdout.decode("utf-8") if not timeout_expired else "",
-            "stderr": stderr.decode("utf-8") if not timeout_expired else "",
-            "timeout_expired": timeout_expired,
-            "time": elapsed,
-            "thread_count": thread_count,
+            "requested_suggestions": requested_suggestions,
+            "failed_suggestions": failed_suggestions,
+            "suggestion_application_failed": bool(failed_suggestions),
             "label": label,
         }
+        result_dict.update(measurement)
+
         # check for duplicates and overwrite them
         to_be_removed: List[int] = []
         for idx, entry in enumerate(execution_results[config_name][script_name][settings_name]):
-            if entry["applied_suggestions"] == applied_suggestions:
-                if entry["thread_count"] == thread_count:
-                    if entry["label"] == label:
-                        to_be_removed.append(idx)
+            if entry["applied_suggestions"] != applied_suggestions:
+                continue
+            if entry.get("requested_suggestions", []) != requested_suggestions:
+                continue
+            if entry["thread_count"] != result_dict["thread_count"]:
+                continue
+            if entry["label"] != label:
+                continue
+            to_be_removed.append(idx)
         for idx in sorted(to_be_removed, reverse=True):
             del execution_results[config_name][script_name][settings_name][idx]
         execution_results[config_name][script_name][settings_name].append(result_dict)
@@ -225,11 +300,40 @@ def execute_configuration(
         with open(execution_results_path, "w+") as f:
             json.dump(execution_results, f, sort_keys=True, indent=4)
 
-    os.chdir(home_dir)
+    return result_dict
 
-    return (
-        p.returncode,
-        elapsed,
-        stdout.decode("utf-8") if not timeout_expired else "",
-        stderr.decode("utf-8") if not timeout_expired else "",
+
+def record_skipped_execution(
+    arguments: ProjectManagerArguments,
+    project_copy_root_path: PATH,
+    config_path: PATH,
+    settings_path: PATH,
+    script_path: PATH,
+    thread_count: int,
+    application_result: PatchApplicationResult,
+) -> Dict[str, Any]:
+    """Record that a run was skipped because its suggestions could not be applied.
+
+    Compiling and executing the copy would measure the *original* code, so the run is
+    not started at all. A placeholder entry is written nonetheless: without it the
+    case would be invisible in the Report tab and could not be told apart from a
+    configuration that was never requested.
+    """
+    project_copy_dp_path = os.path.join(project_copy_root_path, ".discopop")
+    return _store_execution_result(
+        arguments,
+        os.path.basename(config_path),
+        os.path.basename(script_path),
+        os.path.basename(settings_path),
+        read_applied_suggestions(project_copy_dp_path),
+        application_result,
+        {
+            "code": NOT_EXECUTED_RETURN_CODE,
+            "stdout": "",
+            "stderr": application_result.summary(),
+            "timeout_expired": False,
+            "time": 0.0,
+            "thread_count": thread_count,
+            "executed": False,
+        },
     )

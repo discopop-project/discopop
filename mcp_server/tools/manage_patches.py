@@ -67,6 +67,19 @@ TOOL = Tool(
 )
 
 
+def _read_application_result(discopop_dir: Path) -> Optional[dict[str, Any]]:
+    """The structured outcome the patch applicator writes for an --apply run."""
+    path = discopop_dir / "patch_applicator" / "application_result.json"
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
 def _find_patch_applicator() -> Optional[str]:
     venv_bin = os.path.dirname(sys.executable)
     env_path = os.environ.get("PATH", "")
@@ -195,7 +208,23 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             result["suggestion_ids"] = suggestion_ids
         if applied_suggestions is not None:
             result["applied_suggestions"] = applied_suggestions
-        if proc.returncode == 2:
+        # The applicator records exactly which requested suggestions reached the code.
+        # Reporting the unapplied ones is what keeps a caller from measuring or
+        # reviewing unmodified code in the belief that it was parallelized.
+        if action == "apply":
+            application = _read_application_result(discopop_dir)
+            if application:
+                result["applied_now"] = application.get("applied", [])
+                unapplied = list(application.get("failed", [])) + list(application.get("unknown", []))
+                if unapplied:
+                    result["not_applied"] = unapplied
+                    result["status"] = "partial" if application.get("applied") else "error"
+                    result["message"] = (
+                        "The following suggestions were NOT applied: "
+                        + ", ".join(unapplied)
+                        + ". The affected files are unchanged, so the code is not parallelized as requested."
+                    )
+        if proc.returncode == 2 and "message" not in result:
             result["message"] = "Some patches were applied; others may have failed. Check stderr for details."
         if proc.returncode == 3:
             result["message"] = "Nothing to do (no patches to roll back or load)."

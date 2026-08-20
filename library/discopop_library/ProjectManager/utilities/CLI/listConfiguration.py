@@ -16,9 +16,17 @@ from discopop_library.ProjectManager.configurations.compile_script import (
     resolve_compile_script_path,
     validation_needs_separate_compile,
 )
-from discopop_library.ProjectManager.configurations.copying import copy_configuration
+from discopop_library.PatchApplicator.PatchApplicationResult import clear_application_result
+from discopop_library.ProjectManager.configurations.copying import (
+    copy_configuration,
+    get_application_result,
+    patch_applicator_dir_of,
+)
 from discopop_library.ProjectManager.configurations.deletion import delete_configuration
-from discopop_library.ProjectManager.configurations.execution import execute_configuration
+from discopop_library.ProjectManager.configurations.execution import (
+    execute_configuration,
+    record_skipped_execution,
+)
 from discopop_library.ProjectManager.configurations.validation import has_validate_script, run_validation_phase
 
 logger = logging.getLogger("ConfigurationManager")
@@ -140,6 +148,12 @@ def show_configurations_with_execution(
             arguments.project_config_dir, os.path.basename(config)
         )
 
+        if arguments.execute_inplace:
+            # inplace runs reuse the project root's .discopop, which -- unlike a fresh
+            # copy -- is never rewritten; drop a result recorded by an earlier apply so
+            # it cannot be attributed to this run
+            clear_application_result(patch_applicator_dir_of(arguments.project_root))
+
         # collect overview information
         compile_sh = resolve_compile_script_path(arguments.project_config_dir, os.path.basename(config))
         shared_dp_settings = os.path.join(arguments.project_config_dir, "dp_settings.json")
@@ -156,14 +170,28 @@ def show_configurations_with_execution(
                 else copy_configuration(arguments, config, shared_dp_settings)
             )
 
-            ret = execute_configuration(
+            # A failed patch application leaves the copy holding the original code;
+            # compiling and measuring it would misreport it as a parallel run.
+            dp_application_failed = __handle_application_failure(
                 arguments,
                 dp_project_path,
                 config,
                 shared_dp_settings,
-                compile_sh,
+                os.path.join(config, "execute.sh"),
                 __get_thread_count(config, "dp", config_thread_counts),
-                arguments.timeout_compilation,
+            )
+            ret = (
+                None
+                if dp_application_failed
+                else execute_configuration(
+                    arguments,
+                    dp_project_path,
+                    config,
+                    shared_dp_settings,
+                    compile_sh,
+                    __get_thread_count(config, "dp", config_thread_counts),
+                    arguments.timeout_compilation,
+                )
             )
             dp_compile_successful = ret is not None and ret[0] == 0
 
@@ -189,14 +217,28 @@ def show_configurations_with_execution(
                 else copy_configuration(arguments, config, shared_hd_settings)
             )
 
-            ret = execute_configuration(
+            # A failed patch application leaves the copy holding the original code;
+            # compiling and measuring it would misreport it as a parallel run.
+            hd_application_failed = __handle_application_failure(
                 arguments,
                 hd_project_path,
                 config,
                 shared_hd_settings,
-                compile_sh,
+                os.path.join(config, "execute.sh"),
                 __get_thread_count(config, "hd", config_thread_counts),
-                arguments.timeout_compilation,
+            )
+            ret = (
+                None
+                if hd_application_failed
+                else execute_configuration(
+                    arguments,
+                    hd_project_path,
+                    config,
+                    shared_hd_settings,
+                    compile_sh,
+                    __get_thread_count(config, "hd", config_thread_counts),
+                    arguments.timeout_compilation,
+                )
             )
             hd_compile_successful = ret is not None and ret[0] == 0
 
@@ -221,14 +263,28 @@ def show_configurations_with_execution(
                 if arguments.execute_inplace
                 else copy_configuration(arguments, config, shared_seq_settings)
             )
-            ret = execute_configuration(
+            # A failed patch application leaves the copy holding the original code;
+            # compiling and measuring it would misreport it as a parallel run.
+            seq_application_failed = __handle_application_failure(
                 arguments,
                 seq_project_path,
                 config,
                 shared_seq_settings,
-                compile_sh,
+                os.path.join(config, "execute.sh"),
                 __get_thread_count(config, "seq", config_thread_counts),
-                arguments.timeout_compilation,
+            )
+            ret = (
+                None
+                if seq_application_failed
+                else execute_configuration(
+                    arguments,
+                    seq_project_path,
+                    config,
+                    shared_seq_settings,
+                    compile_sh,
+                    __get_thread_count(config, "seq", config_thread_counts),
+                    arguments.timeout_compilation,
+                )
             )
             seq_compile_successful = ret is not None and ret[0] == 0
 
@@ -270,14 +326,28 @@ def show_configurations_with_execution(
                 if arguments.execute_inplace
                 else copy_configuration(arguments, config, shared_par_settings)
             )
-            ret = execute_configuration(
+            # A failed patch application leaves the copy holding the original code;
+            # compiling and measuring it would misreport it as a parallel run.
+            par_application_failed = __handle_application_failure(
                 arguments,
                 par_project_path,
                 config,
                 shared_par_settings,
-                compile_sh,
+                os.path.join(config, "execute.sh"),
                 __get_thread_count(config, "par", config_thread_counts),
-                arguments.timeout_compilation,
+            )
+            ret = (
+                None
+                if par_application_failed
+                else execute_configuration(
+                    arguments,
+                    par_project_path,
+                    config,
+                    shared_par_settings,
+                    compile_sh,
+                    __get_thread_count(config, "par", config_thread_counts),
+                    arguments.timeout_compilation,
+                )
             )
             par_compile_successful = ret is not None and ret[0] == 0
 
@@ -433,3 +503,27 @@ def __get_default_thread_count() -> int:
         return 4  # default if no value could be determined
 
     return int(cpu_count / 2)  # account of hyperthreading typically encountered as a default
+
+
+def __handle_application_failure(
+    arguments: ProjectManagerArguments,
+    project_path: str,
+    config: str,
+    settings_path: str,
+    script_path: str,
+    thread_count: int,
+) -> bool:
+    """True when the copy's requested suggestions did not all reach the code.
+
+    A placeholder entry is recorded in that case, so the skipped run stays visible in
+    the reports instead of silently looking like a parallel run without a speedup.
+    """
+    if arguments.execute_inplace:
+        return False
+    result = get_application_result(project_path)
+    if result is None or not result.failure:
+        return False
+    print("WARNING: " + result.summary())
+    print("Skipping this run: executing the copy would measure the UNMODIFIED code.")
+    record_skipped_execution(arguments, project_path, config, settings_path, script_path, thread_count, result)
+    return True

@@ -17,7 +17,8 @@ from discopop_library.SanityChecker.ArgumentClasses import SanityCheckerArgument
 from discopop_library.SanityChecker.Classes.ExecutionResult import ExecutionResult
 from discopop_library.SanityChecker.Types import SUGGESTION_ID
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
-from discopop_library.PatchApplicator.patch_applicator import run as apply_patches
+from discopop_library.PatchApplicator.PatchApplicationResult import PatchApplicationResult
+from discopop_library.PatchApplicator.patch_applicator import run_with_result as apply_patches
 
 logger = logging.getLogger("CodeConfiguration")
 
@@ -123,8 +124,14 @@ class CodeConfiguration(object):
         shutil.rmtree(self.root_path)
         logger.debug("Deleted " + self.root_path)
 
-    def apply_suggestions(self, arguments: SanityCheckerArguments, suggestion_ids: List[SUGGESTION_ID]) -> None:
-        """Applies the given suggestion to the code configuration via discopop_patch_applicator"""
+    def apply_suggestions(
+        self, arguments: SanityCheckerArguments, suggestion_ids: List[SUGGESTION_ID]
+    ) -> Optional[PatchApplicationResult]:
+        """Applies the given suggestion to the code configuration via discopop_patch_applicator
+
+        Returns which of the requested suggestions reached the code. A caller that
+        ignores a failure would be checking the unmodified original instead.
+        """
         sub_logger = logger.getChild("apply_suggestions")
 
         sub_logger.debug("Applying patch applicator for: " + str(suggestion_ids))
@@ -133,7 +140,7 @@ class CodeConfiguration(object):
         save_dir = os.getcwd()
         os.chdir(self.config_dot_dp_path)
         try:
-            ret_val = apply_patches(
+            ret_val, application_result = apply_patches(
                 PatchApplicatorArguments(
                     arguments.log_level, arguments.write_log, False, suggestion_ids_str, [], False, False, False
                 )
@@ -144,3 +151,6 @@ class CodeConfiguration(object):
             sub_logger.debug("Got Exception during call to patch applicator.")
             os.chdir(save_dir)
             raise ex
+        if application_result is not None and application_result.failure:
+            sub_logger.error(application_result.summary())
+        return application_result

@@ -20,7 +20,9 @@ Each event is both
 Event kinds (field ``event``):
 
 * ``baseline``    -- the untuned reference measurement (``par_settings.json``).
-* ``measurement`` -- one measured configuration, in search order.
+* ``measurement`` -- one measured configuration, in search order. Carries
+  ``application_failed`` / ``failed_suggestions`` when the configuration's patches
+  could not be applied, in which case no runtime was measured at all.
 * ``generation``  -- one evolutionary generation summary (evolutionary only).
 * ``result``      -- the final best configuration + run statistics.
 
@@ -47,8 +49,13 @@ from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 PROGRESS_PREFIX = "@@AT_PROGRESS "
 
 # The entry tuple stored in ``debug_stats``:
-# (applied_suggestions, runtime, return_code, result_valid, thread_sanitizer, path)
-DebugStatEntry = Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]
+# (applied_suggestions, runtime, return_code, result_valid, thread_sanitizer, path,
+#  failed_suggestions)
+# ``failed_suggestions`` holds the requested suggestions that never reached the code.
+# A non-empty list means the entry is NOT a measurement of the suggestions it is
+# labelled with -- the configuration was not run at all -- so it must be reported and
+# counted separately from a parallel run that merely achieved no speedup.
+DebugStatEntry = Tuple[List[SUGGESTION_ID], float, int, bool, bool, str, List[SUGGESTION_ID]]
 
 
 class ProgressReporter:
@@ -97,8 +104,10 @@ class ProgressReporter:
         valid: bool,
         tsan: bool,
         generation: Optional[int] = None,
+        failed_suggestions: Optional[List[SUGGESTION_ID]] = None,
     ) -> None:
         self._index += 1
+        application_failed = bool(failed_suggestions)
         obj: Dict[str, Any] = {
             "event": "measurement",
             "index": self._index,
@@ -107,7 +116,10 @@ class ProgressReporter:
             "return_code": int(return_code),
             "valid": bool(valid),
             "tsan": bool(tsan),
-            "speedup": self._speedup(runtime),
+            # no runtime was measured for a configuration whose patches did not apply
+            "speedup": None if application_failed else self._speedup(runtime),
+            "application_failed": application_failed,
+            "failed_suggestions": [int(s) for s in (failed_suggestions or [])],
         }
         if generation is not None:
             obj["generation"] = int(generation)
@@ -152,10 +164,12 @@ class ProgressReporter:
         invalid_count: int,
         failed_count: int,
         optimization_time_s: float,
+        not_applied_count: int = 0,
     ) -> None:
         self._emit(
             {
                 "event": "result",
+                "not_applied_count": int(not_applied_count),
                 "suggestions": [int(s) for s in suggestions],
                 "speedup": round(speedup, 4),
                 "efficiency": round(efficiency, 4),
@@ -203,23 +217,36 @@ class ProgressList(List[DebugStatEntry]):
         super().append(entry)
         reporter = get_active_reporter()
         if reporter is not None:
-            suggestions, runtime, return_code, valid, tsan, _path = entry
-            reporter.measurement(suggestions, runtime, return_code, valid, tsan)
+            suggestions, runtime, return_code, valid, tsan, _path = entry[:6]
+            # tolerate entries without the failed-suggestions element (older callers)
+            failed_suggestions = list(entry[6]) if len(entry) > 6 else []
+            reporter.measurement(
+                suggestions,
+                runtime,
+                return_code,
+                valid,
+                tsan,
+                failed_suggestions=failed_suggestions,
+            )
 
 
-def count_outcomes(debug_stats: List[DebugStatEntry]) -> Tuple[int, int, int]:
-    """Return (valid, invalid, failed) counts over measured configurations.
+def count_outcomes(debug_stats: List[DebugStatEntry]) -> Tuple[int, int, int, int]:
+    """Return (valid, invalid, failed, not_applied) counts over configurations.
 
-    * failed  -- non-zero return code (compilation/execution error or timeout)
-    * invalid -- ran (return code 0) but the result or thread-sanitizer check failed
-    * valid   -- ran and passed both validity and thread-sanitizer checks
+    * not_applied -- the requested patches did not apply, so nothing was measured
+    * failed      -- non-zero return code (compilation/execution error or timeout)
+    * invalid     -- ran (return code 0) but the result or thread-sanitizer check failed
+    * valid       -- ran and passed both validity and thread-sanitizer checks
     """
-    valid = invalid = failed = 0
-    for _suggestions, _runtime, return_code, result_valid, tsan, _path in debug_stats:
-        if return_code != 0:
+    valid = invalid = failed = not_applied = 0
+    for entry in debug_stats:
+        _suggestions, _runtime, return_code, result_valid, tsan, _path = entry[:6]
+        if len(entry) > 6 and entry[6]:
+            not_applied += 1
+        elif return_code != 0:
             failed += 1
         elif result_valid and tsan:
             valid += 1
         else:
             invalid += 1
-    return valid, invalid, failed
+    return valid, invalid, failed, not_applied

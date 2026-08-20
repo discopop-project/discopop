@@ -20,7 +20,7 @@ from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeC
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_debug_stats
-from discopop_library.EmpiricalAutotuning.output.progress import get_active_reporter
+from discopop_library.EmpiricalAutotuning.output.progress import DebugStatEntry, get_active_reporter
 from discopop_library.HostpotLoader.utilities import get_patterns_by_hotspot_type
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -60,7 +60,7 @@ def execute_evolutionary_combination(
     reference_configuration: CodeConfiguration,
     arguments: AutotunerArguments,
     timeout_after: float,
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]],
+    debug_stats: List[DebugStatEntry],
     get_unique_configuration_id: Callable[[], int],
 ) -> None:
 
@@ -111,6 +111,7 @@ def execute_evolutionary_combination(
             cast(ExecutionResult, tmp_config.execution_result).result_valid,
             cast(ExecutionResult, tmp_config.execution_result).thread_sanitizer,
             tmp_config.root_path,
+            cast(ExecutionResult, tmp_config.execution_result).failed_suggestions,
         )
     )
 
@@ -638,6 +639,24 @@ def __calculate_fitness(
     for entry in search_bar(
         [p for p in population_wo_duplicates if p not in fitness_cache], desc="Executing population"
     ):
+        unapplied = __application_failed(entry)
+        if unapplied is not None:
+            # Not a measurement at all: the patches never reached the code, so this
+            # chromosome is reported as "not applied" instead of as a slow parallel
+            # run. Fitness stays 0.0 via validity_cache.
+            return_code_cache[entry] = 0
+            validity_cache[entry] = False
+            newly_evaluated.append(entry)
+            reporter = get_active_reporter()
+            if reporter is not None:
+                reporter.measurement(
+                    list(entry), 0.0, 0, False, False, generation=generation, failed_suggestions=unapplied
+                )
+            if not arguments.skip_cleanup and entry in entry_to_configuration:
+                entry_to_configuration[entry].deleteFolder()
+                del entry_to_configuration[entry]
+            continue
+
         if entry not in compilation_successful or not compilation_successful[entry]:
             # A configuration that does not build is a failed evaluation, not a
             # non-event: record it so it scores 0.0 and shows up in the search plot.
@@ -670,6 +689,7 @@ def __calculate_fitness(
                 exec_res.result_valid,
                 exec_res.thread_sanitizer,
                 generation=generation,
+                failed_suggestions=exec_res.failed_suggestions,
             )
 
         if not arguments.skip_cleanup:
@@ -708,6 +728,23 @@ def get_fitness(chromosome: CHROMOSOME, reference_runtime: float) -> FITNESS:
     return reference_runtime / runtime
 
 
+def __application_failed(chromosome: CHROMOSOME) -> Optional[List[int]]:
+    """The requested suggestions that never reached this chromosome's code, or None.
+
+    None means the code was patched as requested (or nothing was requested). A list
+    means the configuration must neither be built nor measured, because its runtime
+    would be the runtime of the unmodified code.
+    """
+    global entry_to_configuration
+    configuration = entry_to_configuration.get(chromosome)
+    if configuration is None:
+        return None
+    application = configuration.suggestion_application
+    if application is None or not application.failure:
+        return None
+    return [int(s) for s in application.unapplied if s.lstrip("-").isdigit()]
+
+
 def __compile_population(
     logger: Logger,
     population: List[CHROMOSOME],
@@ -727,12 +764,19 @@ def __compile_population(
         entry_to_configuration[entry] = reference_configuration.create_copy(
             arguments, "par_settings.json", get_unique_configuration_id
         )
-        entry_to_configuration[entry].apply_suggestions(arguments, list(entry))
+        application = entry_to_configuration[entry].apply_suggestions(arguments, list(entry))
+        if application is not None and application.failure:
+            # the copy still holds the unmodified code, so building and measuring it
+            # would attribute a sequential runtime to this chromosome
+            logger.error("Not building " + str(entry) + ": " + application.summary())
+            compilation_successful[entry] = False
     logger.info("----- Compiling")
     local_results: List[Tuple[CHROMOSOME, bool]] = []
     param_list: List[Tuple[CHROMOSOME, AutotunerArguments, float]] = []
     for entry in population:
         if entry in fitness_cache:
+            continue
+        if __application_failed(entry) is not None:
             continue
         param_list.append((entry, copy.deepcopy(arguments), timeout_after))
     with Pool() as pool:

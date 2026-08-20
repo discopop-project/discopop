@@ -24,6 +24,8 @@ import pytest
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
+from discopop_library.EmpiricalAutotuning.output.progress import DebugStatEntry
+from discopop_library.PatchApplicator.PatchApplicationResult import PatchApplicationResult
 from discopop_library.EmpiricalAutotuning.optimization import hotspot_guided_combination as hgc
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -662,9 +664,12 @@ class _StubConfiguration:
         copy.execution_result = None
         return copy
 
-    def apply_suggestions(self, arguments: Any, suggestion_ids: List[int]) -> int:
+    def apply_suggestions(self, arguments: Any, suggestion_ids: List[int]) -> PatchApplicationResult:
         self.applied = hgc.canonical_configuration(suggestion_ids)
-        return 1 if self.applied in self.unpatchable else 0
+        requested = [str(id) for id in self.applied]
+        if self.applied in self.unpatchable:
+            return PatchApplicationResult(requested=requested, failed=requested)
+        return PatchApplicationResult(requested=requested, applied=requested)
 
     def execute(self, arguments: Any, timeout: Optional[float], thread_count: int, is_initial: bool = False) -> None:
         runtime = self.runtimes.get(self.applied, 1000.0)
@@ -708,8 +713,8 @@ def _run_driver(
     runtimes: Dict[Tuple[int, ...], float],
     baseline: float = 10.0,
     **argument_overrides: Any,
-) -> List[Tuple[List[int], float, int, bool, bool, str]]:
-    debug_stats: List[Tuple[List[int], float, int, bool, bool, str]] = []
+) -> List[DebugStatEntry]:
+    debug_stats: List[DebugStatEntry] = []
     hgc.execute_hotspot_guided_combination(
         _detection_result(patterns),
         {},
@@ -786,7 +791,7 @@ def test_the_driver_never_measures_a_configuration_twice(tmp_path: Any) -> None:
 def test_an_unpatchable_configuration_is_recorded_as_failed(tmp_path: Any) -> None:
     """A conflicting patch must not be measured as if it had been applied."""
     _hotspots_on_disk(tmp_path, [_json_region(1, 100, "YES", [1.0, 50.0])])
-    debug_stats: List[Tuple[List[int], float, int, bool, bool, str]] = []
+    debug_stats: List[DebugStatEntry] = []
     stub = _StubConfiguration({(1,): 1.0}, 10.0, unpatchable={(1,)})
 
     hgc.execute_hotspot_guided_combination(
@@ -802,6 +807,9 @@ def test_an_unpatchable_configuration_is_recorded_as_failed(tmp_path: Any) -> No
     )
 
     assert [(entry[0], entry[2], entry[3]) for entry in debug_stats] == [([1], 1, False)]
+    # the entry must say *which* suggestions are missing, so it can be told apart from
+    # a parallel run that merely achieved no speedup
+    assert [entry[6] for entry in debug_stats] == [[1]]
 
 
 def test_the_driver_is_reproducible(tmp_path: Any) -> None:
