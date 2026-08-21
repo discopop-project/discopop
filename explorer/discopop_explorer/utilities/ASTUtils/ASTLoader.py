@@ -7,6 +7,7 @@
 # directory for details.
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Optional
 
@@ -117,10 +118,12 @@ class ClangASTLoader:
         """Build a mapping from AST file paths to the canonical absolute paths in FileMapping.txt.
 
         Clang sometimes records source file paths as bare filenames (e.g. ``test.cpp``)
-        while ``FileMapping.txt`` always stores absolute paths.  This method resolves
-        the discrepancy by suffix-matching each AST path against the FileMapping
-        entries: a FileMapping path ``/a/b/test.cpp`` is considered a match for the
-        AST path ``test.cpp`` because the former ends with ``/test.cpp``.
+        or as paths relative to the compilation directory (e.g. ``./kernel/kernel.c``,
+        ``./kernel/./../main.h``) while ``FileMapping.txt`` always stores absolute paths.
+        This method resolves the discrepancy by suffix-matching each AST path -- after
+        collapsing its ``.`` and ``..`` segments -- against the FileMapping entries: a
+        FileMapping path ``/a/b/test.cpp`` is considered a match for the AST path
+        ``test.cpp`` because the former ends with ``/test.cpp``.
 
         Only AST paths that actually differ from their FileMapping counterpart are
         included in the returned dict; callers can therefore use it as a plain
@@ -156,10 +159,18 @@ class ClangASTLoader:
             if not ast_path or ast_path.startswith("<") or ast_path in filemapping_set:
                 continue
 
-            # Find a FileMapping entry whose path ends with /<ast_path>.
+            # Collapse "." and ".." segments so that a path Clang recorded relative to the
+            # compilation directory ("./kernel/./../main.h") still suffix-matches the
+            # absolute FileMapping entry ("/a/b/main.h").
+            normalized = os.path.normpath(ast_path)
+            if normalized in filemapping_set:
+                mapping[ast_path] = normalized
+                continue
+
+            # Find a FileMapping entry whose path ends with /<normalized>.
             # The separator guard prevents "other_test.cpp".endswith("/test.cpp") from matching.
             for fm_entry in filemapping_entries:
-                if fm_entry.endswith("/" + ast_path) or fm_entry.endswith("\\" + ast_path):
+                if fm_entry.endswith("/" + normalized) or fm_entry.endswith("\\" + normalized):
                     mapping[ast_path] = fm_entry
                     break
 
