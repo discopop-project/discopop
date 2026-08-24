@@ -30,6 +30,7 @@ All configurations live below `.discopop/project/configs/`:
 └── <configuration_name>/
     ├── execute.sh              # required: the timed run
     ├── validate.sh             # optional: untimed correctness check
+    ├── execution_time.json     # optional: read the runtime from the program's output
     ├── compile.sh              # optional: build override for this configuration
     └── compile_validate.sh     # optional: validation build override for this configuration
 ```
@@ -57,6 +58,35 @@ A run selects one of four modes, each backed by its own settings file:
 | `hd` | hotspot detection instrumentation | build → `execute.sh` |
 
 Only `execute.sh` is timed, and its duration is what the autotuner compares. The validation step is skipped entirely for `dp` and `hd`, which are profiling runs: re-running an instrumented binary would regenerate its profiling data.
+
+### Measured runtime
+By default the runtime of a run is the wall clock time of `execute.sh`. That also covers setup and teardown, reading input files and writing results — work that is often not what a parallelization is meant to speed up, and that dilutes every speedup computed from it.
+
+When the program prints the duration of the region that actually matters, that value can be measured instead. The search is configured per configuration in `execution_time.json`, next to the `execute.sh` it applies to:
+
+```json
+{
+  "enabled": true,
+  "regex": "Total time:\\s*([0-9.]+)"
+}
+```
+
+`regex` is a regular expression whose **first capture group** holds the value; the example above reads `1.234` out of `Total time: 1.234 seconds`. Leaving the file out, or setting `enabled` to `false`, measures the wall clock time as before — the stored pattern is kept either way, so switching the search off does not discard it. The default pattern looks for `<DP_EXEC_TIME>1.234</DP_EXEC_TIME>`, a tag a program can print regardless of how the rest of its output is formatted.
+
+Both output streams are searched (`stdout` first, then `stderr`), and of several matches the **last** one is used, so a program printing a time per phase may end with the total. Only `execute.sh` is searched: `compile.sh` and `validate.sh` produce no measurement.
+
+`--execution-time-regex` overrides the stored setting of every configuration for a single run:
+
+| Given as | Effect |
+|---|---|
+| *(omitted)* | each configuration's `execution_time.json` applies |
+| `--execution-time-regex` | search for the `<DP_EXEC_TIME>` tag |
+| `--execution-time-regex 'Total time:\s*([0-9.]+)'` | search for that pattern |
+| `--execution-time-regex ''` | measure the wall clock time, even where a configuration enables the search |
+
+`discopop_auto_tuner` accepts the same option, so the search that ranks candidate patch sets measures the same time the report does.
+
+If the pattern finds nothing, the wall clock time is measured instead and a warning is logged. Such a run is recorded with `"time_source": "wall_clock_fallback"`, so a fallback is never mistaken for a program that reported its own time. Every entry in `execution_results.json` carries the measured wall clock time as `wall_clock_time` alongside the reported `time`, whichever of the two `time` holds.
 
 ### Output validation
 `validate.sh` is optional. Without it, a run counts as correct exactly when `execute.sh` exits `0`. With it, the run counts as correct only when **both** exit `0`. It is run separately from `execute.sh` so that validation work — dumping output, diffing against a reference — never enters the runtime measurement.
@@ -93,7 +123,7 @@ Note that the *role* of a script outranks how specific it is: a shared `compile_
 | `compile.sh`, `compile_validate.sh`, `foo/compile_validate.sh` | `compile.sh` | `foo/compile_validate.sh` |
 
 ### Editing configurations
-- **Graphically:** `discopop` (or `discopop_project_manager --gui`). The configuration assistant creates a first configuration; afterwards the editor's sub-tabs manage `execute.sh`, `validate.sh` and the two override scripts, each with an *Add* / *Remove* button, while the *Compilation Editor* manages the shared `compile.sh`, `compile_validate.sh` and the settings files.
+- **Graphically:** `discopop` (or `discopop_project_manager --gui`). The configuration assistant creates a first configuration; afterwards the editor's sub-tabs manage `execute.sh`, `validate.sh` and the two override scripts, each with an *Add* / *Remove* button, while the *Compilation Editor* manages the shared `compile.sh`, `compile_validate.sh` and the settings files. The *execute.sh* sub-tab also carries that configuration's *Execution time* setting, with a *Test* button that applies the pattern to the output of the last recorded run without executing anything.
 - **By hand:** create the files listed above and mark them executable.
 - **Through an LLM agent:** the [DiscoPoP MCP server](https://github.com/discopop-project/discopop/tree/master/mcp_server) exposes `set_compile_script` (with `purpose` selecting `compile.sh` or `compile_validate.sh`) and `create_execution_configuration` (which writes `execute.sh` and optionally `validate.sh` plus the override scripts).
 

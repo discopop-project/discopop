@@ -8,9 +8,16 @@
 
 from argparse import ArgumentParser
 import os
+import sys
 from discopop_library.GlobalLogger.setup import setup_logger
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
 from discopop_library.ProjectManager.ProjectManager import run
+from discopop_library.ProjectManager.configurations.execution_time import (
+    DEFAULT_EXECUTION_TIME_REGEX,
+    DEFAULT_EXECUTION_TIME_TAG,
+    EXECUTION_TIME_DISABLED,
+    validate_execution_time_regex,
+)
 
 
 def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
@@ -43,6 +50,9 @@ def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
     parser.add_argument("-toc", "--timeout-compilation", type=int, default=3600, help="Timeout in seconds for each individual code compilation. Use 0 to disable timeout. Default: 3600.")
     parser.add_argument("-tov", "--timeout-validation", type=int, default=3600, help="Timeout in seconds for each individual output validation (validate.sh). Use 0 to disable timeout. Default: 3600.")
 
+    parser.add_argument("-etr", "--execution-time-regex", nargs="?", const=DEFAULT_EXECUTION_TIME_REGEX, default=None,
+                        help="Read the execution time from the console output of execute.sh instead of measuring its wall clock time. Expects a regular expression whose first capture group holds the value, e.g. 'Total time:\\s*([0-9.]+)'. Given without a value, the tag '<" + DEFAULT_EXECUTION_TIME_TAG + ">value</" + DEFAULT_EXECUTION_TIME_TAG + ">' is searched for. Overrides the per configuration setting stored in execution_time.json; pass an empty string to disable the search even where a configuration enables it. If omitted, each configuration's own setting applies.")
+
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:
@@ -51,6 +61,14 @@ def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
     arguments = parser.parse_args()
     if force_gui:
         arguments.gui = True
+
+    # Reject an unusable pattern here rather than letting every execution fall
+    # back to the wall clock time with a warning nobody reads.
+    if arguments.execution_time_regex not in (None, EXECUTION_TIME_DISABLED):
+        regex_error = validate_execution_time_regex(arguments.execution_time_regex)
+        if regex_error is not None:
+            print("ERROR: --execution-time-regex: " + regex_error)
+            sys.exit(1)
 
     return ProjectManagerArguments(
         project_root=arguments.project,
@@ -72,6 +90,7 @@ def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
         timeout_execution=None if arguments.timeout_execution == 0 else float(arguments.timeout_execution),
         timeout_compilation=None if arguments.timeout_compilation == 0 else float(arguments.timeout_compilation),
         timeout_validation=None if arguments.timeout_validation == 0 else float(arguments.timeout_validation),
+        execution_time_regex=arguments.execution_time_regex,
     )
 
 

@@ -20,6 +20,13 @@ class ExecutionResult(object):
     # must never be accepted as a search result.
     application_failed: bool
     failed_suggestions: List[int]
+    # Wall clock duration of the run, which is what ``runtime`` holds unless the
+    # configuration asked for the execution time to be read from the program's own
+    # output. The two must not be confused: ``runtime`` is what candidates are
+    # ranked by, but anything bounding the *process* -- above all the per-candidate
+    # timeout -- has to be expressed in wall clock terms, since a reported time
+    # covers only part of the run.
+    wall_clock_runtime: float
 
     def __init__(
         self,
@@ -29,8 +36,12 @@ class ExecutionResult(object):
         thread_sanitizer: bool,
         application_failed: bool = False,
         failed_suggestions: Optional[List[int]] = None,
+        wall_clock_runtime: Optional[float] = None,
     ):
         self.runtime = runtime
+        # defaults to runtime, which is exactly right when no execution time was
+        # read from the program's output
+        self.wall_clock_runtime = runtime if wall_clock_runtime is None else wall_clock_runtime
         self.return_code = return_code
         self.result_valid = result_valid
         self.thread_sanitizer = thread_sanitizer

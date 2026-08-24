@@ -20,6 +20,12 @@ from filelock import FileLock
 
 from discopop_library.PatchApplicator.PatchApplicationResult import PatchApplicationResult, read_application_result
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.configurations.execution_time import (
+    TIME_SOURCE_CONSOLE,
+    TIME_SOURCE_FALLBACK,
+    TIME_SOURCE_WALL_CLOCK,
+    extract_execution_time,
+)
 
 PATH = str
 
@@ -74,7 +80,26 @@ def execute_configuration(
     thread_count: int,
     timeout: Optional[float] = None,
     process_started_callback: Optional[Callable[["subprocess.Popen[bytes]"], None]] = None,
+    execution_time_regex: Optional[str] = None,
+    measurement: Optional[Dict[str, Any]] = None,
 ) -> Optional[Tuple[int, float, str, str]]:
+    """Run one script of a configuration and record what it took.
+
+    ``execution_time_regex``, when given, is searched for in the script's output
+    and the value it finds is reported as the elapsed time in place of the
+    measured wall clock time -- see
+    :mod:`discopop_library.ProjectManager.configurations.execution_time`. Callers
+    pass it only for ``execute.sh``: ``compile.sh`` and ``validate.sh`` run
+    through this function too, but produce no measurement. The wall clock time is
+    recorded alongside either way, and remains the reported time whenever the
+    pattern finds nothing.
+
+    ``measurement``, if given, is updated with the record written to
+    ``execution_results.json``. A caller needing more than the reported time --
+    the autotuner derives its per-candidate timeout from ``wall_clock_time``,
+    which has to bound the whole process -- reads it from there rather than from
+    the return value, whose shape many callers depend on.
+    """
     # check prerequisites
     if not os.path.exists(settings_path):
         return None
@@ -176,6 +201,29 @@ def execute_configuration(
         print("KILLED PROCESS: ", p.pid)
 
     elapsed = round((time.time() - start), 3)
+
+    # A program reporting its own execution time excludes what is of no interest
+    # (setup, teardown, reading and writing files); prefer that value, but never
+    # silently: a run whose pattern found nothing is reported as falling back to
+    # the wall clock time, so a measurement is never mistaken for the other kind.
+    wall_clock_time = elapsed
+    time_source = TIME_SOURCE_WALL_CLOCK
+    if execution_time_regex is not None and not timeout_expired:
+        reported_time = extract_execution_time(
+            stdout.decode("utf-8", errors="replace"), stderr.decode("utf-8", errors="replace"), execution_time_regex
+        )
+        if reported_time is None:
+            time_source = TIME_SOURCE_FALLBACK
+            logger.warning(
+                "Falling back to the wall clock time of "
+                + os.path.basename(script_path)
+                + ": its output did not report an execution time."
+            )
+        else:
+            elapsed = round(reported_time, 3)
+            time_source = TIME_SOURCE_CONSOLE
+            logger.debug("-> execution time reported by the program: " + str(elapsed) + "s")
+
     logger.debug("-> return code: " + str(p.returncode))
     logger.debug("-> thread count: " + str(thread_count))
     logger.debug("-> stdout:\n" + stdout.decode("utf-8") if not timeout_expired else "")
@@ -183,7 +231,7 @@ def execute_configuration(
     logger.debug("-> elapsed time: " + str(elapsed) + "s")
 
     # save execution results
-    _store_execution_result(
+    stored = _store_execution_result(
         arguments,
         config_name,
         script_name,
@@ -196,10 +244,14 @@ def execute_configuration(
             "stderr": stderr.decode("utf-8") if not timeout_expired else "",
             "timeout_expired": timeout_expired,
             "time": elapsed,
+            "wall_clock_time": wall_clock_time,
+            "time_source": time_source,
             "thread_count": thread_count,
             "executed": True,
         },
     )
+    if measurement is not None:
+        measurement.update(stored)
 
     os.chdir(home_dir)
 
@@ -333,6 +385,8 @@ def record_skipped_execution(
             "stderr": application_result.summary(),
             "timeout_expired": False,
             "time": 0.0,
+            "wall_clock_time": 0.0,
+            "time_source": TIME_SOURCE_WALL_CLOCK,
             "thread_count": thread_count,
             "executed": False,
         },

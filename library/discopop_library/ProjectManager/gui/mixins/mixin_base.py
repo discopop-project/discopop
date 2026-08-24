@@ -48,6 +48,16 @@ class ConfigManagerMixinBase:
     compile_override_button: RoundedButton
     validate_script_button: RoundedButton
     validation_compile_override_button: RoundedButton
+    # Execution time setting of execute.sh (stored per configuration in
+    # execution_time.json). Not a text area, hence its own dirty flag.
+    execution_time_enabled_var: tk.BooleanVar
+    execution_time_regex_var: tk.StringVar
+    execution_time_regex_entry: ttk.Entry
+    execution_time_test_button: RoundedButton
+    execution_time_test_label: ttk.Label
+    execution_time_modified: bool
+    _execution_time_traced: bool
+    _execution_time_loading: bool
 
     # Pattern Detection tab
     pattern_detection_tab_index: int
@@ -64,6 +74,7 @@ class ConfigManagerMixinBase:
     timeout_compilation_var: tk.IntVar
     timeout_validation_var: tk.IntVar
     log_level_var: tk.StringVar
+    execution_time_summary_label: ttk.Label
     inplace_var: tk.BooleanVar
     skip_cleanup_var: tk.BooleanVar
     run_button: RoundedButton

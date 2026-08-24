@@ -27,6 +27,7 @@ from discopop_library.ProjectManager.configurations.execution import (
     execute_configuration,
     record_skipped_execution,
 )
+from discopop_library.ProjectManager.configurations.execution_time import resolve_execution_time_regex
 from discopop_library.ProjectManager.configurations.validation import has_validate_script, run_validation_phase
 
 logger = logging.getLogger("ConfigurationManager")
@@ -147,6 +148,10 @@ def show_configurations_with_execution(
         validate_compile_required = validate_sh_exists and validation_needs_separate_compile(
             arguments.project_config_dir, os.path.basename(config)
         )
+        # Only execute.sh is a measurement, so only its runs are searched for an
+        # execution time reported by the program itself; compile.sh and validate.sh
+        # keep their wall clock times.
+        execution_time_regex = resolve_execution_time_regex(config, arguments.execution_time_regex)
 
         if arguments.execute_inplace:
             # inplace runs reuse the project root's .discopop, which -- unlike a fresh
@@ -204,6 +209,7 @@ def show_configurations_with_execution(
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "dp", config_thread_counts),
                     arguments.timeout_execution,
+                    execution_time_regex=execution_time_regex,
                 )
                 dp_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
@@ -251,6 +257,7 @@ def show_configurations_with_execution(
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "hd", config_thread_counts),
                     arguments.timeout_execution,
+                    execution_time_regex=execution_time_regex,
                 )
                 hd_execute_successful = ret is not None and ret[0] == 0
             if not (arguments.skip_cleanup or arguments.execute_inplace):
@@ -297,6 +304,7 @@ def show_configurations_with_execution(
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "seq", config_thread_counts),
                     arguments.timeout_execution,
+                    execution_time_regex=execution_time_regex,
                 )
                 seq_execute_successful = ret is not None and ret[0] == 0
 
@@ -360,6 +368,7 @@ def show_configurations_with_execution(
                     os.path.join(config, "execute.sh"),
                     __get_thread_count(config, "par", config_thread_counts),
                     arguments.timeout_execution,
+                    execution_time_regex=execution_time_regex,
                 )
                 par_execute_successful = ret is not None and ret[0] == 0
 

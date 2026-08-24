@@ -8,9 +8,16 @@
 
 from argparse import ArgumentParser
 import os
+import sys
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.GlobalLogger.setup import setup_logger
 from discopop_library.EmpiricalAutotuning.Autotuner import run
+from discopop_library.ProjectManager.configurations.execution_time import (
+    DEFAULT_EXECUTION_TIME_REGEX,
+    DEFAULT_EXECUTION_TIME_TAG,
+    EXECUTION_TIME_DISABLED,
+    validate_execution_time_regex,
+)
 
 
 def parse_args() -> AutotunerArguments:
@@ -45,10 +52,20 @@ def parse_args() -> AutotunerArguments:
 #                        A third script DP_VALIDATE.sh might be added to add a validation step, where return code 0 is interpreted as a success, i.e. a valid result.")
     parser.add_argument("--skip-cleanup", action="store_true", help="Disable the deletion of created code variants. May require a lot of disk space." )
     parser.add_argument("--sanitize", action="store_true", help="Enable the invocation of ThreadSanitizer if DP_COMPILE_SANITIZE.sh and DP_EXECUTE_SANITIZE.sh are provided." )
+    parser.add_argument("-etr", "--execution-time-regex", nargs="?", const=DEFAULT_EXECUTION_TIME_REGEX, default=None,
+                        help="Rank candidates by the execution time reported in the console output of execute.sh instead of its wall clock time. Expects a regular expression whose first capture group holds the value, e.g. 'Total time:\\s*([0-9.]+)'. Given without a value, the tag '<" + DEFAULT_EXECUTION_TIME_TAG + ">value</" + DEFAULT_EXECUTION_TIME_TAG + ">' is searched for. Overrides the per configuration setting stored in execution_time.json; pass an empty string to disable the search even where a configuration enables it. If omitted, the configuration's own setting applies.")
 
     # fmt:  is provided.
 
     arguments = parser.parse_args()
+
+    # Reject an unusable pattern here rather than letting the whole search run on
+    # wall clock times it was told not to use.
+    if arguments.execution_time_regex not in (None, EXECUTION_TIME_DISABLED):
+        regex_error = validate_execution_time_regex(arguments.execution_time_regex)
+        if regex_error is not None:
+            print("ERROR: --execution-time-regex: " + regex_error)
+            sys.exit(1)
 
     return AutotunerArguments(
         log_level=arguments.log.upper(),
@@ -67,6 +84,7 @@ def parse_args() -> AutotunerArguments:
         hs_min_share=arguments.hs_min_share,
         max_measurements=arguments.max_measurements,
         skip_removal_pass=arguments.skip_removal_pass,
+        execution_time_regex=arguments.execution_time_regex,
     )
 
 

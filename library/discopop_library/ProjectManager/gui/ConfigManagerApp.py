@@ -19,6 +19,7 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 from discopop_library.ProjectManager.utilities.initializeFiles import (
     initialize_configuration_files,
 )
+from discopop_library.ProjectManager.configurations.execution_time import DEFAULT_EXECUTION_TIME_REGEX
 from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.widgets import create_styled_output_console, heading_label
 from discopop_library.ProjectManager.gui.mixins.helpers import (
@@ -203,6 +204,9 @@ class ConfigManagerApp(  # type: ignore
             execute_header_frame, text="Help", command=self._show_execute_sh_help
         )
         execute_help_button.pack(side=tk.RIGHT, padx=5)
+
+        # packed before the text area so it always reserves its natural height
+        self._build_execution_time_settings(execute_sh_frame)
 
         execute_text_frame = ttk.Frame(execute_sh_frame)
         execute_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
@@ -444,6 +448,63 @@ class ConfigManagerApp(  # type: ignore
         )
         style.map("Treeview.Heading", background=[("", widgets.TREE_HEADING_BG)])
         style.map("Treeview", fieldbackground=[("", widgets.TREE_BG)])
+
+    def _build_execution_time_settings(self, parent: ttk.Frame) -> None:
+        """The "read the execution time from the console output" setting of execute.sh.
+
+        It lives in this tab rather than next to the other execution options
+        because it is a property of the script it belongs to -- it describes how
+        that program reports its own timing -- and it is therefore stored per
+        configuration in ``execution_time.json`` and saved with the script.
+        """
+        frame = ttk.LabelFrame(parent, text="Execution time", padding=5)
+        frame.pack(fill=tk.X, side=tk.BOTTOM, padx=5, pady=5)
+
+        self.execution_time_modified = False
+        self._execution_time_traced = False
+        self._execution_time_loading = False
+        self.execution_time_enabled_var = tk.BooleanVar(value=False)
+        self.execution_time_regex_var = tk.StringVar(value=DEFAULT_EXECUTION_TIME_REGEX)
+
+        toggle = ttk.Checkbutton(
+            frame,
+            text="Read the execution time from the program's console output",
+            variable=self.execution_time_enabled_var,
+            command=self._update_execution_time_state,
+        )
+        toggle.pack(anchor=tk.W)
+
+        toggle_tooltip = Tooltip(
+            toggle,
+            "Off: the wall clock time of execute.sh is measured, including setup,\n"
+            "teardown and any file I/O it performs.\n"
+            "On: the time the program prints itself is used instead. If the pattern\n"
+            "finds nothing, the wall clock time is reported and the run is marked\n"
+            "as having fallen back to it.",
+        )
+        bind_tooltip_hover(toggle, toggle_tooltip, self)
+
+        pattern_frame = ttk.Frame(frame)
+        pattern_frame.pack(fill=tk.X, pady=(5, 0))
+        ttk.Label(pattern_frame, text="Pattern:", width=10, anchor=tk.W).pack(side=tk.LEFT)
+        self.execution_time_regex_entry = ttk.Entry(pattern_frame, textvariable=self.execution_time_regex_var)
+        self.execution_time_regex_entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+        self.execution_time_test_button = widgets.create_button(
+            pattern_frame, text="Test", command=self._test_execution_time_regex
+        )
+        self.execution_time_test_button.pack(side=tk.LEFT, padx=5)
+
+        self.execution_time_hint_label = widgets.caption_label(
+            frame,
+            "The first capture group holds the value, e.g. Total time:\\s*([0-9.]+) "
+            "for a program printing 'Total time: 1.234 seconds'.",
+        )
+        self.execution_time_hint_label.pack(anchor=tk.W, pady=(3, 0))
+
+        self.execution_time_test_label = ttk.Label(frame, text="")
+        self.execution_time_test_label.pack(anchor=tk.W, pady=(3, 0))
+
+        self._update_execution_time_state()
 
 
 def run_gui(arguments: ProjectManagerArguments) -> None:

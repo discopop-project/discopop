@@ -14,7 +14,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import time
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor
@@ -26,6 +26,7 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 from discopop_library.ProjectManager.configurations.compile_script import resolve_compile_script_path
 from discopop_library.ProjectManager.configurations.copying import copy_configuration
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
+from discopop_library.ProjectManager.configurations.execution_time import resolve_execution_time_regex
 from discopop_library.ProjectManager.configurations.validation import run_validation_phase
 
 logger = logging.getLogger("CodeConfiguration")
@@ -178,6 +179,10 @@ class CodeConfiguration(object):
         else:
             settings_path = os.path.join(config_path, self.settings_name)
 
+        # The reported time is what candidates are ranked by; the wall clock time
+        # is read alongside it because the per-candidate timeout derived from this
+        # run has to bound the whole process, not just the part the program times.
+        measurement: Dict[str, Any] = {}
         ret = execute_configuration(
             cm_args,
             self.root_path,
@@ -186,12 +191,15 @@ class CodeConfiguration(object):
             execute_sh_path,
             thread_count,
             timeout,
+            execution_time_regex=resolve_execution_time_regex(config_path, arguments.execution_time_regex),
+            measurement=measurement,
         )
         if ret is None:
             result_returncode = 1
             required_time = 1.0
         else:
             result_returncode, required_time, out, err = ret
+        wall_clock_time = float(measurement.get("wall_clock_time", required_time))
 
         # A configuration is valid only if execute.sh succeeded AND, when an
         # optional validate.sh exists, it also succeeds. validate.sh re-runs the
@@ -226,11 +234,19 @@ class CodeConfiguration(object):
 
         # reporting
         logger.debug("Execution took " + str(round(required_time, 4)) + " s")
+        if wall_clock_time != required_time:
+            logger.debug("Wall clock duration of the run: " + str(round(wall_clock_time, 4)) + " s")
         logger.debug("Execution return code: " + str(result_returncode))
         logger.debug("Execution result valid: " + str(result_valid))
         logger.debug("ThreadSanitizer valid: " + str(thread_sanitizer_valid))
 
-        self.execution_result = ExecutionResult(required_time, result_returncode, result_valid, thread_sanitizer_valid)
+        self.execution_result = ExecutionResult(
+            required_time,
+            result_returncode,
+            result_valid,
+            thread_sanitizer_valid,
+            wall_clock_runtime=wall_clock_time,
+        )
 
     def create_copy(
         self, arguments: AutotunerArguments, settings_name: str, get_new_configuration_id: Callable[[], int]

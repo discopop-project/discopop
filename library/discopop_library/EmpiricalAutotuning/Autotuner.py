@@ -102,7 +102,12 @@ def run(arguments: AutotunerArguments) -> None:
         color=reference_configuration.get_statistics_graph_color(),
         shape=NodeShape.BOX,
     )
-    timeout_after = max(3.0, cast(ExecutionResult, reference_configuration.execution_result).runtime * 2)
+    # Derived from the wall clock duration, never from the runtime the candidates
+    # are ranked by: those differ as soon as a configuration reads its execution
+    # time from the program's own output, and a timeout scaled to the *reported*
+    # time would kill every candidate before the part the program does not time
+    # (setup, teardown, file I/O) is even done.
+    timeout_after = max(3.0, cast(ExecutionResult, reference_configuration.execution_result).wall_clock_runtime * 2)
     debug_stats.append(
         (
             [],

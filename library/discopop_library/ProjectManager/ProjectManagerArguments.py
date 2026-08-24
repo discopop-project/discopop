@@ -38,6 +38,11 @@ class ProjectManagerArguments(GeneralArguments):
     timeout_execution: Optional[float]
     timeout_compilation: Optional[float]
     timeout_validation: Optional[float]
+    # Overrides every configuration's stored "read the execution time from the
+    # program's output" setting for this invocation: None leaves it alone, the
+    # empty string disables the search, anything else is used as the pattern.
+    # See discopop_library.ProjectManager.configurations.execution_time.
+    execution_time_regex: Optional[str] = None
     # derived values
     dot_dp: str = ""
     project_dir: str = ""

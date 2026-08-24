@@ -9,8 +9,16 @@
 import json
 import os
 import tkinter as tk
+from typing import Any, Optional
 
 
+from discopop_library.ProjectManager.configurations.execution_time import (
+    EXECUTION_TIME_DISABLED,
+    extract_execution_time,
+    read_execution_time_settings,
+    validate_execution_time_regex,
+    write_execution_time_settings,
+)
 from discopop_library.ProjectManager.configurations.compile_script import (
     get_per_config_compile_script_path,
     get_per_config_validation_compile_script_path,
@@ -18,8 +26,9 @@ from discopop_library.ProjectManager.configurations.compile_script import (
     resolve_compile_script_path,
 )
 from discopop_library.ProjectManager.configurations.validation import has_validate_script
+from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
-from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no, show_warning
+from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no, show_error, show_warning
 from discopop_library.ProjectManager.utilities.scriptFiles import write_script_file
 
 
@@ -59,6 +68,7 @@ class FileEditorMixin(ConfigManagerMixinBase):
         self._load_compile_override()
         self._load_validate_script()
         self._load_validation_compile_override()
+        self._load_execution_time_settings()
         self.right_tabs.tab(self.editor_tab_index, text="Editor")
         self._update_execute_modes()
         self._update_report_display()
@@ -67,8 +77,162 @@ class FileEditorMixin(ConfigManagerMixinBase):
         tab_index = self.editor_sub_tab_index.get(filename)
         if tab_index is None:
             return
+        # The execution time setting is edited in the execute.sh tab but is not a
+        # text area, so it carries its own flag and must not be overwritten by the
+        # script's own state.
+        if filename == "execute.sh":
+            modified = modified or self.execution_time_modified
         base_label = self.editor_sub_tab_labels[filename]
         self.editor_notebook.tab(tab_index, text=f"{base_label} *" if modified else base_label)
+
+    def _has_unsaved_editor_changes(self) -> bool:
+        """Whether anything in the Editor tab is waiting to be saved."""
+        return any(self.modified_files.values()) or self.execution_time_modified
+
+    def _load_execution_time_settings(self) -> None:
+        """Show the execution time setting stored for the selected configuration."""
+        if not self.current_config:
+            return
+
+        config_path = os.path.join(self.config_dir, self.current_config)
+        enabled, regex = read_execution_time_settings(config_path)
+
+        # Loading a configuration writes both variables, which must not look like
+        # an edit -- hence the guard the trace below honours.
+        self._execution_time_loading = True
+        try:
+            self.execution_time_enabled_var.set(enabled)
+            self.execution_time_regex_var.set(regex)
+        finally:
+            self._execution_time_loading = False
+        self.execution_time_modified = False
+        self._arm_execution_time_tracking()
+
+        self.execution_time_test_label.config(text="")
+        self._update_execution_time_state()
+        self._update_execution_time_summary()
+        self._set_sub_tab_modified("execute.sh", self.modified_files["execute.sh"])
+
+    def _update_execution_time_summary(self) -> None:
+        """Mirror the stored setting into the Execute tab, where runs are started."""
+        override = self.arguments.execution_time_regex
+        if override is not None:
+            text = (
+                "from the console output (forced by --execution-time-regex)"
+                if override != EXECUTION_TIME_DISABLED
+                else "wall clock of execute.sh (forced by --execution-time-regex)"
+            )
+        elif self.execution_time_enabled_var.get():
+            text = "from the console output (see Editor -> execute.sh)"
+        else:
+            text = "wall clock of execute.sh"
+        self.execution_time_summary_label.config(text=text)
+
+    def _arm_execution_time_tracking(self) -> None:
+        """Mark the execute.sh tab dirty whenever the execution time setting changes.
+
+        A trace rather than the 500 ms polling the text areas use: these are two
+        variables, so a change is observable directly instead of by comparison.
+        """
+        if getattr(self, "_execution_time_traced", False):
+            return
+
+        def on_change(*_args: Any) -> None:
+            if self._execution_time_loading or self.execution_time_modified:
+                return
+            self.execution_time_modified = True
+            self._set_sub_tab_modified("execute.sh", self.modified_files["execute.sh"])
+            self.right_tabs.tab(self.editor_tab_index, text="Editor *")
+            self._update_execution_time_summary()
+
+        self.execution_time_enabled_var.trace_add("write", on_change)
+        self.execution_time_regex_var.trace_add("write", on_change)
+        self._execution_time_traced = True
+
+    def _update_execution_time_state(self) -> None:
+        """Grey out the pattern while the search is switched off."""
+        state = "normal" if self.execution_time_enabled_var.get() else "disabled"
+        self.execution_time_regex_entry.config(state=state)
+        self.execution_time_test_button.config(state=state)
+
+    def _save_execution_time_settings(self, config_path: str) -> bool:
+        """Persist the execution time setting; False if it was rejected."""
+        if not self.execution_time_modified:
+            return True
+
+        regex = self.execution_time_regex_var.get()
+        if self.execution_time_enabled_var.get():
+            error = validate_execution_time_regex(regex)
+            if error is not None:
+                show_error(self, "Invalid execution time pattern", "The pattern is " + error)
+                return False
+        try:
+            write_execution_time_settings(config_path, self.execution_time_enabled_var.get(), regex)
+        except OSError as e:
+            self._set_status(f"Error saving execution time setting: {e}", fg="red")
+            return False
+        self.execution_time_modified = False
+        return True
+
+    def _test_execution_time_regex(self) -> None:
+        """Apply the pattern to the output of this configuration's last run.
+
+        Reusing a recorded run means the pattern can be checked without executing
+        anything -- which is the point, since a run is what the pattern is meant to
+        measure in the first place.
+        """
+        regex = self.execution_time_regex_var.get()
+        error = validate_execution_time_regex(regex)
+        if error is not None:
+            self.execution_time_test_label.config(text="✗ The pattern is " + error, foreground=widgets.STATUS_FAIL)
+            return
+
+        output = self._last_recorded_execution_output()
+        if output is None:
+            self.execution_time_test_label.config(
+                text="No recorded output to test against yet — execute this configuration first.",
+                foreground=widgets.STATUS_IDLE,
+            )
+            return
+
+        stdout, stderr = output
+        value = extract_execution_time(stdout, stderr, regex)
+        if value is None:
+            self.execution_time_test_label.config(
+                text="✗ No match in the output of the last recorded run.", foreground=widgets.STATUS_FAIL
+            )
+        else:
+            self.execution_time_test_label.config(
+                text=f"✓ Matched in the last recorded run: {value} s", foreground=widgets.STATUS_OK
+            )
+
+    def _last_recorded_execution_output(self) -> Optional[tuple[str, str]]:
+        """stdout and stderr of the most recent recorded execute.sh run, if any."""
+        if not self.current_config:
+            return None
+        results_path = os.path.join(self.arguments.project_dir, "execution_results.json")
+        if not os.path.exists(results_path):
+            return None
+        try:
+            with open(results_path, "r") as f:
+                results = json.load(f)
+            entries = results.get(self.current_config, {}).get("execute.sh", {})
+        except (OSError, json.JSONDecodeError, AttributeError):
+            return None
+
+        # A pattern is written for the program as the measured runs execute it, so
+        # prefer their output over that of the instrumented profiling runs.
+        preferred = ["seq_settings.json", "par_settings.json"]
+        ordered = preferred + [name for name in entries if name not in preferred]
+        for settings_name in ordered:
+            for entry in reversed(entries.get(settings_name, [])):
+                if not entry.get("executed", True):
+                    continue
+                stdout = str(entry.get("stdout", ""))
+                stderr = str(entry.get("stderr", ""))
+                if stdout or stderr:
+                    return stdout, stderr
+        return None
 
     def _load_compile_override(self) -> None:
         if not self.current_config:
@@ -323,6 +487,13 @@ class FileEditorMixin(ConfigManagerMixinBase):
         config_path = os.path.join(self.config_dir, self.current_config)
         saved_files = []
 
+        if self.execution_time_modified:
+            if not self._save_execution_time_settings(config_path):
+                return
+            saved_files.append("execution time setting")
+            # the setting has no text area, so nothing else clears its "*" marker
+            self._set_sub_tab_modified("execute.sh", self.modified_files["execute.sh"])
+
         for filename in self.text_areas:
             if not self.modified_files[filename]:
                 continue
@@ -346,7 +517,7 @@ class FileEditorMixin(ConfigManagerMixinBase):
                 self._set_status(f"Error saving file {filename}: {e}", fg="red")
                 return
 
-        if not any(self.modified_files.values()):
+        if not self._has_unsaved_editor_changes():
             self.right_tabs.tab(self.editor_tab_index, text="Editor")
 
         if saved_files:
@@ -372,7 +543,7 @@ class FileEditorMixin(ConfigManagerMixinBase):
         elif not is_modified and self.modified_files[filename]:
             self.modified_files[filename] = False
             self._set_sub_tab_modified(filename, False)
-            if not any(self.modified_files.values()):
+            if not self._has_unsaved_editor_changes():
                 self.right_tabs.tab(self.editor_tab_index, text="Editor")
 
     def _start_modification_polling(self) -> None:
