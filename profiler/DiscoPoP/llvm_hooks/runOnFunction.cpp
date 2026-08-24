@@ -535,6 +535,15 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     }
 
     // Report statically identified dependencies
+    //
+    // This file is the over-approximating record of the dependencies of the
+    // omitted instructions: it drops the condition under which each of them
+    // holds, so a dependency listed here is assumed to exist. Both maps have to
+    // be written, for opposite reasons. Omitting the pair-conditional ones used
+    // to lose exactly those dependencies whose write is not executed in every
+    // iteration - a loop-carried accumulation guarded by an if, i.e. the shape
+    // of a conditional reduction - and a lost dependency is what produces a
+    // wrong suggestion. An over-approximated one only costs a suggestion.
 
     staticDependencyFile = new std::ofstream();
     std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
@@ -544,6 +553,13 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     for (auto pair : conditionalBBDepMap) {
       for (auto s : pair.second) {
         *staticDependencyFile << s << "\n";
+      }
+    }
+    for (auto pair1 : conditionalBBPairDepMap) {
+      for (auto pair2 : pair1.second) {
+        for (auto s : pair2.second) {
+          *staticDependencyFile << s << "\n";
+        }
       }
     }
     staticDependencyFile->flush();

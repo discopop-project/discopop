@@ -145,6 +145,9 @@ void __dp_finalize(LID lid) {
   output_allocations();
 
   // hybrid analysis
+  // the dependencies of the omitted instructions first: their basic blocks are
+  // known to be complete only now that the target has terminated
+  process_registered_bb_deps();
   generateStringDepMap();
   // End HA
   outputDeps();
