@@ -22,7 +22,10 @@ from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.functions.PEGraph.queries.data_edge_index import DataEdgeIndex
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
-from discopop_explorer.pattern_detectors.new_do_all_detector import identify_simple_doall_and_reduction
+from discopop_explorer.pattern_detectors.new_do_all_detector import (
+    detect_doall_sharing_clauses,
+    identify_simple_doall_and_reduction,
+)
 from discopop_explorer.utilities.ASTUtils.ASTPatternDetectionIntegration import ASTPatternDetectionHelper
 
 MakeNode = Callable[..., Node]
@@ -307,3 +310,131 @@ def test_identify_simple_doall_skips_loop_with_exactly_one_iteration(
 
     patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
     assert patterns == []
+
+
+class _StubASTHelper(ASTPatternDetectionHelper):
+    """An ASTPatternDetectionHelper answering from canned data instead of a loaded AST.
+
+    detect_doall_sharing_clauses asks it three things about the loop's source location: which
+    variables are in scope, which of those are of pointer/reference type, and which have their
+    own storage assigned inside the loop.
+    """
+
+    def __init__(self, in_scope: dict[str, str], assigned_in_loop: frozenset[str] = frozenset()) -> None:
+        super().__init__()
+        self._in_scope = in_scope
+        self._assigned_in_loop = assigned_in_loop
+
+    def get_variables_at_location(
+        self, file_id: int | str, line: int, column: int | None = None
+    ) -> list[tuple[str, str | None]]:
+        return [(name, type_str) for name, type_str in self._in_scope.items()]
+
+    def get_variables_assigned_in_loop_at(self, file_id: int | str, line: int) -> frozenset[str]:
+        return self._assigned_in_loop
+
+
+def _build_pointer_reaim_loop(
+    make_node: MakeNode, build_pet_graph: BuildPetGraph, build_task_graph: Any, make_tg_node: Any
+) -> Tuple[PEGraphX, LoopParentContext, Node, Node]:
+    """Builds the dependency shape a re-aimed pointer produces.
+
+    Two CUs make up each iteration's sequence.  The first initializes ``rA`` (``rA = &rv[i]``),
+    the second reads through it (``rA[i].v``), and that read's RAW dependency points at a CU
+    outside the loop - the code that filled the array back in the caller.  Because the profiler
+    names an indirect access after the pointer it went through, both dependencies carry the name
+    ``rA``, which is what makes the pointer look like incoming shared state.
+    """
+    main = make_node("1:1", NodeType.FUNC, name="main")
+    loop = make_node("1:2", NodeType.LOOP, name="loop", start_line=10, end_line=20)
+    init_cu = make_node("1:3", NodeType.CU, name="init", start_line=11, end_line=11)
+    use_cu = make_node("1:4", NodeType.CU, name="use", start_line=12, end_line=12)
+    outside_cu = make_node("1:5", NodeType.CU, name="outside", start_line=2, end_line=2)
+
+    init_dep = Dependency(EdgeType.DATA)
+    init_dep.dtype = DepType.INIT
+    init_dep.var_name = "rA"
+    init_dep.origin = DepOrigin.DYNAMIC_ANALYSIS
+
+    read_dep = Dependency(EdgeType.DATA)
+    read_dep.dtype = DepType.RAW
+    read_dep.var_name = "rA"
+    read_dep.origin = DepOrigin.DYNAMIC_ANALYSIS
+
+    pet = build_pet_graph(
+        [main, loop, init_cu, use_cu, outside_cu],
+        [
+            (main.id, loop.id, EdgeType.CHILD),
+            (loop.id, init_cu.id, EdgeType.CHILD),
+            (loop.id, use_cu.id, EdgeType.CHILD),
+            (main.id, outside_cu.id, EdgeType.CHILD),
+            (init_cu.id, init_cu.id, init_dep),
+            (use_cu.id, outside_cu.id, read_dep),
+        ],
+    )
+
+    loop_ctx = LoopParentContext(parent_loop=loop.id)
+    for iteration_id in (0, 1):
+        iteration = IterationContext(parent_context=loop_ctx, loopstate_iteration_ids=[iteration_id])
+        loop_ctx.add_contained_context(iteration)
+        iteration.register_parent_context(loop_ctx)
+        work = WorkContext()
+        work.add_node(make_tg_node(init_cu.id, level=1, position=2 * iteration_id))
+        work.add_node(make_tg_node(use_cu.id, level=1, position=2 * iteration_id + 1))
+        iteration.add_contained_context(work)
+        work.register_parent_context(iteration)
+
+    return pet, loop_ctx, loop, outside_cu
+
+
+def _classify(pet: PEGraphX, loop_ctx: LoopParentContext, loop: Node, ast_helper: ASTPatternDetectionHelper) -> Any:
+    return detect_doall_sharing_clauses(
+        pet,
+        ast_helper,
+        DataEdgeIndex(pet),
+        loop.id,
+        [ctx for ctx in loop_ctx.get_contained_contexts(inclusive=False) if isinstance(ctx, IterationContext)],
+        loop_ctx.get_contained_contexts(inclusive=True),
+        set(),
+        {},
+    )
+
+
+def test_pointer_reaimed_in_the_loop_is_private_not_shared(
+    make_node: MakeNode,
+    build_pet_graph: BuildPetGraph,
+    build_task_graph: Any,
+    make_tg_node: Any,
+) -> None:
+    """A pointer assigned inside the loop must be private: sharing it races on the pointer.
+
+    Its incoming RAW dependency describes the memory it is aimed at, not its own value - it
+    cannot describe its own value, since it is written before it is read in every iteration.
+    """
+    pet, loop_ctx, loop, _ = _build_pointer_reaim_loop(make_node, build_pet_graph, build_task_graph, make_tg_node)
+    ast_helper = _StubASTHelper({"rA": "FOUR_VECTOR *"}, assigned_in_loop=frozenset({"rA"}))
+
+    firstprivate, private, lastprivate, shared, _firstwritten, _init = _classify(pet, loop_ctx, loop, ast_helper)
+
+    assert private == {"rA"}
+    assert shared == set()
+    assert firstprivate == set()
+    assert lastprivate == set()
+
+
+def test_pointer_only_read_in_the_loop_stays_shared(
+    make_node: MakeNode,
+    build_pet_graph: BuildPetGraph,
+    build_task_graph: Any,
+    make_tg_node: Any,
+) -> None:
+    """The same dependencies, but nothing assigns the pointer itself inside the loop - as for a
+    base pointer indexed with ``A[i] = ...``. Privatizing that would break it, so it stays shared.
+    """
+    pet, loop_ctx, loop, _ = _build_pointer_reaim_loop(make_node, build_pet_graph, build_task_graph, make_tg_node)
+    ast_helper = _StubASTHelper({"rA": "FOUR_VECTOR *"}, assigned_in_loop=frozenset())
+
+    _firstprivate, private, _lastprivate, shared, _firstwritten, _init = _classify(pet, loop_ctx, loop, ast_helper)
+
+    assert shared == {"rA"}
+    assert private == set()

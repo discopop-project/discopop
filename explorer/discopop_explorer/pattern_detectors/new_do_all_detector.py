@@ -532,6 +532,13 @@ def detect_doall_sharing_clauses(
             if type_str is not None and ("*" in type_str or "&" in type_str)
         ]
     )
+    # names of the variables whose own storage is written somewhere inside this loop, taken from
+    # the AST rather than from the dependencies. The profiler names an access that went through a
+    # pointer after the pointer, so "rA" labels both the write to rA in "rA = &rv[first_i]" and
+    # the read of rv's elements in "rA[i].v" - which makes a pointer that is re-aimed every
+    # iteration indistinguishable from a shared array by dependency data alone. Sharing such a
+    # variable would race on the pointer itself, so it must never be classified as shared.
+    reassigned_vars = ast_helper.get_variables_assigned_in_loop_at(file_id, line_num)
 
     # shared:
     # - no dependency between iterations
@@ -700,7 +707,7 @@ def detect_doall_sharing_clauses(
             # -> classification of the variables clauses according to scheme above
             if var_name in written:
                 if var_name in data_outgoing:
-                    if var_name in ptr_type_access:
+                    if var_name in ptr_type_access and var_name not in reassigned_vars:
                         it_shared.add(var_name)
                     else:
                         it_lastprivate.add(var_name)
@@ -713,7 +720,7 @@ def detect_doall_sharing_clauses(
                     and var_name not in it_lastprivate
                     and var_name not in it_firstprivate
                 ):
-                    if var_name in ptr_type_access:
+                    if var_name in ptr_type_access and var_name not in reassigned_vars:
                         it_shared.add(var_name)
                     else:
                         it_private.add(var_name)
@@ -724,7 +731,14 @@ def detect_doall_sharing_clauses(
                     and var_name not in it_firstprivate
                     and var_name not in it_private
                 ):
-                    it_shared.add(var_name)
+                    if var_name in reassigned_vars:
+                        # The incoming value cannot be this variable's own: it is written before
+                        # it is read inside the iteration. It belongs to the memory reached
+                        # through the variable, which stays shared by way of the base pointer it
+                        # was derived from, while the variable itself is re-aimed every iteration.
+                        it_private.add(var_name)
+                    else:
+                        it_shared.add(var_name)
 
                 if (
                     var_name not in it_private
@@ -733,6 +747,7 @@ def detect_doall_sharing_clauses(
                     and var_name not in it_firstprivate
                     and var_name in it_init
                     and var_name in ptr_type_access
+                    and var_name not in reassigned_vars
                 ):
                     # array initializations without immediate successive uses
                     it_shared.add(var_name)

@@ -121,6 +121,26 @@ class ASTQueries:
         return None
 
     @staticmethod
+    def find_loop_at_location(graph: nx.DiGraph[str], filename: str, line: int) -> Optional[str]:
+        """Find the loop statement whose header starts on a given line.
+
+        Args:
+            graph: AST graph
+            filename: Source filename
+            line: Line the loop header starts on
+
+        Returns:
+            ID of the outermost loop node beginning on *line*, or None if there is none
+        """
+        for node_id in ASTQueries.find_nodes_at_location(graph, filename, line):
+            attrs = graph.nodes[node_id]
+            if attrs.get("kind") in _LOOP_KINDS and attrs.get("range", {}).get("begin_line") == line:
+                # find_nodes_at_location descends the tree, so parents precede their children
+                # and the first hit is the outermost loop starting here
+                return node_id
+        return None
+
+    @staticmethod
     def get_node_info(graph: nx.DiGraph[str], node_id: str) -> dict[str, Any]:
         """Get all attributes of a node.
 
@@ -348,6 +368,87 @@ class ASTVariableAndTypeQueries:
         return sorted(variables)
 
     @staticmethod
+    def find_variables_assigned_in_loop_at(graph: nx.DiGraph[str], filename: str, line: int) -> set[str]:
+        """Find variables whose own storage is assigned inside the loop whose header is at *line*.
+
+        Only assignments to the variable itself count -- ``p = &a[i]`` yields ``p``, whereas
+        ``p[i] = x`` or ``p[i].f += x`` yields nothing, because those write the memory *reached
+        through* ``p`` and leave ``p`` untouched.  The distinction is invisible in the profiler's
+        dependency data, which names an indirect access after the pointer it went through, so the
+        AST is the only place it can be recovered.
+
+        The loop's extent is taken from the AST node's own range, so a variable assigned in an
+        enclosing loop but not in this one is correctly left out.
+
+        Args:
+            graph: AST graph
+            filename: Source filename
+            line: Line the loop header starts on
+
+        Returns:
+            Set of variable names directly assigned somewhere inside the loop body or header
+        """
+        loop_node_id = ASTQueries.find_loop_at_location(graph, filename, line)
+        if loop_node_id is None:
+            return set()
+
+        assigned: set[str] = set()
+        visited: set[str] = set()
+        stack: list[str] = [loop_node_id]
+        while stack:
+            node_id = stack.pop()
+            if node_id in visited:
+                continue
+            visited.add(node_id)
+
+            attrs = graph.nodes[node_id]
+            if attrs.get("kind") in _ASSIGNING_OPERATOR_KINDS and attrs.get("opcode") in _ASSIGNING_OPCODES:
+                target = ASTVariableAndTypeQueries._assignment_target_name(graph, node_id)
+                if target is not None:
+                    assigned.add(target)
+
+            stack.extend(graph.successors(node_id))
+        return assigned
+
+    @staticmethod
+    def _assignment_target_name(graph: nx.DiGraph[str], operator_node_id: str) -> Optional[str]:
+        """Return the name of the variable an assignment operator writes, if it writes one directly.
+
+        The operand written is the operator's first child.  Casts and parentheses around it are
+        transparent; an ``ArraySubscriptExpr``, ``MemberExpr`` or dereference in between means the
+        write goes to memory reached through the variable rather than to the variable, so no name
+        is returned.
+
+        Args:
+            graph: AST graph
+            operator_node_id: ID of the assignment / increment operator node
+
+        Returns:
+            Variable name, or None when the operator does not write a variable directly
+        """
+        children = list(graph.successors(operator_node_id))
+        if not children:
+            return None
+        # The DFS in build_from_ast adds children in source order, so the first successor is the
+        # assignment's left-hand side (its sole operand for ++ / --).
+        current = children[0]
+        seen: set[str] = set()
+        while current not in seen:
+            seen.add(current)
+            attrs = graph.nodes[current]
+            kind = attrs.get("kind")
+            if kind == "DeclRefExpr":
+                name = attrs.get("referenced_name")
+                return str(name) if name else None
+            if kind not in _TRANSPARENT_LVALUE_KINDS:
+                return None
+            next_children = list(graph.successors(current))
+            if not next_children:
+                return None
+            current = next_children[0]
+        return None
+
+    @staticmethod
     def get_variables_in_scope(graph: nx.DiGraph[str], scope_node_id: str) -> list[tuple[str, Optional[str]]]:
         """Find all variables declared within a scope node.
 
@@ -394,6 +495,33 @@ class ASTVariableAndTypeQueries:
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
+_LOOP_KINDS = {"ForStmt", "WhileStmt", "DoStmt", "CXXForRangeStmt"}
+
+# Clang node kinds that write their first operand
+_ASSIGNING_OPERATOR_KINDS = {"BinaryOperator", "CompoundAssignOperator", "UnaryOperator"}
+
+# Operator spellings that write their first operand.  "=" is the only assigning opcode a plain
+# BinaryOperator can carry; the compound forms belong to CompoundAssignOperator and "++" / "--"
+# to UnaryOperator, so one shared set covers all three kinds.
+_ASSIGNING_OPCODES = {
+    "=",
+    "+=",
+    "-=",
+    "*=",
+    "/=",
+    "%=",
+    "&=",
+    "|=",
+    "^=",
+    "<<=",
+    ">>=",
+    "++",
+    "--",
+}
+
+# Node kinds that wrap an lvalue without redirecting the write to different storage
+_TRANSPARENT_LVALUE_KINDS = {"ImplicitCastExpr", "CStyleCastExpr", "ParenExpr", "ConstantExpr"}
 
 # Keyed by the graph object itself (weakly) rather than id(graph): a plain
 # id()-keyed cache would risk a stale hit if a graph is garbage-collected and
