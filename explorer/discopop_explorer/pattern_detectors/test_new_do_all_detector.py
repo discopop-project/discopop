@@ -22,6 +22,7 @@ from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.functions.PEGraph.queries.data_edge_index import DataEdgeIndex
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
+from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 from discopop_explorer.pattern_detectors.new_do_all_detector import (
     detect_doall_sharing_clauses,
     identify_simple_doall_and_reduction,
@@ -194,6 +195,96 @@ def test_identify_simple_reduction_dependency_currently_only_prevents_doall(
 
     patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
     assert patterns == []
+
+
+def _build_reduction_loop(
+    make_node: MakeNode,
+    build_pet_graph: BuildPetGraph,
+    build_task_graph: Any,
+    make_tg_node: Any,
+    reduction_vars: Any,
+) -> Any:
+    """A two-iteration loop whose reduction branch is actually reachable.
+
+    _build_two_iteration_loop adds no node to the LoopParentContext, so its code scope is empty
+    and the "loop_line in loop scope" test can never succeed. Adding the loop's own node gives
+    the context the loop's lines (1:5 - 1:10), which is what a reduction entry for this loop has
+    to be found in.
+    """
+    tg, loop, loop_ctx, work1, work2 = _build_two_iteration_loop(
+        make_node, build_pet_graph, build_task_graph, make_tg_node, reduction_vars=reduction_vars
+    )
+    loop_ctx.add_node(make_tg_node(loop.id, level=0, position=0))
+    return tg, loop, loop_ctx, work1, work2
+
+
+def test_reduction_operation_comes_from_the_matching_entry(
+    make_node: MakeNode,
+    build_pet_graph: BuildPetGraph,
+    build_task_graph: Any,
+    make_tg_node: Any,
+    isolated_pattern_id_cwd: Any,
+) -> None:
+    """The operation must be the one reported for the variable which the dependency matched.
+
+    It used to be read from the last entry of pet.reduction_vars regardless of which entry
+    matched, so every reduction of a project was labelled with the operation of whichever one
+    happened to be listed last in reduction.txt. On rodinia's kmeans that turned the "delta +=
+    1.0" accumulation into reduction(max:delta), because an unrelated maximum was listed last.
+    """
+    tg, loop, loop_ctx, work1, work2 = _build_reduction_loop(
+        make_node,
+        build_pet_graph,
+        build_task_graph,
+        make_tg_node,
+        reduction_vars=[
+            {"loop_line": "1:6", "name": "sum", "operation": "+", "reduction_line": "1:6"},
+            # listed last, belongs to a different loop and variable: the trap
+            {"loop_line": "1:20", "name": "peak", "operation": ">", "reduction_line": "1:21"},
+        ],
+    )
+    dep = Dependency(EdgeType.DATA)
+    dep.dtype = DepType.RAW
+    dep.var_name = "sum"
+    dep.origin = DepOrigin.DYNAMIC_ANALYSIS
+    work1.register_outgoing_dependency(work2, dep)
+
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
+
+    reductions = [p for p in patterns if isinstance(p, ReductionInfo)]
+    assert len(reductions) == 1
+    assert [(v.operation, str(v.name)) for v in reductions[0].reduction] == [("+", "sum")]
+
+
+def test_reduction_operation_translates_comparisons_to_min_and_max(
+    make_node: MakeNode,
+    build_pet_graph: BuildPetGraph,
+    build_task_graph: Any,
+    make_tg_node: Any,
+    isolated_pattern_id_cwd: Any,
+) -> None:
+    """A genuine maximum still has to be reported as one, from its own entry."""
+    tg, loop, loop_ctx, work1, work2 = _build_reduction_loop(
+        make_node,
+        build_pet_graph,
+        build_task_graph,
+        make_tg_node,
+        reduction_vars=[
+            {"loop_line": "1:6", "name": "peak", "operation": ">", "reduction_line": "1:6"},
+            {"loop_line": "1:20", "name": "sum", "operation": "+", "reduction_line": "1:21"},
+        ],
+    )
+    dep = Dependency(EdgeType.DATA)
+    dep.dtype = DepType.RAW
+    dep.var_name = "peak"
+    dep.origin = DepOrigin.DYNAMIC_ANALYSIS
+    work1.register_outgoing_dependency(work2, dep)
+
+    patterns = identify_simple_doall_and_reduction(tg, ASTPatternDetectionHelper(), DataEdgeIndex(tg.pet))
+
+    reductions = [p for p in patterns if isinstance(p, ReductionInfo)]
+    assert len(reductions) == 1
+    assert [(v.operation, str(v.name)) for v in reductions[0].reduction] == [("max", "peak")]
 
 
 def test_identify_simple_doall_allows_static_dependency_first_written_inside_loop(

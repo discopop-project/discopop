@@ -116,8 +116,11 @@ def collect_reduction_variables(
     # reduction_info is filled while iterating sets of contexts and dependencies, so its order
     # is not reproducible across runs. It is only ever used to derive the reduction variables,
     # which go into the pattern's clauses and its duplicate key, so sorting them by name here
-    # makes both reproducible.
-    for ri in sorted(reduction_info, key=lambda ri: (ri[2].var_name or "")):
+    # makes both reproducible. The operation is part of the key as well: entries now carry the
+    # operation of the reduction they describe rather than a single one shared by all of them,
+    # so with the name alone, which of two conflicting operations for one variable survives the
+    # deduplication below would again depend on the unreproducible order.
+    for ri in sorted(reduction_info, key=lambda ri: (ri[2].var_name or "", ri[3].get("operation", ""))):
         if ri[2].var_name is None:
             continue
         var = Variable(type="unknown", name=VarName(ri[2].var_name), defLine="LineNotFound")
@@ -243,15 +246,19 @@ def identify_simple_doall_and_reduction(
         loop_variables = node.created_context.loop_variables
         # tested once per dependency below, so not as the list it is stored as
         loop_variable_keys = set(loop_variables)
-        # The reduction lines which could apply to this loop, per variable name. The loop_line
-        # condition only involves the candidate, so it is evaluated here rather than per
-        # dependency, and the remaining conditions become a lookup by variable name.
+        # The reduction entries which could apply to this loop, per variable name, each paired
+        # with the line its reduction happens on. The loop_line condition only involves the
+        # candidate, so it is evaluated here rather than per dependency, and the remaining
+        # conditions become a lookup by variable name. The whole entry is kept, not just the
+        # line, because the matching one carries the operation the reduction is reported with.
+        # A list rather than a set, so that a variable reduced on more than one line inside the
+        # same loop matches these in the order of pet.reduction_vars, i.e. reproducibly.
         loop_code_scope = node.created_context.get_code_scope_set(tg.pet)
-        reduction_lines_by_var: Dict[str, Set[LineID]] = dict()
+        reduction_entries_by_var: Dict[str, List[Tuple[LineID, Dict[str, str]]]] = dict()
         for red_var_dict in tg.pet.reduction_vars:
             if red_var_dict["loop_line"] in loop_code_scope:
-                reduction_lines_by_var.setdefault(red_var_dict["name"], set()).add(
-                    LineID(red_var_dict["reduction_line"])
+                reduction_entries_by_var.setdefault(red_var_dict["name"], []).append(
+                    (LineID(red_var_dict["reduction_line"]), red_var_dict)
                 )
         # check for dependencies
         dependency_found = False
@@ -278,25 +285,24 @@ def identify_simple_doall_and_reduction(
                         # check if the preventing dependency is a reduction dependency: does a
                         # reduction of this variable happen on a line which both ends of the
                         # dependency cover?
-                        is_reduction_dependency = False
-                        candidate_reduction_lines = reduction_lines_by_var.get(dep.var_name)  # type: ignore[arg-type]
-                        if candidate_reduction_lines is not None:
+                        matched_reduction_entry: Optional[Dict[str, str]] = None
+                        candidate_reduction_entries = reduction_entries_by_var.get(dep.var_name)  # type: ignore[arg-type]
+                        if candidate_reduction_entries is not None:
                             if subnode_code_scope is None:
                                 subnode_code_scope = subnode.get_code_scope_set(tg.pet)
                             target_code_scope = out_dep_target.get_code_scope_set(tg.pet)
-                            for reduction_line in candidate_reduction_lines:
+                            for reduction_line, reduction_entry in candidate_reduction_entries:
                                 if reduction_line in subnode_code_scope and reduction_line in target_code_scope:
-                                    is_reduction_dependency = True
+                                    matched_reduction_entry = reduction_entry
                                     break
-                        if is_reduction_dependency:
-                            # not a valid doall loop
-                            # NOTE: the reduction operation reported here is the one of the LAST
-                            # entry of pet.reduction_vars, not the one of the entry which matched.
-                            # The original loop over pet.reduction_vars had no break, so the
-                            # variable it bound always ended up holding the last entry. Preserved
-                            # deliberately to keep this refactoring behaviour-neutral; see the
-                            # note in the accompanying report.
-                            reduction_info.append((subnode, out_dep_target, dep, tg.pet.reduction_vars[-1]))
+                        is_reduction_dependency = matched_reduction_entry is not None
+                        if matched_reduction_entry is not None:
+                            # not a valid doall loop. The operation has to come from the entry
+                            # which matched: reporting the last entry of pet.reduction_vars
+                            # instead labelled every reduction of a project with the operation of
+                            # whichever one happened to be listed last in reduction.txt, e.g.
+                            # reduction(max:delta) for a "delta += 1.0" accumulation.
+                            reduction_info.append((subnode, out_dep_target, dep, matched_reduction_entry))
                         #                            dependency_found = True
                         #                            break
 
