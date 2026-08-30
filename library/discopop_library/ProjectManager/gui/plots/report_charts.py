@@ -18,7 +18,7 @@ row in the Report table -- never silently dropped, and never plotted as a parall
 that happened to reach no speedup:
 
 * :func:`render_pareto`  -- trade-off scatter of every measured run;
-* :func:`render_scaling` -- one line per (config, mode) across thread counts;
+* :func:`render_scaling` -- scatter of one (config, mode) series per thread count;
 * :func:`render_bars`    -- best-of comparison per configuration and mode.
 
 The pure metric/reduction helpers are matplotlib-free and unit-tested; only the
@@ -316,15 +316,13 @@ def render_scaling(
         xs = [p[0] for p in pts]
         ys = [p[1] for p in pts]
         max_threads = max(max_threads, *xs) if xs else max_threads
-        dashes = mode_style.mode_dashes(mode)
+        # scatter plot: the measurements of a series are not connected
         line_kwargs: Dict[str, Any] = {
             "color": colors.get(config, mode_style.CONFIG_PALETTE[0]),
             "marker": mode_style.mode_marker(mode),
             "markersize": mode_style.LINE_MARKER_SIZE,
-            "linewidth": 2.0,
+            "linestyle": "None",
         }
-        if dashes != (None, None):
-            line_kwargs["dashes"] = list(dashes)
         (line,) = ax.plot(xs, ys, **line_kwargs)
         # Store a representative record from this series (the best one by the metric).
         best_record = max(
