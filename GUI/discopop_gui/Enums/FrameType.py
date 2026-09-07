@@ -6,8 +6,9 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import TypeVar
+from enum import Enum, auto
 
-from discopop_gui.Objects.Canvases.Viewables.Base import Base as ViewableCanvas
-
-ViewableCanvasT = TypeVar("ViewableCanvasT", bound=ViewableCanvas)
+class FrameType(Enum):
+    BASE = auto()
+    MULTI_FRAME = auto()
+    CANVAS_VIEWER = auto()

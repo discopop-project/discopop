@@ -9,4 +9,6 @@
 import tkinter as tk
 from typing import TypeVar
 
-FrameT = TypeVar("FrameT", bound=tk.Frame)
+from discopop_gui.Objects.Frames.Base import Base as BaseFrame
+
+FrameT = TypeVar("FrameT", bound=BaseFrame)

@@ -9,22 +9,24 @@
 from __future__ import annotations
 
 import tkinter as tk
-from typing import Any, Generic, Callable, Dict
+from typing import Any, Generic, Callable, Dict, cast
 
+from discopop_gui.Objects.Frames.Base import Base
 from discopop_gui.Types.ViewableCanvasT import ViewableCanvasT
 from discopop_gui.Objects.Canvases.RoundedSquareButtons.Mouse import Mouse as MouseButton
 from discopop_gui.Objects.Canvases.RoundedSquareButtons.Magnifier import Magnifier as MagnifierButton
 from discopop_gui.Objects.Canvases.RoundedSquareButtons.Cross import Cross as CrossButton
 from discopop_gui.Enums.ViewerMode import ViewerMode
+from discopop_gui.ClassMaps.ViewableCanvases import ViewableCanvasesMap
+from discopop_gui.Enums.ViewableCanvasTypes import ViewableCanvasTypes
+from discopop_gui.Objects.Canvases.Viewables.Base import Base as ViewableCanvasBase
+from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
 
-
-class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
-    def __init__(self, parent: tk.Misc, canvas_builder: Callable[[tk.Frame, "CanvasViewer[ViewableCanvasT]", ViewerMode], ViewableCanvasT], *args: Any, **kwargs: Any) -> None:
+class CanvasViewer(Base, Generic[ViewableCanvasT]):
+    def __init__(self, parent: tk.Misc, *args: Any, **kwargs: Any) -> None:
         super().__init__(parent, *args, **kwargs)
 
-        self._canvas_builder = canvas_builder
         self._selected_option: ViewerMode = ViewerMode.MAIN
-        
         self._canvases : Dict[str, ViewableCanvasT] = {}
         self._canvas_selectors : Dict[str, tk.Button] = {}
         self._active_canvas_id : str | None = None
@@ -119,11 +121,11 @@ class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
                 pady = 2,
             )
 
-    def add_canvas(self, canvas_builder: Callable[[tk.Frame, "CanvasViewer[ViewableCanvasT]", ViewerMode], ViewableCanvasT] | None = None) -> str:
+    def add_canvas(self, canvas_builder: Callable[[tk.Frame, "CanvasViewer[ViewableCanvasT]", ViewerMode], ViewableCanvasT]) -> str:
         self._canvas_id_counter += 1
         canvas_id = str(self._canvas_id_counter)
 
-        new_canvas = canvas_builder(self._canvas_container, self, self._selected_option)if canvas_builder else self._canvas_builder(self._canvas_container, self, self._selected_option)
+        new_canvas = canvas_builder(self._canvas_container, self, self._selected_option)
         self._canvases[canvas_id] = new_canvas
         new_canvas.grid(row=0, column=0, sticky="nsew")
 
@@ -205,3 +207,63 @@ class CanvasViewer(tk.Frame, Generic[ViewableCanvasT]):
             self.get_canvas(active_canvas_id).set_viewer_mode(self._selected_option)
 
         self._update_toolbar()
+
+    def serialize(self) -> dict:
+        return {
+            "canvases" : {canvas_id : {"type" : ViewableCanvasesMap[canvas.__class__.__name__].value, "data" : canvas.serialize()} for canvas_id, canvas in self._canvases.items() if canvas.get_serializable()}
+        }
+
+    def deserialize(self, data: dict) -> None:
+        for canvas_data in data["canvases"].values():
+            canvas_type = ViewableCanvasTypes(canvas_data["type"])
+
+            match canvas_type:
+                case ViewableCanvasTypes.WITH_TREES:
+                    def canvas_builder_with_trees(
+                        parent: tk.Frame,
+                        canvas_viewer: CanvasViewer[ViewableCanvasWithTrees],
+                        canvas_viewer_mode: ViewerMode
+                    ) -> ViewableCanvasWithTrees:
+                        return ViewableCanvasWithTrees(
+                            parent,
+                            canvas_viewer,
+                            canvas_viewer_mode,
+                            bg="white"
+                        )
+
+                    canvas = self.get_canvas(
+                        self.add_canvas(
+                            cast(
+                                Callable[
+                                    [tk.Frame, CanvasViewer[ViewableCanvasT], ViewerMode],
+                                    ViewableCanvasT
+                                ],
+                                canvas_builder_with_trees
+                            )
+                        )
+                    )
+                case _:
+                    def canvas_builder_base(
+                        parent: tk.Frame,
+                        canvas_viewer: CanvasViewer[ViewableCanvasBase],
+                        canvas_viewer_mode: ViewerMode
+                    ) -> ViewableCanvasBase:
+                        return ViewableCanvasBase(
+                            parent,
+                            canvas_viewer_mode,
+                            bg="white"
+                        )
+
+                    canvas = self.get_canvas(
+                        self.add_canvas(
+                            cast(
+                                Callable[
+                                    [tk.Frame, CanvasViewer[ViewableCanvasT], ViewerMode],
+                                    ViewableCanvasT
+                                ],
+                                canvas_builder_base
+                            )
+                        )
+                    )
+
+            canvas.deserialize(canvas_data["data"])

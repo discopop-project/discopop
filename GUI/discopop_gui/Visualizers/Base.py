@@ -11,6 +11,7 @@ import tkinter as tk
 from typing import Dict, Callable, Optional
 
 from discopop_gui.Types.FrameT import FrameT
+from discopop_gui.Objects.Frames.Base import Base as BaseFrame
 
 class Base(ABC):
     def __init__(self, visualize_on : Optional[tk.Frame] = None) -> None:
@@ -25,8 +26,11 @@ class Base(ABC):
             self._root = visualize_on
             self._visualizing_on = True
 
-        self._frames: Dict[str, tk.Frame] = {}
-        self._current_frame_name: str | None = None
+        self._frame_id_counter : int = 0
+        self._frames: Dict[int, BaseFrame] = {}
+        self._frame_names: Dict[int, str] = {}
+        self._file_locations : Dict[int, str] = {}
+        self._current_frame_id: int | None = None
 
     def _on_close(self) -> None:
         self._root.quit()
@@ -36,24 +40,28 @@ class Base(ABC):
     def create_frame(self, name: str, frame_builder: Callable[[tk.Misc], FrameT]) -> FrameT:
         pass
 
-    def get_frame(self, name: str) -> tk.Frame:
+    def get_frame(self, frame_id: int) -> BaseFrame:
         try:
-            return self._frames[name]
+            return self._frames[frame_id]
         except KeyError as error:
-            raise KeyError(f"No Frame named '{name}'.") from error
+            raise KeyError(f"No Frame with ID '{frame_id}'.") from error
         
-    def show_frame(self, name: str) -> None:
-        frame = self.get_frame(name)
+    def show_frame(self, frame_id: int) -> None:
+        frame = self.get_frame(frame_id)
         frame.tkraise()
-        self._current_frame_name = name
+        self._current_frame_id = frame_id
 
-    def delete_frame(self, name: str) -> None:
-        frame = self.get_frame(name)
+    def delete_frame(self, frame_id: int) -> None:
+        frame = self.get_frame(frame_id)
         frame.destroy()
-        del self._frames[name]
+        del self._frames[frame_id]
+        del self._frame_names[frame_id]
 
-        if self._current_frame_name == name:
-            self._current_frame_name = None
+        if frame_id in self._file_locations:
+            del self._file_locations[frame_id]
+
+        if self._current_frame_id == frame_id:
+            self._current_frame_id = None
 
             if self._frames:
                 first_name = next(iter(self._frames))
@@ -77,5 +85,12 @@ class Base(ABC):
         for frame in self._frames.values():
             frame.destroy()
 
+        self._frame_id_counter = 0
         self._frames.clear()
-        self._current_frame_name = None
+        self._frame_names.clear()
+        self._file_locations.clear()
+        self._current_frame_id = None
+
+    @abstractmethod
+    def serialize_current_frame(self) -> dict | None:
+        pass

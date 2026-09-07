@@ -6,8 +6,15 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import TypeVar
+import tkinter as tk
+from typing import Any
 
-from discopop_gui.Objects.Canvases.Viewables.Base import Base as ViewableCanvas
+class Base(tk.Frame):
+    def __init__(self, parent: tk.Misc, *args: Any, **kwargs: Any) -> None:
+        super().__init__(parent, *args, **kwargs)
 
-ViewableCanvasT = TypeVar("ViewableCanvasT", bound=ViewableCanvas)
+    def serialize(self) -> dict:
+        return {}
+
+    def deserialize(self, data : dict) -> None:
+        pass

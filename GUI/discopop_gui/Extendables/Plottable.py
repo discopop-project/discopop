@@ -8,11 +8,12 @@
 
 from typing import Callable, List
 import tkinter as tk
-from matplotlib.axes import Axes
+from matplotlib.axes._axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
 from matplotlib.figure import Figure
 
 from discopop_gui.Visualizers.Base import Base
+from discopop_gui.Objects.Frames.Base import Base as BaseFrame
 from discopop_gui.Objects.Frames.MultiFrame import MultiFrame
 from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
 from discopop_gui.Enums.ViewerMode import ViewerMode as CanvasViewerMode
@@ -30,11 +31,11 @@ class Plottable:
 
         return True
 
-    def create_frame(self, name: str) -> tk.Frame:
+    def create_frame(self, name: str) -> BaseFrame:
         if self._visualizer is None:
             raise VisualizerNotDefined()
 
-        return self._visualizer.create_frame(name, tk.Frame)
+        return self._visualizer.create_frame(name, BaseFrame)
 
     def create_multi_frame(self, name: str, rows: int, columns: int) -> MultiFrame:
         if self._visualizer is None:
@@ -54,29 +55,18 @@ class Plottable:
         for column in range(columns):
             frame.grid_columnconfigure(column, weight=1)
 
-        inner_frames : List[tk.Frame] = []
+        inner_frames : List[BaseFrame] = []
 
         for i in range(rows * columns):
             row = i // columns
             column = i % columns
 
-            inner_frame = tk.Frame(frame, borderwidth=1, relief="solid")
+            inner_frame = BaseFrame(frame, borderwidth=1, relief="solid")
             inner_frame.grid(row=row, column=column, sticky="nsew", padx=5, pady=5)
             inner_frames.append(inner_frame)
 
         frame.initialize(inner_frames)
         return frame
-
-    def get_from_multi_frame(self, name: str, index: int) -> tk.Frame:
-        if self._visualizer is None:
-            raise VisualizerNotDefined()
-
-        frame = self._visualizer.get_frame(name)
-
-        if isinstance(frame, MultiFrame):
-            return frame.get_from_inner(index)
-        else:
-            raise KeyError(f"No multi frame named '{name}'.")
 
     def set_filter_callback(self, callback: Callable[[str], None]) -> None:
         if self._visualizer is None:
@@ -84,17 +74,17 @@ class Plottable:
 
         self._visualizer.set_filter_callback(callback)
 
-    def delete_frame(self, name: str) -> None:
+    def delete_frame(self, frame_id: int) -> None:
         if self._visualizer is None:
             raise VisualizerNotDefined()
 
-        self._visualizer.delete_frame(name)
+        self._visualizer.delete_frame(frame_id)
 
     def create_plot(self, name: str) -> Axes:
         if self._visualizer is None:
             raise VisualizerNotDefined()
 
-        frame: tk.Frame = self._visualizer.create_frame(name, tk.Frame)
+        frame: BaseFrame = self._visualizer.create_frame(name, BaseFrame)
         figure = Figure()
         axes = figure.add_subplot(111)
         axes.set_title("Task graph")
@@ -106,7 +96,6 @@ class Plottable:
         toolbar.grid(row=1)
         frame.grid_rowconfigure(0, weight=1)
         frame.grid_columnconfigure(0, weight=1)
-
         return axes
 
     def create_plottable_canvas(self, name: str) -> ViewableCanvasWithTrees:
@@ -117,34 +106,33 @@ class Plottable:
             return ViewableCanvasWithTrees(parent, canvas_viewer, canvas_viewer_mode, bg="white")
         
         def frame_builder(parent : tk.Misc) -> CanvasViewer[ViewableCanvasWithTrees]:
-            return CanvasViewer(parent, canvas_builder)
+            return CanvasViewer(parent)
 
         frame = self._visualizer.create_frame(name, frame_builder)
+        canvas = frame.get_canvas(frame.add_canvas(canvas_builder))
 
-        canvas = frame.get_canvas(frame.add_canvas())
-        
-        frame.grid_rowconfigure(0, weight=1)
-        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_rowconfigure(0, weight = 1)
+        frame.grid_columnconfigure(0, weight = 1)
 
         return canvas
 
     def create_multi_plot(self, name: str, inner_plot_titles: list[str], rows: int, columns: int) -> list[Axes]:
-        self.create_multi_frame(name, rows, columns)
+        frame = self.create_multi_frame(name, rows, columns)
         axeses = []
 
         for index in range(rows * columns):
-            frame = self.get_from_multi_frame(name, index)
+            inner_frame = frame.get_from_inner(index)
             figure = Figure()
             axes = figure.add_subplot(111)
             axes.set_title(inner_plot_titles[index])
-            canvas = FigureCanvasTkAgg(figure, master=frame)
+            canvas = FigureCanvasTkAgg(figure, master = inner_frame)
             canvas.draw()
             canvas.get_tk_widget().grid(row=0, sticky="nsew")
             toolbar = NavigationToolbar2Tk(canvas, pack_toolbar=False)
             toolbar.update()
-            toolbar.grid(row=1)
-            frame.grid_rowconfigure(0, weight=1)
-            frame.grid_columnconfigure(0, weight=1)
+            toolbar.grid(row = 1)
+            inner_frame.grid_rowconfigure(0, weight = 1)
+            inner_frame.grid_columnconfigure(0, weight = 1)
             axeses.append(axes)
 
         return axeses
@@ -152,3 +140,7 @@ class Plottable:
     def run_visualizer(self) -> None:
         if self._visualizer is not None:
             self._visualizer.run()
+
+    def clear_visualizer(self) -> None:
+        if self._visualizer is not None:
+            self._visualizer.clear()
