@@ -28,7 +28,7 @@ from discopop_library.ProjectManager.gui.widgets import (
 )
 from discopop_library.ProjectManager.gui.plots import autotuning_chart, embedding
 from discopop_library.ProjectManager.gui.plots.autotuning_chart import ProgressModel
-from discopop_library.ProjectManager.gui.plots.data import parse_progress_jsonl, parse_progress_line
+from discopop_library.ProjectManager.gui.plots.data import parse_progress_jsonl, split_progress_events
 
 logger_name = "AutotuningPanel"
 
@@ -117,16 +117,10 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         threads_row = ttk.Frame(settings_frame)
         threads_row.pack(fill=tk.X, pady=5)
         ttk.Label(threads_row, text="Threads:", font=widgets.FONT_BODY).pack(side=tk.LEFT, padx=5)
-        self.autotuning_threads_var = tk.StringVar(value="auto")
-        threads_combo = ttk.Combobox(
-            threads_row,
-            textvariable=self.autotuning_threads_var,
-            values=widgets.THREAD_VALUES,
-            width=10,
-            state="readonly",
-        )
+        self.autotuning_threads_var = tk.StringVar(value=widgets.THREAD_AUTO)
+        threads_combo = widgets.thread_selector(threads_row, self.autotuning_threads_var)
         threads_combo.pack(side=tk.LEFT, padx=5)
-        caption_label(threads_row, "(auto = CPU count / 2)").pack(side=tk.LEFT, padx=5)
+        caption_label(threads_row, "(auto = CPU count / 2; custom counts can be typed)").pack(side=tk.LEFT, padx=5)
 
         # Hotspot types
         hotspot_frame = ttk.Frame(settings_frame)
@@ -135,7 +129,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
 
         self.autotuning_hotspot_types_vars = {}
         for htype in ["yes", "no", "maybe"]:
-            var = tk.BooleanVar(value=htype in ["yes", "no"])
+            var = tk.BooleanVar(value=htype == "yes")
             self.autotuning_hotspot_types_vars[htype] = var
             cb = ttk.Checkbutton(hotspot_frame, text=htype.upper(), variable=var)
             cb.pack(side=tk.LEFT, padx=20)
@@ -535,7 +529,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         selected_hotspot_types = [htype for htype, var in self.autotuning_hotspot_types_vars.items() if var.get()]
         hotspot_types = ",".join(selected_hotspot_types) if selected_hotspot_types else "yes,no,maybe"
 
-        threads_value = self.autotuning_threads_var.get()
+        threads_value = widgets.thread_value(self.autotuning_threads_var)
         algorithm_description = self.autotuning_algorithm_var.get()
         algorithm_value = self.autotuning_algorithm_map.get(algorithm_description, "0")
         log_level = self.autotuning_log_level_var.get()
@@ -596,12 +590,13 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         assert self._autotuning_process.stdout is not None
         for line in self._autotuning_process.stdout:
             # Structured progress events drive the live plot and are kept out of the
-            # console; everything else is echoed to the console as before.
-            event = parse_progress_line(line)
-            if event is not None:
+            # console; everything else is echoed to the console as before. Events are
+            # extracted from anywhere in the line: stdout and stderr share one stream,
+            # so a progress bar redraw can leave its bar text in front of an event.
+            events, residual = split_progress_events(line)
+            for event in events:
                 self.after(0, lambda e=event: self._on_autotuning_progress(e))  # type: ignore
-                continue
-            cleaned = clean_ansi_output(line.rstrip("\n"))
+            cleaned = clean_ansi_output(residual.rstrip("\n"))
             if cleaned:
                 output_callback(cleaned + "\n")
 
@@ -615,6 +610,10 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
 
     def _on_autotuning_complete(self, error: bool = False) -> None:
         self.autotuning_running = False
+
+        # progress.jsonl is the authoritative record of the finished run: rebuild the
+        # plot from it, so the final view is complete even if a live event was lost.
+        self._load_autotuning_progress_from_file()
 
         if self.autotuning_run_button is not None:
             self.autotuning_run_button.config(state="normal", text="Run Autotuning")

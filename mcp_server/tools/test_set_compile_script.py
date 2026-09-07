@@ -52,6 +52,42 @@ class TestSetCompileScript(unittest.TestCase):
         self.assertTrue(os.path.exists(per_config_path))
         self.assertFalse(os.path.exists(os.path.join(self.configs_dir, "compile.sh")))
 
+    def test_purpose_validate_writes_shared_validation_script(self) -> None:
+        data = self._handle(purpose="validate")
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(data["purpose"], "validate")
+        shared_path = os.path.join(self.configs_dir, "compile_validate.sh")
+        self.assertEqual(data["path"], shared_path)
+        self.assertTrue(os.access(shared_path, os.X_OK))
+        self.assertFalse(os.path.exists(os.path.join(self.configs_dir, "compile.sh")))
+
+    def test_purpose_validate_with_config_name_writes_per_config_override(self) -> None:
+        data = self._handle(purpose="validate", config_name="default")
+        per_config_path = os.path.join(self.configs_dir, "default", "compile_validate.sh")
+        self.assertEqual(data["path"], per_config_path)
+        self.assertTrue(os.path.exists(per_config_path))
+        self.assertFalse(os.path.exists(os.path.join(self.configs_dir, "compile_validate.sh")))
+
+    def test_purpose_defaults_to_execute(self) -> None:
+        data = self._handle()
+        self.assertEqual(data["purpose"], "execute")
+        self.assertNotIn("applies_to", data)
+
+    def test_validation_scope_reports_configurations_without_validate_sh(self) -> None:
+        os.makedirs(os.path.join(self.configs_dir, "other"))
+        with open(os.path.join(self.configs_dir, "other", "validate.sh"), "w") as f:
+            f.write("#!/bin/bash\nexit 0\n")
+
+        data = self._handle(purpose="validate")
+
+        self.assertEqual(data["applies_to"], {"used_by": ["other"], "ignored_for": ["default"]})
+
+    def test_invalid_purpose_errors_without_writing(self) -> None:
+        data = self._handle(purpose="bogus")
+        self.assertEqual(data["status"], "error")
+        self.assertFalse(os.path.exists(os.path.join(self.configs_dir, "compile.sh")))
+        self.assertFalse(os.path.exists(os.path.join(self.configs_dir, "compile_validate.sh")))
+
     def test_nonexistent_config_name_errors_without_writing(self) -> None:
         data = self._handle(config_name="does_not_exist")
         self.assertEqual(data["status"], "error")

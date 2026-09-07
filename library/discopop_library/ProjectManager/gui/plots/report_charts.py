@@ -17,19 +17,17 @@ configuration, marker/dash = execution mode, fill = validity):
 
 The pure metric/reduction helpers are matplotlib-free and unit-tested; only the
 ``render_*`` functions touch a figure (passed in by the caller). Record metadata
-is stored on each point/line/bar so hovering shows a tooltip and clicking can
-report the record back to the caller (e.g. to fill an always-visible detail panel).
+is stored on each point/line/bar via :mod:`interaction` so hovering shows a
+tooltip and clicking can report the record back to the caller (e.g. to fill an
+always-visible detail panel).
 """
 
 from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
-from discopop_library.ProjectManager.gui.plots import mode_style
+from discopop_library.ProjectManager.gui.plots import interaction, mode_style
 from discopop_library.ProjectManager.gui.plots.data import ExecutionRecord, pareto_frontier
-
-# Sentinel for storing ExecutionRecord metadata on artists for hover tooltips.
-_RECORD_METADATA_KEY = "_discopop_record"
 
 # metric key -> (axis label, "more is better")
 METRICS: Dict[str, Tuple[str, bool]] = {
@@ -106,157 +104,12 @@ def _format_record_tooltip(record: ExecutionRecord) -> str:
 
 
 def _empty(ax: Any, message: str = "No execution results yet") -> None:
-    ax.text(
-        0.5,
-        0.5,
-        message,
-        ha="center",
-        va="center",
-        color=mode_style.REFERENCE_COLOR,
-        fontsize=mode_style.ANNOTATION_SIZE,
-    )
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-
-_INTERACTION_BOUND_KEY = "_discopop_interaction_bound"
-
-
-def _find_record_at_event(figure: Any, event: Any) -> Optional[ExecutionRecord]:
-    """Return the ExecutionRecord nearest ``event`` (within 2% of the axis range).
-
-    Shared by hover tooltips and click selection so both react to exactly the
-    same set of points/lines/bars carrying record metadata.
-    """
-    if event.inaxes is None or event.xdata is None or event.ydata is None:
-        return None
-    for ax in figure.axes:
-        if not ax.get_visible():
-            continue
-        xdata, ydata = event.xdata, event.ydata
-        threshold = 0.02 * (ax.get_xlim()[1] - ax.get_xlim()[0])
-        # Scatter collections (pareto, autotuning).
-        for coll in ax.collections:
-            if not hasattr(coll, "get_offsets") or len(coll.get_offsets()) == 0:
-                continue
-            offsets = coll.get_offsets()
-            dists = ((offsets[:, 0] - xdata) ** 2 + (offsets[:, 1] - ydata) ** 2) ** 0.5
-            min_dist_idx = dists.argmin()
-            if dists[min_dist_idx] < threshold:
-                records = getattr(coll, _RECORD_METADATA_KEY, None)
-                if records and min_dist_idx < len(records):
-                    return records[min_dist_idx]  # type: ignore[no-any-return]
-        # Line artists (scaling).
-        for line in ax.get_lines():
-            if not line.get_visible() or len(line.get_xdata()) == 0:
-                continue
-            xs, ys = line.get_xdata(), line.get_ydata()
-            dists = ((xs - xdata) ** 2 + (ys - ydata) ** 2) ** 0.5
-            min_dist_idx = dists.argmin()
-            if dists[min_dist_idx] < threshold:
-                record = getattr(line, _RECORD_METADATA_KEY, None)
-                if record is not None:
-                    return record  # type: ignore[no-any-return]
-        # Bar patches (bars chart).
-        for patch in ax.patches:
-            if not patch.get_visible():
-                continue
-            bbox = patch.get_bbox() if hasattr(patch, "get_bbox") else patch.get_path().get_extents()
-            if bbox.contains(xdata, ydata):
-                record = getattr(patch, _RECORD_METADATA_KEY, None)
-                if record is not None:
-                    return record  # type: ignore[no-any-return]
-    return None
+    interaction.empty_message(ax, message)
 
 
 def _setup_record_interaction(figure: Any, on_select: Optional[Callable[[ExecutionRecord], None]] = None) -> None:
-    """Enable hover tooltips and click-to-select for records in the figure.
-
-    Call this after every render. Hovering near a point/line/bar with attached
-    record metadata shows a floating tooltip; clicking one calls ``on_select``
-    with its :class:`ExecutionRecord` (a click that misses every artist is
-    ignored, leaving the previous selection displayed) -- e.g. to fill an
-    always-visible detail panel next to the plot. Safe to call in headless
-    environments (silently skips setup).
-
-    A chart tab re-renders its figure repeatedly (control changes, data
-    refreshes) while reusing the same canvas, so the handlers -- which look up
-    artists via ``figure.axes`` at event time, not bind time -- only need to be
-    attached once; a flag on the canvas guards against piling up duplicate
-    bindings (which would otherwise fire the callback multiple times per click).
-    """
-    # Guard against headless backends (no Tk canvas).
-    if not hasattr(figure.canvas, "mpl_connect") or not hasattr(figure.canvas, "get_tk_widget"):
-        return
-    if getattr(figure.canvas, _INTERACTION_BOUND_KEY, False):
-        return
-    setattr(figure.canvas, _INTERACTION_BOUND_KEY, True)
-
-    _setup_hover_tooltips(figure)
-
-    def on_click(event: Any) -> None:
-        record = _find_record_at_event(figure, event)
-        if record is not None and on_select is not None:
-            on_select(record)
-
-    figure.canvas.mpl_connect("button_press_event", on_click)
-
-
-def _setup_hover_tooltips(figure: Any) -> None:
-    """Enable hover tooltips on a figure that have record metadata attached.
-
-    Binds to the figure canvas's motion_notify_event and displays a sticky label
-    when hovering over a point, line, or bar with attached record metadata.
-    """
-    import tkinter as tk
-
-    # The tooltip label, created on first hover and shown/hidden thereafter.
-    tooltip_label: Optional[tk.Label] = None
-    last_record: Optional[ExecutionRecord] = None
-
-    def on_motion(event: Any) -> None:
-        nonlocal tooltip_label, last_record
-        record = _find_record_at_event(figure, event)
-
-        if record is None:
-            if tooltip_label is not None:
-                tooltip_label.place_forget()
-            last_record = None
-            return
-
-        # If we're hovering the same record, don't recreate the label.
-        if last_record is record:
-            return
-        last_record = record
-
-        text = _format_record_tooltip(record)
-
-        # Create/update the tooltip label.
-        if tooltip_label is None:
-            canvas_widget = figure.canvas.get_tk_widget()
-            tooltip_label = tk.Label(
-                canvas_widget,
-                text=text,
-                background="#fffacd",
-                relief=tk.SOLID,
-                borderwidth=1,
-                font=("TkDefaultFont", 9),
-                justify=tk.LEFT,
-                padx=4,
-                pady=2,
-            )
-        else:
-            tooltip_label.config(text=text)
-
-        # Position the tooltip near the cursor, inside the canvas bounds.
-        canvas_x = figure.canvas.get_tk_widget().winfo_pointerx()
-        canvas_y = figure.canvas.get_tk_widget().winfo_pointery()
-        canvas_x -= figure.canvas.get_tk_widget().winfo_rootx()
-        canvas_y -= figure.canvas.get_tk_widget().winfo_rooty()
-        tooltip_label.place(x=canvas_x + 10, y=canvas_y + 10)
-
-    # Bind the motion handler to the figure's canvas.
-    figure.canvas.mpl_connect("motion_notify_event", on_motion)
+    """Enable hover tooltips and click-to-select for records in the figure."""
+    interaction.setup_interaction(figure, _format_record_tooltip, on_select)
 
 
 def _config_mode_legends(ax: Any, configs: Sequence[str], modes: Sequence[str], colors: Dict[str, str]) -> None:
@@ -336,7 +189,7 @@ def render_pareto(
                 s=mode_style.SCATTER_SIZE,
                 zorder=3,
             )
-        setattr(coll, _RECORD_METADATA_KEY, recs)
+        interaction.attach(coll, recs)
 
     # Pareto frontier only makes sense when both axes are "more is better"
     if show_frontier and more_is_better(x_metric) and more_is_better(y_metric):
@@ -410,7 +263,7 @@ def render_scaling(
         best_record = max(
             [r for r in rows if r.config == config and r.mode == mode], key=lambda r: metric_value(r, metric) or 0.0
         )
-        setattr(line, _RECORD_METADATA_KEY, best_record)
+        interaction.attach(line, best_record)
 
     if show_ideal and metric == "speedup":
         ax.plot(
@@ -473,7 +326,7 @@ def render_bars(
         # Attach record metadata to each bar patch.
         for bar, record in zip(bars, records_in_mode):
             if record is not None:
-                setattr(bar, _RECORD_METADATA_KEY, record)
+                interaction.attach(bar, record)
 
     ax.set_xticks(list(x))
     ax.set_xticklabels(configs)

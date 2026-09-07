@@ -87,7 +87,8 @@ FONT_MONO = ("Courier New", 11)  # console / code surfaces
 # ---------------------------------------------------------------------------
 # Dropdown value lists (shared, so the same selector offers the same options)
 # ---------------------------------------------------------------------------
-THREAD_VALUES = ["auto", "1", "2", "4", "8", "16"]
+THREAD_AUTO = "auto"
+THREAD_VALUES = [THREAD_AUTO, "1", "2", "4", "8", "16"]
 LOG_LEVEL_VALUES = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 # Named ttk button styles registered in ConfigManagerApp._setup_styles.
@@ -235,6 +236,41 @@ def success_button(parent: tk.Misc, text: str, command: Any = None, **kwargs: An
 def danger_button(parent: tk.Misc, text: str, command: Any = None, **kwargs: Any) -> RoundedButton:
     """A destructive/interrupting-action button (Reset / Delete / Stop), red."""
     return create_button(parent, text, command, variant="danger", **kwargs)
+
+
+def is_valid_thread_value(value: str) -> bool:
+    """True for the values a thread selector may hold: ``auto`` or a positive integer."""
+    return value == THREAD_AUTO or (value.isdigit() and int(value) > 0)
+
+
+def thread_value(variable: tk.StringVar) -> str:
+    """Read a thread selector, falling back to ``auto`` for empty or invalid input."""
+    value = variable.get().strip()
+    return value if is_valid_thread_value(value) else THREAD_AUTO
+
+
+def thread_selector(parent: tk.Misc, variable: tk.StringVar, *, width: int = 10, **kwargs: Any) -> ttk.Combobox:
+    """A Threads selector: pick one of the presets, or type a custom thread count.
+
+    The combobox is editable, but typing is restricted to a prefix of ``auto``
+    or a digit sequence, and an incomplete/invalid entry snaps back to ``auto``
+    when the widget loses focus. Call sites should still read the value via
+    :func:`thread_value`, since focus need not have left the widget by the time
+    the value is used.
+    """
+    combo = ttk.Combobox(parent, textvariable=variable, values=THREAD_VALUES, width=width, **kwargs)
+
+    def _validate(proposed: str) -> bool:
+        return proposed == "" or proposed.isdigit() or THREAD_AUTO.startswith(proposed.lower())
+
+    combo.configure(validate="key", validatecommand=(combo.register(_validate), "%P"))
+
+    def _normalize(_event: Any = None) -> None:
+        variable.set(thread_value(variable))
+
+    combo.bind("<FocusOut>", _normalize, add="+")
+    combo.bind("<Return>", _normalize, add="+")
+    return combo
 
 
 def icon_button(parent: tk.Misc, text: str, command: Any = None, *, width: int = 2, **kwargs: Any) -> ttk.Button:

@@ -95,14 +95,59 @@ See [SETUP_GUIDE.md](SETUP_GUIDE.md) for more options or [CLAUDE_INTEGRATION.md]
 
 ## Available Tools
 
-### 1. `get_configurations`
+This section documents the tools around build and execution configuration. The server exposes further tools for running the pipeline and querying its results; call `tools/list`, or see `mcp_server/tools/`, for the complete set.
 
-Retrieves the list of defined execution configurations from a target project.
+### 1. `set_compile_script`
+
+Writes a build script for a project. Must use `$CC` / `$CXX` and `$CFLAGS` / `$CXXFLAGS` instead of hard-coded compiler names, since the same script is reused for sequential, instrumented, hotspot-detection and parallel builds — only the settings file differs.
+
+**Parameters:**
+- `project_path` (string, required): Path to the target project
+- `script_body` (string, required): Bash script body; a `#!/bin/bash` shebang is prepended if absent
+- `config_name` (string, optional): Write a per-configuration override instead of the shared script
+- `purpose` (string, optional): `execute` (default) writes `compile.sh`; `validate` writes `compile_validate.sh`, a separate build for `validate.sh`
+
+A `compile_validate.sh` is only relevant when the configuration also has a `validate.sh`; the response reports which configurations it is `used_by` and which it is `ignored_for`. See the [project manager documentation](https://discopop-project.github.io/discopop/Tools/Project_manager/) for the full resolution order.
+
+**Example:**
+```json
+{
+  "project_path": "/home/user/my_project",
+  "script_body": "$CXX $CXXFLAGS main.cpp -o myapp\n",
+  "purpose": "validate"
+}
+```
+
+### 2. `create_execution_configuration`
+
+Creates a named execution configuration — a subdirectory under `.discopop/project/configs/` describing how to run the compiled binary.
+
+**Parameters:**
+- `project_path` (string, required): Path to the target project
+- `config_name` (string, required): Name of the configuration; also the subdirectory name
+- `script_body` (string, required): Body of `execute.sh`, the timed run
+- `compile_script_body` (string, optional): Body of a per-configuration `compile.sh` override
+- `validate_script_body` (string, optional): Body of `validate.sh`, an untimed output check run after a successful `execute.sh`; the run counts as correct only if both exit `0`
+- `validation_compile_script_body` (string, optional): Body of a per-configuration `compile_validate.sh`; requires a `validate.sh`, and is rejected without one
+
+**Example:**
+```json
+{
+  "project_path": "/home/user/my_project",
+  "config_name": "small_input",
+  "script_body": "./myapp --input data/small.txt > out.txt\n",
+  "validate_script_body": "diff out.txt reference.txt\n"
+}
+```
+
+### 3. `get_configurations`
+
+Retrieves the build scripts and execution configurations defined for a target project, reading `<project_path>/.discopop/project/configs/`.
 
 **Parameters:**
 - `project_path` (string, required): Path to the target project
 
-Looks for configuration directories under `<project_path>/.discopop/project/configs/`.
+**Returns:** the shared `compile_script` and `validation_compile_script`, the `seq` / `dp` settings, and one entry per configuration with its `execute_script`, `compile_script_override`, `validate_script` and `validation_compile_script`. Each script is `null` when the corresponding file does not exist; an empty configuration list together with a null `compile_script` means the project has not been initialized yet.
 
 **Example:**
 ```json
@@ -111,7 +156,7 @@ Looks for configuration directories under `<project_path>/.discopop/project/conf
 }
 ```
 
-### 2. `get_execution_results`
+### 4. `get_execution_results`
 
 Retrieves execution results from prior program executions.
 
@@ -127,7 +172,7 @@ Reads `<project_path>/.discopop/project/execution_results.json`.
 }
 ```
 
-### 3. `get_data_dependencies`
+### 5. `get_data_dependencies`
 
 Returns data dependencies (RAW, WAR, WAW) that cross or lie within a specified code region. Results contain both statically and dynamically identified dependencies — dynamic profiling correctly captures aliasing and other cases that pure static analysis cannot resolve.
 

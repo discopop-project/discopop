@@ -47,34 +47,65 @@ int32_t getFileID(string fileMapping, string fullPathName) {
     return 0;
   }
 
-  int tempfid = 1;
-  fstream fileMappingFile;
+  // Keep FileMapping.txt in an in-memory cache. getFileID is called per-instruction, so
+  // re-reading the file on every call dominates the pass runtime.
+  static std::map<std::string, int32_t> fileIdCache;
+  static int32_t nextFileId = 1;
+  static bool fileMappingLoaded = false;
 
-  fileMappingFile.open(FileMappingPath.data(), ios::in);
-  if (fileMappingFile) {
-    string tp;
-    while (getline(fileMappingFile, tp)) {
-      std::string id = tp.substr(0, tp.find("\t"));
-      std::string file_name = tp.substr(tp.find("\t") + 1);
-      if (file_name == fullPathName) {
-        return stoi(id);
+  auto loadFileMapping = [&]() {
+    fstream fileMappingFile;
+    fileMappingFile.open(FileMappingPath.data(), ios::in);
+    if (fileMappingFile) {
+      string tp;
+      while (getline(fileMappingFile, tp)) {
+        size_t tab = tp.find("\t");
+        if (tab == string::npos) {
+          continue;
+        }
+        int32_t id = stoi(tp.substr(0, tab));
+        std::string file_name = tp.substr(tab + 1);
+        fileIdCache[file_name] = id;
+        if (id >= nextFileId) {
+          nextFileId = id + 1;
+        }
       }
-      tempfid++;
+      fileMappingFile.close();
     }
-    fileMappingFile.close();
+    fileMappingLoaded = true;
+  };
 
-    fileMappingFile.open(FileMappingPath.data(), std::ios_base::app);
-    fileMappingFile << tempfid << "\t" << fullPathName << "\n";
-    fileMappingFile.close();
-    errs() << "added fmap entry: " << tempfid << "\t" << fullPathName << "\n";
-    return tempfid;
-  } else {
-    fileMappingFile.open(FileMappingPath.data(), std::ios_base::app);
-    fileMappingFile << tempfid << "\t" << fullPathName << "\n";
-    fileMappingFile.close();
-    errs() << "added fmap entry: " << tempfid << "\t" << fullPathName << "\n";
-    return tempfid;
+  if (!fileMappingLoaded) {
+    loadFileMapping();
   }
+
+  // hot path: in-memory lookup, no file I/O
+  auto cached = fileIdCache.find(fullPathName);
+  if (cached != fileIdCache.end()) {
+    return cached->second;
+  }
+
+  // Miss. FileMapping.txt is shared by all compiler processes of a build and is not
+  // necessarily pre-generated (see the dp-fmap script), so a file unknown to this process may
+  // well have been registered by a concurrently running one in the meantime. Re-read the file
+  // before handing out a new id, otherwise two processes assign the same id to different
+  // files. Only the miss path pays for this, the cached lookups above stay free.
+  // NOTE: the append below remains racy - two processes missing at the same time still end up
+  // with the same id. Removing that window requires locking the file.
+  loadFileMapping();
+  cached = fileIdCache.find(fullPathName);
+  if (cached != fileIdCache.end()) {
+    return cached->second;
+  }
+
+  // still unknown: assign a new id, persist it once, and cache it
+  int32_t tempfid = nextFileId++;
+  fstream fileMappingFile;
+  fileMappingFile.open(FileMappingPath.data(), std::ios_base::app);
+  fileMappingFile << tempfid << "\t" << fullPathName << "\n";
+  fileMappingFile.close();
+  fileIdCache[fullPathName] = tempfid;
+  return tempfid;
   /*
   int32_t index = 0; // if the associated file id is not found, then we return 0
   string line;

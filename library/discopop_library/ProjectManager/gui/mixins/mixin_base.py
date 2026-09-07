@@ -47,9 +47,13 @@ class ConfigManagerMixinBase:
     editor_sub_tab_labels: Dict[str, str]
     compile_override_button: RoundedButton
     validate_script_button: RoundedButton
+    validation_compile_override_button: RoundedButton
 
     # Pattern Detection tab
     pattern_detection_tab_index: int
+
+    # Hotspot Detection tab
+    hotspot_tab_index: int
 
     # Execute panel elements
     mode_vars: Dict[str, tk.BooleanVar]
@@ -70,6 +74,7 @@ class ConfigManagerMixinBase:
     # Report panel elements
     results_tree: ttk.Treeview
     view_report_button: RoundedButton
+    reload_report_button: RoundedButton
 
     # Compilation editor
     compilation_editor_open: bool
@@ -82,6 +87,7 @@ class ConfigManagerMixinBase:
     current_tooltip_tab: Optional[int]
     test_compilation_button: RoundedButton
     derive_compilation_button: RoundedButton
+    shared_validation_compile_button: RoundedButton
     derive_button_tooltip: Optional[Tooltip]
     derive_button_tooltip_timer: Optional[str]
 
@@ -92,12 +98,22 @@ class ConfigManagerMixinBase:
     explorer_running: bool
     pattern_types_vars: Optional[Dict[str, tk.BooleanVar]]
     jobs_var: Optional[tk.StringVar]
+    hotspot_hint_frame: Optional[ttk.LabelFrame]
 
     # Apply Suggestions (Execute tab)
     suggestions_mode_var: tk.StringVar
     suggestions_count_label: ttk.Label
     autotuner_suggestions_info_label: ttk.Label
     execute_suggestion_selector: SuggestionSelector
+
+    # Hotspot Detection panel elements
+    hotspot_output_text: Optional[scrolledtext.ScrolledText]
+    hotspot_run_button: Optional[RoundedButton]
+    hotspot_running: bool
+    hotspot_repetitions_var: Optional[tk.IntVar]
+    hotspot_notebook: Optional[ttk.Notebook]
+    hotspot_regions_tree: Optional[ttk.Treeview]
+    hotspot_runs_tree: Optional[ttk.Treeview]
 
     # Autotuning panel elements
     autotuning_output_text: Optional[scrolledtext.ScrolledText]
@@ -261,6 +277,10 @@ class ConfigManagerMixinBase:
         """Run the pattern detection."""
         ...
 
+    def _update_hotspot_hint(self) -> None:
+        """Show or hide the 'no hotspot results' hint in the Pattern Detection tab."""
+        ...
+
     def _update_pattern_detection_tab_state(self, enabled: bool) -> None:
         """Update the pattern detection tab enabled/disabled state."""
         ...
@@ -271,6 +291,22 @@ class ConfigManagerMixinBase:
 
     def _refresh_suggestion_selection_display(self) -> None:
         """Refresh the suggestion selection count label in the Execute tab."""
+        ...
+
+    def _build_hotspot_panel(self, parent: tk.Widget) -> None:
+        """Build the hotspot detection panel UI."""
+        ...
+
+    def _update_hotspot_ui(self) -> None:
+        """Update the hotspot detection button states and status block."""
+        ...
+
+    def _refresh_hotspot_results(self) -> None:
+        """Reload Hotspots.json and the measurement run log, then refresh the views."""
+        ...
+
+    def _update_hotspot_config_display(self) -> None:
+        """Refresh the parts of the hotspot panel that depend on the selected config."""
         ...
 
     def _build_autotuning_panel(self, parent: tk.Widget) -> None:

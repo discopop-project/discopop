@@ -198,36 +198,24 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
       // enqueue successors
       std::vector<std::tuple<StaticCallPathTreeNode*, int32_t, StaticCallPathTreeNode*>> new_elements_buffer;
-      std::vector<std::tuple<uint32_t, int32_t, uint32_t>> new_transitions_buffer;
+
+      // The ancestor chain of new_current_path is identical for every successor,
+      // so map base_node -> closest ancestor path node once, then look up per successor.
+      std::unordered_map<StaticCalltreeNode*, StaticCallPathTreeNode*> ancestor_by_base;
+      for(StaticCallPathTreeNode* current = new_current_path; current->base_node != nullptr; current = current->prefix){
+        // keep the first (closest to new_current_path) match
+        ancestor_by_base.emplace(current->base_node, current);
+      }
+
       for(auto succ_pair: new_current_path->base_node->successors){
         int32_t trigger_instructionID = succ_pair.first;
         for(auto succ: succ_pair.second){
 
-          // check for cycles
-          std::unordered_set<StaticCalltreeNode*> nodes_on_path;
-          StaticCallPathTreeNode* current = new_current_path;
-          StaticCallPathTreeNode* cycle_prefix_path = nullptr;
-
-          // TEST to fix cycle search
-          nodes_on_path.insert(succ);
-          // !TEST
-
-          while(current->base_node != nullptr){ // traverse upwards until root
-            if(nodes_on_path.count(current->base_node) > 0){
-              // cycle found
-              cycle_prefix_path = current;
-              break;
-            }
-            else{
-              // no cycle found
-              nodes_on_path.insert(current->base_node);
-              current = current->prefix;
-            }
-          }
-
-          if(cycle_prefix_path){
+          // check for cycles: succ already present on the path -> cycle
+          auto cycle_it = ancestor_by_base.find(succ);
+          if(cycle_it != ancestor_by_base.end()){
             // register transition
-            new_current_path->register_transition(trigger_instructionID, cycle_prefix_path->path_id);
+            new_current_path->register_transition(trigger_instructionID, cycle_it->second->path_id);
             continue;
           }
           // new stack element
@@ -263,8 +251,9 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
-StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions){
-  StaticCallPathTree* call_path_tree = new StaticCallPathTree();
+StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions, std::uint32_t start_path_id){
+  // start ids from start_path_id (no collisions between modules)
+  StaticCallPathTree* call_path_tree = new StaticCallPathTree(start_path_id);
 
   // path id 0 is reserved for debugging and initialization purposes
   // select entry nodes
@@ -371,8 +360,19 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
       }
     }
 */
-    // save path string to buffer
-    std::string path_buffer = to_string(path->path_id) + " " + path->get_path_string() + "\n";
+    // root node uses itself as parent
+    uint32_t parent_id = path->path_id;
+    if(path->prefix != nullptr) {
+        parent_id = path->prefix->path_id;
+    }
+    
+    std::string node_label = "ROOT";
+    if(path->base_node != nullptr) {
+        node_label = path->base_node->get_label();
+    }
+
+    // new format: <NodeID> <ParentID> <Label>
+    std::string path_buffer = std::to_string(path->path_id) + " " + std::to_string(parent_id) + " " + node_label + "\n";
     global_buffer += path_buffer;
   }
   *stateID_to_callpath_file << global_buffer;
@@ -395,11 +395,22 @@ void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_pt
   *callpath_state_transitions_file << "# Format: <source_state_id> <instruction_id> <target_state_id>\n";
 
   std::string global_buffer = "";
+  std::string return_targets_buffer = "# Format: <source_state_id> <target_state_id>\n";
   #pragma omp parallel for reduction(+:global_buffer)
   for(auto path: call_path_tree_ptr->all_nodes){
     for(auto transition_pair: path->state_transitions){
-        std::string transition_buffer = "" + std::to_string(path->path_id) + " " + std::to_string(transition_pair.first) + " " + std::to_string(transition_pair.second) + "\n";
-        global_buffer += transition_buffer;
+      if(transition_pair.first == 1){
+        continue;
+      }
+      std::string transition_buffer = "" + std::to_string(path->path_id) + " " + std::to_string(transition_pair.first) + " " + std::to_string(transition_pair.second) + "\n";
+      global_buffer += transition_buffer;
+    }
+  }
+  for(auto path: call_path_tree_ptr->all_nodes){
+    for(auto transition_pair: path->state_transitions){
+      if(transition_pair.first == 1){
+        return_targets_buffer += std::to_string(path->path_id) + " " + std::to_string(transition_pair.second) + "\n";
+      }
     }
   }
   *callpath_state_transitions_file << global_buffer;
@@ -407,6 +418,16 @@ void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_pt
   if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
     callpath_state_transitions_file->flush();
     callpath_state_transitions_file->close();
+  }
+
+  auto callpath_state_return_targets_file = new std::ofstream();
+  std::string tmp03(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp03 += "/callpath_state_return_targets.txt";
+  callpath_state_return_targets_file->open(tmp03.data(), std::ios_base::app);
+  *callpath_state_return_targets_file << return_targets_buffer;
+  if (callpath_state_return_targets_file != NULL && callpath_state_return_targets_file->is_open()) {
+    callpath_state_return_targets_file->flush();
+    callpath_state_return_targets_file->close();
   }
 
   // prepare saving the callpathState transitions as DOT file
@@ -421,8 +442,11 @@ void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_pt
   #pragma omp parallel for reduction(+:global_buffer)
   for(auto path : call_path_tree_ptr->all_nodes){
     for(auto transition_pair: path->state_transitions){
-        std::string transition_buffer = "  " + std::to_string(path->path_id) + " -> " + std::to_string(transition_pair.second) + " [label = " + std::to_string(transition_pair.first) + "];\n";
-        global_buffer += transition_buffer;
+      if(transition_pair.first == 1){
+        continue;
+      }
+      std::string transition_buffer = "  " + std::to_string(path->path_id) + " -> " + std::to_string(transition_pair.second) + " [label = " + std::to_string(transition_pair.first) + "];\n";
+      global_buffer += transition_buffer;
     }
   }
   *callpath_state_transitions_file << global_buffer;

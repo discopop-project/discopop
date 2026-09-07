@@ -57,9 +57,11 @@ class StaticCallPathTree {
         std::mutex all_nodes_mtx;
 
         StaticCallPathTree();
+        StaticCallPathTree(std::uint32_t start_path_id); // so that ids don't overlap between modules
         ~StaticCallPathTree();
         std::string to_dot_string();
 
         [[nodiscard]] std::uint32_t get_next_free_path_id();
+        std::uint32_t get_current_free_path_id(); // returns next free path id
         void register_node_in_all_nodes(StaticCallPathTreeNode* node_ptr);
 };

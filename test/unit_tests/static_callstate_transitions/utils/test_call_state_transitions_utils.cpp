@@ -10,6 +10,8 @@
 // __dp::current_callpath_state / __dp::calls_without_executed_transitions.
 // Each test builds a small, deterministic transition graph
 // (1 --10--> 2 --20--> 3) and installs it into those globals before running.
+// Constructing the graph from a directory without profiler output reports the
+// missing input files on stderr; that output is expected here.
 class CallStateTransitionsUtilsTest : public ::testing::Test {
 protected:
   std::unique_ptr<CallStateGraph> graph;

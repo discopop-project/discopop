@@ -16,7 +16,6 @@ from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, ca
 import jsonpickle  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
-from alive_progress import alive_bar  # type: ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
 from discopop_explorer.classes.PEGraph.NodeT import NodeT
@@ -31,6 +30,7 @@ from discopop_explorer.functions.PEGraph.traversal.parent import get_all_parents
 from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
+from discopop_library.StatusReporting.console import progress, warn
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
@@ -129,20 +129,17 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
     ) -> PEGraphX:
         """Constructor for making a PETGraphX from the output of parser.parse_inputs()"""
         g = nx.MultiDiGraph()
-        print("\tCreating graph...")
 
-        for id, node in cu_dict.items():
+        for id, node in progress(cu_dict.items(), desc="Adding nodes"):
             n = parse_cu(node)
             g.add_node(id, data=n)
 
-        print("\tAdded nodes...")
-
-        for node_id, node in cu_dict.items():
+        for node_id, node in progress(cu_dict.items(), desc="Adding edges"):
             source = node_id
             if "successors" in dir(node) and "CU" in dir(node.successors):
                 for successor in [n.text for n in node.successors.CU]:
                     if successor not in g:
-                        print(f"WARNING: no successor node {successor} found")
+                        warn(f"no successor node {successor} found")
                     # do not allow "self-successor" edges (incorrect, but not critical. might occur in Data.xml)
                     if source != successor:
                         g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
@@ -150,27 +147,23 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
             if "callsNode" in dir(node) and "nodeCalled" in dir(node.callsNode):
                 for nodeCalled in [n.text for n in node.callsNode.nodeCalled]:
                     if nodeCalled not in g:
-                        print(f"WARNING: no nodeCalled {nodeCalled} found")
+                        warn(f"no nodeCalled {nodeCalled} found")
                     g.add_edge(source, nodeCalled, data=Dependency(EdgeType.CALLSNODE))
 
             if "childrenNodes" in dir(node):
                 for child in [n.text for n in node.childrenNodes]:
                     if child not in g:
-                        print(f"WARNING: no child node {child} found")
+                        warn(f"no child node {child} found")
                     if not (source, child) in g.edges:
                         g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
 
-        print("\tAdded edges...")
-
-        for _, node in g.nodes(data="data"):
+        for _, node in progress(g.nodes(data="data"), desc="Adding loop data"):
             if isinstance(node, LoopNode):
                 node.loop_data = loop_data.get(node.start_position(), None)
                 # TODO remove loop_iterations property, was kept for backwards compatibility only
                 if node.loop_data is not None:
                     # node.loop_iterations = node.loop_data.total_iteration_count
                     node.loop_iterations = node.loop_data.average_iteration_count
-
-        print("\tAdded loop data...")
 
         # calculate position before dependencies affect them
         try:
@@ -181,8 +174,7 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                 pos = nx.shell_layout(g)  # maybe
             except nx.exception.NetworkXException:
                 pos = nx.random_layout(g)
-        print("\tCalculated positions...")
-        for idx, dep in enumerate(dependencies_list):
+        for idx, dep in progress(list(enumerate(dependencies_list)), desc="Adding dependencies"):
             if dep.type == "INIT":
                 sink = readlineToCUIdMap[dep.sink]
                 if len(sink) > 0:
@@ -221,14 +213,12 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                     #                        continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))
-        print("\tAdded dependencies...")
         return cls(g, reduction_vars, pos, visualizer)
 
     def validate(self) -> None:
-        print("\tValidating pet...")
-        print("\t\tValidating function scopes...")
-        for func_node in [n for n in all_nodes(self, FunctionNode)]:
-            print("\t\t\t Func: " + func_node.name)
+        logger = logging.getLogger("Explorer")
+        for func_node in progress(all_nodes(self, FunctionNode), desc="Validating function scopes"):
+            logger.debug("Validating function scope: " + func_node.name)
             min_start_line = func_node.start_line
             max_end_line = func_node.end_line
             for child in direct_children(self, func_node):
@@ -237,18 +227,16 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                 if child.end_line > max_end_line:
                     max_end_line = child.end_line
             if min_start_line != func_node.start_line:
-                print("\t\t\t --> Found fix for start line. Replacing: ", func_node.start_line, "with", min_start_line)
+                logger.debug(f"Fixed start line of {func_node.name}: {func_node.start_line} -> {min_start_line}")
                 func_node.start_line = min_start_line
             if max_end_line != func_node.end_line:
-                print("\t\t\t --> Found fix for end line. Replacing: ", func_node.end_line, "with", max_end_line)
+                logger.debug(f"Fixed end line of {func_node.name}: {func_node.end_line} -> {max_end_line}")
                 func_node.end_line = max_end_line
 
     def map_static_and_dynamic_dependencies(self) -> None:
-        print("\tMapping static to dynamic dependencies...")
-        print("\t\tIdentifying mappings between static and dynamic memory regions...", end=" ")
         mem_reg_mappings: Dict[MemoryRegion, Set[MemoryRegion]] = dict()
         # initialize mappings
-        for node_id in [n.id for n in all_nodes(self, CUNode)]:
+        for node_id in progress([n.id for n in all_nodes(self, CUNode)], desc="Mapping static/dynamic dependencies"):
             out_deps = [(s, t, d) for s, t, d in out_edges(self, node_id) if d.etype == EdgeType.DATA]
 
             # for outgoing dependencies, the scope must be equal
@@ -267,11 +255,9 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                                 mem_reg_mappings[d2.memory_region] = set()
                             mem_reg_mappings[d1.memory_region].add(d2.memory_region)
                             mem_reg_mappings[d2.memory_region].add(d1.memory_region)
-        print("Done.")
 
-        print("\t\tInstantiating static dependencies...", end=" ")
         # create copies of static dependency edges for all dynamic mappings
-        for node_id in [n.id for n in all_nodes(self, CUNode)]:
+        for node_id in progress([n.id for n in all_nodes(self, CUNode)], desc="Instantiating static dependencies"):
             out_deps = [(s, t, d) for s, t, d in out_edges(self, node_id) if d.etype == EdgeType.DATA]
             for s, t, d in out_deps:
                 if d.memory_region is None:
@@ -287,8 +273,6 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                             edge_data = copy.deepcopy(d)
                             edge_data.memory_region = dynamic_mapping
                             self.g.add_edge(s, t, data=edge_data)
-
-        print("Done.")
 
     def synthesize_static_dependency_metadata(self) -> None:
         logger = logging.getLogger("Explorer")
@@ -400,8 +384,6 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                 ]
                 func_nodes = filtered_func_nodes
 
-        print("Calculating local metadata results for functions...")
-        import tqdm  # type: ignore
         from discopop_explorer.parallel_utils import (
             pet_function_metadata_initialize_worker,
             pet_function_metadata_parse_func,
@@ -421,10 +403,10 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
         # that pet_function_metadata_parse_func reads, exactly as the pool initializer did.
         pet_function_metadata_initialize_worker(self)
         tmp_result: List[Tuple[NodeID, Any, Set[NodeID]]] = [
-            pet_function_metadata_parse_func(func_node) for func_node in tqdm.tqdm(param_list)
+            pet_function_metadata_parse_func(func_node)
+            for func_node in progress(param_list, desc="Calculating function metadata")
         ]
         # calculate global result
-        print("Calculating global result...")
         global_reachability_dict: Dict[NodeID, Set[NodeID]] = dict()
         for local_result in tmp_result:
             parsed_function_id, local_reachability_dict, local_children_ids = local_result
@@ -433,8 +415,6 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
             # set parent function for visited nodes
             for child_id in local_children_ids:
                 self.node_at(child_id).parent_function_id = parsed_function_id
-
-        print("\tMetadata calculation done.")
 
         # cleanup dependencies (remove dependencies, if it is overwritten by a more specific Intra-iteration dependency
         # note: this can introduce false positives! Keep the analysis pessimistic to ensure correctness
@@ -472,9 +452,8 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
             print("Cleaning dependencies done.")
 
         # cleanup dependencies II : only consider the Intra-iteration dependencies with the highest level
-        print("Cleaning duplicated dependencies II...")
         to_be_removed = []
-        for cu_node in all_nodes(self, CUNode):
+        for cu_node in progress(all_nodes(self, CUNode), desc="Cleaning duplicated dependencies"):
             out_deps = out_edges(self, cu_node.id, EdgeType.DATA)
             for dep_1 in out_deps:
                 for dep_2 in out_deps:
@@ -503,15 +482,11 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                     to_be_removed_with_keys.append((s, t, key))
         for edge in set(to_be_removed_with_keys):
             self.g.remove_edge(edge[0], edge[1], edge[2])
-        print("Cleaning dependencies II done.")
 
     def calculateLoopMetadata(self) -> None:
-        print("Calculating loop metadata")
-
         # calculate loop indices
-        print("Calculating loop indices")
         loop_nodes = all_nodes(self, LoopNode)
-        for loop in loop_nodes:
+        for loop in progress(loop_nodes, desc="Calculating loop indices"):
             subtree = subtree_of_type(self, loop, CUNode)
             # get variables used in loop
             candidates: Set[Variable] = set()
@@ -523,9 +498,6 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                 if is_loop_index(self, v.name, [loop.start_position()], subtree):
                     loop_indices.add(v)
             loop.loop_indices = [v.name for v in loop_indices]
-        print("\tDone.")
-
-        print("Calculating loop metadata done.")
 
     def enforce_single_function_exit_node(self) -> None:
         for func in all_nodes(self, FunctionNode):

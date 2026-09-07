@@ -9,9 +9,6 @@ import logging
 import threading
 from typing import Dict, List, Optional, Set, Tuple, cast
 
-from tqdm import tqdm  # type: ignore
-
-
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
@@ -31,7 +28,9 @@ from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
+from discopop_explorer.pattern_detectors.clause_classification import filter_classifications, merge_classifications
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
+from discopop_explorer.pattern_detectors.loop_collapse_analysis import identify_collapsible_loop_nests
 from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     ParallelRegionInfo,
     TPIType,
@@ -56,6 +55,8 @@ def run_detection(
     result: List[DoAllInfo | ReductionInfo] = []
 
     result += identify_simple_doall_and_reduction(task_graph, ast_helper)
+    # collapsible nests are derived from the identified patterns, so this must run afterwards
+    result += identify_collapsible_loop_nests(task_graph, ast_helper, result)
 
     show_plot(task_graph)
 
@@ -68,22 +69,22 @@ def show_plot(tg: TaskGraph) -> None:
 
     def draw_plots() -> None:
         ax = tg.create_plot("Context Graph")
-        print("Plotting task graph (context graph)...")
+        logger.debug("Plotting task graph (context graph)...")
         if len(tg.graph.nodes()) < 500:
             tg.plot_context_graph(ax)
 
         ax2 = tg.create_plot("Context Debug Graph")
-        print("Plotting task graph (context debug graph)...")
+        logger.debug("Plotting task graph (context debug graph)...")
         if len(tg.graph.nodes()) < 500:
             tg.plot_context_debug_graph(ax2)
 
         ax3 = tg.create_plot("Task Graph")
-        print("Plotting task graph...")
+        logger.debug("Plotting task graph...")
         if len(tg.graph.nodes()) < 500:
             tg.update_plot(ax3)
 
     def on_filter(filter_text: str) -> None:
-        print("Filter text:", filter_text)
+        logger.debug("Filter text: " + filter_text)
 
         # Extra processing here
 
@@ -174,33 +175,39 @@ def identify_simple_doall_and_reduction(
                         else:
                             # check if dep.origin is static. If so, give it a "second chance", which is tested after classifying variables in the loop.
                             # --> In this case it is a valid doall, if the variable is firstwritten inside the loop
-                            logger.debug(
-                                "Prevents doall: "
-                                + str(dep.dtype)
-                                + " "
-                                + str(dep.source_line)
-                                + " "
-                                + str(dep.sink_line)
-                                + " "
-                                + str(dep.var_name)
-                                + " "
-                                + str(dep.memory_region)
-                                + " "
-                                + "origin: "
-                                + str(dep.origin)
-                                + " "
-                                + "source: "
-                                + str(subnode.get_code_scope(tg.pet, inclusive=True))
-                                + " "
-                                + "out_dep_target: "
-                                + str(out_dep_target.get_code_scope(tg.pet, inclusive=True))
-                                + " "
-                                + "source_ctx: "
-                                + str(ic_source)
-                                + " "
-                                + "target_ctx: "
-                                + str(out_dep_target)
-                            )
+                            # the message is built eagerly, and get_code_scope(inclusive=True) is the
+                            # uncached, fully recursive variant. Building it unconditionally in this
+                            # innermost loop dominated the whole analysis (measured on LULESH: 88s of
+                            # a 146s run, 120M LineID objects), so it is only assembled when a DEBUG
+                            # handler will actually consume it.
+                            if logger.isEnabledFor(logging.DEBUG):
+                                logger.debug(
+                                    "Prevents doall: "
+                                    + str(dep.dtype)
+                                    + " "
+                                    + str(dep.source_line)
+                                    + " "
+                                    + str(dep.sink_line)
+                                    + " "
+                                    + str(dep.var_name)
+                                    + " "
+                                    + str(dep.memory_region)
+                                    + " "
+                                    + "origin: "
+                                    + str(dep.origin)
+                                    + " "
+                                    + "source: "
+                                    + str(subnode.get_code_scope(tg.pet, inclusive=True))
+                                    + " "
+                                    + "out_dep_target: "
+                                    + str(out_dep_target.get_code_scope(tg.pet, inclusive=True))
+                                    + " "
+                                    + "source_ctx: "
+                                    + str(ic_source)
+                                    + " "
+                                    + "target_ctx: "
+                                    + str(out_dep_target)
+                                )
                             if dep.origin == DepOrigin.DYNAMIC_ANALYSIS:
                                 # dependency is trustworthy and definitely breaks doall
                                 dependency_found = True
@@ -607,13 +614,13 @@ def detect_doall_sharing_clauses(
     logger.debug("\tPRE MERGE: lastprivate: " + str(lastprivate))
     logger.debug("\tPRE MERGE: firstprivate: " + str(firstprivate))
     logger.debug("")
-    firstprivate, private, lastprivate, shared = __merge_classifications(firstprivate, private, lastprivate, shared)
+    firstprivate, private, lastprivate, shared = merge_classifications(firstprivate, private, lastprivate, shared)
     logger.debug("\tPOST MERGE: private: " + str(private))
     logger.debug("\tPOST MERGE: shared: " + str(shared))
     logger.debug("\tPOST MERGE: lastprivate: " + str(lastprivate))
     logger.debug("\tPOST MERGE: firstprivate: " + str(firstprivate))
     logger.debug("")
-    firstprivate, private, lastprivate, shared = __filter_classifications(
+    firstprivate, private, lastprivate, shared = filter_classifications(
         known_vars, firstprivate, private, lastprivate, shared
     )
     logger.debug("\tPOST FILTER: private: " + str(private))
@@ -623,75 +630,3 @@ def detect_doall_sharing_clauses(
     logger.debug("---------------------------- LOOP END --------------------")
     logger.debug("")
     return firstprivate, private, lastprivate, shared, firstwritten, init
-
-
-def __merge_classifications(
-    first_private: Set[str],
-    private: Set[str],
-    last_private: Set[str],
-    shared: Set[str],
-) -> Tuple[Set[str], Set[str], Set[str], Set[str]]:
-    new_first_private: Set[str] = set()
-    new_private: Set[str] = set()
-    new_last_private: Set[str] = set()
-    new_shared: Set[str] = set()
-
-    remove_from_private: Set[str] = set()
-    remove_from_first_private: Set[str] = set()
-    remove_from_last_private: Set[str] = set()
-    remove_from_shared: Set[str] = set()
-
-    # Rule 1: firstprivate is more restrictive than private
-    remove_from_private = first_private.intersection(private)
-    # Rule 2: lastprivate is more restrictive than private
-    remove_from_private = remove_from_private.union(last_private.intersection(private))
-    # Rule 3: shared is less restrictive than first_private or last_private
-    remove_from_shared = shared.intersection(first_private.union(last_private))
-    # Rule 4: if a variable is classifyable as shared and private, select shared.
-    remove_from_private = remove_from_private.union(shared.intersection(private))
-
-    new_first_private = first_private - remove_from_first_private
-    new_last_private = last_private - remove_from_last_private
-    new_private = private - remove_from_private
-    new_shared = shared - remove_from_shared
-
-    return new_first_private, new_private, new_last_private, new_shared
-
-
-def __filter_classifications(
-    known_vars: Set[str],
-    first_private: Set[str],
-    private: Set[str],
-    last_private: Set[str],
-    shared: Set[str],
-) -> Tuple[Set[str], Set[str], Set[str], Set[str]]:
-    new_first_private: Set[str] = set()
-    new_private: Set[str] = set()
-    new_last_private: Set[str] = set()
-    new_shared: Set[str] = set()
-
-    remove_from_private: Set[str] = set()
-    remove_from_first_private: Set[str] = set()
-    remove_from_last_private: Set[str] = set()
-    remove_from_shared: Set[str] = set()
-
-    # perform filtering
-    for var in first_private:
-        if var not in known_vars:
-            remove_from_first_private.add(var)
-    for var in private:
-        if var not in known_vars:
-            remove_from_private.add(var)
-    for var in last_private:
-        if var not in known_vars:
-            remove_from_last_private.add(var)
-    for var in shared:
-        if var not in known_vars:
-            remove_from_shared.add(var)
-
-    new_first_private = first_private - remove_from_first_private
-    new_last_private = last_private - remove_from_last_private
-    new_private = private - remove_from_private
-    new_shared = shared - remove_from_shared
-
-    return new_first_private, new_private, new_last_private, new_shared

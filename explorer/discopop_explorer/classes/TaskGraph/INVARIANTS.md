@@ -100,7 +100,36 @@ Two concrete ways this invariant used to break in `__add_branching_nodes_for_fun
 control-flow subgraph into a DAG before any pass that relies on it (dominance
 for branching nodes, the context-nesting BFS) runs - loops are unrolled into
 two linear copies instead of kept as back-edges. All later passes assume no
-cycles remain; none of them re-check this.
+cycles remain and none of them re-checks it, so `__validate_graph_structure`
+does: it reports every remaining strongly connected component (and self-loop)
+with the function it belongs to, as an error, directly after loop unrolling.
+
+The consequences of a surviving cycle are severe and all of them surface far
+away from their cause: dominance-based region wrapping (invariant 2) is unsound,
+the context-nesting stack walk (invariant 1) assigns whichever enclosing context
+a path happens to arrive with, and `__calculate_context_successions` **does not
+terminate at all** if the cycle enters a different number of contexts than it
+leaves - it dedupes its traversal on `(node, level)`, so each lap around such a
+cycle shifts the level by the imbalance and produces a state it has not seen
+before. That last one presents as unbounded memory growth minutes later, with
+nothing pointing back here, which is what makes the check worth its runtime.
+
+Two ways this is known to break, both observable on LULESH:
+
+- **Cycles in detached control flow.** `__break_cycles` searches with
+  `nx.find_cycle(self.graph, source=<function node>)`, so it only ever sees
+  cycles reachable from a function entry node. It also removes edges and rewires
+  predecessors, and in doing so detaches a few hundred nodes from their function
+  root (~470 of 4600 on LULESH). Any cycle inside that detached part is
+  invisible to it and survives - which is exactly what happens since the
+  control-flow edges restored for invariant 6 made a few more cycles land there.
+  The detached nodes are a problem in their own right: their heads have no
+  predecessors, so invariant 1's BFS treats them as program entry points.
+- **The crude fallback gives up.** When no loop header/exit can be derived, the
+  fallback removes one edge and *adds* one (to an outside successor, or to the
+  function's exit node), which can create a new cycle, then advances
+  `search_source` to the next descendant rather than restarting the scan - and
+  `break`s out of the function entirely once that queue is exhausted.
 
 ## 5. `iteration_nodes` closure
 
@@ -115,6 +144,79 @@ usually harmless in isolation, but the same "unvalidated invariant" pattern as
 invariant 3, and a candidate root cause if a similar orphaned-node crash shows
 up again elsewhere in construction.
 
+## 6. Complete control flow after `__visit_pet`
+
+Every `EdgeType.SUCCESSOR` edge of the PET graph must have a counterpart in the
+TaskGraph once `__visit_pet` returns. The traversal creates an edge when it
+*visits the target*, taking the predecessor from the queue entry - so any
+successor that is deliberately not queued needs its edge added explicitly.
+`__visit_branching` must skip queueing already-visited successors (otherwise the
+traversal never terminates on cyclic control flow, since `__visit_CUNode`'s
+single-successor path queues unconditionally), which is exactly where an edge
+can get lost.
+
+This is the invariant `__break_cycles` depends on: it derives a loop's header,
+its iteration entry/exit points and its exit node purely from the shape of the
+cycle it finds. A missing exit edge makes the loop look exit-less, and the only
+node that then still matches the "one successor inside the cycle, one outside"
+header pattern is a branch *inside the loop body* - because `nx.find_cycle`
+returns a single simple cycle and therefore contains only one arm of that
+branch. The pass then anchors `TGStartLoopNode`/`TGEndLoopNode` at the wrong
+node, removes the wrong edge as the "back edge", leaves the real cycle in place
+for the crude fallback to sever, and the resulting `TGStartLoopNode` has zero
+predecessors and no path to its `TGEndLoopNode`. The symptom surfaces much
+later, in `__assign_loop_contexts`, as
+`ValueError("Could not determine loop end node for loop: ...")`.
+
+The shape that triggered this in practice (miniFE, via libstdc++'s
+`__insertion_sort`): a function whose early return shares its exit CU with the
+loop exit, plus an `if`/`else` inside the loop body. The early return reaches the
+exit CU first, so the loop header's exit edge targets an already-visited node.
+See `test_TaskGraph.py`.
+
+## 7. Acyclic, two-sided `Context` relations
+
+The `Context` objects carry two relations, both built after the graph passes above:
+
+- **containment** — `parent_context` / `contained_contexts`, built by
+  `__calculate_context_nesting` (plus `__assign_branching_contexts` and
+  `__assign_loop_contexts`)
+- **succession** — `predecessor` / `successor`, built by
+  `__calculate_context_successions`
+
+Every traversal of them - in `Context` itself, in the pattern detectors, in
+`ContextTaskGraph` - assumes containment forms a forest and the successor chains
+are acyclic. Nothing in the building passes guarantees that: both assign
+`parent_context` / `successor` unconditionally, so the last write wins, and
+`__calculate_context_successions` dedupes its BFS on `(node, level)` while
+discarding the context stack, so a node reached twice at the same nesting level
+along different paths can be linked into two different sequences. An unbalanced
+Start/End pair (invariant 1) corrupts `current_level` and has the same effect.
+
+A cycle introduced that way stays invisible until some traversal walks it, which
+surfaces as a `RecursionError` or a hang arbitrarily far from the cause -
+originally in `Context.get_contained_contexts_in_sequence`, called per loop
+iteration from `new_do_all_detector`.
+
+`__validate_context_structure` runs directly after
+`__calculate_context_successions` and enforces this: it breaks cycles in both
+relations (logging an error, since a cycle always means one of the passes above
+is wrong) and reports links recorded on only one of their two ends, which it
+cannot repair unambiguously. `Context.add_contained_context`,
+`register_parent_context` and `register_successor_context` additionally refuse
+the cycles they can detect in constant/depth-bounded time; longer successor
+cycles are left to the validation pass, because scanning the chain on every
+registration would make building the relation quadratic.
+
+Independently of acyclicity, **the relations are also too large to traverse
+recursively**: successor chains grow with the amount of inlined code and
+containment nesting with the inlining depth, so any recursive walk hits Python's
+recursion limit on well-formed input alone. All traversals in `Context` are
+iterative for that reason. `get_contained_contexts_in_sequence` is additionally
+bounded to the region it was asked about, so a successor chain leaving that
+region cannot pull unrelated contexts (and their CUs) into a caller's result.
+See `Contexts/test_Context.py` and `test_TaskGraph.py`.
+
 ## Where this bites in practice
 
 All of the invariants above are enforced (or silently violated) inside
@@ -123,10 +225,11 @@ and each one's correctness assumption depends on the previous ones having held:
 
 ```
 __visit_pet -> __break_cycles -> __fix_loop_structures -> __duplicate_loop_iterations
-  -> __validate_graph_structure (currently a no-op) -> __add_work_nodes
+  -> __validate_graph_structure (checks invariant 4) -> __add_work_nodes
   -> __assign_loopstate_positions_within_functions -> __inline_function_calls
   -> __add_branching_nodes -> __assign_contexts -> __assign_node_levels
   -> __calculate_context_nesting -> __calculate_context_successions
+  -> __validate_context_structure
 ```
 
 When debugging a "malformed graph" failure, first identify *which* invariant

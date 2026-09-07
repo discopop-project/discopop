@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no
 from discopop_library.ProjectManager.gui import widgets
+from discopop_library.ProjectManager.gui.detail_bar import DetailBar
 from discopop_library.ProjectManager.gui.widgets import danger_button
 from discopop_library.ProjectManager.gui.plots import embedding, report_charts
 from discopop_library.ProjectManager.gui.plots.data import ExecutionRecord, parse_execution_results
@@ -74,6 +75,11 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             button_frame, text="View Report PDF", state="disabled", command=self._view_report
         )
         self.view_report_button.pack(side=tk.LEFT, padx=5)
+
+        self.reload_report_button = widgets.create_button(
+            button_frame, text="⟳ Reload", command=self._update_report_display
+        )
+        self.reload_report_button.pack(side=tk.RIGHT, padx=5)
 
         # Results notebook: a permanent Table tab, on-demand plot tabs, and a
         # trailing "+" tab that opens the add-plot menu.
@@ -279,9 +285,9 @@ class ReportPanelMixin(ConfigManagerMixinBase):
         state["plot_frame"] = plot_frame
         content.add(plot_frame, stretch="always")
 
-        detail_frame = ttk.Frame(content)
-        self._build_detail_bar(detail_frame, state)
-        content.add(detail_frame, minsize=160, width=_DETAIL_BAR_WIDTH, stretch="never")
+        detail = DetailBar(content, placeholder=_DETAIL_PLACEHOLDER)
+        state["detail"] = detail
+        content.add(detail, minsize=160, width=_DETAIL_BAR_WIDTH, stretch="never")
 
         self._report_plot_tabs[str(tab)] = state
         self.report_notebook.select(tab)
@@ -289,83 +295,7 @@ class ReportPanelMixin(ConfigManagerMixinBase):
 
     # ── the always-visible detail bar ───────────────────────────────────────────
 
-    def _build_detail_bar(self, parent: tk.Widget, state: Dict[str, Any]) -> None:
-        widgets.heading_label(parent, "Selection Details").pack(anchor=tk.W, padx=8, pady=(8, 4))
-        ttk.Separator(parent, orient=tk.HORIZONTAL).pack(fill=tk.X, padx=8, pady=(0, 8))
-
-        # A scrollable canvas holds the field rows: a narrow bar plus many wrapped
-        # fields (e.g. a long suggestion list) can exceed the available height.
-        scroll_container = ttk.Frame(parent)
-        scroll_container.pack(fill=tk.BOTH, expand=True, padx=(8, 0))
-
-        canvas = tk.Canvas(scroll_container, highlightthickness=0)
-        scrollbar = ttk.Scrollbar(scroll_container, orient=tk.VERTICAL, command=canvas.yview)
-        canvas.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-
-        body = ttk.Frame(canvas)
-        body_window = canvas.create_window((0, 0), window=body, anchor="nw")
-        canvas.bind("<Configure>", lambda e: canvas.itemconfig(body_window, width=e.width))
-
-        state["detail_canvas"] = canvas
-        state["detail_body"] = body
-        state["detail_value_labels"] = []
-        # A single <Configure> handler covers both the scrollregion (grows with
-        # the field rows) and the value labels' wraplength (tracks the bar's
-        # current width) -- bound once here rather than re-bound per selection,
-        # since Tk's bind() replaces rather than chains a widget's handler for
-        # the same event sequence.
-        body.bind("<Configure>", lambda _e: self._on_detail_body_configure(state))
-        self._bind_detail_scroll(canvas, canvas)
-        self._bind_detail_scroll(body, canvas)
-        self._show_detail_placeholder(state)
-
-    def _on_detail_body_configure(self, state: Dict[str, Any]) -> None:
-        canvas = state["detail_canvas"]
-        body = state["detail_body"]
-        canvas.configure(scrollregion=canvas.bbox("all"))
-        width = max(80, body.winfo_width())
-        for value_label in state["detail_value_labels"]:
-            value_label.configure(wraplength=width)
-
-    def _bind_detail_scroll(self, widget: tk.Widget, canvas: tk.Canvas) -> None:
-        """Route mouse-wheel events on ``widget`` to ``canvas``, mirroring the
-        suggestion selector's scroll handling (all platforms; no-op if the
-        content already fits, so it never steals the wheel from a parent)."""
-
-        def _on_wheel(event: Any) -> str:
-            bbox = canvas.bbox("all")
-            if bbox is None or (bbox[3] - bbox[1]) <= canvas.winfo_height():
-                return "break"
-            if getattr(event, "num", None) == 4:
-                delta = -1
-            elif getattr(event, "num", None) == 5:
-                delta = 1
-            else:
-                delta = -1 if event.delta > 0 else 1
-            canvas.yview_scroll(delta, "units")
-            return "break"
-
-        widget.bind("<MouseWheel>", _on_wheel)  # Windows / macOS
-        widget.bind("<Button-4>", _on_wheel)  # X11 scroll up
-        widget.bind("<Button-5>", _on_wheel)  # X11 scroll down
-
-    def _show_detail_placeholder(self, state: Dict[str, Any]) -> None:
-        body = state["detail_body"]
-        for child in body.winfo_children():
-            child.destroy()
-        state["detail_value_labels"] = []
-        placeholder = widgets.caption_label(body, _DETAIL_PLACEHOLDER, justify=tk.LEFT)
-        placeholder.pack(anchor=tk.W, pady=4)
-        self._bind_detail_scroll(placeholder, state["detail_canvas"])
-
     def _on_plot_record_selected(self, state: Dict[str, Any], record: ExecutionRecord) -> None:
-        body = state["detail_body"]
-        canvas = state["detail_canvas"]
-        for child in body.winfo_children():
-            child.destroy()
-
         status = "✓ valid" if record.valid else ("⧗ timeout" if record.timeout else "✗ failed")
         fields = [
             ("Config", record.config),
@@ -381,21 +311,7 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             fields.append(("Efficiency", f"{record.efficiency:.3f}"))
         fields.append(("Script", record.script))
         fields.append(("Label", record.label or "(unnamed)"))
-
-        # Label above its value (rather than side-by-side) so both stay readable
-        # as the detail bar is resized narrower.
-        value_labels = []
-        for label, value in fields:
-            label_widget = ttk.Label(body, text=label, font=widgets.FONT_CAPTION, foreground=widgets.STATUS_IDLE)
-            label_widget.pack(anchor=tk.W, pady=(8, 0))
-            value_label = ttk.Label(body, text=value, font=widgets.FONT_BODY, justify=tk.LEFT)
-            value_label.pack(anchor=tk.W, fill=tk.X)
-            value_labels.append(value_label)
-            self._bind_detail_scroll(label_widget, canvas)
-            self._bind_detail_scroll(value_label, canvas)
-
-        state["detail_value_labels"] = value_labels
-        self._on_detail_body_configure(state)
+        state["detail"].show_fields(fields)
 
     def _build_plot_controls(self, strip: tk.Widget, tab: tk.Widget, state: Dict[str, Any]) -> None:
         plot_type = state["type"]

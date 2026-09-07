@@ -32,6 +32,9 @@ def merge_only_childs_with_parents(ctg: ContextTaskGraph) -> bool:
         queue: List[Context] = list(ctg.graph.nodes())
         while len(queue) > 0:
             node = queue.pop()
+            # a merge earlier in this scan may have consumed the node
+            if node not in ctg.graph:
+                continue
             # ensure node is of allowed type
             if not (isinstance(node, WorkContext) or isinstance(node, CombinedContext)):
                 continue
@@ -95,6 +98,19 @@ def merge_only_childs_with_parents(ctg: ContextTaskGraph) -> bool:
 
             nodes_merged = True
             modification_applied = True
-            break  # break, so that queue will be newly constructed as it might contain deleted nodes.
+
+            # Keep scanning rather than restarting. Rebuilding list(ctg.graph.nodes()) after every
+            # single merge made the pass O(merges * |V|); the deleted nodes it guarded against are
+            # skipped by the staleness check above instead. Completeness is unaffected: the
+            # enclosing "while nodes_merged" loop still runs to a fixpoint over the whole graph, so
+            # any candidate this scan walks past is picked up by the next one.
+            #
+            # The merge result is pushed last so that it is the very next node examined, which
+            # preserves the previous behaviour: it used to be the newest - and therefore first
+            # popped - node of the rebuilt queue. The order matters. A chain A -> B -> C in which
+            # each node is the parent of the next only collapses fully when C is merged into B
+            # first; merging A and B first strands C, whose parent_context still refers to the
+            # removed B.
+            queue.append(combined_context_node)
 
     return modification_applied

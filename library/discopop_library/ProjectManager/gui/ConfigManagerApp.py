@@ -38,6 +38,7 @@ from discopop_library.ProjectManager.gui.mixins.report import ReportMixin
 from discopop_library.ProjectManager.gui.mixins.help_dialogs import HelpDialogsMixin
 from discopop_library.ProjectManager.gui.mixins.wizard_launcher import WizardLauncherMixin
 from discopop_library.ProjectManager.gui.mixins.explorer_integration import ExplorerIntegrationMixin
+from discopop_library.ProjectManager.gui.mixins.hotspot_panel import HotspotPanelMixin
 from discopop_library.ProjectManager.gui.mixins.autotuning_panel import AutotuningPanelMixin
 from discopop_library.ProjectManager.gui.widgets import CATPPUCCIN_CYAN
 
@@ -54,6 +55,7 @@ class ConfigManagerApp(  # type: ignore
     HelpDialogsMixin,
     WizardLauncherMixin,
     ExplorerIntegrationMixin,
+    HotspotPanelMixin,
     AutotuningPanelMixin,
     tk.Tk,
 ):
@@ -151,6 +153,13 @@ class ConfigManagerApp(  # type: ignore
         self.right_tabs.add(report_tab_frame, text="Report")
         self._build_report_panel(report_tab_frame)
 
+        # Hotspot Detection tab (left of Pattern Detection: hotspots are measured
+        # before, and feed into, the optimizer and the autotuner)
+        hotspot_frame = ttk.Frame(self.right_tabs)
+        self.right_tabs.add(hotspot_frame, text="Hotspot Detection")
+        self.hotspot_tab_index = self.right_tabs.index(hotspot_frame)
+        self._build_hotspot_panel(hotspot_frame)
+
         # Pattern Detection tab
         pattern_detection_frame = ttk.Frame(self.right_tabs)
         self.right_tabs.add(pattern_detection_frame, text="Pattern Detection")
@@ -164,7 +173,8 @@ class ConfigManagerApp(  # type: ignore
         self._build_autotuning_panel(autotuning_frame)
         self._update_pattern_detection_ui()
 
-        # Content frames for execute.sh and the optional per-configuration compile.sh override
+        # Content frames for execute.sh and the optional per-configuration scripts
+        # (compile.sh override, validate.sh, compile_validate.sh override)
         self.text_areas: dict[str, tk.Text] = {}
         self.modified_files: dict[str, bool] = {}
 
@@ -276,15 +286,53 @@ class ConfigManagerApp(  # type: ignore
         self.text_areas["validate.sh"] = validate_text_area
         self.modified_files["validate.sh"] = False
 
+        # --- compile_validate.sh override tab (optional, per-configuration) ---
+        validate_compile_frame = ttk.Frame(self.editor_notebook)
+        self.editor_notebook.add(validate_compile_frame, text="compile_validate.sh (override)")
+
+        validate_compile_header_frame = ttk.Frame(validate_compile_frame)
+        validate_compile_header_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        validate_compile_help_label = heading_label(validate_compile_header_frame, "Validation build script override")
+        validate_compile_help_label.pack(side=tk.LEFT)
+
+        validate_compile_help_button = widgets.create_button(
+            validate_compile_header_frame, text="Help", command=self._show_validation_compile_sh_help
+        )
+        validate_compile_help_button.pack(side=tk.RIGHT, padx=5)
+
+        self.validation_compile_override_button = widgets.create_button(
+            validate_compile_header_frame, text="Add Override", command=self._toggle_validation_compile_override
+        )
+        self.validation_compile_override_button.pack(side=tk.RIGHT, padx=5)
+
+        validate_compile_text_frame = ttk.Frame(validate_compile_frame)
+        validate_compile_text_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        validate_compile_scrollbar = ttk.Scrollbar(validate_compile_text_frame)
+        validate_compile_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        validate_compile_text_area = widgets.create_script_editor(
+            validate_compile_text_frame, yscrollcommand=validate_compile_scrollbar.set
+        )
+        validate_compile_text_area.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        validate_compile_scrollbar.config(command=validate_compile_text_area.yview)
+        enable_text_context_menu(validate_compile_text_area)
+
+        self.text_areas["compile_validate.sh"] = validate_compile_text_area
+        self.modified_files["compile_validate.sh"] = False
+
         self.editor_sub_tab_index = {
             "execute.sh": self.editor_notebook.index(execute_sh_frame),
             "compile.sh": self.editor_notebook.index(compile_sh_frame),
             "validate.sh": self.editor_notebook.index(validate_sh_frame),
+            "compile_validate.sh": self.editor_notebook.index(validate_compile_frame),
         }
         self.editor_sub_tab_labels = {
             "execute.sh": "execute.sh",
             "compile.sh": "compile.sh (override)",
             "validate.sh": "validate.sh",
+            "compile_validate.sh": "compile_validate.sh (override)",
         }
 
         # Build execute panel

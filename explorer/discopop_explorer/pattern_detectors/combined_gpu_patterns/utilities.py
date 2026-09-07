@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from collections import deque
 from typing import List, Set, Dict, Tuple, Optional
 
 from discopop_explorer.classes.PEGraph.PEGraphX import (
@@ -29,10 +30,10 @@ def get_contained_lines(start_line: str, end_line: str) -> List[str]:
 
 
 def get_function_body_cus_without_called_functions(pet: PEGraphX, function_node: FunctionNode) -> List[NodeID]:
-    queue = [t for s, t, d in out_edges(pet, function_node.id, EdgeType.CHILD)]
+    queue = deque(t for s, t, d in out_edges(pet, function_node.id, EdgeType.CHILD))
     visited: Set[NodeID] = set()
     while queue:
-        current = queue.pop(0)
+        current = queue.popleft()
         visited.add(current)
         current_node = pet.node_at(current)
 

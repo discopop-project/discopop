@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+from collections import deque
 from typing import List
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
@@ -23,9 +24,9 @@ def check_reachability(pet: PEGraphX, target: Node, source: Node, edge_types: Li
     if source == target:
         return True
     visited: List[str] = []
-    queue = [target]
+    queue = deque([target])
     while len(queue) > 0:
-        cur_node = queue.pop(0)
+        cur_node = queue.popleft()
         visited.append(cur_node.id)
         tmp_list = [(s, t, e) for s, t, e in in_edges(pet, cur_node.id) if s not in visited and e.etype in edge_types]
         for e in tmp_list:

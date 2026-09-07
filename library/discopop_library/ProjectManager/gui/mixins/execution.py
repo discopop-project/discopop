@@ -19,12 +19,12 @@ from discopop_library.ProjectManager.configurations.compile_script import resolv
 from discopop_library.ProjectManager.configurations.copying import copy_configuration
 from discopop_library.ProjectManager.configurations.deletion import delete_configuration
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
+from discopop_library.ProjectManager.configurations.validation import has_validate_script, run_validation_phase
 from discopop_library.ProjectManager.gui import widgets
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.mixins.helpers import show_warning
 from discopop_library.ProjectManager.gui.rounded_button import RoundedButton
 from typing import Optional
-from tkinter import ttk
 
 
 class ExecutionMixin(ConfigManagerMixinBase):
@@ -121,6 +121,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.stop_execution_button.config(state="normal")
 
         self.run_button.config(state="disabled", text="⟳ Running...")
+        self.prepare_pattern_detection_button.config(state="disabled")
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
 
@@ -297,35 +298,57 @@ class ExecutionMixin(ConfigManagerMixinBase):
 
                     # optional output validation (auto-run when validate.sh exists),
                     # applied only to the "real" runs (seq/par) — matching the CLI.
-                    validate_sh_path = os.path.join(config_path, "validate.sh")
-                    if mode in ("seq", "par") and os.path.exists(validate_sh_path):
-                        if self._execution_stop_event.is_set():
-                            self.after(0, lambda: append_output("Execution stopped by user.\n"))  # type: ignore
-                        else:
-                            self.after(0, lambda: self.status_label.config(text="⏳ Validating...", foreground=widgets.STATUS_BUSY))  # type: ignore
-                            self.after(0, lambda: append_output("Validating output...\n"))  # type: ignore
-                            validate_result = execute_configuration(
-                                args_copy,
-                                project_copy_path,
-                                config_path,
-                                settings_path,
-                                validate_sh_path,
-                                1 if mode == "seq" else thread_count,
-                                args_copy.timeout_validation,
-                                process_started_callback=self._register_execution_process,
-                            )
-                            self._execution_process = None
+                    if mode in ("seq", "par") and has_validate_script(config_path):
 
-                            if validate_result is None or validate_result[0] != 0:
-                                v_rc = validate_result[0] if validate_result else "None"
-                                self.after(0, lambda rc=v_rc: append_output(f"Validation FAILED (return code: {rc})\n"))  # type: ignore
+                        def report_step(status: str, message: str) -> None:
+                            self.after(0, lambda: self.status_label.config(text=status, foreground=widgets.STATUS_BUSY))  # type: ignore
+                            self.after(0, lambda: append_output(message))  # type: ignore
+
+                        validation = run_validation_phase(
+                            args_copy,
+                            project_copy_path,
+                            config_path,
+                            settings_path,
+                            1 if mode == "seq" else thread_count,
+                            timeout_compilation=args_copy.timeout_compilation,
+                            timeout_validation=args_copy.timeout_validation,
+                            process_started_callback=self._register_execution_process,
+                            on_compile_start=lambda _script: report_step(
+                                "⏳ Compiling for validation...", "Compiling for validation...\n"
+                            ),
+                            on_validate_start=lambda _script: report_step("⏳ Validating...", "Validating output...\n"),
+                            should_abort=self._execution_stop_event.is_set,
+                        )
+                        self._execution_process = None
+
+                        if validation.compile_required:
+                            if validation.compile_successful:
+                                assert validation.compile_result is not None
+                                _, c_elapsed, c_stdout, c_stderr = validation.compile_result
+                                self.after(0, lambda e=c_elapsed: append_output(f"Validation build succeeded ({e:.2f}s)\n"))  # type: ignore
+                                if c_stdout:
+                                    self.after(0, lambda o=c_stdout: append_output(f"stdout: {o}\n"))  # type: ignore
+                                if c_stderr:
+                                    self.after(0, lambda e=c_stderr: append_output(f"stderr: {e}\n"))  # type: ignore
                             else:
-                                _, v_elapsed, v_stdout, v_stderr = validate_result
-                                self.after(0, lambda e=v_elapsed: append_output(f"Validation succeeded ({e:.2f}s)\n"))  # type: ignore
-                                if v_stdout:
-                                    self.after(0, lambda o=v_stdout: append_output(f"stdout: {o}\n"))  # type: ignore
-                                if v_stderr:
-                                    self.after(0, lambda e=v_stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+                                c_rc = validation.compile_result[0] if validation.compile_result else "None"
+                                self.after(0, lambda rc=c_rc: append_output(f"Validation build FAILED (return code: {rc})\n"))  # type: ignore
+
+                        if validation.aborted:
+                            self.after(0, lambda: append_output("Execution stopped by user.\n"))  # type: ignore
+                        elif validation.compile_required and not validation.compile_successful:
+                            self.after(0, lambda: append_output("Validation skipped: its build failed.\n"))  # type: ignore
+                        elif not validation.validate_successful:
+                            v_rc = validation.validate_result[0] if validation.validate_result else "None"
+                            self.after(0, lambda rc=v_rc: append_output(f"Validation FAILED (return code: {rc})\n"))  # type: ignore
+                        else:
+                            assert validation.validate_result is not None
+                            _, v_elapsed, v_stdout, v_stderr = validation.validate_result
+                            self.after(0, lambda e=v_elapsed: append_output(f"Validation succeeded ({e:.2f}s)\n"))  # type: ignore
+                            if v_stdout:
+                                self.after(0, lambda o=v_stdout: append_output(f"stdout: {o}\n"))  # type: ignore
+                            if v_stderr:
+                                self.after(0, lambda e=v_stderr: append_output(f"stderr: {e}\n"))  # type: ignore
 
                 if not inplace and not skip_cleanup:
                     try:
@@ -346,6 +369,23 @@ class ExecutionMixin(ConfigManagerMixinBase):
         threading.Thread(target=thread_func, daemon=True).start()
 
     def _prepare_pattern_detection(self) -> None:
+        self._prepare_inplace_run(
+            mode="dp",
+            settings_filename="dp_settings.json",
+            button=self.prepare_pattern_detection_button,
+            button_label="Prepare Pattern Detection",
+            status_noun="pattern detection",
+        )
+
+    def _prepare_inplace_run(
+        self,
+        mode: str,
+        settings_filename: str,
+        button: RoundedButton,
+        button_label: str,
+        status_noun: str,
+    ) -> None:
+        """Compile and execute the selected configuration in ``mode`` with inplace execution."""
         if not self.current_config:
             show_warning(self, "No Configuration Selected", "Please select a configuration first.")
             return
@@ -354,12 +394,12 @@ class ExecutionMixin(ConfigManagerMixinBase):
         if self.stop_execution_button is not None:
             self.stop_execution_button.config(state="normal")
 
-        self.prepare_pattern_detection_button.config(state="disabled", text="⟳ Preparing...")
+        button.config(state="disabled", text="⟳ Preparing...")
         self.run_button.config(state="disabled")
         self.generate_report_button.config(state="disabled")
         self.view_report_button.config(state="disabled")
 
-        self.status_label.config(text="⏳ Preparing pattern detection...", foreground=widgets.STATUS_BUSY)
+        self.status_label.config(text=f"⏳ Preparing {status_noun}...", foreground=widgets.STATUS_BUSY)
 
         self.output_text.config(state=tk.NORMAL)
         self.output_text.delete("1.0", tk.END)
@@ -370,6 +410,10 @@ class ExecutionMixin(ConfigManagerMixinBase):
             self.output_text.insert(tk.END, text)
             self.output_text.see(tk.END)
             self.output_text.config(state="disabled")
+
+        def emit(text: str) -> None:
+            """Schedule ``text`` for display; safe to call from the worker thread."""
+            self.after(0, lambda t=text: append_output(t))  # type: ignore
 
         args_copy = copy.copy(self.arguments)
         args_copy.execute_inplace = True
@@ -401,23 +445,24 @@ class ExecutionMixin(ConfigManagerMixinBase):
         text_handler.setFormatter(formatter)
         root_logger.addHandler(text_handler)
 
-        logger = logging.getLogger("Prepare Pattern Detection")
+        logger = logging.getLogger(f"Prepare {status_noun.title()}")
+        failure_status = f"{status_noun.capitalize()} preparation failed"
 
         def thread_func() -> None:
-            logger.info(f"Starting pattern detection preparation for: {current_config}")
-            self.after(0, lambda: append_output("Compiling in 'dp' mode with inplace execution...\n\n"))  # type: ignore
+            logger.info(f"Starting {status_noun} preparation for: {current_config}")
+            emit(f"Compiling in '{mode}' mode with inplace execution...\n\n")
 
             compile_sh = resolve_compile_script_path(self.arguments.project_config_dir, current_config)
-            shared_dp_settings = os.path.join(self.arguments.project_config_dir, "dp_settings.json")
+            shared_settings = os.path.join(self.arguments.project_config_dir, settings_filename)
 
             self.after(0, lambda: self.status_label.config(text="⏳ Compiling...", foreground=widgets.STATUS_BUSY))  # type: ignore
-            self.after(0, lambda: append_output("Compiling...\n"))  # type: ignore
+            emit("Compiling...\n")
 
             compile_result = execute_configuration(
                 args_copy,
                 self.arguments.project_root,
                 config_path,
-                shared_dp_settings,
+                shared_settings,
                 compile_sh,
                 1,
                 args_copy.timeout_compilation,
@@ -425,29 +470,29 @@ class ExecutionMixin(ConfigManagerMixinBase):
             )
             self._execution_process = None
 
+            success = False
             if compile_result is None or compile_result[0] != 0:
                 ret_code = compile_result[0] if compile_result else "None"
-                self.after(0, lambda rc=ret_code: append_output(f"Compilation failed (return code: {rc})\n"))  # type: ignore
-                self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground=widgets.STATUS_FAIL))  # type: ignore
+                emit(f"Compilation failed (return code: {ret_code})\n")
             else:
                 ret_code, elapsed, stdout, stderr = compile_result
-                self.after(0, lambda e=elapsed: append_output(f"Compilation succeeded ({e:.2f}s)\n"))  # type: ignore
+                emit(f"Compilation succeeded ({elapsed:.2f}s)\n")
                 if stdout:
-                    self.after(0, lambda o=stdout: append_output(f"stdout: {o}\n"))  # type: ignore
+                    emit(f"stdout: {stdout}\n")
                 if stderr:
-                    self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+                    emit(f"stderr: {stderr}\n")
 
                 if self._execution_stop_event.is_set():
-                    self.after(0, lambda: append_output("Pattern detection preparation stopped by user.\n"))  # type: ignore
+                    emit(f"{status_noun.capitalize()} preparation stopped by user.\n")
                 else:
                     self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground=widgets.STATUS_BUSY))  # type: ignore
-                    self.after(0, lambda: append_output("Executing...\n"))  # type: ignore
+                    emit("Executing...\n")
 
                     execute_result = execute_configuration(
                         args_copy,
                         self.arguments.project_root,
                         config_path,
-                        shared_dp_settings,
+                        shared_settings,
                         os.path.join(config_path, "execute.sh"),
                         1,
                         args_copy.timeout_execution,
@@ -455,25 +500,30 @@ class ExecutionMixin(ConfigManagerMixinBase):
                     )
                     self._execution_process = None
 
-                if execute_result is None or execute_result[0] != 0:
-                    ret_code = execute_result[0] if execute_result else "None"
-                    self.after(0, lambda rc=ret_code: append_output(f"Execution failed (return code: {rc})\n"))  # type: ignore
-                    self.after(0, lambda: self.status_label.config(text="Pattern detection preparation failed", foreground=widgets.STATUS_FAIL))  # type: ignore
-                else:
-                    ret_code, elapsed, stdout, stderr = execute_result
-                    self.after(0, lambda e=elapsed: append_output(f"Execution succeeded ({e:.2f}s)\n"))  # type: ignore
-                    if stdout:
-                        self.after(0, lambda o=stdout: append_output(f"stdout: {o}\n"))  # type: ignore
-                    if stderr:
-                        self.after(0, lambda e=stderr: append_output(f"stderr: {e}\n"))  # type: ignore
+                    if execute_result is None or execute_result[0] != 0:
+                        ret_code = execute_result[0] if execute_result else "None"
+                        emit(f"Execution failed (return code: {ret_code})\n")
+                    else:
+                        ret_code, elapsed, stdout, stderr = execute_result
+                        emit(f"Execution succeeded ({elapsed:.2f}s)\n")
+                        if stdout:
+                            emit(f"stdout: {stdout}\n")
+                        if stderr:
+                            emit(f"stderr: {stderr}\n")
+                        success = True
 
             if not self._execution_stop_event.is_set():
-                self.after(0, lambda: append_output("\n=== Pattern detection preparation complete ===\n"))  # type: ignore
-            self.after(0, lambda: self.prepare_pattern_detection_button.config(state=tk.NORMAL, text="Prepare Pattern Detection"))  # type: ignore
+                outcome = "complete" if success else "failed"
+                emit(f"\n=== {status_noun.capitalize()} preparation {outcome} ===\n")
+            self.after(0, lambda: button.config(state=tk.NORMAL, text=button_label))  # type: ignore
+            self.after(0, lambda: self._update_execute_modes())  # type: ignore
             self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
-            self.after(0, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
+            if success or self._execution_stop_event.is_set():
+                self.after(0, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
+            else:
+                self.after(0, lambda: self._set_status(failure_status, fg=widgets.STATUS_FAIL, reset_delay=3000))  # type: ignore
             self.after(0, lambda: self._update_report_display())  # type: ignore
             self.after(0, lambda: self._update_pattern_detection_ui())  # type: ignore
 

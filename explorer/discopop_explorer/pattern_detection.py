@@ -10,8 +10,6 @@ import os
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, cast
 
-from alive_progress import alive_bar  # type: ignore
-
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.utilities.ASTUtils import ASTPatternDetectionHelper
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
@@ -25,6 +23,7 @@ from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.result_classes.DetectionResult import DetectionResult
+from discopop_library.StatusReporting.console import banner, stage
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.PEGraph.DummyNode import DummyNode
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
@@ -95,11 +94,11 @@ class PatternDetectorX(object):
         enable_task_graph_plot: bool,
         enable_context_graph_plot: bool,
         visualizer: Visualizer | None = None,
+        ignore_dependency_states: bool = False,
     ) -> DetectionResult:
         """Runs pattern discovery on the CU graph"""
-        print("Loading AST...")
-        self.ast_helper.load_ast_from_project(project_path)
-        print("   done.")
+        with stage("Loading AST"):
+            self.ast_helper.load_ast_from_project(project_path)
         # self.ast_helper.print_ast_structure()
         self.__merge(False, True)
         self.pet.map_static_and_dynamic_dependencies()
@@ -111,7 +110,14 @@ class PatternDetectorX(object):
         # create TaskGraph from pet
         dynamic_deps_file = dependencies
         static_deps_file = os.path.join(Path(dependencies).parent, "static_dependencies.txt")
-        task_graph = TaskGraph(self.pet, dynamic_deps_file, static_deps_file, visualizer)
+        with stage("Constructing TaskGraph"):
+            task_graph = TaskGraph(
+                self.pet,
+                dynamic_deps_file,
+                static_deps_file,
+                visualizer,
+                ignore_dependency_states=ignore_dependency_states,
+            )
         if enable_task_graph_plot:
             task_graph.plot()
         #        if enable_context_graph_plot:
@@ -275,7 +281,7 @@ class PatternDetectorX(object):
         pattern_contents = read_patterns_from_json_to_json(
             os.path.join("explorer", "patterns.json"), ["do_all", "reduction"]
         )
-        print("PATTERNS:")
+        banner("Loaded existing patterns")
         print(pattern_contents)
 
         def __get_var_obj_from_name(name: VarName) -> Variable:
@@ -313,6 +319,8 @@ class PatternDetectorX(object):
             pt.reduction = [__get_red_var_obj_from_name(v) for v in pattern_dict["reduction"]]
             pt.scheduling_clause = pattern_dict["scheduling_clause"]
             pt.collapse_level = pattern_dict["collapse_level"]
+            # absent in pattern files written before the loop collapse analysis was introduced
+            pt.collapsed_pattern_ids = pattern_dict.get("collapsed_pattern_ids", [])
             res.patterns.do_all.append(pt)
 
         # unpack reduction

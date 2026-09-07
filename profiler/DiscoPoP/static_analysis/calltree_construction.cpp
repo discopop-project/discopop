@@ -624,7 +624,9 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
           {
             continue;
           }
-          if (fn.find("llvm.dbg.declare") != string::npos)
+          // ignore LLVM intrinsics (e.g. llvm.fmuladd.*, llvm.dbg.*, llvm.memcpy.*): these are
+          // lowered arithmetic/metadata operations, not real calls, and have no call-graph meaning.
+          if (F->isIntrinsic())
           {
             continue;
           }

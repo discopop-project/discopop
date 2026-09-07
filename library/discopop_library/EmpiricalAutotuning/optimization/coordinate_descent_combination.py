@@ -9,7 +9,7 @@
 from logging import Logger
 from typing import Callable, Dict, List, Set, Tuple, cast
 
-from tqdm import tqdm  # type: ignore
+from discopop_library.EmpiricalAutotuning.output.bars import search_bar
 
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
@@ -122,7 +122,7 @@ def execute_coordinate_descent_combination(
             improved_in_pass = False
             logger.info("Pass " + str(pass_count))
 
-            for suggestion in tqdm(all_suggestions):
+            for suggestion in search_bar(all_suggestions, desc="Pass " + str(pass_count)):
                 # Toggle: remove if present, add if absent.
                 if suggestion in current_config:
                     candidate = current_config - {suggestion}

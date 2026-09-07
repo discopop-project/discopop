@@ -10,9 +10,6 @@ import threading
 from typing import List, Optional, Set, Tuple, cast
 import warnings
 
-from tqdm import tqdm  # type: ignore
-
-
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
@@ -33,6 +30,7 @@ from discopop_explorer.pattern_detectors.task_parallelism.classes import (
     TPIType,
     TaskParallelismInfo,
 )
+from discopop_library.StatusReporting.console import stage
 
 try:
     from discopop_gui.Visualizers.Base import Base as Visualizer
@@ -46,9 +44,9 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
     logger.info("Starting task detection...")
     result: List[PatternInfo] = []
 
-    logger.info("--> Constructing context task graph from main function...")
     context_task_graph = ContextTaskGraph(task_graph, visualizer)
-    simplification_result = context_task_graph.simplify_graph()
+    with stage("Simplifying ContextTaskGraph"):
+        simplification_result = context_task_graph.simplify_graph()
 
     # result += identify_simple_taskloop(pet, task_graph)
     result += identify_simple_tasking(context_task_graph, simplification_result)
@@ -123,7 +121,7 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
         )
 
     def on_filter(filter_text: str) -> None:
-        print("Filter text:", filter_text)
+        logger.debug("Filter text: " + filter_text)
 
         # Extra processing here
 

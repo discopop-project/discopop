@@ -22,19 +22,28 @@ CallStateGraph::CallStateGraph() {
   tmp_2 += "/callpath_state_transitions.txt";
   // create graph by parsing the file line by line
   std::ifstream file(tmp_2);
+  if (!file) {
+    std::cerr << "DiscoPoP: could not open " << tmp_2 << ". Reported call states will be incorrect!\n";
+  }
   std::string line;
   while (std::getline(file, line)) {
     // process line
-    if (line[0] == '#') {
-      // ignore comment lines
+    if (line.empty() || line[0] == '#') {
+      // ignore empty and comment lines
       continue;
     }
     // get source id
     std::size_t pos = line.find(' ');
+    if (pos == std::string::npos) {
+      continue;
+    }
     std::string source_callstate_id_str = line.substr(0, pos);
     line = line.substr(pos + 1);
     // get trigger instruction
     pos = line.find(' ');
+    if (pos == std::string::npos) {
+      continue;
+    }
     std::string trigger_instruction_id_str = line.substr(0, pos);
     line = line.substr(pos + 1);
     // get target id
@@ -42,6 +51,27 @@ CallStateGraph::CallStateGraph() {
     // register transition in CallStateGraph
     register_transition(std::stoi(source_callstate_id_str), std::stoi(trigger_instruction_id_str),
                         std::stoi(target_callstate_id_str));
+  }
+  // Transitions triggered by the dummy "return" instruction id are stored separately and without
+  // that id (see DiscoPoP::save_path_state_transitions). Without them no function return updates
+  // the call state, so a missing file must not pass silently.
+  std::string tmp_3(getenv("DOT_DISCOPOP_PROFILER"));
+  tmp_3 += "/callpath_state_return_targets.txt";
+  std::ifstream return_targets_file(tmp_3);
+  if (!return_targets_file) {
+    std::cerr << "DiscoPoP: could not open " << tmp_3 << ". Reported call states will be incorrect!\n";
+  }
+  while (std::getline(return_targets_file, line)) {
+    if (line.empty() || line[0] == '#') {
+      continue;
+    }
+    std::size_t pos = line.find(' ');
+    if (pos == std::string::npos) {
+      continue;
+    }
+    std::string source_callstate_id_str = line.substr(0, pos);
+    std::string target_callstate_id_str = line.substr(pos + 1);
+    register_implicit_return_transition(std::stoi(source_callstate_id_str), std::stoi(target_callstate_id_str));
   }
   auto end_time = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
@@ -73,4 +103,11 @@ void CallStateGraph::register_transition(std::int32_t source_call_state_id, std:
   CallState *source = get_or_register_node(source_call_state_id);
   CallState *target = get_or_register_node(target_call_state_id);
   source->register_transition(trigger_instruction, target);
+}
+
+void CallStateGraph::register_implicit_return_transition(std::int32_t source_call_state_id,
+                                                         std::int32_t target_call_state_id) {
+  CallState *source = get_or_register_node(source_call_state_id);
+  CallState *target = get_or_register_node(target_call_state_id);
+  source->register_implicit_return_transition(target);
 }
