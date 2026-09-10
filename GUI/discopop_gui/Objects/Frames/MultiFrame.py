@@ -42,17 +42,32 @@ class MultiFrame(Base):
             } for frame in self._inner_frames]
         }
 
-    def deserialize(self, data : Dict[str, Any]) -> None:
+    def deserialize(self, data: Dict[str, Any]) -> None:
         self._inner_frames = []
+
         for frame_data in data["inner_frames"]:
-            frame_type = frame_data["type"]
+            frame = None
 
-            match FrameType(data["type"]):
+            match FrameType(frame_data["type"]):
                 case FrameType.CANVAS_VIEWER:
-                    frame = self.create_frame(int(data["row"]), int(data["column"]), CanvasViewer)
-                case FrameType.MULTI_FRAME:
-                    frame = self.create_frame(int(data["row"]), int(data["column"]), MultiFrame)
-                case _:
-                    frame = self.create_frame(int(data["row"]), int(data["column"]), Base)
+                    frame = self.create_frame(
+                        int(frame_data["row"]),
+                        int(frame_data["column"]),
+                        lambda parent: CanvasViewer(parent)
+                    )
 
-            frame.deserialize(data["data"])
+                case FrameType.MULTI_FRAME:
+                    frame = self.create_frame(
+                        int(frame_data["row"]),
+                        int(frame_data["column"]),
+                        lambda parent: MultiFrame(parent)
+                    )
+
+                case _:
+                    frame = self.create_frame(
+                        int(frame_data["row"]),
+                        int(frame_data["column"]),
+                        lambda parent: Base(parent)
+                    )
+
+            frame.deserialize(frame_data["data"])
