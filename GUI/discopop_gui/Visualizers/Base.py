@@ -8,7 +8,7 @@
 
 from abc import abstractmethod, ABC
 import tkinter as tk
-from typing import Dict, Callable, Optional
+from typing import Any, Dict, Callable, Optional
 
 from discopop_gui.Types.FrameT import FrameT
 from discopop_gui.Objects.Frames.Base import Base as BaseFrame
@@ -92,5 +92,5 @@ class Base(ABC):
         self._current_frame_id = None
 
     @abstractmethod
-    def serialize_current_frame(self) -> dict | None:
+    def serialize_current_frame(self) -> Dict[str, Any] | None:
         pass

@@ -8,7 +8,7 @@
 
 from typing import Callable, List
 import tkinter as tk
-from matplotlib.axes._axes import Axes
+from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
 from matplotlib.figure import Figure
 

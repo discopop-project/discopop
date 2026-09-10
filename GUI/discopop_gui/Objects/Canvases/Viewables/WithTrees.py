@@ -287,8 +287,8 @@ class WithTrees(Base):
                 destination_height += 1
                 current_node = current_node.higher_order_main_connection
 
-            current_source_node = self._nodes[source_node_id]
-            current_destination_node = self._nodes[destination_node_id]
+            current_source_node : TreeNode | None = self._nodes[source_node_id]
+            current_destination_node : TreeNode | None = self._nodes[destination_node_id]
 
             while current_source_node is not None and source_height > destination_height:
                 current_source_node = self._nodes[current_source_node.id].higher_order_main_connection
