@@ -319,7 +319,7 @@ class WithTrees(Base):
 
         self.update_visual_node_offsets()
 
-    def serialize(self) -> dict:
+    def serialize(self) -> Dict[str, Any]:
         output = super().serialize()
 
         output.update({
@@ -329,7 +329,7 @@ class WithTrees(Base):
 
         return output
 
-    def deserialize(self, data: dict) -> None:
+    def deserialize(self, data: Dict[str, Any]) -> None:
         self.delete("all")
         self._nodes.clear()
         self._highest_managed_dependencies.clear()

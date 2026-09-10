@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import tkinter as tk
 from tkinter import filedialog
-from typing import Dict, Callable, Optional
+from typing import Any, Dict, Callable, Optional
 
 from discopop_gui.Types.FrameT import FrameT
 from discopop_gui.Visualizers.Base import Base
@@ -217,7 +217,7 @@ class WithSidebar(Base):
         self._frame_selectors.clear()
         self._filter.delete("1.0", tk.END)
 
-    def serialize_current_frame(self) -> dict | None:
+    def serialize_current_frame(self) -> Dict[str, Any] | None:
         if self._current_frame_id is None:
             return None
 

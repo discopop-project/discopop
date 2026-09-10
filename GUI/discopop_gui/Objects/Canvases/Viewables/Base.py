@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import tkinter as tk
-from typing import Any
+from typing import Any, Dict
 
 from discopop_gui.Constants import TREE_NODES_SPACING
 from discopop_gui.Enums.ViewerMode import ViewerMode
@@ -384,8 +384,8 @@ class Base(tk.Canvas):
 
         super().delete(*args)
 
-    def serialize(self) -> dict[str, Any]:
+    def serialize(self) -> Dict[str, Any]:
         return {}
 
-    def deserialize(self, data: dict[str, Any]) -> None:
+    def deserialize(self, _ : Dict[str, Any]) -> None:
         pass

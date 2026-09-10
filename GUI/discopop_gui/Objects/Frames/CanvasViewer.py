@@ -208,12 +208,12 @@ class CanvasViewer(Base, Generic[ViewableCanvasT]):
 
         self._update_toolbar()
 
-    def serialize(self) -> dict:
+    def serialize(self) -> Dict[str, Any]:
         return {
             "canvases" : {canvas_id : {"type" : ViewableCanvasesMap[canvas.__class__.__name__].value, "data" : canvas.serialize()} for canvas_id, canvas in self._canvases.items() if canvas.get_serializable()}
         }
 
-    def deserialize(self, data: dict) -> None:
+    def deserialize(self, data: Dict[str, Any]) -> None:
         for canvas_data in data["canvases"].values():
             canvas_type = ViewableCanvasTypes(canvas_data["type"])
 
