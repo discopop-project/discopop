@@ -46,8 +46,6 @@ class MultiFrame(Base):
         self._inner_frames = []
 
         for frame_data in data["inner_frames"]:
-            frame = None
-
             match FrameType(frame_data["type"]):
                 case FrameType.CANVAS_VIEWER:
                     frame = self.create_frame(
@@ -56,12 +54,16 @@ class MultiFrame(Base):
                         lambda parent: CanvasViewer(parent)
                     )
 
+                    frame.deserialize(frame_data["data"])
+
                 case FrameType.MULTI_FRAME:
                     frame = self.create_frame(
                         int(frame_data["row"]),
                         int(frame_data["column"]),
                         lambda parent: MultiFrame(parent)
                     )
+
+                    frame.deserialize(frame_data["data"])
 
                 case _:
                     frame = self.create_frame(
@@ -70,4 +72,4 @@ class MultiFrame(Base):
                         lambda parent: Base(parent)
                     )
 
-            frame.deserialize(frame_data["data"])
+                    frame.deserialize(frame_data["data"])
