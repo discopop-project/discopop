@@ -125,19 +125,7 @@ def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Option
 
         # Extra processing here
 
-    for frame_name in [
-        # "Graphs",
-        # "Task Graph",
-        # "Task graph (context graph)",
-        # "Task graph (context debug graph)",
-        # "Context task graph",
-        "Main Graph"
-    ]:
-        try:
-            context_task_graph.delete_frame(frame_name)
-        except KeyError:
-            pass
-
+    context_task_graph.clear_visualizer()
     context_task_graph.set_filter_callback(on_filter)
     draw_plots()
     context_task_graph.run_visualizer()

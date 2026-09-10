@@ -8,12 +8,18 @@
 
 from __future__ import annotations
 
+import json
 import tkinter as tk
-from typing import Dict, Callable, Optional
+from tkinter import filedialog
+from typing import Any, Dict, Callable, Optional
 
 from discopop_gui.Types.FrameT import FrameT
 from discopop_gui.Visualizers.Base import Base
-
+from discopop_gui.Enums.FrameType import FrameType
+from discopop_gui.ClassMaps.Frames import FramesMap
+from discopop_gui.Objects.Frames.Base import Base as FrameBase
+from discopop_gui.Objects.Frames.MultiFrame import MultiFrame
+from discopop_gui.Objects.Frames.CanvasViewer import CanvasViewer
 
 class WithSidebar(Base):
     def __init__(self, visualize_on : Optional[tk.Frame] = None) -> None:
@@ -45,12 +51,20 @@ class WithSidebar(Base):
         self._sidebar = tk.Frame(self._sidebar_canvas)
         self._sidebar.grid_columnconfigure(0, weight=1)
 
-        self._sidebar_window = self._sidebar_canvas.create_window((0, 0), window=self._sidebar, anchor="nw")
+        self._sidebar_window = self._sidebar_canvas.create_window((0, 0), window = self._sidebar, anchor = "nw")
 
-        self._sidebar_canvas.configure(yscrollcommand=self._sidebar_scrollbar.set)
+        self._sidebar_canvas.configure(yscrollcommand = self._sidebar_scrollbar.set)
 
         self._sidebar.bind("<Configure>", self._sidebar_configure)
         self._sidebar_canvas.bind("<Configure>", self._canvas_configure)
+
+        # Save Frame button
+        self._save_frame_button = tk.Button(self._sidebar_container, text = "Save Frame", command = self._save_frame)
+        self._save_frame_button.grid(row = 1, column = 0, columnspan = 2, sticky = "ew", padx = 5, pady = 2)
+
+        # Load Frame button
+        self._load_frame_button = tk.Button(self._sidebar_container, text = "Load Frame", command = self._load_frame)
+        self._load_frame_button.grid(row = 2, column = 0, columnspan = 2, sticky = "ew", padx = 5, pady = 2)
 
         # Content area
         self._frame_container = tk.Frame(self._pane)
@@ -80,7 +94,7 @@ class WithSidebar(Base):
         self._pane.add(self._frame_container, minsize=300, stretch="always")
         self._pane.add(self._filter_container, minsize=180, width=250, stretch="never")
 
-        self._frame_selectors: Dict[str, tk.Button] = {}
+        self._frame_selectors: Dict[int, tk.Button] = {}
 
     def _sidebar_configure(self, _: tk.Event[tk.Widget]) -> None:
         self._sidebar_canvas.configure(scrollregion=self._sidebar_canvas.bbox("all"))
@@ -89,8 +103,58 @@ class WithSidebar(Base):
         self._sidebar_canvas.itemconfigure(self._sidebar_window, width=event.width)
 
     def _rebuild_selector_layout(self) -> None:
-        for row_index, frame_name in enumerate(self._frame_selectors):
-            self._frame_selectors[frame_name].grid_configure(row=row_index)
+        for row_index, frame_id in enumerate(self._frame_selectors):
+            self._frame_selectors[frame_id].grid_configure(row=row_index)
+
+    def _save_frame(self) -> None:
+        data = self.serialize_current_frame()
+
+        if data is None:
+            return
+
+        file_path = filedialog.asksaveasfilename(
+            parent = self._root,
+            title = "Save Frame",
+            defaultextension = ".json",
+            filetypes = [
+                ("JSON files", "*.json"),
+                ("All files", "*.*"),
+            ],
+        )
+
+        if not file_path:
+            return
+
+        with open(file_path, "w", encoding="utf-8") as file:
+            json.dump(data, file, indent=4)
+
+    def _load_frame(self) -> None:
+        file_path = filedialog.askopenfilename(
+            parent = self._root,
+            title = "Load Frame",
+            filetypes = [
+                ("JSON files", "*.json"),
+                ("All files", "*.*"),
+            ],
+        )
+
+        if not file_path:
+            return
+
+        with open(file_path, "r", encoding="utf-8") as file:
+            data = json.load(file)
+            frame = None
+
+            match FrameType(data["type"]):
+                case FrameType.CANVAS_VIEWER:
+                    frame = self.create_frame(data["frame_name"], CanvasViewer)
+                case FrameType.MULTI_FRAME:
+                    frame = self.create_frame(data["frame_name"], MultiFrame)
+                case _:
+                    frame = self.create_frame(data["frame_name"], FrameBase)
+
+            frame.deserialize(data["data"])
+
 
     def _filter_button_click(self) -> None:
         if self._filter_callback is not None:
@@ -98,42 +162,42 @@ class WithSidebar(Base):
             self._filter_callback(filter_text)
 
     def create_frame(self, name: str, frame_builder: Callable[[tk.Misc], FrameT]) -> FrameT:
-        if name in self._frames:
-            raise ValueError(f"Frame '{name}' already exists.")
-
         frame = frame_builder(self._frame_container)
-        self._frames[name] = frame
-        frame.grid(row=0, column=0, sticky="nsew")
+        frame_id = self._frame_id_counter
+        self._frames[frame_id] = frame
+        self._frame_names[frame_id] = name
+        self._frame_id_counter += 1
+        frame.grid(row = 0, column = 0, sticky="nsew")
 
         def selector_click(frame_name: str = name) -> None:
-            self.show_frame(frame_name)
+            self.show_frame(frame_id)
 
         frame_selector = tk.Button(self._sidebar, text=name, command=selector_click)
 
-        self._frame_selectors[name] = frame_selector
+        self._frame_selectors[frame_id] = frame_selector
 
         frame_selector.grid(row=len(self._frame_selectors) - 1, column=0, sticky="ew", padx=5, pady=2)
 
-        if self._current_frame_name is None:
-            self.show_frame(name)
+        if self._current_frame_id is None:
+            self.show_frame(frame_id)
         else:
-            self.show_frame(self._current_frame_name)
+            self.show_frame(self._current_frame_id)
 
         return frame
 
-    def get_frame_selector(self, name: str) -> tk.Button:
+    def get_frame_selector(self, frame_id: int) -> tk.Button:
         try:
-            return self._frame_selectors[name]
+            return self._frame_selectors[frame_id]
         except KeyError as e:
-            raise KeyError(f"No selector button for frame '{name}'.") from e
+            raise KeyError(f"No selector button for frame '{frame_id}'.") from e
 
-    def delete_frame(self, name: str) -> None:
-        super().delete_frame(name)
+    def delete_frame(self, frame_id : int) -> None:
+        super().delete_frame(frame_id)
 
-        selector = self.get_frame_selector(name)
+        selector = self.get_frame_selector(frame_id)
 
         selector.destroy()
-        del self._frame_selectors[name]
+        del self._frame_selectors[frame_id]
 
         self._rebuild_selector_layout()
 
@@ -152,3 +216,16 @@ class WithSidebar(Base):
 
         self._frame_selectors.clear()
         self._filter.delete("1.0", tk.END)
+
+    def serialize_current_frame(self) -> Dict[str, Any] | None:
+        if self._current_frame_id is None:
+            return None
+
+        frame = self._frames[self._current_frame_id]
+
+        return {
+            "frame_name": self._frame_names[self._current_frame_id],
+            "type" : FramesMap[frame.__class__.__name__].value,
+            "data" : frame.serialize()
+        }
+

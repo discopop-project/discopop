@@ -9,18 +9,19 @@
 from __future__ import annotations
 
 import tkinter as tk
-from typing import Any
+from typing import Any, Dict
 
 from discopop_gui.Constants import TREE_NODES_SPACING
 from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Objects.CanvasItems.Popup import Popup
 
 
-class Viewable(tk.Canvas):
-    def __init__(self, parent: tk.Misc, viewer_mode: ViewerMode, *args: Any, **kwargs: Any) -> None:
+class Base(tk.Canvas):
+    def __init__(self, parent: tk.Misc, viewer_mode: ViewerMode, serializable : bool = True, *args: Any, **kwargs: Any) -> None:
         super().__init__(parent, *args, **kwargs)
 
         self._viewer_mode = viewer_mode
+        self._serializable = serializable
 
         self._original_coordinates : dict[int, tuple[float, ...]] = {}
         self._transform_scale : float = 1
@@ -292,6 +293,9 @@ class Viewable(tk.Canvas):
 
     def get_viewer_mode(self) -> ViewerMode:
         return self._viewer_mode
+
+    def get_serializable(self) -> bool:
+        return self._serializable
     
     def coords_unscaled(self, item_id: int, *coords: float) -> None:
         self._original_coordinates[item_id] = tuple(coords)
@@ -331,7 +335,7 @@ class Viewable(tk.Canvas):
         self._apply_transform_to_item(item_id)
         return item_id
     
-    def clone_item_to_canvas(self, canvas: "Viewable", item_id: int,) -> int:
+    def clone_item_to_canvas(self, canvas: "Base", item_id: int,) -> int:
         item_type = self.type(item_id)
 
         coords = self._original_coordinates.get(item_id, tuple(self.coords(item_id)))
@@ -379,3 +383,9 @@ class Viewable(tk.Canvas):
                     self._original_coordinates.pop(item, None)
 
         super().delete(*args)
+
+    def serialize(self) -> Dict[str, Any]:
+        return {}
+
+    def deserialize(self, _ : Dict[str, Any]) -> None:
+        pass
