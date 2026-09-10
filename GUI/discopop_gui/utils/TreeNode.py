@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any
 
 class TreeNode:
     def __init__(self, id : int) -> None:
@@ -16,7 +16,7 @@ class TreeNode:
         self.managed_dependencies : List[Tuple["TreeNode", "TreeNode"]] = []
         self.metadata : Dict[str, str] = {}
 
-    def serialize(self) -> dict:
+    def serialize(self) -> Dict[str, Any]:
         return {
             "id": self.id,
             "lower_order_main_connection_ids": [str(node.id) for node in self.lower_order_main_connections],
@@ -25,7 +25,7 @@ class TreeNode:
             "metadata": self.metadata.copy()
         }
 
-    def deserialize(self, data: dict, nodes_dictionary: Dict[int, "TreeNode"]) -> None:
+    def deserialize(self, data: Dict[str, Any], nodes_dictionary: Dict[int, "TreeNode"]) -> None:
         self.id = int(data["id"])
         self.lower_order_main_connections = [nodes_dictionary[int(node_id)] for node_id in data["lower_order_main_connection_ids"]]
         self.higher_order_main_connection = nodes_dictionary[int(data["higher_order_main_connection_id"])] if data["higher_order_main_connection_id"] is not None else None
