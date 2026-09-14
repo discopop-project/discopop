@@ -573,6 +573,33 @@ def _progress(step: int, total: int, label: str) -> None:
     sys.stderr.flush()
 
 
+def _count_suggestions(project_path: str) -> Optional[int]:
+    """How many parallelization suggestions the explorer produced, or None if unknown."""
+    patch_gen_dir = Path(project_path) / ".discopop" / "patch_generator"
+    if not patch_gen_dir.is_dir():
+        return None
+    try:
+        return len([entry for entry in patch_gen_dir.iterdir() if entry.is_dir() and entry.name.isdigit()])
+    except OSError:
+        return None
+
+
+def _next_step_hint(suggestion_count: Optional[int]) -> str:
+    """What to do with the patches that were just generated."""
+    if suggestion_count == 0:
+        return (
+            "No parallelization suggestion was found. get_data_dependencies explains why a " "given loop was rejected."
+        )
+    found = f"{suggestion_count} parallelization suggestions were generated. " if suggestion_count else ""
+    return (
+        found + "Call run_auto_tuning to have DiscoPoP measure which combination of them is "
+        "fastest (add apply=true to apply that combination in the same call) — do this before "
+        "applying anything, since the search needs an un-patched project. "
+        "get_parallelization_patches lists the suggestions, and get_data_dependencies "
+        "explains the dependencies behind an individual one."
+    )
+
+
 def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
     try:
         project_path = arguments.get("project_path", "")
@@ -688,6 +715,14 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         }
         if hotspot_detection_enabled and not hotspot_ok:
             result["warning"] = "Hotspot detection failed; pattern analysis covers the entire codebase."
+        # What to do with the patches is the question this pipeline exists to raise, and a
+        # result is read far more reliably than a tool description. Saying how many there
+        # are and which tool decides between them is what keeps the next step from being a
+        # guess made out of the source code.
+        suggestion_count = _count_suggestions(project_path)
+        if suggestion_count is not None:
+            result["suggestions_found"] = suggestion_count
+        result["next_step"] = _next_step_hint(suggestion_count)
         ctx.log_response("gather_data", result)
         return [TextContent(type="text", text=json.dumps(result))]
 
