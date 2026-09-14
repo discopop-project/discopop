@@ -112,6 +112,7 @@ class TestRunAutoTuning(unittest.TestCase):
         self.ctx = ToolContext(debug=False)
         self._pending_progress: Optional[list[dict[str, Any]]] = None
         self._popen_cmd: list[str] = []
+        self._applicator_calls: list[list[str]] = []
         self.__create_complete_project()
 
     def tearDown(self) -> None:
@@ -180,7 +181,26 @@ class TestRunAutoTuning(unittest.TestCase):
         result = run_auto_tuning.handle(arguments, self.ctx)
         return json.loads(result[0].text)
 
-    def __run_with_fake_tuner(self, process: _FakeProcess, **overrides: Any) -> Any:
+    def __applicator(self, returncode: int = 0, output: str = "") -> Any:
+        """A stand-in for discopop_patch_applicator that records how it was called."""
+
+        def run(project_path: str, applicator_args: list[str], *_args: Any, **_kwargs: Any) -> Any:
+            self._applicator_calls.append(list(applicator_args))
+            return (
+                subprocess.CompletedProcess(args=applicator_args, returncode=returncode, stdout=output, stderr=""),
+                None,
+            )
+
+        return run
+
+    def __run_with_fake_tuner(
+        self,
+        process: _FakeProcess,
+        applied: Optional[list[str]] = None,
+        applicator: Any = None,
+        application_result: Optional[dict[str, Any]] = None,
+        **overrides: Any,
+    ) -> Any:
         def start(*args: Any, **_kwargs: Any) -> _FakeProcess:
             self._popen_cmd = list(args[0]) if args else []
             if self._pending_progress is not None:
@@ -188,7 +208,9 @@ class TestRunAutoTuning(unittest.TestCase):
             return process
 
         with (
-            mock.patch.object(run_auto_tuning, "read_applied_suggestions", return_value=([], None)),
+            mock.patch.object(run_auto_tuning, "read_applied_suggestions", return_value=(applied or [], None)),
+            mock.patch.object(run_auto_tuning, "run_patch_applicator", applicator or self.__applicator()),
+            mock.patch.object(run_auto_tuning, "read_application_result", return_value=application_result),
             mock.patch("subprocess.Popen", side_effect=start),
             mock.patch.object(run_auto_tuning, "_terminate"),
         ):
@@ -274,12 +296,89 @@ class TestRunAutoTuning(unittest.TestCase):
         self.assertNotIn("algorithm_selection", data)
         self.assertEqual(self._popen_cmd[self._popen_cmd.index("-A") + 1], "5")
 
-    def test_applied_patches_are_refused(self) -> None:
-        with mock.patch.object(run_auto_tuning, "read_applied_suggestions", return_value=(["3", "7"], None)):
-            data = self.__handle()
+    # -- applied patches ------------------------------------------------------------
+
+    def test_applied_patches_are_cleared_for_the_measurement_and_restored_after(self) -> None:
+        # The search needs an un-patched project, but a caller who only asked for a
+        # measurement must get the project back exactly as it was.
+        self.__completed_run_progress()
+        data = self.__run_with_fake_tuner(_FakeProcess(), applied=["3", "7"])
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(data["cleared_before_tuning"], ["3", "7"])
+        self.assertEqual(self._applicator_calls, [["--clear"], ["--load"]])
+        self.assertIs(data["applied"], False)
+        self.assertFalse([warning for warning in data.get("warnings", []) if "could not be put back" in warning])
+
+    def test_clearing_failure_reports_the_applicator_output_and_the_likely_cause(self) -> None:
+        # rc=1 with an empty stderr is what the applicator produces when a patch can no
+        # longer be reversed; reporting only the return code leaves nothing to act on.
+        failing = self.__applicator(returncode=1, output="Rollback of suggestion 3 not successful.")
+        data = self.__run_with_fake_tuner(_FakeProcess(), applied=["3"], applicator=failing)
         self.assertEqual(data["status"], "error")
-        self.assertIn("3, 7", data["message"])
-        self.assertIn("manage_patches(action='clear')", data["message"])
+        self.assertIn("could not be removed", data["message"])
+        self.assertIn("Rollback of suggestion 3 not successful.", data["message"])
+        self.assertIn("edited by hand", data["message"])
+        self.assertEqual(self._applicator_calls, [["--clear"]])
+
+    def test_a_search_without_measurements_still_restores_the_cleared_selection(self) -> None:
+        data = self.__run_with_fake_tuner(_FakeProcess(returncode=1), applied=["3"])
+        self.assertEqual(data["status"], "error")
+        self.assertEqual(self._applicator_calls, [["--clear"], ["--load"]])
+        self.assertIn("restored", data["message"])
+
+    # -- applying the selection -------------------------------------------------------
+
+    def test_the_selection_is_not_applied_by_default(self) -> None:
+        self.__completed_run_progress()
+        data = self.__run_with_fake_tuner(_FakeProcess())
+        self.assertIs(data["applied"], False)
+        self.assertEqual(self._applicator_calls, [])
+        self.assertIn("manage_patches", data["message"])
+
+    def test_apply_persists_the_selection(self) -> None:
+        self.__completed_run_progress()
+        data = self.__run_with_fake_tuner(
+            _FakeProcess(), apply=True, application_result={"applied": ["1"], "failed": [], "unknown": []}
+        )
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(data["applied"], ["1"])
+        self.assertEqual(self._applicator_calls, [["--apply", "1"]])
+        self.assertIn("rollback", data["message"])
+
+    def test_apply_replaces_a_previously_applied_selection(self) -> None:
+        # Cleared for the measurement, then not restored: the tuner's selection is what
+        # the caller asked to end up with.
+        self.__completed_run_progress()
+        data = self.__run_with_fake_tuner(
+            _FakeProcess(),
+            applied=["3", "7"],
+            apply=True,
+            application_result={"applied": ["1"], "failed": [], "unknown": []},
+        )
+        self.assertEqual(data["applied"], ["1"])
+        self.assertEqual(data["cleared_before_tuning"], ["3", "7"])
+        self.assertEqual(self._applicator_calls, [["--clear"], ["--apply", "1"]])
+
+    def test_a_selection_that_does_not_reach_the_code_is_reported(self) -> None:
+        self.__completed_run_progress()
+        data = self.__run_with_fake_tuner(
+            _FakeProcess(), apply=True, application_result={"applied": [], "failed": ["1"], "unknown": []}
+        )
+        self.assertEqual(data["status"], "partial")
+        self.assertEqual(data["not_applied"], ["1"])
+        self.assertTrue(any("NOT applied" in warning for warning in data["warnings"]))
+
+    def test_nothing_is_applied_when_the_search_selected_nothing(self) -> None:
+        self.__write_progress(
+            [
+                {"event": "baseline", "runtime": 9.5, "valid": True},
+                {"event": "result", "suggestions": [], "speedup": 1.0, "runtime": 9.5, "evaluated": 3},
+            ]
+        )
+        data = self.__run_with_fake_tuner(_FakeProcess(), apply=True)
+        self.assertEqual(data["suggestion_ids"], [])
+        self.assertEqual(self._applicator_calls, [])
+        self.assertIn("No combination", data["message"])
 
     # -- results ------------------------------------------------------------------
 

@@ -18,14 +18,21 @@ from collections import deque
 from pathlib import Path
 from typing import Any, Deque, Optional
 
-from mcp.types import TextContent, Tool
+from mcp.types import TextContent, Tool, ToolAnnotations
 
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.detailed_hotspot_loader import hotspots_json_path, load_detailed_hotspots
 from discopop_library.ProjectManager.configurations.validation import VALIDATE_SCRIPT_NAME
 from discopop_library.ProjectManager.gui.plots.data import parse_progress_jsonl
-from mcp_server.tools.helpers import ToolContext, read_applied_suggestions
+from mcp_server.tools.helpers import (
+    APPLICATOR_OK_RETURNCODES,
+    ToolContext,
+    applicator_failure_details,
+    read_application_result,
+    read_applied_suggestions,
+    run_patch_applicator,
+)
 
 logger = logging.getLogger("discopop-mcp")
 
@@ -44,31 +51,33 @@ _OUTPUT_TAIL_LINES = 40
 TOOL = Tool(
     name="run_auto_tuning",
     description=(
-        "Let DiscoPoP's empirical autotuner select a good combination of parallelization "
-        "suggestions, and return that selection as a list of suggestion IDs. "
-        "Call this after gather_data, when more than a handful of patches exist and the "
-        "question is which of them to apply.\n\n"
-        "The autotuner compiles, executes and validates candidate patch combinations in "
-        "throwaway copies of the project and keeps the fastest combination that still "
-        "produces a valid result. The correctness and effectiveness of the selection are "
-        "therefore measured, not guessed.\n\n"
-        "IMPORTANT: this tool does NOT modify any source file. It only reports the "
-        "selection. To persist it, pass the returned suggestion_ids to "
-        "manage_patches(action='apply', suggestion_ids=[...]).\n\n"
+        "Measure which combination of the generated parallelization suggestions is "
+        "actually fastest, and return it as a list of suggestion IDs — optionally applying "
+        "it in the same call (apply=true).\n\n"
+        "This is the answer to 'which of these patches should I apply?'. The autotuner "
+        "compiles, executes and validates candidate combinations in throwaway copies of the "
+        "project and keeps the fastest one that still produces a valid result, so the "
+        "selection is measured rather than guessed. Call it after gather_data and BEFORE "
+        "applying any patch.\n\n"
+        "By default the tool leaves the sources as it found them and only reports the "
+        "selection, which manage_patches(action='apply', suggestion_ids=[...]) then "
+        "persists. Pass apply=true to have the selected combination applied right away, "
+        "which is the shortest route from profiling data to parallelized code.\n\n"
+        "Patches that are already applied are cleared before the search (the tuner has to "
+        "measure an un-patched project) and restored afterwards — unless apply=true, where "
+        "the new selection replaces them. Nothing has to be cleared by hand.\n\n"
         "Preconditions:\n"
         "  - gather_data must have been run (patches, line mapping and detection results "
         "must exist).\n"
-        "  - No patches may currently be applied: the tuner measures the project in its "
-        "current state and patches candidate combinations on top of it. Run "
-        "manage_patches(action='clear') first if anything is applied.\n"
         "  - For the best search, run gather_data with hotspot_config_names set (ideally two "
         "configurations of different input sizes). Omit 'algorithm' and the tool then picks "
         "the hotspot-guided search; without hotspot results it falls back to the greedy "
         "forward search on its own.\n\n"
-        "NOTE: this is a measurement run. It compiles and executes the project many times "
-        "and can take from minutes to hours. Use timeout_seconds to bound it; when the "
-        "timeout expires the search is stopped and the best combination measured so far is "
-        "still returned with status 'timeout'.\n\n"
+        "COST: this is a measurement run — one compilation plus one execution of the project "
+        "per candidate. The hotspot-guided search evaluates a few candidates per hot code "
+        "region, the greedy search roughly one per suggestion. Bound it with "
+        "timeout_seconds; when the timeout expires the search stops and the best "
+        "combination measured so far is still returned, with status 'timeout'.\n\n"
         "How far the correctness claim reaches depends on the configuration: without a "
         "validate.sh a candidate counts as valid as soon as it exits with code 0, so a "
         "parallelization that corrupts the output is indistinguishable from a correct one. "
@@ -110,6 +119,16 @@ TOOL = Tool(
                     "but requires hotspot detection results."
                 ),
             },
+            "apply": {
+                "type": "boolean",
+                "description": (
+                    "Apply the selected combination to the source files once the search is "
+                    "done, instead of only reporting it. Default: false. With apply=true the "
+                    "result carries 'applied' with the ids that reached the code; the "
+                    "selection can be undone afterwards with "
+                    "manage_patches(action='rollback', suggestion_ids=[...])."
+                ),
+            },
             "timeout_seconds": {
                 "type": "integer",
                 "description": (
@@ -122,6 +141,10 @@ TOOL = Tool(
         "required": ["project_path", "config_name"],
         "additionalProperties": False,
     },
+    # Not read-only (it compiles and executes the project, and applies patches when asked)
+    # but it destroys nothing: with apply=false the sources end up as they were, and an
+    # applied selection is reversible with manage_patches.
+    annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, openWorldHint=False),
 )
 
 
@@ -311,6 +334,101 @@ def _validation_notes(dot_dp: str, config_name: str, result: dict[str, Any]) -> 
     return notes
 
 
+def _clear_before_measuring(project_path: str, applied: list[str], ctx: ToolContext) -> Optional[str]:
+    """Take the applied patches out of the sources, or say why that failed.
+
+    The tuner measures the project as it stands and applies each candidate on top of a
+    copy of it, so patches already in the code would be counted into the baseline and
+    stacked under every candidate. Clearing them here rather than refusing keeps the
+    caller out of a dead end whose only exit was another tool call, and the applicator
+    saves the cleared selection so it can be put back afterwards.
+    """
+    proc, run_error = run_patch_applicator(project_path, ["--clear"])
+    if proc is None:
+        return run_error
+    if proc.returncode not in APPLICATOR_OK_RETURNCODES:
+        output, cause = applicator_failure_details(proc)
+        message = (
+            "The suggestions " + ", ".join(applied) + " are applied to the sources and could not be "
+            f"removed for the measurement (discopop_patch_applicator --clear failed with rc={proc.returncode}). "
+            "Auto tuning needs an un-patched project, because every candidate is measured on top of "
+            "the current state."
+        )
+        if cause is not None:
+            message += " " + cause
+        if output:
+            message += "\nApplicator output:\n" + output
+        return message
+    ctx.log_action(project_path, "run_auto_tuning", f"Cleared applied suggestions before measuring: {applied}")
+    return None
+
+
+def _restore_cleared(project_path: str, cleared: list[str], ctx: ToolContext) -> Optional[str]:
+    """Put back the selection that was cleared for the measurement.
+
+    Used whenever the caller did not ask for the tuner's own selection to be applied:
+    the project then ends the call in the state it started in, which is what makes a
+    measurement safe to ask for.
+    """
+    proc, run_error = run_patch_applicator(project_path, ["--load"])
+    if proc is None:
+        return run_error
+    if proc.returncode not in APPLICATOR_OK_RETURNCODES:
+        output, cause = applicator_failure_details(proc)
+        message = (
+            "The suggestions " + ", ".join(cleared) + " were removed from the sources for the "
+            f"measurement and could not be put back (rc={proc.returncode}). The sources are currently "
+            "un-patched; re-apply them with manage_patches(action='apply', suggestion_ids=[...])."
+        )
+        if cause is not None:
+            message += " " + cause
+        if output:
+            message += "\nApplicator output:\n" + output
+        return message
+    ctx.log_action(project_path, "run_auto_tuning", f"Restored the previously applied suggestions: {cleared}")
+    return None
+
+
+def _apply_selection(project_path: str, suggestion_ids: list[str], ctx: ToolContext) -> dict[str, Any]:
+    """Apply the tuner's selection, reporting exactly what reached the code.
+
+    Returns the fields to merge into the result: ``applied`` and, when something did not
+    make it, ``not_applied`` plus a warning. A failure here does not invalidate the
+    search -- the selection was still measured -- so it is reported rather than raised.
+    """
+    proc, run_error = run_patch_applicator(project_path, ["--apply"] + suggestion_ids)
+    if proc is None:
+        return {"applied": [], "apply_error": run_error}
+    if proc.returncode not in APPLICATOR_OK_RETURNCODES:
+        output, cause = applicator_failure_details(proc)
+        message = f"The selection could not be applied (rc={proc.returncode})."
+        if cause is not None:
+            message += " " + cause
+        if output:
+            message += "\nApplicator output:\n" + output
+        return {"applied": [], "apply_error": message}
+
+    application = read_application_result(project_path)
+    if application is None:
+        # The applicator reported success but wrote no breakdown; the requested ids are
+        # then the best account of what was applied.
+        ctx.log_action(project_path, "run_auto_tuning", f"Applied the selection: {suggestion_ids}")
+        return {"applied": list(suggestion_ids)}
+
+    applied = [str(entry) for entry in application.get("applied", [])]
+    fields: dict[str, Any] = {"applied": applied}
+    not_applied = [str(entry) for entry in list(application.get("failed", [])) + list(application.get("unknown", []))]
+    if not_applied:
+        fields["not_applied"] = not_applied
+        fields["apply_error"] = (
+            "The following selected suggestions were NOT applied: "
+            + ", ".join(not_applied)
+            + ". The affected files are unchanged, so the code is not parallelized as measured."
+        )
+    ctx.log_action(project_path, "run_auto_tuning", f"Applied the selection: {applied}")
+    return fields
+
+
 def _progress_file(dot_dp: str) -> Path:
     return Path(dot_dp) / "auto_tuner" / "progress.jsonl"
 
@@ -385,6 +503,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         project_path: str = arguments.get("project_path", "")
         config_name: str = arguments.get("config_name", "")
         requested_algorithm: Optional[int] = arguments.get("algorithm")
+        apply_selection: bool = bool(arguments.get("apply", False))
         timeout_seconds: int = arguments.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS)
 
         dot_dp = str(Path(project_path) / ".discopop")
@@ -420,23 +539,18 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             if algorithm == HOTSPOT_GUIDED_ALGORITHM and not hotspot_loops_available(dot_dp):
                 return ctx.error(_hotspot_requirement_error(dot_dp), project_path, "run_auto_tuning")
 
-        # The tuner measures the project as it stands and applies each candidate on top of
-        # a copy of it. Patches that are already in the code would therefore be counted as
-        # part of the baseline and stacked under every candidate, which makes both the
-        # measurements and the returned selection wrong.
+        # An un-patched project is what the search has to measure against, so anything
+        # applied is cleared here and -- unless the caller wants the tuner's own selection
+        # applied instead -- put back once the search is over.
         applied, applied_error = read_applied_suggestions(project_path)
         if applied_error is not None:
             return ctx.error(applied_error, project_path, "run_auto_tuning")
+        cleared: list[str] = []
         if applied:
-            return ctx.error(
-                "The following suggestions are currently applied to the source files: "
-                + ", ".join(applied)
-                + ". Auto tuning measures the project in its current state and patches every "
-                "candidate on top of it, so the results would be wrong. Run "
-                "manage_patches(action='clear') first, then call run_auto_tuning again.",
-                project_path,
-                "run_auto_tuning",
-            )
+            clear_error = _clear_before_measuring(project_path, applied, ctx)
+            if clear_error is not None:
+                return ctx.error(clear_error, project_path, "run_auto_tuning")
+            cleared = list(applied)
 
         cmd = [
             sys.executable,
@@ -504,6 +618,15 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                 message = f"The autotuner produced no measurements (rc={returncode})."
             if tail:
                 message += " Last output:\n" + "\n".join(tail)
+            # A search that produced nothing must not also cost the caller the selection
+            # that was in the code when the call started.
+            if cleared:
+                restore_error = _restore_cleared(project_path, cleared, ctx)
+                message += (
+                    f"\n{restore_error}"
+                    if restore_error is not None
+                    else "\nThe suggestions applied before the call (" + ", ".join(cleared) + ") were restored."
+                )
             return ctx.error(message, project_path, "run_auto_tuning")
 
         result = _result_from_events(events, timed_out)
@@ -535,18 +658,50 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                 "No combination of suggestions was faster than the unmodified project, so no "
                 "suggestion is recommended for application."
             )
+
+        warnings: list[str] = []
+        if cleared:
+            result["cleared_before_tuning"] = cleared
+
+        # Either the selection replaces what was in the code, or the code goes back to the
+        # state the call found it in. Both are stated in the result: which one happened
+        # decides what the caller has to do next.
+        if apply_selection and result["suggestion_ids"]:
+            result.update(_apply_selection(project_path, result["suggestion_ids"], ctx))
+            apply_error = result.pop("apply_error", None)
+            if apply_error is not None:
+                warnings.append(apply_error)
+                if not result.get("applied"):
+                    result["status"] = "partial" if result["status"] == "success" else result["status"]
+            if result.get("applied"):
+                result["message"] = (result.get("message", "") + " " if result.get("message") else "") + (
+                    "The selected suggestions were applied to the source files. Undo them with "
+                    "manage_patches(action='rollback', suggestion_ids=[...]) if needed."
+                )
         else:
-            result["message"] = (
-                "Pass suggestion_ids to manage_patches(action='apply', suggestion_ids=[...]) to "
-                "persist this selection. No source file has been modified by this tool."
-            )
+            restored = True
+            if cleared:
+                restore_error = _restore_cleared(project_path, cleared, ctx)
+                if restore_error is not None:
+                    warnings.append(restore_error)
+                    restored = False
+            if result["suggestion_ids"]:
+                result["message"] = (
+                    (result.get("message", "") + " " if result.get("message") else "")
+                    + "Pass suggestion_ids to manage_patches(action='apply', suggestion_ids=[...]) to "
+                    "persist this selection, or call run_auto_tuning again with apply=true."
+                    # Only claimed when it is true: a failed restore left the sources
+                    # un-patched, and the warning saying so must not be contradicted here.
+                    + (" The sources are as they were before this call." if restored else "")
+                )
+            result["applied"] = False
 
         # How much the "the result stays valid" claim is worth depends on the configuration,
         # so the caller is told rather than left to assume the strongest reading.
         if result["suggestion_ids"]:
-            warnings = _validation_notes(dot_dp, config_name, result)
-            if warnings:
-                result["warnings"] = warnings
+            warnings += _validation_notes(dot_dp, config_name, result)
+        if warnings:
+            result["warnings"] = warnings
 
         ctx.log_response("run_auto_tuning", result)
         return [TextContent(type="text", text=json.dumps(result))]
