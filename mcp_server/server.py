@@ -140,13 +140,18 @@ _SERVER_INSTRUCTIONS = (
     "If information appears to be missing, use the tool that produces it "
     "(e.g. run gather_data before calling get_parallelization_patches or get_data_dependencies) "
     "rather than reading the underlying files directly. "
+    "The route from an initialized project to parallelized code is: gather_data to profile "
+    "and detect patterns, then run_auto_tuning to measure which combination of the resulting "
+    "suggestions is actually fastest, then manage_patches to apply that combination — or "
+    "run_auto_tuning(apply=true), which does the last two in one call. "
+    "Never decide which patches to apply by reading them: that choice is what run_auto_tuning "
+    "measures, and picking from the diffs by hand throws away the one thing DiscoPoP can "
+    "establish and a reader cannot. Call it BEFORE applying anything — it needs an un-patched "
+    "project, and clears and restores an existing selection to get one. "
     "IMPORTANT: Always use manage_patches to apply suggested patches — never read patch content "
     "and apply changes manually. manage_patches delegates all patching work to the "
     "discopop_patch_applicator binary, which is orders of magnitude faster and consumes far "
     "fewer tokens than reading patch files and editing source files by hand. "
-    "When several patches exist and the question is which of them to apply, do not guess: "
-    "call run_auto_tuning, which has DiscoPoP measure candidate combinations and returns the "
-    "selected suggestion_ids, and pass those ids to manage_patches to apply them. "
     "Use initialize_discopop_directory with reset=true to clear stale analysis artefacts "
     "when the pipeline is in a broken or inconsistent state."
 )
@@ -166,7 +171,40 @@ _ALL_TOOLS = [
     manage_patches,
 ]
 
+# The three tools that *define* a project rather than analyse one. Together they are
+# roughly a fifth of the tool definitions this server sends a client, and a caller
+# working on a project that is already set up -- an unattended run against a prepared
+# project, most of all -- never wants them: at best they are unused context, at worst
+# initialize_discopop_directory(reset=true) removes the very configurations the caller
+# was pointed at. --tools analysis leaves them out, of the listing and of dispatch
+# alike, so "not offered" and "not available" mean the same thing.
+_SETUP_TOOLS = [
+    initialize_discopop_directory,
+    set_compile_script,
+    create_execution_configuration,
+]
+
+TOOL_SETS = {
+    "all": _ALL_TOOLS,
+    "analysis": [tool for tool in _ALL_TOOLS if tool not in _SETUP_TOOLS],
+}
+DEFAULT_TOOL_SET = "all"
+
 DEFAULT_DAEMON_PORT = 7777
+
+
+def unavailable_tool_message(name: str, tool_set: str) -> str:
+    """Why a tool a client asked for is not here.
+
+    A name this server knows but does not offer is not the same as a typo, and saying
+    so is what keeps a caller from concluding the functionality does not exist.
+    """
+    if any(mod.TOOL.name == name for mod in _ALL_TOOLS):
+        return (
+            f"Tool '{name}' is not available in the '{tool_set}' tool set. "
+            "Restart the server without '--tools " + tool_set + "' to enable it."
+        )
+    return f"Unknown tool: {name}"
 
 
 def _is_daemon_running(port: int) -> bool:
@@ -180,16 +218,18 @@ def _is_daemon_running(port: int) -> bool:
 
 
 class DiscoPopMCPServer:
-    def __init__(self, debug: bool = False):
+    def __init__(self, debug: bool = False, tool_set: str = DEFAULT_TOOL_SET):
         self.server = Server("discopop_mcp_server", instructions=_SERVER_INSTRUCTIONS)
         self.debug = debug
+        self.tool_set = tool_set
+        self._tools = TOOL_SETS[tool_set]
         _setup_logging(debug=debug)
         self._ctx = ToolContext(debug=debug)
         self._register_tools()
 
     def _register_tools(self) -> None:
         _dispatch: dict[str, Callable[[dict[str, Any], ToolContext], list[TextContent]]] = {
-            mod.TOOL.name: mod.handle for mod in _ALL_TOOLS
+            mod.TOOL.name: mod.handle for mod in self._tools
         }
 
         @self.server.call_tool()  # type: ignore[misc, untyped-decorator]
@@ -197,7 +237,7 @@ class DiscoPopMCPServer:
             self._ctx.log_call(name, arguments)
             handler = _dispatch.get(name)
             if not handler:
-                error_msg = f"Unknown tool: {name}"
+                error_msg = unavailable_tool_message(name, self.tool_set)
                 logger.error(error_msg)
                 raise Exception(error_msg)
 
@@ -226,8 +266,8 @@ class DiscoPopMCPServer:
 
         @self.server.list_tools()  # type: ignore[misc, untyped-decorator]
         async def list_tools() -> list[Tool]:
-            tools = [mod.TOOL for mod in _ALL_TOOLS]
-            logger.debug(f"Listed {len(tools)} available tools")
+            tools = [mod.TOOL for mod in self._tools]
+            logger.debug(f"Listed {len(tools)} available tools (tool set: {self.tool_set})")
             return tools
 
     async def run(self) -> None:
@@ -258,15 +298,17 @@ class DiscoPopMCPProxy:
     The server is fully functional in both modes.
     """
 
-    def __init__(self, daemon_port: int = DEFAULT_DAEMON_PORT, debug: bool = False):
+    def __init__(self, daemon_port: int = DEFAULT_DAEMON_PORT, debug: bool = False, tool_set: str = DEFAULT_TOOL_SET):
         self.daemon_port = daemon_port
         self.debug = debug
+        self.tool_set = tool_set
+        self._tools = TOOL_SETS[tool_set]
         _setup_logging(debug=debug)
         self._session: Optional[Any] = None  # mcp.client.session.ClientSession when connected
         # Inline fallback components (used when daemon is unavailable)
         self._ctx = ToolContext(debug=debug)
         self._dispatch: dict[str, Callable[[dict[str, Any], ToolContext], list[TextContent]]] = {
-            mod.TOOL.name: mod.handle for mod in _ALL_TOOLS
+            mod.TOOL.name: mod.handle for mod in self._tools
         }
         self.server = Server("discopop_mcp_server", instructions=_SERVER_INSTRUCTIONS)
         # Lazy daemon connection state
@@ -278,11 +320,17 @@ class DiscoPopMCPProxy:
     def _register_tools(self) -> None:
         @self.server.list_tools()  # type: ignore[misc, untyped-decorator]
         async def list_tools() -> list[Tool]:
-            # Tool list is static — no daemon connection needed for discovery.
-            return [mod.TOOL for mod in _ALL_TOOLS]
+            # Tool list is static — no daemon connection needed for discovery. The proxy
+            # filters it itself: the daemon it forwards to may have been started with a
+            # different tool set, and what this client may call is decided here.
+            return [mod.TOOL for mod in self._tools]
 
         @self.server.call_tool()  # type: ignore[misc, untyped-decorator]
         async def handle_tool_call(name: str, arguments: dict[str, Any]) -> list[TextContent]:
+            if name not in self._dispatch:
+                error_msg = unavailable_tool_message(name, self.tool_set)
+                logger.error(error_msg)
+                raise Exception(error_msg)
             await self._ensure_daemon()
             if self._session is not None:
                 try:
@@ -295,7 +343,7 @@ class DiscoPopMCPProxy:
             self._ctx.log_call(name, arguments)
             handler = self._dispatch.get(name)
             if not handler:
-                error_msg = f"Unknown tool: {name}"
+                error_msg = unavailable_tool_message(name, self.tool_set)
                 logger.error(error_msg)
                 raise Exception(error_msg)
             inline_result = handler(arguments, self._ctx)
@@ -369,7 +417,7 @@ class DiscoPopMCPProxy:
                 tg.start_soon(_stdio_loop)
 
 
-def _run_daemon(port: int, debug: bool) -> None:
+def _run_daemon(port: int, debug: bool, tool_set: str = DEFAULT_TOOL_SET) -> None:
     """Run as a persistent SSE daemon that keeps ToolContext (and its caches) alive."""
     import uvicorn
     from starlette.applications import Starlette
@@ -379,7 +427,7 @@ def _run_daemon(port: int, debug: bool) -> None:
 
     from mcp.server.sse import SseServerTransport
 
-    mcp_instance = DiscoPopMCPServer(debug=debug)
+    mcp_instance = DiscoPopMCPServer(debug=debug, tool_set=tool_set)
     sse = SseServerTransport("/messages/")
 
     async def handle_sse(request: Request) -> Response:
@@ -416,6 +464,7 @@ Examples:
   %(prog)s --debug                     # Start with debug logging
   %(prog)s --daemon                    # Start a persistent daemon for a live console
   %(prog)s --daemon --daemon-port 8888 # Daemon on a custom port
+  %(prog)s --tools analysis            # Hide the project setup tools
   %(prog)s --setup <agent>             # Configure a specific agent
   %(prog)s --setup <agent> --debug     # Configure with debug logging enabled
   %(prog)s --setup-all                 # Configure all agents
@@ -441,6 +490,17 @@ Available agents: {', '.join(agent_choices)}
         "--daemon",
         action="store_true",
         help="Run as a persistent SSE daemon (keeps ToolContext alive; connect via --daemon-port)",
+    )
+    parser.add_argument(
+        "--tools",
+        choices=sorted(TOOL_SETS),
+        default=DEFAULT_TOOL_SET,
+        help=(
+            "Which tools to expose. 'all' (default) offers every tool; 'analysis' leaves out "
+            "the project setup tools (initialize_discopop_directory, set_compile_script, "
+            "create_execution_configuration) — use it against a project that is already "
+            "configured, so those tools can neither be listed nor called"
+        ),
     )
     parser.add_argument(
         "--daemon-port",
@@ -525,7 +585,7 @@ Available agents: {', '.join(agent_choices)}
             sys.exit(1)
     elif args.daemon:
         try:
-            _run_daemon(args.daemon_port, args.debug)
+            _run_daemon(args.daemon_port, args.debug, args.tools)
         except KeyboardInterrupt:
             logger.info("Daemon shutting down...")
             sys.exit(0)
@@ -533,7 +593,7 @@ Available agents: {', '.join(agent_choices)}
             logger.error(f"Daemon fatal error: {e}", exc_info=True)
             sys.exit(1)
     else:
-        proxy = DiscoPopMCPProxy(daemon_port=args.daemon_port, debug=args.debug)
+        proxy = DiscoPopMCPProxy(daemon_port=args.daemon_port, debug=args.debug, tool_set=args.tools)
         try:
             asyncio.run(proxy.run())
         except KeyboardInterrupt:
