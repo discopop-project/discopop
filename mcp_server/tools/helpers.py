@@ -10,6 +10,9 @@ import datetime
 import json
 import logging
 import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any, Optional
 
@@ -19,6 +22,51 @@ from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManag
 from mcp_server.static_dependencies import StaticDependency, parse_static_dependencies
 
 logger = logging.getLogger("discopop-mcp")
+
+
+def find_patch_applicator() -> Optional[str]:
+    """Locate the discopop_patch_applicator executable.
+
+    The venv this server runs in is searched first: an installation that is not on
+    the caller's PATH is the normal case when the MCP client launches the server
+    through an absolute path.
+    """
+    venv_bin = os.path.dirname(sys.executable)
+    env_path = os.environ.get("PATH", "")
+    search_path = venv_bin + os.pathsep + env_path if venv_bin not in env_path else env_path
+    return shutil.which("discopop_patch_applicator", path=search_path)
+
+
+def read_applied_suggestions(project_path: str) -> tuple[Optional[list[str]], Optional[str]]:
+    """The suggestion ids currently applied to the project's sources.
+
+    Returns ``(ids, None)`` on success and ``(None, message)`` when the applicator
+    could not be run at all. An empty list means the sources are un-patched.
+    """
+    applicator = find_patch_applicator()
+    if not applicator:
+        return None, "discopop_patch_applicator not found on PATH. Ensure the discopop_library package is installed."
+    try:
+        proc = subprocess.run(
+            [applicator, "--list"],
+            cwd=str(Path(project_path) / ".discopop"),
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return None, f"Could not query the applied suggestions: {e}"
+    if proc.returncode not in (0, 2, 3):
+        return None, f"discopop_patch_applicator --list failed (rc={proc.returncode}): {proc.stderr.strip()}"
+    for line in proc.stdout.splitlines():
+        if "Applied suggestions:" in line:
+            raw = line.split("Applied suggestions:")[-1].strip()
+            try:
+                parsed = json.loads(raw.replace("'", '"'))
+            except json.JSONDecodeError:
+                return [raw] if raw else [], None
+            return [str(entry) for entry in parsed] if isinstance(parsed, list) else [str(parsed)], None
+    return [], None
 
 
 class ToolContext:

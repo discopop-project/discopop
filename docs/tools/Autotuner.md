@@ -52,6 +52,9 @@ Information on the configuration can be found in the included `.discopop` direct
 Due to the empirical nature of the optimization approach described above, varying sets of input data might yield differing selected configurations.
 For this reason it is important, that the used input data (typically specified in `execute.sh`) is representative for a production run of the software and large enough to allow for beneficial parallelizations.
 
+## Invocation from an LLM agent
+The autotuner is also reachable through the [DiscoPoP MCP server](https://github.com/discopop-project/discopop/tree/master/mcp_server) via its `run_auto_tuning` tool, which runs the search and returns the selected suggestion ids without modifying any source file. The ids can then be applied with the server's `manage_patches` tool.
+
 ## Note
 For a more detailed description of the available run-time arguments, please refer to the help string of the respective tool.
 ```

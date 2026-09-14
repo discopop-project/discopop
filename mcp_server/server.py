@@ -45,6 +45,7 @@ from mcp_server.tools import (
     get_static_data_dependencies,
     initialize_discopop_directory,
     manage_patches,
+    run_auto_tuning,
     set_compile_script,
 )
 from mcp_server.tools.helpers import ToolContext
@@ -143,6 +144,9 @@ _SERVER_INSTRUCTIONS = (
     "and apply changes manually. manage_patches delegates all patching work to the "
     "discopop_patch_applicator binary, which is orders of magnitude faster and consumes far "
     "fewer tokens than reading patch files and editing source files by hand. "
+    "When several patches exist and the question is which of them to apply, do not guess: "
+    "call run_auto_tuning, which has DiscoPoP measure candidate combinations and returns the "
+    "selected suggestion_ids, and pass those ids to manage_patches to apply them. "
     "Use initialize_discopop_directory with reset=true to clear stale analysis artefacts "
     "when the pipeline is in a broken or inconsistent state."
 )
@@ -158,6 +162,7 @@ _ALL_TOOLS = [
     gather_data,
     gather_static_data,
     get_parallelization_patches,
+    run_auto_tuning,
     manage_patches,
 ]
 

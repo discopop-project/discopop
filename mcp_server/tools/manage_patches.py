@@ -8,15 +8,12 @@
 
 import json
 import logging
-import os
-import shutil
-import sys
 from pathlib import Path
 from typing import Any, Optional
 
 from mcp.types import TextContent, Tool
 
-from mcp_server.tools.helpers import ToolContext
+from mcp_server.tools.helpers import ToolContext, find_patch_applicator
 
 logger = logging.getLogger("discopop-mcp")
 
@@ -80,13 +77,6 @@ def _read_application_result(discopop_dir: Path) -> Optional[dict[str, Any]]:
         return None
 
 
-def _find_patch_applicator() -> Optional[str]:
-    venv_bin = os.path.dirname(sys.executable)
-    env_path = os.environ.get("PATH", "")
-    search_path = venv_bin + os.pathsep + env_path if venv_bin not in env_path else env_path
-    return shutil.which("discopop_patch_applicator", path=search_path)
-
-
 def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
     try:
         project_path: str = arguments.get("project_path", "")
@@ -125,7 +115,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                 "manage_patches",
             )
 
-        applicator = _find_patch_applicator()
+        applicator = find_patch_applicator()
         if not applicator:
             return ctx.error(
                 "discopop_patch_applicator not found on PATH. Ensure the discopop_library package is installed.",
