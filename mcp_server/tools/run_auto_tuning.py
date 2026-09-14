@@ -29,7 +29,11 @@ from mcp_server.tools.helpers import ToolContext, read_applied_suggestions
 
 logger = logging.getLogger("discopop-mcp")
 
-DEFAULT_ALGORITHM = 6
+# Preferred algorithm: deterministic and measurement-frugal, but only meaningful with
+# hotspot detection results. Without those, the greedy forward search is the fallback:
+# it needs no hotspot information and still terminates in O(N) evaluations.
+HOTSPOT_GUIDED_ALGORITHM = 6
+FALLBACK_ALGORITHM = 4
 DEFAULT_TIMEOUT_SECONDS = 3600
 # How long the tuner and its children get to shut down after SIGTERM before SIGKILL.
 _KILL_GRACE_SECONDS = 10.0
@@ -57,9 +61,10 @@ TOOL = Tool(
         "  - No patches may currently be applied: the tuner measures the project in its "
         "current state and patches candidate combinations on top of it. Run "
         "manage_patches(action='clear') first if anything is applied.\n"
-        "  - algorithm 6 (the default) requires hotspot detection results — run gather_data "
-        "with hotspot_config_names set, ideally with two configurations of different input "
-        "sizes.\n\n"
+        "  - For the best search, run gather_data with hotspot_config_names set (ideally two "
+        "configurations of different input sizes). Omit 'algorithm' and the tool then picks "
+        "the hotspot-guided search; without hotspot results it falls back to the greedy "
+        "forward search on its own.\n\n"
         "NOTE: this is a measurement run. It compiles and executes the project many times "
         "and can take from minutes to hours. Use timeout_seconds to bound it; when the "
         "timeout expires the search is stopped and the best combination measured so far is "
@@ -90,14 +95,19 @@ TOOL = Tool(
             "algorithm": {
                 "type": "integer",
                 "description": (
-                    "Search algorithm. Default: 6.\n"
+                    "Search algorithm. Omit this to let the tool choose: 6 when hotspot "
+                    "detection results are available, otherwise 4. The chosen value and the "
+                    "reason are reported back in 'algorithm' and 'algorithm_selection'. "
+                    "Pass a value only to override that choice; an explicit 6 without hotspot "
+                    "results is refused rather than silently replaced.\n"
                     "  0 — no combination; measures every suggestion on its own.\n"
                     "  1 — linear combination; accumulates suggestions that keep the result valid.\n"
                     "  3 — evolutionary combination; uses randomness, so it is not reproducible.\n"
-                    "  4 — greedy forward search; one pass over all suggestions, O(N) evaluations.\n"
+                    "  4 — greedy forward search; one pass over all suggestions, O(N) evaluations. "
+                    "Needs no hotspot information, which is why it is the fallback.\n"
                     "  5 — coordinate descent; repeated bit-flip passes until no pass improves.\n"
                     "  6 — hotspot-guided region descent; deterministic and measurement-frugal, "
-                    "but requires hotspot detection results. Recommended default."
+                    "but requires hotspot detection results."
                 ),
             },
             "timeout_seconds": {
@@ -181,25 +191,29 @@ def _validate_preconditions(project_path: str, config_name: str, dot_dp: str) ->
     return None
 
 
-def _validate_hotspots(dot_dp: str) -> Optional[str]:
-    """Reject algorithm 6 without hotspot data instead of letting it be a silent no-op.
+def hotspot_loops_available(dot_dp: str) -> bool:
+    """Whether the hotspot-guided search has anything to work with.
 
     ``execute_hotspot_guided_combination`` returns right after the baseline measurement
-    when no hot loops are known, so the run would burn one compile-and-execute cycle and
-    report that nothing could be improved.
+    when no hot loops are known, so a run without them would burn one compile-and-execute
+    cycle and report that nothing could be improved.
     """
-    hotspots_file = hotspots_json_path(dot_dp)
+    if not os.path.exists(hotspots_json_path(dot_dp)):
+        return False
+    return any(region.node_type == HotspotNodeType.LOOP for region in load_detailed_hotspots(dot_dp))
+
+
+def _hotspot_requirement_error(dot_dp: str) -> str:
+    """Why algorithm 6 cannot run here, for a caller that asked for it explicitly."""
     remedy = (
         "Re-run gather_data with hotspot_config_names set (ideally two configurations with "
-        "different input sizes), or choose a different algorithm (4 or 5) which does not "
-        "need hotspot information."
+        "different input sizes), choose a different algorithm (4 or 5) which does not need "
+        "hotspot information, or omit 'algorithm' to let the tool fall back automatically."
     )
+    hotspots_file = hotspots_json_path(dot_dp)
     if not os.path.exists(hotspots_file):
         return f"algorithm 6 requires hotspot detection results, but {hotspots_file} does not exist. " + remedy
-    regions = load_detailed_hotspots(dot_dp)
-    if not [region for region in regions if region.node_type == HotspotNodeType.LOOP]:
-        return "algorithm 6 requires hot loops, but the hotspot detection results contain none. " + remedy
-    return None
+    return "algorithm 6 requires hot loops, but the hotspot detection results contain none. " + remedy
 
 
 def _pump_output(stream: Any, tail: Deque[str], project_path: str, ctx: ToolContext) -> None:
@@ -370,7 +384,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
     try:
         project_path: str = arguments.get("project_path", "")
         config_name: str = arguments.get("config_name", "")
-        algorithm: int = arguments.get("algorithm", DEFAULT_ALGORITHM)
+        requested_algorithm: Optional[int] = arguments.get("algorithm")
         timeout_seconds: int = arguments.get("timeout_seconds", DEFAULT_TIMEOUT_SECONDS)
 
         dot_dp = str(Path(project_path) / ".discopop")
@@ -385,10 +399,26 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         if precondition_error is not None:
             return ctx.error(precondition_error, project_path, "run_auto_tuning")
 
-        if algorithm == 6:
-            hotspot_error = _validate_hotspots(dot_dp)
-            if hotspot_error is not None:
-                return ctx.error(hotspot_error, project_path, "run_auto_tuning")
+        # Hotspot-guided descent unless there is nothing for it to be guided by. An
+        # explicitly requested algorithm is never silently replaced: the caller asked for
+        # a specific search, so a missing prerequisite is reported instead.
+        algorithm_selection: Optional[str] = None
+        if requested_algorithm is None:
+            if hotspot_loops_available(dot_dp):
+                algorithm = HOTSPOT_GUIDED_ALGORITHM
+                algorithm_selection = "hotspot-guided region descent, chosen because hotspot results are available"
+            else:
+                algorithm = FALLBACK_ALGORITHM
+                algorithm_selection = (
+                    "greedy forward search, chosen because no hotspot detection results are available. "
+                    "Re-run gather_data with hotspot_config_names set to enable the hotspot-guided search, "
+                    "which usually needs fewer measurements."
+                )
+            ctx.log_action(project_path, "run_auto_tuning", f"Selected algorithm {algorithm}: {algorithm_selection}")
+        else:
+            algorithm = requested_algorithm
+            if algorithm == HOTSPOT_GUIDED_ALGORITHM and not hotspot_loops_available(dot_dp):
+                return ctx.error(_hotspot_requirement_error(dot_dp), project_path, "run_auto_tuning")
 
         # The tuner measures the project as it stands and applies each candidate on top of
         # a copy of it. Patches that are already in the code would therefore be counted as
@@ -480,6 +510,8 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         result["project_path"] = project_path
         result["config_name"] = config_name
         result["algorithm"] = algorithm
+        if algorithm_selection is not None:
+            result["algorithm_selection"] = algorithm_selection
 
         if timed_out:
             result["message"] = (

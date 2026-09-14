@@ -201,17 +201,16 @@ The tool does **not** modify any source file — it only reports the selection. 
 **Parameters:**
 - `project_path` (string, required): Absolute path to the project root
 - `config_name` (string, required): Execution configuration to tune (a directory under `.discopop/project/configs/`)
-- `algorithm` (integer, optional): Search algorithm, default `6` (hotspot-guided region descent). See `docs/tools/Autotuner.md` for the full list.
+- `algorithm` (integer, optional): Search algorithm. Omit it and the tool picks `6` (hotspot-guided region descent) when hotspot detection results are available, and `4` (greedy forward search) otherwise; the choice and its reason come back as `algorithm` / `algorithm_selection`. Pass a value only to override that; an explicit `6` without hotspot results is refused rather than silently replaced. See `docs/tools/Autotuner.md` for the full list.
 - `timeout_seconds` (integer, optional): Wall clock bound for the whole search, default `3600`
 
-**Preconditions:** `gather_data` must have been run; no patches may currently be applied (run `manage_patches(action="clear")` first); `algorithm` 6 additionally requires hotspot detection results, i.e. `gather_data` with `hotspot_config_names` set.
+**Preconditions:** `gather_data` must have been run; no patches may currently be applied (run `manage_patches(action="clear")` first). Running `gather_data` with `hotspot_config_names` set is what makes the hotspot-guided search available.
 
 **Example:**
 ```json
 {
   "project_path": "/abs/path/to/my_project",
   "config_name": "tiny",
-  "algorithm": 6,
   "timeout_seconds": 1800
 }
 ```
@@ -220,6 +219,8 @@ The tool does **not** modify any source file — it only reports the selection. 
 ```json
 {
   "status": "success",
+  "algorithm": 6,
+  "algorithm_selection": "hotspot-guided region descent, chosen because hotspot results are available",
   "suggestion_ids": ["7", "12"],
   "speedup": 2.31,
   "efficiency": 0.58,

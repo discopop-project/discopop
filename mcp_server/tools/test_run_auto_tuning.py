@@ -111,6 +111,7 @@ class TestRunAutoTuning(unittest.TestCase):
         self.configs_dir = os.path.join(self.dot_dp, "project", "configs")
         self.ctx = ToolContext(debug=False)
         self._pending_progress: Optional[list[dict[str, Any]]] = None
+        self._popen_cmd: list[str] = []
         self.__create_complete_project()
 
     def tearDown(self) -> None:
@@ -180,7 +181,8 @@ class TestRunAutoTuning(unittest.TestCase):
         return json.loads(result[0].text)
 
     def __run_with_fake_tuner(self, process: _FakeProcess, **overrides: Any) -> Any:
-        def start(*_args: Any, **_kwargs: Any) -> _FakeProcess:
+        def start(*args: Any, **_kwargs: Any) -> _FakeProcess:
+            self._popen_cmd = list(args[0]) if args else []
             if self._pending_progress is not None:
                 self.__write_progress_now(self._pending_progress)
             return process
@@ -215,30 +217,62 @@ class TestRunAutoTuning(unittest.TestCase):
         self.assertIn("does_not_exist", data["message"])
         self.assertIn("get_configurations", data["message"])
 
-    def test_algorithm_6_requires_hotspot_results(self) -> None:
+    def __completed_run_progress(self) -> None:
+        self.__write_progress(
+            [
+                {"event": "baseline", "runtime": 10.0, "valid": True, "thread_count": 4},
+                {"event": "result", "suggestions": [1], "speedup": 2.0, "runtime": 5.0, "evaluated": 1},
+            ]
+        )
+
+    # -- algorithm selection --------------------------------------------------------
+
+    def test_hotspot_guided_search_is_chosen_when_hotspots_exist(self) -> None:
+        self.__completed_run_progress()
+        data = self.__run_with_fake_tuner(_FakeProcess())
+        self.assertEqual(data["algorithm"], 6)
+        self.assertIn("hotspot results are available", data["algorithm_selection"])
+        self.assertIn("-A", self._popen_cmd)
+        self.assertEqual(self._popen_cmd[self._popen_cmd.index("-A") + 1], "6")
+
+    def test_greedy_search_is_the_fallback_without_hotspot_results(self) -> None:
         os.remove(os.path.join(self.dot_dp, "hotspot_detection", "Hotspots.json"))
-        data = self.__handle()
+        self.__completed_run_progress()
+        data = self.__run_with_fake_tuner(_FakeProcess())
+        self.assertEqual(data["status"], "success")
+        self.assertEqual(data["algorithm"], 4)
+        self.assertIn("no hotspot detection results", data["algorithm_selection"])
+        self.assertEqual(self._popen_cmd[self._popen_cmd.index("-A") + 1], "4")
+
+    def test_greedy_search_is_the_fallback_when_no_loop_is_hot(self) -> None:
+        # hotspot results that classify only functions leave the hotspot-guided search
+        # with nothing to descend into
+        self.__write_hotspots(node_type="FUNCTION")
+        self.__completed_run_progress()
+        data = self.__run_with_fake_tuner(_FakeProcess())
+        self.assertEqual(data["algorithm"], 4)
+        self.assertIn("no hotspot detection results", data["algorithm_selection"])
+
+    def test_explicit_algorithm_6_without_hotspots_is_refused(self) -> None:
+        os.remove(os.path.join(self.dot_dp, "hotspot_detection", "Hotspots.json"))
+        data = self.__handle(algorithm=6)
         self.assertEqual(data["status"], "error")
         self.assertIn("hotspot", data["message"])
         self.assertIn("hotspot_config_names", data["message"])
 
-    def test_algorithm_6_requires_hot_loops(self) -> None:
+    def test_explicit_algorithm_6_without_hot_loops_is_refused(self) -> None:
         self.__write_hotspots(node_type="FUNCTION")
-        data = self.__handle()
+        data = self.__handle(algorithm=6)
         self.assertEqual(data["status"], "error")
         self.assertIn("hot loops", data["message"])
 
-    def test_other_algorithms_do_not_need_hotspots(self) -> None:
-        os.remove(os.path.join(self.dot_dp, "hotspot_detection", "Hotspots.json"))
-        self.__write_progress(
-            [
-                {"event": "baseline", "runtime": 10.0, "valid": True},
-                {"event": "result", "suggestions": [1], "speedup": 2.0, "runtime": 5.0, "evaluated": 1},
-            ]
-        )
-        data = self.__run_with_fake_tuner(_FakeProcess(), algorithm=4)
+    def test_explicit_algorithm_is_not_replaced(self) -> None:
+        self.__completed_run_progress()
+        data = self.__run_with_fake_tuner(_FakeProcess(), algorithm=5)
         self.assertEqual(data["status"], "success")
-        self.assertEqual(data["algorithm"], 4)
+        self.assertEqual(data["algorithm"], 5)
+        self.assertNotIn("algorithm_selection", data)
+        self.assertEqual(self._popen_cmd[self._popen_cmd.index("-A") + 1], "5")
 
     def test_applied_patches_are_refused(self) -> None:
         with mock.patch.object(run_auto_tuning, "read_applied_suggestions", return_value=(["3", "7"], None)):
