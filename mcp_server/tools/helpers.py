@@ -37,26 +37,102 @@ def find_patch_applicator() -> Optional[str]:
     return shutil.which("discopop_patch_applicator", path=search_path)
 
 
-def read_applied_suggestions(project_path: str) -> tuple[Optional[list[str]], Optional[str]]:
-    """The suggestion ids currently applied to the project's sources.
+# Return codes of discopop_patch_applicator: 0 = done, 1 = nothing applied (error),
+# 2 = partially applied, 3 = nothing to do (trivially successful).
+APPLICATOR_OK_RETURNCODES = (0, 2, 3)
+APPLICATOR_TIMEOUT_SECONDS = 60
 
-    Returns ``(ids, None)`` on success and ``(None, message)`` when the applicator
-    could not be run at all. An empty list means the sources are un-patched.
+# What the applicator (really: the `patch` command it drives) prints when a patch no
+# longer matches the file it belongs to. Recognising it is what turns an unexplained
+# rc=1 into the one sentence a caller can act on.
+_STALE_PATCH_MARKERS = (
+    "not successful",
+    "hunk #",
+    "reversed (or previously applied)",
+    "malformed patch",
+    "can't find file",
+)
+
+
+def run_patch_applicator(
+    project_path: str, applicator_args: list[str], timeout: int = APPLICATOR_TIMEOUT_SECONDS
+) -> tuple[Optional["subprocess.CompletedProcess[str]"], Optional[str]]:
+    """Run discopop_patch_applicator in the project's .discopop directory.
+
+    Returns ``(completed_process, None)`` when the applicator ran at all -- a non-zero
+    return code is part of the process, not an error here -- and ``(None, message)``
+    when it could not be started. Shared by every tool that patches, so they all treat
+    the applicator's exit codes and its output the same way.
     """
     applicator = find_patch_applicator()
     if not applicator:
         return None, "discopop_patch_applicator not found on PATH. Ensure the discopop_library package is installed."
     try:
         proc = subprocess.run(
-            [applicator, "--list"],
+            [applicator] + applicator_args,
             cwd=str(Path(project_path) / ".discopop"),
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=timeout,
         )
-    except (OSError, subprocess.TimeoutExpired) as e:
-        return None, f"Could not query the applied suggestions: {e}"
-    if proc.returncode not in (0, 2, 3):
+    except subprocess.TimeoutExpired:
+        return None, f"discopop_patch_applicator timed out after {timeout}s."
+    except OSError as e:
+        return None, f"Could not run discopop_patch_applicator: {e}"
+    return proc, None
+
+
+def applicator_failure_details(proc: "subprocess.CompletedProcess[str]") -> tuple[str, Optional[str]]:
+    """The applicator's own account of a failure, plus the likely cause.
+
+    The applicator reports *why* a patch could not be applied or reversed on **stdout**
+    (that is where the `patch` command's own output is echoed to), while stderr is
+    usually empty. Reporting only stderr therefore produces the least actionable error
+    there is -- a return code and nothing else -- so both streams are collected here and
+    the recognisable case is named outright.
+    """
+    output = "\n".join(part for part in (proc.stdout.strip(), proc.stderr.strip()) if part)
+    lowered = output.lower()
+    cause: Optional[str] = None
+    if any(marker in lowered for marker in _STALE_PATCH_MARKERS):
+        cause = (
+            "A patch no longer matches the file it belongs to. This happens when the source "
+            "was edited by hand after the patch was applied, or when the patches were "
+            "generated for an older version of the sources. Undo your manual edits to the "
+            "affected file, or re-run gather_data to regenerate the patches for the current "
+            "sources; the patch applicator cannot reverse a patch whose context has changed."
+        )
+    return output, cause
+
+
+def read_application_result(project_path: str) -> Optional[dict[str, Any]]:
+    """The structured outcome the patch applicator writes for an --apply run.
+
+    Says which of the requested suggestions actually reached the code, which is what
+    keeps a caller from reviewing or measuring unmodified sources in the belief that
+    they were parallelized.
+    """
+    path = Path(project_path) / ".discopop" / "patch_applicator" / "application_result.json"
+    if not path.exists():
+        return None
+    try:
+        with open(path, "r") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def read_applied_suggestions(project_path: str) -> tuple[Optional[list[str]], Optional[str]]:
+    """The suggestion ids currently applied to the project's sources.
+
+    Returns ``(ids, None)`` on success and ``(None, message)`` when the applicator
+    could not be run at all. An empty list means the sources are un-patched.
+    """
+    proc, error = run_patch_applicator(project_path, ["--list"])
+    if proc is None:
+        return None, error
+    if proc.returncode not in APPLICATOR_OK_RETURNCODES:
         return None, f"discopop_patch_applicator --list failed (rc={proc.returncode}): {proc.stderr.strip()}"
     for line in proc.stdout.splitlines():
         if "Applied suggestions:" in line:

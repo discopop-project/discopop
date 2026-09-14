@@ -13,7 +13,13 @@ from typing import Any, Optional
 
 from mcp.types import TextContent, Tool
 
-from mcp_server.tools.helpers import ToolContext, find_patch_applicator
+from mcp_server.tools.helpers import (
+    APPLICATOR_OK_RETURNCODES,
+    ToolContext,
+    applicator_failure_details,
+    read_application_result,
+    run_patch_applicator,
+)
 
 logger = logging.getLogger("discopop-mcp")
 
@@ -33,6 +39,13 @@ TOOL = Tool(
         "The list of applied suggestions is preserved on disk so it can be restored "
         "with load. Existing saves are overwritten.\n"
         "  load    — Re-apply suggestions that were saved by a previous clear operation.\n\n"
+        "Which patches to apply is a question run_auto_tuning answers by measuring; prefer "
+        "it over picking ids by hand, and run it BEFORE applying anything, since it needs "
+        "an un-patched project.\n\n"
+        "Rollback and clear reverse each patch in the source file it was applied to, so they "
+        "only work while that file still matches the patch. Editing a patched file by hand "
+        "and then rolling back fails; make manual changes on top of a selection you intend "
+        "to keep, or re-run gather_data to regenerate the patches for the current sources.\n\n"
         "Requires gather_data to have been run first (patch files must exist under "
         ".discopop/patch_generator/ and FileMapping.txt must be present)."
     ),
@@ -62,19 +75,6 @@ TOOL = Tool(
         "additionalProperties": False,
     },
 )
-
-
-def _read_application_result(discopop_dir: Path) -> Optional[dict[str, Any]]:
-    """The structured outcome the patch applicator writes for an --apply run."""
-    path = discopop_dir / "patch_applicator" / "application_result.json"
-    if not path.exists():
-        return None
-    try:
-        with open(path, "r") as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) else None
-    except (OSError, json.JSONDecodeError):
-        return None
 
 
 def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
@@ -115,63 +115,49 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
                 "manage_patches",
             )
 
-        applicator = find_patch_applicator()
-        if not applicator:
-            return ctx.error(
-                "discopop_patch_applicator not found on PATH. Ensure the discopop_library package is installed.",
-                project_path,
-                "manage_patches",
-            )
-
-        cmd: list[str] = [applicator]
+        applicator_args: list[str] = []
         if action == "apply":
-            cmd += ["--apply"] + suggestion_ids
+            applicator_args = ["--apply"] + suggestion_ids
         elif action == "rollback":
-            cmd += ["--rollback"] + suggestion_ids
+            applicator_args = ["--rollback"] + suggestion_ids
         elif action == "clear":
-            cmd += ["--clear"]
+            applicator_args = ["--clear"]
         elif action == "load":
-            cmd += ["--load"]
+            applicator_args = ["--load"]
         elif action == "list":
-            cmd += ["--list"]
+            applicator_args = ["--list"]
         else:
             return ctx.error(f"Unknown action '{action}'.", project_path, "manage_patches")
 
         ctx.log_action(
             project_path,
             "manage_patches",
-            f"action={action}, suggestion_ids={suggestion_ids}, cmd={cmd}",
+            f"action={action}, suggestion_ids={suggestion_ids}, args={applicator_args}",
         )
 
-        import subprocess
-
-        try:
-            proc = subprocess.run(
-                cmd,
-                cwd=str(discopop_dir),
-                capture_output=True,
-                text=True,
-                timeout=60,
-            )
-        except subprocess.TimeoutExpired:
-            return ctx.error(
-                "discopop_patch_applicator timed out after 60s.",
-                project_path,
-                "manage_patches",
-            )
+        proc, run_error = run_patch_applicator(project_path, applicator_args)
+        if proc is None:
+            return ctx.error(run_error or "discopop_patch_applicator could not be run.", project_path, "manage_patches")
 
         stdout = proc.stdout.strip()
         stderr = proc.stderr.strip()
 
         # rc=0: success; rc=2: partial success; rc=3: nothing to do (trivially ok)
-        if proc.returncode not in (0, 2, 3):
+        if proc.returncode not in APPLICATOR_OK_RETURNCODES:
+            # The applicator prints why it gave up on stdout, so an error carrying only
+            # stderr is a return code and nothing else -- the caller cannot tell a stale
+            # patch from a missing file from a bug, and has nothing to act on.
+            output, cause = applicator_failure_details(proc)
+            message = f"discopop_patch_applicator failed (rc={proc.returncode})."
+            if cause is not None:
+                message += " " + cause
             result: dict[str, Any] = {
                 "status": "error",
                 "project_path": project_path,
                 "action": action,
-                "message": f"discopop_patch_applicator failed (rc={proc.returncode}).",
+                "message": message,
                 "returncode": proc.returncode,
-                "stderr": stderr,
+                "output": output,
             }
             ctx.log_response("manage_patches", result)
             return [TextContent(type="text", text=json.dumps(result))]
@@ -202,7 +188,7 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         # Reporting the unapplied ones is what keeps a caller from measuring or
         # reviewing unmodified code in the belief that it was parallelized.
         if action == "apply":
-            application = _read_application_result(discopop_dir)
+            application = read_application_result(project_path)
             if application:
                 result["applied_now"] = application.get("applied", [])
                 unapplied = list(application.get("failed", [])) + list(application.get("unknown", []))
