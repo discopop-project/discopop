@@ -34,6 +34,9 @@ from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
+from discopop_library.EmpiricalAutotuning.optimization.coordinate_descent_combination import (
+    execute_coordinate_descent_combination,
+)
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
@@ -542,12 +545,32 @@ def execute_hotspot_guided_combination(
     logger.info("Executing hotspot-guided region descent.")
 
     # -- Phase 0: this algorithm is only meaningful with hotspot measurements ------
+    # Without them the descent has no order to walk, but "produce nothing and
+    # exit 0" is the worst possible answer: hotspot detection can fail silently
+    # (an instrumented run that writes no hotspot_result_*.txt leaves the
+    # analyzer with an empty Hotspots.json, and neither reports an error), so a
+    # caller sees a completed auto-tuning whose result is the unmodified
+    # program. Hand over to the hotspot-free coordinate descent instead, which
+    # treats every suggestion as a candidate when no classification exists.
     hotspot_regions = load_detailed_hotspots(arguments.dot_dp_path)
+    fallback_reason: Optional[str] = None
     if not hotspot_regions:
-        __report_missing_hotspots(logger, "no hotspot detection results were found")
-        return
-    if not [region for region in hotspot_regions if region.node_type == HotspotNodeType.LOOP]:
-        __report_missing_hotspots(logger, "the hotspot detection results contain no loops")
+        fallback_reason = "no hotspot detection results were found"
+    elif not [region for region in hotspot_regions if region.node_type == HotspotNodeType.LOOP]:
+        fallback_reason = "the hotspot detection results contain no loops"
+    if fallback_reason is not None:
+        __fall_back_to_coordinate_descent(
+            logger,
+            fallback_reason,
+            detection_result,
+            hotspot_information,
+            time_limit_s,
+            reference_configuration,
+            arguments,
+            timeout_after,
+            debug_stats,
+            get_unique_configuration_id,
+        )
         return
     if hotspots_are_degenerate(hotspot_regions):
         logger.warning(
@@ -565,7 +588,22 @@ def execute_hotspot_guided_combination(
     # -- Phase 1 + 2: candidate regions, ranked --------------------------------------
     regions = build_candidate_regions(detection_result, hotspot_regions, considered_types, arguments.hs_min_share)
     if not regions:
-        __report_missing_hotspots(logger, "no suggestion targets any of the considered hot loops")
+        # Hotspots exist, but none of them is something this detection result can
+        # parallelize, so the descent has nothing to descend into either. Same
+        # reasoning as in Phase 0: a search that can still run beats an empty
+        # answer that looks like a completed one.
+        __fall_back_to_coordinate_descent(
+            logger,
+            "no suggestion targets any of the considered hot loops",
+            detection_result,
+            hotspot_information,
+            time_limit_s,
+            reference_configuration,
+            arguments,
+            timeout_after,
+            debug_stats,
+            get_unique_configuration_id,
+        )
         return
     __log_region_overview(logger, regions, arguments.hs_min_share)
 
@@ -745,16 +783,51 @@ def __removal_pass(
     return current, best_runtime
 
 
-def __report_missing_hotspots(logger: Logger, reason: str) -> None:
-    message = (
+def __fall_back_to_coordinate_descent(
+    logger: Logger,
+    reason: str,
+    detection_result: DetectionResult,
+    hotspot_information: Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME, AVERAGE_RUNTIME]]],
+    time_limit_s: int,
+    reference_configuration: CodeConfiguration,
+    arguments: AutotunerArguments,
+    timeout_after: float,
+    debug_stats: List[DebugStatEntry],
+    get_unique_configuration_id: Callable[[], int],
+) -> None:
+    """Run the hotspot-free search in place of the descent, and say so.
+
+    Coordinate descent is the substitute because it is the closest thing to what
+    -A 6 was chosen for: it searches combinations rather than measuring
+    suggestions one at a time, and it is deterministic. With no classification
+    loaded it considers every suggestion a candidate (see
+    HostpotLoader.utilities.get_patterns_by_hotspot_type), which is exactly the
+    interpretation "we have no hotspot information" calls for.
+
+    Reported at ERROR, above the default log level, because the result that
+    follows was not produced by the algorithm the caller asked for -- and
+    because the usual cause, a hotspot detection run that silently produced
+    nothing, is worth fixing rather than working around run after run.
+    """
+    logger.error(
         "The hotspot-guided region descent requires hotspot detection results, but "
         + reason
-        + ".\nRun the hotspot detection (discopop_hotspot_analyzer) for at least two input sizes "
-        + "before using -A 6, or pick an algorithm that works without hotspot data."
+        + ".\nFalling back to coordinate descent (-A 5), which does not need them. The result "
+        + "below was NOT produced by -A 6.\nTo use the descent, run hotspot detection "
+        + "(discopop_hotspot_analyzer) for at least two input sizes; an empty Hotspots.json "
+        + "usually means the instrumented run wrote no hotspot_result_*.txt files."
     )
-    # ERROR is above the default log level, so this reaches the user without a
-    # second copy of the message on stdout.
-    logger.error(message)
+    execute_coordinate_descent_combination(
+        detection_result,
+        hotspot_information,
+        logger,
+        time_limit_s,
+        reference_configuration,
+        arguments,
+        timeout_after,
+        debug_stats,
+        get_unique_configuration_id,
+    )
 
 
 def __log_region_overview(logger: Logger, regions: Sequence[CandidateRegion], min_share: float) -> None:
