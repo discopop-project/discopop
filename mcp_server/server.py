@@ -32,6 +32,7 @@ from mcp.server import Server
 from mcp.types import TextContent, Tool
 from termcolor import colored
 
+from mcp_server.argument_coercion import coerce_arguments, validation_error
 from mcp_server.setup_mcp import MCPSetup
 
 from mcp_server.tools import (
@@ -232,14 +233,38 @@ class DiscoPopMCPServer:
             mod.TOOL.name: mod.handle for mod in self._tools
         }
 
-        @self.server.call_tool()  # type: ignore[misc, untyped-decorator]
+        _schemas: dict[str, dict[str, Any]] = {mod.TOOL.name: mod.TOOL.inputSchema for mod in self._tools}
+
+        # validate_input=False, because the SDK's validation is stricter than
+        # this server needs to be: a model that sends apply="true" instead of
+        # apply=true means the same thing, and rejecting it costs the whole
+        # interaction (see mcp_server/argument_coercion.py). The arguments are
+        # coerced towards the declared schema and *then* validated here, so a
+        # call that is genuinely wrong is still refused -- with a message naming
+        # the argument and the type expected, which the SDK's does not.
+        @self.server.call_tool(validate_input=False)  # type: ignore[misc, untyped-decorator]
         async def handle_tool_call(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-            self._ctx.log_call(name, arguments)
             handler = _dispatch.get(name)
             if not handler:
+                self._ctx.log_call(name, arguments)
                 error_msg = unavailable_tool_message(name, self.tool_set)
                 logger.error(error_msg)
                 raise Exception(error_msg)
+
+            schema = _schemas.get(name)
+            arguments, coerced = coerce_arguments(arguments, schema)
+            if coerced:
+                logger.info(
+                    "↳ Coerced argument(s) of %s to the declared types: %s",
+                    name,
+                    ", ".join(f"{k} ({v})" for k, v in sorted(coerced.items())),
+                )
+            # Logged after coercion, so the record shows the call as it ran.
+            self._ctx.log_call(name, arguments)
+            invalid = validation_error(name, arguments, schema)
+            if invalid:
+                logger.error(invalid)
+                raise Exception(invalid)
 
             params_summary = "".join(f"\n\t{k}={v!r}" for k, v in (arguments or {}).items() if k != "script_body")
             logger.info(f"▶ Executing: {name}({params_summary})")
@@ -325,12 +350,30 @@ class DiscoPopMCPProxy:
             # different tool set, and what this client may call is decided here.
             return [mod.TOOL for mod in self._tools]
 
-        @self.server.call_tool()  # type: ignore[misc, untyped-decorator]
+        _schemas: dict[str, dict[str, Any]] = {mod.TOOL.name: mod.TOOL.inputSchema for mod in self._tools}
+
+        # The proxy is the default entry point, so this is where a client's
+        # arguments are first seen and where strict validation used to reject
+        # them. Coercing here rather than only in DiscoPopMCPServer matters: the
+        # daemon is never reached for a call the proxy has already refused.
+        @self.server.call_tool(validate_input=False)  # type: ignore[misc, untyped-decorator]
         async def handle_tool_call(name: str, arguments: dict[str, Any]) -> list[TextContent]:
             if name not in self._dispatch:
                 error_msg = unavailable_tool_message(name, self.tool_set)
                 logger.error(error_msg)
                 raise Exception(error_msg)
+            schema = _schemas.get(name)
+            arguments, coerced = coerce_arguments(arguments, schema)
+            if coerced:
+                logger.info(
+                    "↳ Coerced argument(s) of %s to the declared types: %s",
+                    name,
+                    ", ".join(f"{k} ({v})" for k, v in sorted(coerced.items())),
+                )
+            invalid = validation_error(name, arguments, schema)
+            if invalid:
+                logger.error(invalid)
+                raise Exception(invalid)
             await self._ensure_daemon()
             if self._session is not None:
                 try:
