@@ -280,6 +280,14 @@ If a piece of information appears to be missing from the available tools, the co
 
 Run the tuner **before** applying anything. It needs an un-patched project, and while it clears and restores an existing selection on its own, a source file that was also edited by hand can no longer be un-patched automatically.
 
+### The project is left buildable
+
+`gather_data`'s instrumentation steps compile **in place** (`execute_inplace=True`, unlike the ProjectManager flow, which works in a sibling copy) — the profiling output has to land in this project's `.discopop`. A compile script that configures a build directory therefore leaves it pinned to `discopop_cc`/`discopop_cxx`, and an ordinary `make` in it afterwards yields an instrumented binary: orders of magnitude slower than the program, and prone to aborting outright with an allocation or heap error once the code is also multithreaded.
+
+Nothing announces that state, so anyone who then builds and runs the program to check their own work measures DiscoPoP's instrumentation instead and reads the crash as a bug in their code. In one recorded benchmark run an agent lost six minutes to three such executions — each hitting its own shell timeout — and then discarded a working OpenMP parallelization because of them.
+
+So `gather_data` rebuilds the project plainly (`par_settings.json`, falling back to `seq_settings.json`) before it returns, on **every** exit path including its own failures — a failed instrumentation is exactly when the build is left half-instrumented. The outcome is reported as `steps.build_restore`; it is best effort, and a failed rebuild is a warning rather than a failed pipeline, since the data the tool exists to produce is already on disk by then. A call that skipped every instrumentation step (results already current) rebuilds nothing: the build it finds is the one the previous call restored.
+
 ### Limiting the exposed tools
 
 `--tools analysis` leaves out the three project setup tools (`initialize_discopop_directory`, `set_compile_script`, `create_execution_configuration`), which are neither listed nor callable in that mode. Use it when pointing an agent at a project that is already configured: it removes roughly a fifth of the tool definitions from the agent's context, and rules out an `initialize_discopop_directory(reset=true)` that would delete the configurations the agent was pointed at.
