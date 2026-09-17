@@ -24,7 +24,7 @@ To find a beneficial configuration in a comparatively short amount of time, a gr
 - `Parallel patterns` in the form of a `JSON` file, created by the [Explorer](Explorer.md)
 - `Detected hotspots` in the form of a `JSON` file, created by the [Hotspot detection](https://github.com/discopop-project/Hotspot-Detection)
 - `Prepared patch files` created by the [DiscoPoP patch generator](Patch_generator.md)
-- `DP_COMPILE.sh`, `DP_EXECUTE.sh`, and optionally `DP_VALIDATE.sh` scripts to compile, execute and validate the results of the created parallel code. 
+- An `execution configuration` created by the [project manager](Project_manager.md), which provides the `compile.sh` and `execute.sh` scripts used to compile and execute the created parallel code. Its optional `validate.sh` validates the results, and its optional `compile_validate.sh` builds the code that `validate.sh` runs whenever validation requires a different build than the timed execution.
 
 ## Output
 The parallel code representing the identified best configuration will be stored in a copy of the project directory.
@@ -32,7 +32,7 @@ Information on the configuration can be found in the included `.discopop` direct
 
 ## Limitations
 Due to the empirical nature of the optimization approach described above, varying sets of input data might yield differing selected configurations.
-For this reason it is important, that the used input data (typically specified in `DP_EXECUTE.sh`) is representative for a production run of the software and large enough to allow for beneficial parallelizations.
+For this reason it is important, that the used input data (typically specified in `execute.sh`) is representative for a production run of the software and large enough to allow for beneficial parallelizations.
 
 ## Note
 For a more detailed description of the available run-time arguments, please refer to the help string of the respective tool.
