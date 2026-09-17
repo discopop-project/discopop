@@ -106,7 +106,7 @@ class Plottable:
             return ViewableCanvasWithTrees(parent, canvas_viewer, canvas_viewer_mode, bg="white")
         
         def frame_builder(parent : tk.Misc) -> CanvasViewer[ViewableCanvasWithTrees]:
-            return CanvasViewer(parent)
+            return CanvasViewer[ViewableCanvasWithTrees](parent)
 
         frame = self._visualizer.create_frame(name, frame_builder)
         canvas = frame.get_canvas(frame.add_canvas(canvas_builder))

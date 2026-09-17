@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import tkinter as tk
-from typing import Any, Generic, Callable, Dict, cast
+from typing import Any, Generic, Callable, Dict, cast, get_args
 
 from discopop_gui.Objects.Frames.Base import Base
 from discopop_gui.Types.ViewableCanvasT import ViewableCanvasT
@@ -120,6 +120,9 @@ class CanvasViewer(Base, Generic[ViewableCanvasT]):
                 padx = 2,
                 pady = 2,
             )
+
+    def get_generic_type_as_string(self) -> str:
+        return get_args(cast(Any, self).__orig_class__)[0].__name__
 
     def add_canvas(self, canvas_builder: Callable[[tk.Frame, "CanvasViewer[ViewableCanvasT]", ViewerMode], ViewableCanvasT]) -> str:
         self._canvas_id_counter += 1
@@ -242,10 +245,12 @@ class CanvasViewer(Base, Generic[ViewableCanvasT]):
                             )
                         )
                     )
+
+                    canvas.deserialize(canvas_data["data"])
                 case _:
                     def canvas_builder_base(
                         parent: tk.Frame,
-                        canvas_viewer: CanvasViewer[ViewableCanvasBase],
+                        _: CanvasViewer[ViewableCanvasBase],
                         canvas_viewer_mode: ViewerMode
                     ) -> ViewableCanvasBase:
                         return ViewableCanvasBase(
@@ -266,4 +271,4 @@ class CanvasViewer(Base, Generic[ViewableCanvasT]):
                         )
                     )
 
-            canvas.deserialize(canvas_data["data"])
+                    canvas.deserialize(canvas_data["data"])
