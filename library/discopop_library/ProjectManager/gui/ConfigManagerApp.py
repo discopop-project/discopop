@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import os
+import sys
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import ttk
@@ -528,4 +529,8 @@ def run_gui(arguments: ProjectManagerArguments) -> None:
             return
 
     app = ConfigManagerApp(arguments, was_initialized=was_initialized)
+    # mainloop() produces no output for as long as the window is open, which a
+    # caller that is not a person -- a script, a CI job, an agent -- cannot tell
+    # apart from a hang. Name what it is waiting for.
+    print("Opening the DiscoPoP Project Manager. Close the window to continue.", file=sys.stderr)
     app.mainloop()

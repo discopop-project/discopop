@@ -7,7 +7,9 @@ nav_order: 9
 
 # DiscoPoP project manager
 ## Executable
-`discopop_project_manager` (`discopop` opens the same tool with its graphical interface, equivalent to `--gui`)
+`discopop_project_manager` (`discopop` is a stand-in for it; `discopop_gui` opens the same tool with its graphical interface, equivalent to `--gui`)
+
+Up to DiscoPoP 5.0, the bare `discopop` command opened the graphical interface and silently ignored every other argument it was given. It is now the command line tool, and the window has moved to `discopop_gui`.
 
 ## Purpose
 Initialize a project for use with the DiscoPoP framework and manage its *execution configurations*: named descriptions of how the project is built, how it is run, and how the correctness of a run is checked. Configurations are consumed by the project manager itself and by the [empirical autotuner](Autotuner.md), which compiles, executes and validates candidate parallelizations through them.
@@ -123,7 +125,7 @@ Note that the *role* of a script outranks how specific it is: a shared `compile_
 | `compile.sh`, `compile_validate.sh`, `foo/compile_validate.sh` | `compile.sh` | `foo/compile_validate.sh` |
 
 ### Editing configurations
-- **Graphically:** `discopop` (or `discopop_project_manager --gui`). The configuration assistant creates a first configuration; afterwards the editor's sub-tabs manage `execute.sh`, `validate.sh` and the two override scripts, each with an *Add* / *Remove* button, while the *Compilation Editor* manages the shared `compile.sh`, `compile_validate.sh` and the settings files. The *execute.sh* sub-tab also carries that configuration's *Execution time* setting, with a *Test* button that applies the pattern to the output of the last recorded run without executing anything.
+- **Graphically:** `discopop_gui` (or `discopop_project_manager --gui`). The configuration assistant creates a first configuration; afterwards the editor's sub-tabs manage `execute.sh`, `validate.sh` and the two override scripts, each with an *Add* / *Remove* button, while the *Compilation Editor* manages the shared `compile.sh`, `compile_validate.sh` and the settings files. The *execute.sh* sub-tab also carries that configuration's *Execution time* setting, with a *Test* button that applies the pattern to the output of the last recorded run without executing anything.
 - **By hand:** create the files listed above and mark them executable.
 - **Through an LLM agent:** the [DiscoPoP MCP server](https://github.com/discopop-project/discopop/tree/master/mcp_server) exposes `set_compile_script` (with `purpose` selecting `compile.sh` or `compile_validate.sh`) and `create_execution_configuration` (which writes `execute.sh` and optionally `validate.sh` plus the override scripts).
 

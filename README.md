@@ -83,13 +83,15 @@ In case any issues arise during the process please do not hesitate to contact us
 - Installed the [Visual Studio Code Extension](https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop) for visualization of the results.
 
 ### Example (GUI)
-To launch the GUI, navigate to the project's folder and execute the `discopop` command.
+To launch the GUI, navigate to the project's folder and execute the `discopop_gui` command.
 ```
 # create a copy of the example code and enter the folder
 cd discopop_example
 # start the GUI. A wizard will start to help you configure your project.
-discopop
+discopop_gui
 ```
+(Up to DiscoPoP 5.0, the GUI was opened by the bare `discopop` command. That name is
+now the command line tool, i.e. a stand-in for `discopop_project_manager`.)
 The below explanation on the Visual Studio Code Extension is also valid when using the GUI.
 
 ### Example (manual)

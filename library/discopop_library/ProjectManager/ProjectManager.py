@@ -20,6 +20,7 @@ from discopop_library.ProjectManager.utilities.CLI.listConfiguration import (
 from discopop_library.ProjectManager.utilities.deriveSettingsFiles import derive_settings_files
 from discopop_library.ProjectManager.utilities.initializeDirectories import initialize_directories
 from discopop_library.ProjectManager.utilities.initializeFiles import initialize_configuration_files
+from discopop_library.ProjectManager.gui.display import require_display
 from discopop_library.ProjectManager.utilities.reset import reset_project
 
 logger = logging.getLogger("ProjectManager")
@@ -40,6 +41,10 @@ def run(arguments: ProjectManagerArguments) -> None:
             return
 
     if arguments.gui:
+        # Checked before the project is touched and before the GUI is imported:
+        # this branch can only ever end in a window, so a host that cannot show
+        # one should be told that, not handed a TclError from inside tkinter.
+        require_display()
         # Auto-initialize if not already initialized (user doesn't need --init flag)
         if not os.path.exists(arguments.dot_dp):
             print("Initializing project directory:", arguments.dot_dp)

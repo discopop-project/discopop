@@ -19,9 +19,17 @@ from discopop_library.ProjectManager.configurations.execution_time import (
     validate_execution_time_regex,
 )
 
+GUI_COMMAND = "discopop_gui"
 
-def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
-    """Parse the arguments passed to the discopop_configuration_manager"""
+GUI_MOVED_NOTICE = (
+    "Note: 'discopop' used to open the graphical interface. It is now the command\n"
+    "line tool, and the window has moved to '" + GUI_COMMAND + "' (equivalent to\n"
+    "'discopop_project_manager --gui')."
+)
+
+
+def _build_parser() -> ArgumentParser:
+    """Build the parser shared by the command line and the GUI entry point."""
     parser = ArgumentParser(description="Initialize and prepare projects for the use in the DiscoPoP framework.")
     # all flags that are not considered stable should be added to the experimental_parser
     experimental_parser = parser.add_argument_group(
@@ -58,7 +66,12 @@ def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
     # EXPERIMENTAL FLAGS:
     # fmt: on
 
-    arguments = parser.parse_args()
+    return parser
+
+
+def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
+    """Parse the arguments passed to the discopop_configuration_manager"""
+    arguments = _build_parser().parse_args()
     if force_gui:
         arguments.gui = True
 
@@ -95,6 +108,17 @@ def parse_args(force_gui: bool = False) -> ProjectManagerArguments:
 
 
 def main() -> None:
+    if len(sys.argv) == 1:
+        # A bare "discopop" used to open the graphical interface. Falling through
+        # to the command line tool would instead execute the default -x
+        # configuration ("tiny"): copying, building and running the project is
+        # not what somebody reaching for the bare command name asked for, and
+        # nothing in the output would explain why their machine got busy.
+        parser = _build_parser()
+        parser.print_help()
+        if parser.prog == "discopop":
+            print("\n" + GUI_MOVED_NOTICE)
+        return
     arguments = parse_args()
     setup_logger(arguments)
     run(arguments)
