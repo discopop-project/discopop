@@ -17,8 +17,9 @@ detect patterns, and retrieve patches — without human intervention.
 Primary use cases:
   - Parallelism detection: instrument a project, run profiling, detect parallel patterns,
     and retrieve OpenMP patches ready for application.
-  - Data dependency analysis: query static and dynamic data dependencies for arbitrary
-    code regions to support general code understanding, refactoring, and correctness checks.
+  - Data dependency analysis: query the combined static and dynamic data dependencies for
+    arbitrary code regions to support general code understanding, refactoring, and
+    correctness checks.
 """
 
 import asyncio
@@ -38,12 +39,10 @@ from mcp_server.setup_mcp import MCPSetup
 from mcp_server.tools import (
     create_execution_configuration,
     gather_data,
-    gather_static_data,
     get_configurations,
     get_data_dependencies,
     get_execution_results,
     get_parallelization_patches,
-    get_static_data_dependencies,
     initialize_discopop_directory,
     manage_patches,
     run_auto_tuning,
@@ -130,8 +129,8 @@ _SERVER_INSTRUCTIONS = (
     "This server exposes DiscoPoP functionality for two primary use cases: "
     "(1) parallelism detection — instrument a project, run profiling, detect parallel patterns, "
     "retrieve OpenMP patches, and apply or roll back patches via manage_patches; "
-    "(2) data dependency analysis — query static and dynamic data dependencies for arbitrary "
-    "code regions to support code understanding, refactoring, and correctness checks. "
+    "(2) data dependency analysis — query the combined static and dynamic data dependencies "
+    "for arbitrary code regions to support code understanding, refactoring, and correctness checks. "
     "All DiscoPoP data must be accessed exclusively through the tool calls provided by this server. "
     "Do not read, list, or inspect .discopop directories or their contents directly via file reads, "
     "directory listings, or shell commands. "
@@ -161,19 +160,17 @@ _ALL_TOOLS = [
     get_configurations,
     get_execution_results,
     get_data_dependencies,
-    get_static_data_dependencies,
     initialize_discopop_directory,
     set_compile_script,
     create_execution_configuration,
     gather_data,
-    gather_static_data,
     get_parallelization_patches,
     run_auto_tuning,
     manage_patches,
 ]
 
 # The three tools that *define* a project rather than analyse one. Together they are
-# roughly a fifth of the tool definitions this server sends a client, and a caller
+# roughly a third of the tool definitions this server sends a client, and a caller
 # working on a project that is already set up -- an unattended run against a prepared
 # project, most of all -- never wants them: at best they are unused context, at worst
 # initialize_discopop_directory(reset=true) removes the very configurations the caller

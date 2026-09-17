@@ -71,8 +71,8 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
         help="Dump DetectionResult object to JSON file. If a path is given, the DetectionResult object is written to the given file, otherwise to detection_result_dump.json. Contents are equivalent to the json output. NOTE: This dump contains a dump of the PET Graph!",
     )
     parser.add_argument(
-        "--enable-patterns", type=str, nargs="?", default="reduction,doall,task",
-        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,task,pipeline,geodec,simplegpu. Default: reduction,doall,task",
+        "--enable-patterns", type=str, nargs="?", default="reduction,doall",
+        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,task,pipeline,geodec,simplegpu. Default: reduction,doall",
     )
     parser.add_argument(
         "--hotspot-types", type=str, default="yes,maybe",

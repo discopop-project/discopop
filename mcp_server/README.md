@@ -290,7 +290,7 @@ So `gather_data` rebuilds the project plainly (`par_settings.json`, falling back
 
 ### Limiting the exposed tools
 
-`--tools analysis` leaves out the three project setup tools (`initialize_discopop_directory`, `set_compile_script`, `create_execution_configuration`), which are neither listed nor callable in that mode. Use it when pointing an agent at a project that is already configured: it removes roughly a fifth of the tool definitions from the agent's context, and rules out an `initialize_discopop_directory(reset=true)` that would delete the configurations the agent was pointed at.
+`--tools analysis` leaves out the three project setup tools (`initialize_discopop_directory`, `set_compile_script`, `create_execution_configuration`), which are neither listed nor callable in that mode. Use it when pointing an agent at a project that is already configured: it removes roughly a third of the tool definitions from the agent's context, and rules out an `initialize_discopop_directory(reset=true)` that would delete the configurations the agent was pointed at.
 
 ## Daemon Mode
 
