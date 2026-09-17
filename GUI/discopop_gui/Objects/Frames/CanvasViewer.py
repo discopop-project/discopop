@@ -122,7 +122,7 @@ class CanvasViewer(Base, Generic[ViewableCanvasT]):
             )
 
     def get_generic_type_as_string(self) -> str:
-        return get_args(cast(Any, self).__orig_class__)[0].__name__
+        return cast(str, get_args(cast(Any, self).__orig_class__)[0].__name__)
 
     def add_canvas(self, canvas_builder: Callable[[tk.Frame, "CanvasViewer[ViewableCanvasT]", ViewerMode], ViewableCanvasT]) -> str:
         self._canvas_id_counter += 1

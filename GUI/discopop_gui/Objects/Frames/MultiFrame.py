@@ -37,7 +37,7 @@ class MultiFrame(Base):
         return frame
 
     def serialize(self) -> Dict[str, Any]:
-        output = {"inner_frames" : []}
+        output : Dict[str, Any] = {"inner_frames" : []}
 
         for frame in self._inner_frames:
             generic_type = ""
