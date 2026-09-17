@@ -7,8 +7,14 @@
 # directory for details.
 
 import tkinter as tk
-from typing import TypeVar
+from typing import Any, Dict
 
-from discopop_gui.Objects.Frames.Base import Base as BaseFrame
+class Base(tk.Frame):
+    def __init__(self, parent: tk.Misc, *args: Any, **kwargs: Any) -> None:
+        super().__init__(parent, *args, **kwargs)
 
-FrameT = TypeVar("FrameT", bound=BaseFrame)
+    def serialize(self) -> Dict[str, Any]:
+        return {}
+
+    def deserialize(self, _ : Dict[str, Any]) -> None:
+        pass
