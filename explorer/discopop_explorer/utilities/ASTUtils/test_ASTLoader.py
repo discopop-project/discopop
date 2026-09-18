@@ -161,6 +161,45 @@ class TestBuildPathMapping:
             assert mapping["test.cpp"] == "/home/user/project/test.cpp"
             assert mapping["util.cpp"] == "/home/user/project/util.cpp"
 
+    def test_dot_relative_path_matched(self) -> None:
+        """Paths Clang records relative to the compilation dir ("./kernel/kernel.c") are resolved.
+
+        Regression guard: without collapsing the leading "./" the suffix match against the
+        absolute FileMapping entry fails, every node of that file keeps a non-canonical
+        path, and location lookups against it silently return nothing.
+        """
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fmap = Path(tmpdir) / "FileMapping.txt"
+            fmap.write_text("1\t/proj/main.c\n2\t/proj/kernel/kernel_cpu.c\n")
+
+            mapping = ClangASTLoader.build_path_mapping(str(fmap), {"./kernel/kernel_cpu.c"})
+
+            assert mapping["./kernel/kernel_cpu.c"] == "/proj/kernel/kernel_cpu.c"
+
+    def test_dot_dot_relative_path_matched(self) -> None:
+        """ "." and ".." segments anywhere in the AST path are collapsed before matching."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fmap = Path(tmpdir) / "FileMapping.txt"
+            fmap.write_text("1\t/proj/main.h\n2\t/proj/util/timer/timer.h\n")
+
+            mapping = ClangASTLoader.build_path_mapping(
+                str(fmap), {"././main.h", "./kernel/./../main.h", "./kernel/./../util/timer/timer.h"}
+            )
+
+            assert mapping["././main.h"] == "/proj/main.h"
+            assert mapping["./kernel/./../main.h"] == "/proj/main.h"
+            assert mapping["./kernel/./../util/timer/timer.h"] == "/proj/util/timer/timer.h"
+
+    def test_absolute_path_with_dot_segments_matched(self) -> None:
+        """An absolute AST path carrying "." / ".." segments maps onto its canonical form."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            fmap = Path(tmpdir) / "FileMapping.txt"
+            fmap.write_text("1\t/proj/test.cpp\n")
+
+            mapping = ClangASTLoader.build_path_mapping(str(fmap), {"/proj/./sub/../test.cpp"})
+
+            assert mapping["/proj/./sub/../test.cpp"] == "/proj/test.cpp"
+
     def test_already_canonical_path_not_remapped(self) -> None:
         """Paths that already match a FileMapping entry are not included in the result."""
         with tempfile.TemporaryDirectory() as tmpdir:

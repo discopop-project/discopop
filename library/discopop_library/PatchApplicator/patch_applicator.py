@@ -8,7 +8,14 @@
 import json
 import os
 
+from typing import Optional, Tuple
+
 from discopop_library.FolderStructure.setup import setup_patch_applicator
+from discopop_library.PatchApplicator.PatchApplicationResult import (
+    PatchApplicationResult,
+    clear_application_result,
+    write_application_result,
+)
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
 from discopop_library.PatchApplicator.apply import apply_patches
 from discopop_library.PatchApplicator.clear import clear_patches
@@ -24,6 +31,18 @@ def run(arguments: PatchApplicatorArguments) -> int:
     "1: Nothing applied, error"
     "2: Some changes applied successfully"
     "3: Nothing to roll back, trivially successful"
+
+    In-process callers should prefer :func:`run_with_result`, which additionally
+    reports *which* of the requested suggestions reached the code.
+    """
+    retval, _result = run_with_result(arguments)
+    return retval
+
+
+def run_with_result(arguments: PatchApplicatorArguments) -> Tuple[int, Optional[PatchApplicationResult]]:
+    """Like :func:`run`, but also returns the structured apply result.
+
+    The second element is None for every action other than ``--apply``.
     """
 
     if arguments.verbose:
@@ -59,14 +78,25 @@ def run(arguments: PatchApplicatorArguments) -> int:
 
     # handle arguments
     retval = 0
+    application_result: Optional[PatchApplicationResult] = None
     if len(arguments.apply) > 0:
-        retval = apply_patches(arguments.apply, file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
+        application_result = apply_patches(
+            arguments.apply, file_mapping, arguments, applied_suggestions_file, patch_generator_dir
+        )
+        retval = application_result.retval
+        # persist the outcome so consumers that only see the project copy (e.g.
+        # execute_configuration) can tell an unmodified code base from a patched one
+        write_application_result(patch_applicator_dir, application_result)
+        if application_result.failure:
+            print("WARNING: " + application_result.summary())
     elif len(arguments.rollback) > 0:
         retval = rollback_patches(
             arguments.rollback, file_mapping, arguments, applied_suggestions_file, patch_generator_dir
         )
     elif arguments.clear:
         retval = clear_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
+        # a stale result must never be mistaken for the outcome of a later apply
+        clear_application_result(patch_applicator_dir)
     elif arguments.load:
         retval = load_patches(file_mapping, arguments, applied_suggestions_file, patch_generator_dir)
     elif arguments.list:
@@ -75,4 +105,4 @@ def run(arguments: PatchApplicatorArguments) -> int:
     if arguments.verbose:
         print("Done.")
 
-    return retval
+    return retval, application_result

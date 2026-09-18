@@ -15,6 +15,7 @@ from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArgume
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
+from discopop_library.EmpiricalAutotuning.output.progress import DebugStatEntry
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -31,7 +32,7 @@ def execute_greedy_combination(
     reference_configuration: CodeConfiguration,
     arguments: AutotunerArguments,
     timeout_after: float,
-    debug_stats: List[Tuple[List[SUGGESTION_ID], float, int, bool, bool, str]],
+    debug_stats: List[DebugStatEntry],
     get_unique_configuration_id: Callable[[], int],
 ) -> None:
     logger.info("Executing greedy combination.")
@@ -85,6 +86,7 @@ def execute_greedy_combination(
                     exec_res.result_valid,
                     exec_res.thread_sanitizer,
                     tmp_config.root_path,
+                    cast(ExecutionResult, tmp_config.execution_result).failed_suggestions,
                 )
             )
 

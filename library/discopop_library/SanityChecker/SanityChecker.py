@@ -95,7 +95,25 @@ def run(arguments: SanityCheckerArguments) -> None:
     logger.debug("suggestions: " + str(filtered_suggestion_ids))
     for pattern_id in filtered_suggestion_ids:
         configuration = reference_configuration.create_copy(get_unique_configuration_id)
-        configuration.apply_suggestions(arguments, [pattern_id])
+        application = configuration.apply_suggestions(arguments, [pattern_id])
+        if application is not None and application.failure:
+            # Nothing was patched, so this copy holds the original code. Checking it
+            # would certify the unmodified program as a sane parallelization.
+            logger.error("Suggestion " + str(pattern_id) + " not checked: " + application.summary())
+            results.append(
+                {
+                    "applied_suggestions": cast(List[SUGGESTION_ID], [pattern_id]),
+                    "applied_pattern_tags": cast(
+                        List[PATTERN_TAG], [detection_result.patterns.get_pattern_from_id(pattern_id).pattern_tag]
+                    ),
+                    "TSAN_CODE": None,
+                    "VALIDATION": None,
+                    "RETURN_CODE": None,
+                    "APPLICATION_FAILED": True,
+                }
+            )
+            configuration.deleteFolder()
+            continue
         configuration.execute(arguments, timeout=None)
 
         results.append(

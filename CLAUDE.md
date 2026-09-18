@@ -88,5 +88,11 @@ You can execute a full example by following the steps below. The example should 
 - execute pattern analysis via `cd example/.discopop && ../../venv/bin/discopop_explorer`
 - check for existing parallelization suggestions by checking for created patch files in example/.discopop/patch_generator
 
+### Measured execution time
+- by default, a configuration's runtime is the wall clock time of its `execute.sh`; a program printing its own timing can have that value measured instead (see `docs/tools/Project_manager.md`, section "Measured runtime")
+- the setting is stored per configuration in `.discopop/project/configs/<config>/execution_time.json` and edited in the GUI under Editor -> execute.sh; `--execution-time-regex` (on both `discopop_project_manager` and `discopop_auto_tuner`) overrides it for one run
+- the extraction lives in `library/discopop_library/ProjectManager/configurations/execution_time.py`; only `execute.sh` call sites pass a pattern, so `compile.sh` / `validate.sh` keep their wall clock times
+- `execution_results.json` entries carry `wall_clock_time` and `time_source` next to `time`; `time` always holds the measurement of interest, so reports, plots, the auto-tuner and the benchmark harnesses need no change
+
 ### Excecute CI Pipeline locally
 To execute the CI pipeline locally, use the following command from the root folder: `scripts/dev/run_ci_locally.sh`.

@@ -14,17 +14,19 @@ from pathlib import Path
 import shutil
 import subprocess
 import time
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
 from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
+from discopop_library.PatchApplicator.PatchApplicationResult import PatchApplicationResult
 from discopop_library.PatchApplicator.PatchApplicatorArguments import PatchApplicatorArguments
-from discopop_library.PatchApplicator.patch_applicator import run as apply_patches
+from discopop_library.PatchApplicator.patch_applicator import run_with_result as apply_patches
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
 from discopop_library.ProjectManager.configurations.compile_script import resolve_compile_script_path
 from discopop_library.ProjectManager.configurations.copying import copy_configuration
 from discopop_library.ProjectManager.configurations.execution import execute_configuration
+from discopop_library.ProjectManager.configurations.execution_time import resolve_execution_time_regex
 from discopop_library.ProjectManager.configurations.validation import run_validation_phase
 
 logger = logging.getLogger("CodeConfiguration")
@@ -35,6 +37,9 @@ class CodeConfiguration(object):
     config_dot_dp_path: str
     settings_name: str
     execution_result: Optional[ExecutionResult]
+    # Outcome of the last apply_suggestions() call on this configuration. None means
+    # no suggestions were requested (e.g. the reference configuration).
+    suggestion_application: Optional[PatchApplicationResult]
 
     def __init__(self, root_path: str, config_dot_dp_path: str, settings_name: str):
 
@@ -46,6 +51,7 @@ class CodeConfiguration(object):
         if self.config_dot_dp_path.endswith("/"):
             self.config_dot_dp_path = self.config_dot_dp_path[:-1]
         self.execution_result = None
+        self.suggestion_application = None
         logger.debug("Created configuration: " + root_path)
 
     def __str__(self) -> str:
@@ -54,9 +60,35 @@ class CodeConfiguration(object):
     def execute(
         self, arguments: AutotunerArguments, timeout: Optional[float], thread_count: int, is_initial: bool = False
     ) -> None:
+        if self.record_failed_application():
+            return
         compilation_successful = self.compile_only(arguments, timeout, thread_count, is_initial)
         if compilation_successful:
             self.execute_only(arguments, timeout, thread_count, is_initial)
+
+    def record_failed_application(self) -> bool:
+        """Turn an incomplete suggestion application into an invalid result, no run.
+
+        Returns True when the configuration must not be built or measured: its code is
+        the unmodified original, so any runtime measured here would be attributed to
+        parallelizations that are not in the code. Marking the result invalid keeps the
+        candidate out of every search algorithm's accepted set, and the recorded flags
+        let the progress channel and the GUI show it as "not applied" rather than as a
+        parallel run that happened to yield no speedup.
+        """
+        application = self.suggestion_application
+        if application is None or not application.failure:
+            return False
+        logger.error("Not executing " + self.root_path + ": " + application.summary())
+        self.execution_result = ExecutionResult(
+            0.0,
+            0,
+            False,
+            False,
+            application_failed=True,
+            failed_suggestions=application.unapplied_ids,
+        )
+        return True
 
     def compile_only(
         self, arguments: AutotunerArguments, timeout: Optional[float], thread_count: int, is_initial: bool = False
@@ -147,6 +179,10 @@ class CodeConfiguration(object):
         else:
             settings_path = os.path.join(config_path, self.settings_name)
 
+        # The reported time is what candidates are ranked by; the wall clock time
+        # is read alongside it because the per-candidate timeout derived from this
+        # run has to bound the whole process, not just the part the program times.
+        measurement: Dict[str, Any] = {}
         ret = execute_configuration(
             cm_args,
             self.root_path,
@@ -155,12 +191,15 @@ class CodeConfiguration(object):
             execute_sh_path,
             thread_count,
             timeout,
+            execution_time_regex=resolve_execution_time_regex(config_path, arguments.execution_time_regex),
+            measurement=measurement,
         )
         if ret is None:
             result_returncode = 1
             required_time = 1.0
         else:
             result_returncode, required_time, out, err = ret
+        wall_clock_time = float(measurement.get("wall_clock_time", required_time))
 
         # A configuration is valid only if execute.sh succeeded AND, when an
         # optional validate.sh exists, it also succeeds. validate.sh re-runs the
@@ -195,11 +234,19 @@ class CodeConfiguration(object):
 
         # reporting
         logger.debug("Execution took " + str(round(required_time, 4)) + " s")
+        if wall_clock_time != required_time:
+            logger.debug("Wall clock duration of the run: " + str(round(wall_clock_time, 4)) + " s")
         logger.debug("Execution return code: " + str(result_returncode))
         logger.debug("Execution result valid: " + str(result_valid))
         logger.debug("ThreadSanitizer valid: " + str(thread_sanitizer_valid))
 
-        self.execution_result = ExecutionResult(required_time, result_returncode, result_valid, thread_sanitizer_valid)
+        self.execution_result = ExecutionResult(
+            required_time,
+            result_returncode,
+            result_valid,
+            thread_sanitizer_valid,
+            wall_clock_runtime=wall_clock_time,
+        )
 
     def create_copy(
         self, arguments: AutotunerArguments, settings_name: str, get_new_configuration_id: Callable[[], int]
@@ -252,8 +299,16 @@ class CodeConfiguration(object):
         shutil.rmtree(self.root_path)
         logger.debug("Deleted " + self.root_path)
 
-    def apply_suggestions(self, arguments: AutotunerArguments, suggestion_ids: List[SUGGESTION_ID]) -> None:
-        """Applies the given suggestion to the code configuration via discopop_patch_applicator"""
+    def apply_suggestions(
+        self, arguments: AutotunerArguments, suggestion_ids: List[SUGGESTION_ID]
+    ) -> Optional[PatchApplicationResult]:
+        """Applies the given suggestion to the code configuration via discopop_patch_applicator
+
+        The result is stored on the configuration (``suggestion_application``) and
+        returned. It must not be ignored: when a patch does not apply, the code stays
+        sequential and measuring it would fabricate a parallel data point. ``execute``
+        checks the stored result and refuses to run such a configuration.
+        """
         sub_logger = logger.getChild("apply_suggestions")
 
         sub_logger.debug("Applying patch applicator for: " + str(suggestion_ids))
@@ -262,7 +317,7 @@ class CodeConfiguration(object):
         save_dir = os.getcwd()
         os.chdir(self.config_dot_dp_path)
         try:
-            ret_val = apply_patches(
+            ret_val, application_result = apply_patches(
                 PatchApplicatorArguments(
                     "WARNING", arguments.write_log, False, suggestion_ids_str, [], False, False, False
                 )
@@ -273,10 +328,16 @@ class CodeConfiguration(object):
             sub_logger.debug("Got Exception during call to patch applicator.")
             os.chdir(save_dir)
             raise ex
+        self.suggestion_application = application_result
+        if application_result is not None and application_result.failure:
+            sub_logger.error(application_result.summary())
+        return application_result
 
     def get_statistics_graph_label(self) -> str:
         res_str = "" + self.root_path + "\n"
-        if self.execution_result is None:
+        if self.execution_result is not None and self.execution_result.application_failed:
+            res_str += "Suggestions not applied."
+        elif self.execution_result is None:
             res_str += "Not executed."
         else:
             res_str += str(round(self.execution_result.runtime, 3)) + "s"
@@ -284,6 +345,8 @@ class CodeConfiguration(object):
         return res_str
 
     def get_statistics_graph_color(self) -> NodeColor:
+        if self.execution_result is not None and self.execution_result.application_failed:
+            return NodeColor.RED
         if self.execution_result is None:
             return NodeColor.ORANGE
         if self.execution_result.result_valid and self.execution_result.return_code == 0:

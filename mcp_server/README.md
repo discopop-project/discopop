@@ -192,6 +192,51 @@ Dependencies are grouped by direction:
 
 This tool is cheap to call repeatedly — `DetectionResult` and `FileMapping` are cached in memory after the first load. Requires `gather_data` to have been run first.
 
+### 6. `run_auto_tuning`
+
+Runs the [empirical autotuner](../docs/tools/Autotuner.md) and returns the combination of suggestions it selected, so the choice of patches is measured rather than guessed. The tuner compiles, executes and validates candidate combinations in throwaway copies of the project and keeps the fastest one that still produces a valid result.
+
+By default the tool leaves the sources as it found them and only reports the selection, which `manage_patches(action="apply", ...)` then persists. Pass `apply=true` to have the selected combination applied in the same call — the shortest route from profiling data to parallelized code.
+
+Patches that are already applied are cleared before the search (the tuner has to measure an un-patched project) and restored afterwards, unless `apply=true` replaces them with the new selection. Nothing has to be cleared by hand.
+
+**Parameters:**
+- `project_path` (string, required): Absolute path to the project root
+- `config_name` (string, required): Execution configuration to tune (a directory under `.discopop/project/configs/`)
+- `apply` (boolean, optional): Apply the selected combination once the search is done, default `false`. The result then carries `applied` with the ids that reached the code; undo them with `manage_patches(action="rollback", ...)`.
+- `algorithm` (integer, optional): Search algorithm. Omit it and the tool picks `6` (hotspot-guided region descent) when hotspot detection results are available, and `4` (greedy forward search) otherwise; the choice and its reason come back as `algorithm` / `algorithm_selection`. Pass a value only to override that; an explicit `6` without hotspot results is refused rather than silently replaced. See `docs/tools/Autotuner.md` for the full list.
+- `timeout_seconds` (integer, optional): Wall clock bound for the whole search, default `3600`
+
+**Preconditions:** `gather_data` must have been run. Running `gather_data` with `hotspot_config_names` set is what makes the hotspot-guided search available.
+
+**Example:**
+```json
+{
+  "project_path": "/abs/path/to/my_project",
+  "config_name": "tiny",
+  "timeout_seconds": 1800
+}
+```
+
+**Example response:**
+```json
+{
+  "status": "success",
+  "algorithm": 6,
+  "algorithm_selection": "hotspot-guided region descent, chosen because hotspot results are available",
+  "suggestion_ids": ["7", "12"],
+  "speedup": 2.31,
+  "efficiency": 0.58,
+  "runtime": 4.12,
+  "baseline_runtime": 9.52,
+  "evaluated_configurations": 14,
+  "applied": false,
+  "message": "Pass suggestion_ids to manage_patches(action='apply', suggestion_ids=[...]) to persist this selection, or call run_auto_tuning again with apply=true. ..."
+}
+```
+
+This is a measurement run: one compilation plus one execution of the project per candidate. When `timeout_seconds` expires the search is stopped and the best combination measured so far is still returned, with `"status": "timeout"` and `"partial": true`.
+
 ## Logging Output
 
 The server logs all incoming and outgoing communication:
@@ -226,6 +271,26 @@ pytest mcp_server/test_server.py -v
 Reading raw files from `.discopop` is wasteful and unreliable: the directory contains large binary files, intermediate artefacts, and serialised objects that are expensive to parse and consume a significant number of tokens. The MCP tools return pre-processed, structured summaries that contain exactly the information needed — at a fraction of the token cost.
 
 If a piece of information appears to be missing from the available tools, the correct response is to use the tool that produces it (e.g. run `gather_data` before calling `get_parallelization_patches` or `get_data_dependencies`) rather than reading the underlying files directly.
+
+### The route to parallelized code
+
+`gather_data` → `run_auto_tuning` → `manage_patches(action="apply", ...)`, or `gather_data` → `run_auto_tuning(apply=true)`.
+
+**Do not decide which patches to apply by reading them.** Which combination is fastest is what `run_auto_tuning` measures; picking from the diffs by hand discards the one thing DiscoPoP can establish and a reader cannot, and a combination that looks sensible is regularly slower than the sequential program (fork/join overhead on short loops) or invalid. Read patches to *understand* a suggestion, not to choose between them — `get_parallelization_patches(detail="summary")` is enough for the former.
+
+Run the tuner **before** applying anything. It needs an un-patched project, and while it clears and restores an existing selection on its own, a source file that was also edited by hand can no longer be un-patched automatically.
+
+### The project is left buildable
+
+`gather_data`'s instrumentation steps compile **in place** (`execute_inplace=True`, unlike the ProjectManager flow, which works in a sibling copy) — the profiling output has to land in this project's `.discopop`. A compile script that configures a build directory therefore leaves it pinned to `discopop_cc`/`discopop_cxx`, and an ordinary `make` in it afterwards yields an instrumented binary: orders of magnitude slower than the program, and prone to aborting outright with an allocation or heap error once the code is also multithreaded.
+
+Nothing announces that state, so anyone who then builds and runs the program to check their own work measures DiscoPoP's instrumentation instead and reads the crash as a bug in their code. In one recorded benchmark run an agent lost six minutes to three such executions — each hitting its own shell timeout — and then discarded a working OpenMP parallelization because of them.
+
+So `gather_data` rebuilds the project plainly (`par_settings.json`, falling back to `seq_settings.json`) before it returns, on **every** exit path including its own failures — a failed instrumentation is exactly when the build is left half-instrumented. The outcome is reported as `steps.build_restore`; it is best effort, and a failed rebuild is a warning rather than a failed pipeline, since the data the tool exists to produce is already on disk by then. A call that skipped every instrumentation step (results already current) rebuilds nothing: the build it finds is the one the previous call restored.
+
+### Limiting the exposed tools
+
+`--tools analysis` leaves out the three project setup tools (`initialize_discopop_directory`, `set_compile_script`, `create_execution_configuration`), which are neither listed nor callable in that mode. Use it when pointing an agent at a project that is already configured: it removes roughly a third of the tool definitions from the agent's context, and rules out an `initialize_discopop_directory(reset=true)` that would delete the configurations the agent was pointed at.
 
 ## Daemon Mode
 

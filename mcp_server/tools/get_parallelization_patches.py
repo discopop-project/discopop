@@ -24,6 +24,11 @@ TOOL = Tool(
         "Retrieve the generated OpenMP parallelization patches. Call this after "
         "gather_data to inspect or present the suggested code changes. "
         "\n\n"
+        "Reading the patches is not how you decide which of them to apply: which "
+        "combination is actually fastest is what run_auto_tuning measures, and it has to "
+        "run before anything is applied. Use detail='summary' when you only need to see "
+        "what was found — one line per suggestion instead of the full diffs. "
+        "\n\n"
         "Each detected pattern results in a unified-diff patch file stored under "
         ".discopop/patch_generator/<pattern_id>/. The patch inserts an OpenMP pragma "
         "(e.g. #pragma omp parallel for with appropriate clauses) directly above the "
@@ -67,6 +72,16 @@ TOOL = Tool(
                     "(as shown in patterns.json). Omit to return all available patches."
                 ),
             },
+            "detail": {
+                "type": "string",
+                "enum": ["full", "summary"],
+                "description": (
+                    "How much of each patch to return. 'full' (the default) includes the "
+                    "unified diff; 'summary' returns only the pattern id, the source file, "
+                    "the target line and the pragma that would be inserted — enough to see "
+                    "what was suggested, at a fraction of the size."
+                ),
+            },
         },
         "required": ["project_path"],
         "additionalProperties": False,
@@ -74,10 +89,34 @@ TOOL = Tool(
 )
 
 
+def _summarize_patch(patch_content: str) -> tuple[Optional[int], Optional[str]]:
+    """The line a patch targets and the pragma it inserts.
+
+    A suggestion is one added pragma above one loop, so those two facts are what a
+    summary needs; everything else in the diff is context that only matters when the
+    patch is being read rather than chosen between.
+    """
+    line: Optional[int] = None
+    pragma: Optional[str] = None
+    for raw_line in patch_content.splitlines():
+        if raw_line.startswith("@@") and line is None:
+            # "@@ -17,6 +17,7 @@" — the first number of the original-file range
+            try:
+                line = int(raw_line.split("-", 1)[1].split(",", 1)[0].split()[0])
+            except (IndexError, ValueError):
+                line = None
+        elif raw_line.startswith("+") and not raw_line.startswith("+++") and pragma is None:
+            added = raw_line[1:].strip()
+            if added:
+                pragma = added
+    return line, pragma
+
+
 def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
     try:
         project_path = arguments.get("project_path", "")
         pattern_id_filter: Optional[int] = arguments.get("pattern_id")
+        summary_only: bool = arguments.get("detail", "full") == "summary"
 
         p = Path(project_path)
         patch_gen_dir = p / ".discopop" / "patch_generator"
@@ -100,13 +139,14 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             for patch_file in sorted(pattern_dir.glob("*.patch")):
                 patch_content = patch_file.read_text()
                 source_file = ToolContext.extract_source_from_patch(patch_content)
-                patches.append(
-                    {
-                        "pattern_id": pid,
-                        "source_file": source_file,
-                        "patch_content": patch_content,
-                    }
-                )
+                patch: dict[str, Any] = {"pattern_id": pid, "source_file": source_file}
+                if summary_only:
+                    line, pragma = _summarize_patch(patch_content)
+                    patch["target_line"] = line
+                    patch["pragma"] = pragma
+                else:
+                    patch["patch_content"] = patch_content
+                patches.append(patch)
 
         pattern_ids: list[int] = sorted({p["pattern_id"] for p in patches if isinstance(p["pattern_id"], int)})
         ctx.log_action(
@@ -119,6 +159,13 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
             "project_path": project_path,
             "patches": patches,
         }
+        if pattern_ids:
+            # Repeated here because a caller that reached the patches is exactly the one
+            # about to pick from them by hand.
+            result["next_step"] = (
+                "Which of these to apply is a question run_auto_tuning answers by measuring; "
+                "call it (optionally with apply=true) before applying anything."
+            )
         ctx.log_response("get_parallelization_patches", result)
         return [TextContent(type="text", text=json.dumps(result))]
 

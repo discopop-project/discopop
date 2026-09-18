@@ -87,12 +87,13 @@ class ReductionInfo(PatternInfo):
         )
 
     def get_tag(self) -> str:
+        # sorted, see DoAllInfo.get_tag
         result = super().get_tag() + "_"
-        result += f"p({[v.name for v in self.private]})_"
-        result += f"s({[v.name for v in self.shared]})_"
-        result += f"fp({[v.name for v in self.first_private]})_"
-        result += f'r({[str(v.operation) + ":" + v.name for v in self.reduction]})_'
-        result += f"lp({[v.name for v in self.last_private]})"
+        result += f"p({sorted(v.name for v in self.private)})_"
+        result += f"s({sorted(v.name for v in self.shared)})_"
+        result += f"fp({sorted(v.name for v in self.first_private)})_"
+        result += f'r({sorted(str(v.operation) + ":" + v.name for v in self.reduction)})_'
+        result += f"lp({sorted(v.name for v in self.last_private)})"
         return result
 
 

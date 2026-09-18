@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from tabulate import tabulate  # type: ignore
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
+from discopop_library.ProjectManager.reports import entries
 
 import logging
 import matplotlib.pyplot as plt
@@ -54,6 +55,10 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
                     list_values[clean_setting_str] = dict()
 
                 for execution in execution_results[configuration][script][setting]:
+                    # a skipped run (suggestions not applied) has no runtime; keeping it
+                    # would overwrite a measured value with 0.0
+                    if not entries.was_executed(execution):
+                        continue
                     label = execution["label"] if "label" in execution else ""
                     thread_count = execution["thread_count"]
                     if thread_count not in list_values[clean_setting_str]:

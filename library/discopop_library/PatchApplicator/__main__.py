@@ -6,6 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
+import sys
 from argparse import ArgumentParser
 from discopop_library.GlobalLogger.setup import setup_logger
 
@@ -63,6 +64,7 @@ def main() -> int:
     "0: Applied successfully"
     "1: Nothing applied"
     "2: Some changes applied successfully
+    "3: Nothing to roll back, trivially successful"
     """
     retval = 0
     arguments = parse_args()
@@ -72,4 +74,6 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    main()
+    # the console-script wrapper passes the return value to sys.exit; do the same
+    # here so `python -m ...` reports a failed application instead of swallowing it
+    sys.exit(main())

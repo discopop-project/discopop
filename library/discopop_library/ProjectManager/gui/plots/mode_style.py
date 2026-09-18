@@ -13,7 +13,7 @@ The shared encoding language across every results chart:
 * **colour = configuration** (a fixed categorical palette, assigned by stable
   sorted order so filtering a subset never repaints the survivors),
 * **marker shape + line dash = execution mode** (seq / par / dp / hd), and
-* **status colour = validity** (valid / invalid / failed).
+* **status colour = validity** (valid / invalid / failed / not_applied).
 
 Values are plain hex / matplotlib marker codes so this module stays free of Tk
 and matplotlib and can be unit-tested directly.
@@ -58,10 +58,38 @@ DEFAULT_DASHES: Tuple[Optional[float], ...] = (None, None)
 
 # Validity status -> colour. Kept separate from the categorical palette; these are
 # reserved for state and never reused as a "series colour".
+#
+# ``not_applied`` is its own state on purpose: the parallelization suggestions never
+# reached the code, so nothing parallel was ever measured. Folding it into "failed"
+# (a run that broke) or into "valid" (a run without speedup) would hide exactly the
+# case where an unmodified sequential run masquerades as a parallel one.
 STATUS_COLORS: Dict[str, str] = {
     "valid": "#2e7d32",  # green
     "invalid": "#e65100",  # orange
     "failed": "#c62828",  # red
+    "not_applied": "#7b1fa2",  # purple
+}
+
+# Every status, in the order charts should draw and list them.
+STATUS_ORDER: Tuple[str, ...] = ("valid", "invalid", "failed", "not_applied")
+
+# Human-readable status names for legends, tables and tooltips.
+STATUS_LABELS: Dict[str, str] = {
+    "valid": "valid",
+    "invalid": "invalid",
+    "failed": "failed",
+    "not_applied": "patch not applied",
+}
+
+NOT_APPLIED_STATUS = "not_applied"
+
+# A distinct marker on top of the distinct colour: a not-applied point carries no
+# measurement, so it must not be mistaken for a data point at the same position.
+STATUS_MARKERS: Dict[str, str] = {
+    "valid": "o",
+    "invalid": "o",
+    "failed": "o",
+    "not_applied": "X",
 }
 
 # Neutral / reference colours (baselines, ideal-linear lines, grid emphasis).
@@ -106,12 +134,25 @@ def status_color(status: str) -> str:
     return STATUS_COLORS.get(status, STATUS_COLORS["failed"])
 
 
-def execution_status(valid: bool, timeout: bool = False) -> str:
+def status_marker(status: str) -> str:
+    """matplotlib marker code for a validity status."""
+    return STATUS_MARKERS.get(status, "o")
+
+
+def status_label(status: str) -> str:
+    """Human-readable name of a validity status."""
+    return STATUS_LABELS.get(status, status)
+
+
+def execution_status(valid: bool, timeout: bool = False, application_failed: bool = False) -> str:
     """Reduce an execution's flags to a status key for :func:`status_color`.
 
-    execution_results.json has no separate result-validity field, so an execution
-    is either ``valid`` (ran fine) or ``failed`` (non-zero exit or timeout).
+    ``application_failed`` wins over everything else: such a record is not a
+    measurement of the configuration it is labelled with -- the requested patches were
+    never applied, so the run was skipped -- and must be shown as its own state.
     """
+    if application_failed:
+        return NOT_APPLIED_STATUS
     if valid:
         return "valid"
     return "failed"
@@ -135,13 +176,16 @@ def style_legend(legend: Any) -> None:
         title.set_fontsize(LEGEND_TITLE_SIZE)
 
 
-def autotuner_status(return_code: int, valid: bool, tsan: bool) -> str:
+def autotuner_status(return_code: int, valid: bool, tsan: bool, application_failed: bool = False) -> str:
     """Status of an autotuner measurement (has separate validity/TSAN flags).
 
-    * ``failed``  -- non-zero return code
-    * ``invalid`` -- ran but failed the result or thread-sanitizer check
-    * ``valid``   -- ran and passed both
+    * ``not_applied`` -- the requested patches did not apply, so nothing was measured
+    * ``failed``      -- non-zero return code
+    * ``invalid``     -- ran but failed the result or thread-sanitizer check
+    * ``valid``       -- ran and passed both
     """
+    if application_failed:
+        return NOT_APPLIED_STATUS
     if return_code != 0:
         return "failed"
     if valid and tsan:

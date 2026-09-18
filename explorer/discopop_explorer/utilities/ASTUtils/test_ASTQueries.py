@@ -15,6 +15,8 @@ Fixtures use real Clang AST JSON format:
 
 from __future__ import annotations
 
+from typing import Any
+
 import pytest
 import networkx as nx
 
@@ -354,3 +356,168 @@ class TestASTVariableAndTypeQueries:
         # Variables declared at or before line 5 should be present
         assert "i" in var_names
         assert "n" in var_names
+
+
+def _assign(node_id: str, opcode: str, line: int, lhs: dict[str, Any], kind: str = "BinaryOperator") -> dict[str, Any]:
+    """Build an assignment operator node writing *lhs* (whose RHS is an irrelevant literal)."""
+    return {
+        "id": node_id,
+        "kind": kind,
+        "opcode": opcode,
+        "loc": {"line": line, "col": 5},
+        "range": {"begin": {"line": line, "col": 5}, "end": {"line": line, "col": 20}},
+        "inner": [
+            lhs,
+            {
+                "id": node_id + "_rhs",
+                "kind": "IntegerLiteral",
+                "loc": {"line": line, "col": 18},
+                "range": {"begin": {"line": line, "col": 18}, "end": {"line": line, "col": 18}},
+                "inner": [],
+            },
+        ],
+    }
+
+
+def _declref(node_id: str, name: str, line: int, type_str: str = "int") -> dict[str, Any]:
+    return {
+        "id": node_id,
+        "kind": "DeclRefExpr",
+        "type": type_str,
+        "loc": {"line": line, "col": 5},
+        "range": {"begin": {"line": line, "col": 5}, "end": {"line": line, "col": 5}},
+        "referencedDecl": {"kind": "VarDecl", "name": name, "id": "decl_" + name, "type": type_str},
+        "inner": [],
+    }
+
+
+def _wrap(node_id: str, kind: str, line: int, inner: dict[str, Any], name: str | None = None) -> dict[str, Any]:
+    return {
+        "id": node_id,
+        "kind": kind,
+        "name": name,
+        "loc": {"line": line, "col": 5},
+        "range": {"begin": {"line": line, "col": 5}, "end": {"line": line, "col": 12}},
+        "inner": [inner],
+    }
+
+
+@pytest.fixture  # type: ignore[misc]
+def assignment_graph() -> nx.DiGraph[str]:
+    """AST for a loop nest mixing direct writes to a pointer with writes through it.
+
+    10  for (l = 0; ...) {          // outer
+    11      p = &a[i];              // writes p itself
+    12      for (k = 0; ...) {      // inner
+    13          q = &b[j];          // writes q itself
+    14          p[k].f += 1;        // writes memory reached through p, not p
+    15          ++n;
+    16      }
+    17  }
+    """
+    inner_for = {
+        "id": "for_inner",
+        "kind": "ForStmt",
+        "loc": {"file": "kernel.c", "line": 12, "col": 5},
+        "range": {"begin": {"line": 12, "col": 5}, "end": {"line": 16, "col": 5}},
+        "inner": [
+            _assign("assign_q", "=", 13, _declref("ref_q", "q", 13, "double *")),
+            # p[k].f += 1  ->  MemberExpr( ArraySubscriptExpr( ImplicitCast( DeclRefExpr p ) ) )
+            _assign(
+                "assign_through_p",
+                "+=",
+                14,
+                _wrap(
+                    "member_f",
+                    "MemberExpr",
+                    14,
+                    _wrap(
+                        "subscript_p",
+                        "ArraySubscriptExpr",
+                        14,
+                        _wrap("cast_p", "ImplicitCastExpr", 14, _declref("ref_p_read", "p", 14, "S *")),
+                    ),
+                    name="f",
+                ),
+                kind="CompoundAssignOperator",
+            ),
+            {
+                "id": "incr_n",
+                "kind": "UnaryOperator",
+                "opcode": "++",
+                "loc": {"line": 15, "col": 5},
+                "range": {"begin": {"line": 15, "col": 5}, "end": {"line": 15, "col": 8}},
+                "inner": [_declref("ref_n", "n", 15)],
+            },
+        ],
+    }
+    ast = {
+        "kind": "TranslationUnitDecl",
+        "inner": [
+            {
+                "id": "for_outer",
+                "kind": "ForStmt",
+                "loc": {"file": "kernel.c", "line": 10, "col": 5},
+                "range": {"begin": {"line": 10, "col": 5}, "end": {"line": 17, "col": 5}},
+                "inner": [
+                    # a cast around the LHS must stay transparent
+                    _assign(
+                        "assign_p",
+                        "=",
+                        11,
+                        _wrap("cast_p_write", "ImplicitCastExpr", 11, _declref("ref_p", "p", 11, "S *")),
+                    ),
+                    inner_for,
+                ],
+            }
+        ],
+    }
+    return ClangASTGraph().build_from_ast(ast)
+
+
+class TestFindVariablesAssignedInLoopAt:
+    def test_direct_assignment_is_reported(self, assignment_graph: nx.DiGraph[str]) -> None:
+        assigned = ASTVariableAndTypeQueries.find_variables_assigned_in_loop_at(assignment_graph, "kernel.c", 10)
+        assert "p" in assigned
+        assert "q" in assigned
+
+    def test_write_through_pointer_is_not_reported(self, assignment_graph: nx.DiGraph[str]) -> None:
+        """``p[k].f += 1`` writes the memory p points at, so it must not mark p as assigned.
+
+        This is the distinction the profiler's dependency data cannot express: it labels that
+        access "p" just like the ``p = &a[i]`` above it.
+        """
+        assigned = ASTVariableAndTypeQueries.find_variables_assigned_in_loop_at(assignment_graph, "kernel.c", 14)
+        # no loop starts on line 14
+        assert assigned == set()
+
+        inner = ASTVariableAndTypeQueries.find_variables_assigned_in_loop_at(assignment_graph, "kernel.c", 12)
+        # q and n are assigned inside the inner loop; p only receives a write *through* it
+        assert inner == {"q", "n"}
+
+    def test_increment_operator_counts_as_assignment(self, assignment_graph: nx.DiGraph[str]) -> None:
+        assigned = ASTVariableAndTypeQueries.find_variables_assigned_in_loop_at(assignment_graph, "kernel.c", 10)
+        assert "n" in assigned
+
+    def test_enclosing_loop_assignment_excluded_from_inner_loop(self, assignment_graph: nx.DiGraph[str]) -> None:
+        """The loop's own AST range bounds the answer, so p (assigned in the outer loop only)
+        is not reported for the inner loop."""
+        outer = ASTVariableAndTypeQueries.find_variables_assigned_in_loop_at(assignment_graph, "kernel.c", 10)
+        inner = ASTVariableAndTypeQueries.find_variables_assigned_in_loop_at(assignment_graph, "kernel.c", 12)
+        assert "p" in outer
+        assert "p" not in inner
+
+    def test_no_loop_at_line_returns_empty(self, assignment_graph: nx.DiGraph[str]) -> None:
+        assert ASTVariableAndTypeQueries.find_variables_assigned_in_loop_at(assignment_graph, "kernel.c", 99) == set()
+
+    def test_unknown_file_returns_empty(self, assignment_graph: nx.DiGraph[str]) -> None:
+        assert ASTVariableAndTypeQueries.find_variables_assigned_in_loop_at(assignment_graph, "other.c", 10) == set()
+
+
+class TestFindLoopAtLocation:
+    def test_finds_loop_beginning_on_line(self, assignment_graph: nx.DiGraph[str]) -> None:
+        assert ASTQueries.find_loop_at_location(assignment_graph, "kernel.c", 12) == "for_inner"
+
+    def test_line_inside_loop_body_is_not_a_loop_header(self, assignment_graph: nx.DiGraph[str]) -> None:
+        """Line 14 lies within both loops' ranges but starts neither of them."""
+        assert ASTQueries.find_loop_at_location(assignment_graph, "kernel.c", 14) is None

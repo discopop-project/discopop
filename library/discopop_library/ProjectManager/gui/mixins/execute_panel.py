@@ -108,6 +108,15 @@ class ExecutePanelMixin(ConfigManagerMixinBase):
         thread_entry = ttk.Entry(thread_frame, textvariable=self.thread_var, width=10)
         thread_entry.pack(side=tk.LEFT, padx=5)
 
+        # The setting itself lives in Editor -> execute.sh, because it describes
+        # that script's program. It is mirrored here read-only: the run is started
+        # from this tab, so this tab must say which of the two times it produces.
+        execution_time_frame = ttk.Frame(settings_frame)
+        execution_time_frame.pack(fill=tk.X, pady=3)
+        ttk.Label(execution_time_frame, text="Execution time:", width=20, anchor=tk.W).pack(side=tk.LEFT)
+        self.execution_time_summary_label = caption_label(execution_time_frame, "")
+        self.execution_time_summary_label.pack(side=tk.LEFT, padx=5)
+
         label_prefix_frame = ttk.Frame(settings_frame)
         label_prefix_frame.pack(fill=tk.X, pady=3)
         ttk.Label(label_prefix_frame, text="Label Prefix:", width=20, anchor=tk.W).pack(side=tk.LEFT)

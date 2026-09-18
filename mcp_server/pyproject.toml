@@ -35,7 +35,9 @@ classifiers = [
     "Topic :: Software Development",
 ]
 dependencies = [
-    "mcp>=0.1.0",
+    # mcp 2.x replaced the low-level Server decorator API (@server.list_tools() /
+    # @server.call_tool()) with constructor-based handlers; server.py still uses the 1.x API.
+    "mcp>=1.0,<2",
     "termcolor>=2.0",
     "uvicorn>=0.20",
     "starlette>=0.20",

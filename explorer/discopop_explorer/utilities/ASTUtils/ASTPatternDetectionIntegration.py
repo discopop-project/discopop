@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 import traceback
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, FrozenSet, Optional, Tuple, Union
 
 import networkx as nx
 
@@ -37,6 +37,18 @@ class ASTPatternDetectionHelper:
         """Initialize helper with no AST loaded"""
         self.ast_graph: Optional[nx.DiGraph[str]] = None
         self.file_mapping: Dict[int, Path] = {}
+        # memoized results of get_variables_at_location, keyed by the resolved location. The
+        # scope of a source location does not change while an AST is loaded, and pattern
+        # detection asks about the same loop header once per copy of the loop in the task graph -
+        # of which there are many - so this is the difference between one scope walk per loop and
+        # one per copy.
+        self._variables_at_location_cache: Dict[
+            Tuple[str, int, Optional[int]], Tuple[Tuple[str, Optional[str]], ...]
+        ] = {}
+        # memoized results of get_variables_assigned_in_loop_at, keyed by the resolved location,
+        # for the same reason: the answer is a property of the source, and pattern detection asks
+        # about one loop header once per copy of that loop in the task graph.
+        self._assigned_in_loop_cache: Dict[Tuple[str, int], FrozenSet[str]] = {}
 
     def load_ast_from_project(self, project_path: str) -> None:
         """Load and build AST graph from project.
@@ -57,6 +69,9 @@ class ASTPatternDetectionHelper:
             self.file_mapping = load_file_mapping(file_mapping_path)
         except (ValueError, OSError):
             self.file_mapping = {}
+
+        self._variables_at_location_cache.clear()
+        self._assigned_in_loop_cache.clear()
 
         ast_dict = ClangASTLoader.load_ast_from_project(project_path)
         if ast_dict is None:
@@ -109,7 +124,51 @@ class ASTPatternDetectionHelper:
         else:
             file_path_str = file_id
 
-        return ASTVariableAndTypeQueries.find_all_variables_in_scope(self.ast_graph, file_path_str, line, column)
+        cache_key = (file_path_str, line, column)
+        cached = self._variables_at_location_cache.get(cache_key)
+        if cached is None:
+            cached = tuple(
+                ASTVariableAndTypeQueries.find_all_variables_in_scope(self.ast_graph, file_path_str, line, column)
+            )
+            self._variables_at_location_cache[cache_key] = cached
+        # a copy, so that a caller mutating the returned list cannot corrupt the cache
+        return list(cached)
+
+    def get_variables_assigned_in_loop_at(self, file_id: Union[int, str], line: int) -> FrozenSet[str]:
+        """Get the variables assigned directly inside the loop whose header is at a location.
+
+        "Directly" means the variable's own storage is written (``p = &a[i]``), as opposed to
+        memory reached through it (``p[i] = x``).  See
+        :meth:`ASTVariableAndTypeQueries.find_variables_assigned_in_loop_at`.
+
+        Args:
+            file_id: Integer file identifier as defined in ``FileMapping.txt``,
+                or a filename string used directly.
+            line: Line the loop header starts on
+
+        Returns:
+            Frozen set of variable names, empty when the file is unknown, the AST has not been
+            loaded, or no loop starts on *line*.
+        """
+        if not self.ast_graph:
+            return frozenset()
+
+        if isinstance(file_id, int):
+            file_path = self.file_mapping.get(file_id)
+            if file_path is None:
+                return frozenset()
+            file_path_str = str(file_path)
+        else:
+            file_path_str = file_id
+
+        cache_key = (file_path_str, line)
+        cached = self._assigned_in_loop_cache.get(cache_key)
+        if cached is None:
+            cached = frozenset(
+                ASTVariableAndTypeQueries.find_variables_assigned_in_loop_at(self.ast_graph, file_path_str, line)
+            )
+            self._assigned_in_loop_cache[cache_key] = cached
+        return cached
 
     def get_variable_declarations_in_scope(self, scope_name: str) -> list[tuple[str, Optional[str]]]:
         """Get variables declared in a scope by function/loop name

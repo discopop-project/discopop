@@ -26,9 +26,10 @@ from discopop_library.ProjectManager.gui.widgets import (
     heading_label,
     caption_label,
 )
-from discopop_library.ProjectManager.gui.plots import autotuning_chart, embedding
+from discopop_library.ProjectManager.gui.plots import autotuning_chart, embedding, mode_style
 from discopop_library.ProjectManager.gui.plots.autotuning_chart import ProgressModel
 from discopop_library.ProjectManager.gui.plots.data import parse_progress_jsonl, split_progress_events
+from discopop_library.ProjectManager.gui.plots.hotspot_data import hotspots_available_for_explorer
 
 logger_name = "AutotuningPanel"
 
@@ -43,6 +44,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
     autotuning_hotspot_types_vars: Optional[Dict[str, tk.BooleanVar]] = None
     autotuning_algorithm_var: Optional[tk.StringVar] = None
     autotuning_algorithm_map: Dict[str, str] = {}
+    autotuning_algorithm_hint: Optional[ttk.Label] = None
     autotuning_log_level_var: Optional[tk.StringVar] = None
     autotuning_suggestions_label: Optional[ttk.Label] = None
     _autotuning_tab_tooltip: Optional[Any] = None
@@ -56,6 +58,10 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
     _autotuning_progress_model: Optional[ProgressModel] = None
     _autotuning_tile_values: Optional[List[Any]] = None
     _autotuning_plot_frame: Optional[tk.Widget] = None
+    # Banner above the live plot, shown only while configurations could not be patched.
+    _autotuning_warning_label: Optional[ttk.Label] = None
+    # how many not-applied configurations have already been announced on the console
+    _autotuning_reported_not_applied: int = 0
 
     def _build_autotuning_panel(self, parent: tk.Widget) -> None:
         main_paned = tk.PanedWindow(parent, orient=tk.HORIZONTAL, sashrelief=tk.RAISED)
@@ -138,19 +144,30 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         algo_frame = ttk.Frame(settings_frame)
         algo_frame.pack(fill=tk.X, pady=5)
         heading_label(algo_frame, "Algorithm:").pack(anchor=tk.W, padx=5)
-        self.autotuning_algorithm_var = tk.StringVar(value="Evolutionary combination")
+        # Default to the deterministic search: repeating a tuning run reproduces its
+        # decisions, which the randomized evolutionary search cannot promise.
+        self.autotuning_algorithm_var = tk.StringVar(value="Hotspot-guided region descent")
         algo_options = [
             ("0", "No combination (measure only)"),
             ("1", "Linear combination"),
             ("3", "Evolutionary combination"),
             ("4", "Greedy combination"),
             ("5", "Coordinate descent combination"),
+            ("6", "Hotspot-guided region descent"),
         ]
         self.autotuning_algorithm_map = {opt[1]: opt[0] for opt in algo_options}
         algo_combo = ttk.Combobox(algo_frame, textvariable=self.autotuning_algorithm_var, state="readonly", width=40)
         algo_combo["values"] = [opt[1] for opt in algo_options]
         algo_combo.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
         self.autotuning_algorithm_combo = algo_combo
+
+        # The default algorithm stops immediately when no hotspot detection results
+        # exist, so say that here rather than letting the run fail for a reason that
+        # is only visible in the console output.
+        self.autotuning_algorithm_hint = caption_label(algo_frame, "")
+        self.autotuning_algorithm_hint.pack(anchor=tk.W, padx=5)
+        algo_combo.bind("<<ComboboxSelected>>", lambda _event: self._update_algorithm_hint())
+        self._update_algorithm_hint()
 
         # Log level
         loglevel_frame = ttk.Frame(settings_frame)
@@ -275,6 +292,18 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
             value_label.pack(anchor=tk.W)
             self._autotuning_tile_values.append(value_label)
 
+        # Warning banner: a configuration whose patches did not apply was never run,
+        # so it is not a parallel measurement. Called out here as well as in the plot,
+        # because it invalidates the conclusion one would otherwise draw from the run.
+        self._autotuning_warning_label = ttk.Label(
+            plot_tab,
+            text="",
+            foreground=mode_style.status_color(mode_style.NOT_APPLIED_STATUS),
+            font=widgets.FONT_BODY,
+            wraplength=900,
+            justify=tk.LEFT,
+        )
+
         plot_frame = ttk.Frame(plot_tab)
         plot_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=5, pady=5)
         self._autotuning_plot_frame = plot_frame
@@ -292,6 +321,34 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         self._setup_autotuning_tab_tooltip()
         # show the last run (if any) so the plot is not empty on open
         self._load_autotuning_progress_from_file()
+
+    def _update_algorithm_hint(self) -> None:
+        """Warn when the selected algorithm needs hotspot data the project lacks.
+
+        Only the hotspot-guided descent hard-requires ``Hotspots.json``; it aborts
+        without measuring anything when none exists. Since it is the default, a
+        project that never ran hotspot detection would otherwise look as though the
+        tuner simply did nothing.
+        """
+        hint = getattr(self, "autotuning_algorithm_hint", None)
+        if hint is None or self.autotuning_algorithm_var is None:
+            return
+
+        selected = self.autotuning_algorithm_map.get(self.autotuning_algorithm_var.get(), "0")
+        if selected != "6":
+            hint.config(text="", foreground=widgets.STATUS_IDLE)
+            return
+
+        if hotspots_available_for_explorer(self.arguments.dot_dp):
+            hint.config(
+                text="Ranks hot code regions by their measured runtime. Reproducible across runs.",
+                foreground=widgets.STATUS_IDLE,
+            )
+        else:
+            hint.config(
+                text="No hotspot detection results found - run Hotspot Detection first, " "or pick another algorithm.",
+                foreground=widgets.STATUS_FAIL,
+            )
 
     def _update_autotuning_ui(self) -> None:
         if self.autotuning_run_button is not None:
@@ -422,8 +479,35 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         if self._autotuning_progress_model is None:
             self._autotuning_progress_model = ProgressModel()
         self._autotuning_progress_model.ingest(event)
+        self._announce_not_applied(event)
         self._redraw_autotuning_plot()
         self._update_autotuning_tiles()
+
+    def _announce_not_applied(self, event: Dict[str, Any]) -> None:
+        """Echo a not-applied measurement to the console as it happens.
+
+        The plot already encodes the state, but the console is the place a user looks
+        when a search "found nothing": without this line an unpatchable suggestion set
+        is indistinguishable from one that simply did not help.
+        """
+        if event.get("event") != "measurement":
+            return
+        failed = event.get("failed_suggestions") or []
+        if not (event.get("application_failed") or failed):
+            return
+        if self.autotuning_output_text is None:
+            return
+        self._autotuning_reported_not_applied += 1
+        suggestions = failed or event.get("suggestions") or []
+        text = (
+            "⚠ Suggestion application failed for "
+            + (", ".join(str(s) for s in suggestions) if suggestions else "(unknown)")
+            + " - configuration skipped, not measured.\n"
+        )
+        self.autotuning_output_text.config(state=tk.NORMAL)
+        self.autotuning_output_text.insert(tk.END, text)
+        self.autotuning_output_text.see(tk.END)
+        self.autotuning_output_text.config(state="disabled")
 
     def _redraw_autotuning_plot(self) -> None:
         if self._autotuning_figure is None or self._autotuning_progress_model is None:
@@ -438,6 +522,21 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
         tiles = self._autotuning_progress_model.summary_tiles()
         for label_widget, (_key, value) in zip(self._autotuning_tile_values, tiles):
             label_widget.config(text=value)
+        self._update_autotuning_warning()
+
+    def _update_autotuning_warning(self) -> None:
+        """Show/hide the not-applied banner above the live plot."""
+        if self._autotuning_warning_label is None or self._autotuning_progress_model is None:
+            return
+        warning = self._autotuning_progress_model.not_applied_warning()
+        if warning is None:
+            self._autotuning_warning_label.pack_forget()
+            self._autotuning_warning_label.config(text="")
+            return
+        self._autotuning_warning_label.config(
+            text=warning + " Their runtimes are not measurements - the code was left unmodified."
+        )
+        self._autotuning_warning_label.pack(side=tk.TOP, fill=tk.X, padx=8, pady=(0, 4))
 
     def _load_autotuning_progress_from_file(self) -> None:
         """Populate the live plot from a previous run's progress.jsonl, if present."""
@@ -493,6 +592,7 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
 
         # start a fresh live plot for this run
         self._autotuning_progress_model = ProgressModel()
+        self._autotuning_reported_not_applied = 0
         self._redraw_autotuning_plot()
         self._update_autotuning_tiles()
 
@@ -627,8 +727,17 @@ class AutotuningPanelMixin(ConfigManagerMixinBase):
                 self._refresh_suggestion_selection_display()
             if hasattr(self, "_update_report_display"):
                 self._update_report_display()
-            self.status_label.config(text="Autotuning completed successfully", foreground=widgets.STATUS_OK)
-            self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
+            not_applied = (
+                self._autotuning_progress_model.counts()[3] if self._autotuning_progress_model is not None else 0
+            )
+            if not_applied:
+                self.status_label.config(
+                    text=f"⚠ Autotuning completed - {not_applied} configuration(s) could not be patched",
+                    foreground=widgets.STATUS_FAIL,
+                )
+            else:
+                self.status_label.config(text="Autotuning completed successfully", foreground=widgets.STATUS_OK)
+            self.after(6000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore
         else:
             self.status_label.config(text="Autotuning failed", foreground=widgets.STATUS_FAIL)
             self.after(3000, lambda: self.status_label.config(text="Ready", foreground=widgets.STATUS_IDLE))  # type: ignore

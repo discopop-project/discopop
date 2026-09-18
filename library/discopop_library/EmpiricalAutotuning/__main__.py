@@ -8,9 +8,16 @@
 
 from argparse import ArgumentParser
 import os
+import sys
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.GlobalLogger.setup import setup_logger
 from discopop_library.EmpiricalAutotuning.Autotuner import run
+from discopop_library.ProjectManager.configurations.execution_time import (
+    DEFAULT_EXECUTION_TIME_REGEX,
+    DEFAULT_EXECUTION_TIME_TAG,
+    EXECUTION_TIME_DISABLED,
+    validate_execution_time_regex,
+)
 
 
 def parse_args() -> AutotunerArguments:
@@ -33,7 +40,11 @@ def parse_args() -> AutotunerArguments:
     parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     parser.add_argument("-p", "--plot", action="store_true", help="Allow the creation of interactive plots.")
-    parser.add_argument("-A", "--algorithm", type=int, default=0, help="Optimization algorithm. Values: 0: no combination of suggestions. 1: linear combination. 3: evolutionary combination. 4: greedy forward search (O(N) evaluations). 5: coordinate descent / bit-flip local search. Default: 0.")
+    parser.add_argument("-A", "--algorithm", type=int, default=0, help="Optimization algorithm. Values: 0: no combination of suggestions. 1: linear combination. 3: evolutionary combination. 4: greedy forward search (O(N) evaluations). 5: coordinate descent / bit-flip local search. 6: hotspot-guided region descent (deterministic, requires hotspot detection results). Default: 0.")
+    parser.add_argument("--noise-threshold", dest="noise_threshold", type=float, default=0.02, help="[-A 6] Relative runtime improvement a suggestion must achieve to be accepted, e.g. 0.02 for 2 percent. Larger values make the search more robust against measurement noise. Default: 0.02")
+    parser.add_argument("--hs-min-share", dest="hs_min_share", type=float, default=0.01, help="[-A 6] Ignore hot loops whose longest measured run is below this fraction of the hottest loop's. Default: 0.01")
+    parser.add_argument("--max-measurements", dest="max_measurements", type=int, default=0, help="[-A 6] Stop the search after this many compile-and-execute cycles. 0 disables the limit. Note that a search stopped by this limit is no longer reproducible. Default: 0")
+    parser.add_argument("--skip-removal-pass", dest="skip_removal_pass", action="store_true", help="[-A 6] Skip the final pass that checks whether an accepted suggestion can be removed again.")
 #    parser.add_argument("--project-path", type=str, default=os.getcwd(), help="Root path of the project to be tuned. \
 #                        Important: Project root will be copied multiple times! It has to contain the executable scripts DP_COMPILER.sh and DP_EXECUTE.sh! \
 #                        DP_COMPILER.sh must allow the inclusion of OpenMP pragmas into the code. \
@@ -41,10 +52,20 @@ def parse_args() -> AutotunerArguments:
 #                        A third script DP_VALIDATE.sh might be added to add a validation step, where return code 0 is interpreted as a success, i.e. a valid result.")
     parser.add_argument("--skip-cleanup", action="store_true", help="Disable the deletion of created code variants. May require a lot of disk space." )
     parser.add_argument("--sanitize", action="store_true", help="Enable the invocation of ThreadSanitizer if DP_COMPILE_SANITIZE.sh and DP_EXECUTE_SANITIZE.sh are provided." )
+    parser.add_argument("-etr", "--execution-time-regex", nargs="?", const=DEFAULT_EXECUTION_TIME_REGEX, default=None,
+                        help="Rank candidates by the execution time reported in the console output of execute.sh instead of its wall clock time. Expects a regular expression whose first capture group holds the value, e.g. 'Total time:\\s*([0-9.]+)'. Given without a value, the tag '<" + DEFAULT_EXECUTION_TIME_TAG + ">value</" + DEFAULT_EXECUTION_TIME_TAG + ">' is searched for. Overrides the per configuration setting stored in execution_time.json; pass an empty string to disable the search even where a configuration enables it. If omitted, the configuration's own setting applies.")
 
     # fmt:  is provided.
 
     arguments = parser.parse_args()
+
+    # Reject an unusable pattern here rather than letting the whole search run on
+    # wall clock times it was told not to use.
+    if arguments.execution_time_regex not in (None, EXECUTION_TIME_DISABLED):
+        regex_error = validate_execution_time_regex(arguments.execution_time_regex)
+        if regex_error is not None:
+            print("ERROR: --execution-time-regex: " + regex_error)
+            sys.exit(1)
 
     return AutotunerArguments(
         log_level=arguments.log.upper(),
@@ -59,6 +80,11 @@ def parse_args() -> AutotunerArguments:
         thread_count=arguments.threads,
         hotspot_types=arguments.hotspot_types,
         algorithm=arguments.algorithm,
+        noise_threshold=arguments.noise_threshold,
+        hs_min_share=arguments.hs_min_share,
+        max_measurements=arguments.max_measurements,
+        skip_removal_pass=arguments.skip_removal_pass,
+        execution_time_regex=arguments.execution_time_regex,
     )
 
 

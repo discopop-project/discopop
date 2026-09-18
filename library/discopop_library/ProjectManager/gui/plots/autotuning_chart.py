@@ -41,8 +41,16 @@ class Measurement:
     suggestions: List[int]
     speedup: Optional[float]
     runtime: Optional[float]
-    status: str  # "valid" | "invalid" | "failed"
+    status: str  # "valid" | "invalid" | "failed" | "not_applied"
     generation: Optional[int]
+    # Requested suggestions that never reached the code. When non-empty the search
+    # step carries no measurement at all: the configuration was skipped because its
+    # code was still the unmodified original.
+    failed_suggestions: List[int] = field(default_factory=list)
+
+    @property
+    def application_failed(self) -> bool:
+        return self.status == mode_style.NOT_APPLIED_STATUS
 
 
 @dataclass
@@ -70,6 +78,8 @@ class ProgressModel:
         if kind == "baseline":
             self.thread_count = int(event.get("thread_count", self.thread_count))
         elif kind == "measurement":
+            failed_suggestions = [int(s) for s in event.get("failed_suggestions", [])]
+            application_failed = bool(event.get("application_failed", False)) or bool(failed_suggestions)
             self.measurements.append(
                 Measurement(
                     index=int(event.get("index", len(self.measurements) + 1)),
@@ -80,8 +90,10 @@ class ProgressModel:
                         int(event.get("return_code", 0)),
                         bool(event.get("valid", False)),
                         bool(event.get("tsan", False)),
+                        application_failed=application_failed,
                     ),
                     generation=event.get("generation"),
+                    failed_suggestions=failed_suggestions,
                 )
             )
         elif kind == "generation":
@@ -118,16 +130,36 @@ class ProgressModel:
         valid = self._valid()
         return max((m.speedup for m in valid), default=None)  # type: ignore[type-var]
 
-    def counts(self) -> Tuple[int, int, int]:
+    def counts(self) -> Tuple[int, int, int, int]:
+        """(valid, invalid, failed, not_applied) over all reported measurements."""
         valid = sum(1 for m in self.measurements if m.status == "valid")
         invalid = sum(1 for m in self.measurements if m.status == "invalid")
         failed = sum(1 for m in self.measurements if m.status == "failed")
-        return valid, invalid, failed
+        not_applied = sum(1 for m in self.measurements if m.status == mode_style.NOT_APPLIED_STATUS)
+        return valid, invalid, failed, not_applied
+
+    def not_applied_measurements(self) -> List[Measurement]:
+        """The search steps whose patches could not be applied (never measured)."""
+        return [m for m in self.measurements if m.status == mode_style.NOT_APPLIED_STATUS]
+
+    def not_applied_warning(self) -> Optional[str]:
+        """A warning line for the GUI, or None when every configuration was patched."""
+        skipped = self.not_applied_measurements()
+        if not skipped:
+            return None
+        ids = sorted({s for m in skipped for s in (m.failed_suggestions or m.suggestions)})
+        return (
+            "⚠ "
+            + str(len(skipped))
+            + " configuration(s) could not be patched and were not measured"
+            + (" (suggestions: " + ", ".join(str(i) for i in ids) + ")" if ids else "")
+            + "."
+        )
 
     def summary_tiles(self) -> List[Tuple[str, str]]:
         """(label, value) pairs for the summary tile row above the plot."""
         best = self.best_speedup()
-        valid, invalid, failed = self.counts()
+        valid, invalid, failed, not_applied = self.counts()
         if best is not None:
             best_measurement = max(self._valid(), key=lambda m: m.speedup)  # type: ignore[arg-type,return-value]
             runtime = best_measurement.runtime
@@ -142,6 +174,7 @@ class ProgressModel:
             ("Evaluated", str(len(self.measurements))),
             ("Valid", str(valid)),
             ("Invalid / failed", f"{invalid} / {failed}"),
+            ("Not applied", str(not_applied)),
         ]
 
 
@@ -170,6 +203,23 @@ def render(figure: Any, model: ProgressModel) -> None:
         _render_steps(ax, model)
 
 
+def _annotate_not_applied(ax: Any, model: ProgressModel) -> None:
+    """Spell out the not-applied count in the plot, not only in the legend."""
+    warning = model.not_applied_warning()
+    if warning is None:
+        return
+    ax.text(
+        0.99,
+        0.02,
+        warning,
+        transform=ax.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=mode_style.ANNOTATION_SIZE,
+        color=mode_style.status_color(mode_style.NOT_APPLIED_STATUS),
+    )
+
+
 def _baseline_line(ax: Any, x_right: float) -> None:
     ax.axhline(1.0, color=mode_style.REFERENCE_COLOR, linewidth=1.2, linestyle="--")
     ax.annotate(
@@ -184,21 +234,25 @@ def _baseline_line(ax: Any, x_right: float) -> None:
 
 
 def _scatter_by_status(ax: Any, xy_by_status: Dict[str, List[Tuple[float, float]]]) -> None:
-    for status in ("valid", "invalid", "failed"):
+    for status in mode_style.STATUS_ORDER:
         pts = xy_by_status.get(status)
         if not pts:
             continue
         xs = [p[0] for p in pts]
         ys = [p[1] for p in pts]
+        not_applied = status == mode_style.NOT_APPLIED_STATUS
         ax.scatter(
             xs,
             ys,
-            s=mode_style.AUTOTUNER_SCATTER_SIZE,
+            # a not-applied step has no measurement: give it a larger, distinctly
+            # shaped marker so it cannot be read as a data point at speedup 0
+            s=mode_style.AUTOTUNER_SCATTER_SIZE * (1.4 if not_applied else 1.0),
+            marker=mode_style.status_marker(status),
             color=mode_style.status_color(status),
             edgecolors="white",
             linewidths=0.6,
-            zorder=3,
-            label=status,
+            zorder=4 if not_applied else 3,
+            label=mode_style.status_label(status),
         )
 
 
@@ -207,6 +261,7 @@ def _render_steps(ax: Any, model: ProgressModel) -> None:
     for m in model.measurements:
         y = m.speedup if (m.status == "valid" and m.speedup is not None) else 0.0
         xy_by_status.setdefault(m.status, []).append((float(m.index), float(y)))
+    _annotate_not_applied(ax, model)
 
     series = best_so_far([(m.index, m.speedup, m.status == "valid") for m in model.measurements])
     if series:
@@ -263,6 +318,7 @@ def _render_generations(ax: Any, model: ProgressModel) -> None:
         y = m.speedup if (m.status == "valid" and m.speedup is not None) else 0.0
         xy_by_status.setdefault(m.status, []).append((float(m.generation), float(y)))
     _scatter_by_status(ax, xy_by_status)
+    _annotate_not_applied(ax, model)
 
     x_right = float(max(gx)) if gx else 1.0
     _baseline_line(ax, x_right)

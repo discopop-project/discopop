@@ -390,12 +390,16 @@ argument and whose `light()` does not, measured through two configurations):
 
 ## 8. Out of scope
 
-* Changing `discopop_hotspot_analyzer` to join runs on resolved region keys
-  instead of ids. This would make compiling between runs safe, but it alters the
-  `Hotspots.json` contract consumed by the autotuner
-  (`HostpotLoader/hostpot_loader.py`) and the optimizer. The compile-once
-  invariant achieves correctness without touching the `hotspot_detection`
-  package.
+* ~~Changing `discopop_hotspot_analyzer` to join runs on resolved region keys
+  instead of ids.~~ **Done since.** `RegionKey` and the merging helpers moved to
+  `discopop_hotspot_analyzer.region_keys` (`plots/hotspot_data.py` re-exports
+  them), and the analyzer performs the same renumbering itself for its default
+  `--input-dir private` — so a project compiled more than once is analyzed
+  correctly however its runs were produced (CLI, MCP server, benchmark harness),
+  not only via this tab. `Hotspots.json` keeps its shape, so the autotuner
+  (`HostpotLoader/hostpot_loader.py`) and the optimizer are unaffected. The tab
+  itself is unchanged: it still renders `merged/` and passes `--input-dir
+  merged`, which the analyzer takes at face value.
 * Measuring several configurations from a single click. The tab operates on the
   selected configuration; accumulating across inputs is *select, click, repeat*.
 

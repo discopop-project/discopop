@@ -33,6 +33,18 @@ class AutotunerArguments(GeneralArguments):
     hotspot_types: str = ""
     algorithm: int = 0
     search_space: Optional[str] = None
+    # Tuning knobs of the hotspot-guided region descent (-A 6). Defaults are chosen so
+    # the algorithm can be run without any of them.
+    noise_threshold: float = 0.02
+    hs_min_share: float = 0.01
+    max_measurements: int = 0
+    skip_removal_pass: bool = False
+    # Overrides every configuration's stored "read the execution time from the
+    # program's output" setting; see
+    # discopop_library.ProjectManager.configurations.execution_time. The tuner
+    # ranks candidates by measured runtime, so which of the two times is measured
+    # decides what it optimizes for.
+    execution_time_regex: Optional[str] = None
 
     def __post_init__(self) -> None:
         self.project_path = str(Path(self.dot_dp_path).parent.absolute())

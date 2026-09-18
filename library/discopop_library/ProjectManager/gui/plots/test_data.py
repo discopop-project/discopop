@@ -180,3 +180,80 @@ def test_parse_progress_jsonl() -> None:
     text = '{"event": "baseline"}\n\n{"event": "measurement"}\nbroken line\n'
     events = parse_progress_jsonl(text)
     assert [e["event"] for e in events] == ["baseline", "measurement"]
+
+
+def _not_applied_entry(requested: int, thread_count: int = 4) -> Dict[str, Any]:
+    """A placeholder entry as written when the suggestions could not be applied."""
+    return {
+        "applied_suggestions": [],
+        "requested_suggestions": [requested],
+        "failed_suggestions": [requested],
+        "suggestion_application_failed": True,
+        "executed": False,
+        "code": -1,
+        "time": 0.0,
+        "thread_count": thread_count,
+        "label": "",
+    }
+
+
+def test_unapplied_run_is_flagged_and_carries_no_metrics() -> None:
+    data = {
+        "c": {
+            "execute.sh": {
+                "seq_settings.json": [
+                    {"applied_suggestions": [], "code": 0, "time": 10.0, "thread_count": 1},
+                ],
+                "par_settings.json": [_not_applied_entry(27)],
+            }
+        }
+    }
+    records = parse_execution_results(data)
+    skipped = [r for r in records if r.mode == "par"][0]
+    assert skipped.application_failed
+    assert skipped.failed_suggestions == [27] and skipped.requested_suggestions == [27]
+    assert not skipped.valid and not skipped.has_measurement
+    # it was never run, so there is nothing to report as a speedup
+    assert skipped.speedup is None and skipped.efficiency is None
+    assert skipped.status == "not_applied"
+
+
+def test_unapplied_run_does_not_become_the_autotuner_baseline() -> None:
+    """Its applied set is empty too, which used to make it a candidate reference."""
+    data = {
+        "c": {
+            "execute.sh": {
+                "par_settings.json": [
+                    {"applied_suggestions": [], "code": 0, "time": 4.0, "thread_count": 4},  # real baseline
+                    _not_applied_entry(27),  # zero runtime, must be ignored
+                    {"applied_suggestions": [1], "code": 0, "time": 2.0, "thread_count": 4},
+                ]
+            }
+        }
+    }
+    by_key = {(tuple(r.applied_suggestions), r.application_failed): r for r in parse_execution_results(data)}
+    assert by_key[((), False)].speedup == 1.0
+    assert by_key[((1,), False)].speedup == 2.0  # 4.0 / 2.0, not 0.0 / 2.0
+
+
+def test_unapplied_seq_run_does_not_become_the_seq_baseline() -> None:
+    data = {
+        "c": {
+            "execute.sh": {
+                "seq_settings.json": [_not_applied_entry(1, thread_count=1)],
+                "par_settings.json": [
+                    {"applied_suggestions": [1], "code": 0, "time": 2.0, "thread_count": 4},
+                ],
+            }
+        }
+    }
+    par = [r for r in parse_execution_results(data) if r.mode == "par"][0]
+    # no usable baseline exists, so no speedup is invented from the placeholder
+    assert par.speedup is None
+
+
+def test_ordinary_entries_default_to_applied() -> None:
+    """Results written before the new fields existed must keep reading as measurements."""
+    records = parse_execution_results(_sample_results())
+    assert all(not r.application_failed for r in records)
+    assert all(r.has_measurement for r in records)

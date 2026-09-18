@@ -31,8 +31,10 @@ def load_patches(
         suggestions_to_be_applied = json.loads(f.read())["applied"]
 
     # apply all suggestions
-    retval = apply_patches(
+    result = apply_patches(
         suggestions_to_be_applied, file_mapping, arguments, applied_suggestions_file, patch_generator_dir
     )
+    if result.failure:
+        print("WARNING: " + result.summary())
 
-    return retval
+    return result.retval

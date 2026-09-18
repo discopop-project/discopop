@@ -58,15 +58,20 @@ def get_variables(pet: PEGraphX, nodes: Sequence[Node]) -> Dict[Variable, Set[Me
             for v in node.global_vars:
                 if v not in res:
                     res[v] = set()
-            # try to identify memory regions
+            # try to identify memory regions.
+            # since the variable name is checked for equality afterwards,
+            # it is safe to consider incoming dependencies at this point as well.
+            # Note that INIT type edges are considered as well!
+            # The node's dependencies do not depend on the variable, so they are collected once per
+            # node and indexed by variable name. Querying them inside the loop over `res` re-filtered
+            # all of the node's edges for every variable seen so far, which made this quadratic in
+            # the number of variables and dominated the do-all pattern construction.
+            memory_regions_by_var_name: Dict[str, Set[MemoryRegion]] = dict()
+            for _, _, dep in out_edges(pet, node.id, EdgeType.DATA) + in_edges(pet, node.id, EdgeType.DATA):
+                if dep.var_name is not None and dep.memory_region is not None:
+                    memory_regions_by_var_name.setdefault(dep.var_name, set()).add(dep.memory_region)
             for var_name in res:
-                # since the variable name is checked for equality afterwards,
-                # it is safe to consider incoming dependencies at this point as well.
-                # Note that INIT type edges are considered as well!
-                for _, _, dep in out_edges(pet, node.id, EdgeType.DATA) + in_edges(pet, node.id, EdgeType.DATA):
-                    if dep.var_name == var_name.name:
-                        if dep.memory_region is not None:
-                            res[var_name].add(dep.memory_region)
+                res[var_name].update(memory_regions_by_var_name.get(var_name.name, set()))
     return res
 
 

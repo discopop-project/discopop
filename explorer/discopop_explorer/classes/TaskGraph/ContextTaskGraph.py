@@ -340,18 +340,22 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
                 # inter-component dependency
                 # check if sink_ctx_parent_component is a parent of ctx_parent_component
                 sink_is_parent_of: Optional[Context] = None
-                candidates = component_replacements_dict[ctx_parent_component]
+                # copy: the dict entry must not be consumed by the walk, it is read again for
+                # every other ctx. Visited set: the replacement relation is not guaranteed to be
+                # acyclic, and "not in candidates" alone only rejects duplicates that are still
+                # queued, so an already-processed candidate could be re-enqueued forever.
+                candidates = list(component_replacements_dict[ctx_parent_component])
+                visited_candidates: Set[Context] = set(candidates)
                 while len(candidates) > 0:
                     current_candidate = candidates.pop(0)
                     if inverse_component_dict[current_candidate] == sink_ctx_parent_component:
                         # sink_ctx_parent_component is a parent of ctx_parent_component
                         sink_is_parent_of = current_candidate
                         break
-                    candidates += [
-                        c
-                        for c in component_replacements_dict[inverse_component_dict[current_candidate]]
-                        if c not in candidates
-                    ]
+                    for c in component_replacements_dict[inverse_component_dict[current_candidate]]:
+                        if c not in visited_candidates:
+                            visited_candidates.add(c)
+                            candidates.append(c)
 
                 if sink_is_parent_of is not None:
                     # inward dependency found
@@ -372,18 +376,19 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
                 # inter-component dependency
                 # check if ctx_parent_component is a parent of sink_ctx_parent_component
                 source_is_parent_of: Optional[Context] = None
-                candidates = component_replacements_dict[sink_ctx_parent_component]
+                # see the inward walk above for why this copies and tracks visited candidates
+                candidates = list(component_replacements_dict[sink_ctx_parent_component])
+                visited_candidates = set(candidates)
                 while len(candidates) > 0:
                     current_candidate = candidates.pop(0)
                     if inverse_component_dict[current_candidate] == ctx_parent_component:
                         # ctx_parent_component is a parent of sink_ctx_parent_component
                         source_is_parent_of = current_candidate
                         break
-                    candidates += [
-                        c
-                        for c in component_replacements_dict[inverse_component_dict[current_candidate]]
-                        if c not in candidates
-                    ]
+                    for c in component_replacements_dict[inverse_component_dict[current_candidate]]:
+                        if c not in visited_candidates:
+                            visited_candidates.add(c)
+                            candidates.append(c)
 
                 if source_is_parent_of is not None:
                     # outward dependency found
@@ -489,13 +494,35 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
         # TODO: Consider plotting online statistics (especially interesting for larger software)
         self.__print_graph_statistics("Pre simplification")
 
+        # Safety bound on the fixpoint iteration. Every simplification step is supposed to make
+        # the graph strictly smaller, which bounds the number of productive iterations by the
+        # initial size - but split_taskable_control_sequence *adds* nodes, and the steps interact,
+        # so that is an assumption about six mutually recursive passes rather than something the
+        # code enforces. If two steps ever start undoing each other, this turns a silent hang into
+        # a warning plus a usable (if less reduced) result.
+        iteration_budget = max(1000, len(self.graph.nodes) + len(self.graph.edges))
+        budget_exhausted = False
+
         outer_modification_applied = True
-        while outer_modification_applied:
+        while outer_modification_applied and not budget_exhausted:
             outer_modification_applied = False
 
             inner_modification_applied = True
-            while inner_modification_applied:
+            while inner_modification_applied and not budget_exhausted:
                 inner_modification_applied = False
+
+                iteration_budget -= 1
+                if iteration_budget <= 0:
+                    logger.warning(
+                        "ContextTaskGraph simplification did not reach a fixpoint within its "
+                        "iteration budget and was stopped early. The simplification steps are "
+                        "likely undoing each other. Continuing with the partially simplified "
+                        "graph (%d nodes, %d edges).",
+                        len(self.graph.nodes),
+                        len(self.graph.edges),
+                    )
+                    budget_exhausted = True
+                    break
 
                 if True:
                     # note: THIS IS A WORK IN PROGRESS, NOT SURE IT IS BENEFICIAL!

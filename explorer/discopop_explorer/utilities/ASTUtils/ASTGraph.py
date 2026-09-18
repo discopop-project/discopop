@@ -96,6 +96,13 @@ class ClangASTGraph:
                 "loc": loc,
                 "range": range_info,
                 "inner": node.get("inner", []),
+                # operator spelling of BinaryOperator / CompoundAssignOperator / UnaryOperator
+                # nodes ("=", "+=", "++", "&", ...); None for every other kind
+                "opcode": node.get("opcode"),
+                # name of the declaration a DeclRefExpr resolves to. Clang keeps it in
+                # "referencedDecl", not in the node's own "name", so without lifting it here a
+                # DeclRefExpr carries no indication of which variable it reads or writes.
+                "referenced_name": (node.get("referencedDecl") or {}).get("name"),
             }
 
             self.graph.add_node(node_id, **attrs)

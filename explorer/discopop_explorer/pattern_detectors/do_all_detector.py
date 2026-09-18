@@ -97,12 +97,15 @@ class DoAllInfo(PatternInfo):
         )
 
     def get_tag(self) -> str:
+        # the clause lists are materialized from sets, so their order is not reproducible
+        # across runs. The tag identifies a pattern - including for the duplicate check in the
+        # detectors - so it is built from sorted names.
         result = super().get_tag() + "_"
-        result += f"p({[v.name for v in self.private]})_"
-        result += f"s({[v.name for v in self.shared]})_"
-        result += f"fp({[v.name for v in self.first_private]})_"
-        result += f"r({[v.name for v in self.reduction]})_"
-        result += f"lp({[v.name for v in self.last_private]})_"
+        result += f"p({sorted(v.name for v in self.private)})_"
+        result += f"s({sorted(v.name for v in self.shared)})_"
+        result += f"fp({sorted(v.name for v in self.first_private)})_"
+        result += f"r({sorted(v.name for v in self.reduction)})_"
+        result += f"lp({sorted(v.name for v in self.last_private)})_"
         # the collapse level distinguishes patterns which target the same loop but fold in a
         # different number of nested loops, and which may carry identical clauses
         result += f"c({self.collapse_level})"

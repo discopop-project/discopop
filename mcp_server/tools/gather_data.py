@@ -48,6 +48,12 @@ TOOL = Tool(
         "Each step is automatically skipped when its outputs are already current "
         "relative to the source files. Use force=true to re-run all steps unconditionally. "
         "\n\n"
+        "Steps 1 and 4 compile in the project itself, so the project's build directory is "
+        "rebuilt plainly (par_settings.json) before this tool returns: a build left over "
+        "from instrumentation produces binaries that are orders of magnitude slower than "
+        "the program and may abort, so building and running the program by hand afterwards "
+        "is safe. "
+        "\n\n"
         "On success, call get_parallelization_patches to retrieve the generated patches."
     ),
     inputSchema={
@@ -158,8 +164,16 @@ def _hotspot_instrument(
     finally:
         os.chdir(original_cwd)
 
+    # From here on the project's own build directory has been reconfigured for
+    # instrumentation, whatever the outcome -- which is what `_restore_plain_build`
+    # has to know, and cannot tell from a status alone: a pre-flight error never
+    # touched the build, a failed compile did.
     if exec_result is None:
-        return {"status": "error", "message": "execute_configuration returned None for hd_settings.json."}
+        return {
+            "status": "error",
+            "message": "execute_configuration returned None for hd_settings.json.",
+            "compiled_in_place": True,
+        }
 
     returncode, elapsed, stdout, stderr = exec_result
     _log_stdout(project_path, "hotspot_instrument", stdout, ctx)
@@ -171,9 +185,10 @@ def _hotspot_instrument(
             "returncode": returncode,
             "elapsed_time": elapsed,
             "stderr": stderr,
+            "compiled_in_place": True,
         }
     ctx.log_action(project_path, "gather_data", f"Hotspot instrumentation succeeded in {elapsed}s")
-    return {"status": "success", "elapsed_time": elapsed}
+    return {"status": "success", "elapsed_time": elapsed, "compiled_in_place": True}
 
 
 def _hotspot_profiling_single(
@@ -398,8 +413,14 @@ def _instrument_project(
     finally:
         os.chdir(original_cwd)
 
+    # See the note in `_hotspot_instrument`: past this point the build directory
+    # is instrumented regardless of how the step ends.
     if exec_result is None:
-        return {"status": "error", "message": "execute_configuration returned None for dp_settings.json."}
+        return {
+            "status": "error",
+            "message": "execute_configuration returned None for dp_settings.json.",
+            "compiled_in_place": True,
+        }
 
     returncode, elapsed, stdout, stderr = exec_result
     _log_stdout(project_path, "instrument_project", stdout, ctx)
@@ -411,6 +432,7 @@ def _instrument_project(
             "returncode": returncode,
             "elapsed_time": elapsed,
             "stderr": stderr,
+            "compiled_in_place": True,
         }
     if not data_xml.exists():
         return {
@@ -419,9 +441,10 @@ def _instrument_project(
             "returncode": returncode,
             "elapsed_time": elapsed,
             "stderr": stderr,
+            "compiled_in_place": True,
         }
     ctx.log_action(project_path, "gather_data", f"Instrumentation succeeded in {elapsed}s")
-    return {"status": "success", "elapsed_time": elapsed}
+    return {"status": "success", "elapsed_time": elapsed, "compiled_in_place": True}
 
 
 def _run_profiling(
@@ -565,12 +588,276 @@ def _run_pattern_detection(
     return {"status": "success"}
 
 
+def _compiled_in_place(steps: dict[str, Any]) -> bool:
+    """Whether any step of this call reconfigured the project's own build.
+
+    Read off the ``compiled_in_place`` marker the two instrumentation steps set
+    once their ``execute_configuration`` call has run, rather than guessed from
+    a status: a step that failed its pre-flight checks never touched the build,
+    while one whose compilation failed left it instrumented and half-built --
+    the case most in need of restoring, and the one a status cannot tell apart.
+    """
+    return any(
+        isinstance(steps.get(key), dict) and bool(steps[key].get("compiled_in_place"))
+        for key in ("hotspot_instrumentation", "instrumentation")
+    )
+
+
+def _restore_plain_build(
+    project_path: str,
+    config_name: str,
+    timeout_seconds: int,
+    ctx: ToolContext,
+) -> dict[str, Any]:
+    """Rebuild the project plainly, undoing what the instrumented builds left.
+
+    The instrumentation steps above run *in place* (``execute_inplace=True``,
+    ``project_copy_root_path=project_path``) rather than in the sibling copy the
+    ProjectManager flow uses -- the profiling output has to land in this
+    project's ``.discopop``. A compile script normally configures a build
+    directory of its own, so when the last thing that ran was ``dp_settings``
+    or ``hd_settings``, whatever it left behind is pinned to ``discopop_cc`` /
+    ``discopop_cxx``: an ordinary ``make`` in it produces an instrumented
+    binary, and running that binary is orders of magnitude slower than the
+    program and may abort outright.
+
+    Nobody asked for that state and nothing announces it, so an agent (or a
+    person) who builds and runs the program to check their own work measures
+    DiscoPoP's instrumentation instead and reads the crash as their bug. One
+    observed run lost six minutes to three such executions and then discarded a
+    working parallelization because of them. So the build is put back before
+    this tool returns, with ``par_settings.json`` -- the configuration the
+    parallelized code is measured with, so a hand-run of the program now agrees
+    with what the auto-tuner reports -- falling back to ``seq_settings.json``.
+
+    Best effort by design: the data this tool exists to produce is already on
+    disk by the time this runs, so a failed rebuild is reported and logged, but
+    never turns a successful pipeline into a failed one.
+    """
+    p = Path(project_path)
+    configs_dir = p / ".discopop" / "project" / "configs"
+    config_dir = configs_dir / config_name
+    compile_sh = Path(resolve_compile_script_path(str(configs_dir), config_name))
+
+    settings = configs_dir / "par_settings.json"
+    if not settings.exists():
+        settings = configs_dir / "seq_settings.json"
+    if not settings.exists():
+        return {"status": "skipped", "reason": "no_plain_settings_file"}
+    if not compile_sh.exists() or not config_dir.exists():
+        return {"status": "skipped", "reason": "compile_script_or_configuration_missing"}
+
+    pm_args = ctx.make_pm_args(project_path, timeout_seconds)
+    ctx.log_action(
+        project_path,
+        "gather_data",
+        f"Restoring plain build: {compile_sh} via {settings.name}, config='{config_name}'",
+    )
+    original_cwd = os.getcwd()
+    try:
+        exec_result = execute_configuration(
+            arguments=pm_args,
+            project_copy_root_path=project_path,
+            config_path=str(config_dir),
+            settings_path=str(settings),
+            script_path=str(compile_sh),
+            thread_count=1,
+            timeout=float(timeout_seconds),
+        )
+    except Exception as error:  # a cleanup step may not take the pipeline down
+        ctx.log_action(project_path, "gather_data", f"Plain rebuild raised: {error}")
+        return {"status": "error", "message": f"Plain rebuild raised: {error}", "settings": settings.name}
+    finally:
+        os.chdir(original_cwd)
+
+    if exec_result is None:
+        return {"status": "error", "message": "execute_configuration returned None.", "settings": settings.name}
+
+    returncode, elapsed, stdout, stderr = exec_result
+    _log_stdout(project_path, "restore_plain_build", stdout, ctx)
+    if returncode != 0:
+        ctx.log_action(
+            project_path,
+            "gather_data",
+            f"Plain rebuild failed (rc={returncode}); the build directory may still be instrumented",
+        )
+        return {
+            "status": "error",
+            "message": (
+                f"Plain rebuild failed (rc={returncode}). The build directory may still hold an "
+                "instrumented binary -- rebuild from scratch before running the program by hand."
+            ),
+            "returncode": returncode,
+            "elapsed_time": elapsed,
+            "settings": settings.name,
+            "stderr": stderr,
+        }
+    ctx.log_action(project_path, "gather_data", f"Plain build restored in {elapsed}s")
+    return {"status": "success", "elapsed_time": elapsed, "settings": settings.name}
+
+
 def _progress(step: int, total: int, label: str) -> None:
     from termcolor import colored
 
     prefix = colored(f"[gather_data {step}/{total}]", "cyan", attrs=["bold"])
     sys.stderr.write(f"\r{prefix} {label}...\n")
     sys.stderr.flush()
+
+
+def _count_suggestions(project_path: str) -> Optional[int]:
+    """How many parallelization suggestions the explorer produced, or None if unknown."""
+    patch_gen_dir = Path(project_path) / ".discopop" / "patch_generator"
+    if not patch_gen_dir.is_dir():
+        return None
+    try:
+        return len([entry for entry in patch_gen_dir.iterdir() if entry.is_dir() and entry.name.isdigit()])
+    except OSError:
+        return None
+
+
+def _next_step_hint(suggestion_count: Optional[int]) -> str:
+    """What to do with the patches that were just generated."""
+    if suggestion_count == 0:
+        return (
+            "No parallelization suggestion was found. get_data_dependencies explains why a " "given loop was rejected."
+        )
+    found = f"{suggestion_count} parallelization suggestions were generated. " if suggestion_count else ""
+    return (
+        found + "Call run_auto_tuning to have DiscoPoP measure which combination of them is "
+        "fastest (add apply=true to apply that combination in the same call) — do this before "
+        "applying anything, since the search needs an un-patched project. "
+        "get_parallelization_patches lists the suggestions, and get_data_dependencies "
+        "explains the dependencies behind an individual one."
+    )
+
+
+def _pipeline(
+    project_path: str,
+    config_name: str,
+    hotspot_config_names: list[str],
+    timeout_seconds: int,
+    force: bool,
+    ctx: ToolContext,
+) -> dict[str, Any]:
+    """The data collection pipeline itself, as a result dict.
+
+    Separated from :func:`handle` so that the build directory the instrumented
+    steps reconfigure is restored on *every* exit path: the early returns below
+    for a failed instrumentation, profiling or detection all leave a project
+    whose build produces instrumented binaries, and those are exactly the cases
+    where the caller is most likely to go and run the program by hand.
+    """
+    steps: dict[str, Any] = {}
+    hotspot_detection_enabled = len(hotspot_config_names) >= 1
+    hotspot_ok = True
+
+    # Compute source mtime once and reuse across all staleness checks.
+    source_mtime = ToolContext.newest_source_mtime(project_path)
+
+    num_hd_steps = 3 if hotspot_detection_enabled else 0
+    total_steps = num_hd_steps + 3  # instrument + profile + detect
+    step = 0
+
+    # === Optional: hotspot detection pipeline ===
+    if hotspot_detection_enabled:
+        step += 1
+        _progress(step, total_steps, "Hotspot instrumentation")
+        hd_instr = _hotspot_instrument(project_path, config_name, timeout_seconds, force, ctx, source_mtime)
+        steps["hotspot_instrumentation"] = hd_instr
+
+        if hd_instr["status"] in ("success", "skipped"):
+            step += 1
+            _progress(step, total_steps, f"Hotspot profiling ({len(hotspot_config_names)} config(s))")
+            profiling_runs: list[dict[str, Any]] = []
+            for hd_config in hotspot_config_names:
+                run_res = _hotspot_profiling_single(project_path, hd_config, timeout_seconds, force, ctx, source_mtime)
+                profiling_runs.append({"config": hd_config, **run_res})
+            steps["hotspot_profiling"] = profiling_runs
+
+            if all(r["status"] in ("success", "skipped") for r in profiling_runs):
+                step += 1
+                _progress(step, total_steps, "Hotspot analysis")
+                hd_analysis = _hotspot_analysis(project_path, timeout_seconds, force, ctx, source_mtime)
+                steps["hotspot_analysis"] = hd_analysis
+                if hd_analysis["status"] not in ("success", "skipped"):
+                    hotspot_ok = False
+            else:
+                step += 1
+                hotspot_ok = False
+                steps["hotspot_analysis"] = {"status": "not_run", "reason": "hotspot_profiling_failed"}
+        else:
+            step += 2
+            hotspot_ok = False
+            steps["hotspot_profiling"] = []
+            steps["hotspot_analysis"] = {"status": "not_run", "reason": "hotspot_instrumentation_failed"}
+
+    # === Required: instrument project ===
+    step += 1
+    _progress(step, total_steps, "DiscoPoP instrumentation (compile)")
+    instr = _instrument_project(project_path, config_name, timeout_seconds, force, ctx, source_mtime)
+    steps["instrumentation"] = instr
+    if instr["status"] not in ("success", "skipped"):
+        result: dict[str, Any] = {
+            "status": "error",
+            "project_path": project_path,
+            "message": "Instrumentation failed. See steps.instrumentation for details.",
+            "hotspot_detection_enabled": hotspot_detection_enabled,
+            "steps": steps,
+        }
+        return result
+
+    # === Required: run instrumented binary ===
+    step += 1
+    _progress(step, total_steps, "Profiling (run instrumented binary)")
+    prof = _run_profiling(project_path, config_name, timeout_seconds, force, ctx, source_mtime)
+    steps["profiling"] = prof
+    if prof["status"] not in ("success", "skipped"):
+        result = {
+            "status": "error",
+            "project_path": project_path,
+            "message": "Profiling failed. See steps.profiling for details.",
+            "hotspot_detection_enabled": hotspot_detection_enabled,
+            "steps": steps,
+        }
+        return result
+
+    # === Required: pattern detection ===
+    step += 1
+    _progress(step, total_steps, "Pattern detection (discopop_explorer)")
+    detection = _run_pattern_detection(project_path, timeout_seconds, force, ctx, source_mtime)
+    steps["pattern_detection"] = detection
+    if detection["status"] not in ("success", "skipped"):
+        result = {
+            "status": "error",
+            "project_path": project_path,
+            "message": "Pattern detection failed. See steps.pattern_detection for details.",
+            "hotspot_detection_enabled": hotspot_detection_enabled,
+            "steps": steps,
+        }
+        return result
+
+    from termcolor import colored
+
+    sys.stderr.write(f"\r{colored('[gather_data]', 'green', attrs=['bold'])} Pipeline complete.\n")
+    sys.stderr.flush()
+
+    result = {
+        "status": "success",
+        "project_path": project_path,
+        "hotspot_detection_enabled": hotspot_detection_enabled,
+        "steps": steps,
+    }
+    if hotspot_detection_enabled and not hotspot_ok:
+        result["warning"] = "Hotspot detection failed; pattern analysis covers the entire codebase."
+    # What to do with the patches is the question this pipeline exists to raise, and a
+    # result is read far more reliably than a tool description. Saying how many there
+    # are and which tool decides between them is what keeps the next step from being a
+    # guess made out of the source code.
+    suggestion_count = _count_suggestions(project_path)
+    if suggestion_count is not None:
+        result["suggestions_found"] = suggestion_count
+    result["next_step"] = _next_step_hint(suggestion_count)
+    return result
 
 
 def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
@@ -581,113 +868,23 @@ def handle(arguments: dict[str, Any], ctx: ToolContext) -> list[TextContent]:
         timeout_seconds: int = arguments.get("timeout_seconds", 3600)
         force: bool = arguments.get("force", False)
 
-        steps: dict[str, Any] = {}
-        hotspot_detection_enabled = len(hotspot_config_names) >= 1
-        hotspot_ok = True
+        result = _pipeline(project_path, config_name, hotspot_config_names, timeout_seconds, force, ctx)
 
-        # Compute source mtime once and reuse across all staleness checks.
-        source_mtime = ToolContext.newest_source_mtime(project_path)
+        # Leave the project buildable by hand again. Only when something was
+        # actually compiled in place: a call that skipped every instrumentation
+        # step because its results were current found -- and leaves -- the build
+        # the previous call already restored, and a rebuild would be waste.
+        steps = result.get("steps") or {}
+        if _compiled_in_place(steps):
+            restore = _restore_plain_build(project_path, config_name, timeout_seconds, ctx)
+            steps["build_restore"] = restore
+            result["steps"] = steps
+            if restore.get("status") == "error":
+                # Reported, never fatal: the data this tool exists to produce is
+                # already on disk.
+                warning = str(restore.get("message") or "The plain rebuild failed.")
+                result["warning"] = f"{result['warning']} {warning}" if result.get("warning") else warning
 
-        num_hd_steps = 3 if hotspot_detection_enabled else 0
-        total_steps = num_hd_steps + 3  # instrument + profile + detect
-        step = 0
-
-        # === Optional: hotspot detection pipeline ===
-        if hotspot_detection_enabled:
-            step += 1
-            _progress(step, total_steps, "Hotspot instrumentation")
-            hd_instr = _hotspot_instrument(project_path, config_name, timeout_seconds, force, ctx, source_mtime)
-            steps["hotspot_instrumentation"] = hd_instr
-
-            if hd_instr["status"] in ("success", "skipped"):
-                step += 1
-                _progress(step, total_steps, f"Hotspot profiling ({len(hotspot_config_names)} config(s))")
-                profiling_runs: list[dict[str, Any]] = []
-                for hd_config in hotspot_config_names:
-                    run_res = _hotspot_profiling_single(
-                        project_path, hd_config, timeout_seconds, force, ctx, source_mtime
-                    )
-                    profiling_runs.append({"config": hd_config, **run_res})
-                steps["hotspot_profiling"] = profiling_runs
-
-                if all(r["status"] in ("success", "skipped") for r in profiling_runs):
-                    step += 1
-                    _progress(step, total_steps, "Hotspot analysis")
-                    hd_analysis = _hotspot_analysis(project_path, timeout_seconds, force, ctx, source_mtime)
-                    steps["hotspot_analysis"] = hd_analysis
-                    if hd_analysis["status"] not in ("success", "skipped"):
-                        hotspot_ok = False
-                else:
-                    step += 1
-                    hotspot_ok = False
-                    steps["hotspot_analysis"] = {"status": "not_run", "reason": "hotspot_profiling_failed"}
-            else:
-                step += 2
-                hotspot_ok = False
-                steps["hotspot_profiling"] = []
-                steps["hotspot_analysis"] = {"status": "not_run", "reason": "hotspot_instrumentation_failed"}
-
-        # === Required: instrument project ===
-        step += 1
-        _progress(step, total_steps, "DiscoPoP instrumentation (compile)")
-        instr = _instrument_project(project_path, config_name, timeout_seconds, force, ctx, source_mtime)
-        steps["instrumentation"] = instr
-        if instr["status"] not in ("success", "skipped"):
-            result: dict[str, Any] = {
-                "status": "error",
-                "project_path": project_path,
-                "message": "Instrumentation failed. See steps.instrumentation for details.",
-                "hotspot_detection_enabled": hotspot_detection_enabled,
-                "steps": steps,
-            }
-            ctx.log_response("gather_data", result)
-            return [TextContent(type="text", text=json.dumps(result))]
-
-        # === Required: run instrumented binary ===
-        step += 1
-        _progress(step, total_steps, "Profiling (run instrumented binary)")
-        prof = _run_profiling(project_path, config_name, timeout_seconds, force, ctx, source_mtime)
-        steps["profiling"] = prof
-        if prof["status"] not in ("success", "skipped"):
-            result = {
-                "status": "error",
-                "project_path": project_path,
-                "message": "Profiling failed. See steps.profiling for details.",
-                "hotspot_detection_enabled": hotspot_detection_enabled,
-                "steps": steps,
-            }
-            ctx.log_response("gather_data", result)
-            return [TextContent(type="text", text=json.dumps(result))]
-
-        # === Required: pattern detection ===
-        step += 1
-        _progress(step, total_steps, "Pattern detection (discopop_explorer)")
-        detection = _run_pattern_detection(project_path, timeout_seconds, force, ctx, source_mtime)
-        steps["pattern_detection"] = detection
-        if detection["status"] not in ("success", "skipped"):
-            result = {
-                "status": "error",
-                "project_path": project_path,
-                "message": "Pattern detection failed. See steps.pattern_detection for details.",
-                "hotspot_detection_enabled": hotspot_detection_enabled,
-                "steps": steps,
-            }
-            ctx.log_response("gather_data", result)
-            return [TextContent(type="text", text=json.dumps(result))]
-
-        from termcolor import colored
-
-        sys.stderr.write(f"\r{colored('[gather_data]', 'green', attrs=['bold'])} Pipeline complete.\n")
-        sys.stderr.flush()
-
-        result = {
-            "status": "success",
-            "project_path": project_path,
-            "hotspot_detection_enabled": hotspot_detection_enabled,
-            "steps": steps,
-        }
-        if hotspot_detection_enabled and not hotspot_ok:
-            result["warning"] = "Hotspot detection failed; pattern analysis covers the entire codebase."
         ctx.log_response("gather_data", result)
         return [TextContent(type="text", text=json.dumps(result))]
 
