@@ -10,7 +10,7 @@ name: "Venv with DiscoPoP installed"
 description: >
   Provides ./venv with the development requirements and all DiscoPoP packages, installed without -e (the editable
   installs are a convenience for developers, the CI does not need them). The venv is restored from the actions cache,
-  keyed by the environment (system image) and the files the installation depends on, and only built on a miss. The
+  keyed by the environment (key from create_matrix) and the files the installation depends on, and only built on a miss. The
   job "prepare_build" builds and saves it once per environment; the jobs that need it only restore it.
   Building the profiler (LLVM pass, runtime library) is the expensive part, and its sources change less often than
   the Python packages: its wheel is cached separately (action profiler-wheel), keyed by profiler/ only, so a change of
@@ -20,7 +20,7 @@ description: >
 
 inputs:
   environment:
-    description: "Identifies the system the venv is built for, e.g. the image of the container (part of the cache keys)"
+    description: "Identifies the system the venv is built for, e.g. the environment key from create_matrix (part of the cache keys)"
     required: true
   python:
     description: "Interpreter the venv is created with"

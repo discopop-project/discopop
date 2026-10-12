@@ -10,13 +10,13 @@ name: "Wheel of the DiscoPoP profiler"
 description: >
   Provides a wheel of the DiscoPoP profiler (LLVM pass, runtime library) built from the sources in `source`, in
   `wheel_dir`. Building the profiler is expensive and its sources change less often than the rest, so the wheel
-  is restored from the actions cache, keyed by the environment (system image) and the sources in `source`/profiler,
+  is restored from the actions cache, keyed by the environment (key from create_matrix) and the sources in `source`/profiler,
   and only built on a miss. Used for the venv of the version under test (prepared-venv) and for the version the
   benchmarks compare with. The cache is evicted by GitHub when unused, nothing is stored permanently.
 
 inputs:
   environment:
-    description: "Identifies the system the wheel is built for, e.g. the image of the container (part of the cache key)"
+    description: "Identifies the system the wheel is built for, e.g. the environment key from create_matrix (part of the cache key)"
     required: true
   source:
     description: "Checkout whose profiler/ is built, relative to the workspace"
