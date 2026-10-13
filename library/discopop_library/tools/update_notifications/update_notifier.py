@@ -12,6 +12,7 @@ from importlib.metadata import version  # type: ignore
 from packaging.version import Version  # type: ignore
 import os
 import json
+import tempfile
 from datetime import date
 from discopop_library.StatusReporting.console import warn
 from .notification_dialog import notify
@@ -20,7 +21,15 @@ logger = logging.getLogger("UpdateNotifier")
 
 
 def run(module_name: str, module_api_url: str, module_release_url: str) -> None:
+    # the update check is a convenience and must never abort the calling tool,
+    # e.g. when several tools share the configuration files concurrently
+    try:
+        _run_update_check(module_name, module_api_url, module_release_url)
+    except Exception as ex:
+        warn(f"Update check failed with: {type(ex)}: {ex}")
 
+
+def _run_update_check(module_name: str, module_api_url: str, module_release_url: str) -> None:
     config_dir = os.path.join(str(os.getenv("HOME")), ".discopop_config")
     auto_updater_dir = os.path.join(config_dir, "auto_updater")
     settings_file = os.path.join(auto_updater_dir, "settings.json")
@@ -46,41 +55,47 @@ def automatic_updates_active(settings_file: str) -> bool:
         return False
 
 
+def write_json_atomically(path: str, content: Any) -> None:
+    """Write content to path such that concurrent readers see either the old or the new file, never a partial one.
+
+    Every writer uses its own temporary file, and os.replace swaps it in atomically.
+    """
+    fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(path), prefix=os.path.basename(path) + ".", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(content, f)
+        # mkstemp creates the file readable by the owner only
+        os.chmod(tmp_path, 0o644)
+        os.replace(tmp_path, path)
+    except BaseException:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+        raise
+
+
 def register_current_module(modules_file: str, module_name: str, module_api_url: str, module_release_url: str) -> None:
-    tmp_modules_file = modules_file + ".tmp"
     with open(modules_file, "r") as f:
         modules = json.load(f)
-        if module_name not in modules:
-            module_dict = {
-                "api_url": module_api_url,
-                "release_url": module_release_url,
-                "last_checked": None,
-                "last_result": "",
-            }
-            modules[module_name] = module_dict
-
-            with open(tmp_modules_file, "w+") as g:
-                json.dump(modules, g)
-
-    if os.path.exists(tmp_modules_file):
-        os.remove(modules_file)
-        os.rename(tmp_modules_file, modules_file)
+    if module_name not in modules:
+        module_dict = {
+            "api_url": module_api_url,
+            "release_url": module_release_url,
+            "last_checked": None,
+            "last_result": "",
+        }
+        modules[module_name] = module_dict
+        write_json_atomically(modules_file, modules)
 
 
 def setup_folder_structure(config_dir: str, auto_updater_dir: str, settings_file: str, modules_file: str) -> None:
     logger.debug("Checking existence of " + config_dir)
-    if not os.path.exists(config_dir):
-        os.mkdir(config_dir)
-    if not os.path.exists(auto_updater_dir):
-        os.mkdir(auto_updater_dir)
+    os.makedirs(auto_updater_dir, exist_ok=True)
     if not os.path.exists(settings_file):
         settings = {"automatic_check_active": True, "enable_interactive_notifications": True}
-        with open(settings_file, "w+") as f:
-            json.dump(settings, f)
+        write_json_atomically(settings_file, settings)
     if not os.path.exists(modules_file):
         modules: Dict[str, Dict[str, Any]] = dict()
-        with open(modules_file, "w+") as f:
-            json.dump(modules, f)
+        write_json_atomically(modules_file, modules)
 
 
 def check_for_updates(modules_file: str, settings_file: str) -> None:
@@ -144,12 +159,7 @@ def check_for_updates(modules_file: str, settings_file: str) -> None:
             warn(f"Update check for {module} failed with: {type(ex)}: {ex}")
 
     # write potentially updated modules to file
-    tmp_modules_file = modules_file + ".tmp"
-    with open(tmp_modules_file, "w+") as g:
-        json.dump(modules, g)
-    if os.path.exists(tmp_modules_file):
-        os.remove(modules_file)
-        os.rename(tmp_modules_file, modules_file)
+    write_json_atomically(modules_file, modules)
 
 
 def enough_time_elapsed(last_timestamp: Any) -> bool:
