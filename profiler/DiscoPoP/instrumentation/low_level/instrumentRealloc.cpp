@@ -40,7 +40,7 @@ void DiscoPoP::instrumentRealloc(CallBase *toInstrument) {
   vector<Value *> args;
 
   // deallocate the block that was handed in
-  args.push_back(ConstantInt::get(Int32, lid));
+  args.push_back(lidConstant(lid));
   Value *oldAddr = IRB.CreatePtrToInt(toInstrument->getArgOperand(0), Int64);
   args.push_back(oldAddr);
   IRB.CreateCall(DpDelete, args, "");
@@ -49,7 +49,7 @@ void DiscoPoP::instrumentRealloc(CallBase *toInstrument) {
   // allocate the block that came back. realloc is free to move the allocation, so the returned
   // pointer is the only one that describes it; registering the old address instead leaves the
   // runtime tracking a range the program no longer uses.
-  args.push_back(ConstantInt::get(Int32, lid));
+  args.push_back(lidConstant(lid));
   Value *startAddr = IRB.CreatePtrToInt(toInstrument, Int64);
   Value *endAddr = startAddr;
   Value *numBytes = toInstrument->getArgOperand(1);

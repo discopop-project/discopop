@@ -31,7 +31,7 @@ void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
     }
     lid = getLID(&*BI, fileID);
     if (lid > 0 && !isa<PHINode>(BI)) {
-      args.push_back(ConstantInt::get(Int32, lid));
+      args.push_back(lidConstant(lid));
       args.push_back(ConstantInt::get(Int32, id));
       args.push_back(ConstantInt::get(Int32, 0));  // instruction id will be replaced after the assignment of unique instruction ids
 #if LLVM_VERSION_MAJOR >= 22

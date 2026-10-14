@@ -23,7 +23,7 @@ void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
   IRBuilder<> IRB(toInstrument->getNextNode());
 
   vector<Value *> args;
-  args.push_back(ConstantInt::get(Int32, lid));
+  args.push_back(lidConstant(lid));
   args.push_back(determineVariableName_dynamic(toInstrument, ""));
 
   // Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "",

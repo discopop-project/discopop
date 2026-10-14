@@ -159,6 +159,10 @@ private:
 
   bool sanityCheck(BasicBlock *BB);
 
+  // the LID as the first argument of a callback: a 64 bit constant (the runtime's LID type) holding the
+  // 32 bit packed location, i.e. the value the pass has always passed, zero extended
+  Constant *lidConstant(LID lid) { return ConstantInt::get(Int64, static_cast<uint32_t>(lid)); }
+
   // LID to report for leaving the loop L through the exit block BB (see CFA)
   LID getLoopExitLID(BasicBlock *BB, Loop *L);
 

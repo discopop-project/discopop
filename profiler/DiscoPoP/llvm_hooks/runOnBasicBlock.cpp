@@ -197,7 +197,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
           // pthread_exit does not return to its caller.
           // Therefore, we insert DpFuncExit before pthread_exit
           IRBuilder<> IRBRet(&*BI);
-          IRBRet.CreateCall(DpFuncExit, {ConstantInt::get(Int32, getLID(&*BI, fileID)), ConstantInt::get(Int32, 0)});
+          IRBRet.CreateCall(DpFuncExit, {lidConstant(getLID(&*BI, fileID)), ConstantInt::get(Int32, 0)});
           continue;
         }
         if ((fn.str() == "exit") || F->doesNotReturn()) // terminates without returning to main
@@ -257,7 +257,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
         // id, on which it switches the callpath state. The state follows the call only if it enters
         // an instrumented function, see enter_function_for_callstate in the runtime library
         IRBCall.CreateCall(DpCallOrInvoke,
-                           {ConstantInt::get(Int32, lid), ConstantInt::get(Int32, llvm_ir_instruction_id)});
+                           {lidConstant(lid), ConstantInt::get(Int32, llvm_ir_instruction_id)});
         if (DP_DEBUG) {
           if (isa<CallInst>(BI)) {
             if (!(fn.str() == ""))
@@ -286,7 +286,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       // destructors of the target's global objects have run, so main reports its exit like every
       // other function.
       IRBuilder<> IRBRet(&*BI);
-      IRBRet.CreateCall(DpFuncExit, {ConstantInt::get(Int32, lid), ConstantInt::get(Int32, 0)});
+      IRBRet.CreateCall(DpFuncExit, {lidConstant(lid), ConstantInt::get(Int32, 0)});
 
       if (DP_DEBUG) {
         errs() << fn << " returning on " << lid << "\n";
