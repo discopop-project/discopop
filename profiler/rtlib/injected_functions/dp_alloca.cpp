@@ -32,23 +32,6 @@ extern "C" {
 
 void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements) {
   DP_CALLBACK_SCOPE(ALLOCA);
-
-#if DP_MEMORY_REGION_DEALIASING
-#if DP_STACK_ACCESS_DETECTION
-  // create entry to list of allocatedMemoryRegions
-  const std::string allocId = memory_manager->allocate_stack_memory(lid, startAddr, endAddr, numBytes, numElements);
-#else
-  const std::string allocId = memory_manager->allocate_memory(lid, startAddr, endAddr, numBytes, numElements);
-#endif
-  // std::cout << "alloca: " << var << " (" << allocId << ") @ " <<
-  // dputil::decodeLID(lid) << " : " << std::hex << startAddr << " - " <<
-  // std::hex << endAddr << " -> #allocations: " <<
-  // memory_manager->get_number_allocations() << "\n";
-  if (DP_DEBUG) {
-    cout << "alloca: " << var << " (" << allocId << ") @ " << dputil::decodeLID(lid) << " : " << std::hex << startAddr
-         << " - " << std::hex << endAddr << " -> #allocations: " << memory_manager->get_number_allocations() << "\n";
-  }
-#endif
 }
 }
 

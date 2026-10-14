@@ -76,8 +76,6 @@ void __dp_init() {
   bbList = new ReportedBBRecorder();
   // End HA
 
-  memory_manager->allocate_dummy_region();
-
   // This is the first thing to run in an instrumented program, so it is also where the output
   // directory is pinned down. Everything in the runtime that writes a result file reaches it
   // through profiler_output_path() afterwards, see output_paths.hpp.

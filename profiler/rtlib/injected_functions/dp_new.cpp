@@ -31,20 +31,6 @@ extern "C" {
 
 void __dp_new(LID lid, ADDR startAddr, ADDR endAddr, int64_t numBytes) {
   DP_CALLBACK_SCOPE(NEW);
-
-#if DP_MEMORY_REGION_DEALIASING
-  // calculate endAddr of memory region
-  endAddr = startAddr + numBytes;
-
-  // -1 indicates 'on heap'
-  std::string allocID = memory_manager->allocate_memory(lid, startAddr, endAddr, numBytes, -1);
-
-  if (DP_DEBUG) {
-    cout << "new/malloc: " << dputil::decodeLID(lid) << ", " << allocID << ", " << std::hex << startAddr << " - "
-         << std::hex << endAddr;
-    printf(" NumBytes: %lld\n", numBytes);
-  }
-#endif
 }
 }
 

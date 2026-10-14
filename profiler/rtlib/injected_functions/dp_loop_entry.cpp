@@ -40,13 +40,6 @@ void __dp_loop_entry(LID lid, int32_t loopID, int32_t instruction_id) {
   if (is_new_loop) {
     loop_manager->create_new_loop(function_stack_level, loopID, lid);
 
-#if DP_STACK_ACCESS_DETECTION
-    // the loop scope spans the whole loop, the iteration scope one pass through the body. Both are
-    // opened here, and every further entry below replaces only the iteration one.
-    memory_manager->enterScope("loop", lid);
-    memory_manager->enterScope("loop_iteration", lid);
-#endif
-
 #ifdef DP_CALLTREE_PROFILING
     call_tree.enter_loop(lid);
     call_tree.enter_iteration(0);
@@ -69,11 +62,6 @@ void __dp_loop_entry(LID lid, int32_t loopID, int32_t instruction_id) {
     // and update top().funcLevel.
 
     loop_manager->correct_func_level(function_stack_level);
-
-#if DP_STACK_ACCESS_DETECTION
-    memory_manager->leaveScope("loop_iteration", lid);
-    memory_manager->enterScope("loop_iteration", lid);
-#endif
 
 #ifdef DP_CALLTREE_PROFILING
     call_tree.enter_iteration(0);

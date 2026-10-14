@@ -69,11 +69,7 @@ void __dp_read(LID lid, ADDR addr, const char *var) {
   // add current call path state identifier to lid for later retrieval
   current.lid = lid | (((uint64_t)current_callpath_state->get_id()) << 32);
   current.var = var;
-#if DP_MEMORY_REGION_DEALIASING
-  current.AAvar = getMemoryRegionIdFromAddr(var, addr);
-#else
   current.AAvar = (std::int64_t)var;
-#endif
 
   current.addr = addr;
 #if DP_CALLTREE_PROFILING
