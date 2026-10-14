@@ -122,6 +122,12 @@ This document contains critical information about working with this codebase. Fo
 - to execute them, configure and build from the repository root with `cmake -S . -B build_tests -DCMAKE_BUILD_TYPE=Release -DDP_BUILD_UNITTESTS=1`, then `cmake --build build_tests --target DiscoPoP_UT DiscoPoP_Pass_UT -j "$(nproc)"`, then run `build_tests/test/unit_tests/DiscoPoP_UT` and `build_tests/test/pass_unit_tests/DiscoPoP_Pass_UT`; the CI matrix job `profiler_unit_tests` runs both on every matrix entry
 - the end-to-end profiler dependency-detection tests (`test/profiler/{RAW,WAR,WAW,NONE}`) are separate and run via `venv/bin/python -m pytest test/profiler` from the repository root (see "Profiler tests")
 
+#### Compile time options of the runtime library (profiler)
+- most of the runtime library is configured by `-DDP_...` options (`profiler/rtlib/CMakeLists.txt`), which switch code in and out with `#if`; the default build compiles only one variant, so code behind a disabled option is not checked
+- `scripts/dev/check_rtlib_options.sh [build base dir] [configuration]` builds `DiscoPoP_RT` once per set of options (build dirs `build_options/<name>`, gitignored; ~80 s on 8 cores) and fails if one does not compile; a new option belongs into its list. `DP_MEMORY_REGION_DEALIASING` is not part of it yet, it does not compile
+- it only compiles: the unit tests hang with `-DDP_NUM_WORKERS=0` (the access queue integration tests expect workers)
+- CI runs it as a step of the job `profiler_unit_tests`
+
 #### Sanitizers (profiler)
 - the CMake option `DP_SANITIZERS` (value for `-fsanitize=`, e.g. `address,undefined` or `thread`) instruments the runtime library `DiscoPoP_RT` and everything linking it, i.e. `DiscoPoP_UT`; the LLVM pass plugin is not sanitized (it runs inside an uninstrumented clang)
 - to build and run `DiscoPoP_UT` with ASan+UBSan(+LSan) resp. TSan, from the repository root: `scripts/dev/run_profiler_sanitizers.sh address,undefined` resp. `scripts/dev/run_profiler_sanitizers.sh thread` (build dirs `build_asan` / `build_tsan`, gitignored; ~30 s each); the CI job "Runtime unit tests with sanitizers" (`runtime_unit_tests_sanitized`) runs exactly this; it covers only what the unit tests exercise (no LLVM pass, no instrumented programs)
