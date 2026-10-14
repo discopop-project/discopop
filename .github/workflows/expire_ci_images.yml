@@ -1,0 +1,77 @@
+# This file is part of the DiscoPoP software (http://www.discopop.tu-darmstadt.de)
+#
+# Copyright (c) 2020, Technische Universitaet Darmstadt, Germany
+#
+# This software may be modified and distributed under the terms of
+# the 3-Clause BSD License.  See the LICENSE file in the package base
+# directory for details.
+
+# Deletes the prerequisite images of the CI (ghcr.io/<owner>/discopop-ci, see prepare_images in ci.yml) that are older
+# than MAX_AGE_DAYS, so that their packages do not go stale: the tag of an image only depends on its base image and
+# install command, so without this an image would be reused forever. The next CI run finds the image missing and
+# builds it again from the current base image and packages.
+#
+# Scheduled runs only exist for the default branch; use workflow_dispatch (with dry_run) to try it from another one.
+name: "Expire CI images"
+
+on:
+  schedule:
+    # every Monday; images are at most MAX_AGE_DAYS + 7 days old
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Only list the versions that would be deleted"
+        type: boolean
+        default: true
+      max_age_days:
+        description: "Delete images older than this many days"
+        type: string
+        default: "14"
+
+permissions:
+  contents: read
+
+jobs:
+  expire_images:
+    runs-on: ubuntu-latest
+    name: Delete outdated CI images
+    timeout-minutes: 10
+    # deleting package versions needs packages: write (the package must grant this repository write access
+    # in its settings; it does for the packages that prepare_images pushed)
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Delete image versions older than the maximum age
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MAX_AGE_DAYS: ${{ inputs.max_age_days || '14' }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          set -euo pipefail
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          package="discopop-ci"
+          cutoff="$(date -u -d "-${MAX_AGE_DAYS} days" +%Y-%m-%dT%H:%M:%SZ)"
+          echo "Deleting versions of $owner/$package created before $cutoff (dry run: $DRY_RUN)"
+
+          # the package belongs to an organization or to a user
+          if gh api "orgs/$owner" > /dev/null 2>&1; then scope="orgs"; else scope="users"; fi
+          base="$scope/$owner/packages/container/$package/versions"
+
+          # ISO 8601 timestamps in UTC compare correctly as strings
+          gh api --paginate "$base?per_page=100" \
+            --jq ".[] | select(.created_at < \"$cutoff\") | [.id, .created_at, (.metadata.container.tags | join(\",\"))] | @tsv" \
+            > expired.tsv
+          if [ ! -s expired.tsv ]; then
+            echo "Nothing to delete"
+            exit 0
+          fi
+
+          while IFS=$'\t' read -r id created tags; do
+            echo "version $id (created $created, tags: ${tags:-none})"
+            if [ "$DRY_RUN" != "true" ]; then
+              gh api -X DELETE "$base/$id"
+            fi
+          done < expired.tsv
