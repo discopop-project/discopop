@@ -10,7 +10,7 @@
  *
  */
 
-#include "../DiscoPoP.hpp"
+#include "DiscoPoP.hpp"
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 

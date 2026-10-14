@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../../../../profiler/rtlib/memory/Signature.hpp"
+#include "memory/Signature.hpp"
 
 // slotSize=16 (2 bytes/slot), 4 slots -> hash(elem) = ((elem >> 8) + elem) % 4.
 // elem 0 and elem 4 both hash to slot 0, elem 1 hashes to slot 1: used below to

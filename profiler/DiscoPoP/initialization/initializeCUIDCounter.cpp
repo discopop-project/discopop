@@ -10,7 +10,7 @@
  *
  */
 
-#include "../DiscoPoP.hpp"
+#include "DiscoPoP.hpp"
 
 void DiscoPoP::initializeCUIDCounter() {
   std::string CUCounterFile(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));

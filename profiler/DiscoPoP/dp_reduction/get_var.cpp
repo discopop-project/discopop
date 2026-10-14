@@ -10,7 +10,7 @@
  *
  */
 
-#include "../DiscoPoP.hpp"
+#include "DiscoPoP.hpp"
 
 llvm::Value *DiscoPoP::dp_reduction_get_var_rec(llvm::Value *val) {
   if (!val)

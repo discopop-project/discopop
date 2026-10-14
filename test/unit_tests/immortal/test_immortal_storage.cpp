@@ -5,8 +5,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include "../../../profiler/rtlib/Immortal.hpp"
-#include "../../../profiler/rtlib/runtimeFunctionsTypes.hpp"
+#include "Immortal.hpp"
+#include "runtimeFunctionsTypes.hpp"
 
 using namespace __dp;
 

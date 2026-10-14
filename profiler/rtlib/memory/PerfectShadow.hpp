@@ -14,7 +14,7 @@
 
 #include "AbstractShadow.hpp"
 
-#include "../DPTypes.hpp"
+#include "DPTypes.hpp"
 
 #include <cstdint>
 #include <iostream>

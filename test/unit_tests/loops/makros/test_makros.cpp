@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "../../../../profiler/rtlib/loop/LoopTable.hpp"
-#include "../../../../profiler/rtlib/loop/Makros.hpp"
+#include "loop/LoopTable.hpp"
+#include "loop/Makros.hpp"
 
 // Tests for old version (i.e., capturing functionality)
 

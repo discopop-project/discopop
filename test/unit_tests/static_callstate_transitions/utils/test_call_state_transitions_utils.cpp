@@ -7,8 +7,8 @@
 #include <string>
 #include <thread>
 
-#include "../../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
-#include "../../../../profiler/rtlib/static_callstate_transitions/utils.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "static_callstate_transitions/utils.hpp"
 
 // The callpath state tracking (static_callstate_transitions/utils.hpp) operates on the global
 // __dp::current_callpath_state and __dp::call_state_graph. Each test builds a small, deterministic

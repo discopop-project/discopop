@@ -4,9 +4,9 @@
 #include <chrono>
 #include <thread>
 
-#include "../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
-#include "../../../profiler/rtlib/runtimeFunctionsTypes.hpp"
-#include "../../../profiler/rtlib/runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "runtimeFunctionsTypes.hpp"
+#include "runtimeFunctions.hpp"
 
 using namespace __dp;
 

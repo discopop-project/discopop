@@ -37,12 +37,12 @@
 
 #include <benchmark/benchmark.h>
 
-#include "../../profiler/rtlib/DPTypes.hpp"
-#include "../../profiler/rtlib/callback_scope.hpp"
-#include "../../profiler/rtlib/injected_functions/all.hpp"
-#include "../../profiler/rtlib/lifecycle/runtime_startup.hpp"
-#include "../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
-#include "../../profiler/rtlib/static_callstate_transitions/utils.hpp"
+#include "DPTypes.hpp"
+#include "callback_scope.hpp"
+#include "injected_functions/all.hpp"
+#include "lifecycle/runtime_startup.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "static_callstate_transitions/utils.hpp"
 
 #include <cstddef>
 #include <cstdint>

@@ -63,19 +63,24 @@ set(DiscoPoP_SOURCES ${DiscoPoP_SHARED_SOURCES} ${DiscoPoP_CALLBACK_SOURCES})
 
 set(CMAKE_CXX_FLAGS
         "-O2 -std=c++17 -pthread -fno-rtti -fPIE -fPIC")
-# DISCOPOP_BOOST_INCLUDE_DIR is set by the top-level CMakeLists.
-# Appending here because set(CMAKE_CXX_FLAGS) above replaces all flags and
-# target_include_directories / include_directories are not reliable after it.
-if(DISCOPOP_BOOST_INCLUDE_DIR)
-    string(APPEND CMAKE_CXX_FLAGS " -I${DISCOPOP_BOOST_INCLUDE_DIR}")
-endif()
 
 # add_custom_target(DiscoPoP)
 
 add_library(DiscoPoP_RT STATIC
         ${DiscoPoP_SOURCES})
 
-target_link_libraries(DiscoPoP_RT PRIVATE Boost::headers)
+# The include roots of the runtime: its sources, the headers shared with the pass (timer.hpp, debug_print.hpp)
+# and the third party headers are included relative to these, never through "../". PUBLIC through the link
+# below, so that the unit tests and benchmarks compiling against the runtime use the same names.
+add_library(DiscoPoP_RT_Includes INTERFACE)
+target_include_directories(DiscoPoP_RT_Includes INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../share/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../third_party
+        )
+
+# the Boost include directory comes with Boost::headers; it is set up in profiler/CMakeLists.txt
+target_link_libraries(DiscoPoP_RT PUBLIC DiscoPoP_RT_Includes PRIVATE Boost::headers)
 
 # DP_SANITIZER_FLAGS is set by the top-level profiler CMakeLists (DP_SANITIZERS).
 # PUBLIC: targets linking DiscoPoP_RT (e.g. DiscoPoP_UT) get instrumented and
@@ -99,7 +104,7 @@ if(DP_BUILD_UNITTESTS STREQUAL "1")
         # the half that does not depend on which callbacks are switched on, compiled once and
         # reused by every variant -- which is what keeps the extra runtime libraries cheap
         add_library(DiscoPoP_RT_BenchmarkShared OBJECT ${DiscoPoP_SHARED_SOURCES})
-        target_link_libraries(DiscoPoP_RT_BenchmarkShared PRIVATE Boost::headers)
+        target_link_libraries(DiscoPoP_RT_BenchmarkShared PUBLIC DiscoPoP_RT_Includes PRIVATE Boost::headers)
 
         # the CallbackId enumerators from callback_scope.hpp. The library name carries the
         # enumerator so that a driver can go from one to the other without a table.
@@ -123,7 +128,7 @@ if(DP_BUILD_UNITTESTS STREQUAL "1")
         endforeach()
 
         foreach(dp_variant IN LISTS DiscoPoP_RT_BENCHMARK_TARGETS)
-                target_link_libraries(${dp_variant} PRIVATE Boost::headers)
+                target_link_libraries(${dp_variant} PUBLIC DiscoPoP_RT_Includes PRIVATE Boost::headers)
                 # kept out of compile_commands.json: they compile the sources of DiscoPoP_RT again with
                 # other definitions, and clangd would otherwise pick one of them for a file of the runtime
                 set_target_properties(${dp_variant} PROPERTIES EXPORT_COMPILE_COMMANDS OFF)

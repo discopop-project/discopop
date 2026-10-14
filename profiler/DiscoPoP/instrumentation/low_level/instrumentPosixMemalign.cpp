@@ -10,7 +10,7 @@
  *
  */
 
-#include "../../DiscoPoP.hpp"
+#include "DiscoPoP.hpp"
 
 using namespace llvm;
 using namespace std;

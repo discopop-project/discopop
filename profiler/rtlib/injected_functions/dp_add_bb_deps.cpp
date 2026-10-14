@@ -12,7 +12,7 @@
 
 #include "dp_add_bb_deps.hpp"
 
-#include "../hybrid_analysis/bb_deps.hpp"
+#include "hybrid_analysis/bb_deps.hpp"
 
 namespace __dp {
 

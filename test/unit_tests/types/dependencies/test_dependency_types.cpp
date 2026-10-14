@@ -3,7 +3,7 @@
 #include <cstring>
 #include <string>
 
-#include "../../../../profiler/rtlib/runtimeFunctionsTypes.hpp"
+#include "runtimeFunctionsTypes.hpp"
 
 using namespace __dp;
 

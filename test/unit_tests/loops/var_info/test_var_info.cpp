@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../../../../profiler/rtlib/loop/VarInfo.hpp"
+#include "loop/VarInfo.hpp"
 
 // Tests for old version (i.e., capturing functionality)
 

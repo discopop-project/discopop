@@ -10,7 +10,7 @@
  *
  */
 
-#include "../DiscoPoP.hpp"
+#include "DiscoPoP.hpp"
 
 void DiscoPoP::initializeInstructionIDCounter() {
   std::string InstructionCounterFile(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));

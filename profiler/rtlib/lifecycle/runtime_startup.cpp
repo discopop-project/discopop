@@ -12,18 +12,18 @@
 
 #include "runtime_startup.hpp"
 
-#include "../DPTypes.hpp"
+#include "DPTypes.hpp"
 
-#include "../output_paths.hpp"
-#include "../runtimeFunctions.hpp"
-#include "../runtimeFunctionsGlobals.hpp"
+#include "output_paths.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
-#include "../injected_functions/dp_finalize.hpp"
+#include "injected_functions/dp_finalize.hpp"
 
-#include "../../share/include/debug_print.hpp"
-#include "../../share/include/timer.hpp"
+#include "debug_print.hpp"
+#include "timer.hpp"
 
-#include "../static_callstate_transitions/utils.hpp"
+#include "static_callstate_transitions/utils.hpp"
 
 #include <cassert>
 #include <chrono>

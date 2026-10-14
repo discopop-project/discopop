@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <string>
 
-#include "../../../profiler/rtlib/output_paths.hpp"
+#include "output_paths.hpp"
 
 // Every result file the runtime writes goes through profiler_output_path(). __dp_init pins
 // DOT_DISCOPOP_PROFILER down before any other code of an instrumented program runs, so by the time

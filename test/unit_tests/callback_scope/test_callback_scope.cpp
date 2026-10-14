@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "../../../profiler/rtlib/callback_scope.hpp"
-#include "../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
+#include "callback_scope.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 using namespace __dp;
 

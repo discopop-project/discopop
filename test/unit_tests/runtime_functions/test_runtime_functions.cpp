@@ -9,9 +9,9 @@
 #include <unistd.h>
 #include <vector>
 
-#include "../../../profiler/rtlib/lid_utils.hpp"
-#include "../../../profiler/rtlib/runtimeFunctions.hpp"
-#include "../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
+#include "lid_utils.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 using namespace __dp;
 

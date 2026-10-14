@@ -12,15 +12,15 @@
 
 #include "runtime_shutdown.hpp"
 
-#include "../callback_scope.hpp"
-#include "../output_paths.hpp"
-#include "../hybrid_analysis/bb_deps.hpp"
-#include "../runtimeFunctions.hpp"
-#include "../runtimeFunctionsGlobals.hpp"
+#include "callback_scope.hpp"
+#include "output_paths.hpp"
+#include "hybrid_analysis/bb_deps.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
-#include "../injected_functions/dp_func_exit.hpp"
-#include "../injected_functions/dp_loop_output.hpp"
-#include "../injected_functions/dp_taken_branch_counter_output.hpp"
+#include "injected_functions/dp_func_exit.hpp"
+#include "injected_functions/dp_loop_output.hpp"
+#include "injected_functions/dp_taken_branch_counter_output.hpp"
 
 #include <cassert>
 #include <chrono>

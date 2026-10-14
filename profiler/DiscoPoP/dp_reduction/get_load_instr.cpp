@@ -10,7 +10,7 @@
  *
  */
 
-#include "../DiscoPoP.hpp"
+#include "DiscoPoP.hpp"
 
 // Finds the load instruction that actually loads the value from the address
 // 'load_val'.

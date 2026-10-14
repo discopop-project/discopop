@@ -10,11 +10,11 @@
  *
  */
 
-#include "../DPTypes.hpp"
+#include "DPTypes.hpp"
 
-#include "../runtimeFunctionsGlobals.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
-#include "../callback_scope.hpp"
+#include "callback_scope.hpp"
 
 #include <cstdint>
 #include <iostream>

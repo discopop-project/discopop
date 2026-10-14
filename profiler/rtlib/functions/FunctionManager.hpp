@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "../DPTypes.hpp"
-#include "../lid_utils.hpp"
+#include "DPTypes.hpp"
+#include "lid_utils.hpp"
 
 #include <cstddef>
 #include <cstdint>

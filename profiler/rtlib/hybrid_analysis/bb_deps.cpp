@@ -12,15 +12,15 @@
 
 #include "bb_deps.hpp"
 
-#include "../DPTypes.hpp"
+#include "DPTypes.hpp"
 
-#include "../runtimeFunctions.hpp"
-#include "../runtimeFunctionsGlobals.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
-#include "../Immortal.hpp"
+#include "Immortal.hpp"
 
-#include "../../share/include/debug_print.hpp"
-#include "../../share/include/timer.hpp"
+#include "debug_print.hpp"
+#include "timer.hpp"
 
 #include <boost/algorithm/string.hpp>
 #include <cstdint>
