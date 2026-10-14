@@ -44,51 +44,6 @@ def parse_dependency(dep: DependenceItem) -> Dependency:
     d.memory_region = dep.memory_region
     d.is_gep_result_dependency = dep.is_gep_result_dependency
 
-    # parse metadata
-    if dep.metadata is None:
-        d.metadata_intra_iteration_dep = None
-        d.metadata_inter_iteration_dep = None
-        d.metadata_intra_call_dep = None
-        d.metadata_inter_call_dep = None
-        d.metadata_sink_ancestors = None
-        d.metadata_source_ancestors = None
-        return d
-    if len(dep.metadata) > 0:
-        for md in dep.metadata.split(" "):
-            if len(md) == 0:
-                continue
-            # unpack metadata
-            md_type = md[: md.index("[")]
-            md_raw_values = md[md.index("[") + 1 : -1]
-            md_values = [tmp for tmp in md_raw_values.split(",") if len(tmp) > 0]
-
-            # ensure validity and type correctness
-            if (
-                d.metadata_intra_iteration_dep is None
-                or d.metadata_inter_iteration_dep is None
-                or d.metadata_intra_call_dep is None
-                or d.metadata_inter_call_dep is None
-                or d.metadata_sink_ancestors is None
-                or d.metadata_source_ancestors is None
-            ):
-                raise ValueError("Invalid data found!")
-
-            # store metadata
-            if md_type == "IAI":
-                d.metadata_intra_iteration_dep += md_values
-            elif md_type == "IEI":
-                d.metadata_inter_iteration_dep += md_values
-            elif md_type == "IAC":
-                d.metadata_intra_call_dep += md_values
-            elif md_type == "IEC":
-                d.metadata_inter_call_dep += md_values
-            elif md_type == "SINK_ANC":
-                d.metadata_sink_ancestors += md_values
-            elif md_type == "SOURCE_ANC":
-                d.metadata_source_ancestors += md_values
-            else:
-                raise ValueError("Unknown metadata type: ", md_type)
-
     return d
 
 

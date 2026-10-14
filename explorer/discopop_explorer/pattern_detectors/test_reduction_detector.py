@@ -221,8 +221,8 @@ def test_detect_reduction_false_for_raw_on_non_reduction_variable_between_differ
     make_node: MakeNode, build_pet_graph: BuildPetGraph
 ) -> None:
     # a RAW on a variable that is *not* the declared reduction variable ("sum") is handled
-    # by a separate branch of __check_loop_dependencies: with no dependency metadata and
-    # not an intra-iteration dependency, it must still block the reduction suggestion.
+    # by a separate branch of __check_loop_dependencies: if it is not an intra-iteration
+    # dependency, it must still block the reduction suggestion.
     raw = Dependency(EdgeType.DATA)
     raw.dtype = DepType.RAW
     raw.var_name = "y"

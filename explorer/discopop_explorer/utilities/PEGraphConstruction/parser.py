@@ -109,32 +109,6 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
     dependencies_list: List[DependenceItem] = []
     loop_data_list: List[LoopData] = []
 
-    # read dependency metadata
-    metadata_exists: bool = False
-    dependency_metadata_lines = []
-    if os.path.exists(os.path.join(output_path, "dependency_metadata.txt")):
-        with open(os.path.join(output_path, "dependency_metadata.txt"), "r") as dep_metadata_fd:
-            dependency_metadata_lines = dep_metadata_fd.readlines()
-        metadata_exists = True
-    dependency_metadata: Dict[Tuple[Any, Any, Any, Any, Any], List[str]] = dict()
-    for line in dependency_metadata_lines:
-        line = line.replace("\n", "")
-        split_line = line.split(" ")
-        if split_line[0].startswith("#"):
-            continue
-        type = split_line[0]
-        sink = split_line[1]
-        source = split_line[2]
-        var = split_line[3]
-        AAvar = split_line[4]
-        line_metadata = " ".join(
-            [split_line[5], split_line[6], split_line[7], split_line[8], split_line[9], split_line[10]]
-        )  # IAC, IAI, IEC, IEI, SINK_ANC, SOURCE_ANC)
-        key_tuple = sink, source, type, var, AAvar
-        if key_tuple not in dependency_metadata:
-            dependency_metadata[key_tuple] = []
-        dependency_metadata[key_tuple].append(line_metadata)
-
     # read static dependencies
     static_dependency_lines = []
     if not os.path.exists(os.path.join(output_path, "static_dependencies.txt")):
@@ -190,7 +164,6 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             var_str = "" if len(source_fields) == 1 else source_fields[1]
             var_name = ""
             aa_var_name = ""
-            metadata: Optional[List[str]] = [] if metadata_exists else None
             if len(var_str) > 0:
                 if "(" in var_str:
                     split_var_str = var_str.split("(")
@@ -201,11 +174,6 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
                 else:
                     # compatibility with results created without alias analysis
                     var_name = var_str
-            # retrieve metadata
-            key_tuple = sink, source_fields[0], type, var_name, aa_var_name
-            if key_tuple in dependency_metadata:
-                metadata = dependency_metadata[key_tuple]
-
             # check if the dependency originates from the result of a GEP instruction
             is_gep_result_dependency = False
             if var_name.startswith("GEPRESULT_"):
@@ -226,21 +194,9 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
                     source = instruction_to_lineID_mapping[source]
 
             # register dependencies
-            if metadata is None:
-                dependencies_list.append(
-                    DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency, None)
-                )
-                continue
-
-            if len(metadata) == 0:
-                dependencies_list.append(
-                    DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency, "")
-                )
-            else:
-                for md_set in metadata:
-                    dependencies_list.append(
-                        DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency, md_set)
-                    )
+            dependencies_list.append(
+                DependenceItem(sink, source, type, var_name, aa_var_name, is_gep_result_dependency)
+            )
 
     return dependencies_list, loop_data_list
 

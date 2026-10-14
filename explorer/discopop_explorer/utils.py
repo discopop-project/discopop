@@ -817,11 +817,6 @@ def classify_loop_variables(
                         # else:
                         #    shared.append(var)
                         # END: OLD CODE
-            if subset_idx >= 1 and no_inter_iteration_dependency_exists(
-                mem_reg_subset, raw, war, sub, cast(LoopNode, loop)
-            ):
-                # check if metadata suggests, that index accesses are not problematic wrt. parallelization
-                metadata_safe_index_accesses.append(var)
 
     # modify classifications
     # note: 23.07.25: disabled, since private is a more performant alternative to shared in most cases
@@ -876,22 +871,6 @@ def var_declared_in_subtree(var: Variable, sub: list[CUNode]) -> bool:
         if (node.file_id == var_file_id) and (node.start_line <= var_def_line) and (node.end_line >= var_def_line):
             return True
     return False
-
-
-def no_inter_iteration_dependency_exists(
-    mem_regs: Set[MemoryRegion],
-    raw: Set[Tuple[NodeID, NodeID, Dependency]],
-    war: Set[Tuple[NodeID, NodeID, Dependency]],
-    sub: List[CUNode],
-    root_loop: LoopNode,
-) -> bool:
-    for dep in raw.union(war):
-        if dep[0] in [s.id for s in sub] and dep[1] in [s.id for s in sub]:
-            if dep[2].memory_region in mem_regs:
-                if dep[2].metadata_inter_iteration_dep is not None:
-                    if root_loop.start_position() in dep[2].metadata_inter_iteration_dep:
-                        return False
-    return True
 
 
 def __modify_classifications(

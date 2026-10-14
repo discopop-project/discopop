@@ -43,12 +43,6 @@ class Dependency:
     sink_line: Optional[LineID] = None
     intra_iteration: bool = False
     intra_iteration_level: int = -1
-    metadata_intra_iteration_dep: Optional[List[LineID]]
-    metadata_inter_iteration_dep: Optional[List[LineID]]
-    metadata_intra_call_dep: Optional[List[LineID]]
-    metadata_inter_call_dep: Optional[List[LineID]]
-    metadata_sink_ancestors: Optional[List[LineID]]
-    metadata_source_ancestors: Optional[List[LineID]]
     origin: Optional[DepOrigin] = None
     is_gep_result_dependency: bool = False
     # an end of the dependency could not be attributed to the calling context of its callpath state
@@ -87,12 +81,6 @@ class Dependency:
         self.approximate_context = False
         self.carried_by_loop = None
         self.carried_by_pet_loops = None
-        self.metadata_intra_iteration_dep = []
-        self.metadata_inter_iteration_dep = []
-        self.metadata_intra_call_dep = []
-        self.metadata_inter_call_dep = []
-        self.metadata_sink_ancestors = []
-        self.metadata_source_ancestors = []
 
     def __str__(self) -> str:
         return self.var_name if self.var_name is not None else str(self.etype)

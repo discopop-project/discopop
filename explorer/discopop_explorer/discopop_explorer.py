@@ -172,11 +172,6 @@ def __run(
         pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping), visualizer=visualizer)  # type: ignore
         pet.validate()
 
-    # synthesize disambiguation metadata for static dependencies
-    #    if os.path.exists(os.path.join(dirname(abspath(cu_xml)), "dependency_metadata.txt")):
-    #        print("Found disambiguation metadata.")
-    #        pet.synthesize_static_dependency_metadata()
-
     # pet.show()
     # TODO add visualization
 
