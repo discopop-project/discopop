@@ -197,6 +197,7 @@ jobs:
       - name: Build and push the image, unless it exists
         shell: bash
         env:
+          ID: ${{ matrix.id }}
           IMAGE: ${{ matrix.image }}
           BASE_IMAGE: ${{ matrix.base_image }}
           INSTALL_CMD: ${{ matrix.install_deps_cmd }}
@@ -223,6 +224,27 @@ jobs:
           EOF
           if [ -z "${ACT:-}" ]; then
             docker push "$IMAGE"
+
+            # the image of this environment was rebuilt (its install command or base image changed): delete the
+            # superseded ones. The pattern is strict, a prefix would also match other environments (ids share prefixes).
+            # Best effort: a failing cleanup must not fail the build; expire_ci_images.yml removes them later anyway.
+            (
+              set -euo pipefail
+              owner="${GITHUB_REPOSITORY_OWNER,,}"
+              api="https://api.github.com"
+              auth=(-H "Authorization: Bearer $TOKEN" -H "Accept: application/vnd.github+json")
+              if curl -fsS "${auth[@]}" "$api/orgs/$owner" > /dev/null 2>&1; then scope="orgs"; else scope="users"; fi
+              versions="$api/$scope/$owner/packages/container/discopop-ci/versions"
+              current="${IMAGE##*:}"
+              for page in 1 2 3 4 5; do
+                curl -fsS "${auth[@]}" "$versions?per_page=100&page=$page" \
+                  | jq -r --arg id "$ID" --arg current "$current" \
+                    '.[] | select(any(.metadata.container.tags[]; test("^" + $id + "-[0-9a-f]{12}$")) and (.metadata.container.tags | index($current) | not)) | .id'
+              done | while read -r version; do
+                echo "deleting superseded version $version of $ID"
+                curl -fsS -X DELETE "${auth[@]}" "$versions/$version" > /dev/null
+              done
+            ) || echo "::warning::could not delete the superseded images of $ID"
           fi
 
 
