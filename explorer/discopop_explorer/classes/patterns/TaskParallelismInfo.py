@@ -9,56 +9,8 @@
 from enum import Enum
 from typing import List, Optional
 
-from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.PEGraph.Node import Node
-from discopop_explorer.aliases.LineID import LineID
-from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
-
-# We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-# from discopop_explorer.utilities import total_instructions_count, calculate_workload
-
-
-class Task(object):
-    """This class represents task in task parallelism pattern"""
-
-    nodes: List[Node]
-    child_tasks: List["Task"]
-    start_line: LineID
-    end_line: LineID
-
-    def __init__(self, pet: PEGraphX, node: Node):
-        self.node_id = node.id
-        self.nodes = [node]
-        self.start_line = node.start_position()
-        if ":" in self.start_line:
-            self.region_start_line = self.start_line[self.start_line.index(":") + 1 :]
-        else:
-            self.region_start_line = self.start_line
-        self.region_end_line = None
-        self.end_line = node.end_position()
-        self.mw_type = node.mw_type
-
-        # We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg),
-        # the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a
-        # hotspot detection algorithm (TODO: Bertin) with the parallelism discovery.
-        # Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
-        #        self.instruction_count = total_instructions_count(pet, node)
-        #        self.workload = calculate_workload(pet, node)
-        self.instruction_count = 0
-        self.workload = 0
-        self.child_tasks = []
-
-    def aggregate(self, other: "Task") -> None:
-        """Aggregates given task into current task
-
-        :param other: task to aggregate
-        """
-        self.nodes.extend(other.nodes)
-        self.end_line = other.end_line
-        self.workload += other.workload
-        self.instruction_count += other.instruction_count
-        self.mw_type = MWType.BARRIER_WORKER if other.mw_type == MWType.BARRIER_WORKER else MWType.WORKER
 
 
 class TPIType(Enum):
@@ -159,32 +111,4 @@ class ParallelRegionInfo(PatternInfo):
             f"pragma: \n\t{self.pragma}\n"
             f"Parallel Region Start line: {self.region_start_line}\n"
             f"Parallel Region End line {self.region_end_line}\n"
-        )
-
-
-class OmittableCuInfo(PatternInfo):
-    """Class, that contains information on omittable CUs (such that can be
-    combined with a suggested task).
-    Objects of this type are only intermediate and will not show up in the
-    final suggestions.
-    """
-
-    def __init__(self, node: Node, combine_with_node: Node):
-        PatternInfo.__init__(self, node)
-        self.combine_with_node = combine_with_node
-        # only for printing
-        self.cwn_id = combine_with_node.id
-        self.in_dep: List[Optional[str]] = []
-        self.out_dep: List[Optional[str]] = []
-        self.in_out_dep: List[Optional[str]] = []
-
-    def __str__(self) -> str:
-        return (
-            f"Omittable CU: {self.node_id}\n"
-            f"CU Start line: {self.start_line}\n"
-            f"CU End line: {self.end_line}\n"
-            f"Combinable with: {self.cwn_id}\n"
-            f'in_dep: {" ".join([str(s) for s in self.in_dep])}\n'
-            f'out_dep: {" ".join([str(s) for s in self.out_dep])}\n'
-            f'in_out_dep: {" ".join([str(s) for s in self.in_out_dep])}\n'
         )
