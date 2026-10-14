@@ -6,7 +6,7 @@
 #include <string>
 #include <sys/stat.h>
 
-#include "../../../profiler/rtlib/DPUtils.hpp"
+#include "../../../profiler/rtlib/lid_utils.hpp"
 #include "../../../profiler/rtlib/runtimeFunctions.hpp"
 #include "../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
 

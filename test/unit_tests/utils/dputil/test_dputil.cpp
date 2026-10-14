@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <vector>
 
-#include "../../../../profiler/rtlib/DPUtils.hpp"
+#include "../../../../profiler/rtlib/lid_utils.hpp"
 
 // The helpers the runtime and the LLVM pass share. A location id packs a file id and a line
 // number into one integer -- the lower LIDSIZE bits hold the line, the bits above it the file --
