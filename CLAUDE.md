@@ -33,6 +33,12 @@ This document contains critical information about working with this codebase. Fo
 - in case the `venv` is not set up, execute `python3 -m venv venv` to create a new virtual environment
 - always use the `venv` located in the project root directory; if it is not already activated, activate it via `source venv/bin/activate` before running any Python commands
 
+### Code navigation (clangd)
+- every CMake configuration of the root `CMakeLists.txt` writes `compile_commands.json` into its build directory (all targets except the runtime benchmark variants, which compile the runtime sources again with other definitions); `-DCMAKE_EXPORT_COMPILE_COMMANDS=OFF` turns it off
+- clangd finds `build/compile_commands.json` itself; for another build directory link it into the repository root once: `ln -s build_tests/compile_commands.json .` (gitignored)
+- the checked-in `.clangd` removes `-fno-lifetime-dse`, which LLVM's CMake adds for GCC and clang rejects; it is the only editor configuration, keep it editor-independent (no `.vscode` settings)
+- to check that a source file parses with its database entry: `clangd-21 --check=<file>`
+
 ## Type checking
 ### Python
 - install prerequisites via `venv/bin/pip install -r requirements-dev.txt` (pins the mypy version CI uses; a different version can report different errors)

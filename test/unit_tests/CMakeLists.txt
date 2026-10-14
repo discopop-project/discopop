@@ -13,8 +13,6 @@ set(gtest_force_shared_crt
         CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 get_target_property(gtest_main_includes gtest_main
         INTERFACE_INCLUDE_DIRECTORIES)
 set_target_properties(gtest_main PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES
