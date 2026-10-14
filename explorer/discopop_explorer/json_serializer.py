@@ -16,7 +16,7 @@ from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.result_classes.PatternStorage import PatternStorage
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.pattern_detectors.pipeline_detector import PipelineStage
-from discopop_explorer.pattern_detectors.task_parallelism.classes import TPIType
+from discopop_explorer.classes.patterns.TaskParallelismInfo import TPIType
 from discopop_explorer.classes.variable import Variable
 
 

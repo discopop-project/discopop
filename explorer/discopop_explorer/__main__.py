@@ -22,7 +22,7 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
     # all flags that are not considered stable should be added to the experimental_parser
     experimental_parser = parser.add_argument_group(
         "EXPERIMENTAL",
-        "Arguments for the task pattern detector and other experimental features. These flags are considered EXPERIMENTAL and they may or may not be removed or changed in the near future.",
+        "Arguments for experimental features. These flags are considered EXPERIMENTAL and they may or may not be removed or changed in the near future.",
     )
 
     # fmt: off
@@ -94,11 +94,6 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
         help="path to a microbenchmark json file",
     )
 
-    # flags related to task pattern detector:
-    experimental_parser.add_argument(
-        "--task-pattern", action="store_true",
-        help="Enables the task parallelism pattern identification. Requires --cu-inst-res and --llvm-cxxfilt-path to be set.",
-    )
 #    experimental_parser.add_argument(
 #        "--detect-scheduling-clauses", action="store_true",
 #        help="Enables the detection of scheduling clauses for parallel loops.")
@@ -113,7 +108,7 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
     )
     experimental_parser.add_argument(
         "--llvm-cxxfilt-path", type=str, default=None,
-        help="Path to llvm-cxxfilt executable. Required for task pattern detector if non-standard path should be used.",
+        help="Path to llvm-cxxfilt executable.",
     )
     experimental_parser.add_argument(
         "--enable-statistics", action="store_true", help="Enable the calculation and storing of statistics for code and generated suggestions."
@@ -136,10 +131,6 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
     # fmt: on
 
     arguments = parser.parse_args(argv)
-
-    # ensure that --cu-inst-res and --llvm-cxxfilt-path are set if --task-pattern is set
-    if arguments.task_pattern and (arguments.cu_inst_res is None or arguments.llvm_cxxfilt_path is None):
-        parser.error("--task-pattern requires --cu-inst-res and --llvm-cxxfilt-path to be set")
 
     try:
         hotspot_types = parse_hotspot_types(arguments.hotspot_types)
@@ -179,7 +170,6 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
         file_mapping_file=arguments.fmap,
         plugins=arguments.plugins,
         hotspot_types=hotspot_types,
-        enable_task_pattern=arguments.task_pattern,
         #        detect_scheduling_clauses=arguments.detect_scheduling_clauses,
         detect_scheduling_clauses=False,
         enable_profiling_dump_file=arguments.profiling,
