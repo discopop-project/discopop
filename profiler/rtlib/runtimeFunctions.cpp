@@ -765,6 +765,21 @@ void finalizeParallelization() {
   }
 }
 
+#if DP_CALLTREE_PROFILING
+// a worker keeps these for its thread; without workers, the main thread takes over its role
+static std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> main_thread_write_addr_to_call_tree_node_map;
+static std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> main_thread_read_addr_to_call_tree_node_map;
+#endif
+
+void analyzeSingleAccessOnMainThread(__dp::AccessInfo &access) {
+#if DP_CALLTREE_PROFILING
+  analyzeSingleAccess(singleThreadedExecutionSMem, access, main_thread_write_addr_to_call_tree_node_map,
+                      main_thread_read_addr_to_call_tree_node_map);
+#else
+  analyzeSingleAccess(singleThreadedExecutionSMem, access);
+#endif
+}
+
 void finalizeSingleThreadedExecution() {
 #ifdef DP_RTLIB_VERBOSE
   const auto debug_print = make_debug_print("finalizeSingleThreadedExecution");
@@ -776,6 +791,11 @@ void finalizeSingleThreadedExecution() {
 
   delete singleThreadedExecutionSMem;
   singleThreadedExecutionSMem = nullptr;
+#if DP_CALLTREE_PROFILING
+  // release the call tree nodes before the call tree is destroyed
+  main_thread_write_addr_to_call_tree_node_map.clear();
+  main_thread_read_addr_to_call_tree_node_map.clear();
+#endif
   mergeDeps();
   delete myMap;
   myMap = nullptr;

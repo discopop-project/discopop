@@ -56,6 +56,9 @@ void analyzeSingleAccess(
 void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access);
 #endif
 
+// the dependency analysis of one access on the calling thread, used if NUM_WORKERS==0
+void analyzeSingleAccessOnMainThread(__dp::AccessInfo &access);
+
 std::string getMemoryRegionIdFromAddr(std::string fallback, ADDR addr);
 
 void finalizeParallelization();

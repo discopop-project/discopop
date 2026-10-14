@@ -85,7 +85,7 @@ void __dp_write(LID lid, ADDR addr, const char *var) {
 #endif
 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
-  analyzeSingleAccess(singleThreadedExecutionSMem, current);
+  analyzeSingleAccessOnMainThread(current);
 #endif
 }
 }
