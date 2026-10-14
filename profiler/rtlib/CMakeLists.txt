@@ -132,6 +132,9 @@ if(DP_BUILD_UNITTESTS STREQUAL "1")
 
         foreach(dp_variant IN LISTS DiscoPoP_RT_BENCHMARK_TARGETS)
                 target_link_libraries(${dp_variant} PRIVATE Boost::headers)
+                # kept out of compile_commands.json: they compile the sources of DiscoPoP_RT again with
+                # other definitions, and clangd would otherwise pick one of them for a file of the runtime
+                set_target_properties(${dp_variant} PROPERTIES EXPORT_COMPILE_COMMANDS OFF)
         endforeach()
 
         # one target to ask for all of them, so a driver does not have to know the list

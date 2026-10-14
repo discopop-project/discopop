@@ -57,6 +57,17 @@ where `<CMAKE_FLAGS>` can consist of any combination of the following flags and 
 - `-DDP_INTERNAL_TIMER=[0|1]`&ndash; Enable timing of runtime library functions.
 - `-DDP_BUILD_UNITTESTS=[0|1]`&ndash; Enable building unittests and performance benchmarks. Default: `0`.
 
+#### Code navigation in editors
+Editors using [clangd](https://clangd.llvm.org) (e.g. VS Code with the clangd extension, Neovim, Emacs, CLion, Zed) need the compiler flags of every source file to resolve the LLVM headers and to follow definitions across files.
+CMake writes them to `compile_commands.json` in the build directory; `-DCMAKE_EXPORT_COMPILE_COMMANDS=OFF` turns this off.
+clangd finds `build/compile_commands.json` on its own. For a build directory with a different name, link its database into the source directory once (the link is ignored by git):
+```
+ln -s <build_dir>/compile_commands.json .
+```
+Configure again after adding a source file, so that it is listed. The `.clangd` file in the source directory removes a GCC-only flag which clang rejects.
+The database lists the default configuration: code disabled by a `-DDP_...` flag is not indexed.
+A profiler installed via `pip install ./profiler` is built without such a database.
+
 
 
 ## Testing the installation
