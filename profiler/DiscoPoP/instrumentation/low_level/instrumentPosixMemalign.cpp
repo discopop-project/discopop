@@ -39,7 +39,7 @@ void DiscoPoP::instrumentPosixMemalign(CallBase *toInstrument) {
   IRBuilder<> IRB(nextInst);
 
   vector<Value *> args;
-  args.push_back(ConstantInt::get(Int32, lid));
+  args.push_back(lidConstant(lid));
 
   // posix_memalign returns the block through its first argument, a void** out parameter. That
   // argument is the address of the caller's pointer variable, not of the allocation, so the

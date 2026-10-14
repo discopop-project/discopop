@@ -24,7 +24,7 @@ void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
 #endif
 
   vector<Value *> args;
-  args.push_back(ConstantInt::get(Int32, lid));
+  args.push_back(lidConstant(lid));
 
 #if LLVM_VERSION_MAJOR >= 22
   Value *startAddr =

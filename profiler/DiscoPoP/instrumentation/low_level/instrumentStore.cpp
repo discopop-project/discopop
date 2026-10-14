@@ -19,7 +19,7 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruct
     return;
 
   vector<Value *> args;
-  args.push_back(ConstantInt::get(Int32, llvm_ir_instruction_id));
+  args.push_back(ConstantInt::get(Int64, llvm_ir_instruction_id));
 
 #if LLVM_VERSION_MAJOR >= 22
   Value *memAddr = PtrToIntInst::CreatePointerCast(toInstrument->getPointerOperand(), Int64, "", toInstrument->getIterator());

@@ -19,7 +19,7 @@ void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id, Loop *L) {
     return;
   }
   vector<Value *> args;
-  args.push_back(ConstantInt::get(Int32, lid));
+  args.push_back(lidConstant(lid));
   args.push_back(ConstantInt::get(Int32, id));
   args.push_back(ConstantInt::get(Int32, 0));  // instruction id will be replaced after the assignment of unique instruction ids
 #if LLVM_VERSION_MAJOR >= 22
