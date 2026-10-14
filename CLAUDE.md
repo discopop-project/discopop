@@ -124,7 +124,7 @@ This document contains critical information about working with this codebase. Fo
 
 #### Compile time options of the runtime library (profiler)
 - most of the runtime library is configured by `-DDP_...` options (`profiler/rtlib/CMakeLists.txt`), which switch code in and out with `#if`; the default build compiles only one variant, so code behind a disabled option is not checked
-- `scripts/dev/check_rtlib_options.sh [build base dir] [configuration]` builds `DiscoPoP_RT` once per set of options (build dirs `build_options/<name>`, gitignored; ~80 s on 8 cores) and fails if one does not compile; a new option belongs into its list. `DP_MEMORY_REGION_DEALIASING` is not part of it yet, it does not compile
+- `scripts/dev/check_rtlib_options.sh [build base dir] [configuration]` builds `DiscoPoP_RT` once per set of options (build dirs `build_options/<name>`, gitignored; ~80 s on 8 cores) and fails if one does not compile; a new option belongs into its list.
 - it only compiles: the unit tests hang with `-DDP_NUM_WORKERS=0` (the access queue integration tests expect workers)
 - CI runs it as a step of the job `profiler_unit_tests`
 

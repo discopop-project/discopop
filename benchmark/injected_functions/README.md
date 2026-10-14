@@ -86,8 +86,8 @@ where it could. `__dp_call` is additionally driven as a library call, the case i
 instrumented function exit will follow.
 
 **A body can measure as free, and even as slightly negative.** `__dp_alloca`, `__dp_new` and
-`__dp_delete` have no body in the default configuration: two of them are behind
-`DP_MEMORY_REGION_DEALIASING` and the third is commented out. What is left is the difference
+`__dp_delete` have no body: the runtime does not track allocations, the callbacks
+are still emitted by the pass and only return. What is left is the difference
 between two measurements of the same empty call, which is the noise floor -- a few tenths of a
 nanosecond, in either direction.
 

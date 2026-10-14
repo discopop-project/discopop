@@ -119,7 +119,6 @@ file(APPEND "${DiscoPoP_SOURCE_DIR}/library/discopop_library/ConfigProvider/asse
 file(APPEND "${DiscoPoP_SOURCE_DIR}/library/discopop_library/ConfigProvider/assets/build_config.py" "DP_CALLTREE_PROFILING=\"${DP_CALLTREE_PROFILING}\"\n")
 file(APPEND "${DiscoPoP_SOURCE_DIR}/library/discopop_library/ConfigProvider/assets/build_config.py" "DP_CALLTREE_PROFILING_METADATA_CUTOFF=\"${DP_CALLTREE_PROFILING_METADATA_CUTOFF}\"\n")
 file(APPEND "${DiscoPoP_SOURCE_DIR}/library/discopop_library/ConfigProvider/assets/build_config.py" "DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY=\"${DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY}\"\n")
-file(APPEND "${DiscoPoP_SOURCE_DIR}/library/discopop_library/ConfigProvider/assets/build_config.py" "DP_MEMORY_REGION_DEALIASING=\"${DP_MEMORY_REGION_DEALIASING}\"\n")
 file(APPEND "${DiscoPoP_SOURCE_DIR}/library/discopop_library/ConfigProvider/assets/build_config.py" "DP_BRANCH_TRACKING=\"${DP_BRANCH_TRACKING}\"\n")
 file(APPEND "${DiscoPoP_SOURCE_DIR}/library/discopop_library/ConfigProvider/assets/build_config.py" "DP_BUILD_UNITTESTS=\"${DP_BUILD_UNITTESTS}\"\n")
 
