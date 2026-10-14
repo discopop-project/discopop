@@ -390,7 +390,7 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
   // explicit mapping from the digit positions of the "<function>_loopstate<digits>" labels
   // (see StaticCalltree.cpp) to the loops they describe, read by the explorer
   std::ofstream loopstate_positions_file;
-  std::string loopstate_positions_path(getenv("DOT_DISCOPOP_PROFILER"));
+  std::string loopstate_positions_path(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   loopstate_positions_path += "/loopstate_positions.txt";
   loopstate_positions_file.open(loopstate_positions_path.data(), std::ios_base::app);
   for (Function &F : M) {

@@ -29,7 +29,7 @@ void DiscoPoP::dp_reduction_insert_functions() {
 
   // insert function calls to monitor loop iterations
   std::ofstream loop_metadata_file;
-  std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+  std::string tmp(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   tmp += "/loop_meta.txt";
   loop_metadata_file.open(tmp.data());
   llvm::Type *loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ctx_);
