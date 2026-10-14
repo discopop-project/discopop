@@ -35,6 +35,7 @@ build/
 build_tests/
 build_asan/
 build_tsan/
+build_options/
 develop-eggs/
 dist/
 downloads/

@@ -420,6 +420,12 @@ jobs:
         run: |
           build_tests/test/pass_unit_tests/DiscoPoP_Pass_UT
 
+      # most of the runtime is configured by -DDP_... options, and the default build compiles only one variant:
+      # this builds the runtime library once per set of options, so that an option does not stop compiling unnoticed
+      - name: Build the runtime library with the compile time options (scripts/dev/check_rtlib_options.sh)
+        run: |
+          scripts/dev/check_rtlib_options.sh
+
   # PROFILER TESTS of programs compiled with discopop_cxx: which callbacks the pass inserts where (test/instrumentation),
   # and the data dependencies the profiling run finds (test/profiler, gold standard)
   profiler_tests:
