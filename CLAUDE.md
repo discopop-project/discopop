@@ -133,6 +133,10 @@ This document contains critical information about working with this codebase. Fo
 - `scripts/dev/check_headers.py [build dir]` (default `build_tests`, configured as for the unit tests) compiles each header as a translation unit of its own with the flags of its target taken from `compile_commands.json`, and fails if one does not; a new header is picked up by `git ls-files`
 - CI runs it as a step of the job `profiler_unit_tests`
 
+#### LLVM versions (profiler)
+- the pass supports LLVM 19-22; code that must differ between the versions is not written as `#if LLVM_VERSION_MAJOR` at the call site: `profiler/DiscoPoP/llvm_compat.hpp` wraps what is not available in all of them (`llvmcompat::nextInstruction`, `llvmcompat::insertAfter`), and instructions are created before an iterator (`->getIterator()`), which every supported version accepts
+- the remaining version checks are the `PassPlugin.h` include path and the pipeline callback signature in `RegisterPass.cpp`; a new difference belongs into `llvm_compat.hpp`
+
 #### Sanitizers (profiler)
 - the CMake option `DP_SANITIZERS` (value for `-fsanitize=`, e.g. `address,undefined` or `thread`) instruments the runtime library `DiscoPoP_RT` and everything linking it, i.e. `DiscoPoP_UT`; the LLVM pass plugin is not sanitized (it runs inside an uninstrumented clang)
 - to build and run `DiscoPoP_UT` with ASan+UBSan(+LSan) resp. TSan, from the repository root: `scripts/dev/run_profiler_sanitizers.sh address,undefined` resp. `scripts/dev/run_profiler_sanitizers.sh thread` (build dirs `build_asan` / `build_tsan`, gitignored; ~30 s each); the CI job "Runtime unit tests with sanitizers" (`runtime_unit_tests_sanitized`) runs exactly this; it covers only what the unit tests exercise (no LLVM pass, no instrumented programs)
