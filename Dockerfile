@@ -43,7 +43,7 @@ WORKDIR /usr/local/ci
 ADD . /usr/local/ci/discopop
 
 # build discopop
-RUN cmake -S discopop -B discopop/build -DCMAKE_BUILD_TYPE=Debug -DLLVM_DIST_PATH=/usr/local/ci/software/llvm-11.1.0 -DUSE_VENV=/usr/local/ci/venv -DDP_CALLTREE_PROFILING=0 -DDP_BUILD_UNITTESTS=0 && make --directory=discopop/build -j && make --directory=discopop/build install_python_modules
+RUN cmake -S discopop -B discopop/build -DCMAKE_BUILD_TYPE=Debug -DLLVM_DIST_PATH=/usr/local/ci/software/llvm-11.1.0 -DUSE_VENV=/usr/local/ci/venv -DDP_BUILD_UNITTESTS=0 && make --directory=discopop/build -j && make --directory=discopop/build install_python_modules
 
 WORKDIR /usr/local/ci/discopop
 
