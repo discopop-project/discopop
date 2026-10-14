@@ -426,8 +426,7 @@ in-process; the scripts live outside the repository.
 ## 7. Risks / limits (v1)
 
 - Variable names are those at the access; callee parameter names are not mapped
-  back to the caller's arguments (possible later with
-  `DP_MEMORY_REGION_DEALIASING`).
+  back to the caller's arguments.
 - Struct members are named by member only; classified via the AST `MemberExpr`
   on the access line, else `other`.
 - **Stack reuse.** `DP_STACK_ACCESS_DETECTION` is off, so two sibling calls that
