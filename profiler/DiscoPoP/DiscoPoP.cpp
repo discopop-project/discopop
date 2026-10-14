@@ -20,8 +20,6 @@ using namespace llvm;
 using namespace std;
 using namespace dputil;
 
-StringRef DiscoPoP::getPassName() const { return "DiscoPoP"; }
-
 // Initializations
 void DiscoPoP::setupDataTypes() {
   Void = const_cast<Type *>(Type::getVoidTy(*ThisModuleContext));
@@ -83,17 +81,6 @@ DiscoPoP::~DiscoPoP() {
     ocfg.flush();
     ocfg.close();
   }
-}
-
-void DiscoPoP::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<DominatorTreeWrapperPass>();
-  AU.addRequiredTransitive<RegionInfoPass>();
-  // NOTE: changed 'LoopInfo' to 'LoopInfoWrapperPass'
-  AU.addRequired<LoopInfoWrapperPass>();
-  AU.addPreserved<LoopInfoWrapperPass>();
-  // Get recursive functions called in loops. (Mo 5.11.2019)
-  AU.addRequired<CallGraphWrapperPass>();
-  AU.setPreservesAll();
 }
 
 // DPReduction end

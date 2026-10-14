@@ -228,16 +228,6 @@ char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction *instr) {
   return ' ';
 }
 
-// return true if 'operand' is an operand of the instruction 'instr'
-bool DiscoPoP::dp_reduction_is_operand(llvm::Instruction *instr, llvm::Value *operand) {
-  unsigned num_operands = instr->getNumOperands();
-  for (unsigned i = 0; i < num_operands; ++i) {
-    if (instr->getOperand(i) == operand)
-      return true;
-  }
-  return false;
-}
-
 bool DiscoPoP::dp_reduction_init_util(std::string fmap_path) {
   std::ifstream fmap_file;
   fmap_file.open(fmap_path.c_str());

@@ -268,8 +268,6 @@ public:
 
   ~DiscoPoP();
 
-  StringRef getPassName() const;
-
   bool runOnModule(Module &M, ModuleAnalysisManager &MAM);
 
   bool runOnFunction(Function &F, ModuleAnalysisManager &MAM);
@@ -279,8 +277,6 @@ public:
   bool doInitialization(Module &M);
 
   bool doFinalization(Module &M);
-
-  void getAnalysisUsage(AnalysisUsage &Info) const;
 
   static char ID; // Pass identification, replacement for typeid
 
@@ -296,7 +292,6 @@ public:
   int32_t get_or_register_loop_id(llvm::Loop* L);
 
   // functions to get list of global variables
-  void collectGlobalVariables();
 
   // functions to get recursive functions (Mo 5.11.2019)
   bool isRecursive(Function &F, CallGraph &CG);
@@ -396,7 +391,6 @@ struct container_hash {
   unsigned dp_reduction_get_file_id(llvm::Function *func);
   bool dp_reduction_init_util(std::string fmap_path);
   char dp_reduction_get_char_for_opcode(llvm::Instruction *instr); //} // namespace
-  bool dp_reduction_is_operand(llvm::Instruction *instr, llvm::Value *operand);
   int dp_reduction_get_op_order(char c);
   Type *dp_reduction_pointsToStruct(PointerType *PTy);
   string findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
