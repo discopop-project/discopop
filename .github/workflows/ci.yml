@@ -90,16 +90,23 @@ jobs:
           }
           image_of() { sed -E 's/.*"image":"([^"]*)".*/\1/' <<< "$1"; }
 
-          apt_common="export DEBIAN_FRONTEND=noninteractive && apt update && apt install -y python3 python3-pip python3-venv python3-tk build-essential make cmake git libboost-all-dev"
+          # --no-install-recommends and libboost-dev (DiscoPoP only uses header-only Boost libraries) keep the images small:
+          # libboost-all-dev pulls in OpenMPI and, through it, the AMD HIP runtime and a second LLVM
+          apt_install="apt install -y --no-install-recommends"
+          apt_common="export DEBIAN_FRONTEND=noninteractive && apt update && $apt_install ca-certificates python3 python3-pip python3-venv python3-tk build-essential make cmake git libboost-dev"
+          # apt.llvm.org without its llvm.sh, which also installs lldb, lld, clangd and further tools; apt reads the
+          # ASCII-armored key itself, so gnupg is not needed
+          apt_llvm_org="$apt_install wget && wget -qO /etc/apt/trusted.gpg.d/apt.llvm.org.asc https://apt.llvm.org/llvm-snapshot.gpg.key && echo 'deb http://apt.llvm.org/trixie/ llvm-toolchain-trixie-21 main' > /etc/apt/sources.list.d/apt.llvm.org.list && apt purge -y --auto-remove wget && apt update"
 
-          e_llvm19="$(entry ubuntu-24-04-llvm-19-python-3.11 ubuntu:24.04 python3.11 "$apt_common && apt install -y software-properties-common && add-apt-repository -y ppa:deadsnakes/ppa && apt install -y python3.11 python3.11-venv python3.11-tk python3.11-dev && apt install -y llvm-19-dev clang-19 libomp-19-dev")"
-          e_llvm20="$(entry ubuntu-24-04-llvm-20 ubuntu:24.04 python3 "$apt_common && apt install -y llvm-20-dev clang-20 libomp-20-dev")"
-          e_llvm21="$(entry debian-trixie-llvm-21 debian:trixie python3 "$apt_common && apt install -y wget lsb-release gnupg && wget -qO /tmp/llvm.sh https://apt.llvm.org/llvm.sh && bash /tmp/llvm.sh 21 && apt install -y llvm-21-dev clang-21 libomp-21-dev")"
-          e_llvm22="$(entry debian-trixie-llvm-22 debian:trixie python3 "$apt_common && apt install -y llvm-22-dev clang-22 libomp-22-dev")"
-          # the sanitized unit tests and the coverage (no venv needed); llvm-19 provides llvm-cov and llvm-profdata
-          e_tools="$(entry ubuntu-24-04-llvm-19-tools ubuntu:24.04 python3 "$apt_common && apt install -y llvm-19 llvm-19-dev clang-19 libomp-19-dev")"
+          e_llvm19="$(entry ubuntu-24-04-llvm-19-python-3.11 ubuntu:24.04 python3.11 "$apt_common && $apt_install software-properties-common && add-apt-repository -y ppa:deadsnakes/ppa && $apt_install python3.11 python3.11-venv python3.11-tk python3.11-dev && $apt_install llvm-19-dev clang-19 libomp-19-dev")"
+          e_llvm20="$(entry ubuntu-24-04-llvm-20 ubuntu:24.04 python3 "$apt_common && $apt_install llvm-20-dev clang-20 libomp-20-dev")"
+          e_llvm21="$(entry debian-trixie-llvm-21 debian:trixie python3 "$apt_common && $apt_llvm_org && $apt_install llvm-21-dev clang-21 libomp-21-dev")"
+          e_llvm22="$(entry debian-trixie-llvm-22 debian:trixie python3 "$apt_common && $apt_install llvm-22-dev clang-22 libomp-22-dev")"
+          # the sanitized unit tests and the coverage (no venv needed); llvm-19 provides llvm-cov and llvm-profdata,
+          # libclang-rt-19-dev the sanitizer and profile runtimes (only recommended by clang-19)
+          e_tools="$(entry ubuntu-24-04-llvm-19-tools ubuntu:24.04 python3 "$apt_common && $apt_install llvm-19 llvm-19-dev clang-19 libclang-rt-19-dev libomp-19-dev")"
           # the leak check links against the sanitizer runtime of clang
-          e_leak="$(entry debian-trixie-llvm-19-leak-check debian:trixie python3 "export DEBIAN_FRONTEND=noninteractive && apt update && apt install -y python3 build-essential make cmake git llvm-19-dev clang-19 libclang-rt-19-dev libomp-19-dev libboost-all-dev")"
+          e_leak="$(entry debian-trixie-llvm-19-leak-check debian:trixie python3 "export DEBIAN_FRONTEND=noninteractive && apt update && $apt_install ca-certificates python3 build-essential make cmake git llvm-19-dev clang-19 libclang-rt-19-dev libomp-19-dev libboost-dev")"
 
           # the full matrix only where code is merged into master or new_explorer (pushes and pull requests
           # targeting them); every other push is checked on one platform to keep development runs short
