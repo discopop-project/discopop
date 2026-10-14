@@ -37,10 +37,17 @@ TARGETS: Dict[str, str] = {
 
 
 def tracked_headers(directory: str) -> List[str]:
-    out = subprocess.run(
-        ["git", "ls-files", f"{directory}/*.hpp"], cwd=REPO_ROOT, check=True, capture_output=True, text=True
-    ).stdout
-    return out.split()
+    # safe.directory: in the CI containers the checkout belongs to another user than the one running
+    # the script, which makes git refuse to work in it ("dubious ownership", exit status 128)
+    result = subprocess.run(
+        ["git", "-c", f"safe.directory={REPO_ROOT}", "ls-files", f"{directory}/*.hpp"],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        sys.exit(f"git ls-files failed ({result.returncode}): {result.stderr.strip()}")
+    return result.stdout.split()
 
 
 def syntax_only_command(command: str, header: Path) -> List[str]:
