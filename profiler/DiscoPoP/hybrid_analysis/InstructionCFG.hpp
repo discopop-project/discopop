@@ -18,16 +18,18 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 #include <llvm/Support/raw_ostream.h>
+#include <cstdint>
 #include <string>
 
 #include "DPUtils.hpp"
 
-#define ENTRY 1000000
-#define EXIT 2000000
-
 class InstructionCFG : public Graph<llvm::Instruction *> {
 
 private:
+  // the artificial instructions the CFG starts and ends with: ids, not addresses of instructions
+  static constexpr std::uintptr_t ENTRY = 1000000;
+  static constexpr std::uintptr_t EXIT = 2000000;
+
   InstructionNode<llvm::Instruction *> *entry;
   InstructionNode<llvm::Instruction *> *exit;
   dputil::VariableNameFinder *VNF;

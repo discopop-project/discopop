@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from typing import Dict, List, Optional, Sequence, Tuple
 
 # A source location is packed into a single integer as (fileID << LIDSIZE) + lineNumber,
-# see LIDSIZE / decodeLID in profiler/share/include/DPUtils.hpp.
+# see LIDSIZE in profiler/share/include/lid_constants.hpp, decodeLID in profiler/share/include/DPUtils.hpp.
 LIDSIZE = 14
 MAXLNO = 1 << LIDSIZE
 

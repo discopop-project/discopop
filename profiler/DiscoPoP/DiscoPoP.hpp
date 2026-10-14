@@ -105,13 +105,12 @@ inline int32_t get_dp_instruction_id(llvm::Instruction *I) {
 
 #include "Globals.hpp"
 
-#define DP_DEBUG false
+constexpr bool DP_DEBUG = false;
 
-#define ClCheckLoopPar true
-#define DumpToDot false
-#define DP_DEBUG false
-#define DP_VERBOSE false // prints warning messages
-#define DP_hybrid_DEBUG false
+constexpr bool ClCheckLoopPar = true;
+constexpr bool DumpToDot = false;
+constexpr bool DP_VERBOSE = false; // prints warning messages
+constexpr bool DP_hybrid_DEBUG = false;
 
 
 /*
