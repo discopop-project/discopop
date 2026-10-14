@@ -420,6 +420,12 @@ jobs:
         run: |
           build_tests/test/pass_unit_tests/DiscoPoP_Pass_UT
 
+      # a header that only compiles because its includer included something first breaks as soon as the includes change:
+      # this compiles every header of the profiler on its own, with the flags of the build above
+      - name: Compile every header on its own (scripts/dev/check_headers.py)
+        run: |
+          python3 scripts/dev/check_headers.py build_tests
+
       # most of the runtime is configured by -DDP_... options, and the default build compiles only one variant:
       # this builds the runtime library once per set of options, so that an option does not stop compiling unnoticed
       - name: Build the runtime library with the compile time options (scripts/dev/check_rtlib_options.sh)
