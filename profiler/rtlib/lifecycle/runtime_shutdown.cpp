@@ -80,14 +80,6 @@ void write_results(LID lid) {
     function_manager->output_functions(*out);
   }
 
-  {
-    DP_TIMED_SECTION(OUTPUT_ALLOCATIONS, "outputAllocations");
-    auto allocationsFileStream = ofstream(profiler_output_path("memory_regions.txt"), ios::out);
-#if DP_MEMORY_REGION_DEALIASING
-    memory_manager->output_memory_regions(allocationsFileStream);
-#endif
-  }
-
   // hybrid analysis
   // the dependencies of the omitted instructions first: their basic blocks are
   // known to be complete only now that the target has terminated

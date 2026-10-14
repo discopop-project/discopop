@@ -186,13 +186,3 @@ TEST_F(RuntimeFunctionsTest, testEveryReportedLocationGetsItsOwnLine) {
 }
 
 TEST_F(RuntimeFunctionsTest, testAnEmptyReportIsEmpty) { EXPECT_EQ(write_report(), ""); }
-
-// Without DP_MEMORY_REGION_DEALIASING the runtime does not ask the memory manager which
-// allocation an address belongs to, and the variable name stands for itself.
-TEST_F(RuntimeFunctionsTest, testTheMemoryRegionIdOfAnAddressIsTheFallbackByDefault) {
-#if DP_MEMORY_REGION_DEALIASING
-  GTEST_SKIP() << "the dealiasing build asks the memory manager instead";
-#else
-  EXPECT_EQ(getMemoryRegionIdFromAddr("x", 0x1000), "x");
-#endif
-}

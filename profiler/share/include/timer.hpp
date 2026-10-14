@@ -52,23 +52,12 @@ enum class TimerRegion : unsigned int {
   OUTPUT_DEPS,
   OUTPUT_LOOPS,
   OUTPUT_FUNCS,
-  OUTPUT_ALLOCATIONS,
   READ_RUNTIME_INFO,
   INIT_PARALLELIZATION,
-  GET_MEMORY_REGION_ID_FROM_ADDR,
   MERGE_DEPS,
   ANALYZE_DEPS,
   ANALYZE_SINGLE_ACCESS,
   FINALIZE_PARALLELIZATION,
-  CLEAR_STACK_ACCESSES,
-
-  // These are statistics regarding stack access detection
-  STACK_CHECK_READ_ACCESS,
-  STACK_CHECK_WRITE_ACCESS,
-  STACK_FOUND_READ_ACCESS,
-  STACK_FOUND_WRITE_ACCESS,
-  STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE,
-  STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE_TRUE,
 
   // Statistics regarding calltree profiling
   ADD_DEP_CALLTREE_REGISTER_METADATAQUEUEELEMENT,
@@ -208,25 +197,7 @@ public:
     print(stream, " Output the dependencies                         : ", TimerRegion::OUTPUT_DEPS);
     print(stream, " Output the loops                                : ", TimerRegion::OUTPUT_LOOPS);
     print(stream, " Output the functions                            : ", TimerRegion::OUTPUT_FUNCS);
-    print(stream, " Output the allocations                          : ", TimerRegion::OUTPUT_ALLOCATIONS);
     stream << '\n';
-    print(stream, " Get memory region by id from address            : ", TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
-    print(stream, " Clear the stack accesses                        : ", TimerRegion::CLEAR_STACK_ACCESSES);
-    stream << '\n';
-
-    stream << "\n========== DiscoPoP TIMERS: stack access detection ==\n";
-    stream << " NOTE: times to detect stack access in read and write contained "
-              "in \n";
-    stream << "       reported times to read and write from / to memory. \n";
-    print(stream, " Check for read access to stack                  : ", TimerRegion::STACK_CHECK_READ_ACCESS);
-    print(stream, " Check for write access to stack                 : ", TimerRegion::STACK_CHECK_WRITE_ACCESS);
-    print(stream, " Found read access to stack                      : ", TimerRegion::STACK_FOUND_READ_ACCESS);
-    print(stream, " Found write access to stack                     : ", TimerRegion::STACK_FOUND_WRITE_ACCESS);
-    print(stream,
-          " Check for addr is owned by scope                : ", TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE);
-    print(stream,
-          " Found addr is owned by scope                    : ", TimerRegion::STACK_CHECK_ADDR_IS_OWNED_BY_SCOPE_TRUE);
-    stream << "\n";
 
 #if DP_CALLTREE_PROFILING
     stream << "\n========== DiscoPoP TIMERS: calltree profiling ======\n";

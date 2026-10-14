@@ -32,9 +32,6 @@ target_sources(
   loops/makros/test_makros.cpp
   loops/var_counter/test_var_counter.cpp
   loops/var_info/test_var_info.cpp
-  memory/memory_manager/test_memory_manager.cpp
-  memory/memory_region_tree/test_memory_region_tree.cpp
-  memory/mrtnode/test_mrtnode.cpp
   memory/perfect_shadow/test_perfect_shadow.cpp
   memory/scope/test_scope.cpp
   memory/shadow_memory/test_shadow_memory.cpp

@@ -16,7 +16,6 @@
 
 #include "functions/FunctionManager.hpp"
 #include "loop/LoopManager.hpp"
-#include "memory/MemoryManager.hpp"
 
 #if DP_CALLTREE_PROFILING
 #include "calltree/CallTreeNode.hpp"
