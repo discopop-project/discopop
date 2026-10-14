@@ -44,7 +44,6 @@ dependencies = [
     "pydot",
     "requests",
     "scipy",
-    "setuptools",
     "sympy",
     "sympy_plot_backends",
     "tabulate",

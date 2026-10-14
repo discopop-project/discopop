@@ -30,6 +30,7 @@ classifiers = [
 ]
 dependencies = [
     "matplotlib",
+    "networkx",
 ]
 
 [project.optional-dependencies]

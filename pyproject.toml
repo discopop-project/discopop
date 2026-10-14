@@ -35,7 +35,6 @@ dependencies = [
     "discopop-explorer>=0.0.1a2",
     "discopop-mcp-server>=0.0.1a1",
     "discopop-hotspot-detection>=0.0.1a1",
-    "mypy", "black", "data-science-types"
 ]
 
 [project.urls]

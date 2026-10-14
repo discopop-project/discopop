@@ -30,9 +30,6 @@ classifiers = [
 ]
 dependencies = [
     "numpy",
-    "requests",
-    "packaging",
-    "termcolor",
 ]
 
 [project.urls]
