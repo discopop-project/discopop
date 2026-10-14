@@ -9,7 +9,8 @@
 cmake_minimum_required(VERSION 3.28.0)
 project(DiscoPoP)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # compile_commands.json for clangd and other tools, covering every target below; it initializes the
 # EXPORT_COMPILE_COMMANDS property of each target, so it has to be set before the add_subdirectory() calls.
@@ -67,14 +68,9 @@ set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/b
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libi)
 
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-include(HandleLLVMOptions)
-include(AddLLVM)
-
-# LLVM_DEFINITIONS is one space-separated string; passed as is, add_definitions() treats it as a single
-# definition, which breaks as soon as it contains a value (LLVM 22 adds -D_GLIBCXX_USE_CXX11_ABI=1)
-separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
-add_definitions(${LLVM_DEFINITIONS_LIST})
-include_directories(${LLVM_INCLUDE_DIRS})
+# The LLVM headers and definitions are usage requirements of the targets that use LLVM (DiscoPoP_LLVM, see
+# profiler/CMakeLists.txt), and LLVM's compiler flags (HandleLLVMOptions) apply to the pass only
+# (profiler/DiscoPoP/CMakeLists.txt): the runtime library must not depend on how LLVM was built.
 
 # Decided before profiler/ is configured: the runtime library builds an extra variant of itself
 # for the callback benchmarks when the unit tests are requested, see profiler/rtlib/CMakeLists.txt.

@@ -18,7 +18,8 @@
 cmake_minimum_required(VERSION 3.28.0)
 project(DiscoPoPLeakCheck)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # the leak check only needs the unit test binary, not GoogleTest's install rules
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)

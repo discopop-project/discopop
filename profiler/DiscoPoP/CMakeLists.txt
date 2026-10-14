@@ -6,9 +6,10 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-include_directories(
-        ../share/include
-)
+# LLVM's own compiler flags (-fno-rtti where LLVM was built without it, -fvisibility-inlines-hidden, ...) are
+# what a plugin loaded into LLVM tools is built with; they apply to this directory only
+include(HandleLLVMOptions)
+include(AddLLVM)
 
 # The pass sources are compiled once into an OBJECT library, which is consumed both by the
 # LLVMDiscoPoP plugin below and by the DiscoPoP_Pass_UT unit test binary (test/pass_unit_tests).
@@ -91,7 +92,8 @@ target_include_directories(DiscoPoP_PassObjects PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/../share/include
         )
 
-target_link_libraries(DiscoPoP_PassObjects PUBLIC OpenMP::OpenMP_CXX)
+target_link_libraries(DiscoPoP_PassObjects PUBLIC DiscoPoP_LLVM DiscoPoP_Boost OpenMP::OpenMP_CXX
+        PRIVATE DiscoPoP_Warnings)
 
 # forward compiler flags
 # PUBLIC on the object library, so the unit tests compile against the same configuration

@@ -66,5 +66,4 @@ else()
 endif()
 
 target_link_libraries(DiscoPoP_Pass_UT PRIVATE gtest)
-set_target_properties(DiscoPoP_Pass_UT PROPERTIES CXX_STANDARD 17)
 set_target_properties(DiscoPoP_Pass_UT PROPERTIES ENABLE_EXPORTS 1)
