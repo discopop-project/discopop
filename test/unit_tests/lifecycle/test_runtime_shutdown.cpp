@@ -122,7 +122,7 @@ protected:
 private:
   void remove_output_directory() const {
     for (const char *const file : {"dynamic_dependencies.txt", "loop_meta.txt", "loop_counter_output.txt",
-                                   "cu_taken_branch_counter_output.txt", "memory_regions.txt"}) {
+                                   "cu_taken_branch_counter_output.txt"}) {
       ::remove((output_directory + "/" + file).c_str());
     }
     ::remove((output_directory + "/statistics/profiling_time.txt").c_str());
@@ -202,12 +202,6 @@ TEST_F(RuntimeShutdownTest, testTheProfilingTimeIsWritten) {
   write_results(0);
 
   EXPECT_NE(read_output("statistics/profiling_time.txt").find(" ms"), std::string::npos);
-}
-
-TEST_F(RuntimeShutdownTest, testTheAllocationsAreWritten) {
-  write_results(0);
-
-  EXPECT_TRUE(output_exists("memory_regions.txt"));
 }
 
 TEST_F(RuntimeShutdownTest, testTheLoopCountersAreWritten) {

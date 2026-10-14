@@ -48,30 +48,9 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   function_manager->reset_call(lid);
   function_manager->decrease_stack_level();
 
-  // TEST
-  // clear information on allocated stack addresses
-#if DP_STACK_ACCESS_DETECTION
-  const auto last_addresses = memory_manager->pop_last_stack_address();
-#endif
-
-  // clearStackAccesses goes through __dp_read / __dp_write, which take the lock themselves
-  dp_scope.unlock();
-
-#if DP_STACK_ACCESS_DETECTION
-  clearStackAccesses(last_addresses.first,
-                     last_addresses.second); // insert accesses with LID 0 to the queues
-#endif
-
-  dp_scope.relock();
-
-#if DP_STACK_ACCESS_DETECTION
-  memory_manager->leaveScope("function", lid);
-#endif
-
 #ifdef DP_CALLTREE_PROFILING
   call_tree.exit_function();
 #endif
-  // !TEST
 
   if (isExit == 0) {
     function_manager->register_function_end(lid);

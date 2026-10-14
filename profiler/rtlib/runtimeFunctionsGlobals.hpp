@@ -62,7 +62,6 @@ extern std::mutex pthread_compatibility_mutex;
 // to compare the pointer against null.
 extern ImmortalStorage<FunctionManager> function_manager;
 extern ImmortalStorage<LoopManager> loop_manager;
-extern ImmortalStorage<MemoryManager> memory_manager;
 
 void construct_manager_globals();
 void destroy_manager_globals();

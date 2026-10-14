@@ -42,11 +42,6 @@ void __dp_func_entry(LID lid, int32_t isStart, int32_t functionEntryID) {
   // follow the pending call into this function (or switch to the function's own root state)
   enter_function_for_callstate(functionEntryID);
 
-#if DP_STACK_ACCESS_DETECTION
-  memory_manager->enter_new_function();
-  memory_manager->enterScope("function", lid);
-#endif
-
 #ifdef DP_CALLTREE_PROFILING
   call_tree.enter_function(lid);
 #endif

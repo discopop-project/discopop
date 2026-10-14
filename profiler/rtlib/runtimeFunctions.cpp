@@ -323,17 +323,6 @@ void initSingleThreadedExecution() {
   myMap = new depMap();
 }
 
-string getMemoryRegionIdFromAddr(string fallback, ADDR addr) {
-#ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::GET_MEMORY_REGION_ID_FROM_ADDR);
-#endif
-#if DP_MEMORY_REGION_DEALIASING
-  return fallback + '-' + memory_manager->get_memory_region_id(addr, fallback);
-#else
-  return fallback;
-#endif
-}
-
 void mergeDeps() {
   allDepsLock.lock();
 #ifdef DP_INTERNAL_TIMER
@@ -804,22 +793,5 @@ void finalizeSingleThreadedExecution() {
     std::cout << "END: finalize Single Threaded Execution... \n";
   }
 }
-
-#if DP_STACK_ACCESS_DETECTION
-void clearStackAccesses(ADDR stack_lower_bound, ADDR stack_upper_bound) {
-#ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::CLEAR_STACK_ACCESSES);
-#endif
-
-  const auto &current_scope = memory_manager->getCurrentScope();
-  const auto &writes = current_scope.get_first_write();
-  for (ADDR addr : writes) {
-    // cleanup reads
-    __dp_read(0, addr, "");
-    // cleanup writes
-    __dp_write(0, addr, "");
-  }
-}
-#endif
 
 } // namespace __dp

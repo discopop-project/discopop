@@ -47,7 +47,6 @@ std::mutex pthread_compatibility_mutex;
 
 ImmortalStorage<FunctionManager> function_manager;
 ImmortalStorage<LoopManager> loop_manager;
-ImmortalStorage<MemoryManager> memory_manager;
 
 #if DP_CALLTREE_PROFILING
 CallTree call_tree;
@@ -112,7 +111,6 @@ void construct_manager_globals() {
   }
   function_manager.construct();
   loop_manager.construct();
-  memory_manager.construct();
   manager_globals_alive = true;
 }
 
@@ -121,7 +119,6 @@ void destroy_manager_globals() {
   if (!manager_globals_alive) {
     return;
   }
-  memory_manager.destroy();
   loop_manager.destroy();
   function_manager.destroy();
   manager_globals_alive = false;
