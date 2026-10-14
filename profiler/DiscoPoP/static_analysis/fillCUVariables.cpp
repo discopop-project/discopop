@@ -16,7 +16,7 @@ using namespace llvm;
 using namespace std;
 using namespace dputil;
 
-void DiscoPoP::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
+void DiscoPoP::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> & /*CUVector*/,
                                map<string, vector<CU *>> &BBIDToCUIDsMap) {
   int lid;
   string varName, varType, varDefLine;

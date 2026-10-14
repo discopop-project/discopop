@@ -59,7 +59,7 @@ public:
 private:
   std::int32_t sigSlotSize; // in bits
   std::int32_t numSlot;
-  std::int32_t numHash;           // 1 by default
+  [[maybe_unused]] std::int32_t numHash; // 1 by default
   std::int32_t sigSlotSizeInByte; // slot size in byte
   std::int32_t sigSizeInByte;     // total size in byte
   std::uint8_t *sigarray;

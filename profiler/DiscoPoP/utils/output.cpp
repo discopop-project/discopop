@@ -107,7 +107,7 @@ void DiscoPoP::printTree(Node *root, bool isRoot) {
   });
 }
 
-void DiscoPoP::printNode(Node *root, bool isRoot) {
+void DiscoPoP::printNode(Node *root, bool /*isRoot*/) {
   if (root->name.find("llvm")) {
     string start = "";
     if (root->type == nodeTypes::loop) {

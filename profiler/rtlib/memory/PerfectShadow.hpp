@@ -25,7 +25,7 @@ namespace __dp {
 
 class PerfectShadow : public AbstractShadow {
 public:
-  PerfectShadow(int slotSize, int size, int numHash) : PerfectShadow() {}
+  PerfectShadow(int /*slotSize*/, int /*size*/, int /*numHash*/) : PerfectShadow() {}
 
   PerfectShadow() {
     sigRead = new std::unordered_map<int64_t, sigElement>();

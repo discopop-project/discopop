@@ -222,7 +222,7 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I, string pref
   return getOrInsertVarName_dynamic(prefix +  "*", builder);
 }
 
-void DiscoPoP::getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
+void DiscoPoP::getTrueVarNamesFromMetadata(Region *TopRegion, Node * /*root*/,
                                            std::map<string, string> *trueVarNamesFromMetadataMap) {
   // check for deb_declare in Region
   // get IRVarName from first operand

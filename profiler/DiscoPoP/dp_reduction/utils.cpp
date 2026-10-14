@@ -33,7 +33,7 @@ unsigned DiscoPoP::dp_reduction_get_file_id(llvm::Function *func) {
 
       char *success = realpath((directory.str() + "/" + filename.str()).c_str(), abs_path);
       if (!success) {
-        realpath(filename.str().c_str(), abs_path);
+        success = realpath(filename.str().c_str(), abs_path);
       }
 
       break;
@@ -130,7 +130,7 @@ llvm::Value *DiscoPoP::dp_reduction_points_to_var(llvm::GetElementPtrInst *instr
 
 // Encode the fileID and line number of BI as LID.
 // This is needed to support multiple files in a project.
-LID DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t &fileID) {
+LID DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t & /*fileID*/) {
   int32_t lno;
 
   const DebugLoc &location = BI->getDebugLoc();
@@ -177,7 +177,7 @@ char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction *instr) {
       if (intrinsicName.contains("fma") || intrinsicName.contains("fmuladd")){
         bool any_operand_is_negative_constant = false;
         if (instr->getNumOperands() >= 1) {
-          for(auto i = 1; i < instr->getNumOperands(); ++i){
+          for(unsigned i = 1; i < instr->getNumOperands(); ++i){
             Value *rhs_value = instr->getOperand(i);
             if (isa<ConstantInt>(rhs_value)) {
               any_operand_is_negative_constant = cast<ConstantInt>(rhs_value)->isNegative();

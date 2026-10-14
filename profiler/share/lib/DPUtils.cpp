@@ -32,7 +32,7 @@ cl::opt<bool>
 
 namespace dputil {
 
-int32_t getFileID(string fileMapping, string fullPathName) {
+int32_t getFileID(string /*fileMapping*/, string fullPathName) {
   // prepare environment variables
   if (FileMappingPath.length() == 0) {
     char const *tmp = getenv("DOT_DISCOPOP");

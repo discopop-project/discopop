@@ -83,8 +83,8 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   auto start = chrono::high_resolution_clock::now();
   std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> state_transitions;
   std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> inverse_state_transitions;
-  auto state_transitions_ptr = &state_transitions;
-  auto inverset_state_transitions_ptr = &inverse_state_transitions;
+  [[maybe_unused]] auto state_transitions_ptr = &state_transitions;
+  [[maybe_unused]] auto inverset_state_transitions_ptr = &inverse_state_transitions;
   auto static_calltree_ptr = &static_calltree;
   auto call_path_tree_ptr = enumerate_paths(static_calltree, &state_transitions, &inverse_state_transitions, unique_callpath_state_id);
   auto end = chrono::high_resolution_clock::now();

@@ -30,7 +30,8 @@ namespace __dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_alloca(LID lid, char *var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements) {
+void __dp_alloca(LID /*lid*/, char * /*var*/, ADDR /*startAddr*/, ADDR /*endAddr*/, int64_t /*numBytes*/,
+                 int64_t /*numElements*/) {
   DP_CALLBACK_SCOPE(ALLOCA);
 }
 }

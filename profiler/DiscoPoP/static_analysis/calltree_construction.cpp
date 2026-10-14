@@ -324,7 +324,7 @@ std::unordered_map<string, std::unordered_map<TRANSITION_TYPE, std::unordered_ma
 
 // returns true if the call or invoke I is a real call, i.e. not a call of an instrumentation
 // function, a clang helper or an LLVM intrinsic
-static bool is_relevant_call(Instruction *I, Function *callee){
+static bool is_relevant_call(Instruction * /*I*/, Function *callee){
   if (!callee) {
     return false;
   }

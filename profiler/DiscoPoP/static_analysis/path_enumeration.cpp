@@ -259,7 +259,7 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
-StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions, std::uint32_t start_path_id){
+StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, [[maybe_unused]] std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions, [[maybe_unused]] std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions, std::uint32_t start_path_id){
   // start ids from start_path_id (no collisions between modules)
   StaticCallPathTree* call_path_tree = new StaticCallPathTree(start_path_id);
 
@@ -297,8 +297,6 @@ StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, std::uno
   }
   std::atomic<short unsigned int> active_threads(worker_count);
   std::mutex new_stack_mtx;
-  std::mutex state_transitions_mtx;
-  std::mutex inverse_state_transitions_mtx;
 
   std::vector<std::thread> workers;
   for(unsigned int i = 0; i < worker_count; ++i){
@@ -534,7 +532,6 @@ void DiscoPoP::add_function_exit_edges_to_transitions(StaticCallPathTree* call_p
     // find state id for the prefix path
     // register edge transition from path to prefix path with trigger instruction "1" (i.e. leaving function)
   for(auto path: call_path_tree_ptr->all_nodes){
-    auto path_id = path->path_id;
     // rfind first call instruction
 
     StaticCallPathTreeNode* last_call_prefix = nullptr;

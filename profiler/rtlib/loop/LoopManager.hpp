@@ -47,7 +47,7 @@ public:
   }
 
 
-  void iterate_loop(const std::int32_t function_level) {
+  void iterate_loop(const std::int32_t /*function_level*/) {
     loopStack.increment_top_count();
     if (DP_DEBUG) {
       std::cout << "(" << std::dec << loopStack.top().funcLevel << ")";

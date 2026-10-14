@@ -304,7 +304,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
             }
           }
           for(Value* w: to_be_removed){
-            staticallyPredictableValues.erase(V);
+            staticallyPredictableValues.erase(w);
           }
         }
       }
