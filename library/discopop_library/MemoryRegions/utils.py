@@ -18,7 +18,9 @@ def get_sizes_of_memory_regions(
 ) -> Dict[MemoryRegion, int]:
     """Returns the size of the allocated memory region in bytes"""
     if not os.path.exists(mem_reg_file):
-        raise ValueError("Unknown file: ", mem_reg_file)
+        # the profiler no longer writes this file (it was empty unless the removed
+        # DP_MEMORY_REGION_DEALIASING was set), so no size is known
+        return dict()
     # load memory regions to dictionary
     mem_regs_dict: Dict[str, int] = dict()
     with open(mem_reg_file, "r") as f:
