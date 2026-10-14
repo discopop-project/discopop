@@ -21,13 +21,7 @@
 namespace __dp {
 
 /******* Helper functions *******/
-#if DP_CALLTREE_PROFILING
-void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAvar, ADDR addr,
-            shared_ptr<CallTreeNode> arg_write_ctn, shared_ptr<CallTreeNode> arg_read_ctn,
-            bool calculate_dependency_metadata);
-#else
 void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAvar, ADDR addr);
-#endif
 
 void outputDeps();
 
@@ -47,14 +41,7 @@ void *processFirstAccessQueue(void *arg);
 
 void *processSecondAccessQueue(void *arg);
 
-#if DP_CALLTREE_PROFILING
-void analyzeSingleAccess(
-    __dp::AbstractShadow *SMem, __dp::AccessInfo &access,
-    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> &thread_private_write_addr_to_call_tree_node_map,
-    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> &thread_private_read_addr_to_call_tree_node_map);
-#else
 void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access);
-#endif
 
 // the dependency analysis of one access on the calling thread, used if NUM_WORKERS==0
 void analyzeSingleAccessOnMainThread(__dp::AccessInfo &access);

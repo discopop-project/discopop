@@ -48,12 +48,6 @@ std::mutex pthread_compatibility_mutex;
 ImmortalStorage<FunctionManager> function_manager;
 ImmortalStorage<LoopManager> loop_manager;
 
-#if DP_CALLTREE_PROFILING
-CallTree call_tree;
-std::mutex dependency_metadata_results_mtx;
-std::unordered_set<DependencyMetadata> dependency_metadata_results;
-thread_local std::unordered_set<DependencyMetadata> local_dependency_metadata_results;
-#endif
 
 // hybrid analysis
 ReportedBBRecorder *bbList = nullptr;

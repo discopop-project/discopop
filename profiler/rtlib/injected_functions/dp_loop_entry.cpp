@@ -40,10 +40,6 @@ void __dp_loop_entry(LID lid, int32_t loopID, int32_t instruction_id) {
   if (is_new_loop) {
     loop_manager->create_new_loop(function_stack_level, loopID, lid);
 
-#ifdef DP_CALLTREE_PROFILING
-    call_tree.enter_loop(lid);
-    call_tree.enter_iteration(0);
-#endif
 
   } else {
     // The same loop iterates again
@@ -63,9 +59,6 @@ void __dp_loop_entry(LID lid, int32_t loopID, int32_t instruction_id) {
 
     loop_manager->correct_func_level(function_stack_level);
 
-#ifdef DP_CALLTREE_PROFILING
-    call_tree.enter_iteration(0);
-#endif
   }
 
   update_callstate(instruction_id);

@@ -14,8 +14,6 @@
 
 #include "../share/include/timer.hpp"
 #include "Immortal.hpp"
-#include "calltree/CallTree.hpp"
-#include "calltree/DependencyMetadata.hpp"
 #include "memory/AbstractShadow.hpp"
 #include "runtimeFunctionsTypes.hpp"
 #include "static_callstate_transitions/CallStateGraph.hpp"
@@ -67,12 +65,6 @@ void construct_manager_globals();
 void destroy_manager_globals();
 bool manager_globals_constructed() noexcept;
 
-#if DP_CALLTREE_PROFILING
-extern CallTree call_tree;
-extern std::mutex dependency_metadata_results_mtx;
-extern std::unordered_set<DependencyMetadata> dependency_metadata_results;
-extern thread_local std::unordered_set<DependencyMetadata> local_dependency_metadata_results;
-#endif
 
 // hybrid analysis
 extern ReportedBBRecorder *bbList;

@@ -49,9 +49,6 @@ void __dp_loop_exit(LID lid, int32_t loopID, int32_t instruction_id) {
   loop_manager->correct_func_level(function_stack_level);
   loop_manager->exit_loop(lid);
 
-#ifdef DP_CALLTREE_PROFILING
-  call_tree.exit_loop();
-#endif
 
   update_callstate(instruction_id);
 }
