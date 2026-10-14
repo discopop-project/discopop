@@ -8,6 +8,7 @@
 
 """Run the DiscoPoP pipeline (build with the pass, profile, explore) on a copy of a test program."""
 
+import json
 import os
 import shutil
 import subprocess
@@ -24,11 +25,28 @@ class PipelineError(Exception):
     """A stage of the pipeline failed, i.e. the test could not check anything."""
 
 
+def _isolated_home(project_dir: Path) -> Path:
+    """A HOME next to project_dir with the update check of the DiscoPoP tools switched off.
+
+    The tools keep their configuration in $HOME/.discopop_config; a HOME per test keeps the tests from sharing it
+    with each other and with the developer, and from contacting the release server.
+    """
+    home = project_dir.parent / "home"
+    settings_file = home / ".discopop_config" / "auto_updater" / "settings.json"
+    if not settings_file.exists():
+        settings_file.parent.mkdir(parents=True, exist_ok=True)
+        settings_file.write_text(
+            json.dumps({"automatic_check_active": False, "enable_interactive_notifications": False})
+        )
+    return home
+
+
 def _environment(project_dir: Path) -> dict[str, str]:
     env = dict(os.environ)
     env["CC"] = "discopop_cc"
     env["CXX"] = "discopop_cxx"
     env["DP_PROJECT_ROOT_DIR"] = str(project_dir)
+    env["HOME"] = str(_isolated_home(project_dir))
     return env
 
 
