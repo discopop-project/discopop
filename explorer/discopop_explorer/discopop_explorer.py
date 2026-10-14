@@ -81,8 +81,6 @@ class ExplorerArguments(GeneralArguments):
     # experimental features:
     detect_scheduling_clauses: bool
     generate_data_cu_inst: Optional[str]  # none: generate Data_CUInst.txt & exit
-    cu_inst_result_file: Optional[str]
-    llvm_cxxfilt_path: Optional[str]
     microbench_file: Optional[str]
     load_existing_doall_and_reduction_patterns: bool
     ignore_dependency_states: bool
@@ -135,8 +133,6 @@ def __run(
     reduction_file: str,
     plugins: List[str],
     file_mapping: Optional[str] = None,
-    cu_inst_result_file: Optional[str] = None,
-    llvm_cxxfilt_path: Optional[str] = None,
     discopop_build_path: Optional[str] = None,
     enable_patterns: str = "*",
     enable_detection_of_scheduling_clauses: bool = False,
@@ -194,8 +190,6 @@ def __run(
             loop_counter_file,
             reduction_file,
             file_mapping,
-            cu_inst_result_file,
-            llvm_cxxfilt_path,
             discopop_build_path,
             enable_patterns,
             enable_detection_of_scheduling_clauses,
@@ -209,8 +203,6 @@ def __run(
             loop_counter_file,
             reduction_file,
             file_mapping,
-            cu_inst_result_file,
-            llvm_cxxfilt_path,
             discopop_build_path,
             enable_patterns,
             enable_detection_of_scheduling_clauses,
@@ -281,8 +273,6 @@ def run(arguments: ExplorerArguments) -> None:
                 arguments.reduction_file,
                 arguments.plugins,
                 file_mapping=arguments.file_mapping_file,
-                cu_inst_result_file=arguments.cu_inst_result_file,
-                llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
                 discopop_build_path=arguments.discopop_build_path,
                 enable_patterns=arguments.enable_patterns,
                 enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,

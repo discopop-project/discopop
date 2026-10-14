@@ -103,14 +103,6 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
         help="Generates Data_CUInst.txt file and stores it in the given directory. Stops the regular execution of the discopop_explorer. Requires --cu-xml, --dep-file, --loop-counter, --reduction.",
     )
     experimental_parser.add_argument(
-        "--cu-inst-res", type=str, default=None,
-        help="CU instantiation result file."
-    )
-    experimental_parser.add_argument(
-        "--llvm-cxxfilt-path", type=str, default=None,
-        help="Path to llvm-cxxfilt executable.",
-    )
-    experimental_parser.add_argument(
         "--enable-statistics", action="store_true", help="Enable the calculation and storing of statistics for code and generated suggestions."
     )
     experimental_parser.add_argument(
@@ -150,7 +142,6 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
     arguments.reduction = get_path(arguments.path, arguments.reduction)
     arguments.fmap = get_path(arguments.path, arguments.fmap)
     arguments.json = get_path_or_none(arguments.path, arguments.json)
-    arguments.cu_inst_res = get_path_or_none(arguments.path, arguments.cu_inst_res)
     arguments.generate_data_cu_inst = get_path_or_none(arguments.path, arguments.generate_data_cu_inst)
     arguments.profiling = get_path_or_none(arguments.path, arguments.profiling)
     arguments.dump_pet = get_path_or_none(arguments.path, arguments.dump_pet)
@@ -177,8 +168,6 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
         enable_detection_result_dump_file=arguments.dump_detection_result,
         enable_patterns=arguments.enable_patterns,
         generate_data_cu_inst=arguments.generate_data_cu_inst,
-        cu_inst_result_file=arguments.cu_inst_res,
-        llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
         enable_json_file=arguments.json,
         log_level=arguments.log.upper(),
         write_log=arguments.write_log,
