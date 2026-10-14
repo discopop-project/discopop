@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "../../../../profiler/rtlib/functions/FunctionManager.hpp"
+#include "functions/FunctionManager.hpp"
 
 class FunctionManagerTest : public ::testing::Test {};
 

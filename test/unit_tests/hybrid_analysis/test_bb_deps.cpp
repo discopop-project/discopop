@@ -6,12 +6,12 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../../../profiler/rtlib/injected_functions/dp_add_bb_deps.hpp"
-#include "../../../profiler/rtlib/injected_functions/dp_report_bb.hpp"
-#include "../../../profiler/rtlib/injected_functions/dp_report_bb_pair.hpp"
-#include "../../../profiler/rtlib/hybrid_analysis/bb_deps.hpp"
-#include "../../../profiler/rtlib/runtimeFunctions.hpp"
-#include "../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
+#include "injected_functions/dp_add_bb_deps.hpp"
+#include "injected_functions/dp_report_bb.hpp"
+#include "injected_functions/dp_report_bb_pair.hpp"
+#include "hybrid_analysis/bb_deps.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 // The hybrid analysis hands the dependencies of stack locals over as strings
 // "<bb index>=<dep>,<dep>/<bb index>=..." (one per module) and reports the

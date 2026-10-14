@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "../../../../profiler/rtlib/memory/AbstractShadow.hpp"
-#include "../../../../profiler/rtlib/memory/ShadowMemory.hpp"
+#include "memory/AbstractShadow.hpp"
+#include "memory/ShadowMemory.hpp"
 
 #include <cstdint>
 #include <memory>

@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "../../../../profiler/rtlib/hybrid_analysis/bb_deps.hpp"
-#include "../../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
+#include "hybrid_analysis/bb_deps.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 // The registry behind __dp_add_bb_deps. An instrumented module hands over one string covering the
 // dependencies of the instructions whose profiling was omitted; the format is produced by

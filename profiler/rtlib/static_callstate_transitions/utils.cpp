@@ -11,9 +11,9 @@
  */
 
 #include "utils.hpp"
-#include "../Immortal.hpp"
-#include "../output_paths.hpp"
-#include "../runtimeFunctionsGlobals.hpp"
+#include "Immortal.hpp"
+#include "output_paths.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 #include <fstream>
 #include <iostream>

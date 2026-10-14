@@ -15,8 +15,8 @@
 
 #include "lid_utils.hpp"
 
-#include "../share/include/debug_print.hpp"
-#include "../share/include/timer.hpp"
+#include "debug_print.hpp"
+#include "timer.hpp"
 #include "injected_functions/all.hpp"
 #include "loop/Makros.hpp"
 #include "memory/PerfectShadow.hpp"

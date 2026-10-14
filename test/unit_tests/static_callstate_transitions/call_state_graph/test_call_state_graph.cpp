@@ -7,7 +7,7 @@
 #include <string>
 #include <unistd.h>
 
-#include "../../../../profiler/rtlib/static_callstate_transitions/CallStateGraph.hpp"
+#include "static_callstate_transitions/CallStateGraph.hpp"
 
 // CallStateGraph's constructor reads the files
 // "$DOT_DISCOPOP_PROFILER/callpath_state_transitions.txt" and

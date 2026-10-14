@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../../../../profiler/rtlib/loop/LoopTable.hpp"
+#include "loop/LoopTable.hpp"
 
 #include <iostream>
 #include <sstream>

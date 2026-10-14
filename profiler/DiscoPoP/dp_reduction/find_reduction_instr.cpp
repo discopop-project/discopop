@@ -10,7 +10,7 @@
  *
  */
 
-#include "../DiscoPoP.hpp"
+#include "DiscoPoP.hpp"
 
 // returns the reduction instruction where 'val' is the operand if it can find
 // such an operation

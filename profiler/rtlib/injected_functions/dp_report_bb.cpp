@@ -10,13 +10,13 @@
  *
  */
 
-#include "../DPTypes.hpp"
+#include "DPTypes.hpp"
 
-#include "../runtimeFunctions.hpp"
-#include "../runtimeFunctionsGlobals.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
-#include "../callback_scope.hpp"
-#include "../hybrid_analysis/bb_deps.hpp"
+#include "callback_scope.hpp"
+#include "hybrid_analysis/bb_deps.hpp"
 
 #include <cstdint>
 #include <iostream>

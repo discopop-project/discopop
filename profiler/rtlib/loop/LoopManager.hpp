@@ -16,7 +16,7 @@
 #include "LoopRecord.hpp"
 #include "LoopTable.hpp"
 
-#include "../lid_utils.hpp"
+#include "lid_utils.hpp"
 
 #include <ostream>
 

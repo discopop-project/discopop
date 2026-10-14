@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../../../../profiler/DiscoPoP/DiscoPoP.hpp"
+#include "DiscoPoP.hpp"
 
 // Tests for profiler/DiscoPoP/utils/output.cpp
 //

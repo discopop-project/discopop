@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "../share/include/timer.hpp"
+#include "timer.hpp"
 #include "Immortal.hpp"
 #include "memory/AbstractShadow.hpp"
 #include "runtimeFunctionsTypes.hpp"

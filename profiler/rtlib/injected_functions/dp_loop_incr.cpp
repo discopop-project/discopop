@@ -10,13 +10,13 @@
  *
  */
 
-#include "../DPTypes.hpp"
+#include "DPTypes.hpp"
 
-#include "../runtimeFunctionsGlobals.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
-#include "../callback_scope.hpp"
+#include "callback_scope.hpp"
 
-#include "../static_callstate_transitions/utils.hpp"
+#include "static_callstate_transitions/utils.hpp"
 
 namespace __dp {
 

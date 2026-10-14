@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "../../../../profiler/rtlib/loop/LoopManager.hpp"
-#include "../../../../profiler/rtlib/loop/Makros.hpp"
+#include "loop/LoopManager.hpp"
+#include "loop/Makros.hpp"
 
 #include <algorithm>
 #include <sstream>

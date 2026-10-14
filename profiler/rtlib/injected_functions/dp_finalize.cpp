@@ -12,14 +12,14 @@
 
 #include "dp_finalize.hpp"
 
-#include "../DPTypes.hpp"
+#include "DPTypes.hpp"
 
-#include "../runtimeFunctionsGlobals.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
-#include "../lifecycle/runtime_shutdown.hpp"
+#include "lifecycle/runtime_shutdown.hpp"
 
-#include "../../share/include/debug_print.hpp"
-#include "../../share/include/timer.hpp"
+#include "debug_print.hpp"
+#include "timer.hpp"
 
 #include <mutex>
 

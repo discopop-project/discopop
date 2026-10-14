@@ -8,11 +8,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include "../../../profiler/rtlib/hybrid_analysis/bb_deps.hpp"
-#include "../../../profiler/rtlib/lifecycle/runtime_shutdown.hpp"
-#include "../../../profiler/rtlib/output_paths.hpp"
-#include "../../../profiler/rtlib/runtimeFunctions.hpp"
-#include "../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
+#include "hybrid_analysis/bb_deps.hpp"
+#include "lifecycle/runtime_shutdown.hpp"
+#include "output_paths.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 using namespace __dp;
 

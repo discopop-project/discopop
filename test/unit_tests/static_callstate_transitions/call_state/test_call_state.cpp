@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "../../../../profiler/rtlib/static_callstate_transitions/CallState.hpp"
+#include "static_callstate_transitions/CallState.hpp"
 
 class CallStateTest : public ::testing::Test {};
 

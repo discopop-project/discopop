@@ -12,7 +12,7 @@
 
 #include "CallStateGraph.hpp"
 
-#include "../output_paths.hpp"
+#include "output_paths.hpp"
 
 #include <chrono>
 #include <fstream>

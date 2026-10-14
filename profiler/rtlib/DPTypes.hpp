@@ -40,8 +40,8 @@ extern bool DP_DEBUG;
 #define USE_EMHASH
 
 #ifdef USE_EMHASH
-#include "../third_party/emhash/hash_set8.hpp"
-#include "../third_party/emhash/hash_table7.hpp"
+#include "emhash/hash_set8.hpp"
+#include "emhash/hash_table7.hpp"
 namespace __dp {
 template <typename KeyT, typename ValueT> using hashmap = emhash7::HashMap<KeyT, ValueT>;
 template <typename KeyT> using hashset = emhash8::HashSet<KeyT>;

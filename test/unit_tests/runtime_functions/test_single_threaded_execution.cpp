@@ -3,10 +3,10 @@
 #include <cstdint>
 #include <unordered_set>
 
-#include "../../../profiler/rtlib/memory/PerfectShadow.hpp"
-#include "../../../profiler/rtlib/memory/ShadowMemory.hpp"
-#include "../../../profiler/rtlib/runtimeFunctions.hpp"
-#include "../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
+#include "memory/PerfectShadow.hpp"
+#include "memory/ShadowMemory.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 using namespace __dp;
 

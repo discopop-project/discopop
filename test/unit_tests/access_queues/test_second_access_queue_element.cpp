@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
 
-#include "../../../profiler/rtlib/runtimeFunctionsGlobals.hpp"
-#include "../../../profiler/rtlib/runtimeFunctionsTypes.hpp"
-#include "../../../profiler/rtlib/runtimeFunctions.hpp"
-#include "../../../profiler/rtlib/memory/PerfectShadow.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "runtimeFunctionsTypes.hpp"
+#include "runtimeFunctions.hpp"
+#include "memory/PerfectShadow.hpp"
 
 using namespace __dp;
 

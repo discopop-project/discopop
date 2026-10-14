@@ -10,12 +10,12 @@
  *
  */
 
-#include "../DPTypes.hpp"
+#include "DPTypes.hpp"
 
-#include "../output_paths.hpp"
-#include "../runtimeFunctionsGlobals.hpp"
+#include "output_paths.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
-#include "../loop/LoopInfo.hpp"
+#include "loop/LoopInfo.hpp"
 
 #include <fstream>
 #include <iostream>

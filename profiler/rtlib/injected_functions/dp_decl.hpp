@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "../DPTypes.hpp"
+#include "DPTypes.hpp"
 
 namespace __dp {
 

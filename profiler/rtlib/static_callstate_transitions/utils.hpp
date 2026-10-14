@@ -11,7 +11,7 @@
  */
 
 #pragma once
-#include "../runtimeFunctionsGlobals.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 namespace __dp {
 // Callpath state tracking. The state follows the calls, loops and returns of the thread which

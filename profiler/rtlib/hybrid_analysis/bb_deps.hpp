@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "../runtimeFunctionsTypes.hpp"
+#include "runtimeFunctionsTypes.hpp"
 
 #include <cstdint>
 #include <vector>

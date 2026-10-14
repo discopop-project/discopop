@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "../../../../profiler/rtlib/memory/PerfectShadow.hpp"
+#include "memory/PerfectShadow.hpp"
 
 // Tests for old version (i.e., capturing functionality)
 
