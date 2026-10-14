@@ -14,19 +14,10 @@
 
 #include <cstdint>
 
-// Number of bits for holding LID
-#define LIDSIZE 14
-
-// Number of bits for holding LID Metadata (Column + Loop ID + LoopIteration)
-#define LIDMETADATASIZE 32
-
-// Maximum number of lines in a single file. Has to be 2^LIDSIZE.
-#define MAXLNO 16384
+#include "lid_constants.hpp"
 
 // #define SKIP_DUP_INSTR 1
 
-typedef std::int64_t LID;
-typedef std::int64_t ADDR;
 typedef std::int64_t sigElement;
 
 namespace __dp {
