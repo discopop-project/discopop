@@ -16,5 +16,5 @@ void DiscoPoP::insertDpFinalize(Instruction *before) {
   LID lid = getLID(before, fileID);
   assert((lid > 0) && "Returning on an invalid LID.");
   IRBuilder<> IRB(before);
-  IRB.CreateCall(DpFinalize, ConstantInt::get(Int32, lid));
+  IRB.CreateCall(DpFinalize, lidConstant(lid));
 }

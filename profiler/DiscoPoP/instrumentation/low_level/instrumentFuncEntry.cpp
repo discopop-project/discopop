@@ -37,7 +37,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
       IRBuilder<> IRB(insertBefore->getNextNode());
 
       vector<Value *> args;
-      args.push_back(ConstantInt::get(Int32, lid));
+      args.push_back(lidConstant(lid));
       args.push_back(getOrInsertVarName_dynamic(Global_it->getName().str(), IRB));
 
       // Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64,
@@ -89,7 +89,7 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
       IRBuilder<> IRB(&*entryBB.begin());
       // the third argument (function entry id) is set to the call's own instruction id in
       // update_argument_instruction_ids
-      IRB.CreateCall(DpFuncEntry, {ConstantInt::get(Int32, lid), ConstantInt::get(Int32, isStart), ConstantInt::get(Int32, 0)});
+      IRB.CreateCall(DpFuncEntry, {lidConstant(lid), ConstantInt::get(Int32, isStart), ConstantInt::get(Int32, 0)});
       if (DP_DEBUG) {
         errs() << "DiscoPoP: funcEntry instrumented\n";
       }

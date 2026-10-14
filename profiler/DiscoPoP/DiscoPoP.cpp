@@ -33,44 +33,48 @@ void DiscoPoP::setupCallbacks() {
   /* function name
    * return value type
    * arg types
-   * NULL
+   *
+   * the callbacks are extern "C" functions of the runtime library, whose signatures are in
+   * rtlib/injected_functions/*.hpp: a location (LID) or address is a 64 bit integer there, so it is
+   * declared as Int64 here. A narrower declaration would leave the upper half of the argument
+   * register unspecified. test/instrumentation/test_callback_signatures.py compares both.
    */
 
-  DpFinalize = ThisModule->getOrInsertFunction("__dp_finalize", Void, Int32);
+  DpFinalize = ThisModule->getOrInsertFunction("__dp_finalize", Void, Int64);
 
   DpRead = ThisModule->getOrInsertFunction("__dp_read", Void,
 #ifdef SKIP_DUP_INSTR
-                                           Int32, Int64, CharPtr, Int64, Int64
+                                           Int64, Int64, CharPtr, Int64, Int64
 #else
-                                           Int32, Int64, CharPtr
+                                           Int64, Int64, CharPtr
 #endif
   );
 
   DpWrite = ThisModule->getOrInsertFunction("__dp_write", Void,
 #ifdef SKIP_DUP_INSTR
-                                            Int32, Int64, CharPtr, Int64, Int64
+                                            Int64, Int64, CharPtr, Int64, Int64
 #else
-                                            Int32, Int64, CharPtr
+                                            Int64, Int64, CharPtr
 #endif
   );
 
   DpAlloca = ThisModule->getOrInsertFunction("__dp_alloca", Void,
 
-                                             Int32, CharPtr, Int64, Int64, Int64, Int64);
+                                             Int64, CharPtr, Int64, Int64, Int64, Int64);
 
-  DpNew = ThisModule->getOrInsertFunction("__dp_new", Void, Int32, Int64, Int64, Int64);
+  DpNew = ThisModule->getOrInsertFunction("__dp_new", Void, Int64, Int64, Int64, Int64);
 
-  DpDelete = ThisModule->getOrInsertFunction("__dp_delete", Void, Int32, Int64);
+  DpDelete = ThisModule->getOrInsertFunction("__dp_delete", Void, Int64, Int64);
 
-  DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call", Void, Int32, Int32);
+  DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call", Void, Int64, Int32);
 
-  DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry", Void, Int32, Int32, Int32);
+  DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry", Void, Int64, Int32, Int32);
 
-  DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit", Void, Int32, Int32);
+  DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit", Void, Int64, Int32);
 
-  DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry", Void, Int32, Int32, Int32);
+  DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry", Void, Int64, Int32, Int32);
 
-  DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit", Void, Int32, Int32, Int32);
+  DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit", Void, Int64, Int32, Int32);
 
   DpTakenBranchCounterIncr =
       ThisModule->getOrInsertFunction("__dp_incr_taken_branch_counter", Void, CharPtr, Int32, Int32);

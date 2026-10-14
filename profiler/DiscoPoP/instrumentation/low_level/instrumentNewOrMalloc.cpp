@@ -39,7 +39,7 @@ void DiscoPoP::instrumentNewOrMalloc(CallBase *toInstrument) {
   IRBuilder<> IRB(nextInst);
 
   vector<Value *> args;
-  args.push_back(ConstantInt::get(Int32, lid));
+  args.push_back(lidConstant(lid));
 
 #if LLVM_VERSION_MAJOR >= 22
   Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", nextInst->getIterator());
