@@ -59,12 +59,6 @@ void __dp_init() {
 #endif
   construct_manager_globals();
   //
-#if DP_CALLTREE_PROFILING
-//    call_tree = new CallTree();
-// metadata_queue = new MetaDataQueue(6); // TODO: add Worker argument
-//    dependency_metadata_results_mtx = new std::mutex();
-//    dependency_metadata_results = new std::unordered_set<DependencyMetadata>();
-#endif
 
   mainThread_AccessInfoBuffer = firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_CHUNK_SIZE);
 

@@ -17,9 +17,6 @@
 #include "functions/FunctionManager.hpp"
 #include "loop/LoopManager.hpp"
 
-#if DP_CALLTREE_PROFILING
-#include "calltree/CallTreeNode.hpp"
-#endif
 
 #include <algorithm>
 #include <atomic>
@@ -65,17 +62,9 @@ typedef enum {
 struct AccessInfo {
   AccessInfo(bool isRead, LID lid, char *var, std::int64_t AAvar, ADDR addr, bool skip = false)
       : isRead(isRead), skip(skip), lid(lid), var(var), AAvar(AAvar), addr(addr) {
-#if DP_CALLTREE_PROFILING
-    call_tree_node_ptr = nullptr;
-    calculate_dependency_metadata = true;
-#endif
   }
 
   AccessInfo() : isRead(false), skip(false), lid(0), var(""), AAvar(0), addr(0) {
-#if DP_CALLTREE_PROFILING
-    call_tree_node_ptr = nullptr;
-    calculate_dependency_metadata = true;
-#endif
   }
 
   bool isRead;
@@ -86,10 +75,6 @@ struct AccessInfo {
   const char *var;
   std::int64_t AAvar; // memory region id; previously: name of allocated variable -> "Anti Aliased Variable"
   ADDR addr;
-#if DP_CALLTREE_PROFILING
-  shared_ptr<CallTreeNode> call_tree_node_ptr;
-  bool calculate_dependency_metadata;
-#endif
 };
 
 // For runtime dependency merging

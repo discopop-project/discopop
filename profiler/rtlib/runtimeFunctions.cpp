@@ -17,7 +17,6 @@
 
 #include "../share/include/debug_print.hpp"
 #include "../share/include/timer.hpp"
-#include "calltree/utils.hpp"
 #include "injected_functions/all.hpp"
 #include "loop/Makros.hpp"
 #include "memory/PerfectShadow.hpp"
@@ -57,13 +56,7 @@ namespace __dp {
 
 /******* Helper functions *******/
 
-#if DP_CALLTREE_PROFILING
-void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAvar, ADDR addr,
-            shared_ptr<CallTreeNode> arg_write_ctn, shared_ptr<CallTreeNode> arg_read_ctn,
-            bool calculate_dependency_metadata) {
-#else
 void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAvar, ADDR addr) {
-#endif
 
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ADD_DEP);
@@ -80,39 +73,6 @@ void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAv
   // register dependency. operator[] creates the set when the lid is seen for the first time.
   (*myMap)[curr].insert(Dep(type, depOn, var, AAvar));
 
-#if DP_CALLTREE_PROFILING
-  // register dependency for call_tree based metadata calculation
-  if (calculate_dependency_metadata) {
-    DependencyMetadata dmd;
-    switch (type) {
-    case RAW:
-      // process directly
-      dmd = processQueueElement(
-          MetaDataQueueElement(type, curr, depOn, var, AAvar, std::move(arg_read_ctn), std::move(arg_write_ctn)));
-
-      local_dependency_metadata_results.insert(std::move(dmd));
-      break;
-    case WAR:
-      // update write
-      dmd = processQueueElement(
-          MetaDataQueueElement(type, curr, depOn, var, AAvar, std::move(arg_write_ctn), std::move(arg_read_ctn)));
-
-      local_dependency_metadata_results.insert(std::move(dmd));
-      break;
-    case WAW:
-      dmd = processQueueElement(
-          MetaDataQueueElement(type, curr, depOn, var, AAvar, std::move(arg_write_ctn), std::move(arg_write_ctn)));
-
-      local_dependency_metadata_results.insert(std::move(dmd));
-      break;
-    case INIT:
-      break;
-    default:
-      break;
-    }
-  }
-
-#endif
 
   if (DP_DEBUG) {
     cout << "inserted dep [" << decodeLID(curr) << ", ";
@@ -341,32 +301,18 @@ void mergeDeps() {
   myMap->clear();
 }
 
-#if DP_CALLTREE_PROFILING
-void analyzeSingleAccess(
-    __dp::AbstractShadow *SMem, __dp::AccessInfo &access,
-    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> &thread_private_write_addr_to_call_tree_node_map,
-    std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> &thread_private_read_addr_to_call_tree_node_map) {
-#else
 void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
-#endif
 
   // analyze data dependences
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ANALYZE_SINGLE_ACCESS);
 #endif
 
-#if DP_CALLTREE_PROFILING
-  std::shared_ptr<CallTreeNode> &read_ctn = thread_private_read_addr_to_call_tree_node_map[access.addr];
-  std::shared_ptr<CallTreeNode> &write_ctn = thread_private_write_addr_to_call_tree_node_map[access.addr];
-#endif
 
   if (access.isRead) {
     // hybrid analysis
     if (access.skip) {
       SMem->insertToRead(access.addr, access.lid);
-#if DP_CALLTREE_PROFILING
-      read_ctn = std::move(access.call_tree_node_ptr);
-#endif
       return;
     }
     // End HA
@@ -377,70 +323,36 @@ void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access) {
     SMem->insertToRead(access.addr, access.lid);
     if (lastWrite != 0 && lastWrite != 1) {
       // RAW
-#if DP_CALLTREE_PROFILING
-      read_ctn = std::move(access.call_tree_node_ptr);
-#endif
-#if DP_CALLTREE_PROFILING
-      addDep(RAW, access.lid, lastWrite, access.var, access.AAvar, access.addr, write_ctn, read_ctn,
-             access.calculate_dependency_metadata);
-#else
       addDep(RAW, access.lid, lastWrite, access.var, access.AAvar, access.addr);
-#endif
     }
 
   } else {
     sigElement lastWrite = SMem->insertToWrite(access.addr, access.lid);
-#if DP_CALLTREE_PROFILING
-    write_ctn = std::move(access.call_tree_node_ptr);
-#endif
     if (access.skip) {
       return;
     }
     sigElement lastRead = SMem->testInRead(access.addr);
     if (lastWrite == 0 || lastWrite == 1) {
       // INIT
-#if DP_CALLTREE_PROFILING
-      addDep(INIT, access.lid, 0, access.var, access.AAvar, access.addr, write_ctn, read_ctn,
-             access.calculate_dependency_metadata);
-#else
       addDep(INIT, access.lid, 0, access.var, access.AAvar, access.addr);
-#endif
       // A read that came before this write is a WAR no matter whether a write came before it as
       // well. Asking only in the branch below used to lose those dependencies -- and the chunked
       // analysis made that the common case rather than a corner case, because every chunk starts
       // from an empty shadow, so "no earlier write" there only means "none in this chunk".
       if (lastRead != 0 && lastRead != 1) {
-#if DP_CALLTREE_PROFILING
-        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.addr, write_ctn, read_ctn,
-               access.calculate_dependency_metadata);
-#else
         addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.addr);
-#endif
         // Clear intermediate read ops
         SMem->insertToRead(access.addr, 0);
       }
     } else {
       if (lastRead != 0 && lastRead != 1) {
         // WAR
-#if DP_CALLTREE_PROFILING
-        addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.addr, write_ctn, read_ctn,
-               access.calculate_dependency_metadata);
-#else
         addDep(WAR, access.lid, lastRead, access.var, access.AAvar, access.addr);
-#endif
         // Clear intermediate read ops
         SMem->insertToRead(access.addr, 0);
-#if DP_CALLTREE_PROFILING
-        read_ctn = std::move(access.call_tree_node_ptr);
-#endif
       } else {
         // WAW
-#if DP_CALLTREE_PROFILING
-        addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, access.addr, write_ctn, read_ctn,
-               access.calculate_dependency_metadata);
-#else
         addDep(WAW, access.lid, lastWrite, access.var, access.AAvar, access.addr);
-#endif
       }
     }
   }
@@ -493,12 +405,6 @@ void *processFirstAccessQueue(void *arg) {
 
   FirstAccessQueueChunk *current = nullptr;
 
-#if DP_CALLTREE_PROFILING
-  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> thread_private_write_addr_to_call_tree_node_map =
-      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
-  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> thread_private_read_addr_to_call_tree_node_map =
-      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
-#endif
 
   while (true) {
     // get chunk from queue
@@ -558,12 +464,7 @@ void *processFirstAccessQueue(void *arg) {
           }
         } else {
           // handle access as known from the legacy variant of the profiler
-#if DP_CALLTREE_PROFILING
-          analyzeSingleAccess(SMem, access, thread_private_write_addr_to_call_tree_node_map,
-                              thread_private_read_addr_to_call_tree_node_map);
-#else
           analyzeSingleAccess(SMem, access);
-#endif
         }
       }
       // publish the values of the promises in the current chunk
@@ -592,15 +493,6 @@ void *processFirstAccessQueue(void *arg) {
   delete myMap;
   myMap = nullptr;
 
-#if DP_CALLTREE_PROFILING
-  // merge local results into global set
-  {
-    std::lock_guard<std::mutex> my_guard(dependency_metadata_results_mtx);
-    dependency_metadata_results.merge(local_dependency_metadata_results);
-  }
-  local_dependency_metadata_results.clear();
-  // delete local_dependency_metadata_results;
-#endif
 
   if (DP_DEBUG) {
 #ifdef __linux__
@@ -624,12 +516,6 @@ void *processSecondAccessQueue(void *arg) {
 
   SecondAccessQueueElement *current = nullptr;
   AbstractShadow *SMem = new PerfectShadow2();
-#if DP_CALLTREE_PROFILING
-  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> thread_private_write_addr_to_call_tree_node_map =
-      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
-  std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> thread_private_read_addr_to_call_tree_node_map =
-      std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>>();
-#endif
 
   while (true) {
     // get chunk from queue
@@ -644,12 +530,7 @@ void *processSecondAccessQueue(void *arg) {
         if (!(entry_accesses.addr || entry_accesses.lid)) {
           continue;
         }
-#if DP_CALLTREE_PROFILING
-        analyzeSingleAccess(SMem, entry_accesses, thread_private_write_addr_to_call_tree_node_map,
-                            thread_private_read_addr_to_call_tree_node_map);
-#else
         analyzeSingleAccess(SMem, entry_accesses);
-#endif
       }
 
       // update persistent SMem with exit boundary conditions (aka merge the local into the persistent shadow memories)
@@ -690,15 +571,6 @@ void *processSecondAccessQueue(void *arg) {
     }
   }
 
-#if DP_CALLTREE_PROFILING
-  // merge local results into global set
-  {
-    std::lock_guard<std::mutex> my_guard(dependency_metadata_results_mtx);
-    dependency_metadata_results.merge(local_dependency_metadata_results);
-  }
-  local_dependency_metadata_results.clear();
-  // delete local_dependency_metadata_results;
-#endif
 
   delete SMem;
   mergeDeps();
@@ -754,19 +626,9 @@ void finalizeParallelization() {
   }
 }
 
-#if DP_CALLTREE_PROFILING
-// a worker keeps these for its thread; without workers, the main thread takes over its role
-static std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> main_thread_write_addr_to_call_tree_node_map;
-static std::unordered_map<ADDR, std::shared_ptr<CallTreeNode>> main_thread_read_addr_to_call_tree_node_map;
-#endif
 
 void analyzeSingleAccessOnMainThread(__dp::AccessInfo &access) {
-#if DP_CALLTREE_PROFILING
-  analyzeSingleAccess(singleThreadedExecutionSMem, access, main_thread_write_addr_to_call_tree_node_map,
-                      main_thread_read_addr_to_call_tree_node_map);
-#else
   analyzeSingleAccess(singleThreadedExecutionSMem, access);
-#endif
 }
 
 void finalizeSingleThreadedExecution() {
@@ -780,11 +642,6 @@ void finalizeSingleThreadedExecution() {
 
   delete singleThreadedExecutionSMem;
   singleThreadedExecutionSMem = nullptr;
-#if DP_CALLTREE_PROFILING
-  // release the call tree nodes before the call tree is destroyed
-  main_thread_write_addr_to_call_tree_node_map.clear();
-  main_thread_read_addr_to_call_tree_node_map.clear();
-#endif
   mergeDeps();
   delete myMap;
   myMap = nullptr;
