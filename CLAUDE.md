@@ -137,6 +137,12 @@ This document contains critical information about working with this codebase. Fo
 - the pass supports LLVM 19-22; code that must differ between the versions is not written as `#if LLVM_VERSION_MAJOR` at the call site: `profiler/DiscoPoP/llvm_compat.hpp` wraps what is not available in all of them (`llvmcompat::nextInstruction`, `llvmcompat::insertAfter`), and instructions are created before an iterator (`->getIterator()`), which every supported version accepts
 - the remaining version checks are the `PassPlugin.h` include path and the pipeline callback signature in `RegisterPass.cpp`; a new difference belongs into `llvm_compat.hpp`
 
+#### Build configuration of the profiler
+- everything is built as C++20 (`CMAKE_CXX_STANDARD`, set in the root `CMakeLists.txt` and `profiler/CMakeLists.txt`); the runtime library without compiler extensions
+- compiler flags, include directories and definitions belong to targets, not to directories: `DiscoPoP_LLVM` (LLVM headers and definitions), `DiscoPoP_Boost`, `DiscoPoP_Warnings` (`-Wall -Wextra`, applied to the pass and the runtime) and `DiscoPoP_RT_Includes` (include roots of the runtime) are defined in `profiler/CMakeLists.txt` and `profiler/rtlib/CMakeLists.txt`; a library built from the runtime sources is set up by `dp_configure_runtime_target()`
+- LLVM's own flags (`HandleLLVMOptions`) apply to the pass directory only; the runtime must not depend on how LLVM was built (it uses exceptions, for example). The LLVM and third party headers are `SYSTEM`, so their warnings are not reported
+- the profiler's code compiles without warnings with gcc and clang; the deprecation warnings of the LLVM API (`CreateGlobalStringPtr`, `getUnqual`, ...) are the exception, they point at what LLVM 22 removes
+
 #### Sanitizers (profiler)
 - the CMake option `DP_SANITIZERS` (value for `-fsanitize=`, e.g. `address,undefined` or `thread`) instruments the runtime library `DiscoPoP_RT` and everything linking it, i.e. `DiscoPoP_UT`; the LLVM pass plugin is not sanitized (it runs inside an uninstrumented clang)
 - to build and run `DiscoPoP_UT` with ASan+UBSan(+LSan) resp. TSan, from the repository root: `scripts/dev/run_profiler_sanitizers.sh address,undefined` resp. `scripts/dev/run_profiler_sanitizers.sh thread` (build dirs `build_asan` / `build_tsan`, gitignored; ~30 s each); the CI job "Runtime unit tests with sanitizers" (`runtime_unit_tests_sanitized`) runs exactly this; it covers only what the unit tests exercise (no LLVM pass, no instrumented programs)

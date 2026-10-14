@@ -19,7 +19,8 @@ endif()
 
 project(DiscoPopProfiler)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if (POLICY CMP0077)
 	cmake_policy(SET CMP0077 NEW)
@@ -68,8 +69,7 @@ message(STATUS "Found clang: ${CLANG_EXECUTABLE}")
 find_package(Boost QUIET)
 
 if(Boost_FOUND)
-    # Resolve a plain include path for subdirectories that override
-    # CMAKE_CXX_FLAGS and therefore can't rely on target-property propagation.
+    # Resolve a plain include path (see DiscoPoP_Boost below).
     if(Boost_INCLUDE_DIRS)
         set(DISCOPOP_BOOST_INCLUDE_DIR "${Boost_INCLUDE_DIRS}")
     elseif(APPLE)
@@ -99,8 +99,12 @@ else()
     set(DISCOPOP_BOOST_INCLUDE_DIR "${_boost_src_dir}")
 endif()
 
+# Boost as the profiler's targets use it: Boost::headers, plus the include directory resolved above, which
+# the downloaded Boost does not provide through its targets.
+add_library(DiscoPoP_Boost INTERFACE)
+target_link_libraries(DiscoPoP_Boost INTERFACE Boost::headers)
 if(DISCOPOP_BOOST_INCLUDE_DIR)
-    include_directories("${DISCOPOP_BOOST_INCLUDE_DIR}")
+    target_include_directories(DiscoPoP_Boost INTERFACE "${DISCOPOP_BOOST_INCLUDE_DIR}")
     message(STATUS "Boost include dir: ${DISCOPOP_BOOST_INCLUDE_DIR}")
 endif()
 # ─────────────────────────────────────────────────────────────────────────────
@@ -132,14 +136,28 @@ set(LLVM_RUNTIME_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/b
 set(LLVM_LIBRARY_OUTPUT_INTDIR ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libi)
 
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
-include(HandleLLVMOptions)
-include(AddLLVM)
 
-# LLVM_DEFINITIONS is one space-separated string; passed as is, add_definitions() treats it as a single
-# definition, which breaks as soon as it contains a value (LLVM 22 adds -D_GLIBCXX_USE_CXX11_ABI=1)
+# What a target needs to use LLVM's headers. LLVM_DEFINITIONS is one space-separated string; passed as is, it
+# would be a single definition, which breaks as soon as it contains a value (LLVM 22 adds
+# -D_GLIBCXX_USE_CXX11_ABI=1). LLVM's compiler flags (HandleLLVMOptions, included in DiscoPoP/CMakeLists.txt)
+# are not part of this: they apply to the pass only, the runtime library must not depend on how LLVM was built.
 separate_arguments(LLVM_DEFINITIONS_LIST NATIVE_COMMAND ${LLVM_DEFINITIONS})
-add_definitions(${LLVM_DEFINITIONS_LIST})
-include_directories(${LLVM_INCLUDE_DIRS})
+add_library(DiscoPoP_LLVM INTERFACE)
+# SYSTEM: the warnings of the LLVM headers are not ours to fix
+target_include_directories(DiscoPoP_LLVM SYSTEM INTERFACE ${LLVM_INCLUDE_DIRS})
+target_compile_definitions(DiscoPoP_LLVM INTERFACE ${LLVM_DEFINITIONS_LIST})
+if(NOT LLVM_ENABLE_RTTI)
+    # code deriving from LLVM's classes has to agree with how LLVM was built
+    target_compile_options(DiscoPoP_LLVM INTERFACE -fno-rtti)
+endif()
+
+# the warnings of the profiler's own code
+add_library(DiscoPoP_Warnings INTERFACE)
+target_compile_options(DiscoPoP_Warnings INTERFACE $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wall;-Wextra>)
+
+# -pthread, as the runtime was compiled with it before
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 
 # ── Sanitizers ───────────────────────────────────────────────────────────────
 # DP_SANITIZERS takes a value for -fsanitize=, e.g. "address,undefined" or

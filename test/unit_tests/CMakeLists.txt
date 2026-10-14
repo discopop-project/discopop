@@ -64,5 +64,4 @@ target_sources(
 target_include_directories(DiscoPoP_UT PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(DiscoPoP_UT PRIVATE DiscoPoP_RT)
 target_link_libraries(DiscoPoP_UT PRIVATE gtest)
-set_target_properties(DiscoPoP_UT PROPERTIES CXX_STANDARD 20)
 set_target_properties(DiscoPoP_UT PROPERTIES ENABLE_EXPORTS 1)

@@ -61,8 +61,18 @@ set(DiscoPoP_SHARED_SOURCES
 
 set(DiscoPoP_SOURCES ${DiscoPoP_SHARED_SOURCES} ${DiscoPoP_CALLBACK_SOURCES})
 
-set(CMAKE_CXX_FLAGS
-        "-O2 -std=c++17 -pthread -fno-rtti -fPIE -fPIC")
+# What every library built from the runtime sources needs: DiscoPoP_RT, and the variants for the benchmarks below.
+# The flags are the runtime's own, they do not depend on how LLVM was built; the C++ standard comes from
+# CMAKE_CXX_STANDARD, without the compiler's extensions.
+function(dp_configure_runtime_target target)
+        target_link_libraries(${target} PUBLIC DiscoPoP_RT_Includes Threads::Threads PRIVATE DiscoPoP_Boost DiscoPoP_Warnings)
+        target_compile_options(${target} PRIVATE -fno-rtti)
+        set_target_properties(${target} PROPERTIES POSITION_INDEPENDENT_CODE ON CXX_EXTENSIONS OFF)
+        # the runtime is optimized in builds without optimization flags of their own, too
+        if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+                target_compile_options(${target} PRIVATE -O2)
+        endif()
+endfunction()
 
 # add_custom_target(DiscoPoP)
 
@@ -76,11 +86,14 @@ add_library(DiscoPoP_RT_Includes INTERFACE)
 target_include_directories(DiscoPoP_RT_Includes INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/../share/include
+        )
+# SYSTEM: the warnings of the third party code are not ours to fix
+target_include_directories(DiscoPoP_RT_Includes SYSTEM INTERFACE
         ${CMAKE_CURRENT_SOURCE_DIR}/../third_party
         )
 
-# the Boost include directory comes with Boost::headers; it is set up in profiler/CMakeLists.txt
-target_link_libraries(DiscoPoP_RT PUBLIC DiscoPoP_RT_Includes PRIVATE Boost::headers)
+# Boost comes with DiscoPoP_Boost; it is set up in profiler/CMakeLists.txt
+dp_configure_runtime_target(DiscoPoP_RT)
 
 # DP_SANITIZER_FLAGS is set by the top-level profiler CMakeLists (DP_SANITIZERS).
 # PUBLIC: targets linking DiscoPoP_RT (e.g. DiscoPoP_UT) get instrumented and
@@ -95,8 +108,8 @@ endif()
 # instrumentation apart: what the added calls cost by themselves, and what each callback's body
 # adds on top of them.
 #
-# Built here rather than next to the benchmarks that use them, because CMAKE_CXX_FLAGS above
-# applies to this directory only and libraries that are compared have to be compiled identically.
+# Built here rather than next to the benchmarks that use them, because dp_configure_runtime_target() above
+# sets the flags of the runtime and libraries that are compared have to be compiled identically.
 # None of them is installed or linked by anything the profiler ships: they export the same symbols
 # as DiscoPoP_RT, so an instrumented program linked against one of them would profile partially or
 # not at all.
@@ -104,7 +117,7 @@ if(DP_BUILD_UNITTESTS STREQUAL "1")
         # the half that does not depend on which callbacks are switched on, compiled once and
         # reused by every variant -- which is what keeps the extra runtime libraries cheap
         add_library(DiscoPoP_RT_BenchmarkShared OBJECT ${DiscoPoP_SHARED_SOURCES})
-        target_link_libraries(DiscoPoP_RT_BenchmarkShared PUBLIC DiscoPoP_RT_Includes PRIVATE Boost::headers)
+        dp_configure_runtime_target(DiscoPoP_RT_BenchmarkShared)
 
         # the CallbackId enumerators from callback_scope.hpp. The library name carries the
         # enumerator so that a driver can go from one to the other without a table.
@@ -128,7 +141,7 @@ if(DP_BUILD_UNITTESTS STREQUAL "1")
         endforeach()
 
         foreach(dp_variant IN LISTS DiscoPoP_RT_BENCHMARK_TARGETS)
-                target_link_libraries(${dp_variant} PUBLIC DiscoPoP_RT_Includes PRIVATE Boost::headers)
+                dp_configure_runtime_target(${dp_variant})
                 # kept out of compile_commands.json: they compile the sources of DiscoPoP_RT again with
                 # other definitions, and clangd would otherwise pick one of them for a file of the runtime
                 set_target_properties(${dp_variant} PROPERTIES EXPORT_COMPILE_COMMANDS OFF)

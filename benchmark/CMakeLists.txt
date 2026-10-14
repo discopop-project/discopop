@@ -40,7 +40,6 @@ target_sources(
 target_include_directories(DiscoPoP_BM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(DiscoPoP_BM PRIVATE DiscoPoP_RT)
 target_link_libraries(DiscoPoP_BM PRIVATE benchmark::benchmark)
-set_target_properties(DiscoPoP_BM PROPERTIES CXX_STANDARD 20)
 set_target_properties(DiscoPoP_UT PROPERTIES ENABLE_EXPORTS 1)
 
 # The per-callback benchmarks, built twice from the same source: once against the runtime as it
@@ -53,8 +52,7 @@ foreach(dp_callback_benchmark IN ITEMS DiscoPoP_BM_Callbacks DiscoPoP_BM_Callbac
     injected_functions/benchmark_injected_functions.cpp)
   target_include_directories(${dp_callback_benchmark} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
   target_link_libraries(${dp_callback_benchmark} PRIVATE benchmark::benchmark)
-  target_link_libraries(${dp_callback_benchmark} PRIVATE Boost::headers)
-  set_target_properties(${dp_callback_benchmark} PROPERTIES CXX_STANDARD 20)
+  target_link_libraries(${dp_callback_benchmark} PRIVATE DiscoPoP_Boost)
 endforeach()
 
 target_link_libraries(DiscoPoP_BM_Callbacks PRIVATE DiscoPoP_RT)
