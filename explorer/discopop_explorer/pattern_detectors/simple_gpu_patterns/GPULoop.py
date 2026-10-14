@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import os
 from enum import IntEnum
 from typing import List, Set, Optional, Union, Any, Dict, Tuple, cast
 
@@ -22,7 +21,6 @@ from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.functions.PEGraph.properties.is_reduction_var_by_name import is_reduction_var_by_name
-from discopop_explorer.functions.PEGraph.queries.memory_regions import get_memory_regions
 from discopop_explorer.functions.PEGraph.queries.reductions import get_reduction_sign
 from discopop_explorer.functions.PEGraph.queries.subtree import get_left_right_subtree, subtree_of_type
 from discopop_explorer.functions.PEGraph.queries.variables import get_undefined_variables_inside_loop, get_variables
@@ -49,7 +47,6 @@ from discopop_explorer.utils import (
     is_read_in_subtree,
 )
 from discopop_explorer.classes.variable import Variable
-from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_explorer.pattern_detectors.simple_gpu_patterns.GPUMemory import getCalledFunctions, map_node
 
@@ -292,30 +289,10 @@ class GPULoopPattern(PatternInfo):
         clauses: List[str] = []
         var_names: List[str] = []
         modified_var_names: List[str] = []
-        subnodes = subtree_of_type(pet, pet.node_at(self.node_id), CUNode)
         if self.map_type_to:
             modified_var_names = []
             for var in self.map_type_to:
-                memory_regions = get_memory_regions(pet, subnodes, var.name)
-
-                # get size of memory region
-                memory_region_sizes = get_sizes_of_memory_regions(
-                    memory_regions, os.path.join(project_folder_path, "profiler/memory_regions.txt")
-                )
-                if len(memory_region_sizes) > 0:
-                    max_mem_reg_size = max(memory_region_sizes.values())
-                    # divide memory region size by size of variable
-                    # construct new list of modified var names
-                    modified_var_names.append(
-                        (
-                            # var.name + "[:]"
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
-                            if "**" in var.type
-                            else var.name
-                        )
-                    )
-                else:
-                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
+                modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
 
             clauses.append(omp_clause_str("map(to: args)", modified_var_names))
             var_names = []
@@ -323,75 +300,21 @@ class GPULoopPattern(PatternInfo):
         if self.map_type_from:
             modified_var_names = []
             for var in self.map_type_from:
-                memory_regions = get_memory_regions(pet, subnodes, var.name)
-
-                # get size of memory region
-                memory_region_sizes = get_sizes_of_memory_regions(
-                    memory_regions, os.path.join(project_folder_path, "profiler/memory_regions.txt")
-                )
-                if len(memory_region_sizes) > 0:
-                    max_mem_reg_size = max(memory_region_sizes.values())
-                    # divide memory region size by size of variable
-                    # construct new list of modified var names
-                    modified_var_names.append(
-                        (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
-                            if "**" in var.type
-                            else var.name
-                        )
-                    )
-                else:
-                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
+                modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(from: args)", modified_var_names))
             var_names = []
 
         if self.map_type_tofrom:
             modified_var_names = []
             for var in self.map_type_tofrom:
-                memory_regions = get_memory_regions(pet, subnodes, var.name)
-
-                # get size of memory region
-                memory_region_sizes = get_sizes_of_memory_regions(
-                    memory_regions, os.path.join(project_folder_path, "profiler/memory_regions.txt")
-                )
-                if len(memory_region_sizes) > 0:
-                    max_mem_reg_size = max(memory_region_sizes.values())
-                    # divide memory region size by size of variable
-                    # construct new list of modified var names
-                    modified_var_names.append(
-                        (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
-                            if "**" in var.type
-                            else var.name
-                        )
-                    )
-                else:
-                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
+                modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(tofrom: args)", modified_var_names))
             var_names = []
 
         if self.map_type_alloc:
             modified_var_names = []
             for var in self.map_type_alloc:
-                memory_regions = get_memory_regions(pet, subnodes, var.name)
-
-                # get size of memory region
-                memory_region_sizes = get_sizes_of_memory_regions(
-                    memory_regions, os.path.join(project_folder_path, "profiler/memory_regions.txt")
-                )
-                if len(memory_region_sizes) > 0:
-                    max_mem_reg_size = max(memory_region_sizes.values())
-                    # divide memory region size by size of variable
-                    # construct new list of modified var names
-                    modified_var_names.append(
-                        (
-                            var.name + "[:" + str(int(max_mem_reg_size / var.sizeInByte)) + "]"
-                            if "**" in var.type
-                            else var.name
-                        )
-                    )
-                else:
-                    modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
+                modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(alloc: args)", modified_var_names))
             var_names = []
 

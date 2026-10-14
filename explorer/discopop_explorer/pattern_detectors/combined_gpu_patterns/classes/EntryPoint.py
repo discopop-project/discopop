@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import os.path
 from typing import Set, Tuple, List
 
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
@@ -19,9 +18,6 @@ from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Dependenc
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Enums import (
     EntryPointType,
     EntryPointPositioning,
-)
-from discopop_library.MemoryRegions.utils import (
-    get_sizes_of_memory_regions,
 )
 
 
@@ -138,22 +134,7 @@ class EntryPoint(object):
                 var_names_types_and_sizes.append((var_name, var_obj.type, var_obj.sizeInByte))
         # add [..] to variable name if required (type contains "**")
 
-        # get size of memory region
-        memory_region_sizes = get_sizes_of_memory_regions(
-            self.memory_regions, os.path.join(project_folder_path, "profiler/memory_regions.txt")
-        )
-        if len(memory_region_sizes) > 0:
-            max_mem_reg_size = max(memory_region_sizes.values())
-            # divide memory region size by size of variable
-            # construct new list of modified var names
-            modified_var_names = [
-                (
-                    vn + "[:]" if "**" in t else vn
-                )  # (vn + "[:" + str(int(max_mem_reg_size / s)) + "]" if "**" in t else vn)
-                for vn, t, s in var_names_types_and_sizes
-            ]
-        else:
-            modified_var_names = [(vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes]
+        modified_var_names = [(vn + "[:]" if "**" in t else vn) for vn, t, s in var_names_types_and_sizes]
 
         return (
             ",".join(modified_var_names),
