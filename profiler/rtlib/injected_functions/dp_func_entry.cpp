@@ -42,9 +42,6 @@ void __dp_func_entry(LID lid, int32_t isStart, int32_t functionEntryID) {
   // follow the pending call into this function (or switch to the function's own root state)
   enter_function_for_callstate(functionEntryID);
 
-#ifdef DP_CALLTREE_PROFILING
-  call_tree.enter_function(lid);
-#endif
 
   if (isStart)
     *out << "START " << dputil::decodeLID(lid) << endl;

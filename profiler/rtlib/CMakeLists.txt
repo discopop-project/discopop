@@ -44,12 +44,6 @@ set(DiscoPoP_SHARED_SOURCES
         runtimeFunctionsGlobals.cpp
         memory/Signature.cpp
 
-        calltree/CallTreeNode.cpp
-        calltree/CallTree.cpp
-        calltree/CallTreeGlobals.cpp
-        calltree/DependencyMetadata.cpp
-        calltree/MetaDataQueueElement.cpp
-        calltree/utils.cpp
 
         injected_functions/dp_add_bb_deps.cpp
         injected_functions/dp_finalize.cpp
@@ -163,34 +157,6 @@ if(DEFINED DP_INTERNAL_TIMER)
                 message(STATUS "WARNING: DiscoPoP configuration: DP_INTERNAL_TIMER enabled. Debug setting. Reduces profiling speed.")
         endif()
 endif()
-
-
-if(DEFINED DP_CALLTREE_PROFILING)
-        if(NOT ${DP_CALLTREE_PROFILING} EQUAL 0)
-                target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING=${DP_CALLTREE_PROFILING})
-                message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING enabled. Reduces profiling speed.")
-        endif()
-endif()
-
-if(DEFINED DP_CALLTREE_PROFILING_METADATA_CUTOFF)
-        target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING_METADATA_CUTOFF=${DP_CALLTREE_PROFILING_METADATA_CUTOFF})
-        message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF enabled. Incomplete dependency metadata possible.")
-else()
-        target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING_METADATA_CUTOFF=50)
-        message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF set to default value: 50.")
-endif()
-
-if(DEFINED DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY)
-        target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY=${DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY})
-        message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY set to ${DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY} * 0.1% .")
-else()
-        target_compile_definitions(DiscoPoP_RT PUBLIC DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY=1)
-        message(STATUS "WARNING: DiscoPoP configuration: DP_CALLTREE_PROFILING_METADATA_CUTOFF_IGNORE_PROBABILITY set to default value: 0.1%")
-endif()
-
-
-
-
 
 # end of compiler flags
 

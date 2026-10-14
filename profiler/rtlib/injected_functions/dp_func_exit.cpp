@@ -48,9 +48,6 @@ void __dp_func_exit(LID lid, int32_t isExit) {
   function_manager->reset_call(lid);
   function_manager->decrease_stack_level();
 
-#ifdef DP_CALLTREE_PROFILING
-  call_tree.exit_function();
-#endif
 
   if (isExit == 0) {
     function_manager->register_function_end(lid);
