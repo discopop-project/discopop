@@ -11,6 +11,7 @@
  */
 
 #include "DiscoPoP.hpp"
+#include "llvm_compat.hpp"
 
 using namespace llvm;
 using namespace std;
@@ -445,11 +446,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     for (auto pair : conditionalBBDepMap) {
       // Insert call to reportbb
       Instruction *insertionPoint = getHybridReportInsertionPoint(pair.first);
-#if LLVM_VERSION_MAJOR >= 22
       CallInst::Create(ReportBB, ConstantInt::get(Int32, bbDepCount), "", insertionPoint->getIterator());
-#else
-      CallInst::Create(ReportBB, ConstantInt::get(Int32, bbDepCount), "", insertionPoint);
-#endif
 
       // ---- Insert deps into string ----
       if (bbDepCount)
@@ -488,13 +485,8 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     map<pair<BasicBlock *, Value *>, AllocaInst *> semaphores;
     for (auto &sourceBlock : conditionalBBPairDepMap) {
       for (auto &variable : sourceBlock.second) {
-#if LLVM_VERSION_MAJOR >= 22
-        auto AI = new AllocaInst(Int32, 0, "__dp_bb", F.getEntryBlock().getFirstNonPHI()->getNextNode()->getIterator());
-        new StoreInst(ConstantInt::get(Int32, 0), AI, false, AI->getNextNode()->getIterator());
-#else
-        auto AI = new AllocaInst(Int32, 0, "__dp_bb", F.getEntryBlock().getFirstNonPHI()->getNextNonDebugInstruction());
-        new StoreInst(ConstantInt::get(Int32, 0), AI, false, AI->getNextNonDebugInstruction());
-#endif
+        auto AI = new AllocaInst(Int32, 0, "__dp_bb", llvmcompat::nextInstruction(F.getEntryBlock().getFirstNonPHI())->getIterator());
+        new StoreInst(ConstantInt::get(Int32, 0), AI, false, llvmcompat::nextInstruction(AI)->getIterator());
         semaphores[{sourceBlock.first, variable.first}] = AI;
       }
     }
@@ -518,13 +510,8 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
       auto reports = reportsOfBlock.find(&BB);
       if (reports != reportsOfBlock.end()) {
         for (auto &report : reports->second) {
-#if LLVM_VERSION_MAJOR >= 22
           auto LI = new LoadInst(Int32, report.first, Twine(""), false, insertionPoint->getIterator());
           CallInst::Create(ReportBBPair, ArrayRef<Value *>({LI, ConstantInt::get(Int32, bbDepCount)}), "", insertionPoint->getIterator());
-#else
-          auto LI = new LoadInst(Int32, report.first, Twine(""), false, insertionPoint);
-          CallInst::Create(ReportBBPair, ArrayRef<Value *>({LI, ConstantInt::get(Int32, bbDepCount)}), "", insertionPoint);
-#endif
           // ---- Insert deps into string ----
           if (bbDepCount)
             bbDepString += "/";
@@ -551,28 +538,16 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
         }
         for (auto &semaphore : semaphores) {
           if (semaphore.first.second == writers.first && semaphore.first.first != &BB) {
-#if LLVM_VERSION_MAJOR >= 22
             new StoreInst(ConstantInt::get(Int32, 0), semaphore.second, false, insertionPoint->getIterator());
-#else
-            new StoreInst(ConstantInt::get(Int32, 0), semaphore.second, false, insertionPoint);
-#endif
           }
         }
       }
       auto sourceBlock = conditionalBBPairDepMap.find(&BB);
       if (sourceBlock != conditionalBBPairDepMap.end()) {
         // the current callpath state + 1, so that 0 keeps meaning "no source"
-#if LLVM_VERSION_MAJOR >= 22
         auto BBStateCall = CallInst::Create(BBState, "", insertionPoint->getIterator());
-#else
-        auto BBStateCall = CallInst::Create(BBState, "", insertionPoint);
-#endif
         for (auto &variable : sourceBlock->second) {
-#if LLVM_VERSION_MAJOR >= 22
           new StoreInst(BBStateCall, semaphores[{&BB, variable.first}], false, insertionPoint->getIterator());
-#else
-          new StoreInst(BBStateCall, semaphores[{&BB, variable.first}], false, insertionPoint);
-#endif
         }
       }
     }

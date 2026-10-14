@@ -11,6 +11,7 @@
  */
 
 #include "DiscoPoP.hpp"
+#include "llvm_compat.hpp"
 
 using namespace llvm;
 using namespace std;
@@ -21,22 +22,13 @@ void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
   LID lid = getLID(toInstrument, fileID);
   if (lid == 0)
     return;
-#if LLVM_VERSION_MAJOR >= 22
-  IRBuilder<> IRB(toInstrument->getNextNode());
-#else
-  IRBuilder<> IRB(toInstrument->getNextNonDebugInstruction());
-#endif
+  IRBuilder<> IRB(llvmcompat::nextInstruction(toInstrument));
 
   vector<Value *> args;
   args.push_back(lidConstant(lid));
 
-#if LLVM_VERSION_MAJOR >= 22
   Value *startAddr =
       PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode()->getIterator());
-#else
-  Value *startAddr =
-      PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode());
-#endif
 
   args.push_back(startAddr);
 

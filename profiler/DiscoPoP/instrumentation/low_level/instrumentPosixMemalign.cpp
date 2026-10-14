@@ -11,6 +11,7 @@
  */
 
 #include "DiscoPoP.hpp"
+#include "llvm_compat.hpp"
 
 using namespace llvm;
 using namespace std;
@@ -25,11 +26,7 @@ void DiscoPoP::instrumentPosixMemalign(CallBase *toInstrument) {
   // Determine correct placement for the call to __dp_new
   Instruction *nextInst = nullptr;
   if (isa<CallInst>(toInstrument)) {
-#if LLVM_VERSION_MAJOR >= 22
-    nextInst = toInstrument->getNextNode();
-#else
-    nextInst = toInstrument->getNextNonDebugInstruction();
-#endif
+    nextInst = llvmcompat::nextInstruction(toInstrument);
   } else if (isa<InvokeInst>(toInstrument)) {
     // Invoke instructions are always located at the end of a basic block.
     // Invoke instructions may throw errors, in which case the successor is a
