@@ -18,7 +18,7 @@
 # usage: scripts/dev/check_rtlib_options.sh [build base dir] [name of one configuration]
 #   [build base dir]  default: build_options (gitignored); every configuration gets its own subdirectory,
 #                     as a CMake cache keeps the options of the earlier configure
-#   [name]            build only this configuration, e.g. no_workers_calltree
+#   [name]            build only this configuration, e.g. no_workers
 #
 # A new option belongs into the list below.
 
@@ -31,12 +31,10 @@ ONLY="${2:-}"
 # name|cmake options
 CONFIGURATIONS=(
   "default|"
-  "calltree|-DDP_CALLTREE_PROFILING=1"
   "no_workers|-DDP_NUM_WORKERS=0"
-  "no_workers_calltree|-DDP_NUM_WORKERS=0 -DDP_CALLTREE_PROFILING=1"
   "pthread_compatibility|-DDP_PTHREAD_COMPATIBILITY_MODE=1"
   "verbose_timer|-DDP_RTLIB_VERBOSE=1 -DDP_INTERNAL_TIMER=1"
-  "all|-DDP_CALLTREE_PROFILING=1 -DDP_PTHREAD_COMPATIBILITY_MODE=1 -DDP_RTLIB_VERBOSE=1 -DDP_INTERNAL_TIMER=1"
+  "all|-DDP_PTHREAD_COMPATIBILITY_MODE=1 -DDP_RTLIB_VERBOSE=1 -DDP_INTERNAL_TIMER=1"
 )
 
 mkdir -p "${BASE_DIR}"
