@@ -15,11 +15,19 @@
 #include "Enums.hpp"
 #include "Globals.hpp"
 
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
+
 typedef struct Variable_struct {
-  string name;
-  string type;
-  string defLine;
-  string isArray;
+  std::string name;
+  std::string type;
+  std::string defLine;
+  std::string isArray;
   bool readAccess;
   bool writeAccess;
 
@@ -27,7 +35,7 @@ typedef struct Variable_struct {
       : name(other.name), type(other.type), defLine(other.defLine), readAccess(other.readAccess),
         writeAccess(other.writeAccess) {}
 
-  Variable_struct(string n, string t, string d, bool readAccess, bool writeAccess)
+  Variable_struct(std::string n, std::string t, std::string d, bool readAccess, bool writeAccess)
       : name(n), type(t), defLine(d), readAccess(readAccess), writeAccess(writeAccess) {}
 
   // We have a set of this struct. The set doesn't know how to order the
@@ -39,25 +47,25 @@ typedef struct Variable_struct {
 } Variable;
 
 typedef struct Node_struct {
-  string ID;
+  std::string ID;
   nodeTypes type;
   int startLine;
   int endLine;
-  BasicBlock *BB;
+  llvm::BasicBlock *BB;
 
   // Only for func type
-  string name;
-  vector<Variable> argumentsList;
-  set<int> returnLines;
+  std::string name;
+  std::vector<Variable> argumentsList;
+  std::set<int> returnLines;
 
-  vector<Node_struct *> childrenNodes;
+  std::vector<Node_struct *> childrenNodes;
   Node_struct *parentNode;
 
   // isRecursive function (Mo 5.11.2019)
-  string recursiveFunctionCall = "";
+  std::string recursiveFunctionCall = "";
 
   Node_struct() {
-    ID = to_string(fileID) + ":" + to_string(CUIDCounter++);
+    ID = std::to_string(fileID) + ":" + std::to_string(CUIDCounter++);
     parentNode = NULL;
     BB = NULL;
   }
@@ -65,30 +73,30 @@ typedef struct Node_struct {
 
 typedef struct CU_struct : Node_struct {
 
-  string BBID; // BasicBlock Id where the CU appears in
+  std::string BBID; // BasicBlock Id where the CU appears in
 
   unsigned readDataSize;  // number of bytes read from memory by the cu
   unsigned writeDataSize; // number of bytes written into memory during the cu
   unsigned instructionsCount;
 
   // basic block id & successor basic blocks for control dependence
-  vector<string> successorCUs; // keeps IDs of control dependent CUs
-  string basicBlockName;
+  std::vector<std::string> successorCUs; // keeps IDs of control dependent CUs
+  std::string basicBlockName;
 
-  set<int> instructionsLineNumbers;
-  set<int> readPhaseLineNumbers;
-  set<int> writePhaseLineNumbers;
-  set<int> returnInstructions;
+  std::set<int> instructionsLineNumbers;
+  std::set<int> readPhaseLineNumbers;
+  std::set<int> writePhaseLineNumbers;
+  std::set<int> returnInstructions;
 
-  set<Variable> localVariableNames;
-  set<Variable> globalVariableNames;
+  std::set<Variable> localVariableNames;
+  std::set<Variable> globalVariableNames;
 
   bool performsFileIO;
 
   // Map to record function call line numbers
-  map<int, vector<Node *>> callLineTofunctionMap;
+  std::map<int, std::vector<Node *>> callLineTofunctionMap;
   // Map to record function call instruction ids
-  map<int, vector<Instruction*>> callLineToCallInstructionMap;
+  std::map<int, std::vector<llvm::Instruction*>> callLineToCallInstructionMap;
 
   CU_struct() {
     type = nodeTypes::cu;

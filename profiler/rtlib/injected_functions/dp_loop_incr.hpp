@@ -12,6 +12,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace __dp {
 
 /******* Instrumentation function *******/
