@@ -16,9 +16,6 @@ from discopop_explorer.utilities.ASTUtils import ASTPatternDetectionHelper
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
-from discopop_explorer.pattern_detectors.task_parallelism.task_parallelism_detector import (
-    build_preprocessed_graph_and_run_detection as detect_tp,
-)
 from discopop_explorer.classes.variable import Variable
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
@@ -93,7 +90,6 @@ class PatternDetectorX(object):
         llvm_cxxfilt_path: Optional[str],
         discopop_build_path: Optional[str],
         enable_patterns: str,
-        enable_task_pattern: bool,
         enable_detection_of_scheduling_clauses: bool,
         hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
         jobs: Optional[int],
@@ -181,24 +177,6 @@ class PatternDetectorX(object):
         #            res.patterns.geometric_decomposition = detect_gd(self.pet, hotspots)
         #            print("\tDONE.")
 
-        # check if task pattern should be enabled
-        #        if enable_task_pattern:
-        #            if cu_inst_result_file is None:
-        #                raise ValueError("cu_inst_result_file not specified.")
-        #            if file_mapping is None:
-        #                raise ValueError("file_mapping not specified.")
-        #            res.patterns.task = detect_tp(
-        #                cu_dict,
-        #                dependencies,
-        #                reduction_vars,
-        #                file_mapping,
-        #                cu_inst_result_file,
-        #                llvm_cxxfilt_path,
-        #                discopop_build_path,
-        #                hotspots,
-        #                res.patterns.reduction,
-        #            )
-        #
         #       # detect GPU patterns based on previously identified patterns
         #       if "*" in enable_patterns or "simplegpu" in enable_patterns:
         #           print("SIMPLE GPU...")
@@ -281,7 +259,6 @@ class PatternDetectorX(object):
         llvm_cxxfilt_path: Optional[str],
         discopop_build_path: Optional[str],
         enable_patterns: str,
-        enable_task_pattern: bool,
         enable_detection_of_scheduling_clauses: bool,
         hotspots: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]],
     ) -> DetectionResult:

@@ -25,7 +25,7 @@ from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
-from discopop_explorer.pattern_detectors.task_parallelism.classes import (
+from discopop_explorer.classes.patterns.TaskParallelismInfo import (
     ParallelRegionInfo,
     TPIType,
     TaskParallelismInfo,
@@ -146,7 +146,7 @@ def identify_simple_tasking(
 
     for tpc in simplification_results:
 
-        from discopop_explorer.pattern_detectors.task_parallelism.classes import TPIType
+        from discopop_explorer.classes.patterns.TaskParallelismInfo import TPIType
 
         if tpc.parent_context is None:
             continue

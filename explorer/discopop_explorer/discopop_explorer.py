@@ -79,7 +79,6 @@ class ExplorerArguments(GeneralArguments):
     enable_detection_result_dump_file: Optional[str]  # None means no dump, otherwise the path
     enable_patterns: str
     # experimental features:
-    enable_task_pattern: bool
     detect_scheduling_clauses: bool
     generate_data_cu_inst: Optional[str]  # none: generate Data_CUInst.txt & exit
     cu_inst_result_file: Optional[str]
@@ -140,7 +139,6 @@ def __run(
     llvm_cxxfilt_path: Optional[str] = None,
     discopop_build_path: Optional[str] = None,
     enable_patterns: str = "*",
-    enable_task_pattern: bool = False,
     enable_detection_of_scheduling_clauses: bool = False,
     hotspot_functions: Optional[Dict[HotspotType, List[Tuple[int, int, HotspotNodeType, str, float]]]] = None,
     load_existing_doall_and_reduction_patterns: bool = False,
@@ -205,7 +203,6 @@ def __run(
             llvm_cxxfilt_path,
             discopop_build_path,
             enable_patterns,
-            enable_task_pattern,
             enable_detection_of_scheduling_clauses,
             hotspot_functions,
         )
@@ -221,7 +218,6 @@ def __run(
             llvm_cxxfilt_path,
             discopop_build_path,
             enable_patterns,
-            enable_task_pattern,
             enable_detection_of_scheduling_clauses,
             hotspot_functions,
             jobs,
@@ -294,7 +290,6 @@ def run(arguments: ExplorerArguments) -> None:
                 llvm_cxxfilt_path=arguments.llvm_cxxfilt_path,
                 discopop_build_path=arguments.discopop_build_path,
                 enable_patterns=arguments.enable_patterns,
-                enable_task_pattern=arguments.enable_task_pattern,
                 enable_detection_of_scheduling_clauses=arguments.detect_scheduling_clauses,
                 hotspot_functions=hotspots,
                 load_existing_doall_and_reduction_patterns=arguments.load_existing_doall_and_reduction_patterns,

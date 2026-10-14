@@ -49,7 +49,7 @@ from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.clause_classification import filter_classifications, merge_classifications
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.loop_collapse_analysis import identify_collapsible_loop_nests
-from discopop_explorer.pattern_detectors.task_parallelism.classes import (
+from discopop_explorer.classes.patterns.TaskParallelismInfo import (
     ParallelRegionInfo,
     TPIType,
     TaskParallelismInfo,
