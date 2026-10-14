@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 // recieves the region and outputs all variables and variables crossing basic
 // block boundaries in the region.
 void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet) {

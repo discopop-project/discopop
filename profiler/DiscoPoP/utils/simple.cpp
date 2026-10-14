@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 Type *DiscoPoP::pointsToStruct(PointerType *PTy) {
   assert(PTy);
   Type *structType = PTy;

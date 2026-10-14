@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 /* metadata format in LLVM IR:
 !5 = metadata !{
   i32,      ;; Tag (see below)  // DW_TAG_pointer_type:     0

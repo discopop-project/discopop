@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 string DiscoPoP::determineVariableType(Instruction *I) {
   string s = "";
   string type_str;

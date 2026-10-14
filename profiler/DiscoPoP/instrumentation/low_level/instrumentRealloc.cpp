@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 void DiscoPoP::instrumentRealloc(CallBase *toInstrument) {
   // add instrumentation for calls to realloc
   LID lid = getLID(toInstrument, fileID);

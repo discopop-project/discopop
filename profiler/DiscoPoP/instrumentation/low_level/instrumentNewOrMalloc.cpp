@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 void DiscoPoP::instrumentNewOrMalloc(CallBase *toInstrument) {
   // add instrumentation for new instructions or calls to malloc
   LID lid = getLID(toInstrument, fileID);

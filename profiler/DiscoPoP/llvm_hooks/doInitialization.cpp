@@ -13,6 +13,10 @@
 #include "../DiscoPoP.hpp"
 #include <filesystem>
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 bool DiscoPoP::doInitialization(Module &M) {
   if (DP_DEBUG) {
     errs() << "DiscoPoP | 190: init pass DiscoPoP \n";

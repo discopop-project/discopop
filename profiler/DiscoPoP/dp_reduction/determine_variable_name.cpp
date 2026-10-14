@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, string> *trueVarNamesFromMetadataMap) {
 
   assert(I && "Instruction cannot be NULL \n");

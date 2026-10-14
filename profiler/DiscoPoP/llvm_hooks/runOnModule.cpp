@@ -13,6 +13,10 @@
 #include "../DiscoPoP.hpp"
 #include <thread>
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 // pass get invoked here
 bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   cout << "MODULE " << M.getName().str() << "\n";

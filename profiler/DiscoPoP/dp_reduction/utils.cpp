@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 unsigned DiscoPoP::dp_reduction_get_file_id(llvm::Function *func) {
   unsigned file_id = 0;
 

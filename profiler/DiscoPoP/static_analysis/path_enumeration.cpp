@@ -13,6 +13,10 @@
 #include "../DiscoPoP.hpp"
 #include <thread>
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 // The .dot files written below are debugging aids: nothing in the toolchain reads them back,
 // and for deep call graphs they are by far the largest artifacts the pass produces (tens of MB
 // per translation unit). They are therefore only written on request.

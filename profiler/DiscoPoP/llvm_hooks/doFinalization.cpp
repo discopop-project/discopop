@@ -14,6 +14,10 @@
 
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 bool DiscoPoP::doFinalization(Module &M) {
   // unique InstructionID assignment
   // write the current count of unique instructions to a file to avoid duplication between modules.

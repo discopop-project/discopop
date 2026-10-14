@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
   // add instrumentation for delete instructions or calls to free
   LID lid = getLID(toInstrument, fileID);

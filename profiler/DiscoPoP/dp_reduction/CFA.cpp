@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) {
   std::string lid = "LOOPENDNOTFOUND";
   SmallVector<BasicBlock *, 8> ExitBlocks;

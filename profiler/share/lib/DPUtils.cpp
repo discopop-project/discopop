@@ -13,6 +13,10 @@
 #include "DPUtils.hpp"
 
 #define DP_DEBUG_TYPE "dputils"
+
+using namespace llvm;
+using namespace std;
+using namespace dputil;
 using namespace std;
 
 // cl::opt <string> FileMappingPath("fm-path", cl::init(""),

@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 // Instrumentation function inserters.
 void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
   LID lid = getLID(toInstrument, fileID);

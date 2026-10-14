@@ -35,7 +35,7 @@ public:
   void create_new_loop(const std::int32_t function_level, const std::int32_t loop_id, const LID begin_line) {
     loopStack.push(LoopTableEntry(function_level, loop_id, 0, begin_line));
     if (loops.find(begin_line) == loops.end()) {
-      loops.insert(pair<LID, LoopRecord *>(begin_line, new LoopRecord(0, 0, 0)));
+      loops.insert(std::pair<LID, LoopRecord *>(begin_line, new LoopRecord(0, 0, 0)));
     }
     if (DP_DEBUG) {
       std::cout << "(" << std::dec << function_level << ")Loop " << loop_id << " enters." << std::endl;

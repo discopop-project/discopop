@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 void DiscoPoP::instrumentFuncEntry(Function &F) {
   BasicBlock &entryBB = F.getEntryBlock();
   LID lid = 0;

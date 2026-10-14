@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
   for (Function &F : M) {
     for(BasicBlock &BB: F){

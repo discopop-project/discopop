@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 string DiscoPoP::getOrInsertVarName_static(string varName, IRBuilder<> &builder) {
   Value *valName = NULL;
   // remove .addr if added. Replaced by the GEPRESULT_ tag

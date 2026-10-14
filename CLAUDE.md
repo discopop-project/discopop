@@ -129,7 +129,7 @@ This document contains critical information about working with this codebase. Fo
 - CI runs it as a step of the job `profiler_unit_tests`
 
 #### Headers of the profiler
-- every header below `profiler/rtlib`, `profiler/DiscoPoP` and `profiler/share/include` has to compile on its own, i.e. include what it uses
+- every header below `profiler/rtlib`, `profiler/DiscoPoP` and `profiler/share/include` has to compile on its own, i.e. include what it uses; no header may contain a `using namespace` directive (source files may)
 - `scripts/dev/check_headers.py [build dir]` (default `build_tests`, configured as for the unit tests) compiles each header as a translation unit of its own with the flags of its target taken from `compile_commands.json`, and fails if one does not; a new header is picked up by `git ls-files`
 - CI runs it as a step of the job `profiler_unit_tests`
 

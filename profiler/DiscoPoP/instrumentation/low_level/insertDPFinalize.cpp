@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 void DiscoPoP::insertDpFinalize(Instruction *before) {
   LID lid = getLID(before, fileID);
   assert((lid > 0) && "Returning on an invalid LID.");

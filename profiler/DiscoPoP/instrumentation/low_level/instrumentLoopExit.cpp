@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 void DiscoPoP::instrumentLoopExit(BasicBlock *bb, int32_t id, Loop *L) {
   // see getLoopExitLID for exit blocks without a valid LID of their own
   LID lid = getLoopExitLID(bb, L);
