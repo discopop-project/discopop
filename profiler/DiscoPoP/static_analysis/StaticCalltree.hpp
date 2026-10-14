@@ -18,6 +18,7 @@
 #include <stdint.h>
 #include <vector>
 #include <algorithm>
+#include <utility>
 
 class StaticCalltreeNode {
     private:
@@ -70,6 +71,15 @@ class StaticCalltree {
         std::unordered_map<int32_t, StaticCalltreeNode*> instruction_map;
         StaticCalltree();
         ~StaticCalltree();
+        // owns its nodes: a copy would delete them twice, so it can only be moved (buildStaticCalltree
+        // returns it by value)
+        StaticCalltree(StaticCalltree&& other) noexcept
+            : node_count(other.node_count), function_map(std::move(other.function_map)), instruction_map(std::move(other.instruction_map)) {
+            other.function_map.clear();
+            other.instruction_map.clear();
+        }
+        StaticCalltree(const StaticCalltree&) = delete;
+        StaticCalltree& operator=(const StaticCalltree&) = delete;
         StaticCalltreeNode* get_or_insert_function_node(std::string function_name);
         StaticCalltreeNode* get_or_insert_function_node(std::string function_nam, std::string loop_iteration_instance);
         StaticCalltreeNode* get_or_insert_instruction_node(int32_t instructionID);

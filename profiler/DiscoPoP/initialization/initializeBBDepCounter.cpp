@@ -14,7 +14,7 @@
 
 void DiscoPoP::initializeBBDepCounter() {
 
-  std::string BBDepCounterFile(getenv("DOT_DISCOPOP_PROFILER"));
+  std::string BBDepCounterFile(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   BBDepCounterFile += "/DP_BBDepCounter.txt";
   if (dputil::fexists(BBDepCounterFile)) {
     std::fstream inBBDepCounter(BBDepCounterFile, std::ios_base::in);

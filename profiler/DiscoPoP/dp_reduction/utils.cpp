@@ -111,7 +111,7 @@ string DiscoPoP::findStructMemberName_static(MDNode *structNode, unsigned idx, I
       return dyn_cast<MDString>(member->getOperand(3))->getString().str();
     }
   }
-  return NULL;
+  return "";
 }
 
 // returns the value that the GetElementPtrInst ultimately points to

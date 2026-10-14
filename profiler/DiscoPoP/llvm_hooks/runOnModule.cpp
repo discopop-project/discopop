@@ -23,7 +23,7 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
 
   // prepare saving the mapping from instructionID to lineID for backwards compatibility
   instructionID_to_lineID_file = new std::ofstream();
-  std::string tmp0(getenv("DOT_DISCOPOP_PROFILER"));
+  std::string tmp0(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   tmp0 += "/instructionID_to_lineID_mapping.txt";
   instructionID_to_lineID_file->open(tmp0.data(), std::ios_base::app);
 
@@ -43,12 +43,12 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   // DPReduction
 
   reduction_file = new std::ofstream();
-  std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+  std::string tmp(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   tmp += "/reduction.txt";
   reduction_file->open(tmp.data(), std::ios_base::app);
 
   loop_counter_file = new std::ofstream();
-  std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
+  std::string tmp2(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   tmp2 += "/loop_counter_output.txt";
   loop_counter_file->open(tmp2.data(), std::ios_base::app);
 
