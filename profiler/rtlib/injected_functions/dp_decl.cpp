@@ -78,7 +78,7 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   current.skip = true;
 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
-  analyzeSingleAccess(singleThreadedExecutionSMem, current);
+  analyzeSingleAccessOnMainThread(current);
 #endif
 }
 }
