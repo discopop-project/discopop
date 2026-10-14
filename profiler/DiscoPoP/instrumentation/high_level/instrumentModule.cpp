@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 // iterates over all functions in the module and calls 'instrument_function'
 // on suitable ones
 void DiscoPoP::instrument_module(llvm::Module *module, map<string, string> *trueVarNamesFromMetadataMap, llvm::ModuleAnalysisManager &mam) {

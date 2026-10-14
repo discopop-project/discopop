@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 // Goes through all instructions in a loop and determines if they might be
 // suitable for reduction.
 // An entry is added to the 'loops_' vector and for each suitable instruction,

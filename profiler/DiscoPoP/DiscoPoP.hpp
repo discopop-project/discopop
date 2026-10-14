@@ -113,9 +113,6 @@ inline int32_t get_dp_instruction_id(llvm::Instruction *I) {
 #define DP_VERBOSE false // prints warning messages
 #define DP_hybrid_DEBUG false
 
-using namespace llvm;
-using namespace std;
-using namespace dputil;
 
 /*
 // Command line options
@@ -129,22 +126,22 @@ class DiscoPoP { // : public ModulePass, public PassInfoMixin<DiscoPoP> {
 private:
   // CUGeneration
 
-  ofstream *outCUs;
-  ofstream *outOriginalVariables;
-  ofstream *outCUIDCounter;
-  ofstream *outBBDepCounter;
-  ofstream *outInstructionIDCounter;
-  ofstream *outCallpathStateIDCounter;
+  std::ofstream *outCUs;
+  std::ofstream *outOriginalVariables;
+  std::ofstream *outCUIDCounter;
+  std::ofstream *outBBDepCounter;
+  std::ofstream *outInstructionIDCounter;
+  std::ofstream *outCallpathStateIDCounter;
   // Mohammad 23.12.2020
-  map<string, string> loopStartLines;
+  std::map<std::string, std::string> loopStartLines;
   // id of the loop node in Data.xml, per llvm::Loop of the function processed last
   // (filled by fillStartEndLineNumbers, read by CFA for loopstate_positions.txt)
-  map<llvm::Loop *, string> loopToPETNodeID;
+  std::map<llvm::Loop *, std::string> loopToPETNodeID;
 
   // structures to get list of global variables
-  set<string> programGlobalVariablesSet;
+  std::set<std::string> programGlobalVariablesSet;
   // structures to get actual variable names from llvm replacements
-  map<string, string> trueVarNamesFromMetadataMap;
+  std::map<std::string, std::string> trueVarNamesFromMetadataMap;
 
   // CUGeneration end
 
@@ -155,108 +152,108 @@ private:
   void setupCallbacks();
 
   // Helper functions
-  bool isaCallOrInvoke(Instruction *BI);
+  bool isaCallOrInvoke(llvm::Instruction *BI);
 
-  bool sanityCheck(BasicBlock *BB);
+  bool sanityCheck(llvm::BasicBlock *BB);
 
   // the LID as the first argument of a callback: a 64 bit constant (the runtime's LID type) holding the
   // 32 bit packed location, i.e. the value the pass has always passed, zero extended
-  Constant *lidConstant(LID lid) { return ConstantInt::get(Int64, static_cast<uint32_t>(lid)); }
+  llvm::Constant *lidConstant(LID lid) { return llvm::ConstantInt::get(Int64, static_cast<uint32_t>(lid)); }
 
   // LID to report for leaving the loop L through the exit block BB (see CFA)
-  LID getLoopExitLID(BasicBlock *BB, Loop *L);
+  LID getLoopExitLID(llvm::BasicBlock *BB, llvm::Loop *L);
 
   void collectDebugInfo();
 
-  void processStructTypes(string const &fullStructName, MDNode *structNode);
+  void processStructTypes(std::string const &fullStructName, llvm::MDNode *structNode);
 
-  DIGlobalVariable *findDbgGlobalDeclare(GlobalVariable *V);
+  llvm::DIGlobalVariable *findDbgGlobalDeclare(llvm::GlobalVariable *V);
 
-  Value *getOrInsertVarName_dynamic(string varName, IRBuilder<> &builder);
+  llvm::Value *getOrInsertVarName_dynamic(std::string varName, llvm::IRBuilder<> &builder);
 
-  string getOrInsertVarName_static(string varName, IRBuilder<> &builder);
+  std::string getOrInsertVarName_static(std::string varName, llvm::IRBuilder<> &builder);
 
-  Value *findStructMemberName(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
+  llvm::Value *findStructMemberName(llvm::MDNode *structNode, unsigned idx, llvm::IRBuilder<> &builder);
 
-  Type *pointsToStruct(PointerType *PTy);
+  llvm::Type *pointsToStruct(llvm::PointerType *PTy);
 
-  Value *determineVariableName_dynamic(Instruction *const I, string prefix);
+  llvm::Value *determineVariableName_dynamic(llvm::Instruction *const I, std::string prefix);
 
-  string determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/,
-                                      bool disable_MetadataMap, string prefix);
+  std::string determineVariableName_static(llvm::Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/,
+                                      bool disable_MetadataMap, std::string prefix);
 
-  void getTrueVarNamesFromMetadata(Region *TopRegion, Node *root,
-                                   std::map<string, string> *trueVarNamesFromMetadataMap);
+  void getTrueVarNamesFromMetadata(llvm::Region *TopRegion, Node *root,
+                                   std::map<std::string, std::string> *trueVarNamesFromMetadataMap);
 
   // Control flow analysis
-  void CFA(Function &F, LoopInfo &LI);
+  void CFA(llvm::Function &F, llvm::LoopInfo &LI);
 
   // Callback Inserters
   // void insertDpFinalize(Instruction *before);
-  void instrumentAlloca(AllocaInst *toInstrument);
+  void instrumentAlloca(llvm::AllocaInst *toInstrument);
 
-  void instrumentNewOrMalloc(CallBase *toInstrument);
-  void instrumentRealloc(CallBase *toInstrument);
-  void instrumentCalloc(CallBase *toInstrument);
-  void instrumentPosixMemalign(CallBase *toInstrument);
+  void instrumentNewOrMalloc(llvm::CallBase *toInstrument);
+  void instrumentRealloc(llvm::CallBase *toInstrument);
+  void instrumentCalloc(llvm::CallBase *toInstrument);
+  void instrumentPosixMemalign(llvm::CallBase *toInstrument);
 
-  void instrumentDeleteOrFree(CallBase *toInstrument);
+  void instrumentDeleteOrFree(llvm::CallBase *toInstrument);
 
-  void instrumentStore(StoreInst *toInstrument, int32_t llvm_ir_instruction_id);
+  void instrumentStore(llvm::StoreInst *toInstrument, int32_t llvm_ir_instruction_id);
 
-  void instrumentLoad(LoadInst *toInstrument, int32_t llvm_ir_instruction_id);
+  void instrumentLoad(llvm::LoadInst *toInstrument, int32_t llvm_ir_instruction_id);
 
-  void insertDpFinalize(Instruction *before);
+  void insertDpFinalize(llvm::Instruction *before);
 
-  void instrumentFuncEntry(Function &F);
+  void instrumentFuncEntry(llvm::Function &F);
 
-  void instrumentLoopEntry(BasicBlock *bb, int32_t id);
+  void instrumentLoopEntry(llvm::BasicBlock *bb, int32_t id);
 
-  void instrumentLoopExit(BasicBlock *bb, int32_t id, Loop *L);
+  void instrumentLoopExit(llvm::BasicBlock *bb, int32_t id, llvm::Loop *L);
 
   int64_t uniqueNum;
 
   // Callbacks to run-time library
-  FunctionCallee DpFinalize;
-  FunctionCallee DpRead, DpWrite;
-  FunctionCallee DpAlloca, DpNew, DpDelete; //, DpDecl;
-  FunctionCallee DpCallOrInvoke;
-  FunctionCallee DpFuncEntry, DpFuncExit;
-  FunctionCallee DpLoopEntry, DpLoopExit;
-  FunctionCallee DpTakenBranchCounterIncr;
+  llvm::FunctionCallee DpFinalize;
+  llvm::FunctionCallee DpRead, DpWrite;
+  llvm::FunctionCallee DpAlloca, DpNew, DpDelete; //, DpDecl;
+  llvm::FunctionCallee DpCallOrInvoke;
+  llvm::FunctionCallee DpFuncEntry, DpFuncExit;
+  llvm::FunctionCallee DpLoopEntry, DpLoopExit;
+  llvm::FunctionCallee DpTakenBranchCounterIncr;
 
   // Basic types
-  Type *Void;
-  IntegerType *Int8, *Int32, *Int64;
-  PointerType *CharPtr;
+  llvm::Type *Void;
+  llvm::IntegerType *Int8, *Int32, *Int64;
+  llvm::PointerType *CharPtr;
 
   // Control flow analysis
   int32_t loopID;
 
   // Output streams
-  ofstream ocfg;
+  std::ofstream ocfg;
 
   // Export Module M from runOnModule() to the whole structure space
-  Module *ThisModule;
-  LLVMContext *ThisModuleContext;
+  llvm::Module *ThisModule;
+  llvm::LLVMContext *ThisModuleContext;
 
   // The __dp_read / __dp_write / __dp_alloca call inserted for a load, store or alloca. The
   // omission analysis erases the ones whose instruction it can predict statically, and it
   // used to find them as the neighbour of that instruction -- which stops being true as soon
   // as anything moves the two apart, and then silently left the call in place. Filled while
   // instrumenting one function, cleared when the next one starts.
-  map<Instruction *, CallInst *> insertedAccessCallbacks;
+  std::map<llvm::Instruction *, llvm::CallInst *> insertedAccessCallbacks;
 
-  map<string, Value *> VarNames;
-  set<DIGlobalVariable *> GlobalVars;
-  map<string, MDNode *> Structs;
+  std::map<std::string, llvm::Value *> VarNames;
+  std::set<llvm::DIGlobalVariable *> GlobalVars;
+  std::map<std::string, llvm::MDNode *> Structs;
   // DPInstrumentation end
 
   // DPInstrumentationOmission
-  string bbDepString;
-  string fileName;
+  std::string bbDepString;
+  std::string fileName;
   int32_t fid;
-  FunctionCallee ReportBB, ReportBBPair, BBState;
+  llvm::FunctionCallee ReportBB, ReportBBPair, BBState;
   dputil::VariableNameFinder *VNF;
   std::ofstream *staticDependencyFile;
   int nextFreeStaticMemoryRegionID;
@@ -272,48 +269,48 @@ public:
 
   ~DiscoPoP();
 
-  bool runOnModule(Module &M, ModuleAnalysisManager &MAM);
+  bool runOnModule(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 
-  bool runOnFunction(Function &F, ModuleAnalysisManager &MAM);
+  bool runOnFunction(llvm::Function &F, llvm::ModuleAnalysisManager &MAM);
 
-  void runOnBasicBlock(BasicBlock &BB);
+  void runOnBasicBlock(llvm::BasicBlock &BB);
 
-  bool doInitialization(Module &M);
+  bool doInitialization(llvm::Module &M);
 
-  bool doFinalization(Module &M);
+  bool doFinalization(llvm::Module &M);
 
   static char ID; // Pass identification, replacement for typeid
 
   // CUGeneration
 
   // DiscoPoP Functions
-  string determineVariableType(Instruction *I);
+  std::string determineVariableType(llvm::Instruction *I);
 
-  string determineVariableDefLine(Instruction *I);
+  std::string determineVariableDefLine(llvm::Instruction *I);
 
-  void getFunctionReturnLines(Region *TopRegion, Node *root);
+  void getFunctionReturnLines(llvm::Region *TopRegion, Node *root);
 
   int32_t get_or_register_loop_id(llvm::Loop* L);
 
   // functions to get list of global variables
 
   // functions to get recursive functions (Mo 5.11.2019)
-  bool isRecursive(Function &F, CallGraph &CG);
+  bool isRecursive(llvm::Function &F, llvm::CallGraph &CG);
 
   // Populate variable sets global to BB
-  void populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet);
+  void populateGlobalVariablesSet(llvm::Region *TopRegion, std::set<std::string> &globalVariablesSet);
 
-  void createCUs(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
-                 map<string, vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI, ModuleAnalysisManager &MAM);
+  void createCUs(llvm::Region *TopRegion, std::set<std::string> &globalVariablesSet, std::vector<CU *> &CUVector,
+                 std::map<std::string, std::vector<CU *>> &BBIDToCUIDsMap, Node *root, llvm::LoopInfo &LI, llvm::ModuleAnalysisManager &MAM);
 
-  void createTakenBranchInstrumentation(Region *TopRegion, map<string, vector<CU *>> &BBIDToCUIDsMap);
+  void createTakenBranchInstrumentation(llvm::Region *TopRegion, std::map<std::string, std::vector<CU *>> &BBIDToCUIDsMap);
 
-  StaticCalltree buildStaticCalltree(Module &M);
-  bool isInstrumentedFunction(Function &F);
+  StaticCalltree buildStaticCalltree(llvm::Module &M);
+  bool isInstrumentedFunction(llvm::Function &F);
   // determineFileID, cached per function of the current module (the lookup walks the function and
   // resolves its file path)
-  int32_t getCachedFileID(Function &F);
-  std::unordered_map<const Function *, int32_t> file_id_cache;
+  int32_t getCachedFileID(llvm::Function &F);
+  std::unordered_map<const llvm::Function *, int32_t> file_id_cache;
   //std::pair<std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>> enumerate_paths(StaticCalltree& calltree);
   StaticCallPathTree* enumerate_paths(StaticCalltree& calltree, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions,
   std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions, std::uint32_t start_path_id);
@@ -325,9 +322,9 @@ public:
   void save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr);
   void save_static_calltree_to_dot(StaticCalltree* calltree);
   void save_function_entries(StaticCallPathTree* call_path_tree_ptr);
-  void assign_instruction_ids_to_dp_reduction_functions(Module &M);
-  void update_argument_instruction_ids(Module &M);
-  void instrument_landing_pads(Module &M);
+  void assign_instruction_ids_to_dp_reduction_functions(llvm::Module &M);
+  void update_argument_instruction_ids(llvm::Module &M);
+  void instrument_landing_pads(llvm::Module &M);
 // hasher used for std::vector<StaticCalltreeNode*>
 template <typename Container>
 struct container_hash {
@@ -342,10 +339,10 @@ struct container_hash {
   std::unordered_map<StaticCalltreeNode*, std::unordered_set<int32_t>> get_contained_in_map(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>& paths);
   std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, container_hash<std::vector<StaticCalltreeNode*>>> get_path_to_id_map(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>& paths);
 
-  void fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> &CUVector,
-                       map<string, vector<CU *>> &BBIDToCUIDsMap);
+  void fillCUVariables(llvm::Region *TopRegion, std::set<std::string> &globalVariablesSet, std::vector<CU *> &CUVector,
+                       std::map<std::string, std::vector<CU *>> &BBIDToCUIDsMap);
 
-  void fillStartEndLineNumbers(Node *root, LoopInfo &LI);
+  void fillStartEndLineNumbers(Node *root, llvm::LoopInfo &LI);
 
   void findStartEndLineNumbers(Node *root, int &start, int &end);
 
@@ -355,13 +352,13 @@ struct container_hash {
   void initializeInstructionIDCounter();
   void initializeCallpathStateIDCounter();
 
-  string xmlEscape(string data);
+  std::string xmlEscape(std::string data);
 
   void secureStream();
 
-  string getLineNumbersString(set<int> LineNumbers);
+  std::string getLineNumbersString(std::set<int> LineNumbers);
 
-  string getChildrenNodesString(Node *node);
+  std::string getChildrenNodesString(Node *node);
 
   // void printOriginalVariables(set<string> &originalVariablesSet);
   void printData(Node *node);
@@ -375,14 +372,14 @@ struct container_hash {
 
   // DPReduction
 
-  void instrument_module(llvm::Module *module, map<string, string> *trueVarNamesFromMetadataMap, llvm::ModuleAnalysisManager &mam);
-  bool inlinedFunction(Function *F);
-  void instrument_function(llvm::Function *function, map<string, string> *trueVarNamesFromMetadataMap, llvm::LoopInfo &loop_info);
-  void instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI,
-                       map<string, string> *trueVarNamesFromMetadataMap);
-  std::string dp_reduction_CFA(Function &F, llvm::Loop *loop, int file_id);
-  string dp_reduction_determineVariableName(Instruction *I, map<string, string> *trueVarNamesFromMetadataMap);
-  string dp_reduction_determineVariableType(Instruction *I);
+  void instrument_module(llvm::Module *module, std::map<std::string, std::string> *trueVarNamesFromMetadataMap, llvm::ModuleAnalysisManager &mam);
+  bool inlinedFunction(llvm::Function *F);
+  void instrument_function(llvm::Function *function, std::map<std::string, std::string> *trueVarNamesFromMetadataMap, llvm::LoopInfo &loop_info);
+  void instrument_loop(llvm::Function &F, int file_id, llvm::Loop *loop, llvm::LoopInfo &LI,
+                       std::map<std::string, std::string> *trueVarNamesFromMetadataMap);
+  std::string dp_reduction_CFA(llvm::Function &F, llvm::Loop *loop, int file_id);
+  std::string dp_reduction_determineVariableName(llvm::Instruction *I, std::map<std::string, std::string> *trueVarNamesFromMetadataMap);
+  std::string dp_reduction_determineVariableType(llvm::Instruction *I);
   llvm::Instruction *dp_reduction_get_reduction_instr(llvm::Instruction *store_instr, llvm::Instruction **load_instr);
   llvm::Instruction *dp_reduction_find_reduction_instr(llvm::Value *val);
   llvm::Instruction *dp_reduction_get_load_instr(llvm::Value *load_val, llvm::Instruction *cur_instr,
@@ -396,10 +393,10 @@ struct container_hash {
   bool dp_reduction_init_util(std::string fmap_path);
   char dp_reduction_get_char_for_opcode(llvm::Instruction *instr); //} // namespace
   int dp_reduction_get_op_order(char c);
-  Type *dp_reduction_pointsToStruct(PointerType *PTy);
-  string findStructMemberName_static(MDNode *structNode, unsigned idx, IRBuilder<> &builder);
-  bool dp_reduction_sanityCheck(BasicBlock *BB, int file_id);
-  LID dp_reduction_getLID(Instruction *BI, int32_t &fileID);
+  llvm::Type *dp_reduction_pointsToStruct(llvm::PointerType *PTy);
+  std::string findStructMemberName_static(llvm::MDNode *structNode, unsigned idx, llvm::IRBuilder<> &builder);
+  bool dp_reduction_sanityCheck(llvm::BasicBlock *BB, int file_id);
+  LID dp_reduction_getLID(llvm::Instruction *BI, int32_t &fileID);
   void dp_reduction_insert_functions();
   bool check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue);
   llvm::LLVMContext *ctx_;

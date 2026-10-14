@@ -12,6 +12,10 @@
 
 #include "InstructionCFG.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F) : VNF(_VNF) {
   entry = Graph::addInstructionNode((Instruction *)ENTRY);
   exit = Graph::addInstructionNode((Instruction *)EXIT);

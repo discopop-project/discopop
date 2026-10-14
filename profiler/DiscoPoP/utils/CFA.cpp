@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 // Control-flow analysis functions
 
 void DiscoPoP::CFA(Function &F, LoopInfo &LI) {

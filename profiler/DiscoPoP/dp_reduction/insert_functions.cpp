@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 // Inserts calls to allow for dynamic analysis of the loops.
 void DiscoPoP::dp_reduction_insert_functions() {
 

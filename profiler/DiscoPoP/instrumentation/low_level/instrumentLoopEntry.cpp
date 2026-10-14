@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, int32_t id) {
   BasicBlock *currentBB = bb;
   vector<Value *> args;

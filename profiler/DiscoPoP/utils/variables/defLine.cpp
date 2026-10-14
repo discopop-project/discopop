@@ -14,6 +14,10 @@
 #include <unordered_set>
 #include <queue>
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 string DiscoPoP::determineVariableDefLine(Instruction *I) {
   string varDefLine{"LineNotFound"};
 

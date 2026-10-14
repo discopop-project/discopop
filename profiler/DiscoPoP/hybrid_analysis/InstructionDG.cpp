@@ -14,6 +14,10 @@
 
 #include "DPUtils.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid)
     : VNF(_VNF), CFG(_CFG), fid(_fid) {
   for (auto edge : CFG->getInEdges(CFG->getExit())) {

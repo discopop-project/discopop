@@ -13,6 +13,10 @@
 #include "../DiscoPoP.hpp"
 #include <unordered_set>
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 typedef int8_t TRANSITION_TYPE; // 0 -> enterLoop, 1 -> exitLoop, 2 -> incrementLoop
 #define TRANSITION_TYPE_ENTERLOOP 0
 #define TRANSITION_TYPE_EXITLOOP 1

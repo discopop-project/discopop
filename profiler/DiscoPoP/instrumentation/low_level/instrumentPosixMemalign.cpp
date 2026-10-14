@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 void DiscoPoP::instrumentPosixMemalign(CallBase *toInstrument) {
   // add instrumentation for calls to posix_memalign
   LID lid = getLID(toInstrument, fileID);

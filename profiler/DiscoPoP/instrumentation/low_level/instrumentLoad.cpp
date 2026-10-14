@@ -12,6 +12,10 @@
 
 #include "../../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 void DiscoPoP::instrumentLoad(LoadInst *toInstrument, int32_t llvm_ir_instruction_id) {
 
   LID lid = getLID(toInstrument, fileID);

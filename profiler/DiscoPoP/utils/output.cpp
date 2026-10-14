@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 /********** Output functions *********/
 string DiscoPoP::xmlEscape(string data) {
   string::size_type pos = 0;

@@ -26,7 +26,6 @@
 #include <utility>
 #include <vector>
 
-using namespace std;
 
 template <typename InstructionNodeT> class InstructionNode {
 private:

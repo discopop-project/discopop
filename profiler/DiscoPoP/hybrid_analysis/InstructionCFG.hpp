@@ -25,28 +25,28 @@
 #define ENTRY 1000000
 #define EXIT 2000000
 
-class InstructionCFG : public Graph<Instruction *> {
+class InstructionCFG : public Graph<llvm::Instruction *> {
 
 private:
-  InstructionNode<Instruction *> *entry;
-  InstructionNode<Instruction *> *exit;
+  InstructionNode<llvm::Instruction *> *entry;
+  InstructionNode<llvm::Instruction *> *exit;
   dputil::VariableNameFinder *VNF;
-  set<Instruction *> highlightedInstructionNodes;
+  std::set<llvm::Instruction *> highlightedInstructionNodes;
 
-  void findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB, Instruction *previousInstruction, std::set<std::pair<BasicBlock*, Instruction*>> *visited);
+  void findAndAddFirstRelevantInstructionInSuccessorBlocks(llvm::BasicBlock *BB, llvm::Instruction *previousInstruction, std::set<std::pair<llvm::BasicBlock*, llvm::Instruction*>> *visited);
 
 public:
-  InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F);
+  InstructionCFG(dputil::VariableNameFinder *_VNF, llvm::Function &F);
 
-  InstructionNode<Instruction *> *getEntry() { return entry; }
+  InstructionNode<llvm::Instruction *> *getEntry() { return entry; }
 
-  InstructionNode<Instruction *> *getExit() { return exit; }
+  InstructionNode<llvm::Instruction *> *getExit() { return exit; }
 
-  bool isEntryOrExit(Instruction *I) {
+  bool isEntryOrExit(llvm::Instruction *I) {
     return Graph::getInstructionNode(I) == entry || Graph::getInstructionNode(I) == exit;
   }
 
-  void highlightInstructionNode(Instruction *instr);
+  void highlightInstructionNode(llvm::Instruction *instr);
 
-  void dumpToDot(const string targetPath);
+  void dumpToDot(const std::string targetPath);
 };

@@ -12,6 +12,10 @@
 
 #include "../DiscoPoP.hpp"
 
+using namespace llvm;
+using namespace std;
+using namespace dputil;
+
 // Returns the instruction before which the hybrid analysis reports an execution
 // of BB (__dp_report_bb / __dp_report_bb_pair) or records it in a semaphore
 // (__dp_bb_state): the terminator, but in front of the instrumentation of a

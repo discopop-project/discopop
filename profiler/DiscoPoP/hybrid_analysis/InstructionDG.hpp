@@ -17,34 +17,34 @@
 #include "unordered_map"
 #include <string>
 
-class InstructionDG : public Graph<Instruction *> {
+class InstructionDG : public Graph<llvm::Instruction *> {
 
 private:
   dputil::VariableNameFinder *VNF;
   InstructionCFG *CFG;
-  set<Instruction *> highlightedInstructionNodes;
+  std::set<llvm::Instruction *> highlightedInstructionNodes;
   int32_t fid;
 
-  void recursiveDepChecker(set<Instruction *> *checkedInstructions, Instruction *I, Instruction *C);
+  void recursiveDepChecker(std::set<llvm::Instruction *> *checkedInstructions, llvm::Instruction *I, llvm::Instruction *C);
 
-  void recursiveDepFinder(set<Instruction *> *checkedInstructions, Instruction *I);
+  void recursiveDepFinder(std::set<llvm::Instruction *> *checkedInstructions, llvm::Instruction *I);
 
 public:
   InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid);
 
-  bool edgeIsINIT(Edge<Instruction *> *e);
+  bool edgeIsINIT(Edge<llvm::Instruction *> *e);
 
-  string edgeToDPDep(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap);
-  string edgeToInstructionBasedDPDep(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap);
+  std::string edgeToDPDep(Edge<llvm::Instruction *> *e, std::unordered_map<std::string, std::pair<std::string, std::string>> &staticValueNameToMemRegIDMap);
+  std::string edgeToInstructionBasedDPDep(Edge<llvm::Instruction *> *e, std::unordered_map<std::string, std::pair<std::string, std::string>> &staticValueNameToMemRegIDMap);
 
-  void highlightInstructionNode(Instruction *instr);
+  void highlightInstructionNode(llvm::Instruction *instr);
 
-  void dumpToDot(const string targetPath);
+  void dumpToDot(const std::string targetPath);
 
-  string getInstructionLine(Instruction *I);
+  std::string getInstructionLine(llvm::Instruction *I);
 
-  string getInitEdgeInstructionLine(Edge<Instruction *> *e);
+  std::string getInitEdgeInstructionLine(Edge<llvm::Instruction *> *e);
 
-  string getValueNameAndMemRegIDFromEdge(Edge<Instruction *> *e, unordered_map<string, pair<string, string>> &staticValueNameToMemRegIDMap);
+  std::string getValueNameAndMemRegIDFromEdge(Edge<llvm::Instruction *> *e, std::unordered_map<std::string, std::pair<std::string, std::string>> &staticValueNameToMemRegIDMap);
 
 };

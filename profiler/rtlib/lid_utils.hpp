@@ -25,7 +25,6 @@
 
 #include "DPTypes.hpp"
 
-using namespace std;
 
 namespace dputil {
 
@@ -50,10 +49,10 @@ inline std::string decodeLID(std::int64_t lid) {
   return ss.str();
 }
 
-inline vector<string> *split(string input, char delim) {
-  vector<string> *substrings = new vector<string>();
-  istringstream inputStringStream(input);
-  string sub;
+inline std::vector<std::string> *split(std::string input, char delim) {
+  std::vector<std::string> *substrings = new std::vector<std::string>();
+  std::istringstream inputStringStream(input);
+  std::string sub;
 
   while (getline(inputStringStream, sub, delim)) {
     substrings->push_back(sub);
@@ -62,19 +61,19 @@ inline vector<string> *split(string input, char delim) {
   return substrings;
 }
 
-inline int32_t getFileID(string fileMapping, string fullPathName) {
+inline int32_t getFileID(std::string fileMapping, std::string fullPathName) {
   int32_t index = 0; // if the associated file id is not found, then we return 0
-  string line;
-  ifstream fileMap(fileMapping.c_str());
+  std::string line;
+  std::ifstream fileMap(fileMapping.c_str());
 
   if (fileMap.is_open()) {
-    vector<string> *substrings = NULL;
+    std::vector<std::string> *substrings = NULL;
     while (getline(fileMap, line)) {
       substrings = split(line, '\t');
       bool found = false;
       if (substrings->size() == 2) {
-        string indexString = (*substrings)[0];
-        string fileName = (*substrings)[1];
+        std::string indexString = (*substrings)[0];
+        std::string fileName = (*substrings)[1];
         if (fileName.compare(fullPathName) == 0) {
           index = (int32_t)atoi(indexString.c_str());
           found = true;
@@ -92,8 +91,8 @@ inline int32_t getFileID(string fileMapping, string fullPathName) {
   return index;
 }
 
-inline bool fexists(const string &filename) {
-  ifstream ifile(filename.c_str());
+inline bool fexists(const std::string &filename) {
+  std::ifstream ifile(filename.c_str());
 
   if (ifile.fail())
     return false;
@@ -101,12 +100,12 @@ inline bool fexists(const string &filename) {
     return true;
 }
 
-inline string get_exe_dir() {
+inline std::string get_exe_dir() {
   char buff[1024];
   ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
   if (len != -1) {
     buff[len] = '\0';
-    string fullPath = std::string(buff);
+    std::string fullPath = std::string(buff);
     return fullPath.substr(0, fullPath.find_last_of('/'));
   } else {
     return "";
