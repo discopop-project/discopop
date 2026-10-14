@@ -54,7 +54,7 @@ public:
 
   inline void removeFromWrite(std::int64_t memAddr) override { sigWrite->remove(memAddr); }
 
-  inline std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr, std::int64_t endAddr) override {
+  inline std::unordered_set<ADDR> getAddrsInRange(std::int64_t /*startAddr*/, std::int64_t /*endAddr*/) override {
     // not possible for Shadow, since not all addresses are kept
     std::unordered_set<ADDR> result;
     return result;

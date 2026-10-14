@@ -10,11 +10,14 @@
  *
  */
 
-#define DEBUG_TYPE "dpop"
 //#define SKIP_DUP_INSTR 1
-//#define DEBUG_TYPE "dp-omissions"
 
 #include "DiscoPoP.hpp"
+
+// after the includes: LLVM headers define their own DEBUG_TYPE
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "dpop"
+//#define DEBUG_TYPE "dp-omissions"
 
 using namespace llvm;
 using namespace std;
@@ -35,7 +38,7 @@ void DiscoPoP::setupCallbacks() {
    * arg types
    *
    * the callbacks are extern "C" functions of the runtime library, whose signatures are in
-   * rtlib/injected_functions/*.hpp: a location (LID) or address is a 64 bit integer there, so it is
+   * rtlib/injected_functions/<callback>.hpp: a location (LID) or address is a 64 bit integer there, so it is
    * declared as Int64 here. A narrower declaration would leave the upper half of the argument
    * register unspecified. test/instrumentation/test_callback_signatures.py compares both.
    */

@@ -54,7 +54,7 @@ using namespace llvm;
 namespace {
 
 struct DiscoPoP_new_PM_adaptor : public PassInfoMixin<DiscoPoP_new_PM_adaptor> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager & /*FAM*/) {
     errs() << "Running DiscoPoP pass on Function: " + F.getName().str()  + " \n";
     //const ModuleAnalysisManager &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
     return PreservedAnalyses::all();

@@ -82,7 +82,7 @@ sigElement Signature::membershipCheck(int64_t elem) {
   return res;
 }
 
-bool Signature::intersect(Signature &other) { return false; }
+bool Signature::intersect(Signature & /*other*/) { return false; }
 
 double Signature::expectedFalsePositiveRate() {
   double result = 0.0;

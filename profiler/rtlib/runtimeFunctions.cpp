@@ -56,7 +56,7 @@ namespace __dp {
 
 /******* Helper functions *******/
 
-void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAvar, ADDR addr) {
+void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAvar, ADDR /*addr*/) {
 
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::ADD_DEP);

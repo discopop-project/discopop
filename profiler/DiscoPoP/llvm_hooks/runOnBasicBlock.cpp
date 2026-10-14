@@ -88,7 +88,7 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       *instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << "*" << "\n";
     }
 
-    if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
+    if ([[maybe_unused]] DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
       assert(DI->getOperand(0));
 #if false  // NOTE (25-10-30) DISABLED FOR LLVM 19 COMPATIBILITY REASONS
       if (AllocaInst *alloc = dyn_cast<AllocaInst>(DI->getOperand(0))) {
