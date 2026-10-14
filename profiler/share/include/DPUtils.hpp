@@ -89,6 +89,13 @@ extern string FileMappingPath;
 extern cl::opt<bool> DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS;
 namespace dputil {
 
+// value of the environment variable `name`, or `fallback` if it is not set (std::string(nullptr) is
+// undefined behaviour); the fallbacks match the ones the pass's doInitialization sets
+inline string getEnvOrDefault(const char *name, const char *fallback) {
+  const char *value = getenv(name);
+  return string(value != nullptr ? value : fallback);
+}
+
 inline string decodeLID(int64_t lid) {
   if (lid == 0)
     return "*";

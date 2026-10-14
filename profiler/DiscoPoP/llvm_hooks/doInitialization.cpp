@@ -33,7 +33,7 @@ bool DiscoPoP::doInitialization(Module &M) {
     mkdir(getenv("DOT_DISCOPOP"), 0777);
 
     // check if HOME/.discopop_config directory in user folder exists
-    std::string user_home_dp_dir = (std::string(getenv("HOME")) + std::string("/.discopop_config"));
+    std::string user_home_dp_dir = (dputil::getEnvOrDefault("HOME", "") + std::string("/.discopop_config"));
     struct stat st_dp_user;
     if (stat(user_home_dp_dir.c_str() , &st_dp_user) == -1) {
       // create .discopop_config folder in user directory to save overview of project .discopop folders
@@ -54,7 +54,7 @@ bool DiscoPoP::doInitialization(Module &M) {
   }
   // prepare statistics directory if not present
   struct stat st3;
-  std::string tmp_str_2(getenv("DOT_DISCOPOP_PROFILER"));
+  std::string tmp_str_2(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   tmp_str_2 += "/statistics";
   if (stat(tmp_str_2.data(), &st3) == -1) {
     mkdir(tmp_str_2.data(), 0777);
@@ -129,10 +129,6 @@ bool DiscoPoP::doInitialization(Module &M) {
     // Export M to the outside
     ThisModule = &M;
     ThisModuleContext = &(M.getContext());
-
-    for (set<DIGlobalVariable *>::iterator it = GlobalVars.begin(); it != GlobalVars.end(); ++it) {
-      GlobalVars.erase(it);
-    }
 
     GlobalVars.clear();
     Structs.clear();

@@ -45,7 +45,7 @@ bool DiscoPoP::isInstrumentedFunction(Function &F) {
     return false;
   }
 
-  std::string dp_project_dir(getenv("DP_PROJECT_ROOT_DIR"));
+  std::string dp_project_dir(dputil::getEnvOrDefault("DP_PROJECT_ROOT_DIR", "/"));
 
   SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
   F.getAllMetadata(MDs);
@@ -653,7 +653,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     // wrong suggestion. An over-approximated one only costs a suggestion.
 
     staticDependencyFile = new std::ofstream();
-    std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+    std::string tmp(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
     tmp += "/static_dependencies.txt";
     staticDependencyFile->open(tmp.data(), std::ios_base::app);
 

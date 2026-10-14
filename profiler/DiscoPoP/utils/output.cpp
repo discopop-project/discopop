@@ -43,12 +43,12 @@ string DiscoPoP::xmlEscape(string data) {
 
 void DiscoPoP::secureStream() {
   outOriginalVariables = new std::ofstream();
-  std::string tmp(getenv("DOT_DISCOPOP_PROFILER"));
+  std::string tmp(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   tmp += "/OriginalVariables.txt";
   outOriginalVariables->open(tmp.data(), std::ios_base::app);
 
   outCUs = new std::ofstream();
-  std::string tmp2(getenv("DOT_DISCOPOP_PROFILER"));
+  std::string tmp2(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   tmp2 += "/Data.xml";
   outCUs->open(tmp2.data(), std::ios_base::app);
 }
