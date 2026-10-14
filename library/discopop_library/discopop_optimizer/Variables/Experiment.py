@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from cProfile import Profile
-import os
 from pathlib import Path
 from typing import Dict, Tuple, Set, Optional, List, Any
 
@@ -15,7 +14,6 @@ from sympy import Integer, Symbol, Expr, Float  # type: ignore
 
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_library.HostpotLoader.HotspotType import HotspotType
-from discopop_library.MemoryRegions.utils import get_sizes_of_memory_regions
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
@@ -96,11 +94,8 @@ class Experiment(object):
         self.detection_result = detection_result
         self.arguments = arguments
 
-        self.__memory_region_sizes = get_sizes_of_memory_regions(
-            set(),
-            os.path.join(profiler_dir, "memory_regions.txt"),
-            return_all_memory_regions=True,
-        )
+        # the profiler records no allocation sizes: every memory region is assumed to be of the default size
+        self.__memory_region_sizes = dict()
 
         self.file_mapping = file_mapping
         self.function_models = dict()
