@@ -38,6 +38,8 @@ dependencies = [
     "numpy>=1.16.3",
     "pluginbase>=1.0.0",
     "pstats2",
+    "termcolor",
+    "tqdm",
 ]
 
 [project.optional-dependencies]
