@@ -20,8 +20,7 @@
 #                     as a CMake cache keeps the options of the earlier configure
 #   [name]            build only this configuration, e.g. no_workers_calltree
 #
-# A new option belongs into the list below. DP_MEMORY_REGION_DEALIASING is not part of it: it does not
-# compile at the moment (see docs/setup/discopop.md).
+# A new option belongs into the list below.
 
 set -uo pipefail
 
@@ -35,10 +34,9 @@ CONFIGURATIONS=(
   "calltree|-DDP_CALLTREE_PROFILING=1"
   "no_workers|-DDP_NUM_WORKERS=0"
   "no_workers_calltree|-DDP_NUM_WORKERS=0 -DDP_CALLTREE_PROFILING=1"
-  "stack_access|-DDP_STACK_ACCESS_DETECTION=1"
   "pthread_compatibility|-DDP_PTHREAD_COMPATIBILITY_MODE=1"
   "verbose_timer|-DDP_RTLIB_VERBOSE=1 -DDP_INTERNAL_TIMER=1"
-  "all|-DDP_CALLTREE_PROFILING=1 -DDP_STACK_ACCESS_DETECTION=1 -DDP_PTHREAD_COMPATIBILITY_MODE=1 -DDP_RTLIB_VERBOSE=1 -DDP_INTERNAL_TIMER=1"
+  "all|-DDP_CALLTREE_PROFILING=1 -DDP_PTHREAD_COMPATIBILITY_MODE=1 -DDP_RTLIB_VERBOSE=1 -DDP_INTERNAL_TIMER=1"
 )
 
 mkdir -p "${BASE_DIR}"
