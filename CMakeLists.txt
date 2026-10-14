@@ -11,6 +11,14 @@ project(DiscoPoP)
 
 set(CMAKE_CXX_STANDARD 17)
 
+# compile_commands.json for clangd and other tools, covering every target below; it initializes the
+# EXPORT_COMPILE_COMMANDS property of each target, so it has to be set before the add_subdirectory() calls.
+# The generator creates the cache entry empty, so set(... CACHE) would not change it; an explicit
+# -DCMAKE_EXPORT_COMPILE_COMMANDS=OFF is respected.
+if("${CMAKE_EXPORT_COMPILE_COMMANDS}" STREQUAL "")
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
+
 if (POLICY CMP0077)
 	cmake_policy(SET CMP0077 NEW)
 endif()
