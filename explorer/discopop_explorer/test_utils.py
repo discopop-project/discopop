@@ -32,7 +32,6 @@ from discopop_explorer.utils import (
     is_reduction_var,
     is_scalar_val,
     is_written_in_subtree,
-    no_inter_iteration_dependency_exists,
     var_declared_in_subtree,
     classify_loop_variables,
     __merge_classifications,
@@ -254,33 +253,6 @@ def test_var_declared_in_subtree_true_when_defline_equals_start_line(make_node: 
     var = Variable("int", VarName("x"), "1:1")
     node = make_node("1:1", NodeType.CU, name="cu", start_line=1, end_line=10)
     assert var_declared_in_subtree(var, [_cu(node)]) is True
-
-
-# --- no_inter_iteration_dependency_exists --------------------------------------------
-
-
-def test_no_inter_iteration_dependency_exists_true_by_default(make_node: MakeNode) -> None:
-    loop = _loop(make_node("1:1", NodeType.LOOP, name="loop", start_line=5))
-    sub = [_cu(make_node("1:2", NodeType.CU, name="a")), _cu(make_node("1:3", NodeType.CU, name="b"))]
-    dep = _dep("M1")  # metadata_inter_iteration_dep defaults to []
-    raw = {_edge("1:2", "1:3", dep)}
-    assert no_inter_iteration_dependency_exists({MemoryRegion("M1")}, raw, set(), sub, loop) is True
-
-
-def test_no_inter_iteration_dependency_exists_false_when_flagged_for_this_loop(make_node: MakeNode) -> None:
-    loop = _loop(make_node("1:1", NodeType.LOOP, name="loop", start_line=5))
-    sub = [_cu(make_node("1:2", NodeType.CU, name="a")), _cu(make_node("1:3", NodeType.CU, name="b"))]
-    dep = _dep("M1", metadata_inter_iteration_dep=[loop.start_position()])
-    raw = {_edge("1:2", "1:3", dep)}
-    assert no_inter_iteration_dependency_exists({MemoryRegion("M1")}, raw, set(), sub, loop) is False
-
-
-def test_no_inter_iteration_dependency_exists_ignores_deps_outside_subtree(make_node: MakeNode) -> None:
-    loop = _loop(make_node("1:1", NodeType.LOOP, name="loop", start_line=5))
-    sub = [_cu(make_node("1:2", NodeType.CU, name="a"))]
-    dep = _dep("M1", metadata_inter_iteration_dep=[loop.start_position()])
-    raw = {_edge("1:2", "1:9", dep)}  # "1:9" is not part of `sub`
-    assert no_inter_iteration_dependency_exists({MemoryRegion("M1")}, raw, set(), sub, loop) is True
 
 
 # --- __merge_classifications (utils.py) ----------------------------------------------

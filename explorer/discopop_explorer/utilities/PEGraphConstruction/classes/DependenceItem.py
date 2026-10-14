@@ -19,7 +19,6 @@ class DependenceItem(object):
     var_name: Any
     memory_region: Any
     is_gep_result_dependency: bool
-    metadata: Any
     # TODO improve typing
 
     def is_equal(self, other: DependenceItem) -> bool:

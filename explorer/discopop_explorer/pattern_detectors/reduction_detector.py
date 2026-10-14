@@ -274,16 +274,6 @@ def __check_loop_dependencies(
         if is_loop_index(pet, dep.var_name, loop_start_lines, root_children_cus):
             continue
 
-        # if metadata exists, ignore dependencies where either source or sink do not lie within root_loop
-        if dep.metadata_source_ancestors is not None and dep.metadata_sink_ancestors is not None:
-            if len(dep.metadata_source_ancestors) > 0 and len(dep.metadata_sink_ancestors) > 0:
-                if not (
-                    (root_loop.start_position() in dep.metadata_sink_ancestors)
-                    and root_loop.start_position() in dep.metadata_source_ancestors
-                ):
-                    tmp = root_loop.start_position()
-                    continue
-
         # targeted variable is not read-only
         if dep.dtype == DepType.INIT:
             continue
@@ -301,64 +291,14 @@ def __check_loop_dependencies(
             else:
                 # RAW does not target a reduction variable.
                 # RAW problematic, if it is not an intra-iteration RAW.
-                if (
-                    dep.metadata_intra_iteration_dep is None
-                    or dep.metadata_inter_iteration_dep is None
-                    or dep.metadata_intra_call_dep is None
-                    or dep.metadata_inter_call_dep is None
-                    or dep.metadata_sink_ancestors is None
-                    or dep.metadata_source_ancestors is None
-                    or (len(dep.metadata_sink_ancestors) == 0 and len(dep.metadata_source_ancestors) == 0)
-                ):
-                    # no metadata generated
-                    if not dep.intra_iteration:
-                        return True
-                else:
-                    # metadata exist
-                    cond_1 = (len(dep.metadata_intra_iteration_dep) == 0) and parent_function_lineid in (
-                        dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else []
-                    )
-                    cond_2 = len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0
-                    cond_3 = len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0
-                    cond_4 = root_loop.start_position() in dep.metadata_inter_iteration_dep
-                    # if cond_1 or cond_2 or cond_3:
-                    if cond_2 or cond_4:
-                        return True
+                if not dep.intra_iteration:
+                    return True
         elif dep.dtype == DepType.WAR:
             # check WAR dependencies
             # WAR problematic, if it is not an intra-iteration WAR and the variable is not private or firstprivate
-            if dep.metadata_intra_iteration_dep is None:
-                # no metadata generated
-                if not dep.intra_iteration:
-                    if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
-                        return True
-            else:
-                # metadata exists
-                if (
-                    not dep.intra_iteration
-                    and (dep.metadata_intra_iteration_dep is None or len(dep.metadata_intra_iteration_dep) == 0)
-                    and parent_function_lineid
-                    in (dep.metadata_intra_call_dep if dep.metadata_intra_call_dep is not None else [])
-                ) or (
-                    (
-                        False
-                        if dep.metadata_inter_call_dep is None
-                        else (len([cf for cf in called_functions_lineids if cf in dep.metadata_inter_call_dep]) > 0)
-                    )
-                    and (
-                        False
-                        if dep.metadata_inter_iteration_dep is None
-                        else (len([t for t in parent_loops if t in dep.metadata_inter_iteration_dep]) > 0)
-                    )
-                ):
-                    if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
-                        # check if variable is defined inside loop
-                        if dep.memory_region not in memory_regions_defined_in_loop:
-                            return True
-                        # check if the definitions of the accessed variable originates from a function call
-                        if __check_for_problematic_function_argument_access(pet, source, target, dep):
-                            pass
-                            return True
+            if not dep.intra_iteration:
+                if dep.var_name not in [v.name for v in first_privates + privates + last_privates]:
+                    return True
         elif dep.dtype == DepType.WAW:
             # check WAW dependencies
             # handled by variable classification
