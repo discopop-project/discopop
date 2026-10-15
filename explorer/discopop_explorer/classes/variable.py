@@ -36,7 +36,7 @@ class Variable(object):
     def __lt__(self, other: Variable) -> bool:
         try:
             return self.name < other.name
-        except:
+        except Exception:
             return True
 
     def __str__(self) -> str:

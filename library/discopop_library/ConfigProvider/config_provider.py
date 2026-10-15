@@ -23,7 +23,7 @@ def run(arguments: ConfigProviderArguments) -> str:
             try:
                 tmp = str(os.readlink(executable))
                 executable = tmp
-            except:
+            except Exception:
                 found_final = True
         return str(Path(executable).parent.parent.absolute())
         # return str(Path(str(os.readlink(executable))).parent.parent.absolute())

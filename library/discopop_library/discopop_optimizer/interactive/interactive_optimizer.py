@@ -89,7 +89,7 @@ def parse_input(
             try:
                 id = int(s)
                 pattern_ids1.append(id)
-            except:
+            except Exception:
                 pass
         logger.debug("Adding ids: " + str(pattern_ids1))
         applied_suggestions.update(pattern_ids1)
@@ -100,7 +100,7 @@ def parse_input(
             try:
                 id = int(s)
                 pattern_ids2.append(id)
-            except:
+            except Exception:
                 pass
         logger.debug("Removing ids: " + str(pattern_ids2))
         for i in pattern_ids2:

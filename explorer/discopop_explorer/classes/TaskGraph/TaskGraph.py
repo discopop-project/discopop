@@ -976,7 +976,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         )
                     )
                     break
-                except:
+                except Exception:
                     continue
 
         return queue
