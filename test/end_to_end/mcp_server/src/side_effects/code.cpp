@@ -3,7 +3,7 @@
 #include <string.h>
 
 // Ground truth for the get_side_effects tests: every function documents the
-// effects it has outside of itself (see DESIGN_get_side_effects.md, section 5).
+// effects it has outside of itself (see design/get_side_effects.md, section 5).
 
 int g_counter = 0;
 int g_sink = 0;

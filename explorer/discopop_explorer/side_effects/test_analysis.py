@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-"""Unit tests of the side effect analysis on small hand-written exports (DESIGN_get_side_effects.md, section 1)."""
+"""Unit tests of the side effect analysis on small hand-written exports (design/get_side_effects.md, section 1)."""
 
 from __future__ import annotations
 

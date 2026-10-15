@@ -7,7 +7,7 @@
 # directory for details.
 """Per-function side effects computed on request from a loaded export.
 
-Semantics: DESIGN_get_side_effects.md, section 1. Build one ``SideEffectIndex`` per
+Semantics: design/get_side_effects.md, section 1. Build one ``SideEffectIndex`` per
 loaded export (cheap, linear in its size); ``compute`` caches its results.
 
 Decisions where the design leaves room (kept here so that the code and its reasons stay together):
