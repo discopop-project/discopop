@@ -60,6 +60,7 @@
 #include "DPUtils.hpp"
 #include "utils/profiler_files.hpp"
 #include "dp_reduction/dp_reduction.hpp"
+#include "dp_reduction/ReductionInstrumenter.hpp"
 #include "hybrid_analysis/InstructionDG.hpp"
 #include "static_analysis/StaticCalltree.hpp"
 #include "static_analysis/StaticCallPathTree.hpp"
@@ -343,21 +344,11 @@ public:
 
   // DPReduction
 
-  void instrument_module(llvm::Module *module, std::map<std::string, std::string> *trueVarNamesFromMetadataMap, llvm::ModuleAnalysisManager &mam);
-  void instrument_function(llvm::Function *function, std::map<std::string, std::string> *trueVarNamesFromMetadataMap, llvm::LoopInfo &loop_info);
-  void instrument_loop(llvm::Function &F, int file_id, llvm::Loop *loop, llvm::LoopInfo &LI,
-                       std::map<std::string, std::string> *trueVarNamesFromMetadataMap);
-  std::string dp_reduction_CFA(llvm::Function &F, llvm::Loop *loop, int file_id);
   std::string dp_reduction_determineVariableName(llvm::Instruction *I, std::map<std::string, std::string> *trueVarNamesFromMetadataMap);
   unsigned dp_reduction_get_file_id(llvm::Function *func);
   bool dp_reduction_init_util(std::string fmap_path);
   std::string findStructMemberName_static(llvm::MDNode *structNode, unsigned idx, llvm::IRBuilder<> &builder);
-  void dp_reduction_insert_functions();
-  std::ofstream reduction_file;
-  std::ofstream loop_counter_file;
   std::ofstream instructionID_to_lineID_file;
-  std::vector<loop_info_t> loops_;
-  std::vector<instr_info_t> instructions_;
   std::map<std::string, int> path_to_id_;
   std::map<llvm::Loop*, int> loop_to_id;
   // per loop id of the current module: id of its loop node in Data.xml and its start

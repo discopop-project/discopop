@@ -10,15 +10,34 @@
  *
  */
 
-#include "DiscoPoP.hpp"
+#include "dp_reduction/ReductionInstrumenter.hpp"
+
+#include "dp_reduction/dp_reduction.hpp"
+
+#include "utils/profiler_files.hpp"
+
+#include <string.h>
+#include <utility>
 
 using namespace llvm;
 using namespace std;
 using namespace dputil;
 
+dp_reduction::ReductionInstrumenter::ReductionInstrumenter(llvm::Module &module, Services services)
+    : module_(module), services_(std::move(services)),
+      reduction_file_(profiler_files::open("reduction.txt")),
+      loop_counter_file_(profiler_files::open("loop_counter_output.txt")) {}
+
+void dp_reduction::ReductionInstrumenter::close() {
+  // closing flushes
+  reduction_file_.close();
+  loop_counter_file_.close();
+}
+
 // iterates over all functions in the module and calls 'instrument_function'
 // on suitable ones
-void DiscoPoP::instrument_module(llvm::Module *module, map<string, string> *trueVarNamesFromMetadataMap, llvm::ModuleAnalysisManager &mam) {
+void dp_reduction::ReductionInstrumenter::instrument_module(llvm::ModuleAnalysisManager &mam) {
+  llvm::Module *module = &module_;
   for (llvm::Module::iterator func_it = module->begin(); func_it != module->end(); ++func_it) {
     llvm::Function *func = &(*func_it);
     std::string fn_name = func->getName().str();
@@ -30,6 +49,6 @@ void DiscoPoP::instrument_module(llvm::Module *module, map<string, string> *true
     llvm::FunctionAnalysisManager &fam = mam.getResult<FunctionAnalysisManagerModuleProxy>(*module).getManager();
     llvm::LoopInfo &loop_info = fam.getResult<llvm::LoopAnalysis>(*func);
 
-    instrument_function(func, trueVarNamesFromMetadataMap, loop_info);
+    instrument_function(func, loop_info);
   }
 }
