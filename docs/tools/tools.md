@@ -62,6 +62,7 @@ flowchart TD
 The [project manager](Project_manager.md) and the [GUI](GUI.md) store how your project is built and executed (*execution configurations*) and run these steps for you. The [MCP server](MCP_server.md) offers the same pipeline to LLM agents. All three use the same configurations below `.discopop/project`.
 
 ## Tools for users
+
 | Command | Purpose | Page |
 |---|---|---|
 | `discopop_gui` | Graphical user interface for the whole workflow | [Graphical user interface](GUI.md) |

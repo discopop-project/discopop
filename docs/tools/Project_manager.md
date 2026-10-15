@@ -246,6 +246,7 @@ which writes `.discopop/profiler` and `.discopop/hotspot_detection` into the pro
 The project manager does not run the Explorer. After a `dp` run, run `discopop_explorer` inside `.discopop` (see [Explorer](Explorer.md)); the GUI and the MCP server do this step for you.
 
 ## Options
+
 | Option | Default | Description |
 |---|---|---|
 | `-p`, `--project PATH` | current directory | Root of the project. It must be possible to copy it and build the copy. |

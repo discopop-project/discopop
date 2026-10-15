@@ -32,6 +32,7 @@ cd .discopop && discopop_patch_generator
 ```
 
 ## Options
+
 | Option | Default | Description |
 |--------|---------|-------------|
 | `-v`, `--verbose` | off | Enable verbose output. |

@@ -186,6 +186,7 @@ The tab runs [`discopop_auto_tuner`](Autotuner.md) for the selected configuratio
 The *Live Plot* tab shows every measured configuration while the tuner runs, the *Console* tab its output. The tab does not apply the result: in the *Execute* tab, choose *Apply autotuner-selected suggestions* and run the `par` mode, or apply the suggestions to your sources with the [patch applicator](Patch_applicator.md).
 
 ## What the tabs run
+
 | Tab | Runs |
 |---|---|
 | Editor, Execute, Report | The code of [`discopop_project_manager`](Project_manager.md) (in the GUI process) |

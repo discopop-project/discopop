@@ -116,6 +116,7 @@ The analyzer is not part of the project manager. The *Hotspot Detection* tab of 
 The directory also contains `Hotspots.txt`, the `merged/` directory and, written by the GUI, `measurement_runs.json`.
 
 ## Use of the results
+
 | Consumer | Use |
 |---|---|
 | [Explorer](Explorer.md) | `--hotspot-types` (default `yes,maybe`): only regions of these classes are analyzed. Without `Hotspots.json`, the whole program is analyzed. |
