@@ -30,7 +30,7 @@ A more comprehensive overview of DiscoPoP can be found on our [project website](
 | Profiler (`discopop_cc`, `discopop_cxx`) | Instruments the program and records data dependences while it runs | [Compiler wrappers](tools/Instrumentation.md) |
 | Explorer (`discopop_explorer`) | Detects parallel patterns in the profiling data and creates patches | [Explorer](tools/Explorer.md) |
 | Patch tools | Create, apply and repair the OpenMP patches | [Patch generator](tools/Patch_generator.md), [Patch applicator](tools/Patch_applicator.md), [Patch repair](tools/Patch_repair.md) |
-| Hotspot detection | Measures which code regions take the time | [Hotspot detection](tools/Hotspot_detection.md) |
+| Hotspot detection | Identifies the code regions that account for most of the execution time | [Hotspot detection](tools/Hotspot_detection.md) |
 | Empirical autotuner (`discopop_auto_tuner`) | Measures combinations of suggestions and selects the best one | [Empirical autotuner](tools/Autotuner.md) |
 | MCP server (`discopop_mcp_server`) | Lets AI assistants run DiscoPoP | [MCP server](tools/MCP_server.md) |
 | VS Code extension | An extension to the GUI for browsing suggestions and hotspots in the editor | [VS Code extension](setup/vscx.md) |
