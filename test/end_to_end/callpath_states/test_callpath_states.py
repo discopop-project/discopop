@@ -28,11 +28,11 @@ class TestCallpathStates(PipelineTestCase):
     SRC_DIR = pathlib.Path(__file__).parent / "src"
 
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         super().setUpClass()
         # callpath per state id, from the prefix tree "<state_id> <parent_state_id> <label>"
         tree = dict()
-        with open(os.path.join(self.profiler_dir, "stateID_to_callpath_mapping.txt")) as f:
+        with open(os.path.join(cls.profiler_dir, "stateID_to_callpath_mapping.txt")) as f:
             for line in f:
                 fields = line.split()
                 if len(fields) >= 3 and not line.startswith("#"):
@@ -45,9 +45,9 @@ class TestCallpathStates(PipelineTestCase):
                 state_id = tree[state_id][0]
             return list(reversed(labels))
 
-        self.callpath = staticmethod(callpath)
-        with open(os.path.join(self.profiler_dir, "dynamic_dependencies.txt")) as f:
-            self.used_states = set(re.findall(r"@(\d+)", f.read()))
+        cls.callpath = staticmethod(callpath)
+        with open(os.path.join(cls.profiler_dir, "dynamic_dependencies.txt")) as f:
+            cls.used_states = set(re.findall(r"@(\d+)", f.read()))
 
     def test_initial_state_is_main(self):
         with open(os.path.join(self.profiler_dir, "initial_stateID.txt")) as f:

@@ -29,9 +29,9 @@ class TestStackAccessStates(PipelineTestCase):
     SRC_DIR = pathlib.Path(__file__).parent / "src"
 
     @classmethod
-    def setUpClass(self):
+    def setUpClass(cls):
         super().setUpClass()
-        profiler_dir = self.profiler_dir
+        profiler_dir = cls.profiler_dir
 
         labels = dict()
         with open(os.path.join(profiler_dir, "stateID_to_callpath_mapping.txt")) as f:
@@ -54,9 +54,9 @@ class TestStackAccessStates(PipelineTestCase):
             return (lines.get(instruction), labels.get(state) if state else None)
 
         # (sink line, sink state label, type, source line, source state label, variable, memory region)
-        self.records = set()
-        self.raw_stack_records = []
-        self.dynamic_sink_labels = dict()  # sink line -> state labels of the dynamically profiled records
+        cls.records = set()
+        cls.raw_stack_records = []
+        cls.dynamic_sink_labels = dict()  # sink line -> state labels of the dynamically profiled records
         with open(os.path.join(profiler_dir, "dynamic_dependencies.txt")) as f:
             for line in f:
                 fields = line.split()
@@ -68,10 +68,10 @@ class TestStackAccessStates(PipelineTestCase):
                 ):
                     source_line, source_label = end(source)
                     if region.startswith("S"):
-                        self.raw_stack_records.append(fields[0] + " " + dep_type + " " + source)
-                        self.records.add((sink_line, sink_label, dep_type, source_line, source_label, variable, region))
+                        cls.raw_stack_records.append(fields[0] + " " + dep_type + " " + source)
+                        cls.records.add((sink_line, sink_label, dep_type, source_line, source_label, variable, region))
                     else:
-                        self.dynamic_sink_labels.setdefault(sink_line, set()).add(sink_label)
+                        cls.dynamic_sink_labels.setdefault(sink_line, set()).add(sink_label)
 
     def state_pairs(self, sink_line, dep_type, source_line, variable):
         return {
