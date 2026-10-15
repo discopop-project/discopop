@@ -29,7 +29,7 @@ echo "Please set the contents of the script according to the wiki: https://tuda-
 echo "The scripts need to make use of CC / CXX and the according flags CFLAGS / CXXFLAGS and return 0 upon successful execution."
 echo "Document: $(realpath $0)"
 exit 1
-"""
+"""  # noqa: E501
 
 
 def initialize_configuration_files(arguments: ProjectManagerArguments) -> None:

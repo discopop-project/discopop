@@ -76,7 +76,8 @@ class Loop(Workload):
         experiment.substitutions[self.per_iteration_sequential_workload] = Integer(0)
         self.registered_child = None
 
-    # todo: note: it might be more beneficial to use the iterations "per entry" instead of the total amount of iterations
+    # todo: note: it might be more beneficial to use the iterations "per entry" instead of the total amount of
+    # iterations
     # example:
     # for(100)      --> use 100
     #   for(100)    --> use 100 instead of 10000

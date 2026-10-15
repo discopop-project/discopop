@@ -25,7 +25,8 @@ def parse_args() -> ViewerArguments:
     parser.add_argument(
         "--path", type=str, default=str(os.getcwd()),
         help="Path to the .discopop directory to be analyzed")
-    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, "
+    "CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:
     # fmt: on

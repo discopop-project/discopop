@@ -18,10 +18,16 @@ def parse_args() -> ParallelRegionMergerArguments:
     parser = ArgumentParser(description="DiscoPoP parallel region merger")
 
     # fmt: off
-    parser.add_argument("--dot-dp-path", type=str, default=os.getcwd(), help="Path to the .discopop folder. Default: $(cwd)")
-    parser.add_argument("-a", "--apply-suggestions", help="Comma separated list of suggestions ids to be considered for the merge. Use the keyword 'auto' to load the configuration determined by the autotuner (if multiple configurations exist, union will be considered, if '--config' is not specified).")
-    parser.add_argument("-c", "--config", default="tiny", help="Configurations to be loaded from the autotuning results. If specified config does not exist, union will be considered. Requires '-s auto' to have any effect. Default: tiny")
-    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--dot-dp-path", type=str, default=os.getcwd(), help="Path to the .discopop folder. Default: "
+    "$(cwd)")
+    parser.add_argument("-a", "--apply-suggestions", help="Comma separated list of suggestions ids to be considered "
+    "for the merge. Use the keyword 'auto' to load the configuration determined by the autotuner (if multiple "
+    "configurations exist, union will be considered, if '--config' is not specified).")
+    parser.add_argument("-c", "--config", default="tiny", help="Configurations to be loaded from the autotuning "
+    "results. If specified config does not exist, union will be considered. Requires '-s auto' to have any effect. "
+    "Default: tiny")
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, "
+    "CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     parser.add_argument("-p", "--plot", action="store_true", help="Allow the creation of interactive plots.")
     # fmt:  is provided.

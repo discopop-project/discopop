@@ -75,7 +75,8 @@ def execute_evolutionary_combination(
     # - once all MAYBEs were used, the population is grown by crossover and mutation only;
     #   no random combinations are injected, since every new individual costs a full
     #   compile-and-execute cycle
-    # --> In theory, this apporach should allow a refinement of YES suggestion combinations independent of the added MAYBE's,
+    # --> In theory, this apporach should allow a refinement of YES suggestion combinations independent of the added
+    #   MAYBE's,
     #     and increase result quality in general in case of early termination
 
     logger.info("Executing evolutionary combination.")
@@ -170,19 +171,32 @@ def execute_evolutionary_combination(
 #########################################################################################################
 #########################################################################################################
 # Considerations regarding parameter tuning from: https://www.datacamp.com/tutorial/genetic-algorithm-python
-# As with any model, the performance of a genetic algorithm depends on various parameters, notably population size, crossover rate, mutation rate, and bounding parameters. Changing these parameters will change how your model performs.
+# As with any model, the performance of a genetic algorithm depends on various parameters, notably population size,
+# crossover rate, mutation rate, and bounding parameters. Changing these parameters will change how your model performs.
 
-# As a general rule of thumb, larger population sizes will help you find the optimal solution quicker because there are more options to choose from. However, larger population sizes also require more time and resources to run.
+# As a general rule of thumb, larger population sizes will help you find the optimal solution quicker because there are
+# more options to choose from. However, larger population sizes also require more time and resources to run.
 
-# A higher crossover rate can lead to faster convergence by combining beneficial traits from different individuals more frequently. However, a crossover rate that is too high might disrupt the population structure, leading to premature convergence.
+# A higher crossover rate can lead to faster convergence by combining beneficial traits from different individuals more
+# frequently. However, a crossover rate that is too high might disrupt the population structure, leading to premature
+# convergence.
 
-# A higher mutation rate helps maintain genetic diversity, preventing the algorithm from getting stuck at a local optimum. However, if the mutation rate is too high, it can disrupt the convergence process by introducing too much randomness, making it difficult for the algorithm to refine solutions.
+# A higher mutation rate helps maintain genetic diversity, preventing the algorithm from getting stuck at a local
+# optimum. However, if the mutation rate is too high, it can disrupt the convergence process by introducing too much
+# randomness, making it difficult for the algorithm to refine solutions.
 
-# Bounding parameters define the range within which the algorithm searches for solutions. These are important to tune to your particular business problem. Too narrow of a bounding area may miss optimal solutions to your problem. Too broad of a bounding area will take more time and resources to run. But there are other considerations too.
+# Bounding parameters define the range within which the algorithm searches for solutions. These are important to tune to
+# your particular business problem. Too narrow of a bounding area may miss optimal solutions to your problem. Too broad
+# of a bounding area will take more time and resources to run. But there are other considerations too.
 
-# For instance, in our coded example above, that equation theoretically has no limits. But practically, we can’t ask the computer to find the flattest arc in an infinitely large graph. So, boundaries are necessary. But changing those boundaries will also change the optimal answer. In my opinion, establishing appropriate boundaries for your specific use case is imperative with any model.
+# For instance, in our coded example above, that equation theoretically has no limits. But practically, we can’t ask the
+# computer to find the flattest arc in an infinitely large graph. So, boundaries are necessary. But changing those
+# boundaries will also change the optimal answer. In my opinion, establishing appropriate boundaries for your specific
+# use case is imperative with any model.
 
-# There may be other important parameters to tune in your particular model. Experiment with different values to find the best settings for your problem. To learn about tuning GA’s specifically, check out Informed Methods: Genetic Algorithms.
+# There may be other important parameters to tune in your particular model. Experiment with different values to find the
+# best settings for your problem. To learn about tuning GA’s specifically, check out Informed Methods: Genetic
+# Algorithms.
 
 #########################################################################################################
 #########################################################################################################

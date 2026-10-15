@@ -130,7 +130,8 @@ def import_suggestion(
                     environment.detection_result.patterns.do_all.append(pattern_info)
 
                     if environment.arguments.single_suggestions:
-                        # register the individual Pattern as a OutputPattern to reflect the device mapping of a regular suggestion
+                        # register the individual Pattern as a OutputPattern to reflect the device mapping of a regular
+                        # suggestion
                         optimizer_output_pattern = OptimizerOutputPattern(
                             suggestion._node, [new_node_id], environment.get_system().get_host_device_id(), environment
                         )

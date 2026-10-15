@@ -399,7 +399,8 @@ class TaskGraph(object):
         return res
 
     def is_direct_child(self, potential_parent: TGNode, potential_child: TGNode) -> bool:
-        """checks if potential_parent is a direct parent of potential_child, i.e. a contained relation exists with no pet node inbetween.
+        """checks if potential_parent is a direct parent of potential_child, i.e. a contained relation exists with no
+        pet node inbetween.
         Empty task nodes are allow as intermediate nodes.
         Returns true, if the relation is valid. False, otherwise."""
         current = potential_child

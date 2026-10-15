@@ -419,14 +419,14 @@ class ExecutionMixin(ConfigManagerMixinBase):
                             if validation.compile_successful:
                                 assert validation.compile_result is not None
                                 _, c_elapsed, c_stdout, c_stderr = validation.compile_result
-                                self.after(0, lambda e=c_elapsed: append_output(f"Validation build succeeded ({e:.2f}s)\n"))  # type: ignore
+                                self.after(0, lambda e=c_elapsed: append_output(f"Validation build succeeded ({e:.2f}s)\n"))  # type: ignore  # noqa: E501
                                 if c_stdout:
                                     self.after(0, lambda o=c_stdout: append_output(f"stdout: {o}\n"))  # type: ignore
                                 if c_stderr:
                                     self.after(0, lambda e=c_stderr: append_output(f"stderr: {e}\n"))  # type: ignore
                             else:
                                 c_rc = validation.compile_result[0] if validation.compile_result else "None"
-                                self.after(0, lambda rc=c_rc: append_output(f"Validation build FAILED (return code: {rc})\n"))  # type: ignore
+                                self.after(0, lambda rc=c_rc: append_output(f"Validation build FAILED (return code: {rc})\n"))  # type: ignore  # noqa: E501
 
                         if validation.aborted:
                             self.after(0, lambda: append_output("Execution stopped by user.\n"))  # type: ignore
@@ -479,7 +479,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
 
             self.after(0, lambda: append_output("\n=== Execution complete ===\n"))  # type: ignore
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL, text="Run"))  # type: ignore
-            self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
+            self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore  # noqa: E501
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.inplace_var.set(False))  # type: ignore
             if application_failures:
@@ -616,7 +616,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 if self._execution_stop_event.is_set():
                     emit(f"{status_noun.capitalize()} preparation stopped by user.\n")
                 else:
-                    self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground=widgets.STATUS_BUSY))  # type: ignore
+                    self.after(0, lambda: self.status_label.config(text="⏳ Executing...", foreground=widgets.STATUS_BUSY))  # type: ignore  # noqa: E501
                     emit("Executing...\n")
 
                     execute_result = execute_configuration(
@@ -660,7 +660,7 @@ class ExecutionMixin(ConfigManagerMixinBase):
                 emit(f"\n=== {status_noun.capitalize()} preparation {outcome} ===\n")
             self.after(0, lambda: button.config(state=tk.NORMAL, text=button_label))  # type: ignore
             self.after(0, lambda: self._update_execute_modes())  # type: ignore
-            self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore
+            self.after(0, lambda: self.stop_execution_button.config(state="disabled") if self.stop_execution_button else None)  # type: ignore  # noqa: E501
             self.after(0, lambda: self.run_button.config(state=tk.NORMAL))  # type: ignore
             self.after(0, lambda: self.generate_report_button.config(state=tk.NORMAL))  # type: ignore
             if success or self._execution_stop_event.is_set():

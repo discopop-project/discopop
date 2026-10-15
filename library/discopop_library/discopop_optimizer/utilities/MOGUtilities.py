@@ -492,7 +492,8 @@ def get_all_loop_nodes(graph: nx.DiGraph) -> List[int]:
 def get_read_and_written_data_from_subgraph(
     graph: nx.DiGraph, node_id: int, ignore_successors: bool = False
 ) -> Tuple[Set[MemoryRegion], Set[MemoryRegion]]:
-    """Collect written and read memory regions for the node itself, it's successor and it's children. Used in the data flow calculation step."""
+    """Collect written and read memory regions for the node itself, it's successor and it's children. Used in the data
+    flow calculation step."""
     read_memory_regions: Set[MemoryRegion] = set()
     written_memory_regions: Set[MemoryRegion] = set()
     # collect reads and writes from successors and children

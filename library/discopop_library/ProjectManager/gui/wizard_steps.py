@@ -44,7 +44,7 @@ The wizard will help you with:
 
 After completing this wizard, your project will be ready to use with DiscoPoP.
 
-Click "Next >" to begin."""
+Click "Next >" to begin."""  # noqa: E501
         label = ttk.Label(frame, text=intro, font=widgets.FONT_BODY, justify=tk.LEFT, wraplength=900)
         label.pack(anchor=tk.NW, padx=10, pady=15)
         return frame

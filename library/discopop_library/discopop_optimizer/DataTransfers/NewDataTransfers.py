@@ -100,7 +100,8 @@ class DeviceMemory(object):
             else:
                 is_first_data_occurrence = True
 
-            # check for differing unique ids to prevent updates in an already synchronized state, if the data is already present on the device
+            # check for differing unique ids to prevent updates in an already synchronized state, if the data is already
+            # present on the device
             already_synchronized = False
             if not is_first_data_occurrence:
                 if device_id in self.memory:
@@ -258,7 +259,8 @@ class DataFrame(object):
         for u in updates:
             logger.debug("\t" + str(u))
 
-        # in case of multiple cleanup updates to the same memory from different devices, identify the most recent version for transfer and delete the others
+        # in case of multiple cleanup updates to the same memory from different devices, identify the most recent
+        # version for transfer and delete the others
         # -> split updates by memory region
         updates_by_mem_reg: Dict[MemoryRegion, List[Update]] = dict()
         for u in updates:
@@ -423,7 +425,8 @@ def new_calculate_data_transfers(
                         valid_successors = [s for s in successors if s in requirements]
                     logger.debug("valid after requirements: " + str(valid_successors))
 
-                    # if no successor is a requirement, select a successor which represents a sequential execution at device NONE
+                    # if no successor is a requirement, select a successor which represents a sequential execution at
+                    # device NONE
                     if len(valid_successors) == 0:
                         valid_successors = [
                             s
@@ -432,7 +435,8 @@ def new_calculate_data_transfers(
                         ]
                     logger.debug("valid successors after strict sequential check: " + str(valid_successors))
 
-                    # if no valid successor with the strict sequential version check could be found, relax the condition and try again
+                    # if no valid successor with the strict sequential version check could be found, relax the condition
+                    # and try again
                     if len(valid_successors) == 0:
                         valid_successors = [s for s in successors if data_at(graph, s).represents_sequential_version()]
                     logger.debug("valid successors after loose sequential check: " + str(valid_successors))
@@ -465,7 +469,8 @@ def new_calculate_data_transfers(
                 for c in children:
                     device_id_stack.append(current_device_id)
                     dataframe_stack.append(DataFrame())
-                # add device id of the parent to the device_id_stack for each child, as the last element will be popped when the path end is reached
+                # add device id of the parent to the device_id_stack for each child, as the last element will be popped
+                # when the path end is reached
                 # add a new dataframe for each child to enforce cleaning up before leaving a loop body, if necessary
                 # children will be visited before the successor is visited
 

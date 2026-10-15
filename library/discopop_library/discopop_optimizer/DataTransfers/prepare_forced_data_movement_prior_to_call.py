@@ -44,7 +44,8 @@ def prepare_forced_data_movement_prior_to_call(experiment: Experiment) -> nx.DiG
             queue += [p for p in get_predecessors(experiment.optimization_graph, current) if p not in queue]
 
         # get the n last cu_ids prior to node
-        # multiples to allow "skipping" the branch merge node, inherited from the PE Graph, to fix the update positioning inside the branch
+        # multiples to allow "skipping" the branch merge node, inherited from the PE Graph, to fix the update
+        # positioning inside the branch
         queue = [node]
         last_original_cu_ids = None
         n = 2

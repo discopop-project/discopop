@@ -58,7 +58,8 @@ class ReportPanelMixin(ConfigManagerMixinBase):
             if ask_yes_no(
                 self,
                 "Confirm Reset",
-                "Are you sure you want to reset the entire project?\nThis will delete all data except the configuration files.",
+                "Are you sure you want to reset the entire project?\nThis will delete all data except the "
+                "configuration files.",
             ):
                 self._reset_project_data()
 

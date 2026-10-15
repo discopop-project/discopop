@@ -117,7 +117,8 @@ def __collapse_loops_in_function(function_node_id: int) -> bool:
                         # if loops are located on the same device, collapse
                         if loop_data.device_id == current_data.device_id:
                             if loop not in visited_inner_loop:
-                                # calculate distance of loop to parent to check for perfect nesting (distance <= 2 due to graph structure)
+                                # calculate distance of loop to parent to check for perfect nesting (distance <= 2 due
+                                # to graph structure)
                                 distance_to_parent = 0
                                 inner_queue: List[Tuple[int, int]] = [(loop, 0)]
                                 while inner_queue:
@@ -204,7 +205,8 @@ def __collapse_loops_in_function(function_node_id: int) -> bool:
                 pattern_info.device_type = (
                     global_experiment.get_system().get_device(node_data_copy.device_id).get_device_type()
                 )
-                pattern_info.applicable_pattern = False  # patterns are only applicable via the optimizer output pattern interfaces due to potential data movement
+                # patterns are only applicable via the optimizer output pattern interfaces due to potential data movement  # noqa: E501
+                pattern_info.applicable_pattern = False
                 global_experiment.suggestion_to_node_ids_dict[pattern_id] = [new_node_id]
                 global_experiment.node_id_to_suggestion_dict[new_node_id] = pattern_id
 

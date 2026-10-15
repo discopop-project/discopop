@@ -56,7 +56,8 @@ def prepare_force_branch_end_data_movement(experiment: Experiment) -> nx.DiGraph
             queue += [p for p in get_predecessors(experiment.optimization_graph, current) if p not in queue]
 
         # get the n last cu_ids prior to node
-        # multiples to allow "skipping" the branch merge node, inherited from the PE Graph, to fix the update positioning inside the branch
+        # multiples to allow "skipping" the branch merge node, inherited from the PE Graph, to fix the update
+        # positioning inside the branch
         queue = [node]
         last_original_cu_ids = None
         n = 2

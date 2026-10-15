@@ -28,7 +28,9 @@ from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
 
 
 class GenericNode(object):
-    node_id: int  # id of the node in the nx.DiGraph which stores this object  # environment object to retrieve and store free symbols and other configurable values
+    # id of the node in the nx.DiGraph which stores this object
+    # environment object to retrieve and store free symbols and other configurable values
+    node_id: int
     # Performance modelling
     introduced_symbols: List[Symbol]
     performance_model: CostModel
