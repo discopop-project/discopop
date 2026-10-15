@@ -21,41 +21,17 @@ using namespace dputil;
 bool DiscoPoP::doFinalization(Module &M) {
   // unique InstructionID assignment
   // write the current count of unique instructions to a file to avoid duplication between modules.
-  outInstructionIDCounter = new std::ofstream();
-  std::string tmp0(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  tmp0 += "/DP_InstructionIDCounter.txt";
-  outInstructionIDCounter->open(tmp0.data(), std::ios_base::out);
-  if (outInstructionIDCounter && outInstructionIDCounter->is_open()) {
-    *outInstructionIDCounter << InstructionIDCounter;
-    outInstructionIDCounter->flush();
-    outInstructionIDCounter->close();
-  }
+  profiler_files::writeCounter("DP_InstructionIDCounter.txt", InstructionIDCounter);
   // unique InstructionID assignment end
 
   // unique CallpathStateID assignment
   // write the current count of unique callpath states to a file to avoid duplication between modules.
-  outCallpathStateIDCounter = new std::ofstream();
-  std::string tmp01(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  tmp01 += "/DP_CallpathStateIDCounter.txt";
-  outCallpathStateIDCounter->open(tmp01.data(), std::ios_base::out);
-  if (outCallpathStateIDCounter && outCallpathStateIDCounter->is_open()) {
-    *outCallpathStateIDCounter << CallpathStateIDCounter;
-    outCallpathStateIDCounter->flush();
-    outCallpathStateIDCounter->close();
-  }
+  profiler_files::writeCounter("DP_CallpathStateIDCounter.txt", CallpathStateIDCounter);
   // unique CallpathStateID assignment end
 
   // CUGeneration
   // write the current count of CUs to a file to avoid duplicate CUs.
-  outCUIDCounter = new std::ofstream();
-  std::string tmp(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  tmp += "/DP_CUIDCounter.txt";
-  outCUIDCounter->open(tmp.data(), std::ios_base::out);
-  if (outCUIDCounter && outCUIDCounter->is_open()) {
-    *outCUIDCounter << CUIDCounter;
-    outCUIDCounter->flush();
-    outCUIDCounter->close();
-  }
+  profiler_files::writeCounter("DP_CUIDCounter.txt", CUIDCounter);
   // CUGeneration end
 
   // DPInstrumentationOmission
@@ -83,15 +59,7 @@ bool DiscoPoP::doFinalization(Module &M) {
     appendToGlobalCtors(M, registration, 0);
   }
   // write the current count of BBs to a file to avoid duplicate BBids
-  outBBDepCounter = new std::ofstream();
-  std::string tmp2(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  tmp2 += "/DP_BBDepCounter.txt";
-  outBBDepCounter->open(tmp2.data(), std::ios_base::out);
-  if (outBBDepCounter && outBBDepCounter->is_open()) {
-    *outBBDepCounter << bbDepCount;
-    outBBDepCounter->flush();
-    outBBDepCounter->close();
-  }
+  profiler_files::writeCounter("DP_BBDepCounter.txt", bbDepCount);
 
   // DPInstrumentationOmission end
   return true;

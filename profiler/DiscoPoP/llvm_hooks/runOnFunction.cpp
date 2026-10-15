@@ -631,27 +631,22 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     // of a conditional reduction - and a lost dependency is what produces a
     // wrong suggestion. An over-approximated one only costs a suggestion.
 
-    staticDependencyFile = new std::ofstream();
-    std::string tmp(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-    tmp += "/static_dependencies.txt";
-    staticDependencyFile->open(tmp.data(), std::ios_base::app);
+    std::ofstream staticDependencyFile = profiler_files::open("static_dependencies.txt");
 
     for (auto pair : conditionalBBDepMap) {
       for (auto s : pair.second) {
-        *staticDependencyFile << s << "\n";
+        staticDependencyFile << s << "\n";
       }
     }
     for (auto &pair1 : conditionalBBPairDepMap) {
       for (auto &variable : pair1.second) {
         for (auto &pair2 : variable.second) {
           for (auto s : pair2.second) {
-            *staticDependencyFile << s << "\n";
+            staticDependencyFile << s << "\n";
           }
         }
       }
     }
-    staticDependencyFile->flush();
-    staticDependencyFile->close();
 
     if (DP_hybrid_DEBUG)
       errs() << "Done with function " << F.getName() << ":\n";

@@ -316,11 +316,7 @@ void DiscoPoP::save_initial_path(StaticCallPathTree* call_path_tree_ptr){
   cout << "saving initial path..\n";
 
   // prepare saving the initial callpathStateID
-  std::ofstream *file;
-  file = new std::ofstream();
-  std::string tmp01(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  tmp01 += "/initial_stateID.txt";
-  file->open(tmp01.data(), std::ios_base::app);
+  std::ofstream file = profiler_files::open("initial_stateID.txt");
 
   // find candidates for initial path
   std::vector<StaticCallPathTreeNode*> candidates = call_path_tree_ptr->root->successors;
@@ -335,26 +331,19 @@ void DiscoPoP::save_initial_path(StaticCallPathTree* call_path_tree_ptr){
     {
       cout << "CANDIDATE: " << label << "\n";
       // save path id to file
-      *file << to_string(candidate->path_id) << "\n";
+      file << to_string(candidate->path_id) << "\n";
       cout << "FOUND A MAIN PATH!\n";
       break;
     }
   }
-  // close file handle
-  if (file != NULL && file->is_open()) {
-    file->flush();
-    file->close();
-  }
+  file.close();
   cout << "Done saving initial path..\n";
 }
 
 void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
   cout << "saving enumerated paths..\n";
   // prepare saving the mapping from callpath to callpathStateID for reference
-  auto stateID_to_callpath_file = new std::ofstream();
-  std::string tmp01(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  tmp01 += "/stateID_to_callpath_mapping.txt";
-  stateID_to_callpath_file->open(tmp01.data(), std::ios_base::app);
+  std::ofstream stateID_to_callpath_file = profiler_files::open("stateID_to_callpath_mapping.txt");
   // write file
   std::string global_buffer = "";
   for(auto path: call_path_tree_ptr->all_nodes){
@@ -385,24 +374,17 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
     std::string path_buffer = std::to_string(path->path_id) + " " + std::to_string(parent_id) + " " + node_label + "\n";
     global_buffer += path_buffer;
   }
-  *stateID_to_callpath_file << global_buffer;
-  // close file handle
-  if (stateID_to_callpath_file != NULL && stateID_to_callpath_file->is_open()) {
-    stateID_to_callpath_file->flush();
-    stateID_to_callpath_file->close();
-  }
+  stateID_to_callpath_file << global_buffer;
+  stateID_to_callpath_file.close();
   cout << "Done saving enumerated path..\n";
 }
 
 void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr){
   cout << "saving path state transitions..\n";
   // prepare saving the callpathState transitions
-  callpath_state_transitions_file = new std::ofstream();
-  std::string tmp(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  tmp += "/callpath_state_transitions.txt";
-  callpath_state_transitions_file->open(tmp.data(), std::ios_base::app);
+  std::ofstream callpath_state_transitions_file = profiler_files::open("callpath_state_transitions.txt");
   // write file
-  *callpath_state_transitions_file << "# Format: <source_state_id> <instruction_id> <target_state_id>\n";
+  callpath_state_transitions_file << "# Format: <source_state_id> <instruction_id> <target_state_id>\n";
 
   std::string global_buffer = "";
   std::string return_targets_buffer = "# Format: <source_state_id> <target_state_id>\n";
@@ -422,31 +404,18 @@ void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_pt
       }
     }
   }
-  *callpath_state_transitions_file << global_buffer;
-  // close file handle
-  if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
-    callpath_state_transitions_file->flush();
-    callpath_state_transitions_file->close();
-  }
+  callpath_state_transitions_file << global_buffer;
+  callpath_state_transitions_file.close();
 
-  auto callpath_state_return_targets_file = new std::ofstream();
-  std::string tmp03(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  tmp03 += "/callpath_state_return_targets.txt";
-  callpath_state_return_targets_file->open(tmp03.data(), std::ios_base::app);
-  *callpath_state_return_targets_file << return_targets_buffer;
-  if (callpath_state_return_targets_file != NULL && callpath_state_return_targets_file->is_open()) {
-    callpath_state_return_targets_file->flush();
-    callpath_state_return_targets_file->close();
-  }
+  std::ofstream callpath_state_return_targets_file = profiler_files::open("callpath_state_return_targets.txt");
+  callpath_state_return_targets_file << return_targets_buffer;
+  callpath_state_return_targets_file.close();
 
   if (write_callpath_dot_files()) {
     // prepare saving the callpathState transitions as DOT file
-    callpath_state_transitions_file = new std::ofstream();
-    std::string tmp02(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-    tmp02 += "/callpath_state_transitions.dot";
-    callpath_state_transitions_file->open(tmp02.data(), std::ios_base::app);
+    std::ofstream callpath_state_transitions_dot = profiler_files::open("callpath_state_transitions.dot");
     // write file
-    *callpath_state_transitions_file << "diGraph G {\n";
+    callpath_state_transitions_dot << "diGraph G {\n";
 
     global_buffer = "";  // reuse old global buffer
     for(auto path : call_path_tree_ptr->all_nodes){
@@ -458,14 +427,10 @@ void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_pt
         global_buffer += transition_buffer;
       }
     }
-    *callpath_state_transitions_file << global_buffer;
+    callpath_state_transitions_dot << global_buffer;
 
-    *callpath_state_transitions_file << "}\n";
-    // close file handle
-    if (callpath_state_transitions_file != NULL && callpath_state_transitions_file->is_open()) {
-      callpath_state_transitions_file->flush();
-      callpath_state_transitions_file->close();
-    }
+    callpath_state_transitions_dot << "}\n";
+    callpath_state_transitions_dot.close();
   }
 
   cout << "Done saving path state transitions..\n";
@@ -477,10 +442,7 @@ void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_pt
 // call's transition into a function only if it leads to an entry state of the entered function,
 // and else switches to the function's root entry state (see enter_function_for_callstate).
 void DiscoPoP::save_function_entries(StaticCallPathTree* call_path_tree_ptr){
-  std::ofstream file;
-  std::string path(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  path += "/callpath_function_entries.txt";
-  file.open(path.data(), std::ios_base::app);
+  std::ofstream file = profiler_files::open("callpath_function_entries.txt");
   file << "# Format: S <state_id> <function_entry_instruction_id> | E <function_entry_instruction_id> <root_state_id>\n";
   std::string buffer;
   for(auto path_node: call_path_tree_ptr->all_nodes){
@@ -505,20 +467,11 @@ void DiscoPoP::save_static_calltree_to_dot(StaticCalltree *calltree){
     return;
   }
   cout << "saving path state transitions to dot..\n";
-  std::ofstream *calltree_dot_file;
   // prepare saving the calltree as DOT file
-  calltree_dot_file = new std::ofstream();
-  std::string tmp(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  tmp += "/static_calltree.dot";
-  calltree_dot_file->open(tmp.data(), std::ios_base::app);
+  std::ofstream calltree_dot_file = profiler_files::open("static_calltree.dot");
   // write file
-  *calltree_dot_file << calltree->to_dot_string() << "\n";
-
-  // close file handle
-  if (calltree_dot_file != NULL && calltree_dot_file->is_open()) {
-    calltree_dot_file->flush();
-    calltree_dot_file->close();
-  }
+  calltree_dot_file << calltree->to_dot_string() << "\n";
+  calltree_dot_file.close();
   cout << "Done saving path state transitions to dot..\n";
 }
 

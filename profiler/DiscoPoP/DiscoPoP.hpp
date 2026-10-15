@@ -58,6 +58,7 @@
 #endif
 
 #include "DPUtils.hpp"
+#include "utils/profiler_files.hpp"
 #include "hybrid_analysis/InstructionDG.hpp"
 #include "static_analysis/StaticCalltree.hpp"
 #include "static_analysis/StaticCallPathTree.hpp"
@@ -125,12 +126,8 @@ class DiscoPoP { // : public ModulePass, public PassInfoMixin<DiscoPoP> {
 private:
   // CUGeneration
 
-  std::ofstream *outCUs;
-  std::ofstream *outOriginalVariables;
-  std::ofstream *outCUIDCounter;
-  std::ofstream *outBBDepCounter;
-  std::ofstream *outInstructionIDCounter;
-  std::ofstream *outCallpathStateIDCounter;
+  std::ofstream outCUs;
+  std::ofstream outOriginalVariables;
   // Mohammad 23.12.2020
   std::map<std::string, std::string> loopStartLines;
   // id of the loop node in Data.xml, per llvm::Loop of the function processed last
@@ -254,7 +251,6 @@ private:
   int32_t fid;
   llvm::FunctionCallee ReportBB, ReportBBPair, BBState;
   dputil::VariableNameFinder *VNF;
-  std::ofstream *staticDependencyFile;
   int nextFreeStaticMemoryRegionID;
 
   // DPInstrumentationOmission end
@@ -400,11 +396,9 @@ struct container_hash {
   bool check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue);
   llvm::LLVMContext *ctx_;
   llvm::Module *module_;
-  std::ofstream *reduction_file;
-  std::ofstream *loop_counter_file;
-  std::ofstream *instructionID_to_lineID_file;
-  std::ofstream *stateID_to_callpath_file;
-  std::ofstream *callpath_state_transitions_file;
+  std::ofstream reduction_file;
+  std::ofstream loop_counter_file;
+  std::ofstream instructionID_to_lineID_file;
   std::vector<loop_info_t> loops_;
   std::vector<instr_info_t> instructions_;
   std::map<std::string, int> path_to_id_;

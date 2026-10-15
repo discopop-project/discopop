@@ -34,7 +34,7 @@ void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
               MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+to_string(llvm_ir_instruction_id)));
               BI->setMetadata("dp.md.instr.id", N);
               // fill instructionID to lineID mapping file
-              *instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << decodeLID(getLID(&*BI, fileID)) << "\n";
+              instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << decodeLID(getLID(&*BI, fileID)) << "\n";
             }
           }
         }
