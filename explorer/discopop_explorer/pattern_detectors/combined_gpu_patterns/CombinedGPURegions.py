@@ -106,10 +106,10 @@ class CombinedGPURegion(PatternInfo):
         self.contained_regions = contained_regions
         self.device_cu_ids = device_cu_ids
         self.start_line = min(
-            [l.start_line for l in contained_regions]
+            [region.start_line for region in contained_regions]
         )  # todo: not correct anymore since multiple files contained now
         self.end_line = max(
-            [l.end_line for l in contained_regions]
+            [region.end_line for region in contained_regions]
         )  # todo: not correct anymore since multiple files contained now
         print("\n\n", file=sys.stderr)
         print("DEVICE CU IDS: ", file=sys.stderr)

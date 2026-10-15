@@ -29,10 +29,10 @@ from discopop_library.discopop_optimizer.classes.types.DataAccessType import (
 
 class GenericNode(object):
     node_id: int  # id of the node in the nx.DiGraph which stores this object  # environment object to retrieve and store free symbols and other configurable values
-    ## Performance modelling
+    # Performance modelling
     introduced_symbols: List[Symbol]
     performance_model: CostModel
-    ## Data transfer calculation
+    # Data transfer calculation
     written_memory_regions: Set[WriteDataAccess]
     read_memory_regions: Set[ReadDataAccess]
     device_id: DeviceID

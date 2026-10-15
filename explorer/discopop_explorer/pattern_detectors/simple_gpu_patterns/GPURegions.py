@@ -67,8 +67,8 @@ class GPURegionInfo(PatternInfo):
         self.map_delete_vars = map_delete_vars
         self.produced_vars = produced_vars
         self.consumed_vars = consumed_vars
-        self.start_line = min([l.start_line for l in contained_loops])
-        self.end_line = max([l.end_line for l in contained_loops])
+        self.start_line = min([loop.start_line for loop in contained_loops])
+        self.end_line = max([loop.end_line for loop in contained_loops])
         self.project_folder_path = project_folder_path
 
     def __str__(self) -> str:
@@ -326,7 +326,7 @@ class GPURegions:
                 if gpuLoop is None:
                     continue
                 gpuLoop.printGPULoop()
-        print(f"==============================================")
+        print("==============================================")
         for i in range(0, self.numRegions):
             t: int = len(self.cascadingLoopsInRegions[i]) - 1
             firstNodeID = self.cascadingLoopsInRegions[i][0]

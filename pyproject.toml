@@ -53,6 +53,10 @@ extend-exclude = ["venv", "venv_base", "build*", "base", "htmlcov"]
 [tool.ruff.lint]
 # pycodestyle (E, W) and pyflakes (F)
 select = ["E", "W", "F"]
+# these comment/whitespace rules are still preview rules in this ruff version; only the listed ones are enabled
+preview = true
+explicit-preview-rules = true
+extend-select = ["E202", "E262", "E265", "E266", "W391"]
 ignore = [
     "E203",  # whitespace before ':' -- black formats slices this way
 ]

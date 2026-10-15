@@ -123,9 +123,9 @@ def greedy_search(
                 dbg_decisions_string = ""
                 for key in k:
                     dbg_decisions_string += str(key) + "("
-                    for l in k[key]:
+                    for decision_list in k[key]:
                         dbg_decisions_string += "[ "
-                        for entry2 in l:
+                        for entry2 in decision_list:
                             dbg_decisions_string += str(entry2)
                             entry_data = data_at(global_experiment.optimization_graph, entry2)
 

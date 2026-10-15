@@ -62,7 +62,7 @@ def show_configurations_without_execution(arguments: ProjectManagerArguments) ->
         hd_settings = os.path.join(config, "hd_settings.json")
         dp_settings_exist = os.path.exists(dp_settings)
         hd_settings_exist = os.path.exists(hd_settings)
-        if not config in compatibility:
+        if config not in compatibility:
             compatibility[config] = dict()
         compatibility[config]["autotuner"] = dp_settings_exist and hd_settings_exist
 
@@ -399,7 +399,7 @@ def show_configurations_with_execution(
                 delete_configuration(arguments, par_project_path)
 
         # collect information: autotuner
-        if not config in compatibility:
+        if config not in compatibility:
             compatibility[config] = dict()
         compatibility[config]["autotuner"] = (
             dp_settings_exist

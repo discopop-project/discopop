@@ -43,11 +43,11 @@ def is_readonly_inside_loop_body(
         ]:
             # If there is a waw dependency for var, then var is written in loop
             # (sink is always inside loop for waw/war)
-            if dep.memory_region == d.memory_region and not (d.sink_line in loops_start_lines):
+            if dep.memory_region == d.memory_region and d.sink_line not in loops_start_lines:
                 return False
         for t, d in [(t, d) for s, t, d in in_edges(pet, v.id, EdgeType.DATA) if d.dtype == DepType.RAW]:
             # If there is a reverse raw dependency for var, then var is written in loop
             # (source is always inside loop for reverse raw)
-            if dep.memory_region == d.memory_region and not (d.source_line in loops_start_lines):
+            if dep.memory_region == d.memory_region and d.source_line not in loops_start_lines:
                 return False
     return True

@@ -621,17 +621,18 @@ def execute_hotspot_guided_combination(
     excluded: Set[SUGGESTION_ID] = set()
     deadline = time.time() + time_limit_s if time_limit_s > 0 else None
 
-    evaluate = lambda config: _evaluate(
-        config,
-        cache,
-        reference_configuration,
-        arguments,
-        timeout_after,
-        get_unique_configuration_id,
-        debug_stats,
-        logger,
-        deadline,
-    )
+    def evaluate(config: Sequence[SUGGESTION_ID]) -> Tuple[float, bool]:
+        return _evaluate(
+            config,
+            cache,
+            reference_configuration,
+            arguments,
+            timeout_after,
+            get_unique_configuration_id,
+            debug_stats,
+            logger,
+            deadline,
+        )
 
     logger.info(
         "Starting descent over "

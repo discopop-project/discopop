@@ -158,7 +158,7 @@ def __print_cs_list(list: List[cs]) -> None:
 
 
 def run(arguments: HotspotAnalyzerArguments) -> None:
-    ## TO BE USED FROM WITHIN THE .discopop directory!
+    # TO BE USED FROM WITHIN THE .discopop directory!
     discopop_dir = os.getcwd()
     print("DiscoPoP Dir: ", discopop_dir)
     # enter hotspot_detection/private folder
@@ -189,7 +189,7 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
 
     os.chdir(hotspot_detection_private_dir)
 
-    ## CS LIST
+    # CS LIST
     cslist: List[cs] = []
 
     def getHots(bl: bool) -> List[cs]:
@@ -205,7 +205,7 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
             hotSum += i.avr
         return hotSum
 
-    ## READ FILES
+    # READ FILES
     # cs_id.txt seeds the region list, rather than hotspot_result_0.txt: a region
     # need not be present in every run (it may belong to a build that a later
     # configuration did not instrument), and seeding from one run would drop it.
@@ -257,7 +257,7 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
 
     print("Done.")
 
-    ## CALCULATE
+    # CALCULATE
     vMAX = 0
     vMIN = inf
     dMAX = 0.0
@@ -339,7 +339,7 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
     __print_cs_list(NZcslist)
     print(ratioMiddle)
 
-    ## WRITE OUT RESULTS
+    # WRITE OUT RESULTS
     print("Output results ... ", end="")
 
     with open("hotspot_result.txt", "w") as f:

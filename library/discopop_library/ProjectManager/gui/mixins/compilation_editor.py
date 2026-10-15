@@ -487,7 +487,7 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
                 else:
                     self.after(0, lambda rc=ret_code, e=elapsed: self.status_label.config(text=f"✗ Compilation failed (exit code: {rc}, {e:.2f}s)", foreground=widgets.STATUS_FAIL))  # type: ignore
 
-                output_msg = f"Compilation test output:\n\n"
+                output_msg = "Compilation test output:\n\n"
                 if ret_code == 0:
                     output_msg += f"Success ({elapsed:.2f}s)\n"
                 else:

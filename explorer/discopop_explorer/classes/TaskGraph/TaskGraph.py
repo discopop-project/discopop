@@ -2084,11 +2084,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         queue.append((succ, current_level, preceding_context, open_contexts))
                         already_enqueued.add((succ, current_level))
 
-    ## DEBUG
+    # DEBUG
     #       plt.ioff()
     #       self.plot_context_graph()
     #       plt.pause(1)
-    ## !DEBUG
+    # !DEBUG
 
     def __collect_all_contexts(self) -> List[Context]:
         """Returns every context reachable from self.contexts via any of the four relations, in a
@@ -2456,7 +2456,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         queue.append(queue_element)
                         already_enqueued.add(queue_element)
 
-    ### DEBGU
+    # DEBGU
     #        plt.ioff()
     #        self.plot_context_graph()
     #        plt.pause(1)
@@ -2464,7 +2464,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     #            print("parents: ", str([c.get_label() for c in ctx.parent_context]))
     #        import sys
     #        sys.exit(0)
-    ### !DEBUG
+    # !DEBUG
 
     def __inline_function_calls(self) -> None:
         warnings.warn("Not yet implemented!")
@@ -5320,13 +5320,13 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         if node is None:
             return []
         successors = list(dict.fromkeys(t for s, t in self.graph.out_edges(node)))
-        ## DEBUG
+        # DEBUG
         #        if node.get_label() == "3:34" and len(successors) > 1:
         #            print("SUCCESSORS: ", str([c.get_label() for c in successors]))
         #            plt.ioff()
         #            self.plot(highlight_nodes=[node] + successors)
         #            plt.pause(1)
-        ## !DEBUG
+        # !DEBUG
         return successors
 
     def get_predecessors(self, node: Optional[TGNode]) -> List[TGNode]:

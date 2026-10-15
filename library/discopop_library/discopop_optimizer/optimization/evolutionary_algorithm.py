@@ -44,13 +44,13 @@ def perform_evolutionary_search(
 ) -> Optional[OptimizerOutputPattern]:
     if arguments.optimization_level_2_parameters is None:
         arguments.optimization_level_2_parameters = ["50", "5"]
-    ### SETTINGS
+    # SETTINGS
     population_size = int(arguments.optimization_level_2_parameters[0])
     generations = int(arguments.optimization_level_2_parameters[1])
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
     crossovers = int(population_size / 10)
     mutations = int(population_size / 10)
-    ### END SETTINGS
+    # END SETTINGS
 
     population: List[List[int]] = __initialize(experiment, population_size, available_decisions, arguments)
     population, fitness, _ = __calculate_fitness(experiment, population, arguments)

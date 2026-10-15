@@ -440,7 +440,7 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
         required_synthetic_landing_pads: List[List[Context]] = []
         for ctx in progress(self.graph.nodes):
             # filter for entry nodes
-            ## TODO: REMOVE THE INSTANCE CHECKS, make sure the graph structure is correct!
+            # TODO: REMOVE THE INSTANCE CHECKS, make sure the graph structure is correct!
             if len(self.get_predecessors(ctx)) != 0 or not (
                 isinstance(ctx, WorkContext) or isinstance(ctx, FunctionContext)
             ):

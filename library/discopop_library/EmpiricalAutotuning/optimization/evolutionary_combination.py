@@ -64,7 +64,7 @@ def execute_evolutionary_combination(
     get_unique_configuration_id: Callable[[], int],
 ) -> None:
 
-    ## NOTES:
+    # NOTES:
     # - increase selection likelihood by hotspot type -> more hotspots contained, higher likelihood
     # - initialize population with all YES suggestions
     # - fill the population until population size K with MAYBE suggestions
@@ -203,21 +203,21 @@ def perform_evolutionary_search(
     never cut short, because a partially measured generation would report misleading
     statistics.
     """
-    ### SETTINGS
+    # SETTINGS
     population_size = max(10, len(patterns_by_hotspot_type[HotspotType.YES]) * 2)
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
     crossover_factor = 0.4
     mutations_factor = 0.5
     setting_convergence_factor = 1.0  # 0.9 --> average fitnes of the reached 90% of the best specimen
     convergence_generation_threshold = 2  # 2 -> average has to be greater than threshold for 3 generations
-    ### END SETTINGS
+    # END SETTINGS
 
-    ## statistics
+    # statistics
     current_convergence_factor = setting_convergence_factor
     generations_max_not_changed = 0
     generations_avg_not_changed = 0
     generations_threshold_not_reached = 0
-    ## end statistics
+    # end statistics
 
     population, unused_maybes = __initialize(logger, population_size, patterns_by_hotspot_type)
     evaluated = __calculate_fitness(

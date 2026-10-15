@@ -27,7 +27,7 @@ from discopop_library.discopop_optimizer.classes.system.System import System
 
 
 class Experiment(object):
-    ## SETTINGS
+    # SETTINGS
     # todo: convert Costs into estimated runtime, removes need for high overhead weight
     workload_overhead_weight = Integer(1500)
     do_all_overhead_weight_by_device: Dict[int, Expr] = {
@@ -41,7 +41,7 @@ class Experiment(object):
         2: Integer(300),
     }
 
-    ## END OF SETTINGS
+    # END OF SETTINGS
 
     __system: System
 

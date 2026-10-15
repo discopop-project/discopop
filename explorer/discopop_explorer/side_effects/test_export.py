@@ -504,7 +504,7 @@ def test_ast_facts_of_a_function() -> None:
 
     assert facts.found
     assert facts.params == [{"name": "p", "reachable": True}, {"name": "n", "reachable": False}]
-    assert {l["name"]: (l["pointer"], l["static"]) for l in facts.locals} == {
+    assert {local["name"]: (local["pointer"], local["static"]) for local in facts.locals} == {
         "calls": (False, True),
         "q": (True, False),
         "ext": (False, True),  # block-scope extern: persistent state, like a static local
@@ -693,7 +693,7 @@ def test_typedef_pointers_and_pointer_wrappers_are_pointer_locals() -> None:
     ]
     _facts, facts = _facts_of(_function_ast("F", "_Z1F", [], body, []), "_Z1F")
 
-    assert {l["name"]: l["pointer"] for l in facts.locals} == {
+    assert {local["name"]: local["pointer"] for local in facts.locals} == {
         "q": True,
         "sp": True,
         "it": True,
@@ -723,7 +723,7 @@ def test_every_declaration_of_a_local_name_is_exported() -> None:
     ]
     _facts, facts = _facts_of(_function_ast("F", "_Z1F", [], body, []), "_Z1F")
 
-    entries = sorted((l["name"], l["pointer"], l["static"]) for l in facts.locals)
+    entries = sorted((local["name"], local["pointer"], local["static"]) for local in facts.locals)
     assert entries == [("i", False, False), ("i", False, True)]  # one entry per distinct declaration
 
 

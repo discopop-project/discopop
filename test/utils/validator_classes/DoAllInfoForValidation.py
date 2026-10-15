@@ -12,7 +12,7 @@ class DoAllInfoForValidation(object):
         print(self)
         print("  against ")
         print(other)
-        
+
         if (
             self.dai.start_line == other.dai.start_line
             and self.dai.end_line == other.dai.end_line

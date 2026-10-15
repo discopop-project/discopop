@@ -263,7 +263,7 @@ def is_reduction(reduction_line: str, fmap_lines: List[str], file_mapping: str) 
 def possible_reduction(line: int, src_lines: List[str]) -> bool:
     assert line > 0 and line <= len(src_lines), "invalid src line"
     src_line = src_lines[line - 1]
-    while not ";" in src_line:
+    while ";" not in src_line:
         line = line + 1
         if line > len(src_lines):
             return False

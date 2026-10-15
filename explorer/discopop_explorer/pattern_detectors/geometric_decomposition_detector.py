@@ -177,7 +177,7 @@ def __iterations_count(pet: PEGraphX, node: LoopNode) -> int:
     :param node: the loop node
     :return: number of iterations
     """
-    if not (node in __loop_iterations):
+    if node not in __loop_iterations:
         loop_iter = node.loop_iterations
         parent_iter = __get_parent_iterations(pet, node)
 
