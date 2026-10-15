@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import tkinter as tk
 from typing import TypeVar
 
 from discopop_gui.Objects.Frames.Base import Base as BaseFrame

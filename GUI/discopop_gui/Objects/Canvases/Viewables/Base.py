@@ -11,7 +11,6 @@ from __future__ import annotations
 import tkinter as tk
 from typing import Any, Dict
 
-from discopop_gui.Constants import TREE_NODES_SPACING
 from discopop_gui.Enums.ViewerMode import ViewerMode
 from discopop_gui.Objects.CanvasItems.Popup import Popup
 

@@ -6,20 +6,17 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, List
 import tkinter as tk
 from matplotlib.axes import Axes
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
 from matplotlib.figure import Figure
 
-from discopop_gui.utils.TreeNode import TreeNode
 from discopop_gui.Visualizers.Base import Base
 from discopop_gui.Objects.Frames.Base import Base as BaseFrame
 from discopop_gui.Objects.Frames.MultiFrame import MultiFrame
 from discopop_gui.Objects.Frames.CanvasViewerWithTrees import CanvasViewerWithTrees
-from discopop_gui.Enums.ViewerMode import ViewerMode as CanvasViewerMode
 from discopop_gui.Exceptions.VisualizerNotDefined import VisualizerNotDefined
-from discopop_gui.Objects.Canvases.Viewables.WithTrees import WithTrees as ViewableCanvasWithTrees
 
 
 class Plottable:

@@ -11,7 +11,7 @@ import os
 import subprocess
 import tempfile
 import unittest
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Tuple
 from unittest import mock
 
 from mcp_server.tools import gather_data
