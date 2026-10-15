@@ -1,21 +1,67 @@
 ---
 layout: default
-title: Environment variables
+title: Environment variables and runtime settings
 parent: Setup
-nav_order: 1
+nav_order: 3
 ---
 
-# Environment variables
-Environment variables can be used to control the instrumentation and profiling behavior of DiscoPoP.
-An overview of the configurable environment variables and their effects can be found below.
+# Environment variables and runtime settings
 
-## Instrumentation
-The following environment variables take effect during the static analysis and instrumentation of the program (see [Example: Step 1](../examples/walk_through.md#step-1-instrument-and-build-the-example-code)).
+The tools of DiscoPoP read a few environment variables. The profiling runtime is configured with a settings file instead.
 
-- `DP_PROJECT_ROOT_DIR`: Specify the path to the root folder of the project to be analyzed. Only functions defined inside this folder will be instrumented. If no value is supplied, all functions including library functions will be instrumented. Default value: `/`. 
-- `DP_WRITE_CALLPATH_DOT`: If set to any value, the static analysis additionally writes `static_calltree.dot` and `callpath_state_transitions.dot` to `.discopop/profiler`. Both files are visualizations for debugging purposes and are not read back by DiscoPoP. For programs with deep call graphs they are by far the largest files the static analysis produces, which is why they are not written by default.
+1. TOC
+{:toc}
 
+## Instrumentation and profiling
 
-## Profiling
-The following environment variables take effect during the profiling of the instrumented program (see [Example: Step 2](../examples/walk_through.md#step-2-execute-instrumented-code)).
+| Variable | Default | Description |
+|---|---|---|
+| `DOT_DISCOPOP` | `.discopop` in the current directory | Directory in which the instrumentation, the runtime and the hotspot detection write their results. The profiling data ends up in the subdirectory `profiler`. When you start an instrumented program by hand from another directory, the directory has to exist and contain `profiler/`. The project manager sets it for every run of a configuration. |
+| `DP_PROJECT_ROOT_DIR` | `/` | Root directory of the project to analyze. Only functions defined inside it are instrumented; with the default, all functions including library functions are. Read by the profiler's LLVM pass and by the hotspot detection. The project manager sets it for every run. |
+| `DP_WRITE_CALLPATH_DOT` | not set | If set to any value, the static analysis also writes `static_calltree.dot` and `callpath_state_transitions.dot` to `.discopop/profiler`. They visualize the call graph for debugging, are not read by DiscoPoP, and are the largest files of the static analysis for programs with deep call graphs. |
+| `DOT_DISCOPOP_PROFILER` | `<DOT_DISCOPOP>/profiler` | Set automatically by the instrumentation from `DOT_DISCOPOP`. Do not set it yourself. |
 
+Example:
+
+```bash
+DP_PROJECT_ROOT_DIR=$PWD DOT_DISCOPOP=$PWD/.discopop discopop_cxx example.cpp -o a.out
+```
+
+See the [command line walk-through](../examples/walk_through.md) for the complete workflow.
+
+## Patch repair
+
+| Variable | Default | Description |
+|---|---|---|
+| `DISCOPOP_PATCH_REPAIR_LLM_CONFIG` | `.discopop/patch_repair/llm_config.json` | Path of the LLM connection configuration of the [patch repair](../tools/Patch_repair.md). Overrides the default location for one run; the option `--llm-config` of the tool takes precedence over both. |
+
+## Graphical user interface
+
+`discopop_gui` needs a display. It exits with an error message if neither `DISPLAY` (X11) nor `WAYLAND_DISPLAY` is set. On a machine without a display, use the project manager on the command line instead (`discopop_project_manager --help`). The package `python3-tk` has to be installed, see [Installation](./discopop.md#prerequisites).
+
+## Runtime settings (dp.conf)
+
+The runtime library of the profiler reads the file `dp.conf` from the directory of the instrumented executable when the program starts. Each line has the form `<KEY>=<value>`; spaces are ignored. Keys that are not listed are ignored.
+
+| Key | Default | Description |
+|---|---|---|
+| `NUM_WORKERS` | 4 (the build default, see [Build options](./build_options.md#profiling)) | Number of worker threads that analyze the memory accesses. |
+| `FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER` | 4 | Limit of the first access queue per worker, in chunks of 100000 accesses (about 4 MB each). Lower it to reduce the memory use of the profiler. |
+| `SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER` | 4 | Limit of the second access queue per worker, in elements of up to about 11 MB each. |
+| `SIG_ELEM_BIT` | 56 | Signature memory: bits per element. |
+| `SIG_NUM_ELEM` | 270000 | Signature memory: number of elements. |
+| `SIG_NUM_HASH` | 2 | Signature memory: number of hash functions. |
+| `USE_PERFECT` | 1 (enabled) | Perfect instead of signature-based shadow memory. |
+| `DP_DEBUG` | off | Any positive value prints the settings at start (followed by a pause of two seconds) and enables debug output of the runtime. |
+
+Example `dp.conf` for eight workers:
+
+```text
+NUM_WORKERS=8
+```
+
+{: .warning }
+Values have to be greater than 0, other values are ignored. Consequently `USE_PERFECT=0` has no effect, and neither can the number of workers be set to 0 in `dp.conf`.
+
+{: .note }
+The signature settings (`SIG_*`) and `USE_PERFECT` are only evaluated for the shadow memory of the single-threaded execution mode, which is used when the runtime has no worker threads. The worker threads always use the perfect shadow memory.

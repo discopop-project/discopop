@@ -1,0 +1,89 @@
+---
+layout: default
+title: MCP server
+parent: Tools
+nav_order: 10
+---
+
+# MCP server
+## Executable
+`discopop_mcp_server`
+
+## Purpose
+The DiscoPoP MCP server lets an LLM agent (for example Claude Code or OpenCode) drive DiscoPoP through the [Model Context Protocol](https://modelcontextprotocol.io/). The agent can configure a project, profile it, retrieve data dependencies and side effects of a code region, and let the [empirical autotuner](Autotuner.md) measure and apply the parallelization suggestions that pay off, without reading the large `.discopop` artefacts itself. Every answer is based on an actual execution, so it captures aliasing that reading the code misses.
+
+Use it when you want an agent to parallelize C/C++ code, to check whether code can safely run in parallel, or to find out which data a function or code region reads and writes (for example to check that a refactoring preserves the data flow).
+
+It is not suitable when the project cannot be built and run locally, for other languages than C/C++, or for GPU or distributed-memory parallelism. Profiling an instrumented build takes minutes for small programs and longer for large ones.
+
+## Prerequisites
+- DiscoPoP installed in the same Python environment as the server (see [Installation](../setup/discopop.md)). The tools call `discopop_cxx`, `discopop_explorer` and `discopop_auto_tuner`.
+- A build script that uses `$CC`/`$CXX` and `$CFLAGS`/`$CXXFLAGS` instead of fixed compiler names. The same script is used for plain, instrumented and parallel builds.
+- A small but representative program input, because instrumented runs are slow.
+
+## Installation
+The server is part of `pip install discopop`. Activate the environment and check the command:
+```bash
+discopop_mcp_server --help
+```
+
+## Register the server with an agent
+```bash
+discopop_mcp_server --setup claude_code   # writes ~/.claude.json
+discopop_mcp_server --setup opencode      # writes ~/.config/opencode/opencode.jsonc
+discopop_mcp_server --setup-all           # all agents that are installed
+discopop_mcp_server --verify claude_code  # check the entry
+discopop_mcp_server --status              # show the setup status
+```
+If a virtual environment is active, the entry points to the server of that environment. `--full-path` writes the full path of the executable found in `PATH` instead, and `--debug` adds `--debug` to the entry.
+
+Other MCP clients that start servers over stdio need an entry like the following (not tested with other clients):
+```json
+{
+  "mcpServers": {
+    "discopop_mcp_server": { "command": "/path/to/venv/bin/discopop_mcp_server" }
+  }
+}
+```
+
+## Tools
+The server offers 15 tools. In workflow order:
+
+| Tool | Purpose |
+|------|---------|
+| `initialize_discopop_directory` | Create the `.discopop` structure of a project (once per project). `reset=true` removes the analysis results and keeps the configuration. |
+| `set_compile_script` | Write the build script `compile.sh` (shared, or per configuration). |
+| `create_execution_configuration` | Create a named configuration with an `execute.sh` (and optional `validate.sh`). |
+| `delete_execution_configuration` | Delete a configuration; its recorded results are kept. |
+| `get_configurations` | Show the build scripts and configurations of a project. |
+| `get_project_status` | Show which steps have run, whether they are stale and which call comes next. |
+| `gather_data` | Run the pipeline: optional hotspot detection (`hotspot_config_names`), instrumentation, profiling and pattern detection. Rebuilds the project plainly afterwards. |
+| `get_hotspots` | List the loops and functions where the program spends its time. |
+| `get_parallelization_patches` | List the generated suggestions and their patches. |
+| `explain_parallelization` | Explain why code at given lines was or was not suggested for parallelization. |
+| `get_data_dependencies` | Return the RAW, WAR and WAW dependencies that cross or lie within a code region. |
+| `get_side_effects` | Return the data a function reads and writes outside of itself, including its callees. |
+| `run_auto_tuning` | Measure which combination of suggestions is fastest; `apply=true` applies it. |
+| `manage_patches` | Apply, roll back, clear, load or list suggestions (uses the [patch applicator](Patch_applicator.md)). |
+| `get_execution_results` | Show the recorded runs of the scripts, to find out why something failed. |
+
+`--tools analysis` hides the four project setup tools (`initialize_discopop_directory`, `set_compile_script`, `create_execution_configuration`, `delete_execution_configuration`). Use it against a project that is already configured. The default is `--tools all`.
+
+## Daemon mode
+By default, the client starts one server process per session and the cached data is lost when it ends. `discopop_mcp_server --daemon` runs a persistent server that keeps the loaded analysis data (detection result, file mapping, side-effect index) between calls and sessions. It listens on `127.0.0.1`, port `7777` by default (`--daemon-port`). The server that the client starts checks for a daemon on its first tool call and forwards the calls to it; without a daemon, it runs the tools itself. It never starts a daemon. Start the daemon yourself before you start the client:
+```bash
+discopop_mcp_server --daemon --daemon-port 8888   # client entry: discopop_mcp_server --daemon-port 8888
+```
+Use the same `--daemon-port` for the daemon and for the client entry.
+
+## Rules for agents
+- Access DiscoPoP data only through the tools. Never read `.discopop` directories: they contain large binary artefacts, and the tools return compact summaries.
+- If data is missing, run the tool that produces it, usually `gather_data`.
+- Do not choose patches by reading them. `run_auto_tuning` measures which combination pays off; it needs a project without applied patches. Apply the selection with `run_auto_tuning(apply=true)` or `manage_patches`, never by editing source files.
+- If the pipeline is in an inconsistent state, call `initialize_discopop_directory(reset=true)`.
+
+## Relation to the project manager and the GUI
+The server uses the same project structure as the [project manager](Project_manager.md) and the [GUI](GUI.md): configurations live in `.discopop/project/configs/`, and runs are recorded in `.discopop/project/execution_results.json`. You can create a configuration with the GUI and let an agent use it, or the other way round.
+
+## More information
+The [README of the MCP server](https://github.com/tuda-hpclab/discopop/blob/master/mcp_server/README.md) describes the parameters and results of every tool, the progress and cancellation support, and development.

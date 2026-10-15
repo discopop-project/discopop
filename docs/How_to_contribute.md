@@ -1,100 +1,164 @@
 ---
 layout: default
 title: How to contribute
-nav_order: 6
+nav_order: 8
 ---
 
-# Contributing
+# How to contribute
+
+1. TOC
+{:toc}
+
 ## Reporting a bug or requesting a feature
-If you have encountered a bug or would like to request or propose a new feature, please feel free to create a new issue using the appropriate template.
 
-## Implementing a requested feature or fixing a known bug
-If you want to fix a known bug or implement a new feature, please first create a fork of the repository.
-After you have implemented your changes, you can propose them for inclusion in the project by creating a pull request from your fork into the `master` branch.
-Please link the issue of the implemented feature or the fixed bug in the pull request for clearness, or add the respective [keywords](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword#linking-a-pull-request-to-an-issue-using-a-keyword).
+Create an issue with the appropriate template (bug report or feature request) on [GitHub](https://github.com/tuda-hpclab/discopop/issues).
 
-# Contributing as a project member
-## Reporting a bug or requesting a feature
-The process is identical to the previously mentioned process for contributors which are not part of the project.
+## Proposing a change
 
-## Solving an issue
-The process to solve an already known issue (bug or feature request) is basically identical to the previously described process.
-However, instead of creating a fork of the repository please create a branch with a descriptive name, which allows to understand it's purpose and it's relation to the targeted issue.
-A good and easy option for this is to use the `Create a branch` link which can be found in the `Development` section of each issue.
-Follow the instructions for determining the Version number depending on the contents of your branch and create a pull request to the respective release branch.
+- Contributors outside the project create a fork. Project members create a branch with a descriptive name (the *Create a branch* link in the *Development* section of an issue is a good start).
+- The base branch is **`new_explorer`**, the current development branch. `master` only receives releases.
+- Open a pull request into `new_explorer`. Link the issue it solves, e.g. with a [closing keyword](https://docs.github.com/en/issues/tracking-your-work-with-issues/linking-a-pull-request-to-an-issue#linking-a-pull-request-to-an-issue-using-a-keyword).
+- Every file needs the license tag (see [License tags](#license-tags)); the CI checks it.
 
-## Setup for developers
-In general it is sufficient to follow the general installation instructions. However the following tips can help you to be more productive:
- - Work on python code in a virtual environment
- - Install the python programs in development mode by executing `pip install -e .[dev]` from the project main directory
-   - The `-e` switch ensures that changes in the python source code are immediately active.
-   - `[dev]` also installs some development requirements (e.g. mypy, black, pre-commit).
- - Install some git hooks by running `pre-commit install` from the main directory of this project. These hooks help to ensure a good quality of the commited code by automatically running some checks:
-   - black is run to **format** python source code
-   - ruff is run to **lint** python source code (pycodestyle, pyflakes, some naming rules; configured in `pyproject.toml`)
-   - python **type safety** is improved with mypy
-   - we enforce [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/)
-   - other checks like looking for unneccesary whitespace and preventing large files to be added
+## Setting up a development environment
 
+Install the prerequisites from [Installation](setup/discopop.md#prerequisites), then:
+
+```bash
+git clone https://github.com/tuda-hpclab/discopop.git
+cd discopop
+python3 -m venv venv
+venv/bin/python -m pip install -r requirements-dev.txt
+venv/bin/python -m pip install . ./profiler ./explorer ./library ./GUI ./hotspot_detection ./mcp_server
+```
+
+`make` does the same with editable installs for the Python packages. `requirements-dev.txt` pins the versions of mypy, black, ruff, pytest and the other tools that the CI uses; other versions can report different findings.
+
+{: .important }
+Install `./profiler` and `./hotspot_detection` without `-e` and all packages in one command, see [Installation](setup/discopop.md#manual-installation). After changing the profiler (`profiler/`), reinstall it (`venv/bin/python -m pip install ./profiler`): the profiler and instrumentation tests drive the *installed* `discopop_cxx`.
+
+### Pre-commit hooks
+
+```bash
+venv/bin/python -m pip install pre-commit
+venv/bin/pre-commit install
+```
+
+(`pre-commit` is not part of `requirements-dev.txt`.) This installs the hooks of `.pre-commit-config.yaml` (pre-commit and commit-msg): whitespace and end-of-file fixes, YAML and merge-conflict checks, large file check, mypy, black, ruff, the license tag check and the commit message check.
+
+## Python
+
+- The supported Python versions are 3.11 and newer.
+- **Formatting:** black with line length 120. The CI checks these paths only: `explorer library hotspot_detection/discopop_hotspot_analyzer hotspot_detection/discopop_hotspot_cc hotspot_detection/discopop_hotspot_cxx GUI mcp_server test/leak_check benchmark/pass_overhead benchmark/injected_functions benchmark/compare test/instrumentation`.
+
+  ```bash
+  venv/bin/python -m black -l 120 --check <paths>
+  venv/bin/python -m black -l 120 <paths you changed>
+  ```
+
+  Never run black on `.`: it would reformat many unrelated files.
+- **Linting:** `venv/bin/python -m ruff check` checks the whole repository (pycodestyle, pyflakes, and the naming rules N804 and N806; configured in `pyproject.toml`). Black does not wrap comments, docstrings and long strings, so wrap those by hand. Review the result of `ruff check --fix`: do not remove code that only commented-out code uses, and do not rename public names to satisfy a naming rule.
+- **Type checking:** `venv/bin/python -m mypy --config-file=mypy.ini` checks everything the CI checks (the `files` list of `mypy.ini`). Add type annotations to new code.
+
+## C++ (profiler)
+
+- The profiler (`profiler/DiscoPoP`, `profiler/rtlib`, `profiler/share`) follows the Google C++ Style Guide with 120 columns, configured in `profiler/.clang-format`, `profiler/CPPLINT.cfg` and `profiler/.clang-tidy`. `scripts/dev/check_cpp_style.sh [build dir]` runs clang-format, cpplint and clang-tidy and fails on any finding.
+- Names that are looked up by string must keep their spelling: the injected callbacks `__dp_*` and the methods that LLVM's pass manager detects (`run`, `isRequired`, `name`).
+- Every header has to compile on its own and no header may contain a `using namespace` directive (`scripts/dev/check_headers.py`).
+- The pass supports LLVM 19&ndash;22. Code that differs between the versions belongs into `profiler/DiscoPoP/llvm_compat.hpp`, not into `#if LLVM_VERSION_MAJOR` at the call site.
+- Everything is built as C++20. The code compiles without warnings with gcc and clang (the deprecation warnings of the LLVM API are the exception).
+- Compile time options of the runtime (`-DDP_...`) switch code in and out; a new option belongs into the list of `scripts/dev/check_rtlib_options.sh`. See [Build options](setup/build_options.md).
+
+## Tests
+
+All suites run with pytest. Write new tests in pytest style.
+
+| Command | Runs |
+|---|---|
+| `venv/bin/python -m pytest -m "not e2e and not profiler"` | the unit tests (explorer, library, mcp_server, hotspot_detection, project manager, leak check, benchmark compare) |
+| `venv/bin/python -m pytest` | everything configured in `testpaths` of `pyproject.toml`, including the end-to-end and profiler tests |
+| `venv/bin/python -m pytest -n auto --dist loadgroup test/end_to_end` | the end-to-end tests in parallel |
+| `venv/bin/python -m pytest -n auto --dist loadgroup test/instrumentation test/profiler` | the tests of the LLVM pass and of the reported dependencies |
+| `venv/bin/python -m pytest explorer/discopop_explorer -k <name>` | one package or test selection |
+
+- The tests of `explorer`, `library`, `mcp_server` and `hotspot_detection` are colocated with the source as `test_*.py`. The explorer's `conftest.py` provides fixtures for building small graphs without the profiler pipeline.
+- Tests with the marker `e2e` (`test/end_to_end`) and `profiler` (`test/instrumentation`, `test/profiler`) need the installed profiler and are skipped without it.
+- Tests `test/wip_end_to_end` are work in progress and only run with `DP_RUN_WIP_TESTS=1`.
+- **C++ unit tests:** `DiscoPoP_UT` (runtime library, `test/unit_tests`) and `DiscoPoP_Pass_UT` (pass, `test/pass_unit_tests`) are built through the root `CMakeLists.txt`, see [Build options](setup/build_options.md#developer-builds).
+
+### Adding an end-to-end test case
+
+Every directory below `test/end_to_end/cases` that contains an `expected.toml` is one test. The directory holds the program in `src/` (a Makefile that builds `prog` with `$CC`/`$CXX`) and the expected patterns; the schema is documented in the docstring of `test/end_to_end/test_cases.py`. Known failures get `xfail = "<reason>"`. The pipeline runs in a temporary copy of `src/`.
+
+Tests that check more than the detected patterns live in `test/end_to_end/<topic>/test_<topic>.py` and derive from `pipeline.PipelineTestCase`. Profiler dependency cases are directories with `test.cpp`, a `Makefile` and `expected.toml` below `test/profiler/{RAW,WAR,WAW,NONE}` (see `test/profiler/README.md`).
+
+## Continuous integration
+
+`.github/workflows/ci.yml` runs on pushes to `master` and `new_explorer`, on every pull request and manually. A commit is tested once: a feature branch is tested through its pull request. The full matrix (Ubuntu 24.04 with LLVM 19 and 20, Debian 13 with LLVM 21 and 22) only runs when merging into `master`; other pull requests and manual runs test Debian 13 with LLVM 21. The jobs cover the static checks (license tags, black, ruff), mypy, the unit tests, the instrumentation, profiler and end-to-end tests, the C++ unit tests, sanitizers, a leak check, coverage, and benchmarks with a comparison against the previous version.
+
+To run the pipeline locally (requires [act](https://github.com/nektos/act) and Docker):
+
+```bash
+scripts/dev/run_ci_locally.sh
+scripts/dev/run_ci_locally.sh --matrix id:ubuntu-24-04-llvm-20
+```
 
 ## Commit messages
-Commit messages should follow the conventional commits format: [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/)
 
-## Creating a new release
-Execute the following steps in order to create a new DiscoPoP release:
-- Switch to the release branch (e.g. `release/1.2.3`) which shall be released
-- Update the version file in the repository (`discopop_library/global_data/version/VERSION`)
-- Create a `.deb` package by executing `scripts/dev/create_package.sh`. The package will be created in `packages`.
-- Create a pull request to the `master` branch and validate the changes
-- Merge the pull request by rebasing and create a tag on the `master` branch with the name `v1.2.3`
-    - Creating the tag triggers the automatic publication of the project to PyPi
-    - Creating the tag triggers the automatic creation of a release draft
-- Update the newly created release draft
-  - Release tag: `v1.2.3`
-  - Release title: `DiscoPoP Version 1.2.3`
-  - Description should contain a summary of the most relevant changes
-  - Add the created `.deb` package to the list of files
-- If everything is fine, publish the new release
+Commit messages have the form `type(scope): subject`, for example `fix(profiler): ...` or `docs(explorer): ...`. Allowed types: `feat`, `fix`, `test`, `chore`, `update`, `refactor`, `doc`, `docs`, `perf`, `wip`, `ci`, `build`, `style`. The scope and an optional `[info]` are optional. Merge and revert commits are accepted. `scripts/dev/check-commit-msg.py` checks the format as a commit-msg hook.
 
-### Determining the Version Number
-Lets assume a current version number `1.2.3`.
-A new version number shall be determined as follows:
-* Release only contains Bugfixes and minor improvements (e.g. code cleanup, stability fixes etc.) or documentation updates.
-    * ==> Increase the last digit by `1`
-* Release adds / modifies features with only a relatively minor impact (e.g. adding a new flag), <b>while ensuring full compatibility</b> with the previous version.
-    * ==> Increase middle digit by `1`.
-    * ==> Set last digit to `0`.
-* Release adds a major new feature or modifies any interface (for example by modifying the format of input or output data) in such a way that it is <b>not fully compatible</b> with the previous version anymore.
-    * ==> Increase first digit by `1`.
-    * ==> Set remaining digits to `0`.
+## License tags
 
-### Publish to PyPi
-To publish a package update to PyPi, crate and upload a tag on the respective branch.
-To trigger an update of:
-- the profiler, use `profiler_v*`
-- the explorer, use `explorer_v*`
-- the library, use `library_v*`
-as tag names, where `*` can be a version number as described above, but also be formatted as follows to publish alpha or beta packages.
-To publish package 1.2.3 alpha version 4, use `1.2.3a4` as version string. For a beta release use `b` instead.
-Update the `VERSION` file of the respective package accordingly.
+Every source file carries the DiscoPoP license header in its first 20 lines (`scripts/dev/check-license.sh`, run by pre-commit and by the CI). Copy the header of a neighboring file. Binary files, `__init__.py`, `docs/`, `test/` and a few other locations are exempt (see the script).
 
-# Developer hints
+## Releases
+
+Each package has its own `VERSION` file (`profiler/`, `explorer/`, `library/`, `GUI/`, `hotspot_detection/`, `mcp_server/`, and the root `VERSION` for `discopop`), which its `pyproject.toml` reads. Update it before tagging. A tag publishes to PyPI:
+
+| Tag | Publishes |
+|---|---|
+| `profiler_v<version>` | `discopop-profiler` |
+| `explorer_v<version>` | `discopop-explorer` |
+| `library_v<version>` | `discopop-library` |
+| `gui_v<version>` | `discopop-gui` |
+| `hotspot_detection_v<version>` | `discopop-hotspot-detection` |
+| `mcp_server_v<version>` | `discopop-mcp-server` |
+| `v<version>` (e.g. `v5.0.3`), tagged on `master` | the root package `discopop` and a draft GitHub release |
+| `v<version>a<n>`, `v<version>b<n>`, `v<version>dev<n>` | the root package `discopop` as pre-release |
+
+Use `1.2.3a4` as the version of an alpha release and `b` instead of `a` for a beta release. Version numbers: bug fixes and documentation only raise the last digit; compatible new features raise the middle digit and reset the last; changes of interfaces or data formats that are not compatible raise the first digit and reset the others.
+
+## Developer utilities
+
+The scripts in `scripts/dev` support development; run them from the root of the repository.
+
+| Script | Purpose |
+|---|---|
+| `run_ci_locally.sh` | runs the CI workflow locally with act |
+| `check-commit-msg.py` | validates a commit message (commit-msg hook) |
+| `check-license.sh` | checks that files carry the license tag (pre-commit) |
+| `check_cpp_style.sh [build dir]` | clang-format (dry run), cpplint and clang-tidy on the profiler |
+| `clang-format.sh` | runs clang-format in place on all C/C++ files (run it from `scripts/dev`) |
+| `check_headers.py [build dir]` | compiles every profiler header on its own |
+| `check_rtlib_options.sh [dir] [name]` | builds the runtime library once per set of compile time options (compile check only) |
+| `run_profiler_sanitizers.sh <sanitizers>` | builds and runs `DiscoPoP_UT` with `address,undefined` or `thread` |
+| `check_profiler_leaks.sh` | compiles the programs of `test/leak_check/programs` with the pass, links an ASan/LSan runtime and evaluates leaks of the runtime |
+| `run_rtlib_coverage.sh` | builds `DiscoPoP_UT` with clang coverage and reports the coverage of `profiler/rtlib` (`--min-line-coverage`, `--markdown-out`, `--html-out`) |
+
+The benchmarks have their own drivers: `benchmark/pass_overhead/run_pass_benchmark.py` (compile time, run time and size with and without the pass), `benchmark/injected_functions/run_callback_benchmark.py` (cost of each injected callback) and `benchmark/compare` (comparison of two versions, used by the CI); see the READMEs in these directories.
+
 ## Output folder structure
-All tools developed as part of the DiscoPop Project make use of the following folder structure:
+
+All tools make use of the following structure, where nothing is stored outside of `.discopop` in order to keep the build directory of the user clean:
+
+```text
+project root/
+  .discopop/
+    FileMapping.txt
+    <tool>/
+      output files of the tool
+      private/
+        intermediate files of the tool
 ```
-- project root/
- - .discopop/
-  - FileMapping.txt
-  - <tool_1>/
-    - tool_1 output files
-    - private/
-     - tool_1 intermediate files
-  - <tool_2>/
-    - ...
-  - ...
-```
-, where no data should be stored / created outside the `.discopop` folder in order to keep the users build directory as clean as possible.
-Files which are read by different tools, e.g. the `FileMapping.txt`, shall be stored in the `.discopop` folder.
-Each tool may create a folder. In case data from these files is required by another tool, think about how to encode the information in a easy-to-use and structured format, preferrably JSON. If possible, please do not rely on exporting to simple `.txt` files as parsing adds a potential point of failure.
-Output data for use by other tools should be stored in the folder of the creating tool. Intermediate files may be stored in a folder named `private` and shall not be used by other tools.
-Analysis tools, like pattern detection scripts etc. shall be structured in such a way, that a execution from within the `.discopop` folder is intended.
+
+Files that several tools read, such as `FileMapping.txt`, live directly in `.discopop`. Output for other tools is stored in the folder of the creating tool; intermediate files go into `private` and are not used by other tools. Prefer structured formats such as JSON over plain text files for data that other tools read. Analysis tools are meant to be executed from within `.discopop`. See [Data](data/data.md) for the real contents.

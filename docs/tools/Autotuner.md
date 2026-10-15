@@ -2,15 +2,15 @@
 layout: default
 title: Empirical autotuner
 parent: Tools
-nav_order: 8
+nav_order: 9
 ---
 
-# DiscoPoP Empirical Autotuner
+# Empirical autotuner
 ## Executable
 `discopop_auto_tuner`
 
 ## Purpose
-Identify the best configuration of parallel code which is achievable by applying a combination of the parallelization suggestion found by the [DiscoPoP Explorer](../tools/Explorer.md) or [optimizer](../tools/Optimizer.md). Internally, the [DiscoPoP patch applicator](../tools/Patch_applicator.md) is used to create different parallel codes, which will be compiled, executed, and evaluated based on the observed execution time and result validity.
+Identify the best configuration of parallel code which is achievable by applying a combination of the parallelization suggestions found by the [DiscoPoP Explorer](Explorer.md). Internally, the [DiscoPoP patch applicator](Patch_applicator.md) is used to create different parallel codes, which will be compiled, executed, and evaluated based on the observed execution time and result validity.
 
 ## Search algorithms
 The search algorithm is selected with `-A/--algorithm`. Note that the default, `-A 0`, does **not** combine suggestions: it measures every suggestion on its own.
@@ -60,23 +60,57 @@ Raising the tuner's own count is worth it when the machine's noise is large enou
 
 ## Required input
 - `Parallel patterns` in the form of a `JSON` file, created by the [Explorer](Explorer.md)
-- `Detected hotspots` in the form of a `JSON` file, created by the [Hotspot detection](https://github.com/discopop-project/Hotspot-Detection)
-- `Prepared patch files` created by the [DiscoPoP patch generator](Patch_generator.md)
-- An `execution configuration` created by the [project manager](Project_manager.md), which provides the `compile.sh` and `execute.sh` scripts used to compile and execute the created parallel code. Its optional `validate.sh` validates the results, and its optional `compile_validate.sh` builds the code that `validate.sh` runs whenever validation requires a different build than the timed execution.
+- `Prepared patch files` created by the [DiscoPoP patch generator](Patch_generator.md) (the Explorer creates them already)
+- An `execution configuration` created by the [project manager](Project_manager.md), which provides the `compile.sh` and `execute.sh` scripts used to compile and execute the created parallel code. Its optional `validate.sh` validates the results, and its optional `compile_validate.sh` builds the code that `validate.sh` runs whenever validation requires a different build than the timed execution. The tuner uses the `dp` and `hd` settings of the project, so run the configuration in these modes at least once.
+- `Detected hotspots` (`.discopop/hotspot_detection/Hotspots.json`), created by the [Hotspot detection](Hotspot_detection.md). They are only required for `-A 6`; for the other algorithms, all suggestions count as `yes` if no hotspot information exists.
+
+The tool reads the `.discopop` directory it is started in; use `--dot-dp-path` to give another one. The project must not have patches applied.
 
 ## Output
-The parallel code representing the identified best configuration will be stored in a copy of the project directory.
-Information on the configuration can be found in the included `.discopop` directory.
+The tuner does not modify your sources and, by default, keeps no code copy. Results are written to `.discopop/auto_tuner/`:
+
+| File | Content |
+|---|---|
+| `results.json` | Per configuration: `applied_suggestions`, `speedup`, `efficiency`, `time` (and `not_applied_count` if patches could not be applied) of the best combination. Not written with `--compile-only`. |
+| `measurements.json`, `progress.jsonl` | All measured combinations and the progress events (used by the [GUI](GUI.md)'s live plot) |
+| `compile_results.json` | With `--compile-only`: whether each configuration compiles |
+
+Further files are `.discopop/measurements.csv` and `.discopop/dp_autotuner_statistics.dot` / `.svg`. On the console, the tuner prints `@@AT_PROGRESS` event lines and a summary with the selected suggestions, the speedup, the parallel efficiency and the optimization time. The summary names the copy of the project that contains the best configuration; this copy only exists if you pass `--skip-cleanup`, otherwise it is deleted when the tuner exits.
+
+To use the result, apply the selected suggestions with the [patch applicator](Patch_applicator.md) (`discopop_patch_applicator -a <ids>`), or let the project manager apply them in its project copy (`discopop_project_manager -x <configuration>:par -a auto`).
+
+## Options
+| Option | Default | Description |
+|---|---|---|
+| `--dot-dp-path PATH` | current directory | Path to the `.discopop` directory |
+| `-c`, `--config NAME` | `tiny` | Execution configuration to use |
+| `-A`, `--algorithm N` | `0` | Search algorithm: `0`, `1`, `3`, `4`, `5`, `6` (see above) |
+| `-s`, `--suggestions IDS` | | Skip the search; measure these comma separated suggestions as one configuration |
+| `--search-space IDS` | all suggestions | Restrict the search to these suggestion ids (explicit ids, ranges are not expanded). Ignored with `-s`. With `-A 0`, a listed id the hotspot loader could not classify is measured as well. |
+| `-t`, `--threads N` | CPU count / 2 | `OMP_NUM_THREADS` of the measurements |
+| `-ht`, `--hotspot-types TYPES` | `yes,no,maybe` | Hotspot classes to consider (`yes`, `no`, `maybe`) |
+| `-xr`, `--execution-repetitions N` | `1` | Runs per candidate; the median ranks it |
+| `-etr`, `--execution-time-regex [RE]` | per configuration | Rank candidates by the time the program reports; see [Measured runtime](Project_manager.md#measured-runtime) |
+| `--noise-threshold F` | `0.02` | `-A 6`: relative improvement a suggestion needs to be accepted |
+| `--hs-min-share F` | `0.01` | `-A 6`: ignore hot loops below this fraction of the hottest loop's runtime |
+| `--max-measurements N` | `0` (no limit) | `-A 6`: stop after N compile-and-execute cycles |
+| `--skip-removal-pass` | off | `-A 6`: skip the final removal pass; with `-s`: measure exactly the given selection |
+| `--compile-only` | off | Build every candidate, execute none |
+| `--skip-cleanup` | off | Keep the created code variants (may need much disk space) |
+| `--sanitize` | off | Run ThreadSanitizer if `DP_COMPILE_SANITIZE.sh` and `DP_EXECUTE_SANITIZE.sh` are provided |
+| `-p`, `--plot` | off | Allow interactive plots |
+| `--log LEVEL` | `WARNING` | Log level |
+| `--write-log` | off | Write a log file |
 
 ## Limitations
 Due to the empirical nature of the optimization approach described above, varying sets of input data might yield differing selected configurations.
 For this reason it is important, that the used input data (typically specified in `execute.sh`) is representative for a production run of the software and large enough to allow for beneficial parallelizations.
 
-## Invocation from an LLM agent
-The autotuner is also reachable through the [DiscoPoP MCP server](https://github.com/discopop-project/discopop/tree/master/mcp_server) via its `run_auto_tuning` tool, which runs the search and returns the selected suggestion ids without modifying any source file. The ids can then be applied with the server's `manage_patches` tool.
+## Invocation from the GUI and from an LLM agent
+The *Autotuning* tab of the [GUI](GUI.md) runs the tuner and shows a live plot of the measurements. The [DiscoPoP MCP server](MCP_server.md) offers it as the tool `run_auto_tuning`, which runs the search and returns the selected suggestion ids; with `apply=true` it applies them, otherwise the ids can be applied with the tool `manage_patches`.
 
 ## Note
-For a more detailed description of the available run-time arguments, please refer to the help string of the respective tool.
-```
+For the available run-time arguments, see the table above or the help string of the tool.
+```text
 discopop_auto_tuner --help
 ```

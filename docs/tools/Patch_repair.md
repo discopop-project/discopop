@@ -2,10 +2,10 @@
 layout: default
 title: Patch repair
 parent: Tools
-nav_order: 5
+nav_order: 8
 ---
 
-# DiscoPoP Patch Repair
+# Patch repair
 ## Executable
 `discopop_patch_repair`
 
@@ -24,7 +24,7 @@ A suggestion whose patch does not build is one the [autotuner](Autotuner.md) can
 ## How it works
 1. **Discovery.** One `discopop_auto_tuner -A 0 --compile-only` run builds every considered suggestion on its own and reports which of them fail. The compiler's diagnostics are read from `execution_results.json`, which lives in the original project and therefore survives the deletion of the project copy that produced them.
 2. **Repair.** Each failing suggestion is handed to the agent together with its patch, the source before and after the patch, and the compiler's output. The agent answers with a corrected patch -- it is never given write access to the project.
-3. **Verification.** The answer passes six checks before anything is stored, and the suggestion is rebuilt with the candidate in place. Only a candidate that builds is kept.
+3. **Verification.** The answer passes the checks below before anything is stored, and the suggestion is rebuilt with the candidate in place. Only a candidate that builds is kept.
 
 If the *reference* configuration does not build -- the project without any suggestion applied -- the run stops immediately. No candidate's failure says anything about its patches in that case.
 
@@ -64,13 +64,14 @@ Every repair costs agent tokens and at least one build, so the default is delibe
 - `--dry-run` performs the whole pipeline but leaves `patch_generator/` as it found it. Note that a candidate is still *built* to check it, so a patch file is written and put back; the run ends with the file exactly as it started.
 
 ## When a repair is accepted
-A candidate must pass all of these:
+A candidate must pass all six of these checks, cheapest first.
 
 1. **Extraction** -- the answer contains a patch block per file it changes.
-2. **Apply** -- the whole patch set applies. A suggestion's patches are indivisible (the [patch applicator](Patch_applicator.md) rolls back a partial application), so one rejected file rejects the set.
-3. **Canonicalization** -- the patch is re-derived from the code it produces, with the patch generator's own `diff -Naru`. A stored repaired patch is therefore indistinguishable in form from a generated one, and the model's line numbers only have to be close enough for `patch` to apply.
-4. **The parallelization is still there** -- every OpenMP directive the original patch added must still be added. This check is what keeps a green build honest: an agent can always make a compiler error go away by deleting the directive, which compiles and silently turns the suggestion into a no-op. Changing a directive's *clauses* is allowed, and is the expected fix.
-5. **It compiles** -- the suggestion is rebuilt with the candidate in place.
+2. **Dry-run apply** -- the whole patch set applies to the unpatched code. A suggestion's patches are indivisible (the [patch applicator](Patch_applicator.md) rolls back a partial application), so one rejected file rejects the set. If the answer was written against the already patched code, it is interpreted as a change on top of the original patch.
+3. **Apply** -- the patch set is applied for real and the resulting code is read.
+4. **Canonicalization** -- the patch is re-derived from the code it produces, with the patch generator's own `diff -Naru`. A stored repaired patch is therefore indistinguishable in form from a generated one, and the model's line numbers only have to be close enough for `patch` to apply.
+5. **The parallelization is still there** -- every OpenMP directive the original patch added must still be added. This check is what keeps a green build honest: an agent can always make a compiler error go away by deleting the directive, which compiles and silently turns the suggestion into a no-op. Changing a directive's *clauses* is allowed, and is the expected fix.
+6. **It compiles** -- the suggestion is rebuilt with the candidate in place.
 
 ## Choosing a model
 The agent, the model and their settings are configured in `.discopop/patch_repair/llm_config.json`, in two sections:
@@ -82,7 +83,7 @@ They are separate because they answer different questions: a connection means th
 
 For a one-off run nothing needs configuring: `--backend` and `--model` override whatever is stored, and with exactly one agent installed even those can be omitted.
 
-```
+```text
 discopop_patch_repair --backend opencode --model openai/gpt-5.4-mini
 ```
 
@@ -101,12 +102,38 @@ Repaired patches replace the originals in `patch_generator/<id>/`, all of a sugg
 The attempt transcripts are the main surface for judging a repair, and for working on the prompts; they are written unconditionally.
 
 ## Graphical interface
-The tool is also available from the **Patch Repair** tab of the [project manager](Project_manager.md) GUI, between *Pattern Detection* and *Autotuning*. The tab shows the outcome per suggestion and the generated and repaired patch side by side, so a repair can be read before it is trusted.
+The tool is also available from the **Patch Repair** tab of the [project manager](Project_manager.md) GUI, between *Pattern Detection* and *Autotuning*; see [Graphical user interface](GUI.md). The tab shows the outcome per suggestion and the generated and repaired patch side by side, so a repair can be read before it is trusted.
 
 ## Limitations
 - The answer of a language model is not reproducible: the same run can yield different patches. `results.json` records the backend, the model and the accepted attempt.
 - Every suggestion is compiled on its own, so a patch set that builds in isolation but conflicts with another suggestion's patches is out of this tool's reach by construction. That is the [autotuner](Autotuner.md)'s domain.
 - Only compilation is repaired. A suggestion that builds but produces a wrong result, or no speedup, is not this tool's concern.
 
-## Note
-For a more detailed description of the available run-time arguments, please refer to the help string of the respective tool.
+## Options
+Run the tool from inside `.discopop`, or pass `--dot-dp-path`.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--dot-dp-path` | current directory | Path to the `.discopop` folder. |
+| `-c`, `--config` | `tiny` | Execution configuration used to build the suggestions. |
+| `-ht`, `--hotspot-types` | `yes,maybe` | Hotspot types to consider (`yes`, `no`, `maybe`). |
+| `-s`, `--suggestions` | none | Comma-separated suggestion ids to repair. Overrides the hotspot filter. |
+| `-t`, `--threads` | `1` | Value of `OMP_NUM_THREADS` passed to the builds. |
+| `--prompts` | `2` | Independent attempts per suggestion. |
+| `--retries` | `2` | Follow-up turns within one attempt. |
+| `--max-attempts` | `6` | Hard ceiling on agent calls per suggestion. |
+| `--max-repairs` | `0` | Stop after this many repaired suggestions. `0` disables the limit. |
+| `--agent-error-retries` | `2` | Extra calls when a call produces no answer. |
+| `--connection` | the only one defined | Name of a connection of the LLM configuration. |
+| `--backend` | from the connection | Agent backend: `opencode` or `claude`. |
+| `--model` | from the connection | Backend-specific model id. |
+| `--agent-timeout` | `300` | Timeout in seconds of a single agent call. |
+| `--llm-config` | `<dot-dp-path>/patch_repair/llm_config.json` | LLM configuration; `$DISCOPOP_PATCH_REPAIR_LLM_CONFIG` overrides the default. |
+| `--prompt-dir` | built-in | Directory with prompt templates to use instead of the built-in ones. |
+| `--context-lines` | `60` | Source lines of context around each patched region. |
+| `--max-error-chars` | `8000` | Maximum characters of compiler diagnostics in a prompt. |
+| `--max-prompt-chars` | `60000` | Maximum prompt size; the patches themselves are never dropped. |
+| `--dry-run` | off | Run the whole pipeline but leave `patch_generator/` untouched. |
+| `--restore` | off | Restore the patches backed up by an earlier repair and exit. |
+| `--log` | `WARNING` | Log level. |
+| `--write-log` | off | Write a log file. |

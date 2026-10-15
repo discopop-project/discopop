@@ -1,20 +1,22 @@
 ---
 layout: default
 title: Pipeline
-has_children: true
 parent: Parallel patterns
 grand_parent: Data
-nav_order: 3
+nav_order: 4
 ---
 
 
 # Pipeline
 
+{: .warning }
+Not detected at the moment: the detector is not run by the explorer (`--enable-patterns pipeline` has no effect). This page describes the output of earlier versions.
+
 ## Reporting
 
 ### Pipelines
 Pipelines are reported in the following format:
-```
+```text
 Pipeline at: 1:11
 Start line: 1:30
 End line: 1:34
@@ -33,7 +35,7 @@ The reported values shall be interpreted as follows:
 
 ### Pipeline Stages
 Individual stages of a pipeline are reported in the following format:
-```
+```text
 Node: 1:13
 Start line: 1:31
 End line: 1:31
@@ -89,7 +91,7 @@ As an example, we will analyze the following code snippet for parallelization po
     a = b;
 
 Analyzing this code snippet results in the following parallelization suggestion:
-```
+```text
 Pipeline at:
 Start line: 1:3
 End line: 1:7
@@ -132,7 +134,7 @@ After interpreting and implementing the suggestion, the resulting, now parallel,
     int i;
     int d=20,a=22, b=44,c=90;
     for (i=0; i<100; i++) {
-        #pragma omp task firsprivate(i) shared(d, in) depend(out:a)
+        #pragma omp task firstprivate(i) shared(d, in) depend(out:a)
         a = foo(i, d);
         #pragma omp task shared(d, in) depend(in:a) depend(out:b)
         b = bar(a, d);

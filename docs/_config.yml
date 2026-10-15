@@ -12,8 +12,6 @@ permalink: pretty
 
 remote_theme: just-the-docs/just-the-docs
 
-logo: "img/discoPoP_RGB_no_border.svg"
-
 callouts:
   highlight:
     color: yellow
@@ -39,4 +37,4 @@ aux_links:
   "VS Code Extension":
     - "https://marketplace.visualstudio.com/items?itemName=TUDarmstadt-LaboratoryforParallelProgramming.discopop"
 
-footer_content: "Copyright &copy; 2022, Technical University of Darmstadt."
+footer_content: "Copyright &copy; 2026, Technical University of Darmstadt."
