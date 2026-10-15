@@ -11,7 +11,8 @@ from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 
 
 class TGStartLoopNode(TGNode):
-    # loop state position corresponds to the position of the iteration count for the specific loop within the "_loopstate"-information in the callpaths reported by the profiler
+    # loop state position corresponds to the position of the iteration count for the specific loop within the
+    # "_loopstate"-information in the callpaths reported by the profiler
     loopstate_position: Optional[int] = None
 
     def get_label(self) -> str:

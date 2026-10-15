@@ -78,7 +78,8 @@ def INVALID_merge_successive_TaskParentContext_nodes(ctg: ContextTaskGraph) -> b
             # remove nodes
             for ctx in to_be_removed:
                 ctg.graph.remove_node(ctx)
-            # if modification was applied, queue might now contain deleted nodes. and thus be invalid. Start new outer iteration
+            # if modification was applied, queue might now contain deleted nodes. and thus be invalid. Start new outer
+            # iteration
             if nodes_merged:
                 break
 

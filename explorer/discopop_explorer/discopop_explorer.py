@@ -159,7 +159,7 @@ def __run(
         visualizer = Visualizer(visualize_on)
 
     with stage("Constructing PET graph"):
-        pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping), visualizer=visualizer)  # type: ignore
+        pet = PEGraphX.from_parsed_input(*parse_inputs(cu_xml, dep_file, reduction_file, file_mapping), visualizer=visualizer)  # type: ignore  # noqa: E501
         pet.validate()
 
     # pet.show()
@@ -355,7 +355,7 @@ def run(arguments: ExplorerArguments) -> None:
         #        if arguments.microbench_file is not None:
         #            microbench_file = get_path(
         #                arguments.project_path, arguments.microbench_file
-        #            )  # NOTE: the json file is not usually located in the project, this is just for demonstration purposes
+        #            )  # NOTE: the json file is not usually located in the project, this is just for demonstration purposes  # noqa: E501
         #            if not os.path.isfile(microbench_file):
         #                raise FileNotFoundError(f"Microbenchmark file not found: {microbench_file}")
         #            extrapBench = ExtrapInterpolatedMicrobench(microbench_file)

@@ -22,7 +22,8 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
     # all flags that are not considered stable should be added to the experimental_parser
     experimental_parser = parser.add_argument_group(
         "EXPERIMENTAL",
-        "Arguments for experimental features. These flags are considered EXPERIMENTAL and they may or may not be removed or changed in the near future.",
+        "Arguments for experimental features. These flags are considered EXPERIMENTAL and they may or may not be "
+        "removed or changed in the near future.",
     )
 
     # fmt: off
@@ -60,32 +61,43 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
         help="Json output")
     parser.add_argument(
         "--profiling", type=str, nargs="?", default=None, const="explorer/profiling_stats.txt",
-        help="Enable profiling. If a path is given, the profiling stats are written to the given file, otherwise to profiling_stats.txt",
+        help="Enable profiling. If a path is given, the profiling stats are written to the given file, otherwise to "
+        "profiling_stats.txt",
     )
     parser.add_argument(
         "--dump-pet", type=str, nargs="?", default=None, const="explorer/pet_dump.json",
-        help="Dump PET Graph to JSON file. If a path is given, the PET Graph is written to the given file, otherwise to pet_dump.json",
+        help="Dump PET Graph to JSON file. If a path is given, the PET Graph is written to the given file, otherwise "
+        "to pet_dump.json",
     )
     parser.add_argument(
         "--dump-detection-result", type=str, nargs="?", default="explorer/detection_result_dump.json",
-        help="Dump DetectionResult object to JSON file. If a path is given, the DetectionResult object is written to the given file, otherwise to detection_result_dump.json. Contents are equivalent to the json output. NOTE: This dump contains a dump of the PET Graph!",
+        help="Dump DetectionResult object to JSON file. If a path is given, the DetectionResult object is written to "
+        "the given file, otherwise to detection_result_dump.json. Contents are equivalent to the json output. NOTE: "
+        "This dump contains a dump of the PET Graph!",
     )
     parser.add_argument(
         "--pattern-decisions", type=str, nargs="?", default="explorer/pattern_decisions.json",
-        help="Write which code regions were considered as pattern candidates and why they were rejected to this JSON file; without a value, nothing is recorded. Default: explorer/pattern_decisions.json",
+        help="Write which code regions were considered as pattern candidates and why they were rejected to this JSON "
+        "file; without a value, nothing is recorded. Default: explorer/pattern_decisions.json",
     )
     parser.add_argument(
         "--enable-patterns", type=str, nargs="?", default="reduction,doall",
-        help="Specify comma-separated list of pattern types to be identified. Options: reduction,doall,task,pipeline,geodec,simplegpu. Default: reduction,doall",
+        help="Specify comma-separated list of pattern types to be identified. Options: "
+        "reduction,doall,task,pipeline,geodec,simplegpu. Default: reduction,doall",
     )
     parser.add_argument(
         "--hotspot-types", type=str, default="yes,maybe",
-        help="Comma-separated list of hotspot types whose code regions are considered during the analysis. Only takes effect if hotspot information exists (hotspot_detection/Hotspots.json); without it, the whole program is analyzed. Options: yes,no,maybe. Default: yes,maybe",
+        help="Comma-separated list of hotspot types whose code regions are considered during the analysis. Only takes "
+        "effect if hotspot information exists (hotspot_detection/Hotspots.json); without it, the whole program is "
+        "analyzed. Options: yes,no,maybe. Default: yes,maybe",
     )
-    parser.add_argument("--load-existing-doall-and-reduction-patterns", action="store_true", help="Skip pattern detection and insert existing patterns.json contents into the created detection_result.json")
-    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--load-existing-doall-and-reduction-patterns", action="store_true", help="Skip pattern "
+    "detection and insert existing patterns.json contents into the created detection_result.json")
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, "
+    "CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
-    parser.add_argument("-j", "--jobs", type=int, help="Allow the use of N threads. Use 0 or 1 to disable threading. Default: Unlimited", default=None)
+    parser.add_argument("-j", "--jobs", type=int, help="Allow the use of N threads. Use 0 or 1 to disable threading. "
+    "Default: Unlimited", default=None)
 
     # EXPERIMENTAL FLAGS:
     # temporary flag for microbenchmark file
@@ -100,18 +112,24 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
 
     experimental_parser.add_argument(
         "--generate-data-cu-inst", type=str, default=None,
-        help="Generates Data_CUInst.txt file and stores it in the given directory. Stops the regular execution of the discopop_explorer. Requires --cu-xml, --dep-file, --loop-counter, --reduction.",
+        help="Generates Data_CUInst.txt file and stores it in the given directory. Stops the regular execution of the "
+        "discopop_explorer. Requires --cu-xml, --dep-file, --loop-counter, --reduction.",
     )
     experimental_parser.add_argument(
-        "--enable-statistics", action="store_true", help="Enable the calculation and storing of statistics for code and generated suggestions."
+        "--enable-statistics", action="store_true", help="Enable the calculation and storing of statistics for code "
+        "and generated suggestions."
     )
     experimental_parser.add_argument(
         "--ignore-dependency-states", action="store_true",
-        help="Ignore the callpath state markers (\"@<state_id>\") contained in the dependency data. Dependencies are then interpreted as if the profiler had not distinguished between callpath states, which also reclassifies the affected dependencies from dynamic to static. Useful to compare pattern detection with and without state information.",
+        help="Ignore the callpath state markers (\"@<state_id>\") contained in the dependency data. Dependencies are "
+        "then interpreted as if the profiler had not distinguished between callpath states, which also reclassifies "
+        "the affected dependencies from dynamic to static. Useful to compare pattern detection with and without state "
+        "information.",
     )
     experimental_parser.add_argument(
         "--plot-pet", type=str, nargs="?", default=None, const="explorer/pet_plot.gexf",
-        help="Plots PET as a GEXF file. If a path is given (file extension has to be .gexf), the PET Graph is written to the given file, otherwise to pet_plot.gexf"
+        help="Plots PET as a GEXF file. If a path is given (file extension has to be .gexf), the PET Graph is written "
+        "to the given file, otherwise to pet_plot.gexf"
     )
     experimental_parser.add_argument(
         "--plot-task-graph", action="store_true", help="Enables interactive plotting of the task graph."
@@ -131,7 +149,7 @@ def parse_args(argv: Optional[List[str]] = None) -> ExplorerArguments:
 
     # ensure that --cu-xml, --dep-file, --loop-counter, --reduction are set if --generate-data-cu-inst is set
     # NOTE: no need to check, the defaults got us covered
-    # if arguments.generate_data_cu_inst is not None and (arguments.cu_xml is None or arguments.dep_file is None or arguments.loop_counter is None or arguments.reduction is None):
+    # if arguments.generate_data_cu_inst is not None and (arguments.cu_xml is None or arguments.dep_file is None or arguments.loop_counter is None or arguments.reduction is None):  # noqa: E501
     #    parser.error("--generate-data-cu-inst requires --cu-xml, --dep-file, --loop-counter, --reduction to be set")
 
     # post processing of arguments: interpret relative paths as relative to project path

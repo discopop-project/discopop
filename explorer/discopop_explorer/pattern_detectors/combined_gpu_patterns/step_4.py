@@ -97,7 +97,8 @@ class Context(object):
                         file=sys.stderr,
                     )
                 print("ADD : ", (ident, origin_cu_id), file=sys.stderr)
-                # todo: do not simply add, but replace current entry with origin_cu_id if it is a successor of the current entry
+                # todo: do not simply add, but replace current entry with origin_cu_id if it is a successor of the
+                # current entry
                 #  necessary, since relying on set behavior is not sufficient anymore
                 if ident not in [t[0] for t in self.seen_writes_by_device[device_id_to_update][mem_reg]]:
                     self.seen_writes_by_device[device_id_to_update][mem_reg].add((ident, origin_cu_id))
@@ -592,7 +593,8 @@ def create_circle_free_function_graphs(pet: PEGraphX, add_dummy_node: bool = Tru
                 ]
                 print("POT: ", potential_cycle_successor_nodes)
 
-                # only consider such cycle_successors which DO NOT share a direct parent with the potential_exit_node, except for functions
+                # only consider such cycle_successors which DO NOT share a direct parent with the potential_exit_node,
+                # except for functions
                 pen_parents = [
                     s
                     for s, t, d in in_edges(pet, potential_exit_node, EdgeType.CHILD)

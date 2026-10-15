@@ -49,7 +49,8 @@ class WorkContext(Context):
         # DEBUG add contained node ids
         contained_node_ids: Set[str] = set()
         for node in self.contained_nodes:
-            # filter out function return nodes, as their ids might overlap with dummy nodes and may result in hard-to-interpret visualizations
+            # filter out function return nodes, as their ids might overlap with dummy nodes and may result in
+            # hard-to-interpret visualizations
             pet_node = node.get_pet_node(pet)
             if pet_node is None:
                 continue
@@ -68,7 +69,8 @@ class WorkContext(Context):
         return label
 
     def get_contained_calls(self, pet: PEGraphX) -> List[Tuple[PETNodeID, LineID]]:
-        """returns a list of calls contained in the context. Each call is represented as a tuple of the called function's PETNodeID and the lineID of the call."""
+        """returns a list of calls contained in the context. Each call is represented as a tuple of the called
+        function's PETNodeID and the lineID of the call."""
         calls = []
         for node in self.contained_nodes:
             pet_node = node.get_pet_node(pet)

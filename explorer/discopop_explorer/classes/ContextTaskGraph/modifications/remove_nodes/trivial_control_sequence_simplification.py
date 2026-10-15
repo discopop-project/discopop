@@ -23,7 +23,8 @@ logger = logging.getLogger("Explorer")
 
 
 def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
-    """Replace trivial, linear control sequences with a CombinedContext node. Loop until no further linear sequences exist.
+    """Replace trivial, linear control sequences with a CombinedContext node. Loop until no further linear sequences
+    exist.
     Trivial sequences can consist of WorkContext and CombinedContext nodes only.
     Trivial sequences must contain at least one WorkContext.
     (Currently disabled: trivial sequences must share a common parent.)
@@ -45,7 +46,7 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
             successors = ctg.get_successors(node)
             if (
                 len(successors) != 1
-            ):  # or len(predecessors) != 1:  Note: checking predecessor length is too pessimistic for effective reduction
+            ):  # or len(predecessors) != 1:  Note: checking predecessor length is too pessimistic for effective reduction  # noqa: E501
                 continue
             # ensure existing control edge to successor
             if len([info for info in ctg.get_edge_info(node, successors[0]) if info.type == CTGEdgeType.CONTROL]) < 1:
@@ -74,7 +75,7 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
                 # ensure current is of either allowed type of sequence members
                 if not (
                     isinstance(current, WorkContext) or isinstance(current, CombinedContext)
-                ):  # or isinstance(current, IterationContext) or isinstance(current, InlinedFunctionContext) or isinstance(current, FunctionContext)):
+                ):  # or isinstance(current, IterationContext) or isinstance(current, InlinedFunctionContext) or isinstance(current, FunctionContext)):  # noqa: E501
                     # not a valid sequence member
                     break
 
@@ -121,7 +122,8 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
             # ensure sequence consists of at least two elements
             if len(sequence) < 2:
                 continue
-            # ensure that the sequence contains at least one WorkContext or CombinedContext element, so that the Sequence performs at least some minor work.
+            # ensure that the sequence contains at least one WorkContext or CombinedContext element, so that the
+            # Sequence performs at least some minor work.
             if (
                 len(
                     [
@@ -148,7 +150,8 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
                     if seq_elem_1 == seq_elem_2:
                         continue
                     if idx_2 > idx_1:
-                        # a potential data dependency from seq_elem_1 to seq_elem_2 would follow the control edge flow, thus, not a problem.
+                        # a potential data dependency from seq_elem_1 to seq_elem_2 would follow the control edge flow,
+                        # thus, not a problem.
                         continue
 
                     if seq_elem_2 in data_edge_successors:

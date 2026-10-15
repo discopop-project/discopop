@@ -1142,9 +1142,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     )
                     entry_node = None
 
-                #                print("Found entry node: ", entry_node.get_label() if entry_node is not None else "NONE")
+                #                print("Found entry node: ", entry_node.get_label() if entry_node is not None else "NONE")  # noqa: E501
                 #                print("Found exit node: ", exit_node.get_label() if exit_node is not None else "NONE")
-                #                print("Found iteration entry points: ", [n.get_label() for n in iteration_entry_points])
+                #                print("Found iteration entry points: ", [n.get_label() for n in iteration_entry_points])  # noqa: E501
                 #                print("Found iteration exit points: ", [n.get_label() for n in iteration_exit_points])
 
                 if entry_node is not None and exit_node is not None:
@@ -1221,7 +1221,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         + str((cycle[-1][0].get_label(), cycle[-1][1].get_label()))
                     )
                     self.graph.remove_edge(cycle[-1][0], cycle[-1][1])
-                    # try to minimize the "error" by connecting the end of the cycle to a successor of the "entry" node, if it is outside the cycle
+                    # try to minimize the "error" by connecting the end of the cycle to a successor of the "entry" node,
+                    # if it is outside the cycle
                     outside_successor = None
                     for succ in self.get_successors(cycle[-1][0]):
                         if succ not in cycle_nodes:
@@ -1234,7 +1235,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             + str((cycle[-1][1].get_label(), outside_successor.get_label()))
                         )
                     else:
-                        # if this is not possible, connect the exit to the function exit node to preserve the correct graph structure
+                        # if this is not possible, connect the exit to the function exit node to preserve the correct
+                        # graph structure
                         descendants = self.get_descendants(function_node)
                         function_exit_nodes = [
                             d
@@ -1249,8 +1251,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             )
                         else:
                             raise ValueError(
-                                "Could neither determine outside loop successor nor function exit node for broken cycle: "
-                                + str([(t[0].get_label(), t[1].get_label()) for t in cycle])
+                                "Could neither determine outside loop successor nor function exit node for broken "
+                                "cycle: " + str([(t[0].get_label(), t[1].get_label()) for t in cycle])
                             )
 
                     # progress search
@@ -1260,7 +1262,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         break
 
     def __fix_loop_structures(self, plot_problematic_loops: bool = False) -> None:
-        # in case a loop contains a branch to a non-iteration node (e.g. via "break"- statement), delete this edge and cleanup the graph
+        # in case a loop contains a branch to a non-iteration node (e.g. via "break"- statement), delete this edge and
+        # cleanup the graph
         logger.info("Fixing loop structures...")
         self.cus_deleted_by_early_exits = set()
         self.loops_with_cut_exits = dict()
@@ -1356,7 +1359,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                 )
                             )
                         logger.warning(
-                            "Typical reasons include break statements and similar. Treat results using this loop with caution."
+                            "Typical reasons include break statements and similar. Treat results using this loop with "
+                            "caution."
                         )
 
                         # A call which does not return (exit(), abort(), a throw) ends the program from
@@ -1509,7 +1513,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         self.__copy_iteration_subgraph(copied_nodes, iteration_nodes, sin, ein)
                     )
 
-                    # set loopstate_iterations_ids sucht that both iteration nodes react to different loopsate information during dependency creation
+                    # set loopstate_iterations_ids sucht that both iteration nodes react to different loopsate
+                    # information during dependency creation
                     # print("sin.loopstate_iteration_ids: ", sin.loopstate_iteration_ids)
                     if sin.loopstate_iteration_ids is None:
                         sin.set_loopstate_iteration_ids([1])
@@ -2440,7 +2445,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             #                            print("TYPE: ", type(current_context))
                             if type(current_context) is not Context:
                                 raise ValueError(
-                                    "Current.parent_context must not be None, as context must not be None during processing!"
+                                    "Current.parent_context must not be None, as context must not be None during "
+                                    "processing!"
                                 )
                             continue
                         current_context = current_context.parent_context
@@ -3095,7 +3101,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             if dependency.dtype == DepType.INIT:
                 continue
 
-            # find all pairs of TGNodes which qualify as source and / or targets of the dependency (Note: due to the duplication of iterations and function inlining, multiple occurrences are possible!)
+            # find all pairs of TGNodes which qualify as source and / or targets of the dependency (Note: due to the
+            # duplication of iterations and function inlining, multiple occurrences are possible!)
             source_tg_nodes: List[TGNode] = []
             for node in self.graph.nodes:
                 # search for regular nodes (i.e. CU nodes) with the given PET node id
@@ -3133,7 +3140,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             if dependency.dtype == DepType.INIT:
                 continue
 
-            # find all pairs of TGNodes which qualify as source and / or targets of the dependency (Note: due to the duplication of iterations and function inlining, multiple occurrences are possible!)
+            # find all pairs of TGNodes which qualify as source and / or targets of the dependency (Note: due to the
+            # duplication of iterations and function inlining, multiple occurrences are possible!)
             source_tg_nodes: List[TGNode] = []
             for node in self.graph.nodes:
                 # search for regular nodes (i.e. CU nodes) with the given PET node id
@@ -3292,7 +3300,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 for source_state_id, source_state_deps in source_location_deps.items():
                     for sink_location, sink_location_deps in source_state_deps.items():
                         for sink_state_id, var_infos in sink_location_deps.items():
-                            # if the current dependency is at least partially specified, it will not be overwritten in step 1.
+                            # if the current dependency is at least partially specified, it will not be overwritten in
+                            # step 1.
                             if source_state_id != "NO_STATE" or sink_state_id != "NO_STATE":
                                 # at least partially specified
                                 continue
@@ -3315,7 +3324,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                                         sink_state_id == "NO_STATE"
                                                         and check_sink_state_id != "NO_STATE"
                                                     ) or (sink_state_id == check_sink_state_id):
-                                                        # more specific sink_state_id exists. Mark current dependency for removal and skip to next dependency.
+                                                        # more specific sink_state_id exists. Mark current dependency
+                                                        # for removal and skip to next dependency.
                                                         logger.debug(
                                                             "step 1 overwrites: %s %s %s %s %s -> %s %s %s %s %s",
                                                             dep_type,
@@ -3344,7 +3354,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             if sink_state_id == "NO_STATE":
                                 for check_sink_state_id, check_var_infos in sink_location_deps.items():
                                     if check_sink_state_id != "NO_STATE":
-                                        # more specific sink_state_id exists. Mark current dependency for removal and skip to next dependency.
+                                        # more specific sink_state_id exists. Mark current dependency for removal and
+                                        # skip to next dependency.
                                         logger.debug(
                                             "step 1 overwrites: %s %s %s %s %s -> %s %s %s %s %s",
                                             dep_type,
@@ -3410,7 +3421,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                                     check_var_infos,
                                                 ) in check_sink_location_deps.items():
                                                     if sink_state_id == check_sink_state_id:
-                                                        # more specific sink_state_id exists. Mark current dependency for removal and skip to next dependency.
+                                                        # more specific sink_state_id exists. Mark current dependency
+                                                        # for removal and skip to next dependency.
                                                         logger.debug(
                                                             "step 2 overwrites: %s %s %s %s %s -> %s %s %s %s %s",
                                                             dep_type,
@@ -3439,7 +3451,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             if sink_state_id == "NO_STATE" and source_state_id != "NO_STATE":
                                 for check_sink_state_id, check_var_infos in sink_location_deps.items():
                                     if check_sink_state_id != "NO_STATE":
-                                        # more specific sink_state_id exists. Mark current dependency for removal and skip to next dependency.
+                                        # more specific sink_state_id exists. Mark current dependency for removal and
+                                        # skip to next dependency.
                                         logger.debug(
                                             "step 2 overwrites: %s %s %s %s %s -> %s %s %s %s %s",
                                             dep_type,
@@ -3480,7 +3493,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         return dependencies
 
     def __get_state_mappings_from_file(self, dynamic_dependency_file: str) -> Dict[str, List[str]]:
-        """Returns a dictionary mapping state ids to callpaths. Contained elements are filtered to only include these states which are used in dynamic_dependency_file."""
+        """Returns a dictionary mapping state ids to callpaths. Contained elements are filtered to only include these
+        states which are used in dynamic_dependency_file."""
         warnings.warn(
             "TODO: stateID to callpath mapping might get really big. Implement this more scalable / resilient."
         )
@@ -4203,7 +4217,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     #                                 ).loopstate_iteration_ids,
     #                             )
     #                             print("loopstate_info: ", loopstate_info)
-    #                             # if loopstate_iteraton at the current index is 3, the loop should not be entered. Some mismatch occured
+    #                             # if loopstate_iteraton at the current index is 3, the loop should not be entered.
+    #                             Some mismatch occured
     #                             if loopstate_info[loopstate_position] == "3":
     #                                 # continue search with successors of current loop
     #                                 if parent_loop_ctx.successor is None:
@@ -4213,7 +4228,9 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     #                                 print("-> Skipped loop body due to loopstate 3")
     #                                 continue
     #
-    #                             # find the IterationContext child of the parent_loop_ctx which matches the loopstate_iteration at the current index. Proceed processing there to skip previous iteration bodies.
+    #                             # find the IterationContext child of the parent_loop_ctx which matches the
+    #                             loopstate_iteration at the current index. Proceed processing there to skip previous
+    #                             iteration bodies.
     #                             if int(loopstate_info[loopstate_position]) in loopstate_indices:
     #                                 # iter_ctx targets current loopstate. nothing to do.
     #                                 pass
@@ -4235,11 +4252,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     #
     #                             #                                if isinstance(IterationContext)
     #                             #
-    #                             #                                # search in children on parent_loop_ctx for matchin loopstate_index
-    #                             #                                for child in parent_loop_ctx.get_contained_contexts():
+    #                             #                               # search in children on parent_loop_ctx for matchin
+    #                             loopstate_index
+    #                             #                                for child in parent_loop_ctx.get_contained_contexts():  # noqa: E501
     #                             #                                    if (
     #                             #                                        isinstance(child, IterationContext)
-    #                             #                                        and int(loopstate_info[loopstate_position]) in child.loopstate_iteration_ids
+    #                             #                                        and int(loopstate_info[loopstate_position]) in child.loopstate_iteration_ids  # noqa: E501
     #                             #                                    ):
     #                             #                                        iter_ctx = child
     #                             #                                        break
@@ -4257,8 +4275,10 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     #                                 n.state_id = state_id
     #                                 print("set state_id: ", state_id, " to node: ", n)
     #
-    #                             # since loopstate encodes information on multiple entered loops, it may not be discarded by the processed TGStartIterationNode.
-    #                             # successive TGFunctionNode encounters will cleanup leading loopstates in the remaining_path
+    #                             # since loopstate encodes information on multiple entered loops, it may not be
+    #                             discarded by the processed TGStartIterationNode.
+    #                             # successive TGFunctionNode encounters will cleanup leading loopstates in the
+    #                             remaining_path
     #
     #                 # continue search with successors
     #                 for succ in self.get_successors(current_node):
@@ -4278,7 +4298,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         state_ids_cache: Dict[Context, FrozenSet[int]],
         fallback: Optional["_ContextFallback"] = None,
     ) -> Set[Context]:
-        """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long run, when instructionIDs become the default over lineIDs.
+        """instructionID_mappings_dict is a mapping from instructionIDs to lineIDs. This should be removed in the long
+        run, when instructionIDs become the default over lineIDs.
         state_mappings_dict is a mapping from stateIDs to callpaths.
         location_to_work_contexts is a reverse index {lineID: WorkContexts whose code scope contains it},
         built once per dependency-insertion pass (see __insert_data_dependencies_from_files).
@@ -4677,9 +4698,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                 # dynamic dependencies are allowed to leave the current function
                                 # register dependencies between all pairs of source and target contexts
                                 #
-                                # prevent false positive dependencies in case of same iterations by checking for same ancestors
-                                # TODO: add states to contexts to allow a more robust search in __get_work_contexts_by_location_and_state_id
-                                # TODO: The fact the following condition is necessary is a result of incorrect behavior of __get_work_contexts_by_location_and_state_id, which should be fixed!
+                                # prevent false positive dependencies in case of same iterations by checking for same
+                                # ancestors
+                                # TODO: add states to contexts to allow a more robust search in
+                                # __get_work_contexts_by_location_and_state_id
+                                # TODO: The fact the following condition is necessary is a result of incorrect behavior
+                                # of __get_work_contexts_by_location_and_state_id, which should be fixed!
                                 same_state = source_state_id == sink_state_id
                                 carried: Optional[Tuple[int, int]] = None
                                 source_frames = state_frames(source_state_id) if source_state_id.isdigit() else None
@@ -4954,7 +4978,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 if target_ctx not in preceeding_contexts:
                     continue
                 # target_ctx is preceeding ctx
-                # check if dep is covered by a initialization. If so, the dependency can be ignored as it is a hallucination
+                # check if dep is covered by a initialization. If so, the dependency can be ignored as it is a
+                # hallucination
                 if dep.memory_region is not None and dep.memory_region in initialized_var_memregs:
                     invalid_deps.append((ctx, target_ctx, dep))
                     continue
@@ -5020,7 +5045,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                                 + entry
                                 + ". Keep dependency to err on the safe side."
                             )
-                            # following checks would not target the current dependency. Keep the dependency to err on the safe side.
+                            # following checks would not target the current dependency. Keep the dependency to err on
+                            # the safe side.
                             skip_further_checks = True
                             break
 
@@ -5034,7 +5060,8 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             logger.warning(
                                 "found sink-ancestor mismatch: " + entry + ". Keep dependency to err on the safe side."
                             )
-                            # following checks would not target the current dependency. Keep the dependency to err on the safe side.
+                            # following checks would not target the current dependency. Keep the dependency to err on
+                            # the safe side.
                             skip_further_checks = True
                             break
 

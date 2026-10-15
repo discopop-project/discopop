@@ -46,7 +46,8 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
     # identify immediate successive contexts with no dependencies between them
     logger.info("--> Identify tasking with data sharing clauses ... TODO")
     logger.info("--> Identifying simple asynchronous tasking ... TODO")
-    # identify non-immediate successive contexts with no dependencies between them, such that asynchronous execution is possible
+    # identify non-immediate successive contexts with no dependencies between them, such that asynchronous execution is
+    # possible
     logger.info("--> Identifying dependent tasking... TODO")
     logger.info("--> Identifying multi-dependent tasking... TODO")
     logger.info("--> Identifying loop tasking... TODO")

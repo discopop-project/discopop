@@ -37,10 +37,10 @@ from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.repla
 from discopop_explorer.classes.ContextTaskGraph.modifications.inflate_nodes.split_taskable_control_sequence import (
     split_taskable_control_sequence,
 )
-from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.trivial_control_sequence_simplification import (
+from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.trivial_control_sequence_simplification import (  # noqa: E501
     trivial_control_sequence_simplification,
 )
-from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.merge_only_childs_without_successors_with_parents import (
+from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.merge_only_childs_without_successors_with_parents import (  # noqa: E501
     merge_only_childs_without_successors_with_parents,
 )
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import (
@@ -102,7 +102,8 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
             self.__construct_from_task_graph()
 
     def __construct_from_task_graph(self) -> None:
-        """convert the given task graph to a ContextTaskGraph for Task detection. The created graph will be used to determine Forks, Barriers, and Tasks."""
+        """convert the given task graph to a ContextTaskGraph for Task detection. The created graph will be used to
+        determine Forks, Barriers, and Tasks."""
         for ctx in progress(self.task_graph.contexts, desc="Adding context nodes"):
             self.add_node(ctx)
 
@@ -460,7 +461,7 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
     #        while cleaning_found:
     #            cleaning_found = False
     #            for node in self.graph.nodes:
-    #                if len(self.get_predecessors(node)) == 0 and not (isinstance(node, WorkContext) or isinstance(node, FunctionContext)):
+    #                if len(self.get_predecessors(node)) == 0 and not (isinstance(node, WorkContext) or isinstance(node, FunctionContext)):  # noqa: E501
     #                    self.graph.remove_node(node)
     #                    cleaning_found = True
     #                    break
@@ -546,7 +547,8 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
                         statistics_time_series_node_count.append(len(self.graph.nodes))
                         statistics_time_series_edge_count.append(len(self.graph.edges))
 
-                # todo: replace "trivial" BranchParent with CombinedContext (trivial: both branches consist of exaclty one node)
+                # todo: replace "trivial" BranchParent with CombinedContext (trivial: both branches consist of exaclty
+                # one node)
 
                 # merge only-childs without successors with parents
                 # Note: this is not really effective and leads to a lot more iterations

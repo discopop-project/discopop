@@ -55,14 +55,18 @@ class DeviceUpdateInfo(PatternInfo):
 
     def __str__(self) -> str:
         return (
-            # f"Device update at: {self.node_id}\n" # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
+            # f"Device update at: {self.node_id}\n" # removed to allow reduction of duplicates in the generated OpenMP
+            # code in CodeGenerator
             f"Start line: {self.start_line}\n"
             f"End line: {self.end_line}\n"
-            # f"source_node: {self.source_node_id}\n"  # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
-            # f"target_node: {self.target_node_id}\n"  # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
+            # f"source_node: {self.source_node_id}\n" # removed to allow reduction of duplicates in the generated OpenMP
+            # code in CodeGenerator
+            # f"target_node: {self.target_node_id}\n" # removed to allow reduction of duplicates in the generated OpenMP
+            # code in CodeGenerator
             f"source_device: {self.source_device_id}\n"
             f"target_device: {self.target_device_id}\n"
-            # f"mem_reg: {self.mem_reg}\n"  # removed to allow reduction of duplicates in the generated OpenMP code in CodeGenerator
+            # f"mem_reg: {self.mem_reg}\n" # removed to allow reduction of duplicates in the generated OpenMP code in
+            # CodeGenerator
             f"var_name: {self.var_name}\n"
             f"is_first_data_occurrence: {self.is_first_data_occurrence}\n"
             f"openmp_source_device_id: {self.openmp_source_device_id}\n"

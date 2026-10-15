@@ -23,7 +23,8 @@ logger = logging.getLogger("Explorer")
 
 
 def replace_trivial_branched_region(ctg: ContextTaskGraph) -> bool:
-    """Replaces a trivial branched section (BranchParent + exactly two children + one merge node) with a CombinedContext node.
+    """Replaces a trivial branched section (BranchParent + exactly two children + one merge node) with a CombinedContext
+    node.
     Returns True, if a modification was applied."""
     modification_applied = False
     nodes_merged = True

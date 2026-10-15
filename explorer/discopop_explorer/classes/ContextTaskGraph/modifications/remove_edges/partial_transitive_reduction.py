@@ -48,7 +48,8 @@ def partial_transitive_reduction(ctg: ContextTaskGraph) -> bool:
             if len(control_edge_predecessors) < 2:
                 # trivially no redundancy possible
                 continue
-            # a control edge is considered redundant, if its source node is a dominator of every other incoming control edge
+            # a control edge is considered redundant, if its source node is a dominator of every other incoming control
+            # edge
             for pred_1 in control_edge_predecessors:
                 pred_1_is_dominator = True
                 for pred_2 in control_edge_predecessors:
