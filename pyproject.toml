@@ -44,6 +44,18 @@ Homepage = "https://www.discopop.tu-darmstadt.de/"
 line-length = 120
 target-version = ["py311"]  # oldest supported Python (requires-python), so black never emits newer syntax
 
+[tool.ruff]
+line-length = 120
+target-version = "py311"  # oldest supported Python (requires-python)
+extend-exclude = ["venv", "venv_base", "build*", "base", "htmlcov"]
+
+[tool.ruff.lint]
+# pycodestyle (E, W) and pyflakes (F)
+select = ["E", "W", "F"]
+ignore = [
+    "E203",  # whitespace before ':' -- black formats slices this way
+]
+
 [tool.pytest.ini_options]
 # unit tests, end-to-end and profiler tests (markers e2e, profiler; skipped without the installed profiler, see CLAUDE.md)
 testpaths = [
