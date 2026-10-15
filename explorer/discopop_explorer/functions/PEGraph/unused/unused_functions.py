@@ -59,7 +59,7 @@ def unused_get_first_written_vars_in_loop(
 ) -> Set[Variable]:
     root_children = subtree_of_type(pet, root_loop, CUNode)
     loop_node_ids = [n.id for n in root_children]
-    fwVars = set()
+    fw_vars = set()
 
     raw = set()
     war = set()
@@ -71,15 +71,15 @@ def unused_get_first_written_vars_in_loop(
         waw.update(pet.get_dep(sub_node, DepType.WAW, False))
 
     for var in undefinedVarsInLoop:
-        if var not in fwVars:
+        if var not in fw_vars:
             for i in raw:
                 if i[2].var_name == var and i[0] in loop_node_ids and i[1] in loop_node_ids:
                     for e in itertools.chain(war, waw):
                         if e[2].var_name == var and e[0] in loop_node_ids and e[1] in loop_node_ids:
                             if e[2].sink_line == i[2].source_line:
-                                fwVars.add(var)
+                                fw_vars.add(var)
 
-    return fwVars
+    return fw_vars
 
 
 def unused_is_first_written_in_loop(pet: PEGraphX, dep: Dependency, root_loop: Node) -> bool:

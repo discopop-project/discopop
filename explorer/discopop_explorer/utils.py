@@ -467,12 +467,12 @@ def is_first_written_new(
         assert dep[2].var_name is not None
         if dep[2].memory_region in mem_regs and any([n.id == dep[1] for n in tree]):
             result = True
-            for warDep in war_deps:
-                assert warDep[2].var_name is not None
+            for war_dep in war_deps:
+                assert war_dep[2].var_name is not None
                 if (
-                    warDep[2].memory_region in mem_regs
+                    war_dep[2].memory_region in mem_regs
                     and any([n.id == dep[1] for n in tree])
-                    and dep[2].source_line == warDep[2].sink_line
+                    and dep[2].source_line == war_dep[2].sink_line
                 ):
                     result = False
                     break

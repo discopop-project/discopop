@@ -68,8 +68,8 @@ class DelaunayInterpolatedMicrobench(Microbench):
         self, benchType: MicrobenchType, benchDim: MicrobenchDimension
     ) -> List[Tuple[int, Union[int, float], int, float]]:
         tuples: List[Tuple[int, Union[int, float], int, float]] = []
-        for benchCoord, values in self.data[benchType][benchDim].items():
-            tuples.append((*benchCoord, np.median(values).item()))
+        for bench_coord, values in self.data[benchType][benchDim].items():
+            tuples.append((*bench_coord, np.median(values).item()))
         return tuples
 
     def __interpolate(self) -> None:

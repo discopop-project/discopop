@@ -2151,24 +2151,24 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
     def __break_containment_cycles(self, contexts: List[Context]) -> int:
         """Detects cycles in the contained_contexts relation with an iterative depth-first search
         and removes the edge closing each of them. Returns the number of removed edges."""
-        ON_STACK, FINISHED = 1, 2
+        on_stack, finished = 1, 2
         state: Dict[Context, int] = dict()
         removed = 0
         for root in progress(contexts, desc="Breaking containment cycles"):
             if root in state:
                 continue
-            state[root] = ON_STACK
+            state[root] = on_stack
             # (context, its not yet visited children); children are popped from the back
             stack: List[Tuple[Context, List[Context]]] = [(root, self.__sorted_contexts(root.contained_contexts))]
             while len(stack) > 0:
                 current, remaining_children = stack[-1]
                 if len(remaining_children) == 0:
-                    state[current] = FINISHED
+                    state[current] = finished
                     stack.pop()
                     continue
                 child = remaining_children.pop()
                 child_state = state.get(child, 0)
-                if child_state == ON_STACK:
+                if child_state == on_stack:
                     # back edge: child is an ancestor of current on the current search path
                     logger.error(
                         "Context %s contains %s, which is one of its own ancestors. Removing the "
@@ -2181,7 +2181,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         child.parent_context = None
                     removed += 1
                 elif child_state == 0:
-                    state[child] = ON_STACK
+                    state[child] = on_stack
                     stack.append((child, self.__sorted_contexts(child.contained_contexts)))
                 # FINISHED children are reached via a second, non-cyclic path - harmless here
         return removed
@@ -2191,7 +2191,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         Every context has at most one successor, so following the chain from each context and
         colouring the contexts on it visits every context once. Returns the number of cleared
         links."""
-        ON_PATH, FINISHED = 1, 2
+        on_path, finished = 1, 2
         state: Dict[Context, int] = dict()
         cleared = 0
         for context in progress(contexts, desc="Breaking succession cycles"):
@@ -2200,10 +2200,10 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             path: List[Context] = []
             current: Optional[Context] = context
             while current is not None and current not in state:
-                state[current] = ON_PATH
+                state[current] = on_path
                 path.append(current)
                 current = current.successor
-            if current is not None and state[current] == ON_PATH:
+            if current is not None and state[current] == on_path:
                 # the chain ran back into a context of the path just walked
                 closing_context = path[-1]
                 logger.error(
@@ -2217,7 +2217,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     current.predecessor = None
                 cleared += 1
             for path_context in path:
-                state[path_context] = FINISHED
+                state[path_context] = finished
         return cleared
 
     def __report_context_relation_inconsistencies(self, contexts: List[Context]) -> None:

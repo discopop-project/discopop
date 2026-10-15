@@ -50,8 +50,13 @@ target-version = "py311"  # oldest supported Python (requires-python)
 extend-exclude = ["venv", "venv_base", "build*", "base", "htmlcov"]
 
 [tool.ruff.lint]
-# pycodestyle (E, W) and pyflakes (F)
-select = ["E", "W", "F"]
+# pycodestyle (E, W), pyflakes (F) and the pep8-naming rules that need no change of a public name: N804 (`cls` in class
+# methods) and N806 (local variables). The other naming rules stay off on purpose, because satisfying them would rename
+# public names: modules (N999), functions and methods (N802), arguments that callers pass by keyword (N803), class and
+# module attributes (N815, N816), classes (N801) and exceptions (N818) are imported across the packages, are entry
+# points of the command line tools, and their `module.Class` paths are stored in the jsonpickle data of `.discopop`
+# directories.
+select = ["E", "W", "F", "N804", "N806"]
 # these comment/whitespace rules are still preview rules in this ruff version; only the listed ones are enabled
 preview = true
 explicit-preview-rules = true

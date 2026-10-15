@@ -94,12 +94,12 @@ class Microbench(ABC):
         # z axis: measurement values
         # (iterations are fixed based on input parameter)
         z = [self.evaluateInterpolation(type, dim, (i, j, iterations)) for i in threads for j in workloads]  # results
-        X, Y = np.meshgrid(threads, workloads)  # type: ignore
-        Z = np.array(z).reshape(len(threads), len(workloads)).transpose()
+        x, y = np.meshgrid(threads, workloads)  # type: ignore
+        z_grid = np.array(z).reshape(len(threads), len(workloads)).transpose()
 
         fig, ax = plt.subplots(subplot_kw={"projection": "3d"})  # type: ignore
         # ignored type due to incompatibilities between local mypy and GitHub ci
-        surf = ax.plot_surface(X, Y, Z, cmap=cm.coolwarm, linewidth=0, antialiased=False)  # type: ignore
+        surf = ax.plot_surface(x, y, z_grid, cmap=cm.coolwarm, linewidth=0, antialiased=False)  # type: ignore
         ax.set_zlim(0, np.nanmax(z))  # type: ignore
         ax.zaxis.set_major_locator(LinearLocator(10))  # type: ignore
         fig.colorbar(surf, shrink=0.5, aspect=5)

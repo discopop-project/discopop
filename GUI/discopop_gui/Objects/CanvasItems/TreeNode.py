@@ -496,7 +496,7 @@ class TreeNode:
         space_needed_left: int = 0
         space_needed_right: int = 0
         flip = False
-        leftSet = False
+        left_set = False
 
         for connection_id, _ in self._lower_order_main_x_offset_data.items():
             if connection_id == lower_order_id:
@@ -521,16 +521,16 @@ class TreeNode:
             if offset_data is None:
                 continue
 
-            if not leftSet:
+            if not left_set:
                 space_needed_left = abs(self._lower_order_main_x_offset_data[connection_id][0]) + offset_data[0]
-                leftSet = True
+                left_set = True
 
             space_needed_right = abs(self._lower_order_main_x_offset_data[connection_id][0]) + offset_data[1]
 
         if self._canvas.check_highest_visual_node(self._base_node.id):
             self._canvas.request_x_space_by_highest_visual_node(
                 self._base_node.id,
-                None if ((not leftSet) and (not self._visible)) else (space_needed_left, space_needed_right),
+                None if ((not left_set) and (not self._visible)) else (space_needed_left, space_needed_right),
             )
 
             return
@@ -540,7 +540,7 @@ class TreeNode:
                 self._higher_order_main_connection.get_source_node_id()
             ).request_x_space_by_lower_order(
                 self._base_node.id,
-                None if ((not leftSet) and (not self._visible)) else (space_needed_left, space_needed_right),
+                None if ((not left_set) and (not self._visible)) else (space_needed_left, space_needed_right),
             )
         else:
             raise ValueError("No main higher order node found of non-highest.")

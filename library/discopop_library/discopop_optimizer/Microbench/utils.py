@@ -32,9 +32,9 @@ def convert_discopop_to_microbench_workload(discopop_per_iteration_workload: Exp
 
     # discopop_per_iteration_workload is equivalent to (Wd/iD)
     # for the same reason, iteration_count is disregarded
-    Wm = cast(Expr, (discopop_per_iteration_workload - w0) / wi)
+    wm = cast(Expr, (discopop_per_iteration_workload - w0) / wi)
     # do not allow negative return values
-    return Max(Wm, Integer(1))
+    return Max(wm, Integer(1))
 
 
 def convert_microbench_to_discopop_workload(microbench_workload: Expr, iteration_count: Expr) -> Expr:

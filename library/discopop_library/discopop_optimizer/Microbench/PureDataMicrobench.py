@@ -120,27 +120,27 @@ class PureDataMicrobench(Microbench):
             raise KeyError("Invalid key type:" + str(type(key)))
 
     def removeOutliers(self) -> None:
-        for type, dimMap in self.measurements.items():
-            for dim, coordMap in dimMap.items():
-                for coord, values in coordMap.items():
+        for type, dim_map in self.measurements.items():
+            for dim, coord_map in dim_map.items():
+                for coord, values in coord_map.items():
                     self.measurements[type][dim][coord] = __remove_outliers_using_iqr(values)
 
     def useMedian(self) -> None:
-        for type, dimMap in self.measurements.items():
-            for dim, coordMap in dimMap.items():
-                for coord, values in coordMap.items():
+        for type, dim_map in self.measurements.items():
+            for dim, coord_map in dim_map.items():
+                for coord, values in coord_map.items():
                     self.measurements[type][dim][coord] = [np.median(values).item()]
 
     def useMean(self) -> None:
-        for type, dimMap in self.measurements.items():
-            for dim, coordMap in dimMap.items():
-                for coord, values in coordMap.items():
+        for type, dim_map in self.measurements.items():
+            for dim, coord_map in dim_map.items():
+                for coord, values in coord_map.items():
                     self.measurements[type][dim][coord] = [np.mean(values).item()]
 
     def removeZeroParameters(self) -> None:
-        for type, dimMap in self.measurements.items():
-            for dim, coordMap in dimMap.items():
-                for coord in list(coordMap.keys()):
+        for type, dim_map in self.measurements.items():
+            for dim, coord_map in dim_map.items():
+                for coord in list(coord_map.keys()):
                     if 0 in coord:
                         del self.measurements[type][dim][coord]
 
@@ -154,22 +154,22 @@ class PureDataMicrobench(Microbench):
         min: float = float("-inf"),
         max: float = float("inf"),
     ) -> None:
-        for type, dimMap in self.measurements.items():
+        for type, dim_map in self.measurements.items():
             for d in dim:
-                if d in dimMap:
-                    for coord, values in dimMap[d].items():
+                if d in dim_map:
+                    for coord, values in dim_map[d].items():
                         self.measurements[type][d][coord] = [
                             v if v >= min and v <= max else (min if v < min else max) for v in values
                         ]
 
     def merge(self, other: PureDataMicrobench) -> None:
-        for type, dimMap in other.measurements.items():
+        for type, dim_map in other.measurements.items():
             if type not in self.measurements:
                 self.measurements[type] = {}
-            for dim, coordMap in dimMap.items():
+            for dim, coord_map in dim_map.items():
                 if dim not in self.measurements[type]:
                     self.measurements[type][dim] = {}
-                for coord, values in coordMap.items():
+                for coord, values in coord_map.items():
                     if coord not in self.measurements[type][dim]:
                         self.measurements[type][dim][coord] = []
                     self.measurements[type][dim][coord].extend(values)

@@ -81,9 +81,9 @@ def __map_dummy_nodes(cu_dict: Dict[str, ObjectifiedElement]) -> Dict[str, Objec
     # iterate over all real functions
     for func in func_node_args_to_id_map:
         if func in dummy_node_args_to_id_map:
-            for dummyID in dummy_node_args_to_id_map[func]:
-                dummy_to_func_ids_map[dummyID] = func_node_args_to_id_map[func]
-                cu_dict.pop(dummyID)
+            for dummy_id in dummy_node_args_to_id_map[func]:
+                dummy_to_func_ids_map[dummy_id] = func_node_args_to_id_map[func]
+                cu_dict.pop(dummy_id)
 
     # now go through all the nodes and update the mapped dummies to real funcs
     for node_id, node in cu_dict.items():
@@ -117,7 +117,7 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             static_dependency_lines = static_dep_fd.readlines()
 
     # load instruction to lineID mapping for backwards compatibility
-    instruction_to_lineID_mapping: Dict[str, str] = dict()
+    instruction_to_line_id_mapping: Dict[str, str] = dict()
     if os.path.exists(os.path.join(output_path, "instructionID_to_lineID_mapping.txt")):
         with open(os.path.join(output_path, "instructionID_to_lineID_mapping.txt"), "r") as f:
             for line in f.readlines():
@@ -133,7 +133,7 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
                 file_id = line_id_split[0]
                 line_num = line_id_split[1]
                 _column_num = line_id_split[2]
-                instruction_to_lineID_mapping[instruction_id] = str(file_id) + ":" + str(line_num)
+                instruction_to_line_id_mapping[instruction_id] = str(file_id) + ":" + str(line_num)
 
     for line in dep_fd.readlines() + static_dependency_lines:
         dep_fields = line.split()
@@ -184,13 +184,13 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
             if ":" not in sink:
                 if "@" in sink:
                     sink = sink[: sink.index("@")]  # remove state information
-                if sink in instruction_to_lineID_mapping:
-                    sink = instruction_to_lineID_mapping[sink]
+                if sink in instruction_to_line_id_mapping:
+                    sink = instruction_to_line_id_mapping[sink]
             if ":" not in source:
                 if "@" in source:
                     source = source[: source.index("@")]  # remove state information
-                if source in instruction_to_lineID_mapping:
-                    source = instruction_to_lineID_mapping[source]
+                if source in instruction_to_line_id_mapping:
+                    source = instruction_to_line_id_mapping[source]
 
             # register dependencies
             dependencies_list.append(

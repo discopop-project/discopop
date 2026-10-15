@@ -178,19 +178,19 @@ class GPURegions:
         :return:
         """
         loop: LoopNode = cast(LoopNode, map_node(self.pet, cuID))
-        nextLoop: LoopNode = cast(LoopNode, map_node(self.pet, nextCUID))
+        next_loop: LoopNode = cast(LoopNode, map_node(self.pet, nextCUID))
 
         # next loop is not a loop!
-        if nextLoop.type != 2:
+        if next_loop.type != 2:
             return False
 
-        loopFirstChild: Node = direct_children(self.pet, loop)[0]
-        CUIDsofLoop = out_edges(self.pet, loopFirstChild.id, EdgeType.SUCCESSOR)
-        lastCUofLoop = map_node(self.pet, CUIDsofLoop[-1][1])
-        nextLoopFirstChild: Node = direct_children(self.pet, nextLoop)[0]
-        successors = out_edges(self.pet, lastCUofLoop.id, EdgeType.SUCCESSOR)
+        loop_first_child: Node = direct_children(self.pet, loop)[0]
+        cu_ids_of_loop = out_edges(self.pet, loop_first_child.id, EdgeType.SUCCESSOR)
+        last_cu_of_loop = map_node(self.pet, cu_ids_of_loop[-1][1])
+        next_loop_first_child: Node = direct_children(self.pet, next_loop)[0]
+        successors = out_edges(self.pet, last_cu_of_loop.id, EdgeType.SUCCESSOR)
         if successors:
-            if nextLoopFirstChild.id == successors[0][1]:
+            if next_loop_first_child.id == successors[0][1]:
                 return True
             else:
                 return False
@@ -201,11 +201,11 @@ class GPURegions:
 
         :return:
         """
-        regionNum = 0
+        region_num = 0
         # find the next loop of each loop in the source code
         self.findNextLoop()
 
-        self.cascadingLoopsInRegions[regionNum].append(self.gpu_loop_patterns[0].nodeID)
+        self.cascadingLoopsInRegions[region_num].append(self.gpu_loop_patterns[0].nodeID)
         for i in progress(range(0, len(self.gpu_loop_patterns)), desc="Identifying cascading loops"):
             if self.gpu_loop_patterns[i].nextLoop is not None:
                 if map_node(self.pet, cast(NodeID, self.gpu_loop_patterns[i].nextLoop)).type == 2:
@@ -213,13 +213,17 @@ class GPURegions:
                         self.gpu_loop_patterns[i].nodeID,
                         cast(NodeID, self.gpu_loop_patterns[i].nextLoop),
                     ):
-                        self.cascadingLoopsInRegions[regionNum].append(cast(NodeID, self.gpu_loop_patterns[i].nextLoop))
+                        self.cascadingLoopsInRegions[region_num].append(
+                            cast(NodeID, self.gpu_loop_patterns[i].nextLoop)
+                        )
                     else:
-                        regionNum += 1
+                        region_num += 1
                         self.cascadingLoopsInRegions.append([])
-                        self.cascadingLoopsInRegions[regionNum].append(cast(NodeID, self.gpu_loop_patterns[i].nextLoop))
+                        self.cascadingLoopsInRegions[region_num].append(
+                            cast(NodeID, self.gpu_loop_patterns[i].nextLoop)
+                        )
 
-        self.numRegions = regionNum + 1
+        self.numRegions = region_num + 1
 
     def determineDataMapping(self) -> None:
         """determine data mapping for each GPU Region and their contained GPU Loops."""
@@ -316,23 +320,25 @@ class GPURegions:
 
         for i in range(0, self.numRegions):
             for j in self.cascadingLoopsInRegions[i]:
-                gpuLoop = self.findGPULoop(j)
-                if gpuLoop is None:
+                gpu_loop = self.findGPULoop(j)
+                if gpu_loop is None:
                     continue
-                gpuLoop.printGPULoop()
+                gpu_loop.printGPULoop()
         print("==============================================")
         for i in range(0, self.numRegions):
             t: int = len(self.cascadingLoopsInRegions[i]) - 1
-            firstNodeID = self.cascadingLoopsInRegions[i][0]
-            lastNodeID = self.cascadingLoopsInRegions[i][t]
-            fn = map_node(self.pet, firstNodeID)
-            ln = map_node(self.pet, lastNodeID)
+            first_node_id = self.cascadingLoopsInRegions[i][0]
+            last_node_id = self.cascadingLoopsInRegions[i][t]
+            fn = map_node(self.pet, first_node_id)
+            ln = map_node(self.pet, last_node_id)
             start = fn.start_position()
             end = ln.end_position()
-            gpuRegionLoop = GPULoopPattern(self.pet, firstNodeID, start, end, 1000, self.project_folder_path)
-            visitedVars: Set[Variable] = set()
+            gpuRegionLoop = GPULoopPattern(  # noqa: N806  the commented-out code of this function uses the name
+                self.pet, first_node_id, start, end, 1000, self.project_folder_path
+            )
+            visited_vars: Set[Variable] = set()
             while t >= 0:
-                loopIter = self.findGPULoop(
+                loopIter = self.findGPULoop(  # noqa: N806  the commented-out code of this function uses the name
                     self.cascadingLoopsInRegions[i][t]
                 )  # tmp_result contains GPU loops inside the parent region
 
@@ -348,7 +354,7 @@ class GPURegions:
                 # loopIter.printGPULoop()
                 for v in varis:
                     if loopIter.findMappedVar("from", v):
-                        if v in visitedVars:
+                        if v in visited_vars:
                             if gpuRegionLoop.findMappedVar("to", v):
                                 # // cout << "gpuRegionLoop to: " << get_var_name(v) << endl;
                                 gpuRegionLoop.map_type_to.remove(v)
@@ -356,32 +362,32 @@ class GPURegions:
                                 #                                       gpuRegionLoop.map_type_to.end(), v),
                                 #                                gpuRegionLoop.map_type_to.end())
                                 gpuRegionLoop.map_type_alloc.append(v)
-                                visitedVars.add(v)
+                                visited_vars.add(v)
                             else:
                                 gpuRegionLoop.map_type_from.append(v)
-                                visitedVars.add(v)
+                                visited_vars.add(v)
                         else:
                             # // cout << "visited from: " << get_var_name(v) << endl;
                             gpuRegionLoop.map_type_from.append(v)
-                            visitedVars.add(v)
+                            visited_vars.add(v)
                     elif loopIter.findMappedVar("to", v):
-                        if v in visitedVars:
+                        if v in visited_vars:
                             # // cout << "loopIter to: " << get_var_name(v) << endl;
                             if gpuRegionLoop.findMappedVar("alloc", v):
                                 # // cout << "gpuRegionLoop alloc: " << get_var_name(v) << endl;
                                 gpuRegionLoop.map_type_alloc.remove(v)
 
                                 gpuRegionLoop.map_type_to.append(v)
-                                visitedVars.add(v)
+                                visited_vars.add(v)
                         else:
                             # // cout << "visited to: " << get_var_name(v) << endl;
                             gpuRegionLoop.map_type_to.append(v)
-                            visitedVars.add(v)
+                            visited_vars.add(v)
                     elif loopIter.findMappedVar("tofrom", v):
-                        if v not in visitedVars:
+                        if v not in visited_vars:
                             # // cout << "loopIter tofrom: " << get_var_name(v) << endl;
                             gpuRegionLoop.map_type_tofrom.append(v)
-                            visitedVars.add(v)
+                            visited_vars.add(v)
                         else:
                             if gpuRegionLoop.findMappedVar("to", v):
                                 gpuRegionLoop.map_type_to.remove(v)
@@ -390,9 +396,9 @@ class GPURegions:
                                 gpuRegionLoop.map_type_from.remove(v)
                                 gpuRegionLoop.map_type_tofrom.append(v)
                     elif loopIter.findMappedVar("alloc", v):
-                        if v not in visitedVars:
+                        if v not in visited_vars:
                             gpuRegionLoop.map_type_alloc.append(v)
-                            visitedVars.add(v)
+                            visited_vars.add(v)
                 t -= 1
 
             # gpuRegionLoop.printGPULoop()  # only prints first loop of the region.
