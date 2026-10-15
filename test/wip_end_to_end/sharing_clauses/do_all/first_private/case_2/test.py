@@ -1,9 +1,7 @@
 # type: ignore
 
-import copy
 import os
 import pathlib
-import subprocess
 from typing import Dict, List
 import unittest
 
@@ -14,8 +12,6 @@ import jsonpickle
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from test.utils.sharing_clauses.clauses_utils import check_clauses_for_FN, check_clauses_for_FP
 from test.utils.subprocess_wrapper.command_execution_wrapper import run_cmd
-from test.utils.validator_classes.DoAllInfoForValidation import DoAllInfoForValidation
-from subprocess import DEVNULL
 from discopop_library.ConfigProvider.config_provider import run as run_config_provider
 from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProviderArguments
 

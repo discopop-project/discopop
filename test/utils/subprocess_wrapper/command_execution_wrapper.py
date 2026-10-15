@@ -1,5 +1,5 @@
 import subprocess
-from typing import Dict, Tuple
+from typing import Dict
 
 
 def run_cmd(cmd: str, cwd: str, env: Dict[str, str]) -> None:

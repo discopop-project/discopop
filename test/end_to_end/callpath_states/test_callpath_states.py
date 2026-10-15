@@ -20,7 +20,6 @@ do-while loop shared one state."""
 import os
 import pathlib
 import re
-import unittest
 
 from test.end_to_end.pipeline import PipelineTestCase
 

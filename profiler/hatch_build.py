@@ -101,9 +101,15 @@ from scikit_build_core.build import (  # noqa: E402  (import after guard logic)
 
 # Try importing optional hooks; they may not exist in older versions.
 try:
-    from scikit_build_core.build import build_editable as _build_editable
-    from scikit_build_core.build import get_requires_for_build_editable as _get_requires_for_build_editable
-    from scikit_build_core.build import prepare_metadata_for_build_editable as _prepare_metadata_for_build_editable
+    from scikit_build_core.build import (  # noqa: F401  availability probe of the build backend
+        build_editable as _build_editable,
+    )
+    from scikit_build_core.build import (  # noqa: F401  availability probe of the build backend
+        get_requires_for_build_editable as _get_requires_for_build_editable,
+    )
+    from scikit_build_core.build import (  # noqa: F401  availability probe of the build backend
+        prepare_metadata_for_build_editable as _prepare_metadata_for_build_editable,
+    )
 
     _has_editable = True
 except ImportError:
