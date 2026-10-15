@@ -50,7 +50,7 @@ discopop_gui
 On the first start, a wizard asks for your compile script and an execution script, and creates the first configuration. See [Getting started](https://tuda-hpclab.github.io/discopop/getting_started/) for the details.
 
 ## What the GUI can do
-Detect parallel patterns: the Pattern Detection tab runs the explorer on the profiling data of your program and lists the suggested OpenMP constructs (do-all loops, reductions) with their patches.
+Detect parallel patterns: the Execute tab manages the profiling and the Pattern Detection tab analyzes the profiling data of your program in order to identify and present parallelization suggestions in the form of OpenMP constructs and corresponding patches.
 
 ![Pattern Detection tab after a detection run](docs/assets/screenshots/gui_pattern_detection.svg)
 
