@@ -13,6 +13,7 @@ on:
       - update_wiki
       - master
       - new_explorer
+      - docs/two_tier
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -24,7 +25,7 @@ jobs:
   update_wiki-build:
     name: "Update Wiki - Build"
     runs-on: ubuntu-22.04
-    if: contains(fromJSON('["refs/heads/update_wiki", "refs/heads/master", "refs/heads/new_explorer"]'), github.ref)
+    if: contains(fromJSON('["refs/heads/update_wiki", "refs/heads/master", "refs/heads/new_explorer", "refs/heads/docs/two_tier"]'), github.ref)
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,7 +46,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-22.04
     needs: update_wiki-build
-    if: contains(fromJSON('["refs/heads/update_wiki", "refs/heads/master", "refs/heads/new_explorer"]'), github.ref)
+    if: contains(fromJSON('["refs/heads/update_wiki", "refs/heads/master", "refs/heads/new_explorer", "refs/heads/docs/two_tier"]'), github.ref)
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
