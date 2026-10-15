@@ -18,18 +18,18 @@ template <std::size_t N> class DebugPrint {
 public:
   explicit DebugPrint(const char message[N]) {
     for (auto i = 0; i < N; i++) {
-      buffer[i] = message[i];
+      buffer_[i] = message[i];
     }
 
-    std::cout << "enter: " << buffer << '\n';
+    std::cout << "enter: " << buffer_ << '\n';
   }
 
-  ~DebugPrint() { std::cout << "exit: " << buffer << '\n'; }
+  ~DebugPrint() { std::cout << "exit: " << buffer_ << '\n'; }
 
 private:
-  char buffer[N];
+  char buffer_[N];
 };
 
-template <std::size_t N> inline DebugPrint<N> make_debug_print(const char (&message)[N]) {
+template <std::size_t N> inline DebugPrint<N> MakeDebugPrint(const char (&message)[N]) {
   return DebugPrint<N>(message);
 }

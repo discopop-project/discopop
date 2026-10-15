@@ -14,22 +14,22 @@
 
 #include <string>
 
-namespace __dp {
+namespace dp {
 
-struct var_info_t {
-  std::string var_name_;
-  int file_id_ = 0;
-  int instr_id_ = 0;
-  int loop_line_nr_ = 0;
-  int instr_line_ = 0;
-  char operation_ = 0;
+struct VarInfoT {
+  std::string var_name;
+  int file_id = 0;
+  int instr_id = 0;
+  int loop_line_nr = 0;
+  int instr_line = 0;
+  char operation = 0;
 
-  bool operator==(const var_info_t &other) const noexcept {
-    return var_name_ == other.var_name_ && file_id_ == other.file_id_ && instr_id_ == other.instr_id_ &&
-           loop_line_nr_ == other.loop_line_nr_ && instr_line_ == other.instr_line_ && operation_ == other.operation_;
+  bool operator==(const VarInfoT &other) const noexcept {
+    return var_name == other.var_name && file_id == other.file_id && instr_id == other.instr_id &&
+           loop_line_nr == other.loop_line_nr && instr_line == other.instr_line && operation == other.operation;
   }
 
-  bool operator!=(const var_info_t &other) const noexcept { return !(*this == other); }
+  bool operator!=(const VarInfoT &other) const noexcept { return !(*this == other); }
 };
 
-} // namespace __dp
+} // namespace dp

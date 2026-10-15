@@ -23,46 +23,46 @@ using llvm::StoreInst;
 using llvm::isa;
 using llvm::successors;
 
-InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F) : VNF(_VNF) {
-  entry = Graph::addInstructionNode(reinterpret_cast<Instruction *>(ENTRY));
-  exit = Graph::addInstructionNode(reinterpret_cast<Instruction *>(EXIT));
-  Instruction *previousInstruction;
-  for (BasicBlock &BB : F) {
+InstructionCFG::InstructionCFG(dputil::VariableNameFinder *vnf, Function &f) : vnf_(vnf) {
+  entry_ = Graph::AddInstructionNode(reinterpret_cast<Instruction *>(kEntry));
+  exit_ = Graph::AddInstructionNode(reinterpret_cast<Instruction *>(kExit));
+  Instruction *previous_instruction;
+  for (BasicBlock &bb : f) {
     // Add current block's store/load/call-instructions and declarations to
     // graph
-    previousInstruction = nullptr;
-    for (Instruction &I : BB) {
-      if (isa<StoreInst>(I) || isa<LoadInst>(I) || isa<AllocaInst>(&I)) {
-        if (previousInstruction != nullptr) {
-          Graph::addEdge(previousInstruction, &I);
+    previous_instruction = nullptr;
+    for (Instruction &i : bb) {
+      if (isa<StoreInst>(i) || isa<LoadInst>(i) || isa<AllocaInst>(&i)) {
+        if (previous_instruction != nullptr) {
+          Graph::AddEdge(previous_instruction, &i);
         }
-        previousInstruction = &I;
+        previous_instruction = &i;
       }
     }
     // Add edges from last instruction in current block to first instruction all
     // the successor blocks
-    if (previousInstruction != nullptr){
+    if (previous_instruction != nullptr){
       std::set<std::pair<BasicBlock*, Instruction*>> visited;
-      findAndAddFirstRelevantInstructionInSuccessorBlocks(&BB, previousInstruction, &visited);
+      FindAndAddFirstRelevantInstructionInSuccessorBlocks(&bb, previous_instruction, &visited);
     }
   }
   // Conect entry/exit nodes
-  for (auto instNode : Graph::getInstructionNodes()) {
-    if (instNode != entry && instNode != exit) {
-      if (Graph::getInEdges(instNode).empty()) {
-        Graph::addEdge(entry, instNode);
-      } else if (Graph::getOutEdges(instNode).empty()) {
-        Graph::addEdge(instNode, exit);
+  for (auto inst_node : Graph::GetInstructionNodes()) {
+    if (inst_node != entry_ && inst_node != exit_) {
+      if (Graph::GetInEdges(inst_node).empty()) {
+        Graph::AddEdge(entry_, inst_node);
+      } else if (Graph::GetOutEdges(inst_node).empty()) {
+        Graph::AddEdge(inst_node, exit_);
       }
     }
   }
 }
 
-void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *BB,
-                                                                         Instruction *previousInstruction,
+void InstructionCFG::FindAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBlock *bb,
+                                                                         Instruction *previous_instruction,
                                                                          std::set<std::pair<BasicBlock*, Instruction*>> *visited) {
   // Check for and break out of cycles
-  std::pair<BasicBlock*, Instruction*> tmp_pair = std::make_pair(BB, previousInstruction);
+  std::pair<BasicBlock*, Instruction*> tmp_pair = std::make_pair(bb, previous_instruction);
   const bool already_visited = visited->find(tmp_pair) != visited->end();
   if(already_visited){
     return;
@@ -70,48 +70,48 @@ void InstructionCFG::findAndAddFirstRelevantInstructionInSuccessorBlocks(BasicBl
   // register visited node
   visited->insert(tmp_pair);
 
-  for (BasicBlock *S : successors(BB)) {
-    for (Instruction &I : *S) {
-      if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
-        Graph::addEdge(previousInstruction, &I);
+  for (BasicBlock *s : successors(bb)) {
+    for (Instruction &i : *s) {
+      if (isa<StoreInst>(i) || isa<LoadInst>(i)) {
+        Graph::AddEdge(previous_instruction, &i);
         goto next;
-      } else if (isa<AllocaInst>(&I)) {
-        Graph::addEdge(previousInstruction, &I);
+      } else if (isa<AllocaInst>(&i)) {
+        Graph::AddEdge(previous_instruction, &i);
         goto next;
-      } else if (isa<ReturnInst>(&I)) {
-        Graph::addEdge(Graph::getInstructionNode(previousInstruction), exit);
+      } else if (isa<ReturnInst>(&i)) {
+        Graph::AddEdge(Graph::GetInstructionNode(previous_instruction), exit_);
       }
     }
-    if (S != BB){
-      findAndAddFirstRelevantInstructionInSuccessorBlocks(S, previousInstruction, visited);
+    if (s != bb){
+      FindAndAddFirstRelevantInstructionInSuccessorBlocks(s, previous_instruction, visited);
     }
   next:;
   }
 }
 
 
-void InstructionCFG::highlightInstructionNode(Instruction *instr) { highlightedInstructionNodes.insert(instr); }
+void InstructionCFG::HighlightInstructionNode(Instruction *instr) { highlighted_instruction_nodes_.insert(instr); }
 
-void InstructionCFG::dumpToDot(const std::string targetPath) {
+void InstructionCFG::DumpToDot(const std::string target_path) {
   // Write the graph to a DOT file
-  std::ofstream dotStream;
-  dotStream.open(targetPath);
-  dotStream << "digraph{";
+  std::ofstream dot_stream;
+  dot_stream.open(target_path);
+  dot_stream << "digraph{";
   // Create all nodes in DOT format
-  for (auto instNode : getInstructionNodes()) {
+  for (auto inst_node : GetInstructionNodes()) {
     std::string label;
     DebugLoc dl;
     Instruction *instr;
-    if (instNode == entry) {
+    if (inst_node == entry_) {
       label = "label=ENTRY";
       goto printInstructionNode;
     }
-    if (instNode == exit) {
+    if (inst_node == exit_) {
       label = "label=EXIT";
       goto printInstructionNode;
     }
-    label = "label=\"" + std::to_string(Graph::getInstructionNodeIndex(instNode)) + "\\n";
-    instr = instNode->getItem();
+    label = "label=\"" + std::to_string(Graph::GetInstructionNodeIndex(inst_node)) + "\\n";
+    instr = inst_node->GetItem();
     dl = instr->getDebugLoc();
     if (isa<StoreInst>(instr) || isa<LoadInst>(instr)) {
       if (isa<StoreInst>(instr)) {
@@ -123,7 +123,7 @@ void InstructionCFG::dumpToDot(const std::string targetPath) {
       } else {
         label += "read(";
 }
-      label += VNF->getVarName(instr);
+      label += vnf_->GetVarName(instr);
       label += ") ";
 
       if (dl) {
@@ -134,26 +134,26 @@ void InstructionCFG::dumpToDot(const std::string targetPath) {
         label += std::to_string(instr->getFunction()->getSubprogram()->getLine());
       }
       label += "\"";
-      if (highlightedInstructionNodes.find(instr) != highlightedInstructionNodes.end()) {
+      if (highlighted_instruction_nodes_.find(instr) != highlighted_instruction_nodes_.end()) {
         label += "\",fillcolor=cyan,style=filled";
       }
     } else if (isa<AllocaInst>(instr)) {
-      label += "alloca(" + VNF->getVarName(instr) + ")";
+      label += "alloca(" + vnf_->GetVarName(instr) + ")";
       label += "\",shape=rectangle,fillcolor=wheat,style=filled";
     } else {
       label += "?\"";
 }
 
   printInstructionNode:
-    dotStream << "\t\"" << getInstructionNodeIndex(instNode) << "\" [" << label << "];\n";
+    dot_stream << "\t\"" << GetInstructionNodeIndex(inst_node) << "\" [" << label << "];\n";
   }
-  dotStream << "\n\n";
+  dot_stream << "\n\n";
 
   // Now print all outgoing edges and their labels
-  for (auto e : getEdges()) {
-    dotStream << "\t\"" << getInstructionNodeIndex(e->getSrc()) << "\" -> \"" << getInstructionNodeIndex(e->getDst())
+  for (auto e : GetEdges()) {
+    dot_stream << "\t\"" << GetInstructionNodeIndex(e->GetSrc()) << "\" -> \"" << GetInstructionNodeIndex(e->GetDst())
               << "\";\n";
   }
-  dotStream << "}";
-  dotStream.close();
+  dot_stream << "}";
+  dot_stream.close();
 }

@@ -24,33 +24,33 @@ using llvm::MDNode;
 using llvm::MDString;
 using llvm::StringRef;
 using llvm::cast;
-using cu_output::xmlEscape;
+using cu_output::XmlEscape;
 
 namespace {
 
 // writes the CU graph of one function into Data.xml
 class CUGraphWriter {
 public:
-  CUGraphWriter(std::ofstream &outCUs, const std::map<std::string, std::string> &loopStartLines)
-      : outCUs(outCUs), loopStartLines(loopStartLines) {}
+  CUGraphWriter(std::ofstream &out_cus, const std::map<std::string, std::string> &loop_start_lines)
+      : out_cus_(out_cus), loop_start_lines_(loop_start_lines) {}
 
-  void printTree(Node *node, bool isRoot);
+  void PrintTree(Node *node, bool is_root);
 
 private:
-  std::string getLineNumbersString(std::set<LID> LineNumbers);
+  std::string GetLineNumbersString(std::set<LID> line_numbers);
 
-  std::string getChildrenNodesString(Node *node);
+  std::string GetChildrenNodesString(Node *node);
 
-  void printNode(Node *node, bool isRoot);
+  void PrintNode(Node *node, bool is_root);
 
-  std::ofstream &outCUs;
-  const std::map<std::string, std::string> &loopStartLines;
+  std::ofstream &out_cus_;
+  const std::map<std::string, std::string> &loop_start_lines_;
 };
 
 } // namespace
 
 /********** Output functions *********/
-std::string cu_output::xmlEscape(std::string data) {
+std::string cu_output::XmlEscape(std::string data) {
   std::string::size_type pos = 0;
   for (;;) {
     pos = data.find_first_of("\"&<>", pos);
@@ -79,29 +79,29 @@ std::string cu_output::xmlEscape(std::string data) {
   return data;
 }
 
-void cu_output::writeCUGraph(Node *root, const std::map<std::string, std::string> &loopStartLines) {
+void cu_output::WriteCuGraph(Node *root, const std::map<std::string, std::string> &loop_start_lines) {
   // OriginalVariables.txt stays empty, but is created as it always was
-  std::ofstream outOriginalVariables = profiler_files::open("OriginalVariables.txt");
-  std::ofstream outCUs = profiler_files::open("Data.xml");
+  std::ofstream out_original_variables = profiler_files::Open("OriginalVariables.txt");
+  std::ofstream out_cus = profiler_files::Open("Data.xml");
 
-  outCUs << "<Nodes>" << "\n" << "\n";
+  out_cus << "<Nodes>" << "\n" << "\n";
 
-  CUGraphWriter(outCUs, loopStartLines).printTree(root, true);
+  CUGraphWriter(out_cus, loop_start_lines).PrintTree(root, true);
 
-  outCUs << "</Nodes>" << "\n" << "\n" << "\n";
+  out_cus << "</Nodes>" << "\n" << "\n" << "\n";
 
   // closing flushes
-  outCUs.close();
-  outOriginalVariables.close();
+  out_cus.close();
+  out_original_variables.close();
 }
 
-std::string CUGraphWriter::getLineNumbersString(std::set<LID> LineNumbers) {
+std::string CUGraphWriter::GetLineNumbersString(std::set<LID> line_numbers) {
   std::string line = "";
-  for (auto li : LineNumbers) {
-    std::string temp = ',' + dputil::decodeLID(li);
+  for (auto li : line_numbers) {
+    std::string temp = ',' + dputil::DecodeLid(li);
     if (temp != ",*") {
       if (line == "") {
-        line = dputil::decodeLID(li);
+        line = dputil::DecodeLid(li);
       } else {
         line = line + temp;
       }
@@ -110,129 +110,129 @@ std::string CUGraphWriter::getLineNumbersString(std::set<LID> LineNumbers) {
   return line;
 }
 
-std::string CUGraphWriter::getChildrenNodesString(Node *root) {
-  std::string childrenIDs = "";
+std::string CUGraphWriter::GetChildrenNodesString(Node *root) {
+  std::string children_ids = "";
   int i = 0;
-  std::for_each(root->childrenNodes.begin(), root->childrenNodes.end(), [&](Node *node) {
+  std::for_each(root->children_nodes.begin(), root->children_nodes.end(), [&](Node *node) {
     if (i == 0) {
-      childrenIDs = node->ID;
+      children_ids = node->id;
       i++;
     } else {
-      childrenIDs += "," + node->ID;
+      children_ids += "," + node->id;
     }
   });
-  return childrenIDs;
+  return children_ids;
 }
 
-void CUGraphWriter::printTree(Node *root, bool isRoot) {
-  printNode(root, isRoot);
+void CUGraphWriter::PrintTree(Node *root, bool is_root) {
+  PrintNode(root, is_root);
 
-  std::for_each(root->childrenNodes.begin(), root->childrenNodes.end(), [&](Node *node) {
-    if (node->type == nodeTypes::func) {
-      isRoot = false;
+  std::for_each(root->children_nodes.begin(), root->children_nodes.end(), [&](Node *node) {
+    if (node->type == NodeTypes::kFunc) {
+      is_root = false;
     }
-    printTree(node, isRoot);
+    PrintTree(node, is_root);
   });
 }
 
-void CUGraphWriter::printNode(Node *root, bool /*isRoot*/) {
+void CUGraphWriter::PrintNode(Node *root, bool /*isRoot*/) {
   if (root->name.find("llvm")) {
     std::string start = "";
-    if (root->type == nodeTypes::loop) {
-      auto loopStart = loopStartLines.find(root->ID);
-      start = loopStart != loopStartLines.end() ? loopStart->second : "";
+    if (root->type == NodeTypes::kLoop) {
+      auto loop_start = loop_start_lines_.find(root->id);
+      start = loop_start != loop_start_lines_.end() ? loop_start->second : "";
     } else {
-      start = dputil::decodeLID(root->startLine);
+      start = dputil::DecodeLid(root->start_line);
     }
-    outCUs << "\t<Node"
-            << " id=\"" << xmlEscape(root->ID) << "\""
+    out_cus_ << "\t<Node"
+            << " id=\"" << XmlEscape(root->id) << "\""
             << " type=\"" << root->type << "\""
-            << " name=\"" << xmlEscape(root->name) << "\""
+            << " name=\"" << XmlEscape(root->name) << "\""
             << " startsAtLine = \"" << start << "\""
-            << " endsAtLine = \"" << dputil::decodeLID(root->endLine) << "\""
+            << " endsAtLine = \"" << dputil::DecodeLid(root->end_line) << "\""
             << ">" << "\n";
-    outCUs << "\t\t<childrenNodes>" << getChildrenNodesString(root) << "</childrenNodes>" << "\n";
-    if (root->type == nodeTypes::func || root->type == nodeTypes::dummy) {
-      outCUs << "\t\t<funcArguments>" << "\n";
-      for (auto ai : root->argumentsList) {
-        outCUs << "\t\t\t<arg type=\"" << xmlEscape(ai.type) << "\""
-                << " defLine=\"" << xmlEscape(ai.defLine) << "\""
-                << " accessMode=\"" << (ai.readAccess ? "R" : "") << (ai.writeAccess ? "W" : "") << "\">"
-                << xmlEscape(ai.name) << "</arg>" << "\n";
+    out_cus_ << "\t\t<childrenNodes>" << GetChildrenNodesString(root) << "</childrenNodes>" << "\n";
+    if (root->type == NodeTypes::kFunc || root->type == NodeTypes::kDummy) {
+      out_cus_ << "\t\t<funcArguments>" << "\n";
+      for (auto ai : root->arguments_list) {
+        out_cus_ << "\t\t\t<arg type=\"" << XmlEscape(ai.type) << "\""
+                << " defLine=\"" << XmlEscape(ai.def_line) << "\""
+                << " accessMode=\"" << (ai.read_access ? "R" : "") << (ai.write_access ? "W" : "") << "\">"
+                << XmlEscape(ai.name) << "</arg>" << "\n";
       }
-      outCUs << "\t\t</funcArguments>" << "\n";
+      out_cus_ << "\t\t</funcArguments>" << "\n";
 
-      std::string rlVals = "";
-      for (auto rl : root->returnLines) {
-        rlVals += dputil::decodeLID(rl) + ", ";
+      std::string rl_vals = "";
+      for (auto rl : root->return_lines) {
+        rl_vals += dputil::DecodeLid(rl) + ", ";
       }
-      outCUs << "\t\t<funcReturnLines>" << rlVals << "</funcReturnLines>" << "\n";
+      out_cus_ << "\t\t<funcReturnLines>" << rl_vals << "</funcReturnLines>" << "\n";
     }
 
-    if (root->type == nodeTypes::cu) {
+    if (root->type == NodeTypes::kCu) {
       CU *cu = static_cast<CU *>(root);
-      outCUs << "\t\t<BasicBlockID>" << cu->BBID << "</BasicBlockID>" << "\n";
-      outCUs << "\t\t<readDataSize>" << cu->readDataSize << "</readDataSize>" << "\n";
-      outCUs << "\t\t<writeDataSize>" << cu->writeDataSize << "</writeDataSize>" << "\n";
-      outCUs << "\t\t<performsFileIO>" << cu->performsFileIO << "</performsFileIO>" << "\n";
+      out_cus_ << "\t\t<BasicBlockID>" << cu->bb_id << "</BasicBlockID>" << "\n";
+      out_cus_ << "\t\t<readDataSize>" << cu->read_data_size << "</readDataSize>" << "\n";
+      out_cus_ << "\t\t<writeDataSize>" << cu->write_data_size << "</writeDataSize>" << "\n";
+      out_cus_ << "\t\t<performsFileIO>" << cu->performs_file_io << "</performsFileIO>" << "\n";
 
-      outCUs << "\t\t<instructionsCount>" << cu->instructionsCount << "</instructionsCount>" << "\n";
-      outCUs << "\t\t<instructionLines count=\"" << (cu->instructionsLineNumbers).size() << "\">"
-              << getLineNumbersString(cu->instructionsLineNumbers) << "</instructionLines>" << "\n";
-      outCUs << "\t\t<readPhaseLines count=\"" << (cu->readPhaseLineNumbers).size() << "\">"
-              << getLineNumbersString(cu->readPhaseLineNumbers) << "</readPhaseLines>" << "\n";
-      outCUs << "\t\t<writePhaseLines count=\"" << (cu->writePhaseLineNumbers).size() << "\">"
-              << getLineNumbersString(cu->writePhaseLineNumbers) << "</writePhaseLines>" << "\n";
-      outCUs << "\t\t<returnInstructions count=\"" << (cu->returnInstructions).size() << "\">"
-              << getLineNumbersString(cu->returnInstructions) << "</returnInstructions>" << "\n";
-      outCUs << "\t\t<successors>" << "\n";
-      for (auto sucCUi : cu->successorCUs) {
-        outCUs << "\t\t\t<CU>" << sucCUi << "</CU>" << "\n";
+      out_cus_ << "\t\t<instructionsCount>" << cu->instructions_count << "</instructionsCount>" << "\n";
+      out_cus_ << "\t\t<instructionLines count=\"" << (cu->instructions_line_numbers).size() << "\">"
+              << GetLineNumbersString(cu->instructions_line_numbers) << "</instructionLines>" << "\n";
+      out_cus_ << "\t\t<readPhaseLines count=\"" << (cu->read_phase_line_numbers).size() << "\">"
+              << GetLineNumbersString(cu->read_phase_line_numbers) << "</readPhaseLines>" << "\n";
+      out_cus_ << "\t\t<writePhaseLines count=\"" << (cu->write_phase_line_numbers).size() << "\">"
+              << GetLineNumbersString(cu->write_phase_line_numbers) << "</writePhaseLines>" << "\n";
+      out_cus_ << "\t\t<returnInstructions count=\"" << (cu->return_instructions).size() << "\">"
+              << GetLineNumbersString(cu->return_instructions) << "</returnInstructions>" << "\n";
+      out_cus_ << "\t\t<successors>" << "\n";
+      for (auto suc_cu_i : cu->successor_cus) {
+        out_cus_ << "\t\t\t<CU>" << suc_cu_i << "</CU>" << "\n";
       }
-      outCUs << "\t\t</successors>" << "\n";
+      out_cus_ << "\t\t</successors>" << "\n";
 
-      outCUs << "\t\t<localVariables>" << "\n";
-      for (auto lvi : cu->localVariableNames) {
-        outCUs << "\t\t\t<local type=\"" << xmlEscape(lvi.type) << "\""
-                << " defLine=\"" << xmlEscape(lvi.defLine) << "\""
-                << " accessMode=\"" << (lvi.readAccess ? "R" : "") << (lvi.writeAccess ? "W" : "") << "\">"
-                << xmlEscape(lvi.name) << "</local>" << "\n";
+      out_cus_ << "\t\t<localVariables>" << "\n";
+      for (auto lvi : cu->local_variable_names) {
+        out_cus_ << "\t\t\t<local type=\"" << XmlEscape(lvi.type) << "\""
+                << " defLine=\"" << XmlEscape(lvi.def_line) << "\""
+                << " accessMode=\"" << (lvi.read_access ? "R" : "") << (lvi.write_access ? "W" : "") << "\">"
+                << XmlEscape(lvi.name) << "</local>" << "\n";
       }
-      outCUs << "\t\t</localVariables>" << "\n";
+      out_cus_ << "\t\t</localVariables>" << "\n";
 
-      outCUs << "\t\t<globalVariables>" << "\n";
-      for (auto gvi : cu->globalVariableNames) {
-        outCUs << "\t\t\t<global type=\"" << xmlEscape(gvi.type) << "\""
-                << " defLine=\"" << xmlEscape(gvi.defLine) << "\""
-                << " accessMode=\"" << (gvi.readAccess ? "R" : "") << (gvi.writeAccess ? "W" : "") << "\">"
-                << xmlEscape(gvi.name) << "</global>" << "\n";
+      out_cus_ << "\t\t<globalVariables>" << "\n";
+      for (auto gvi : cu->global_variable_names) {
+        out_cus_ << "\t\t\t<global type=\"" << XmlEscape(gvi.type) << "\""
+                << " defLine=\"" << XmlEscape(gvi.def_line) << "\""
+                << " accessMode=\"" << (gvi.read_access ? "R" : "") << (gvi.write_access ? "W" : "") << "\">"
+                << XmlEscape(gvi.name) << "</global>" << "\n";
       }
-      outCUs << "\t\t</globalVariables>" << "\n";
+      out_cus_ << "\t\t</globalVariables>" << "\n";
 
-      outCUs << "\t\t<callsNode>" << "\n";
-      for (auto i : (cu->callLineTofunctionMap)) {
+      out_cus_ << "\t\t<callsNode>" << "\n";
+      for (auto i : (cu->call_line_to_function_map)) {
         int idx = 0;  // for correctly accessing callLineToCallInstructionMap's value
         for (auto ii : i.second) {
           // get call instruction id
-          MDNode *md = cu->callLineToCallInstructionMap[i.first][idx]->getMetadata("dp.md.instr.id");
-          std::string callInstId = "UNKNOWN";
+          MDNode *md = cu->call_line_to_call_instruction_map[i.first][idx]->getMetadata("dp.md.instr.id");
+          std::string call_inst_id = "UNKNOWN";
           if(md && md->getNumOperands() > 0){
             StringRef instruction_id_str = cast<MDString>(md->getOperand(0))->getString();
-            callInstId = instruction_id_str.split(':').second.str();
+            call_inst_id = instruction_id_str.split(':').second.str();
           }
           // append to XML file
-          outCUs << "\t\t\t<nodeCalled atLine=\"" << dputil::decodeLID(i.first) << "\" callInstId=\"" << callInstId << "\">" << ii->ID << "</nodeCalled>"
+          out_cus_ << "\t\t\t<nodeCalled atLine=\"" << dputil::DecodeLid(i.first) << "\" callInstId=\"" << call_inst_id << "\">" << ii->id << "</nodeCalled>"
                   << std::endl;
           // specifica for recursive fucntions inside loops. (Mo 5.11.2019)
-          outCUs << "\t\t\t\t<recursiveFunctionCall>" << ii->recursiveFunctionCall << "</recursiveFunctionCall>"
+          out_cus_ << "\t\t\t\t<recursiveFunctionCall>" << ii->recursive_function_call << "</recursiveFunctionCall>"
                   << std::endl;
           idx++;
         }
       }
-      outCUs << "\t\t</callsNode>" << "\n";
+      out_cus_ << "\t\t</callsNode>" << "\n";
     }
 
-    outCUs << "\t</Node>" << "\n" << "\n";
+    out_cus_ << "\t</Node>" << "\n" << "\n";
   }
 }
 /************** End of output functions *******************/

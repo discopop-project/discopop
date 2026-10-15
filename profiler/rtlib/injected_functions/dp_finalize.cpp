@@ -23,7 +23,7 @@
 
 #include <mutex>
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -31,7 +31,7 @@ extern "C" {
 void __dp_finalize(LID lid) {
   // Reached twice when the target leaves through a function that does not return to main: once
   // from the call the pass puts in front of it, and once from the .fini_array entry.
-  if (!profiling_active()) {
+  if (!ProfilingActive()) {
     return;
   }
 
@@ -42,25 +42,25 @@ void __dp_finalize(LID lid) {
   std::unique_lock<std::mutex> lock(pthread_compatibility_mutex);
 #endif
 #ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("__dp_finalize");
+  const auto debug_print = MakeDebugPrint("__dp_finalize");
 #endif
 
   {
 #ifdef DP_INTERNAL_TIMER
-    const auto timer = Timer(timers, TimerRegion::FINALIZE, true);
+    const auto timer = Timer(timers, TimerRegion::kFinalize, true);
 #endif
 
     // unwind_function_stack goes through __dp_func_exit, which takes the lock itself
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
     lock.unlock();
 #endif
-    unwind_function_stack(lid);
+    UnwindFunctionStack(lid);
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
     lock.lock();
 #endif
 
-    write_results(lid);
-    release_runtime();
+    WriteResults(lid);
+    ReleaseRuntime();
   }
 
   // Outside the scope above, so the FINALIZE timer has printed its report by now.
@@ -69,4 +69,4 @@ void __dp_finalize(LID lid) {
 }
 }
 
-} // namespace __dp
+} // namespace dp

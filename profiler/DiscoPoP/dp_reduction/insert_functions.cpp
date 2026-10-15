@@ -16,23 +16,23 @@
 
 
 // Inserts calls to allow for dynamic analysis of the loops.
-void dp_reduction::ReductionInstrumenter::insert_functions() {
+void dp_reduction::ReductionInstrumenter::InsertFunctions() {
 
   // insert function calls to monitor the variable's load and store operations
   for (auto const &instruction : instructions_) {
-    int store_line = instruction.store_inst_->getDebugLoc().getLine();
+    int store_line = instruction.store_inst->getDebugLoc().getLine();
 
     // output information about the reduction variables
-    reduction_file_ << " FileID : " << instruction.file_id_;
-    reduction_file_ << " Loop Line Number : " << instruction.loop_line_nr_;
+    reduction_file_ << " FileID : " << instruction.file_id;
+    reduction_file_ << " Loop Line Number : " << instruction.loop_line_nr;
     reduction_file_ << " Reduction Line Number : " << std::to_string(store_line);
-    reduction_file_ << " Variable Name : " << instruction.var_name_;
-    reduction_file_ << " Operation Name : " << instruction.operation_ << "\n";
+    reduction_file_ << " Variable Name : " << instruction.var_name;
+    reduction_file_ << " Operation Name : " << instruction.operation << "\n";
   }
 
   // insert function calls to monitor loop iterations
   std::ofstream loop_metadata_file;
-  std::string tmp(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
+  std::string tmp(dputil::GetEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   tmp += "/loop_meta.txt";
   loop_metadata_file.open(tmp.data());
   llvm::Type *loop_incr_fn_arg_type = llvm::Type::getInt32Ty(module_.getContext());
@@ -53,10 +53,10 @@ void dp_reduction::ReductionInstrumenter::insert_functions() {
     args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(module_.getContext()), loop_info.loop_id));
     args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(module_.getContext()), 0));  // instruction id will be replaced after assigning unique
 
-    llvm::CallInst::Create(incr_loop_counter_callee, args, "", loop_info.first_body_instr_->getIterator());
-    loop_metadata_file << loop_info.file_id_ << " ";
+    llvm::CallInst::Create(incr_loop_counter_callee, args, "", loop_info.first_body_instr->getIterator());
+    loop_metadata_file << loop_info.file_id << " ";
     loop_metadata_file << loop_info.loop_id << " ";
-    loop_metadata_file << loop_info.line_nr_ << "\n";
+    loop_metadata_file << loop_info.line_nr << "\n";
   }
   loop_metadata_file.close();
 

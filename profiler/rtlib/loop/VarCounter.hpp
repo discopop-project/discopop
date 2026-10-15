@@ -14,19 +14,19 @@
 
 #include <cstdint>
 
-namespace __dp {
+namespace dp {
 
 struct VarCounter {
-  unsigned int counters_[2] = {0, 0};
-  int64_t mem_addr_ = 0;
-  bool valid_ = true;
+  unsigned int counters[2] = {0, 0};
+  int64_t mem_addr = 0;
+  bool valid = true;
 
   bool operator==(const VarCounter &other) const noexcept {
-    return counters_[0] == other.counters_[0] && counters_[1] == other.counters_[1] && mem_addr_ == other.mem_addr_ &&
-           valid_ == other.valid_;
+    return counters[0] == other.counters[0] && counters[1] == other.counters[1] && mem_addr == other.mem_addr &&
+           valid == other.valid;
   }
 
   bool operator!=(const VarCounter &other) const noexcept { return !(*this == other); }
 };
 
-} // namespace __dp
+} // namespace dp

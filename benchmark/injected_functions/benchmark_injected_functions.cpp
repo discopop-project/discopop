@@ -87,7 +87,7 @@ std::int64_t accessed_memory[kAddressCount];
 void fill_input_pools() {
   for (std::size_t i = 0; i < kLineCount; ++i) {
     // what the pass encodes: the file id above the line number, see dputil::decodeLID
-    line_ids[i] = (static_cast<LID>(kFileId) << LIDSIZE) | static_cast<LID>(i + 1);
+    line_ids[i] = (static_cast<LID>(kFileId) << kLidSize) | static_cast<LID>(i + 1);
   }
   for (std::size_t i = 0; i < kAddressCount; ++i) {
     addresses[i] = reinterpret_cast<ADDR>(&accessed_memory[i]);
@@ -109,7 +109,7 @@ void fill_input_pools() {
 // Without this reset a benchmark would measure whichever of the two paths the benchmark that ran
 // before it happened to leave behind, and filtering down to a single benchmark would change the
 // result of the ones that remain.
-void reset_call_state() { __dp::reset_callstate_tracking(__dp::current_callpath_state); }
+void reset_call_state() { dp::ResetCallstateTracking(dp::current_callpath_state); }
 
 // --------------------------------------------------------------- benchmarks ---
 
@@ -133,9 +133,9 @@ void benchmark_read(benchmark::State &state) {
   Cursor cursor;
   for (auto _ : state) {
 #ifdef SKIP_DUP_INSTR
-    __dp::__dp_read(cursor.line(), cursor.address(), cursor.variable(), 0, 0);
+    dp::__dp_read(cursor.line(), cursor.address(), cursor.variable(), 0, 0);
 #else
-    __dp::__dp_read(cursor.line(), cursor.address(), cursor.variable());
+    dp::__dp_read(cursor.line(), cursor.address(), cursor.variable());
 #endif
     cursor.advance();
   }
@@ -146,9 +146,9 @@ void benchmark_write(benchmark::State &state) {
   Cursor cursor;
   for (auto _ : state) {
 #ifdef SKIP_DUP_INSTR
-    __dp::__dp_write(cursor.line(), cursor.address(), cursor.variable(), 0, 0);
+    dp::__dp_write(cursor.line(), cursor.address(), cursor.variable(), 0, 0);
 #else
-    __dp::__dp_write(cursor.line(), cursor.address(), cursor.variable());
+    dp::__dp_write(cursor.line(), cursor.address(), cursor.variable());
 #endif
     cursor.advance();
   }
@@ -159,9 +159,9 @@ void benchmark_decl(benchmark::State &state) {
   Cursor cursor;
   for (auto _ : state) {
 #ifdef SKIP_DUP_INSTR
-    __dp::__dp_decl(cursor.line(), cursor.address(), cursor.variable(), 0, 0);
+    dp::__dp_decl(cursor.line(), cursor.address(), cursor.variable(), 0, 0);
 #else
-    __dp::__dp_decl(cursor.line(), cursor.address(), cursor.variable());
+    dp::__dp_decl(cursor.line(), cursor.address(), cursor.variable());
 #endif
     cursor.advance();
   }
@@ -172,7 +172,7 @@ void benchmark_alloca(benchmark::State &state) {
   Cursor cursor;
   for (auto _ : state) {
     const ADDR start = cursor.address();
-    __dp::__dp_alloca(cursor.line(), cursor.variable(), start, start + 8, 8, 1);
+    dp::__dp_alloca(cursor.line(), cursor.variable(), start, start + 8, 8, 1);
     cursor.advance();
   }
 }
@@ -182,7 +182,7 @@ void benchmark_new(benchmark::State &state) {
   Cursor cursor;
   for (auto _ : state) {
     const ADDR start = cursor.address();
-    __dp::__dp_new(cursor.line(), start, start + 8, 8);
+    dp::__dp_new(cursor.line(), start, start + 8, 8);
     cursor.advance();
   }
 }
@@ -191,7 +191,7 @@ void benchmark_delete(benchmark::State &state) {
   reset_call_state();
   Cursor cursor;
   for (auto _ : state) {
-    __dp::__dp_delete(cursor.line(), cursor.address());
+    dp::__dp_delete(cursor.line(), cursor.address());
     cursor.advance();
   }
 }
@@ -204,7 +204,7 @@ void benchmark_call(benchmark::State &state) {
   reset_call_state();
   Cursor cursor;
   for (auto _ : state) {
-    __dp::__dp_call(cursor.line(), 0);
+    dp::__dp_call(cursor.line(), 0);
     cursor.advance();
   }
 }
@@ -219,8 +219,8 @@ void benchmark_function_entry_exit(benchmark::State &state) {
   for (auto _ : state) {
     const LID line = cursor.line();
     // isStart = 0: the "START" line belongs to main and is written once per program, not per call
-    __dp::__dp_func_entry(line, 0, 0);
-    __dp::__dp_func_exit(line, 0);
+    dp::__dp_func_entry(line, 0, 0);
+    dp::__dp_func_exit(line, 0);
     cursor.advance();
   }
 }
@@ -234,8 +234,8 @@ void benchmark_loop_entry_exit(benchmark::State &state) {
   for (auto _ : state) {
     const LID line = cursor.line();
     const std::int32_t loop_id = cursor.loop();
-    __dp::__dp_loop_entry(line, loop_id, kInstructionId);
-    __dp::__dp_loop_exit(line, loop_id, kInstructionId);
+    dp::__dp_loop_entry(line, loop_id, kInstructionId);
+    dp::__dp_loop_exit(line, loop_id, kInstructionId);
     cursor.advance();
   }
 }
@@ -244,7 +244,7 @@ void benchmark_loop_incr(benchmark::State &state) {
   reset_call_state();
   Cursor cursor;
   for (auto _ : state) {
-    __dp::__dp_loop_incr(cursor.loop(), kInstructionId);
+    dp::__dp_loop_incr(cursor.loop(), kInstructionId);
     cursor.advance();
   }
 }
@@ -253,7 +253,7 @@ void benchmark_report_bb(benchmark::State &state) {
   reset_call_state();
   Cursor cursor;
   for (auto _ : state) {
-    __dp::__dp_report_bb(cursor.basic_block());
+    dp::__dp_report_bb(cursor.basic_block());
     cursor.advance();
   }
 }
@@ -263,7 +263,7 @@ void benchmark_report_bb_pair(benchmark::State &state) {
   Cursor cursor;
   for (auto _ : state) {
     // semaphore set: the branch was taken, so the block is recorded
-    __dp::__dp_report_bb_pair(1, cursor.basic_block());
+    dp::__dp_report_bb_pair(1, cursor.basic_block());
     cursor.advance();
   }
 }
@@ -273,7 +273,7 @@ void benchmark_incr_taken_branch_counter(benchmark::State &state) {
   Cursor cursor;
   for (auto _ : state) {
     // cmp_res == active_on: the branch was taken, so the counter is raised
-    __dp::__dp_incr_taken_branch_counter(cursor.branch(), 1, 1);
+    dp::__dp_incr_taken_branch_counter(cursor.branch(), 1, 1);
     cursor.advance();
   }
 }
@@ -312,9 +312,9 @@ int main(int argc, char **argv) {
   // callback below would return at its first line -- with no diagnostic, and with timings that
   // look like a spectacular speedup. The call itself does nothing: the .init_array entry has
   // already run by now and __dp_init returns immediately when the runtime is up.
-  __dp::__dp_init();
+  dp::__dp_init();
 
-  if (!__dp::profiling_active()) {
+  if (!dp::ProfilingActive()) {
     std::fprintf(stderr, "ERROR: the DiscoPoP runtime is not running, so the callbacks would measure nothing.\n");
     return 1;
   }

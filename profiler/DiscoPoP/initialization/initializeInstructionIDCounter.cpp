@@ -12,13 +12,13 @@
 
 #include "DiscoPoP.hpp"
 
-void DiscoPoP::initializeInstructionIDCounter() {
-  std::string InstructionCounterFile(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  InstructionCounterFile += "/DP_InstructionIDCounter.txt";
-  if (dputil::fexists(InstructionCounterFile)) {
-    std::fstream inInstructionIDCounter(InstructionCounterFile, std::ios_base::in);
+void DiscoPoP::InitializeInstructionIdCounter() {
+  std::string instruction_counter_file(dputil::GetEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
+  instruction_counter_file += "/DP_InstructionIDCounter.txt";
+  if (dputil::FileExists(instruction_counter_file)) {
+    std::fstream in_instruction_id_counter(instruction_counter_file, std::ios_base::in);
     ;
-    inInstructionIDCounter >> InstructionIDCounter;
-    inInstructionIDCounter.close();
+    in_instruction_id_counter >> instruction_id_counter;
+    in_instruction_id_counter.close();
   }
 }

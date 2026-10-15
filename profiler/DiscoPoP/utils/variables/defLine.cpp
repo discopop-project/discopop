@@ -20,22 +20,22 @@ using llvm::Instruction;
 using llvm::filterDbgVars;
 using llvm::predecessors;
 
-std::string DiscoPoP::determineVariableDefLine(Instruction *I) {
-  std::string varDefLine{"LineNotFound"};
+std::string DiscoPoP::DetermineVariableDefLine(Instruction *i) {
+  std::string var_def_line{"LineNotFound"};
 
-  bool isGlobal = false;
-  std::string varName = determineVariableName_static(&*I, isGlobal, true, "");
-  varName = (varName.find(".addr") == varName.npos) ? varName : varName.erase(varName.find(".addr"), 5);
+  bool is_global = false;
+  std::string var_name = DetermineVariableNameStatic(&*i, is_global, true, "");
+  var_name = (var_name.find(".addr") == var_name.npos) ? var_name : var_name.erase(var_name.find(".addr"), 5);
 
-  std::string varType = determineVariableType(&*I);
+  std::string var_type = DetermineVariableType(&*i);
 //  std::cout << "\tvarName: " << varName << "\n";
 //  std::cout << "\tvarType: " << varType << "\n";
 
   // search in prior Instructions and Basic Blocks for Debug records for varName to get defLines
   bool found_var = false;
 
-  BasicBlock* current_bb = I->getParent();
-  Instruction* current_inst = I;
+  BasicBlock* current_bb = i->getParent();
+  Instruction* current_inst = i;
   std::unordered_set<BasicBlock*> visited;
   std::unordered_set<BasicBlock*> added_to_queue;
   std::queue<BasicBlock*> queue;
@@ -44,9 +44,9 @@ std::string DiscoPoP::determineVariableDefLine(Instruction *I) {
 
     auto dbg_record_range = current_inst->getDbgRecordRange();
     auto dbg_variable_range = filterDbgVars(dbg_record_range);
-    for(DbgVariableRecord &DVR : dbg_variable_range){
-      std::string IRVarName = DVR.getValue()->getName().str();
-      std::string SRCVarName = DVR.getVariable()->getName().str();
+    for(DbgVariableRecord &dvr : dbg_variable_range){
+      std::string ir_var_name = dvr.getValue()->getName().str();
+      std::string src_var_name = dvr.getVariable()->getName().str();
 //      std::cout << "\t\t-> DbgRecord: IRVarName: " << IRVarName << "\n";
 //      std::cout << "\t\t\t-> VarType: " << DVR.getVariable()->getType()->getName().str() << "\n";
 //      std::cout << "\t\t\t-> SRCVarName: " << SRCVarName << "\n";
@@ -56,11 +56,11 @@ std::string DiscoPoP::determineVariableDefLine(Instruction *I) {
 
       std::string type_str;
       llvm::raw_string_ostream rso(type_str);
-      DVR.getValue()->getType()->print(rso);
+      dvr.getValue()->getType()->print(rso);
 
-      if((varName == SRCVarName) && (varType == rso.str())){
+      if((var_name == src_var_name) && (var_type == rso.str())){
         found_var = true;
-        varDefLine = std::to_string(fileID) + ":" + std::to_string(DVR.getDebugLoc().getLine());
+        var_def_line = std::to_string(file_id) + ":" + std::to_string(dvr.getDebugLoc().getLine());
         break;
       }
     }
@@ -104,9 +104,9 @@ std::string DiscoPoP::determineVariableDefLine(Instruction *I) {
 
   }
 
-  if((varDefLine == "LineNotFound") && (programGlobalVariablesSet.count(varName))){
-    varDefLine = "GlobalVar";
+  if((var_def_line == "LineNotFound") && (program_global_variables_set_.count(var_name))){
+    var_def_line = "GlobalVar";
   }
 
-  return varDefLine;
+  return var_def_line;
 }

@@ -19,7 +19,7 @@
 #include <iostream>
 #include <string>
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -37,7 +37,7 @@ void __dp_taken_branch_counter_output() {
   std::ofstream ofile;
 
   // output information about the loops
-  ofile.open(profiler_output_path("cu_taken_branch_counter_output.txt"));
+  ofile.open(ProfilerOutputPath("cu_taken_branch_counter_output.txt"));
 
   for (auto pair : cuec) {
     ofile << pair.first << ";" << pair.second << "\n";
@@ -49,4 +49,4 @@ void __dp_taken_branch_counter_output() {
 }
 }
 
-} // namespace __dp
+} // namespace dp

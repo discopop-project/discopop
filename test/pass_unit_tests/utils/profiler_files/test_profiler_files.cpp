@@ -52,17 +52,17 @@ protected:
 } // namespace
 
 TEST_F(ProfilerFilesTest, testPathIsInTheProfilerDirectory) {
-  EXPECT_EQ(profiler_files::path("a.txt"), dir + "/a.txt");
+  EXPECT_EQ(profiler_files::Path("a.txt"), dir + "/a.txt");
 }
 
 TEST_F(ProfilerFilesTest, testPathFallsBackToTheDefaultDirectory) {
   unsetenv("DOT_DISCOPOP_PROFILER");
-  EXPECT_EQ(profiler_files::path("a.txt"), ".discopop/profiler/a.txt");
+  EXPECT_EQ(profiler_files::Path("a.txt"), ".discopop/profiler/a.txt");
 }
 
 TEST_F(ProfilerFilesTest, testStreamIsFlushedAndClosedWhenItGoesOutOfScope) {
   {
-    std::ofstream stream = profiler_files::open("out.txt");
+    std::ofstream stream = profiler_files::Open("out.txt");
     ASSERT_TRUE(stream.is_open());
     stream << "written\n";
   }
@@ -71,11 +71,11 @@ TEST_F(ProfilerFilesTest, testStreamIsFlushedAndClosedWhenItGoesOutOfScope) {
 
 TEST_F(ProfilerFilesTest, testStreamAppendsToAnExistingFile) {
   {
-    std::ofstream first = profiler_files::open("out.txt");
+    std::ofstream first = profiler_files::Open("out.txt");
     first << "first\n";
   }
   {
-    std::ofstream second = profiler_files::open("out.txt");
+    std::ofstream second = profiler_files::Open("out.txt");
     second << "second\n";
   }
   EXPECT_EQ(read("out.txt"), "first\nsecond\n");
@@ -84,7 +84,7 @@ TEST_F(ProfilerFilesTest, testStreamAppendsToAnExistingFile) {
 TEST_F(ProfilerFilesTest, testStreamCanBeAssignedToAMember) {
   // the pass keeps its files as members that are opened per module
   std::ofstream member;
-  member = profiler_files::open("out.txt");
+  member = profiler_files::Open("out.txt");
   EXPECT_TRUE(member.is_open());
   member << "x";
   member.close();
@@ -94,7 +94,7 @@ TEST_F(ProfilerFilesTest, testStreamCanBeAssignedToAMember) {
 
 TEST_F(ProfilerFilesTest, testUnopenableFileIsAStreamThatIgnoresWrites) {
   setenv("DOT_DISCOPOP_PROFILER", (dir + "/missing").c_str(), 1);
-  std::ofstream stream = profiler_files::open("out.txt");
+  std::ofstream stream = profiler_files::Open("out.txt");
   EXPECT_FALSE(stream.is_open());
   stream << "ignored";
   stream.close();
@@ -102,9 +102,9 @@ TEST_F(ProfilerFilesTest, testUnopenableFileIsAStreamThatIgnoresWrites) {
 }
 
 TEST_F(ProfilerFilesTest, testAssigningAnOpenMemberClosesItsFile) {
-  std::ofstream member = profiler_files::open("first.txt");
+  std::ofstream member = profiler_files::Open("first.txt");
   member << "first";
-  member = profiler_files::open("second.txt");
+  member = profiler_files::Open("second.txt");
   member << "second";
   member.close();
   EXPECT_EQ(read("first.txt"), "first");
@@ -112,14 +112,14 @@ TEST_F(ProfilerFilesTest, testAssigningAnOpenMemberClosesItsFile) {
 }
 
 TEST_F(ProfilerFilesTest, testWriteCounterReplacesTheContent) {
-  profiler_files::writeCounter("counter.txt", 17);
+  profiler_files::WriteCounter("counter.txt", 17);
   EXPECT_EQ(read("counter.txt"), "17");
-  profiler_files::writeCounter("counter.txt", 4);
+  profiler_files::WriteCounter("counter.txt", 4);
   EXPECT_EQ(read("counter.txt"), "4");
 }
 
 TEST_F(ProfilerFilesTest, testWriteCounterWithoutADirectoryDoesNothing) {
   setenv("DOT_DISCOPOP_PROFILER", (dir + "/missing").c_str(), 1);
-  profiler_files::writeCounter("counter.txt", 17);
+  profiler_files::WriteCounter("counter.txt", 17);
   EXPECT_EQ(read("counter.txt"), "");
 }

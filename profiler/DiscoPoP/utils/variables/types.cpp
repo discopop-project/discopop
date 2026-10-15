@@ -22,23 +22,23 @@ using llvm::cast;
 using llvm::isa;
 using llvm::raw_string_ostream;
 
-std::string DiscoPoP::determineVariableType(Instruction *I) {
+std::string DiscoPoP::DetermineVariableType(Instruction *i) {
   std::string s = "";
   std::string type_str;
-  int index = isa<StoreInst>(I) ? 1 : 0;
+  int index = isa<StoreInst>(i) ? 1 : 0;
   raw_string_ostream rso(type_str);
-  (*((I->getOperand(index))->getType())).print(rso);
+  (*((i->getOperand(index))->getType())).print(rso);
 
-  Value *operand = I->getOperand(index);
+  Value *operand = i->getOperand(index);
 
   if (operand->hasName()) {
     if (isa<GetElementPtrInst>(*operand)) {
       GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
-      Value *ptrOperand = gep->getPointerOperand();
-      PointerType *PTy = cast<PointerType>(ptrOperand->getType());
+      Value *ptr_operand = gep->getPointerOperand();
+      PointerType *p_ty = cast<PointerType>(ptr_operand->getType());
       // we've found a struct/class
-      Type *structType = pointsToStruct(PTy);
-      if (structType && gep->getNumOperands() > 2) {
+      Type *struct_type = PointsToStruct(p_ty);
+      if (struct_type && gep->getNumOperands() > 2) {
         s = "STRUCT,";
       }
 
@@ -49,10 +49,10 @@ std::string DiscoPoP::determineVariableType(Instruction *I) {
       //} else {
         // check if previous instruction is a GEP as well. If so, an Array has
         // been found (e.g. double**)
-        Value *prevInst = cast<Instruction>(gep)->getOperand(0);
-        if (isa<GetElementPtrInst>(prevInst)) {
+        Value *prev_inst = cast<Instruction>(gep)->getOperand(0);
+        if (isa<GetElementPtrInst>(prev_inst)) {
           s = "ARRAY,";
-        } else if (prevInst->getType()->isPointerTy()) {
+        } else if (prev_inst->getType()->isPointerTy()) {
           s = "ARRAY,";
         }
       //}

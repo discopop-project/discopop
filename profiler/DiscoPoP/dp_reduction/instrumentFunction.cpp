@@ -15,10 +15,10 @@
 
 // iterates over all loops in a function and calls 'instrument_loop' for each
 // one
-void dp_reduction::ReductionInstrumenter::instrument_function(llvm::Function *function, llvm::LoopInfo &loop_info) {
+void dp_reduction::ReductionInstrumenter::InstrumentFunction(llvm::Function *function, llvm::LoopInfo &loop_info) {
 
   // get the corresponding file id
-  std::int32_t tmp_file_id = services_.getFileID(*function);
+  std::int32_t tmp_file_id = services_.get_file_id(*function);
   if (tmp_file_id == 0) {
     return;
   }
@@ -26,6 +26,6 @@ void dp_reduction::ReductionInstrumenter::instrument_function(llvm::Function *fu
   //llvm::LoopInfo &loop_info = getAnalysis<llvm::LoopInfoWrapperPass>(*function).getLoopInfo();
 
   for (auto loop_it = loop_info.begin(); loop_it != loop_info.end(); ++loop_it) {
-    instrument_loop(*function, tmp_file_id, *loop_it, loop_info);
+    InstrumentLoop(*function, tmp_file_id, *loop_it, loop_info);
   }
 }

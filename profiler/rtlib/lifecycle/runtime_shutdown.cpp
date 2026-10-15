@@ -29,20 +29,20 @@
 #include <string>
 
 
-namespace __dp {
+namespace dp {
 
-void unwind_function_stack(LID lid) {
+void UnwindFunctionStack(LID lid) {
   // The loop below assumes a function stack that both halves of the bracket maintained:
   // __dp_func_entry raises the level, __dp_func_exit lowers it, and the loop drives the second
   // until the first has been undone. A benchmark build that leaves either body out (see
   // callback_body_enabled()) breaks that in one of two ways -- without the exit the level never
   // reaches -1 and this spins forever, without the entry it is already far below -1. Neither has a
   // stack worth unwinding, and the two invariants below describe one that was being maintained.
-  if (!callback_body_enabled(CallbackId::FUNC_ENTRY) || !callback_body_enabled(CallbackId::FUNC_EXIT)) {
+  if (!CallbackBodyEnabled(CallbackId::FUNC_ENTRY) || !CallbackBodyEnabled(CallbackId::FUNC_EXIT)) {
     return;
   }
 
-  while (function_manager->get_current_stack_level() >= 0) {
+  while (function_manager->GetCurrentStackLevel() >= 0) {
     __dp_func_exit(lid, 1);
   }
 
@@ -50,20 +50,20 @@ void unwind_function_stack(LID lid) {
   assert(loop_manager->empty() && "Program terminates but loop stack is not empty!");
 }
 
-void write_results(LID lid) {
-  if (DP_DEBUG) {
-    std::cout << "Program terminates at LID " << std::dec << dputil::decodeLID(lid) << ", clearing up" << std::endl;
+void WriteResults(LID lid) {
+  if (dp_debug) {
+    std::cout << "Program terminates at LID " << std::dec << dputil::DecodeLid(lid) << ", clearing up" << std::endl;
   }
 
-  if (NUM_WORKERS > 0) {
-    finalizeParallelization();
+  if (num_workers > 0) {
+    FinalizeParallelization();
   } else {
-    finalizeSingleThreadedExecution();
+    FinalizeSingleThreadedExecution();
   }
 
   {
-    DP_TIMED_SECTION(OUTPUT_LOOPS, "outputLoops");
-    loop_manager->output(*out);
+    DP_TIMED_SECTION(kOutputLoops, "outputLoops");
+    loop_manager->Output(*out);
   }
 
   // The iteration counters and the taken branch counters used to be dumped from a call the pass
@@ -75,38 +75,38 @@ void write_results(LID lid) {
   __dp_taken_branch_counter_output();
 
   {
-    DP_TIMED_SECTION(OUTPUT_FUNCS, "outputFunc");
-    function_manager->output_functions(*out);
+    DP_TIMED_SECTION(kOutputFuncs, "outputFunc");
+    function_manager->OutputFunctions(*out);
   }
 
   // hybrid analysis
   // the dependencies of the omitted instructions first: their basic blocks are
   // known to be complete only now that the target has terminated
-  process_registered_bb_deps();
-  generateStringDepMap();
+  ProcessRegisteredBbDeps();
+  GenerateStringDepMap();
   // End HA
-  outputDeps();
+  OutputDeps();
 
 
-  *out << dputil::decodeLID(lid) << " END program" << std::endl;
+  *out << dputil::DecodeLid(lid) << " END program" << std::endl;
   out->flush();
   out->close();
 
   const auto time_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
       std::chrono::high_resolution_clock::now() - statistics_profiling_start_time);
-  auto stats_file = std::ofstream(profiler_output_path("statistics/profiling_time.txt"), std::ios::out);
+  auto stats_file = std::ofstream(ProfilerOutputPath("statistics/profiling_time.txt"), std::ios::out);
   stats_file << std::to_string(time_elapsed.count()) << " ms\n";
   stats_file.close();
 }
 
-void release_runtime() {
+void ReleaseRuntime() {
   // hybrid analysis
-  delete allDeps;
-  allDeps = nullptr;
-  delete outPutDeps;
-  outPutDeps = nullptr;
-  delete bbList;
-  bbList = nullptr;
+  delete all_deps;
+  all_deps = nullptr;
+  delete out_put_deps;
+  out_put_deps = nullptr;
+  delete bb_list;
+  bb_list = nullptr;
   // End HA
 
   delete call_state_graph;
@@ -114,20 +114,20 @@ void release_runtime() {
   // The last reader of the memory manager is the allocation output in write_results(); the
   // accesses that ask it for a region id are all behind us, and the worker threads that could
   // still have been processing them were joined by finalizeParallelization().
-  destroy_manager_globals();
+  DestroyManagerGlobals();
 
   delete out;
   out = nullptr;
 
-  runtime_state = RuntimeState::Terminated;
+  runtime_state = RuntimeState::kTerminated;
 
   // last use of the manually managed globals is behind us, and every callback returns early
   // from here on, so they can go
-  destroy_immortal_globals();
+  DestroyImmortalGlobals();
 
-  if (DP_DEBUG) {
+  if (dp_debug) {
     std::cout << "Program terminated." << std::endl;
   }
 }
 
-} // namespace __dp
+} // namespace dp

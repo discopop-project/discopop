@@ -58,17 +58,17 @@ using llvm::errs;
 using llvm::isa;
 using hybrid_analysis::HybridAnalysis;
 
-constexpr bool DumpToDot = false;
-constexpr bool DP_hybrid_DEBUG = false;
+constexpr bool kDumpToDot = false;
+constexpr bool kDpHybridDebug = false;
 
 // reads a counter persisted by an earlier module (see HybridAnalysis::finalize)
-template <typename T> static void readCounter(const std::string &name, T &value) {
-  std::string counterFile(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  counterFile += "/" + name;
-  if (dputil::fexists(counterFile)) {
-    std::fstream inCounter(counterFile, std::ios_base::in);
-    inCounter >> value;
-    inCounter.close();
+template <typename T> static void ReadCounter(const std::string &name, T &value) {
+  std::string counter_file(dputil::GetEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
+  counter_file += "/" + name;
+  if (dputil::FileExists(counter_file)) {
+    std::fstream in_counter(counter_file, std::ios_base::in);
+    in_counter >> value;
+    in_counter.close();
   }
 }
 
@@ -78,9 +78,9 @@ template <typename T> static void readCounter(const std::string &name, T &value)
 // call or return right before it (__dp_call before an invoke, __dp_func_exit /
 // __dp_finalize before a return), as these change the callpath state and the
 // report has to see the state of BB's accesses.
-static Instruction *getHybridReportInsertionPoint(BasicBlock *BB) {
-  Instruction *insertionPoint = BB->getTerminator();
-  for (Instruction *prev = insertionPoint->getPrevNode(); prev; prev = prev->getPrevNode()) {
+static Instruction *GetHybridReportInsertionPoint(BasicBlock *bb) {
+  Instruction *insertion_point = bb->getTerminator();
+  for (Instruction *prev = insertion_point->getPrevNode(); prev; prev = prev->getPrevNode()) {
     if (isa<DbgInfoIntrinsic>(prev)) {
       continue;
     }
@@ -92,32 +92,32 @@ static Instruction *getHybridReportInsertionPoint(BasicBlock *BB) {
     if (fn != "__dp_call" && fn != "__dp_func_exit" && fn != "__dp_finalize") {
       break;
     }
-    insertionPoint = prev;
+    insertion_point = prev;
   }
-  return insertionPoint;
+  return insertion_point;
 }
 
 // DPInstrumentationOmission
-HybridAnalysis::HybridAnalysis(Module &M) {
-  Type *Void = Type::getVoidTy(M.getContext());
-  Int32 = Type::getInt32Ty(M.getContext());
+HybridAnalysis::HybridAnalysis(Module &m) {
+  Type *void_type = Type::getVoidTy(m.getContext());
+  int32_ = Type::getInt32Ty(m.getContext());
 
-  bbDepCount = 0;
-  readCounter("DP_BBDepCounter.txt", bbDepCount);
+  bb_dep_count = 0;
+  ReadCounter("DP_BBDepCounter.txt", bb_dep_count);
 
-  nextFreeStaticMemoryRegionID = 0;
-  readCounter("DP_StaticMemoryRegionIDCounter.txt", nextFreeStaticMemoryRegionID);
+  next_free_static_memory_region_id_ = 0;
+  ReadCounter("DP_StaticMemoryRegionIDCounter.txt", next_free_static_memory_region_id_);
 
-  ReportBB = M.getOrInsertFunction("__dp_report_bb", Void, Int32);
-  ReportBBPair = M.getOrInsertFunction("__dp_report_bb_pair", Void, Int32, Int32);
-  BBState = M.getOrInsertFunction("__dp_bb_state", Int32);
-  VNF = std::make_unique<dputil::VariableNameFinder>(M);
+  report_bb_ = m.getOrInsertFunction("__dp_report_bb", void_type, int32_);
+  report_bb_pair_ = m.getOrInsertFunction("__dp_report_bb_pair", void_type, int32_, int32_);
+  bb_state_ = m.getOrInsertFunction("__dp_bb_state", int32_);
+  vnf_ = std::make_unique<dputil::VariableNameFinder>(m);
 }
 
-bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
-                                     std::map<Instruction *, CallInst *> &insertedAccessCallbacks,
-                                     std::map<std::string, std::string> &trueVarNamesFromMetadataMap) {
-  if (F.getInstructionCount() == 0) {
+bool HybridAnalysis::AnalyzeFunction(Function &f, ModuleAnalysisManager &mam,
+                                     std::map<Instruction *, CallInst *> &inserted_access_callbacks,
+                                     std::map<std::string, std::string> &true_var_names_from_metadata_map) {
+  if (f.getInstructionCount() == 0) {
     return false;
 }
 
@@ -131,51 +131,51 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
 #endif
   /////
 
-  if (DP_hybrid_DEBUG) {
-    errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
+  if (kDpHybridDebug) {
+    errs() << "\n---------- Omission Analysis on " << f.getName() << " ----------\n";
 }
 
   DebugLoc dl;
-  Value *V;
+  Value *v;
 
-  std::set<Instruction *> omittableInstructions;
+  std::set<Instruction *> omittable_instructions;
 
-  std::set<Value *> staticallyPredictableValues;
+  std::set<Value *> statically_predictable_values;
   // Get local values (variables)
-  for (Instruction &I : F.getEntryBlock()) {
-    if (AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
-      staticallyPredictableValues.insert(AI);
+  for (Instruction &i : f.getEntryBlock()) {
+    if (AllocaInst *ai = dyn_cast<AllocaInst>(&i)) {
+      statically_predictable_values.insert(ai);
     }
   }
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
+  for (BasicBlock &bb : f) {
+    for (Instruction &i : bb) {
       // Remove from staticallyPredictableValues those which are passed to
       // other functions (by ref/ptr)
-      if (CallInst *call_inst = dyn_cast<CallInst>(&I)) {
+      if (CallInst *call_inst = dyn_cast<CallInst>(&i)) {
         if (call_inst->getCalledFunction()) {
           for (uint i = 0; i < call_inst->getNumOperands() - 1; ++i) {
-            V = call_inst->getArgOperand(i);
-            std::set<Value *>::iterator it = staticallyPredictableValues.find(V);
-            if (it != staticallyPredictableValues.end()) {
-              staticallyPredictableValues.erase(V);
-              if (DP_hybrid_DEBUG) {
-                errs() << VNF->getVarName(V) << "\n";
+            v = call_inst->getArgOperand(i);
+            std::set<Value *>::iterator it = statically_predictable_values.find(v);
+            if (it != statically_predictable_values.end()) {
+              statically_predictable_values.erase(v);
+              if (kDpHybridDebug) {
+                errs() << vnf_->GetVarName(v) << "\n";
 }
             }
           }
         }
       }
       // Remove values from locals if dereferenced
-      if (isa<StoreInst>(I)) {
-        V = I.getOperand(0);
+      if (isa<StoreInst>(i)) {
+        v = i.getOperand(0);
         std::set < Value*> to_be_removed;
-        for (Value *w : staticallyPredictableValues) {
-          if (w == V) {
-            to_be_removed.insert(V);
+        for (Value *w : statically_predictable_values) {
+          if (w == v) {
+            to_be_removed.insert(v);
           }
         }
         for(Value* w: to_be_removed){
-          staticallyPredictableValues.erase(w);
+          statically_predictable_values.erase(w);
         }
       }
     }
@@ -183,39 +183,39 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
 
   // assign static memory region IDs to statically predictable values and thus
   // dependencies
-  std::unordered_map<std::string, std::pair<std::string, std::string>> staticValueNameToMemRegIDMap; // <SSA variable name>: (original variable
+  std::unordered_map<std::string, std::pair<std::string, std::string>> static_value_name_to_mem_reg_id_map; // <SSA variable name>: (original variable
                                                                             // name, statically assigned MemReg ID)
   std::int64_t next_id;
-  std::string llvmIRVarName;
-  std::string originalVarName;
-  std::string staticMemoryRegionID;
-  for (auto V : staticallyPredictableValues) {
-    next_id = nextFreeStaticMemoryRegionID++;
-    llvmIRVarName = VNF->getVarName(V);
+  std::string llvm_ir_var_name;
+  std::string original_var_name;
+  std::string static_memory_region_id;
+  for (auto v : statically_predictable_values) {
+    next_id = next_free_static_memory_region_id_++;
+    llvm_ir_var_name = vnf_->GetVarName(v);
     // Note: Using variables names as keys is only possible at this point,
     // since the map is created for each function individually. Thus, we can
     // rely on the SSA properties of LLVM IR and can assume that e.g. scoping
     // is handled by LLVM and destinct variable names are introduced.
-    originalVarName = trueVarNamesFromMetadataMap[llvmIRVarName];
-    if (originalVarName.size() == 0) {
+    original_var_name = true_var_names_from_metadata_map[llvm_ir_var_name];
+    if (original_var_name.size() == 0) {
       // no original variable name could be identified using the available
       // metadata. Fall back to the LLVM IR name of the value.
-      originalVarName = llvmIRVarName;
+      original_var_name = llvm_ir_var_name;
     }
-    staticMemoryRegionID = "S" + std::to_string(next_id);
-    staticValueNameToMemRegIDMap[llvmIRVarName] = std::pair<std::string, std::string>(originalVarName, staticMemoryRegionID);
+    static_memory_region_id = "S" + std::to_string(next_id);
+    static_value_name_to_mem_reg_id_map[llvm_ir_var_name] = std::pair<std::string, std::string>(original_var_name, static_memory_region_id);
   }
 
-  if (DP_hybrid_DEBUG) {
+  if (kDpHybridDebug) {
     errs() << "--- Local Values ---\n";
-    for (auto V : staticallyPredictableValues) {
-      errs() << VNF->getVarName(V) << "\n";
+    for (auto v : statically_predictable_values) {
+      errs() << vnf_->GetVarName(v) << "\n";
     }
   }
 
   // Perform the SPA dependence analysis
   std::int32_t fid;
-  dputil::determineFileID(F, fid);
+  dputil::DetermineFileId(f, fid);
   // The dependencies are reported per execution of the basic block holding
   // their sinks, together with the callpath states of their ends, so that
   // they can be attributed to calling contexts and loop iterations like the
@@ -226,7 +226,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   // sink BB -> dependencies whose source lies in the same execution of the
   // sink BB, before the sink, or which have no source instruction (INIT):
   // both ends get the state of the sink BB's execution
-  std::map<BasicBlock *, std::set<std::string>> conditionalBBDepMap;
+  std::map<BasicBlock *, std::set<std::string>> conditional_bb_dep_map;
   // source BB -> variable -> sink BB -> dependencies whose source lies in an
   // earlier execution of the source BB (or of the sink BB itself). Per source
   // BB and variable, a per-invocation semaphore holds the state of the most
@@ -236,144 +236,144 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   // the loop's header on the "j++" of its previous execution). The source
   // gets the semaphore's state, the sink the state of the sink BB's
   // execution. Only reported while the semaphore is set.
-  std::map<BasicBlock *, std::map<Value *, std::map<BasicBlock *, std::set<std::string>>>> conditionalBBPairDepMap;
+  std::map<BasicBlock *, std::map<Value *, std::map<BasicBlock *, std::set<std::string>>>> conditional_bb_pair_dep_map;
 
   //auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-  llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent()).getManager();
+  llvm::FunctionAnalysisManager &fam = mam.getResult<FunctionAnalysisManagerModuleProxy>(*f.getParent()).getManager();
   //llvm::LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
-  llvm::DominatorTree &DT= fam.getResult<llvm::DominatorTreeAnalysis>(F);
+  llvm::DominatorTree &dt= fam.getResult<llvm::DominatorTreeAnalysis>(f);
 
-  InstructionCFG CFG(VNF.get(), F);
-  InstructionDG DG(VNF.get(), &CFG, fid);
+  InstructionCFG cfg(vnf_.get(), f);
+  InstructionDG dg(vnf_.get(), &cfg, fid);
 
   // collect init instruction to prevent false-positive WAW Dependences due to allocations in loops,
   // which will be moved to the function entry
-  std::map<std::string, std::set<std::string>> lineToInitializedVarsMap;
-  for (auto edge : DG.getEdges()){
-    if(DG.edgeIsINIT(edge)){
-      std::string initLine = DG.getInitEdgeInstructionLine(edge);
-      std::string varIdentifier = DG.getValueNameAndMemRegIDFromEdge(edge, staticValueNameToMemRegIDMap);
+  std::map<std::string, std::set<std::string>> line_to_initialized_vars_map;
+  for (auto edge : dg.GetEdges()){
+    if(dg.EdgeIsInit(edge)){
+      std::string init_line = dg.GetInitEdgeInstructionLine(edge);
+      std::string var_identifier = dg.GetValueNameAndMemRegIdFromEdge(edge, static_value_name_to_mem_reg_id_map);
 
-      if(lineToInitializedVarsMap.find(initLine) == lineToInitializedVarsMap.end()){
+      if(line_to_initialized_vars_map.find(init_line) == line_to_initialized_vars_map.end()){
         std::set<std::string> tmp;
-        lineToInitializedVarsMap[initLine] = tmp;
+        line_to_initialized_vars_map[init_line] = tmp;
       }
-      lineToInitializedVarsMap[initLine].insert(varIdentifier);
+      line_to_initialized_vars_map[init_line].insert(var_identifier);
     }
   }
 
-  for (auto edge : DG.getEdges()) {
-    Instruction *Src = edge->getSrc()->getItem();
-    Instruction *Dst = edge->getDst()->getItem();
+  for (auto edge : dg.GetEdges()) {
+    Instruction *src = edge->GetSrc()->GetItem();
+    Instruction *dst = edge->GetDst()->GetItem();
 
-    V = Src->getOperand(isa<StoreInst>(Src) ? 1 : 0);
-    if (isa<AllocaInst>(Dst)) {
-      V = dyn_cast<Value>(Dst);
+    v = src->getOperand(isa<StoreInst>(src) ? 1 : 0);
+    if (isa<AllocaInst>(dst)) {
+      v = dyn_cast<Value>(dst);
 }
 
-    if (staticallyPredictableValues.find(V) == staticallyPredictableValues.end()) {
+    if (statically_predictable_values.find(v) == statically_predictable_values.end()) {
       continue;
 }
 
-    if (Src != Dst && DT.dominates(Dst, Src) && (isa<AllocaInst>(Dst) || Dst->getParent() == Src->getParent())) {
-      if (!conditionalBBDepMap.count(Src->getParent())) {
+    if (src != dst && dt.dominates(dst, src) && (isa<AllocaInst>(dst) || dst->getParent() == src->getParent())) {
+      if (!conditional_bb_dep_map.count(src->getParent())) {
         std::set<std::string> tmp;
-        conditionalBBDepMap[Src->getParent()] = tmp;
+        conditional_bb_dep_map[src->getParent()] = tmp;
       }
-      conditionalBBDepMap[Src->getParent()].insert(DG.edgeToInstructionBasedDPDep(edge, staticValueNameToMemRegIDMap));
+      conditional_bb_dep_map[src->getParent()].insert(dg.EdgeToInstructionBasedDpDep(edge, static_value_name_to_mem_reg_id_map));
     } else {
       // Prevent reporting of false-positive WAW Dependencies due to alloca movement from e.g. loops to function entry
-      bool insertDep = true;
-      if(Dst == Src){ // check if instruciton are the same
+      bool insert_dep = true;
+      if(dst == src){ // check if instruciton are the same
         // check if initialization exists in the instruction line
-        if(lineToInitializedVarsMap.find(DG.getInstructionLine(Dst)) != lineToInitializedVarsMap.end()){
+        if(line_to_initialized_vars_map.find(dg.GetInstructionLine(dst)) != line_to_initialized_vars_map.end()){
           // check if the accessed variable is initialed here
-          std::string varIdentifier = DG.getValueNameAndMemRegIDFromEdge(edge, staticValueNameToMemRegIDMap);
-          if(lineToInitializedVarsMap[DG.getInstructionLine(Dst)].find(varIdentifier) != lineToInitializedVarsMap[DG.getInstructionLine(Dst)].end()){
+          std::string var_identifier = dg.GetValueNameAndMemRegIdFromEdge(edge, static_value_name_to_mem_reg_id_map);
+          if(line_to_initialized_vars_map[dg.GetInstructionLine(dst)].find(var_identifier) != line_to_initialized_vars_map[dg.GetInstructionLine(dst)].end()){
             // ignore this access as the initialized variable is accessed
-            insertDep = false;
+            insert_dep = false;
           }
         }
       }
 
-      if(insertDep){
-        conditionalBBPairDepMap[Dst->getParent()][V][Src->getParent()].insert(
-          DG.edgeToInstructionBasedDPDep(edge, staticValueNameToMemRegIDMap));
+      if(insert_dep){
+        conditional_bb_pair_dep_map[dst->getParent()][v][src->getParent()].insert(
+          dg.EdgeToInstructionBasedDpDep(edge, static_value_name_to_mem_reg_id_map));
       }
     }
-    omittableInstructions.insert(Src);
-    omittableInstructions.insert(Dst);
+    omittable_instructions.insert(src);
+    omittable_instructions.insert(dst);
   }
 
   // Omit SPA instructions with no dependences
-  for (auto node : DG.getInstructionNodes()) {
-    if (!isa<StoreInst>(node->getItem()) && !!isa<LoadInst>(node->getItem())) {
+  for (auto node : dg.GetInstructionNodes()) {
+    if (!isa<StoreInst>(node->GetItem()) && !!isa<LoadInst>(node->GetItem())) {
       continue;
 }
-    V = node->getItem()->getOperand(isa<StoreInst>(node->getItem()) ? 1 : 0);
-    if (!DG.getInEdges(node).size() && !DG.getOutEdges(node).size() &&
-        staticallyPredictableValues.find(V) != staticallyPredictableValues.end()) {
-      omittableInstructions.insert(node->getItem());
+    v = node->GetItem()->getOperand(isa<StoreInst>(node->GetItem()) ? 1 : 0);
+    if (!dg.GetInEdges(node).size() && !dg.GetOutEdges(node).size() &&
+        statically_predictable_values.find(v) != statically_predictable_values.end()) {
+      omittable_instructions.insert(node->GetItem());
 }
   }
 
   // Add observation of execution of single basic blocks
-  for (auto pair : conditionalBBDepMap) {
+  for (auto pair : conditional_bb_dep_map) {
     // Insert call to reportbb
-    Instruction *insertionPoint = getHybridReportInsertionPoint(pair.first);
-    CallInst::Create(ReportBB, ConstantInt::get(Int32, bbDepCount), "", insertionPoint->getIterator());
+    Instruction *insertion_point = GetHybridReportInsertionPoint(pair.first);
+    CallInst::Create(report_bb_, ConstantInt::get(int32_, bb_dep_count), "", insertion_point->getIterator());
 
     // ---- Insert deps into string ----
-    if (bbDepCount) {
-      bbDepString += "/";
+    if (bb_dep_count) {
+      bb_dep_string_ += "/";
 }
     bool first = true;
-    bbDepString += std::to_string(bbDepCount) + "=";
+    bb_dep_string_ += std::to_string(bb_dep_count) + "=";
     for (auto dep : pair.second) {
       if (!first) {
-        bbDepString += ",";
+        bb_dep_string_ += ",";
 }
-      bbDepString += dep;
+      bb_dep_string_ += dep;
       first = false;
     }
     // ---------------------------------
-    ++bbDepCount;
+    ++bb_dep_count;
   }
 
   // Add observation of in-order execution of pairs of basic blocks
   // the basic blocks writing each variable which is the source of a pair dependency
-  std::map<Value *, std::set<BasicBlock *>> writersOfVariable;
-  for (auto &sourceBlock : conditionalBBPairDepMap) {
-    for (auto &variable : sourceBlock.second) {
-      writersOfVariable[variable.first];
+  std::map<Value *, std::set<BasicBlock *>> writers_of_variable;
+  for (auto &source_block : conditional_bb_pair_dep_map) {
+    for (auto &variable : source_block.second) {
+      writers_of_variable[variable.first];
     }
   }
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      if (StoreInst *store = dyn_cast<StoreInst>(&I)) {
-        auto writers = writersOfVariable.find(store->getPointerOperand());
-        if (writers != writersOfVariable.end()) {
-          writers->second.insert(&BB);
+  for (BasicBlock &bb : f) {
+    for (Instruction &i : bb) {
+      if (StoreInst *store = dyn_cast<StoreInst>(&i)) {
+        auto writers = writers_of_variable.find(store->getPointerOperand());
+        if (writers != writers_of_variable.end()) {
+          writers->second.insert(&bb);
         }
       }
     }
   }
   // one semaphore per (source BB, variable)
   std::map<std::pair<BasicBlock *, Value *>, AllocaInst *> semaphores;
-  for (auto &sourceBlock : conditionalBBPairDepMap) {
-    for (auto &variable : sourceBlock.second) {
-      auto AI = new AllocaInst(Int32, 0, "__dp_bb", llvmcompat::nextInstruction(F.getEntryBlock().getFirstNonPHI())->getIterator());
-      new StoreInst(ConstantInt::get(Int32, 0), AI, false, llvmcompat::nextInstruction(AI)->getIterator());
-      semaphores[{sourceBlock.first, variable.first}] = AI;
+  for (auto &source_block : conditional_bb_pair_dep_map) {
+    for (auto &variable : source_block.second) {
+      auto ai = new AllocaInst(int32_, 0, "__dp_bb", llvmcompat::NextInstruction(f.getEntryBlock().getFirstNonPHI())->getIterator());
+      new StoreInst(ConstantInt::get(int32_, 0), ai, false, llvmcompat::NextInstruction(ai)->getIterator());
+      semaphores[{source_block.first, variable.first}] = ai;
     }
   }
   // sink BB -> (semaphore, dependencies)
-  std::map<BasicBlock *, std::vector<std::pair<AllocaInst *, const std::set<std::string> *>>> reportsOfBlock;
-  for (auto &sourceBlock : conditionalBBPairDepMap) {
-    for (auto &variable : sourceBlock.second) {
-      for (auto &sinkBlock : variable.second) {
-        reportsOfBlock[sinkBlock.first].push_back(
-            {semaphores[{sourceBlock.first, variable.first}], &sinkBlock.second});
+  std::map<BasicBlock *, std::vector<std::pair<AllocaInst *, const std::set<std::string> *>>> reports_of_block;
+  for (auto &source_block : conditional_bb_pair_dep_map) {
+    for (auto &variable : source_block.second) {
+      for (auto &sink_block : variable.second) {
+        reports_of_block[sink_block.first].push_back(
+            {semaphores[{source_block.first, variable.first}], &sink_block.second});
       }
     }
   }
@@ -382,63 +382,63 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   // it writes (of other source BBs), record its own state in its semaphores.
   // Reporting first lets a dependency on an earlier execution of the same
   // block see the state of that execution.
-  for (BasicBlock &BB : F) {
-    Instruction *insertionPoint = getHybridReportInsertionPoint(&BB);
-    auto reports = reportsOfBlock.find(&BB);
-    if (reports != reportsOfBlock.end()) {
+  for (BasicBlock &bb : f) {
+    Instruction *insertion_point = GetHybridReportInsertionPoint(&bb);
+    auto reports = reports_of_block.find(&bb);
+    if (reports != reports_of_block.end()) {
       for (auto &report : reports->second) {
-        auto LI = new LoadInst(Int32, report.first, Twine(""), false, insertionPoint->getIterator());
-        CallInst::Create(ReportBBPair, ArrayRef<Value *>({LI, ConstantInt::get(Int32, bbDepCount)}), "", insertionPoint->getIterator());
+        auto li = new LoadInst(int32_, report.first, Twine(""), false, insertion_point->getIterator());
+        CallInst::Create(report_bb_pair_, ArrayRef<Value *>({li, ConstantInt::get(int32_, bb_dep_count)}), "", insertion_point->getIterator());
         // ---- Insert deps into string ----
-        if (bbDepCount) {
-          bbDepString += "/";
+        if (bb_dep_count) {
+          bb_dep_string_ += "/";
 }
-        bbDepString += std::to_string(bbDepCount);
-        bbDepString += "=";
+        bb_dep_string_ += std::to_string(bb_dep_count);
+        bb_dep_string_ += "=";
         bool first = true;
         for (auto &dep : *report.second) {
           if (!first) {
-            bbDepString += ",";
+            bb_dep_string_ += ",";
 }
-          bbDepString += dep;
+          bb_dep_string_ += dep;
           first = false;
         }
         // ----------------------------------
-        ++bbDepCount;
+        ++bb_dep_count;
       }
     }
-    if (isa<ReturnInst>(BB.getTerminator())) {
+    if (isa<ReturnInst>(bb.getTerminator())) {
       // no later execution of a sink in this invocation
       continue;
     }
-    for (auto &writers : writersOfVariable) {
-      if (writers.second.count(&BB) == 0) {
+    for (auto &writers : writers_of_variable) {
+      if (writers.second.count(&bb) == 0) {
         continue;
       }
       for (auto &semaphore : semaphores) {
-        if (semaphore.first.second == writers.first && semaphore.first.first != &BB) {
-          new StoreInst(ConstantInt::get(Int32, 0), semaphore.second, false, insertionPoint->getIterator());
+        if (semaphore.first.second == writers.first && semaphore.first.first != &bb) {
+          new StoreInst(ConstantInt::get(int32_, 0), semaphore.second, false, insertion_point->getIterator());
         }
       }
     }
-    auto sourceBlock = conditionalBBPairDepMap.find(&BB);
-    if (sourceBlock != conditionalBBPairDepMap.end()) {
+    auto source_block = conditional_bb_pair_dep_map.find(&bb);
+    if (source_block != conditional_bb_pair_dep_map.end()) {
       // the current callpath state + 1, so that 0 keeps meaning "no source"
-      auto BBStateCall = CallInst::Create(BBState, "", insertionPoint->getIterator());
-      for (auto &variable : sourceBlock->second) {
-        new StoreInst(BBStateCall, semaphores[{&BB, variable.first}], false, insertionPoint->getIterator());
+      auto bb_state_call = CallInst::Create(bb_state_, "", insertion_point->getIterator());
+      for (auto &variable : source_block->second) {
+        new StoreInst(bb_state_call, semaphores[{&bb, variable.first}], false, insertion_point->getIterator());
       }
     }
   }
 
-  if (DumpToDot) {
-    CFG.dumpToDot(fileName + "_" + std::string(F.getName()) + ".CFG.dot");
-    DG.dumpToDot(fileName + "_" + std::string(F.getName()) + ".DG.dot");
+  if (kDumpToDot) {
+    cfg.DumpToDot(file_name_ + "_" + std::string(f.getName()) + ".CFG.dot");
+    dg.DumpToDot(file_name_ + "_" + std::string(f.getName()) + ".DG.dot");
   }
 
-  if (DP_hybrid_DEBUG) {
+  if (kDpHybridDebug) {
     errs() << "--- Conditional BB Dependences:\n";
-    for (auto pair : conditionalBBDepMap) {
+    for (auto pair : conditional_bb_dep_map) {
       errs() << pair.first->getName() << ":\n";
       for (auto s : pair.second) {
         errs() << "\t" << s << "\n";
@@ -446,7 +446,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
     }
 
     errs() << "--- Conditional BB-Pair Dependences:\n";
-    for (auto &pair1 : conditionalBBPairDepMap) {
+    for (auto &pair1 : conditional_bb_pair_dep_map) {
       for (auto &variable : pair1.second) {
         for (auto &pair2 : variable.second) {
           errs() << pair1.first->getName() << "-";
@@ -459,27 +459,27 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
     }
   }
 
-  if (DP_hybrid_DEBUG) {
+  if (kDpHybridDebug) {
     errs() << "--- Program Instructions:\n";
-    for (BasicBlock &BB : F) {
-      for (Instruction &I : BB) {
-        if (!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I)) {
+    for (BasicBlock &bb : f) {
+      for (Instruction &i : bb) {
+        if (!isa<StoreInst>(i) && !isa<LoadInst>(i) && !isa<AllocaInst>(i)) {
           continue;
 }
-        errs() << "\t" << (isa<StoreInst>(I) ? "Write " : (isa<AllocaInst>(I) ? "Alloca " : "Read ")) << " | ";
-        if ((dl = I.getDebugLoc())) {
+        errs() << "\t" << (isa<StoreInst>(i) ? "Write " : (isa<AllocaInst>(i) ? "Alloca " : "Read ")) << " | ";
+        if ((dl = i.getDebugLoc())) {
           errs() << dl.getLine() << "," << dl.getCol();
         } else {
-          errs() << F.getSubprogram()->getLine() << ",*";
+          errs() << f.getSubprogram()->getLine() << ",*";
         }
         errs() << " | ";
-        V = I.getOperand(isa<StoreInst>(I) ? 1 : 0);
-        if (isa<AllocaInst>(I)) {
-          V = dyn_cast<Value>(&I);
+        v = i.getOperand(isa<StoreInst>(i) ? 1 : 0);
+        if (isa<AllocaInst>(i)) {
+          v = dyn_cast<Value>(&i);
         }
-        errs() << VNF->getVarName(V);
+        errs() << vnf_->GetVarName(v);
 
-        if (omittableInstructions.find(&I) != omittableInstructions.end()) {
+        if (omittable_instructions.find(&i) != omittable_instructions.end()) {
           errs() << " | OMITTED";
         }
         errs() << "\n";
@@ -493,13 +493,13 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   // to sit next to it: the two are neighbours only as long as nothing between the
   // instrumentation and here moves them apart, and an instruction whose call is not found
   // keeps being profiled although its dependencies have been reported statically.
-  for (Instruction *I : omittableInstructions) {
-    const auto callback = insertedAccessCallbacks.find(I);
-    if (callback == insertedAccessCallbacks.end()) {
+  for (Instruction *i : omittable_instructions) {
+    const auto callback = inserted_access_callbacks.find(i);
+    if (callback == inserted_access_callbacks.end()) {
       continue;
 }
     callback->second->eraseFromParent();
-    insertedAccessCallbacks.erase(callback);
+    inserted_access_callbacks.erase(callback);
   }
 
   // Report statically identified dependencies
@@ -513,32 +513,32 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   // of a conditional reduction - and a lost dependency is what produces a
   // wrong suggestion. An over-approximated one only costs a suggestion.
 
-  std::ofstream staticDependencyFile = profiler_files::open("static_dependencies.txt");
+  std::ofstream static_dependency_file = profiler_files::Open("static_dependencies.txt");
 
-  for (auto pair : conditionalBBDepMap) {
+  for (auto pair : conditional_bb_dep_map) {
     for (auto s : pair.second) {
-      staticDependencyFile << s << "\n";
+      static_dependency_file << s << "\n";
     }
   }
-  for (auto &pair1 : conditionalBBPairDepMap) {
+  for (auto &pair1 : conditional_bb_pair_dep_map) {
     for (auto &variable : pair1.second) {
       for (auto &pair2 : variable.second) {
         for (auto s : pair2.second) {
-          staticDependencyFile << s << "\n";
+          static_dependency_file << s << "\n";
         }
       }
     }
   }
 
-  if (DP_hybrid_DEBUG) {
-    errs() << "Done with function " << F.getName() << ":\n";
+  if (kDpHybridDebug) {
+    errs() << "Done with function " << f.getName() << ":\n";
 }
   return true;
 }
 
-void HybridAnalysis::finalize(Module &M) {
-  Type *Void = Type::getVoidTy(M.getContext());
-  PointerType *CharPtr = PointerType::getUnqual(Type::getInt8Ty(M.getContext()));
+void HybridAnalysis::Finalize(Module &m) {
+  Type *void_type = Type::getVoidTy(m.getContext());
+  PointerType *char_ptr = PointerType::getUnqual(Type::getInt8Ty(m.getContext()));
 
   // Hand the dependencies of the instructions whose profiling was omitted over
   // to the runtime. Their __dp_read / __dp_write / __dp_alloca calls have been
@@ -553,19 +553,19 @@ void HybridAnalysis::finalize(Module &M) {
   // constructor reaches every translation unit regardless of compilation order;
   // the runtime only records the string there and parses it during
   // __dp_finalize, once it knows which basic blocks were executed.
-  if (!bbDepString.empty()) {
+  if (!bb_dep_string_.empty()) {
     Function *registration =
-        Function::Create(FunctionType::get(Void, false), GlobalValue::InternalLinkage,
-                         "__dp_register_bb_deps." + M.getModuleIdentifier(), &M);
-    IRBuilder<> builder(BasicBlock::Create(M.getContext(), "entry", registration));
-    Value *V = builder.CreateGlobalStringPtr(StringRef(bbDepString), ".dp_bb_deps");
-    builder.CreateCall(M.getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr), {V});
+        Function::Create(FunctionType::get(void_type, false), GlobalValue::InternalLinkage,
+                         "__dp_register_bb_deps." + m.getModuleIdentifier(), &m);
+    IRBuilder<> builder(BasicBlock::Create(m.getContext(), "entry", registration));
+    Value *v = builder.CreateGlobalStringPtr(StringRef(bb_dep_string_), ".dp_bb_deps");
+    builder.CreateCall(m.getOrInsertFunction("__dp_add_bb_deps", void_type, char_ptr), {v});
     builder.CreateRetVoid();
-    appendToGlobalCtors(M, registration, 0);
+    appendToGlobalCtors(m, registration, 0);
   }
   // write the current count of BBs to a file to avoid duplicate BBids
-  profiler_files::writeCounter("DP_BBDepCounter.txt", bbDepCount);
+  profiler_files::WriteCounter("DP_BBDepCounter.txt", bb_dep_count);
   // write the next free static memory region id to avoid duplicate ids between modules
-  profiler_files::writeCounter("DP_StaticMemoryRegionIDCounter.txt", nextFreeStaticMemoryRegionID);
+  profiler_files::WriteCounter("DP_StaticMemoryRegionIDCounter.txt", next_free_static_memory_region_id_);
 }
 // DPInstrumentationOmission end

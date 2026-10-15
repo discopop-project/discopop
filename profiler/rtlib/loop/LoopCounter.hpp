@@ -16,11 +16,11 @@
 
 #include <vector>
 
-namespace __dp {
+namespace dp {
 
 class LoopCounter {
 public:
-  void incr_loop_counter(int loop_id) {
+  void IncrLoopCounter(int loop_id) {
     const std::size_t required_size = static_cast<std::size_t>(loop_id) + 1;
     if (loop_counters_.size() < required_size) {
       loop_counters_.resize(required_size);
@@ -29,10 +29,10 @@ public:
     loop_counters_[loop_id] += 1;
   }
 
-  const std::vector<unsigned int> &get_loop_counters() const noexcept { return loop_counters_; }
+  const std::vector<unsigned int> &GetLoopCounters() const noexcept { return loop_counters_; }
 
 private:
   std::vector<unsigned int> loop_counters_;
 };
 
-} // namespace __dp
+} // namespace dp

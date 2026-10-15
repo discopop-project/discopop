@@ -30,7 +30,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace __dp {
+namespace dp {
 
 // The dependencies of the instructions whose profiling was omitted, as handed
 // over by the instrumented modules. Every module registers the string covering
@@ -50,23 +50,23 @@ ImmortalStorage<std::vector<const char *>> registered_bb_dep_strings_storage;
 bool registered_bb_dep_strings_constructed = false;
 } // namespace
 
-std::vector<const char *> &registered_bb_dep_strings() {
+std::vector<const char *> &RegisteredBbDepStrings() {
   if (!registered_bb_dep_strings_constructed) {
-    registered_bb_dep_strings_storage.construct();
+    registered_bb_dep_strings_storage.Construct();
     registered_bb_dep_strings_constructed = true;
   }
   return registered_bb_dep_strings_storage.value;
 }
 
-void release_registered_bb_deps() {
+void ReleaseRegisteredBbDeps() {
   if (registered_bb_dep_strings_constructed) {
-    registered_bb_dep_strings_storage.destroy();
+    registered_bb_dep_strings_storage.Destroy();
     registered_bb_dep_strings_constructed = false;
   }
 }
 
-std::uint32_t current_callpath_state_id_for_bb_reports() {
-  return current_callpath_state == nullptr ? 0 : static_cast<std::uint32_t>(current_callpath_state->get_id());
+std::uint32_t CurrentCallpathStateIdForBbReports() {
+  return current_callpath_state == nullptr ? 0 : static_cast<std::uint32_t>(current_callpath_state->GetId());
 }
 
 namespace {
@@ -83,7 +83,7 @@ struct HandedOverDep {
 
 // parses "<sink> NOM <type> <source>|<rest>". Returns false for malformed
 // entries, which are skipped.
-bool parse_handed_over_dep(const std::string &dep, HandedOverDep &parsed) {
+bool ParseHandedOverDep(const std::string &dep, HandedOverDep &parsed) {
   const std::size_t sink_end = dep.find(' ');
   if (sink_end == std::string::npos || sink_end == 0) {
     return false;
@@ -114,7 +114,7 @@ bool parse_handed_over_dep(const std::string &dep, HandedOverDep &parsed) {
 
 // basic block index -> the dependencies handed over under it
 std::unordered_map<std::uint32_t, std::vector<HandedOverDep>>
-parse_handed_over_dep_strings(const std::vector<const char *> &dep_strings) {
+ParseHandedOverDepStrings(const std::vector<const char *> &dep_strings) {
   std::unordered_map<std::uint32_t, std::vector<HandedOverDep>> deps_by_bb;
   for (const char *dep_string_ptr : dep_strings) {
     if (dep_string_ptr == nullptr) {
@@ -137,7 +137,7 @@ parse_handed_over_dep_strings(const std::vector<const char *> &dep_strings) {
       std::vector<HandedOverDep> &target = deps_by_bb[bb_index];
       for (const std::string &dep : deps) {
         HandedOverDep parsed;
-        if (parse_handed_over_dep(dep, parsed)) {
+        if (ParseHandedOverDep(dep, parsed)) {
           target.push_back(std::move(parsed));
         }
       }
@@ -148,11 +148,11 @@ parse_handed_over_dep_strings(const std::vector<const char *> &dep_strings) {
 
 } // namespace
 
-void merge_bb_deps(const std::vector<const char *> &dep_strings, const ReportedBBSet &reported, stringDepMap &out) {
+void MergeBbDeps(const std::vector<const char *> &dep_strings, const ReportedBBSet &reported, StringDepMap &out) {
   if (reported.empty()) {
     return;
   }
-  const auto deps_by_bb = parse_handed_over_dep_strings(dep_strings);
+  const auto deps_by_bb = ParseHandedOverDepStrings(dep_strings);
   for (const ReportedBB &execution : reported) {
     const auto deps = deps_by_bb.find(execution.bb_index);
     if (deps == deps_by_bb.end()) {
@@ -171,18 +171,18 @@ void merge_bb_deps(const std::vector<const char *> &dep_strings, const ReportedB
 // actually executed into the collected dependencies, once per distinct pair of
 // callpath states the executions were reported with. Must run after the target
 // has terminated (bbList complete) and before the dependencies are written out.
-void process_registered_bb_deps() {
+void ProcessRegisteredBbDeps() {
 #ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("process_registered_bb_deps");
+  const auto debug_print = MakeDebugPrint("process_registered_bb_deps");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::ADD_BB_DEPS);
+  const auto timer = Timer(timers, TimerRegion::kAddBbDeps);
 #endif
 
-  if (bbList == nullptr || outPutDeps == nullptr) {
+  if (bb_list == nullptr || out_put_deps == nullptr) {
     return;
   }
-  merge_bb_deps(registered_bb_dep_strings(), bbList->get_executions(), *outPutDeps);
+  MergeBbDeps(RegisteredBbDepStrings(), bb_list->GetExecutions(), *out_put_deps);
 }
 
-} // namespace __dp
+} // namespace dp

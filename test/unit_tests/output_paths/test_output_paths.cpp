@@ -37,21 +37,21 @@ private:
 TEST_F(OutputPathsTest, testTheFileIsPlacedInTheProfilerDirectory) {
   setenv(variable, "/tmp/some_target/.discopop/profiler", 1);
 
-  EXPECT_EQ(__dp::profiler_output_path("loop_meta.txt"), "/tmp/some_target/.discopop/profiler/loop_meta.txt");
+  EXPECT_EQ(dp::ProfilerOutputPath("loop_meta.txt"), "/tmp/some_target/.discopop/profiler/loop_meta.txt");
 }
 
 // write_results() asks for statistics/profiling_time.txt, so the file may name a subdirectory
 TEST_F(OutputPathsTest, testAFileInASubdirectoryKeepsItsSubdirectory) {
   setenv(variable, "/tmp/target/.discopop/profiler", 1);
 
-  EXPECT_EQ(__dp::profiler_output_path("statistics/profiling_time.txt"),
+  EXPECT_EQ(dp::ProfilerOutputPath("statistics/profiling_time.txt"),
             "/tmp/target/.discopop/profiler/statistics/profiling_time.txt");
 }
 
 TEST_F(OutputPathsTest, testARelativeDirectoryIsKeptRelative) {
   setenv(variable, ".discopop/profiler", 1);
 
-  EXPECT_EQ(__dp::profiler_output_path("dynamic_dependencies.txt"), ".discopop/profiler/dynamic_dependencies.txt");
+  EXPECT_EQ(dp::ProfilerOutputPath("dynamic_dependencies.txt"), ".discopop/profiler/dynamic_dependencies.txt");
 }
 
 // An unset variable means __dp_init did not run. A build with asserts says so and stops; the
@@ -61,9 +61,9 @@ TEST_F(OutputPathsTest, testAnUnsetDirectoryFallsBackToTheDefaultOne) {
   unsetenv(variable);
 
 #ifdef NDEBUG
-  EXPECT_EQ(__dp::profiler_output_path("reduction.txt"), ".discopop/profiler/reduction.txt");
+  EXPECT_EQ(dp::ProfilerOutputPath("reduction.txt"), ".discopop/profiler/reduction.txt");
 #else
-  EXPECT_DEATH(__dp::profiler_output_path("reduction.txt"), "DOT_DISCOPOP_PROFILER is unset");
+  EXPECT_DEATH(dp::profiler_output_path("reduction.txt"), "DOT_DISCOPOP_PROFILER is unset");
 #endif
 }
 
@@ -72,5 +72,5 @@ TEST_F(OutputPathsTest, testAnUnsetDirectoryFallsBackToTheDefaultOne) {
 TEST_F(OutputPathsTest, testAnEmptyDirectoryIsNotTreatedAsUnset) {
   setenv(variable, "", 1);
 
-  EXPECT_EQ(__dp::profiler_output_path("reduction.txt"), "/reduction.txt");
+  EXPECT_EQ(dp::ProfilerOutputPath("reduction.txt"), "/reduction.txt");
 }

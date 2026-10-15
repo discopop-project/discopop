@@ -12,7 +12,7 @@
 
 #pragma once
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -20,4 +20,4 @@ extern "C" {
 void __dp_loop_output();
 }
 
-} // namespace __dp
+} // namespace dp

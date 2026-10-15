@@ -14,16 +14,16 @@
 
 #include "DPTypes.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
 #ifndef SKIP_DUP_INSTR
 // hybrid analysis
-void __dp_delete(LID lid, ADDR startAddr);
+void __dp_delete(LID lid, ADDR start_addr);
 // End HA
 #endif
 }
 
-} // namespace __dp
+} // namespace dp

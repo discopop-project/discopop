@@ -19,7 +19,7 @@
 
 #include <mutex>
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -27,11 +27,11 @@ extern "C" {
 // An exception unwinds the stack without running the __dp_func_exit of the functions it leaves.
 // Their callpath states are discarded here, when the landing pad of the function which continues
 // is reached.
-void __dp_landing_pad(int32_t functionEntryID) {
+void __dp_landing_pad(int32_t function_entry_id) {
   DP_CALLBACK_SCOPE(LANDING_PAD);
 
-  resume_function_for_callstate(functionEntryID);
+  ResumeFunctionForCallstate(function_entry_id);
 }
 }
 
-} // namespace __dp
+} // namespace dp

@@ -14,13 +14,13 @@
 
 #include "DPTypes.hpp"
 
-namespace __dp {
+namespace dp {
 
 extern "C" {
 
 // called at the start of every landing pad (exception cleanup or catch handler) of an instrumented
 // function. functionEntryID identifies the function, as for __dp_func_entry.
-void __dp_landing_pad(int32_t functionEntryID);
+void __dp_landing_pad(int32_t function_entry_id);
 }
 
-} // namespace __dp
+} // namespace dp

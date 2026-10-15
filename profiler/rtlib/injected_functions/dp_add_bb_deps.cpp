@@ -14,7 +14,7 @@
 
 #include "hybrid_analysis/bb_deps.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -27,13 +27,13 @@ extern "C" {
 // Deliberately takes no lock: this runs during static initialization, where
 // locking a global mutex would depend on that mutex already being constructed,
 // and where the program is still single-threaded anyway.
-void __dp_add_bb_deps(char *depStringPtr) {
-  if (depStringPtr == nullptr) {
+void __dp_add_bb_deps(char *dep_string_ptr) {
+  if (dep_string_ptr == nullptr) {
     return;
   }
-  registered_bb_dep_strings().push_back(depStringPtr);
+  RegisteredBbDepStrings().push_back(dep_string_ptr);
 }
 // End HA
 }
 
-} // namespace __dp
+} // namespace dp

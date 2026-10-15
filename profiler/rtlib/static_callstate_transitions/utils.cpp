@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-namespace __dp {
+namespace dp {
 
 namespace {
 // the callpath state of a caller, restored when the entered function is left
@@ -53,11 +53,11 @@ CallstateHotData &callstate_hot = callstate_hot_storage.value;
 bool callstate_hot_constructed = false;
 
 // the target of the transition triggered by instructionID, following a fall-through transition
-CallState *get_transition_target_with_fallthrough(CallState *state, int32_t instructionID) {
-  CallState *transition_target = state->get_transition_target(instructionID);
+CallState *GetTransitionTargetWithFallthrough(CallState *state, int32_t instruction_id) {
+  CallState *transition_target = state->GetTransitionTarget(instruction_id);
   if (transition_target) {
     // check if a fall-through transition (i.e. instructionID '0') exists
-    CallState *fallthrough_transition_target = transition_target->get_fallthrough_transition_target();
+    CallState *fallthrough_transition_target = transition_target->GetFallthroughTransitionTarget();
     if (fallthrough_transition_target) {
       // TODO: this fallthrough could be implemented statically by redirecting the edges accordingly
       transition_target = fallthrough_transition_target;
@@ -67,20 +67,20 @@ CallState *get_transition_target_with_fallthrough(CallState *state, int32_t inst
 }
 } // namespace
 
-void update_callstate(int32_t instructionID) {
+void UpdateCallstate(int32_t instruction_id) {
   if (!callstate_owner || callstate_hot.frozen) {
     return;
   }
-  CallState *transition_target = get_transition_target_with_fallthrough(current_callpath_state, instructionID);
+  CallState *transition_target = GetTransitionTargetWithFallthrough(current_callpath_state, instruction_id);
   if (transition_target) {
     current_callpath_state = transition_target;
   }
 }
 
-void reset_callstate_tracking(CallState *initial_state) {
+void ResetCallstateTracking(CallState *initial_state) {
   current_callpath_state = initial_state;
   if (!callstate_hot_constructed) {
-    callstate_hot_storage.construct();
+    callstate_hot_storage.Construct();
     callstate_hot_constructed = true;
   }
   callstate_hot.frames.clear();
@@ -89,10 +89,10 @@ void reset_callstate_tracking(CallState *initial_state) {
   callstate_owner = true;
 }
 
-void initialize_current_callpath_state() {
+void InitializeCurrentCallpathState() {
   // open input file
   // create graph by parsing the file line by line
-  const std::string path = profiler_output_path("initial_stateID.txt");
+  const std::string path = ProfilerOutputPath("initial_stateID.txt");
   std::ifstream file(path);
   std::string line;
   // The pass writes this file only once it has found a call path labelled "main" (see
@@ -120,12 +120,12 @@ void initialize_current_callpath_state() {
     std::cerr << "DiscoPoP: could not read an initial call state from " << path
               << ". Reported call states will be incorrect!\n";
   }
-  reset_callstate_tracking(call_state_graph->get_or_register_node(current_callpath_state_id));
+  ResetCallstateTracking(call_state_graph->GetOrRegisterNode(current_callpath_state_id));
 }
 
-void register_call_for_callstate(int32_t instructionID) { pending_call_instruction = instructionID; }
+void RegisterCallForCallstate(int32_t instruction_id) { pending_call_instruction = instruction_id; }
 
-void enter_function_for_callstate(int32_t function_entry_id) {
+void EnterFunctionForCallstate(int32_t function_entry_id) {
   int32_t call_instruction = pending_call_instruction;
   pending_call_instruction = 0;
   if (!callstate_owner) {
@@ -135,16 +135,16 @@ void enter_function_for_callstate(int32_t function_entry_id) {
 
   CallState *target = nullptr;
   if (call_instruction != 0 && !callstate_hot.frozen) {
-    target = get_transition_target_with_fallthrough(current_callpath_state, call_instruction);
+    target = GetTransitionTargetWithFallthrough(current_callpath_state, call_instruction);
     // the call's transition is valid only if it leads into the entered function. Otherwise the
     // callee was not the entered function (a call into code without instrumentation, which called
     // back into instrumented code) or is not known in the caller's translation unit.
-    if (target && target->get_function_entry_id() != function_entry_id) {
+    if (target && target->GetFunctionEntryId() != function_entry_id) {
       target = nullptr;
     }
   }
   if (!target && call_state_graph) {
-    target = call_state_graph->get_function_entry_state(function_entry_id);
+    target = call_state_graph->GetFunctionEntryState(function_entry_id);
   }
   if (target) {
     current_callpath_state = target;
@@ -155,7 +155,7 @@ void enter_function_for_callstate(int32_t function_entry_id) {
   }
 }
 
-void leave_function_for_callstate() {
+void LeaveFunctionForCallstate() {
   pending_call_instruction = 0;
   if (!callstate_owner || callstate_hot.frames.empty()) {
     return;
@@ -165,7 +165,7 @@ void leave_function_for_callstate() {
   callstate_hot.frames.pop_back();
 }
 
-void resume_function_for_callstate(int32_t function_entry_id) {
+void ResumeFunctionForCallstate(int32_t function_entry_id) {
   pending_call_instruction = 0;
   if (!callstate_owner) {
     return;
@@ -181,12 +181,12 @@ void resume_function_for_callstate(int32_t function_entry_id) {
   }
   // leave the functions entered by it
   while (callstate_hot.frames.size() > frame_count) {
-    leave_function_for_callstate();
+    LeaveFunctionForCallstate();
   }
 }
 
-bool callstate_transitions_frozen() { return callstate_hot_constructed && callstate_hot.frozen; }
+bool CallstateTransitionsFrozen() { return callstate_hot_constructed && callstate_hot.frozen; }
 
-std::size_t callstate_frame_count() { return callstate_hot_constructed ? callstate_hot.frames.size() : 0; }
+std::size_t CallstateFrameCount() { return callstate_hot_constructed ? callstate_hot.frames.size() : 0; }
 
-} // namespace __dp
+} // namespace dp

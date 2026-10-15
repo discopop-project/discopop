@@ -29,165 +29,165 @@
 
 template <typename InstructionNodeT> class InstructionNode {
 private:
-  InstructionNodeT item;
+  InstructionNodeT item_;
 
 public:
-  explicit InstructionNode(InstructionNodeT _item) : item(_item) {}
+  explicit InstructionNode(InstructionNodeT item) : item_(item) {}
 
   ~InstructionNode(){};
 
-  InstructionNodeT getItem() const { return item; }
+  InstructionNodeT GetItem() const { return item_; }
 };
 
 template <typename InstructionNodeT> class Edge {
 private:
-  InstructionNode<InstructionNodeT> *src;
-  InstructionNode<InstructionNodeT> *dst;
+  InstructionNode<InstructionNodeT> *src_;
+  InstructionNode<InstructionNodeT> *dst_;
 
 public:
-  Edge(InstructionNode<InstructionNodeT> *_src, InstructionNode<InstructionNodeT> *_dst) : src(_src), dst(_dst){};
+  Edge(InstructionNode<InstructionNodeT> *src, InstructionNode<InstructionNodeT> *dst) : src_(src), dst_(dst){};
 
   ~Edge(){};
 
-  InstructionNode<InstructionNodeT> *getSrc() const { return src; }
+  InstructionNode<InstructionNodeT> *GetSrc() const { return src_; }
 
-  InstructionNode<InstructionNodeT> *getDst() const { return dst; }
+  InstructionNode<InstructionNodeT> *GetDst() const { return dst_; }
 };
 
 template <typename InstructionNodeT> class Graph {
 private:
-  std::list<InstructionNode<InstructionNodeT> *> instructionNodesList;
-  unsigned nextIntKey = 0;
+  std::list<InstructionNode<InstructionNodeT> *> instruction_nodes_list_;
+  unsigned next_int_key_ = 0;
   // This stores a map from object of type T to it's respective pair (Key,
   // InstructionNode)
-  std::map<InstructionNodeT, std::pair<int, InstructionNode<InstructionNodeT> *>> instructionNodes;
-  std::list<Edge<InstructionNodeT> *> edgesList;
+  std::map<InstructionNodeT, std::pair<int, InstructionNode<InstructionNodeT> *>> instruction_nodes_;
+  std::list<Edge<InstructionNodeT> *> edges_list_;
   // This map stores all the outcoming edges from node of type T
-  std::map<InstructionNode<InstructionNodeT> *, std::set<Edge<InstructionNodeT> *>> outEdges;
+  std::map<InstructionNode<InstructionNodeT> *, std::set<Edge<InstructionNodeT> *>> out_edges_;
   // This map stores all the incoming edges to node of type T
-  std::map<InstructionNode<InstructionNodeT> *, std::set<Edge<InstructionNodeT> *>> inEdges;
+  std::map<InstructionNode<InstructionNodeT> *, std::set<Edge<InstructionNodeT> *>> in_edges_;
 
 public:
   Graph(){};
 
   ~Graph() {
-    for (auto &n : instructionNodesList) {
+    for (auto &n : instruction_nodes_list_) {
       delete n;
 }
-    for (auto &e : edgesList) {
+    for (auto &e : edges_list_) {
       delete e;
 }
   }
 
-  InstructionNode<InstructionNodeT> *operator[](InstructionNodeT item) const { return getInstructionNode(item); }
+  InstructionNode<InstructionNodeT> *operator[](InstructionNodeT item) const { return GetInstructionNode(item); }
 
-  InstructionNode<InstructionNodeT> *addInstructionNode(InstructionNodeT item) {
-    if (instructionNodes.count(item) == 0) {
-      InstructionNode<InstructionNodeT> *instructionNode = new InstructionNode<InstructionNodeT>(item);
-      instructionNodes[item] =
-          std::pair<int, InstructionNode<InstructionNodeT> *>(nextIntKey, instructionNode);
-      instructionNodesList.push_back(instructionNode);
-      nextIntKey++;
-      return instructionNode;
+  InstructionNode<InstructionNodeT> *AddInstructionNode(InstructionNodeT item) {
+    if (instruction_nodes_.count(item) == 0) {
+      InstructionNode<InstructionNodeT> *instruction_node = new InstructionNode<InstructionNodeT>(item);
+      instruction_nodes_[item] =
+          std::pair<int, InstructionNode<InstructionNodeT> *>(next_int_key_, instruction_node);
+      instruction_nodes_list_.push_back(instruction_node);
+      next_int_key_++;
+      return instruction_node;
     }
 #ifdef DEBUG_GRAPH_HPP
       std::cout << "\nTrying to add an already added item.\n";
 #endif
-      return instructionNodes.find(item)->second.second;
+      return instruction_nodes_.find(item)->second.second;
   }
 
-  InstructionNode<InstructionNodeT> *getInstructionNode(InstructionNodeT item) {
-    if (instructionNodes.count(item) == 0) {
+  InstructionNode<InstructionNodeT> *GetInstructionNode(InstructionNodeT item) {
+    if (instruction_nodes_.count(item) == 0) {
       return nullptr;
 }
-    return instructionNodes.find(item)->second.second;
+    return instruction_nodes_.find(item)->second.second;
   }
 
-  InstructionNode<InstructionNodeT> *getInstructionNodeByIndex(const int index) const {
-    for (const auto &pair_ : instructionNodes) {
-      if (pair_.second.first == index) {
-        return pair_.second.second;
+  InstructionNode<InstructionNodeT> *GetInstructionNodeByIndex(const int index) const {
+    for (const auto &pair : instruction_nodes_) {
+      if (pair.second.first == index) {
+        return pair.second.second;
       }
     }
     return nullptr;
   }
 
-  int getInstructionNodeIndex(InstructionNodeT item) const {
-    if (instructionNodes.count(item) == 0) {
+  int GetInstructionNodeIndex(InstructionNodeT item) const {
+    if (instruction_nodes_.count(item) == 0) {
       return -1;
 }
-    return instructionNodes.find(item)->second.first;
+    return instruction_nodes_.find(item)->second.first;
   }
 
-  int getInstructionNodeIndex(InstructionNode<InstructionNodeT> *instructionNode) const {
-    return getInstructionNodeIndex(instructionNode->getItem());
+  int GetInstructionNodeIndex(InstructionNode<InstructionNodeT> *instruction_node) const {
+    return GetInstructionNodeIndex(instruction_node->GetItem());
   }
 
-  std::list<InstructionNode<InstructionNodeT> *> getInstructionNodes() const { return instructionNodesList; }
+  std::list<InstructionNode<InstructionNodeT> *> GetInstructionNodes() const { return instruction_nodes_list_; }
 
-  Edge<InstructionNodeT> *addEdge(InstructionNode<InstructionNodeT> *src, InstructionNode<InstructionNodeT> *dst) {
-    for (Edge<InstructionNodeT> *ed : outEdges[src]) {
-      if (ed->getDst() == dst) {
+  Edge<InstructionNodeT> *AddEdge(InstructionNode<InstructionNodeT> *src, InstructionNode<InstructionNodeT> *dst) {
+    for (Edge<InstructionNodeT> *ed : out_edges_[src]) {
+      if (ed->GetDst() == dst) {
         return nullptr;
       }
     }
 
     Edge<InstructionNodeT> *edge = new Edge<InstructionNodeT>(src, dst);
-    outEdges[src].insert(edge);
-    inEdges[dst].insert(edge);
-    edgesList.push_back(edge);
+    out_edges_[src].insert(edge);
+    in_edges_[dst].insert(edge);
+    edges_list_.push_back(edge);
     return edge;
   }
 
-  Edge<InstructionNodeT> *addEdge(InstructionNodeT src, InstructionNodeT dst) {
-    InstructionNode<InstructionNodeT> *src_ = getInstructionNode(src);
-    InstructionNode<InstructionNodeT> *dst_ = getInstructionNode(dst);
+  Edge<InstructionNodeT> *AddEdge(InstructionNodeT src, InstructionNodeT dst) {
+    InstructionNode<InstructionNodeT> *src_node = GetInstructionNode(src);
+    InstructionNode<InstructionNodeT> *dst_node = GetInstructionNode(dst);
 
-    if (src_ == nullptr) {
-      src_ = addInstructionNode(src);
+    if (src_node == nullptr) {
+      src_node = AddInstructionNode(src);
 }
-    if (dst_ == nullptr) {
-      dst_ = addInstructionNode(dst);
-}
-
-    return addEdge(src_, dst_);
-  }
-
-  std::set<Edge<InstructionNodeT> *> getInEdges(InstructionNode<InstructionNodeT> *instructionNode) {
-    std::set<Edge<InstructionNodeT> *> inEdges_;
-    if (inEdges.find(instructionNode) != inEdges.end()) {
-      inEdges_ = inEdges[instructionNode];
+    if (dst_node == nullptr) {
+      dst_node = AddInstructionNode(dst);
 }
 
-    return inEdges_;
+    return AddEdge(src_node, dst_node);
   }
 
-  std::set<Edge<InstructionNodeT> *> getInEdges(InstructionNodeT item) {
-    InstructionNode<InstructionNodeT> *instructionNode = getInstructionNode(item);
-    return getInEdges(instructionNode);
-  }
-
-  std::set<Edge<InstructionNodeT> *> getOutEdges(InstructionNode<InstructionNodeT> *instructionNode) {
-    std::set<Edge<InstructionNodeT> *> outEdges_;
-    if (outEdges.count(instructionNode) != 0) {
-      return outEdges[instructionNode];
+  std::set<Edge<InstructionNodeT> *> GetInEdges(InstructionNode<InstructionNodeT> *instruction_node) {
+    std::set<Edge<InstructionNodeT> *> in_edges;
+    if (in_edges_.find(instruction_node) != in_edges_.end()) {
+      in_edges = in_edges_[instruction_node];
 }
-    return outEdges_;
+
+    return in_edges;
   }
 
-  std::set<Edge<InstructionNodeT> *> getOutEdges(InstructionNodeT item) {
-    return getOutEdges(getInstructionNode(item));
+  std::set<Edge<InstructionNodeT> *> GetInEdges(InstructionNodeT item) {
+    InstructionNode<InstructionNodeT> *instruction_node = GetInstructionNode(item);
+    return GetInEdges(instruction_node);
   }
 
-  void removeEdge(Edge<InstructionNodeT> *e) {
+  std::set<Edge<InstructionNodeT> *> GetOutEdges(InstructionNode<InstructionNodeT> *instruction_node) {
+    std::set<Edge<InstructionNodeT> *> out_edges;
+    if (out_edges_.count(instruction_node) != 0) {
+      return out_edges_[instruction_node];
+}
+    return out_edges;
+  }
+
+  std::set<Edge<InstructionNodeT> *> GetOutEdges(InstructionNodeT item) {
+    return getOutEdges(GetInstructionNode(item));
+  }
+
+  void RemoveEdge(Edge<InstructionNodeT> *e) {
     auto out = e->getSrc();
     auto in = e->getDst();
-    edgesList.remove(e);
-    outEdges[out].erase(e);
-    inEdges[in].erase(e);
+    edges_list_.remove(e);
+    out_edges_[out].erase(e);
+    in_edges_[in].erase(e);
   }
 
-  std::list<Edge<InstructionNodeT> *> getEdges() const { return edgesList; }
+  std::list<Edge<InstructionNodeT> *> GetEdges() const { return edges_list_; }
 
-  int size() const { return nextIntKey; }
+  int size() const { return next_int_key_; }
 };

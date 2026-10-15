@@ -17,35 +17,35 @@
 #include <cstdint>
 #include <unordered_set>
 
-namespace __dp {
+namespace dp {
 
 class AbstractShadow {
 public:
   virtual ~AbstractShadow() {}
 
-  virtual sigElement testInRead(std::int64_t memAddr) = 0;
+  virtual SigElement TestInRead(std::int64_t mem_addr) = 0;
 
-  virtual sigElement testInWrite(std::int64_t memAddr) = 0;
+  virtual SigElement TestInWrite(std::int64_t mem_addr) = 0;
 
-  virtual sigElement insertToRead(std::int64_t memAddr, sigElement value) = 0;
+  virtual SigElement InsertToRead(std::int64_t mem_addr, SigElement value) = 0;
 
-  virtual sigElement insertToWrite(std::int64_t memAddr, sigElement value) = 0;
+  virtual SigElement InsertToWrite(std::int64_t mem_addr, SigElement value) = 0;
 
-  virtual void updateInRead(std::int64_t memAddr, sigElement newValue) = 0;
+  virtual void UpdateInRead(std::int64_t mem_addr, SigElement new_value) = 0;
 
-  virtual void updateInWrite(std::int64_t memAddr, sigElement newValue) = 0;
+  virtual void UpdateInWrite(std::int64_t mem_addr, SigElement new_value) = 0;
 
-  virtual void removeFromRead(std::int64_t memAddr) = 0;
+  virtual void RemoveFromRead(std::int64_t mem_addr) = 0;
 
-  virtual void removeFromWrite(std::int64_t memAddr) = 0;
+  virtual void RemoveFromWrite(std::int64_t mem_addr) = 0;
 
-  virtual std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr, std::int64_t endAddr) = 0;
+  virtual std::unordered_set<ADDR> GetAddrsInRange(std::int64_t start_addr, std::int64_t end_addr) = 0;
 
-  virtual std::vector<std::pair<std::int64_t, sigElement>> getReadKVPairs() = 0;
+  virtual std::vector<std::pair<std::int64_t, SigElement>> GetReadKvPairs() = 0;
 
-  virtual std::vector<std::pair<std::int64_t, sigElement>> getWriteKVPairs() = 0;
+  virtual std::vector<std::pair<std::int64_t, SigElement>> GetWriteKvPairs() = 0;
 
-  virtual void print() = 0;
+  virtual void Print() = 0;
 };
 
-} // namespace __dp
+} // namespace dp

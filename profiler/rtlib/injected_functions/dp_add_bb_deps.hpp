@@ -14,14 +14,14 @@
 
 #include "DPTypes.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
 // hybrid analysis
-void __dp_add_bb_deps(char *depStringPtr);
+void __dp_add_bb_deps(char *dep_string_ptr);
 // End HA
 }
 
-} // namespace __dp
+} // namespace dp

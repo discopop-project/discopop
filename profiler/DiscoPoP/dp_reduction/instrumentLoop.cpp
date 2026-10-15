@@ -27,7 +27,7 @@ using llvm::isa;
 // suitable for reduction.
 // An entry is added to the 'loops_' vector and for each suitable instruction,
 // an entry is added to the 'instructions_' vector.
-void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI) {
+void dp_reduction::ReductionInstrumenter::InstrumentLoop(Function &f, int file_id, llvm::Loop *loop, LoopInfo &li) {
 
   // Whatever becomes of this loop, its subloops are loops of their own. Both early returns
   // below used to take them with it, so a loop that could not be described made every loop
@@ -35,19 +35,19 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
   // keeps the loop, so the order in which loop ids are handed out does not change.
   const auto instrument_subloops = [&]() {
     for (llvm::Loop *sub_loop : loop->getSubLoops()) {
-      instrument_loop(F, file_id, sub_loop, LI);
+      InstrumentLoop(f, file_id, sub_loop, li);
     }
   };
 
   auto loc = loop->getStartLoc();
-  if (!dp_reduction::loc_exists(loc)) {
+  if (!dp_reduction::LocExists(loc)) {
     // Nothing can be said about a loop that has no location: it is left out of
     // loop_meta.txt and gets no __dp_loop_incr, so its iterations are never counted.
     // Worth a word, because the location comes off the terminator of the loop's
     // preheader -- a branch inserted in front of it without a debug location silently
     // empties the file for a whole module, and that looks like nothing at all.
     errs() << "WARNING: DiscoPoP: loop without a source location, not instrumented."
-           << " File: " << file_id << " Function: " << F.getName() << "\n";
+           << " File: " << file_id << " Function: " << f.getName() << "\n";
     instrument_subloops();
     return;
   }
@@ -62,15 +62,15 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
     return;
   }
   // add an entry to the 'loops_' vector
-  loop_info_t loop_info;
-  loop_info.line_nr_ = loc.getLine();
-  loop_info.file_id_ = file_id;
-  loop_info.first_body_instr_ = &(*basic_blocks[1]->begin());
+  LoopInfoT loop_info;
+  loop_info.line_nr = loc.getLine();
+  loop_info.file_id = file_id;
+  loop_info.first_body_instr = &(*basic_blocks[1]->begin());
 
-  std::string loopEndLine = dp_reduction::CFA(F, loop, file_id);
-  loop_info.end_line = loopEndLine;
+  std::string loop_end_line = dp_reduction::CFA(f, loop, file_id);
+  loop_info.end_line = loop_end_line;
   loop_info.function_name = std::string((basic_blocks[1]->getParent()->getName()));
-  loop_info.loop_id = services_.getLoopID(loop);
+  loop_info.loop_id = services_.get_loop_id(loop);
 
   loops_.push_back(loop_info);
 
@@ -104,7 +104,7 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
       // Add an entry to the corresponding map or invalidate an already
       // existing entry, if the same instruction is executed on multiple
       // lines.
-      llvm::Value *operand = dp_reduction::get_var(instr);
+      llvm::Value *operand = dp_reduction::GetVar(instr);
       if (operand) {
         std::map<llvm::Value *, llvm::Instruction *> *map_ptr =
             (opcode == llvm::Instruction::Store) ? &store_instructions : &load_instructions;
@@ -113,7 +113,7 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
             llvm::DebugLoc new_loc = instr->getDebugLoc();
             llvm::DebugLoc old_loc = (*map_ptr)[operand]->getDebugLoc();
 
-            if (!dp_reduction::loc_exists(new_loc) || !dp_reduction::loc_exists(old_loc)) {
+            if (!dp_reduction::LocExists(new_loc) || !dp_reduction::LocExists(old_loc)) {
               (*map_ptr)[operand] = nullptr;
             } else if (new_loc.getLine() != old_loc.getLine()) {
               (*map_ptr)[operand] = nullptr;
@@ -128,7 +128,7 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
   // - a variable that is read must also be written in the loop
   // - a variable must not be read or written more than once
   // - the store instruction comes after the load instruction
-  std::vector<instr_info_t> candidates;
+  std::vector<InstrInfoT> candidates;
   for (auto it = load_instructions.begin(); it != load_instructions.end(); ++it) {
     if (!it->second) {
       continue;
@@ -138,40 +138,40 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
     if (it2 != store_instructions.end() && it2->second) {
       llvm::DebugLoc load_loc = it->second->getDebugLoc();
       llvm::DebugLoc store_loc = it2->second->getDebugLoc();
-      if (!dp_reduction::loc_exists(load_loc) || !dp_reduction::loc_exists(store_loc)) {
+      if (!dp_reduction::LocExists(load_loc) || !dp_reduction::LocExists(store_loc)) {
         continue;
 }
       if (load_loc.getLine() > store_loc.getLine()) {
         continue;
 }
-      if (load_loc.getLine() == loop_info.line_nr_ || store_loc.getLine() == loop_info.line_nr_) {
+      if (load_loc.getLine() == loop_info.line_nr || store_loc.getLine() == loop_info.line_nr) {
         continue;
 }
 
       if (loop_info.end_line == "LOOPENDNOTFOUND") {
-        errs() << "WARNING: Loop end not found! File: " << file_id << " Function: " << F.getName()
+        errs() << "WARNING: Loop end not found! File: " << file_id << " Function: " << f.getName()
                << " Start line: " << loop_info.start_line << "\n";
         continue;
       }
-      if (loop_info.line_nr_ > std::stoul(loop_info.end_line)) {
+      if (loop_info.line_nr > std::stoul(loop_info.end_line)) {
         continue;
 }
 
       // Check if both load and store insts belong to the loop
-      if (load_loc.getLine() < loop_info.line_nr_ || load_loc.getLine() > std::stoul(loop_info.end_line)) {
+      if (load_loc.getLine() < loop_info.line_nr || load_loc.getLine() > std::stoul(loop_info.end_line)) {
         continue;
 }
-      if (store_loc.getLine() < loop_info.line_nr_ || store_loc.getLine() > std::stoul(loop_info.end_line)) {
+      if (store_loc.getLine() < loop_info.line_nr || store_loc.getLine() > std::stoul(loop_info.end_line)) {
         continue;
 }
 
       if (it->first->hasName()) {
-        instr_info_t info;
-        info.var_name_ = services_.getVariableName(it->second);
-        info.loop_line_nr_ = loop_info.line_nr_;
-        info.file_id_ = file_id;
-        info.store_inst_ = llvm::dyn_cast<llvm::StoreInst>(it2->second);
-        info.load_inst_ = llvm::dyn_cast<llvm::LoadInst>(it->second);
+        InstrInfoT info;
+        info.var_name = services_.get_variable_name(it->second);
+        info.loop_line_nr = loop_info.line_nr;
+        info.file_id = file_id;
+        info.store_inst = llvm::dyn_cast<llvm::StoreInst>(it2->second);
+        info.load_inst = llvm::dyn_cast<llvm::LoadInst>(it->second);
 
         candidates.push_back(info);
       }
@@ -180,36 +180,36 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
 
   // now check if the variables are part of a reduction operation
   for (auto candidate : candidates) {
-    int index = isa<StoreInst>(candidate.load_inst_) ? 1 : 0;
-    std::string varNameLoad = "LOAD";
-    std::string varTypeLoad = "SCALAR";
-    llvm::DebugLoc loc = (candidate.load_inst_)->getDebugLoc();
+    int index = isa<StoreInst>(candidate.load_inst) ? 1 : 0;
+    std::string var_name_load = "LOAD";
+    std::string var_type_load = "SCALAR";
+    llvm::DebugLoc loc = (candidate.load_inst)->getDebugLoc();
 
-    varNameLoad = services_.getVariableName(candidate.load_inst_);
-    varTypeLoad = dp_reduction::determineVariableType(candidate.load_inst_);
-    if (llvm::isa<llvm::GetElementPtrInst>(candidate.load_inst_->getOperand(index))) {
-      if (varTypeLoad.find("ARRAY,") == std::string::npos || varNameLoad.find(".addr") == std::string::npos ||
-          varTypeLoad.find("**") != std::string::npos) {
+    var_name_load = services_.get_variable_name(candidate.load_inst);
+    var_type_load = dp_reduction::DetermineVariableType(candidate.load_inst);
+    if (llvm::isa<llvm::GetElementPtrInst>(candidate.load_inst->getOperand(index))) {
+      if (var_type_load.find("ARRAY,") == std::string::npos || var_name_load.find(".addr") == std::string::npos ||
+          var_type_load.find("**") != std::string::npos) {
         continue;
-      } if (varTypeLoad.find("ARRAY,") != std::string::npos || varNameLoad.find(".addr") != std::string::npos ||
-                 varTypeLoad.find("STRUCT,") != std::string::npos || varTypeLoad.find("**") != std::string::npos) {
+      } if (var_type_load.find("ARRAY,") != std::string::npos || var_name_load.find(".addr") != std::string::npos ||
+                 var_type_load.find("STRUCT,") != std::string::npos || var_type_load.find("**") != std::string::npos) {
         llvm::Instruction *load_instr = nullptr;
-        llvm::Instruction *instr = dp_reduction::get_reduction_instr(candidate.store_inst_, &load_instr);
+        llvm::Instruction *instr = dp_reduction::GetReductionInstr(candidate.store_inst, &load_instr);
         if (instr) {
-          candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-          candidate.operation_ = dp_reduction::get_char_for_opcode(instr);
+          candidate.load_inst = llvm::cast<llvm::LoadInst>(load_instr);
+          candidate.operation = dp_reduction::GetCharForOpcode(instr);
         } else {
           continue;
         }
       }
     } else {
-      if (varTypeLoad.find("ARRAY,") != std::string::npos || varNameLoad.find(".addr") != std::string::npos ||
-          varTypeLoad.find("STRUCT,") != std::string::npos || varTypeLoad.find("**") != std::string::npos) {
+      if (var_type_load.find("ARRAY,") != std::string::npos || var_name_load.find(".addr") != std::string::npos ||
+          var_type_load.find("STRUCT,") != std::string::npos || var_type_load.find("**") != std::string::npos) {
         llvm::Instruction *load_instr = nullptr;
-        llvm::Instruction *instr = dp_reduction::get_reduction_instr(candidate.store_inst_, &load_instr);
+        llvm::Instruction *instr = dp_reduction::GetReductionInstr(candidate.store_inst, &load_instr);
         if (instr) {
-          candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-          candidate.operation_ = dp_reduction::get_char_for_opcode(instr);
+          candidate.load_inst = llvm::cast<llvm::LoadInst>(load_instr);
+          candidate.operation = dp_reduction::GetCharForOpcode(instr);
         } else {
           // We should ignore store instructions that are not associated with a
           // load e.g., pbvc[i] = c1s;
@@ -217,28 +217,28 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
         }
       } else {
         llvm::Instruction *load_instr = nullptr;
-        llvm::Instruction *instr = dp_reduction::get_reduction_instr(candidate.store_inst_, &load_instr);
+        llvm::Instruction *instr = dp_reduction::GetReductionInstr(candidate.store_inst, &load_instr);
         if (instr) {
-          candidate.load_inst_ = llvm::cast<llvm::LoadInst>(load_instr);
-          candidate.operation_ = dp_reduction::get_char_for_opcode(instr);
+          candidate.load_inst = llvm::cast<llvm::LoadInst>(load_instr);
+          candidate.operation = dp_reduction::GetCharForOpcode(instr);
         } else {
           // We want to find max or min reduction operations
           // We want to find the basicblock that contains the load instruction
           // Then, we traverse the whole function to check if the reduction
           // operation is > or <
-          BasicBlock *BB = (candidate.load_inst_)->getParent();
-          std::string bbName = BB->getName().str();
+          BasicBlock *bb = (candidate.load_inst)->getParent();
+          std::string bb_name = bb->getName().str();
 
           // Ignore loops. Only look for conditional blocks
-          if (bbName.find("if") != std::string::npos || bbName.find("for") != std::string::npos) {
+          if (bb_name.find("if") != std::string::npos || bb_name.find("for") != std::string::npos) {
             // e.g. in lulesh.cc: "if (domain.vdov(indx) != Real_t(0.)) { if (
             // dtf < dtcourant_tmp ) { dtcourant_tmp = dtf ; courant_elem  =
             // indx ; }}"
 
             // check if loaded value is used in the store instruction to prevent
             // "false positives"
-            if (dp_reduction::check_value_usage(candidate.store_inst_->getValueOperand(), cast<Value>(candidate.load_inst_))) {
-              candidate.operation_ = '>';
+            if (dp_reduction::CheckValueUsage(candidate.store_inst->getValueOperand(), cast<Value>(candidate.load_inst))) {
+              candidate.operation = '>';
             } else {
               continue;
             }

@@ -25,32 +25,32 @@ using llvm::StoreInst;
 using llvm::Twine;
 using llvm::Value;
 
-void DiscoPoP::instrumentStore(StoreInst *toInstrument, std::int32_t llvm_ir_instruction_id) {
+void DiscoPoP::InstrumentStore(StoreInst *to_instrument, std::int32_t llvm_ir_instruction_id) {
 
-  LID lid = dputil::getLID(toInstrument, fileID);
+  LID lid = dputil::GetLid(to_instrument, file_id);
   if (lid == 0) {
     return;
 }
 
   std::vector<Value *> args;
-  args.push_back(ConstantInt::get(Int64, llvm_ir_instruction_id));
+  args.push_back(ConstantInt::get(int64_, llvm_ir_instruction_id));
 
-  Value *memAddr = PtrToIntInst::CreatePointerCast(toInstrument->getPointerOperand(), Int64, "", toInstrument->getIterator());
-  args.push_back(memAddr);
+  Value *mem_addr = PtrToIntInst::CreatePointerCast(to_instrument->getPointerOperand(), int64_, "", to_instrument->getIterator());
+  args.push_back(mem_addr);
 
-  args.push_back(determineVariableName_dynamic(toInstrument, ""));
+  args.push_back(DetermineVariableNameDynamic(to_instrument, ""));
 
 #ifdef SKIP_DUP_INSTR
-  std::string name = "S" + std::to_string(uniqueNum);
+  std::string name = "S" + std::to_string(unique_num_);
 
-  GlobalVariable *addrTracker = new GlobalVariable(*this->ThisModule,
-                                                   Int64, // trackerType
+  GlobalVariable *addrTracker = new GlobalVariable(*this->this_module_,
+                                                   int64_, // trackerType
                                                    false, GlobalVariable::PrivateLinkage,
-                                                   Constant::getNullValue(Int64), // trackerType
+                                                   Constant::getNullValue(int64_), // trackerType
                                                    name);
-  GlobalVariable *countTracker = new GlobalVariable(*this->ThisModule, Int64, false, GlobalVariable::PrivateLinkage,
-                                                    Constant::getNullValue(Int64), name + "count");
-  uniqueNum++;
+  GlobalVariable *countTracker = new GlobalVariable(*this->this_module_, int64_, false, GlobalVariable::PrivateLinkage,
+                                                    Constant::getNullValue(int64_), name + "count");
+  unique_num_++;
 
   // Load current values before instr
   LoadInst *currentAddrTracker = new LoadInst::LoadInst(addrTracker, Twine(), toInstrument);
@@ -61,20 +61,20 @@ void DiscoPoP::instrumentStore(StoreInst *toInstrument, std::int32_t llvm_ir_ins
   args.push_back(currentCount);
 #endif
 
-  CallInst *callback = CallInst::Create(DpWrite, args, "", toInstrument->getIterator());
-  insertedAccessCallbacks[toInstrument] = callback;
+  CallInst *callback = CallInst::Create(dp_write_, args, "", to_instrument->getIterator());
+  inserted_access_callbacks_[to_instrument] = callback;
 
 #ifdef SKIP_DUP_INSTR
   // Post instrumentation call
   // Create updates
   StoreInst *addrUpdate = new StoreInst::StoreInst(memAddr, addrTracker);
   BinaryOperator::BinaryOperator *incCount =
-      BinaryOperator::Create(Instruction::Add, currentCount, ConstantInt::get(Int64, 1));
+      BinaryOperator::Create(Instruction::Add, currentCount, ConstantInt::get(int64_, 1));
   StoreInst *countUpdate = new StoreInst::StoreInst(incCount, countTracker);
 
   // add updates after before
-  llvmcompat::insertAfter(addrUpdate, toInstrument);
-  llvmcompat::insertAfter(incCount, toInstrument);
-  llvmcompat::insertAfter(countUpdate, incCount);
+  llvmcompat::InsertAfter(addrUpdate, to_instrument);
+  llvmcompat::InsertAfter(incCount, to_instrument);
+  llvmcompat::InsertAfter(countUpdate, incCount);
 #endif
 }

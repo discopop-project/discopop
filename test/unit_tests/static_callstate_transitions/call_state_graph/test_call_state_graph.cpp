@@ -23,16 +23,16 @@ protected:
 TEST_F(CallStateGraphTest, testGetOrRegisterNodeCreatesNewNode) {
   CallStateGraph graph;
 
-  CallState *node = graph.get_or_register_node(1);
+  CallState *node = graph.GetOrRegisterNode(1);
   ASSERT_NE(node, nullptr);
-  EXPECT_EQ(node->get_id(), 1);
+  EXPECT_EQ(node->GetId(), 1);
 }
 
 TEST_F(CallStateGraphTest, testGetOrRegisterNodeReturnsSameNodeForSameId) {
   CallStateGraph graph;
 
-  CallState *first = graph.get_or_register_node(1);
-  CallState *second = graph.get_or_register_node(1);
+  CallState *first = graph.GetOrRegisterNode(1);
+  CallState *second = graph.GetOrRegisterNode(1);
 
   EXPECT_EQ(first, second);
 }
@@ -40,43 +40,43 @@ TEST_F(CallStateGraphTest, testGetOrRegisterNodeReturnsSameNodeForSameId) {
 TEST_F(CallStateGraphTest, testRegisterTransitionWiresUpStates) {
   CallStateGraph graph;
 
-  graph.register_transition(1, 100, 2);
+  graph.RegisterTransition(1, 100, 2);
 
-  CallState *source = graph.get_or_register_node(1);
-  CallState *target = graph.get_or_register_node(2);
+  CallState *source = graph.GetOrRegisterNode(1);
+  CallState *target = graph.GetOrRegisterNode(2);
 
-  EXPECT_EQ(source->get_transition_target(100), target);
+  EXPECT_EQ(source->GetTransitionTarget(100), target);
 }
 
 TEST_F(CallStateGraphTest, testRegisterImplicitReturnTransitionWiresUpStates) {
   CallStateGraph graph;
 
-  graph.register_implicit_return_transition(1, 2);
+  graph.RegisterImplicitReturnTransition(1, 2);
 
-  CallState *source = graph.get_or_register_node(1);
-  CallState *target = graph.get_or_register_node(2);
+  CallState *source = graph.GetOrRegisterNode(1);
+  CallState *target = graph.GetOrRegisterNode(2);
 
-  EXPECT_EQ(source->get_implicit_return_transition_target(), target);
+  EXPECT_EQ(source->GetImplicitReturnTransitionTarget(), target);
 }
 
 TEST_F(CallStateGraphTest, testFunctionEntryStatesAreUnknownByDefault) {
   CallStateGraph graph;
 
-  EXPECT_EQ(graph.get_function_entry_state(42), nullptr);
-  EXPECT_EQ(graph.get_or_register_node(1)->get_function_entry_id(), 0);
+  EXPECT_EQ(graph.GetFunctionEntryState(42), nullptr);
+  EXPECT_EQ(graph.GetOrRegisterNode(1)->GetFunctionEntryId(), 0);
 }
 
 TEST_F(CallStateGraphTest, testRegisterFunctionEntryState) {
   CallStateGraph graph;
 
-  graph.register_function_entry_state(42, 7);
-  graph.register_state_function(8, 43);
+  graph.RegisterFunctionEntryState(42, 7);
+  graph.RegisterStateFunction(8, 43);
 
-  ASSERT_NE(graph.get_function_entry_state(42), nullptr);
-  EXPECT_EQ(graph.get_function_entry_state(42)->get_id(), 7);
-  EXPECT_EQ(graph.get_or_register_node(7)->get_function_entry_id(), 42);
-  EXPECT_EQ(graph.get_or_register_node(8)->get_function_entry_id(), 43);
-  EXPECT_EQ(graph.get_function_entry_state(43), nullptr);
+  ASSERT_NE(graph.GetFunctionEntryState(42), nullptr);
+  EXPECT_EQ(graph.GetFunctionEntryState(42)->GetId(), 7);
+  EXPECT_EQ(graph.GetOrRegisterNode(7)->GetFunctionEntryId(), 42);
+  EXPECT_EQ(graph.GetOrRegisterNode(8)->GetFunctionEntryId(), 43);
+  EXPECT_EQ(graph.GetFunctionEntryState(43), nullptr);
 }
 
 TEST_F(CallStateGraphTest, testReadsCallpathFunctionEntriesFile) {
@@ -97,10 +97,10 @@ TEST_F(CallStateGraphTest, testReadsCallpathFunctionEntriesFile) {
 
   CallStateGraph graph;
 
-  ASSERT_NE(graph.get_function_entry_state(100), nullptr);
-  EXPECT_EQ(graph.get_function_entry_state(100)->get_id(), 5);
-  EXPECT_EQ(graph.get_function_entry_state(200), nullptr);
-  EXPECT_EQ(graph.get_or_register_node(9)->get_function_entry_id(), 200);
+  ASSERT_NE(graph.GetFunctionEntryState(100), nullptr);
+  EXPECT_EQ(graph.GetFunctionEntryState(100)->GetId(), 5);
+  EXPECT_EQ(graph.GetFunctionEntryState(200), nullptr);
+  EXPECT_EQ(graph.GetOrRegisterNode(9)->GetFunctionEntryId(), 200);
 
   std::remove(path.c_str());
   rmdir(dir);
@@ -135,8 +135,8 @@ TEST_F(CallStateGraphParsingTest, testEveryTransitionInTheFileIsRegistered) {
 
   CallStateGraph graph;
 
-  EXPECT_EQ(graph.get_or_register_node(1)->get_transition_target(10), graph.get_or_register_node(2));
-  EXPECT_EQ(graph.get_or_register_node(2)->get_transition_target(20), graph.get_or_register_node(3));
+  EXPECT_EQ(graph.GetOrRegisterNode(1)->GetTransitionTarget(10), graph.GetOrRegisterNode(2));
+  EXPECT_EQ(graph.GetOrRegisterNode(2)->GetTransitionTarget(20), graph.GetOrRegisterNode(3));
 }
 
 TEST_F(CallStateGraphParsingTest, testCommentsAndEmptyLinesAreSkipped) {
@@ -144,7 +144,7 @@ TEST_F(CallStateGraphParsingTest, testCommentsAndEmptyLinesAreSkipped) {
 
   CallStateGraph graph;
 
-  EXPECT_EQ(graph.get_or_register_node(1)->get_transition_target(10), graph.get_or_register_node(2));
+  EXPECT_EQ(graph.GetOrRegisterNode(1)->GetTransitionTarget(10), graph.GetOrRegisterNode(2));
 }
 
 TEST_F(CallStateGraphParsingTest, testALineMissingAFieldIsSkipped) {
@@ -152,8 +152,8 @@ TEST_F(CallStateGraphParsingTest, testALineMissingAFieldIsSkipped) {
 
   CallStateGraph graph;
 
-  EXPECT_EQ(graph.get_or_register_node(1)->get_transition_target(10), nullptr);
-  EXPECT_EQ(graph.get_or_register_node(2)->get_transition_target(20), graph.get_or_register_node(3));
+  EXPECT_EQ(graph.GetOrRegisterNode(1)->GetTransitionTarget(10), nullptr);
+  EXPECT_EQ(graph.GetOrRegisterNode(2)->GetTransitionTarget(20), graph.GetOrRegisterNode(3));
 }
 
 TEST_F(CallStateGraphParsingTest, testTheLastLineNeedsNoNewline) {
@@ -161,7 +161,7 @@ TEST_F(CallStateGraphParsingTest, testTheLastLineNeedsNoNewline) {
 
   CallStateGraph graph;
 
-  EXPECT_EQ(graph.get_or_register_node(1)->get_transition_target(10), graph.get_or_register_node(2));
+  EXPECT_EQ(graph.GetOrRegisterNode(1)->GetTransitionTarget(10), graph.GetOrRegisterNode(2));
 }
 
 // the returns are stored without the trigger id they are keyed by in the file, so they come back
@@ -171,8 +171,8 @@ TEST_F(CallStateGraphParsingTest, testTheReturnTargetsAreReadFromTheirOwnFile) {
 
   CallStateGraph graph;
 
-  EXPECT_EQ(graph.get_or_register_node(3)->get_implicit_return_transition_target(), graph.get_or_register_node(1));
-  EXPECT_EQ(graph.get_or_register_node(3)->get_transition_target(1), nullptr);
+  EXPECT_EQ(graph.GetOrRegisterNode(3)->GetImplicitReturnTransitionTarget(), graph.GetOrRegisterNode(1));
+  EXPECT_EQ(graph.GetOrRegisterNode(3)->GetTransitionTarget(1), nullptr);
 }
 
 TEST_F(CallStateGraphParsingTest, testTheReturnTargetsFileSkipsCommentsAndEmptyLinesAsWell) {
@@ -180,7 +180,7 @@ TEST_F(CallStateGraphParsingTest, testTheReturnTargetsFileSkipsCommentsAndEmptyL
 
   CallStateGraph graph;
 
-  EXPECT_EQ(graph.get_or_register_node(3)->get_implicit_return_transition_target(), graph.get_or_register_node(1));
+  EXPECT_EQ(graph.GetOrRegisterNode(3)->GetImplicitReturnTransitionTarget(), graph.GetOrRegisterNode(1));
 }
 
 TEST_F(CallStateGraphParsingTest, testBothFilesEndUpInTheSameGraph) {
@@ -189,10 +189,10 @@ TEST_F(CallStateGraphParsingTest, testBothFilesEndUpInTheSameGraph) {
 
   CallStateGraph graph;
 
-  CallState *const entered = graph.get_or_register_node(1)->get_transition_target(10);
+  CallState *const entered = graph.GetOrRegisterNode(1)->GetTransitionTarget(10);
   ASSERT_NE(entered, nullptr);
-  EXPECT_EQ(entered->get_id(), 2);
-  EXPECT_EQ(entered->get_implicit_return_transition_target(), graph.get_or_register_node(1));
+  EXPECT_EQ(entered->GetId(), 2);
+  EXPECT_EQ(entered->GetImplicitReturnTransitionTarget(), graph.GetOrRegisterNode(1));
 }
 
 // The constructor runs from __dp_init, so it must get through its input without throwing. A field
@@ -204,8 +204,8 @@ TEST_F(CallStateGraphParsingTest, testALineWithAFieldThatIsNotANumberIsSkipped) 
   ASSERT_NO_THROW({
     CallStateGraph graph;
 
-    EXPECT_EQ(graph.get_or_register_node(1)->get_transition_target(10), nullptr);
-    EXPECT_EQ(graph.get_or_register_node(2)->get_transition_target(20), graph.get_or_register_node(3));
+    EXPECT_EQ(graph.GetOrRegisterNode(1)->GetTransitionTarget(10), nullptr);
+    EXPECT_EQ(graph.GetOrRegisterNode(2)->GetTransitionTarget(20), graph.GetOrRegisterNode(3));
   });
 }
 
@@ -215,7 +215,7 @@ TEST_F(CallStateGraphParsingTest, testAnIdTooLargeForTheStateTypeIsSkipped) {
   ASSERT_NO_THROW({
     CallStateGraph graph;
 
-    EXPECT_EQ(graph.get_or_register_node(1)->get_transition_target(10), graph.get_or_register_node(2));
+    EXPECT_EQ(graph.GetOrRegisterNode(1)->GetTransitionTarget(10), graph.GetOrRegisterNode(2));
   });
 }
 
@@ -225,7 +225,7 @@ TEST_F(CallStateGraphParsingTest, testTheReturnTargetsFileSurvivesAMalformedLine
   ASSERT_NO_THROW({
     CallStateGraph graph;
 
-    EXPECT_EQ(graph.get_or_register_node(3)->get_implicit_return_transition_target(), graph.get_or_register_node(1));
+    EXPECT_EQ(graph.GetOrRegisterNode(3)->GetImplicitReturnTransitionTarget(), graph.GetOrRegisterNode(1));
   });
 }
 

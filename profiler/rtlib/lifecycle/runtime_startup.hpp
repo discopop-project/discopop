@@ -12,7 +12,7 @@
 
 #pragma once
 
-namespace __dp {
+namespace dp {
 
 /******* Runtime startup *******/
 extern "C" {
@@ -23,4 +23,4 @@ extern "C" {
 void __dp_init();
 }
 
-} // namespace __dp
+} // namespace dp

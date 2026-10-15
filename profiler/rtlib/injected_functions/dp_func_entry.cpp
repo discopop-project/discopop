@@ -26,29 +26,29 @@
 #include <string>
 
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_func_entry(LID lid, std::int32_t isStart, std::int32_t functionEntryID) {
+void __dp_func_entry(LID lid, std::int32_t is_start, std::int32_t function_entry_id) {
   DP_CALLBACK_SCOPE(FUNC_ENTRY);
 
   // The runtime is up before the first callback: it is brought up from .init_array, see
   // lifecycle/runtime_startup.cpp. No lazy initialization is needed here.
-  function_manager->register_function_start(lid);
+  function_manager->RegisterFunctionStart(lid);
 
   // follow the pending call into this function (or switch to the function's own root state)
-  enter_function_for_callstate(functionEntryID);
+  EnterFunctionForCallstate(function_entry_id);
 
 
-  if (isStart) {
-    *out << "START " << dputil::decodeLID(lid) << std::endl;
+  if (is_start) {
+    *out << "START " << dputil::DecodeLid(lid) << std::endl;
 }
 
   // Reset last call tracker
-  function_manager->log_call(0);
+  function_manager->LogCall(0);
 }
 }
 
-} // namespace __dp
+} // namespace dp

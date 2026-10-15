@@ -12,7 +12,7 @@
 
 #include "StaticCallPathTree.hpp"
 
-StaticCallPathTreeNode* StaticCallPathTreeNode::get_or_register_successor(StaticCallPathTree* tree, StaticCalltreeNode* successor_node){
+StaticCallPathTreeNode* StaticCallPathTreeNode::GetOrRegisterSuccessor(StaticCallPathTree* tree, StaticCalltreeNode* successor_node){
     std::lock_guard<std::mutex> lg(mtx);
     // search for successor
     for(auto succ: successors){
@@ -21,7 +21,7 @@ StaticCallPathTreeNode* StaticCallPathTreeNode::get_or_register_successor(Static
         }
     }
     // register successor
-    StaticCallPathTreeNode* new_node = new StaticCallPathTreeNode(tree->get_next_free_path_id(), successor_node, this);
+    StaticCallPathTreeNode* new_node = new StaticCallPathTreeNode(tree->GetNextFreePathId(), successor_node, this);
     successors.push_back(new_node);
     return new_node;
 }
@@ -32,30 +32,30 @@ StaticCallPathTreeNode::~StaticCallPathTreeNode(){
     }
 }
 
-std::string StaticCallPathTreeNode::to_dot_string(){
+std::string StaticCallPathTreeNode::ToDotString(){
     std::string result = "";
     result += std::to_string(path_id) + ";\n";
     for(auto succ: successors){
         result += std::to_string(path_id) + " -> " + std::to_string(succ->path_id) + ";\n";
-        result += succ->to_dot_string();
+        result += succ->ToDotString();
     }
     return result;
 }
 
-std::string StaticCallPathTreeNode::get_path_string(){
+std::string StaticCallPathTreeNode::GetPathString(){
     if(this->base_node == nullptr){
         return "";
     }
-    std::string path_str = this->base_node->get_label();
+    std::string path_str = this->base_node->GetLabel();
     auto current = this->prefix;
     while(current->base_node != nullptr){
-        path_str = current->base_node->get_label() + "-->" + path_str;
+        path_str = current->base_node->GetLabel() + "-->" + path_str;
         current = current->prefix;
     }
     return path_str;
 }
 
-void StaticCallPathTreeNode::register_transition(int32_t trigger_instruction_id, const std::uint32_t target_path_id){
+void StaticCallPathTreeNode::RegisterTransition(int32_t trigger_instruction_id, const std::uint32_t target_path_id){
     std::lock_guard<std::mutex> lg(mtx);
     state_transitions[trigger_instruction_id] = target_path_id;
 }
@@ -66,31 +66,31 @@ void StaticCallPathTreeNode::register_transition(int32_t trigger_instruction_id,
 
 
 StaticCallPathTree::StaticCallPathTree(){
-    root = new StaticCallPathTreeNode(get_next_free_path_id(), nullptr);
-    register_node_in_all_nodes(root);
+    root = new StaticCallPathTreeNode(GetNextFreePathId(), nullptr);
+    RegisterNodeInAllNodes(root);
 }
 
 StaticCallPathTree::StaticCallPathTree(std::uint32_t start_path_id){
     // start counting paths from start_path_id
-    next_free_path_id = start_path_id;
-    root = new StaticCallPathTreeNode(get_next_free_path_id(), nullptr);
-    register_node_in_all_nodes(root);
+    next_free_path_id_ = start_path_id;
+    root = new StaticCallPathTreeNode(GetNextFreePathId(), nullptr);
+    RegisterNodeInAllNodes(root);
 }
 
 StaticCallPathTree::~StaticCallPathTree(){
     delete root;
 }
 
-std::string StaticCallPathTree::to_dot_string(){
+std::string StaticCallPathTree::ToDotString(){
     std::string result = "";
     result += "diGraph G {\n";
-    result += root->to_dot_string();
+    result += root->ToDotString();
     result += "}\n";
     return result;
 }
 
 
- std::uint32_t StaticCallPathTree::get_next_free_path_id(){
+ std::uint32_t StaticCallPathTree::GetNextFreePathId(){
     /*std::uint32_t buffer;
     {
         //std::lock_guard<std::mutex> lg(next_free_path_id_mtx);
@@ -99,13 +99,13 @@ std::string StaticCallPathTree::to_dot_string(){
     }
     return buffer;
     */
-    return next_free_path_id.fetch_add(1);
+    return next_free_path_id_.fetch_add(1);
 }
 
-std::uint32_t StaticCallPathTree::get_current_free_path_id(){
-    return next_free_path_id.load();
+std::uint32_t StaticCallPathTree::GetCurrentFreePathId(){
+    return next_free_path_id_.load();
 }
 
-void StaticCallPathTree::register_node_in_all_nodes(StaticCallPathTreeNode* node_ptr){
+void StaticCallPathTree::RegisterNodeInAllNodes(StaticCallPathTreeNode* node_ptr){
     all_nodes.push_back(node_ptr);
 }

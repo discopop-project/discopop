@@ -12,13 +12,13 @@
 
 #include "DiscoPoP.hpp"
 
-void DiscoPoP::initializeCUIDCounter() {
-  std::string CUCounterFile(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  CUCounterFile += "/DP_CUIDCounter.txt";
-  if (dputil::fexists(CUCounterFile)) {
-    std::fstream inCUIDCounter(CUCounterFile, std::ios_base::in);
+void DiscoPoP::InitializeCuIdCounter() {
+  std::string cu_counter_file(dputil::GetEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
+  cu_counter_file += "/DP_CUIDCounter.txt";
+  if (dputil::FileExists(cu_counter_file)) {
+    std::fstream in_cu_id_counter(cu_counter_file, std::ios_base::in);
     ;
-    inCUIDCounter >> CUIDCounter;
-    inCUIDCounter.close();
+    in_cu_id_counter >> cu_id_counter;
+    in_cu_id_counter.close();
   }
 }

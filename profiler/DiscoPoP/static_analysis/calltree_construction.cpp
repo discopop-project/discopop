@@ -28,44 +28,44 @@ using llvm::cast;
 using llvm::dyn_cast;
 using llvm::isa;
 
-using TRANSITION_TYPE = std::int8_t; // 0 -> enterLoop, 1 -> exitLoop, 2 -> incrementLoop
+using TransitionType = std::int8_t; // 0 -> enterLoop, 1 -> exitLoop, 2 -> incrementLoop
 #define TRANSITION_TYPE_ENTERLOOP 0
 #define TRANSITION_TYPE_EXITLOOP 1
 #define TRANSITION_TYPE_INCREMENTLOOP 2
 
-using LOOP_ID = std::int32_t;
-using ITERATION_INSTANCE = std::vector<std::int32_t>;
+using LoopId = std::int32_t;
+using IterationInstance = std::vector<std::int32_t>;
 
 // returns a mapping from loop id to the instruction id of the loop entry call
-std::unordered_map<std::int32_t, std::int32_t> get_loop_entry_instructionIDs(Function &F){
+std::unordered_map<std::int32_t, std::int32_t> GetLoopEntryInstructionIds(Function &f){
   std::unordered_map<std::int32_t, std::int32_t> loop_entry_instruction_ids;
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
-    BasicBlock &BB = *FI;
-    for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
-      auto instruction = &*BI;
+  for (Function::iterator fi = f.begin(), fe = f.end(); fi != fe; ++fi) {
+    BasicBlock &bb = *fi;
+    for (BasicBlock::iterator bi = bb.begin(), e = bb.end(); bi != e; ++bi) {
+      auto instruction = &*bi;
       if(isa<CallInst>(instruction)){
-        auto ci = cast<CallInst>(BI);
-        Function* F = ci->getCalledFunction();
-        if(F){
-          auto fn = F->getName();
+        auto ci = cast<CallInst>(bi);
+        Function* f = ci->getCalledFunction();
+        if(f){
+          auto fn = f->getName();
           if (fn.find("__dp_loop_entry") != std::string::npos)
           {
             // get id of entered loop
-            if (llvm::ConstantInt* CI = dyn_cast<llvm::ConstantInt>(ci->getArgOperand(1))) {
+            if (llvm::ConstantInt* const_int = dyn_cast<llvm::ConstantInt>(ci->getArgOperand(1))) {
               // operand is a ConstantInt, we can use CI here
               std::int32_t loop_id;
-              if (CI->getBitWidth() <= 32) {
-                loop_id = CI->getSExtValue();
+              if (const_int->getBitWidth() <= 32) {
+                loop_id = const_int->getSExtValue();
               }
 
               // Get InstructionID of callinstruction
-              MDNode* md = BI->getMetadata("dp.md.instr.id");
+              MDNode* md = bi->getMetadata("dp.md.instr.id");
               if(md){
                 // Metadata exists
-                std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
-                callInstructionID_str.erase(0, 15);
-                std::int32_t callInstructionID = std::stoi(callInstructionID_str);
-                loop_entry_instruction_ids[loop_id] = callInstructionID;
+                std::string call_instruction_id_str = cast<MDString>(md->getOperand(0))->getString().str();
+                call_instruction_id_str.erase(0, 15);
+                std::int32_t call_instruction_id = std::stoi(call_instruction_id_str);
+                loop_entry_instruction_ids[loop_id] = call_instruction_id;
               }
             }
             else {
@@ -82,35 +82,35 @@ std::unordered_map<std::int32_t, std::int32_t> get_loop_entry_instructionIDs(Fun
 
 // returns a mapping from loop id to the instruction ids of the loop's exit calls (one per real
 // exit block, see CFA)
-std::unordered_map<std::int32_t, std::vector<std::int32_t>> get_loop_exit_instructionIDs(Function &F){
+std::unordered_map<std::int32_t, std::vector<std::int32_t>> GetLoopExitInstructionIds(Function &f){
   std::unordered_map<std::int32_t, std::vector<std::int32_t>> loop_exit_instruction_ids;
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
-    BasicBlock &BB = *FI;
-    for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
-      auto instruction = &*BI;
+  for (Function::iterator fi = f.begin(), fe = f.end(); fi != fe; ++fi) {
+    BasicBlock &bb = *fi;
+    for (BasicBlock::iterator bi = bb.begin(), e = bb.end(); bi != e; ++bi) {
+      auto instruction = &*bi;
       if(isa<CallInst>(instruction)){
-        auto ci = cast<CallInst>(BI);
-        Function* F = ci->getCalledFunction();
-        if(F){
-          auto fn = F->getName();
+        auto ci = cast<CallInst>(bi);
+        Function* f = ci->getCalledFunction();
+        if(f){
+          auto fn = f->getName();
           if (fn.find("__dp_loop_exit") != std::string::npos)
           {
             // get id of exited loop
-            if (llvm::ConstantInt* CI = dyn_cast<llvm::ConstantInt>(ci->getArgOperand(1))) {
+            if (llvm::ConstantInt* const_int = dyn_cast<llvm::ConstantInt>(ci->getArgOperand(1))) {
               // operand is a ConstantInt, we can use CI here
               std::int32_t loop_id;
-              if (CI->getBitWidth() <= 32) {
-                loop_id = CI->getSExtValue();
+              if (const_int->getBitWidth() <= 32) {
+                loop_id = const_int->getSExtValue();
               }
 
               // Get InstructionID of callinstruction
-              MDNode* md = BI->getMetadata("dp.md.instr.id");
+              MDNode* md = bi->getMetadata("dp.md.instr.id");
               if(md){
                 // Metadata exists
-                std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
-                callInstructionID_str.erase(0, 15);
-                std::int32_t callInstructionID = std::stoi(callInstructionID_str);
-                loop_exit_instruction_ids[loop_id].push_back(callInstructionID);
+                std::string call_instruction_id_str = cast<MDString>(md->getOperand(0))->getString().str();
+                call_instruction_id_str.erase(0, 15);
+                std::int32_t call_instruction_id = std::stoi(call_instruction_id_str);
+                loop_exit_instruction_ids[loop_id].push_back(call_instruction_id);
               }
             }
             else {
@@ -126,35 +126,35 @@ std::unordered_map<std::int32_t, std::vector<std::int32_t>> get_loop_exit_instru
 }
 
 // returns a mapping from loop id to the instruction id of the loop increment call
-std::unordered_map<std::int32_t, std::int32_t> get_loop_increment_instructionIDs(Function &F){
+std::unordered_map<std::int32_t, std::int32_t> GetLoopIncrementInstructionIds(Function &f){
   std::unordered_map<std::int32_t, std::int32_t> loop_increment_instruction_ids;
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
-    BasicBlock &BB = *FI;
-    for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
-      auto instruction = &*BI;
+  for (Function::iterator fi = f.begin(), fe = f.end(); fi != fe; ++fi) {
+    BasicBlock &bb = *fi;
+    for (BasicBlock::iterator bi = bb.begin(), e = bb.end(); bi != e; ++bi) {
+      auto instruction = &*bi;
       if(isa<CallInst>(instruction)){
-        auto ci = cast<CallInst>(BI);
-        Function* F = ci->getCalledFunction();
-        if(F){
-          auto fn = F->getName();
+        auto ci = cast<CallInst>(bi);
+        Function* f = ci->getCalledFunction();
+        if(f){
+          auto fn = f->getName();
           if (fn.find("__dp_loop_incr") != std::string::npos)
           {
             // get id of incremented loop
-            if (llvm::ConstantInt* CI = dyn_cast<llvm::ConstantInt>(ci->getArgOperand(0))) {
+            if (llvm::ConstantInt* const_int = dyn_cast<llvm::ConstantInt>(ci->getArgOperand(0))) {
               // operand is a ConstantInt, we can use CI here
               std::int32_t loop_id;
-              if (CI->getBitWidth() <= 32) {
-                loop_id = CI->getSExtValue();
+              if (const_int->getBitWidth() <= 32) {
+                loop_id = const_int->getSExtValue();
               }
 
               // Get InstructionID of callinstruction
-              MDNode* md = BI->getMetadata("dp.md.instr.id");
+              MDNode* md = bi->getMetadata("dp.md.instr.id");
               if(md){
                 // Metadata exists
-                std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
-                callInstructionID_str.erase(0, 15);
-                std::int32_t callInstructionID = std::stoi(callInstructionID_str);
-                loop_increment_instruction_ids[loop_id] = callInstructionID;
+                std::string call_instruction_id_str = cast<MDString>(md->getOperand(0))->getString().str();
+                call_instruction_id_str.erase(0, 15);
+                std::int32_t call_instruction_id = std::stoi(call_instruction_id_str);
+                loop_increment_instruction_ids[loop_id] = call_instruction_id;
               }
             }
             else {
@@ -174,7 +174,7 @@ std::unordered_map<std::int32_t, std::int32_t> get_loop_increment_instructionIDs
 // to tell true ancestors (must be active together) apart from siblings (mutually exclusive,
 // since only one of them can be executing at any given time).
 struct LoopTreeNode {
-  LOOP_ID loop_id;
+  LoopId loop_id;
   std::vector<LoopTreeNode*> children;
 };
 
@@ -185,27 +185,27 @@ struct LoopTreeNode {
 // (e.g. in the middle of the body of an enclosing loop), so the order of the entry and exit calls
 // does not describe the nesting. Returns one LoopTreeNode* per top-level loop; loop_ids receives
 // the id of every instrumented loop.
-std::vector<LoopTreeNode*> build_loop_forest(Function &F, LoopInfo &LI, std::unordered_map<const Loop*, LOOP_ID>& loop_ids){
+std::vector<LoopTreeNode*> BuildLoopForest(Function &f, LoopInfo &li, std::unordered_map<const Loop*, LoopId>& loop_ids){
   std::vector<LoopTreeNode*> roots;
   std::vector<std::pair<const Loop*, LoopTreeNode*>> nodes_in_layout_order;
   std::unordered_map<const Loop*, LoopTreeNode*> node_of_loop;
 
-  for (BasicBlock &BB : F) {
-    for (Instruction &I : BB) {
-      auto ci = dyn_cast<CallInst>(&I);
+  for (BasicBlock &bb : f) {
+    for (Instruction &i : bb) {
+      auto ci = dyn_cast<CallInst>(&i);
       if (!ci || !ci->getCalledFunction() || ci->getCalledFunction()->getName() != "__dp_loop_entry") {
         continue;
       }
-      auto CI = dyn_cast<llvm::ConstantInt>(ci->getArgOperand(1));
-      const Loop* L = LI.getLoopFor(&BB);
-      if (!CI || CI->getBitWidth() > 32 || !L || node_of_loop.count(L) > 0) {
+      auto const_int = dyn_cast<llvm::ConstantInt>(ci->getArgOperand(1));
+      const Loop* l = li.getLoopFor(&bb);
+      if (!const_int || const_int->getBitWidth() > 32 || !l || node_of_loop.count(l) > 0) {
         continue;
       }
       LoopTreeNode* node = new LoopTreeNode();
-      node->loop_id = static_cast<LOOP_ID>(CI->getSExtValue());
-      loop_ids[L] = node->loop_id;
-      node_of_loop[L] = node;
-      nodes_in_layout_order.push_back({L, node});
+      node->loop_id = static_cast<LoopId>(const_int->getSExtValue());
+      loop_ids[l] = node->loop_id;
+      node_of_loop[l] = node;
+      nodes_in_layout_order.push_back({l, node});
     }
   }
 
@@ -224,9 +224,9 @@ std::vector<LoopTreeNode*> build_loop_forest(Function &F, LoopInfo &LI, std::uno
 }
 
 // Frees the nodes allocated by build_loop_forest for a single tree.
-void delete_loop_tree(LoopTreeNode* node){
+void DeleteLoopTree(LoopTreeNode* node){
   for(auto child : node->children){
-    delete_loop_tree(child);
+    DeleteLoopTree(child);
   }
   delete node;
 }
@@ -234,16 +234,16 @@ void delete_loop_tree(LoopTreeNode* node){
 // Assigns each loop tree node a stable position (offset) within the flat ITERATION_INSTANCE
 // vector via pre-order traversal, and records the resulting loop_id sequence (used to map
 // an offset back to its loop_id, e.g. for debug output and in buildStaticCalltree).
-void flatten_loop_forest(LoopTreeNode* node, std::vector<LOOP_ID>& out_sequence, std::unordered_map<LoopTreeNode*, std::int32_t>& node_to_offset){
+void FlattenLoopForest(LoopTreeNode* node, std::vector<LoopId>& out_sequence, std::unordered_map<LoopTreeNode*, std::int32_t>& node_to_offset){
   node_to_offset[node] = static_cast<std::int32_t>(out_sequence.size());
   out_sequence.push_back(node->loop_id);
   for(auto child : node->children){
-    flatten_loop_forest(child, out_sequence, node_to_offset);
+    FlattenLoopForest(child, out_sequence, node_to_offset);
   }
 }
 
 // converts an iteration instance to its string representation (one digit per loop position)
-std::string iteration_instance_to_string(const ITERATION_INSTANCE& instance){
+std::string IterationInstanceToString(const IterationInstance& instance){
   std::string result;
   result.reserve(instance.size());
   for(auto v : instance){
@@ -263,28 +263,28 @@ std::string iteration_instance_to_string(const ITERATION_INSTANCE& instance){
 // `incoming_instances`: the valid states representing "about to enter `node`", i.e. all of
 // node's ancestors already carry a concrete iteration value (0/1/2) and node's own position
 // as well as all descendant positions are still '3'.
-void generate_states_for_node(
+void GenerateStatesForNode(
     LoopTreeNode* node,
-    const std::vector<ITERATION_INSTANCE>& incoming_instances,
+    const std::vector<IterationInstance>& incoming_instances,
     std::unordered_map<LoopTreeNode*, std::int32_t>& node_to_offset,
-    std::unordered_map<std::string, std::unordered_map<TRANSITION_TYPE, std::unordered_map<LOOP_ID, std::string>>>& transitions,
+    std::unordered_map<std::string, std::unordered_map<TransitionType, std::unordered_map<LoopId, std::string>>>& transitions,
     bool is_top_level){
 
   std::int32_t offset = node_to_offset[node];
-  LOOP_ID loop_id = node->loop_id;
+  LoopId loop_id = node->loop_id;
 
-  std::vector<ITERATION_INSTANCE> own_instances;
+  std::vector<IterationInstance> own_instances;
   own_instances.reserve(incoming_instances.size() * 3);
 
   for(const auto& parent_instance : incoming_instances){
-    std::string parent_instance_str = iteration_instance_to_string(parent_instance);
+    std::string parent_instance_str = IterationInstanceToString(parent_instance);
 
-    ITERATION_INSTANCE variants[3];
+    IterationInstance variants[3];
     std::string variant_strs[3];
     for(int v = 0; v < 3; ++v){
       variants[v] = parent_instance;
       variants[v][offset] = v;
-      variant_strs[v] = iteration_instance_to_string(variants[v]);
+      variant_strs[v] = IterationInstanceToString(variants[v]);
       own_instances.push_back(variants[v]);
     }
 
@@ -309,7 +309,7 @@ void generate_states_for_node(
   }
 
   for(auto child : node->children){
-    generate_states_for_node(child, own_instances, node_to_offset, transitions, false);
+    GenerateStatesForNode(child, own_instances, node_to_offset, transitions, false);
   }
 }
 
@@ -319,14 +319,14 @@ void generate_states_for_node(
 // tree and only ever branches within a single node's own subtree at a time. As a result, a
 // node at depth d contributes 3^d states instead of 3^N, since its siblings (and everything
 // nested inside them) are guaranteed to stay "dont care".
-std::unordered_map<std::string, std::unordered_map<TRANSITION_TYPE, std::unordered_map<LOOP_ID, std::string>>> get_loop_iteration_instances_and_transitions(std::vector<LoopTreeNode*>& forest, std::int32_t loop_count, std::unordered_map<LoopTreeNode*, std::int32_t>& node_to_offset){
-  std::unordered_map<std::string, std::unordered_map<TRANSITION_TYPE, std::unordered_map<LOOP_ID, std::string>>> loop_iteration_instance_transitions;
+std::unordered_map<std::string, std::unordered_map<TransitionType, std::unordered_map<LoopId, std::string>>> GetLoopIterationInstancesAndTransitions(std::vector<LoopTreeNode*>& forest, std::int32_t loop_count, std::unordered_map<LoopTreeNode*, std::int32_t>& node_to_offset){
+  std::unordered_map<std::string, std::unordered_map<TransitionType, std::unordered_map<LoopId, std::string>>> loop_iteration_instance_transitions;
 
-  ITERATION_INSTANCE root_instance(loop_count, 3);
-  std::vector<ITERATION_INSTANCE> root_instances{root_instance};
+  IterationInstance root_instance(loop_count, 3);
+  std::vector<IterationInstance> root_instances{root_instance};
 
   for(auto root : forest){
-    generate_states_for_node(root, root_instances, node_to_offset, loop_iteration_instance_transitions, true);
+    GenerateStatesForNode(root, root_instances, node_to_offset, loop_iteration_instance_transitions, true);
   }
 
   return loop_iteration_instance_transitions;
@@ -335,7 +335,7 @@ std::unordered_map<std::string, std::unordered_map<TRANSITION_TYPE, std::unorder
 
 // returns true if the call or invoke I is a real call, i.e. not a call of an instrumentation
 // function, a clang helper or an LLVM intrinsic
-static bool is_relevant_call(Instruction * /*I*/, Function *callee){
+static bool IsRelevantCall(Instruction * /*I*/, Function *callee){
   if (!callee) {
     return false;
   }
@@ -353,28 +353,28 @@ static bool is_relevant_call(Instruction * /*I*/, Function *callee){
 
 // returns a map from loopID to a vector of callInstructionIDs contained in the loop, i.e. in a
 // basic block of the loop according to LoopInfo
-std::unordered_map<std::int32_t, std::vector<std::int32_t>> get_loop_callInstruction_affectance(Function &F, LoopInfo &LI, std::unordered_map<const Loop*, LOOP_ID>& loop_ids){
+std::unordered_map<std::int32_t, std::vector<std::int32_t>> GetLoopCallInstructionAffectance(Function &f, LoopInfo &li, std::unordered_map<const Loop*, LoopId>& loop_ids){
   std::unordered_map<std::int32_t, std::vector<std::int32_t>> result_map;
-  for (BasicBlock &BB : F) {
-    const Loop* innermost = LI.getLoopFor(&BB);
+  for (BasicBlock &bb : f) {
+    const Loop* innermost = li.getLoopFor(&bb);
     if (!innermost) {
       continue;
     }
-    for (Instruction &I : BB) {
-      if (!isa<CallInst>(&I) && !isa<InvokeInst>(&I)) {
+    for (Instruction &i : bb) {
+      if (!isa<CallInst>(&i) && !isa<InvokeInst>(&i)) {
         continue;
       }
-      if (!is_relevant_call(&I, getCalledFunctionThroughAliases(&I))) {
+      if (!IsRelevantCall(&i, GetCalledFunctionThroughAliases(&i))) {
         continue;
       }
-      std::int32_t callInstructionID = get_dp_instruction_id(&I);
-      if (callInstructionID == 0) {
+      std::int32_t call_instruction_id = GetDpInstructionId(&i);
+      if (call_instruction_id == 0) {
         continue;
       }
-      for (const Loop* L = innermost; L != nullptr; L = L->getParentLoop()) {
-        auto pos = loop_ids.find(L);
+      for (const Loop* l = innermost; l != nullptr; l = l->getParentLoop()) {
+        auto pos = loop_ids.find(l);
         if (pos != loop_ids.end()) {
-          result_map[pos->second].push_back(callInstructionID);
+          result_map[pos->second].push_back(call_instruction_id);
         }
       }
     }
@@ -383,7 +383,7 @@ std::unordered_map<std::int32_t, std::vector<std::int32_t>> get_loop_callInstruc
 }
 
 // inverts the given map. Returns a map from CallInstructionID to LoopIDs which affect it.
-std::unordered_map<std::int32_t, std::vector<std::int32_t>> get_inverted_loop_callInstruction_affectance(std::unordered_map<std::int32_t, std::vector<std::int32_t>> loop_call_affectance){
+std::unordered_map<std::int32_t, std::vector<std::int32_t>> GetInvertedLoopCallInstructionAffectance(std::unordered_map<std::int32_t, std::vector<std::int32_t>> loop_call_affectance){
   std::unordered_map<std::int32_t, std::vector<std::int32_t>> result_map;
   for(auto pair: loop_call_affectance){
     auto loop_id = pair.first;
@@ -402,32 +402,32 @@ std::unordered_map<std::int32_t, std::vector<std::int32_t>> get_inverted_loop_ca
 namespace static_callpaths {
 
 // builds a call tree for the given Module on the basis of the statically available information
-StaticCalltree buildStaticCalltree(Module &M, const std::map<std::int32_t, LoopIdentity> &loop_id_to_identity) {
+StaticCalltree BuildStaticCalltree(Module &m, const std::map<std::int32_t, LoopIdentity> &loop_id_to_identity) {
   StaticCalltree calltree;
   // explicit mapping from the digit positions of the "<function>_loopstate<digits>" labels
   // (see StaticCalltree.cpp) to the loops they describe, read by the explorer
   std::ofstream loopstate_positions_file;
-  std::string loopstate_positions_path(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
+  std::string loopstate_positions_path(dputil::GetEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   loopstate_positions_path += "/loopstate_positions.txt";
   loopstate_positions_file.open(loopstate_positions_path.data(), std::ios_base::app);
-  for (Function &F : M) {
-    std::cout << "BUILDING FUNCTION: " << F.getName().str() << "\n";
+  for (Function &f : m) {
+    std::cout << "BUILDING FUNCTION: " << f.getName().str() << "\n";
     // reconstruct the real loop nesting tree (preserves parent/child relationships, which is
     // required to tell true ancestors apart from mutually-exclusive sibling loops)
-    std::unordered_map<const Loop*, LOOP_ID> loop_ids;
+    std::unordered_map<const Loop*, LoopId> loop_ids;
     std::vector<LoopTreeNode*> loop_forest;
     // LoopInfo of the instrumented function (instrumentation only inserts calls, the CFG is unchanged)
-    std::unique_ptr<DominatorTree> DT;
-    std::unique_ptr<LoopInfo> LI;
-    if (!F.isDeclaration()) {
-      DT = std::make_unique<DominatorTree>(F);
-      LI = std::make_unique<LoopInfo>(*DT);
-      loop_forest = build_loop_forest(F, *LI, loop_ids);
+    std::unique_ptr<DominatorTree> dt;
+    std::unique_ptr<LoopInfo> li;
+    if (!f.isDeclaration()) {
+      dt = std::make_unique<DominatorTree>(f);
+      li = std::make_unique<LoopInfo>(*dt);
+      loop_forest = BuildLoopForest(f, *li, loop_ids);
     }
-    std::vector<LOOP_ID> sequentialized_contained_loops;
+    std::vector<LoopId> sequentialized_contained_loops;
     std::unordered_map<LoopTreeNode*, std::int32_t> node_to_offset;
     for(auto root : loop_forest){
-      flatten_loop_forest(root, sequentialized_contained_loops, node_to_offset);
+      FlattenLoopForest(root, sequentialized_contained_loops, node_to_offset);
     }
     // <function> <position> <loop_id> <Data.xml loop node id> <file_id>:<start_line>
     for(std::size_t position = 0; position < sequentialized_contained_loops.size(); ++position){
@@ -439,15 +439,15 @@ StaticCalltree buildStaticCalltree(Module &M, const std::map<std::int32_t, LoopI
         pet_node_id = identity->second.pet_node_id;
         start_location = identity->second.start_location;
       }
-      loopstate_positions_file << F.getName().str() << " " << position << " " << loop_id << " " << pet_node_id << " " << start_location << "\n";
+      loopstate_positions_file << f.getName().str() << " " << position << " " << loop_id << " " << pet_node_id << " " << start_location << "\n";
     }
     //cerr << "seq_contained_loops: " << std::endl;
     //for (auto s : sequentialized_contained_loops){
     //  cerr << " --> " << s << std::endl;
     //}
-    auto loop_entry_instructionIDs = get_loop_entry_instructionIDs(F);
-    auto loop_exit_instructionIDs = get_loop_exit_instructionIDs(F);
-    auto loop_increment_instructionIDs = get_loop_increment_instructionIDs(F);
+    auto loop_entry_instruction_ids = GetLoopEntryInstructionIds(f);
+    auto loop_exit_instruction_ids = GetLoopExitInstructionIds(f);
+    auto loop_increment_instruction_ids = GetLoopIncrementInstructionIds(f);
 
     // for each loop, allow 3 values to represent the currently executed iteration
     // create one instance of the function_node in the calltree per combination of iterations.
@@ -458,22 +458,22 @@ StaticCalltree buildStaticCalltree(Module &M, const std::map<std::int32_t, LoopI
     // must be active for it to be entered, and its siblings (and everything nested inside
     // them) always remain "dont care", since they cannot be active at the same time. This
     // bounds the number of states for a given loop by 3^depth instead of 3^(total loop count).
-    auto iteration_instances_and_transitions = get_loop_iteration_instances_and_transitions(loop_forest, static_cast<std::int32_t>(sequentialized_contained_loops.size()), node_to_offset);
+    auto iteration_instances_and_transitions = GetLoopIterationInstancesAndTransitions(loop_forest, static_cast<std::int32_t>(sequentialized_contained_loops.size()), node_to_offset);
 
     for(auto root : loop_forest){
-      delete_loop_tree(root);
+      DeleteLoopTree(root);
     }
 
     // create StaticCalltreeNode instances for function F
     std::vector<StaticCalltreeNode*> function_node_instances;
 
-    StaticCalltreeNode* original_function_node_ptr = calltree.get_or_insert_function_node(F.getName().str());
+    StaticCalltreeNode* original_function_node_ptr = calltree.GetOrInsertFunctionNode(f.getName().str());
     // the function's __dp_func_entry call identifies the function at runtime
-    if (!F.isDeclaration()) {
-      for (Instruction &I : F.getEntryBlock()) {
-        auto ci = dyn_cast<CallInst>(&I);
+    if (!f.isDeclaration()) {
+      for (Instruction &i : f.getEntryBlock()) {
+        auto ci = dyn_cast<CallInst>(&i);
         if (ci && ci->getCalledFunction() && ci->getCalledFunction()->getName() == "__dp_func_entry") {
-          original_function_node_ptr->function_entry_instruction_id = get_dp_instruction_id(&I);
+          original_function_node_ptr->function_entry_instruction_id = GetDpInstructionId(&i);
           break;
         }
       }
@@ -491,7 +491,7 @@ StaticCalltree buildStaticCalltree(Module &M, const std::map<std::int32_t, LoopI
         continue;
       }
 
-      StaticCalltreeNode* function_node_ptr = calltree.get_or_insert_function_node(F.getName().str(), instance);
+      StaticCalltreeNode* function_node_ptr = calltree.GetOrInsertFunctionNode(f.getName().str(), instance);
       function_node_instances.push_back(function_node_ptr);
       instance_to_node_map[instance] = function_node_ptr;
 
@@ -537,7 +537,7 @@ StaticCalltree buildStaticCalltree(Module &M, const std::map<std::int32_t, LoopI
       for(auto pair: iteration_instances_and_transitions["entry_points"][TRANSITION_TYPE_ENTERLOOP]){
         auto loop_id = pair.first;
         auto loop_entry_instance = pair.second;
-        calltree.addEdge(original_function_node_ptr, instance_to_node_map[loop_entry_instance], loop_entry_instructionIDs[loop_id]);
+        calltree.AddEdge(original_function_node_ptr, instance_to_node_map[loop_entry_instance], loop_entry_instruction_ids[loop_id]);
       }
     }
 
@@ -569,28 +569,28 @@ StaticCalltree buildStaticCalltree(Module &M, const std::map<std::int32_t, LoopI
           // transition without a trigger instruction must not be created.
           std::vector<std::int32_t> trigger_instructions;
           if(transition_type == TRANSITION_TYPE_ENTERLOOP){
-            trigger_instructions.push_back(loop_entry_instructionIDs[loop_id]);
+            trigger_instructions.push_back(loop_entry_instruction_ids[loop_id]);
           }
           else if(transition_type == TRANSITION_TYPE_EXITLOOP){
             // a loop with several exit blocks is left through any of their exit calls
-            trigger_instructions = loop_exit_instructionIDs[loop_id];
+            trigger_instructions = loop_exit_instruction_ids[loop_id];
           }
           else if(transition_type == TRANSITION_TYPE_INCREMENTLOOP){
-            auto increment = loop_increment_instructionIDs.find(loop_id);
-            if(increment != loop_increment_instructionIDs.end()){
+            auto increment = loop_increment_instruction_ids.find(loop_id);
+            if(increment != loop_increment_instruction_ids.end()){
               trigger_instructions.push_back(increment->second);
             }
             else{
               // loops without __dp_loop_incr (instrument_loop skips loops without a source location
               // and loops of a single basic block) start a new iteration whenever their header, and
               // thus the loop entry call, is executed again
-              trigger_instructions.push_back(loop_entry_instructionIDs[loop_id]);
+              trigger_instructions.push_back(loop_entry_instruction_ids[loop_id]);
             }
           }
           // create edges
           for(auto trigger_instruction : trigger_instructions){
             if(trigger_instruction != 0){
-              calltree.addEdge(source_node, target_node, trigger_instruction);
+              calltree.AddEdge(source_node, target_node, trigger_instruction);
             }
           }
         }
@@ -600,37 +600,37 @@ StaticCalltree buildStaticCalltree(Module &M, const std::map<std::int32_t, LoopI
 
     // get connection between loops and called functions inside the loops
     std::unordered_map<std::int32_t, std::vector<std::int32_t>> loop_call_affectance;
-    if (LI) {
-      loop_call_affectance = get_loop_callInstruction_affectance(F, *LI, loop_ids);
+    if (li) {
+      loop_call_affectance = GetLoopCallInstructionAffectance(f, *li, loop_ids);
     }
-    auto inverted_loop_call_affectance = get_inverted_loop_callInstruction_affectance(loop_call_affectance);
+    auto inverted_loop_call_affectance = GetInvertedLoopCallInstructionAffectance(loop_call_affectance);
 
-    for (BasicBlock &BB : F) {
-      for (Instruction &I : BB) {
-        if (!isa<CallInst>(&I) && !isa<InvokeInst>(&I)) {
+    for (BasicBlock &bb : f) {
+      for (Instruction &i : bb) {
+        if (!isa<CallInst>(&i) && !isa<InvokeInst>(&i)) {
           continue;
         }
         // resolves aliases, e.g. calls of constructors (see getCalledFunctionThroughAliases)
-        Function *callee = getCalledFunctionThroughAliases(&I);
-        if (!is_relevant_call(&I, callee)) {
+        Function *callee = GetCalledFunctionThroughAliases(&i);
+        if (!IsRelevantCall(&i, callee)) {
           continue;
         }
         // register CallInstruction Node in StaticCalltree
-        std::int32_t callInstructionID = get_dp_instruction_id(&I);
-        if (callInstructionID == 0) {
+        std::int32_t call_instruction_id = GetDpInstructionId(&i);
+        if (call_instruction_id == 0) {
           continue;
         }
-        StaticCalltreeNode* callInstructionNode_ptr = calltree.get_or_insert_instruction_node(callInstructionID);
-        calltree.addEdge(original_function_node_ptr, callInstructionNode_ptr, callInstructionID);
+        StaticCalltreeNode* call_instruction_node_ptr = calltree.GetOrInsertInstructionNode(call_instruction_id);
+        calltree.AddEdge(original_function_node_ptr, call_instruction_node_ptr, call_instruction_id);
         // connect to nodes if the loop contains the call and the loop is "active" and node is an entry node to the loop, i.e. iteration count is 0
-        auto parent_loops = inverted_loop_call_affectance[callInstructionID];
+        auto parent_loops = inverted_loop_call_affectance[call_instruction_id];
         for(auto parent_loop_id : parent_loops){
           for(auto node_ptr: loop_activity_map[parent_loop_id]){
-            calltree.addEdge(node_ptr, callInstructionNode_ptr, callInstructionID);
+            calltree.AddEdge(node_ptr, call_instruction_node_ptr, call_instruction_id);
           }
         }
-        StaticCalltreeNode* calleeNode_ptr = calltree.get_or_insert_function_node(callee->getName().str());
-        calltree.addEdge(callInstructionNode_ptr, calleeNode_ptr, 0);
+        StaticCalltreeNode* callee_node_ptr = calltree.GetOrInsertFunctionNode(callee->getName().str());
+        calltree.AddEdge(call_instruction_node_ptr, callee_node_ptr, 0);
       }
     }
   }

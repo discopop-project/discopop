@@ -20,16 +20,16 @@ using llvm::Module;
 using llvm::ModuleAnalysisManager;
 
 // pass get invoked here
-bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
-  std::cout << "MODULE " << M.getName().str() << "\n";
+bool DiscoPoP::RunOnModule(Module &m, ModuleAnalysisManager &mam) {
+  std::cout << "MODULE " << m.getName().str() << "\n";
 
-  doInitialization(M);
+  DoInitialization(m);
 
   // prepare saving the mapping from instructionID to lineID for backwards compatibility
-  instructionID_to_lineID_file = profiler_files::open("instructionID_to_lineID_mapping.txt");
+  instruction_id_to_line_id_file = profiler_files::Open("instructionID_to_lineID_mapping.txt");
 
   // cout << "\tFUNCTION:\n";
-  for (Function &F : M) {
+  for (Function &f : m) {
     /*
         string to_be_printed = "\t(" + to_string(++counter) + " / " +
        to_string(M.size()) + ") -- " + F.getName().str();
@@ -38,29 +38,29 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
         }
         cout << to_be_printed + "\r";
     */
-    runOnFunction(F, MAM);
+    RunOnFunction(f, mam);
   }
 
   // DPReduction
 
   dp_reduction::ReductionInstrumenter reduction(
-      M, {[this](Function &F) { return getCachedFileID(F); }, [this](Loop *L) { return get_or_register_loop_id(L); },
-          [this](Instruction *I) { return dp_reduction_determineVariableName(I, &trueVarNamesFromMetadataMap); }});
+      m, {[this](Function &f) { return GetCachedFileId(f); }, [this](Loop *l) { return GetOrRegisterLoopId(l); },
+          [this](Instruction *i) { return DpReductionDetermineVariableName(i, &true_var_names_from_metadata_map_); }});
 
-  reduction.instrument_module(MAM);
+  reduction.InstrumentModule(mam);
 
-  reduction.insert_functions();
+  reduction.InsertFunctions();
 
   // disambiguating instructions
-  assign_instruction_ids_to_dp_reduction_functions(M);
+  AssignInstructionIdsToDpReductionFunctions(m);
   // update argument instruction ids
-  update_argument_instruction_ids(M);
+  UpdateArgumentInstructionIds(m);
   // restore callpath states after exceptions (needs the function entry ids)
-  instrument_landing_pads(M);
+  InstrumentLandingPads(m);
   // prepare information for call state transitioning and instruction mapping during dynamic analysis.
   // -> build static calltree for state transition and instruction mapping preparation
   std::cout << "Building static calltree..\n";
-  StaticCalltree static_calltree = static_callpaths::buildStaticCalltree(M, loop_id_to_identity);
+  StaticCalltree static_calltree = static_callpaths::BuildStaticCalltree(m, loop_id_to_identity);
   std::cout << "Done building static calltree..\n";
   // -> assign unique stateIDs to all possible call states
   std::cout << "Enumerating paths..\n";
@@ -70,7 +70,7 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   [[maybe_unused]] auto state_transitions_ptr = &state_transitions;
   [[maybe_unused]] auto inverset_state_transitions_ptr = &inverse_state_transitions;
   auto static_calltree_ptr = &static_calltree;
-  auto call_path_tree_ptr = static_callpaths::enumerate_paths(static_calltree, &state_transitions, &inverse_state_transitions, unique_callpath_state_id);
+  auto call_path_tree_ptr = static_callpaths::EnumeratePaths(static_calltree, &state_transitions, &inverse_state_transitions, unique_callpath_state_id_);
   auto end = std::chrono::high_resolution_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
   std::cout << "Done enumerating paths.. took: " << (time/1000.0) << "s" << std::endl;
@@ -85,17 +85,17 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   // add fucntion exit edges to state_transitions
   std::cout << "START AFEETT..\n";
   //add_function_exit_edges_to_transitions(state_transitions, call_path_tree_ptr); // enumerated_paths, path_to_id_map);
-  static_callpaths::add_function_exit_edges_to_transitions(call_path_tree_ptr); // enumerated_paths, path_to_id_map);
+  static_callpaths::AddFunctionExitEdgesToTransitions(call_path_tree_ptr); // enumerated_paths, path_to_id_map);
   std::cout << "Done AFEETT..\n";
 
 
   // save the generated paths and transitions to disk
-  std::thread t1([call_path_tree_ptr](){static_callpaths::save_initial_path(call_path_tree_ptr);});
-  std::thread t2([call_path_tree_ptr](){static_callpaths::save_enumerated_paths(call_path_tree_ptr);});
+  std::thread t1([call_path_tree_ptr](){static_callpaths::SaveInitialPath(call_path_tree_ptr);});
+  std::thread t2([call_path_tree_ptr](){static_callpaths::SaveEnumeratedPaths(call_path_tree_ptr);});
   //std::thread t3([this, state_transitions_ptr](){this->save_path_state_transitions(state_transitions_ptr);});
-  std::thread t3([call_path_tree_ptr](){static_callpaths::save_path_state_transitions(call_path_tree_ptr);});
-  std::thread t4([static_calltree_ptr](){static_callpaths::save_static_calltree_to_dot(static_calltree_ptr);});
-  std::thread t5([call_path_tree_ptr](){static_callpaths::save_function_entries(call_path_tree_ptr);});
+  std::thread t3([call_path_tree_ptr](){static_callpaths::SavePathStateTransitions(call_path_tree_ptr);});
+  std::thread t4([static_calltree_ptr](){static_callpaths::SaveStaticCalltreeToDot(static_calltree_ptr);});
+  std::thread t5([call_path_tree_ptr](){static_callpaths::SaveFunctionEntries(call_path_tree_ptr);});
 
   t1.join();
   t2.join();
@@ -105,20 +105,20 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
 
 
   // save current instructionID for continuation in the next Module
-  InstructionIDCounter = unique_llvm_ir_instruction_id;
+  instruction_id_counter = unique_llvm_ir_instruction_id_;
 
   // update the global path id so the next module starts with a new id
-  unique_callpath_state_id = call_path_tree_ptr->get_current_free_path_id();
+  unique_callpath_state_id_ = call_path_tree_ptr->GetCurrentFreePathId();
 
   // save current stateID for continuation in the next Module
-  CallpathStateIDCounter = unique_callpath_state_id;
+  callpath_state_id_counter = unique_callpath_state_id_;
 
   // closing flushes
-  instructionID_to_lineID_file.close();
-  reduction.close();
+  instruction_id_to_line_id_file.close();
+  reduction.Close();
   // End DPReduction
 
-  doFinalization(M);
+  DoFinalization(m);
 
   delete call_path_tree_ptr;
 

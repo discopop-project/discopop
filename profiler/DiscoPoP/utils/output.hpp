@@ -21,10 +21,10 @@
 namespace cu_output {
 
 // escapes the characters XML reserves (", &, < and >)
-std::string xmlEscape(std::string data);
+std::string XmlEscape(std::string data);
 
 // appends the CU graph below root, the node of a function, to Data.xml; loopStartLines holds the
 // start line of each loop node by its ID
-void writeCUGraph(Node *root, const std::map<std::string, std::string> &loopStartLines);
+void WriteCuGraph(Node *root, const std::map<std::string, std::string> &loop_start_lines);
 
 } // namespace cu_output

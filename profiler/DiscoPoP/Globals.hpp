@@ -13,9 +13,9 @@
 #pragma once
 #include <cstdint>
 
-extern unsigned int CUIDCounter;
-extern unsigned int bbDepCount;
-extern unsigned int InstructionIDCounter;
-extern unsigned int CallpathStateIDCounter;
-extern bool defaultIsGlobalVariableValue;
-extern std::int32_t fileID;
+extern unsigned int cu_id_counter;
+extern unsigned int bb_dep_count;
+extern unsigned int instruction_id_counter;
+extern unsigned int callpath_state_id_counter;
+extern bool default_is_global_variable_value;
+extern std::int32_t file_id;

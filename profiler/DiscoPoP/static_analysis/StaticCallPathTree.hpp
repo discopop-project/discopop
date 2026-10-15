@@ -33,19 +33,19 @@ class StaticCallPathTreeNode {
 
         ~StaticCallPathTreeNode();
 
-        StaticCallPathTreeNode* get_or_register_successor(StaticCallPathTree* tree, StaticCalltreeNode* successor_node);
+        StaticCallPathTreeNode* GetOrRegisterSuccessor(StaticCallPathTree* tree, StaticCalltreeNode* successor_node);
 
-        void register_transition(int32_t trigger_instruction_id, std::uint32_t target_path_id);
+        void RegisterTransition(int32_t trigger_instruction_id, std::uint32_t target_path_id);
 
-        [[nodiscard]] std::string to_dot_string();
-        [[nodiscard]] std::string get_path_string();
+        [[nodiscard]] std::string ToDotString();
+        [[nodiscard]] std::string GetPathString();
 };
 
 
 class StaticCallPathTree {
     private:
 
-        std::atomic<std::uint32_t> next_free_path_id{0};
+        std::atomic<std::uint32_t> next_free_path_id_{0};
         //std::mutex next_free_path_id_mtx;
 
 
@@ -59,9 +59,9 @@ class StaticCallPathTree {
         StaticCallPathTree();
         explicit StaticCallPathTree(std::uint32_t start_path_id); // so that ids don't overlap between modules
         ~StaticCallPathTree();
-        std::string to_dot_string();
+        std::string ToDotString();
 
-        [[nodiscard]] std::uint32_t get_next_free_path_id();
-        std::uint32_t get_current_free_path_id(); // returns next free path id
-        void register_node_in_all_nodes(StaticCallPathTreeNode* node_ptr);
+        [[nodiscard]] std::uint32_t GetNextFreePathId();
+        std::uint32_t GetCurrentFreePathId(); // returns next free path id
+        void RegisterNodeInAllNodes(StaticCallPathTreeNode* node_ptr);
 };

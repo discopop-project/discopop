@@ -24,7 +24,7 @@
 #include <string>
 
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -43,10 +43,10 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   }
 #endif
 
-  function_manager->reset_call(lid);
+  function_manager->ResetCall(lid);
 
-  if (DP_DEBUG) {
-    std::cout << "instStore at encoded LID " << std::dec << dputil::decodeLID(lid) << " and addr " << std::hex << addr
+  if (dp_debug) {
+    std::cout << "instStore at encoded LID " << std::dec << dputil::DecodeLid(lid) << " and addr " << std::hex << addr
          << std::endl;
   }
 
@@ -54,28 +54,28 @@ void __dp_decl(LID lid, ADDR addr, char *var) {
   AccessInfo current;
 #else
   // check if buffer is full. Push it to firstAccessQueue if so, and create a new buffer
-  if (mainThread_AccessInfoBuffer->is_full()) {
+  if (main_thread_access_info_buffer->IsFull()) {
     // spin-lock to prevent endless queue growth
-    while (!firstAccessQueue.can_accept_entries()) {
+    while (!first_access_queue.CanAcceptEntries()) {
       usleep(1000);
     }
-    firstAccessQueue.push(mainThread_AccessInfoBuffer);
-    mainThread_AccessInfoBuffer = firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_CHUNK_SIZE);
+    first_access_queue.Push(main_thread_access_info_buffer);
+    main_thread_access_info_buffer = first_access_queue_chunk_buffer.GetPreparedChunk(kFirstAccessQueueChunkSize);
   }
-  AccessInfo &current = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
+  AccessInfo &current = main_thread_access_info_buffer->GetNextAccessInfoBuffer();
 #endif
-  current.isRead = false;
+  current.is_read = false;
   // add current call path state identifier to lid for later retrieval
-  current.lid = lid | (static_cast<std::uint64_t>(current_callpath_state->get_id()) << 32);
+  current.lid = lid | (static_cast<std::uint64_t>(current_callpath_state->GetId()) << 32);
   current.var = var;
-  current.AAvar = reinterpret_cast<std::int64_t>(var);
+  current.aa_var = reinterpret_cast<std::int64_t>(var);
   current.addr = addr;
   current.skip = true;
 
 #if defined DP_NUM_WORKERS && DP_NUM_WORKERS == 0
-  analyzeSingleAccessOnMainThread(current);
+  AnalyzeSingleAccessOnMainThread(current);
 #endif
 }
 }
 
-} // namespace __dp
+} // namespace dp

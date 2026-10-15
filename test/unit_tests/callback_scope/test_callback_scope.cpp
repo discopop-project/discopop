@@ -3,7 +3,7 @@
 #include "callback_scope.hpp"
 #include "runtimeFunctionsGlobals.hpp"
 
-using namespace __dp;
+using namespace dp;
 
 namespace {
 
@@ -22,8 +22,8 @@ void instrumented_callback() {
 void instrumented_callback_releasing_the_lock() {
   DP_CALLBACK_SCOPE(FUNC_EXIT);
 
-  dp_scope.unlock();
-  dp_scope.relock();
+  dp_scope.Unlock();
+  dp_scope.Relock();
 
   ++callbacks_that_did_their_work;
 }
@@ -75,47 +75,47 @@ protected:
   void TearDown() override { runtime_state = previous_state; }
 
 private:
-  RuntimeState previous_state = RuntimeState::NotInitialized;
+  RuntimeState previous_state = RuntimeState::kNotInitialized;
 };
 
 TEST_F(CallbackScopeTest, testProfilingIsNotActiveBeforeTheRuntimeStarted) {
-  runtime_state = RuntimeState::NotInitialized;
+  runtime_state = RuntimeState::kNotInitialized;
 
-  EXPECT_FALSE(profiling_active());
+  EXPECT_FALSE(ProfilingActive());
 }
 
 TEST_F(CallbackScopeTest, testProfilingIsActiveWhileTheRuntimeRuns) {
-  runtime_state = RuntimeState::Running;
+  runtime_state = RuntimeState::kRunning;
 
-  EXPECT_TRUE(profiling_active());
+  EXPECT_TRUE(ProfilingActive());
 }
 
 TEST_F(CallbackScopeTest, testProfilingIsNotActiveAfterTheRuntimeTerminated) {
-  runtime_state = RuntimeState::Terminated;
+  runtime_state = RuntimeState::kTerminated;
 
-  EXPECT_FALSE(profiling_active());
+  EXPECT_FALSE(ProfilingActive());
 }
 
 TEST_F(CallbackScopeTest, testTheScopeLetsACallbackThroughWhileTheRuntimeRuns) {
-  runtime_state = RuntimeState::Running;
+  runtime_state = RuntimeState::kRunning;
 
-  const auto scope = CallbackScope(TimerRegion::READ, CallbackId::READ, "test");
+  const auto scope = CallbackScope(TimerRegion::kRead, CallbackId::READ, "test");
 
   EXPECT_TRUE(static_cast<bool>(scope));
 }
 
 TEST_F(CallbackScopeTest, testTheScopeStopsACallbackBeforeTheRuntimeStarted) {
-  runtime_state = RuntimeState::NotInitialized;
+  runtime_state = RuntimeState::kNotInitialized;
 
-  const auto scope = CallbackScope(TimerRegion::READ, CallbackId::READ, "test");
+  const auto scope = CallbackScope(TimerRegion::kRead, CallbackId::READ, "test");
 
   EXPECT_FALSE(static_cast<bool>(scope));
 }
 
 TEST_F(CallbackScopeTest, testTheScopeStopsACallbackAfterTheRuntimeTerminated) {
-  runtime_state = RuntimeState::Terminated;
+  runtime_state = RuntimeState::kTerminated;
 
-  const auto scope = CallbackScope(TimerRegion::READ, CallbackId::READ, "test");
+  const auto scope = CallbackScope(TimerRegion::kRead, CallbackId::READ, "test");
 
   EXPECT_FALSE(static_cast<bool>(scope));
 }
@@ -123,16 +123,16 @@ TEST_F(CallbackScopeTest, testTheScopeStopsACallbackAfterTheRuntimeTerminated) {
 // the decision is made when the scope is entered, so a callback that is already running finishes
 // even if the runtime terminates underneath it
 TEST_F(CallbackScopeTest, testTheDecisionIsTakenOnceAndDoesNotChangeAfterwards) {
-  runtime_state = RuntimeState::Running;
-  const auto scope = CallbackScope(TimerRegion::READ, CallbackId::READ, "test");
+  runtime_state = RuntimeState::kRunning;
+  const auto scope = CallbackScope(TimerRegion::kRead, CallbackId::READ, "test");
 
-  runtime_state = RuntimeState::Terminated;
+  runtime_state = RuntimeState::kTerminated;
 
   EXPECT_TRUE(static_cast<bool>(scope));
 }
 
 TEST_F(CallbackScopeTest, testACallbackDoesItsWorkWhileTheRuntimeRuns) {
-  runtime_state = RuntimeState::Running;
+  runtime_state = RuntimeState::kRunning;
 
   instrumented_callback();
 
@@ -140,7 +140,7 @@ TEST_F(CallbackScopeTest, testACallbackDoesItsWorkWhileTheRuntimeRuns) {
 }
 
 TEST_F(CallbackScopeTest, testACallbackReturnsWithoutWorkBeforeTheRuntimeStarted) {
-  runtime_state = RuntimeState::NotInitialized;
+  runtime_state = RuntimeState::kNotInitialized;
 
   instrumented_callback();
 
@@ -149,7 +149,7 @@ TEST_F(CallbackScopeTest, testACallbackReturnsWithoutWorkBeforeTheRuntimeStarted
 
 // the case the state exists for: the instrumented destructors of the target's globals
 TEST_F(CallbackScopeTest, testACallbackReturnsWithoutWorkAfterTheRuntimeTerminated) {
-  runtime_state = RuntimeState::Terminated;
+  runtime_state = RuntimeState::kTerminated;
 
   instrumented_callback();
 
@@ -157,7 +157,7 @@ TEST_F(CallbackScopeTest, testACallbackReturnsWithoutWorkAfterTheRuntimeTerminat
 }
 
 TEST_F(CallbackScopeTest, testACallbackMayReleaseAndTakeTheLockAgain) {
-  runtime_state = RuntimeState::Running;
+  runtime_state = RuntimeState::kRunning;
 
   instrumented_callback_releasing_the_lock();
 
@@ -166,17 +166,17 @@ TEST_F(CallbackScopeTest, testACallbackMayReleaseAndTakeTheLockAgain) {
 
 // releasing what was never taken is what a callback that returns early would do
 TEST_F(CallbackScopeTest, testReleasingTheLockOfAStoppedCallbackIsHarmless) {
-  runtime_state = RuntimeState::Terminated;
-  auto scope = CallbackScope(TimerRegion::READ, CallbackId::READ, "test");
+  runtime_state = RuntimeState::kTerminated;
+  auto scope = CallbackScope(TimerRegion::kRead, CallbackId::READ, "test");
 
-  scope.unlock();
-  scope.relock();
+  scope.Unlock();
+  scope.Relock();
 
   EXPECT_FALSE(static_cast<bool>(scope));
 }
 
 TEST_F(CallbackScopeTest, testACallbackWithoutAScopeDoesItsWorkWhileTheRuntimeRuns) {
-  runtime_state = RuntimeState::Running;
+  runtime_state = RuntimeState::kRunning;
 
   instrumented_callback_without_a_scope();
 
@@ -184,7 +184,7 @@ TEST_F(CallbackScopeTest, testACallbackWithoutAScopeDoesItsWorkWhileTheRuntimeRu
 }
 
 TEST_F(CallbackScopeTest, testACallbackWithoutAScopeReturnsWithoutWorkAfterTheRuntimeTerminated) {
-  runtime_state = RuntimeState::Terminated;
+  runtime_state = RuntimeState::kTerminated;
 
   instrumented_callback_without_a_scope();
 
@@ -197,15 +197,15 @@ TEST_F(CallbackScopeTest, testACallbackWithoutAScopeReturnsWithoutWorkAfterTheRu
 // other test in this binary, and every profiled program, depends on.
 TEST_F(CallbackScopeTest, testEveryCallbackBodyIsEnabledInTheShippedBuild) {
   for (const auto callback : all_callbacks) {
-    EXPECT_TRUE(callback_body_enabled(callback)) << "callback id " << static_cast<int>(callback);
+    EXPECT_TRUE(CallbackBodyEnabled(callback)) << "callback id " << static_cast<int>(callback);
   }
 }
 
 // It has to fold away, not be asked at runtime: a body that is only skipped over still costs the
 // branch that skips it, and the measurement would report that branch as the cost of the body.
 TEST_F(CallbackScopeTest, testWhetherABodyIsEnabledIsDecidedAtCompileTime) {
-  static_assert(callback_body_enabled(CallbackId::READ), "the shipped build runs every body");
-  static_assert(callback_body_enabled(CallbackId::LOOP_INCR), "the shipped build runs every body");
+  static_assert(CallbackBodyEnabled(CallbackId::READ), "the shipped build runs every body");
+  static_assert(CallbackBodyEnabled(CallbackId::LOOP_INCR), "the shipped build runs every body");
 
   SUCCEED();
 }
@@ -213,9 +213,9 @@ TEST_F(CallbackScopeTest, testWhetherABodyIsEnabledIsDecidedAtCompileTime) {
 // A timed section is the non-callback variant: no state check and no lock, used for the
 // individual output steps of __dp_finalize, which run with the lock already held.
 TEST_F(CallbackScopeTest, testATimedSectionDoesNotDependOnTheRuntimeState) {
-  runtime_state = RuntimeState::Terminated;
+  runtime_state = RuntimeState::kTerminated;
 
-  DP_TIMED_SECTION(OUTPUT_LOOPS, "outputLoops");
+  DP_TIMED_SECTION(kOutputLoops, "outputLoops");
 
   SUCCEED();
 }

@@ -18,14 +18,14 @@
 
 // #define SKIP_DUP_INSTR 1
 
-using sigElement = std::int64_t;
+using SigElement = std::int64_t;
 
-namespace __dp {
+namespace dp {
 // The runtime debug flag, defined in runtimeFunctionsGlobals.cpp. Declared in this header and
 // not only in runtimeFunctionsGlobals.hpp, because the managers below rtlib report through it
 // as well and cannot include that header: it includes them.
-extern bool DP_DEBUG;
-} // namespace __dp
+extern bool dp_debug;
+} // namespace dp
 
 // TODO(Lukas): Is this valid?
 #define USE_EMHASH
@@ -33,15 +33,15 @@ extern bool DP_DEBUG;
 #ifdef USE_EMHASH
 #include "emhash/hash_set8.hpp"
 #include "emhash/hash_table7.hpp"
-namespace __dp {
-template <typename KeyT, typename ValueT> using hashmap = emhash7::HashMap<KeyT, ValueT>;
-template <typename KeyT> using hashset = emhash8::HashSet<KeyT>;
-} // namespace __dp
+namespace dp {
+template <typename KeyT, typename ValueT> using HashMap = emhash7::HashMap<KeyT, ValueT>;
+template <typename KeyT> using HashSet = emhash8::HashSet<KeyT>;
+} // namespace dp
 #else
 #include <unordered_map>
 #include <unordered_set>
-namespace __dp {
+namespace dp {
 template <typename KeyT, typename ValueT> using hashmap = std::unordered_map<KeyT, ValueT>;
 template <typename KeyT> using hashset = std::unordered_set<KeyT>;
-} // namespace __dp
+} // namespace dp
 #endif

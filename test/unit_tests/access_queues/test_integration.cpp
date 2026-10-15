@@ -4,57 +4,57 @@
 #include "runtimeFunctionsTypes.hpp"
 #include "runtimeFunctions.hpp"
 
-using namespace __dp;
+using namespace dp;
 
 class AccessQueueIntegrationTest : public ::testing::Test {
     void SetUp() override{
-        __dp::construct_immortal_globals();
-        __dp::allDeps = new __dp::depMap();
-        __dp::mainThread_AccessInfoBuffer = __dp::firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_CHUNK_SIZE);
-        __dp::initParallelization();
+        dp::ConstructImmortalGlobals();
+        dp::all_deps = new dp::DepMap();
+        dp::main_thread_access_info_buffer = dp::first_access_queue_chunk_buffer.GetPreparedChunk(kFirstAccessQueueChunkSize);
+        dp::InitParallelization();
     }
 
     void TearDown() override {
-        if(!(finalizeParallelizationCalled)){
-            finalizeParallelization();
+        if(!(finalize_parallelization_called)){
+            FinalizeParallelization();
         }
         // free what the runtime keeps until the program ends, since the next test initializes it again
         // (the runtime's own teardown in __dp_finalize does not run in the unit tests)
         // finalizeParallelization leaves a fresh chunk for late accesses; SetUp replaces it
-        delete __dp::mainThread_AccessInfoBuffer;
-        __dp::mainThread_AccessInfoBuffer = nullptr;
-        delete __dp::allDeps;
-        __dp::allDeps = nullptr;
+        delete dp::main_thread_access_info_buffer;
+        dp::main_thread_access_info_buffer = nullptr;
+        delete dp::all_deps;
+        dp::all_deps = nullptr;
         // chunks the worker threads prepared in advance
-        while (__dp::firstAccessQueueChunkBuffer.get_queue_size() > 0) {
-            delete __dp::firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_CHUNK_SIZE);
+        while (dp::first_access_queue_chunk_buffer.GetQueueSize() > 0) {
+            delete dp::first_access_queue_chunk_buffer.GetPreparedChunk(kFirstAccessQueueChunkSize);
         }
-        __dp::destroy_immortal_globals();
+        dp::DestroyImmortalGlobals();
     }
 };
 
 void printAllDeps(){
     std::cout << "allDeps:" << std::endl;
-    for(auto pair : *allDeps){
+    for(auto pair : *all_deps){
         std::cout << "LID: " << pair.first << std::endl;
         for(auto dep: pair.second){
             std::cout << "--> ";
             switch(dep.type){
-                case(RAW):
+                case(kRaw):
                     std::cout << "RAW ";
                     break;
-                case (WAR):
+                case (kWar):
                     std::cout << "WAR ";
                     break;
-                case (WAW):
+                case (kWaw):
                     std::cout << "WAW ";
                     break;
-                case (INIT):
+                case (kInit):
                     std::cout << "INIT ";
                     break;
             }
 
-            std::cout << "depOn: " << dep.depOn << " var: " << dep.var << std::endl;
+            std::cout << "depOn: " << dep.dep_on << " var: " << dep.var << std::endl;
         }
     }
     std::cout << std::endl;
@@ -63,48 +63,48 @@ void printAllDeps(){
 
 
 void read(std::int64_t addr, std::int64_t lid){
-    AccessInfo& current = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
+    AccessInfo& current = main_thread_access_info_buffer->GetNextAccessInfoBuffer();
     current.addr = addr;
-    current.isRead = true;
+    current.is_read = true;
     current.lid = lid;
     current.skip = false;
     current.var = "dummy";
 }
 
 void write(std::int64_t addr, std::int64_t lid){
-    AccessInfo& current = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
+    AccessInfo& current = main_thread_access_info_buffer->GetNextAccessInfoBuffer();
     current.addr = addr;
-    current.isRead = false;
+    current.is_read = false;
     current.lid = lid;
     current.skip = false;
     current.var = "dummy";
 }
 
 void clear(std::int64_t addr){
-    AccessInfo& current = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
+    AccessInfo& current = main_thread_access_info_buffer->GetNextAccessInfoBuffer();
     current.addr = addr;
-    current.isRead = true;
+    current.is_read = true;
     current.lid = 1;
     current.skip = true;
     current.var = "dummy";
 
-    AccessInfo& current_1 = mainThread_AccessInfoBuffer->get_next_AccessInfo_buffer();
+    AccessInfo& current_1 = main_thread_access_info_buffer->GetNextAccessInfoBuffer();
     current_1.addr = addr;
-    current_1.isRead = false;
+    current_1.is_read = false;
     current_1.lid = 1;
     current_1.skip = true;
     current_1.var = "dummy";
 }
 
 void push(){
-    firstAccessQueue.push(mainThread_AccessInfoBuffer);
-    mainThread_AccessInfoBuffer = firstAccessQueueChunkBuffer.get_prepared_chunk(10);
+    first_access_queue.Push(main_thread_access_info_buffer);
+    main_thread_access_info_buffer = first_access_queue_chunk_buffer.GetPreparedChunk(10);
 }
 
 void check_lid_deps(LID lid, int expected_INIT, int expected_RAW, int expected_WAR, int expected_WAW){
     bool lid_contained = false;
-    auto got = allDeps->find (lid);
-    if ( got != allDeps->end() ){
+    auto got = all_deps->find (lid);
+    if ( got != all_deps->end() ){
         lid_contained = true;
     }
 
@@ -114,20 +114,20 @@ void check_lid_deps(LID lid, int expected_INIT, int expected_RAW, int expected_W
 
     ASSERT_TRUE(lid_contained);
     int expected_size = expected_INIT + expected_RAW + expected_WAR + expected_WAW;
-    ASSERT_EQ((*allDeps)[lid].size(), expected_size);
+    ASSERT_EQ((*all_deps)[lid].size(), expected_size);
     int count_INIT = 0, count_RAW = 0, count_WAR = 0, count_WAW = 0;
-    for(Dep elem: (*allDeps)[lid]){
+    for(Dep elem: (*all_deps)[lid]){
         switch(elem.type){
-            case(INIT):
+            case(kInit):
                 count_INIT++;
                 break;
-            case(RAW):
+            case(kRaw):
                 count_RAW++;
                 break;
-            case(WAR):
+            case(kWar):
                 count_WAR++;
                 break;
-            case(WAW):
+            case(kWaw):
                 count_WAW++;
                 break;
         }
@@ -139,7 +139,7 @@ void check_lid_deps(LID lid, int expected_INIT, int expected_RAW, int expected_W
 }
 
 void check_registered_lids(int expected_lids){
-    ASSERT_EQ(allDeps->size(), expected_lids);
+    ASSERT_EQ(all_deps->size(), expected_lids);
 }
 
 
@@ -153,24 +153,24 @@ TEST_F(AccessQueueIntegrationTest, checkEnvironment) {
 }
 
 TEST_F(AccessQueueIntegrationTest, NoDep_1) {
-    ASSERT_EQ(allDeps->size(), 0);
-    finalizeParallelization();
-    ASSERT_EQ(allDeps->size(), 0);
+    ASSERT_EQ(all_deps->size(), 0);
+    FinalizeParallelization();
+    ASSERT_EQ(all_deps->size(), 0);
 }
 
 TEST_F(AccessQueueIntegrationTest, R) {
     read(42, 1337);
-    ASSERT_EQ(allDeps->size(), 0);
-    finalizeParallelization();
-    ASSERT_EQ(allDeps->size(), 0);
+    ASSERT_EQ(all_deps->size(), 0);
+    FinalizeParallelization();
+    ASSERT_EQ(all_deps->size(), 0);
 }
 
 TEST_F(AccessQueueIntegrationTest, RP) {
     read(42, 1337);
     push();
-    ASSERT_EQ(allDeps->size(), 0);
-    finalizeParallelization();
-    ASSERT_EQ(allDeps->size(), 0);
+    ASSERT_EQ(all_deps->size(), 0);
+    FinalizeParallelization();
+    ASSERT_EQ(all_deps->size(), 0);
 }
 
 TEST_F(AccessQueueIntegrationTest, RPR) {
@@ -178,15 +178,15 @@ TEST_F(AccessQueueIntegrationTest, RPR) {
     push();
     read(42, 1337);
 
-    ASSERT_EQ(allDeps->size(), 0);
-    finalizeParallelization();
-    ASSERT_EQ(allDeps->size(), 0);
+    ASSERT_EQ(all_deps->size(), 0);
+    FinalizeParallelization();
+    ASSERT_EQ(all_deps->size(), 0);
 }
 
 TEST_F(AccessQueueIntegrationTest, W) {
     write(42, 1337);
-    ASSERT_EQ(allDeps->size(), 0);
-    finalizeParallelization();
+    ASSERT_EQ(all_deps->size(), 0);
+    FinalizeParallelization();
     check_registered_lids(1);
     check_lid_deps(1337,1,0,0,0);
 }
@@ -194,7 +194,7 @@ TEST_F(AccessQueueIntegrationTest, W) {
 TEST_F(AccessQueueIntegrationTest, WP) {
     write(42, 1337);
     push();
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     check_lid_deps(1337, 1, 0, 0, 0);
 }
@@ -203,7 +203,7 @@ TEST_F(AccessQueueIntegrationTest, WPW) {
     write(42, 1337);
     push();
     write(42, 1337);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     check_lid_deps(1337, 1, 0, 0, 1);
 }
@@ -212,7 +212,7 @@ TEST_F(AccessQueueIntegrationTest, RPW) {
     read(42, 1337);
     push();
     write(42, 1337);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     // The write is the first one to this address, which makes it an INIT -- and it still comes
     // after a read of the same address, which makes it a WAR as well.
@@ -223,7 +223,7 @@ TEST_F(AccessQueueIntegrationTest, WPR) {
     write(42, 1337);
     push();
     read(42, 1337);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     check_lid_deps(1337, 1, 1, 0, 0);
 }
@@ -233,7 +233,7 @@ TEST_F(AccessQueueIntegrationTest, RPRP) {
     push();
     read(42, 1337);
     push();
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(0);
 }
 
@@ -242,7 +242,7 @@ TEST_F(AccessQueueIntegrationTest, WPWP) {
     push();
     write(42, 1337);
     push();
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     check_lid_deps(1337, 1, 0, 0, 1);
 }
@@ -252,7 +252,7 @@ TEST_F(AccessQueueIntegrationTest, RPWP) {
     push();
     write(42, 1337);
     push();
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     check_lid_deps(1337, 1, 0, 1, 0);
 }
@@ -262,7 +262,7 @@ TEST_F(AccessQueueIntegrationTest, WPRP) {
     push();
     read(42, 1337);
     push();
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     check_lid_deps(1337, 1, 1, 0, 0);
 }
@@ -270,14 +270,14 @@ TEST_F(AccessQueueIntegrationTest, WPRP) {
 TEST_F(AccessQueueIntegrationTest, PR) {
     push();
     read(42, 1337);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(0);
 }
 
 TEST_F(AccessQueueIntegrationTest, PW) {
     push();
     write(42, 1337);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     check_lid_deps(1337, 1, 0, 0, 0);
 }
@@ -286,7 +286,7 @@ TEST_F(AccessQueueIntegrationTest, PRP) {
     push();
     read(42, 1337);
     push();
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(0);
 }
 
@@ -294,7 +294,7 @@ TEST_F(AccessQueueIntegrationTest, PWP) {
     push();
     write(42, 1337);
     push();
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     check_lid_deps(1337, 1, 0, 0, 0);
 }
@@ -303,7 +303,7 @@ TEST_F(AccessQueueIntegrationTest, PRW) {
     push();
     read(42, 1337);
     write(42, 1337);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     // Read and write in one chunk, so the WAR is found against the chunk local shadow.
     check_lid_deps(1337, 1, 0, 1, 0);
@@ -313,7 +313,7 @@ TEST_F(AccessQueueIntegrationTest, PWR) {
     push();
     write(42, 1337);
     read(42, 1337);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     check_lid_deps(1337, 1, 1, 0, 0);
 }
@@ -324,7 +324,7 @@ TEST_F(AccessQueueIntegrationTest, RPRPR) {
     read(42, 1338);
     push();
     read(42, 1339);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(0);
 }
 
@@ -334,7 +334,7 @@ TEST_F(AccessQueueIntegrationTest, WPWPW) {
     write(42, 1338);
     push();
     write(42, 1339);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(3);
     check_lid_deps(1337, 1, 0, 0, 0);
     check_lid_deps(1338, 0, 0, 0, 1);
@@ -348,7 +348,7 @@ TEST_F(AccessQueueIntegrationTest, RPPPPR) {
     push();
     push();
     read(42, 1338);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(0);
 }
 
@@ -359,7 +359,7 @@ TEST_F(AccessQueueIntegrationTest, WPPPPW) {
     push();
     push();
     write(42, 1338);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(2);
     check_lid_deps(1337, 1, 0,0,0);
     check_lid_deps(1338, 0, 0,0,1);
@@ -372,7 +372,7 @@ TEST_F(AccessQueueIntegrationTest, RPPPPW) {
     push();
     push();
     write(42, 1338);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(1);
     // Four chunk boundaries between the read and the write, and the WAR survives all of them.
     check_lid_deps(1338, 1, 0,1,0);
@@ -385,7 +385,7 @@ TEST_F(AccessQueueIntegrationTest, WPPPPR) {
     push();
     push();
     read(42, 1338);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(2);
     check_lid_deps(1337,1,0,0,0);
     check_lid_deps(1338,0,1,0,0);
@@ -395,7 +395,7 @@ TEST_F(AccessQueueIntegrationTest, WCW) {
     write(42, 1337);
     clear(42);
     write(42, 1338);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(2);
     check_lid_deps(1337,1,0,0,0);
     check_lid_deps(1338,1,0,0,0);
@@ -406,7 +406,7 @@ TEST_F(AccessQueueIntegrationTest, WPCW) {
     push();
     clear(42);
     write(42, 1338);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(2);
     check_lid_deps(1337,1,0,0,0);
     check_lid_deps(1338,1,0,0,0);
@@ -417,7 +417,7 @@ TEST_F(AccessQueueIntegrationTest, WCPW) {
     clear(42);
     push();
     write(42, 1338);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(2);
     check_lid_deps(1337,1,0,0,0);
     check_lid_deps(1338,1,0,0,0);
@@ -429,7 +429,7 @@ TEST_F(AccessQueueIntegrationTest, WPCPW) {
     clear(42);
     push();
     write(42, 1338);
-    finalizeParallelization();
+    FinalizeParallelization();
     check_registered_lids(2);
     check_lid_deps(1337,1,0,0,0);
     check_lid_deps(1338,1,0,0,0);

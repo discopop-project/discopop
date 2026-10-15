@@ -14,16 +14,16 @@
 
 #include "DPTypes.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
 // hybrid analysis
-void __dp_report_bb_pair(int32_t semaphore, uint32_t bbIndex);
+void __dp_report_bb_pair(int32_t semaphore, uint32_t bb_index);
 
 uint32_t __dp_bb_state();
 // End HA
 }
 
-} // namespace __dp
+} // namespace dp

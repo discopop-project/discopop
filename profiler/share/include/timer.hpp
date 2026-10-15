@@ -26,91 +26,91 @@
  */
 enum class TimerRegion : unsigned int {
   // These are directly inserted calls
-  ADD_BB_DEPS = 0,
-  ALLOCA,
-  CALL,
-  DECL,
-  DELETE,
-  FINALIZE,
-  FUNC_ENTRY,
-  FUNC_EXIT,
-  INCR_TAKEN_BRANCH_COUNTER,
-  INIT,
-  LANDING_PAD,
-  LOOP_ENTRY,
-  LOOP_EXIT,
-  LOOP_INCR,
-  NEW,
-  READ,
-  REPORT_BB,
-  REPORT_BB_PAIR,
-  WRITE,
+  kAddBbDeps = 0,
+  kAlloca,
+  kCall,
+  kDecl,
+  kDelete,
+  kFinalize,
+  kFuncEntry,
+  kFuncExit,
+  kIncrTakenBranchCounter,
+  kInit,
+  kLandingPad,
+  kLoopEntry,
+  kLoopExit,
+  kLoopIncr,
+  kNew,
+  kRead,
+  kReportBb,
+  kReportBbPair,
+  kWrite,
 
   // These are indirectly inserted calls
-  ADD_DEP,
-  GENERATE_STRING_DEP_MAP,
-  OUTPUT_DEPS,
-  OUTPUT_LOOPS,
-  OUTPUT_FUNCS,
-  READ_RUNTIME_INFO,
-  INIT_PARALLELIZATION,
-  MERGE_DEPS,
-  ANALYZE_DEPS,
-  ANALYZE_SINGLE_ACCESS,
-  FINALIZE_PARALLELIZATION,
+  kAddDep,
+  kGenerateStringDepMap,
+  kOutputDeps,
+  kOutputLoops,
+  kOutputFuncs,
+  kReadRuntimeInfo,
+  kInitParallelization,
+  kMergeDeps,
+  kAnalyzeDeps,
+  kAnalyzeSingleAccess,
+  kFinalizeParallelization,
 
-  SIZE_DONT_USE,
+  kSizeDontUse,
 };
 
 /**
  * This number is used as a shortcut to count the number of values valid for
  * TimerRegion
  */
-constexpr std::size_t NUMBER_TIMERS = static_cast<std::size_t>(TimerRegion::SIZE_DONT_USE);
+constexpr std::size_t kNumberTimers = static_cast<std::size_t>(TimerRegion::kSizeDontUse);
 
 /**
  * This class is used to collect all sorts of different timers (see
  * TimerRegion). It provides an interface to start, stop, and print the timers
  */
 class Timers {
-  using time_point = std::chrono::high_resolution_clock::time_point;
-  using index_type = std::vector<time_point>::size_type;
+  using TimePoint = std::chrono::high_resolution_clock::time_point;
+  using IndexType = std::vector<TimePoint>::size_type;
 
 public:
   Timers() {
-    time_start = std::vector<Timers::time_point>{NUMBER_TIMERS};
-    time_stop = std::vector<Timers::time_point>{NUMBER_TIMERS};
+    time_start_ = std::vector<Timers::TimePoint>{kNumberTimers};
+    time_stop_ = std::vector<Timers::TimePoint>{kNumberTimers};
 
-    number_called = std::vector<std::size_t>(NUMBER_TIMERS, static_cast<std::size_t>(0));
-    time_elapsed = std::vector<std::chrono::nanoseconds>{NUMBER_TIMERS};
+    number_called_ = std::vector<std::size_t>(kNumberTimers, static_cast<std::size_t>(0));
+    time_elapsed_ = std::vector<std::chrono::nanoseconds>{kNumberTimers};
   }
 
   /**
    * @brief Starts the respective timer
    * @param timer The timer to start
    */
-  void start(const TimerRegion timer) {
-    const auto timer_id = get_timer_index(timer);
-    number_called[timer_id]++;
-    time_start[timer_id] = std::chrono::high_resolution_clock::now();
+  void Start(const TimerRegion timer) {
+    const auto timer_id = GetTimerIndex(timer);
+    number_called_[timer_id]++;
+    time_start_[timer_id] = std::chrono::high_resolution_clock::now();
   }
 
   /**
    * @brief Stops the respective timer
    * @param timer The timer to stops
    */
-  void stop(const TimerRegion timer) {
-    const auto timer_id = get_timer_index(timer);
-    time_stop[timer_id] = std::chrono::high_resolution_clock::now();
+  void Stop(const TimerRegion timer) {
+    const auto timer_id = GetTimerIndex(timer);
+    time_stop_[timer_id] = std::chrono::high_resolution_clock::now();
   }
 
   /**
    * @brief Stops the respective timer and adds the elapsed time
    * @param timer The timer to stops
    */
-  void stop_and_add(const TimerRegion timer) {
-    stop(timer);
-    add_start_stop_diff_to_elapsed(timer);
+  void StopAndAdd(const TimerRegion timer) {
+    Stop(timer);
+    AddStartStopDiffToElapsed(timer);
   }
 
   /**
@@ -118,18 +118,18 @@ public:
    * to the elapsed time
    * @param timer The timer for which to add the difference
    */
-  void add_start_stop_diff_to_elapsed(const TimerRegion timer) {
-    const auto timer_id = get_timer_index(timer);
-    time_elapsed[timer_id] += (time_stop[timer_id] - time_start[timer_id]);
+  void AddStartStopDiffToElapsed(const TimerRegion timer) {
+    const auto timer_id = GetTimerIndex(timer);
+    time_elapsed_[timer_id] += (time_stop_[timer_id] - time_start_[timer_id]);
   }
 
   /**
    * @brief Resets the elapsed time for the timer
    * @param timer The timer for which to reset the elapsed time
    */
-  void reset_elapsed(const TimerRegion timer) {
-    const auto timer_id = get_timer_index(timer);
-    time_elapsed[timer_id] = std::chrono::nanoseconds(0);
+  void ResetElapsed(const TimerRegion timer) {
+    const auto timer_id = GetTimerIndex(timer);
+    time_elapsed_[timer_id] = std::chrono::nanoseconds(0);
   }
 
   /**
@@ -137,59 +137,59 @@ public:
    * @param timer The timer for which to return the elapsed time
    * @return The elapsed time
    */
-  [[nodiscard]] std::chrono::nanoseconds get_elapsed(const TimerRegion timer) {
-    const auto timer_id = get_timer_index(timer);
-    return time_elapsed[timer_id];
+  [[nodiscard]] std::chrono::nanoseconds GetElapsed(const TimerRegion timer) {
+    const auto timer_id = GetTimerIndex(timer);
+    return time_elapsed_[timer_id];
   }
 
   /**
    * @brief Prints a formatted output to the stream
    * @param stream The out stream
    */
-  void print(std::ostream &stream) {
+  void Print(std::ostream &stream) {
     stream << "\n========== DiscoPoP TIMERS: Inserted calls ==========\n";
-    print(stream, " Function call                                   : ", TimerRegion::CALL);
-    print(stream, " Function entry                                  : ", TimerRegion::FUNC_ENTRY);
-    print(stream, " Function exit                                   : ", TimerRegion::FUNC_EXIT);
+    Print(stream, " Function call                                   : ", TimerRegion::kCall);
+    Print(stream, " Function entry                                  : ", TimerRegion::kFuncEntry);
+    Print(stream, " Function exit                                   : ", TimerRegion::kFuncExit);
     stream << '\n';
-    print(stream, " Landing pad                                     : ", TimerRegion::LANDING_PAD);
-    print(stream, " Loop entry                                      : ", TimerRegion::LOOP_ENTRY);
-    print(stream, " Loop exit                                       : ", TimerRegion::LOOP_EXIT);
-    print(stream, " Loop iteration                                  : ", TimerRegion::LOOP_INCR);
-    print(stream, " Taken branch counter                            : ",
-          TimerRegion::INCR_TAKEN_BRANCH_COUNTER);
+    Print(stream, " Landing pad                                     : ", TimerRegion::kLandingPad);
+    Print(stream, " Loop entry                                      : ", TimerRegion::kLoopEntry);
+    Print(stream, " Loop exit                                       : ", TimerRegion::kLoopExit);
+    Print(stream, " Loop iteration                                  : ", TimerRegion::kLoopIncr);
+    Print(stream, " Taken branch counter                            : ",
+          TimerRegion::kIncrTakenBranchCounter);
     stream << '\n';
-    print(stream, " Add basic block dependencies                    : ", TimerRegion::ADD_BB_DEPS);
-    print(stream, " Report a basic block                            : ", TimerRegion::REPORT_BB);
-    print(stream, " Report a pair of basic blocks                   : ", TimerRegion::REPORT_BB_PAIR);
+    Print(stream, " Add basic block dependencies                    : ", TimerRegion::kAddBbDeps);
+    Print(stream, " Report a basic block                            : ", TimerRegion::kReportBb);
+    Print(stream, " Report a pair of basic blocks                   : ", TimerRegion::kReportBbPair);
     stream << '\n';
-    print(stream, " New memory on the stack                         : ", TimerRegion::ALLOCA);
-    print(stream, " New memory on the heap                          : ", TimerRegion::NEW);
-    print(stream, " Delete memory                                   : ", TimerRegion::DELETE);
+    Print(stream, " New memory on the stack                         : ", TimerRegion::kAlloca);
+    Print(stream, " New memory on the heap                          : ", TimerRegion::kNew);
+    Print(stream, " Delete memory                                   : ", TimerRegion::kDelete);
     stream << '\n';
-    print(stream, " Read from memory                                : ", TimerRegion::READ);
-    print(stream, " Write to memory                                 : ", TimerRegion::WRITE);
+    Print(stream, " Read from memory                                : ", TimerRegion::kRead);
+    Print(stream, " Write to memory                                 : ", TimerRegion::kWrite);
     stream << '\n';
-    print(stream, " Decl                                            : ", TimerRegion::DECL);
-    print(stream, " Init                                            : ", TimerRegion::INIT);
-    print(stream, " Finalize                                        : ", TimerRegion::FINALIZE);
+    Print(stream, " Decl                                            : ", TimerRegion::kDecl);
+    Print(stream, " Init                                            : ", TimerRegion::kInit);
+    Print(stream, " Finalize                                        : ", TimerRegion::kFinalize);
     stream << '\n';
 
     stream << "\n========== DiscoPoP TIMERS: Indirect calls ==========\n";
-    print(stream, " Reading the runtime info                        : ", TimerRegion::READ_RUNTIME_INFO);
-    print(stream, " Initializing the parallelization                : ", TimerRegion::INIT_PARALLELIZATION);
-    print(stream, " Finalizing the parallelization                  : ", TimerRegion::FINALIZE_PARALLELIZATION);
+    Print(stream, " Reading the runtime info                        : ", TimerRegion::kReadRuntimeInfo);
+    Print(stream, " Initializing the parallelization                : ", TimerRegion::kInitParallelization);
+    Print(stream, " Finalizing the parallelization                  : ", TimerRegion::kFinalizeParallelization);
     stream << '\n';
-    print(stream, " Generate the dependency map                     : ", TimerRegion::GENERATE_STRING_DEP_MAP);
-    print(stream, " Analyze singe accesses                          : ", TimerRegion::ANALYZE_SINGLE_ACCESS);
-    print(stream, "  |- Add a dependency                            : ", TimerRegion::ADD_DEP);
-    print(stream, " Merge dendencies                                : ", TimerRegion::MERGE_DEPS);
-    print(stream, " Analyze the dependencies (incorrect!)           : ",
-          TimerRegion::ANALYZE_DEPS); // Incorrect due to multithreading
+    Print(stream, " Generate the dependency map                     : ", TimerRegion::kGenerateStringDepMap);
+    Print(stream, " Analyze singe accesses                          : ", TimerRegion::kAnalyzeSingleAccess);
+    Print(stream, "  |- Add a dependency                            : ", TimerRegion::kAddDep);
+    Print(stream, " Merge dendencies                                : ", TimerRegion::kMergeDeps);
+    Print(stream, " Analyze the dependencies (incorrect!)           : ",
+          TimerRegion::kAnalyzeDeps); // Incorrect due to multithreading
     stream << '\n';
-    print(stream, " Output the dependencies                         : ", TimerRegion::OUTPUT_DEPS);
-    print(stream, " Output the loops                                : ", TimerRegion::OUTPUT_LOOPS);
-    print(stream, " Output the functions                            : ", TimerRegion::OUTPUT_FUNCS);
+    Print(stream, " Output the dependencies                         : ", TimerRegion::kOutputDeps);
+    Print(stream, " Output the loops                                : ", TimerRegion::kOutputLoops);
+    Print(stream, " Output the functions                            : ", TimerRegion::kOutputFuncs);
     stream << '\n';
 
   }
@@ -198,23 +198,23 @@ public:
    * @brief Returns the current time as a string
    * @return The current time as a string
    */
-  [[nodiscard]] std::string wall_clock_time() {
+  [[nodiscard]] std::string WallClockTime() {
     // The time is printed with 24 interesting characters followed by '\n'
-    constexpr std::size_t size_of_date_string = 24;
+    constexpr std::size_t kSizeOfDateString = 24;
 
 #if defined(__linux__) || defined(__APPLE__)
     time_t raw_time = 0;
     struct tm time_info;
 
     // Need some more space for '\n' and other checks
-    char char_buff[size_of_date_string + 3];
+    char char_buff[kSizeOfDateString + 3];
 
     time(&raw_time);
     localtime_r(&raw_time, &time_info);
     asctime_r(&time_info, char_buff);
 
     // Avoid '\n'
-    return std::string(char_buff, size_of_date_string);
+    return std::string(char_buff, kSizeOfDateString);
 #else
     time_t raw_time = 0;
     struct tm time_info;
@@ -237,46 +237,46 @@ private:
    * @param timer The timer as an enum value
    * @result The timer as an index
    */
-  [[nodiscard]] index_type get_timer_index(const TimerRegion timer) noexcept {
-    const auto timer_id = static_cast<index_type>(timer);
+  [[nodiscard]] IndexType GetTimerIndex(const TimerRegion timer) noexcept {
+    const auto timer_id = static_cast<IndexType>(timer);
     return timer_id;
   }
 
-  void print(std::ostream &stream, const char *message, const TimerRegion region) {
-    const auto index = get_timer_index(region);
+  void Print(std::ostream &stream, const char *message, const TimerRegion region) {
+    const auto index = GetTimerIndex(region);
 
-    const auto counted = time_elapsed[index].count();
+    const auto counted = time_elapsed_[index].count();
     const auto seconds = static_cast<double>(counted) * 1e-9;
 
-    const auto called = number_called[index];
+    const auto called = number_called_[index];
 
     stream << message << std::setw(8) << std::fixed << seconds << "\t(" << called << " times called)\n";
   }
 
-  std::vector<time_point> time_start;
-  std::vector<time_point> time_stop;
+  std::vector<TimePoint> time_start_;
+  std::vector<TimePoint> time_stop_;
 
-  std::vector<std::size_t> number_called;
-  std::vector<std::chrono::nanoseconds> time_elapsed;
+  std::vector<std::size_t> number_called_;
+  std::vector<std::chrono::nanoseconds> time_elapsed_;
 };
 
 class Timer {
 public:
   Timer(Timers *timers, TimerRegion region, bool also_print = false)
-      : timers(timers), region(region), print(also_print) {
+      : timers_(timers), region_(region), print_(also_print) {
     assert(timers != nullptr && "Timer started but timers is nullptr");
-    timers->start(region);
+    timers->Start(region);
   }
 
   ~Timer() {
-    timers->stop_and_add(region);
-    if (print) {
-      timers->print(std::cout);
+    timers_->StopAndAdd(region_);
+    if (print_) {
+      timers_->Print(std::cout);
     }
   }
 
 private:
-  Timers *timers;
-  TimerRegion region;
-  bool print;
+  Timers *timers_;
+  TimerRegion region_;
+  bool print_;
 };

@@ -15,7 +15,7 @@
 #include <new>
 #include <utility>
 
-namespace __dp {
+namespace dp {
 
 // Storage for a global whose lifetime the runtime manages by hand.
 //
@@ -47,11 +47,11 @@ template <typename T> union ImmortalStorage {
   ImmortalStorage(const ImmortalStorage &) = delete;
   ImmortalStorage &operator=(const ImmortalStorage &) = delete;
 
-  template <typename... Args> void construct(Args &&...args) {
+  template <typename... Args> void Construct(Args &&...args) {
     ::new (static_cast<void *>(&value)) T(std::forward<Args>(args)...);
   }
 
-  void destroy() { value.~T(); }
+  void Destroy() { value.~T(); }
 
   // Reached with -> and *, so a use site reads like the pointer some of these globals used to
   // be while the object is addressed directly. A pointer variable -- and a reference at
@@ -63,4 +63,4 @@ template <typename T> union ImmortalStorage {
   const T &operator*() const noexcept { return value; }
 };
 
-} // namespace __dp
+} // namespace dp

@@ -27,7 +27,7 @@ namespace {
 // ios_base::app, so a truncated or left over line is exactly what it looks like. It must not throw:
 // this constructor runs from __dp_init, where an escaping exception takes the instrumented program
 // down before it has started.
-bool parse_id(const std::string &text, std::int32_t &result) {
+bool ParseId(const std::string &text, std::int32_t &result) {
   try {
     std::size_t consumed = 0;
     result = std::stoi(text, &consumed);
@@ -44,7 +44,7 @@ CallStateGraph::CallStateGraph() {
   const auto start_time = std::chrono::high_resolution_clock::now();
 #endif
   // open input file
-  const std::string tmp_2 = __dp::profiler_output_path("callpath_state_transitions.txt");
+  const std::string tmp_2 = dp::ProfilerOutputPath("callpath_state_transitions.txt");
   // create graph by parsing the file line by line
   std::ifstream file(tmp_2);
   if (!file) {
@@ -77,17 +77,17 @@ CallStateGraph::CallStateGraph() {
     std::int32_t source_callstate_id = 0;
     std::int32_t trigger_instruction_id = 0;
     std::int32_t target_callstate_id = 0;
-    if (!parse_id(source_callstate_id_str, source_callstate_id) ||
-        !parse_id(trigger_instruction_id_str, trigger_instruction_id) ||
-        !parse_id(target_callstate_id_str, target_callstate_id)) {
+    if (!ParseId(source_callstate_id_str, source_callstate_id) ||
+        !ParseId(trigger_instruction_id_str, trigger_instruction_id) ||
+        !ParseId(target_callstate_id_str, target_callstate_id)) {
       continue;
     }
-    register_transition(source_callstate_id, trigger_instruction_id, target_callstate_id);
+    RegisterTransition(source_callstate_id, trigger_instruction_id, target_callstate_id);
   }
   // Transitions triggered by the dummy "return" instruction id are stored separately and without
   // that id (see static_callpaths::save_path_state_transitions). Without them no function return updates
   // the call state, so a missing file must not pass silently.
-  const std::string tmp_3 = __dp::profiler_output_path("callpath_state_return_targets.txt");
+  const std::string tmp_3 = dp::ProfilerOutputPath("callpath_state_return_targets.txt");
   std::ifstream return_targets_file(tmp_3);
   if (!return_targets_file) {
     std::cerr << "DiscoPoP: could not open " << tmp_3 << ". Reported call states will be incorrect!\n";
@@ -104,13 +104,13 @@ CallStateGraph::CallStateGraph() {
     std::string target_callstate_id_str = line.substr(pos + 1);
     std::int32_t source_callstate_id = 0;
     std::int32_t target_callstate_id = 0;
-    if (!parse_id(source_callstate_id_str, source_callstate_id) ||
-        !parse_id(target_callstate_id_str, target_callstate_id)) {
+    if (!ParseId(source_callstate_id_str, source_callstate_id) ||
+        !ParseId(target_callstate_id_str, target_callstate_id)) {
       continue;
     }
-    register_implicit_return_transition(source_callstate_id, target_callstate_id);
+    RegisterImplicitReturnTransition(source_callstate_id, target_callstate_id);
   }
-  read_function_entries(__dp::profiler_output_path("callpath_function_entries.txt"));
+  ReadFunctionEntries(dp::ProfilerOutputPath("callpath_function_entries.txt"));
 #ifdef DP_RTLIB_VERBOSE
   // The instrumented program writes its own output to this stream, so a measurement of the runtime's
   // own startup does not belong there unconditionally. It stays behind the switch the rest of the
@@ -125,7 +125,7 @@ CallStateGraph::CallStateGraph() {
 //   S <state_id> <function_entry_instruction_id>   the state is the entry state of a function instance
 //   E <function_entry_instruction_id> <state_id>   the root entry state of the function
 // Without it, functions are entered only through call transitions of their own translation unit.
-void CallStateGraph::read_function_entries(const std::string &path) {
+void CallStateGraph::ReadFunctionEntries(const std::string &path) {
   std::ifstream file(path);
   if (!file) {
     std::cerr << "DiscoPoP: could not open " << path << ". Reported call states will be incorrect!\n";
@@ -144,26 +144,26 @@ void CallStateGraph::read_function_entries(const std::string &path) {
       continue;
     }
     if (kind == "S") {
-      register_state_function(first, second);
+      RegisterStateFunction(first, second);
     } else if (kind == "E") {
-      register_function_entry_state(first, second);
+      RegisterFunctionEntryState(first, second);
     }
   }
 }
 
-void CallStateGraph::register_state_function(std::int32_t call_state_id, std::int32_t function_entry_id) {
-  get_or_register_node(call_state_id)->set_function_entry_id(function_entry_id);
+void CallStateGraph::RegisterStateFunction(std::int32_t call_state_id, std::int32_t function_entry_id) {
+  GetOrRegisterNode(call_state_id)->SetFunctionEntryId(function_entry_id);
 }
 
-void CallStateGraph::register_function_entry_state(std::int32_t function_entry_id, std::int32_t call_state_id) {
-  CallState *state = get_or_register_node(call_state_id);
-  state->set_function_entry_id(function_entry_id);
-  function_entry_states[function_entry_id] = state;
+void CallStateGraph::RegisterFunctionEntryState(std::int32_t function_entry_id, std::int32_t call_state_id) {
+  CallState *state = GetOrRegisterNode(call_state_id);
+  state->SetFunctionEntryId(function_entry_id);
+  function_entry_states_[function_entry_id] = state;
 }
 
-CallState *CallStateGraph::get_function_entry_state(std::int32_t function_entry_id) {
-  auto pos = function_entry_states.find(function_entry_id);
-  if (pos == function_entry_states.end()) {
+CallState *CallStateGraph::GetFunctionEntryState(std::int32_t function_entry_id) {
+  auto pos = function_entry_states_.find(function_entry_id);
+  if (pos == function_entry_states_.end()) {
     return nullptr;
   }
   return pos->second;
@@ -174,7 +174,7 @@ CallStateGraph::~CallStateGraph() {
   const auto start_time = std::chrono::high_resolution_clock::now();
 #endif
   // delete nodes
-  for (auto pair : node_map) {
+  for (auto pair : node_map_) {
     delete pair.second;
   }
 #ifdef DP_RTLIB_VERBOSE
@@ -184,25 +184,25 @@ CallStateGraph::~CallStateGraph() {
 #endif
 }
 
-CallState *CallStateGraph::get_or_register_node(std::int32_t call_state_id) {
-  if (node_map.find(call_state_id) == node_map.end()) {
+CallState *CallStateGraph::GetOrRegisterNode(std::int32_t call_state_id) {
+  if (node_map_.find(call_state_id) == node_map_.end()) {
     CallState *node = new CallState(call_state_id);
-    node_map[call_state_id] = node;
+    node_map_[call_state_id] = node;
     return node;
   }
-  return node_map[call_state_id];
+  return node_map_[call_state_id];
 }
 
-void CallStateGraph::register_transition(std::int32_t source_call_state_id, std::int32_t trigger_instruction,
+void CallStateGraph::RegisterTransition(std::int32_t source_call_state_id, std::int32_t trigger_instruction,
                                          std::int32_t target_call_state_id) {
-  CallState *source = get_or_register_node(source_call_state_id);
-  CallState *target = get_or_register_node(target_call_state_id);
-  source->register_transition(trigger_instruction, target);
+  CallState *source = GetOrRegisterNode(source_call_state_id);
+  CallState *target = GetOrRegisterNode(target_call_state_id);
+  source->RegisterTransition(trigger_instruction, target);
 }
 
-void CallStateGraph::register_implicit_return_transition(std::int32_t source_call_state_id,
+void CallStateGraph::RegisterImplicitReturnTransition(std::int32_t source_call_state_id,
                                                          std::int32_t target_call_state_id) {
-  CallState *source = get_or_register_node(source_call_state_id);
-  CallState *target = get_or_register_node(target_call_state_id);
-  source->register_implicit_return_transition(target);
+  CallState *source = GetOrRegisterNode(source_call_state_id);
+  CallState *target = GetOrRegisterNode(target_call_state_id);
+  source->RegisterImplicitReturnTransition(target);
 }

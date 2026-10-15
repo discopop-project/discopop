@@ -23,39 +23,39 @@ using llvm::Value;
 using llvm::cast;
 using llvm::isa;
 
-void DiscoPoP::instrumentCalloc(CallBase *toInstrument) {
+void DiscoPoP::InstrumentCalloc(CallBase *to_instrument) {
   // add instrumentation for calls to calloc
-  LID lid = dputil::getLID(toInstrument, fileID);
+  LID lid = dputil::GetLid(to_instrument, file_id);
   if (lid == 0) {
     return;
 }
 
   // Determine correct placement for the call to __dp_new
-  Instruction *nextInst = nullptr;
-  if (isa<CallInst>(toInstrument)) {
-    nextInst = llvmcompat::nextInstruction(toInstrument);
-  } else if (isa<InvokeInst>(toInstrument)) {
+  Instruction *next_inst = nullptr;
+  if (isa<CallInst>(to_instrument)) {
+    next_inst = llvmcompat::NextInstruction(to_instrument);
+  } else if (isa<InvokeInst>(to_instrument)) {
     // Invoke instructions are always located at the end of a basic block.
     // Invoke instructions may throw errors, in which case the successor is a
     // "landing pad" basic block. If no error is thrown, the control flow is
     // resumed at a "normal destination" basic block. Set the first instruction
     // of the normal destination as nextInst in order to add the Instrumentation
     // at the correct location.
-    nextInst = &*cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    next_inst = &*cast<InvokeInst>(to_instrument)->getNormalDest()->getFirstNonPHIOrDbg();
   }
 
-  IRBuilder<> IRB(nextInst);
+  IRBuilder<> irb(next_inst);
 
   std::vector<Value *> args;
-  args.push_back(lidConstant(lid));
+  args.push_back(LidConstant(lid));
 
-  Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64, "", nextInst->getIterator());
-  Value *endAddr = startAddr;
-  Value *numBytes = IRB.CreateMul(toInstrument->getArgOperand(0), toInstrument->getArgOperand(1));
+  Value *start_addr = PtrToIntInst::CreatePointerCast(to_instrument, int64_, "", next_inst->getIterator());
+  Value *end_addr = start_addr;
+  Value *num_bytes = irb.CreateMul(to_instrument->getArgOperand(0), to_instrument->getArgOperand(1));
 
-  args.push_back(startAddr);
-  args.push_back(endAddr); // currently unused
-  args.push_back(numBytes);
+  args.push_back(start_addr);
+  args.push_back(end_addr); // currently unused
+  args.push_back(num_bytes);
 
-  IRB.CreateCall(DpNew, args, "");
+  irb.CreateCall(dp_new_, args, "");
 }

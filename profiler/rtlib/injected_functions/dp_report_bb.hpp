@@ -14,12 +14,12 @@
 
 #include "DPTypes.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_report_bb(uint32_t bbIndex);
+void __dp_report_bb(uint32_t bb_index);
 }
 
-} // namespace __dp
+} // namespace dp

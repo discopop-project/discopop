@@ -23,38 +23,38 @@
 #include <unordered_set>
 
 
-namespace __dp {
+namespace dp {
 
 // hybrid analysis
-void generateStringDepMap() {
+void GenerateStringDepMap() {
 #ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("generateStringDepMap");
+  const auto debug_print = MakeDebugPrint("generateStringDepMap");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::GENERATE_STRING_DEP_MAP);
+  const auto timer = Timer(timers, TimerRegion::kGenerateStringDepMap);
 #endif
 
-  for (auto &dline : *allDeps) {
+  for (auto &dline : *all_deps) {
     if (dline.first) {
       //  unpack dline.first (lid) to instructionID and callpathStateID
-      std::uint32_t dline_first_instID = (dline.first & 0xFFFFFFFF);
-      std::uint32_t dline_first_callpathStateID = ((dline.first & 0xFFFFFFFF00000000) >> 32);
-      std::string unpacked_lid = std::to_string(dline_first_instID) + "@" +
-                            std::to_string(dline_first_callpathStateID); // use instructionID instead of lineID
-      std::unordered_set<std::string> lineDeps;
+      std::uint32_t dline_first_inst_id = (dline.first & 0xFFFFFFFF);
+      std::uint32_t dline_first_callpath_state_id = ((dline.first & 0xFFFFFFFF00000000) >> 32);
+      std::string unpacked_lid = std::to_string(dline_first_inst_id) + "@" +
+                            std::to_string(dline_first_callpath_state_id); // use instructionID instead of lineID
+      std::unordered_set<std::string> line_deps;
       for (auto &d : dline.second) {
         std::string dep = "";
         switch (d.type) {
-        case RAW:
+        case kRaw:
           dep += "RAW";
           break;
-        case WAR:
+        case kWar:
           dep += "WAR";
           break;
-        case WAW:
+        case kWaw:
           dep += "WAW";
           break;
-        case INIT:
+        case kInit:
           dep += "INIT";
           break;
         default:
@@ -62,35 +62,35 @@ void generateStringDepMap() {
         }
 
         // unpack d.depOn to instructionID and callpathStateID
-        std::uint32_t d_depOn_instID = (d.depOn & 0xFFFFFFFF);
-        std::uint32_t d_depOn_callpathStateID = ((d.depOn & 0xFFFFFFFF00000000) >> 32);
-        dep += ' ' + std::to_string(d_depOn_instID) + "@" +
-               std::to_string(d_depOn_callpathStateID); // use unpacked information instead of lineID
+        std::uint32_t d_dep_on_inst_id = (d.dep_on & 0xFFFFFFFF);
+        std::uint32_t d_dep_on_callpath_state_id = ((d.dep_on & 0xFFFFFFFF00000000) >> 32);
+        dep += ' ' + std::to_string(d_dep_on_inst_id) + "@" +
+               std::to_string(d_dep_on_callpath_state_id); // use unpacked information instead of lineID
 
         dep += "|" + std::string(d.var);
-        dep += "(" + std::to_string(d.AAvar) + ")";
+        dep += "(" + std::to_string(d.aa_var) + ")";
 
-        lineDeps.insert(dep);
+        line_deps.insert(dep);
       }
 
-      if (outPutDeps->count(unpacked_lid) == 0) {
-        (*outPutDeps)[unpacked_lid] = lineDeps;
+      if (out_put_deps->count(unpacked_lid) == 0) {
+        (*out_put_deps)[unpacked_lid] = line_deps;
       } else {
-        (*outPutDeps)[unpacked_lid].insert(lineDeps.begin(), lineDeps.end());
+        (*out_put_deps)[unpacked_lid].insert(line_deps.begin(), line_deps.end());
       }
     }
   }
 }
 
-void outputDeps() {
+void OutputDeps() {
 #ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("outputDeps");
+  const auto debug_print = MakeDebugPrint("outputDeps");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::OUTPUT_DEPS);
+  const auto timer = Timer(timers, TimerRegion::kOutputDeps);
 #endif
 
-  for (auto pair : *outPutDeps) {
+  for (auto pair : *out_put_deps) {
     *out << pair.first << " NOM ";
     for (auto dep : pair.second) {
       *out << ' ' << dep;
@@ -100,4 +100,4 @@ void outputDeps() {
 }
 // End HA
 
-} // namespace __dp
+} // namespace dp

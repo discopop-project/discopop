@@ -77,18 +77,18 @@
 
 
 // extern cl::opt <string> FileMappingPath;
-extern std::string FileMappingPath;
-extern llvm::cl::opt<bool> DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS;
+extern std::string file_mapping_path;
+extern llvm::cl::opt<bool> dp_memory_profiling_skip_function_arguments;
 namespace dputil {
 
 // value of the environment variable `name`, or `fallback` if it is not set (std::string(nullptr) is
 // undefined behaviour); the fallbacks match the ones the pass's doInitialization sets
-inline std::string getEnvOrDefault(const char *name, const char *fallback) {
+inline std::string GetEnvOrDefault(const char *name, const char *fallback) {
   const char *value = getenv(name);
   return std::string(value != nullptr ? value : fallback);
 }
 
-inline std::string decodeLID(int64_t lid) {
+inline std::string DecodeLid(int64_t lid) {
   if (lid == 0) {
     return "*";
 }
@@ -96,23 +96,23 @@ inline std::string decodeLID(int64_t lid) {
   std::stringstream ss;
   uint32_t ulid = static_cast<uint32_t>(lid);
 
-  ss << (ulid >> LIDSIZE) << ":" << ulid % MAXLNO;
+  ss << (ulid >> kLidSize) << ":" << ulid % kMaxLno;
   return ss.str();
 }
 
-inline std::vector<std::string> *split(std::string input, char delim) {
+inline std::vector<std::string> *Split(std::string input, char delim) {
   std::vector<std::string> *substrings = new std::vector<std::string>();
-  std::istringstream inputStringStream(input);
+  std::istringstream input_string_stream(input);
   std::string sub;
 
-  while (getline(inputStringStream, sub, delim)) {
+  while (getline(input_string_stream, sub, delim)) {
     substrings->push_back(sub);
   }
 
   return substrings;
 }
 
-inline bool fexists(const std::string &filename) {
+inline bool FileExists(const std::string &filename) {
   std::ifstream ifile(filename.c_str());
 
   if (ifile.fail()) {
@@ -120,23 +120,23 @@ inline bool fexists(const std::string &filename) {
   }     return true;
 }
 
-int32_t getFileID(std::string fileMapping, std::string fullPathName);
+int32_t GetFileId(std::string file_mapping, std::string full_path_name);
 
 // Encode a file id and a line number as LID, see lid_constants.hpp. Returns 0 ("no location") and warns
 // once per file id if one of them does not fit into the LID.
-int64_t encodeLID(int32_t fileID, int64_t line);
+int64_t EncodeLid(int32_t file_id, int64_t line);
 
-int64_t getLID(llvm::Instruction *BI, int32_t &fileID);
+int64_t GetLid(llvm::Instruction *bi, int32_t &file_id);
 
-void determineFileID(llvm::Function &F, int32_t &fileID);
+void DetermineFileId(llvm::Function &f, int32_t &file_id);
 
-std::string get_exe_dir();
+std::string GetExeDir();
 
 class VariableNameFinder {
 public:
-  explicit VariableNameFinder(llvm::Module &M);
+  explicit VariableNameFinder(llvm::Module &m);
 
-  std::string getVarName(llvm::Value const *V);
+  std::string GetVarName(llvm::Value const *v);
 };
 
 } // namespace dputil

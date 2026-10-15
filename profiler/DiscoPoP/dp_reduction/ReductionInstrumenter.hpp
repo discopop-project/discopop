@@ -31,9 +31,9 @@ namespace dp_reduction {
 // What the reduction pass takes from the rest of the pass: it has to number its loops the way the control flow
 // analysis does, name variables as the pass does and know the file ids of the functions.
 struct Services {
-  std::function<int32_t(llvm::Function &)> getFileID;
-  std::function<int32_t(llvm::Loop *)> getLoopID;
-  std::function<std::string(llvm::Instruction *)> getVariableName;
+  std::function<int32_t(llvm::Function &)> get_file_id;
+  std::function<int32_t(llvm::Loop *)> get_loop_id;
+  std::function<std::string(llvm::Instruction *)> get_variable_name;
 };
 
 // The reduction pass for one module: finds the loops and the instructions that may be part of a reduction
@@ -44,27 +44,27 @@ public:
   ReductionInstrumenter(llvm::Module &module, Services services);
 
   // iterates over all functions in the module and calls 'instrument_function' on suitable ones
-  void instrument_module(llvm::ModuleAnalysisManager &mam);
+  void InstrumentModule(llvm::ModuleAnalysisManager &mam);
 
   // inserts calls to allow for dynamic analysis of the loops
-  void insert_functions();
+  void InsertFunctions();
 
   // closes (and so flushes) the files
-  void close();
+  void Close();
 
 private:
   // iterates over all loops in a function and calls 'instrument_loop' for each one
-  void instrument_function(llvm::Function *function, llvm::LoopInfo &loop_info);
+  void InstrumentFunction(llvm::Function *function, llvm::LoopInfo &loop_info);
 
   // determines which instructions of a loop might be suitable for a reduction; adds an entry to 'loops_' and
   // one to 'instructions_' for each suitable instruction
-  void instrument_loop(llvm::Function &F, int file_id, llvm::Loop *loop, llvm::LoopInfo &LI);
+  void InstrumentLoop(llvm::Function &f, int file_id, llvm::Loop *loop, llvm::LoopInfo &li);
 
   llvm::Module &module_;
   Services services_;
   std::ofstream reduction_file_;
-  std::vector<loop_info_t> loops_;
-  std::vector<instr_info_t> instructions_;
+  std::vector<LoopInfoT> loops_;
+  std::vector<InstrInfoT> instructions_;
 };
 
 } // namespace dp_reduction

@@ -21,7 +21,7 @@
 #include <mutex>
 #include <optional>
 
-namespace __dp {
+namespace dp {
 
 // The callbacks the LLVM pass injects, one enumerator each.
 //
@@ -29,6 +29,11 @@ namespace __dp {
 // TimerRegion drives the DP_INTERNAL_TIMER report and covers the runtime's own regions too.
 // Tying the benchmark builds to it would mean changing that report to change what can be
 // measured.
+//
+// The enumerators keep the spelling of the callbacks instead of kCamelCase: profiler/rtlib/CMakeLists.txt
+// names the benchmark runtime variants after them (DiscoPoP_RT_Only_<ENUMERATOR>) and passes them as
+// DP_BENCHMARK_ONLY_CALLBACK, and the benchmark drivers use those names.
+// NOLINTBEGIN(readability-identifier-naming)
 enum class CallbackId {
   ALLOCA,
   CALL,
@@ -47,6 +52,51 @@ enum class CallbackId {
   REPORT_BB_PAIR,
   WRITE,
 };
+// NOLINTEND(readability-identifier-naming)
+
+// The TimerRegion a callback is timed as: the region of the same name. The switch names every
+// enumerator, so -Wswitch reports a callback without a region.
+constexpr TimerRegion TimerRegionOf(CallbackId callback) {
+  switch (callback) {
+    case CallbackId::ALLOCA:
+      return TimerRegion::kAlloca;
+    case CallbackId::CALL:
+      return TimerRegion::kCall;
+    case CallbackId::DECL:
+      return TimerRegion::kDecl;
+    case CallbackId::DELETE:
+      return TimerRegion::kDelete;
+    case CallbackId::FUNC_ENTRY:
+      return TimerRegion::kFuncEntry;
+    case CallbackId::FUNC_EXIT:
+      return TimerRegion::kFuncExit;
+    case CallbackId::INCR_TAKEN_BRANCH_COUNTER:
+      return TimerRegion::kIncrTakenBranchCounter;
+    case CallbackId::LANDING_PAD:
+      return TimerRegion::kLandingPad;
+    case CallbackId::LOOP_ENTRY:
+      return TimerRegion::kLoopEntry;
+    case CallbackId::LOOP_EXIT:
+      return TimerRegion::kLoopExit;
+    case CallbackId::LOOP_INCR:
+      return TimerRegion::kLoopIncr;
+    case CallbackId::NEW:
+      return TimerRegion::kNew;
+    case CallbackId::READ:
+      return TimerRegion::kRead;
+    case CallbackId::REPORT_BB:
+      return TimerRegion::kReportBb;
+    case CallbackId::REPORT_BB_PAIR:
+      return TimerRegion::kReportBbPair;
+    case CallbackId::WRITE:
+      return TimerRegion::kWrite;
+  }
+  return TimerRegion::kSizeDontUse;
+}
+
+// TimerRegionOf as a constant, so that a callback does not pay for the mapping at run time.
+template <CallbackId Callback>
+inline constexpr TimerRegion kTimerRegionOf = TimerRegionOf(Callback);
 
 // Whether one callback carries out its own work, or returns as soon as it has been entered.
 //
@@ -58,7 +108,7 @@ enum class CallbackId {
 //
 // Deliberately a constant rather than a flag: the body has to be gone from the generated code,
 // not skipped over at runtime, or the measurement would include the branch that skips it.
-constexpr bool callback_body_enabled([[maybe_unused]] CallbackId callback) noexcept {
+constexpr bool CallbackBodyEnabled([[maybe_unused]] CallbackId callback) noexcept {
 #if defined(DP_BENCHMARK_ONLY_CALLBACK)
   return callback == CallbackId::DP_BENCHMARK_ONLY_CALLBACK;
 #elif defined(DP_BENCHMARK_EMPTY_CALLBACKS)
@@ -112,8 +162,8 @@ private:
 template <std::size_t N> class CallbackScope {
 public:
   CallbackScope([[maybe_unused]] TimerRegion region, CallbackId callback, [[maybe_unused]] const char (&name)[N])
-      : active(callback_body_enabled(callback) && profiling_active()) {
-    if (!active) {
+      : active_(CallbackBodyEnabled(callback) && ProfilingActive()) {
+    if (!active_) {
       // Deliberately before everything else: a callback that is about to return without doing
       // anything must not take the lock, announce itself or produce a timing sample.
       return;
@@ -133,13 +183,13 @@ public:
   CallbackScope &operator=(const CallbackScope &) = delete;
 
   // Whether the callback may go on. Callbacks return early when this is false.
-  explicit operator bool() const noexcept { return active; }
+  explicit operator bool() const noexcept { return active_; }
 
   // For the callbacks that call back into instrumented code in the middle of their work and
   // therefore have to let go of the lock first. Without DP_PTHREAD_COMPATIBILITY_MODE both are
   // empty. Whatever is still held is released when the scope is destroyed, which the hand
   // written lock()/unlock() pairs did not manage.
-  void unlock() {
+  void Unlock() {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
     if (lock.owns_lock()) {
       lock.unlock();
@@ -147,7 +197,7 @@ public:
 #endif
   }
 
-  void relock() {
+  void Relock() {
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
     if (!lock.owns_lock()) {
       lock.lock();
@@ -158,7 +208,7 @@ public:
 private:
   // Declared lock, trace, timer and therefore destroyed in the opposite order, so the timer still
   // stops before the lock is released, exactly as the hand written sequence did.
-  bool active;
+  bool active_;
 #ifdef DP_PTHREAD_COMPATIBILITY_MODE
   std::unique_lock<std::mutex> lock;
 #endif
@@ -170,15 +220,15 @@ private:
 #endif
 };
 
-} // namespace __dp
+} // namespace dp
 
-// The preamble of an instrumented callback. `callback` is the bare enumerator, which has to name
-// both a TimerRegion and a CallbackId -- so a callback cannot end up timed as one region and
-// switched by another. The name the verbose build reports comes from __func__ and therefore cannot
+// The preamble of an instrumented callback. `callback` is the bare CallbackId enumerator; the
+// TimerRegion follows from it (kTimerRegionOf) -- so a callback cannot end up timed as one region
+// and switched by another. The name the verbose build reports comes from __func__ and therefore cannot
 // drift away from the function it belongs to either. Declares `dp_scope`, which callbacks that
 // release the lock in the middle of their work address by that name.
 #define DP_CALLBACK_SCOPE(callback)                                                                                    \
-  auto dp_scope = ::__dp::CallbackScope(TimerRegion::callback, ::__dp::CallbackId::callback, __func__);                \
+  auto dp_scope = ::dp::CallbackScope(::dp::kTimerRegionOf< ::dp::CallbackId::callback>, ::dp::CallbackId::callback, __func__);                \
   if (!dp_scope) {                                                                                                     \
     return;                                                                                                            \
   }                                                                                                                    \
@@ -189,11 +239,11 @@ private:
 // CallbackId. It answers the same two questions: is the runtime running, and does this build
 // execute this callback's body.
 #define DP_CALLBACK_GUARD(callback)                                                                                    \
-  if (!::__dp::callback_body_enabled(::__dp::CallbackId::callback) || !::__dp::profiling_active()) {                   \
+  if (!::dp::CallbackBodyEnabled(::dp::CallbackId::callback) || !::dp::ProfilingActive()) {                   \
     return;                                                                                                            \
   }                                                                                                                    \
   static_cast<void>(0)
 
 // A traced and timed section that is not a callback: no state check, no lock. See TimedSection.
 #define DP_TIMED_SECTION(region, name)                                                                                 \
-  [[maybe_unused]] const auto dp_section = ::__dp::TimedSection(TimerRegion::region, name)
+  [[maybe_unused]] const auto dp_section = ::dp::TimedSection(TimerRegion::region, name)

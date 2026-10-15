@@ -22,28 +22,28 @@
 
 dp_reduction::ReductionInstrumenter::ReductionInstrumenter(llvm::Module &module, Services services)
     : module_(module), services_(std::move(services)),
-      reduction_file_(profiler_files::open("reduction.txt")) {}
+      reduction_file_(profiler_files::Open("reduction.txt")) {}
 
-void dp_reduction::ReductionInstrumenter::close() {
+void dp_reduction::ReductionInstrumenter::Close() {
   // closing flushes
   reduction_file_.close();
 }
 
 // iterates over all functions in the module and calls 'instrument_function'
 // on suitable ones
-void dp_reduction::ReductionInstrumenter::instrument_module(llvm::ModuleAnalysisManager &mam) {
+void dp_reduction::ReductionInstrumenter::InstrumentModule(llvm::ModuleAnalysisManager &mam) {
   llvm::Module *module = &module_;
   for (llvm::Module::iterator func_it = module->begin(); func_it != module->end(); ++func_it) {
     llvm::Function *func = &(*func_it);
     std::string fn_name = func->getName().str();
     if (func->isDeclaration() || (std::strcmp(fn_name.c_str(), "NULL") == 0) || fn_name.find("llvm") != std::string::npos ||
-        dp_reduction::inlinedFunction(func)) {
+        dp_reduction::InlinedFunction(func)) {
       continue;
     }
 
     llvm::FunctionAnalysisManager &fam = mam.getResult<llvm::FunctionAnalysisManagerModuleProxy>(*module).getManager();
     llvm::LoopInfo &loop_info = fam.getResult<llvm::LoopAnalysis>(*func);
 
-    instrument_function(func, loop_info);
+    InstrumentFunction(func, loop_info);
   }
 }

@@ -16,7 +16,7 @@ sections between the markers ``DP_LEAK_CHECK_BEGIN <section>`` and ``DP_LEAK_CHE
 ``before_finalize`` (memory lost while the target ran) and ``after_finalize`` (additionally what the runtime
 library's teardown in __dp_finalize loses). Both sections are evaluated, each against its own known leaks.
 
-A leak counts if its allocation stack contains a function of the runtime library (``__dp_*`` or ``__dp::*``);
+A leak counts if its allocation stack contains a function of the runtime library (``__dp_*`` or ``dp::*``);
 leaks of the target program itself are listed, but ignored. The check fails if
 
 - a leak of the runtime library is not covered by an entry of the known leaks file for its section, or the
@@ -42,7 +42,7 @@ Known leaks file format, one entry per line (``#`` starts a comment):
 The frames of an entry are compared with the runtime library frames of a leak's allocation stack (plus
 ``main``), innermost first, so library internals like std::allocator frames do not matter. A frame of an
 entry matches a function of the stack if it equals its full name or its name without the parameter list
-(whitespace ignored), so ``__dp::foo`` matches ``__dp::foo(int, long)`` but not ``__dp::foobar``. An entry
+(whitespace ignored), so ``dp::foo`` matches ``dp::foo(int, long)`` but not ``dp::foobar``. An entry
 covers a leak if its frames match the first frames of the leak. The leaks covered by one entry are summed up
 per run and section.
 """
@@ -80,7 +80,7 @@ def _normalize(name: str) -> str:
 
 
 def _base_name(name: str) -> str:
-    """The function name without its parameter list: ``__dp::foo(int)`` -> ``__dp::foo``."""
+    """The function name without its parameter list: ``dp::foo(int)`` -> ``dp::foo``."""
     return name if name.startswith("(") else name.split("(", 1)[0]
 
 
@@ -93,7 +93,7 @@ def _frame_matches(entry_frame: str, frame: str) -> bool:
 
 
 def _is_runtime_library_frame(name: str) -> bool:
-    return name.startswith("__dp_") or name.startswith("__dp::")
+    return name.startswith("__dp_") or name.startswith("dp::")
 
 
 def _function_name(frame_text: str) -> str:

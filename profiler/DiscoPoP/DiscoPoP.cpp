@@ -32,14 +32,14 @@ using llvm::dyn_cast;
 using llvm::errs;
 
 // Initializations
-void DiscoPoP::setupDataTypes() {
-  Void = const_cast<Type *>(Type::getVoidTy(*ThisModuleContext));
-  Int32 = const_cast<IntegerType *>(IntegerType::getInt32Ty(*ThisModuleContext));
-  Int64 = const_cast<IntegerType *>(IntegerType::getInt64Ty(*ThisModuleContext));
-  CharPtr = PointerType::getUnqual(Type::getInt8Ty(*ThisModuleContext));
+void DiscoPoP::SetupDataTypes() {
+  void_type_ = const_cast<Type *>(Type::getVoidTy(*this_module_context_));
+  int32_ = const_cast<IntegerType *>(IntegerType::getInt32Ty(*this_module_context_));
+  int64_ = const_cast<IntegerType *>(IntegerType::getInt64Ty(*this_module_context_));
+  char_ptr_ = PointerType::getUnqual(Type::getInt8Ty(*this_module_context_));
 }
 
-void DiscoPoP::setupCallbacks() {
+void DiscoPoP::SetupCallbacks() {
   /* function name
    * return value type
    * arg types
@@ -50,44 +50,44 @@ void DiscoPoP::setupCallbacks() {
    * register unspecified. test/instrumentation/test_callback_signatures.py compares both.
    */
 
-  DpFinalize = ThisModule->getOrInsertFunction("__dp_finalize", Void, Int64);
+  dp_finalize_ = this_module_->getOrInsertFunction("__dp_finalize", void_type_, int64_);
 
-  DpRead = ThisModule->getOrInsertFunction("__dp_read", Void,
+  dp_read_ = this_module_->getOrInsertFunction("__dp_read", void_type_,
 #ifdef SKIP_DUP_INSTR
-                                           Int64, Int64, CharPtr, Int64, Int64
+                                           int64_, int64_, char_ptr_, int64_, int64_
 #else
-                                           Int64, Int64, CharPtr
+                                           int64_, int64_, char_ptr_
 #endif
   );
 
-  DpWrite = ThisModule->getOrInsertFunction("__dp_write", Void,
+  dp_write_ = this_module_->getOrInsertFunction("__dp_write", void_type_,
 #ifdef SKIP_DUP_INSTR
-                                            Int64, Int64, CharPtr, Int64, Int64
+                                            int64_, int64_, char_ptr_, int64_, int64_
 #else
-                                            Int64, Int64, CharPtr
+                                            int64_, int64_, char_ptr_
 #endif
   );
 
-  DpAlloca = ThisModule->getOrInsertFunction("__dp_alloca", Void,
+  dp_alloca_ = this_module_->getOrInsertFunction("__dp_alloca", void_type_,
 
-                                             Int64, CharPtr, Int64, Int64, Int64, Int64);
+                                             int64_, char_ptr_, int64_, int64_, int64_, int64_);
 
-  DpNew = ThisModule->getOrInsertFunction("__dp_new", Void, Int64, Int64, Int64, Int64);
+  dp_new_ = this_module_->getOrInsertFunction("__dp_new", void_type_, int64_, int64_, int64_, int64_);
 
-  DpDelete = ThisModule->getOrInsertFunction("__dp_delete", Void, Int64, Int64);
+  dp_delete_ = this_module_->getOrInsertFunction("__dp_delete", void_type_, int64_, int64_);
 
-  DpCallOrInvoke = ThisModule->getOrInsertFunction("__dp_call", Void, Int64, Int32);
+  dp_call_or_invoke_ = this_module_->getOrInsertFunction("__dp_call", void_type_, int64_, int32_);
 
-  DpFuncEntry = ThisModule->getOrInsertFunction("__dp_func_entry", Void, Int64, Int32, Int32);
+  dp_func_entry_ = this_module_->getOrInsertFunction("__dp_func_entry", void_type_, int64_, int32_, int32_);
 
-  DpFuncExit = ThisModule->getOrInsertFunction("__dp_func_exit", Void, Int64, Int32);
+  dp_func_exit_ = this_module_->getOrInsertFunction("__dp_func_exit", void_type_, int64_, int32_);
 
-  DpLoopEntry = ThisModule->getOrInsertFunction("__dp_loop_entry", Void, Int64, Int32, Int32);
+  dp_loop_entry_ = this_module_->getOrInsertFunction("__dp_loop_entry", void_type_, int64_, int32_, int32_);
 
-  DpLoopExit = ThisModule->getOrInsertFunction("__dp_loop_exit", Void, Int64, Int32, Int32);
+  dp_loop_exit_ = this_module_->getOrInsertFunction("__dp_loop_exit", void_type_, int64_, int32_, int32_);
 
-  DpTakenBranchCounterIncr =
-      ThisModule->getOrInsertFunction("__dp_incr_taken_branch_counter", Void, CharPtr, Int32, Int32);
+  dp_taken_branch_counter_incr_ =
+      this_module_->getOrInsertFunction("__dp_incr_taken_branch_counter", void_type_, char_ptr_, int32_, int32_);
 }
 
 // DPReduction end

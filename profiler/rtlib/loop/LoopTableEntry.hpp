@@ -16,31 +16,31 @@
 
 #include <cstdint>
 
-namespace __dp {
+namespace dp {
 
 // For loop tracking
 struct LoopTableEntry {
   LoopTableEntry(std::int32_t function_level, std::int32_t loop_id, std::int32_t number_hits, LID begin_line)
-      : funcLevel(function_level), loopID(loop_id), begin(begin_line), count(number_hits) {
+      : func_level(function_level), loop_id(loop_id), begin(begin_line), count_(number_hits) {
   }
 
-  std::int32_t funcLevel;
-  std::int32_t loopID;
+  std::int32_t func_level;
+  std::int32_t loop_id;
   LID begin;
 
   bool operator==(const LoopTableEntry &other) const noexcept {
-    return funcLevel == other.funcLevel && loopID == other.loopID && count == other.count && begin == other.begin;
+    return func_level == other.func_level && loop_id == other.loop_id && count_ == other.count_ && begin == other.begin;
   }
 
   bool operator!=(const LoopTableEntry &other) const noexcept { return !(*this == other); }
 
-  std::int32_t get_count() const noexcept { return count; }
+  std::int32_t GetCount() const noexcept { return count_; }
 
-  void increment_count() noexcept { ++count; }
+  void IncrementCount() noexcept { ++count_; }
 
 
 private:
-  std::int32_t count;
+  std::int32_t count_;
 };
 
-} // namespace __dp
+} // namespace dp

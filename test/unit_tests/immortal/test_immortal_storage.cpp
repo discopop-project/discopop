@@ -8,7 +8,7 @@
 #include "Immortal.hpp"
 #include "runtimeFunctionsTypes.hpp"
 
-using namespace __dp;
+using namespace dp;
 
 namespace {
 
@@ -60,7 +60,7 @@ TEST_F(ImmortalStorageTest, testTheStorageLeavesItsObjectUnconstructed) {
 TEST_F(ImmortalStorageTest, testLeavingTheScopeDoesNotDestroyTheObject) {
   {
     ImmortalStorage<Tracked> storage;
-    storage.construct();
+    storage.Construct();
     ASSERT_EQ(Tracked::constructed, 1);
   }
 
@@ -69,40 +69,40 @@ TEST_F(ImmortalStorageTest, testLeavingTheScopeDoesNotDestroyTheObject) {
 
 TEST_F(ImmortalStorageTest, testDestroyingTheObjectRunsItsDestructorExactlyOnce) {
   ImmortalStorage<Tracked> storage;
-  storage.construct();
+  storage.Construct();
 
-  storage.destroy();
+  storage.Destroy();
 
   EXPECT_EQ(Tracked::destroyed, 1);
 }
 
 TEST_F(ImmortalStorageTest, testTheObjectCanBeConstructedAgainAfterItWasDestroyed) {
   ImmortalStorage<Tracked> storage;
-  storage.construct();
-  storage.destroy();
+  storage.Construct();
+  storage.Destroy();
 
-  storage.construct();
+  storage.Construct();
 
   EXPECT_EQ(Tracked::constructed, 2);
   EXPECT_EQ(Tracked::destroyed, 1);
-  storage.destroy();
+  storage.Destroy();
 }
 
 TEST_F(ImmortalStorageTest, testConstructionArgumentsReachTheObject) {
   ImmortalStorage<Tracked> storage;
 
-  storage.construct(42);
+  storage.Construct(42);
 
   EXPECT_EQ(Tracked::last_argument, 42);
-  storage.destroy();
+  storage.Destroy();
 }
 
 TEST_F(ImmortalStorageTest, testTheConstructedObjectIsReachedThroughTheStorage) {
   ImmortalStorage<Tracked> storage;
-  storage.construct();
+  storage.Construct();
 
   EXPECT_EQ(storage.value.value, 7);
-  storage.destroy();
+  storage.Destroy();
 }
 
 // Callers bind a reference to `value` at namespace scope, which requires the address to be an
@@ -111,10 +111,10 @@ TEST_F(ImmortalStorageTest, testTheAddressOfTheObjectDoesNotChange) {
   ImmortalStorage<Tracked> storage;
   const Tracked *const before = &storage.value;
 
-  storage.construct();
+  storage.Construct();
 
   EXPECT_EQ(&storage.value, before);
-  storage.destroy();
+  storage.Destroy();
 }
 
 // The instantiations the runtime actually uses, see runtimeFunctionsGlobals.cpp. They are
@@ -123,41 +123,41 @@ TEST_F(ImmortalStorageTest, testTheAddressOfTheObjectDoesNotChange) {
 TEST_F(ImmortalStorageTest, testTheGlobalsOfTheRuntimeCompleteTheirLifetime) {
   {
     ImmortalStorage<std::unordered_map<char *, long>> cuec;
-    cuec.construct();
+    cuec.Construct();
     cuec.value[nullptr] = 1;
     EXPECT_EQ(cuec.value.size(), 1u);
-    cuec.destroy();
+    cuec.Destroy();
   }
   {
     ImmortalStorage<std::vector<std::uint32_t>> calls_without_executed_transitions;
-    calls_without_executed_transitions.construct();
+    calls_without_executed_transitions.Construct();
     calls_without_executed_transitions.value.push_back(3);
     EXPECT_EQ(calls_without_executed_transitions.value.size(), 1u);
-    calls_without_executed_transitions.destroy();
+    calls_without_executed_transitions.Destroy();
   }
   {
     ImmortalStorage<std::vector<const char *>> registered_bb_deps;
-    registered_bb_deps.construct();
+    registered_bb_deps.Construct();
     registered_bb_deps.value.push_back("0=1 NOM RAW 2|x(3)");
     EXPECT_EQ(registered_bb_deps.value.size(), 1u);
-    registered_bb_deps.destroy();
+    registered_bb_deps.Destroy();
   }
   {
     ImmortalStorage<FirstAccessQueue> first_access_queue;
-    first_access_queue.construct(4);
+    first_access_queue.Construct(4);
     EXPECT_TRUE(first_access_queue.value.empty());
-    first_access_queue.destroy();
+    first_access_queue.Destroy();
   }
   {
     ImmortalStorage<SecondAccessQueue> second_access_queue;
-    second_access_queue.construct(4);
+    second_access_queue.Construct(4);
     EXPECT_TRUE(second_access_queue.value.empty());
-    second_access_queue.destroy();
+    second_access_queue.Destroy();
   }
   {
     ImmortalStorage<FirstAccessQueueChunkBuffer> chunk_buffer;
-    chunk_buffer.construct(1);
-    EXPECT_EQ(chunk_buffer.value.get_queue_size(), 0u);
-    chunk_buffer.destroy();
+    chunk_buffer.Construct(1);
+    EXPECT_EQ(chunk_buffer.value.GetQueueSize(), 0u);
+    chunk_buffer.Destroy();
   }
 }

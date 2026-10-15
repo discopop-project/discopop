@@ -28,25 +28,25 @@ using llvm::cast;
 using llvm::dyn_cast;
 using llvm::isa;
 
-void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
-  for (Function &F : M) {
-    for(BasicBlock &BB: F){
-      for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
-        auto instruction = &*BI;
+void DiscoPoP::AssignInstructionIdsToDpReductionFunctions(Module &m){
+  for (Function &f : m) {
+    for(BasicBlock &bb: f){
+      for (BasicBlock::iterator bi = bb.begin(), e = bb.end(); bi != e; ++bi) {
+        auto instruction = &*bi;
         if(isa<CallInst>(instruction)){
-          auto ci = cast<CallInst>(BI);
-          Function* F = ci->getCalledFunction();
-          if(F){
-            auto fn = F->getName();
+          auto ci = cast<CallInst>(bi);
+          Function* f = ci->getCalledFunction();
+          if(f){
+            auto fn = f->getName();
             if (fn.find("__dp_loop_incr") != std::string::npos)
             {
               // assign missing unique instruction id
-              LLVMContext& ctx = BI->getContext();
-              std::int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
-              MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+std::to_string(llvm_ir_instruction_id)));
-              BI->setMetadata("dp.md.instr.id", N);
+              LLVMContext& ctx = bi->getContext();
+              std::int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id_++;
+              MDNode* n = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+std::to_string(llvm_ir_instruction_id)));
+              bi->setMetadata("dp.md.instr.id", n);
               // fill instructionID to lineID mapping file
-              instructionID_to_lineID_file << std::to_string(llvm_ir_instruction_id) << " " << dputil::decodeLID(dputil::getLID(&*BI, fileID)) << "\n";
+              instruction_id_to_line_id_file << std::to_string(llvm_ir_instruction_id) << " " << dputil::DecodeLid(dputil::GetLid(&*bi, file_id)) << "\n";
             }
           }
         }
@@ -55,72 +55,72 @@ void DiscoPoP::assign_instruction_ids_to_dp_reduction_functions(Module &M){
   }
 }
 
-void DiscoPoP::update_argument_instruction_ids(Module &M){
+void DiscoPoP::UpdateArgumentInstructionIds(Module &m){
   std::cout << "Updating argument instruction ids...\n";
-  for (Function &F : M) {
-    for(BasicBlock &BB: F){
-      for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
-        auto instruction = &*BI;
+  for (Function &f : m) {
+    for(BasicBlock &bb: f){
+      for (BasicBlock::iterator bi = bb.begin(), e = bb.end(); bi != e; ++bi) {
+        auto instruction = &*bi;
         if(isa<CallInst>(instruction)){
-          auto ci = cast<CallInst>(BI);
-          Function* F = ci->getCalledFunction();
-          if(F){
-            auto fn = F->getName();
+          auto ci = cast<CallInst>(bi);
+          Function* f = ci->getCalledFunction();
+          if(f){
+            auto fn = f->getName();
             if (fn.find("__dp_loop_entry") != std::string::npos)
             {
               // Get InstructionID of callinstruction
-              MDNode* md = BI->getMetadata("dp.md.instr.id");
-              std::int32_t callInstructionID = 0;
+              MDNode* md = bi->getMetadata("dp.md.instr.id");
+              std::int32_t call_instruction_id = 0;
               if(md){
                 // Metadata exists
-                std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
-                callInstructionID_str.erase(0, 15);
-                callInstructionID = std::stoi(callInstructionID_str);
+                std::string call_instruction_id_str = cast<MDString>(md->getOperand(0))->getString().str();
+                call_instruction_id_str.erase(0, 15);
+                call_instruction_id = std::stoi(call_instruction_id_str);
               }
               // update the function argument
-              if(callInstructionID != 0){
-                ci->setArgOperand(2, ConstantInt::get(Int32, callInstructionID));
+              if(call_instruction_id != 0){
+                ci->setArgOperand(2, ConstantInt::get(int32_, call_instruction_id));
               }
             }
             if (fn.find("__dp_loop_incr") != std::string::npos)
             {
               // Get InstructionID of callinstruction
-              MDNode* md = BI->getMetadata("dp.md.instr.id");
-              std::int32_t callInstructionID = 0;
+              MDNode* md = bi->getMetadata("dp.md.instr.id");
+              std::int32_t call_instruction_id = 0;
               if(md){
                 // Metadata exists
-                std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
-                callInstructionID_str.erase(0, 15);
-                callInstructionID = std::stoi(callInstructionID_str);
+                std::string call_instruction_id_str = cast<MDString>(md->getOperand(0))->getString().str();
+                call_instruction_id_str.erase(0, 15);
+                call_instruction_id = std::stoi(call_instruction_id_str);
               }
               // update the function argument
-              if(callInstructionID != 0){
-                ci->setArgOperand(1, ConstantInt::get(Int32, callInstructionID));
+              if(call_instruction_id != 0){
+                ci->setArgOperand(1, ConstantInt::get(int32_, call_instruction_id));
               }
             }
             if (fn == "__dp_func_entry")
             {
               // the instruction id of the entry call identifies the function at runtime, see
               // callpath_function_entries.txt
-              std::int32_t callInstructionID = get_dp_instruction_id(&*BI);
-              if(callInstructionID != 0){
-                ci->setArgOperand(2, ConstantInt::get(Int32, callInstructionID));
+              std::int32_t call_instruction_id = GetDpInstructionId(&*bi);
+              if(call_instruction_id != 0){
+                ci->setArgOperand(2, ConstantInt::get(int32_, call_instruction_id));
               }
             }
             if (fn.find("__dp_loop_exit") != std::string::npos)
             {
               // Get InstructionID of callinstruction
-              MDNode* md = BI->getMetadata("dp.md.instr.id");
-              std::int32_t callInstructionID = 0;
+              MDNode* md = bi->getMetadata("dp.md.instr.id");
+              std::int32_t call_instruction_id = 0;
               if(md){
                 // Metadata exists
-                std::string callInstructionID_str = cast<MDString>(md->getOperand(0))->getString().str();
-                callInstructionID_str.erase(0, 15);
-                callInstructionID = std::stoi(callInstructionID_str);
+                std::string call_instruction_id_str = cast<MDString>(md->getOperand(0))->getString().str();
+                call_instruction_id_str.erase(0, 15);
+                call_instruction_id = std::stoi(call_instruction_id_str);
               }
               // update the function argument
-              if(callInstructionID != 0){
-                ci->setArgOperand(2, ConstantInt::get(Int32, callInstructionID));
+              if(call_instruction_id != 0){
+                ci->setArgOperand(2, ConstantInt::get(int32_, call_instruction_id));
               }
             }
           }
@@ -134,16 +134,16 @@ void DiscoPoP::update_argument_instruction_ids(Module &M){
 // instrumented function. An exception leaves functions without their __dp_func_exit calls; the
 // runtime library discards their callpath states when the exception reaches a landing pad.
 // Requires the function entry ids assigned by update_argument_instruction_ids.
-void DiscoPoP::instrument_landing_pads(Module &M){
-  FunctionCallee DpLandingPad = M.getOrInsertFunction("__dp_landing_pad", Type::getVoidTy(M.getContext()), Int32);
-  for (Function &F : M) {
-    if (F.isDeclaration()) {
+void DiscoPoP::InstrumentLandingPads(Module &m){
+  FunctionCallee dp_landing_pad = m.getOrInsertFunction("__dp_landing_pad", Type::getVoidTy(m.getContext()), int32_);
+  for (Function &f : m) {
+    if (f.isDeclaration()) {
       continue;
     }
     // the function entry id is the last argument of the function's __dp_func_entry call
     ConstantInt* function_entry_id = nullptr;
-    for (Instruction &I : F.getEntryBlock()) {
-      auto ci = dyn_cast<CallInst>(&I);
+    for (Instruction &i : f.getEntryBlock()) {
+      auto ci = dyn_cast<CallInst>(&i);
       if (ci && ci->getCalledFunction() && ci->getCalledFunction()->getName() == "__dp_func_entry") {
         function_entry_id = dyn_cast<ConstantInt>(ci->getArgOperand(2));
         break;
@@ -152,12 +152,12 @@ void DiscoPoP::instrument_landing_pads(Module &M){
     if (function_entry_id == nullptr || function_entry_id->isZero()) {
       continue;
     }
-    for (BasicBlock &BB : F) {
-      if (!BB.isLandingPad()) {
+    for (BasicBlock &bb : f) {
+      if (!bb.isLandingPad()) {
         continue;
       }
-      IRBuilder<> IRB(&*BB.getFirstInsertionPt());
-      IRB.CreateCall(DpLandingPad, {function_entry_id});
+      IRBuilder<> irb(&*bb.getFirstInsertionPt());
+      irb.CreateCall(dp_landing_pad, {function_entry_id});
     }
   }
 }

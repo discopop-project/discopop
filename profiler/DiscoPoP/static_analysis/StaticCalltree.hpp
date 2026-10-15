@@ -22,12 +22,12 @@
 
 class StaticCalltreeNode {
     private:
-        uint32_t node_id;
-        bool type; // 0: Function; 1: Call instruction
+        uint32_t node_id_;
+        bool type_; // 0: Function; 1: Call instruction
 //        TODO: other types for loop iterations might be a good idea!
-        std::string functionName;
-        int32_t instructionID;
-        std::string label;  // precomputed once in the constructor; see get_label()
+        std::string function_name_;
+        int32_t instruction_id_;
+        std::string label_;  // precomputed once in the constructor; see get_label()
 
     public:
         std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> successors;  // first element of the pairs is the trigger instructionID for the transition
@@ -40,30 +40,30 @@ class StaticCalltreeNode {
         // true if the node is the node of a function (not a loop iteration state) and no call
         // instruction of the module leads to it. Its loop iteration states lead back to it on loop
         // exits, so predecessors of other kinds do not count.
-        bool is_uncalled_function(){
-            if (type || is_loopstate) {
+        bool IsUncalledFunction(){
+            if (type_ || is_loopstate) {
                 return false;
             }
             for (auto pred : predecessors) {
-                if (pred->get_type()) {
+                if (pred->GetType()) {
                     return false;
                 }
             }
             return true;
         }
-        StaticCalltreeNode(uint32_t node_id_arg, bool type_arg, std::string functionName_arg, int32_t instructionID_arg):node_id(node_id_arg),type(type_arg),functionName(functionName_arg),instructionID(instructionID_arg){
+        StaticCalltreeNode(uint32_t node_id_arg, bool type_arg, std::string function_name_arg, int32_t instruction_id_arg):node_id_(node_id_arg),type_(type_arg),function_name_(function_name_arg),instruction_id_(instruction_id_arg){
             // type 0: function -> functionName; type 1: call instruction -> "call_<instructionID>"
-            label = type ? ("call_" + std::to_string(instructionID)) : functionName;
+            label_ = type_ ? ("call_" + std::to_string(instruction_id_)) : function_name_;
         };
-        void print();
-        const std::string& get_label();
-        bool get_type();
-        void register_successor(StaticCalltreeNode* succ, int32_t trigger_instructionID);
+        void Print();
+        const std::string& GetLabel();
+        bool GetType();
+        void RegisterSuccessor(StaticCalltreeNode* succ, int32_t trigger_instruction_id);
 };
 
 class StaticCalltree {
     private:
-        uint32_t node_count = 0;
+        uint32_t node_count_ = 0;
 
     public:
 
@@ -74,16 +74,16 @@ class StaticCalltree {
         // owns its nodes: a copy would delete them twice, so it can only be moved (buildStaticCalltree
         // returns it by value)
         StaticCalltree(StaticCalltree&& other) noexcept
-            : node_count(other.node_count), function_map(std::move(other.function_map)), instruction_map(std::move(other.instruction_map)) {
+            : node_count_(other.node_count_), function_map(std::move(other.function_map)), instruction_map(std::move(other.instruction_map)) {
             other.function_map.clear();
             other.instruction_map.clear();
         }
         StaticCalltree(const StaticCalltree&) = delete;
         StaticCalltree& operator=(const StaticCalltree&) = delete;
-        StaticCalltreeNode* get_or_insert_function_node(std::string function_name);
-        StaticCalltreeNode* get_or_insert_function_node(std::string function_nam, std::string loop_iteration_instance);
-        StaticCalltreeNode* get_or_insert_instruction_node(int32_t instructionID);
-        void print();
-        std::string to_dot_string();
-        void addEdge(StaticCalltreeNode* source, StaticCalltreeNode* target, int32_t trigger_instructionID);
+        StaticCalltreeNode* GetOrInsertFunctionNode(std::string function_name);
+        StaticCalltreeNode* GetOrInsertFunctionNode(std::string function_nam, std::string loop_iteration_instance);
+        StaticCalltreeNode* GetOrInsertInstructionNode(int32_t instruction_id);
+        void Print();
+        std::string ToDotString();
+        void AddEdge(StaticCalltreeNode* source, StaticCalltreeNode* target, int32_t trigger_instruction_id);
 };

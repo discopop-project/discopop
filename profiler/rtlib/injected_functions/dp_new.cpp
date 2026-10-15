@@ -23,7 +23,7 @@
 #include <string>
 
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -33,4 +33,4 @@ void __dp_new(LID /*lid*/, ADDR /*startAddr*/, ADDR /*endAddr*/, std::int64_t /*
 }
 }
 
-} // namespace __dp
+} // namespace dp

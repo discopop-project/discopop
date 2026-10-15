@@ -23,8 +23,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
-# A source location is packed into a single integer as (fileID << LIDSIZE) + lineNumber,
-# see profiler/share/include/lid_constants.hpp, decodeLID in profiler/share/include/DPUtils.hpp.
+# A source location is packed into a single integer as (file id << kLidSize) + line number,
+# see profiler/share/include/lid_constants.hpp, DecodeLid in profiler/share/include/DPUtils.hpp.
 # The layout is read from that header, so that it exists in one place only.
 LID_CONSTANTS_HEADER = Path(__file__).resolve().parents[2] / "profiler" / "share" / "include" / "lid_constants.hpp"
 
@@ -36,10 +36,10 @@ def _read_lid_constant(name: str) -> int:
     return int(match.group(1))
 
 
-LIDSIZE = _read_lid_constant("LIDSIZE")
+LIDSIZE = _read_lid_constant("kLidSize")
 MAXLNO = 1 << LIDSIZE
 #: highest file id a location can hold: the location is what is left of 64 bits below the metadata
-MAXFILEID = (1 << (64 - _read_lid_constant("LIDMETADATASIZE") - LIDSIZE)) - 1
+MAXFILEID = (1 << (64 - _read_lid_constant("kLidMetadataSize") - LIDSIZE)) - 1
 
 #: Callbacks whose first argument is such a packed location.
 LOCATION_CALLBACKS = frozenset(

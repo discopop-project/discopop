@@ -63,8 +63,8 @@ def program_log(
 KNOWN = [
     KnownLeak("before_finalize", "Direct", 1, 4096, ("__dp_func_entry", "main"), 1),
     KnownLeak("after_finalize", "Direct", 1, 4096, ("__dp_func_entry", "main"), 2),
-    KnownLeak("after_finalize", "Indirect", 1, 1 << 20, ("__dp::addDep",), 3),
-    KnownLeak("after_finalize", "Indirect", 2, 1 << 24, ("__dp::PerfectShadow2::*",), 4),
+    KnownLeak("after_finalize", "Indirect", 1, 1 << 20, ("dp::addDep",), 3),
+    KnownLeak("after_finalize", "Indirect", 2, 1 << 24, ("dp::PerfectShadow2::*",), 4),
 ]
 
 
@@ -95,7 +95,7 @@ def test_leak_of_the_target_program_is_ignored() -> None:
 
 
 def test_teardown_leak_is_checked() -> None:
-    lost_sets: Leak = ("Indirect", 4000, 40, ["__dp::addDep(long)", "__dp::processFirstAccessQueue(void*)"])
+    lost_sets: Leak = ("Indirect", 4000, 40, ["dp::addDep(long)", "dp::processFirstAccessQueue(void*)"])
     checker = Checker(KNOWN)
     checker.check_log("run.log", program_log([SELF_PATH], [SELF_PATH, lost_sets]), verbose=False)
     assert any("line 3 exceeds its limit" in h and "after_finalize" in h for h in headlines(checker))
@@ -111,11 +111,11 @@ def test_known_leak_limit() -> None:
 @pytest.mark.parametrize(
     "entry, frame, matches",
     [
-        ("__dp::foo", "__dp::foo(int, long)", True),
-        ("__dp::foo", "__dp::foobar(int)", False),
-        ("__dp::foo(int,long)", "__dp::foo(int, long)", True),
-        ("__dp::PerfectShadow2::*", "__dp::PerfectShadow2::insertToWrite(long, long)", True),
-        ("__dp::PerfectShadow2::*", "__dp::PerfectShadow2Other::get()", False),
+        ("dp::foo", "dp::foo(int, long)", True),
+        ("dp::foo", "dp::foobar(int)", False),
+        ("dp::foo(int,long)", "dp::foo(int, long)", True),
+        ("dp::PerfectShadow2::*", "dp::PerfectShadow2::insertToWrite(long, long)", True),
+        ("dp::PerfectShadow2::*", "dp::PerfectShadow2Other::get()", False),
         ("__dp_func_entry", "__dp_func_entry", True),
     ],
 )
@@ -164,21 +164,21 @@ def grow(short_after: Sequence[Leak], long_after: Sequence[Leak], heap: Tuple[fl
 
 
 def test_growth_of_a_known_leak_fails() -> None:
-    small: Leak = ("Indirect", 100000, 1, ["__dp::PerfectShadow2::insertToWrite(long, long)"])
-    large: Leak = ("Indirect", 200000, 2, ["__dp::PerfectShadow2::updateInRead(long, long)"])
+    small: Leak = ("Indirect", 100000, 1, ["dp::PerfectShadow2::insertToWrite(long, long)"])
+    large: Leak = ("Indirect", 200000, 2, ["dp::PerfectShadow2::updateInRead(long, long)"])
     checker = grow([small], [large])
     assert any(h.startswith("leak grows with the run time") for h in headlines(checker))
 
 
 def test_growth_is_compared_per_known_entry_not_per_stack() -> None:
-    first: Leak = ("Indirect", 100000, 1, ["__dp::PerfectShadow2::insertToWrite(long, long)"])
-    second: Leak = ("Indirect", 100000, 1, ["__dp::PerfectShadow2::updateInRead(long, long)"])
+    first: Leak = ("Indirect", 100000, 1, ["dp::PerfectShadow2::insertToWrite(long, long)"])
+    second: Leak = ("Indirect", 100000, 1, ["dp::PerfectShadow2::updateInRead(long, long)"])
     assert grow([first], [second]).problems == []
 
 
 def test_byte_growth_within_the_slack_passes() -> None:
-    small: Leak = ("Indirect", 232, 1, ["__dp::addDep(long)", "__dp::processSecondAccessQueue(void*)"])
-    large: Leak = ("Indirect", 2056, 1, ["__dp::addDep(long)", "__dp::analyzeSingleAccess(long)"])
+    small: Leak = ("Indirect", 232, 1, ["dp::addDep(long)", "dp::processSecondAccessQueue(void*)"])
+    large: Leak = ("Indirect", 2056, 1, ["dp::addDep(long)", "dp::analyzeSingleAccess(long)"])
     assert grow([small], [large]).problems == []
     # a known leak that only the long run has is bounded by its entry's limit
     assert grow([], [large]).problems == []
