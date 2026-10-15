@@ -32,7 +32,7 @@ struct LoopIdentity {
   std::string start_location;
 };
 
-typedef struct Variable_struct {
+using Variable = struct Variable_struct {
   std::string name;
   std::string type;
   std::string defLine;
@@ -53,9 +53,9 @@ typedef struct Variable_struct {
 
   inline bool operator>(const Variable_struct &rhs) const { return name > rhs.name; }
 
-} Variable;
+};
 
-typedef struct Node_struct {
+using Node = struct Node_struct {
   std::string ID;
   nodeTypes type;
   LID startLine;
@@ -78,9 +78,9 @@ typedef struct Node_struct {
     parentNode = nullptr;
     BB = nullptr;
   }
-} Node;
+};
 
-typedef struct CU_struct : Node_struct {
+using CU = struct CU_struct : Node_struct {
 
   std::string BBID; // BasicBlock Id where the CU appears in
 
@@ -121,7 +121,7 @@ typedef struct CU_struct : Node_struct {
                    // basic blocks, then remove it.
   }
 
-} CU;
+};
 
 struct instr_info_t {
   std::string var_name_;

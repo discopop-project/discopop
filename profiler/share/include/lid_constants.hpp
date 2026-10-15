@@ -19,8 +19,8 @@
 // metadata (call path state, loop iterations) above, see LIDMETADATASIZE. Use dputil::encodeLID to build
 // one; it checks that file id and line fit.
 // Shared by the LLVM pass, which writes the LIDs into the instrumentation, and the runtime, which decodes them.
-typedef std::int64_t LID;
-typedef std::int64_t ADDR;
+using LID = std::int64_t;
+using ADDR = std::int64_t;
 
 // Number of bits for holding the line number in a LID
 constexpr int LIDSIZE = 18;

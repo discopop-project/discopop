@@ -24,8 +24,8 @@ namespace static_callpaths {
 // per translation unit). They are therefore only written on request.
 static bool write_callpath_dot_files() { return getenv("DP_WRITE_CALLPATH_DOT") != nullptr; }
 
-typedef int32_t CALLPATH_STATE_ID;
-typedef int32_t INSTRUCTION_ID;
+using CALLPATH_STATE_ID = int32_t;
+using INSTRUCTION_ID = int32_t;
 
 void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threads, StaticCallPathTree* call_path_tree, std::stack<std::tuple<StaticCallPathTreeNode*, INSTRUCTION_ID, StaticCallPathTreeNode*>> *new_stack, std::mutex *new_stack_mtx){
   bool initial_iteration = true;

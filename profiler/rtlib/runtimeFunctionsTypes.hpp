@@ -34,7 +34,7 @@
 namespace __dp {
 /******* Data structures *******/
 
-typedef enum {
+using depType = enum {
   RAW,
   WAR,
   WAW,
@@ -50,14 +50,14 @@ typedef enum {
   WAW_II_2,
   // .._II_x to represent inter-iteration dependencies by loop level in case of
   // nested loops
-} depType;
+};
 
-typedef enum {
+using depTypeModifier = enum {
   NOM,
   II_0,
   II_1,
   II_2 // NOM -> Normal
-} depTypeModifier;
+};
 
 struct AccessInfo {
   AccessInfo(bool isRead, LID lid, char *var, std::int64_t AAvar, ADDR addr, bool skip = false)
@@ -114,14 +114,14 @@ public:
   }
 };
 
-typedef std::unordered_set<Dep, DepHasher, eqDep> depSet;
+using depSet = std::unordered_set<Dep, DepHasher, eqDep>;
 // The sets are held by value. As owning raw pointers they outlived every map they were stored
 // in: the per-thread map is cleared once per processed chunk, which dropped the pointers and
 // leaked one set per dependency source line and chunk for the whole run.
-typedef std::unordered_map<LID, depSet> depMap;
+using depMap = std::unordered_map<LID, depSet>;
 
 // Hybrid anaysis
-typedef std::unordered_map<std::string, std::unordered_set<std::string>> stringDepMap;
+using stringDepMap = std::unordered_map<std::string, std::unordered_set<std::string>>;
 // One observed execution of a reporting basic block of the hybrid analysis (see
 // __dp_report_bb / __dp_report_bb_pair): which entry of the handed over
 // dependency strings it reports, the callpath state of the most recent execution
@@ -144,7 +144,7 @@ struct ReportedBBHasher {
   }
 };
 
-typedef std::unordered_set<ReportedBB, ReportedBBHasher> ReportedBBSet;
+using ReportedBBSet = std::unordered_set<ReportedBB, ReportedBBHasher>;
 
 // Collects the reported executions. A reporting basic block executes very
 // often, but mostly in pairs of states it was already reported with, so the
