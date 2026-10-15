@@ -345,11 +345,8 @@ public:
   // DPReduction
 
   std::string dp_reduction_determineVariableName(llvm::Instruction *I, std::map<std::string, std::string> *trueVarNamesFromMetadataMap);
-  unsigned dp_reduction_get_file_id(llvm::Function *func);
-  bool dp_reduction_init_util(std::string fmap_path);
   std::string findStructMemberName_static(llvm::MDNode *structNode, unsigned idx, llvm::IRBuilder<> &builder);
   std::ofstream instructionID_to_lineID_file;
-  std::map<std::string, int> path_to_id_;
   std::map<llvm::Loop*, int> loop_to_id;
   // per loop id of the current module: id of its loop node in Data.xml and its start
   // location (file_id:line), as written to loopstate_positions.txt

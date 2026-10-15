@@ -25,13 +25,11 @@ using namespace dputil;
 
 dp_reduction::ReductionInstrumenter::ReductionInstrumenter(llvm::Module &module, Services services)
     : module_(module), services_(std::move(services)),
-      reduction_file_(profiler_files::open("reduction.txt")),
-      loop_counter_file_(profiler_files::open("loop_counter_output.txt")) {}
+      reduction_file_(profiler_files::open("reduction.txt")) {}
 
 void dp_reduction::ReductionInstrumenter::close() {
   // closing flushes
   reduction_file_.close();
-  loop_counter_file_.close();
 }
 
 // iterates over all functions in the module and calls 'instrument_function'

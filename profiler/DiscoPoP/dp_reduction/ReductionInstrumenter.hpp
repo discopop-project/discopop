@@ -63,7 +63,6 @@ private:
   llvm::Module &module_;
   Services services_;
   std::ofstream reduction_file_;
-  std::ofstream loop_counter_file_;
   std::vector<loop_info_t> loops_;
   std::vector<instr_info_t> instructions_;
 };

@@ -45,13 +45,6 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
       M, {[this](Function &F) { return getCachedFileID(F); }, [this](Loop *L) { return get_or_register_loop_id(L); },
           [this](Instruction *I) { return dp_reduction_determineVariableName(I, &trueVarNamesFromMetadataMap); }});
 
-  /*
-  bool success = dp_reduction_init_util(FileMappingPath);
-  if (!success) {
-      llvm::errs() << "could not find the FileMapping file: " << FileMappingPath
-  << "\n"; return false;
-  }
-  */
   reduction.instrument_module(MAM);
 
   reduction.insert_functions();
@@ -85,15 +78,6 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   //std::cout << call_path_tree_ptr->to_dot_string();
   //std::cout << "! CallPathTree " << std::endl;
   // !DEBUG
-
-
-  // prepare quicker search
-  //cout << "START prepare PITIM..\n";
-  //auto contained_in_map = get_contained_in_map(enumerated_paths);
-
-  // TODO REMOVE? - covered by new StaticCallPathTree
-  //auto path_to_id_map = get_path_to_id_map(enumerated_paths);
-  //cout << "DONE prepare PITIM..\n";
 
 
   // add fucntion exit edges to state_transitions

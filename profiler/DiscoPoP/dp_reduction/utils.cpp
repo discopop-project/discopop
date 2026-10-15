@@ -16,43 +16,6 @@ using namespace llvm;
 using namespace std;
 using namespace dputil;
 
-unsigned DiscoPoP::dp_reduction_get_file_id(llvm::Function *func) {
-  unsigned file_id = 0;
-
-  // get the filepath of this function
-  char abs_path[PATH_MAX] = {'\0'};
-  for (auto bb_it = func->begin(); bb_it != func->end(); ++bb_it) {
-    for (auto instr_it = bb_it->begin(); instr_it != bb_it->end(); ++instr_it) {
-      llvm::MDNode *node = instr_it->getMetadata("dbg");
-      if (!node)
-        continue;
-
-      llvm::DILocation *di_loc = llvm::dyn_cast<llvm::DILocation>(node);
-      llvm::StringRef filename = di_loc->getFilename();
-      llvm::StringRef directory = di_loc->getDirectory();
-
-      char *success = realpath((directory.str() + "/" + filename.str()).c_str(), abs_path);
-      if (!success) {
-        success = realpath(filename.str().c_str(), abs_path);
-      }
-
-      break;
-    }
-    if (abs_path[0] != '\0')
-      break;
-  }
-
-  if (abs_path[0] != '\0') {
-    auto it = path_to_id_.find(std::string(abs_path));
-    if (it != path_to_id_.end()) {
-      file_id = it->second;
-    } else {
-    }
-  }
-
-  return file_id;
-}
-
 // finds the previous use of 'val'
 llvm::Instruction *dp_reduction::get_prev_use(llvm::Instruction *instr, llvm::Value *val) {
   if (!instr)
@@ -230,31 +193,4 @@ char dp_reduction::get_char_for_opcode(llvm::Instruction *instr) {
   if (opcode == llvm::Instruction::Xor)
     return '^';
   return ' ';
-}
-
-bool DiscoPoP::dp_reduction_init_util(std::string fmap_path) {
-  std::ifstream fmap_file;
-  fmap_file.open(fmap_path.c_str());
-  if (fmap_file.fail()) {
-    std::cout << "Opening FileMapping failed: " << strerror(errno) << "\n";
-  }
-  if (!fmap_file.is_open()) {
-    return false;
-  }
-
-  std::string line;
-  while (std::getline(fmap_file, line)) {
-    char filename[512] = {'\0'};
-    int file_id = 0;
-
-    int cnt = sscanf(line.c_str(), "%d\t%s", &file_id, filename);
-    if (cnt == 2) {
-
-      path_to_id_.emplace(std::string(filename), file_id);
-    }
-  }
-
-  fmap_file.close();
-
-  return true;
 }
