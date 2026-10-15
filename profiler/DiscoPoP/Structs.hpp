@@ -32,7 +32,7 @@ struct LoopIdentity {
   std::string start_location;
 };
 
-using Variable = struct Variable_struct {
+struct Variable {
   std::string name;
   std::string type;
   std::string defLine;
@@ -40,22 +40,22 @@ using Variable = struct Variable_struct {
   bool readAccess;
   bool writeAccess;
 
-  Variable_struct(const Variable_struct &other)
+  Variable(const Variable &other)
       : name(other.name), type(other.type), defLine(other.defLine), readAccess(other.readAccess),
         writeAccess(other.writeAccess) {}
 
-  Variable_struct(std::string n, std::string t, std::string d, bool readAccess, bool writeAccess)
+  Variable(std::string n, std::string t, std::string d, bool readAccess, bool writeAccess)
       : name(n), type(t), defLine(d), readAccess(readAccess), writeAccess(writeAccess) {}
 
   // We have a set of this struct. The set doesn't know how to order the
   // elements.
-  inline bool operator<(const Variable_struct &rhs) const { return name < rhs.name; }
+  inline bool operator<(const Variable &rhs) const { return name < rhs.name; }
 
-  inline bool operator>(const Variable_struct &rhs) const { return name > rhs.name; }
+  inline bool operator>(const Variable &rhs) const { return name > rhs.name; }
 
 };
 
-using Node = struct Node_struct {
+struct Node {
   std::string ID;
   nodeTypes type;
   LID startLine;
@@ -67,20 +67,20 @@ using Node = struct Node_struct {
   std::vector<Variable> argumentsList;
   std::set<LID> returnLines;
 
-  std::vector<Node_struct *> childrenNodes;
-  Node_struct *parentNode;
+  std::vector<Node *> childrenNodes;
+  Node *parentNode;
 
   // isRecursive function (Mo 5.11.2019)
   std::string recursiveFunctionCall = "";
 
-  Node_struct() {
+  Node() {
     ID = std::to_string(fileID) + ":" + std::to_string(CUIDCounter++);
     parentNode = nullptr;
     BB = nullptr;
   }
 };
 
-using CU = struct CU_struct : Node_struct {
+struct CU : Node {
 
   std::string BBID; // BasicBlock Id where the CU appears in
 
@@ -107,7 +107,7 @@ using CU = struct CU_struct : Node_struct {
   // Map to record function call instruction ids
   std::map<LID, std::vector<llvm::Instruction*>> callLineToCallInstructionMap;
 
-  CU_struct() {
+  CU() {
     type = nodeTypes::cu;
     readDataSize = 0;
     writeDataSize = 0;
