@@ -23,7 +23,7 @@ void DiscoPoP::instrument_module(llvm::Module *module, map<string, string> *true
     llvm::Function *func = &(*func_it);
     std::string fn_name = func->getName().str();
     if (func->isDeclaration() || (strcmp(fn_name.c_str(), "NULL") == 0) || fn_name.find("llvm") != std::string::npos ||
-        inlinedFunction(func)) {
+        dp_reduction::inlinedFunction(func)) {
       continue;
     }
 

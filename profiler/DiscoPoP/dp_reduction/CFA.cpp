@@ -78,7 +78,7 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
       bool hasValidExit = false;
       for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
            ++EI) {
-        hasValidExit = dp_reduction_sanityCheck(*EI, file_id);
+        hasValidExit = dp_reduction::sanityCheck(*EI, file_id);
         if (hasValidExit == true)
           break;
       }
@@ -91,7 +91,7 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
           LID lid = 0;
 
           for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
-            lid = dp_reduction_getLID(&*BI, file_id);
+            lid = dp_reduction::getLID(&*BI, file_id);
             uint64_t ulid = (uint64_t)lid;
             if (ulid != 0) {
               return to_string(ulid % MAXLNO);

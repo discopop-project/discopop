@@ -49,8 +49,8 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
       PointerType *PTy = cast<PointerType>(ptrOperand->getType());
 
       // we've found a struct/class
-      // (2025-10-30) Simplified unpacking of structs for llvm 19 compatibility inside dp_reduction_pointsToStruct
-      Type *structType = dp_reduction_pointsToStruct(PTy);
+      // (2025-10-30) Simplified unpacking of structs for llvm 19 compatibility inside dp_reduction::pointsToStruct
+      Type *structType = dp_reduction::pointsToStruct(PTy);
       if (structType && gep->getNumOperands() > 2) {
         Value *constValue = gep->getOperand(2);
         if (constValue && isa<ConstantInt>(*constValue)) {

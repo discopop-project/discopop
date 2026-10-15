@@ -14,7 +14,7 @@
 
 // Finds the load instruction that actually loads the value from the address
 // 'load_val'.
-llvm::Instruction *DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val, llvm::Instruction *cur_instr,
+llvm::Instruction *dp_reduction::get_load_instr(llvm::Value *load_val, llvm::Instruction *cur_instr,
                                                          std::vector<char> &reduction_operations) {
   if (!load_val || !cur_instr)
     return nullptr;
@@ -28,22 +28,22 @@ llvm::Instruction *DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val, 
     // The current instruction does not load the value from the address of
     // 'load_val'. But it might load the value from a variable where 'load_val'
     // is stored in, so find the previous use of the source operand.
-    llvm::Instruction *prev_use = dp_reduction_get_prev_use(cur_instr, val);
+    llvm::Instruction *prev_use = dp_reduction::get_prev_use(cur_instr, val);
     if (prev_use) {
       if (llvm::isa<llvm::StoreInst>(prev_use)) {
-        return dp_reduction_get_load_instr(load_val, prev_use, reduction_operations);
+        return dp_reduction::get_load_instr(load_val, prev_use, reduction_operations);
       } else if (llvm::isa<llvm::GetElementPtrInst>(prev_use)) {
         llvm::GetElementPtrInst *ptr_instr = llvm::cast<llvm::GetElementPtrInst>(prev_use);
-        llvm::Value *points_to = dp_reduction_points_to_var(ptr_instr);
+        llvm::Value *points_to = dp_reduction::points_to_var(ptr_instr);
         if (points_to == load_val) {
           return cur_instr;
         } else {
-          bool found = static_cast<bool>(dp_reduction_get_load_instr(
+          bool found = static_cast<bool>(dp_reduction::get_load_instr(
               load_val, llvm::dyn_cast<llvm::Instruction>(points_to), reduction_operations));
           return (found) ? cur_instr : nullptr;
         }
       } else {
-        bool found = static_cast<bool>(dp_reduction_get_load_instr(load_val, prev_use, reduction_operations));
+        bool found = static_cast<bool>(dp_reduction::get_load_instr(load_val, prev_use, reduction_operations));
         return (found) ? cur_instr : nullptr;
       }
     } else {
@@ -51,7 +51,7 @@ llvm::Instruction *DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val, 
     }
   }
 
-  char c = dp_reduction_get_char_for_opcode(cur_instr);
+  char c = dp_reduction::get_char_for_opcode(cur_instr);
   if (c != ' ') {
     reduction_operations.push_back(c);
   }
@@ -63,7 +63,7 @@ llvm::Instruction *DiscoPoP::dp_reduction_get_load_instr(llvm::Value *load_val, 
   for (unsigned int i = 0; i != cur_instr->getNumOperands(); ++i) {
     llvm::Value *operand = cur_instr->getOperand(i);
     if (llvm::isa<llvm::Instruction>(operand)) {
-      result = dp_reduction_get_load_instr(load_val, llvm::cast<llvm::Instruction>(operand), reduction_operations);
+      result = dp_reduction::get_load_instr(load_val, llvm::cast<llvm::Instruction>(operand), reduction_operations);
       if (result) {
         break;
       }

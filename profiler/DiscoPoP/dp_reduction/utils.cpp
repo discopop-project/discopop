@@ -54,7 +54,7 @@ unsigned DiscoPoP::dp_reduction_get_file_id(llvm::Function *func) {
 }
 
 // finds the previous use of 'val'
-llvm::Instruction *DiscoPoP::dp_reduction_get_prev_use(llvm::Instruction *instr, llvm::Value *val) {
+llvm::Instruction *dp_reduction::get_prev_use(llvm::Instruction *instr, llvm::Value *val) {
   if (!instr)
     return nullptr;
 
@@ -76,7 +76,7 @@ llvm::Instruction *DiscoPoP::dp_reduction_get_prev_use(llvm::Instruction *instr,
   return llvm::dyn_cast<llvm::Instruction>(val);
 }
 
-int DiscoPoP::dp_reduction_get_op_order(char c) {
+int dp_reduction::get_op_order(char c) {
   if (c == '*' || c == '/')
     return 5;
   if (c == '+' || c == '-')
@@ -90,7 +90,7 @@ int DiscoPoP::dp_reduction_get_op_order(char c) {
   return 0;
 }
 
-Type *DiscoPoP::dp_reduction_pointsToStruct(PointerType *PTy) {
+Type *dp_reduction::pointsToStruct(PointerType *PTy) {
   assert(PTy);
   // (2025-10-30) Omitted check for struct type for llvm 19 compatibility
   Type *structType = PTy;
@@ -119,7 +119,7 @@ string DiscoPoP::findStructMemberName_static(MDNode *structNode, unsigned idx, I
 }
 
 // returns the value that the GetElementPtrInst ultimately points to
-llvm::Value *DiscoPoP::dp_reduction_points_to_var(llvm::GetElementPtrInst *instr) {
+llvm::Value *dp_reduction::points_to_var(llvm::GetElementPtrInst *instr) {
   llvm::Value *points_to = nullptr;
   while (instr) {
     points_to = instr->getPointerOperand();
@@ -130,7 +130,7 @@ llvm::Value *DiscoPoP::dp_reduction_points_to_var(llvm::GetElementPtrInst *instr
 
 // Encode the fileID and line number of BI as LID.
 // This is needed to support multiple files in a project.
-LID DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t & /*fileID*/) {
+LID dp_reduction::getLID(Instruction *BI, int32_t & /*fileID*/) {
   int32_t lno;
 
   const DebugLoc &location = BI->getDebugLoc();
@@ -147,10 +147,10 @@ LID DiscoPoP::dp_reduction_getLID(Instruction *BI, int32_t & /*fileID*/) {
   return lid;
 }
 
-bool DiscoPoP::dp_reduction_sanityCheck(BasicBlock *BB, int file_id) {
+bool dp_reduction::sanityCheck(BasicBlock *BB, int file_id) {
   LID lid;
   for (BasicBlock::iterator BI = BB->begin(), EI = BB->end(); BI != EI; ++BI) {
-    lid = dp_reduction_getLID(&*BI, file_id);
+    lid = dp_reduction::getLID(&*BI, file_id);
     if (lid > 0) {
       return true;
     }
@@ -162,7 +162,7 @@ bool DiscoPoP::dp_reduction_sanityCheck(BasicBlock *BB, int file_id) {
 // switches + and - if a negative constant is added or subtracted
 //(mainly used to support -- as reduction operation, might be implemented as
 //'add -1')
-char DiscoPoP::dp_reduction_get_char_for_opcode(llvm::Instruction *instr) {
+char dp_reduction::get_char_for_opcode(llvm::Instruction *instr) {
   unsigned opcode = instr->getOpcode();
   if(opcode == llvm::Instruction::Call){
     // check for calls to relevant arithmetic intrinsic functions (fma, fmuladd)

@@ -124,7 +124,7 @@ LID DiscoPoP::getLoopExitLID(BasicBlock *BB, Loop *L) {
   return 0;
 }
 
-bool DiscoPoP::check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue) {
+bool dp_reduction::check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue) {
   // Return true, if searchedValue is used within the computation of parentValue
   if (parentValue == searchedValue) {
     return true;
@@ -151,7 +151,7 @@ bool DiscoPoP::check_value_usage(llvm::Value *parentValue, llvm::Value *searched
   return false;
 }
 
-bool DiscoPoP::inlinedFunction(Function *F) {
+bool dp_reduction::inlinedFunction(Function *F) {
   for (Function::iterator FI = F->begin(), FE = F->end(); FI != FE; ++FI) {
     for (BasicBlock::iterator BI = FI->begin(), E = FI->end(); BI != E; ++BI) {
       if (DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
