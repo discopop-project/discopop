@@ -285,53 +285,13 @@ string get_exe_dir() {
   }
 }
 
-VariableNameFinder::VariableNameFinder(Module &M) {
-  DebugInfoFinder DIF;
-  DIF.processModule(M);
-  for (auto DI : DIF.types()) {
-    if (auto CT = dyn_cast<DICompositeType>(DI)) {
-      vector<string> v;
-      for (auto E : CT->getElements()) {
-        if (auto DT = dyn_cast<DIDerivedType>(E)) {
-          v.push_back(DT->getName().str());
-        }
-      }
-      StructMemberMap.insert({CT->getName().str(), v});
-    }
-  }
-}
+VariableNameFinder::VariableNameFinder(Module & /*M*/) {}
 
 string VariableNameFinder::getVarName(Value const *V) {
   if (const Instruction *I = dyn_cast<Instruction>(V)) {
     if (auto GEPI = dyn_cast<GetElementPtrInst>(I)) {
-      Type *srcElemT = GEPI->getSourceElementType();
-      string r = getVarName(GEPI->getOperand(0));
-
-      if (GEPI->getNumOperands() == 2) {
-        return r;
-      }
-
-      if (dyn_cast<ConstantInt>(GEPI->getOperand(1))->getSExtValue() > 0) {
-        r += "";
-      }
-
-      if (isa<ArrayType>(srcElemT) || isa<IntegerType>(srcElemT)) {
-        return r;
-      } else if (StructType *st = dyn_cast<StructType>(srcElemT)) {
-        if (st->hasName()) {
-          string structTypeName = st->getName().str();
-          if (structTypeName.find("struct.") != string::npos) {
-            structTypeName = structTypeName.erase(0, 7);
-          }
-          if (structTypeName.find("class.") != string::npos) {
-            structTypeName = structTypeName.erase(0, 6);
-          }
-          if (StructMemberMap.count(structTypeName) > 0) {
-            return r;
-          }
-        }
-      }
-      return r;
+      // an element (of an array, of a struct) is named like the object it belongs to
+      return getVarName(GEPI->getOperand(0));
     }
 
     if (isa<SExtInst>(I)) {
@@ -419,12 +379,8 @@ string VariableNameFinder::getVarName(Value const *V) {
 
   if (const GEPOperator *gepo = dyn_cast<GEPOperator>(V)) {
     if (const GlobalVariable *gv = dyn_cast<GlobalVariable>(gepo->getPointerOperand())) {
-      string r = GlobalValue::getGlobalIdentifier(gv->getName(), gv->getLinkage(), gv->getParent()->getSourceFileName());
-      Type *st = gepo->getSourceElementType();
-      if (StructType *ct = dyn_cast<StructType>(st)) {
-        string structTypeName = ct->getName().str().erase(0, 7);
-        r += "";
-        return r;
+      if (isa<StructType>(gepo->getSourceElementType())) {
+        return GlobalValue::getGlobalIdentifier(gv->getName(), gv->getLinkage(), gv->getParent()->getSourceFileName());
       }
     }
   }
