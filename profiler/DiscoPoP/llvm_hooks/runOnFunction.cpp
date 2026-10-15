@@ -126,8 +126,9 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
   fileID = getCachedFileID(F);
 
   // only instrument functions belonging to project source files
-  if (!fileID)
+  if (!fileID) {
     return false;
+}
 
   buildCUGraph(F, MAM, graph);
   instrumentFunction(F, MAM, graph);

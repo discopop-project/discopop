@@ -20,8 +20,9 @@ using namespace dputil;
 void DiscoPoP::instrumentLoad(LoadInst *toInstrument, int32_t llvm_ir_instruction_id) {
 
   LID lid = getLID(toInstrument, fileID);
-  if (lid == 0)
+  if (lid == 0) {
     return;
+}
 
   vector<Value *> args;
 

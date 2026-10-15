@@ -29,35 +29,42 @@ InstructionDG::InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_
 }
 
 void InstructionDG::recursiveDepChecker(set<Instruction *> *checkedInstructions, Instruction *I, Instruction *C) {
-  if (CFG->isEntryOrExit(C))
+  if (CFG->isEntryOrExit(C)) {
     return;
+}
   checkedInstructions->insert(C);
   Value *V, *W;
-  if (isa<AllocaInst>(I))
+  if (isa<AllocaInst>(I)) {
     V = dyn_cast<Value>(I);
-  else
+  } else {
     V = I->getOperand(isa<StoreInst>(I) ? 1 : 0);
+}
 
-  if (isa<AllocaInst>(C))
+  if (isa<AllocaInst>(C)) {
     W = dyn_cast<Value>(C);
-  else
+  } else {
     W = C->getOperand(isa<StoreInst>(C) ? 1 : 0);
+}
 
   if (V == W && (isa<StoreInst>(I) || isa<StoreInst>(C))) {
     Graph::addEdge(I, C);
     return;
   }
-  for (auto edge : CFG->getInEdges(C))
-    if (checkedInstructions->find(edge->getSrc()->getItem()) == checkedInstructions->end())
+  for (auto edge : CFG->getInEdges(C)) {
+    if (checkedInstructions->find(edge->getSrc()->getItem()) == checkedInstructions->end()) {
       recursiveDepChecker(checkedInstructions, I, edge->getSrc()->getItem());
+}
+}
 }
 
 void InstructionDG::recursiveDepFinder(set<Instruction *> *checkedInstructions, Instruction *I) {
-  if (CFG->isEntryOrExit(I) || checkedInstructions->find(I) != checkedInstructions->end())
+  if (CFG->isEntryOrExit(I) || checkedInstructions->find(I) != checkedInstructions->end()) {
     return;
+}
   checkedInstructions->insert(I);
-  if (isa<StoreInst>(I) || isa<LoadInst>(I))
+  if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
     Graph::addInstructionNode(I);
+}
   for (auto edge : CFG->getInEdges(I)) {
     if (isa<StoreInst>(I) || isa<LoadInst>(I)) {
       recursiveDepChecker(new set<Instruction *>(), I, edge->getSrc()->getItem());
@@ -176,14 +183,16 @@ void InstructionDG::dumpToDot(const string targetPath) {
     string label = "label=\"" + to_string(Graph::getInstructionNodeIndex(instNode)) + "\\n";
     Instruction *instr = instNode->getItem();
     if (isa<StoreInst>(instr)) {
-      if (DebugLoc dl = instr->getDebugLoc())
+      if (DebugLoc dl = instr->getDebugLoc()) {
         label += "write(";
-      else
+      } else {
         label += "init(";
-    } else if (isa<LoadInst>(instr))
+}
+    } else if (isa<LoadInst>(instr)) {
       label += "read(";
-    else
+    } else {
       label += "alloca(";
+}
     label += VNF->getVarName(instr);
     label += ") ";
 

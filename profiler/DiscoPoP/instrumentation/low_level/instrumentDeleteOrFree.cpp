@@ -20,8 +20,9 @@ using namespace dputil;
 void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
   // add instrumentation for delete instructions or calls to free
   LID lid = getLID(toInstrument, fileID);
-  if (lid == 0)
+  if (lid == 0) {
     return;
+}
   IRBuilder<> IRB(llvmcompat::nextInstruction(toInstrument));
 
   vector<Value *> args;

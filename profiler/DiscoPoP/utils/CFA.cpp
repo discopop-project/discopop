@@ -102,8 +102,9 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI, const map<Loop *, string> &loopToP
       for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
            ++EI) {
         hasValidExit = getLoopExitLID(*EI, L) > 0;
-        if (hasValidExit == true)
+        if (hasValidExit == true) {
           break;
+}
       }
 
       if (hasValidEntry && hasValidExit) {

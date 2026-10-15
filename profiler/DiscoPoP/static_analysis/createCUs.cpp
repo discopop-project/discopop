@@ -56,21 +56,24 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
     } else {
       // end of loops. go to the parent of the loop. may have to jump several
       // nodes in case of nested loops
-      for (map<Loop *, Node *>::iterator it = loopToNodeMap.begin(); it != loopToNodeMap.end(); it++)
+      for (map<Loop *, Node *>::iterator it = loopToNodeMap.begin(); it != loopToNodeMap.end(); it++) {
         if (it->second == currentNode) // current node found in loop map jump to its parent.
         {
           currentNode = currentNode->parentNode;
           it = loopToNodeMap.begin();    // search the whole map again for current node
-          if (it->second == currentNode) // due to it++ we need to check first
+          if (it->second == currentNode) { // due to it++ we need to check first
             // element of map ourself
             currentNode = currentNode->parentNode;
+}
         }
+}
     }
 
     cu = new CU;
 
-    if (bb->getName().size() == 0)
+    if (bb->getName().size() == 0) {
       bb->setName(cu->ID);
+}
 
     cu->BBID = bb->getName().str();
     cu->BB = *bb;
@@ -159,8 +162,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
           varName = determineVariableName_static(&*instruction, isGlobalVar, false, "");
           varType = determineVariableType(&*instruction);
           suspiciousVariables.insert(varName);
-          if (lid > 0)
+          if (lid > 0) {
             cu->writePhaseLineNumbers.insert(lid);
+}
         } else if (isa<LoadInst>(instruction)) {
           // get size of data read from memory by this load instruction
           Type *Ty = instruction->getType();
@@ -203,8 +207,9 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
             }
           } else {
             if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName)) {
-              if (lid > 0)
+              if (lid > 0) {
                 cu->readPhaseLineNumbers.insert(lid);
+}
             }
           }
         } else if (isa<CallInst>(instruction) || isa<InvokeInst>(instruction)) {
@@ -302,16 +307,17 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
               if (DebugLoc dl = tempBI->getDebugLoc()) {
                 lid = to_string(dl->getLine());
               } else {
-                if (tempBI->getFunction()->getSubprogram())
+                if (tempBI->getFunction()->getSubprogram()) {
                   lid = to_string(tempBI->getFunction()->getSubprogram()->getLine());
-                else {
+                } else {
                   lid = "LineNotFound";
                 }
               }
               break;
             }
-            if (externalFunction)
+            if (externalFunction) {
               continue;
+}
           } else {
             lid = "LineNotFound";
           }

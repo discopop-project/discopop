@@ -125,33 +125,40 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
   // - the store instruction comes after the load instruction
   std::vector<instr_info_t> candidates;
   for (auto it = load_instructions.begin(); it != load_instructions.end(); ++it) {
-    if (!it->second)
+    if (!it->second) {
       continue;
+}
 
     auto it2 = store_instructions.find(it->first);
     if (it2 != store_instructions.end() && it2->second) {
       llvm::DebugLoc load_loc = it->second->getDebugLoc();
       llvm::DebugLoc store_loc = it2->second->getDebugLoc();
-      if (!dp_reduction::loc_exists(load_loc) || !dp_reduction::loc_exists(store_loc))
+      if (!dp_reduction::loc_exists(load_loc) || !dp_reduction::loc_exists(store_loc)) {
         continue;
-      if (load_loc.getLine() > store_loc.getLine())
+}
+      if (load_loc.getLine() > store_loc.getLine()) {
         continue;
-      if (load_loc.getLine() == loop_info.line_nr_ || store_loc.getLine() == loop_info.line_nr_)
+}
+      if (load_loc.getLine() == loop_info.line_nr_ || store_loc.getLine() == loop_info.line_nr_) {
         continue;
+}
 
       if (loop_info.end_line == "LOOPENDNOTFOUND") {
         errs() << "WARNING: Loop end not found! File: " << file_id << " Function: " << F.getName()
                << " Start line: " << loop_info.start_line << "\n";
         continue;
       }
-      if (loop_info.line_nr_ > std::stoul(loop_info.end_line))
+      if (loop_info.line_nr_ > std::stoul(loop_info.end_line)) {
         continue;
+}
 
       // Check if both load and store insts belong to the loop
-      if (load_loc.getLine() < loop_info.line_nr_ || load_loc.getLine() > std::stoul(loop_info.end_line))
+      if (load_loc.getLine() < loop_info.line_nr_ || load_loc.getLine() > std::stoul(loop_info.end_line)) {
         continue;
-      if (store_loc.getLine() < loop_info.line_nr_ || store_loc.getLine() > std::stoul(loop_info.end_line))
+}
+      if (store_loc.getLine() < loop_info.line_nr_ || store_loc.getLine() > std::stoul(loop_info.end_line)) {
         continue;
+}
 
       if (it->first->hasName()) {
         instr_info_t info;

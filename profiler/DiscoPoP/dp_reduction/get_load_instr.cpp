@@ -16,14 +16,16 @@
 // 'load_val'.
 llvm::Instruction *dp_reduction::get_load_instr(llvm::Value *load_val, llvm::Instruction *cur_instr,
                                                          std::vector<char> &reduction_operations) {
-  if (!load_val || !cur_instr)
+  if (!load_val || !cur_instr) {
     return nullptr;
+}
   if (llvm::isa<llvm::LoadInst>(cur_instr)) {
     // Does the current instruction already load the value from the correct
     // address? If that is the case, return it.
     llvm::Value *val = cur_instr->getOperand(0);
-    if (val == load_val)
+    if (val == load_val) {
       return cur_instr;
+}
 
     // The current instruction does not load the value from the address of
     // 'load_val'. But it might load the value from a variable where 'load_val'

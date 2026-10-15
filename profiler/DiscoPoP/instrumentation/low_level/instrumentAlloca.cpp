@@ -19,8 +19,9 @@ using namespace dputil;
 // Instrumentation function inserters.
 void DiscoPoP::instrumentAlloca(AllocaInst *toInstrument) {
   LID lid = getLID(toInstrument, fileID);
-  if (lid == 0)
+  if (lid == 0) {
     return;
+}
 
   // NOTE: manual memory management using malloc etc. not covered yet!
 

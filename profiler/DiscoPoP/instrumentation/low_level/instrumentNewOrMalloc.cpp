@@ -20,8 +20,9 @@ using namespace dputil;
 void DiscoPoP::instrumentNewOrMalloc(CallBase *toInstrument) {
   // add instrumentation for new instructions or calls to malloc
   LID lid = getLID(toInstrument, fileID);
-  if (lid == 0)
+  if (lid == 0) {
     return;
+}
 
   // Determine correct placement for the call to __dp_new
   Instruction *nextInst = nullptr;

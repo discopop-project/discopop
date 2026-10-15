@@ -264,15 +264,17 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
                            {lidConstant(lid), ConstantInt::get(Int32, llvm_ir_instruction_id)});
         if (DP_DEBUG) {
           if (isa<CallInst>(BI)) {
-            if (!(fn.str() == ""))
+            if (!(fn.str() == "")) {
               errs() << "calling " << fn << " on " << lid << "\n";
-            else
+            } else {
               errs() << "calling unknown function on " << lid << "\n";
+}
           } else {
-            if (!(fn.str() == ""))
+            if (!(fn.str() == "")) {
               errs() << "invoking " << fn << " on " << lid << "\n";
-            else
+            } else {
               errs() << "invoking unknown function on " << lid << "\n";
+}
           }
         }
       }

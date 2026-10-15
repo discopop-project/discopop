@@ -92,8 +92,9 @@ HybridAnalysis::HybridAnalysis(Module &M) {
 bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
                                      map<Instruction *, CallInst *> &insertedAccessCallbacks,
                                      map<string, string> &trueVarNamesFromMetadataMap) {
-  if (F.getInstructionCount() == 0)
+  if (F.getInstructionCount() == 0) {
     return false;
+}
 
 // Enable / Disable hybrid profiling
 #ifndef DP_HYBRID_PROFILING
@@ -105,8 +106,9 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
 #endif
   /////
 
-  if (DP_hybrid_DEBUG)
+  if (DP_hybrid_DEBUG) {
     errs() << "\n---------- Omission Analysis on " << F.getName() << " ----------\n";
+}
 
   DebugLoc dl;
   Value *V;
@@ -131,8 +133,9 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
             std::set<Value *>::iterator it = staticallyPredictableValues.find(V);
             if (it != staticallyPredictableValues.end()) {
               staticallyPredictableValues.erase(V);
-              if (DP_hybrid_DEBUG)
+              if (DP_hybrid_DEBUG) {
                 errs() << VNF->getVarName(V) << "\n";
+}
             }
           }
         }
@@ -239,11 +242,13 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
     Instruction *Dst = edge->getDst()->getItem();
 
     V = Src->getOperand(isa<StoreInst>(Src) ? 1 : 0);
-    if (isa<AllocaInst>(Dst))
+    if (isa<AllocaInst>(Dst)) {
       V = dyn_cast<Value>(Dst);
+}
 
-    if (staticallyPredictableValues.find(V) == staticallyPredictableValues.end())
+    if (staticallyPredictableValues.find(V) == staticallyPredictableValues.end()) {
       continue;
+}
 
     if (Src != Dst && DT.dominates(Dst, Src) && (isa<AllocaInst>(Dst) || Dst->getParent() == Src->getParent())) {
       if (!conditionalBBDepMap.count(Src->getParent())) {
@@ -277,12 +282,14 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
 
   // Omit SPA instructions with no dependences
   for (auto node : DG.getInstructionNodes()) {
-    if (!isa<StoreInst>(node->getItem()) && !!isa<LoadInst>(node->getItem()))
+    if (!isa<StoreInst>(node->getItem()) && !!isa<LoadInst>(node->getItem())) {
       continue;
+}
     V = node->getItem()->getOperand(isa<StoreInst>(node->getItem()) ? 1 : 0);
     if (!DG.getInEdges(node).size() && !DG.getOutEdges(node).size() &&
-        staticallyPredictableValues.find(V) != staticallyPredictableValues.end())
+        staticallyPredictableValues.find(V) != staticallyPredictableValues.end()) {
       omittableInstructions.insert(node->getItem());
+}
   }
 
   // Add observation of execution of single basic blocks
@@ -292,13 +299,15 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
     CallInst::Create(ReportBB, ConstantInt::get(Int32, bbDepCount), "", insertionPoint->getIterator());
 
     // ---- Insert deps into string ----
-    if (bbDepCount)
+    if (bbDepCount) {
       bbDepString += "/";
+}
     bool first = true;
     bbDepString += to_string(bbDepCount) + "=";
     for (auto dep : pair.second) {
-      if (!first)
+      if (!first) {
         bbDepString += ",";
+}
       bbDepString += dep;
       first = false;
     }
@@ -356,14 +365,16 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
         auto LI = new LoadInst(Int32, report.first, Twine(""), false, insertionPoint->getIterator());
         CallInst::Create(ReportBBPair, ArrayRef<Value *>({LI, ConstantInt::get(Int32, bbDepCount)}), "", insertionPoint->getIterator());
         // ---- Insert deps into string ----
-        if (bbDepCount)
+        if (bbDepCount) {
           bbDepString += "/";
+}
         bbDepString += to_string(bbDepCount);
         bbDepString += "=";
         bool first = true;
         for (auto &dep : *report.second) {
-          if (!first)
+          if (!first) {
             bbDepString += ",";
+}
           bbDepString += dep;
           first = false;
         }
@@ -415,8 +426,9 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
         for (auto &pair2 : variable.second) {
           errs() << pair1.first->getName() << "-";
           errs() << pair2.first->getName() << ":\n";
-          for (auto s : pair2.second)
+          for (auto s : pair2.second) {
             errs() << "\t" << s << "\n";
+}
         }
       }
     }
@@ -426,8 +438,9 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
     errs() << "--- Program Instructions:\n";
     for (BasicBlock &BB : F) {
       for (Instruction &I : BB) {
-        if (!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I))
+        if (!isa<StoreInst>(I) && !isa<LoadInst>(I) && !isa<AllocaInst>(I)) {
           continue;
+}
         errs() << "\t" << (isa<StoreInst>(I) ? "Write " : (isa<AllocaInst>(I) ? "Alloca " : "Read ")) << " | ";
         if ((dl = I.getDebugLoc())) {
           errs() << dl.getLine() << "," << dl.getCol();
@@ -457,8 +470,9 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   // keeps being profiled although its dependencies have been reported statically.
   for (Instruction *I : omittableInstructions) {
     const auto callback = insertedAccessCallbacks.find(I);
-    if (callback == insertedAccessCallbacks.end())
+    if (callback == insertedAccessCallbacks.end()) {
       continue;
+}
     callback->second->eraseFromParent();
     insertedAccessCallbacks.erase(callback);
   }
@@ -491,8 +505,9 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
     }
   }
 
-  if (DP_hybrid_DEBUG)
+  if (DP_hybrid_DEBUG) {
     errs() << "Done with function " << F.getName() << ":\n";
+}
   return true;
 }
 

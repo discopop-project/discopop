@@ -13,8 +13,9 @@
 #include "DiscoPoP.hpp"
 
 llvm::Value *dp_reduction::get_var_rec(llvm::Value *val) {
-  if (!val)
+  if (!val) {
     return nullptr;
+}
 
   if (llvm::isa<llvm::AllocaInst>(val) || llvm::isa<llvm::GlobalVariable>(val)) {
     return val;

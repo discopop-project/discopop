@@ -194,8 +194,9 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I, string pref
             map<string, MDNode *>::iterator it = Structs.find(strName);
             if (it != Structs.end()) {
               Value *ret = findStructMemberName(it->second, memberIdx, builder);
-              if (ret)
+              if (ret) {
                 return ret;
+}
             }
           }
         }

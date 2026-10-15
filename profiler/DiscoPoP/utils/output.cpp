@@ -52,8 +52,9 @@ string cu_output::xmlEscape(string data) {
   string::size_type pos = 0;
   for (;;) {
     pos = data.find_first_of("\"&<>", pos);
-    if (pos == string::npos)
+    if (pos == string::npos) {
       break;
+}
     string replacement;
     switch (data[pos]) {
     case '\"':

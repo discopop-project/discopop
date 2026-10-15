@@ -89,8 +89,9 @@ inline std::string getEnvOrDefault(const char *name, const char *fallback) {
 }
 
 inline std::string decodeLID(int64_t lid) {
-  if (lid == 0)
+  if (lid == 0) {
     return "*";
+}
 
   std::stringstream ss;
   uint32_t ulid = (uint32_t)lid;
@@ -114,10 +115,11 @@ inline std::vector<std::string> *split(std::string input, char delim) {
 inline bool fexists(const std::string &filename) {
   std::ifstream ifile(filename.c_str());
 
-  if (ifile.fail())
+  if (ifile.fail()) {
     return false;
-  else
+  } else {
     return true;
+}
 }
 
 int32_t getFileID(std::string fileMapping, std::string fullPathName);

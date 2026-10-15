@@ -79,8 +79,9 @@ std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
       for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
            ++EI) {
         hasValidExit = dp_reduction::sanityCheck(*EI, file_id);
-        if (hasValidExit == true)
+        if (hasValidExit == true) {
           break;
+}
       }
 
       if (hasValidExit) {

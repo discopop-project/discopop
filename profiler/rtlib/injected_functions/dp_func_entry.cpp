@@ -43,8 +43,9 @@ void __dp_func_entry(LID lid, int32_t isStart, int32_t functionEntryID) {
   enter_function_for_callstate(functionEntryID);
 
 
-  if (isStart)
+  if (isStart) {
     *out << "START " << dputil::decodeLID(lid) << endl;
+}
 
   // Reset last call tracker
   function_manager->log_call(0);

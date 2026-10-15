@@ -18,8 +18,9 @@ using namespace dputil;
 
 // finds the previous use of 'val'
 llvm::Instruction *dp_reduction::get_prev_use(llvm::Instruction *instr, llvm::Value *val) {
-  if (!instr)
+  if (!instr) {
     return nullptr;
+}
 
   auto instr_users = val->users();
   bool instr_found = false;
@@ -40,16 +41,21 @@ llvm::Instruction *dp_reduction::get_prev_use(llvm::Instruction *instr, llvm::Va
 }
 
 int dp_reduction::get_op_order(char c) {
-  if (c == '*' || c == '/')
+  if (c == '*' || c == '/') {
     return 5;
-  if (c == '+' || c == '-')
+}
+  if (c == '+' || c == '-') {
     return 4;
-  if (c == '&')
+}
+  if (c == '&') {
     return 3;
-  if (c == '^')
+}
+  if (c == '^') {
     return 2;
-  if (c == '|')
+}
+  if (c == '|') {
     return 1;
+}
   return 0;
 }
 
@@ -148,10 +154,11 @@ char dp_reduction::get_char_for_opcode(llvm::Instruction *instr) {
           }
         }
 
-        if (any_operand_is_negative_constant)
+        if (any_operand_is_negative_constant) {
           return '-';
-        else
+        } else {
           return '+';
+}
       }
     }
   }
@@ -165,10 +172,11 @@ char dp_reduction::get_char_for_opcode(llvm::Instruction *instr) {
       }
     }
 
-    if (operand_is_negative_constant)
+    if (operand_is_negative_constant) {
       return '-';
-    else
+    } else {
       return '+';
+}
   }
   if (opcode == llvm::Instruction::Sub || opcode == llvm::Instruction::FSub) {
     bool operand_is_negative_constant = false;
@@ -179,18 +187,23 @@ char dp_reduction::get_char_for_opcode(llvm::Instruction *instr) {
       }
     }
 
-    if (operand_is_negative_constant)
+    if (operand_is_negative_constant) {
       return '+';
-    else
+    } else {
       return '-';
+}
   }
-  if (opcode == llvm::Instruction::Mul || opcode == llvm::Instruction::FMul)
+  if (opcode == llvm::Instruction::Mul || opcode == llvm::Instruction::FMul) {
     return '*';
-  if (opcode == llvm::Instruction::And)
+}
+  if (opcode == llvm::Instruction::And) {
     return '&';
-  if (opcode == llvm::Instruction::Or)
+}
+  if (opcode == llvm::Instruction::Or) {
     return '|';
-  if (opcode == llvm::Instruction::Xor)
+}
+  if (opcode == llvm::Instruction::Xor) {
     return '^';
+}
   return ' ';
 }
