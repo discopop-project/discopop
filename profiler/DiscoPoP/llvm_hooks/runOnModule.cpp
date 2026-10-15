@@ -66,7 +66,7 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   // prepare information for call state transitioning and instruction mapping during dynamic analysis.
   // -> build static calltree for state transition and instruction mapping preparation
   cout << "Building static calltree..\n";
-  StaticCalltree static_calltree = buildStaticCalltree(M);
+  StaticCalltree static_calltree = static_callpaths::buildStaticCalltree(M, loop_id_to_identity);
   cout << "Done building static calltree..\n";
   // -> assign unique stateIDs to all possible call states
   cout << "Enumerating paths..\n";
@@ -76,7 +76,7 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   [[maybe_unused]] auto state_transitions_ptr = &state_transitions;
   [[maybe_unused]] auto inverset_state_transitions_ptr = &inverse_state_transitions;
   auto static_calltree_ptr = &static_calltree;
-  auto call_path_tree_ptr = enumerate_paths(static_calltree, &state_transitions, &inverse_state_transitions, unique_callpath_state_id);
+  auto call_path_tree_ptr = static_callpaths::enumerate_paths(static_calltree, &state_transitions, &inverse_state_transitions, unique_callpath_state_id);
   auto end = chrono::high_resolution_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start).count();
   cout << "Done enumerating paths.. took: " << (time/1000.0) << "s" << std::endl;
@@ -100,17 +100,17 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   // add fucntion exit edges to state_transitions
   cout << "START AFEETT..\n";
   //add_function_exit_edges_to_transitions(state_transitions, call_path_tree_ptr); // enumerated_paths, path_to_id_map);
-  add_function_exit_edges_to_transitions(call_path_tree_ptr); // enumerated_paths, path_to_id_map);
+  static_callpaths::add_function_exit_edges_to_transitions(call_path_tree_ptr); // enumerated_paths, path_to_id_map);
   cout << "Done AFEETT..\n";
 
 
   // save the generated paths and transitions to disk
-  std::thread t1([this, call_path_tree_ptr](){this->save_initial_path(call_path_tree_ptr);});
-  std::thread t2([this, call_path_tree_ptr](){this->save_enumerated_paths(call_path_tree_ptr);});
+  std::thread t1([call_path_tree_ptr](){static_callpaths::save_initial_path(call_path_tree_ptr);});
+  std::thread t2([call_path_tree_ptr](){static_callpaths::save_enumerated_paths(call_path_tree_ptr);});
   //std::thread t3([this, state_transitions_ptr](){this->save_path_state_transitions(state_transitions_ptr);});
-  std::thread t3([this, call_path_tree_ptr](){this->save_path_state_transitions(call_path_tree_ptr);});
-  std::thread t4([this, static_calltree_ptr](){this->save_static_calltree_to_dot(static_calltree_ptr);});
-  std::thread t5([this, call_path_tree_ptr](){this->save_function_entries(call_path_tree_ptr);});
+  std::thread t3([call_path_tree_ptr](){static_callpaths::save_path_state_transitions(call_path_tree_ptr);});
+  std::thread t4([static_calltree_ptr](){static_callpaths::save_static_calltree_to_dot(static_calltree_ptr);});
+  std::thread t5([call_path_tree_ptr](){static_callpaths::save_function_entries(call_path_tree_ptr);});
 
   t1.join();
   t2.join();

@@ -85,7 +85,7 @@ CallStateGraph::CallStateGraph() {
     register_transition(source_callstate_id, trigger_instruction_id, target_callstate_id);
   }
   // Transitions triggered by the dummy "return" instruction id are stored separately and without
-  // that id (see DiscoPoP::save_path_state_transitions). Without them no function return updates
+  // that id (see static_callpaths::save_path_state_transitions). Without them no function return updates
   // the call state, so a missing file must not pass silently.
   const std::string tmp_3 = __dp::profiler_output_path("callpath_state_return_targets.txt");
   std::ifstream return_targets_file(tmp_3);
@@ -121,7 +121,7 @@ CallStateGraph::CallStateGraph() {
 #endif
 }
 
-// Reads callpath_function_entries.txt (see DiscoPoP::save_function_entries), lines:
+// Reads callpath_function_entries.txt (see static_callpaths::save_function_entries), lines:
 //   S <state_id> <function_entry_instruction_id>   the state is the entry state of a function instance
 //   E <function_entry_instruction_id> <state_id>   the root entry state of the function
 // Without it, functions are entered only through call transitions of their own translation unit.

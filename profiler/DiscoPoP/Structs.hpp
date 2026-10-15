@@ -24,6 +24,13 @@
 #include <string>
 #include <vector>
 
+// the identity of a loop in the output of the pass, as written to loopstate_positions.txt: the id of its
+// loop node in Data.xml and its start location (file_id:line)
+struct LoopIdentity {
+  std::string pet_node_id;
+  std::string start_location;
+};
+
 typedef struct Variable_struct {
   std::string name;
   std::string type;
