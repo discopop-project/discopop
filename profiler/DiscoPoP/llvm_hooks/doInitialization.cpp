@@ -160,6 +160,9 @@ bool DiscoPoP::doInitialization(Module &M) {
 
     initializeBBDepCounter();
 
+    nextFreeStaticMemoryRegionID = 0;
+    initializeStaticMemoryRegionIDCounter();
+
     ReportBB = M.getOrInsertFunction("__dp_report_bb", Void, Int32);
     ReportBBPair = M.getOrInsertFunction("__dp_report_bb_pair", Void, Int32, Int32);
     BBState = M.getOrInsertFunction("__dp_bb_state", Int32);

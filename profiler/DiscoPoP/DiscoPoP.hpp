@@ -253,6 +253,8 @@ private:
   int32_t fid;
   llvm::FunctionCallee ReportBB, ReportBBPair, BBState;
   dputil::VariableNameFinder *VNF;
+  // the S<n> ids of the statically predictable memory regions; persisted like the other counters,
+  // so that the ids of different translation units do not collide
   int nextFreeStaticMemoryRegionID;
 
   // DPInstrumentationOmission end
@@ -321,6 +323,7 @@ public:
   // Output function
   void initializeCUIDCounter();
   void initializeBBDepCounter();
+  void initializeStaticMemoryRegionIDCounter();
   void initializeInstructionIDCounter();
   void initializeCallpathStateIDCounter();
 
