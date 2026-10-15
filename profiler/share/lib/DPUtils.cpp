@@ -51,7 +51,11 @@ using llvm::isa;
 // cl::opt <string> FileMappingPath("fm-path", cl::init(""),
 //                                  cl::desc("Specify file mapping location"),
 //                                  cl::Hidden);
-std::string file_mapping_path = "";
+std::string &FileMappingPath() {
+  // allocated once and never destroyed: an object with static storage duration must be trivially destructible
+  static std::string &path = *new std::string();
+  return path;
+}
 
 llvm::cl::opt<bool>
     dp_memory_profiling_skip_function_arguments("memory-profiling-skip-function-arguments", llvm::cl::init(false),
@@ -63,14 +67,14 @@ namespace dputil {
 
 std::int32_t GetFileId(std::string /*fileMapping*/, std::string full_path_name) {
   // prepare environment variables
-  if (file_mapping_path.length() == 0) {
+  if (FileMappingPath().length() == 0) {
     char const *tmp = std::getenv("DOT_DISCOPOP");
     if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
     }
-    file_mapping_path = std::getenv("DOT_DISCOPOP");
-    file_mapping_path += "/FileMapping.txt";
+    FileMappingPath() = std::getenv("DOT_DISCOPOP");
+    FileMappingPath() += "/FileMapping.txt";
   }
 
   // check if path in DP_PROJECT_ROOT_DIR
@@ -88,7 +92,7 @@ std::int32_t GetFileId(std::string /*fileMapping*/, std::string full_path_name) 
 
   auto load_file_mapping = [&]() {
     std::fstream file_mapping_file;
-    file_mapping_file.open(file_mapping_path.data(), std::ios::in);
+    file_mapping_file.open(FileMappingPath().data(), std::ios::in);
     if (file_mapping_file) {
       std::string tp;
       while (std::getline(file_mapping_file, tp)) {
@@ -134,7 +138,7 @@ std::int32_t GetFileId(std::string /*fileMapping*/, std::string full_path_name) 
   // still unknown: assign a new id, persist it once, and cache it
   std::int32_t tempfid = next_file_id++;
   std::fstream file_mapping_file;
-  file_mapping_file.open(file_mapping_path.data(), std::ios_base::app);
+  file_mapping_file.open(FileMappingPath().data(), std::ios_base::app);
   file_mapping_file << tempfid << "\t" << full_path_name << "\n";
   file_mapping_file.close();
   file_id_cache[full_path_name] = tempfid;
@@ -188,14 +192,14 @@ std::int64_t EncodeLid(std::int32_t file_id, std::int64_t line) {
 // This is needed to support multiple files in a project.
 std::int64_t GetLid(Instruction *bi, std::int32_t &file_id) {
   // prepare environment variables
-  if (file_mapping_path.length() == 0) {
+  if (FileMappingPath().length() == 0) {
     char const *tmp = std::getenv("DOT_DISCOPOP");
     if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
     }
-    file_mapping_path = std::getenv("DOT_DISCOPOP");
-    file_mapping_path += "/FileMapping.txt";
+    FileMappingPath() = std::getenv("DOT_DISCOPOP");
+    FileMappingPath() += "/FileMapping.txt";
   }
 
   std::int32_t lno = 0;
@@ -229,7 +233,7 @@ std::int64_t GetLid(Instruction *bi, std::int32_t &file_id) {
     }
 
     const std::string full_path_name = dir.str() + "/" + file.str();
-    file_id = dputil::GetFileId(file_mapping_path, full_path_name);
+    file_id = dputil::GetFileId(FileMappingPath(), full_path_name);
 
     // file is not in FileMapping.txt: there is no location to report. 0 means "no location" to every caller
     // (they do not instrument the instruction); -1 would have been instrumented as the location 262143:16383
@@ -249,14 +253,14 @@ std::int64_t GetLid(Instruction *bi, std::int32_t &file_id) {
 // determine the file index according to the given FileMapping
 void DetermineFileId(Function &f, std::int32_t &file_id) {
   // prepare environment variables
-  if (file_mapping_path.length() == 0) {
+  if (FileMappingPath().length() == 0) {
     char const *tmp = std::getenv("DOT_DISCOPOP");
     if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
     }
-    file_mapping_path = std::getenv("DOT_DISCOPOP");
-    file_mapping_path += "/FileMapping.txt";
+    FileMappingPath() = std::getenv("DOT_DISCOPOP");
+    FileMappingPath() += "/FileMapping.txt";
   }
   file_id = 0;
 
@@ -288,7 +292,7 @@ void DetermineFileId(Function &f, std::int32_t &file_id) {
           }
 
           if (absolute_path_file_name) {
-            file_id = dputil::GetFileId(file_mapping_path, std::string(absolute_path_file_name));
+            file_id = dputil::GetFileId(FileMappingPath(), std::string(absolute_path_file_name));
             std::free(absolute_path_file_name); // allocated by realpath
           }
           // the first instruction with a debug location determines the file
