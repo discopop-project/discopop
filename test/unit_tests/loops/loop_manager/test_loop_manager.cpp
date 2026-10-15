@@ -344,7 +344,7 @@ TEST_F(LoopManagerTest, testOutputLoopThatWasNeverLeft) {
   lm.IterateLoop(1);
   lm.IterateLoop(1);
 
-  // the end line is unknown, which decodeLID reports as '*'
+  // the end line is unknown, which DecodeLid reports as '*'
   const std::vector<std::string> expected{"* END loop", "0:3 BGN loop 0 0 0 0"};
   ASSERT_EQ(sorted_output_lines(lm), expected);
 }

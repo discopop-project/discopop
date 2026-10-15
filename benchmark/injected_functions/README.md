@@ -20,7 +20,7 @@ the call the pass adds, and what the runtime does inside it.
 
 Both are built from [`benchmark_injected_functions.cpp`](benchmark_injected_functions.cpp) and run
 the same benchmarks under the same names. `DiscoPoP_RT_EmptyCallbacks` is the runtime library built
-with `DP_BENCHMARK_EMPTY_CALLBACKS`, where `callback_body_enabled()` is a compile time `false` and
+with `DP_BENCHMARK_EMPTY_CALLBACKS`, where `CallbackBodyEnabled()` is a compile time `false` and
 every callback compiles down to its return (see
 [`profiler/rtlib/callback_scope.hpp`](../../profiler/rtlib/callback_scope.hpp)). The body of a
 callback therefore costs the difference between the two binaries -- and the loop that drives the
