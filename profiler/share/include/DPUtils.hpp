@@ -133,9 +133,6 @@ void determineFileID(llvm::Function &F, int32_t &fileID);
 std::string get_exe_dir();
 
 class VariableNameFinder {
-private:
-  std::map<std::string, std::vector<std::string>> StructMemberMap;
-
 public:
   VariableNameFinder(llvm::Module &M);
 
