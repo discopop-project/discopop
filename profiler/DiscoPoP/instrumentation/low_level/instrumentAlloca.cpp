@@ -11,6 +11,7 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <vector>
 
 using llvm::AllocaInst;
 using llvm::ArrayType;

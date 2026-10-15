@@ -10,6 +10,7 @@
  *
  */
 
+#include "dp_write.hpp"
 #include "DPTypes.hpp"
 
 #include "runtimeFunctions.hpp"

@@ -76,6 +76,7 @@
 #include <map>
 #include <optional>
 #include <set>
+#include <string>
 #include <string.h>
 #include <unordered_map>
 #include <unordered_set>
@@ -108,6 +109,7 @@ inline int32_t GetDpInstructionId(llvm::Instruction *i) {
 }
 
 #include <stdlib.h>
+#include <vector>
 
 #include "Globals.hpp"
 

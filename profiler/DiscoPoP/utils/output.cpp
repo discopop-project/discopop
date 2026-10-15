@@ -19,6 +19,8 @@
 
 #include <algorithm>
 #include <fstream>
+#include <map>
+#include <string>
 
 using llvm::MDNode;
 using llvm::MDString;

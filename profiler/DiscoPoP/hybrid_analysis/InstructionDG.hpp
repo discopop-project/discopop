@@ -15,7 +15,9 @@
 #include "DPUtils.hpp"
 #include "InstructionCFG.hpp"
 #include "unordered_map"
+#include <set>
 #include <string>
+#include <utility>
 
 class InstructionDG : public Graph<llvm::Instruction *> {
 

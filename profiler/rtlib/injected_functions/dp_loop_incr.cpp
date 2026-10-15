@@ -10,6 +10,7 @@
  *
  */
 
+#include "dp_loop_incr.hpp"
 #include "DPTypes.hpp"
 
 #include "runtimeFunctionsGlobals.hpp"

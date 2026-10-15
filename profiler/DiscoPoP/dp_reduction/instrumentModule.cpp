@@ -16,6 +16,7 @@
 
 #include "utils/profiler_files.hpp"
 
+#include <string>
 #include <string.h>
 #include <utility>
 

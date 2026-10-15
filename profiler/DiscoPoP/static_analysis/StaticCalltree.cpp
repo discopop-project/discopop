@@ -13,6 +13,9 @@
 
 #include "StaticCalltree.hpp"
 #include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
 
 void StaticCalltreeNode::Print(){
     std::cout << "Node: ID: " << node_id_ << " Type: " << type_ << " Name: " << function_name_ << " instructionID: " << instruction_id_ << "\n";

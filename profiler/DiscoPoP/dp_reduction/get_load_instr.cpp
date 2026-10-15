@@ -11,6 +11,7 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <vector>
 
 // Finds the load instruction that actually loads the value from the address
 // 'load_val'.

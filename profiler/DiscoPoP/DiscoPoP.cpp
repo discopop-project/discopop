@@ -13,6 +13,7 @@
 //#define SKIP_DUP_INSTR 1
 
 #include "DiscoPoP.hpp"
+#include <string>
 
 // after the includes: LLVM headers define their own DEBUG_TYPE
 #undef DEBUG_TYPE

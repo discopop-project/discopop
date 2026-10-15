@@ -11,6 +11,9 @@
  */
 
 #include "InstructionCFG.hpp"
+#include <set>
+#include <string>
+#include <utility>
 
 using llvm::AllocaInst;
 using llvm::BasicBlock;

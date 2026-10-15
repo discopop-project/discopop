@@ -11,6 +11,9 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <map>
+#include <string>
+#include <vector>
 
 using llvm::BasicBlock;
 using llvm::BranchInst;

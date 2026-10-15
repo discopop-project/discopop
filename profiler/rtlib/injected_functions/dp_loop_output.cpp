@@ -10,6 +10,7 @@
  *
  */
 
+#include "dp_loop_output.hpp"
 #include "DPTypes.hpp"
 
 #include "output_paths.hpp"
@@ -17,8 +18,10 @@
 
 #include "loop/LoopInfo.hpp"
 
+#include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <string>
 #include <unordered_map>
 #include <vector>
 

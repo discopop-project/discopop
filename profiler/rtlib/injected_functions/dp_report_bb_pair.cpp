@@ -10,6 +10,7 @@
  *
  */
 
+#include "dp_report_bb_pair.hpp"
 #include "DPTypes.hpp"
 
 #include "runtimeFunctions.hpp"

@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <cstdlib>
+#include <string>
 
 namespace dp {
 

@@ -10,6 +10,7 @@
  *
  */
 
+#include "dp_delete.hpp"
 #include "DPTypes.hpp"
 
 #include "runtimeFunctionsGlobals.hpp"

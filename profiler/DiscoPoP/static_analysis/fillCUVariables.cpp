@@ -11,6 +11,10 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
 
 using llvm::BasicBlock;
 using llvm::Instruction;

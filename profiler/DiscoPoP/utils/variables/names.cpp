@@ -11,6 +11,8 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <map>
+#include <string>
 
 using llvm::AllocaInst;
 using llvm::ConstantInt;
