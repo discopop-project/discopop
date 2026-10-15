@@ -341,7 +341,7 @@ def run(arguments: AutotunerArguments) -> None:
     # select best option and create code folder
     if arguments.algorithm == 1:
         for stat_entry in sorted(debug_stats, key=lambda x: len(x[0]), reverse=True):
-            if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
+            if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] and stat_entry[4]:
                 sibling_config = reference_configuration.create_copy(
                     arguments, "par_settings.json", get_unique_configuration_id
                 )
@@ -363,7 +363,7 @@ def run(arguments: AutotunerArguments) -> None:
                 break
     else:
         for stat_entry in sorted(debug_stats, key=lambda x: (x[1])):
-            if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
+            if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] and stat_entry[4]:
                 sibling_config = reference_configuration.create_copy(
                     arguments, "par_settings.json", get_unique_configuration_id
                 )
@@ -403,7 +403,7 @@ def run(arguments: AutotunerArguments) -> None:
             for stats in sorted(debug_stats, key=lambda x: x[1], reverse=False):
                 if str(stats[2]) != "0":
                     continue
-                if stats[3] == False:  # skip invalid results
+                if not stats[3]:  # skip invalid results
                     continue
                 f.write(str(stats[0]) + "; " + str(round(stats[1], 3)) + "; " + str(stats[2]) + ";" + "\n")
                 break

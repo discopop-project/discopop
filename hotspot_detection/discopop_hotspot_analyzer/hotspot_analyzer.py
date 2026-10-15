@@ -135,7 +135,7 @@ class cs:
         self.topRatio = bl
 
     def getHotness(self) -> str:
-        if self.topAvr == True and self.topRatio == True:
+        if self.topAvr and self.topRatio:
             return "YES"
         if self.topAvr != self.topRatio:
             return "MAYBE"
@@ -345,7 +345,7 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
     counterM = 0
     counterN = 0
     for x in NZcslist:
-        if x.topAvr == True and x.topRatio == True:
+        if x.topAvr and x.topRatio:
             counterY += 1
             yesNoMaybe = " is YES"
             x.hotness = "YES"
@@ -353,7 +353,7 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
             counterM += 1
             yesNoMaybe = " is MAYBE"
             x.hotness = "MAYBE"
-        if x.topAvr == False and x.topRatio == False:
+        if not x.topAvr and not x.topRatio:
             counterN += 1
             yesNoMaybe = " is NO"
             x.hotness = "NO"

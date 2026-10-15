@@ -56,7 +56,7 @@ def run_detection(pet: PEGraphX, task_graph: TaskGraph, visualizer: Visualizer |
 
 
 def show_all_plots(context_task_graph: ContextTaskGraph, highlight_nodes: Optional[Set[Context]] = None) -> None:
-    if context_task_graph.plottable() == False:
+    if not context_task_graph.plottable():
         return
 
     def draw_plots() -> None:

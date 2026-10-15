@@ -88,7 +88,7 @@ class WithTrees(Base):
         for node_id in self._highest_visual_node_ids:
             if node_id == visual_node_id:
                 flip = True
-            elif flip == False:
+            elif not flip:
                 self._highest_visual_nodes_x_offset_data[node_id] = (
                     self._highest_visual_nodes_x_offset_data[node_id][0] + left_offset,
                     self._highest_visual_nodes_x_offset_data[node_id][1],
@@ -138,7 +138,7 @@ class WithTrees(Base):
                     space_requested[1],
                 )
                 flip = True
-            elif flip == False:
+            elif not flip:
                 self._highest_visual_nodes_x_offset_data[connection_id] = (
                     self._highest_visual_nodes_x_offset_data[connection_id][0] + left_offset,
                     self._highest_visual_nodes_x_offset_data[connection_id][1],

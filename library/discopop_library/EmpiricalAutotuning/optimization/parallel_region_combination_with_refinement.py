@@ -110,7 +110,7 @@ def execute_parallel_region_combination_with_refinement(
     # select the best seen configuration
     best_seen_configuration: List[SUGGESTION_ID] = []
     for stat_entry in sorted(debug_stats, key=lambda x: x[1], reverse=False):
-        if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] == True and stat_entry[4] == True:
+        if len(stat_entry[0]) != 0 and stat_entry[2] == 0 and stat_entry[3] and stat_entry[4]:
             best_seen_configuration = stat_entry[0]
             break
 

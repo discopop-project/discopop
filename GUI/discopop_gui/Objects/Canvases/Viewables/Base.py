@@ -46,7 +46,7 @@ class Base(tk.Canvas):
         self.bind("<Motion>", self._check_popup_distance)
 
     def _check_popup_distance(self, event: tk.Event) -> None:
-        if self._popup.get_visible() == False:
+        if not self._popup.get_visible():
             return
 
         bbox = self._popup.get_last_bbox()

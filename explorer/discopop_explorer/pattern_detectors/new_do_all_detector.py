@@ -82,7 +82,7 @@ def run_detection(
 
 
 def show_plot(tg: TaskGraph) -> None:
-    if tg.plottable() == False:
+    if not tg.plottable():
         return
 
     def draw_plots() -> None:
