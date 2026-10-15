@@ -26,7 +26,7 @@ def in_edges(
     """
     if etype is None:
         return [t for t in pet.g.in_edges(node_id, data="data")]
-    elif type(etype) == list:
+    elif type(etype) is list:
         return [t for t in pet.g.in_edges(node_id, data="data") if t[2].etype in etype]
     else:
         return [t for t in pet.g.in_edges(node_id, data="data") if t[2].etype == etype]
@@ -43,7 +43,7 @@ def out_edges(
     """
     if etype is None:
         return [t for t in pet.g.out_edges(node_id, data="data")]
-    elif type(etype) == list:
+    elif type(etype) is list:
         return [t for t in pet.g.out_edges(node_id, data="data") if t[2].etype in etype]
     else:
         return [t for t in pet.g.out_edges(node_id, data="data") if t[2].etype == etype]
@@ -52,7 +52,7 @@ def out_edges(
 def count_edges(pet: PEGraphX, etype: Optional[Union[EdgeType, List[EdgeType]]] = None) -> int:
     if etype is None:
         return len([e for e in pet.g.edges(data=True)])
-    elif type(etype) == list:
+    elif type(etype) is list:
         return len([e for e in pet.g.edges(data=True) if e[2]["data"].etype in etype])
     else:
         return len([e for e in pet.g.edges(data=True) if e[2]["data"].etype == etype])

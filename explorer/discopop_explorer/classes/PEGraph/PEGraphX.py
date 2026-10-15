@@ -194,10 +194,10 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                     source_node = g.nodes[source_cu_id]["data"]
                     vars_in_sink_node = set()
                     vars_in_source_node = set()
-                    if type(sink_node) == CUNode:
+                    if type(sink_node) is CUNode:
                         for var in itertools.chain(sink_node.local_vars, sink_node.global_vars):
                             vars_in_sink_node.add(var.name)
-                    if type(source_node) == CUNode:
+                    if type(source_node) is CUNode:
                         for var in itertools.chain(source_node.local_vars, source_node.global_vars):
                             vars_in_source_node.add(var.name)
 
@@ -590,7 +590,7 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                 raise ValueError("Node: ", node.id, "has too many parents!")
             else:
                 for parent in parents:
-                    if type(self.node_at(parent)) != FunctionNode:
+                    if type(self.node_at(parent)) is not FunctionNode:
                         return parent
         return None
 

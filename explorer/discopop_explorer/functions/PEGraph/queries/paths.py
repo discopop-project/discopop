@@ -64,7 +64,7 @@ def get_path_nodes_between(pet: PEGraphX, target: CUNode, source: CUNode, edge_t
         [
             (cast(CUNode, pet.node_at(t)), [])
             for s, t, d in out_edges(pet, source.id, edge_types)
-            if type(pet.node_at(t)) == CUNode
+            if type(pet.node_at(t)) is CUNode
         ]
     )
 

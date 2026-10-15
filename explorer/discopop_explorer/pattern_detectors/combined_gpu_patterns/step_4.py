@@ -305,7 +305,7 @@ def __identify_merge_node(pet: PEGraphX, successors: List[NodeID]) -> Optional[N
         # return False otherwise.
         # do not allow return BB's as merge nodes, since this would be trivially true for every path split
         potential_merge_node = pet.node_at(node_id)
-        if type(potential_merge_node) != CUNode:
+        if type(potential_merge_node) is not CUNode:
             return False
         if (
             "return" in str(potential_merge_node.basic_block_id)
@@ -596,12 +596,12 @@ def create_circle_free_function_graphs(pet: PEGraphX, add_dummy_node: bool = Tru
                 pen_parents = [
                     s
                     for s, t, d in in_edges(pet, potential_exit_node, EdgeType.CHILD)
-                    if type(pet.node_at(s)) != FunctionNode
+                    if type(pet.node_at(s)) is not FunctionNode
                 ]
                 filtered_pcsn = []
                 for pcsn in potential_cycle_successor_nodes:
                     pcsn_parents = [
-                        s for s, t, d in in_edges(pet, pcsn, EdgeType.CHILD) if type(pet.node_at(s)) != FunctionNode
+                        s for s, t, d in in_edges(pet, pcsn, EdgeType.CHILD) if type(pet.node_at(s)) is not FunctionNode
                     ]
                     if len([nid for nid in pen_parents if nid in pcsn_parents]) == 0:
                         # no shared parents

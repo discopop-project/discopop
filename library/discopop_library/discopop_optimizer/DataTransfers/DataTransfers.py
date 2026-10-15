@@ -307,7 +307,7 @@ def __check_current_node(
 
     #    if device_switch or type(node_data) == SynchronizationTrigger or True:
 
-    if type(node_data) == SynchronizationTrigger or type(node_data) == DeviceSwitch:
+    if type(node_data) is SynchronizationTrigger or type(node_data) is DeviceSwitch:
         # identify updates at a designated synchronization point
         context = context.calculate_and_perform_necessary_updates(
             node_data.read_memory_regions,
@@ -324,7 +324,7 @@ def __check_current_node(
         while len(queue) > 0:
             current = queue.pop()
             current_data = data_at(graph, current)
-            if type(current_data) == DeviceSwitch:
+            if type(current_data) is DeviceSwitch:
                 last_seen_device_switch_node = current
                 break
             queue += [p for p in get_predecessors(graph, current) if p not in queue]

@@ -128,7 +128,7 @@ class FunctionNode(Node):
 
             # find post dominator outside parent, if type(parent) != function
             for node_id in cast(List[NodeID], self.children_cu_ids):
-                if type(pet.node_at(node_id)) != CUNode:
+                if type(pet.node_at(node_id)) is not CUNode:
                     continue
                 # initialize search with immediate post dominator
                 post_dom_id = immediate_post_dominators_dict[node_id]
@@ -137,7 +137,7 @@ class FunctionNode(Node):
                 while (
                     pet.get_node_parent_id(pet.node_at(node_id)) == pet.get_node_parent_id(pet.node_at(post_dom_id))
                     and type(pet.node_at(cast(NodeID, pet.get_node_parent_id(pet.node_at(post_dom_id)))))
-                    != FunctionNode
+                    is not FunctionNode
                 ):
                     if post_dom_id in visited:
                         # cycle detected!

@@ -45,7 +45,7 @@ def import_suggestion(
 
     for node in buffer:
         introduced_options: Set[int] = set()
-        if suggestion.node_id == data_at(graph, node).cu_id and type(data_at(graph, node)) == Loop:
+        if suggestion.node_id == data_at(graph, node).cu_id and type(data_at(graph, node)) is Loop:
             # save node in introduced_options to mark as mutually exclusive
             introduced_options.add(node)
             environment.pattern_id_to_decisions_dict[suggestion.pattern_id] = [node]

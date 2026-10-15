@@ -27,13 +27,13 @@ def insert_device_switch_nodes(experiment: Experiment) -> nx.DiGraph:
     insert_device_switches: List[Tuple[int, int]] = []
     for node in experiment.optimization_graph.nodes:
         node_data = data_at(experiment.optimization_graph, node)
-        if type(node_data) == SynchronizationTrigger:
+        if type(node_data) is SynchronizationTrigger:
             # ignore Synchronization triggers
             continue
         successors = get_successors(experiment.optimization_graph, node)
         for successor in successors:
             successor_data = data_at(experiment.optimization_graph, successor)
-            if type(successor_data) == SynchronizationTrigger:
+            if type(successor_data) is SynchronizationTrigger:
                 # ignore Synchronization triggers
                 continue
             if node_data.device_id != successor_data.device_id:
@@ -113,7 +113,7 @@ def __set_read_and_write_information(experiment: Experiment, device_switch_nodes
         while len(queue) > 0:
             current = queue.pop()
             current_data = data_at(experiment.optimization_graph, current)
-            if type(current_data) == DeviceSwitch or type(current_data) == SynchronizationTrigger:
+            if type(current_data) is DeviceSwitch or type(current_data) is SynchronizationTrigger:
                 # stop search along this path
                 continue
             reads.update(current_data.read_memory_regions)

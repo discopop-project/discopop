@@ -116,7 +116,7 @@ def get_function_return_node(graph: nx.DiGraph, function: int) -> int:
     while len(queue) > 0:
         current = queue.pop()
         successors = get_successors(graph, current)
-        if len(successors) == 0 and type(data_at(graph, current)) == FunctionReturn:
+        if len(successors) == 0 and type(data_at(graph, current)) is FunctionReturn:
             return current
         queue += [s for s in successors if s not in queue]
     raise ValueError(
@@ -447,7 +447,7 @@ def convert_temporary_edge(graph: nx.DiGraph, source_id: int, target_id: int) ->
 def get_all_function_nodes(graph: nx.DiGraph) -> List[int]:
     result_set: Set[int] = set()
     for node_id in graph.nodes:
-        if type(graph.nodes[node_id]["data"]) == FunctionRoot:
+        if type(graph.nodes[node_id]["data"]) is FunctionRoot:
             result_set.add(node_id)
     return list(result_set)
 
@@ -484,7 +484,7 @@ def get_nodes_by_functions(graph: nx.DiGraph) -> Dict[int, List[int]]:
 def get_all_loop_nodes(graph: nx.DiGraph) -> List[int]:
     result_set: Set[int] = set()
     for node_id in graph.nodes:
-        if type(graph.nodes[node_id]["data"]) == Loop:
+        if type(graph.nodes[node_id]["data"]) is Loop:
             result_set.add(node_id)
     return list(result_set)
 
@@ -560,7 +560,7 @@ def get_parent_function(graph: nx.DiGraph, node_id: int) -> int:
     """Returns the parent function of node_id"""
     all_parents = get_all_parents(graph, node_id)
     for p in all_parents:
-        if type(data_at(graph, p)) == FunctionRoot:
+        if type(data_at(graph, p)) is FunctionRoot:
             return p
     raise ValueError("No parent exists for node " + str(node_id) + ", type: " + str(type(data_at(graph, node_id))))
 

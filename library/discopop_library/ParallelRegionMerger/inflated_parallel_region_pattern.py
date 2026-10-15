@@ -261,7 +261,7 @@ def __simple_inflate_parallel_regions(pet: PEGraphX, tg: TaskGraph) -> None:
     # inflate entry
     entry_queue: List[EnterParallelNode] = []
     for tgn in tg.get_all_nodes():
-        if type(tgn) == EnterParallelNode:
+        if type(tgn) is EnterParallelNode:
             entry_queue.append(tgn)
     while entry_queue:
         current_entry = entry_queue.pop()
@@ -270,7 +270,7 @@ def __simple_inflate_parallel_regions(pet: PEGraphX, tg: TaskGraph) -> None:
         if predecessor is None:
             continue
         # check (2)
-        if type(predecessor) == EnterParallelNode or type(predecessor) == ExitParallelNode:
+        if type(predecessor) is EnterParallelNode or type(predecessor) is ExitParallelNode:
             continue
         # check (3)
         if len(tg.get_successors(predecessor)) > 1 or len(tg.get_predecessors(predecessor)) > 1:
@@ -293,7 +293,7 @@ def __simple_inflate_parallel_regions(pet: PEGraphX, tg: TaskGraph) -> None:
 
     exit_queue: List[ExitParallelNode] = []
     for tgn in tg.get_all_nodes():
-        if type(tgn) == ExitParallelNode:
+        if type(tgn) is ExitParallelNode:
             exit_queue.append(tgn)
     while exit_queue:
         current_exit = exit_queue.pop()
@@ -303,7 +303,7 @@ def __simple_inflate_parallel_regions(pet: PEGraphX, tg: TaskGraph) -> None:
             continue
         successor = successors[0]
         # check (2)
-        if type(successor) == ExitParallelNode or type(successor) == EnterParallelNode:
+        if type(successor) is ExitParallelNode or type(successor) is EnterParallelNode:
             continue
         # check (3)
         if len(tg.get_successors(successor)) > 1 or len(tg.get_predecessors(successor)) > 1:
@@ -329,7 +329,7 @@ def __simple_combine_successive_regions(pet: PEGraphX, tg: TaskGraph) -> None:
     """Combine parallel regions in immediate succession, if exactly one successor edge exists between them."""
     queue: List[EnterParallelNode] = []
     for tgn in tg.get_all_nodes():
-        if type(tgn) == EnterParallelNode:
+        if type(tgn) is EnterParallelNode:
             queue.append(tgn)
     # for each EnterParallelNode, check if the predecessor is a ExitParallelNode.
     # If so, create a new parallel region spanning both and enter the newly created Region back into the queue.
@@ -340,7 +340,7 @@ def __simple_combine_successive_regions(pet: PEGraphX, tg: TaskGraph) -> None:
         if len(predecessors) != 1:
             continue
         predecessor = predecessors[0]
-        if type(predecessor) != ExitParallelNode:
+        if type(predecessor) is not ExitParallelNode:
             continue
 
         predecessor_entry = tg.get_connected_entry(predecessor)
@@ -376,7 +376,7 @@ def select_patterns(
     # select all functions as starting points, which have no incoming call edges
     function_nodes: List[TGFunctionNode] = []
     for tgn in tg.get_all_nodes():
-        if type(tgn) == TGFunctionNode:
+        if type(tgn) is TGFunctionNode:
             if len(tg.get_callers(tgn)) == 0:
                 function_nodes.append(tgn)
     print("ENTRY FUNCITONS:")
@@ -394,9 +394,9 @@ def select_patterns(
         while queue:
             current = queue.pop(0)
             visited.append(current)
-            if type(current) == TGFunctionNode:
+            if type(current) is TGFunctionNode:
                 print("encountered Function: ", current.fn.name)
-            if type(current) == EnterParallelNode and entered_parallel_region is None:
+            if type(current) is EnterParallelNode and entered_parallel_region is None:
                 # found outer-most parallel region
                 entered_parallel_region = current.parallel_region_id
                 outermost_parallel_regions.append(current)
@@ -404,7 +404,7 @@ def select_patterns(
                 if current not in region_contains_dict:
                     region_contains_dict[current] = []
             elif (
-                type(current) == ExitParallelNode
+                type(current) is ExitParallelNode
                 and entered_parallel_region is not None
                 and entered_parallel_region == current.parallel_region_id
             ):
@@ -414,7 +414,7 @@ def select_patterns(
             else:
                 modifiers = tg.get_modifiers(current)
                 for mod in modifiers:
-                    if type(mod) == DoAllModifierNode:
+                    if type(mod) is DoAllModifierNode:
                         modified_doall_pattern = copy.deepcopy(mod.do_all_pattern)
                         modified_doall_pattern.request_pattern_id()
                         modified_doall_pattern.standalone_pattern = False
@@ -427,7 +427,7 @@ def select_patterns(
                             region_contains_dict[outermost_parallel_regions[-1]].append(
                                 modified_doall_pattern.pattern_id
                             )
-                    elif type(mod) == ReductionModifierNode:
+                    elif type(mod) is ReductionModifierNode:
                         modified_reduction_pattern = copy.deepcopy(mod.reduction_pattern)
                         modified_reduction_pattern.request_pattern_id()
                         modified_reduction_pattern.standalone_pattern = False

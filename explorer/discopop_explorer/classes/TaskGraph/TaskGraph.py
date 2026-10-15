@@ -2269,7 +2269,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("--> classify entry points...")
         entry_points: List[LoopParentContext] = []
         for node in progress(self.graph.nodes):
-            if type(node.created_context) == LoopParentContext:
+            if type(node.created_context) is LoopParentContext:
                 entry_points.append(node.created_context)
         logger.info("--> determine loop variables...")
         for loop_ctx in progress(entry_points):
@@ -2334,13 +2334,13 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("--> classify entry points...")
         entry_points: List[LoopParentContext] = []
         for node in progress(self.graph.nodes):
-            if type(node.created_context) == LoopParentContext:
+            if type(node.created_context) is LoopParentContext:
                 entry_points.append(node.created_context)
         logger.info("--> cleaning loop dependencies")
         for loop_ctx in progress(entry_points):
             # get contexts by iterations
             iteration_ctxs = [
-                c for c in loop_ctx.get_contained_contexts(inclusive=False) if type(c) == IterationContext
+                c for c in loop_ctx.get_contained_contexts(inclusive=False) if type(c) is IterationContext
             ]
             iteration_contained_ctxs: Dict[IterationContext, Set[Context]] = dict()
             for it_ctx in iteration_ctxs:
@@ -2438,7 +2438,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         # empty parent context can happen at the root level of the graph. All other cases are invalid.
                         if current_context.parent_context is None:
                             #                            print("TYPE: ", type(current_context))
-                            if type(current_context) != Context:
+                            if type(current_context) is not Context:
                                 raise ValueError(
                                     "Current.parent_context must not be None, as context must not be None during processing!"
                                 )
@@ -2486,7 +2486,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 calling_nodes: List[TGNode] = []
                 for node in descendants:
                     if (
-                        node.pet_node_id in calling_pet_nodes and type(node) == TGNode
+                        node.pet_node_id in calling_pet_nodes and type(node) is TGNode
                     ):  # check for type TGNode to exclude function calls etc.
                         calling_nodes.append(node)
                 # filter calling nodes to such, which have not been inlined already
@@ -2964,7 +2964,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         logger.info("Adding work nodes...")
         work_nodes: List[TGNode] = []
         for node in progress(self.graph.nodes):
-            if type(node) == TGNode:
+            if type(node) is TGNode:
                 work_nodes.append(node)
 
         logger.info("--> classify context entry nodes")
@@ -2977,7 +2977,12 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             # create a new context, if the predecessor of node is not a regular work node
             preds = self.get_predecessors(node)
             create_new_context = False
-            if len(preds) > 1 or len(preds) == 0 or type(preds[0]) != TGNode or len(self.get_successors(preds[0])) > 1:
+            if (
+                len(preds) > 1
+                or len(preds) == 0
+                or type(preds[0]) is not TGNode
+                or len(self.get_successors(preds[0])) > 1
+            ):
                 create_new_context = True
 
             # create a new context if the node contains a function call
@@ -3019,7 +3024,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                 if (
                     len(successors) == 0
                     or len(successors) > 1
-                    or type(successors[0]) != TGNode
+                    or type(successors[0]) is not TGNode
                     or successors[0] in context_entry_nodes
                 ):
                     break
@@ -3094,7 +3099,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             source_tg_nodes: List[TGNode] = []
             for node in self.graph.nodes:
                 # search for regular nodes (i.e. CU nodes) with the given PET node id
-                if type(node) == TGNode and node.pet_node_id is not None:
+                if type(node) is TGNode and node.pet_node_id is not None:
                     if node.pet_node_id == source:
                         source_tg_nodes.append(node)
 
@@ -3132,7 +3137,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             source_tg_nodes: List[TGNode] = []
             for node in self.graph.nodes:
                 # search for regular nodes (i.e. CU nodes) with the given PET node id
-                if type(node) == TGNode and node.pet_node_id is not None:
+                if type(node) is TGNode and node.pet_node_id is not None:
                     if node.pet_node_id == source:
                         source_tg_nodes.append(node)
 
@@ -5341,7 +5346,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         result: Set[TGNode] = set()
         while len(queue) > 0:
             current_node, remaining_results_on_path = queue.pop()
-            if current_node.pet_node_id == pet_node_id and type(current_node) == TGNode:
+            if current_node.pet_node_id == pet_node_id and type(current_node) is TGNode:
                 if len(current_node.parent_context.intersection(disallow_target_contexts)) == 0:
                     # no overlap with disallowed contexts
                     result.add(current_node)
@@ -5413,7 +5418,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
 
     def get_loop_header_context(self, loop: LoopParentContext) -> Optional[WorkContext]:
         for ctx_1 in loop.contained_contexts:
-            if not type(ctx_1) == WorkContext:
+            if type(ctx_1) is not WorkContext:
                 continue
             # find a context ctx_1 without predecessor, i.e, the entry into the loops body, thus the loop header
             is_loop_header = True

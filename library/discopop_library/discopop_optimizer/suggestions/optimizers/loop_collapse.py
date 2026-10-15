@@ -111,7 +111,7 @@ def __collapse_loops_in_function(function_node_id: int) -> bool:
                 logger.debug("\tCurrent: " + str(current))
                 current_data = data_at(global_graph, current)
 
-                if type(current_data) == Loop:
+                if type(current_data) is Loop:
                     # parent is parallelizable loop -> collapse and end search
                     if current_data.suggestion_type == "do_all":
                         # if loops are located on the same device, collapse
@@ -166,7 +166,7 @@ def __collapse_loops_in_function(function_node_id: int) -> bool:
                 found_loop: bool = False
                 while queue:
                     current = queue.pop()
-                    if type(data_at(global_graph, current)) == Loop and current not in ignore_list:
+                    if type(data_at(global_graph, current)) is Loop and current not in ignore_list:
                         # more than one loop contained!
                         if found_loop:
                             invalid.add(csrc)
