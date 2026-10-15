@@ -9,16 +9,16 @@
 name: "DiscoPoP CI"
 
 # which configurations run is decided in create_matrix: the full matrix when merging into master or new_explorer
-# (pushes to them, pull requests targeting them), debian trixie with LLVM 21 for every other push.
-# pull requests into other branches need no run of their own: the push to their branch is tested already.
+# (pushes to them, pull requests targeting them), debian trixie with LLVM 21 for every other pull request.
+# A commit is tested once: branches are tested through their pull request (which also covers the pull requests of a
+# stack, whose target is another feature branch), so a push only runs for the branches that code is merged into.
+# A branch without a pull request is tested by a manual run (workflow_dispatch).
 on:
   push:
     branches:
-      - "**"
-  pull_request:
-    branches:
       - master
       - new_explorer  # This is a temporary addition and should be removed before merging into master!
+  pull_request:
   # manual runs, e.g. to get the callback benchmark (callback_benchmark) for a branch
   workflow_dispatch:
     inputs:
@@ -33,6 +33,8 @@ permissions:
 
 # a new push to a pull request or a branch supersedes the running checks of the previous push; the limited
 # self-hosted capacity is spent on the current state. pushes to master and new_explorer are never cancelled.
+# (a pull request is identified by its number, so the duplicate runs that a rebase of a stack can start for it cancel
+# each other as well)
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' || (github.ref != 'refs/heads/master' && github.ref != 'refs/heads/new_explorer') }}
@@ -40,7 +42,8 @@ concurrency:
 jobs:
 # used for eventual multiple operating system testing
 # the full matrix runs when merging into master or new_explorer; other pushes only test debian trixie with LLVM 21
-# ("reduced"). The jobs outside the matrix run in both cases.
+# ("reduced"): every other pull request (e.g. those of a stack) and manual run. The jobs outside the matrix run in
+# both cases.
 # the entries cover each supported LLVM version (19-22) and the minimum Python (3.11) once, see CLAUDE.md.
 # LLVM 21 is packaged by neither distribution (apt.llvm.org), Python 3.11 comes from the deadsnakes PPA.
 # "python" is the interpreter the venv is created with.
@@ -59,6 +62,7 @@ jobs:
     timeout-minutes: 5
     outputs:
       scope: ${{ steps.create_matrix.outputs.scope }}
+      benchmarks: ${{ steps.create_matrix.outputs.benchmarks }}
       matrix: ${{ steps.create_matrix.outputs.matrix }}
       images: ${{ steps.create_matrix.outputs.images }}
       build_environments: ${{ steps.create_matrix.outputs.build_environments }}
@@ -123,10 +127,18 @@ jobs:
             build_environments="[$e_llvm21]"
             scope="reduced"
           fi
+          # the benchmarks (about half of the time of a run) compare against the version before and are of interest where
+          # code is merged, not for every pull request of a stack: those get them through a manual run of the branch
+          if [[ "$scope" = "full" || "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]]; then
+            benchmarks="true"
+          else
+            benchmarks="false"
+          fi
           echo "Configuration: $scope (event: $GITHUB_EVENT_NAME, ref: $GITHUB_REF, pull request target: ${PR_BASE_REF:-none}, GITHUB_BASE_REF: ${GITHUB_BASE_REF:-none})"
 
           {
             echo "scope=$scope"
+            echo "benchmarks=$benchmarks"
             echo "matrix<<END"
             echo "$matrix"
             echo "END"
@@ -258,8 +270,8 @@ jobs:
           python: ${{ matrix.python }}
           save: "true"
 
-  # The tests of the matrix entries are split by kind into the jobs below, so a failure names what failed and the
-  # kinds run in parallel. Each matrix job restores the prepared venv and installs the DiscoPoP packages itself.
+  # The tests of the matrix entries are split into the jobs below (the Python based checks in one, the profiler build in
+  # another), which run in parallel. Each matrix job restores the prepared venv and installs the DiscoPoP packages itself.
   #
   # STATIC CHECKS: independent of the platform (black targets the supported Python versions, see pyproject.toml), so
   # they run once instead of per matrix entry.
@@ -318,73 +330,6 @@ jobs:
         run: |
           venv/bin/python3 -m black -l 120 --check benchmark/pass_overhead benchmark/injected_functions benchmark/compare test/instrumentation
 
-  # TYPE CHECK per matrix entry: mypy checks against the Python version of the interpreter it runs with
-  type_check:
-    runs-on: self-hosted
-    permissions:
-      contents: read
-      packages: read
-    container:
-      image: ${{ matrix.image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN || 'unset' }}
-    name: "Type check: mypy (${{ matrix.id }})"
-    needs: [create_matrix, prepare_images, prepare_build]
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.create_matrix.outputs.matrix) }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      # the venv with all DiscoPoP packages comes from the prepare_build job
-      - name: Setup venv with DiscoPoP
-        uses: ./.github/actions/prepared-venv
-        with:
-          environment: ${{ matrix.image }}
-          python: ${{ matrix.python }}
-
-      - name: Run mypy
-        run: |
-          venv/bin/python3 -m mypy --config-file=mypy.ini
-
-  # PYTHON UNIT TESTS: the roots and import mode are configured in pyproject.toml ([tool.pytest.ini_options])
-  python_unit_tests:
-    runs-on: self-hosted
-    permissions:
-      contents: read
-      packages: read
-    container:
-      image: ${{ matrix.image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN || 'unset' }}
-    name: "Python unit tests (${{ matrix.id }})"
-    needs: [create_matrix, prepare_images, prepare_build]
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.create_matrix.outputs.matrix) }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      # the venv with all DiscoPoP packages comes from the prepare_build job
-      - name: Setup venv with DiscoPoP
-        uses: ./.github/actions/prepared-venv
-        with:
-          environment: ${{ matrix.image }}
-          python: ${{ matrix.python }}
-
-      # the end-to-end and profiler tests are part of the bare pytest run, but have their own jobs (end_to_end_tests,
-      # profiler_tests)
-      - name: Run the Python unit tests
-        run: |
-          . venv/bin/activate
-          python3 -m pytest -m "not e2e and not profiler"
-
   # PROFILER UNIT TESTS: the GoogleTest binaries of the runtime library (DiscoPoP_UT) and the LLVM pass (DiscoPoP_Pass_UT);
   # built from the root CMakeLists.txt, they need no venv
   profiler_unit_tests:
@@ -432,9 +377,15 @@ jobs:
         run: |
           scripts/dev/check_rtlib_options.sh
 
-  # PROFILER TESTS of programs compiled with discopop_cxx: which callbacks the pass inserts where (test/instrumentation),
-  # and the data dependencies the profiling run finds (test/profiler, gold standard)
-  profiler_tests:
+  # PYTHON TESTS per matrix entry: type check (mypy checks against the Python version of the interpreter it runs with),
+  # the unit tests (the roots and import mode are configured in pyproject.toml, [tool.pytest.ini_options]), the profiler
+  # tests of programs compiled with discopop_cxx (which callbacks the pass inserts where: test/instrumentation, and the
+  # data dependencies the profiling run finds: test/profiler) and the end-to-end tests (the whole pipeline: profiling,
+  # pattern detection, patches, MCP server, on small programs).
+  # One job instead of one per kind: each kind takes about a minute, so a job of its own spent more time on starting the
+  # container, restoring the venv and waiting for a free runner than on the checks. The steps all run, so a run
+  # reports every failing kind; the profiler build (profiler_unit_tests) stays a job of its own, it takes minutes.
+  python_tests:
     runs-on: self-hosted
     permissions:
       contents: read
@@ -444,9 +395,9 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN || 'unset' }}
-    name: "Profiler tests: instrumentation, dependency detection (${{ matrix.id }})"
+    name: "Python tests: mypy, unit, profiler, end-to-end (${{ matrix.id }})"
     needs: [create_matrix, prepare_images, prepare_build]
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.create_matrix.outputs.matrix) }}
@@ -461,45 +412,31 @@ jobs:
           environment: ${{ matrix.image }}
           python: ${{ matrix.python }}
 
+      - name: Type check (mypy)
+        run: |
+          venv/bin/python3 -m mypy --config-file=mypy.ini
+
+      # the end-to-end and profiler tests are part of the bare pytest run, but have their own steps
+      - name: Python unit tests
+        if: ${{ !cancelled() }}
+        run: |
+          . venv/bin/activate
+          python3 -m pytest -m "not e2e and not profiler"
+
       - name: Instrumentation tests
+        if: ${{ !cancelled() }}
         run: |
           . venv/bin/activate
           python3 -m pytest -v -n auto --dist loadgroup test/instrumentation
 
       - name: Profiler gold standard tests
+        if: ${{ !cancelled() }}
         run: |
           . venv/bin/activate
           python3 -m pytest -v -n auto --dist loadgroup test/profiler
 
-  # END-TO-END TESTS: the whole pipeline (profiling, pattern detection, patches, MCP server) on small programs
-  end_to_end_tests:
-    runs-on: self-hosted
-    permissions:
-      contents: read
-      packages: read
-    container:
-      image: ${{ matrix.image }}
-      credentials:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN || 'unset' }}
-    name: "End-to-end tests (${{ matrix.id }})"
-    needs: [create_matrix, prepare_images, prepare_build]
-    timeout-minutes: 90
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJson(needs.create_matrix.outputs.matrix) }}
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      # the venv with all DiscoPoP packages comes from the prepare_build job
-      - name: Setup venv with DiscoPoP
-        uses: ./.github/actions/prepared-venv
-        with:
-          environment: ${{ matrix.image }}
-          python: ${{ matrix.python }}
-
       - name: Python end-to-end tests
+        if: ${{ !cancelled() }}
         run: |
           . venv/bin/activate
           python3 -m pytest -v -n auto --dist loadgroup test/end_to_end
@@ -525,7 +462,7 @@ jobs:
       options: --security-opt seccomp=unconfined
     name: "Runtime unit tests with sanitizers (${{ matrix.label }})"
     # the more detailed checks only run once the basic checks and tests have passed
-    needs: [create_matrix, prepare_images, static_checks, type_check, python_unit_tests, profiler_unit_tests, profiler_tests, end_to_end_tests]
+    needs: [create_matrix, prepare_images, static_checks, python_tests, profiler_unit_tests]
     timeout-minutes: 30
     strategy:
       fail-fast: false
@@ -567,7 +504,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN || 'unset' }}
     name: "Leak check of instrumented programs (ASan/LSan)"
     # the more detailed checks only run once the basic checks and tests have passed
-    needs: [create_matrix, prepare_images, static_checks, type_check, python_unit_tests, profiler_unit_tests, profiler_tests, end_to_end_tests]
+    needs: [create_matrix, prepare_images, static_checks, python_tests, profiler_unit_tests]
     timeout-minutes: 45
     steps:
       - name: Checkout Repository
@@ -595,7 +532,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN || 'unset' }}
     name: "Coverage: runtime library unit tests"
     # the more detailed checks only run once the basic checks and tests have passed
-    needs: [create_matrix, prepare_images, static_checks, type_check, python_unit_tests, profiler_unit_tests, profiler_tests, end_to_end_tests]
+    needs: [create_matrix, prepare_images, static_checks, python_tests, profiler_unit_tests]
     timeout-minutes: 45
     steps:
       - name: Checkout Repository
@@ -627,7 +564,7 @@ jobs:
     runs-on: self-hosted
     # after the detailed checks (whose success implies the basic ones'); the coverage only has to be finished.
     # never run code from pull requests of forks on the self-hosted runner (see create_matrix)
-    if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && needs.runtime_unit_tests_sanitized.result == 'success' && needs.instrumented_programs_leak_check.result == 'success' }}
+    if: ${{ !cancelled() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && needs.create_matrix.outputs.benchmarks == 'true' && needs.runtime_unit_tests_sanitized.result == 'success' && needs.instrumented_programs_leak_check.result == 'success' }}
     permissions:
       contents: read
       packages: read
@@ -854,15 +791,22 @@ jobs:
     name: Checks successful
     # a matrix job stands for all of its entries, i.e. the configurations create_matrix selected for
     # this run: debian trixie with LLVM 21 in the reduced, every entry in the full configuration
-    needs: [create_matrix, static_checks, type_check, python_unit_tests, profiler_unit_tests, profiler_tests, end_to_end_tests, runtime_unit_tests_sanitized, instrumented_programs_leak_check, pass_overhead_benchmark]
+    needs: [create_matrix, static_checks, python_tests, profiler_unit_tests, runtime_unit_tests_sanitized, instrumented_programs_leak_check, pass_overhead_benchmark]
     # require success explicitly: a skipped job (e.g. a pull request from a fork) must not report success
     if: ${{ always() }}
     timeout-minutes: 5
     steps:
       - name: Report
         run: |
-          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" != "false" ]]; then
+          # the benchmark is skipped where create_matrix did not ask for it (a pull request of a stack); every other
+          # skipped job (e.g. all of them for a pull request from a fork) must not report success
+          benchmark_skipped_as_planned="${{ needs.create_matrix.outputs.benchmarks == 'false' && needs.pass_overhead_benchmark.result == 'skipped' }}"
+          others_skipped="${{ needs.create_matrix.result == 'skipped' || needs.static_checks.result == 'skipped' || needs.python_tests.result == 'skipped' || needs.profiler_unit_tests.result == 'skipped' || needs.runtime_unit_tests_sanitized.result == 'skipped' || needs.instrumented_programs_leak_check.result == 'skipped' || (needs.pass_overhead_benchmark.result == 'skipped' && needs.create_matrix.outputs.benchmarks != 'false') }}"
+          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}" != "false" || "$others_skipped" != "false" ]]; then
             echo "Checks did not succeed, job results: ${{ join(needs.*.result, ', ') }}"
             exit 1
+          fi
+          if [ "$benchmark_skipped_as_planned" = "true" ]; then
+            echo "The benchmarks are not part of this run (pull request into a feature branch); run the workflow manually for them"
           fi
           echo "All checks successful (${{ needs.create_matrix.outputs.scope }} configuration: ${{ join(fromJson(needs.create_matrix.outputs.matrix || '{"include":[]}').include.*.id, ', ') }})"
