@@ -172,7 +172,7 @@ bool DiscoPoP::isRecursive(Function &F, CallGraph &CG) {
   return false;
 }
 
-void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI) {
+void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI, map<Loop *, string> &loopToPETNodeID) {
   if (root->type != nodeTypes::cu) {
     LID start = -1, end = -1;
 
@@ -196,7 +196,7 @@ void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI) {
   }
 
   for (auto i : root->childrenNodes) {
-    fillStartEndLineNumbers(i, LI);
+    fillStartEndLineNumbers(i, LI, loopToPETNodeID);
   }
 }
 

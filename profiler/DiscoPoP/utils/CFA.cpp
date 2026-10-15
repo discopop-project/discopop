@@ -18,7 +18,7 @@ using namespace dputil;
 
 // Control-flow analysis functions
 
-void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
+void DiscoPoP::CFA(Function &F, LoopInfo &LI, const map<Loop *, string> &loopToPETNodeID) {
   SmallVector<BasicBlock *, 8> ExitBlocks;
   for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE; ++BB) {
     BasicBlock *tmpBB = &*BB;
