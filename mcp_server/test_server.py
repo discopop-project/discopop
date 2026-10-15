@@ -13,7 +13,6 @@ Test suite for the DiscoPoP MCP Server
 """
 
 import json
-import logging
 import re
 import unittest
 from unittest.mock import patch
