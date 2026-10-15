@@ -134,7 +134,7 @@ std::string get_exe_dir();
 
 class VariableNameFinder {
 public:
-  VariableNameFinder(llvm::Module &M);
+  explicit VariableNameFinder(llvm::Module &M);
 
   std::string getVarName(llvm::Value const *V);
 };
