@@ -398,10 +398,9 @@ public:
       buffer = internal_queue.front();
       internal_queue.pop();
       return buffer;
-    } else {
-      // allocate a new chunk
+    }       // allocate a new chunk
       return new FirstAccessQueueChunk(chunk_size);
-    }
+
   }
 
   std::size_t get_queue_size() {

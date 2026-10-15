@@ -28,9 +28,8 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
     string retVal = getOrInsertVarName_static("", builder);
     if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
       return retVal; // not found
-    } else {
-      return (*trueVarNamesFromMetadataMap)[retVal]; // found
-    }
+    }       return (*trueVarNamesFromMetadataMap)[retVal]; // found
+
   }
 
   if (operand->hasName()) {
@@ -39,9 +38,8 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
       string retVal = string(operand->getName());
       if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
         return retVal; // not found
-      } else {
-        return (*trueVarNamesFromMetadataMap)[retVal]; // found
-      }
+      }         return (*trueVarNamesFromMetadataMap)[retVal]; // found
+
     }
     if (isa<GetElementPtrInst>(*operand)) {
       GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
@@ -65,16 +63,14 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
                 string retVal = ret;
                 if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
                   return retVal; // not found
-                } else {
-                  return (*trueVarNamesFromMetadataMap)[retVal]; // found
-                }
+                }                   return (*trueVarNamesFromMetadataMap)[retVal]; // found
+
               } else {
                 string retVal = getOrInsertVarName_static("", builder);
                 if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
                   return retVal; // not found
-                } else {
-                  return (*trueVarNamesFromMetadataMap)[retVal]; // found
-                }
+                }                   return (*trueVarNamesFromMetadataMap)[retVal]; // found
+
               }
             }
           }
@@ -92,9 +88,8 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
     string retVal = string(operand->getName().data());
     if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
       return retVal; // not found
-    } else {
-      return (*trueVarNamesFromMetadataMap)[retVal]; // found
-    }
+    }       return (*trueVarNamesFromMetadataMap)[retVal]; // found
+
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {

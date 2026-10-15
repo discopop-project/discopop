@@ -96,9 +96,7 @@ inline bool fexists(const std::string &filename) {
 
   if (ifile.fail()) {
     return false;
-  } else {
-    return true;
-}
+  }     return true;
 }
 
 inline std::string get_exe_dir() {
@@ -108,9 +106,8 @@ inline std::string get_exe_dir() {
     buff[len] = '\0';
     std::string fullPath = std::string(buff);
     return fullPath.substr(0, fullPath.find_last_of('/'));
-  } else {
-    return "";
-  }
+  }     return "";
+
 }
 
 } // namespace dputil

@@ -34,7 +34,7 @@ llvm::Instruction *dp_reduction::get_load_instr(llvm::Value *load_val, llvm::Ins
     if (prev_use) {
       if (llvm::isa<llvm::StoreInst>(prev_use)) {
         return dp_reduction::get_load_instr(load_val, prev_use, reduction_operations);
-      } else if (llvm::isa<llvm::GetElementPtrInst>(prev_use)) {
+      } if (llvm::isa<llvm::GetElementPtrInst>(prev_use)) {
         llvm::GetElementPtrInst *ptr_instr = llvm::cast<llvm::GetElementPtrInst>(prev_use);
         llvm::Value *points_to = dp_reduction::points_to_var(ptr_instr);
         if (points_to == load_val) {

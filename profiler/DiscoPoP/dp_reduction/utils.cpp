@@ -32,7 +32,7 @@ llvm::Instruction *dp_reduction::get_prev_use(llvm::Instruction *instr, llvm::Va
 
     if (instr_found) {
       return usr_instr;
-    } else if (usr_instr == instr) {
+    } if (usr_instr == instr) {
       instr_found = true;
       continue;
     }
@@ -156,9 +156,7 @@ char dp_reduction::get_char_for_opcode(llvm::Instruction *instr) {
 
         if (any_operand_is_negative_constant) {
           return '-';
-        } else {
-          return '+';
-}
+        }           return '+';
       }
     }
   }
@@ -174,9 +172,7 @@ char dp_reduction::get_char_for_opcode(llvm::Instruction *instr) {
 
     if (operand_is_negative_constant) {
       return '-';
-    } else {
-      return '+';
-}
+    }       return '+';
   }
   if (opcode == llvm::Instruction::Sub || opcode == llvm::Instruction::FSub) {
     bool operand_is_negative_constant = false;
@@ -189,9 +185,7 @@ char dp_reduction::get_char_for_opcode(llvm::Instruction *instr) {
 
     if (operand_is_negative_constant) {
       return '+';
-    } else {
-      return '-';
-}
+    }       return '-';
   }
   if (opcode == llvm::Instruction::Mul || opcode == llvm::Instruction::FMul) {
     return '*';

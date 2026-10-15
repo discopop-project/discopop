@@ -362,9 +362,8 @@ void add_function_exit_edges_to_transitions(StaticCallPathTree* call_path_tree_p
         last_call_prefix = current->prefix;
         break;
       }
-      else{
-        current = current->prefix;
-      }
+              current = current->prefix;
+
     }
     if(last_call_prefix == nullptr){
       // no call found

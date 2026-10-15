@@ -116,9 +116,8 @@ std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
               lid = to_string(DebugLoc(DIL)->getLine());
 
               break;
-            } else {
-              foundEnd = true;
-            }
+            }               foundEnd = true;
+
           }
         }
       }
