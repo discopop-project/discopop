@@ -74,7 +74,7 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
                 # ensure current is of either allowed type of sequence members
                 if not (
                     isinstance(current, WorkContext) or isinstance(current, CombinedContext)
-                ):  #  or isinstance(current, IterationContext) or isinstance(current, InlinedFunctionContext) or isinstance(current, FunctionContext)):
+                ):  # or isinstance(current, IterationContext) or isinstance(current, InlinedFunctionContext) or isinstance(current, FunctionContext)):
                     # not a valid sequence member
                     break
 

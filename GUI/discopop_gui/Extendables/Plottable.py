@@ -27,7 +27,7 @@ class Plottable:
         self._visualizer = visualizer
 
     def plottable(self) -> bool:
-        if self._visualizer == None:
+        if self._visualizer is None:
             return False
 
         return True

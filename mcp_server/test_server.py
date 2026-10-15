@@ -7,7 +7,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 """
 Test suite for the DiscoPoP MCP Server
 """

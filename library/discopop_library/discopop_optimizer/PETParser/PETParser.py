@@ -432,7 +432,7 @@ class PETParser(object):
                     if iteration_time - start_time > timeout:
                         # show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
 
-                        ## dbg show profiling data
+                        # dbg show profiling data
                         if self.experiment.arguments.profiling and self.experiment.profile is not None:
                             self.experiment.profile.disable()
                             if os.path.exists("optimizer_profile.txt"):
@@ -469,7 +469,7 @@ class PETParser(object):
                     modification_found = False
                     iteration_time = int(time())
                     if iteration_time - start_time > timeout:
-                        ## dbg show profiling data
+                        # dbg show profiling data
                         if self.experiment.arguments.profiling and self.experiment.profile is not None:
                             self.experiment.profile.disable()
                             if os.path.exists("optimizer_profile.txt"):
@@ -712,7 +712,7 @@ class PETParser(object):
                     while len(inner_queue) > 0:
                         inner_current = inner_queue.pop()
                         inner_current_data = data_at(self.graph, inner_current)
-                        if inner_current_data.original_cu_id != None:
+                        if inner_current_data.original_cu_id is not None:
                             last_original_cu_id = inner_current_data.original_cu_id
                             break
                         else:
@@ -1403,7 +1403,7 @@ class PETParser(object):
                 for mem_reg in writes:
                     current_last_writes[mem_reg] = current_node
 
-                ## start data_flow calculation for children
+                # start data_flow calculation for children
                 for child in get_children(self.graph, current_node):
                     _current_last_writes = inlined_data_flow_calculation(child, current_last_writes)
 

@@ -93,7 +93,7 @@ def check_pipeline(pet: PEGraphX, root: Node) -> None:
         print(f"matrix before: {initial_coef}")
         for i in range(0, len(initial_matrix)):
             print(" ".join([str(x) for x in initial_matrix[i]]))
-        print(f"matrix after independent removed:")
+        print("matrix after independent removed:")
         for i in range(0, len(no_indep_matrix)):
             print(" ".join([str(x) for x in no_indep_matrix[i]]))
         print(f"matrix after merged: {new_coef}")

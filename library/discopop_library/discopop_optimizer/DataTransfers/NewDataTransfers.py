@@ -429,7 +429,7 @@ def new_calculate_data_transfers(
                         valid_successors = [
                             s
                             for s in successors
-                            if data_at(graph, s).represents_sequential_version() and data_at(graph, s).device_id == None
+                            if data_at(graph, s).represents_sequential_version() and data_at(graph, s).device_id is None
                         ]
                     logger.debug("valid successors after strict sequential check: " + str(valid_successors))
 

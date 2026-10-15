@@ -837,7 +837,7 @@ class TreeNode:
 
     def hide_lower_order_connections(self) -> None:
         for connection_id, edge in self._lower_order_main_connections.items():
-            if not (connection_id in self._lower_order_main_hide_requests):
+            if connection_id not in self._lower_order_main_hide_requests:
                 self._canvas.itemconfigure(edge.get_canvas_edge_id(), state="hidden")
                 self._canvas.get_visual_node(connection_id).hide_by_higher_order(self._base_node.id)
                 self._lower_order_main_hide_requests.add(connection_id)

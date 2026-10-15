@@ -108,7 +108,7 @@ def get_locally_optimized_models(
                     substituted_model.sequential_costs = substituted_model.sequential_costs.subs(substitutions)
 
             #                    decision_models_with_substitutions.append(
-            ##                        (decision, (model, context, substituted_model))
+            # (decision, (model, context, substituted_model))
             #                   )
 
             # set free symbol ranges and distributions for comparisons

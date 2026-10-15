@@ -221,7 +221,7 @@ def identify_simple_tasking(
             tpi.task_group.append(task_group_num)
             tpi.region_end_line = str(
                 task_scope_max
-            )  #  LineID(str(tpc_parent_pet_node.file_id) + ":" + str(task_scope_max))
+            )  # LineID(str(tpc_parent_pet_node.file_id) + ":" + str(task_scope_max))
             tpi.standalone_pattern = False
             tpi.applicable_pattern = False
             pattern_objects.append(tpi)

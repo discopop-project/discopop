@@ -166,11 +166,11 @@ class TestASTVisualization:
 
         ASTVisualization.print_tree_structure(sample_graph, root, max_depth=0)
         out_0 = capsys.readouterr().out
-        lines_0 = [l for l in out_0.splitlines() if l.strip()]
+        lines_0 = [line for line in out_0.splitlines() if line.strip()]
 
         ASTVisualization.print_tree_structure(sample_graph, root, max_depth=1)
         out_1 = capsys.readouterr().out
-        lines_1 = [l for l in out_1.splitlines() if l.strip()]
+        lines_1 = [line for line in out_1.splitlines() if line.strip()]
 
         assert len(lines_1) > len(lines_0), "max_depth=1 should print more than max_depth=0"
 

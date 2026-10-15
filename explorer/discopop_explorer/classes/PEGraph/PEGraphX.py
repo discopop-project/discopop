@@ -154,7 +154,7 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                 for child in [n.text for n in node.childrenNodes]:
                     if child not in g:
                         warn(f"no child node {child} found")
-                    if not (source, child) in g.edges:
+                    if (source, child) not in g.edges:
                         g.add_edge(source, child, data=Dependency(EdgeType.CHILD))
 
         for _, node in progress(g.nodes(data="data"), desc="Adding loop data"):

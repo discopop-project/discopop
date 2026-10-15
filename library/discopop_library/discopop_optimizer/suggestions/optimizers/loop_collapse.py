@@ -226,7 +226,7 @@ def __collapse_loops_in_function(function_node_id: int) -> bool:
                 for option in [
                     e[0] for e in global_graph.in_edges(loop, data="data") if isinstance(e[2], MutuallyExclusiveEdge)
                 ]:
-                    if cast(Loop, data_at(global_graph, option)).suggestion == None:
+                    if cast(Loop, data_at(global_graph, option)).suggestion is None:
                         seq_loop_option = option
                         break
                 # create a copy of the sequential version of the inner loop with only a single iteration

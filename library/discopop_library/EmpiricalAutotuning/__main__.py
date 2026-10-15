@@ -55,8 +55,8 @@ def parse_args() -> AutotunerArguments:
 #                        DP_EXECUTE.sh may return not 0, if either the execution or validation of the result failed. \
 #                        A third script DP_VALIDATE.sh might be added to add a validation step, where return code 0 is interpreted as a success, i.e. a valid result.")
     parser.add_argument("--compile-only", dest="compile_only", action="store_true", help="Build every candidate but execute none of them. Nothing is measured, so no candidate is ranked and no speedup is reported; the run only answers whether each configuration compiles. Intended for checking the applicability of suggestions, e.g. by discopop_patch_repair.")
-    parser.add_argument("--skip-cleanup", action="store_true", help="Disable the deletion of created code variants. May require a lot of disk space." )
-    parser.add_argument("--sanitize", action="store_true", help="Enable the invocation of ThreadSanitizer if DP_COMPILE_SANITIZE.sh and DP_EXECUTE_SANITIZE.sh are provided." )
+    parser.add_argument("--skip-cleanup", action="store_true", help="Disable the deletion of created code variants. May require a lot of disk space.")
+    parser.add_argument("--sanitize", action="store_true", help="Enable the invocation of ThreadSanitizer if DP_COMPILE_SANITIZE.sh and DP_EXECUTE_SANITIZE.sh are provided.")
     parser.add_argument("-xr", "--execution-repetitions", type=int, default=DEFAULT_TUNING_REPETITIONS,
                         help="Run each candidate this many times and rank it by the median of the measured times, so that a single noisy run cannot decide the search. Note that this multiplies the tuning time: the search performs one program execution per candidate. Repeating the final measurements instead (discopop_project_manager --execution-repetitions) keeps the search cheap while still reporting a stable runtime. Default: " + str(DEFAULT_TUNING_REPETITIONS) + " (measure each candidate once); the measured runs are repeated by default instead.")
 
