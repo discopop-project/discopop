@@ -64,7 +64,6 @@ When the project has no usable configuration, the GUI opens the *Configuration A
 After **Finish**, the new configuration is selected and the *Execute* tab opens. See [Project manager](Project_manager.md) for the meaning of the scripts and settings.
 
 ## Editor
-<!-- TODO screenshot: replace placeholder -->
 ![Editor tab, execute.sh with the execution time setting](../assets/screenshots/gui_editor_execute_sh.svg)
 
 The *Editor* tab edits the scripts of the selected configuration. Save with **Save (Ctrl+S)**. Every sub-tab has a **Help** button. The sub-tabs are:
@@ -93,7 +92,6 @@ By default, the runtime of `execute.sh` is its wall clock time. Check *Read the 
 The GUI does not derive the settings files again when it executes a configuration, so your edits of them are kept. The command line project manager overwrites them from `seq_settings.json` on every run.
 
 ## Execute
-<!-- TODO screenshot: replace placeholder -->
 ![Execute tab](../assets/screenshots/gui_execute.svg)
 
 The *Execute* tab compiles and runs the selected configuration, as `discopop_project_manager -x` does, and records the measurements.
@@ -114,7 +112,6 @@ In-place execution together with applied suggestions modifies your project direc
 Results are stored in `.discopop/project/execution_results.json`.
 
 ## Report
-<!-- TODO screenshot: replace placeholder -->
 ![Report tab](../assets/screenshots/gui_report.svg)
 
 The *Report* tab shows all recorded measurements. The *Table* tab lists configuration, script, setting, label, applied and not applied suggestions, threads, status, time, speedup and efficiency; speedup is relative to the `seq` run of the same script. With the **+** tab you add plots: *Trade-off scatter*, *Thread scaling*, *Speedup / efficiency bars* and *Runtime bars*. Click a point or bar to see its details.
