@@ -12,6 +12,9 @@
 
 #include "DPUtils.hpp"
 
+#include <set>
+#include <string>
+
 #define DP_DEBUG_TYPE "dputils"
 
 using namespace llvm;
@@ -181,11 +184,20 @@ int64_t getLID(Instruction *BI, int32_t &fileID) {
       File = File.substr(2, File.size() - 1);
     }
 
-    fileID = dputil::getFileID(FileMappingPath, Dir.str() + "/" + File.str());
+    const std::string fullPathName = Dir.str() + "/" + File.str();
+    fileID = dputil::getFileID(FileMappingPath, fullPathName);
 
-    // file is not in FileMapping.txt
-    if (fileID == 0)
-      return -1;
+    // file is not in FileMapping.txt: there is no location to report. 0 means "no location" to every caller
+    // (they do not instrument the instruction); -1 would have been instrumented as the location 262143:16383
+    if (fileID == 0) {
+      static std::set<std::string> warnedFiles;
+      if (warnedFiles.insert(fullPathName).second) {
+        errs() << "DiscoPoP: warning: " << fullPathName
+               << " is not in the file mapping or outside of DP_PROJECT_ROOT_DIR, its instructions are not "
+                  "instrumented\n";
+      }
+      return 0;
+    }
   }
   lid = (fileID << LIDSIZE) + lno;
 
