@@ -5,9 +5,9 @@ nav_order: 2
 ---
 
 # Getting started
-This page takes you from the installation to the first parallelization suggestions and a measured speedup, using the graphical user interface (GUI). The [GUI walk-through](examples/walk_through_gui.md) shows the same steps on an example program, and the [Manual](manual.md) describes every tool and option.
+This page takes you from the installation to the first parallelization suggestions and a measured speedup, using the graphical user interface (GUI). The [GUI walk-through](examples/walk_through_gui.md) goes through the same steps on an example program and explains them in more detail, and the [Manual](manual.md) describes every tool and option.
 
-## What you need
+## Prerequisites
 * A Linux system with Python 3.11 or newer and a display (the GUI uses Tk).
 * The system packages below. The profiler is built from source during the installation.
 * A C or C++ project that builds with the compilers and flags given in the environment variables `$CC`/`$CXX` and `$CFLAGS`/`$CXXFLAGS`. DiscoPoP sets these variables to instrument your code, so a build script that hard-codes `gcc` does not work.
