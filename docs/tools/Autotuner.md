@@ -80,6 +80,7 @@ Further files are `.discopop/measurements.csv` and `.discopop/dp_autotuner_stati
 To use the result, apply the selected suggestions with the [patch applicator](Patch_applicator.md) (`discopop_patch_applicator -a <ids>`), or let the project manager apply them in its project copy (`discopop_project_manager -x <configuration>:par -a auto`).
 
 ## Options
+
 | Option | Default | Description |
 |---|---|---|
 | `--dot-dp-path PATH` | current directory | Path to the `.discopop` directory |

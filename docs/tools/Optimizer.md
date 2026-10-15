@@ -37,6 +37,7 @@ discopop_patch_generator -a optimizer/patterns.json
 ```
 
 ## Options
+
 | Option | Default | Description |
 |--------|---------|-------------|
 | `-v`, `--verbose` | off | Enable verbose output. |

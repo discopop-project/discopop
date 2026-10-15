@@ -44,6 +44,7 @@ flowchart TD
 The [project manager](tools/Project_manager.md) and the [GUI](tools/GUI.md) run these steps for you; the [MCP server](tools/MCP_server.md) lets an AI assistant do the same.
 
 ## Guide to the sections
+
 | Section | Content |
 |---|---|
 | [Setup](setup/setup.md) | [Installation](setup/discopop.md), [build options](setup/build_options.md), [environment variables](setup/environment_variables.md), [VS Code extension](setup/vscx.md) |

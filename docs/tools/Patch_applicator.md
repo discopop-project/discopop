@@ -46,6 +46,7 @@ discopop_patch_applicator -C       # reset again
 `-C` overwrites an earlier save. Calling it twice in a row saves an empty list, so a following `-L` restores nothing.
 
 ## Options
+
 | Option | Default | Description |
 |--------|---------|-------------|
 | `-a`, `--apply <id ...>` | none | Apply the suggestions with the given ids. Suggestions that are already applied are skipped. |
