@@ -8,8 +8,8 @@
 
 name: "DiscoPoP CI"
 
-# which configurations run is decided in create_matrix: the full matrix when merging into master or new_explorer
-# (pushes to them, pull requests targeting them), debian trixie with LLVM 21 for every other pull request.
+# which configurations run is decided in create_matrix: the full matrix when merging into master
+# (pushes to it, pull requests targeting it), debian trixie with LLVM 21 for every other pull request.
 # A commit is tested once: branches are tested through their pull request (which also covers the pull requests of a
 # stack, whose target is another feature branch), so a push only runs for the branches that code is merged into.
 # A branch without a pull request is tested by a manual run (workflow_dispatch).
@@ -41,7 +41,7 @@ concurrency:
 
 jobs:
 # used for eventual multiple operating system testing
-# the full matrix runs when merging into master or new_explorer; other pushes only test debian trixie with LLVM 21
+# the full matrix runs when merging into master; other pushes only test debian trixie with LLVM 21
 # ("reduced"): every other pull request (e.g. those of a stack) and manual run. The jobs outside the matrix run in
 # both cases.
 # the entries cover each supported LLVM version (19-22) and the minimum Python (3.11) once, see CLAUDE.md.
@@ -114,10 +114,10 @@ jobs:
           # the leak check links against the sanitizer runtime of clang
           e_leak="$(entry debian-trixie-llvm-19-leak-check debian:trixie python3 "export DEBIAN_FRONTEND=noninteractive && apt update && $apt_install ca-certificates python3 build-essential make cmake git llvm-19-dev clang-19 libclang-rt-19-dev libomp-19-dev libboost-dev")"
 
-          # the full matrix only where code is merged into master or new_explorer (pushes and pull requests
-          # targeting them); every other push is checked on one platform to keep development runs short
-          if [[ ( "$GITHUB_EVENT_NAME" = "push" && ( "$GITHUB_REF" = "refs/heads/master" || "$GITHUB_REF" = "refs/heads/new_explorer" ) ) \
-             || ( "$GITHUB_EVENT_NAME" = "pull_request" && ( "$PR_BASE_REF" = "master" || "$PR_BASE_REF" = "new_explorer" ) ) ]]; then
+          # the full matrix only where code is merged into master (pushes and pull requests targeting it);
+          # every other push is checked on one platform to keep development runs short
+          if [[ ( "$GITHUB_EVENT_NAME" = "push" && "$GITHUB_REF" = "refs/heads/master" ) \
+             || ( "$GITHUB_EVENT_NAME" = "pull_request" && "$PR_BASE_REF" = "master" ) ]]; then
             matrix="{\"include\":[$e_llvm19,$e_llvm20,$e_llvm21,$e_llvm22]}"
             images="[$e_llvm19,$e_llvm20,$e_llvm21,$e_llvm22,$e_tools,$e_leak]"
             # the environments that need the venv with DiscoPoP (see prepare_build)
