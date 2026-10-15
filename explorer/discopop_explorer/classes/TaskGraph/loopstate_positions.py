@@ -9,7 +9,7 @@
 
 Each digit of such a label is the iteration bucket of one loop of the function. Which loop a digit
 position stands for is written by the profiler to loopstate_positions.txt (see
-DiscoPoP::buildStaticCalltree), one line per digit position:
+static_callpaths::buildStaticCalltree), one line per digit position:
 
     <function name> <position> <loop id> <Data.xml loop node id> <file_id>:<start line>
 

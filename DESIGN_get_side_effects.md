@@ -420,7 +420,7 @@ in-process; the scripts live outside the repository.
   first also froze at 2 states: `initial_stateID.txt` had two lines, `main` and
   `_Z11DumpToVisitR6Domainiii` ("Do**main**"), and the runtime takes the last one.
   Compiling `lulesh.cc` last avoided it. **This is a profiler bug outside this
-  feature** (`DiscoPoP::save_initial_path` matches `"main"` as a substring); to
+  feature** (`static_callpaths::save_initial_path` matches `"main"` as a substring); to
   be reported separately.
 
 ## 7. Risks / limits (v1)
