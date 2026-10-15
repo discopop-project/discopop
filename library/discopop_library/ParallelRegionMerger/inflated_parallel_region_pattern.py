@@ -9,11 +9,7 @@ from __future__ import annotations
 import copy
 import json
 import os
-import sys
-from multiprocessing import Pool
-from typing import TYPE_CHECKING, List, Dict, Optional, Set, Tuple, cast
-import warnings
-import networkx as nx  # type: ignore
+from typing import TYPE_CHECKING, List, Dict, Optional, Tuple
 
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.EnterParallelNode import EnterParallelNode
@@ -23,17 +19,9 @@ from discopop_library.ParallelRegionMerger.classes.TaskGraph.DoallModifierNode i
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGFunctionNode import TGFunctionNode
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGNode import TGNode
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.TaskGraph import TaskGraph
-from discopop_explorer.functions.PEGraph.properties.depends_ignore_readonly import depends_ignore_readonly
-from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
-from discopop_explorer.functions.PEGraph.properties.is_readonly_inside_loop_body import is_readonly_inside_loop_body
-from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
-from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
-from discopop_explorer.functions.PEGraph.queries.variables import get_variables
-from discopop_explorer.functions.PEGraph.traversal.parent import get_all_parent_functions, get_parent_function
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
-from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
@@ -43,14 +31,10 @@ from discopop_explorer.classes.PEGraph.PEGraphX import (
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.Node import Node
-from discopop_explorer.classes.PEGraph.Dependency import Dependency
-from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
-from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
-from discopop_explorer.utils import classify_loop_variables, filter_for_hotspots
 from discopop_explorer.classes.variable import Variable
 from discopop_library.ParallelRegionMerger.ArgumentClasses import ParallelRegionMergerArguments
 from discopop_library.ParallelRegionMerger.Types import SUGGESTION_ID

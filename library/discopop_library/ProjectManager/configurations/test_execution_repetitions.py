@@ -17,7 +17,6 @@ The scripts count their own invocations in a file, so one script body can behave
 differently on each repetition -- which is the whole point of the feature.
 """
 
-import json
 import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, cast

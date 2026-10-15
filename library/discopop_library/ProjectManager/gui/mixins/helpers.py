@@ -11,7 +11,7 @@ import re
 import tkinter as tk
 import tkinter.font
 from tkinter import scrolledtext, ttk
-from typing import Optional, Literal, Any, Union
+from typing import Optional, Any, Union
 
 from discopop_library.ProjectManager.gui import widgets
 

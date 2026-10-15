@@ -9,7 +9,7 @@ import copy
 from typing import Callable, Set, cast, Tuple, List, Dict
 
 import networkx as nx  # type: ignore
-from sympy import Expr, Integer, Symbol, log, Float, init_printing  # type: ignore
+from sympy import Expr, Integer, Symbol  # type: ignore
 
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
@@ -18,7 +18,9 @@ from discopop_library.discopop_optimizer.Microbench.utils import (
 )
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
-from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
+from discopop_library.discopop_optimizer.classes.edges.OptionEdge import (  # noqa: F401  used by the commented-out code
+    OptionEdge,
+)
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.system.devices.CPU import CPU

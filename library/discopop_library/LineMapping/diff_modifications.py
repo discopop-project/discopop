@@ -7,7 +7,7 @@
 # directory for details.
 import os.path
 import subprocess
-from typing import List, Tuple, Dict, Optional, Set
+from typing import List, Dict, Set
 
 from discopop_library.LineMapping.load import load_line_mapping
 from discopop_library.LineMapping.save import save_line_mapping

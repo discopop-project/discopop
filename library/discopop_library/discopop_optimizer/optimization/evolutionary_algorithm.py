@@ -11,12 +11,9 @@ import json
 from multiprocessing import Pool
 import os
 from typing import Dict, List, Optional, Set, Tuple, cast
-import warnings
 
-from sympy import Expr  # type: ignore
 import tqdm  # type: ignore
 from discopop_explorer.aliases.NodeID import NodeID
-from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
@@ -27,9 +24,7 @@ import random
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
 from discopop_library.discopop_optimizer.optimization.validation import check_configuration_validity
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
-    get_in_options,
     get_out_mutex_edges,
-    get_out_options,
     get_requirements,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at

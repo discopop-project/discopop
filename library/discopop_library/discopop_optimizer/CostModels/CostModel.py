@@ -13,7 +13,7 @@ from typing import Any, List, Dict, TextIO, Tuple, Optional
 import numpy as np
 import sympy  # type: ignore
 from matplotlib import pyplot as plt  # type: ignore
-from sympy import Function, Symbol, init_printing, Expr, N, nsimplify, Integer  # type: ignore
+from sympy import Symbol, init_printing, Expr, Integer  # type: ignore
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

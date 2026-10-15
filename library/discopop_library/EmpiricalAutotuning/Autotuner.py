@@ -6,21 +6,18 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import itertools
 import json
 import logging
 from logging import Logger
 import os
 import time
-from typing import List, Set, Tuple, cast
+from typing import List, Tuple, cast
 
 import jsonpickle  # type: ignore
-from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
-from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
-from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor, NodeShape, StatisticsGraph
+from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeShape, StatisticsGraph
 from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.optimization.check_single_combination import check_single_combination
 from discopop_library.EmpiricalAutotuning.optimization.coordinate_descent_combination import (
@@ -37,7 +34,7 @@ from discopop_library.EmpiricalAutotuning.optimization.linear_hotspot_combinatio
 
 from discopop_library.EmpiricalAutotuning.optimization.measure_only import execute_measure_only
 
-from discopop_library.EmpiricalAutotuning.optimization.parallel_region_combination_with_refinement import (
+from discopop_library.EmpiricalAutotuning.optimization.parallel_region_combination_with_refinement import (  # noqa: F401  used by the commented-out code
     execute_parallel_region_combination_with_refinement,
 )
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
@@ -49,14 +46,11 @@ from discopop_library.EmpiricalAutotuning.output.progress import (
     set_active_reporter,
 )
 from discopop_library.PatchApplicator.PatchApplicationResult import clear_application_result
-from discopop_library.EmpiricalAutotuning.priorities import get_prioritized_configurations
-from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids, restrict_patterns_to_ids
+from discopop_library.EmpiricalAutotuning.utils import restrict_patterns_to_ids
 from discopop_library.FolderStructure.setup import setup_auto_tuner
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
-from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
-from discopop_library.HostpotLoader.utilities import get_patterns_by_hotspot_type
 from discopop_library.result_classes.DetectionResult import DetectionResult
 
 logger = logging.getLogger("Autotuner")

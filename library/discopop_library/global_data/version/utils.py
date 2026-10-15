@@ -6,8 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import os.path
-from pathlib import Path
+import os.path  # noqa: F401  used by the commented-out code
+from pathlib import Path  # noqa: F401  used by the commented-out code
 
 
 def get_version() -> str:

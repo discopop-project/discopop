@@ -6,28 +6,17 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import itertools
 import json
 import logging
 import os
 import subprocess
-import time
-from typing import Any, Dict, List, Set, Tuple, cast
+from typing import Any, Dict
 
 import jsonpickle  # type: ignore
-from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
-from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 
 from discopop_explorer.json_serializer import PatternBaseSerializer
-from discopop_library.FolderStructure.setup import setup_auto_tuner, setup_parallel_region_merger
-from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
-from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType
-from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
-from discopop_library.HostpotLoader.utilities import get_patterns_by_hotspot_type
+from discopop_library.FolderStructure.setup import setup_parallel_region_merger
 from discopop_library.ParallelRegionMerger.ArgumentClasses import ParallelRegionMergerArguments
-from discopop_library.ParallelRegionMerger.Types import SUGGESTION_ID
-from discopop_library.discopop_optimizer import suggestions
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.ParallelRegionMerger.inflated_parallel_region_pattern import (
     run_detection as detect_inflated_parallel_regions,

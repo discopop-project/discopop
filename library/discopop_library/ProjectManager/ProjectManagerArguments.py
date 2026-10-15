@@ -5,13 +5,11 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import json
 import os
 from pathlib import Path
 import sys
 from dataclasses import dataclass
-from typing import List, Optional
-import warnings
+from typing import Optional
 
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
 from discopop_library.ProjectManager.configurations.repetitions import DEFAULT_MEASURED_REPETITIONS

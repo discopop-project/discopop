@@ -10,11 +10,10 @@ import json
 import os
 from pathlib import Path
 from posixpath import abspath, dirname
-from typing import Dict, cast
+from typing import Dict
 from discopop_explorer.utilities.PEGraphConstruction.classes.DependenceItem import DependenceItem
 from discopop_explorer.utilities.PEGraphConstruction.parser import __parse_dep_file
 from discopop_library.DependencyComparator.DependencyComparatorArguments import DependencyComparatorArguments
-from discopop_library.global_data.version.utils import get_version
 
 
 def run(arguments: DependencyComparatorArguments) -> int:

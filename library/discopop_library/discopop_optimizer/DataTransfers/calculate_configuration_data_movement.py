@@ -7,9 +7,12 @@
 # directory for details.
 
 from typing import cast
-from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
-from discopop_library.discopop_optimizer.CostModels.utilities import get_performance_models_for_functions
-from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import calculate_data_transfers
+from discopop_library.discopop_optimizer.CostModels.utilities import (  # noqa: F401  used by the commented-out code
+    get_performance_models_for_functions,
+)
+from discopop_library.discopop_optimizer.DataTransfers.DataTransfers import (  # noqa: F401  used by the commented-out code
+    calculate_data_transfers,
+)
 from discopop_library.discopop_optimizer.DataTransfers.NewDataTransfers import new_calculate_data_transfers
 from discopop_library.discopop_optimizer.UpdateOptimization.main import optimize_updates
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment

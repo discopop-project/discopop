@@ -17,7 +17,6 @@ from discopop_library.discopop_optimizer.classes.nodes.ContextSave import Contex
 from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshot import ContextSnapshot
 from discopop_library.discopop_optimizer.classes.nodes.ContextSnapshotPop import ContextSnapshotPop
 from discopop_library.discopop_optimizer.classes.nodes.SynchronizationTrigger import SynchronizationTrigger
-from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     add_successor_edge,

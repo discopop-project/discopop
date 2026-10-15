@@ -7,10 +7,8 @@
 # directory for details.
 import json
 import os
-import textwrap
 from typing import Any, Dict, List
 
-from tabulate import tabulate  # type: ignore
 
 from discopop_library.ProjectManager.ProjectManagerArguments import ProjectManagerArguments
 from discopop_library.ProjectManager.reports import entries

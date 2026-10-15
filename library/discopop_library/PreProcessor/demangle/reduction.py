@@ -8,7 +8,6 @@
 
 import logging
 import os
-import re
 from discopop_library.PreProcessor.PreProcessorArguments import PreProcessorArguments
 from discopop_library.PreProcessor.demangle.utilities import demangle_tag
 

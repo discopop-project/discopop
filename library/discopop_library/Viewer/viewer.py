@@ -6,13 +6,9 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import os
-from pathlib import Path
 
 from discopop_library.Viewer.ViewerArguments import ViewerArguments
 from discopop_library.Viewer.suggestions_view import print_suggestions_overview
-from discopop_library.global_data.version.utils import get_version
-import shutil
 import logging
 
 logger = logging.getLogger("Viewer")

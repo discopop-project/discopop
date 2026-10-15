@@ -6,60 +6,43 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import cProfile
-import json
 import logging
 import os.path
 import pstats
-import shutil
-from typing import Dict, List, Tuple, cast
 import warnings
 
 import jsonpickle  # type: ignore
-from sympy import Float, Symbol  # type: ignore
 
-from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
 from discopop_library.FolderStructure.setup import setup_optimizer
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
-from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
-from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.PathManagement.PathManagement import load_file_mapping
-from discopop_library.discopop_optimizer.CostModels.DataTransfer.DataTransferCosts import add_data_transfer_costs
-from discopop_library.discopop_optimizer.CostModels.utilities import get_performance_models_for_functions
 from discopop_library.discopop_optimizer.DataTransfers.NewDataTransfers import new_calculate_data_transfers
 from discopop_library.discopop_optimizer.DataTransfers.calculate_configuration_data_movement import (
     calculate_data_movement,
 )
-from discopop_library.discopop_optimizer.DataTransfers.prepare_force_branch_end_data_movement import (
-    prepare_force_branch_end_data_movement,
-)
 from discopop_library.discopop_optimizer.DataTransfers.prepare_forced_data_movement import prepare_forced_data_movement
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
-from discopop_library.discopop_optimizer.PETParser.PETParser import PETParser
 from discopop_library.discopop_optimizer.UpdateOptimization.main import optimize_updates
 from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
     create_optimization_graph,
     export_detection_result_to_json,
     export_patterns_to_json,
     export_to_json,
-    get_sequential_cost_model,
     initialize_free_symbol_ranges_and_distributions,
 )
-from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
-from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.system.system_utils import generate_default_system_configuration
-from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import query_user_for_symbol_values
 from discopop_library.discopop_optimizer.interactive.interactive_optimizer import run_interactive_optimizer
-from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
 from discopop_library.discopop_optimizer.optimization.evaluate_all_decision_combinations import (
     evaluate_all_decision_combinations,
 )
 from discopop_library.discopop_optimizer.optimization.evolutionary_algorithm import perform_evolutionary_search
 from discopop_library.discopop_optimizer.optimization.greedy import greedy_search
 from discopop_library.discopop_optimizer.suggestions.optimizers.main import optimize_suggestions
-from discopop_library.discopop_optimizer.utilities.insert_device_switch_nodes import insert_device_switch_nodes
+from discopop_library.discopop_optimizer.utilities.insert_device_switch_nodes import (  # noqa: F401  used by the commented-out code
+    insert_device_switch_nodes,
+)
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
-from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
 from discopop_library.global_data.version.utils import get_version
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from discopop_library.discopop_optimizer.classes.system.System import System

@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict
 import requests  # type: ignore
 from importlib.metadata import version  # type: ignore
 from packaging.version import Version  # type: ignore

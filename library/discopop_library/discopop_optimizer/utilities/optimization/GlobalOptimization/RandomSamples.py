@@ -9,7 +9,6 @@ import copy
 from typing import List, Dict, Tuple
 
 import networkx as nx  # type: ignore
-from spb import plot3d, MB, plot  # type: ignore
 from sympy import Symbol  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel

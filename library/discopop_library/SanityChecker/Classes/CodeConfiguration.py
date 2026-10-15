@@ -11,7 +11,6 @@ import logging
 import os
 import shutil
 import subprocess
-import time
 from typing import Callable, List, Optional
 from discopop_library.SanityChecker.ArgumentClasses import SanityCheckerArguments
 from discopop_library.SanityChecker.Classes.ExecutionResult import ExecutionResult

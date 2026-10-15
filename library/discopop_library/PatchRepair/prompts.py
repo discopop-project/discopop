@@ -37,7 +37,6 @@ from dataclasses import dataclass, field
 import json
 import logging
 import os
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from discopop_library.PatchRepair.diagnostics import Diagnostic, truncate_diagnostics

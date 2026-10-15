@@ -13,8 +13,6 @@ import tkinter as tk
 from tkinter import Button
 from typing import Dict, List, Optional, Tuple, cast
 
-import jsonpickle  # type: ignore
-import jsons  # type: ignore
 from sympy import Float, Symbol  # type: ignore
 from discopop_explorer.json_serializer import PatternBaseSerializer  # type: ignore
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
@@ -36,7 +34,6 @@ from discopop_library.discopop_optimizer.gui.presentation.OptionTable import (
 from discopop_library.discopop_optimizer.gui.queries.ValueTableQuery import query_user_for_symbol_values
 from discopop_library.discopop_optimizer.gui.widgets.ScrollableFrame import ScrollableFrameWidget
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
-from discopop_library.result_classes.DetectionResult import DetectionResult
 
 
 def show_function_models(

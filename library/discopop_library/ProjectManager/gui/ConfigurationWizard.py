@@ -19,13 +19,11 @@ from discopop_library.ProjectManager.configurations.compile_script import (
     get_per_config_validation_compile_script_path,
 )
 from discopop_library.ProjectManager.utilities.initializeFiles import (
-    initial_settings_content,
-    initial_script_content,
     initialize_configuration_files,
 )
 from discopop_library.ProjectManager.utilities.scriptFiles import write_script_file
 from discopop_library.ProjectManager.gui import widgets
-from discopop_library.ProjectManager.gui.widgets import create_styled_output_console, heading_label
+from discopop_library.ProjectManager.gui.widgets import heading_label
 from discopop_library.ProjectManager.gui.wizard_steps import WizardStepsMixin
 from discopop_library.ProjectManager.gui.mixins.helpers import ask_yes_no, show_error
 

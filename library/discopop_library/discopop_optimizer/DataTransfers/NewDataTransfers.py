@@ -26,7 +26,6 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_predecessors,
     get_requirements,
     get_successors,
-    show_decision_graph,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 from discopop_library.discopop_optimizer.classes.nodes.ContextRestore import ContextRestore

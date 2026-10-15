@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, List, Optional, Set, cast
+from typing import Dict, List, Set, cast
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.variable import Variable

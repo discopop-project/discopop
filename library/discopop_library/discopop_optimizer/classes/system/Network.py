@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from typing import Dict, Tuple, List, Optional, cast
-import warnings
 
 from sympy import Expr, Symbol, Integer  # type: ignore
 

@@ -8,13 +8,12 @@
 import json
 from multiprocessing import Pool
 import os
-from typing import Dict, List, Optional, Set, Tuple, cast
+from typing import Dict, List, Optional, Tuple, cast
 
 from sympy import Expr, re  # type: ignore
 import tqdm  # type: ignore
 from discopop_explorer.aliases.NodeID import NodeID
 
-from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject

@@ -6,15 +6,14 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
-import itertools
-from multiprocessing import Pool
-from typing import Any, ClassVar, Dict, List, Optional, cast, Set, Tuple
+from multiprocessing import Pool  # noqa: F401  used by the commented-out code
+from typing import Any, Dict, List, cast, Set, Tuple
 import warnings
 
 import matplotlib  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
-import tqdm  # type: ignore
+import tqdm  # type: ignore  # noqa: F401  used by the commented-out code
 
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID

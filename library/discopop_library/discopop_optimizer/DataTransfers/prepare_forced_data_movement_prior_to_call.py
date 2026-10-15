@@ -12,7 +12,6 @@ from sympy import Integer  # type: ignore
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 
 import networkx as nx  # type: ignore
-from discopop_library.discopop_optimizer.classes.nodes import Workload
 from discopop_library.discopop_optimizer.classes.nodes.SynchronizationTrigger import SynchronizationTrigger
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess, WriteDataAccess
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (

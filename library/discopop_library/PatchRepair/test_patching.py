@@ -13,7 +13,6 @@ built around, so these tests are mostly about what happens when it writes them b
 """
 
 from pathlib import Path
-from typing import Any, Dict
 
 import pytest
 

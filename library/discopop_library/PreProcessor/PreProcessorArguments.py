@@ -5,10 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import json
-import sys
 from dataclasses import dataclass
-from typing import List
 
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
 

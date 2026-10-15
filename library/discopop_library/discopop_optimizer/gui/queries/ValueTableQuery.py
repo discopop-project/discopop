@@ -7,7 +7,7 @@
 # directory for details.
 import tkinter as tk
 from tkinter import *
-from typing import Any, List, Tuple, Optional, Dict, cast, Union
+from typing import Any, List, Tuple, Optional, Dict, cast
 
 from sympy import Symbol, Expr  # type: ignore
 

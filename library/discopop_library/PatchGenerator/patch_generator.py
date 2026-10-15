@@ -5,18 +5,12 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import json
 import logging
 import os.path
-import shutil
-from typing import Dict
 
-from discopop_library.CodeGenerator.CodeGenerator import from_json_strings
 from discopop_library.FolderStructure.setup import setup_patch_generator
 from discopop_library.JSONHandler.JSONHandler import read_patterns_from_json_to_json
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
-from discopop_library.PatchGenerator.from_optimizer_output import from_optimizer_output
-from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
 from discopop_library.PatchGenerator.from_json_patterns import from_json_patterns
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 

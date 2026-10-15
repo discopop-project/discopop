@@ -8,7 +8,7 @@
 
 import logging
 import os
-from typing import Dict, List, Set
+from typing import Dict, Set
 from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.StatusReporting.console import banner
 from discopop_library.Viewer.ViewerArguments import ViewerArguments

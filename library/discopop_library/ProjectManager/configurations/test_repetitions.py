@@ -8,8 +8,6 @@
 
 """Tests for picking the run that counts among repeated measurements."""
 
-from typing import List
-
 import pytest
 
 from discopop_library.ProjectManager.configurations.repetitions import (

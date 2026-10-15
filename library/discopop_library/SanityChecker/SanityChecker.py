@@ -12,18 +12,13 @@ import os
 from typing import Dict, List, Optional, Tuple, Union, cast
 
 import jsonpickle  # type: ignore
-from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
-from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_library.FolderStructure.setup import setup_sanity_checker
 from discopop_library.HostpotLoader.utilities import get_patterns_by_hotspot_type
 from discopop_library.SanityChecker.ArgumentClasses import SanityCheckerArguments
 from discopop_library.SanityChecker.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.SanityChecker.Classes.ExecutionResult import ExecutionResult
 from discopop_library.SanityChecker.Types import PATTERN_TAG, RETURN_CODE, SUGGESTION_ID, TSAN_CODE, VALIDATION_CODE
-from discopop_library.SanityChecker.utils import get_applicable_suggestion_ids
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
-from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
 from discopop_library.result_classes.DetectionResult import DetectionResult
 

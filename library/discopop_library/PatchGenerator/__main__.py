@@ -7,7 +7,6 @@
 # directory for details.
 import os.path
 from argparse import ArgumentParser
-from pathlib import Path
 from discopop_library.GlobalLogger.setup import setup_logger
 
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments

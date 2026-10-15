@@ -15,7 +15,6 @@ from discopop_library.EmpiricalAutotuning.output.progress import DebugStatEntry
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
-from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_debug_stats
 from discopop_library.HostpotLoader.utilities import get_patterns_by_hotspot_type
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
