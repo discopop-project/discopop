@@ -114,7 +114,7 @@ class EntryPoint(object):
             self.entry_point_positioning,
         )
 
-    def join(self, other: EntryPoint) -> None:
+    def join(self, other: "EntryPoint") -> None:
         self.var_names.update(other.var_names)
         self.memory_regions.update(other.memory_regions)
         self.dependencies.update(other.dependencies)
