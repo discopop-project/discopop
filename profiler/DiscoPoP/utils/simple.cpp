@@ -118,7 +118,7 @@ LID DiscoPoP::getLoopExitLID(BasicBlock *BB, Loop *L) {
   if (L != nullptr && fileID > 0) {
     DebugLoc end_loc = L->getLocRange().getEnd();
     if (end_loc && end_loc.getLine() > 0) {
-      return ((LID)fileID << LIDSIZE) + end_loc.getLine();
+      return dputil::encodeLID(fileID, end_loc.getLine());
     }
   }
   return 0;
@@ -174,7 +174,7 @@ bool DiscoPoP::isRecursive(Function &F, CallGraph &CG) {
 
 void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI) {
   if (root->type != nodeTypes::cu) {
-    int start = -1, end = -1;
+    LID start = -1, end = -1;
 
     if (root->type == nodeTypes::loop) {
       for (auto i : root->childrenNodes) {
@@ -182,7 +182,7 @@ void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI) {
           Loop *loop = LI.getLoopFor(i->BB);
           DebugLoc dl = loop->getStartLoc();
           LID lid = 0;
-          lid = (fileID << LIDSIZE) + dl->getLine();
+          lid = dputil::encodeLID(fileID, dl->getLine());
           loopStartLines[root->ID] = dputil::decodeLID(lid);
           loopToPETNodeID[loop] = root->ID;
           break;
@@ -200,7 +200,7 @@ void DiscoPoP::fillStartEndLineNumbers(Node *root, LoopInfo &LI) {
   }
 }
 
-void DiscoPoP::findStartEndLineNumbers(Node *root, int &start, int &end) {
+void DiscoPoP::findStartEndLineNumbers(Node *root, LID &start, LID &end) {
   if (root->type == nodeTypes::cu) {
     if (start == -1 || start > root->startLine) {
       start = root->startLine;
@@ -217,7 +217,7 @@ void DiscoPoP::findStartEndLineNumbers(Node *root, int &start, int &end) {
 }
 
 void DiscoPoP::getFunctionReturnLines(Region *TopRegion, Node *root) {
-  int lid = 0;
+  LID lid = 0;
   for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<ReturnInst>(instruction)) {

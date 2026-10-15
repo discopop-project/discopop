@@ -114,7 +114,7 @@ void DiscoPoP::CFA(Function &F, LoopInfo &LI) {
         identity.pet_node_id = pet_node != loopToPETNodeID.end() ? pet_node->second : "-";
         DebugLoc start_loc = L->getStartLoc();
         identity.start_location =
-            start_loc ? dputil::decodeLID(((LID)fileID << LIDSIZE) + start_loc.getLine()) : to_string(fileID) + ":0";
+            start_loc ? dputil::decodeLID(dputil::encodeLID(fileID, start_loc.getLine())) : to_string(fileID) + ":0";
         loop_id_to_identity[tmp_loop_id] = identity;
         // Instrument loop header block.
         instrumentLoopEntry(tmpBB, tmp_loop_id);

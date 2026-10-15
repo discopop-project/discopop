@@ -343,7 +343,7 @@ struct container_hash {
 
   void fillStartEndLineNumbers(Node *root, llvm::LoopInfo &LI);
 
-  void findStartEndLineNumbers(Node *root, int &start, int &end);
+  void findStartEndLineNumbers(Node *root, LID &start, LID &end);
 
   // Output function
   void initializeCUIDCounter();
@@ -355,7 +355,7 @@ struct container_hash {
 
   void secureStream();
 
-  std::string getLineNumbersString(std::set<int> LineNumbers);
+  std::string getLineNumbersString(std::set<LID> LineNumbers);
 
   std::string getChildrenNodesString(Node *node);
 

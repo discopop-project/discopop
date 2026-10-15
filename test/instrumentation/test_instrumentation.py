@@ -466,3 +466,26 @@ class TestAbnormalTermination(InstrumentationTestCase):
         self.assertCallbackCount("__dp_func_exit", 1)
         self.assertInstrumentsLine("__dp_func_exit", "return")
         self.assertNotEqual(self.abort_call().block, self.program.calls("__dp_func_exit")[0].block)
+
+
+class TestCodeBeyondTheLineOf16Bits(InstrumentationTestCase):
+    """Lines past 2^14 used to spill into the file id of the location they were packed into."""
+
+    SOURCE = (
+        "// padding\n" * 20000
+        + """
+        int main() {                      // @main
+          int b[10];
+          for (int i = 0; i < 10; ++i) {  // @loop
+            b[i] = i;                     // @array_write
+          }
+          return b[3];                    // @array_read
+        }
+        """
+    )
+
+    def test_the_line_is_reported_unchanged(self) -> None:
+        self.assertGreater(self.program.line_of_marker("array_write"), 20000)
+        self.assertInstrumentsLine("__dp_write", "array_write")
+        self.assertInstrumentsLine("__dp_read", "array_read")
+        self.assertInstrumentsLine("__dp_func_entry", "main")

@@ -57,7 +57,7 @@ void DiscoPoP::secureStream() {
   outCUs->open(tmp2.data(), std::ios_base::app);
 }
 
-string DiscoPoP::getLineNumbersString(set<int> LineNumbers) {
+string DiscoPoP::getLineNumbersString(set<LID> LineNumbers) {
   string line = "";
   for (auto li : LineNumbers) {
     std::string temp = ',' + dputil::decodeLID(li);

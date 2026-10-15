@@ -138,6 +138,25 @@ int32_t getFileID(string /*fileMapping*/, string fullPathName) {
   */
 }
 
+int64_t encodeLID(int32_t fileID, int64_t line) {
+  static std::set<int32_t> warnedFileIDs;
+  if (fileID < 0 || fileID > MAXFILEID) {
+    if (warnedFileIDs.insert(fileID).second) {
+      errs() << "DiscoPoP: warning: the file id " << fileID << " exceeds the maximum of " << MAXFILEID
+             << " files, its instructions are not instrumented\n";
+    }
+    return 0;
+  }
+  if (line < 0 || line >= MAXLNO) {
+    if (warnedFileIDs.insert(fileID).second) {
+      errs() << "DiscoPoP: warning: line " << line << " of the file with the id " << fileID << " exceeds the maximum of "
+             << MAXLNO - 1 << " lines, its instructions are not instrumented (see FileMapping.txt for the file)\n";
+    }
+    return 0;
+  }
+  return (static_cast<int64_t>(fileID) << LIDSIZE) + line;
+}
+
 // Encode the fileID and line number of BI as LID.
 // Encode metadata regarding the instruction in the first LIDMETADATASIZE bits
 // This is needed to support multiple files in a project.
@@ -153,7 +172,6 @@ int64_t getLID(Instruction *BI, int32_t &fileID) {
     FileMappingPath += "/FileMapping.txt";
   }
 
-  int64_t lid = 0;
   int32_t lno = 0;
 
   const DebugLoc &location = BI->getDebugLoc();
@@ -199,9 +217,7 @@ int64_t getLID(Instruction *BI, int32_t &fileID) {
       return 0;
     }
   }
-  lid = (fileID << LIDSIZE) + lno;
-
-  return lid;
+  return encodeLID(fileID, lno);
 }
 
 // determine the file index according to the given FileMapping

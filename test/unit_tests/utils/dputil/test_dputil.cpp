@@ -64,7 +64,21 @@ TEST_F(DPUtilsTest, testALocationDecodesToFileAndLine) { EXPECT_EQ(dputil::decod
 TEST_F(DPUtilsTest, testTheFirstLineOfTheFirstFileDecodes) { EXPECT_EQ(dputil::decodeLID(make_lid(0, 1)), "0:1"); }
 
 TEST_F(DPUtilsTest, testTheLastLineAFileCanHoldDecodes) {
-  EXPECT_EQ(dputil::decodeLID(make_lid(7, MAXLNO - 1)), "7:16383");
+  EXPECT_EQ(dputil::decodeLID(make_lid(7, MAXLNO - 1)), "7:" + std::to_string(MAXLNO - 1));
+}
+
+TEST_F(DPUtilsTest, testTheLastFileAProjectCanHoldDecodes) {
+  // the file id occupies the bits above the line, up to bit 31: it must not be read as a sign
+  EXPECT_EQ(dputil::decodeLID(make_lid(MAXFILEID, MAXLNO - 1)),
+            std::to_string(MAXFILEID) + ":" + std::to_string(MAXLNO - 1));
+  EXPECT_EQ(dputil::decodeLID(make_lid(MAXFILEID, 1)), std::to_string(MAXFILEID) + ":1");
+}
+
+// the lines of a file must not leak into its file id, and the other way round: this was the case for
+// the lines above 2^LIDSIZE - 1 of a layout that gave the line fewer bits
+TEST_F(DPUtilsTest, testTheLineOfALocationDoesNotChangeItsFile) {
+  EXPECT_EQ(dputil::decodeLID(make_lid(5, 16384)), "5:16384");
+  EXPECT_EQ(dputil::decodeLID(make_lid(5, 100000)), "5:100000");
 }
 
 // the call path state the runtime packs into the upper half is not part of the location

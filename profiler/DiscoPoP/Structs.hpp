@@ -14,6 +14,7 @@
 
 #include "Enums.hpp"
 #include "Globals.hpp"
+#include "lid_constants.hpp"
 
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
@@ -49,14 +50,14 @@ typedef struct Variable_struct {
 typedef struct Node_struct {
   std::string ID;
   nodeTypes type;
-  int startLine;
-  int endLine;
+  LID startLine;
+  LID endLine;
   llvm::BasicBlock *BB;
 
   // Only for func type
   std::string name;
   std::vector<Variable> argumentsList;
-  std::set<int> returnLines;
+  std::set<LID> returnLines;
 
   std::vector<Node_struct *> childrenNodes;
   Node_struct *parentNode;
@@ -83,10 +84,10 @@ typedef struct CU_struct : Node_struct {
   std::vector<std::string> successorCUs; // keeps IDs of control dependent CUs
   std::string basicBlockName;
 
-  std::set<int> instructionsLineNumbers;
-  std::set<int> readPhaseLineNumbers;
-  std::set<int> writePhaseLineNumbers;
-  std::set<int> returnInstructions;
+  std::set<LID> instructionsLineNumbers;
+  std::set<LID> readPhaseLineNumbers;
+  std::set<LID> writePhaseLineNumbers;
+  std::set<LID> returnInstructions;
 
   std::set<Variable> localVariableNames;
   std::set<Variable> globalVariableNames;
@@ -94,9 +95,9 @@ typedef struct CU_struct : Node_struct {
   bool performsFileIO;
 
   // Map to record function call line numbers
-  std::map<int, std::vector<Node *>> callLineTofunctionMap;
+  std::map<LID, std::vector<Node *>> callLineTofunctionMap;
   // Map to record function call instruction ids
-  std::map<int, std::vector<llvm::Instruction*>> callLineToCallInstructionMap;
+  std::map<LID, std::vector<llvm::Instruction*>> callLineToCallInstructionMap;
 
   CU_struct() {
     type = nodeTypes::cu;

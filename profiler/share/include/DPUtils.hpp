@@ -122,6 +122,10 @@ inline bool fexists(const std::string &filename) {
 
 int32_t getFileID(std::string fileMapping, std::string fullPathName);
 
+// Encode a file id and a line number as LID, see lid_constants.hpp. Returns 0 ("no location") and warns
+// once per file id if one of them does not fit into the LID.
+int64_t encodeLID(int32_t fileID, int64_t line);
+
 int64_t getLID(llvm::Instruction *BI, int32_t &fileID);
 
 void determineFileID(llvm::Function &F, int32_t &fileID);
