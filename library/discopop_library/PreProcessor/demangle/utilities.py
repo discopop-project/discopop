@@ -12,7 +12,6 @@ import subprocess
 
 
 def demangle_tag(tag: str, parent_logger: logging.Logger, cxxfilt_bin: str) -> str:
-    logger = parent_logger.getChild("demangle_tag")
 
     # check if the tag contains any alphabetic character to suppress unnecessary calls to cxxfilt
     if re.search("[a-zA-Z]", tag) is None:

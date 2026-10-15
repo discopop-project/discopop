@@ -41,7 +41,7 @@ def trivial_control_sequence_simplification(ctg: ContextTaskGraph) -> bool:
             if node not in ctg.graph:
                 continue
             # check if node is a valid sequence entry
-            predecessors = ctg.get_predecessors(node)
+            predecessors = ctg.get_predecessors(node)  # noqa: F841  used by the commented-out code
             successors = ctg.get_successors(node)
             if (
                 len(successors) != 1

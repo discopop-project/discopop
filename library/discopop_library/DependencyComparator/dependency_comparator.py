@@ -151,7 +151,7 @@ def get_instructionID_to_lineID_mapping(project_folder: Path) -> Dict[str, str]:
                 line_id_split = line_id.split(":")
                 file_id = line_id_split[0]
                 line_num = line_id_split[1]
-                column_num = line_id_split[2]
+                _column_num = line_id_split[2]
                 mappings_dict[instruction_id] = str(file_id) + ":" + str(line_num)
     return mappings_dict
 

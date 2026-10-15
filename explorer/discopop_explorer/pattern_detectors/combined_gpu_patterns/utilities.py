@@ -35,7 +35,7 @@ def get_function_body_cus_without_called_functions(pet: PEGraphX, function_node:
     while queue:
         current = queue.popleft()
         visited.add(current)
-        current_node = pet.node_at(current)
+        _current_node = pet.node_at(current)
 
         # add children if they do not result from a call
         children = [t for s, t, d in out_edges(pet, current, EdgeType.CHILD)]

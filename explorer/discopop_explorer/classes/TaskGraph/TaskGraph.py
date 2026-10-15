@@ -897,7 +897,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         self.root = root
 
         pet_root = pet.main
-        pet_root_node = self.__get_or_insert_TGFunctionNode(
+        self.__get_or_insert_TGFunctionNode(
             pet_root.id, self.__get_next_level(), self.__get_next_position(self.__get_current_level())
         )
 
@@ -1340,7 +1340,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                             if sin.pet_node_id is not None
                             else ("CU ID " + str(sin.pet_node_id))
                         )
-                        reason_position_string = ""
 
                         logger.warning(
                             "Found and fixing invalid loop structure in loop at "
@@ -3196,14 +3195,11 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     source_location = line_split[0]
                     del line_split[0]
 
-                    dep_is_dynamic_based_on_source = False
-
                     # unpack source
                     if "@" in source_location:
                         source_split = source_location.split("@")
                         source_location = source_split[0]
                         source_state_id = source_split[1]
-                        dep_is_dynamic_based_on_source = True
                     else:
                         source_state_id = "NO_STATE"
 
@@ -3231,12 +3227,10 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                         var_info = dep_contents_split[1]
 
                         # unpack sink_location
-                        dep_is_dynamic_based_on_sink = False
                         if "@" in sink_location:
                             sink_location_split = sink_location.split("@")
                             sink_location = sink_location_split[0]
                             sink_state_id = sink_location_split[1]
-                            dep_is_dynamic_based_on_sink = True
                         else:
                             sink_state_id = "NO_STATE"
 
@@ -4387,7 +4381,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
                     line_id_split = line_id.split(":")
                     file_id = line_id_split[0]
                     line_num = line_id_split[1]
-                    column_num = line_id_split[2]
+                    _column_num = line_id_split[2]
                     mappings_dict[instruction_id] = str(file_id) + ":" + str(line_num)
 
         # read stateID to callpath mapping
@@ -4935,7 +4929,7 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
             for node in ctx.get_contained_nodes():
                 if node.pet_node_id is None:
                     continue
-                pet_node = self.pet.node_at(node.pet_node_id)
+                _pet_node = self.pet.node_at(node.pet_node_id)
                 in_data_edges = in_edges(self.pet, node.pet_node_id, EdgeType.DATA)
                 incoming_init_deps = [e[2] for e in in_data_edges if e[2].dtype == DepType.INIT]
                 for dep in incoming_init_deps:
@@ -5418,7 +5412,6 @@ class TaskGraph(Plottable, object):  # type: ignore[misc]
         return copied_nodes, copied_iteration_nodes, copied_nodes[iteration_entry], copied_nodes[iteration_exit]
 
     def get_loop_header_context(self, loop: LoopParentContext) -> Optional[WorkContext]:
-        candidates: List[WorkContext] = []
         for ctx_1 in loop.contained_contexts:
             if not type(ctx_1) == WorkContext:
                 continue

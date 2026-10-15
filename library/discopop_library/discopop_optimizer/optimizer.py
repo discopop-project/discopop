@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import cProfile
-import logging
 import os.path
 import pstats
 import warnings
@@ -68,7 +67,6 @@ def run(arguments: OptimizerArguments) -> None:
 
 
 def run_passive_optimizer(arguments: OptimizerArguments) -> None:
-    logger = logging.getLogger("Optimizer")
 
     # check prerequisites and setup folder structure
     if arguments.verbose:
@@ -125,7 +123,7 @@ def run_passive_optimizer(arguments: OptimizerArguments) -> None:
 
     if arguments.verbose:
         print("Loading patterns...", end="")
-    patterns_by_type = read_patterns_from_json_to_json(pattern_file_path, [])
+    read_patterns_from_json_to_json(pattern_file_path, [])
     if arguments.verbose:
         print("Done.")
 

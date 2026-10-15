@@ -142,7 +142,7 @@ def _run_once(
 
         stdout, stderr = p.communicate()
 
-    except subprocess.TimeoutExpired as tex:
+    except subprocess.TimeoutExpired:
         timeout_expired = True
         os.killpg(os.getpgid(p.pid), signal.SIGTERM)
         print("KILLED PROCESS: ", p.pid)

@@ -249,8 +249,8 @@ class GPURegions:
             self.cu_ids_by_region[tuple(region)] = [n.id for n in region_cus]
 
             # determine start and end line of region
-            region_start_line = min([cu.start_line for cu in region_cus])
-            region_end_line = max([cu.end_line for cu in region_cus])
+            _region_start_line = min([cu.start_line for cu in region_cus])
+            _region_end_line = max([cu.end_line for cu in region_cus])
 
             # determine variables which are written outside the region and read inside
             consumed_vars: List[str] = []
@@ -260,9 +260,6 @@ class GPURegions:
                 # var is consumed, if incoming RAW dep exists
                 for sink_cu_id, source_cu_id, dep in in_dep_edges:
                     # unpack dep for sake of clarity
-                    sink_line = dep.sink_line
-                    source_line = dep.source_line
-                    var_name = dep.var_name
 
                     if self.pet.node_at(source_cu_id) not in region_cus:
                         if dep.dtype == DepType.RAW:
@@ -276,9 +273,6 @@ class GPURegions:
                 # var is produced, if outgoing RAW or WAW dep exists
                 for sink_cu_id, source_cu_id, dep in out_dep_edges:
                     # unpack dep for sake of clarity
-                    sink_line = dep.sink_line
-                    source_line = dep.source_line
-                    var_name = dep.var_name
                     if self.pet.node_at(sink_cu_id) not in region_cus:
                         if dep.dtype in [DepType.RAW, DepType.WAW]:
                             if dep.var_name not in produced_vars and dep.var_name is not None:

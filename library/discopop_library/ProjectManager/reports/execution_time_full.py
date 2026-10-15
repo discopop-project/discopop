@@ -34,7 +34,6 @@ def generate_execution_time_report_full(arguments: ProjectManagerArguments, time
 def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[str, Any], timestamp: str) -> None:
     fig, ax = plt.subplots(layout="constrained")  # type: ignore
     configuration_names: List[str] = []
-    tmp_values: Dict[str, Dict[int, Dict[str, Dict[str, float]]]] = dict()
     values: Dict[str, Tuple[float, ...]] = dict()
     list_values: Dict[str, Dict[int, Dict[str, List[float]]]] = dict()
     # collect configuration names to allow filling missing information with default value 0.0
@@ -46,9 +45,6 @@ def __plot_output(arguments: ProjectManagerArguments, execution_results: Dict[st
             if script != "execute.sh":
                 continue
             for setting in execution_results[configuration][script]:
-                applied_suggestions_string = ""
-                return_codes_string = ""
-                times_string = ""
                 clean_setting_str = setting.replace("_settings.json", "")
                 if clean_setting_str not in list_values:
                     list_values[clean_setting_str] = dict()

@@ -234,12 +234,12 @@ def calculate_per_iteration_workload_of_loop(pet: PEGraphX, node: Node) -> int:
             else:
                 try:
                     res += calculate_workload(pet, child)
-                except RecursionError as rerr:
+                except RecursionError:
                     warnings.warn("Cost calculation not possible for node: " + str(child.id) + "!")
         else:
             try:
                 res += calculate_workload(pet, child)
-            except RecursionError as rerr:
+            except RecursionError:
                 warnings.warn("Cost calculation not possible for node: " + str(child.id) + "!")
     return res
 
@@ -743,7 +743,7 @@ def classify_loop_variables(
         )
 
     # vars = list(pet.get_variables(sub))
-    metadata_safe_index_accesses: List[Variable] = []
+    metadata_safe_index_accesses: List[Variable] = []  # noqa: F841  used by the commented-out code
     for var in vars:
         if loop.start_position() == "2:517" and var.name == "nidx":  # (var.name == "d" or var.name == "d2"):
             pass

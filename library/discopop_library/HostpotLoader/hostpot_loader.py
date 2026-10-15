@@ -8,7 +8,6 @@
 
 
 import json
-import logging
 import os
 from typing import Dict, List, Tuple
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
@@ -25,8 +24,6 @@ def run(
     arguments: HotspotLoaderArguments,
 ) -> Dict[HotspotType, List[Tuple[FILEID, STARTLINE, HotspotNodeType, NAME, AVERAGE_RUNTIME]]]:
     """Loads Hotspots for processing in other tools of the framework"""
-
-    logger = logging.getLogger("HotspotLoader")
 
     dot_discopop_path = arguments.dot_discopop_path if len(arguments.dot_discopop_path) > 0 else os.getcwd()
 

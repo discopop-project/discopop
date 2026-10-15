@@ -199,7 +199,6 @@ def __parse_node(
     node_data = data_at(experiment.optimization_graph, node_id)
 
     min_wl, max_wl = 0, 0
-    last_visited_node_id = node_id
 
     # modify the workload_stack if necessary
     #  ContextSnapshot --> enter recursion

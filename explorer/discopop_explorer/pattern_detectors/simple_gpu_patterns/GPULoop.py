@@ -287,7 +287,6 @@ class GPULoopPattern(PatternInfo):
 
         # == default construct ==
         clauses: List[str] = []
-        var_names: List[str] = []
         modified_var_names: List[str] = []
         if self.map_type_to:
             modified_var_names = []
@@ -295,28 +294,24 @@ class GPULoopPattern(PatternInfo):
                 modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
 
             clauses.append(omp_clause_str("map(to: args)", modified_var_names))
-            var_names = []
 
         if self.map_type_from:
             modified_var_names = []
             for var in self.map_type_from:
                 modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(from: args)", modified_var_names))
-            var_names = []
 
         if self.map_type_tofrom:
             modified_var_names = []
             for var in self.map_type_tofrom:
                 modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(tofrom: args)", modified_var_names))
-            var_names = []
 
         if self.map_type_alloc:
             modified_var_names = []
             for var in self.map_type_alloc:
                 modified_var_names.append(var.name + "[:]" if "**" in var.type else var.name)
             clauses.append(omp_clause_str("map(alloc: args)", modified_var_names))
-            var_names = []
 
         if self.reduction_vars_str:
             clauses.append(omp_clause_str("reduction(args)", self.reduction_vars_str))

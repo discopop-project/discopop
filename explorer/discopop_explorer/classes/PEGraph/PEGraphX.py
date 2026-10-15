@@ -332,7 +332,6 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
             for func_node in progress(param_list, desc="Calculating function metadata")
         ]
         # calculate global result
-        global_reachability_dict: Dict[NodeID, Set[NodeID]] = dict()
         for local_result in tmp_result:
             parsed_function_id, local_reachability_dict, local_children_ids = local_result
             # set reachability values to function nodes

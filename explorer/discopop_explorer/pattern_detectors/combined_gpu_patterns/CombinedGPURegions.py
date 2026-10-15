@@ -400,7 +400,9 @@ def find_combined_gpu_regions(
 
     intra_function_combinations = find_combinations_within_function_body(pet, combinable_pairs)
 
-    true_successor_combinations = find_true_successor_combinations(pet, intra_function_combinations)
+    true_successor_combinations = find_true_successor_combinations(  # noqa: F841  used by the commented-out code
+        pet, intra_function_combinations
+    )
 
     # combine regions
     for combinable_1, combinable_2 in intra_function_combinations:  # true_successor_combinations:

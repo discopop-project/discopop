@@ -22,8 +22,6 @@ from discopop_library.HostpotLoader.HotspotType import HotspotType
 from discopop_library.HostpotLoader.hostpot_loader import AVERAGE_RUNTIME, FILEID, NAME, STARTLINE
 from discopop_library.result_classes.DetectionResult import DetectionResult
 
-import time
-
 
 def execute_measure_only(
     detection_result: DetectionResult,
@@ -41,7 +39,6 @@ def execute_measure_only(
     logger.debug("Patterns by hotspot type")
     logger.debug(str(patterns_by_hotspot_type))
 
-    start_time = time.time()
     visited = []
 
     # initialize with all YES and MAYBE hotspot suggestions

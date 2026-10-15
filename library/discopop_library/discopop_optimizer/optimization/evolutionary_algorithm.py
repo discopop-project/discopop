@@ -44,7 +44,6 @@ def perform_evolutionary_search(
     generations = int(arguments.optimization_level_2_parameters[1])
     selection_strength = 0.85  # 0.8 --> 80% of the population will be selected for the next generation
     crossovers = int(population_size / 10)
-    mutations = int(population_size / 10)
     # END SETTINGS
 
     population: List[List[int]] = __initialize(experiment, population_size, available_decisions, arguments)

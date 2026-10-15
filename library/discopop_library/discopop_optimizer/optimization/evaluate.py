@@ -40,7 +40,9 @@ def evaluate_configuration(
     # get main function
     main_function: Optional[FunctionRoot] = None
     funciton_node_ids = get_all_function_nodes(experiment.optimization_graph)
-    function_root_nodes = [cast(FunctionRoot, data_at(experiment.optimization_graph, fid)) for fid in funciton_node_ids]
+    _function_root_nodes = [
+        cast(FunctionRoot, data_at(experiment.optimization_graph, fid)) for fid in funciton_node_ids
+    ]
     for function_id in funciton_node_ids:
         if cast(FunctionRoot, data_at(experiment.optimization_graph, function_id)).name == "main":
             main_function = cast(FunctionRoot, data_at(experiment.optimization_graph, function_id))

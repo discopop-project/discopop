@@ -132,7 +132,7 @@ def __parse_dep_file(dep_fd: TextIOWrapper, output_path: str) -> Tuple[List[Depe
                 line_id_split = line_id.split(":")
                 file_id = line_id_split[0]
                 line_num = line_id_split[1]
-                column_num = line_id_split[2]
+                _column_num = line_id_split[2]
                 instruction_to_lineID_mapping[instruction_id] = str(file_id) + ":" + str(line_num)
 
     for line in dep_fd.readlines() + static_dependency_lines:

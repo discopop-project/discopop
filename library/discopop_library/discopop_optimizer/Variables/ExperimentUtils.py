@@ -207,8 +207,6 @@ def get_sequential_cost_model(experiment: Experiment) -> Dict[FunctionRoot, List
 def initialize_free_symbol_ranges_and_distributions(
     experiment: Experiment, arguments: OptimizerArguments, system: System
 ) -> None:
-    free_symbol_ranges: Dict[Symbol, Tuple[float, float]] = dict()
-    free_symbol_distributions: Dict[Symbol, FreeSymbolDistribution] = dict()
     sorted_free_symbols = sorted(list(experiment.free_symbols), key=lambda x: x.name)
     symbol_values: List[
         Tuple[
