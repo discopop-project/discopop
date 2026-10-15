@@ -10,11 +10,11 @@ directory for details.
 
 # DiscoPoP MCP Server
 
-A Model Context Protocol (MCP) server that exposes DiscoPoP functionality to Claude, enabling Claude to drive the full instrumentation pipeline and query static and dynamic data dependencies.
+A Model Context Protocol (MCP) server that exposes DiscoPoP functionality to MCP clients such as Claude Code and OpenCode, enabling an LLM agent to drive the full instrumentation pipeline and query static and dynamic data dependencies.
 
 ## Overview
 
-The DiscoPoP MCP Server bridges the gap between Claude and DiscoPoP's profiling and analysis tools. It allows Claude to:
+The DiscoPoP MCP Server bridges the gap between an LLM agent and DiscoPoP's profiling and analysis tools. It allows the agent to:
 
 - Instrument a project, run profiling, detect parallel patterns, and retrieve OpenMP patches
 - Query static and dynamic data dependencies for arbitrary code regions to support code understanding, refactoring, and correctness checks
@@ -25,7 +25,7 @@ The DiscoPoP MCP Server bridges the gap between Claude and DiscoPoP's profiling 
 ## Features
 
 - **Standalone CLI executable** - Run independently via command line
-- **Local deployment** - Uses stdio for direct Claude integration
+- **Local deployment** - Uses stdio for direct integration with MCP clients (Claude Code, OpenCode, ...)
 - **Persistent daemon mode** - Optional long-running server that keeps analysis data in memory between calls
 - **Opt-in daemon** - Start `discopop_mcp_server --daemon` yourself; the server connects to it on the first tool call
 - **Transparent fallback** - Falls back to inline execution when no daemon is available
@@ -33,70 +33,135 @@ The DiscoPoP MCP Server bridges the gap between Claude and DiscoPoP's profiling 
 - **Type-safe** - Full type hints throughout
 - **Extensible** - Easy to add new tools and capabilities
 
+## Prerequisites
+
+- Python 3.11 or newer.
+- DiscoPoP installed in the **same environment** as the server. The tools call `discopop_cxx`, `discopop_explorer` and `discopop_auto_tuner`, which come with the other DiscoPoP packages; see the [installation page](https://tuda-hpclab.github.io/discopop/setup/discopop/).
+- A build script that uses `$CC`/`$CXX` and `$CFLAGS`/`$CXXFLAGS`, and a small but representative program input.
+
 ## Installation
 
-### Option 1: Install from source (Recommended for development)
+The server is part of `pip install discopop`. From a checkout, install it together with the other packages (all paths in one command, profiler and hotspot detection not editable):
 
 ```bash
-cd mcp_server
-pip install -e ".[dev]"
+python3 -m venv venv
+venv/bin/python -m pip install . ./profiler ./explorer ./library ./GUI ./hotspot_detection ./mcp_server
 ```
 
-### Option 2: Install as standalone package
+Check the command:
 
 ```bash
-pip install .
+discopop_mcp_server --help
 ```
 
-### Option 3: Direct script usage
+From a checkout, `python -m mcp_server.server` (started in the repository root) runs the server code of the checkout. `python mcp_server/server.py` also works when the package is installed. The optional `dev` extra (`pip install "./mcp_server[dev]"`) adds the test dependencies.
+
+## Register the server with an agent
 
 ```bash
-python mcp_server/server.py --debug
+discopop_mcp_server --setup claude_code   # Claude Code: writes ~/.claude.json
+discopop_mcp_server --setup opencode      # OpenCode: writes ~/.config/opencode/opencode.jsonc
+discopop_mcp_server --setup-all           # every supported agent that is installed
+discopop_mcp_server --verify claude_code  # check the entry of an agent
+discopop_mcp_server --status              # show the setup status of all agents
 ```
 
-## Quick Start
+- If a virtual environment is active, the entry points to the `discopop_mcp_server` of that environment.
+- `--full-path` writes the full path of the executable found in `PATH` instead of the bare command name.
+- `--debug` adds `--debug` to the entry, `-v/--verbose` prints details during the setup.
+- Restart the agent afterwards.
 
-### Run the server
+Manual entry for Claude Code in `~/.claude.json` (or `claude mcp add discopop_mcp_server -- discopop_mcp_server`):
 
-```bash
-discopop_mcp_server --debug
+```json
+{
+  "mcpServers": {
+    "discopop_mcp_server": { "command": "/path/to/venv/bin/discopop_mcp_server" }
+  }
+}
 ```
 
-This starts the server in stdio mode, which is used by Claude. The `--debug` flag enables verbose logging.
+Entry for OpenCode in `~/.config/opencode/opencode.jsonc`:
 
-## Usage Examples
+```json
+{
+  "mcp": {
+    "discopop_mcp_server": { "type": "local", "command": ["/path/to/venv/bin/discopop_mcp_server"] }
+  }
+}
+```
 
-### From the command line
+Other MCP clients that start servers over stdio need an equivalent entry (not tested).
+
+## Usage
 
 ```bash
-# Default mode — proxy that routes to daemon if available, otherwise runs inline
+# Default mode: stdio server, a proxy that routes to a daemon if one is available, otherwise runs inline
 discopop_mcp_server
 
 # With debug logging
 discopop_mcp_server --debug
 
-# Persistent daemon — keeps analysis data in memory between calls
-discopop_mcp_server --daemon
-
-# Daemon on a custom port (default: 7777)
+# Persistent daemon (default port 7777)
 discopop_mcp_server --daemon --daemon-port 8888
 ```
 
-### Integration with Claude Code
-
-Use the built-in setup flag for easy integration:
-
-```bash
-discopop_mcp_server --setup claude_code
-```
-
-This automatically configures Claude Code to use the server, handling virtual environment detection, configuration directory creation, and path resolution.
-
-See [SETUP_GUIDE.md](SETUP_GUIDE.md) for more options or [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) for detailed setup instructions.
+Once registered, ask the agent, for example: "Profile this project and parallelize the hot loops", "What data dependencies exist for lines 40-80 of src/compute.cpp?" or "Which data does `scale` read and write?".
 
 ## Available Tools
 
-This section documents the tools around build and execution configuration. The server exposes further tools for running the pipeline and querying its results; call `tools/list`, or see `mcp_server/tools/`, for the complete set.
+The server offers 15 tools. In workflow order: `initialize_discopop_directory`, `set_compile_script`, `create_execution_configuration` (once per project; `delete_execution_configuration` and `get_configurations` manage them), `get_project_status`, `gather_data`, `get_hotspots`, `get_parallelization_patches`, `explain_parallelization`, `get_data_dependencies`, `get_side_effects`, `run_auto_tuning`, `manage_patches` and `get_execution_results`. The setup tools are hidden by `--tools analysis`.
+
+### `initialize_discopop_directory`
+
+Sets up `.discopop/project/configs/` with `seq_settings.json`, `dp_settings.json`, `hd_settings.json`, `par_settings.json` and a placeholder `compile.sh`. The first call for every project. An initialized project is left unchanged.
+
+**Parameters:**
+- `project_path` (string, required): Absolute path to the project root
+- `reset` (boolean, optional): Delete all analysis artefacts under `.discopop/` (profiler output, explorer results, patches, hotspot data, execution results) and keep `.discopop/project/`; applied suggestions are rolled back first. Default `false`
+- `base_cc`, `base_cxx` (string, optional): Compilers of the plain builds. Defaults `clang`, `clang++`
+- `cflags`, `cxxflags` (string, optional): Initial flags shared by all build modes
+
+### `delete_execution_configuration`
+
+Deletes a named configuration (its directory under `.discopop/project/configs/` with `execute.sh`, `validate.sh` and per-configuration compile scripts). Analysis results gathered with it and its recorded runs are kept. Cannot be undone.
+
+**Parameters:**
+- `project_path` (string, required): Absolute path to the project root
+- `config_name` (string, required): Name of the configuration
+
+### `gather_data`
+
+Runs the complete data collection pipeline and detects patterns: optional hotspot detection (compile with hotspot instrumentation, run once per configuration in `hotspot_config_names`, classify regions as YES/MAYBE/NO), then instrumentation, profiling with `config_name`, and `discopop_explorer`. A step is skipped when its outputs are newer than the sources. Afterwards the project is rebuilt without instrumentation (see below).
+
+**Parameters:**
+- `project_path` (string, required): Absolute path to the project root
+- `config_name` (string, required): Execution configuration used for compilation and profiling
+- `hotspot_config_names` (array of strings, optional): Configurations for the hotspot profiling runs; at least two with different input sizes classify best. Omitted: no hotspot detection and the whole program is analyzed
+- `timeout_seconds` (integer, optional): Timeout of each step. Default `3600`
+- `force` (boolean, optional): Re-run all steps. Default `false`
+
+### `get_parallelization_patches`
+
+Returns the generated OpenMP patches (`.discopop/patch_generator/<pattern_id>/`). Use `detail="summary"` to see what was found without the diffs. Which suggestions to apply is measured by `run_auto_tuning`, not decided by reading the patches.
+
+**Parameters:**
+- `project_path` (string, required): Absolute path to the project root
+- `pattern_id` (string, optional) / `pattern_ids` (array, optional): Only these suggestions
+- `file_path` (string, optional): Only suggestions for this source file
+- `detail` (`"full"` or `"summary"`, optional): `full` (default) includes the diff; `summary` gives id, pattern type, lines, pragma, hotspot class and the nesting of the suggestions
+- `limit` (integer, optional): Maximum number of suggestions. Default `50`
+
+### `manage_patches`
+
+Applies, rolls back, clears, loads or lists suggestions with `discopop_patch_applicator`; the source files are modified in place. Requires `gather_data`.
+
+**Parameters:**
+- `project_path` (string, required): Absolute path to the project root
+- `action` (`apply`, `rollback`, `clear`, `load`, `list`, required): `clear` resets all sources and saves the list of applied suggestions (overwriting an earlier save), `load` applies the saved list again
+- `suggestion_ids` (array of strings, optional): Required for `apply` and `rollback`; the `pattern_id` values of `get_parallelization_patches`
+
+Rollback and clear only work while the patched files still match the patches; make manual edits on top of a selection you keep.
 
 ### `set_compile_script`
 
@@ -108,7 +173,7 @@ Writes a build script for a project. Must use `$CC` / `$CXX` and `$CFLAGS` / `$C
 - `config_name` (string, optional): Write a per-configuration override instead of the shared script
 - `purpose` (string, optional): `execute` (default) writes `compile.sh`; `validate` writes `compile_validate.sh`, a separate build for `validate.sh`
 
-A `compile_validate.sh` is only relevant when the configuration also has a `validate.sh`; the response reports which configurations it is `used_by` and which it is `ignored_for`. See the [project manager documentation](https://tuda-hpclab.github.io/discopop/Tools/Project_manager/) for the full resolution order.
+A `compile_validate.sh` is only relevant when the configuration also has a `validate.sh`; the response reports which configurations it is `used_by` and which it is `ignored_for`. See the [project manager documentation](https://tuda-hpclab.github.io/discopop/tools/Project_manager/) for the full resolution order.
 
 **Example:**
 ```json
@@ -226,7 +291,7 @@ Returns the data a function was observed to read and write outside of itself dur
 
 At most 100 entries are returned, ranked writes before reads; global, parameter, other; the function's own accesses before those of callees, shallower callees first; observed before static; then by name. A cut result has `truncated: true` and a `next_step` naming the filters. An ambiguous name returns `status: "ambiguous"` with the `candidates` (name, file, lines).
 
-The tool reads `.discopop/explorer/side_effects.json.gz`, which `discopop_explorer` writes during `gather_data`; it never loads the PET. It refuses, with a `next_step` to run `gather_data` (again), when that file is missing, unreadable or of another format version, stale (`profiler/dynamic_dependencies.txt` changed since it was written), or written by an older explorer run with `--ignore-dependency-states`. The explorer writes no export when it runs with `--ignore-dependency-states` (and removes an earlier one), so the data is then reported as missing. Semantics and limits: `DESIGN_get_side_effects.md`.
+The tool reads `.discopop/explorer/side_effects.json.gz`, which `discopop_explorer` writes during `gather_data`; it never loads the PET. It refuses, with a `next_step` to run `gather_data` (again), when that file is missing, unreadable or of another format version, stale (`profiler/dynamic_dependencies.txt` changed since it was written), or written by an older explorer run with `--ignore-dependency-states`. The explorer writes no export when it runs with `--ignore-dependency-states` (and removes an earlier one), so the data is then reported as missing. Semantics and limits: [`DESIGN_get_side_effects.md`](../DESIGN_get_side_effects.md).
 
 ### `explain_parallelization`
 
@@ -271,7 +336,7 @@ Answers in one cheap, read-only call where a project stands in the DiscoPoP work
 
 ### `run_auto_tuning`
 
-Runs the [empirical autotuner](../docs/tools/Autotuner.md) and returns the combination of suggestions it selected, so the choice of patches is measured rather than guessed. The tuner compiles, executes and validates candidate combinations in throwaway copies of the project and keeps the fastest one that still produces a valid result.
+Runs the [empirical autotuner](https://tuda-hpclab.github.io/discopop/tools/Autotuner/) and returns the combination of suggestions it selected, so the choice of patches is measured rather than guessed. The tuner compiles, executes and validates candidate combinations in throwaway copies of the project and keeps the fastest one that still produces a valid result.
 
 By default the tool leaves the sources as it found them and only reports the selection, which `manage_patches(action="apply", ...)` then persists. Pass `apply=true` to have the selected combination applied in the same call — the shortest route from profiling data to parallelized code.
 
@@ -282,7 +347,7 @@ Patches that are already applied are cleared before the search (the tuner has to
 - `config_name` (string, required): Execution configuration to tune (a directory under `.discopop/project/configs/`)
 - `apply` (boolean, optional): Apply the selected combination once the search is done, default `false`. The result then carries `applied` with the ids that reached the code; undo them with `manage_patches(action="rollback", ...)`. With `suggestion_ids`, the given selection is applied whenever its `outcome` is `valid`, even if it is slower than the un-patched project; an `invalid`, `failed` or `not_applied` one never is.
 - `suggestion_ids` (array of strings or integers, optional): Measure exactly this selection instead of running a search (see below). The ids are the `pattern_id` values of `get_parallelization_patches`. Cannot be combined with `algorithm`.
-- `algorithm` (string, optional): Search algorithm: `independent`, `linear`, `evolutionary`, `greedy`, `coordinate_descent` or `hotspot_guided`. Omit it and the tool picks `hotspot_guided` (hotspot-guided region descent) when hotspot detection results are available, and `greedy` (greedy forward search) otherwise; the choice and its reason come back as `algorithm` / `algorithm_selection`. Pass a value only to override that; an explicit `hotspot_guided` without hotspot results is refused rather than silently replaced. The names stand for the tuner's `-A` values 0, 1, 3, 4, 5 and 6, which are still accepted. See `docs/tools/Autotuner.md` for details.
+- `algorithm` (string, optional): Search algorithm: `independent`, `linear`, `evolutionary`, `greedy`, `coordinate_descent` or `hotspot_guided`. Omit it and the tool picks `hotspot_guided` (hotspot-guided region descent) when hotspot detection results are available, and `greedy` (greedy forward search) otherwise; the choice and its reason come back as `algorithm` / `algorithm_selection`. Pass a value only to override that; an explicit `hotspot_guided` without hotspot results is refused rather than silently replaced. The names stand for the tuner's `-A` values 0, 1, 3, 4, 5 and 6, which are still accepted. See the [autotuner page](https://tuda-hpclab.github.io/discopop/tools/Autotuner/) for details.
 - `timeout_seconds` (integer, optional): Wall clock bound for the whole search, default `3600`
 
 **Preconditions:** `gather_data` must have been run. Running `gather_data` with `hotspot_config_names` set is what makes the hotspot-guided search available.
@@ -396,7 +461,7 @@ So `gather_data` rebuilds the project plainly (`par_settings.json`, falling back
 
 ## Daemon Mode
 
-By default, Claude Code starts a fresh `discopop_mcp_server` process for each session. Data loaded during the session (such as the `DetectionResult` produced by `gather_data`) is cached only for that session and discarded when it ends.
+By default, the agent starts a fresh `discopop_mcp_server` process for each session. Data loaded during the session (such as the `DetectionResult` produced by `gather_data`) is cached only for that session and discarded when it ends.
 
 **Daemon mode** (`--daemon`) solves this by running a single long-lived server process that keeps its internal state alive across multiple tool calls and across multiple Claude sessions.
 
@@ -436,7 +501,7 @@ discopop_mcp_server --daemon-port 8888
 
 |                          | `discopop_mcp_server` (default) | `discopop_mcp_server --daemon` |
 |--------------------------|--------------------------------|-------------------------------|
-| Who runs it              | Claude Code (automatic)        | You, manually                 |
+| Who runs it              | The agent (automatic)          | You, manually                 |
 | Lifetime                 | One Claude session             | Until `Ctrl+C`                |
 | Daemon check timing      | First tool call                | N/A                           |
 | State between tool calls | None                           | Kept alive in `ToolContext`   |
@@ -472,57 +537,15 @@ The default (`discopop_mcp_server`) uses **stdio** for communication with Claude
 6. Server logs the incoming call and outgoing response
 7. Response returned to Claude
 
-## Shipping to Users
-
-### Method 1: PyPI Package (Recommended)
-
-1. Update version in `pyproject.toml`
-2. Build: `python -m build`
-3. Publish: `python -m twine upload dist/*`
-4. Users install: `pip install discopop_mcp_server`
-
-### Method 2: Source Distribution
-
-Include in your DiscoPoP repository:
-```bash
-pip install git+https://github.com/tuda-hpclab/discopop.git#subdirectory=mcp_server
-```
-
-### Method 3: Bundled Binary
-
-Use PyInstaller to create standalone executables:
-```bash
-pip install pyinstaller
-pyinstaller --onefile mcp_server/server.py --name discopop_mcp_server
-```
-
 ## Development
 
 ### Adding New Tools
 
-1. Define tool schema in `_register_tools()`:
-```python
-Tool(
-    name="your_tool",
-    description="...",
-    inputSchema={...}
-)
-```
+Every tool is a module in `mcp_server/tools/` that defines a `TOOL` (name, description, input schema) and a `handle(arguments, ctx)` function; look at an existing module such as `get_hotspots.py`.
 
-2. Add handler method:
-```python
-def _handle_your_tool(self, arguments: dict[str, Any]) -> list[TextContent]:
-    self._log_call("your_tool", arguments)
-    # Implementation here
-    self._log_response("your_tool", result)
-    return [TextContent(type="text", text=json.dumps(result))]
-```
-
-3. Register in tool call handler:
-```python
-elif name == "your_tool":
-    return self._handle_your_tool(arguments)
-```
+1. Create `mcp_server/tools/your_tool.py` and a colocated `test_your_tool.py`.
+2. Import the module in `mcp_server/server.py` and add it to `_ALL_TOOLS`. Tools that define a project belong into `_SETUP_TOOLS` as well; `TOOL_SETS` builds the `--tools` sets from these lists.
+3. Describe it in this file and in `docs/tools/MCP_server.md`.
 
 ### Type Checking
 
@@ -541,7 +564,8 @@ mypy mcp_server/server.py
   ```bash
   discopop_mcp_server --verify claude_code
   ```
-- See [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md) for detailed troubleshooting
+- Check that `discopop_mcp_server` is on the `PATH` of the agent, or re-run the setup with `--full-path`
+- Restart the agent after changing its configuration; run `discopop_mcp_server --debug` to see start-up errors
 
 ### Server won't start
 - Check Python version (requires 3.11+)
@@ -559,13 +583,17 @@ mypy mcp_server/server.py
 
 ### Missing dependencies
 ```bash
-# Install all dependencies
-pip install -e ".[dev,sse]"
+# Reinstall the server with its dependencies (mcp, jsonpickle, termcolor, uvicorn, starlette)
+venv/bin/python -m pip install ./mcp_server
 ```
 
 ## License
 
 This software is part of DiscoPoP and is licensed under the 3-Clause BSD License. See the LICENSE file in the package base directory for details.
+
+## Distribution
+
+Maintainer notes on building and publishing the package are in [DISTRIBUTION.md](DISTRIBUTION.md).
 
 ## Support
 
