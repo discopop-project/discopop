@@ -17,6 +17,8 @@ using namespace llvm;
 using namespace std;
 using namespace dputil;
 
+namespace static_callpaths {
+
 // The .dot files written below are debugging aids: nothing in the toolchain reads them back,
 // and for deep call graphs they are by far the largest artifacts the pass produces (tens of MB
 // per translation unit). They are therefore only written on request.
@@ -25,7 +27,7 @@ static bool write_callpath_dot_files() { return getenv("DP_WRITE_CALLPATH_DOT") 
 typedef int32_t CALLPATH_STATE_ID;
 typedef int32_t INSTRUCTION_ID;
 
-std::unordered_map<StaticCalltreeNode*, std::unordered_set<CALLPATH_STATE_ID>> DiscoPoP::get_contained_in_map(std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths){
+std::unordered_map<StaticCalltreeNode*, std::unordered_set<CALLPATH_STATE_ID>> get_contained_in_map(std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths){
   std::unordered_map<StaticCalltreeNode*, std::unordered_set<CALLPATH_STATE_ID>> contained_in_map;
   for(auto pair: paths){
     for(auto node_ptr : pair.second){
@@ -141,8 +143,8 @@ CALLPATH_STATE_ID get_id_from_callpath_fast_old(std::vector<StaticCalltreeNode*>
 
 
 
-std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, DiscoPoP::container_hash<std::vector<StaticCalltreeNode*>>> DiscoPoP::get_path_to_id_map(std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths){
-  std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, DiscoPoP::container_hash<std::vector<StaticCalltreeNode*>>> map;
+std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, container_hash<std::vector<StaticCalltreeNode*>>> get_path_to_id_map(std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths){
+  std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, container_hash<std::vector<StaticCalltreeNode*>>> map;
   for(auto pair: paths){
     map[pair.second] = pair.first;
   }
@@ -150,7 +152,7 @@ std::unordered_map<std::vector<StaticCalltreeNode*>, CALLPATH_STATE_ID, DiscoPoP
 }
 
 
-CALLPATH_STATE_ID get_id_from_callpath_fast(std::vector<StaticCalltreeNode*>& target_path, std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths, std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, DiscoPoP::container_hash<std::vector<StaticCalltreeNode*>>>& path_to_id_map){
+CALLPATH_STATE_ID get_id_from_callpath_fast(std::vector<StaticCalltreeNode*>& target_path, std::unordered_map<CALLPATH_STATE_ID, std::vector<StaticCalltreeNode*>>& paths, std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, container_hash<std::vector<StaticCalltreeNode*>>>& path_to_id_map){
   auto pos = path_to_id_map.find(target_path);
   if(pos != path_to_id_map.end()){
     return pos->second;
@@ -259,7 +261,7 @@ void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threa
 
 // create a complete list of callpaths and intermediate states based on the static call tree of the module
 // and assign unique identifiers to every state
-StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, [[maybe_unused]] std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions, [[maybe_unused]] std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions, std::uint32_t start_path_id){
+StaticCallPathTree* enumerate_paths(StaticCalltree& calltree, [[maybe_unused]] std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions, [[maybe_unused]] std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions, std::uint32_t start_path_id){
   // start ids from start_path_id (no collisions between modules)
   StaticCallPathTree* call_path_tree = new StaticCallPathTree(start_path_id);
 
@@ -312,7 +314,7 @@ StaticCallPathTree* DiscoPoP::enumerate_paths(StaticCalltree& calltree, [[maybe_
 }
 
 // save the id of the initial state id to file
-void DiscoPoP::save_initial_path(StaticCallPathTree* call_path_tree_ptr){
+void save_initial_path(StaticCallPathTree* call_path_tree_ptr){
   cout << "saving initial path..\n";
 
   // prepare saving the initial callpathStateID
@@ -340,7 +342,7 @@ void DiscoPoP::save_initial_path(StaticCallPathTree* call_path_tree_ptr){
   cout << "Done saving initial path..\n";
 }
 
-void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
+void save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
   cout << "saving enumerated paths..\n";
   // prepare saving the mapping from callpath to callpathStateID for reference
   std::ofstream stateID_to_callpath_file = profiler_files::open("stateID_to_callpath_mapping.txt");
@@ -379,7 +381,7 @@ void DiscoPoP::save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr){
   cout << "Done saving enumerated path..\n";
 }
 
-void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr){
+void save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr){
   cout << "saving path state transitions..\n";
   // prepare saving the callpathState transitions
   std::ofstream callpath_state_transitions_file = profiler_files::open("callpath_state_transitions.txt");
@@ -441,7 +443,7 @@ void DiscoPoP::save_path_state_transitions(StaticCallPathTree* call_path_tree_pt
 // identified by the instruction id of their __dp_func_entry call. The runtime library follows a
 // call's transition into a function only if it leads to an entry state of the entered function,
 // and else switches to the function's root entry state (see enter_function_for_callstate).
-void DiscoPoP::save_function_entries(StaticCallPathTree* call_path_tree_ptr){
+void save_function_entries(StaticCallPathTree* call_path_tree_ptr){
   std::ofstream file = profiler_files::open("callpath_function_entries.txt");
   file << "# Format: S <state_id> <function_entry_instruction_id> | E <function_entry_instruction_id> <root_state_id>\n";
   std::string buffer;
@@ -462,7 +464,7 @@ void DiscoPoP::save_function_entries(StaticCallPathTree* call_path_tree_ptr){
   file.close();
 }
 
-void DiscoPoP::save_static_calltree_to_dot(StaticCalltree *calltree){
+void save_static_calltree_to_dot(StaticCalltree *calltree){
   if (!write_callpath_dot_files()) {
     return;
   }
@@ -477,7 +479,7 @@ void DiscoPoP::save_static_calltree_to_dot(StaticCalltree *calltree){
 
 // adds the state transition edges corresponding to returning from a function.
 // for completeness and fail-safety, this edge is added to every state in a function, i.e., returning is possible from every state
-void DiscoPoP::add_function_exit_edges_to_transitions(StaticCallPathTree* call_path_tree_ptr){
+void add_function_exit_edges_to_transitions(StaticCallPathTree* call_path_tree_ptr){
 
   // for each path in paths
     // rfind first call instruction
@@ -511,3 +513,5 @@ void DiscoPoP::add_function_exit_edges_to_transitions(StaticCallPathTree* call_p
     path->register_transition(1, prefix_path_stateID);
   }
 }
+
+} // namespace static_callpaths

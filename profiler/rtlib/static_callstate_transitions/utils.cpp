@@ -96,7 +96,7 @@ void initialize_current_callpath_state() {
   std::ifstream file(path);
   std::string line;
   // The pass writes this file only once it has found a call path labelled "main" (see
-  // DiscoPoP::save_initial_path), so it can be missing or empty -- and then the id below used to be
+  // static_callpaths::save_initial_path), so it can be missing or empty -- and then the id below used to be
   // read without ever having been written, which sends a garbage state into the graph. State 0 is
   // the defined fallback: it has no transitions, so the reported call state simply stays put.
   int32_t current_callpath_state_id = 0;

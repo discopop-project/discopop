@@ -388,8 +388,10 @@ std::unordered_map<int32_t, std::vector<int32_t>> get_inverted_loop_callInstruct
   return result_map;
 }
 
+namespace static_callpaths {
+
 // builds a call tree for the given Module on the basis of the statically available information
-StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
+StaticCalltree buildStaticCalltree(Module &M, const std::map<int32_t, LoopIdentity> &loop_id_to_identity) {
   StaticCalltree calltree;
   // explicit mapping from the digit positions of the "<function>_loopstate<digits>" labels
   // (see StaticCalltree.cpp) to the loops they describe, read by the explorer
@@ -624,3 +626,5 @@ StaticCalltree DiscoPoP::buildStaticCalltree(Module &M) {
   loopstate_positions_file.close();
   return calltree;
 }
+
+} // namespace static_callpaths
