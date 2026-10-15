@@ -117,9 +117,7 @@ inline bool fexists(const std::string &filename) {
 
   if (ifile.fail()) {
     return false;
-  } else {
-    return true;
-}
+  }     return true;
 }
 
 int32_t getFileID(std::string fileMapping, std::string fullPathName);

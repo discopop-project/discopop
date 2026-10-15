@@ -186,7 +186,7 @@ void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_
       if (varTypeLoad.find("ARRAY,") == std::string::npos || varNameLoad.find(".addr") == std::string::npos ||
           varTypeLoad.find("**") != std::string::npos) {
         continue;
-      } else if (varTypeLoad.find("ARRAY,") != std::string::npos || varNameLoad.find(".addr") != std::string::npos ||
+      } if (varTypeLoad.find("ARRAY,") != std::string::npos || varNameLoad.find(".addr") != std::string::npos ||
                  varTypeLoad.find("STRUCT,") != std::string::npos || varTypeLoad.find("**") != std::string::npos) {
         llvm::Instruction *load_instr = nullptr;
         llvm::Instruction *instr = dp_reduction::get_reduction_instr(candidate.store_inst_, &load_instr);

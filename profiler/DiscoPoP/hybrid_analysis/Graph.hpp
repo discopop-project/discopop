@@ -32,7 +32,7 @@ private:
   InstructionNodeT item;
 
 public:
-  InstructionNode(InstructionNodeT _item) : item(_item) {}
+  explicit InstructionNode(InstructionNodeT _item) : item(_item) {}
 
   ~InstructionNode(){};
 
@@ -89,12 +89,11 @@ public:
       instructionNodesList.push_back(instructionNode);
       nextIntKey++;
       return instructionNode;
-    } else {
+    }
 #ifdef DEBUG_GRAPH_HPP
       std::cout << "\nTrying to add an already added item.\n";
 #endif
       return instructionNodes.find(item)->second.second;
-    }
   }
 
   InstructionNode<InstructionNodeT> *getInstructionNode(InstructionNodeT item) {

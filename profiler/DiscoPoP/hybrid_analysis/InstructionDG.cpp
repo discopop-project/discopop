@@ -78,9 +78,8 @@ void InstructionDG::highlightInstructionNode(Instruction *instr) { highlightedIn
 string InstructionDG::getInstructionLine(Instruction *I) {
   if (DebugLoc dl = I->getDebugLoc()) {
     return to_string(dl->getLine());
-  } else {
-    return to_string(I->getFunction()->getSubprogram()->getLine());
-  }
+  }     return to_string(I->getFunction()->getSubprogram()->getLine());
+
 }
 
 bool InstructionDG::edgeIsINIT(Edge<Instruction *> *e){
@@ -115,7 +114,7 @@ string InstructionDG::edgeToDPDep(Edge<Instruction *> *e,
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]
                .first // use original variable name instead of LLVM IR SSA name
            + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
-  } else if (DebugLoc dl = J->getDebugLoc()) {
+  } if (DebugLoc dl = J->getDebugLoc()) {
     depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
     return to_string(fid) + ":" + getInstructionLine(I) + " " + "NOM" + " " + depType + " " + to_string(fid) + ":" +
            getInstructionLine(J) + "|" +
@@ -157,7 +156,7 @@ string InstructionDG::edgeToInstructionBasedDPDep(Edge<Instruction *> *e,
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]
                .first // use original variable name instead of LLVM IR SSA name
            + "(" + staticValueNameToMemRegIDMap[VNF->getVarName(I)].second + ")";
-  } else if (DebugLoc dl = J->getDebugLoc()) {
+  } if (DebugLoc dl = J->getDebugLoc()) {
     depType = (isa<LoadInst>(I) ? string("R") : string("W")) + "A" + (isa<LoadInst>(J) ? string("R") : string("W"));
     return unique_instruction_id_I + " " + "NOM" + " " + depType + " " + unique_instruction_id_J + "|" +
            staticValueNameToMemRegIDMap[VNF->getVarName(I)]

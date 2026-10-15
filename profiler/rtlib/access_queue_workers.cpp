@@ -155,11 +155,10 @@ void *processFirstAccessQueue(void *arg) {
       if (finalizeParallelizationCalled) {
         // no chunks left to process. Let thread finish.
         break;
-      } else {
-        // let thread sleep and try fetching a chunk again after potentially preparing an new chunk
+      }         // let thread sleep and try fetching a chunk again after potentially preparing an new chunk
         firstAccessQueueChunkBuffer.prepare_chunk_if_required(FIRST_ACCESS_QUEUE_CHUNK_SIZE);
         usleep(1000);
-      }
+
     }
   }
 
@@ -236,9 +235,8 @@ void *processSecondAccessQueue(void *arg) {
         if (firstAccessQueue.empty() && secondAccessQueue.empty()) {
           // no chunks left to process. Let thread finish.
           break;
-        } else {
-          usleep(1000);
-        }
+        }           usleep(1000);
+
       } else {
         // let thread sleep and try fetching a chunk again
         usleep(1000);

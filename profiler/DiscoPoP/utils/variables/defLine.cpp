@@ -66,8 +66,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
     if(found_var) {
       break;
     }
-    else {
-      // proceed to prior instruction / basic block
+          // proceed to prior instruction / basic block
       auto prior_inst = current_inst->getPrevNode();
       if(prior_inst == nullptr){
         // check if prior basic block exists
@@ -100,7 +99,7 @@ string DiscoPoP::determineVariableDefLine(Instruction *I) {
         current_bb = current_inst->getParent();
       }
 
-    }
+
   }
 
   if((varDefLine == "LineNotFound") && (programGlobalVariablesSet.count(varName))){

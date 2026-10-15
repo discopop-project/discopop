@@ -23,7 +23,7 @@ llvm::Instruction *dp_reduction::find_reduction_instr(llvm::Value *val) {
   char c = dp_reduction::get_char_for_opcode(instr);
   if (c != ' ') {
     return instr;
-  } else if (opcode == llvm::Instruction::Load) {
+  } if (opcode == llvm::Instruction::Load) {
     llvm::Instruction *prev_use = dp_reduction::get_prev_use(instr, instr->getOperand(0));
     return dp_reduction::find_reduction_instr(prev_use);
   } else if (opcode == llvm::Instruction::Store) {

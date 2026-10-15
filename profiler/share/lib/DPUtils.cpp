@@ -280,9 +280,8 @@ string get_exe_dir() {
     buff[len] = '\0';
     string fullPath = std::string(buff);
     return fullPath.substr(0, fullPath.find_last_of('/'));
-  } else {
-    return "";
-  }
+  }     return "";
+
 }
 
 VariableNameFinder::VariableNameFinder(Module & /*M*/) {}

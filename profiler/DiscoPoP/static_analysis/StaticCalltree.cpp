@@ -42,11 +42,10 @@ void StaticCalltreeNode::register_successor(StaticCalltreeNode* succ, int32_t tr
         // already registered
         return;
     }
-    else{
-        // register successor
+            // register successor
         successors[trigger_instructionID].push_back(succ);
         succ->predecessors.push_back(this);
-    }
+
 }
 
 StaticCalltree::StaticCalltree(){
@@ -71,10 +70,9 @@ StaticCalltreeNode* StaticCalltree::get_or_insert_function_node(std::string func
         function_map[function_name] = node_ptr;
         return node_ptr;
     }
-    else{
-//        std::cout << "Retrieve function name: " << function_name << "\n";
+    //        std::cout << "Retrieve function name: " << function_name << "\n";
         return function_map[function_name];
-    }
+
 }
 
 StaticCalltreeNode* StaticCalltree::get_or_insert_function_node(std::string function_name, std::string loop_iteration_instance){
@@ -87,10 +85,9 @@ StaticCalltreeNode* StaticCalltree::get_or_insert_function_node(std::string func
         function_map[function_name] = node_ptr;
         return node_ptr;
     }
-    else{
-//        std::cout << "Retrieve function name: " << function_name << "\n";
+    //        std::cout << "Retrieve function name: " << function_name << "\n";
         return function_map[function_name];
-    }
+
 }
 
 StaticCalltreeNode* StaticCalltree::get_or_insert_instruction_node(int32_t instructionID){
@@ -100,10 +97,9 @@ StaticCalltreeNode* StaticCalltree::get_or_insert_instruction_node(int32_t instr
         instruction_map[instructionID] = node_ptr;
         return node_ptr;
     }
-    else{
-//        std::cout << "Retrieve instruction id: " << instructionID << "\n";
+    //        std::cout << "Retrieve instruction id: " << instructionID << "\n";
         return instruction_map[instructionID];
-    }
+
 }
 
 // trigger_instructionID = 0 -> no trigger required
