@@ -346,7 +346,7 @@ def _decl_ref(node_id: str, name: str, referenced_id: str, kind: str = "VarDecl"
 
 
 def _ast() -> Dict[str, Any]:
-    """int g; const int t[2]; void f(int *p, int n) { static int calls; int *q; g = n; s->second = t[0]; memset(p, 0, n); }"""
+    """int g; const int t[2]; void f(int *p, int n) { static int calls; int *q; g = n; s->second = t[0]; memset(p, 0, n); }"""  # noqa: E501
     loc = {"file": "/src/code.cpp", "line": 3}
     return {
         "kind": "TranslationUnitDecl",

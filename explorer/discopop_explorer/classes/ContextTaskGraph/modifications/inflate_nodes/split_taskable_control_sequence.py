@@ -29,15 +29,18 @@ def split_taskable_control_sequence(
     ctg: ContextTaskGraph, identified_tasks: List[TaskParentContext]
 ) -> Tuple[bool, List[TaskParentContext]]:
     """Split Control sequence between two Work or CombinedContext nodes, if there is no DATA edge between them.
-    To Perform the split, a TaskParent dummy node is inserted before the first node of the sequence and both sequence nodes will become direct successors of the TaskParent node.
+    To Perform the split, a TaskParent dummy node is inserted before the first node of the sequence and both sequence
+    nodes will become direct successors of the TaskParent node.
     Incoming dependencies to the Task nodes will be redirected to the TaskParentContext node.
     Outgoing dependencies from the Task nodes will be redirected to originate from the TaskEndContext node.
-    Implementation relies on the successive application of __break_triangles for cleanup, as it will not remove the edge between the first node in the sequence and its predecessor.
+    Implementation relies on the successive application of __break_triangles for cleanup, as it will not remove the edge
+    between the first node in the sequence and its predecessor.
     Returns True, if the graph was modified."""
     sequences_split = True
     modification_applied = False
     logger.warning(
-        "Note: incoming data for data sharing clauses of suggested tasks can be retrieved before redirecting data edges to TaskParentContext and TaskEndContext nodes."
+        "Note: incoming data for data sharing clauses of suggested tasks can be retrieved before redirecting data "
+        "edges to TaskParentContext and TaskEndContext nodes."
     )
     while sequences_split:
         sequences_split = False
@@ -53,15 +56,18 @@ def split_taskable_control_sequence(
                 for ctx in ctg.get_successors(node)
                 if len([info for info in ctg.get_edge_info(node, ctx) if info.type == CTGEdgeType.CONTROL]) > 0
             ]
-            # ensure that node has exactly one control edge successor  (todo: this might be extended in the future, but should not be necessary for regular operation)
+            # ensure that node has exactly one control edge successor (todo: this might be extended in the future, but
+            # should not be necessary for regular operation)
             if len(control_edge_successors) != 1:
                 continue
-            # at this point, control_edge_successors should only contain a single element, otherwise multiple TaskParents and TaskEnds would be spawned
+            # at this point, control_edge_successors should only contain a single element, otherwise multiple
+            # TaskParents and TaskEnds would be spawned
             for successor in control_edge_successors:
                 # check if successor is of type Work or CombinedContext
                 if not (isinstance(successor, WorkContext) or isinstance(successor, CombinedContext)):
                     continue
-                # check if a data dependency between both nodes exist, i.e., whether both can be executed in parallel or not
+                # check if a data dependency between both nodes exist, i.e., whether both can be executed in parallel or
+                # not
                 if (
                     len([info for info in ctg.get_edge_info(node, successor) if info.type == CTGEdgeType.DATA]) > 0
                     or len([info for info in ctg.get_edge_info(successor, node) if info.type == CTGEdgeType.DATA]) > 0
@@ -132,7 +138,8 @@ def split_taskable_control_sequence(
                         > 0
                     )
                 ]
-                # redirect CONTROL edges from successors predecessors to task_parent_node. only consider additional predecessors to node
+                # redirect CONTROL edges from successors predecessors to task_parent_node. only consider additional
+                # predecessors to node
                 for pred in succ_control_edge_predecessors:
                     if pred == node:
                         continue
@@ -156,7 +163,8 @@ def split_taskable_control_sequence(
                 ctg.graph.remove_edge(node, successor)
                 # connect node to task_end_node
                 ctg.add_edge(node, task_end_node, CTGEdgeInfo(CTGEdgeType.CONTROL))
-                # redirect outgoing control edges of successor through task_end_node (again, __break_triangles will cleanup)
+                # redirect outgoing control edges of successor through task_end_node (again, __break_triangles will
+                # cleanup)
                 succ_control_edge_successors = [
                     ctx
                     for ctx in ctg.get_successors(successor)

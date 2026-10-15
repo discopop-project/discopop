@@ -202,7 +202,7 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                             vars_in_source_node.add(var.name)
 
                     # Note: consider all dependencies, independent of the variable names
-                    #                    if dep.var_name not in vars_in_sink_node and dep.var_name not in vars_in_source_node:
+                    #                    if dep.var_name not in vars_in_sink_node and dep.var_name not in vars_in_source_node:  # noqa: E501
                     #                        continue
                     if sink_cu_id and source_cu_id:
                         g.add_edge(sink_cu_id, source_cu_id, data=parse_dependency(dep))

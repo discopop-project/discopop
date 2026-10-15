@@ -114,7 +114,10 @@ def is_loop_index2(pet: PEGraphX, root_loop: Node, var_name: str) -> bool:
 
 
 # NOTE: left old code as it may become relevant again in the near future
-# We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g., ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the information to decide which code sections (loops or functions) are worth parallelizing.
+# We decided to omit the information that computes the workload and the relevant codes. For large programs (e.g.,
+# ffmpeg), the generated Data.xml file becomes very large. However, we keep the code here because we would like to
+# integrate a hotspot detection algorithm (TODO: Bertin) with the parallelism discovery. Then, we need to retrieve the
+# information to decide which code sections (loops or functions) are worth parallelizing.
 def calculate_workload(pet: PEGraphX, node: Node, ignore_function_calls_and_cached_values: bool = False) -> int:
     """Calculates and stores the workload for a given node
     The workload is the number of instructions multiplied by respective number of iterations
@@ -792,7 +795,8 @@ def classify_loop_variables(
                 if (len(mem_reg_subset.intersection(initialized_memory_regions)) > 0 and subset_idx < 1) or len(
                     mem_reg_subset.intersection(uninitialized_memregs)
                 ) > 0:
-                    # subset_idx < 1 to ignore this check for gep memory regions, as they create additional INIT dependencies
+                    # subset_idx < 1 to ignore this check for gep memory regions, as they create additional INIT
+                    # dependencies
                     # variable is initialized in loop.
 
                     # No data sharing clauses required, if the variable is declared inside the loop.
@@ -881,8 +885,10 @@ def __modify_classifications(
     reduction: list[Variable],
     metadata_safe_index_accesses: list[Variable],
 ) -> Tuple[list[Variable], list[Variable], list[Variable], list[Variable], list[Variable]]:
-    # Rule 1: if structure index accesses suggest, that parallelizing is safe without data sharing clauses, loosen private clauses to shared.
-    # --> this rule does not affect first_ and last_private clauses, as they require a specific access / dependency pattern
+    # Rule 1: if structure index accesses suggest, that parallelizing is safe without data sharing clauses, loosen
+    # private clauses to shared.
+    # --> this rule does not affect first_ and last_private clauses, as they require a specific access / dependency
+    #   pattern
     move_to_shared: List[Variable] = []
     for var in metadata_safe_index_accesses:
         if var in private:

@@ -281,7 +281,8 @@ def identify_simple_doall_and_reduction(
     decisions: Optional[PatternDecisionLog] = None,
 ) -> List[DoAllInfo | ReductionInfo]:
     """Analyzes the results of the graph simplification and create simple doall patterns.
-    Implementation is fundamentally similar to the original doall detector, but implemented in a more maintainable fashion.
+    Implementation is fundamentally similar to the original doall detector, but implemented in a more maintainable
+    fashion.
     Checks for clean doall opportunities."""
     patterns: List[DoAllInfo | ReductionInfo] = []
     # everything a pattern's tag is derived from, for the patterns collected in `patterns` - see
@@ -449,7 +450,8 @@ def identify_simple_doall_and_reduction(
             # check for and allow accesses to the loop variable
             if (dep.var_name, dep.memory_region) in loop_variable_keys:
                 return False
-            # check if dep.origin is static. If so, give it a "second chance", which is tested after classifying variables in the loop.
+            # check if dep.origin is static. If so, give it a "second chance", which is tested after classifying
+            # variables in the loop.
             # --> In this case it is a valid doall, if the variable is firstwritten inside the loop
             # the message is built eagerly, and get_code_scope(inclusive=True) is the
             # uncached, fully recursive variant. Building it unconditionally in this
@@ -516,7 +518,8 @@ def identify_simple_doall_and_reduction(
             # check for do-all preventing dependencies
             for subnode in subtrees[ic_source]:
                 for out_dep_target, dep in subnode.outgoing_dependencies:
-                    # WAR dependencies between iterations are non-critical, as they overwrite data and thus can be privatized
+                    # WAR dependencies between iterations are non-critical, as they overwrite data and thus can be
+                    # privatized
                     if dep.etype == EdgeType.DATA and dep.dtype == DepType.WAR:
                         continue
                     if dep.carried_by_pet_loops is not None:
@@ -690,9 +693,11 @@ def detect_doall_sharing_clauses(
     loop_variables: Set[str],
     clause_cache: Dict[ClauseCacheKey, SharingClauses],
 ) -> SharingClauses:
-    """classifies variables used inside the iterations and returns the OpenMP data sharing clauses in the following structure:
+    """classifies variables used inside the iterations and returns the OpenMP data sharing clauses in the following
+    structure:
     (firstprivate, private, lastprivate, shared, firstwritten, init)
-    firstwritten and init are not data sharing clauses, but required to validate potential doall-breaking dependencies originating from static information.
+    firstwritten and init are not data sharing clauses, but required to validate potential doall-breaking dependencies
+    originating from static information.
 
     The result is memoized in clause_cache. The classification reaches the contexts it is given
     only to read the CU sequences out of them, so it is a function of those sequences - and the
@@ -769,11 +774,14 @@ def detect_doall_sharing_clauses(
     # shared:
     # - outside dependency but not to or from the other iteration
     # private:
-    # - outside dependency but not to or from the other iteration && RAW or WAW between first and second access in contained sequence && no RAW from outside to inside of loop
+    # - outside dependency but not to or from the other iteration && RAW or WAW between first and second access in
+    #   contained sequence && no RAW from outside to inside of loop
     # lastprivate:
-    # - outside dependency but none to or from the other iteration && RAW or WAW between first and second access in contained sequence && read from outside to inside of loop
+    # - outside dependency but none to or from the other iteration && RAW or WAW between first and second access in
+    #   contained sequence && read from outside to inside of loop
     # firstprivate:
-    # - outside dependency but none to or from the other iteration && outgoing RAW from first access in contained sequence && RAW or WAR exists within
+    # - outside dependency but none to or from the other iteration && outgoing RAW from first access in contained
+    #   sequence && RAW or WAR exists within
 
     private: Set[str] = set()
     shared: Set[str] = set()

@@ -58,7 +58,8 @@ class Context(object):
     def get_contained_nodes(self, inclusive: bool = False) -> List[TGNode]:
         """
         Returns the nodes contained in the current context.
-        inclusive: If False, does not consider contexts contained in the current context. If true, included contexts are traversed recursively.
+        inclusive: If False, does not consider contexts contained in the current context. If true, included contexts are
+        traversed recursively.
         """
         if not inclusive:
             return self.contained_nodes
@@ -81,7 +82,8 @@ class Context(object):
     def get_contained_contexts(self, inclusive: bool = False) -> Set[Context]:
         """
         Returns the contexts contained in the current context.
-        If inclusive is False, only the directly contained contexts will be returned. If inclusive is True, contexts will be collected recursively.
+        If inclusive is False, only the directly contained contexts will be returned. If inclusive is True, contexts
+        will be collected recursively.
         """
         if not inclusive:
             return self.contained_contexts
@@ -264,7 +266,8 @@ class Context(object):
         return False
 
     def get_ancestor_contexts(self) -> List[Context]:
-        """return the ancestor contexts of the current context, starting with the direct parent context and ending with the root context."""
+        """return the ancestor contexts of the current context, starting with the direct parent context and ending with
+        the root context."""
         ancestors: List[Context] = []
         visited: Set[Context] = {self}
         current_context = self.parent_context
