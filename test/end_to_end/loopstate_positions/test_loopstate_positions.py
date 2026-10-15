@@ -12,7 +12,6 @@ whose exit block has no debug location."""
 import os
 import pathlib
 import re
-import unittest
 
 from test.end_to_end.pipeline import PipelineTestCase
 

@@ -1,19 +1,14 @@
 # type: ignore
 import os
 import pathlib
-import subprocess
 import unittest
 
 import jsonpickle
 
 from discopop_library.result_classes.DetectionResult import DetectionResult
 from test.utils.subprocess_wrapper.command_execution_wrapper import run_cmd
-from test.utils.validator_classes.DoAllInfoForValidation import DoAllInfoForValidation
-from subprocess import DEVNULL
 from discopop_library.ConfigProvider.config_provider import run as run_config_provider
 from discopop_library.ConfigProvider.ConfigProviderArguments import ConfigProviderArguments
-from discopop_library.DependencyComparator.DependencyComparatorArguments import DependencyComparatorArguments
-from discopop_library.DependencyComparator.dependency_comparator import run as run_comparator
 
 
 class TestMethods(unittest.TestCase):
