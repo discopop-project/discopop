@@ -215,7 +215,7 @@ For DiscoPoP, I recommend a **phased approach**:
 
 ### Phase 1: Initial Release (Now)
 1. Start with GitHub releases (source distribution)
-2. Document installation in [INSTALLATION.md](INSTALLATION.md)
+2. Document installation in [README.md](README.md#installation)
 3. Push to PyPI once stable
 
 ### Phase 2: Mature Release (1-2 months)
@@ -299,10 +299,8 @@ git push --tags
 
 Provide comprehensive documentation for each distribution method:
 
-1. **[INSTALLATION.md](INSTALLATION.md)** - How to install
-2. **[CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md)** - How to use with Claude
-3. **[README.md](README.md)** - Features and usage
-4. **Quick start** - In each release notes
+1. **[README.md](README.md)** - Installation, client setup, features and usage
+2. **Quick start** - In each release notes
 
 ### Example release notes:
 
@@ -387,8 +385,6 @@ Maintain a support table:
 
 ## See Also
 
-- [INSTALLATION.md](INSTALLATION.md)
-- [CLAUDE_INTEGRATION.md](CLAUDE_INTEGRATION.md)
 - [README.md](README.md)
 - [PyPI Help](https://pypi.org/help/)
 - [setuptools Documentation](https://setuptools.pypa.io/)
