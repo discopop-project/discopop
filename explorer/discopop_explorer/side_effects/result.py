@@ -76,7 +76,7 @@ class Effect:
 class SideEffects:
     function: FunctionInfo
     coverage: Coverage
-    # True / False / None (unknown), see DESIGN_get_side_effects.md, section 1.3
+    # True / False / None (unknown), see design/get_side_effects.md, section 1.3
     pure_on_observed_inputs: Optional[bool]
     performs_file_io: bool
     # demangled names of called functions without a definition in the project, minus the allowlist

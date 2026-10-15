@@ -10,7 +10,7 @@
 
 The analysis (discopop_explorer.side_effects.analysis) returns every effect, unranked
 and uncut; this tool filters, ranks, cuts and words them for an agent. See
-DESIGN_get_side_effects.md, section 3.
+design/get_side_effects.md, section 3.
 """
 
 from __future__ import annotations

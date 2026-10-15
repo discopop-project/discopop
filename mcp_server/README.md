@@ -291,7 +291,7 @@ Returns the data a function was observed to read and write outside of itself dur
 
 At most 100 entries are returned, ranked writes before reads; global, parameter, other; the function's own accesses before those of callees, shallower callees first; observed before static; then by name. A cut result has `truncated: true` and a `next_step` naming the filters. An ambiguous name returns `status: "ambiguous"` with the `candidates` (name, file, lines).
 
-The tool reads `.discopop/explorer/side_effects.json.gz`, which `discopop_explorer` writes during `gather_data`; it never loads the PET. It refuses, with a `next_step` to run `gather_data` (again), when that file is missing, unreadable or of another format version, stale (`profiler/dynamic_dependencies.txt` changed since it was written), or written by an older explorer run with `--ignore-dependency-states`. The explorer writes no export when it runs with `--ignore-dependency-states` (and removes an earlier one), so the data is then reported as missing. Semantics and limits: [`DESIGN_get_side_effects.md`](../DESIGN_get_side_effects.md).
+The tool reads `.discopop/explorer/side_effects.json.gz`, which `discopop_explorer` writes during `gather_data`; it never loads the PET. It refuses, with a `next_step` to run `gather_data` (again), when that file is missing, unreadable or of another format version, stale (`profiler/dynamic_dependencies.txt` changed since it was written), or written by an older explorer run with `--ignore-dependency-states`. The explorer writes no export when it runs with `--ignore-dependency-states` (and removes an earlier one), so the data is then reported as missing. Semantics and limits: [`design/get_side_effects.md`](../design/get_side_effects.md).
 
 ### `explain_parallelization`
 

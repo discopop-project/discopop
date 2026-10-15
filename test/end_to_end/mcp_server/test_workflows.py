@@ -271,7 +271,7 @@ def _effects(data: dict[str, Any]) -> set[tuple[str, str, str]]:
 @requires_profiler
 class TestSideEffects(unittest.IsolatedAsyncioTestCase):
     """get_side_effects on src/side_effects/code.cpp, whose functions document their ground truth
-    (DESIGN_get_side_effects.md, section 5). Only the rows the design expects to hold are asserted;
+    (design/get_side_effects.md, section 5). Only the rows the design expects to hold are asserted;
     rows marked as limitations (stack reuse) are not."""
 
     def setUp(self) -> None:
