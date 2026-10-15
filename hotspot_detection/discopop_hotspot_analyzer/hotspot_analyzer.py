@@ -119,11 +119,11 @@ class cs:
         self.ratio = 1 / ((self.minVal / self.maxVal) + 1)
 
     def calAvr(self) -> None:
-        tempSum = 0.0
+        temp_sum = 0.0
         for i in self.runtimes:
-            tempSum += i
-        self.avr = tempSum / len(self.runtimes)
-        self.sum = tempSum
+            temp_sum += i
+        self.avr = temp_sum / len(self.runtimes)
+        self.sum = temp_sum
 
     def isHot(self, bl: bool) -> None:
         self.hot = bl
@@ -193,24 +193,24 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
     cslist: List[cs] = []
 
     def getHots(bl: bool) -> List[cs]:
-        Hots = []
+        hots = []
         for x in cslist:
             if x.hot == bl:
-                Hots.append(x)
-        return Hots
+                hots.append(x)
+        return hots
 
     def getSum(lst: List[cs]) -> float:
-        hotSum = 0.0
+        hot_sum = 0.0
         for i in lst:
-            hotSum += i.avr
-        return hotSum
+            hot_sum += i.avr
+        return hot_sum
 
     # READ FILES
     # cs_id.txt seeds the region list, rather than hotspot_result_0.txt: a region
     # need not be present in every run (it may belong to a build that a later
     # configuration did not instrument), and seeding from one run would drop it.
     print("Reading cs_id.txt ... ", end="")
-    csIndex: Dict[int, cs] = {}
+    cs_index: Dict[int, cs] = {}
     csfile = open("cs_id.txt", "r")
     for line in csfile:
         temp = []
@@ -220,38 +220,38 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
             continue
 
         csid = int(temp[0])
-        tempCs = csIndex.get(csid)
-        if tempCs is None:
-            tempCs = cs(csid)
-            csIndex[csid] = tempCs
-            cslist.append(tempCs)
+        temp_cs = cs_index.get(csid)
+        if temp_cs is None:
+            temp_cs = cs(csid)
+            cs_index[csid] = temp_cs
+            cslist.append(temp_cs)
         if temp[1] == "func":
-            tempCs.addInfo("FUNCTION", int(temp[2]), int(temp[3]), temp[4] if len(temp) > 4 else "")
+            temp_cs.addInfo("FUNCTION", int(temp[2]), int(temp[3]), temp[4] if len(temp) > 4 else "")
         if temp[1] == "loop":
-            tempCs.addInfo("LOOP", int(temp[2]), int(temp[3]), "")
+            temp_cs.addInfo("LOOP", int(temp[2]), int(temp[3]), "")
     csfile.close()
     print("Done.")
 
     print("Reading hotspot results... ", end="")
     i = 0
-    resultNum = 0
+    result_num = 0
     while True:
-        fileName = f"hotspot_result_{i}.txt"
+        file_name = f"hotspot_result_{i}.txt"
         i += 1
-        if os.path.exists(fileName):
+        if os.path.exists(file_name):
             pass
         else:
             break
-        resultNum += 1
-        dataFile = open(fileName, "r")
-        for line in dataFile:
+        result_num += 1
+        data_file = open(file_name, "r")
+        for line in data_file:
             temp = []
             for word in line.split():
                 temp.append(word)
-            tempCs = csIndex.get(int(temp[0]))
-            if tempCs:
-                tempCs.addData(float(temp[1]))
-        dataFile.close()
+            temp_cs = cs_index.get(int(temp[0]))
+            if temp_cs:
+                temp_cs.addData(float(temp[1]))
+        data_file.close()
 
     print("Done.")
 
@@ -259,7 +259,7 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
 
     __print_cs_list(cslist)
 
-    NZcslist: List[cs] = []
+    nz_cs_list: List[cs] = []
 
     print("Calculate Averages ... ", end="")
     for j in cslist:
@@ -272,104 +272,104 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
 
     for m in cslist:
         if m.sum > 0:
-            NZcslist.append(m)
+            nz_cs_list.append(m)
 
     print("Calculate Min,Max,Avg ... ", end="")
-    for j in NZcslist:
+    for j in nz_cs_list:
         j.calMin()
         j.calMax()
         j.calAvr()
     print("Done.")
 
     print("Calculate Delta and Ratio ... ", end="")
-    for j in NZcslist:
+    for j in nz_cs_list:
         j.roundMin()
         j.calDelta()
         j.calRatio()
     print("Done.")
 
     tempmax = 0.0
-    maxCS: Optional[cs] = None
+    max_cs: Optional[cs] = None
 
-    for x in NZcslist:
+    for x in nz_cs_list:
         if x.maxVal >= tempmax:
             tempmax = x.maxVal
-            maxCS = x
+            max_cs = x
 
-    if maxCS is not None:
-        print("max cs: ", maxCS.csid, " ", maxCS.maxVal)
+    if max_cs is not None:
+        print("max cs: ", max_cs.csid, " ", max_cs.maxVal)
 
     # sorting cs list based on avr and ratio
     print("Sort CS lists ... ", end="")
-    sortedCsAvr = NZcslist.copy()
-    sortedCsAvr.sort(key=lambda x: x.avr, reverse=True)
+    sorted_cs_avr = nz_cs_list.copy()
+    sorted_cs_avr.sort(key=lambda x: x.avr, reverse=True)
 
-    sortedCsRatio = NZcslist.copy()
-    sortedCsRatio.sort(key=lambda x: x.ratio, reverse=True)
+    sorted_cs_ratio = nz_cs_list.copy()
+    sorted_cs_ratio.sort(key=lambda x: x.ratio, reverse=True)
     print("Done.")
 
     # detecting hotspots of each list by mean or median
     print("Detect hotspots ... ", end="")
     mean = True
     if mean:
-        avrMiddle = np.mean([x.avr for x in NZcslist])
-        ratioMiddle = np.mean([x.ratio for x in NZcslist])
+        avr_middle = np.mean([x.avr for x in nz_cs_list])
+        ratio_middle = np.mean([x.ratio for x in nz_cs_list])
     else:
-        avrMiddle = np.median([x.avr for x in NZcslist])
-        ratioMiddle = np.median([x.ratio for x in NZcslist])
+        avr_middle = np.median([x.avr for x in nz_cs_list])
+        ratio_middle = np.median([x.ratio for x in nz_cs_list])
 
-    for x in NZcslist:
-        if x.avr >= avrMiddle:
+    for x in nz_cs_list:
+        if x.avr >= avr_middle:
             x.isTopAvr(True)
 
-    for x in NZcslist:
-        if x.ratio >= ratioMiddle:
+    for x in nz_cs_list:
+        if x.ratio >= ratio_middle:
             x.isTopRatio(True)
     print("Done")
 
     # print
-    __print_cs_list(NZcslist)
-    print(ratioMiddle)
+    __print_cs_list(nz_cs_list)
+    print(ratio_middle)
 
     # WRITE OUT RESULTS
     print("Output results ... ", end="")
 
     with open("hotspot_result.txt", "w") as f:
-        for x in NZcslist:
+        for x in nz_cs_list:
             f.write(f"{x.csid} {x.ratio} {x.avr} {x.minVal} {x.maxVal} {x.getHotness()}\n")
 
     # categorize Hotspots based on my definition
     f = open("Hotspots.txt", "w")
     f.write("Is this code region a hotspot? \n")
-    counterY = 0
-    counterM = 0
-    counterN = 0
-    for x in NZcslist:
+    counter_y = 0
+    counter_m = 0
+    counter_n = 0
+    for x in nz_cs_list:
         if x.topAvr and x.topRatio:
-            counterY += 1
-            yesNoMaybe = " is YES"
+            counter_y += 1
+            yes_no_maybe = " is YES"
             x.hotness = "YES"
         if x.topAvr != x.topRatio:
-            counterM += 1
-            yesNoMaybe = " is MAYBE"
+            counter_m += 1
+            yes_no_maybe = " is MAYBE"
             x.hotness = "MAYBE"
         if not x.topAvr and not x.topRatio:
-            counterN += 1
-            yesNoMaybe = " is NO"
+            counter_n += 1
+            yes_no_maybe = " is NO"
             x.hotness = "NO"
-        f.write(str(x.csid) + " " + str(x.name) + " at " + str(x.fid) + ":" + str(x.lineNum) + yesNoMaybe + "\n")
-    f.write("Number of YES code regions: " + str(counterY) + " \n")
-    f.write("Number of MAYBE code regions: " + str(counterM) + " \n")
-    f.write("Number of NO code regions: " + str(counterN) + " \n")
-    f.write("Number of Non-zero code regions: " + str(counterN + counterM + counterY) + " \n")
+        f.write(str(x.csid) + " " + str(x.name) + " at " + str(x.fid) + ":" + str(x.lineNum) + yes_no_maybe + "\n")
+    f.write("Number of YES code regions: " + str(counter_y) + " \n")
+    f.write("Number of MAYBE code regions: " + str(counter_m) + " \n")
+    f.write("Number of NO code regions: " + str(counter_n) + " \n")
+    f.write("Number of Non-zero code regions: " + str(counter_n + counter_m + counter_y) + " \n")
     f.close()
 
     # export results to Hotspots.json and store in "public" folder
     with open(os.path.join(hotspot_detection_dir, "Hotspots.json"), "w+") as outfile:
         outfile.write('{"code_regions": [')
-        for id, x in enumerate(NZcslist):
+        for id, x in enumerate(nz_cs_list):
             outfile.write(x.toJSON())
-            if id != len(NZcslist) - 1:
+            if id != len(nz_cs_list) - 1:
                 outfile.write(",\n")
             else:
                 # last element of the list

@@ -34,9 +34,9 @@ class Network(object):
         if (source, target) not in self.__transfer_speeds:
             if self.__host_device is None:
                 raise ValueError("Host device of network unspecified!")
-            S_to_H_speed = self.__transfer_speeds[(source, self.__host_device)]
-            H_to_T_speed = self.__transfer_speeds[(self.__host_device, target)]
-            return min(S_to_H_speed, H_to_T_speed)
+            s_to_h_speed = self.__transfer_speeds[(source, self.__host_device)]
+            h_to_t_speed = self.__transfer_speeds[(self.__host_device, target)]
+            return min(s_to_h_speed, h_to_t_speed)
         return self.__transfer_speeds[(source, target)]
 
     def get_transfer_initialization_costs(self, source: Device, target: Device) -> Expr:
@@ -45,9 +45,9 @@ class Network(object):
         if (source, target) not in self.__transfer_speeds:
             if self.__host_device is None:
                 raise ValueError("Host device of network unspecified!")
-            S_to_H_init_costs = self.__transfer_initialization_costs[(source, self.__host_device)]
-            H_to_T_init_costs = self.__transfer_initialization_costs[(self.__host_device, target)]
-            return cast(Expr, S_to_H_init_costs + H_to_T_init_costs)
+            s_to_h_init_costs = self.__transfer_initialization_costs[(source, self.__host_device)]
+            h_to_t_init_costs = self.__transfer_initialization_costs[(self.__host_device, target)]
+            return cast(Expr, s_to_h_init_costs + h_to_t_init_costs)
         return self.__transfer_initialization_costs[(source, target)]
 
     def get_free_symbols(self) -> List[Tuple[Symbol, Optional[Expr]]]:

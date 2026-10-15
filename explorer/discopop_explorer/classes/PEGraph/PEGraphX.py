@@ -138,10 +138,10 @@ class PEGraphX(Plottable, object):  # type: ignore[misc]
                         g.add_edge(source, successor, data=Dependency(EdgeType.SUCCESSOR))
 
             if "callsNode" in dir(node) and "nodeCalled" in dir(node.callsNode):
-                for nodeCalled in [n.text for n in node.callsNode.nodeCalled]:
-                    if nodeCalled not in g:
-                        warn(f"no nodeCalled {nodeCalled} found")
-                    g.add_edge(source, nodeCalled, data=Dependency(EdgeType.CALLSNODE))
+                for node_called in [n.text for n in node.callsNode.nodeCalled]:
+                    if node_called not in g:
+                        warn(f"no nodeCalled {node_called} found")
+                    g.add_edge(source, node_called, data=Dependency(EdgeType.CALLSNODE))
 
             if "childrenNodes" in dir(node):
                 for child in [n.text for n in node.childrenNodes]:

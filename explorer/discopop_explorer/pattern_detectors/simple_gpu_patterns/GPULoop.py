@@ -378,8 +378,8 @@ class GPULoopPattern(PatternInfo):
         :return:
         """
         # The string begins with the type, the LID and the number of iterations.
-        fileID = parse_id(self.nodeID)
-        ss: str = str(fileID[0]) + ":"
+        file_id = parse_id(self.nodeID)
+        ss: str = str(file_id[0]) + ":"
         ss += str(self.startLine) + " "
         ss += "0" if not self.reduction_vars_str else "1"
         ss += " " + str(self.iteration_count) + " "
@@ -427,8 +427,8 @@ class GPULoopPattern(PatternInfo):
         waw = set()
         rev_raw = set()
 
-        dummyFunctions: Set[NodeID] = set()
-        self.called_functions.update(getCalledFunctions(pet, loop, self.called_functions, dummyFunctions))
+        dummy_functions: Set[NodeID] = set()
+        self.called_functions.update(getCalledFunctions(pet, loop, self.called_functions, dummy_functions))
 
         for sub_node in sub:
             raw.update(get_dep_of_type(pet, sub_node, DepType.RAW, False))
@@ -557,10 +557,10 @@ class GPULoopPattern(PatternInfo):
         :return:
         """
         n = map_node(pet, node_id)
-        endLine = 0
+        end_line = 0
         for children in direct_children(pet, n):
-            if children.end_line > endLine:
-                endLine = children.end_line
+            if children.end_line > end_line:
+                end_line = children.end_line
 
     def setCollapseClause(self, pet: PEGraphX, node_id: NodeID, res: DetectionResult) -> None:
         """

@@ -30,20 +30,20 @@ class ParsedMicrobenchResults:
 def parseMicrobenchResults(jsonPath: str) -> ParsedMicrobenchResults:
     # Parse JSON into an object with attributes corresponding to dict keys.
     with open(jsonPath) as file:
-        jsonData = json.loads(file.read())
+        json_data = json.loads(file.read())
 
     measurements: Dict[
         MicrobenchType,
         Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
     ] = dict()
-    for typeString, dimMap in jsonData["measurements"].items():
-        mbType = MicrobenchType(typeString)
-        measurements[mbType] = dict()
-        for dimString, coordList in dimMap.items():
-            mbDim = MicrobenchDimension(dimString)
-            measurements[mbType][mbDim] = dict()
-            for obj in coordList:
+    for type_string, dim_map in json_data["measurements"].items():
+        mb_type = MicrobenchType(type_string)
+        measurements[mb_type] = dict()
+        for dim_string, coord_list in dim_map.items():
+            mb_dim = MicrobenchDimension(dim_string)
+            measurements[mb_type][mb_dim] = dict()
+            for obj in coord_list:
                 coord = MicrobenchCoordinate(*obj["point"])
                 values = obj["values"]
-                measurements[mbType][mbDim][coord] = values
+                measurements[mb_type][mb_dim][coord] = values
     return ParsedMicrobenchResults(measurements)

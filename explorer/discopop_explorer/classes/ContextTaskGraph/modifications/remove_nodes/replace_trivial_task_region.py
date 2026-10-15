@@ -56,7 +56,7 @@ def replace_trivial_task_region(ctg: ContextTaskGraph) -> bool:
             if not successors_preceeding_nodes_valid:
                 continue
             # check if both successors are immediately followed by the TaskEnd node and have only a single successor
-            successors_immediately_followed_by_TaskEnd = True
+            successors_immediately_followed_by_task_end = True
             for succ in control_edge_successors:
                 succ_control_edge_successors = [
                     ctx
@@ -64,12 +64,12 @@ def replace_trivial_task_region(ctg: ContextTaskGraph) -> bool:
                     if len([info for info in ctg.get_edge_info(succ, ctx) if info.type == CTGEdgeType.CONTROL]) > 0
                 ]
                 if len(succ_control_edge_successors) != 1:
-                    successors_immediately_followed_by_TaskEnd = False
+                    successors_immediately_followed_by_task_end = False
                     break
                 if succ_control_edge_successors[0] != node.task_end_context:
-                    successors_immediately_followed_by_TaskEnd = False
+                    successors_immediately_followed_by_task_end = False
                     break
-            if not successors_immediately_followed_by_TaskEnd:
+            if not successors_immediately_followed_by_task_end:
                 continue
             # combine nodes into CombinedContext node
             combined_context_node = CombinedContext()

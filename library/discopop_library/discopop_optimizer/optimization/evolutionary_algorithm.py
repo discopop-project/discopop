@@ -248,12 +248,12 @@ def __select(
         score_sum += val
 
     # get Probabilities for each element
-    probabilityMap: Dict[Tuple[int, ...], float] = dict()
+    probability_map: Dict[Tuple[int, ...], float] = dict()
     for element_idx, element in enumerate(population):
-        probabilityMap[tuple(element)] = 1 - (fitness[element_idx] / score_sum)
+        probability_map[tuple(element)] = 1 - (fitness[element_idx] / score_sum)
 
     # get weights list
-    weights = [probabilityMap[tuple(elem)] for elem in population]
+    weights = [probability_map[tuple(elem)] for elem in population]
 
     # select population to preserve
     new_population = random.choices(population, weights=weights, k=new_population_size - 1)

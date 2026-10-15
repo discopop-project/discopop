@@ -39,9 +39,9 @@ class ExtrapInterpolatedMicrobench(Microbench):
 
     # convenient for debugging: print the model functions
     def printModelFunctions(self) -> None:
-        for callpathMetric, model in self.models.items():
-            test = str(callpathMetric[0]).ljust(12)
-            metric = str(callpathMetric[1])
+        for callpath_metric, model in self.models.items():
+            test = str(callpath_metric[0]).ljust(12)
+            metric = str(callpath_metric[1])
             if metric == "Test time in us":
                 metric = "Test:      "
             elif metric == "Reference time in us":

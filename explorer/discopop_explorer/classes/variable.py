@@ -24,7 +24,7 @@ class Variable(object):
         # Sizes are mainly unknown if the underlying variable is a pointer type.
         # Since Pointers in 64-bit architectures occupy 8 bytes, this size is chosen as the "default" at this point.
         if sizeInByte == 0:
-            sizeInByte = 8
+            sizeInByte = 8  # noqa: N806  the commented-out code of this function uses the name
         self.sizeInByte = sizeInByte
 
     def __hash__(self) -> int:

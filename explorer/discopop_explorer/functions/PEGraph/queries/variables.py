@@ -86,9 +86,9 @@ def get_undefined_variables_inside_loop(
     vars = get_variables(pet, sub)
     if root_loop.start_line == 122 and root_loop.file_id == 9:
         pass
-    dummyVariables = []
-    definedVarsInLoop = []
-    definedVarsInCalledFunctions = []
+    dummyVariables = []  # noqa: N806  the commented-out code of this function uses the name
+    definedVarsInLoop = []  # noqa: N806  the commented-out code of this function uses the name
+    definedVarsInCalledFunctions = []  # noqa: N806  the commented-out code of this function uses the name
 
     # Remove llvm temporary variables
     for var in vars:
