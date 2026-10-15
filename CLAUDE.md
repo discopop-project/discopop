@@ -146,7 +146,7 @@ This document contains critical information about working with this codebase. Fo
 - names looked up by string must keep their spelling: the injected callbacks `__dp_*` (and the `FunctionType`s the pass builds for them must match their signatures) and the methods LLVM's pass manager detects (`run`, `isRequired`, `name`)
 
 #### LLVM versions (profiler)
-- the pass supports LLVM 19-22; code that must differ between the versions is not written as `#if LLVM_VERSION_MAJOR` at the call site: `profiler/DiscoPoP/llvm_compat.hpp` wraps what is not available in all of them (`llvmcompat::nextInstruction`, `llvmcompat::insertAfter`), and instructions are created before an iterator (`->getIterator()`), which every supported version accepts
+- the pass supports LLVM 19-22; code that must differ between the versions is not written as `#if LLVM_VERSION_MAJOR` at the call site: `profiler/DiscoPoP/llvm_compat.hpp` wraps what is not available in all of them (`llvmcompat::NextInstruction`, `llvmcompat::InsertAfter`), and instructions are created before an iterator (`->getIterator()`), which every supported version accepts
 - the remaining version checks are the `PassPlugin.h` include path and the pipeline callback signature in `RegisterPass.cpp`; a new difference belongs into `llvm_compat.hpp`
 
 #### Build configuration of the profiler
@@ -215,7 +215,7 @@ To execute the CI pipeline locally, use the following command from the root fold
 
 ### Runtime library benchmark variants
 - `profiler/rtlib/CMakeLists.txt` builds the runtime 18 times when `DP_BUILD_UNITTESTS=1`: the shipped `DiscoPoP_RT`, plus `DiscoPoP_RT_EmptyCallbacks` (no callback body at all) and one `DiscoPoP_RT_Only_<CALLBACK>` per callback (only that body)
-- the switch is `callback_body_enabled(CallbackId)` in `profiler/rtlib/callback_scope.hpp`, driven by `DP_BENCHMARK_EMPTY_CALLBACKS` and `DP_BENCHMARK_ONLY_CALLBACK=<enumerator>`; it is a compile-time constant, so a body that is off is gone from the generated code rather than skipped over
+- the switch is `CallbackBodyEnabled(CallbackId)` in `profiler/rtlib/callback_scope.hpp`, driven by `DP_BENCHMARK_EMPTY_CALLBACKS` and `DP_BENCHMARK_ONLY_CALLBACK=<enumerator>`; it is a compile-time constant, so a body that is off is gone from the generated code rather than skipped over
 - build them all with `cmake --build build_tests --target DiscoPoP_RT_BenchmarkVariants`; they are not installed and must never be linked into a profiled program
 - the shared half of the runtime is compiled once into `DiscoPoP_RT_BenchmarkShared` and reused; `DiscoPoP_CALLBACK_SOURCES` in that CMakeLists lists the files whose code depends on the switch (everything including `callback_scope.hpp`) — a new callback file belongs there, not in `DiscoPoP_SHARED_SOURCES`
 

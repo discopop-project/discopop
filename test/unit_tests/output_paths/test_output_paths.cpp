@@ -5,7 +5,7 @@
 
 #include "output_paths.hpp"
 
-// Every result file the runtime writes goes through profiler_output_path(). __dp_init pins
+// Every result file the runtime writes goes through ProfilerOutputPath(). __dp_init pins
 // DOT_DISCOPOP_PROFILER down before any other code of an instrumented program runs, so by the time
 // a callback wants to write something the directory is known; the function only has to join it
 // with the file name.

@@ -86,7 +86,7 @@ std::int64_t accessed_memory[kAddressCount];
 
 void fill_input_pools() {
   for (std::size_t i = 0; i < kLineCount; ++i) {
-    // what the pass encodes: the file id above the line number, see dputil::decodeLID
+    // what the pass encodes: the file id above the line number, see dputil::DecodeLid
     line_ids[i] = (static_cast<LID>(kFileId) << kLidSize) | static_cast<LID>(i + 1);
   }
   for (std::size_t i = 0; i < kAddressCount; ++i) {

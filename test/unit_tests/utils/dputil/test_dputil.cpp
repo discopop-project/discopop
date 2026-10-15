@@ -12,11 +12,11 @@
 #include "lid_utils.hpp"
 
 // The helpers the runtime and the LLVM pass share. A location id packs a file id and a line
-// number into one integer -- the lower LIDSIZE bits hold the line, the bits above it the file --
+// number into one integer -- the lower kLidSize bits hold the line, the bits above it the file --
 // and the upper 32 bits carry the call path state the runtime adds, which decoding drops again.
 class DPUtilsTest : public ::testing::Test {
 protected:
-  // A file the test owns for the duration of one test case. getFileID() and fexists() take paths,
+  // A file the test owns for the duration of one test case. GetFileId() and FileExists() take paths,
   // so there is no way around touching the file system for them.
   class TemporaryFile {
   public:
@@ -75,7 +75,7 @@ TEST_F(DPUtilsTest, testTheLastFileAProjectCanHoldDecodes) {
 }
 
 // the lines of a file must not leak into its file id, and the other way round: this was the case for
-// the lines above 2^LIDSIZE - 1 of a layout that gave the line fewer bits
+// the lines above 2^kLidSize - 1 of a layout that gave the line fewer bits
 TEST_F(DPUtilsTest, testTheLineOfALocationDoesNotChangeItsFile) {
   EXPECT_EQ(dputil::DecodeLid(make_lid(5, 16384)), "5:16384");
   EXPECT_EQ(dputil::DecodeLid(make_lid(5, 100000)), "5:100000");
