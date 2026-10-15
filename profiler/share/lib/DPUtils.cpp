@@ -39,7 +39,7 @@ int32_t getFileID(string /*fileMapping*/, string fullPathName) {
   // prepare environment variables
   if (FileMappingPath.length() == 0) {
     char const *tmp = getenv("DOT_DISCOPOP");
-    if (tmp == NULL) {
+    if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
     }
@@ -164,7 +164,7 @@ int64_t getLID(Instruction *BI, int32_t &fileID) {
   // prepare environment variables
   if (FileMappingPath.length() == 0) {
     char const *tmp = getenv("DOT_DISCOPOP");
-    if (tmp == NULL) {
+    if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
     }
@@ -187,7 +187,7 @@ int64_t getLID(Instruction *BI, int32_t &fileID) {
     // Get the new fileID.
     StringRef File = "", Dir = "";
     MDNode *N = BI->getMetadata("dbg");
-    if (N == NULL) {
+    if (N == nullptr) {
       // N == NULL means BI is only a helper instruction.
       // No metadata is attached to BI.
       return 0;
@@ -225,7 +225,7 @@ void determineFileID(Function &F, int32_t &fileID) {
   // prepare environment variables
   if (FileMappingPath.length() == 0) {
     char const *tmp = getenv("DOT_DISCOPOP");
-    if (tmp == NULL) {
+    if (tmp == nullptr) {
       // DOT_DISCOPOP needs to be initialized
       setenv("DOT_DISCOPOP", ".discopop", 1);
     }
@@ -255,10 +255,10 @@ void determineFileID(Function &F, int32_t &fileID) {
           File = Loc->getFilename();
           Dir = Loc->getDirectory();
 
-          char *absolutePathFileName = realpath((Dir.str() + "/" + File.str()).c_str(), NULL);
+          char *absolutePathFileName = realpath((Dir.str() + "/" + File.str()).c_str(), nullptr);
 
-          if (absolutePathFileName == NULL) {
-            absolutePathFileName = realpath(File.data(), NULL);
+          if (absolutePathFileName == nullptr) {
+            absolutePathFileName = realpath(File.data(), nullptr);
           }
 
           if (absolutePathFileName) {

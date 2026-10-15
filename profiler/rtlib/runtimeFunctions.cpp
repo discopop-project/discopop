@@ -185,8 +185,8 @@ void finalizeParallelization() {
 
   // wait for worker threads
   for (int i = 0; i < NUM_WORKERS; ++i)
-    pthread_join(workers[i], NULL);
-  pthread_join(*secondAccessQueue_worker_thread, NULL);
+    pthread_join(workers[i], nullptr);
+  pthread_join(*secondAccessQueue_worker_thread, nullptr);
 
   // delete allocated memory
   delete[] workers;

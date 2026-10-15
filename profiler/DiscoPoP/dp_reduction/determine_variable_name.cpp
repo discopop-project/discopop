@@ -24,7 +24,7 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
 
   IRBuilder<> builder(I);
 
-  if (operand == NULL) {
+  if (operand == nullptr) {
     string retVal = getOrInsertVarName_static("", builder);
     if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
       return retVal; // not found

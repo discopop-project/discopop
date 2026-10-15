@@ -75,8 +75,8 @@ typedef struct Node_struct {
 
   Node_struct() {
     ID = std::to_string(fileID) + ":" + std::to_string(CUIDCounter++);
-    parentNode = NULL;
-    BB = NULL;
+    parentNode = nullptr;
+    BB = nullptr;
   }
 } Node;
 

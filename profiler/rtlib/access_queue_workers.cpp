@@ -177,7 +177,7 @@ void *processFirstAccessQueue(void *arg) {
 #endif
   }
 
-  pthread_exit(NULL);
+  pthread_exit(nullptr);
   return nullptr;
 }
 
@@ -261,7 +261,7 @@ void *processSecondAccessQueue(void *arg) {
 #endif
   }
 
-  pthread_exit(NULL);
+  pthread_exit(nullptr);
   return nullptr;
 }
 

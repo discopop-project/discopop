@@ -17,7 +17,7 @@ using namespace std;
 using namespace dputil;
 
 string DiscoPoP::getOrInsertVarName_static(string varName, IRBuilder<> &builder) {
-  Value *valName = NULL;
+  Value *valName = nullptr;
   // remove .addr if added. Replaced by the GEPRESULT_ tag
   if (varName.find(".addr") != std::string::npos){
     varName.erase(varName.find(".addr"), 5);
@@ -51,7 +51,7 @@ Value *DiscoPoP::getOrInsertVarName_dynamic(string varName, IRBuilder<> &builder
     varName = trueVarNamesFromMetadataMap[varName];
   }
 
-  Value *vName = NULL;
+  Value *vName = nullptr;
   map<string, Value *>::iterator pair = VarNames.find(varName);
   if (pair == VarNames.end()) {
     vName = builder.CreateGlobalStringPtr(StringRef(varName.c_str()), ".str");
@@ -71,7 +71,7 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
 
   IRBuilder<> builder(I);
 
-  if (operand == NULL) {
+  if (operand == nullptr) {
     string retVal = getOrInsertVarName_static("", builder);
     if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
       return retVal; // not found
@@ -163,7 +163,7 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I, string pref
 
   IRBuilder<> builder(I);
 
-  if (operand == NULL) {
+  if (operand == nullptr) {
     return getOrInsertVarName_dynamic("*", builder);
   }
 
@@ -171,7 +171,7 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I, string pref
     // we've found a global variable
     if (isa<GlobalVariable>(*operand)) {
       DIGlobalVariable *gv = findDbgGlobalDeclare(cast<GlobalVariable>(operand));
-      if (gv != NULL) {
+      if (gv != nullptr) {
         return getOrInsertVarName_dynamic(prefix +  string(gv->getDisplayName().data()), builder);
       }
     }

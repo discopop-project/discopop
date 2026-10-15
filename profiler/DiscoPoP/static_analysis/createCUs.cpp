@@ -78,7 +78,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
     vector<CU *> basicBlockCUVector;
     basicBlockCUVector.push_back(cu);
     BBIDToCUIDsMap.insert(pair<string, vector<CU *>>(bb->getName(), basicBlockCUVector));
-    DILocalScope *scopeBuffer = NULL;
+    DILocalScope *scopeBuffer = nullptr;
 
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       // NOTE: 'instruction' --> '&*instruction'
