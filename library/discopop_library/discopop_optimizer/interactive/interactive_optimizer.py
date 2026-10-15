@@ -10,9 +10,6 @@ import logging
 import os
 from typing import List, Optional, Set, cast
 from discopop_library.discopop_optimizer.DataTransfers.NewDataTransfers import new_calculate_data_transfers
-from discopop_library.discopop_optimizer.DataTransfers.calculate_configuration_data_movement import (
-    calculate_data_movement,
-)
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.UpdateOptimization.main import optimize_updates
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
@@ -21,7 +18,6 @@ from discopop_library.discopop_optimizer.Variables.ExperimentUtils import (
     export_to_json,
     restore_session,
 )
-from discopop_library.discopop_optimizer.utilities.MOGUtilities import show
 from discopop_library.result_classes.MergedPattern import MergedPattern
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 

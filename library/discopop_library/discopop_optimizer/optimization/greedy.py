@@ -6,23 +6,19 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import copy
-import json
 import logging
 from multiprocessing import Pool
 import os
-from typing import Dict, List, Optional, Set, Tuple, cast
+from typing import Dict, List, Optional, Tuple, cast
 
-from sympy import Expr  # type: ignore
 import tqdm  # type: ignore
 from discopop_explorer.aliases.NodeID import NodeID
 
-from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.context.ContextObject import ContextObject
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.optimization.evaluate import evaluate_configuration
-from itertools import product
 from discopop_library.discopop_optimizer.optimization.validation import check_configuration_validity
 
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at

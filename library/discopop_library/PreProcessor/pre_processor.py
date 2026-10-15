@@ -5,12 +5,9 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import json
 import os
 import shutil
 
-from discopop_library.FolderStructure.setup import setup_patch_applicator
-from discopop_library.PathManagement.PathManagement import load_file_mapping
 
 import logging
 

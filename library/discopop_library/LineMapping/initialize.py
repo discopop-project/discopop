@@ -6,8 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import json
-import os.path
 from pathlib import Path
 from typing import Dict
 

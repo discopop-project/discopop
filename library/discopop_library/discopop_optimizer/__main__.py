@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 from argparse import ArgumentParser
-import logging
 from discopop_library.GlobalLogger.setup import setup_logger
 
 from discopop_library.discopop_optimizer.optimizer import run

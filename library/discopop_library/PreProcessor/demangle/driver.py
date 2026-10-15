@@ -12,10 +12,16 @@ from discopop_library.PreProcessor.PreProcessorArguments import PreProcessorArgu
 
 import logging
 
-from discopop_library.PreProcessor.demangle.data_xml import demangle_data_xml
-from discopop_library.PreProcessor.demangle.dynamic_dependencies import demangle_dynamic_dependencies
+from discopop_library.PreProcessor.demangle.data_xml import (  # noqa: F401  used by the commented-out code
+    demangle_data_xml,
+)
+from discopop_library.PreProcessor.demangle.dynamic_dependencies import (  # noqa: F401  used by the commented-out code
+    demangle_dynamic_dependencies,
+)
 from discopop_library.PreProcessor.demangle.reduction import demangle_reduction
-from discopop_library.PreProcessor.demangle.static_dependencies import demangle_static_dependencies
+from discopop_library.PreProcessor.demangle.static_dependencies import (  # noqa: F401  used by the commented-out code
+    demangle_static_dependencies,
+)
 
 
 def demangle(arguments: PreProcessorArguments, parent_logger: logging.Logger) -> None:

@@ -5,11 +5,6 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import List
-from discopop_explorer.classes.PEGraph.CUNode import CUNode
-from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
-from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGFunctionNode import TGFunctionNode
-from discopop_library.ParallelRegionMerger.classes.TaskGraph.TGNode import TGNode
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.TaskNode import TaskNode
 
 

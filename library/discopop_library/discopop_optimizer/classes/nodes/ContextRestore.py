@@ -5,8 +5,8 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import copy
-import warnings
+import copy  # noqa: F401  used by the commented-out code
+import warnings  # noqa: F401  used by the commented-out code
 
 import networkx as nx  # type: ignore
 

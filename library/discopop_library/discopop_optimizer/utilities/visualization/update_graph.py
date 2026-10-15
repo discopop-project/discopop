@@ -14,10 +14,7 @@ import networkx as nx  # type: ignore
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment  # type: ignore
 
 from discopop_library.discopop_optimizer.classes.edges.ChildEdge import ChildEdge
-from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
-from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import RequirementEdge
 from discopop_library.discopop_optimizer.classes.edges.SuccessorEdge import SuccessorEdge
-from discopop_library.discopop_optimizer.classes.edges.TemporaryEdge import TemporaryEdge
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop

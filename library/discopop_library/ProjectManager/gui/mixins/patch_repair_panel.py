@@ -36,7 +36,7 @@ from discopop_library.PatchRepair import llm_backends
 from discopop_library.PatchRepair.PatchRepairArguments import DEFAULT_HOTSPOT_TYPES
 from discopop_library.PatchRepair.results import PROGRESS_PREFIX
 from discopop_library.ProjectManager.gui import widgets
-from discopop_library.ProjectManager.gui.mixins.helpers import Tooltip, clean_ansi_output, show_error
+from discopop_library.ProjectManager.gui.mixins.helpers import clean_ansi_output, show_error
 from discopop_library.ProjectManager.gui.mixins.mixin_base import ConfigManagerMixinBase
 from discopop_library.ProjectManager.gui.plots.data import split_progress_events
 from discopop_library.ProjectManager.gui.rounded_button import RoundedButton

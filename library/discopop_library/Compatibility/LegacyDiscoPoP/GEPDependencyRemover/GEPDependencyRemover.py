@@ -7,26 +7,12 @@
 # directory for details.
 
 import logging
-import os
 import re
-from typing import List, Tuple, cast
+from typing import List
 
-import jsonpickle  # type: ignore
-from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
-from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_library.Compatibility.LegacyDiscoPoP.GEPDependencyRemover.ArgumentClasses import (
     GEPDependencyRemoverArguments,
 )
-from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
-from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
-from discopop_library.EmpiricalAutotuning.Statistics.StatisticsGraph import NodeColor, NodeShape, StatisticsGraph
-from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
-from discopop_library.EmpiricalAutotuning.utils import get_applicable_suggestion_ids
-from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
-from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
-from discopop_library.HostpotLoader.HotspotType import HotspotType
-from discopop_library.HostpotLoader.hostpot_loader import run as load_hotspots
-from discopop_library.result_classes.DetectionResult import DetectionResult
 
 logger = logging.getLogger("GEPDependencyRemover")
 

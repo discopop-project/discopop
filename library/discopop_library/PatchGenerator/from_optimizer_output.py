@@ -11,16 +11,14 @@ import os.path
 from pathlib import Path
 import shutil
 from typing import Dict, List, Optional, Tuple
-from discopop_library.CodeGenerator.CodeGenerator import from_json_strings, from_json_strings_with_mapping
+from discopop_library.CodeGenerator.CodeGenerator import from_json_strings_with_mapping
 from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
 from discopop_library.PatchGenerator.diffs import get_diffs_from_modified_code
-from discopop_library.discopop_optimizer.classes.context.Update import Update, construct_update_from_dict
+from discopop_library.discopop_optimizer.classes.context.Update import construct_update_from_dict
 from discopop_library.discopop_optimizer.classes.system.devices.DeviceTypeEnum import DeviceTypeEnum
 from discopop_library.discopop_optimizer.classes.types.Aliases import DeviceID
 from discopop_library.result_classes.DetectionResult import DetectionResult
 import jsonpickle  # type: ignore
-
-from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
 
 
 def from_optimizer_output(

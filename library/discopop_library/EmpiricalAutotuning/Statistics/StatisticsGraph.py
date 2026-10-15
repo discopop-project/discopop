@@ -10,7 +10,6 @@ from enum import Enum
 import logging
 import os
 import subprocess
-from typing import Any
 import networkx as nx  # type: ignore
 
 logger = logging.getLogger("StatisticsGraph")

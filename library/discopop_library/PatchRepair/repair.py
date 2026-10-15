@@ -20,7 +20,7 @@ and only the far smaller set of failures costs a per-suggestion invocation after
 import logging
 import os
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from discopop_library.FolderStructure.setup import setup_patch_repair
 from discopop_library.PatchRepair import llm_config
@@ -30,7 +30,6 @@ from discopop_library.PatchRepair.candidates import Candidate, collect_candidate
 from discopop_library.PatchRepair.compilation import CompileCheckError, CompileReport, run_compile_check
 from discopop_library.ProjectManager.configurations.execution import read_applied_suggestions
 from discopop_library.PatchRepair.results import (
-    STATUS_FAILED,
     STATUS_NOT_APPLIED,
     STATUS_OK,
     STATUS_REPAIRED,

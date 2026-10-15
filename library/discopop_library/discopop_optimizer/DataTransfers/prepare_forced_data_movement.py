@@ -9,7 +9,7 @@
 from discopop_library.discopop_optimizer.DataTransfers.prepare_force_branch_end_data_movement import (
     prepare_force_branch_end_data_movement,
 )
-from discopop_library.discopop_optimizer.DataTransfers.prepare_forced_data_movement_prior_to_call import (
+from discopop_library.discopop_optimizer.DataTransfers.prepare_forced_data_movement_prior_to_call import (  # noqa: F401  used by the commented-out code
     prepare_forced_data_movement_prior_to_call,
 )
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment

@@ -5,9 +5,8 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from typing import List, Tuple, cast, Any, Union, Optional
+from typing import List, Tuple, cast, Any, Union, Optional  # noqa: F401  used by the commented-out code
 
-import networkx as nx  # type: ignore
 
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.ContextMerge import ContextMerge

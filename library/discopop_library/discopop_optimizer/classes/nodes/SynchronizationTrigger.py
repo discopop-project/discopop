@@ -7,12 +7,11 @@
 # directory for details.
 from typing import Optional, Set
 
-from sympy import Function, Symbol, Integer, Expr  # type: ignore
+from sympy import Expr  # type: ignore
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import WriteDataAccess  # type: ignore
 
 from discopop_explorer.aliases.NodeID import NodeID
-from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
 from discopop_library.discopop_optimizer.classes.types.DataAccessType import ReadDataAccess
 

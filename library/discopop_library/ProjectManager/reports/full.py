@@ -7,7 +7,6 @@
 # directory for details.
 
 import datetime
-import json
 import os
 import textwrap
 import time

@@ -8,20 +8,18 @@
 
 import copy
 import logging
-from multiprocessing import Pool
-from typing import Dict, List, Set, Tuple, cast
+from multiprocessing import Pool  # noqa: F401  used by the commented-out code
+from typing import List, Set, Tuple, cast
 from sympy import Integer, Symbol  # type: ignore
 
 import networkx as nx  # type: ignore
 
-import tqdm  # type: ignore
+import tqdm  # type: ignore  # noqa: F401  used by the commented-out code
 from discopop_library.discopop_optimizer.classes.nodes.ContextNode import ContextNode  # type: ignore
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern  # type: ignore
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo  # type: ignore
-from discopop_library.PatternIdManagement.unique_pattern_id import get_unique_pattern_id
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.edges.MutuallyExclusiveEdge import MutuallyExclusiveEdge
-from discopop_library.discopop_optimizer.classes.edges.OptionEdge import OptionEdge
 from discopop_library.discopop_optimizer.classes.edges.RequirementEdge import RequirementEdge
 from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.nodes.Workload import Workload
@@ -34,7 +32,6 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_parents,
     get_predecessors,
     get_successors,
-    show,
 )
 from discopop_library.discopop_optimizer.utilities.simple_utilities import data_at
 

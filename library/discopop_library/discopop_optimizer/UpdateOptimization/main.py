@@ -7,7 +7,7 @@
 # directory for details.
 
 import logging
-import os
+import os  # noqa: F401  used by the commented-out code
 
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.UpdateOptimization.AddRangesToUpdates import add_ranges_to_updates
@@ -15,10 +15,14 @@ from discopop_library.discopop_optimizer.UpdateOptimization.LoopInitializationUp
     fix_loop_initialization_updates,
 )
 from discopop_library.discopop_optimizer.UpdateOptimization.RemoveDuplicatedUpdates import remove_duplicated_updates
-from discopop_library.discopop_optimizer.UpdateOptimization.RemoveLoopIndexUpdates import remove_loop_index_updates
+from discopop_library.discopop_optimizer.UpdateOptimization.RemoveLoopIndexUpdates import (  # noqa: F401  used by the commented-out code
+    remove_loop_index_updates,
+)
 from discopop_library.discopop_optimizer.UpdateOptimization.RemoveSameDeviceUpdates import remove_same_device_updates
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.utilities.visualization.update_graph import show_update_graph
+from discopop_library.discopop_optimizer.utilities.visualization.update_graph import (  # noqa: F401  used by the commented-out code
+    show_update_graph,
+)
 from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutputPattern
 
 

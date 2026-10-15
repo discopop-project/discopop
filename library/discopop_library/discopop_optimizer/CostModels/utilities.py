@@ -12,12 +12,11 @@ import warnings
 
 import networkx as nx  # type: ignore
 import sympy  # type: ignore
-from sympy import Integer, Expr, Symbol  # type: ignore
+from sympy import Integer  # type: ignore
 
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
 from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
-from discopop_library.discopop_optimizer.classes.nodes.Loop import Loop
 from discopop_library.discopop_optimizer.classes.system.devices.GPU import GPU
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_in_mutex_edges,
@@ -26,8 +25,6 @@ from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_children,
     get_edge_data,
     get_requirements,
-    get_out_options,
-    get_in_options,
     get_all_parents,
     get_all_function_nodes,
 )

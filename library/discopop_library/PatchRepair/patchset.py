@@ -28,7 +28,7 @@ import logging
 import os
 from pathlib import Path
 import re
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 logger = logging.getLogger("PatchRepair").getChild("patchset")
 

@@ -18,7 +18,6 @@ from discopop_library.ParallelRegionMerger.classes.TaskGraph.CallEdge import Cal
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.ContainsEdge import ContainsEdge
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.DataflowEdge import DataflowEdge
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.DoallModifierNode import DoAllModifierNode
-from discopop_library.ParallelRegionMerger.classes.TaskGraph.Edge import Edge
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.EnterParallelNode import EnterParallelNode
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.ExitParallelNode import ExitParallelNode
 from discopop_library.ParallelRegionMerger.classes.TaskGraph.FriendlyModifierNode import FriendlyModifierNode

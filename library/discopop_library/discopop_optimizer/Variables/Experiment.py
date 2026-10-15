@@ -7,14 +7,13 @@
 # directory for details.
 from cProfile import Profile
 from pathlib import Path
-from typing import Dict, Tuple, Set, Optional, List, Any
+from typing import Dict, Tuple, Set, Optional, List
 
 import networkx as nx  # type: ignore
-from sympy import Integer, Symbol, Expr, Float  # type: ignore
+from sympy import Integer, Symbol, Expr  # type: ignore
 
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_library.HostpotLoader.HotspotType import HotspotType
-from discopop_library.PathManagement.PathManagement import load_file_mapping
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.classes.enums.Distributions import FreeSymbolDistribution
 

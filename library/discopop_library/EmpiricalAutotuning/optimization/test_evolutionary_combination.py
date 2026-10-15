@@ -16,7 +16,7 @@ that compiles or executes code is out of scope here (that is covered end-to-end)
 import itertools
 import logging
 import random
-from typing import Any, Dict, Iterator, List, Tuple
+from typing import Dict, Iterator, List, Tuple
 
 import pytest
 

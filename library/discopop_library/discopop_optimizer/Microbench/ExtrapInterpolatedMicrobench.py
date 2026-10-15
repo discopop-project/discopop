@@ -12,7 +12,6 @@ import sympy  # type: ignore
 from extrap.entities.callpath import Callpath  # type: ignore
 from extrap.entities.metric import Metric  # type: ignore
 from extrap.entities.model import Model  # type: ignore
-from extrap.entities.parameter import Parameter  # type: ignore
 from extrap.fileio.json_file_reader import read_json_file  # type: ignore
 from extrap.modelers.model_generator import ModelGenerator  # type: ignore
 from extrap.modelers.multi_parameter.multi_parameter_modeler import MultiParameterModeler  # type: ignore

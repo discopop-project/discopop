@@ -15,7 +15,7 @@ never invoked, the build is not bounded by a timeout derived from a runtime that
 was never measured, and a successful build is not recorded as a fast run.
 """
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import pytest
 

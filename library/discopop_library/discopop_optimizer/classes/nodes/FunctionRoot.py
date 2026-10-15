@@ -8,7 +8,7 @@
 from __future__ import annotations
 from typing import Any, List, Optional
 
-from sympy import Function, Symbol, Integer, Expr  # type: ignore
+from sympy import Function, Symbol, Integer, Expr  # type: ignore  # noqa: F401  used by the commented-out code
 
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_library.discopop_optimizer.CostModels.CostModel import CostModel

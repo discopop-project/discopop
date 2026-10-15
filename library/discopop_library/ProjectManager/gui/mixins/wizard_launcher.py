@@ -7,7 +7,6 @@
 # directory for details.
 
 import os
-import tkinter as tk
 
 
 from discopop_library.ProjectManager.gui.ConfigurationWizard import ConfigurationWizard

@@ -505,7 +505,6 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
 
     def _show_test_compilation_result(self, output: str, return_code: int) -> None:
         """Show test compilation result in a dialog"""
-        from tkinter import simpledialog
 
         dialog = tk.Toplevel(self)  # type: ignore
         dialog.title("Compilation Test Result")

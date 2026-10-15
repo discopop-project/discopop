@@ -7,7 +7,6 @@
 # directory for details.
 import os.path
 from dataclasses import dataclass
-from typing import List, Optional
 
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments
 

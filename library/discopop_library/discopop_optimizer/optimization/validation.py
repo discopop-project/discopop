@@ -12,14 +12,11 @@ from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_library.discopop_optimizer.OptimizerArguments import OptimizerArguments
 from discopop_library.discopop_optimizer.Variables.Experiment import Experiment
-from discopop_library.discopop_optimizer.classes.nodes.FunctionRoot import FunctionRoot
 from discopop_library.discopop_optimizer.utilities.MOGUtilities import (
     get_all_function_nodes,
     get_children,
     get_in_mutex_edges,
-    get_in_options,
     get_out_mutex_edges,
-    get_out_options,
     get_requirements,
     get_successors,
 )

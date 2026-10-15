@@ -14,7 +14,6 @@ from discopop_library.EmpiricalAutotuning.output.bars import search_bar
 from discopop_library.EmpiricalAutotuning.ArgumentClasses import AutotunerArguments
 from discopop_library.EmpiricalAutotuning.Classes.CodeConfiguration import CodeConfiguration
 from discopop_library.EmpiricalAutotuning.Classes.ExecutionResult import ExecutionResult
-from discopop_library.EmpiricalAutotuning.Types import SUGGESTION_ID
 from discopop_library.EmpiricalAutotuning.output.progress import DebugStatEntry
 from discopop_library.EmpiricalAutotuning.output.intermediate import show_info_stats
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType

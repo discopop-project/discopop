@@ -6,8 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import json
-import os
-import pathlib
 import warnings
 from typing import Any, Dict, List, Tuple, Optional, cast
 

@@ -22,7 +22,7 @@ from discopop_library.ProjectManager.utilities.initializeFiles import (
 )
 from discopop_library.ProjectManager.configurations.execution_time import DEFAULT_EXECUTION_TIME_REGEX
 from discopop_library.ProjectManager.gui import widgets
-from discopop_library.ProjectManager.gui.widgets import create_styled_output_console, heading_label
+from discopop_library.ProjectManager.gui.widgets import heading_label
 from discopop_library.ProjectManager.gui.mixins.helpers import (
     Tooltip,
     bind_tooltip_hover,

@@ -8,7 +8,6 @@
 
 import json
 import os
-import shutil
 import subprocess
 from typing import Dict
 import warnings
