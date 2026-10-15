@@ -16,7 +16,8 @@ from discopop_library.result_classes.OptimizerOutputPattern import OptimizerOutp
 def remove_same_device_updates(
     experiment: Experiment, configuration: OptimizerOutputPattern, arguments: OptimizerArguments
 ) -> OptimizerOutputPattern:
-    """Remove updates where source and device id are equal. These are artifacts from initializing device memory states during the data movement calculation."""
+    """Remove updates where source and device id are equal. These are artifacts from initializing device memory states
+    during the data movement calculation."""
     cleaned_updates: List[Update] = []
     for update in configuration.data_movement:
         if (

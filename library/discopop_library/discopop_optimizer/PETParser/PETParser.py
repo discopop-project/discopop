@@ -156,7 +156,8 @@ class PETParser(object):
         self.__add_calling_edges()
 
         logger.info("Inlining read and write information from function calls..")
-        # note: inlining at this position is a cheap but less reliable alternative to propagating everythin on function calls.
+        # note: inlining at this position is a cheap but less reliable alternative to propagating everythin on function
+        # calls.
         # note: full propagation leads to issues with WriteDataAccess unique ids and potentially broken results
         self.__inline_reads_and_writes_from_call()
         logger.info("Inlining read and write information from function calls done.")
@@ -333,7 +334,8 @@ class PETParser(object):
     def __identify_most_likely_paths_80_percent_cutoff(
         self, branch_likelihood_dict: Dict[str, Dict[str, float]], function: int
     ) -> List[int]:
-        """Traverse graph downwards and return a list of the nodes visited if all branches were taken that constitute a sum of at least 80% of the observed cases."""
+        """Traverse graph downwards and return a list of the nodes visited if all branches were taken that constitute a
+        sum of at least 80% of the observed cases."""
         keep_nodes: List[int] = []
         queue: List[int] = []
         # get path entries points
@@ -386,7 +388,8 @@ class PETParser(object):
         return keep_nodes
 
     def __identify_most_likely_path(self, node_likelihood_dict: Dict[int, float], function: int) -> List[int]:
-        """Traverse graph upwards and return a list of the most likely nodes which constitute the most likely execution path."""
+        """Traverse graph upwards and return a list of the most likely nodes which constitute the most likely execution
+        path."""
         keep_nodes: List[int] = []
         queue: List[int] = []
         # get path end points
@@ -825,13 +828,13 @@ class PETParser(object):
             #                    fix_applied = False
             #                    for node in get_all_nodes_in_function(self.graph, function):
             #                        if len(get_predecessors(self.graph, node)) > 1:
-            #                            warnings.warn("SANITY CHECK FAILED FOR NODE " +  str(node) + " . Removing random edge to try an fix the problem.")
+            #                            warnings.warn("SANITY CHECK FAILED FOR NODE " +  str(node) + " . Removing random edge to try an fix the problem.")  # noqa: E501
             #                            remove_edge(self.graph, get_predecessors(self.graph, node)[0], node)
             #                            fix_applied = True
             #                            break
             # except ValueError:
             #    if self.experiment.arguments.verbose:
-            #        print("NPBS: Function",  data_at(self.graph, function).name ,"invalid due to graph construction issues. Skipping.")
+            #        print("NPBS: Function",  data_at(self.graph, function).name ,"invalid due to graph construction issues. Skipping.")  # noqa: E501
             #    self.invalid_functions.add(function)
 
     def __fix_empty_branches(
@@ -969,7 +972,7 @@ class PETParser(object):
                 #                updated_exit = branch_exit_to_updated_exit[updated_entry]
                 #                print("EMPTY: ", entry, exit)
                 #                # redirect entry
-                #                redirect_edge(self.graph, context_snapshot_id, last_node_id, updated_entry, updated_entry)
+                #                redirect_edge(self.graph, context_snapshot_id, last_node_id, updated_entry, updated_entry)  # noqa: E501
                 #                last_node_id = updated_exit
 
                 # connect exit of linearized section
@@ -1070,7 +1073,8 @@ class PETParser(object):
             self.graph.remove_node(node_id)
 
     def __parse_raw_node(self, root_node_id: int, visited_nodes: Set[int]) -> Tuple[int, int]:
-        """parses the nodes starting from the root node and returns the id of the first and last node in the created linearized path"""
+        """parses the nodes starting from the root node and returns the id of the first and last node in the created
+        linearized path"""
         visited_nodes.add(root_node_id)
         # if this node has children, parse them before proceeding
         children_entry_points: List[int] = []
@@ -1361,7 +1365,8 @@ class PETParser(object):
             mark_branched_section(current_node, [])
 
     #    def __new_calculate_data_flow(self):
-    #        """calculate dataflow in such a way, that no data is left on any device but the host and every relevant change is synchronized."""
+    #        """calculate dataflow in such a way, that no data is left on any device but the host and every relevant
+    #        change is synchronized."""
     #        self.in_data_flow = dict()
     #        self.out_data_flow = dict()
     #
@@ -1450,7 +1455,7 @@ class PETParser(object):
                         cast(FunctionRoot, data_at(self.graph, function_node)).name,
                         "invalid due to graph construction errors. Skipping.",
                     )
-                    # show_function(self.graph, data_at(self.graph, function_node), show_dataflow=False, show_mutex_edges=False)
+                    # show_function(self.graph, data_at(self.graph, function_node), show_dataflow=False, show_mutex_edges=False)  # noqa: E501
                 self.invalid_functions.add(function_node)
             except IndexError:
                 # function has no child. ignore, but issue a warning

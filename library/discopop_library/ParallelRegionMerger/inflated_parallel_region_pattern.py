@@ -357,7 +357,8 @@ def __simple_combine_successive_regions(pet: PEGraphX, tg: TaskGraph) -> None:
 
 
 def __get_shared_vars_from_combination(entry_1: EnterParallelNode, entry_2: EnterParallelNode) -> List[Variable]:
-    """calcuate and return the shared variables for a combined Parallel region spaning regions 1 and 2, where 1 is a direct predecessor of 2."""
+    """calcuate and return the shared variables for a combined Parallel region spaning regions 1 and 2, where 1 is a
+    direct predecessor of 2."""
     # TODO maybe a consideration of definition lines of the variables etc is necessary
     # TODO write unit tests
     shared_vars = [v for v in entry_1.shared_vars if v in entry_2.shared_vars]

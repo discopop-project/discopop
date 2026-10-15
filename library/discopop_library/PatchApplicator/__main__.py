@@ -20,7 +20,8 @@ def parse_args() -> PatchApplicatorArguments:
     # all flags that are not considered stable should be added to the experimental_parser
     experimental_parser = parser.add_argument_group(  # noqa: F841  kept as documented by the comments around it
         "EXPERIMENTAL",
-        "Arguments for the task pattern detector and other experimental features. These flags are considered EXPERIMENTAL and they may or may not be removed or changed in the near future.",
+        "Arguments for the task pattern detector and other experimental features. These flags are considered "
+        "EXPERIMENTAL and they may or may not be removed or changed in the near future.",
     )
 
     # fmt: off
@@ -40,7 +41,8 @@ def parse_args() -> PatchApplicatorArguments:
     parser.add_argument('-l', '--list', action="store_true", help="Show the list of applied suggestions."
                                                                   "If set, nothing else will be done.")
 
-    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, "
+    "CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # EXPERIMENTAL FLAGS:
     # fmt: on

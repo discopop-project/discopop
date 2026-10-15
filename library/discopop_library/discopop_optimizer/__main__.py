@@ -29,11 +29,15 @@ def parse_args() -> OptimizerArguments:
     parser.add_argument("-v", "--verbose", action="store_true",
         help="Enable verbose output.")
     parser.add_argument("-p", type=int, default=0,
-        help="Program path pruning aggressiveness. 0: no pruning. 1: prune to paths that cover 80%% of observed decisions per path split. 2: prune to most likely path.")
-    parser.add_argument("-o", type=int, default=0, help="Optimization level: 0 -> no optimization. 1 -> greedy. 2 -> evolutionary. 3 -> exhaustive")
+        help="Program path pruning aggressiveness. 0: no pruning. 1: prune to paths that cover 80%% of observed "
+        "decisions per path split. 2: prune to most likely path.")
+    parser.add_argument("-o", type=int, default=0, help="Optimization level: 0 -> no optimization. 1 -> greedy. 2 -> "
+    "evolutionary. 3 -> exhaustive")
 
-    parser.add_argument("-opt-2-params", type=str, default=None, nargs=2, metavar=("population_size", "generations"), help="Configure parameters of the evolutionary optimization (-o2). Default: 50 5")
-    parser.add_argument("-s", "--single-suggestions", action="store_true", help="Enable the generation of individual suggestions for device mappings.")
+    parser.add_argument("-opt-2-params", type=str, default=None, nargs=2, metavar=("population_size", "generations"),
+                        help="Configure parameters of the evolutionary optimization (-o2). Default: 50 5")
+    parser.add_argument("-s", "--single-suggestions", action="store_true", help="Enable the generation of individual "
+    "suggestions for device mappings.")
 
     parser.add_argument(
         "--doall-microbench-file", type=str, default="None",
@@ -49,19 +53,24 @@ def parse_args() -> OptimizerArguments:
     )
     parser.add_argument("--profiling", action="store_true",
         help="Enable profiling.")
-    parser.add_argument("--pin-function-calls-to-host", action="store_true", help="Force functions calls on the host system. Prevent offloading of entire functions.")
-    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--pin-function-calls-to-host", action="store_true", help="Force functions calls on the host "
+    "system. Prevent offloading of entire functions.")
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, "
+    "CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
     # INTERACTIVE (Merge) flags
     interactive_parser.add_argument("-i", "--interactive", action="store_true",
         help="Enable interactive pattern merge tool.")
-    interactive_parser.add_argument("--interactive-export", metavar="suggestion_ids", type=str, default="None", help="Merge and export the result for the comma-separated list of suggestion ids. Requires '-i' .")
+    interactive_parser.add_argument("--interactive-export", metavar="suggestion_ids", type=str, default="None",
+                                    help="Merge and export the result for the comma-separated list of suggestion ids. "
+                                    "Requires '-i' .")
     # EXPERIMENTAL FLAGS:
     experimental_parser.add_argument("--allow-nested-parallelism", action="store_true",
         help="Allow the creation of nested parallelism suggestions. "
         + "WARNING: Cost estimations may not be accurrate due to potentially"
         + "high overhead introduced by entering nested parallelism!")
-    experimental_parser.add_argument("--check-called-function-for-nested-parallelism", action="store_true", help="Extend the check for nested parallelism to called functions."
+    experimental_parser.add_argument("--check-called-function-for-nested-parallelism", action="store_true",
+        help="Extend the check for nested parallelism to called functions."
         + "WARNING: Execution time may increase significantly!")
 
     experimental_parser.add_argument("--plot", action="store_true",

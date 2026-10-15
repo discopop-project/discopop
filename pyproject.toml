@@ -61,6 +61,11 @@ ignore = [
     "E203",  # whitespace before ':' -- black formats slices this way
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# argparse help texts written as backslash-continued string literals whose indentation is part of the text; they
+# cannot be wrapped without changing the displayed text
+"library/discopop_library/SanityChecker/__main__.py" = ["E501"]
+
 [tool.pytest.ini_options]
 # unit tests, end-to-end and profiler tests (markers e2e, profiler; skipped without the installed profiler, see CLAUDE.md)
 testpaths = [

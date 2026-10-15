@@ -129,7 +129,8 @@ def __nested_parallelism_found(experiment: Experiment, configuration: List[int],
 def __filter_for_relevant_options(
     experiment: Experiment, configuration: List[int], to_be_cleaned: List[int]
 ) -> List[int]:
-    """removes all node_ids from the list to_be_cleaned which are not relevant for the given configuration (i.e. parallelization opportunities which are not chosen.)"""
+    """removes all node_ids from the list to_be_cleaned which are not relevant for the given configuration (i.e.
+    parallelization opportunities which are not chosen.)"""
     cleaned_list: List[int] = []
     for node_id in to_be_cleaned:
         if node_id in configuration:
@@ -142,6 +143,7 @@ def __filter_for_relevant_options(
             cleaned_list.append(node_id)
             continue
         else:
-            # node_id is not in configuration and options exist, i.e. it is not selected by the configuration and has to be ignored
+            # node_id is not in configuration and options exist, i.e. it is not selected by the configuration and has to
+            # be ignored
             continue
     return cleaned_list

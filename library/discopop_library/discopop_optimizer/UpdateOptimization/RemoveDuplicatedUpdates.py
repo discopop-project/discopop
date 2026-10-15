@@ -102,7 +102,7 @@ def remove_duplicated_updates(
             # no data is removed. keep the update
             cleaned_updates.append(update)
             continue
-        #        if update.source_device_id == configuration.host_device_id and update.target_device_id == configuration.host_device_id:
+        #        if update.source_device_id == configuration.host_device_id and update.target_device_id == configuration.host_device_id:  # noqa: E501
         #            cleaned_updates.append(update)
         #            continue
 

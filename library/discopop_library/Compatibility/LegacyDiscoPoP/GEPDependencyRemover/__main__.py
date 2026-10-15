@@ -21,9 +21,15 @@ def parse_args() -> GEPDependencyRemoverArguments:
 
     # fmt: off
 
-    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, CRITICAL")
+    parser.add_argument("--log", type=str, default="WARNING", help="Specify log level: DEBUG, INFO, WARNING, ERROR, "
+    "CRITICAL")
     parser.add_argument("--write-log", action="store_true", help="Create Logfile.")
-    parser.add_argument("--dyndep-file-path", type=str, default=os.path.join(os.getcwd(), ".discopop", "profiler", "dynamic_dependencies.txt"), help="Path to the dynamic dependencies file to be converted.")
+    parser.add_argument(
+        "--dyndep-file-path",
+        type=str,
+        default=os.path.join(os.getcwd(), ".discopop", "profiler", "dynamic_dependencies.txt"),
+        help="Path to the dynamic dependencies file to be converted.",
+    )
     # fmt: on
 
     arguments = parser.parse_args()

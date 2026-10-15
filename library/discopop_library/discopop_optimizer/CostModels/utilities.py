@@ -221,7 +221,8 @@ def get_node_performance_models(
                         continue
 
                     # 2 check if a sibling of successor exists which has a requirements edge to a visited node
-                    # 2.1 check if an incoming or outgoing option edge exists, get the node id for the sequential version
+                    # 2.1 check if an incoming or outgoing option edge exists, get the node id for the sequential
+                    # version
                     # 2.2 for all parallelization options
                     # 2.3 check if a requirements edge to a visited node exists
                     # 2.4 if so, stop if successor is NOT the parallelization option with the requirements edge
@@ -281,7 +282,8 @@ def get_node_performance_models(
                             path_invalid = True
                         if not path_invalid:
                             if data_at(graph, successor).suggestion is None:
-                                # if the sequential "fallback" has been used, check if a different option is specifically
+                                # if the sequential "fallback" has been used, check if a different option is
+                                # specifically
                                 # mentioned in restrict_to_decisions. If so, the sequential fallback shall be ignored.
                                 options = get_out_mutex_edges(graph, successor)
                                 restricted_options = [opt for opt in options if opt in restrict_to_decisions]

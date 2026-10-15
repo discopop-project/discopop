@@ -14,7 +14,8 @@ from discopop_library.LineMapping.save import save_line_mapping
 
 
 def apply_line_mapping_modifications_from_files(file_id: int, original_file: str, modified_file: str) -> None:
-    """Calculates diff between original_file and modified_file and applied modifications from the diff to the line_mapping"""
+    """Calculates diff between original_file and modified_file and applied modifications from the diff to the
+    line_mapping"""
     if not os.path.exists(original_file):
         raise FileNotFoundError(original_file)
     if not os.path.exists(modified_file):

@@ -479,13 +479,13 @@ class CompilationEditorMixin(ConfigManagerMixinBase):
             )
 
             if result is None:
-                self.after(0, lambda: self.status_label.config(text="✗ Compilation test failed: settings not found", foreground=widgets.STATUS_FAIL))  # type: ignore
+                self.after(0, lambda: self.status_label.config(text="✗ Compilation test failed: settings not found", foreground=widgets.STATUS_FAIL))  # type: ignore  # noqa: E501
             else:
                 ret_code, elapsed, stdout, stderr = result
                 if ret_code == 0:
-                    self.after(0, lambda e=elapsed: self.status_label.config(text=f"✓ Compilation successful ({e:.2f}s)", foreground=widgets.STATUS_OK))  # type: ignore
+                    self.after(0, lambda e=elapsed: self.status_label.config(text=f"✓ Compilation successful ({e:.2f}s)", foreground=widgets.STATUS_OK))  # type: ignore  # noqa: E501
                 else:
-                    self.after(0, lambda rc=ret_code, e=elapsed: self.status_label.config(text=f"✗ Compilation failed (exit code: {rc}, {e:.2f}s)", foreground=widgets.STATUS_FAIL))  # type: ignore
+                    self.after(0, lambda rc=ret_code, e=elapsed: self.status_label.config(text=f"✗ Compilation failed (exit code: {rc}, {e:.2f}s)", foreground=widgets.STATUS_FAIL))  # type: ignore  # noqa: E501
 
                 output_msg = "Compilation test output:\n\n"
                 if ret_code == 0:

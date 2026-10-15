@@ -18,7 +18,8 @@ from discopop_library.discopop_optimizer.suggestions.importers.reduction import 
 
 
 def import_suggestions(experiment: Experiment) -> nx.DiGraph:
-    """Imports the suggestions specified in res into the graph stored in the given experiment and returns the modified graph"""
+    """Imports the suggestions specified in res into the graph stored in the given experiment and returns the modified
+    graph"""
 
     # import do-all
     buffer = copy.deepcopy(experiment.detection_result.patterns.do_all)

@@ -17,7 +17,8 @@ from discopop_library.discopop_optimizer.Microbench.Microbench import (
 
 # This class can be used to mix two microbench models.
 # The inner model will be used for evaluation of the lower values
-# The outer model will be used for evaluation of the higher values (if any coordinate point is higher than the threshold)
+# The outer model will be used for evaluation of the higher values (if any coordinate point is higher than the
+# threshold)
 class MixedMicrobench(Microbench):
     inner: Microbench
     outer: Microbench
@@ -35,7 +36,8 @@ class MixedMicrobench(Microbench):
         Dict[MicrobenchDimension, Dict[MicrobenchCoordinate, List[float]]],
     ]:
         raise TypeError(
-            "This MixedMicrobench might be based on two different sets of measurements. Use getInnerMeasurements() or getOuterMeasurements() instead."
+            "This MixedMicrobench might be based on two different sets of measurements. Use getInnerMeasurements() or "
+            "getOuterMeasurements() instead."
         )
 
     def getInnerMeasurements(

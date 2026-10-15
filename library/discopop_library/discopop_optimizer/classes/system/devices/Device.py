@@ -77,7 +77,9 @@ class Device(object):
         if workload is None:
             raise ValueError("workload is None")
 
-        # todo -> define functions to evaluate workloads on different devices. include these functions in the construction of the cost model for later evaluation instead of "manually" converting the workload to time values
+        # todo -> define functions to evaluate workloads on different devices. include these functions in the
+        # construction of the cost model for later evaluation instead of "manually" converting the workload to time
+        # values
         # todo: correctly set is_sequential argument
         # todo mark parallel execution in subtree of suggestions?
 

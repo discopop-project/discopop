@@ -38,7 +38,8 @@ logger = logging.getLogger("PatchRepair").getChild("diagnostics")
 # Matches clang's and gcc's shared format. Anything else is kept in the text but
 # implicates no file, which costs prompt budgeting detail and nothing else.
 DIAGNOSTIC = re.compile(
-    r"^(?P<path>[^\s:][^:]*):(?P<line>\d+)(?::(?P<column>\d+))?:\s*(?P<severity>error|fatal error|warning|note):\s*(?P<message>.*)$",
+    r"^(?P<path>[^\s:][^:]*):(?P<line>\d+)(?::(?P<column>\d+))?:\s*(?P<severity>error|fatal "
+    r"error|warning|note):\s*(?P<message>.*)$",
     re.MULTILINE,
 )
 

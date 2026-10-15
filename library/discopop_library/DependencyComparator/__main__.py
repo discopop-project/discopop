@@ -15,7 +15,8 @@ from discopop_library.DependencyComparator.dependency_comparator import run
 def parse_args() -> DependencyComparatorArguments:
     parser = ArgumentParser(
         description="DiscoPoP dependency comparator.",
-        epilog="Return codes: 0 -> no difference. 1xx -> missing dependencies. x1x -> additional non-init dependencies. xx1 -> additional init dependencies.",
+        epilog="Return codes: 0 -> no difference. 1xx -> missing dependencies. x1x -> additional non-init "
+        "dependencies. xx1 -> additional init dependencies.",
     )
 
     # fmt: off

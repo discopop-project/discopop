@@ -23,7 +23,8 @@ def add_data_transfer_costs(
     function_performance_models: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]],
     environment: Experiment,
 ) -> Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]]:
-    """Calculates the data transfer costs for each of the given performance models and adds them to the respective model."""
+    """Calculates the data transfer costs for each of the given performance models and adds them to the respective
+    model."""
     result_dict: Dict[FunctionRoot, List[Tuple[CostModel, ContextObject]]] = dict()
 
     for function in function_performance_models:

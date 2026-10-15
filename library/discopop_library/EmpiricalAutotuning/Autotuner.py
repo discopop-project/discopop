@@ -206,7 +206,8 @@ def run(arguments: AutotunerArguments) -> None:
     detection_result: DetectionResult = jsonpickle.decode(tmp_str, keys=True)
     logger.debug("loaded suggestions")
 
-    # get metadata: highest average runtime in hotspot information. Used to filter relevant loops (1% runtime contribution)
+    # get metadata: highest average runtime in hotspot information. Used to filter relevant loops (1% runtime
+    # contribution)
     max_avg_runtime = 0.0
     for hotspot_type in [HotspotType.YES, HotspotType.MAYBE, HotspotType.NO]:
         if hotspot_information:
