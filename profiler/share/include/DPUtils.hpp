@@ -94,7 +94,7 @@ inline std::string decodeLID(int64_t lid) {
 }
 
   std::stringstream ss;
-  uint32_t ulid = (uint32_t)lid;
+  uint32_t ulid = static_cast<uint32_t>(lid);
 
   ss << (ulid >> LIDSIZE) << ":" << ulid % MAXLNO;
   return ss.str();

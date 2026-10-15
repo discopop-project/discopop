@@ -42,7 +42,7 @@ sigElement Signature::insert(int64_t elem, sigElement value) {
   for (int i = end; i >= begin; --i) {
     temp = sigarray[i];
     oldValue += temp << (end - i) * 8;
-    sigarray[i] = (uint8_t)value;
+    sigarray[i] = static_cast<uint8_t>(value);
     value >>= 8;
   }
   return oldValue;
@@ -54,7 +54,7 @@ void Signature::update(int64_t elem, sigElement newValue) {
   int32_t begin = hash(elem) * sigSlotSizeInByte;
   int32_t end = begin + sigSlotSizeInByte - 1;
   for (int i = end; i >= begin; --i) {
-    sigarray[i] = (int8_t)newValue;
+    sigarray[i] = static_cast<int8_t>(newValue);
     newValue >>= 8;
   }
 }

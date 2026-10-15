@@ -210,8 +210,8 @@ void *processSecondAccessQueue(void *arg) {
       // update persistent SMem with exit boundary conditions (aka merge the local into the persistent shadow memories)
       AbstractShadow *promised_last_smem_ptr = current->exit_boundary_SMem.get();
 
-      auto sigRead = ((PerfectShadow2 *)promised_last_smem_ptr)->getSigRead();
-      auto sigWrite = ((PerfectShadow2 *)promised_last_smem_ptr)->getSigWrite();
+      auto sigRead = static_cast<PerfectShadow2 *>(promised_last_smem_ptr)->getSigRead();
+      auto sigWrite = static_cast<PerfectShadow2 *>(promised_last_smem_ptr)->getSigWrite();
 
       // identify required updates to SMem
       // iterate over addresses to be merged

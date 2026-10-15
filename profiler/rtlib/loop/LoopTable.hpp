@@ -66,7 +66,7 @@ public:
     auto lid = old_lid;
 
     if (empty()) {
-      return lid | (((LID)0xFF) << 56);
+      return lid | (static_cast<LID>(0xFF) << 56);
     }
 
     // store loop iteration metadata (last 8 bits for loop id, 1 bit to mark
@@ -76,19 +76,19 @@ public:
     // metadata and thus empty
 
     if (size() > 0) {
-      lid = lid | (((LID)(first().loopID & 0xFF)) << 56);    // add masked loop id
-      lid = lid | (((LID)(top().get_count() & 0x7F)) << 48); // add masked loop count
-      lid = lid | (LID)0x0080000000000000;                   // mark loop count valid
+      lid = lid | (static_cast<LID>(first().loopID & 0xFF) << 56);    // add masked loop id
+      lid = lid | (static_cast<LID>(top().get_count() & 0x7F) << 48); // add masked loop count
+      lid = lid | 0x0080000000000000;                   // mark loop count valid
     }
 
     if (size() > 1) {
-      lid = lid | (((LID)(topMinusN(1).get_count() & 0x7F)) << 40); // add masked loop count
-      lid = lid | (LID)0x0000800000000000;                          // mark loop count valid
+      lid = lid | (static_cast<LID>(topMinusN(1).get_count() & 0x7F) << 40); // add masked loop count
+      lid = lid | 0x0000800000000000;                          // mark loop count valid
     }
 
     if (size() > 2) {
-      lid = lid | (((LID)(topMinusN(2).get_count() & 0x7F)) << 32); // add masked loop count
-      lid = lid | (LID)0x0000008000000000;                          // mark loop count valid
+      lid = lid | (static_cast<LID>(topMinusN(2).get_count() & 0x7F) << 32); // add masked loop count
+      lid = lid | 0x0000008000000000;                          // mark loop count valid
     }
 
     return lid;

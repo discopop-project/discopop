@@ -17,8 +17,8 @@ using namespace std;
 using namespace dputil;
 
 InstructionCFG::InstructionCFG(dputil::VariableNameFinder *_VNF, Function &F) : VNF(_VNF) {
-  entry = Graph::addInstructionNode((Instruction *)ENTRY);
-  exit = Graph::addInstructionNode((Instruction *)EXIT);
+  entry = Graph::addInstructionNode(reinterpret_cast<Instruction *>(ENTRY));
+  exit = Graph::addInstructionNode(reinterpret_cast<Instruction *>(EXIT));
   Instruction *previousInstruction;
   for (BasicBlock &BB : F) {
     // Add current block's store/load/call-instructions and declarations to

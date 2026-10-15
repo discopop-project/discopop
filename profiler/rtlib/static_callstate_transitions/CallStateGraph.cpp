@@ -117,7 +117,7 @@ CallStateGraph::CallStateGraph() {
   // runtime keeps its diagnostics behind.
   const auto end_time = std::chrono::high_resolution_clock::now();
   const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-  std::cout << "[CallStateGraph()]: " << ((double)duration.count() / 1000.0) << "s" << std::endl;
+  std::cout << "[CallStateGraph()]: " << (static_cast<double>(duration.count()) / 1000.0) << "s" << std::endl;
 #endif
 }
 
@@ -180,7 +180,7 @@ CallStateGraph::~CallStateGraph() {
 #ifdef DP_RTLIB_VERBOSE
   const auto end_time = std::chrono::high_resolution_clock::now();
   const auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-  std::cout << "[~CallStateGraph()]: " << ((double)duration.count() / 1000.0) << "s" << std::endl;
+  std::cout << "[~CallStateGraph()]: " << (static_cast<double>(duration.count()) / 1000.0) << "s" << std::endl;
 #endif
 }
 

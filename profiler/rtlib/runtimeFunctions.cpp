@@ -51,7 +51,7 @@ void readRuntimeInfo() {
         variable.erase(std::remove_if(variable.begin(), variable.end(), func), variable.end());
         value.erase(std::remove_if(value.begin(), value.end(), func), value.end());
 
-        int32_t intValue = (int32_t)atoi(value.c_str());
+        int32_t intValue = atoi(value.c_str());
         if (intValue > 0) {
           if (variable.compare("DP_DEBUG") == 0) {
             DP_DEBUG = true;
@@ -106,8 +106,8 @@ void initParallelization() {
   numAccesses = new uint64_t[NUM_WORKERS]();
 
   // bound the memory held by the access queues
-  firstAccessQueue.set_max_size((std::size_t)FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER * NUM_WORKERS);
-  secondAccessQueue.set_max_size((std::size_t)SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER * NUM_WORKERS);
+  firstAccessQueue.set_max_size(static_cast<std::size_t>(FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER) * NUM_WORKERS);
+  secondAccessQueue.set_max_size(static_cast<std::size_t>(SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER) * NUM_WORKERS);
 
   // initialize and set thread detached attribute
   finalizeParallelizationCalled = false; // mostly for unit-tests.

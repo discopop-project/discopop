@@ -11,6 +11,7 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <cstdint>
 #include <thread>
 
 using namespace llvm;
@@ -27,7 +28,7 @@ static bool write_callpath_dot_files() { return getenv("DP_WRITE_CALLPATH_DOT") 
 using CALLPATH_STATE_ID = int32_t;
 using INSTRUCTION_ID = int32_t;
 
-void process_enumerate_paths_stack(std::atomic<short unsigned int> *active_threads, StaticCallPathTree* call_path_tree, std::stack<std::tuple<StaticCallPathTreeNode*, INSTRUCTION_ID, StaticCallPathTreeNode*>> *new_stack, std::mutex *new_stack_mtx){
+void process_enumerate_paths_stack(std::atomic<uint16_t> *active_threads, StaticCallPathTree* call_path_tree, std::stack<std::tuple<StaticCallPathTreeNode*, INSTRUCTION_ID, StaticCallPathTreeNode*>> *new_stack, std::mutex *new_stack_mtx){
   bool initial_iteration = true;
   std::vector<StaticCallPathTreeNode*> nodes_added_by_thread;
   while(active_threads->load() != 0){
@@ -162,7 +163,7 @@ StaticCallPathTree* enumerate_paths(StaticCalltree& calltree, [[maybe_unused]] s
   if(worker_count == 0){
     worker_count = 1; // fallback, if concurrency could not be determined.
   }
-  std::atomic<short unsigned int> active_threads(worker_count);
+  std::atomic<uint16_t> active_threads(worker_count);
   std::mutex new_stack_mtx;
 
   std::vector<std::thread> workers;

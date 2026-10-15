@@ -85,7 +85,7 @@ public:
     if (instructionNodes.count(item) == 0) {
       InstructionNode<InstructionNodeT> *instructionNode = new InstructionNode<InstructionNodeT>(item);
       instructionNodes[item] =
-          std::make_pair<int, InstructionNode<InstructionNodeT> *>(nextIntKey, std::move(instructionNode));
+          std::pair<int, InstructionNode<InstructionNodeT> *>(nextIntKey, instructionNode);
       instructionNodesList.push_back(instructionNode);
       nextIntKey++;
       return instructionNode;
