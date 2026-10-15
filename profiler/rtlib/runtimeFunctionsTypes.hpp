@@ -34,7 +34,7 @@
 namespace __dp {
 /******* Data structures *******/
 
-using depType = enum {
+enum depType {
   RAW,
   WAR,
   WAW,
@@ -52,7 +52,7 @@ using depType = enum {
   // nested loops
 };
 
-using depTypeModifier = enum {
+enum depTypeModifier {
   NOM,
   II_0,
   II_1,
