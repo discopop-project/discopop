@@ -16,16 +16,29 @@
 
 // A location id (LID) names an instruction of the instrumented program: the id of its file in the upper
 // bits and its line in the lower LIDSIZE bits, i.e. (file id << LIDSIZE) + line. The runtime adds its
-// metadata (column, loop id, loop iterations) above, see LIDMETADATASIZE.
+// metadata (call path state, loop iterations) above, see LIDMETADATASIZE. Use dputil::encodeLID to build
+// one; it checks that file id and line fit.
 // Shared by the LLVM pass, which writes the LIDs into the instrumentation, and the runtime, which decodes them.
 typedef std::int64_t LID;
 typedef std::int64_t ADDR;
 
 // Number of bits for holding the line number in a LID
-constexpr int LIDSIZE = 14;
+constexpr int LIDSIZE = 18;
 
 // Number of bits for holding LID Metadata (Column + Loop ID + Loop Iteration)
 constexpr int LIDMETADATASIZE = 32;
 
-// Maximum number of lines in a single file. Has to be 2^LIDSIZE.
+// Number of bits for holding the location (file id and line number) of a LID
+constexpr int LIDLOCATIONSIZE = 64 - LIDMETADATASIZE;
+
+// Number of bits for holding the file id in a LID
+constexpr int FILEIDSIZE = LIDLOCATIONSIZE - LIDSIZE;
+
+// Number of lines in a single file: the lines 0 to MAXLNO - 1 can be encoded. Has to be 2^LIDSIZE.
 constexpr int MAXLNO = 1 << LIDSIZE;
+
+// Highest file id that can be encoded. File id 0 means "no file".
+constexpr int MAXFILEID = (1 << FILEIDSIZE) - 1;
+
+static_assert(LIDLOCATIONSIZE == 32, "the location of a LID is 32 bits wide: the runtime masks it with 0xFFFFFFFF");
+static_assert(LIDSIZE > 0 && FILEIDSIZE > 0, "a LID needs bits for both its line and its file id");

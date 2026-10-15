@@ -22,7 +22,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
   // pointers, structs etc.
   Node *currentNode = root;
   CU *cu;
-  int lid;
+  LID lid;
   string varName;
   bool isGlobalVar = false;
   string varType;
@@ -353,14 +353,14 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
 
           //if (isRecursive(*f, CGWP->getCallGraph())) {
           if (isRecursive(*f, CG)) {
-            int lid = getLID(&*instruction, fileID);
+            LID lid = getLID(&*instruction, fileID);
             n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
           }
 
           vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName().str()];
           // locate the CU where this function call belongs
           for (auto i : BBCUsVector) {
-            int lid = getLID(&*instruction, fileID);
+            LID lid = getLID(&*instruction, fileID);
             if (lid >= i->startLine && lid <= i->endLine) {
               i->instructionsLineNumbers.insert(lid);
               i->childrenNodes.push_back(n);

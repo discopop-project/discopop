@@ -94,7 +94,7 @@ std::string DiscoPoP::dp_reduction_CFA(Function &F, llvm::Loop *L, int file_id) 
             lid = dp_reduction_getLID(&*BI, file_id);
             uint64_t ulid = (uint64_t)lid;
             if (ulid != 0) {
-              return to_string(ulid % 16384);
+              return to_string(ulid % MAXLNO);
             }
           }
         }

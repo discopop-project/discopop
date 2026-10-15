@@ -18,7 +18,7 @@ using namespace dputil;
 
 void DiscoPoP::fillCUVariables(Region *TopRegion, set<string> &globalVariablesSet, vector<CU *> & /*CUVector*/,
                                map<string, vector<CU *>> &BBIDToCUIDsMap) {
-  int lid;
+  LID lid;
   string varName, varType, varDefLine;
   bool isGlobalVar = false;
   // Changed TerminatorInst to Instuction
