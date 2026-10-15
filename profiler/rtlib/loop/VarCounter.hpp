@@ -12,11 +12,13 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace __dp {
 
 struct VarCounter {
   unsigned int counters_[2] = {0, 0};
-  long long mem_addr_ = 0;
+  int64_t mem_addr_ = 0;
   bool valid_ = true;
 
   bool operator==(const VarCounter &other) const noexcept {

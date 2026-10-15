@@ -15,6 +15,7 @@
 #include "DPTypes.hpp"
 
 #include <algorithm>
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <unordered_map>
@@ -25,7 +26,7 @@ namespace __dp {
 
 // Data structure to store information on a single source code scope
 struct Scope {
-  Scope(unsigned long id) : scope_id(id) {}
+  explicit Scope(uint64_t id) : scope_id(id) {}
 
   void registerStackRead(ADDR address, LID debug_lid, const char *debug_var) {
     if (!(first_written.find(address) != first_written.end())) {
@@ -39,14 +40,14 @@ struct Scope {
     }
   }
 
-  unsigned long get_id() const noexcept { return scope_id; }
+  uint64_t get_id() const noexcept { return scope_id; }
 
   const std::unordered_set<ADDR> &get_first_read() const noexcept { return first_read; }
 
   const std::unordered_set<ADDR> &get_first_write() const noexcept { return first_written; }
 
 private:
-  unsigned long scope_id;
+  uint64_t scope_id;
   std::unordered_set<ADDR> first_read;
   std::unordered_set<ADDR> first_written;
 };
@@ -137,16 +138,16 @@ struct ScopeManager {
 
 private:
   std::vector<Scope> scopeStack;
-  unsigned long next_scope_id = 1; // 0 marks invalid in addrToLastAccessScopeID
+  uint64_t next_scope_id = 1; // 0 marks invalid in addrToLastAccessScopeID
 
-  std::unordered_map<ADDR, unsigned long> addrToLastAccessScopeID;
+  std::unordered_map<ADDR, uint64_t> addrToLastAccessScopeID;
 };
 
 // Hopefully faster version
 
 struct Scope2 {
   // Can use vectors for a speed up when dealing with < 100 addresses
-  Scope2(const unsigned long id) : scope_id(id) {
+  explicit Scope2(const uint64_t id) : scope_id(id) {
     first_read.reserve(64);
     first_written.reserve(64);
   }
@@ -165,14 +166,14 @@ struct Scope2 {
     }
   }
 
-  unsigned long get_id() const noexcept { return scope_id; }
+  uint64_t get_id() const noexcept { return scope_id; }
 
   const hashset<ADDR> &get_first_read() const noexcept { return first_read; }
 
   const hashset<ADDR> &get_first_write() const noexcept { return first_written; }
 
 private:
-  unsigned long scope_id;
+  uint64_t scope_id;
   hashset<ADDR> first_read;
   hashset<ADDR> first_written;
 };
@@ -259,10 +260,10 @@ struct ScopeManager2 {
   }
 
 private:
-  unsigned long next_scope_id = 1;
+  uint64_t next_scope_id = 1;
 
   std::vector<Scope2> scopeStack;
-  hashmap<ADDR, unsigned long> addrToLastAccessScopeID;
+  hashmap<ADDR, uint64_t> addrToLastAccessScopeID;
 };
 
 } // namespace __dp

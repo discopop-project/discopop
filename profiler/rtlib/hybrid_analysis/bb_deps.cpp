@@ -66,7 +66,7 @@ void release_registered_bb_deps() {
 }
 
 std::uint32_t current_callpath_state_id_for_bb_reports() {
-  return current_callpath_state == nullptr ? 0 : (std::uint32_t)current_callpath_state->get_id();
+  return current_callpath_state == nullptr ? 0 : static_cast<std::uint32_t>(current_callpath_state->get_id());
 }
 
 namespace {
@@ -130,7 +130,7 @@ parse_handed_over_dep_strings(const std::vector<const char *> &dep_strings) {
         // skip invalid entry
         continue;
       }
-      const std::uint32_t bb_index = (std::uint32_t)std::stoul(entry.substr(0, separator));
+      const std::uint32_t bb_index = static_cast<std::uint32_t>(std::stoul(entry.substr(0, separator)));
       const std::string dep_list = entry.substr(separator + 1);
       std::vector<std::string> deps;
       boost::split(deps, dep_list, boost::is_any_of(","));

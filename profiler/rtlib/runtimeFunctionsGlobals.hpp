@@ -78,7 +78,7 @@ extern stringDepMap *outPutDeps;
 void construct_immortal_globals();
 void destroy_immortal_globals();
 
-extern std::unordered_map<char *, long> &cuec;
+extern std::unordered_map<char *, int64_t> &cuec;
 
 // What the runtime is currently doing. There are exactly three states and they are reached in
 // order: __dp_init moves to Running, __dp_finalize moves to Terminated.

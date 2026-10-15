@@ -93,7 +93,7 @@ std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
 
           for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
             lid = dp_reduction::getLID(&*BI, file_id);
-            uint64_t ulid = (uint64_t)lid;
+            uint64_t ulid = static_cast<uint64_t>(lid);
             if (ulid != 0) {
               return to_string(ulid % MAXLNO);
             }

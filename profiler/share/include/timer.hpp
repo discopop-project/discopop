@@ -81,7 +81,7 @@ public:
     time_start = std::vector<Timers::time_point>{NUMBER_TIMERS};
     time_stop = std::vector<Timers::time_point>{NUMBER_TIMERS};
 
-    number_called = std::vector<std::size_t>(NUMBER_TIMERS, std::size_t(0));
+    number_called = std::vector<std::size_t>(NUMBER_TIMERS, static_cast<std::size_t>(0));
     time_elapsed = std::vector<std::chrono::nanoseconds>{NUMBER_TIMERS};
   }
 
@@ -200,7 +200,7 @@ public:
    */
   [[nodiscard]] std::string wall_clock_time() {
     // The time is printed with 24 interesting characters followed by '\n'
-    constexpr auto size_of_date_string = 24;
+    constexpr std::size_t size_of_date_string = 24;
 
 #if defined(__linux__) || defined(__APPLE__)
     time_t raw_time = 0;

@@ -23,6 +23,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
+#include <cstdint>
 #include <fstream>
 #include <set>
 #include <unordered_map>
@@ -160,7 +161,7 @@ bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
   // dependencies
   unordered_map<string, pair<string, string>> staticValueNameToMemRegIDMap; // <SSA variable name>: (original variable
                                                                             // name, statically assigned MemReg ID)
-  long next_id;
+  int64_t next_id;
   string llvmIRVarName;
   string originalVarName;
   string staticMemoryRegionID;

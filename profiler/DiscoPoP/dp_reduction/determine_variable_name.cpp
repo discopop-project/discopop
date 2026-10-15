@@ -81,9 +81,9 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
       // (25-10-30) Note: replaced for LLVM19 compatibility
       // OLD: if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
       if (isa<GetElementPtrInst>(*ptrOperand)) {
-        return dp_reduction_determineVariableName((Instruction *)ptrOperand, trueVarNamesFromMetadataMap);
+        return dp_reduction_determineVariableName(cast<Instruction>(ptrOperand), trueVarNamesFromMetadataMap);
       }
-      return dp_reduction_determineVariableName((Instruction *)gep, trueVarNamesFromMetadataMap);
+      return dp_reduction_determineVariableName(static_cast<Instruction *>(gep), trueVarNamesFromMetadataMap);
     }
     string retVal = string(operand->getName().data());
     if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
@@ -93,7 +93,7 @@ string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, map<string, 
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
-    return dp_reduction_determineVariableName((Instruction *)(operand), trueVarNamesFromMetadataMap);
+    return dp_reduction_determineVariableName(cast<Instruction>(operand), trueVarNamesFromMetadataMap);
   }
   // if we cannot determine the name, then return *
   return "*";

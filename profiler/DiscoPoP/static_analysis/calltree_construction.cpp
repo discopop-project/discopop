@@ -191,7 +191,7 @@ std::vector<LoopTreeNode*> build_loop_forest(Function &F, LoopInfo &LI, std::uno
         continue;
       }
       LoopTreeNode* node = new LoopTreeNode();
-      node->loop_id = (LOOP_ID)CI->getSExtValue();
+      node->loop_id = static_cast<LOOP_ID>(CI->getSExtValue());
       loop_ids[L] = node->loop_id;
       node_of_loop[L] = node;
       nodes_in_layout_order.push_back({L, node});
@@ -447,7 +447,7 @@ StaticCalltree buildStaticCalltree(Module &M, const std::map<int32_t, LoopIdenti
     // must be active for it to be entered, and its siblings (and everything nested inside
     // them) always remain "dont care", since they cannot be active at the same time. This
     // bounds the number of states for a given loop by 3^depth instead of 3^(total loop count).
-    auto iteration_instances_and_transitions = get_loop_iteration_instances_and_transitions(loop_forest, (int32_t)sequentialized_contained_loops.size(), node_to_offset);
+    auto iteration_instances_and_transitions = get_loop_iteration_instances_and_transitions(loop_forest, static_cast<int32_t>(sequentialized_contained_loops.size()), node_to_offset);
 
     for(auto root : loop_forest){
       delete_loop_tree(root);

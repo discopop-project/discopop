@@ -109,7 +109,7 @@ public:
   size_t operator()(Dep const &key) const { // the parameter type should be the same as the type of key of unordered_map
     size_t hash = 0;
     hash += std::hash<int64_t>{}(key.depOn);
-    hash += std::hash<int>{}((int)key.type);
+    hash += std::hash<int>{}(static_cast<int>(key.type));
     return hash;
   }
 };
@@ -139,7 +139,7 @@ struct ReportedBB {
 
 struct ReportedBBHasher {
   size_t operator()(const ReportedBB &key) const {
-    std::uint64_t states = (((std::uint64_t)key.source_state) << 32) | key.sink_state;
+    std::uint64_t states = (static_cast<std::uint64_t>(key.source_state) << 32) | key.sink_state;
     return std::hash<std::uint64_t>{}(states) ^ (std::hash<std::uint32_t>{}(key.bb_index) * 0x9E3779B97F4A7C15ULL);
   }
 };
@@ -158,7 +158,7 @@ public:
   ReportedBBRecorder() : slots(INITIAL_CAPACITY) {}
 
   inline void record(std::uint32_t bb_index, std::uint32_t source_state, std::uint32_t sink_state) {
-    const std::uint64_t states = (((std::uint64_t)source_state) << 32) | sink_state;
+    const std::uint64_t states = (static_cast<std::uint64_t>(source_state) << 32) | sink_state;
     std::size_t mask = slots.size() - 1;
     for (std::size_t pos = slot_of(bb_index, states) & mask;; pos = (pos + 1) & mask) {
       Slot &slot = slots[pos];
@@ -185,7 +185,7 @@ public:
     for (const Slot &slot : slots) {
       if (slot.used) {
         executions.insert(
-            ReportedBB{slot.bb_index, (std::uint32_t)(slot.states >> 32), (std::uint32_t)(slot.states & 0xFFFFFFFF)});
+            ReportedBB{slot.bb_index, static_cast<std::uint32_t>(slot.states >> 32), static_cast<std::uint32_t>(slot.states & 0xFFFFFFFF)});
       }
     }
     return executions;
@@ -200,11 +200,11 @@ private:
   };
 
   static inline std::size_t slot_of(std::uint32_t bb_index, std::uint64_t states) {
-    std::uint64_t h = states * 0x9E3779B97F4A7C15ULL ^ (((std::uint64_t)bb_index) * 0xC2B2AE3D27D4EB4FULL);
+    std::uint64_t h = states * 0x9E3779B97F4A7C15ULL ^ (static_cast<std::uint64_t>(bb_index) * 0xC2B2AE3D27D4EB4FULL);
     h ^= h >> 29;
     h *= 0xBF58476D1CE4E5B9ULL;
     h ^= h >> 32;
-    return (std::size_t)h;
+    return static_cast<std::size_t>(h);
   }
 
   void grow() {

@@ -67,7 +67,7 @@ private:
   std::int32_t insertedElem;
   std::int32_t conflictElem;
 
-  std::uint32_t hash(std::int64_t value) { return (std::uint32_t)((value >> 8) + value) % numSlot; }
+  std::uint32_t hash(std::int64_t value) { return static_cast<std::uint32_t>((value >> 8) + value) % numSlot; }
 };
 
 } // namespace __dp

@@ -132,9 +132,9 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
       // NOTE (25-10-30) simplified for LLVM 19 compatibility
       // OLD: if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
       if (isa<GetElementPtrInst>(*ptrOperand)) {
-        return determineVariableName_static((Instruction *)ptrOperand, isGlobalVariable, false, prefix);
+        return determineVariableName_static(cast<Instruction>(ptrOperand), isGlobalVariable, false, prefix);
       }
-      return determineVariableName_static((Instruction *)gep, isGlobalVariable, false, "GEPRESULT_" + prefix);
+      return determineVariableName_static(static_cast<Instruction *>(gep), isGlobalVariable, false, "GEPRESULT_" + prefix);
     }
     string retVal = string(operand->getName().data());
     if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
@@ -145,7 +145,7 @@ string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVari
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
-    return determineVariableName_static((Instruction *)(operand), isGlobalVariable, false, prefix);
+    return determineVariableName_static(cast<Instruction>(operand), isGlobalVariable, false, prefix);
   }
   // if we cannot determine the name, then return *
   return ""; // getOrInsertVarName("*", builder);
@@ -201,15 +201,15 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I, string pref
       // (2025-10-30) Simplified check for array type for llvm 19 compatibility
       //if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
       if (isa<GetElementPtrInst>(*ptrOperand)) {
-        return determineVariableName_dynamic((Instruction *)ptrOperand, prefix);
+        return determineVariableName_dynamic(cast<Instruction>(ptrOperand), prefix);
       }
-      return determineVariableName_dynamic((Instruction *)gep, "GEPRESULT_"+prefix);
+      return determineVariableName_dynamic(static_cast<Instruction *>(gep), "GEPRESULT_"+prefix);
     }
     return getOrInsertVarName_dynamic(prefix + string(operand->getName().data()), builder);
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
-    return determineVariableName_dynamic((Instruction *)(operand), prefix);
+    return determineVariableName_dynamic(cast<Instruction>(operand), prefix);
   }
   if (isa<AllocaInst>(I)) {
     return getOrInsertVarName_dynamic(prefix + I->getName().str(), builder);

@@ -30,7 +30,7 @@ namespace __dp {
 namespace {
 // The backing storage of the globals whose lifetime the runtime manages itself, see
 // Immortal.hpp for why they must not be destroyed along with the target's own globals.
-ImmortalStorage<std::unordered_map<char *, long>> cuec_storage;
+ImmortalStorage<std::unordered_map<char *, int64_t>> cuec_storage;
 ImmortalStorage<FirstAccessQueue> firstAccessQueue_storage;
 ImmortalStorage<SecondAccessQueue> secondAccessQueue_storage;
 ImmortalStorage<FirstAccessQueueChunkBuffer> firstAccessQueueChunkBuffer_storage;
@@ -54,7 +54,7 @@ ReportedBBRecorder *bbList = nullptr;
 stringDepMap *outPutDeps = nullptr;
 // end hybrid analysis
 
-std::unordered_map<char *, long> &cuec = cuec_storage.value;
+std::unordered_map<char *, int64_t> &cuec = cuec_storage.value;
 
 RuntimeState runtime_state = RuntimeState::NotInitialized;
 

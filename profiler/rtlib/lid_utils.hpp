@@ -75,7 +75,7 @@ inline int32_t getFileID(std::string fileMapping, std::string fullPathName) {
         std::string indexString = (*substrings)[0];
         std::string fileName = (*substrings)[1];
         if (fileName.compare(fullPathName) == 0) {
-          index = (int32_t)atoi(indexString.c_str());
+          index = atoi(indexString.c_str());
           found = true;
         }
       }
