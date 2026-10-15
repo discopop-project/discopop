@@ -2,33 +2,60 @@
 layout: default
 title: Project manager
 parent: Tools
-nav_order: 10
+nav_order: 2
 ---
 
-# DiscoPoP project manager
+# Project manager
 ## Executable
-`discopop_project_manager` (`discopop` is a stand-in for it; `discopop_gui` opens the same tool with its graphical interface, equivalent to `--gui`)
+`discopop_project_manager` (`discopop` is an alias for it). `discopop_gui` opens the same tool with its [graphical interface](GUI.md), equivalent to `--gui`.
 
-Up to DiscoPoP 5.0, the bare `discopop` command opened the graphical interface and silently ignored every other argument it was given. It is now the command line tool, and the window has moved to `discopop_gui`.
+Up to DiscoPoP 5.0, the bare `discopop` command opened the graphical interface and silently ignored every other argument it was given. It is now the command line tool, and the window has moved to `discopop_gui`. Without any argument, the tool prints its help and does nothing.
 
 ## Purpose
-Initialize a project for use with the DiscoPoP framework and manage its *execution configurations*: named descriptions of how the project is built, how it is run, and how the correctness of a run is checked. Configurations are consumed by the project manager itself and by the [empirical autotuner](Autotuner.md), which compiles, executes and validates candidate parallelizations through them.
+Initialize a project for use with the DiscoPoP framework and manage its *execution configurations*: named descriptions of how the project is built, how it is run, and how the correctness of a run is checked. The project manager builds and runs the project in the modes described below, records the measurements and creates reports. Configurations are also used by the [empirical autotuner](Autotuner.md), [patch repair](Patch_repair.md), the [GUI](GUI.md) and the [MCP server](MCP_server.md), which compile, execute and validate candidate parallelizations through them.
+
+For a step-by-step example, see [Project manager on the command line](../examples/project_manager_cli.md).
 
 ## Required input
 - A project that can be copied to a sibling directory and built there
-- A configuration directory below `.discopop`, created via `--init`
+- A `.discopop/project/configs` directory with a `compile.sh`, a `seq_settings.json` and at least one configuration with an `execute.sh` (see below)
+
+## Initialization
+```bash
+cd <your project>
+discopop_project_manager --init
+```
+
+`--init` creates the `.discopop` directory and exactly two files:
+
+- `.discopop/project/configs/compile.sh`: a placeholder that prints a hint and exits with `1`, so a run fails until you edit it. It is already executable.
+- `.discopop/project/configs/seq_settings.json`: `{"CC": "clang", "CXX": "clang++", "CFLAGS": "", "CXXFLAGS": ""}`
+
+It creates no configuration. You create one by adding a directory with an `execute.sh` below `configs`:
+
+```bash
+cat > .discopop/project/configs/compile.sh <<'EOF'
+#!/bin/bash
+$CXX $CXXFLAGS example.cpp -o prog
+EOF
+mkdir .discopop/project/configs/tiny
+printf '#!/bin/bash\n./prog\n' > .discopop/project/configs/tiny/execute.sh
+chmod +x .discopop/project/configs/compile.sh .discopop/project/configs/tiny/execute.sh
+```
+
+Alternatively, use the [GUI](GUI.md) (its configuration assistant creates all files) or the [MCP server](MCP_server.md). `tiny` is the configuration name `-x` uses by default.
 
 ## Configuration directory
 All configurations live below `.discopop/project/configs/`:
 
-```
+```text
 .discopop/project/configs/
 ├── compile.sh                  # shared build
 ├── compile_validate.sh         # optional: shared build used for validation only
-├── seq_settings.json           # compilers and flags per mode
-├── dp_settings.json
-├── hd_settings.json
-├── par_settings.json
+├── seq_settings.json           # compilers and flags of the sequential build
+├── dp_settings.json            # derived from seq_settings.json
+├── hd_settings.json            # derived from seq_settings.json
+├── par_settings.json           # derived from seq_settings.json
 └── <configuration_name>/
     ├── execute.sh              # required: the timed run
     ├── validate.sh             # optional: untimed correctness check
@@ -36,6 +63,14 @@ All configurations live below `.discopop/project/configs/`:
     ├── compile.sh              # optional: build override for this configuration
     └── compile_validate.sh     # optional: validation build override for this configuration
 ```
+
+`dp_settings.json`, `hd_settings.json` and `par_settings.json` are derived from `seq_settings.json` and **overwritten on every command line run** (except `--init`, `-r`, `-rx` and `--gui`). Edit `seq_settings.json` instead:
+
+| Settings file | Derived from `seq_settings.json` by |
+|---|---|
+| `dp_settings.json` | `CC=discopop_cc`, `CXX=discopop_cxx` |
+| `hd_settings.json` | `CC=discopop_hotspot_cc`, `CXX=discopop_hotspot_cxx`, `-fopenmp` appended to `CFLAGS` and `CXXFLAGS` |
+| `par_settings.json` | `-fopenmp` appended to `CFLAGS` and `CXXFLAGS` |
 
 Every script is executed with the project root as its working directory, so relative paths may be used as if already in the project root. Each script must exit `0` on success. The following environment variables are available:
 
@@ -47,7 +82,7 @@ Every script is executed with the project root as its working directory, so rela
 | `$DOT_DISCOPOP` | absolute path of the `.discopop` directory inside that root |
 | `$OMP_NUM_THREADS` | thread count of the current run |
 
-Build scripts must use `$CC` / `$CXX` and `$CFLAGS` / `$CXXFLAGS` rather than hard-coded compiler names. The same script is reused for sequential builds, DiscoPoP instrumentation, hotspot detection and parallel builds; only the settings file changes between them.
+Build scripts must use `$CC` / `$CXX` and `$CFLAGS` / `$CXXFLAGS` rather than hard-coded compiler names. The same script is reused for sequential builds, DiscoPoP instrumentation, hotspot detection and parallel builds; only the settings file changes between them. A bare `clang` / `clang++` in the settings is replaced by the highest installed `clang-<N>` / `clang++-<N>` if no unversioned compiler is on the `PATH`.
 
 ### Execution modes
 A run selects one of four modes, each backed by its own settings file:
@@ -144,7 +179,7 @@ The timeouts apply **per repetition**, not to the sequence, so `-tox` does not h
 
 `validate.sh` may need a differently compiled binary than `execute.sh`: built with extra checks, against a reference implementation, or with an output-dumping flag. Provide those build instructions in `compile_validate.sh`. The full validation step is then:
 
-```
+```text
 build (compile.sh)          →  execute.sh          →  build (compile_validate.sh)  →  validate.sh
         timeout-compilation        timeout-execution         timeout-compilation           timeout-validation
 ```
@@ -174,20 +209,64 @@ Note that the *role* of a script outranks how specific it is: a shared `compile_
 | `compile.sh`, `compile_validate.sh`, `foo/compile_validate.sh` | `compile.sh` | `foo/compile_validate.sh` |
 
 ### Editing configurations
-- **Graphically:** `discopop_gui` (or `discopop_project_manager --gui`). The configuration assistant creates a first configuration; afterwards the editor's sub-tabs manage `execute.sh`, `validate.sh` and the two override scripts, each with an *Add* / *Remove* button, while the *Compilation Editor* manages the shared `compile.sh`, `compile_validate.sh` and the settings files. The *execute.sh* sub-tab also carries that configuration's *Execution time* setting, with a *Test* button that applies the pattern to the output of the last recorded run without executing anything.
-- **By hand:** create the files listed above and mark them executable.
-- **Through an LLM agent:** the [DiscoPoP MCP server](https://github.com/tuda-hpclab/discopop/tree/master/mcp_server) exposes `set_compile_script` (with `purpose` selecting `compile.sh` or `compile_validate.sh`) and `create_execution_configuration` (which writes `execute.sh` and optionally `validate.sh` plus the override scripts).
+- **Graphically:** `discopop_gui` (or `discopop_project_manager --gui`). The configuration assistant creates a first configuration; afterwards the editor's sub-tabs manage `execute.sh`, `validate.sh` and the two override scripts, while the *Compilation Editor* manages the shared `compile.sh`, `compile_validate.sh` and the settings files. See [Graphical user interface](GUI.md).
+- **By hand:** create the files listed above and mark the scripts executable.
+- **Through an LLM agent:** the [DiscoPoP MCP server](MCP_server.md) exposes `set_compile_script` (with `purpose` selecting `compile.sh` or `compile_validate.sh`) and `create_execution_configuration` (which writes `execute.sh` and optionally `validate.sh` plus the override scripts).
 
-### The GUI's tabs
-Beyond the editor, the graphical interface drives the rest of the pipeline in workflow order: *Execute* runs a configuration, *Report* shows the collected measurements, and *Hotspot Detection*, *Pattern Detection*, [*Patch Repair*](Patch_repair.md) and [*Autotuning*](Autotuner.md) each run the corresponding tool as a subprocess and display its results.
+## Executing configurations
+`-x` takes a comma separated list of `<configuration>[:<mode>][:<threads>]`:
+
+```bash
+discopop_project_manager -x tiny                        # all four modes of tiny
+discopop_project_manager -x tiny:seq:1,tiny:par:4       # two runs
+discopop_project_manager -x tiny:par:4 -xr 5 -lp first  # five repetitions, label "first"
+discopop_project_manager -xf                            # every configuration, all modes
+```
+
+- Modes are `seq`, `dp`, `hd` and `par`. Without a mode, all four run.
+- The thread count is the value of `OMP_NUM_THREADS`. The default is half of the CPU count; `seq` always uses 1.
+- Without `-x`, the configuration `tiny` is executed. An unknown configuration name produces an empty table and no error.
+- `-l` lists the configurations and does nothing else.
+- `-a <ids>` applies the comma separated suggestion ids before the execution. `-a auto` uses the suggestions selected by the autotuner (`auto_tuner/results.json`; the union if several configurations exist), `-a prm` those of the parallel region merger. Suggestions are applied in the project copy only; your sources stay untouched.
+
+### Project copies
+Unless `-i/--inplace` is given, every run happens in a copy of the project, created next to it and named `<configuration>_<settings file>_<project directory>`, for example `tiny_dp_settings.json_my_project`. The copy includes your `.discopop` directory. It is deleted after the run unless `--skip-cleanup` is given. Without `-i`, the profiling data of a `dp` run is therefore deleted with the copy. To keep it for the [Explorer](Explorer.md), either run in place:
+
+```bash
+discopop_project_manager -x tiny:dp:4,tiny:hd:4 -i
+```
+
+which writes `.discopop/profiler` and `.discopop/hotspot_detection` into the project (and leaves the built program there), or keep the copy with `--skip-cleanup` and run the Explorer inside the `.discopop` directory of the copy.
 
 ## Output
-- Execution results of every script run, collected in `.discopop/project/execution_results.json`
-- Optional reports below `.discopop/project/reports`, generated via `--report`
-- Unless `--inplace` is given, each run happens in a copy of the project directory created next to it, which is removed again afterwards unless `--skip-cleanup` is given
+- `.discopop/project/execution_results.json`: the results of every script run, structured as `{configuration: {script: {settings file: [entry, ...]}}}`, for example `["tiny"]["execute.sh"]["seq_settings.json"]`. The key is the name of the settings file, not the mode. An entry holds, among others, `code`, `time`, `wall_clock_time`, `time_source`, `thread_count`, `label`, `applied_suggestions`, `requested_suggestions`, `failed_suggestions`, `repetitions`, `repetition_times` and `time_aggregate`. A new run replaces an entry with the same suggestions, thread count and label.
+- `.discopop/project/reports/<timestamp>/`, created by `--report`: `report.csv`, `speedups.pdf`, `efficiency.pdf`, `execution_time.pdf`, `execution_time_full.pdf` and `full_report.pdf`. The console shows the table as well. Speedup is relative to the `seq` run of the same script.
+- Profiling data of `dp` and `hd` runs below `.discopop/profiler` and `.discopop/hotspot_detection` of the project (with `-i`) or of the copy.
 
-## Note
-For a more detailed description of the available run-time arguments, please refer to the help string of the respective tool.
-```
-discopop_project_manager --help
-```
+The project manager does not run the Explorer. After a `dp` run, run `discopop_explorer` inside `.discopop` (see [Explorer](Explorer.md)); the GUI and the MCP server do this step for you.
+
+## Options
+| Option | Default | Description |
+|---|---|---|
+| `-p`, `--project PATH` | current directory | Root of the project. It must be possible to copy it and build the copy. |
+| `--init` | | Initialize `.discopop` (see above). |
+| `--gui` | | Open the [graphical interface](GUI.md); needs a display. |
+| `-x`, `--execute LIST` | `tiny` | Comma separated `<configuration>[:<mode>][:<threads>]`. |
+| `-xf`, `--execute-full` | | Execute all configurations. |
+| `-a`, `--apply-suggestions IDS` | | Suggestion ids to apply before the execution, or `auto` / `prm`. |
+| `-l`, `--list` | | List the configurations; nothing else is done. |
+| `-i`, `--inplace` | off | Execute in the project root instead of a copy. |
+| `--skip-cleanup` | off | Keep the project copies (may need much disk space). |
+| `--report` | | Generate the report from the stored results. |
+| `--show-report` | | Only has an effect together with `--report`, where it opens the PDF with `xdg-open`. Alone it does not show a report. |
+| `-r`, `--reset` | | Delete everything in `.discopop` except `project/`; implies `-rx`. |
+| `-rx`, `--reset-execution-results` | | Delete `execution_results.json` and the reports. |
+| `-lp`, `--label-prefix` | empty | Prefix of the label stored with the measurements. |
+| `-tox`, `--timeout-execution` | 3600 | Timeout of each execution in seconds; 0 disables it. |
+| `-toc`, `--timeout-compilation` | 3600 | Timeout of each compilation in seconds; 0 disables it. |
+| `-tov`, `--timeout-validation` | 3600 | Timeout of each validation in seconds; 0 disables it. |
+| `-xr`, `--execution-repetitions N` | 3 | Repetitions of `execute.sh` in `seq` and `par`; the median is reported. |
+| `-etr`, `--execution-time-regex [RE]` | per configuration | Read the time from the output. Without a value: the `<DP_EXEC_TIME>` tag; `''` disables the search. |
+| `-v`, `--verbose` | off | Verbose output. |
+| `--log LEVEL` | `WARNING` | Log level (`DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`). |
+| `--write-log` | off | Write a log file. |

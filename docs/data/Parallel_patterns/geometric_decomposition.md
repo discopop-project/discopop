@@ -1,18 +1,20 @@
 ---
 layout: default
-title: Geometric Decomposition
-has_children: true
+title: Geometric decomposition
 parent: Parallel patterns
 grand_parent: Data
-nav_order: 2
+nav_order: 5
 ---
 
 
-# Geometric Decomposition
+# Geometric decomposition
+
+{: .warning }
+Not detected at the moment: the detector is not run by the explorer (`--enable-patterns geodec` has no effect). This page describes the output of earlier versions.
 
 ## Reporting
 Possible geometric decompositions are reported in the following format:
-```
+```text
 Geometric decomposition at: 1:9
 Start line: 1:26
 End line: 1:36
@@ -33,8 +35,8 @@ The reported values shall be interpreted as follows:
 * `Geometric decomposition at: <file_id>:<cu_id>`, where the respective parent file can be looked up in the `FileMapping.txt` using `file_id` and `cu_id` can be used for a look up in `Data.xml`
 * `Start line: <file_id>:<line_num>`, where `line_num` refers to the first source code line of the potential geometrically decomposable code.
 * `End line: <file_id>:<line_num>`, where `line_num` refers to the last line of the suggested pattern.
-* `Do-All loops: [<file_id>:<cu_id>]` specifies which [Do-all loops](Do-All.md) can be part of the geometric decomposition.
-* `Reduction loops: [<file_id>:<ci_id>]` specifies which [Reduction loops](Reduction.md) can be part of the geometric decomposition.
+* `Do-All loops: [<file_id>:<cu_id>]` specifies which [Do-all loops](doall.md) can be part of the geometric decomposition.
+* `Reduction loops: [<file_id>:<cu_id>]` specifies which [Reduction loops](reduction.md) can be part of the geometric decomposition.
 * `Number of tasks: <int>` specifies the number of tasks which should or can be spawned in order to process the geometric decomposition.
 * `Chunk limits: <int>` determine the size of a workload package (amount of iterations) for each individual spawned task.
 * `private, shared, first_private` and `last_private` indicate variables which should be mentioned within the respective OpenMP data sharing clauses.
@@ -69,7 +71,7 @@ As an example, we will analyze the following code snippet for parallelization po
     }
 
 Analyzing this code snippet results in the following geometric decomposition suggestion:
-```
+```text
 Geometric decomposition at: 1:1
 Start line: 1:2
 End line: 1:12
