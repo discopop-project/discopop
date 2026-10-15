@@ -78,7 +78,7 @@ FirstAccessQueueChunkBuffer& first_access_queue_chunk_buffer = first_access_queu
 #define XSTR(x) STR(x)
 #define STR(x) #x
 #ifdef DP_NUM_WORKERS
-int32_t NUM_WORKERS = DP_NUM_WORKERS;
+int32_t num_workers = DP_NUM_WORKERS;
 #else
 int32_t num_workers = 4;  // default number of worker threads (multiple workers
                           // can potentially lead to non-deterministic results)
