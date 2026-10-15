@@ -11,7 +11,9 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <iostream>
 #include <thread>
+#include <unordered_map>
 
 using llvm::Function;
 using llvm::Instruction;

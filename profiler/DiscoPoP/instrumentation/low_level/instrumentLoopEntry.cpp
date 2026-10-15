@@ -11,6 +11,8 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <string>
+#include <vector>
 
 using llvm::BasicBlock;
 using llvm::CallInst;

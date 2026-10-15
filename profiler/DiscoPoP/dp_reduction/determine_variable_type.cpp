@@ -11,6 +11,7 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <string>
 
 using llvm::GetElementPtrInst;
 using llvm::Instruction;

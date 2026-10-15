@@ -13,6 +13,8 @@
 #include "dp_reduction/ReductionInstrumenter.hpp"
 
 #include "utils/profiler_files.hpp"
+#include <string>
+#include <vector>
 
 
 // Inserts calls to allow for dynamic analysis of the loops.

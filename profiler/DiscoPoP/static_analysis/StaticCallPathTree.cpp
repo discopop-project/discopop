@@ -11,6 +11,7 @@
  */
 
 #include "StaticCallPathTree.hpp"
+#include <string>
 
 StaticCallPathTreeNode* StaticCallPathTreeNode::GetOrRegisterSuccessor(StaticCallPathTree* tree, StaticCalltreeNode* successor_node){
     std::lock_guard<std::mutex> lg(mtx);

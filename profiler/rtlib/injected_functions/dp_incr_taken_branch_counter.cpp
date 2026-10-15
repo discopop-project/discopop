@@ -10,6 +10,7 @@
  *
  */
 
+#include "dp_incr_taken_branch_counter.hpp"
 #include "DPTypes.hpp"
 
 #include "runtimeFunctionsGlobals.hpp"

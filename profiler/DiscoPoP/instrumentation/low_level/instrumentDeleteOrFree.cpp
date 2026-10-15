@@ -12,6 +12,7 @@
 
 #include "DiscoPoP.hpp"
 #include "llvm_compat.hpp"
+#include <vector>
 
 using llvm::CallBase;
 using llvm::IRBuilder;

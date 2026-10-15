@@ -11,7 +11,13 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <iostream>
+#include <map>
+#include <memory>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 using llvm::BasicBlock;
 using llvm::CallInst;

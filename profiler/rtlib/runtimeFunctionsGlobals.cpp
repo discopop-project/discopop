@@ -15,6 +15,7 @@
 #include "Immortal.hpp"
 #include "hybrid_analysis/bb_deps.hpp"
 #include "runtimeFunctions.hpp"
+#include <unordered_map>
 
 bool use_perfect = true;
 

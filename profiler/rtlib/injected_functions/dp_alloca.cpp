@@ -10,6 +10,7 @@
  *
  */
 
+#include "dp_alloca.hpp"
 #include "DPTypes.hpp"
 #include "lid_utils.hpp"
 

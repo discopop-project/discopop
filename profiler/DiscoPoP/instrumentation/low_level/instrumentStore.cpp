@@ -12,6 +12,8 @@
 
 #include "DiscoPoP.hpp"
 #include "llvm_compat.hpp"
+#include <string>
+#include <vector>
 
 using llvm::BinaryOperator;
 using llvm::CallInst;

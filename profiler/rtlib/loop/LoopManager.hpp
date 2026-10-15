@@ -18,7 +18,9 @@
 
 #include "lid_utils.hpp"
 
+#include <iostream>
 #include <ostream>
+#include <vector>
 
 namespace dp {
 

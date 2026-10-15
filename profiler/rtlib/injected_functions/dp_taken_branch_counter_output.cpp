@@ -10,6 +10,7 @@
  *
  */
 
+#include "dp_taken_branch_counter_output.hpp"
 #include "DPTypes.hpp"
 
 #include "output_paths.hpp"

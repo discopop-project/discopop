@@ -16,6 +16,7 @@
 
 #include <cstdint>
 #include <unordered_set>
+#include <vector>
 
 namespace dp {
 

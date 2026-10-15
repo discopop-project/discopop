@@ -10,6 +10,7 @@
  *
  */
 
+#include "dp_new.hpp"
 #include "DPTypes.hpp"
 
 #include "runtimeFunctionsGlobals.hpp"

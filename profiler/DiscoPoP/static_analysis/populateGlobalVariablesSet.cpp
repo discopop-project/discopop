@@ -11,6 +11,9 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <map>
+#include <set>
+#include <string>
 
 using llvm::BasicBlock;
 using llvm::CallInst;

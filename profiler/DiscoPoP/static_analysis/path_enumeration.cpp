@@ -12,7 +12,13 @@
 
 #include "DiscoPoP.hpp"
 #include <cstdint>
+#include <iostream>
+#include <stack>
+#include <string>
 #include <thread>
+#include <tuple>
+#include <unordered_map>
+#include <vector>
 
 
 namespace static_callpaths {

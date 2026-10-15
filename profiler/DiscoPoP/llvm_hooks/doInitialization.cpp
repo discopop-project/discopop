@@ -12,6 +12,8 @@
 
 #include "DiscoPoP.hpp"
 #include <filesystem>
+#include <iostream>
+#include <string>
 
 using llvm::Module;
 using llvm::Value;

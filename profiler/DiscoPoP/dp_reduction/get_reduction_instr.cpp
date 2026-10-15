@@ -11,6 +11,7 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <vector>
 
 // Retrieves the reduction operation for the operand that is stored by the
 // 'store_instr' (if such a reduction operation exists).

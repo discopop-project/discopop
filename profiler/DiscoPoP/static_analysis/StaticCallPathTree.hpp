@@ -13,6 +13,9 @@
 #include "StaticCalltree.hpp"
 #include <mutex>
 #include <atomic>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 
 class StaticCallPathTree; // forward declaration

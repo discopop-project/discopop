@@ -13,6 +13,10 @@
 #include "dp_reduction/ReductionInstrumenter.hpp"
 
 #include "dp_reduction/dp_reduction.hpp"
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
 
 using llvm::BasicBlock;
 using llvm::Function;

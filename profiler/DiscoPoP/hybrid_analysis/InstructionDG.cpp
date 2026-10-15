@@ -13,6 +13,10 @@
 #include "InstructionDG.hpp"
 
 #include "DPUtils.hpp"
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <utility>
 
 using llvm::AllocaInst;
 using llvm::DebugLoc;

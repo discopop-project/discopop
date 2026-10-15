@@ -11,6 +11,7 @@
  */
 
 #include "DiscoPoP.hpp"
+#include <string>
 #include <unordered_set>
 #include <queue>
 
