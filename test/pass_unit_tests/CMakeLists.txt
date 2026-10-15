@@ -32,6 +32,7 @@ target_sources(
   utils/dputil/test_lid.cpp
   utils/dputil/test_variable_name.cpp
   utils/output/test_output.cpp
+  utils/profiler_files/test_profiler_files.cpp
   )
 
 target_include_directories(DiscoPoP_Pass_UT PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

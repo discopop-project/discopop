@@ -83,9 +83,9 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       lno = BI->getFunction()->getSubprogram()->getLine();
     }
     if(lno != 0){
-      *instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << to_string(fileID) << ":" << to_string(lno) << ":" << to_string(colno) << "\n";
+      instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << to_string(fileID) << ":" << to_string(lno) << ":" << to_string(colno) << "\n";
     } else{
-      *instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << "*" << "\n";
+      instructionID_to_lineID_file << to_string(llvm_ir_instruction_id) << " " << "*" << "\n";
     }
 
     if ([[maybe_unused]] DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {

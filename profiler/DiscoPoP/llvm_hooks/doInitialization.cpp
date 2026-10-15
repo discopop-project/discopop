@@ -113,7 +113,6 @@ bool DiscoPoP::doInitialization(Module &M) {
     CUIDCounter = 0;
     defaultIsGlobalVariableValue = false;
     ThisModule = &M;
-    outCUIDCounter = NULL;
 
     initializeCUIDCounter();
 

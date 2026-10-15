@@ -24,11 +24,11 @@ void DiscoPoP::dp_reduction_insert_functions() {
     int store_line = instruction.store_inst_->getDebugLoc().getLine();
 
     // output information about the reduction variables
-    *reduction_file << " FileID : " << instruction.file_id_;
-    *reduction_file << " Loop Line Number : " << instruction.loop_line_nr_;
-    *reduction_file << " Reduction Line Number : " << to_string(store_line);
-    *reduction_file << " Variable Name : " << instruction.var_name_;
-    *reduction_file << " Operation Name : " << instruction.operation_ << "\n";
+    reduction_file << " FileID : " << instruction.file_id_;
+    reduction_file << " Loop Line Number : " << instruction.loop_line_nr_;
+    reduction_file << " Reduction Line Number : " << to_string(store_line);
+    reduction_file << " Variable Name : " << instruction.var_name_;
+    reduction_file << " Operation Name : " << instruction.operation_ << "\n";
   }
 
   // insert function calls to monitor loop iterations
