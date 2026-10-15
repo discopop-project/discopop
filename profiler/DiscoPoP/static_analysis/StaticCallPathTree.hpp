@@ -57,7 +57,7 @@ class StaticCallPathTree {
         std::mutex all_nodes_mtx;
 
         StaticCallPathTree();
-        StaticCallPathTree(std::uint32_t start_path_id); // so that ids don't overlap between modules
+        explicit StaticCallPathTree(std::uint32_t start_path_id); // so that ids don't overlap between modules
         ~StaticCallPathTree();
         std::string to_dot_string();
 

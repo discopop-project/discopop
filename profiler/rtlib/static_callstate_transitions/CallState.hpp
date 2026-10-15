@@ -36,7 +36,7 @@ public:
   // The dummy instruction id that stands for leaving a function.
   static constexpr std::int32_t kReturnTrigger = 1;
 
-  CallState(int32_t id_arg) : id(id_arg) {}
+  explicit CallState(int32_t id_arg) : id(id_arg) {}
   void register_transition(int32_t trigger_instruction, CallState *target_state);
   void register_implicit_return_transition(CallState *target_state);
   int32_t get_id() const;

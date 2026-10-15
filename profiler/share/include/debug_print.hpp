@@ -16,7 +16,7 @@
 
 template <std::size_t N> class DebugPrint {
 public:
-  DebugPrint(const char message[N]) {
+  explicit DebugPrint(const char message[N]) {
     for (auto i = 0; i < N; i++) {
       buffer[i] = message[i];
     }

@@ -230,7 +230,7 @@ private:
 
 class FirstAccessQueueChunk {
 public:
-  FirstAccessQueueChunk(std::size_t chunk_size) : buffer_size(chunk_size) { buffer.resize(chunk_size); }
+  explicit FirstAccessQueueChunk(std::size_t chunk_size) : buffer_size(chunk_size) { buffer.resize(chunk_size); }
 
   inline bool is_full() { return element_count == buffer_size; }
 
@@ -267,7 +267,7 @@ public:
 
 class SecondAccessQueue {
 public:
-  SecondAccessQueue(std::size_t arg_max_size) : max_size(arg_max_size) {}
+  explicit SecondAccessQueue(std::size_t arg_max_size) : max_size(arg_max_size) {}
 
   void push(SecondAccessQueueElement *elem) {
     // wait until the consumer has made room: every element keeps the shadow memory of a whole chunk alive,
@@ -315,7 +315,7 @@ private:
 
 class FirstAccessQueue {
 public:
-  FirstAccessQueue(std::size_t arg_max_size) : max_size(arg_max_size) {}
+  explicit FirstAccessQueue(std::size_t arg_max_size) : max_size(arg_max_size) {}
 
   // Asked by the profiled thread before every push, without taking the lock, so it reads the
   // counter instead of the queue: std::queue::size() while a worker is popping is a data race.
@@ -364,7 +364,7 @@ class FirstAccessQueueChunkBuffer {
   // data structure to allow the allocation of chunks by worker threads, so the main thread registering the data
   // accesses does not lose this time
 public:
-  FirstAccessQueueChunkBuffer(std::size_t arg_size) : size(arg_size) {}
+  explicit FirstAccessQueueChunkBuffer(std::size_t arg_size) : size(arg_size) {}
 
   // free the chunks prepared but never handed out
   ~FirstAccessQueueChunkBuffer() {
