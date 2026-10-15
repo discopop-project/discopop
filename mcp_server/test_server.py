@@ -38,7 +38,7 @@ class TestDiscoPopMCPServer(unittest.TestCase):
 
     def test_logging_call_info(self) -> None:
         """Test that call logging works"""
-        with patch("logging.Logger.info") as mock_info:
+        with patch("logging.Logger.info"):
             self.server._ctx.log_call("test_tool", {"arg": "value"})
             # Just verify the method doesn't raise
 

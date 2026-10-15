@@ -217,7 +217,6 @@ class Context(object):
         new_device_id = get_device_id(comb_gpu_reg, next_cu_id)
 
         # check for device switch
-        device_switch_occurred = True if new_device_id != self.device_id else False
 
         # apply updates to written memory regions
         writes_for_update = dict()

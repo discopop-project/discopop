@@ -59,7 +59,7 @@ class PatternInfo(PatternBase):
             return self.workload
         try:
             self.workload = calculate_workload(pet, self._node)
-        except RecursionError as rerr:
+        except RecursionError:
             import warnings
 
             warnings.warn("Cost calculation not possible for node: " + str(self._node.id) + "!")

@@ -151,7 +151,6 @@ def run(arguments: AutotunerArguments) -> None:
     # append, so all step-based algorithms report progress without any change.
     debug_stats: List[DebugStatEntry] = ProgressList()
     statistics_graph = StatisticsGraph()
-    statistics_step_num = 0
 
     setup_auto_tuner(os.getcwd())
     auto_tuner_dir = os.path.join(os.getcwd(), "auto_tuner")
@@ -218,7 +217,6 @@ def run(arguments: AutotunerArguments) -> None:
                     max_avg_runtime = info[4]
 
     # identify the best suggestion
-    visited_configurations: List[List[SUGGESTION_ID]] = []
     best_suggestion_configuration: Tuple[List[SUGGESTION_ID], CodeConfiguration] = ([], reference_configuration)
 
     time_limit_s = 3600  # seconds

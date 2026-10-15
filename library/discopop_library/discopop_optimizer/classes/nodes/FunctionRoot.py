@@ -54,7 +54,9 @@ class FunctionRoot(Workload):
         """Model:
         Spawn overhead + children"""
         # todo this is only a dummy, not a finished model!
-        function_name = "function" + "_" + str(self.node_id) + "_" + self.name
+        function_name = (  # noqa: F841  used by the commented-out code
+            "function" + "_" + str(self.node_id) + "_" + self.name
+        )
         # spawn_overhead = Symbol(function_name + "_spawn_overhead")
         # self.introduced_symbols.append(spawn_overhead)
         # model = Function(function_name)

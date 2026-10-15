@@ -335,8 +335,8 @@ class UnpackedSuggestion(object):
     ) -> List[Pragma]:
         pragmas = []
 
-        region_start_line = int(region_start.split(":")[1])
-        region_end_line = int(region_end.split(":")[1])
+        _region_start_line = int(region_start.split(":")[1])
+        _region_end_line = int(region_end.split(":")[1])
         for loop in contained_loops:
             loop_start = loop["start_line"]
             loop_start_line = int(loop_start.split(":")[1])

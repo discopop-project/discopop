@@ -5,7 +5,6 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-import logging
 import os.path
 
 from discopop_library.FolderStructure.setup import setup_patch_generator
@@ -16,7 +15,6 @@ from discopop_library.PathManagement.PathManagement import load_file_mapping
 
 
 def run(arguments: PatchGeneratorArguments) -> None:
-    logger = logging.getLogger("PatchGenerator")
 
     if arguments.verbose:
         print("Started DiscoPoP Patch Generator...")

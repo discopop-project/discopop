@@ -265,7 +265,6 @@ class ExecutionMixin(ConfigManagerMixinBase):
 
                 self.after(0, lambda m=mode: append_output(f"\n=== {m.upper()} mode ===\n"))  # type: ignore
 
-                settings_file = f"{mode}_settings.json"
                 if mode == "seq":
                     settings_path = shared_seq_settings
                 elif mode == "dp":

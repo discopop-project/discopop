@@ -234,8 +234,6 @@ def __detect_do_all(pet: PEGraphX, root_loop: LoopNode) -> bool:
             # todo: issue critical around file_io
 
     for i in range(0, len(subnodes)):
-        children_cache: Dict[Node, List[Node]] = dict()
-        dependency_cache: Dict[Tuple[Node, Node], Set[Node]] = dict()
         for j in range(i, len(subnodes)):
             if __check_loop_dependencies(
                 pet,
@@ -383,8 +381,6 @@ def __old_detect_do_all(pet: PEGraphX, root_loop: CUNode) -> bool:
             return False
 
     for i in range(0, len(subnodes)):
-        children_cache: Dict[CUNode, List[CUNode]] = dict()
-        dependency_cache: Dict[Tuple[CUNode, CUNode], Set[CUNode]] = dict()
         for j in range(i, len(subnodes)):
             if depends_ignore_readonly(pet, subnodes[i], subnodes[j], root_loop):
                 return False

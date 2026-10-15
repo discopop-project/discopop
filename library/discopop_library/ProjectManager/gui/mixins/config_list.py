@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import json
 import os
 import tkinter as tk
 from typing import Any, Literal, Optional
@@ -27,15 +26,6 @@ class ConfigListMixin(ConfigManagerMixinBase):
             configs = sorted(
                 [d for d in os.listdir(self.config_dir) if os.path.isdir(os.path.join(self.config_dir, d))]
             )
-
-            execution_results_path = os.path.join(self.arguments.project_dir, "execution_results.json")
-            execution_results: dict[str, Any] = {}
-            try:
-                if os.path.exists(execution_results_path):
-                    with open(execution_results_path, "r") as f:
-                        execution_results = json.load(f)
-            except Exception:
-                pass
 
             for config in configs:
                 self.listbox.insert(tk.END, config)

@@ -12,7 +12,6 @@ from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 
 
 def is_passed_by_reference(pet: PEGraphX, dep: Dependency, func: FunctionNode) -> bool:
-    res = False
 
     for i in func.args:
         if i.name == dep.var_name:

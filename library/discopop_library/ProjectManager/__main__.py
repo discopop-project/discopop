@@ -36,7 +36,7 @@ def _build_parser() -> ArgumentParser:
     """Build the parser shared by the command line and the GUI entry point."""
     parser = ArgumentParser(description="Initialize and prepare projects for the use in the DiscoPoP framework.")
     # all flags that are not considered stable should be added to the experimental_parser
-    experimental_parser = parser.add_argument_group(
+    experimental_parser = parser.add_argument_group(  # noqa: F841  kept as documented by the comments around it
         "EXPERIMENTAL",
         "Arguments for configuration manager and other experimental features. These arguments are considered EXPERIMENTAL and they may or may not be removed or modified in the near future.",
     )

@@ -485,7 +485,7 @@ class PETParser(object):
                         if len(get_successors(self.graph, node)) > 1:
                             modification_found = self.__fix_too_many_successors(node, dbg_function_node=function_node)
                             if modification_found:
-                                dbg_show = True
+                                dbg_show = True  # noqa: F841  used by the commented-out code
                                 break
             #            if dbg_show:
             #                show_function(self.graph, function_node, show_dataflow=False, show_mutex_edges=False)
@@ -601,7 +601,7 @@ class PETParser(object):
             new_node_id = self.get_new_node_id()
             node_copy_data = copy.deepcopy(data_at(self.graph, node))
             node_copy_data.node_id = new_node_id
-            node_copy = self.graph.add_node(new_node_id, data=node_copy_data)
+            self.graph.add_node(new_node_id, data=node_copy_data)
             modified_nodes.append(new_node_id)
             # copy non-successors type incoming edges
             for in_edge in self.graph.in_edges(node, data="data"):
@@ -1196,7 +1196,7 @@ class PETParser(object):
                 parallelizable_workload = calculate_workload(
                     self.pet, cu_node, ignore_function_calls_and_cached_values=True
                 )
-            except RecursionError as rerr:
+            except RecursionError:
                 warnings.warn("Cost calculation not possible for node: " + str(cu_node.id) + "!")
                 parallelizable_workload = 0
             self.graph.add_node(
@@ -1234,7 +1234,7 @@ class PETParser(object):
                 discopop_workload = calculate_workload(
                     self.pet, loop_node, ignore_function_calls_and_cached_values=True
                 )
-            except RecursionError as rerr:
+            except RecursionError:
                 warnings.warn("Cost calculation not possible for node: " + str(loop_node.id) + "!")
                 discopop_workload = 0
             self.graph.add_node(

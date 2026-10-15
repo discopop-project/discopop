@@ -235,8 +235,6 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
     print("Reading hotspot results... ", end="")
     i = 0
     resultNum = 0
-    minData = inf
-    maxData = 0.0
     while True:
         fileName = f"hotspot_result_{i}.txt"
         i += 1
@@ -258,12 +256,6 @@ def run(arguments: HotspotAnalyzerArguments) -> None:
     print("Done.")
 
     # CALCULATE
-    vMAX = 0
-    vMIN = inf
-    dMAX = 0.0
-    dMIN = inf
-    deltaData = maxData - minData
-    ratioData = maxData / minData if minData != 0 else 0.0
 
     __print_cs_list(cslist)
 

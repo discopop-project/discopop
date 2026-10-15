@@ -23,7 +23,7 @@ class TestMethods(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         current_dir = pathlib.Path(__file__).parent.resolve()
-        dp_build_dir = run_config_provider(
+        run_config_provider(
             ConfigProviderArguments(
                 return_dp_build_dir=True,
                 return_llvm_bin_dir=False,
