@@ -151,7 +151,7 @@ def __run(
 
     visualizer = None
 
-    if enable_visualizer == True:
+    if enable_visualizer:
         # imported lazily since it requires tkinter, which may be unavailable
         # (e.g. on a headless server) when the GUI visualizer is not requested
         from discopop_gui.Visualizers.WithSidebar import WithSidebar as Visualizer
