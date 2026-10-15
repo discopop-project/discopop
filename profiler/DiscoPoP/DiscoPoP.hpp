@@ -132,9 +132,6 @@ private:
   std::ofstream outOriginalVariables;
   // Mohammad 23.12.2020
   std::map<std::string, std::string> loopStartLines;
-  // id of the loop node in Data.xml, per llvm::Loop of the function processed last
-  // (filled by fillStartEndLineNumbers, read by CFA for loopstate_positions.txt)
-  std::map<llvm::Loop *, std::string> loopToPETNodeID;
 
   // structures to get list of global variables
   std::set<std::string> programGlobalVariablesSet;
@@ -184,7 +181,7 @@ private:
                                    std::map<std::string, std::string> *trueVarNamesFromMetadataMap);
 
   // Control flow analysis
-  void CFA(llvm::Function &F, llvm::LoopInfo &LI);
+  void CFA(llvm::Function &F, llvm::LoopInfo &LI, const std::map<llvm::Loop *, std::string> &loopToPETNodeID);
 
   // Callback Inserters
   // void insertDpFinalize(Instruction *before);
@@ -272,6 +269,12 @@ public:
 
   bool runOnFunction(llvm::Function &F, llvm::ModuleAnalysisManager &MAM);
 
+  // the stages of runOnFunction, see there for why they run in this order
+  void buildCUGraph(llvm::Function &F, llvm::ModuleAnalysisManager &MAM, FunctionCUGraph &graph);
+  void instrumentFunction(llvm::Function &F, llvm::ModuleAnalysisManager &MAM, const FunctionCUGraph &graph);
+  void writeCUGraph(FunctionCUGraph &graph);
+  bool runHybridAnalysis(llvm::Function &F, llvm::ModuleAnalysisManager &MAM);
+
   void runOnBasicBlock(llvm::BasicBlock &BB);
 
   bool doInitialization(llvm::Module &M);
@@ -316,7 +319,7 @@ public:
   void fillCUVariables(llvm::Region *TopRegion, std::set<std::string> &globalVariablesSet, std::vector<CU *> &CUVector,
                        std::map<std::string, std::vector<CU *>> &BBIDToCUIDsMap);
 
-  void fillStartEndLineNumbers(Node *root, llvm::LoopInfo &LI);
+  void fillStartEndLineNumbers(Node *root, llvm::LoopInfo &LI, std::map<llvm::Loop *, std::string> &loopToPETNodeID);
 
   void findStartEndLineNumbers(Node *root, LID &start, LID &end);
 

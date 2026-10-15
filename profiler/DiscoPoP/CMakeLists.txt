@@ -82,6 +82,7 @@ add_library(DiscoPoP_PassObjects OBJECT
 
         hybrid_analysis/InstructionCFG.cpp
         hybrid_analysis/InstructionDG.cpp
+        hybrid_analysis/HybridAnalysis.cpp
         )
 
 # the plugin is built as a shared object, so the objects have to be position independent

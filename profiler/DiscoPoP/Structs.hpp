@@ -16,6 +16,7 @@
 #include "Globals.hpp"
 #include "lid_constants.hpp"
 
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -140,4 +141,16 @@ struct loop_info_t {
   std::string end_line;
   std::string function_name;
   int loop_id;
+};
+
+// The CU graph of one function: built by DiscoPoP::buildCUGraph, written to Data.xml by
+// DiscoPoP::writeCUGraph once the function is instrumented (see DiscoPoP::runOnFunction).
+struct FunctionCUGraph {
+  Node *root = nullptr; // the function node; like the loop nodes, never freed
+  std::vector<CU *> CUs; // freed by writeCUGraph
+  std::map<std::string, std::vector<CU *>> BBIDToCUs;
+  // variables which appear in more than one basic block
+  std::set<std::string> globalVariables;
+  // id of the loop node in Data.xml per llvm::Loop (read by CFA for loopstate_positions.txt)
+  std::map<llvm::Loop *, std::string> loopToPETNodeID;
 };
