@@ -218,14 +218,11 @@ private:
 
   // Basic types
   llvm::Type *Void;
-  llvm::IntegerType *Int8, *Int32, *Int64;
+  llvm::IntegerType *Int32, *Int64;
   llvm::PointerType *CharPtr;
 
   // Control flow analysis
   int32_t loopID;
-
-  // Output streams
-  std::ofstream ocfg;
 
   // Export Module M from runOnModule() to the whole structure space
   llvm::Module *ThisModule;
@@ -244,7 +241,6 @@ private:
   // DPInstrumentation end
 
   // DPInstrumentationOmission
-  int32_t fid;
   // created by doInitialization, where it declares its callbacks
   std::optional<hybrid_analysis::HybridAnalysis> hybridAnalysis;
 
@@ -256,8 +252,6 @@ private:
 
 public:
   DiscoPoP() : uniqueNum(1){}; // : ModulePass(ID), uniqueNum(1){};
-
-  ~DiscoPoP();
 
   bool runOnModule(llvm::Module &M, llvm::ModuleAnalysisManager &MAM);
 
