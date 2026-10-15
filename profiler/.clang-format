@@ -1,0 +1,22 @@
+---
+# Formatting of the profiler's C++ code: the Google C++ Style Guide, with 120 columns.
+Language: Cpp
+BasedOnStyle: Google
+ColumnLimit: 120
+DerivePointerAlignment: false
+PointerAlignment: Left
+IncludeBlocks: Regroup
+IncludeCategories:
+  # C system headers
+  - Regex: '^<[a-z_/]+\.h>'
+    Priority: 1
+  # C++ standard library headers
+  - Regex: '^<[a-z_]+>'
+    Priority: 2
+  # other libraries
+  - Regex: '^(<|"(llvm|llvm-c|clang)/)'
+    Priority: 3
+  # the profiler's own headers
+  - Regex: '.*'
+    Priority: 4
+...

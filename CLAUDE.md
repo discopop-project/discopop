@@ -140,6 +140,11 @@ This document contains critical information about working with this codebase. Fo
 - `scripts/dev/check_headers.py [build dir]` (default `build_tests`, configured as for the unit tests) compiles each header as a translation unit of its own with the flags of its target taken from `compile_commands.json`, and fails if one does not; a new header is picked up by `git ls-files`
 - CI runs it as a step of the job `profiler_unit_tests`
 
+#### Code style of the profiler (Google C++ Style Guide)
+- the profiler's C++ code (`profiler/DiscoPoP`, `profiler/rtlib`, `profiler/share`) follows the Google C++ Style Guide with 120 columns: `profiler/.clang-format`, `profiler/CPPLINT.cfg` and `profiler/.clang-tidy` (naming included) configure it; the tools are pinned in `requirements-dev.txt`
+- `scripts/dev/check_cpp_style.sh [build dir]` runs clang-format (dry run), cpplint and clang-tidy (on the compile commands of `build_tests`, configured as for the unit tests) and fails on any finding; CI does not run it yet
+- names looked up by string must keep their spelling: the injected callbacks `__dp_*` (and the `FunctionType`s the pass builds for them must match their signatures) and the methods LLVM's pass manager detects (`run`, `isRequired`, `name`)
+
 #### LLVM versions (profiler)
 - the pass supports LLVM 19-22; code that must differ between the versions is not written as `#if LLVM_VERSION_MAJOR` at the call site: `profiler/DiscoPoP/llvm_compat.hpp` wraps what is not available in all of them (`llvmcompat::nextInstruction`, `llvmcompat::insertAfter`), and instructions are created before an iterator (`->getIterator()`), which every supported version accepts
 - the remaining version checks are the `PassPlugin.h` include path and the pipeline callback signature in `RegisterPass.cpp`; a new difference belongs into `llvm_compat.hpp`
