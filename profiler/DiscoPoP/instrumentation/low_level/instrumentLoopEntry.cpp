@@ -22,8 +22,8 @@ using llvm::Value;
 using llvm::cast;
 using llvm::isa;
 
-void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, std::int32_t id) {
-  BasicBlock *currentBB = bb;
+void DiscoPoP::InstrumentLoopEntry(BasicBlock *bb, std::int32_t id) {
+  BasicBlock *current_bb = bb;
   std::vector<Value *> args;
   LID lid = 0;
 
@@ -32,20 +32,20 @@ void DiscoPoP::instrumentLoopEntry(BasicBlock *bb, std::int32_t id) {
   // Usually every loop has a .end block as the exit block, thus the
   // exit of a loop will not be the entry of another loop. The first if
   // check is just in case the blocks are organized in a abnormal way.
-  for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
-    if (isa<CallInst>(BI)) {
-      Function *tmpF = (cast<CallInst>(BI))->getCalledFunction();
-      StringRef tmpFn = tmpF->getName();
-      if (tmpFn.find("__dp_loop_exit") != std::string::npos) {
+  for (BasicBlock::iterator bi = current_bb->begin(), ei = current_bb->end(); bi != ei; ++bi) {
+    if (isa<CallInst>(bi)) {
+      Function *tmp_f = (cast<CallInst>(bi))->getCalledFunction();
+      StringRef tmp_fn = tmp_f->getName();
+      if (tmp_fn.find("__dp_loop_exit") != std::string::npos) {
         continue;
 }
     }
-    lid = dputil::getLID(&*BI, fileID);
-    if (lid > 0 && !isa<PHINode>(BI)) {
-      args.push_back(lidConstant(lid));
-      args.push_back(ConstantInt::get(Int32, id));
-      args.push_back(ConstantInt::get(Int32, 0));  // instruction id will be replaced after the assignment of unique instruction ids
-      CallInst::Create(DpLoopEntry, args, "", BI);
+    lid = dputil::GetLid(&*bi, file_id);
+    if (lid > 0 && !isa<PHINode>(bi)) {
+      args.push_back(LidConstant(lid));
+      args.push_back(ConstantInt::get(int32_, id));
+      args.push_back(ConstantInt::get(int32_, 0));  // instruction id will be replaced after the assignment of unique instruction ids
+      CallInst::Create(dp_loop_entry_, args, "", bi);
       break;
     }
   }

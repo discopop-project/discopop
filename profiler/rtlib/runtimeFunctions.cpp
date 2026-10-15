@@ -29,44 +29,44 @@
 #include <vector>
 
 
-namespace __dp {
+namespace dp {
 
-void readRuntimeInfo() {
+void ReadRuntimeInfo() {
 #ifdef DP_RTLIB_VERBOSE
   std::cout << "enter readRuntimeInfo\n";
 #endif
 
-  std::ifstream conf(dputil::get_exe_dir() + "/dp.conf");
+  std::ifstream conf(dputil::GetExeDir() + "/dp.conf");
   std::string line;
   if (conf.is_open()) {
     auto func = [](char c) { return (c == ' '); };
     std::vector<std::string> *substrings = nullptr;
     while (std::getline(conf, line)) {
-      substrings = dputil::split(line, '=');
+      substrings = dputil::Split(line, '=');
       if (substrings->size() == 2) {
         std::string variable = (*substrings)[0];
         std::string value = (*substrings)[1];
         variable.erase(std::remove_if(variable.begin(), variable.end(), func), variable.end());
         value.erase(std::remove_if(value.begin(), value.end(), func), value.end());
 
-        std::int32_t intValue = std::atoi(value.c_str());
-        if (intValue > 0) {
+        std::int32_t int_value = std::atoi(value.c_str());
+        if (int_value > 0) {
           if (variable.compare("DP_DEBUG") == 0) {
-            DP_DEBUG = true;
+            dp_debug = true;
           } else if (variable.compare("SIG_ELEM_BIT") == 0) {
-            SIG_ELEM_BIT = intValue;
+            sig_elem_bit = int_value;
           } else if (variable.compare("SIG_NUM_ELEM") == 0) {
-            SIG_NUM_ELEM = intValue;
+            sig_num_elem = int_value;
           } else if (variable.compare("SIG_NUM_HASH") == 0) {
-            SIG_NUM_HASH = intValue;
+            sig_num_hash = int_value;
           } else if (variable.compare("NUM_WORKERS") == 0) {
-            NUM_WORKERS = intValue;
+            num_workers = int_value;
           } else if (variable.compare("FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER") == 0) {
-            FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER = intValue;
+            first_access_queue_chunks_per_worker = int_value;
           } else if (variable.compare("SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER") == 0) {
-            SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER = intValue;
+            second_access_queue_elements_per_worker = int_value;
           } else if (variable.compare("USE_PERFECT") == 0) {
-            USE_PERFECT = intValue != 0;
+            use_perfect = int_value != 0;
           }
         }
       }
@@ -74,13 +74,13 @@ void readRuntimeInfo() {
       delete substrings;
     }
   }
-  if (DP_DEBUG) {
-    std::cout << "sig_elem_bit = " << SIG_ELEM_BIT << "\n";
-    std::cout << "sig_num_elem = " << SIG_NUM_ELEM << "\n";
-    std::cout << "sig_num_hash = " << SIG_NUM_HASH << "\n";
-    std::cout << "num_workers  = " << NUM_WORKERS << "\n";
-    std::cout << "faq_chunks_per_worker   = " << FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER << "\n";
-    std::cout << "saq_elements_per_worker = " << SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER << "\n";
+  if (dp_debug) {
+    std::cout << "sig_elem_bit = " << sig_elem_bit << "\n";
+    std::cout << "sig_num_elem = " << sig_num_elem << "\n";
+    std::cout << "sig_num_hash = " << sig_num_hash << "\n";
+    std::cout << "num_workers  = " << num_workers << "\n";
+    std::cout << "faq_chunks_per_worker   = " << first_access_queue_chunks_per_worker << "\n";
+    std::cout << "saq_elements_per_worker = " << second_access_queue_elements_per_worker << "\n";
     sleep(2);
   }
 
@@ -89,133 +89,133 @@ void readRuntimeInfo() {
 #endif
 }
 
-void initParallelization() {
+void InitParallelization() {
 #ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("initParallelization");
+  const auto debug_print = MakeDebugPrint("initParallelization");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::INIT_PARALLELIZATION);
+  const auto timer = Timer(timers, TimerRegion::kInitParallelization);
 #endif
 
   // initialize global variables
-  workers = new pthread_t[NUM_WORKERS];
+  workers = new pthread_t[num_workers];
 
   // Initialize count of accesses
-  numAccesses = new std::uint64_t[NUM_WORKERS]();
+  num_accesses = new std::uint64_t[num_workers]();
 
   // bound the memory held by the access queues
-  firstAccessQueue.set_max_size(static_cast<std::size_t>(FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER) * NUM_WORKERS);
-  secondAccessQueue.set_max_size(static_cast<std::size_t>(SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER) * NUM_WORKERS);
+  first_access_queue.SetMaxSize(static_cast<std::size_t>(first_access_queue_chunks_per_worker) * num_workers);
+  second_access_queue.SetMaxSize(static_cast<std::size_t>(second_access_queue_elements_per_worker) * num_workers);
 
   // initialize and set thread detached attribute
-  finalizeParallelizationCalled = false; // mostly for unit-tests.
+  finalize_parallelization_called = false; // mostly for unit-tests.
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
   // create worker threads to process the firstAccessQueue
-  for (std::int64_t i = 0; i < NUM_WORKERS; ++i) {
-    pthread_create(&workers[i], &attr, processFirstAccessQueue, reinterpret_cast<void *>(i));
+  for (std::int64_t i = 0; i < num_workers; ++i) {
+    pthread_create(&workers[i], &attr, ProcessFirstAccessQueue, reinterpret_cast<void *>(i));
   }
 
   // create worker thread to process the secondAccessQueue
-  secondAccessQueue_worker_thread = new pthread_t();
-  pthread_create(secondAccessQueue_worker_thread, &attr, processSecondAccessQueue,
-                 reinterpret_cast<void *>(static_cast<std::intptr_t>(NUM_WORKERS)));
+  second_access_queue_worker_thread = new pthread_t();
+  pthread_create(second_access_queue_worker_thread, &attr, ProcessSecondAccessQueue,
+                 reinterpret_cast<void *>(static_cast<std::intptr_t>(num_workers)));
 
   pthread_attr_destroy(&attr);
 }
 
-void initSingleThreadedExecution() {
+void InitSingleThreadedExecution() {
 #ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("initSingleThreadedExecution");
+  const auto debug_print = MakeDebugPrint("initSingleThreadedExecution");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::ANALYZE_DEPS);
+  const auto timer = Timer(timers, TimerRegion::kAnalyzeDeps);
 #endif
 
-  if (USE_PERFECT) {
-    singleThreadedExecutionSMem = new PerfectShadow2();
+  if (use_perfect) {
+    single_threaded_execution_smem = new PerfectShadow2();
   } else {
-    singleThreadedExecutionSMem = new ShadowMemory(SIG_ELEM_BIT, SIG_NUM_ELEM, SIG_NUM_HASH);
+    single_threaded_execution_smem = new ShadowMemory(sig_elem_bit, sig_num_elem, sig_num_hash);
   }
 
-  myMap = new depMap();
+  my_map = new DepMap();
 }
 
-void mergeDeps() {
-  allDepsLock.lock();
+void MergeDeps() {
+  all_deps_lock.lock();
 #ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::MERGE_DEPS);
+  const auto timer = Timer(timers, TimerRegion::kMergeDeps);
 #endif
 
-  for (auto &dep : *myMap) {
+  for (auto &dep : *my_map) {
     // if a lid occurs the first time, operator[] adds its set to the global hash table;
     // otherwise the set that is already there is extended.
-    depSet &global_deps = (*allDeps)[dep.first];
+    DepSet &global_deps = (*all_deps)[dep.first];
     for (auto &d : dep.second) {
       global_deps.insert(d);
     }
   }
-  allDepsLock.unlock();
-  myMap->clear();
+  all_deps_lock.unlock();
+  my_map->clear();
 }
 
-void finalizeParallelization() {
+void FinalizeParallelization() {
 #ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("finalizeParallelization");
+  const auto debug_print = MakeDebugPrint("finalizeParallelization");
 #endif
 #ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::FINALIZE_PARALLELIZATION);
+  const auto timer = Timer(timers, TimerRegion::kFinalizeParallelization);
 #endif
 
-  if (DP_DEBUG) {
+  if (dp_debug) {
     std::cout << "BEGIN: finalize parallelization... \n";
   }
 
   // push last state of the mainThread_AccessInfoBuffer to the global FirstAccessQueue
-  firstAccessQueue.push(mainThread_AccessInfoBuffer);
-  mainThread_AccessInfoBuffer = firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_CHUNK_SIZE);
+  first_access_queue.Push(main_thread_access_info_buffer);
+  main_thread_access_info_buffer = first_access_queue_chunk_buffer.GetPreparedChunk(kFirstAccessQueueChunkSize);
 
   // fake signaling: just notify the workers that no more addresses will be
   // collected
-  finalizeParallelizationCalled = true;
+  finalize_parallelization_called = true;
 
   // wait for worker threads
-  for (int i = 0; i < NUM_WORKERS; ++i) {
+  for (int i = 0; i < num_workers; ++i) {
     pthread_join(workers[i], nullptr);
 }
-  pthread_join(*secondAccessQueue_worker_thread, nullptr);
+  pthread_join(*second_access_queue_worker_thread, nullptr);
 
   // delete allocated memory
   delete[] workers;
-  delete secondAccessQueue_worker_thread;
-  delete[] numAccesses;
-  numAccesses = nullptr;
+  delete second_access_queue_worker_thread;
+  delete[] num_accesses;
+  num_accesses = nullptr;
 
-  if (DP_DEBUG) {
+  if (dp_debug) {
     std::cout << "END: finalize parallelization... \n";
   }
 }
 
-void finalizeSingleThreadedExecution() {
+void FinalizeSingleThreadedExecution() {
 #ifdef DP_RTLIB_VERBOSE
-  const auto debug_print = make_debug_print("finalizeSingleThreadedExecution");
+  const auto debug_print = MakeDebugPrint("finalizeSingleThreadedExecution");
 #endif
 
-  if (DP_DEBUG) {
+  if (dp_debug) {
     std::cout << "BEGIN: finalize Single Threaded Execution... \n";
   }
 
-  delete singleThreadedExecutionSMem;
-  singleThreadedExecutionSMem = nullptr;
-  mergeDeps();
-  delete myMap;
-  myMap = nullptr;
+  delete single_threaded_execution_smem;
+  single_threaded_execution_smem = nullptr;
+  MergeDeps();
+  delete my_map;
+  my_map = nullptr;
 
-  if (DP_DEBUG) {
+  if (dp_debug) {
     std::cout << "END: finalize Single Threaded Execution... \n";
   }
 }
 
-} // namespace __dp
+} // namespace dp

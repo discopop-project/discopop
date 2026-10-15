@@ -14,7 +14,7 @@
 
 #include "DPTypes.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -26,4 +26,4 @@ void __dp_write(LID lid, ADDR addr, const char *var);
 #endif
 }
 
-} // namespace __dp
+} // namespace dp

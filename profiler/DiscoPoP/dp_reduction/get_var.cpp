@@ -12,7 +12,7 @@
 
 #include "DiscoPoP.hpp"
 
-llvm::Value *dp_reduction::get_var_rec(llvm::Value *val) {
+llvm::Value *dp_reduction::GetVarRec(llvm::Value *val) {
   if (!val) {
     return nullptr;
 }
@@ -24,25 +24,25 @@ llvm::Value *dp_reduction::get_var_rec(llvm::Value *val) {
     llvm::GetElementPtrInst *elem_ptr_instr = llvm::cast<llvm::GetElementPtrInst>(val);
 
     // struct member reductions are not supported by OpenMP
-    llvm::Value *points_to = dp_reduction::points_to_var(elem_ptr_instr);
+    llvm::Value *points_to = dp_reduction::PointsToVar(elem_ptr_instr);
     llvm::AllocaInst *a_instr = llvm::dyn_cast<llvm::AllocaInst>(points_to);
     llvm::Type *type = (a_instr) ? a_instr->getAllocatedType() : points_to->getType();
     if (type->isStructTy()) {
       return nullptr;
     }
 
-    return dp_reduction::get_var_rec(elem_ptr_instr->getPointerOperand());
+    return dp_reduction::GetVarRec(elem_ptr_instr->getPointerOperand());
   }
   if (llvm::isa<llvm::LoadInst>(val)) {
     llvm::LoadInst *load_instr = llvm::cast<llvm::LoadInst>(val);
-    return dp_reduction::get_var_rec(load_instr->getOperand(0));
+    return dp_reduction::GetVarRec(load_instr->getOperand(0));
   }
 
   return nullptr;
 }
 
 // Get the value that is stored or loaded by a store / load instruction.
-llvm::Value *dp_reduction::get_var(llvm::Instruction *instr) {
+llvm::Value *dp_reduction::GetVar(llvm::Instruction *instr) {
   unsigned index = (llvm::isa<llvm::LoadInst>(instr)) ? 0 : 1;
-  return dp_reduction::get_var_rec(instr->getOperand(index));
+  return dp_reduction::GetVarRec(instr->getOperand(index));
 }

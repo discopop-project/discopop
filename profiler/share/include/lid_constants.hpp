@@ -23,22 +23,22 @@ using LID = std::int64_t;
 using ADDR = std::int64_t;
 
 // Number of bits for holding the line number in a LID
-constexpr int LIDSIZE = 18;
+constexpr int kLidSize = 18;
 
 // Number of bits for holding LID Metadata (Column + Loop ID + Loop Iteration)
-constexpr int LIDMETADATASIZE = 32;
+constexpr int kLidMetadataSize = 32;
 
 // Number of bits for holding the location (file id and line number) of a LID
-constexpr int LIDLOCATIONSIZE = 64 - LIDMETADATASIZE;
+constexpr int kLidLocationSize = 64 - kLidMetadataSize;
 
 // Number of bits for holding the file id in a LID
-constexpr int FILEIDSIZE = LIDLOCATIONSIZE - LIDSIZE;
+constexpr int kFileIdSize = kLidLocationSize - kLidSize;
 
 // Number of lines in a single file: the lines 0 to MAXLNO - 1 can be encoded. Has to be 2^LIDSIZE.
-constexpr int MAXLNO = 1 << LIDSIZE;
+constexpr int kMaxLno = 1 << kLidSize;
 
 // Highest file id that can be encoded. File id 0 means "no file".
-constexpr int MAXFILEID = (1 << FILEIDSIZE) - 1;
+constexpr int kMaxFileId = (1 << kFileIdSize) - 1;
 
-static_assert(LIDLOCATIONSIZE == 32, "the location of a LID is 32 bits wide: the runtime masks it with 0xFFFFFFFF");
-static_assert(LIDSIZE > 0 && FILEIDSIZE > 0, "a LID needs bits for both its line and its file id");
+static_assert(kLidLocationSize == 32, "the location of a LID is 32 bits wide: the runtime masks it with 0xFFFFFFFF");
+static_assert(kLidSize > 0 && kFileIdSize > 0, "a LID needs bits for both its line and its file id");

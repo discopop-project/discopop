@@ -28,7 +28,7 @@
 
 namespace dputil {
 
-inline void decodeLID(std::int64_t lid, std::ostream &out) {
+inline void DecodeLid(std::int64_t lid, std::ostream &out) {
   if (lid == 0) {
     out << '*';
     return;
@@ -40,42 +40,42 @@ inline void decodeLID(std::int64_t lid, std::ostream &out) {
   // remove metadata
   lid &= 0x00000000FFFFFFFF;
 
-  out << (lid >> LIDSIZE) << ':' << lid % MAXLNO;
+  out << (lid >> kLidSize) << ':' << lid % kMaxLno;
 }
 
-inline std::string decodeLID(std::int64_t lid) {
+inline std::string DecodeLid(std::int64_t lid) {
   std::stringstream ss;
-  decodeLID(lid, ss);
+  DecodeLid(lid, ss);
   return ss.str();
 }
 
-inline std::vector<std::string> *split(std::string input, char delim) {
+inline std::vector<std::string> *Split(std::string input, char delim) {
   std::vector<std::string> *substrings = new std::vector<std::string>();
-  std::istringstream inputStringStream(input);
+  std::istringstream input_string_stream(input);
   std::string sub;
 
-  while (getline(inputStringStream, sub, delim)) {
+  while (getline(input_string_stream, sub, delim)) {
     substrings->push_back(sub);
   }
 
   return substrings;
 }
 
-inline int32_t getFileID(std::string fileMapping, std::string fullPathName) {
+inline int32_t GetFileId(std::string file_mapping, std::string full_path_name) {
   int32_t index = 0; // if the associated file id is not found, then we return 0
   std::string line;
-  std::ifstream fileMap(fileMapping.c_str());
+  std::ifstream file_map(file_mapping.c_str());
 
-  if (fileMap.is_open()) {
+  if (file_map.is_open()) {
     std::vector<std::string> *substrings = nullptr;
-    while (getline(fileMap, line)) {
-      substrings = split(line, '\t');
+    while (getline(file_map, line)) {
+      substrings = Split(line, '\t');
       bool found = false;
       if (substrings->size() == 2) {
-        std::string indexString = (*substrings)[0];
-        std::string fileName = (*substrings)[1];
-        if (fileName.compare(fullPathName) == 0) {
-          index = atoi(indexString.c_str());
+        std::string index_string = (*substrings)[0];
+        std::string file_name = (*substrings)[1];
+        if (file_name.compare(full_path_name) == 0) {
+          index = atoi(index_string.c_str());
           found = true;
         }
       }
@@ -86,12 +86,12 @@ inline int32_t getFileID(std::string fileMapping, std::string fullPathName) {
         break;
       }
     }
-    fileMap.close();
+    file_map.close();
   }
   return index;
 }
 
-inline bool fexists(const std::string &filename) {
+inline bool FileExists(const std::string &filename) {
   std::ifstream ifile(filename.c_str());
 
   if (ifile.fail()) {
@@ -99,13 +99,13 @@ inline bool fexists(const std::string &filename) {
   }     return true;
 }
 
-inline std::string get_exe_dir() {
+inline std::string GetExeDir() {
   char buff[1024];
   ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff) - 1);
   if (len != -1) {
     buff[len] = '\0';
-    std::string fullPath = std::string(buff);
-    return fullPath.substr(0, fullPath.find_last_of('/'));
+    std::string full_path = std::string(buff);
+    return full_path.substr(0, full_path.find_last_of('/'));
   }     return "";
 
 }

@@ -15,13 +15,13 @@
 class PerfectShadowTest : public ::testing::Test {};
 
 TEST_F(PerfectShadowTest, testConstructor) {
-  const auto shadow = __dp::PerfectShadow{};
+  const auto shadow = dp::PerfectShadow{};
 
-  const auto *reads = shadow.getSigRead();
+  const auto *reads = shadow.GetSigRead();
   ASSERT_NE(reads, nullptr);
   ASSERT_TRUE(reads->empty());
 
-  const auto *writes = shadow.getSigWrite();
+  const auto *writes = shadow.GetSigWrite();
   ASSERT_NE(writes, nullptr);
   ASSERT_TRUE(writes->empty());
 }
@@ -30,48 +30,48 @@ TEST_F(PerfectShadowTest, testConstructor) {
 // three shadow memory parameters. A perfect shadow records every address, so it ignores them --
 // but it has to accept them, or the two are no longer interchangeable.
 TEST_F(PerfectShadowTest, testConstructorWithTheShadowMemoryParameters) {
-  auto shadow = __dp::PerfectShadow{56, 270000, 2};
+  auto shadow = dp::PerfectShadow{56, 270000, 2};
 
-  ASSERT_NE(shadow.getSigRead(), nullptr);
-  ASSERT_TRUE(shadow.getSigRead()->empty());
-  ASSERT_NE(shadow.getSigWrite(), nullptr);
-  ASSERT_TRUE(shadow.getSigWrite()->empty());
+  ASSERT_NE(shadow.GetSigRead(), nullptr);
+  ASSERT_TRUE(shadow.GetSigRead()->empty());
+  ASSERT_NE(shadow.GetSigWrite(), nullptr);
+  ASSERT_TRUE(shadow.GetSigWrite()->empty());
 
-  shadow.updateInWrite(1000, 7);
-  EXPECT_EQ(shadow.testInWrite(1000), 7);
+  shadow.UpdateInWrite(1000, 7);
+  EXPECT_EQ(shadow.TestInWrite(1000), 7);
 }
 
 TEST_F(PerfectShadowTest, testGet) {
-  auto shadow = __dp::PerfectShadow{};
+  auto shadow = dp::PerfectShadow{};
 
-  const auto *reads = shadow.getSigRead();
-  const auto *writes = shadow.getSigWrite();
+  const auto *reads = shadow.GetSigRead();
+  const auto *writes = shadow.GetSigWrite();
 
   const auto addresses = std::vector<std::int64_t>{0, 4, 5, 12, 16, 20, 24, 28, 1000, 1004, 1008};
 
   for (const auto address : addresses) {
-    ASSERT_EQ(shadow.testInRead(address), 0);
+    ASSERT_EQ(shadow.TestInRead(address), 0);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
   ASSERT_TRUE(writes->empty());
 
   for (const auto address : addresses) {
-    ASSERT_EQ(shadow.testInRead(address), 0);
+    ASSERT_EQ(shadow.TestInRead(address), 0);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
   ASSERT_TRUE(writes->empty());
 
   for (const auto address : addresses) {
-    ASSERT_EQ(shadow.testInWrite(address), 0);
+    ASSERT_EQ(shadow.TestInWrite(address), 0);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
   ASSERT_EQ(writes->size(), addresses.size());
 
   for (const auto address : addresses) {
-    ASSERT_EQ(shadow.testInWrite(address), 0);
+    ASSERT_EQ(shadow.TestInWrite(address), 0);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
@@ -99,15 +99,15 @@ TEST_F(PerfectShadowTest, testGet) {
 }
 
 TEST_F(PerfectShadowTest, testInsert) {
-  auto shadow = __dp::PerfectShadow{};
+  auto shadow = dp::PerfectShadow{};
 
-  const auto *reads = shadow.getSigRead();
-  const auto *writes = shadow.getSigWrite();
+  const auto *reads = shadow.GetSigRead();
+  const auto *writes = shadow.GetSigWrite();
 
   const auto addresses = std::vector<std::int64_t>{0, 4, 5, 12, 16, 20, 24, 28, 1000, 1004, 1008};
 
   for (const auto address : addresses) {
-    const auto old_val = shadow.insertToRead(address, 1);
+    const auto old_val = shadow.InsertToRead(address, 1);
     ASSERT_EQ(old_val, 0);
   }
 
@@ -125,7 +125,7 @@ TEST_F(PerfectShadowTest, testInsert) {
   }
 
   for (const auto address : addresses) {
-    const auto old_val = shadow.insertToRead(address, 14);
+    const auto old_val = shadow.InsertToRead(address, 14);
     ASSERT_EQ(old_val, 1);
   }
 
@@ -143,11 +143,11 @@ TEST_F(PerfectShadowTest, testInsert) {
   }
 
   for (const auto address : addresses) {
-    ASSERT_EQ(shadow.testInRead(address), 14);
+    ASSERT_EQ(shadow.TestInRead(address), 14);
   }
 
   for (const auto address : addresses) {
-    const auto old_val = shadow.insertToWrite(address, 4);
+    const auto old_val = shadow.InsertToWrite(address, 4);
     ASSERT_EQ(old_val, 0);
   }
 
@@ -176,20 +176,20 @@ TEST_F(PerfectShadowTest, testInsert) {
 }
 
 TEST_F(PerfectShadowTest, testUpdate) {
-  auto shadow = __dp::PerfectShadow{};
+  auto shadow = dp::PerfectShadow{};
 
-  const auto *reads = shadow.getSigRead();
-  const auto *writes = shadow.getSigWrite();
+  const auto *reads = shadow.GetSigRead();
+  const auto *writes = shadow.GetSigWrite();
 
   const auto addresses = std::vector<std::int64_t>{0, 4, 5, 12, 16, 20, 24, 28, 1000, 1004, 1008};
 
   for (const auto address : addresses) {
-    std::ignore = shadow.insertToRead(address, 1);
-    std::ignore = shadow.insertToWrite(address, 12);
+    std::ignore = shadow.InsertToRead(address, 1);
+    std::ignore = shadow.InsertToWrite(address, 12);
   }
 
   for (const auto address : addresses) {
-    shadow.updateInRead(address, 14);
+    shadow.UpdateInRead(address, 14);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
@@ -216,7 +216,7 @@ TEST_F(PerfectShadowTest, testUpdate) {
   }
 
   for (const auto address : addresses) {
-    shadow.updateInWrite(address, 27);
+    shadow.UpdateInWrite(address, 27);
   }
 
   for (const auto address : addresses) {
@@ -241,20 +241,20 @@ TEST_F(PerfectShadowTest, testUpdate) {
 }
 
 TEST_F(PerfectShadowTest, testRemove) {
-  auto shadow = __dp::PerfectShadow{};
+  auto shadow = dp::PerfectShadow{};
 
-  const auto *reads = shadow.getSigRead();
-  const auto *writes = shadow.getSigWrite();
+  const auto *reads = shadow.GetSigRead();
+  const auto *writes = shadow.GetSigWrite();
 
   const auto addresses = std::vector<std::int64_t>{0, 4, 5, 12, 16, 20, 24, 28, 1000, 1004, 1008};
 
   for (const auto address : addresses) {
-    std::ignore = shadow.insertToRead(address, 1);
-    std::ignore = shadow.insertToWrite(address, 12);
+    std::ignore = shadow.InsertToRead(address, 1);
+    std::ignore = shadow.InsertToWrite(address, 12);
   }
 
   for (const auto address : addresses) {
-    shadow.removeFromRead(address);
+    shadow.RemoveFromRead(address);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
@@ -281,7 +281,7 @@ TEST_F(PerfectShadowTest, testRemove) {
   }
 
   for (const auto address : addresses) {
-    shadow.removeFromWrite(address);
+    shadow.RemoveFromWrite(address);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
@@ -309,25 +309,25 @@ TEST_F(PerfectShadowTest, testRemove) {
 }
 
 TEST_F(PerfectShadowTest, testAddressesInRange) {
-  auto shadow = __dp::PerfectShadow{};
+  auto shadow = dp::PerfectShadow{};
 
   const auto addresses_read = std::vector<std::int64_t>{0, 4, 5, 12, 16, 20, 24, 28, 1000, 1004, 1008};
   const auto addresses_write = std::vector<std::int64_t>{4, 6, 8, 12, 16, 20, 48, 56, 1001, 1002, 1003, 1005};
 
   for (const auto address : addresses_read) {
-    std::ignore = shadow.insertToRead(address, 1);
+    std::ignore = shadow.InsertToRead(address, 1);
   }
 
   for (const auto address : addresses_write) {
-    std::ignore = shadow.insertToWrite(address, 1);
+    std::ignore = shadow.InsertToWrite(address, 1);
   }
 
-  const auto addresses_in_range_1 = shadow.getAddrsInRange(7, 14);
+  const auto addresses_in_range_1 = shadow.GetAddrsInRange(7, 14);
   ASSERT_EQ(addresses_in_range_1.size(), 2);
   ASSERT_TRUE(addresses_in_range_1.find(8) != addresses_in_range_1.end());
   ASSERT_TRUE(addresses_in_range_1.find(12) != addresses_in_range_1.end());
 
-  const auto addresses_in_range_2 = shadow.getAddrsInRange(1000, 1004);
+  const auto addresses_in_range_2 = shadow.GetAddrsInRange(1000, 1004);
   ASSERT_EQ(addresses_in_range_2.size(), 5);
   ASSERT_TRUE(addresses_in_range_2.find(1000) != addresses_in_range_2.end());
   ASSERT_TRUE(addresses_in_range_2.find(1001) != addresses_in_range_2.end());
@@ -336,10 +336,10 @@ TEST_F(PerfectShadowTest, testAddressesInRange) {
   ASSERT_TRUE(addresses_in_range_2.find(1004) != addresses_in_range_2.end());
 
   for (const auto address : addresses_read) {
-    shadow.removeFromRead(address);
+    shadow.RemoveFromRead(address);
   }
 
-  const auto addresses_in_range_3 = shadow.getAddrsInRange(7, 14);
+  const auto addresses_in_range_3 = shadow.GetAddrsInRange(7, 14);
   ASSERT_EQ(addresses_in_range_3.size(), 2);
   ASSERT_TRUE(addresses_in_range_3.find(8) != addresses_in_range_3.end());
   ASSERT_TRUE(addresses_in_range_3.find(12) != addresses_in_range_3.end());
@@ -350,48 +350,48 @@ TEST_F(PerfectShadowTest, testAddressesInRange) {
 class PerfectShadow2Test : public ::testing::Test {};
 
 TEST_F(PerfectShadow2Test, testConstructor) {
-  const auto shadow = __dp::PerfectShadow2{};
+  const auto shadow = dp::PerfectShadow2{};
 
-  const auto *reads = shadow.getSigRead();
+  const auto *reads = shadow.GetSigRead();
   ASSERT_NE(reads, nullptr);
   ASSERT_TRUE(reads->empty());
 
-  const auto *writes = shadow.getSigWrite();
+  const auto *writes = shadow.GetSigWrite();
   ASSERT_NE(writes, nullptr);
   ASSERT_TRUE(writes->empty());
 }
 
 TEST_F(PerfectShadow2Test, testGet) {
-  auto shadow = __dp::PerfectShadow2{};
+  auto shadow = dp::PerfectShadow2{};
 
-  const auto *reads = shadow.getSigRead();
-  const auto *writes = shadow.getSigWrite();
+  const auto *reads = shadow.GetSigRead();
+  const auto *writes = shadow.GetSigWrite();
 
   const auto addresses = std::vector<std::int64_t>{0, 4, 5, 12, 16, 20, 24, 28, 1000, 1004, 1008};
 
   for (const auto address : addresses) {
-    ASSERT_EQ(shadow.testInRead(address), 0);
+    ASSERT_EQ(shadow.TestInRead(address), 0);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
   ASSERT_TRUE(writes->empty());
 
   for (const auto address : addresses) {
-    ASSERT_EQ(shadow.testInRead(address), 0);
+    ASSERT_EQ(shadow.TestInRead(address), 0);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
   ASSERT_TRUE(writes->empty());
 
   for (const auto address : addresses) {
-    ASSERT_EQ(shadow.testInWrite(address), 0);
+    ASSERT_EQ(shadow.TestInWrite(address), 0);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
   ASSERT_EQ(writes->size(), addresses.size());
 
   for (const auto address : addresses) {
-    ASSERT_EQ(shadow.testInWrite(address), 0);
+    ASSERT_EQ(shadow.TestInWrite(address), 0);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
@@ -419,15 +419,15 @@ TEST_F(PerfectShadow2Test, testGet) {
 }
 
 TEST_F(PerfectShadow2Test, testInsert) {
-  auto shadow = __dp::PerfectShadow2{};
+  auto shadow = dp::PerfectShadow2{};
 
-  const auto *reads = shadow.getSigRead();
-  const auto *writes = shadow.getSigWrite();
+  const auto *reads = shadow.GetSigRead();
+  const auto *writes = shadow.GetSigWrite();
 
   const auto addresses = std::vector<std::int64_t>{0, 4, 5, 12, 16, 20, 24, 28, 1000, 1004, 1008};
 
   for (const auto address : addresses) {
-    const auto old_val = shadow.insertToRead(address, 1);
+    const auto old_val = shadow.InsertToRead(address, 1);
     ASSERT_EQ(old_val, 0);
   }
 
@@ -445,7 +445,7 @@ TEST_F(PerfectShadow2Test, testInsert) {
   }
 
   for (const auto address : addresses) {
-    const auto old_val = shadow.insertToRead(address, 14);
+    const auto old_val = shadow.InsertToRead(address, 14);
     ASSERT_EQ(old_val, 1);
   }
 
@@ -463,11 +463,11 @@ TEST_F(PerfectShadow2Test, testInsert) {
   }
 
   for (const auto address : addresses) {
-    ASSERT_EQ(shadow.testInRead(address), 14);
+    ASSERT_EQ(shadow.TestInRead(address), 14);
   }
 
   for (const auto address : addresses) {
-    const auto old_val = shadow.insertToWrite(address, 4);
+    const auto old_val = shadow.InsertToWrite(address, 4);
     ASSERT_EQ(old_val, 0);
   }
 
@@ -496,20 +496,20 @@ TEST_F(PerfectShadow2Test, testInsert) {
 }
 
 TEST_F(PerfectShadow2Test, testUpdate) {
-  auto shadow = __dp::PerfectShadow2{};
+  auto shadow = dp::PerfectShadow2{};
 
-  const auto *reads = shadow.getSigRead();
-  const auto *writes = shadow.getSigWrite();
+  const auto *reads = shadow.GetSigRead();
+  const auto *writes = shadow.GetSigWrite();
 
   const auto addresses = std::vector<std::int64_t>{0, 4, 5, 12, 16, 20, 24, 28, 1000, 1004, 1008};
 
   for (const auto address : addresses) {
-    std::ignore = shadow.insertToRead(address, 1);
-    std::ignore = shadow.insertToWrite(address, 12);
+    std::ignore = shadow.InsertToRead(address, 1);
+    std::ignore = shadow.InsertToWrite(address, 12);
   }
 
   for (const auto address : addresses) {
-    shadow.updateInRead(address, 14);
+    shadow.UpdateInRead(address, 14);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
@@ -536,7 +536,7 @@ TEST_F(PerfectShadow2Test, testUpdate) {
   }
 
   for (const auto address : addresses) {
-    shadow.updateInWrite(address, 27);
+    shadow.UpdateInWrite(address, 27);
   }
 
   for (const auto address : addresses) {
@@ -561,20 +561,20 @@ TEST_F(PerfectShadow2Test, testUpdate) {
 }
 
 TEST_F(PerfectShadow2Test, testRemove) {
-  auto shadow = __dp::PerfectShadow2{};
+  auto shadow = dp::PerfectShadow2{};
 
-  const auto *reads = shadow.getSigRead();
-  const auto *writes = shadow.getSigWrite();
+  const auto *reads = shadow.GetSigRead();
+  const auto *writes = shadow.GetSigWrite();
 
   const auto addresses = std::vector<std::int64_t>{0, 4, 5, 12, 16, 20, 24, 28, 1000, 1004, 1008};
 
   for (const auto address : addresses) {
-    std::ignore = shadow.insertToRead(address, 1);
-    std::ignore = shadow.insertToWrite(address, 12);
+    std::ignore = shadow.InsertToRead(address, 1);
+    std::ignore = shadow.InsertToWrite(address, 12);
   }
 
   for (const auto address : addresses) {
-    shadow.removeFromRead(address);
+    shadow.RemoveFromRead(address);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
@@ -601,7 +601,7 @@ TEST_F(PerfectShadow2Test, testRemove) {
   }
 
   for (const auto address : addresses) {
-    shadow.removeFromWrite(address);
+    shadow.RemoveFromWrite(address);
   }
 
   ASSERT_EQ(reads->size(), addresses.size());
@@ -629,25 +629,25 @@ TEST_F(PerfectShadow2Test, testRemove) {
 }
 
 TEST_F(PerfectShadow2Test, testAddressesInRange) {
-  auto shadow = __dp::PerfectShadow2{};
+  auto shadow = dp::PerfectShadow2{};
 
   const auto addresses_read = std::vector<std::int64_t>{0, 4, 5, 12, 16, 20, 24, 28, 1000, 1004, 1008};
   const auto addresses_write = std::vector<std::int64_t>{4, 6, 8, 12, 16, 20, 48, 56, 1001, 1002, 1003, 1005};
 
   for (const auto address : addresses_read) {
-    std::ignore = shadow.insertToRead(address, 1);
+    std::ignore = shadow.InsertToRead(address, 1);
   }
 
   for (const auto address : addresses_write) {
-    std::ignore = shadow.insertToWrite(address, 1);
+    std::ignore = shadow.InsertToWrite(address, 1);
   }
 
-  const auto addresses_in_range_1 = shadow.getAddrsInRange(7, 14);
+  const auto addresses_in_range_1 = shadow.GetAddrsInRange(7, 14);
   ASSERT_EQ(addresses_in_range_1.size(), 2);
   ASSERT_TRUE(addresses_in_range_1.find(8) != addresses_in_range_1.end());
   ASSERT_TRUE(addresses_in_range_1.find(12) != addresses_in_range_1.end());
 
-  const auto addresses_in_range_2 = shadow.getAddrsInRange(1000, 1004);
+  const auto addresses_in_range_2 = shadow.GetAddrsInRange(1000, 1004);
   ASSERT_EQ(addresses_in_range_2.size(), 5);
   ASSERT_TRUE(addresses_in_range_2.find(1000) != addresses_in_range_2.end());
   ASSERT_TRUE(addresses_in_range_2.find(1001) != addresses_in_range_2.end());
@@ -656,10 +656,10 @@ TEST_F(PerfectShadow2Test, testAddressesInRange) {
   ASSERT_TRUE(addresses_in_range_2.find(1004) != addresses_in_range_2.end());
 
   for (const auto address : addresses_read) {
-    shadow.removeFromRead(address);
+    shadow.RemoveFromRead(address);
   }
 
-  const auto addresses_in_range_3 = shadow.getAddrsInRange(7, 14);
+  const auto addresses_in_range_3 = shadow.GetAddrsInRange(7, 14);
   ASSERT_EQ(addresses_in_range_3.size(), 2);
   ASSERT_TRUE(addresses_in_range_3.find(8) != addresses_in_range_3.end());
   ASSERT_TRUE(addresses_in_range_3.find(12) != addresses_in_range_3.end());
@@ -683,7 +683,7 @@ private:
   std::streambuf *previous;
 };
 
-using kv_pairs = std::vector<std::pair<std::int64_t, sigElement>>;
+using kv_pairs = std::vector<std::pair<std::int64_t, SigElement>>;
 
 kv_pairs sorted(kv_pairs pairs) {
   std::sort(pairs.begin(), pairs.end());
@@ -693,98 +693,98 @@ kv_pairs sorted(kv_pairs pairs) {
 } // namespace
 
 TEST_F(PerfectShadowTest, testKeyValuePairs) {
-  auto shadow = __dp::PerfectShadow{};
+  auto shadow = dp::PerfectShadow{};
 
-  ASSERT_TRUE(shadow.getReadKVPairs().empty());
-  ASSERT_TRUE(shadow.getWriteKVPairs().empty());
+  ASSERT_TRUE(shadow.GetReadKvPairs().empty());
+  ASSERT_TRUE(shadow.GetWriteKvPairs().empty());
 
-  shadow.insertToRead(4, 100);
-  shadow.insertToRead(8, 200);
-  shadow.insertToWrite(4, 300);
+  shadow.InsertToRead(4, 100);
+  shadow.InsertToRead(8, 200);
+  shadow.InsertToWrite(4, 300);
 
-  ASSERT_EQ(sorted(shadow.getReadKVPairs()), (kv_pairs{{4, 100}, {8, 200}}));
-  ASSERT_EQ(sorted(shadow.getWriteKVPairs()), (kv_pairs{{4, 300}}));
+  ASSERT_EQ(sorted(shadow.GetReadKvPairs()), (kv_pairs{{4, 100}, {8, 200}}));
+  ASSERT_EQ(sorted(shadow.GetWriteKvPairs()), (kv_pairs{{4, 300}}));
 
   // remove zeroes the value instead of dropping the key, so the pair stays in the listing
-  shadow.removeFromRead(8);
-  ASSERT_EQ(sorted(shadow.getReadKVPairs()), (kv_pairs{{4, 100}, {8, 0}}));
+  shadow.RemoveFromRead(8);
+  ASSERT_EQ(sorted(shadow.GetReadKvPairs()), (kv_pairs{{4, 100}, {8, 0}}));
 }
 
 TEST_F(PerfectShadowTest, testMoveConstructor) {
-  auto shadow = __dp::PerfectShadow{};
-  shadow.insertToRead(4, 100);
-  shadow.insertToWrite(8, 200);
+  auto shadow = dp::PerfectShadow{};
+  shadow.InsertToRead(4, 100);
+  shadow.InsertToWrite(8, 200);
 
-  const auto *reads_before = shadow.getSigRead();
-  const auto *writes_before = shadow.getSigWrite();
+  const auto *reads_before = shadow.GetSigRead();
+  const auto *writes_before = shadow.GetSigWrite();
 
-  auto moved = __dp::PerfectShadow{std::move(shadow)};
+  auto moved = dp::PerfectShadow{std::move(shadow)};
 
   // the maps are handed over, not copied
-  ASSERT_EQ(moved.getSigRead(), reads_before);
-  ASSERT_EQ(moved.getSigWrite(), writes_before);
-  ASSERT_EQ(moved.testInRead(4), 100);
-  ASSERT_EQ(moved.testInWrite(8), 200);
+  ASSERT_EQ(moved.GetSigRead(), reads_before);
+  ASSERT_EQ(moved.GetSigWrite(), writes_before);
+  ASSERT_EQ(moved.TestInRead(4), 100);
+  ASSERT_EQ(moved.TestInWrite(8), 200);
 
   // and the moved-from shadow keeps none of them, which is what makes its destructor safe
-  ASSERT_EQ(shadow.getSigRead(), nullptr);
-  ASSERT_EQ(shadow.getSigWrite(), nullptr);
+  ASSERT_EQ(shadow.GetSigRead(), nullptr);
+  ASSERT_EQ(shadow.GetSigWrite(), nullptr);
 }
 
 TEST_F(PerfectShadowTest, testMoveAssignment) {
-  auto source = __dp::PerfectShadow{};
-  source.insertToRead(4, 100);
+  auto source = dp::PerfectShadow{};
+  source.InsertToRead(4, 100);
 
-  auto target = __dp::PerfectShadow{};
-  target.insertToRead(9, 999);
+  auto target = dp::PerfectShadow{};
+  target.InsertToRead(9, 999);
 
-  const auto *source_reads = source.getSigRead();
-  const auto *target_reads = target.getSigRead();
+  const auto *source_reads = source.GetSigRead();
+  const auto *target_reads = target.GetSigRead();
 
   target = std::move(source);
 
-  ASSERT_EQ(target.getSigRead(), source_reads);
-  ASSERT_EQ(target.testInRead(4), 100);
+  ASSERT_EQ(target.GetSigRead(), source_reads);
+  ASSERT_EQ(target.TestInRead(4), 100);
 
   // assignment swaps rather than releases, so the maps the target held live on in the source and
   // are freed when it goes out of scope
-  ASSERT_EQ(source.getSigRead(), target_reads);
+  ASSERT_EQ(source.GetSigRead(), target_reads);
 }
 
 TEST_F(PerfectShadowTest, testPrint) {
-  auto shadow = __dp::PerfectShadow{};
-  shadow.insertToRead(4, 100);
+  auto shadow = dp::PerfectShadow{};
+  shadow.InsertToRead(4, 100);
 
   const CoutCapture capture{};
-  shadow.print();
+  shadow.Print();
 
   ASSERT_EQ(capture.str(), "Hello from PerfectShadow\n");
 }
 
 TEST_F(PerfectShadow2Test, testKeyValuePairs) {
-  auto shadow = __dp::PerfectShadow2{};
+  auto shadow = dp::PerfectShadow2{};
 
-  ASSERT_TRUE(shadow.getReadKVPairs().empty());
-  ASSERT_TRUE(shadow.getWriteKVPairs().empty());
+  ASSERT_TRUE(shadow.GetReadKvPairs().empty());
+  ASSERT_TRUE(shadow.GetWriteKvPairs().empty());
 
-  shadow.insertToRead(4, 100);
-  shadow.insertToRead(8, 200);
-  shadow.insertToWrite(4, 300);
+  shadow.InsertToRead(4, 100);
+  shadow.InsertToRead(8, 200);
+  shadow.InsertToWrite(4, 300);
 
-  ASSERT_EQ(sorted(shadow.getReadKVPairs()), (kv_pairs{{4, 100}, {8, 200}}));
-  ASSERT_EQ(sorted(shadow.getWriteKVPairs()), (kv_pairs{{4, 300}}));
+  ASSERT_EQ(sorted(shadow.GetReadKvPairs()), (kv_pairs{{4, 100}, {8, 200}}));
+  ASSERT_EQ(sorted(shadow.GetWriteKvPairs()), (kv_pairs{{4, 300}}));
 
-  shadow.removeFromRead(8);
-  ASSERT_EQ(sorted(shadow.getReadKVPairs()), (kv_pairs{{4, 100}, {8, 0}}));
+  shadow.RemoveFromRead(8);
+  ASSERT_EQ(sorted(shadow.GetReadKvPairs()), (kv_pairs{{4, 100}, {8, 0}}));
 }
 
 TEST_F(PerfectShadow2Test, testPrint) {
-  auto shadow = __dp::PerfectShadow2{};
-  shadow.insertToRead(4, 100);
-  shadow.insertToWrite(4, 200);
+  auto shadow = dp::PerfectShadow2{};
+  shadow.InsertToRead(4, 100);
+  shadow.InsertToWrite(4, 200);
 
   const CoutCapture capture{};
-  shadow.print();
+  shadow.Print();
 
   const auto output = capture.str();
   ASSERT_NE(output.find("ADDR"), std::string::npos);

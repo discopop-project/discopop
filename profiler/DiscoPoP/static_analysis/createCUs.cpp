@@ -34,54 +34,54 @@ using llvm::cast;
 using llvm::isa;
 using llvm::raw_string_ostream;
 
-void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariablesSet, std::vector<CU *> &CUVector,
-                         std::map<std::string, std::vector<CU *>> &BBIDToCUIDsMap, Node *root, LoopInfo &LI, ModuleAnalysisManager &MAM) {
-  const DataLayout *DL = &ThisModule->getDataLayout(); // used to get data size of variables,
+void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_variables_set, std::vector<CU *> &cu_vector,
+                         std::map<std::string, std::vector<CU *>> &bb_id_to_cu_ids_map, Node *root, LoopInfo &li, ModuleAnalysisManager &mam) {
+  const DataLayout *dl = &this_module_->getDataLayout(); // used to get data size of variables,
   // pointers, structs etc.
-  Node *currentNode = root;
+  Node *current_node = root;
   CU *cu;
   LID lid;
-  std::string varName;
-  bool isGlobalVar = false;
-  std::string varType;
-  std::set<std::string> suspiciousVariables;
-  std::string basicBlockName;
+  std::string var_name;
+  bool is_global_var = false;
+  std::string var_type;
+  std::set<std::string> suspicious_variables;
+  std::string basic_block_name;
 
-  std::map<Loop *, Node *> loopToNodeMap;
+  std::map<Loop *, Node *> loop_to_node_map;
 
-  for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
+  for (Region::block_iterator bb = top_region->block_begin(); bb != top_region->block_end(); ++bb) {
 
     // Get the closest loop where bb lives in.
     // (loop == NULL) if bb is not in any loop.
-    Loop *loop = LI.getLoopFor(*bb);
+    Loop *loop = li.getLoopFor(*bb);
     if (loop) {
       // if bb is in a loop and if we have already created a node for that loop,
       // assign it to currentNode.
-      if (loopToNodeMap.find(loop) != loopToNodeMap.end()) {
-        currentNode = loopToNodeMap[loop];
+      if (loop_to_node_map.find(loop) != loop_to_node_map.end()) {
+        current_node = loop_to_node_map[loop];
       }
       // else, create a new Node for the loop, add it as children of currentNode
       // and add it to the map.
       else {
         Node *n = new Node;
-        n->type = nodeTypes::loop;
-        n->parentNode = currentNode;
-        currentNode->childrenNodes.push_back(n);
+        n->type = NodeTypes::kLoop;
+        n->parent_node = current_node;
+        current_node->children_nodes.push_back(n);
 
-        loopToNodeMap[loop] = n;
-        currentNode = n;
+        loop_to_node_map[loop] = n;
+        current_node = n;
       }
     } else {
       // end of loops. go to the parent of the loop. may have to jump several
       // nodes in case of nested loops
-      for (std::map<Loop *, Node *>::iterator it = loopToNodeMap.begin(); it != loopToNodeMap.end(); it++) {
-        if (it->second == currentNode) // current node found in loop map jump to its parent.
+      for (std::map<Loop *, Node *>::iterator it = loop_to_node_map.begin(); it != loop_to_node_map.end(); it++) {
+        if (it->second == current_node) // current node found in loop map jump to its parent.
         {
-          currentNode = currentNode->parentNode;
-          it = loopToNodeMap.begin();    // search the whole map again for current node
-          if (it->second == currentNode) { // due to it++ we need to check first
+          current_node = current_node->parent_node;
+          it = loop_to_node_map.begin();    // search the whole map again for current node
+          if (it->second == current_node) { // due to it++ we need to check first
             // element of map ourself
-            currentNode = currentNode->parentNode;
+            current_node = current_node->parent_node;
 }
         }
 }
@@ -90,34 +90,34 @@ void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariabl
     cu = new CU;
 
     if (bb->getName().size() == 0) {
-      bb->setName(cu->ID);
+      bb->setName(cu->id);
 }
 
-    cu->BBID = bb->getName().str();
-    cu->BB = *bb;
-    currentNode->childrenNodes.push_back(cu);
-    std::vector<CU *> basicBlockCUVector;
-    basicBlockCUVector.push_back(cu);
-    BBIDToCUIDsMap.insert(std::pair<std::string, std::vector<CU *>>(bb->getName(), basicBlockCUVector));
-    DILocalScope *scopeBuffer = nullptr;
+    cu->bb_id = bb->getName().str();
+    cu->bb = *bb;
+    current_node->children_nodes.push_back(cu);
+    std::vector<CU *> basic_block_cu_vector;
+    basic_block_cu_vector.push_back(cu);
+    bb_id_to_cu_ids_map.insert(std::pair<std::string, std::vector<CU *>>(bb->getName(), basic_block_cu_vector));
+    DILocalScope *scope_buffer = nullptr;
 
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       // NOTE: 'instruction' --> '&*instruction'
-      lid = dputil::getLID(&*instruction, fileID);
-      basicBlockName = bb->getName().str();
+      lid = dputil::GetLid(&*instruction, file_id);
+      basic_block_name = bb->getName().str();
 
       // Do not allow to combine Instructions from different scopes in the
       // source code.
       if ((&*instruction)->getDebugLoc()) {
-        if ((&*instruction)->getDebugLoc()->getScope() != scopeBuffer) {
+        if ((&*instruction)->getDebugLoc()->getScope() != scope_buffer) {
           // scopes are not equal
 
-          int scopeIsParentOfBuffer = 0;
-          if (scopeBuffer) {
-            scopeIsParentOfBuffer = (&*instruction)->getDebugLoc()->getScope() == scopeBuffer->getScope();
+          int scope_is_parent_of_buffer = 0;
+          if (scope_buffer) {
+            scope_is_parent_of_buffer = (&*instruction)->getDebugLoc()->getScope() == scope_buffer->getScope();
           }
 
-          if (scopeIsParentOfBuffer) {
+          if (scope_is_parent_of_buffer) {
             // allow a combination of two CU's if the second scope is the parent
             // of the first scope
           } else {
@@ -125,46 +125,46 @@ void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariabl
             // different scopes in the source code.
 
             // create new CU if the old one contains any instruction
-            if ((!cu->readPhaseLineNumbers.empty()) || (!cu->writePhaseLineNumbers.empty()) ||
-                (!cu->returnInstructions.empty())) {
-              cu->startLine = *(cu->instructionsLineNumbers.begin());
-              cu->endLine = *(cu->instructionsLineNumbers.rbegin());
+            if ((!cu->read_phase_line_numbers.empty()) || (!cu->write_phase_line_numbers.empty()) ||
+                (!cu->return_instructions.empty())) {
+              cu->start_line = *(cu->instructions_line_numbers.begin());
+              cu->end_line = *(cu->instructions_line_numbers.rbegin());
 
-              cu->basicBlockName = basicBlockName;
-              CUVector.push_back(cu);
-              suspiciousVariables.clear();
+              cu->basic_block_name = basic_block_name;
+              cu_vector.push_back(cu);
+              suspicious_variables.clear();
               CU *temp = cu; // keep current CU to make a reference to the successor CU
               cu = new CU;
 
-              cu->BBID = bb->getName().str();
-              cu->BB = *bb;
+              cu->bb_id = bb->getName().str();
+              cu->bb = *bb;
 
-              currentNode->childrenNodes.push_back(cu);
-              temp->successorCUs.push_back(cu->ID);
-              BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
+              current_node->children_nodes.push_back(cu);
+              temp->successor_cus.push_back(cu->id);
+              bb_id_to_cu_ids_map[bb->getName().str()].push_back(cu);
             }
           }
           // update scopeBuffer
-          scopeBuffer = (&*instruction)->getDebugLoc()->getScope();
+          scope_buffer = (&*instruction)->getDebugLoc()->getScope();
         }
       }
 
       if (lid > 0) {
-        cu->instructionsLineNumbers.insert(lid);
-        cu->instructionsCount++;
+        cu->instructions_line_numbers.insert(lid);
+        cu->instructions_count++;
         // find return instructions
         if (isa<ReturnInst>(instruction)) {
-          cu->returnInstructions.insert(lid);
+          cu->return_instructions.insert(lid);
         }
         // find branches to return instructions, i.e. return statements
         else if (isa<BranchInst>(instruction)) {
           if ((cast<BranchInst>(instruction))->isUnconditional()) {
             if ((cast<BranchInst>(instruction))->getNumSuccessors() == 1) {
-              BasicBlock *successorBB = (cast<BranchInst>(instruction))->getSuccessor(0);
-              for (BasicBlock::iterator innerInstruction = successorBB->begin(); innerInstruction != successorBB->end();
-                   ++innerInstruction) {
-                if (isa<ReturnInst>(innerInstruction)) {
-                  cu->returnInstructions.insert(lid);
+              BasicBlock *successor_bb = (cast<BranchInst>(instruction))->getSuccessor(0);
+              for (BasicBlock::iterator inner_instruction = successor_bb->begin(); inner_instruction != successor_bb->end();
+                   ++inner_instruction) {
+                if (isa<ReturnInst>(inner_instruction)) {
+                  cu->return_instructions.insert(lid);
                   break;
                 }
               }
@@ -174,87 +174,87 @@ void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariabl
         if (isa<StoreInst>(instruction)) {
           // get size of data written into memory by this store instruction
           Value *operand = instruction->getOperand(1);
-          Type *Ty = operand->getType();
-          unsigned u = DL->getTypeSizeInBits(Ty);
-          cu->writeDataSize += u;
-          varName = determineVariableName_static(&*instruction, isGlobalVar, false, "");
-          varType = determineVariableType(&*instruction);
-          suspiciousVariables.insert(varName);
+          Type *ty = operand->getType();
+          unsigned u = dl->getTypeSizeInBits(ty);
+          cu->write_data_size += u;
+          var_name = DetermineVariableNameStatic(&*instruction, is_global_var, false, "");
+          var_type = DetermineVariableType(&*instruction);
+          suspicious_variables.insert(var_name);
           if (lid > 0) {
-            cu->writePhaseLineNumbers.insert(lid);
+            cu->write_phase_line_numbers.insert(lid);
 }
         } else if (isa<LoadInst>(instruction)) {
           // get size of data read from memory by this load instruction
-          Type *Ty = instruction->getType();
-          unsigned u = DL->getTypeSizeInBits(Ty);
-          cu->readDataSize += u;
-          varName = determineVariableName_static(&*instruction, isGlobalVar, false, "");
-          if (suspiciousVariables.count(varName)) {
+          Type *ty = instruction->getType();
+          unsigned u = dl->getTypeSizeInBits(ty);
+          cu->read_data_size += u;
+          var_name = DetermineVariableNameStatic(&*instruction, is_global_var, false, "");
+          if (suspicious_variables.count(var_name)) {
             // VIOLATION OF CAUTIOUS PROPERTY
             // it is a load instruction which read the value of a global
             // variable.
             // This global variable has already been stored previously.
             // A new CU should be created here.
-            cu->readPhaseLineNumbers.erase(lid);
-            cu->writePhaseLineNumbers.erase(lid);
-            cu->instructionsLineNumbers.erase(lid);
-            cu->instructionsCount--;
-            if (cu->instructionsLineNumbers.empty()) {
+            cu->read_phase_line_numbers.erase(lid);
+            cu->write_phase_line_numbers.erase(lid);
+            cu->instructions_line_numbers.erase(lid);
+            cu->instructions_count--;
+            if (cu->instructions_line_numbers.empty()) {
               // cu->removeCU();
-              cu->startLine = -1;
-              cu->endLine = -1;
+              cu->start_line = -1;
+              cu->end_line = -1;
             } else {
-              cu->startLine = *(cu->instructionsLineNumbers.begin());
-              cu->endLine = *(cu->instructionsLineNumbers.rbegin());
+              cu->start_line = *(cu->instructions_line_numbers.begin());
+              cu->end_line = *(cu->instructions_line_numbers.rbegin());
             }
-            cu->basicBlockName = basicBlockName;
-            CUVector.push_back(cu);
-            suspiciousVariables.clear();
+            cu->basic_block_name = basic_block_name;
+            cu_vector.push_back(cu);
+            suspicious_variables.clear();
             CU *temp = cu; // keep current CU to make a reference to the successor CU
             cu = new CU;
 
-            cu->BBID = bb->getName().str();
-            cu->BB = *bb;
+            cu->bb_id = bb->getName().str();
+            cu->bb = *bb;
 
-            currentNode->childrenNodes.push_back(cu);
-            temp->successorCUs.push_back(cu->ID);
-            BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
+            current_node->children_nodes.push_back(cu);
+            temp->successor_cus.push_back(cu->id);
+            bb_id_to_cu_ids_map[bb->getName().str()].push_back(cu);
             if (lid > 0) {
-              cu->readPhaseLineNumbers.insert(lid);
-              cu->instructionsLineNumbers.insert(lid);
+              cu->read_phase_line_numbers.insert(lid);
+              cu->instructions_line_numbers.insert(lid);
             }
           } else {
-            if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName)) {
+            if (global_variables_set.count(var_name) || program_global_variables_set_.count(var_name)) {
               if (lid > 0) {
-                cu->readPhaseLineNumbers.insert(lid);
+                cu->read_phase_line_numbers.insert(lid);
 }
             }
           }
         } else if (isa<CallInst>(instruction) || isa<InvokeInst>(instruction)) {
           // allow only a single function call per CU
           // create new CU if the old one contains any instruction
-          if ((!cu->readPhaseLineNumbers.empty()) || (!cu->writePhaseLineNumbers.empty()) ||
-              (!cu->returnInstructions.empty())) {
-            cu->startLine = *(cu->instructionsLineNumbers.begin());
-            cu->endLine = *(cu->instructionsLineNumbers.rbegin());
+          if ((!cu->read_phase_line_numbers.empty()) || (!cu->write_phase_line_numbers.empty()) ||
+              (!cu->return_instructions.empty())) {
+            cu->start_line = *(cu->instructions_line_numbers.begin());
+            cu->end_line = *(cu->instructions_line_numbers.rbegin());
 
-            cu->basicBlockName = basicBlockName;
-            CUVector.push_back(cu);
-            suspiciousVariables.clear();
+            cu->basic_block_name = basic_block_name;
+            cu_vector.push_back(cu);
+            suspicious_variables.clear();
             CU *temp = cu; // keep current CU to make a reference to the successor CU
             cu = new CU;
 
-            cu->BBID = bb->getName().str();
-            cu->BB = *bb;
+            cu->bb_id = bb->getName().str();
+            cu->bb = *bb;
 
-            currentNode->childrenNodes.push_back(cu);
-            temp->successorCUs.push_back(cu->ID);
-            BBIDToCUIDsMap[bb->getName().str()].push_back(cu);
+            current_node->children_nodes.push_back(cu);
+            temp->successor_cus.push_back(cu->id);
+            bb_id_to_cu_ids_map[bb->getName().str()].push_back(cu);
           }
 
           // get the name of the called function and check if a FileIO function
           // is called
-          std::set<std::string> IOFunctions{
+          std::set<std::string> io_functions{
               "fopen",       "fopen_s",      "freopen",    "freopen_s",      "fclose",    "fflush",     "setbuf",
               "setvbuf",     "fwide",        "fread",      "fwrite",         "fgetc",     "getc",       "fgets",
               "fputc",       "putc",         "fputs",      "getchar",        "gets",      "gets_s",     "putchar",
@@ -275,10 +275,10 @@ void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariabl
           if (ci) {
             if (ci->getCalledFunction()) {
               if (ci->getCalledFunction()->hasName()) {
-                if (std::find(IOFunctions.begin(), IOFunctions.end(), ci->getCalledFunction()->getName().str()) !=
-                    IOFunctions.end()) {
+                if (std::find(io_functions.begin(), io_functions.end(), ci->getCalledFunction()->getName().str()) !=
+                    io_functions.end()) {
                   // Called function performs FileIO
-                  cu->performsFileIO = true;
+                  cu->performs_file_io = true;
                 }
               }
             }
@@ -286,23 +286,23 @@ void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariabl
         }
       }
     }
-    if (cu->instructionsLineNumbers.empty()) {
+    if (cu->instructions_line_numbers.empty()) {
       // cu->removeCU();
-      cu->startLine = -1;
-      cu->endLine = -1;
+      cu->start_line = -1;
+      cu->end_line = -1;
     } else {
-      cu->startLine = *(cu->instructionsLineNumbers.begin());
-      cu->endLine = *(cu->instructionsLineNumbers.rbegin());
+      cu->start_line = *(cu->instructions_line_numbers.begin());
+      cu->end_line = *(cu->instructions_line_numbers.rbegin());
     }
 
-    cu->basicBlockName = basicBlockName;
-    CUVector.push_back(cu);
-    suspiciousVariables.clear();
+    cu->basic_block_name = basic_block_name;
+    cu_vector.push_back(cu);
+    suspicious_variables.clear();
 
     // check for call instructions in current basic block
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       // Note: Don't create nodes for library functions (c++/llvm).
-      LID lid = dputil::getLID(&*instruction, fileID);
+      LID lid = dputil::GetLid(&*instruction, file_id);
       if (lid > 0) {
         if (isa<CallInst>(instruction) || isa<InvokeInst>(instruction)) {
           Function *f = nullptr;
@@ -318,22 +318,22 @@ void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariabl
 
           std::string lid;
           if (f) {
-            bool externalFunction = true;
-            for (Function::iterator FI = f->begin(), FE = f->end(); FI != FE; ++FI) {
-              externalFunction = false;
-              auto tempBI = FI->begin();
-              if (DebugLoc dl = tempBI->getDebugLoc()) {
+            bool external_function = true;
+            for (Function::iterator fi = f->begin(), fe = f->end(); fi != fe; ++fi) {
+              external_function = false;
+              auto temp_bi = fi->begin();
+              if (DebugLoc dl = temp_bi->getDebugLoc()) {
                 lid = std::to_string(dl->getLine());
               } else {
-                if (tempBI->getFunction()->getSubprogram()) {
-                  lid = std::to_string(tempBI->getFunction()->getSubprogram()->getLine());
+                if (temp_bi->getFunction()->getSubprogram()) {
+                  lid = std::to_string(temp_bi->getFunction()->getSubprogram()->getLine());
                 } else {
                   lid = "LineNotFound";
                 }
               }
               break;
             }
-            if (externalFunction) {
+            if (external_function) {
               continue;
 }
           } else {
@@ -341,7 +341,7 @@ void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariabl
           }
 
           Node *n = new Node;
-          n->type = nodeTypes::dummy;
+          n->type = NodeTypes::kDummy;
           // For ordinary function calls, F has a name.
           // However, sometimes the function being called
           // in IR is encapsulated by "bitcast()" due to
@@ -361,7 +361,7 @@ void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariabl
               raw_string_ostream rso(type_str);
               (it->getType())->print(rso);
               Variable v(std::string(it->getName()), rso.str(), lid, true, true);
-              n->argumentsList.push_back(v);
+              n->arguments_list.push_back(v);
             }
           } else // get name of the indirect function which is called
           {
@@ -373,23 +373,23 @@ void DiscoPoP::createCUs(Region *TopRegion, std::set<std::string> &globalVariabl
           // Recursive functions
           //CallGraphWrapperPass *CGWP = &(getAnalysis<CallGraphWrapperPass>());
 
-          llvm::CallGraph &CG = MAM.getResult<llvm::CallGraphAnalysis>(*ThisModule);
+          llvm::CallGraph &cg = mam.getResult<llvm::CallGraphAnalysis>(*this_module_);
 
           //if (isRecursive(*f, CGWP->getCallGraph())) {
-          if (isRecursive(*f, CG)) {
-            LID lid = dputil::getLID(&*instruction, fileID);
-            n->recursiveFunctionCall = n->name + " " + dputil::decodeLID(lid) + ",";
+          if (IsRecursive(*f, cg)) {
+            LID lid = dputil::GetLid(&*instruction, file_id);
+            n->recursive_function_call = n->name + " " + dputil::DecodeLid(lid) + ",";
           }
 
-          std::vector<CU *> BBCUsVector = BBIDToCUIDsMap[bb->getName().str()];
+          std::vector<CU *> bb_cus_vector = bb_id_to_cu_ids_map[bb->getName().str()];
           // locate the CU where this function call belongs
-          for (auto i : BBCUsVector) {
-            LID lid = dputil::getLID(&*instruction, fileID);
-            if (lid >= i->startLine && lid <= i->endLine) {
-              i->instructionsLineNumbers.insert(lid);
-              i->childrenNodes.push_back(n);
-              i->callLineTofunctionMap[lid].push_back(n);
-              i->callLineToCallInstructionMap[lid].push_back(&(*instruction));
+          for (auto i : bb_cus_vector) {
+            LID lid = dputil::GetLid(&*instruction, file_id);
+            if (lid >= i->start_line && lid <= i->end_line) {
+              i->instructions_line_numbers.insert(lid);
+              i->children_nodes.push_back(n);
+              i->call_line_to_function_map[lid].push_back(n);
+              i->call_line_to_call_instruction_map[lid].push_back(&(*instruction));
               break;
             }
           }

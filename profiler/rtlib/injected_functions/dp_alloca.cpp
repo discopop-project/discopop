@@ -24,7 +24,7 @@
 #include <string>
 
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -35,4 +35,4 @@ void __dp_alloca(LID /*lid*/, char * /*var*/, ADDR /*startAddr*/, ADDR /*endAddr
 }
 }
 
-} // namespace __dp
+} // namespace dp

@@ -33,16 +33,16 @@
 #include <unordered_map>
 #include <utility>
 
-extern bool USE_PERFECT;
+extern bool use_perfect;
 
 // Shadow memory parameters
-extern std::int32_t SIG_ELEM_BIT;
-extern std::int32_t SIG_NUM_ELEM;
-extern std::int32_t SIG_NUM_HASH;
+extern std::int32_t sig_elem_bit;
+extern std::int32_t sig_num_elem;
+extern std::int32_t sig_num_hash;
 
-extern std::uint64_t *numAccesses;
+extern std::uint64_t *num_accesses;
 
-namespace __dp {
+namespace dp {
 
 // DP_DEBUG is declared in DPTypes.hpp, see the note there.
 
@@ -61,22 +61,22 @@ extern std::mutex pthread_compatibility_mutex;
 extern ImmortalStorage<FunctionManager> function_manager;
 extern ImmortalStorage<LoopManager> loop_manager;
 
-void construct_manager_globals();
-void destroy_manager_globals();
-bool manager_globals_constructed() noexcept;
+void ConstructManagerGlobals();
+void DestroyManagerGlobals();
+bool ManagerGlobalsConstructed() noexcept;
 
 
 // hybrid analysis
-extern ReportedBBRecorder *bbList;
-extern stringDepMap *outPutDeps;
+extern ReportedBBRecorder *bb_list;
+extern StringDepMap *out_put_deps;
 // end hybrid analysis
 
 // The globals declared as references below outlive the static destructors of the target
 // program: __dp_finalize still uses them after those have run. They are constructed by
 // construct_immortal_globals() and destroyed at the end of __dp_finalize; before the runtime
 // has been initialized, the referenced objects do not exist yet. See Immortal.hpp.
-void construct_immortal_globals();
-void destroy_immortal_globals();
+void ConstructImmortalGlobals();
+void DestroyImmortalGlobals();
 
 extern std::unordered_map<char *, int64_t> &cuec;
 
@@ -88,46 +88,46 @@ extern std::unordered_map<char *, int64_t> &cuec;
 // instrumented like everything else, so their callbacks still arrive -- they have to return
 // without touching anything, not start the runtime up again.
 enum class RuntimeState {
-  NotInitialized,
-  Running,
-  Terminated,
+  kNotInitialized,
+  kRunning,
+  kTerminated,
 };
 
 extern RuntimeState runtime_state;
 
 // The question every instrumented callback asks: may it do its work?
-inline bool profiling_active() noexcept { return runtime_state == RuntimeState::Running; }
+inline bool ProfilingActive() noexcept { return runtime_state == RuntimeState::kRunning; }
 
 // Runtime merging structures
-extern depMap *allDeps;
+extern DepMap *all_deps;
 
 extern std::ofstream *out;
 
-extern std::mutex allDepsLock;
+extern std::mutex all_deps_lock;
 extern pthread_t *workers;                              // worker threads
-extern std::atomic<bool> finalizeParallelizationCalled; // signals to worker threads that no further data access will be
+extern std::atomic<bool> finalize_parallelization_called; // signals to worker threads that no further data access will be
                                                         // registered in the first queue
-extern FirstAccessQueueChunk *mainThread_AccessInfoBuffer;
+extern FirstAccessQueueChunk *main_thread_access_info_buffer;
 // number of accesses recorded per chunk of the first access queue
-constexpr int FIRST_ACCESS_QUEUE_CHUNK_SIZE = 100000;
+constexpr int kFirstAccessQueueChunkSize = 100000;
 // default limits of the access queues, per worker thread; adjustable via dp.conf
 // (FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER, SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER). A queued chunk holds
 // FIRST_ACCESS_QUEUE_CHUNK_SIZE accesses (~4 MB), a second queue element up to ~11 MB.
-constexpr int DEFAULT_FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER = 4;
-constexpr int DEFAULT_SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER = 4;
+constexpr int kDefaultFirstAccessQueueChunksPerWorker = 4;
+constexpr int kDefaultSecondAccessQueueElementsPerWorker = 4;
 
-extern FirstAccessQueue &firstAccessQueue;
-extern SecondAccessQueue &secondAccessQueue;
-extern pthread_t *secondAccessQueue_worker_thread;
-extern FirstAccessQueueChunkBuffer &firstAccessQueueChunkBuffer;
+extern FirstAccessQueue &first_access_queue;
+extern SecondAccessQueue &second_access_queue;
+extern pthread_t *second_access_queue_worker_thread;
+extern FirstAccessQueueChunkBuffer &first_access_queue_chunk_buffer;
 
-extern AbstractShadow *singleThreadedExecutionSMem;
+extern AbstractShadow *single_threaded_execution_smem;
 
-extern int32_t NUM_WORKERS;
-extern int32_t FIRST_ACCESS_QUEUE_CHUNKS_PER_WORKER;
-extern int32_t SECOND_ACCESS_QUEUE_ELEMENTS_PER_WORKER;
+extern int32_t num_workers;
+extern int32_t first_access_queue_chunks_per_worker;
+extern int32_t second_access_queue_elements_per_worker;
 
-extern thread_local depMap *myMap;
+extern thread_local DepMap *my_map;
 
 // see static_callstate_transitions/utils.hpp
 extern CallState *current_callpath_state;
@@ -136,4 +136,4 @@ extern CallStateGraph *call_state_graph;
 // statistics
 extern std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 
-} // namespace __dp
+} // namespace dp

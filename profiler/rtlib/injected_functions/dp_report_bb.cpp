@@ -25,7 +25,7 @@
 #include <string>
 
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -34,16 +34,16 @@ extern "C" {
 // handed over under bbIndex have their sources in the same execution of that
 // basic block (or no source instruction at all, INIT). Both ends of these
 // dependencies therefore carry the current callpath state.
-void __dp_report_bb(std::uint32_t bbIndex) {
+void __dp_report_bb(std::uint32_t bb_index) {
   DP_CALLBACK_SCOPE(REPORT_BB);
 
 #ifdef DP_RTLIB_VERBOSE
-  std::cout << "bbIndex: " << std::to_string(bbIndex) << '\n';
+  std::cout << "bb_index: " << std::to_string(bb_index) << '\n';
 #endif
 
-  const std::uint32_t state = current_callpath_state_id_for_bb_reports();
-  bbList->record(bbIndex, state, state);
+  const std::uint32_t state = CurrentCallpathStateIdForBbReports();
+  bb_list->Record(bb_index, state, state);
 }
 }
 
-} // namespace __dp
+} // namespace dp

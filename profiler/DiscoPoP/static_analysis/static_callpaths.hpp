@@ -32,22 +32,22 @@ namespace static_callpaths {
 
 // builds a call tree for the given Module on the basis of the statically available information; writes
 // loopstate_positions.txt, naming the loops by `loop_id_to_identity`
-StaticCalltree buildStaticCalltree(llvm::Module &M, const std::map<int32_t, LoopIdentity> &loop_id_to_identity);
+StaticCalltree BuildStaticCalltree(llvm::Module &m, const std::map<int32_t, LoopIdentity> &loop_id_to_identity);
 
 //std::pair<std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>>, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>> enumerate_paths(StaticCalltree& calltree);
-StaticCallPathTree* enumerate_paths(StaticCalltree& calltree, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions,
+StaticCallPathTree* EnumeratePaths(StaticCalltree& calltree, std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *state_transitions,
 std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *inverse_state_transitions, std::uint32_t start_path_id);
 //void save_initial_path(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
-void save_initial_path(StaticCallPathTree* call_path_tree_ptr);
+void SaveInitialPath(StaticCallPathTree* call_path_tree_ptr);
 //void save_enumerated_paths(std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths);
-void save_enumerated_paths(StaticCallPathTree* call_path_tree_ptr);
+void SaveEnumeratedPaths(StaticCallPathTree* call_path_tree_ptr);
 // void save_path_state_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>> *transitions);
-void save_path_state_transitions(StaticCallPathTree* call_path_tree_ptr);
-void save_static_calltree_to_dot(StaticCalltree* calltree);
-void save_function_entries(StaticCallPathTree* call_path_tree_ptr);
+void SavePathStateTransitions(StaticCallPathTree* call_path_tree_ptr);
+void SaveStaticCalltreeToDot(StaticCalltree* calltree);
+void SaveFunctionEntries(StaticCallPathTree* call_path_tree_ptr);
 
 // void add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, std::unordered_map<int32_t, std::vector<StaticCalltreeNode*>> paths, std::unordered_map<std::vector<StaticCalltreeNode*>, int32_t, container_hash<std::vector<StaticCalltreeNode*>>> path_to_id_map);
 //void add_function_exit_edges_to_transitions(std::unordered_map<int32_t, std::unordered_map<int32_t, int32_t>>& state_transitions, StaticCallPathTree* call_path_tree_ptr);
-void add_function_exit_edges_to_transitions(StaticCallPathTree* call_path_tree_ptr);
+void AddFunctionExitEdgesToTransitions(StaticCallPathTree* call_path_tree_ptr);
 
 } // namespace static_callpaths

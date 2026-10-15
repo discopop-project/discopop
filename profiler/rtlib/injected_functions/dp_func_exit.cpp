@@ -26,15 +26,15 @@
 #include <string>
 
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_func_exit(LID lid, std::int32_t isExit) {
-  if (!profiling_active()) {
-    if (DP_DEBUG) {
-      std::cout << "Exiting function LID " << std::dec << dputil::decodeLID(lid);
+void __dp_func_exit(LID lid, std::int32_t is_exit) {
+  if (!ProfilingActive()) {
+    if (dp_debug) {
+      std::cout << "Exiting function LID " << std::dec << dputil::DecodeLid(lid);
       std::cout << " but the runtime is not running. Destructors?" << std::endl;
     }
     return;
@@ -42,23 +42,23 @@ void __dp_func_exit(LID lid, std::int32_t isExit) {
 
   DP_CALLBACK_SCOPE(FUNC_EXIT);
 
-  loop_manager->clean_function_exit(function_manager->get_current_stack_level(), lid);
+  loop_manager->CleanFunctionExit(function_manager->GetCurrentStackLevel(), lid);
 
-  function_manager->reset_call(lid);
-  function_manager->decrease_stack_level();
+  function_manager->ResetCall(lid);
+  function_manager->DecreaseStackLevel();
 
 
-  if (isExit == 0) {
-    function_manager->register_function_end(lid);
+  if (is_exit == 0) {
+    function_manager->RegisterFunctionEnd(lid);
   }
 
-  if (DP_DEBUG) {
-    std::cout << "Exiting fucntion LID " << std::dec << dputil::decodeLID(lid) << std::endl;
-    std::cout << "Function stack level = " << std::dec << function_manager->get_current_stack_level() << std::endl;
+  if (dp_debug) {
+    std::cout << "Exiting fucntion LID " << std::dec << dputil::DecodeLid(lid) << std::endl;
+    std::cout << "Function stack level = " << std::dec << function_manager->GetCurrentStackLevel() << std::endl;
   }
   // restore the callpath state of the caller, still under the lock (released with dp_scope)
-  leave_function_for_callstate();
+  LeaveFunctionForCallstate();
 }
 }
 
-} // namespace __dp
+} // namespace dp

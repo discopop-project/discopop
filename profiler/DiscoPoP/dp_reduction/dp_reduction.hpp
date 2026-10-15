@@ -30,46 +30,46 @@
 namespace dp_reduction {
 
 // returns the reduction instruction where 'val' is the operand if it can find such an operation
-llvm::Instruction *find_reduction_instr(llvm::Value *val);
+llvm::Instruction *FindReductionInstr(llvm::Value *val);
 
 // Retrieves the reduction operation for the operand that is stored by the 'store_instr' (if such a reduction
 // operation exists). 'load_instr' will point to the load instruction that actually loads the value.
-llvm::Instruction *get_reduction_instr(llvm::Instruction *store_instr, llvm::Instruction **load_instr);
+llvm::Instruction *GetReductionInstr(llvm::Instruction *store_instr, llvm::Instruction **load_instr);
 
 // Finds the load instruction that actually loads the value from the address 'load_val'.
-llvm::Instruction *get_load_instr(llvm::Value *load_val, llvm::Instruction *cur_instr,
+llvm::Instruction *GetLoadInstr(llvm::Value *load_val, llvm::Instruction *cur_instr,
                                   std::vector<char> &reduction_operations);
 
 // the value that is stored or loaded by a store / load instruction
-llvm::Value *get_var(llvm::Instruction *instr);
-llvm::Value *get_var_rec(llvm::Value *val);
+llvm::Value *GetVar(llvm::Instruction *instr);
+llvm::Value *GetVarRec(llvm::Value *val);
 
 // returns the value that the GetElementPtrInst ultimately points to
-llvm::Value *points_to_var(llvm::GetElementPtrInst *instr);
+llvm::Value *PointsToVar(llvm::GetElementPtrInst *instr);
 
 // finds the previous use of 'val'
-llvm::Instruction *get_prev_use(llvm::Instruction *instr, llvm::Value *val);
+llvm::Instruction *GetPrevUse(llvm::Instruction *instr, llvm::Value *val);
 
 // a char describing the opcode, e.g. '+' for Add or FAdd, and the order of the operations
-char get_char_for_opcode(llvm::Instruction *instr);
-int get_op_order(char c);
+char GetCharForOpcode(llvm::Instruction *instr);
+int GetOpOrder(char c);
 
-std::string determineVariableType(llvm::Instruction *I);
-llvm::Type *pointsToStruct(llvm::PointerType *PTy);
+std::string DetermineVariableType(llvm::Instruction *i);
+llvm::Type *PointsToStruct(llvm::PointerType *p_ty);
 
-inline bool loc_exists(llvm::DebugLoc const &loc) { return static_cast<bool>(loc); }
+inline bool LocExists(llvm::DebugLoc const &loc) { return static_cast<bool>(loc); }
 
 // the location of an instruction as a LID of the line only, and whether a block has an instruction with one
-LID getLID(llvm::Instruction *BI, int32_t &fileID);
-bool sanityCheck(llvm::BasicBlock *BB, int file_id);
+LID GetLid(llvm::Instruction *bi, int32_t &file_id);
+bool SanityCheck(llvm::BasicBlock *bb, int file_id);
 
 // true, if searchedValue is used within the computation of parentValue
-bool check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue);
+bool CheckValueUsage(llvm::Value *parent_value, llvm::Value *searched_value);
 
 // true, if the function contains inlined code
-bool inlinedFunction(llvm::Function *F);
+bool InlinedFunction(llvm::Function *f);
 
 // the line at which the loop L of the function F ends, as a string, or "LOOPENDNOTFOUND"
-std::string CFA(llvm::Function &F, llvm::Loop *L, int file_id);
+std::string CFA(llvm::Function &f, llvm::Loop *l, int file_id);
 
 } // namespace dp_reduction

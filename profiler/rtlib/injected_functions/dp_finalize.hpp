@@ -14,7 +14,7 @@
 
 #include "DPTypes.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -22,4 +22,4 @@ extern "C" {
 void __dp_finalize(LID lid);
 }
 
-} // namespace __dp
+} // namespace dp

@@ -7,39 +7,39 @@
 class VarCounterTest : public ::testing::Test {};
 
 TEST_F(VarCounterTest, testZeroInitialization) {
-  const auto vc = __dp::VarCounter{};
+  const auto vc = dp::VarCounter{};
 
-  ASSERT_EQ(vc.counters_[0], 0);
-  ASSERT_EQ(vc.counters_[1], 0);
-  ASSERT_EQ(vc.mem_addr_, 0);
-  ASSERT_TRUE(vc.valid_);
+  ASSERT_EQ(vc.counters[0], 0);
+  ASSERT_EQ(vc.counters[1], 0);
+  ASSERT_EQ(vc.mem_addr, 0);
+  ASSERT_TRUE(vc.valid);
 }
 
 TEST_F(VarCounterTest, testInitialization) {
-  const auto vc = __dp::VarCounter{1, 2, 3, false};
+  const auto vc = dp::VarCounter{1, 2, 3, false};
 
-  ASSERT_EQ(vc.counters_[0], 1);
-  ASSERT_EQ(vc.counters_[1], 2);
-  ASSERT_EQ(vc.mem_addr_, 3);
-  ASSERT_FALSE(vc.valid_);
+  ASSERT_EQ(vc.counters[0], 1);
+  ASSERT_EQ(vc.counters[1], 2);
+  ASSERT_EQ(vc.mem_addr, 3);
+  ASSERT_FALSE(vc.valid);
 }
 
 TEST_F(VarCounterTest, testNegativeInitialization) {
-  const auto vc = __dp::VarCounter{1, 2, -3, false};
+  const auto vc = dp::VarCounter{1, 2, -3, false};
 
-  ASSERT_EQ(vc.counters_[0], 1);
-  ASSERT_EQ(vc.counters_[1], 2);
-  ASSERT_EQ(vc.mem_addr_, -3);
-  ASSERT_FALSE(vc.valid_);
+  ASSERT_EQ(vc.counters[0], 1);
+  ASSERT_EQ(vc.counters[1], 2);
+  ASSERT_EQ(vc.mem_addr, -3);
+  ASSERT_FALSE(vc.valid);
 }
 
 TEST_F(VarCounterTest, testEquality) {
-  const auto vc1 = __dp::VarCounter{1, 2, 3, false};
-  const auto vc2 = __dp::VarCounter{1, 2, 3, false};
-  const auto vc3 = __dp::VarCounter{1, 2, 4, false};
-  const auto vc4 = __dp::VarCounter{1, 3, 3, false};
-  const auto vc5 = __dp::VarCounter{2, 2, 3, false};
-  const auto vc6 = __dp::VarCounter{1, 2, 3, true};
+  const auto vc1 = dp::VarCounter{1, 2, 3, false};
+  const auto vc2 = dp::VarCounter{1, 2, 3, false};
+  const auto vc3 = dp::VarCounter{1, 2, 4, false};
+  const auto vc4 = dp::VarCounter{1, 3, 3, false};
+  const auto vc5 = dp::VarCounter{2, 2, 3, false};
+  const auto vc6 = dp::VarCounter{1, 2, 3, true};
 
   ASSERT_EQ(vc1, vc1);
 

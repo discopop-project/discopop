@@ -18,8 +18,8 @@ using llvm::Value;
 using llvm::dyn_cast;
 using llvm::errs;
 
-bool DiscoPoP::doInitialization(Module &M) {
-  if (DP_DEBUG) {
+bool DiscoPoP::DoInitialization(Module &m) {
+  if (kDpDebug) {
     errs() << "DiscoPoP | 190: init pass DiscoPoP \n";
   }
 
@@ -38,7 +38,7 @@ bool DiscoPoP::doInitialization(Module &M) {
     mkdir(std::getenv("DOT_DISCOPOP"), 0777);
 
     // check if HOME/.discopop_config directory in user folder exists
-    std::string user_home_dp_dir = (dputil::getEnvOrDefault("HOME", "") + std::string("/.discopop_config"));
+    std::string user_home_dp_dir = (dputil::GetEnvOrDefault("HOME", "") + std::string("/.discopop_config"));
     struct stat st_dp_user;
     if (stat(user_home_dp_dir.c_str() , &st_dp_user) == -1) {
       // create .discopop_config folder in user directory to save overview of project .discopop folders
@@ -59,7 +59,7 @@ bool DiscoPoP::doInitialization(Module &M) {
   }
   // prepare statistics directory if not present
   struct stat st3;
-  std::string tmp_str_2(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
+  std::string tmp_str_2(dputil::GetEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   tmp_str_2 += "/statistics";
   if (stat(tmp_str_2.data(), &st3) == -1) {
     mkdir(tmp_str_2.data(), 0777);
@@ -87,10 +87,10 @@ bool DiscoPoP::doInitialization(Module &M) {
   // InstructionID assignment
   {
     // required for consecutive and unique assignment of instructionIDs across multiple modules.
-    InstructionIDCounter = 1;  // Reserve values 0 for "fallthrough" and 1 for "return"
-    initializeInstructionIDCounter();
+    instruction_id_counter = 1;  // Reserve values 0 for "fallthrough" and 1 for "return"
+    InitializeInstructionIdCounter();
     // instructionID assignment
-    unique_llvm_ir_instruction_id = InstructionIDCounter + 1;
+    unique_llvm_ir_instruction_id_ = instruction_id_counter + 1;
   }
 
   // CallpathStateID assignment
@@ -99,29 +99,29 @@ bool DiscoPoP::doInitialization(Module &M) {
     // id rather than the last used one (runOnModule stores the path tree's next free id), so it is
     // used as-is. A value of 0 means no module has been processed yet; ids then start at 1, as 0 is
     // reserved for debugging and initialization purposes.
-    CallpathStateIDCounter = 0;
-    initializeCallpathStateIDCounter();
-    if (CallpathStateIDCounter == 0) {
-      unique_callpath_state_id = 1;
+    callpath_state_id_counter = 0;
+    InitializeCallpathStateIdCounter();
+    if (callpath_state_id_counter == 0) {
+      unique_callpath_state_id_ = 1;
     } else {
-      unique_callpath_state_id = CallpathStateIDCounter;
+      unique_callpath_state_id_ = callpath_state_id_counter;
     }
   }
 
 
   // CUGeneration
   {
-    CUIDCounter = 0;
-    defaultIsGlobalVariableValue = false;
-    ThisModule = &M;
+    cu_id_counter = 0;
+    default_is_global_variable_value = false;
+    this_module_ = &m;
 
-    initializeCUIDCounter();
+    InitializeCuIdCounter();
 
-    for (Module::global_iterator I = ThisModule->global_begin(); I != ThisModule->global_end(); I++) {
-      Value *globalVariable = dyn_cast<Value>(I);
-      std::string glo = std::string(globalVariable->getName());
+    for (Module::global_iterator i = this_module_->global_begin(); i != this_module_->global_end(); i++) {
+      Value *global_variable = dyn_cast<Value>(i);
+      std::string glo = std::string(global_variable->getName());
       if (glo.find(".") == glo.npos) {
-        programGlobalVariablesSet.insert(glo);
+        program_global_variables_set_.insert(glo);
         // originalVariablesSet.insert(glo);
       }
     }
@@ -131,25 +131,25 @@ bool DiscoPoP::doInitialization(Module &M) {
   // DPInstrumentation
   {
     // Export M to the outside
-    ThisModule = &M;
-    ThisModuleContext = &(M.getContext());
+    this_module_ = &m;
+    this_module_context_ = &(m.getContext());
 
-    GlobalVars.clear();
-    Structs.clear();
-    collectDebugInfo();
+    global_vars_.clear();
+    structs_.clear();
+    CollectDebugInfo();
 
     // Initialize variables needed
-    setupDataTypes();
-    setupCallbacks();
+    SetupDataTypes();
+    SetupCallbacks();
 
     // Check loop parallelism?
-    if (ClCheckLoopPar) {
-      if (DP_DEBUG) {
+    if (kClCheckLoopPar) {
+      if (kDpDebug) {
         errs() << "check loop parallelism \n";
       }
-      loopID = 0;
+      loop_id_ = 0;
     } else {
-      loopID = -1;
+      loop_id_ = -1;
     }
 
   }
@@ -157,7 +157,7 @@ bool DiscoPoP::doInitialization(Module &M) {
 
   // DPInstrumentationOmission
   {
-    hybridAnalysis.emplace(M);
+    hybrid_analysis_.emplace(m);
   }
   // DPInstrumentationOmission end
 

@@ -22,124 +22,124 @@
 class HybridAnalysisBBDepsTest : public ::testing::Test {
 protected:
   std::unique_ptr<CallStateGraph> graph;
-  __dp::RuntimeState saved_runtime_state = __dp::RuntimeState::NotInitialized;
-  __dp::ReportedBBRecorder *saved_bb_list = nullptr;
+  dp::RuntimeState saved_runtime_state = dp::RuntimeState::kNotInitialized;
+  dp::ReportedBBRecorder *saved_bb_list = nullptr;
   CallState *saved_state = nullptr;
 
   void SetUp() override {
     setenv("DOT_DISCOPOP_PROFILER", "/tmp/discopop_ut_nonexistent_dir", 1);
     graph = std::make_unique<CallStateGraph>();
 
-    saved_runtime_state = __dp::runtime_state;
-    saved_bb_list = __dp::bbList;
-    saved_state = __dp::current_callpath_state;
+    saved_runtime_state = dp::runtime_state;
+    saved_bb_list = dp::bb_list;
+    saved_state = dp::current_callpath_state;
 
-    __dp::runtime_state = __dp::RuntimeState::Running;
-    __dp::bbList = new __dp::ReportedBBRecorder();
+    dp::runtime_state = dp::RuntimeState::kRunning;
+    dp::bb_list = new dp::ReportedBBRecorder();
     enter_state(7);
   }
 
   void TearDown() override {
-    delete __dp::bbList;
-    __dp::bbList = saved_bb_list;
-    __dp::runtime_state = saved_runtime_state;
-    __dp::current_callpath_state = saved_state;
+    delete dp::bb_list;
+    dp::bb_list = saved_bb_list;
+    dp::runtime_state = saved_runtime_state;
+    dp::current_callpath_state = saved_state;
   }
 
-  void enter_state(std::int32_t id) { __dp::current_callpath_state = graph->get_or_register_node(id); }
+  void enter_state(std::int32_t id) { dp::current_callpath_state = graph->GetOrRegisterNode(id); }
 
-  static std::unordered_set<std::string> records_of(const __dp::stringDepMap &deps, const std::string &sink) {
+  static std::unordered_set<std::string> records_of(const dp::StringDepMap &deps, const std::string &sink) {
     const auto it = deps.find(sink);
     return it == deps.end() ? std::unordered_set<std::string>() : it->second;
   }
 };
 
 TEST_F(HybridAnalysisBBDepsTest, testReportBBGivesBothEndsTheCurrentState) {
-  __dp::__dp_report_bb(3);
+  dp::__dp_report_bb(3);
 
-  ASSERT_EQ(__dp::bbList->get_executions().size(), 1u);
-  EXPECT_EQ(*__dp::bbList->get_executions().begin(), (__dp::ReportedBB{3, 7, 7}));
+  ASSERT_EQ(dp::bb_list->GetExecutions().size(), 1u);
+  EXPECT_EQ(*dp::bb_list->GetExecutions().begin(), (dp::ReportedBB{3, 7, 7}));
 }
 
 TEST_F(HybridAnalysisBBDepsTest, testBBStateIsCurrentStatePlusOne) {
-  EXPECT_EQ(__dp::__dp_bb_state(), 8u);
+  EXPECT_EQ(dp::__dp_bb_state(), 8u);
   enter_state(0);
-  EXPECT_EQ(__dp::__dp_bb_state(), 1u); // state 0 still counts as executed
+  EXPECT_EQ(dp::__dp_bb_state(), 1u); // state 0 still counts as executed
 }
 
 TEST_F(HybridAnalysisBBDepsTest, testBBStateIsZeroWithoutKnownState) {
-  __dp::current_callpath_state = nullptr;
-  EXPECT_EQ(__dp::__dp_bb_state(), 0u);
+  dp::current_callpath_state = nullptr;
+  EXPECT_EQ(dp::__dp_bb_state(), 0u);
   enter_state(7);
-  __dp::runtime_state = __dp::RuntimeState::NotInitialized;
-  EXPECT_EQ(__dp::__dp_bb_state(), 0u);
-  __dp::runtime_state = __dp::RuntimeState::Terminated;
-  EXPECT_EQ(__dp::__dp_bb_state(), 0u);
+  dp::runtime_state = dp::RuntimeState::kNotInitialized;
+  EXPECT_EQ(dp::__dp_bb_state(), 0u);
+  dp::runtime_state = dp::RuntimeState::kTerminated;
+  EXPECT_EQ(dp::__dp_bb_state(), 0u);
 }
 
 TEST_F(HybridAnalysisBBDepsTest, testReportBBPairIgnoresUnexecutedSource) {
-  __dp::__dp_report_bb_pair(0, 4);
-  EXPECT_TRUE(__dp::bbList->get_executions().empty());
+  dp::__dp_report_bb_pair(0, 4);
+  EXPECT_TRUE(dp::bb_list->GetExecutions().empty());
 }
 
 TEST_F(HybridAnalysisBBDepsTest, testReportBBPairTakesSourceStateFromSemaphore) {
   // the source block executes in state 7 (e.g. iteration bucket 0) ...
-  const std::int32_t semaphore = (std::int32_t)__dp::__dp_bb_state();
+  const std::int32_t semaphore = (std::int32_t)dp::__dp_bb_state();
   // ... the sink block in the next iteration (state 8)
   enter_state(8);
-  __dp::__dp_report_bb_pair(semaphore, 4);
+  dp::__dp_report_bb_pair(semaphore, 4);
 
-  ASSERT_EQ(__dp::bbList->get_executions().size(), 1u);
-  EXPECT_EQ(*__dp::bbList->get_executions().begin(), (__dp::ReportedBB{4, 7, 8}));
+  ASSERT_EQ(dp::bb_list->GetExecutions().size(), 1u);
+  EXPECT_EQ(*dp::bb_list->GetExecutions().begin(), (dp::ReportedBB{4, 7, 8}));
 }
 
 TEST_F(HybridAnalysisBBDepsTest, testReportsAreIgnoredOutsideOfTheProfiledRun) {
-  __dp::runtime_state = __dp::RuntimeState::NotInitialized;
-  __dp::__dp_report_bb(1);
-  __dp::__dp_report_bb_pair(8, 2);
-  __dp::runtime_state = __dp::RuntimeState::Terminated;
-  __dp::__dp_report_bb(1);
-  __dp::__dp_report_bb_pair(8, 2);
-  EXPECT_TRUE(__dp::bbList->get_executions().empty());
+  dp::runtime_state = dp::RuntimeState::kNotInitialized;
+  dp::__dp_report_bb(1);
+  dp::__dp_report_bb_pair(8, 2);
+  dp::runtime_state = dp::RuntimeState::kTerminated;
+  dp::__dp_report_bb(1);
+  dp::__dp_report_bb_pair(8, 2);
+  EXPECT_TRUE(dp::bb_list->GetExecutions().empty());
 }
 
 TEST_F(HybridAnalysisBBDepsTest, testRepeatedExecutionsInTheSameStatesAreRecordedOnce) {
   for (int i = 0; i < 5; ++i) {
-    __dp::__dp_report_bb(3);
-    __dp::__dp_report_bb_pair(8, 4);
+    dp::__dp_report_bb(3);
+    dp::__dp_report_bb_pair(8, 4);
   }
-  EXPECT_EQ(__dp::bbList->get_executions().size(), 2u);
+  EXPECT_EQ(dp::bb_list->GetExecutions().size(), 2u);
 }
 
 TEST_F(HybridAnalysisBBDepsTest, testRecorderKeepsEveryDistinctExecution) {
   // repeated executions in recurring states, interleaved between basic blocks,
   // and enough distinct ones to make the recorder's table grow several times
-  __dp::ReportedBBRecorder recorder;
-  __dp::ReportedBBSet expected;
+  dp::ReportedBBRecorder recorder;
+  dp::ReportedBBSet expected;
   for (int round = 0; round < 3; ++round) {
     for (std::uint32_t state = 0; state < 3000; ++state) {
-      recorder.record(2, state, state + 1);
-      recorder.record(5, 9, state % 7);
+      recorder.Record(2, state, state + 1);
+      recorder.Record(5, 9, state % 7);
       if (round == 0) {
-        expected.insert(__dp::ReportedBB{2, state, state + 1});
-        expected.insert(__dp::ReportedBB{5, 9, state % 7});
+        expected.insert(dp::ReportedBB{2, state, state + 1});
+        expected.insert(dp::ReportedBB{5, 9, state % 7});
       }
     }
   }
   // the pair of states (0, 0) of basic block 0 is an ordinary entry
-  recorder.record(0, 0, 0);
-  expected.insert(__dp::ReportedBB{0, 0, 0});
+  recorder.Record(0, 0, 0);
+  expected.insert(dp::ReportedBB{0, 0, 0});
 
   EXPECT_EQ(recorder.size(), expected.size());
-  EXPECT_EQ(recorder.get_executions(), expected);
+  EXPECT_EQ(recorder.GetExecutions(), expected);
 }
 
 TEST_F(HybridAnalysisBBDepsTest, testMergeAddsStatesToSinkAndSource) {
   const std::vector<const char *> strings = {"0=36 NOM RAW 38|s(S2),35 NOM RAW 34|t(S4)"};
-  const __dp::ReportedBBSet reported = {__dp::ReportedBB{0, 29, 27}};
-  __dp::stringDepMap out;
+  const dp::ReportedBBSet reported = {dp::ReportedBB{0, 29, 27}};
+  dp::StringDepMap out;
 
-  __dp::merge_bb_deps(strings, reported, out);
+  dp::MergeBbDeps(strings, reported, out);
 
   EXPECT_EQ(out.size(), 2u);
   EXPECT_EQ(records_of(out, "36@27"), (std::unordered_set<std::string>{"RAW 38@29|s(S2)"}));
@@ -148,10 +148,10 @@ TEST_F(HybridAnalysisBBDepsTest, testMergeAddsStatesToSinkAndSource) {
 
 TEST_F(HybridAnalysisBBDepsTest, testMergeKeepsInitWithoutSource) {
   const std::vector<const char *> strings = {"5=34 NOM INIT *|t(S4)"};
-  const __dp::ReportedBBSet reported = {__dp::ReportedBB{5, 28, 28}};
-  __dp::stringDepMap out;
+  const dp::ReportedBBSet reported = {dp::ReportedBB{5, 28, 28}};
+  dp::StringDepMap out;
 
-  __dp::merge_bb_deps(strings, reported, out);
+  dp::MergeBbDeps(strings, reported, out);
 
   EXPECT_EQ(records_of(out, "34@28"), (std::unordered_set<std::string>{"INIT *|t(S4)"}));
 }
@@ -159,11 +159,11 @@ TEST_F(HybridAnalysisBBDepsTest, testMergeKeepsInitWithoutSource) {
 TEST_F(HybridAnalysisBBDepsTest, testMergeEmitsOneRecordPerReportedStatePair) {
   // a loop-carried dependency of a loop with iteration buckets 27, 28, 29
   const std::vector<const char *> strings = {"2=36 NOM RAW 38|s(S2)"};
-  const __dp::ReportedBBSet reported = {__dp::ReportedBB{2, 27, 28}, __dp::ReportedBB{2, 28, 29},
-                                        __dp::ReportedBB{2, 29, 27}};
-  __dp::stringDepMap out;
+  const dp::ReportedBBSet reported = {dp::ReportedBB{2, 27, 28}, dp::ReportedBB{2, 28, 29},
+                                        dp::ReportedBB{2, 29, 27}};
+  dp::StringDepMap out;
 
-  __dp::merge_bb_deps(strings, reported, out);
+  dp::MergeBbDeps(strings, reported, out);
 
   EXPECT_EQ(out.size(), 3u);
   EXPECT_EQ(records_of(out, "36@27"), (std::unordered_set<std::string>{"RAW 38@29|s(S2)"}));
@@ -175,10 +175,10 @@ TEST_F(HybridAnalysisBBDepsTest, testMergeSkipsUnreportedBlocksAndCombinesModule
   // two modules, numbered consecutively (DP_BBDepCounter.txt)
   const std::vector<const char *> strings = {"0=10 NOM RAW 9|x(S0)/1=11 NOM WAR 10|x(S0)",
                                              "2=20 NOM WAW 20|y(S1)"};
-  const __dp::ReportedBBSet reported = {__dp::ReportedBB{1, 3, 3}, __dp::ReportedBB{2, 4, 5}};
-  __dp::stringDepMap out;
+  const dp::ReportedBBSet reported = {dp::ReportedBB{1, 3, 3}, dp::ReportedBB{2, 4, 5}};
+  dp::StringDepMap out;
 
-  __dp::merge_bb_deps(strings, reported, out);
+  dp::MergeBbDeps(strings, reported, out);
 
   EXPECT_EQ(out.size(), 2u);
   EXPECT_TRUE(records_of(out, "10@3").empty());
@@ -188,11 +188,11 @@ TEST_F(HybridAnalysisBBDepsTest, testMergeSkipsUnreportedBlocksAndCombinesModule
 
 TEST_F(HybridAnalysisBBDepsTest, testMergeJoinsExistingRecordsOfTheSameSink) {
   const std::vector<const char *> strings = {"0=36 NOM RAW 20|s(S2)", "1=36 NOM RAW 38|s(S2)"};
-  const __dp::ReportedBBSet reported = {__dp::ReportedBB{0, 26, 27}, __dp::ReportedBB{1, 29, 27}};
-  __dp::stringDepMap out;
+  const dp::ReportedBBSet reported = {dp::ReportedBB{0, 26, 27}, dp::ReportedBB{1, 29, 27}};
+  dp::StringDepMap out;
   out["36@27"].insert("RAW 12@27|other(1234)");
 
-  __dp::merge_bb_deps(strings, reported, out);
+  dp::MergeBbDeps(strings, reported, out);
 
   EXPECT_EQ(records_of(out, "36@27"),
             (std::unordered_set<std::string>{"RAW 12@27|other(1234)", "RAW 20@26|s(S2)", "RAW 38@29|s(S2)"}));
@@ -200,10 +200,10 @@ TEST_F(HybridAnalysisBBDepsTest, testMergeJoinsExistingRecordsOfTheSameSink) {
 
 TEST_F(HybridAnalysisBBDepsTest, testMergeSkipsMalformedEntries) {
   const std::vector<const char *> strings = {nullptr, "x=1 NOM RAW 2|a(S0)/3=garbage,4 NOM RAW 5|b(S1)/=6 NOM RAW 7|c(S2)"};
-  const __dp::ReportedBBSet reported = {__dp::ReportedBB{3, 1, 1}};
-  __dp::stringDepMap out;
+  const dp::ReportedBBSet reported = {dp::ReportedBB{3, 1, 1}};
+  dp::StringDepMap out;
 
-  __dp::merge_bb_deps(strings, reported, out);
+  dp::MergeBbDeps(strings, reported, out);
 
   EXPECT_EQ(out.size(), 1u);
   EXPECT_EQ(records_of(out, "4@1"), (std::unordered_set<std::string>{"RAW 5@1|b(S1)"}));
@@ -213,17 +213,17 @@ TEST_F(HybridAnalysisBBDepsTest, testProcessRegisteredBBDepsUsesReportedExecutio
   // what __dp_finalize does: the strings registered by the module constructors
   // are merged with the executions reported during the run
   static const char dep_string[] = "900001=36 NOM RAW 38|s(S2)";
-  __dp::__dp_add_bb_deps(const_cast<char *>(dep_string));
-  const std::int32_t semaphore = (std::int32_t)__dp::__dp_bb_state();
+  dp::__dp_add_bb_deps(const_cast<char *>(dep_string));
+  const std::int32_t semaphore = (std::int32_t)dp::__dp_bb_state();
   enter_state(8);
-  __dp::__dp_report_bb_pair(semaphore, 900001);
+  dp::__dp_report_bb_pair(semaphore, 900001);
 
-  __dp::stringDepMap *saved_out = __dp::outPutDeps;
-  __dp::outPutDeps = new __dp::stringDepMap();
-  __dp::process_registered_bb_deps();
-  const auto records = records_of(*__dp::outPutDeps, "36@8");
-  delete __dp::outPutDeps;
-  __dp::outPutDeps = saved_out;
+  dp::StringDepMap *saved_out = dp::out_put_deps;
+  dp::out_put_deps = new dp::StringDepMap();
+  dp::ProcessRegisteredBbDeps();
+  const auto records = records_of(*dp::out_put_deps, "36@8");
+  delete dp::out_put_deps;
+  dp::out_put_deps = saved_out;
 
   EXPECT_EQ(records, (std::unordered_set<std::string>{"RAW 38@7|s(S2)"}));
 }

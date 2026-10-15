@@ -18,36 +18,36 @@
 
 #include <string>
 
-namespace __dp {
+namespace dp {
 
 /******* Helper functions *******/
-void addDep(depType type, LID curr, LID depOn, const char *var, std::int64_t AAvar, ADDR addr);
+void AddDep(DepType type, LID curr, LID dep_on, const char *var, std::int64_t aa_var, ADDR addr);
 
-void outputDeps();
+void OutputDeps();
 
-void generateStringDepMap();
+void GenerateStringDepMap();
 
-void readRuntimeInfo();
+void ReadRuntimeInfo();
 
-void initParallelization();
+void InitParallelization();
 
-void initSingleThreadedExecution();
+void InitSingleThreadedExecution();
 
-void mergeDeps();
+void MergeDeps();
 
 // void *analyzeDeps(void *arg);
 
-void *processFirstAccessQueue(void *arg);
+void *ProcessFirstAccessQueue(void *arg);
 
-void *processSecondAccessQueue(void *arg);
+void *ProcessSecondAccessQueue(void *arg);
 
-void analyzeSingleAccess(__dp::AbstractShadow *SMem, __dp::AccessInfo &access);
+void AnalyzeSingleAccess(dp::AbstractShadow *smem, dp::AccessInfo &access);
 
 // the dependency analysis of one access on the calling thread, used if NUM_WORKERS==0
-void analyzeSingleAccessOnMainThread(__dp::AccessInfo &access);
+void AnalyzeSingleAccessOnMainThread(dp::AccessInfo &access);
 
-void finalizeParallelization();
+void FinalizeParallelization();
 
-void finalizeSingleThreadedExecution();
+void FinalizeSingleThreadedExecution();
 
-} // namespace __dp
+} // namespace dp

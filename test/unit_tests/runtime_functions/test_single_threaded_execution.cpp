@@ -8,7 +8,7 @@
 #include "runtimeFunctions.hpp"
 #include "runtimeFunctionsGlobals.hpp"
 
-using namespace __dp;
+using namespace dp;
 
 // What __dp_init sets up and __dp_finalize tears down again when the runtime profiles without
 // worker threads: one shadow memory for the whole program instead of one per worker, and the
@@ -16,39 +16,39 @@ using namespace __dp;
 // one, because nothing else does it in this configuration.
 class SingleThreadedExecutionTest : public ::testing::Test {
 protected:
-  depMap collected_dependencies;
+  DepMap collected_dependencies;
 
   void SetUp() override {
-    previous_all_deps = allDeps;
-    previous_shadow = singleThreadedExecutionSMem;
-    previous_map = myMap;
-    previous_use_perfect = USE_PERFECT;
-    previous_sig_elem_bit = SIG_ELEM_BIT;
-    previous_sig_num_elem = SIG_NUM_ELEM;
-    previous_sig_num_hash = SIG_NUM_HASH;
+    previous_all_deps = all_deps;
+    previous_shadow = single_threaded_execution_smem;
+    previous_map = my_map;
+    previous_use_perfect = use_perfect;
+    previous_sig_elem_bit = sig_elem_bit;
+    previous_sig_num_elem = sig_num_elem;
+    previous_sig_num_hash = sig_num_hash;
 
-    allDeps = &collected_dependencies;
-    singleThreadedExecutionSMem = nullptr;
-    myMap = nullptr;
+    all_deps = &collected_dependencies;
+    single_threaded_execution_smem = nullptr;
+    my_map = nullptr;
   }
 
   void TearDown() override {
-    delete singleThreadedExecutionSMem;
-    singleThreadedExecutionSMem = previous_shadow;
-    delete myMap;
-    myMap = previous_map;
+    delete single_threaded_execution_smem;
+    single_threaded_execution_smem = previous_shadow;
+    delete my_map;
+    my_map = previous_map;
 
-    allDeps = previous_all_deps;
-    USE_PERFECT = previous_use_perfect;
-    SIG_ELEM_BIT = previous_sig_elem_bit;
-    SIG_NUM_ELEM = previous_sig_num_elem;
-    SIG_NUM_HASH = previous_sig_num_hash;
+    all_deps = previous_all_deps;
+    use_perfect = previous_use_perfect;
+    sig_elem_bit = previous_sig_elem_bit;
+    sig_num_elem = previous_sig_num_elem;
+    sig_num_hash = previous_sig_num_hash;
   }
 
 private:
-  depMap *previous_all_deps = nullptr;
+  DepMap *previous_all_deps = nullptr;
   AbstractShadow *previous_shadow = nullptr;
-  depMap *previous_map = nullptr;
+  DepMap *previous_map = nullptr;
   bool previous_use_perfect = true;
   std::int32_t previous_sig_elem_bit = 0;
   std::int32_t previous_sig_num_elem = 0;
@@ -56,23 +56,23 @@ private:
 };
 
 TEST_F(SingleThreadedExecutionTest, testInitializingCreatesTheShadowMemoryAndTheDependencyMap) {
-  initSingleThreadedExecution();
+  InitSingleThreadedExecution();
 
-  EXPECT_NE(singleThreadedExecutionSMem, nullptr);
-  EXPECT_NE(myMap, nullptr);
+  EXPECT_NE(single_threaded_execution_smem, nullptr);
+  EXPECT_NE(my_map, nullptr);
 }
 
 TEST_F(SingleThreadedExecutionTest, testTheNewDependencyMapIsEmpty) {
-  initSingleThreadedExecution();
+  InitSingleThreadedExecution();
 
-  EXPECT_TRUE(myMap->empty());
+  EXPECT_TRUE(my_map->empty());
 }
 
 TEST_F(SingleThreadedExecutionTest, testTheNewShadowMemoryKnowsNoAccess) {
-  initSingleThreadedExecution();
+  InitSingleThreadedExecution();
 
-  EXPECT_EQ(singleThreadedExecutionSMem->testInRead(0x1000), 0);
-  EXPECT_EQ(singleThreadedExecutionSMem->testInWrite(0x1000), 0);
+  EXPECT_EQ(single_threaded_execution_smem->TestInRead(0x1000), 0);
+  EXPECT_EQ(single_threaded_execution_smem->TestInWrite(0x1000), 0);
 }
 
 // Which of the two shadow memories was created is told apart by what they can do rather than by
@@ -80,63 +80,63 @@ TEST_F(SingleThreadedExecutionTest, testTheNewShadowMemoryKnowsNoAccess) {
 // option. A perfect shadow keeps every address and can enumerate them again; a signature keeps
 // none and reports an empty range.
 TEST_F(SingleThreadedExecutionTest, testThePerfectShadowIsUsedByDefault) {
-  USE_PERFECT = true;
-  initSingleThreadedExecution();
+  use_perfect = true;
+  InitSingleThreadedExecution();
 
-  singleThreadedExecutionSMem->insertToWrite(0x1000, 1);
+  single_threaded_execution_smem->InsertToWrite(0x1000, 1);
 
-  EXPECT_EQ(singleThreadedExecutionSMem->getAddrsInRange(0x0, 0x2000), (std::unordered_set<ADDR>{0x1000}));
+  EXPECT_EQ(single_threaded_execution_smem->GetAddrsInRange(0x0, 0x2000), (std::unordered_set<ADDR>{0x1000}));
 }
 
 // the signature based alternative, sized from the three shadow memory parameters
 TEST_F(SingleThreadedExecutionTest, testTheSignatureShadowIsUsedWhenThePerfectOneIsTurnedOff) {
-  USE_PERFECT = false;
-  SIG_ELEM_BIT = 56;
-  SIG_NUM_ELEM = 1024;
-  SIG_NUM_HASH = 2;
-  initSingleThreadedExecution();
+  use_perfect = false;
+  sig_elem_bit = 56;
+  sig_num_elem = 1024;
+  sig_num_hash = 2;
+  InitSingleThreadedExecution();
 
-  singleThreadedExecutionSMem->insertToWrite(0x1000, 1);
+  single_threaded_execution_smem->InsertToWrite(0x1000, 1);
 
-  EXPECT_EQ(singleThreadedExecutionSMem->testInWrite(0x1000), 1);
-  EXPECT_TRUE(singleThreadedExecutionSMem->getAddrsInRange(0x0, 0x2000).empty());
+  EXPECT_EQ(single_threaded_execution_smem->TestInWrite(0x1000), 1);
+  EXPECT_TRUE(single_threaded_execution_smem->GetAddrsInRange(0x0, 0x2000).empty());
 }
 
 TEST_F(SingleThreadedExecutionTest, testFinalizingReleasesTheShadowMemoryAndTheDependencyMap) {
-  initSingleThreadedExecution();
+  InitSingleThreadedExecution();
 
-  finalizeSingleThreadedExecution();
+  FinalizeSingleThreadedExecution();
 
-  EXPECT_EQ(singleThreadedExecutionSMem, nullptr);
-  EXPECT_EQ(myMap, nullptr);
+  EXPECT_EQ(single_threaded_execution_smem, nullptr);
+  EXPECT_EQ(my_map, nullptr);
 }
 
 // nothing else merges the per-thread map in this configuration, so what the callbacks recorded
 // would never reach the report if finalizing skipped it
 TEST_F(SingleThreadedExecutionTest, testFinalizingMergesWhatWasRecordedIntoTheGlobalDependencies) {
-  initSingleThreadedExecution();
-  (*myMap)[42].insert(Dep(RAW, 7, "x", 3));
+  InitSingleThreadedExecution();
+  (*my_map)[42].insert(Dep(kRaw, 7, "x", 3));
 
-  finalizeSingleThreadedExecution();
+  FinalizeSingleThreadedExecution();
 
   ASSERT_EQ(collected_dependencies.count(42), 1u);
   EXPECT_EQ(collected_dependencies[42].size(), 1u);
 }
 
 TEST_F(SingleThreadedExecutionTest, testFinalizingKeepsTheDependenciesThatWereAlreadyGlobal) {
-  collected_dependencies[42].insert(Dep(WAR, 8, "y", 4));
-  initSingleThreadedExecution();
-  (*myMap)[42].insert(Dep(RAW, 7, "x", 3));
+  collected_dependencies[42].insert(Dep(kWar, 8, "y", 4));
+  InitSingleThreadedExecution();
+  (*my_map)[42].insert(Dep(kRaw, 7, "x", 3));
 
-  finalizeSingleThreadedExecution();
+  FinalizeSingleThreadedExecution();
 
   EXPECT_EQ(collected_dependencies[42].size(), 2u);
 }
 
 TEST_F(SingleThreadedExecutionTest, testFinalizingWithoutRecordedDependenciesChangesNothing) {
-  initSingleThreadedExecution();
+  InitSingleThreadedExecution();
 
-  finalizeSingleThreadedExecution();
+  FinalizeSingleThreadedExecution();
 
   EXPECT_TRUE(collected_dependencies.empty());
 }

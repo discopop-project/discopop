@@ -22,13 +22,13 @@
 #include <unordered_map>
 #include <vector>
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
 void __dp_loop_output() {
-  if (!manager_globals_constructed() || loop_manager->is_done()) {
+  if (!ManagerGlobalsConstructed() || loop_manager->IsDone()) {
     return;
   }
 
@@ -40,20 +40,20 @@ void __dp_loop_output() {
 
   // get meta information about the loops, by loop id -- loop_meta.txt lists the loops in
   // the order the pass registered them, which is not the order of their ids.
-  std::unordered_map<int, loop_info_t> loop_infos;
-  ifile.open(profiler_output_path("loop_meta.txt"));
+  std::unordered_map<int, LoopInfoT> loop_infos;
+  ifile.open(ProfilerOutputPath("loop_meta.txt"));
   while (std::getline(ifile, line)) {
-    loop_info_t loop_info;
-    int cnt = sscanf(line.c_str(), "%d %d %d", &loop_info.file_id_, &loop_info.loop_id_, &loop_info.line_nr_);
+    LoopInfoT loop_info;
+    int cnt = sscanf(line.c_str(), "%d %d %d", &loop_info.file_id, &loop_info.loop_id, &loop_info.line_nr);
     if (cnt == 3) {
-      loop_infos[loop_info.loop_id_] = loop_info;
+      loop_infos[loop_info.loop_id] = loop_info;
     }
   }
   ifile.close();
 
   // output information about the loops
-  ofile.open(profiler_output_path("loop_counter_output.txt"));
-  const auto &loop_counters = loop_manager->get_loop_counters();
+  ofile.open(ProfilerOutputPath("loop_counter_output.txt"));
+  const auto &loop_counters = loop_manager->GetLoopCounters();
 
   // The counters are indexed by loop id, starting at 0. Reading them from 1 and pairing
   // them with the lines of loop_meta.txt in file order named every count after the wrong
@@ -65,16 +65,16 @@ void __dp_loop_output() {
       // A loop the pass counted but could not describe. Nothing to name it by.
       continue;
     }
-    ofile << loop_info->second.file_id_ << " ";
-    ofile << loop_info->second.line_nr_ << " ";
+    ofile << loop_info->second.file_id << " ";
+    ofile << loop_info->second.line_nr << " ";
     ofile << loop_counters[i] << "\n";
   }
   ofile.close();
 
   std::cout << "done" << std::endl;
 
-  loop_manager->set_done();
+  loop_manager->SetDone();
 }
 }
 
-} // namespace __dp
+} // namespace dp

@@ -24,30 +24,30 @@ using llvm::StringRef;
 using llvm::Value;
 using llvm::dyn_cast;
 
-std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
+std::string dp_reduction::CFA(Function &f, llvm::Loop *l, int file_id) {
   std::string lid = "LOOPENDNOTFOUND";
-  SmallVector<BasicBlock *, 8> ExitBlocks;
-  for (Function::iterator BB = F.begin(), BE = F.end(); BB != BE; ++BB) {
-    BasicBlock *tmpBB = &*BB;
-    ExitBlocks.clear();
+  SmallVector<BasicBlock *, 8> exit_blocks;
+  for (Function::iterator bb = f.begin(), be = f.end(); bb != be; ++bb) {
+    BasicBlock *tmp_bb = &*bb;
+    exit_blocks.clear();
 
     // Get the closest loop where tmpBB lives in.
     // (L == NULL) if tmpBB is not in any loop.
 
     // Check if tmpBB is the loop header (.cond) block.
-    if (L != nullptr) {
-      StringRef loopType = tmpBB->getName().split('.').first;
+    if (l != nullptr) {
+      StringRef loop_type = tmp_bb->getName().split('.').first;
 
       // If tmpBB is the header block, get the exit blocks of the loop.
-      if (L->hasDedicatedExits()) {
+      if (l->hasDedicatedExits()) {
         // loop exits are in canonical form
-        L->getUniqueExitBlocks(ExitBlocks);
+        l->getUniqueExitBlocks(exit_blocks);
       } else {
         // loop exits are NOT in canonical form
-        L->getExitBlocks(ExitBlocks);
+        l->getExitBlocks(exit_blocks);
       }
 
-      if (ExitBlocks.size() == 0) {
+      if (exit_blocks.size() == 0) {
         continue;
       }
 
@@ -55,55 +55,55 @@ std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
       // the if-else block containing the break. Since we always want
       // to find the real exit (.end) block, we need to check the
       // successors of the break statement(s).
-      SmallVector<BasicBlock *, 4> RealExitBlocks;
+      SmallVector<BasicBlock *, 4> real_exit_blocks;
 
-      for (SmallVectorImpl<BasicBlock *>::iterator EI = ExitBlocks.begin(), END = ExitBlocks.end(); EI != END; ++EI) {
-        StringRef exitType = (*EI)->getName().split('.').first;
-        if ((exitType.str() == loopType.str()) && ((*EI)->getName().find("end") != std::string::npos) &&
-            (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), *EI) == RealExitBlocks.end())) {
-          RealExitBlocks.push_back(*EI);
+      for (SmallVectorImpl<BasicBlock *>::iterator ei = exit_blocks.begin(), end = exit_blocks.end(); ei != end; ++ei) {
+        StringRef exit_type = (*ei)->getName().split('.').first;
+        if ((exit_type.str() == loop_type.str()) && ((*ei)->getName().find("end") != std::string::npos) &&
+            (std::find(real_exit_blocks.begin(), real_exit_blocks.end(), *ei) == real_exit_blocks.end())) {
+          real_exit_blocks.push_back(*ei);
         } else {
           // Changed TerminatorInst to Instruction
-          Instruction *TI = (*EI)->getTerminator();
+          Instruction *ti = (*ei)->getTerminator();
           assert(TI != NULL && "Exit block is not well formed!");
-          unsigned int numSucc = TI->getNumSuccessors();
-          for (unsigned int i = 0; i < numSucc; ++i) {
-            BasicBlock *succ = TI->getSuccessor(i);
-            exitType = succ->getName().split('.').first;
-            if ((exitType.str() == loopType.str()) && (succ->getName().find("end") != std::string::npos) &&
-                (std::find(RealExitBlocks.begin(), RealExitBlocks.end(), succ) == RealExitBlocks.end())) {
-              RealExitBlocks.push_back(succ);
+          unsigned int num_succ = ti->getNumSuccessors();
+          for (unsigned int i = 0; i < num_succ; ++i) {
+            BasicBlock *succ = ti->getSuccessor(i);
+            exit_type = succ->getName().split('.').first;
+            if ((exit_type.str() == loop_type.str()) && (succ->getName().find("end") != std::string::npos) &&
+                (std::find(real_exit_blocks.begin(), real_exit_blocks.end(), succ) == real_exit_blocks.end())) {
+              real_exit_blocks.push_back(succ);
             }
           }
         }
       }
 
-      if (RealExitBlocks.size() == 0) {
+      if (real_exit_blocks.size() == 0) {
         continue;
       }
 
       // Check if entry block and exit block(s) have valid LID.
-      bool hasValidExit = false;
-      for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
-           ++EI) {
-        hasValidExit = dp_reduction::sanityCheck(*EI, file_id);
-        if (hasValidExit == true) {
+      bool has_valid_exit = false;
+      for (SmallVectorImpl<BasicBlock *>::iterator ei = real_exit_blocks.begin(), end = real_exit_blocks.end(); ei != end;
+           ++ei) {
+        has_valid_exit = dp_reduction::SanityCheck(*ei, file_id);
+        if (has_valid_exit == true) {
           break;
 }
       }
 
-      if (hasValidExit) {
-        for (SmallVectorImpl<BasicBlock *>::iterator EI = RealExitBlocks.begin(), END = RealExitBlocks.end(); EI != END;
-             ++EI) {
-          BasicBlock *currentBB = *EI;
+      if (has_valid_exit) {
+        for (SmallVectorImpl<BasicBlock *>::iterator ei = real_exit_blocks.begin(), end = real_exit_blocks.end(); ei != end;
+             ++ei) {
+          BasicBlock *current_bb = *ei;
           std::vector<Value *> args;
           LID lid = 0;
 
-          for (BasicBlock::iterator BI = currentBB->begin(), EI = currentBB->end(); BI != EI; ++BI) {
-            lid = dp_reduction::getLID(&*BI, file_id);
+          for (BasicBlock::iterator bi = current_bb->begin(), ei = current_bb->end(); bi != ei; ++bi) {
+            lid = dp_reduction::GetLid(&*bi, file_id);
             std::uint64_t ulid = static_cast<std::uint64_t>(lid);
             if (ulid != 0) {
-              return std::to_string(ulid % MAXLNO);
+              return std::to_string(ulid % kMaxLno);
             }
           }
         }
@@ -111,20 +111,20 @@ std::string dp_reduction::CFA(Function &F, llvm::Loop *L, int file_id) {
     }
   }
   if (lid == "LOOPENDNOTFOUND") {
-    if (MDNode *LoopID = L->getLoopID()) {
-      DebugLoc Start;
+    if (MDNode *loop_id = l->getLoopID()) {
+      DebugLoc start;
       // We use the first DebugLoc in the header as the start location of the
       // loop and if there is a second DebugLoc in the header we use it as end
       // location of the loop.
-      bool foundEnd = false;
-      for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-        if (DILocation *DIL = dyn_cast<DILocation>(LoopID->getOperand(i))) {
-          if (!Start) {
-            if (foundEnd) {
-              lid = std::to_string(DebugLoc(DIL)->getLine());
+      bool found_end = false;
+      for (unsigned i = 1, ie = loop_id->getNumOperands(); i < ie; ++i) {
+        if (DILocation *dil = dyn_cast<DILocation>(loop_id->getOperand(i))) {
+          if (!start) {
+            if (found_end) {
+              lid = std::to_string(DebugLoc(dil)->getLine());
 
               break;
-            }               foundEnd = true;
+            }               found_end = true;
 
           }
         }

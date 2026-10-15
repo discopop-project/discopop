@@ -34,7 +34,7 @@
 #include <string>
 
 
-namespace __dp {
+namespace dp {
 
 /******* Runtime startup *******/
 extern "C" {
@@ -43,30 +43,30 @@ void __dp_init() {
   // Anything but NotInitialized: either the runtime is already up, or it has already written its
   // results and released everything. The latter used to pass this check, because the flag it read
   // was cleared again in __dp_finalize.
-  if (runtime_state != RuntimeState::NotInitialized) {
+  if (runtime_state != RuntimeState::kNotInitialized) {
     return;
   }
 
   // This part should be executed only once.
   // The globals the runtime manages itself have to exist before anything reads them.
-  construct_immortal_globals();
-  readRuntimeInfo();
+  ConstructImmortalGlobals();
+  ReadRuntimeInfo();
   timers = new Timers();
   statistics_profiling_start_time = std::chrono::high_resolution_clock::now();
 #ifdef DP_INTERNAL_TIMER
-  const auto timer = Timer(timers, TimerRegion::INIT);
+  const auto timer = Timer(timers, TimerRegion::kInit);
 #endif
-  construct_manager_globals();
+  ConstructManagerGlobals();
   //
 
-  mainThread_AccessInfoBuffer = firstAccessQueueChunkBuffer.get_prepared_chunk(FIRST_ACCESS_QUEUE_CHUNK_SIZE);
+  main_thread_access_info_buffer = first_access_queue_chunk_buffer.GetPreparedChunk(kFirstAccessQueueChunkSize);
 
   out = new std::ofstream();
 
   // hybrid analysis
-  allDeps = new depMap();
-  outPutDeps = new stringDepMap();
-  bbList = new ReportedBBRecorder();
+  all_deps = new DepMap();
+  out_put_deps = new StringDepMap();
+  bb_list = new ReportedBBRecorder();
   // End HA
 
   // This is the first thing to run in an instrumented program, so it is also where the output
@@ -78,21 +78,21 @@ void __dp_init() {
   const std::string profiler_directory = std::string(std::getenv("DOT_DISCOPOP")) + "/profiler";
   setenv("DOT_DISCOPOP_PROFILER", profiler_directory.c_str(), 1);
 
-  out->open(profiler_output_path("dynamic_dependencies.txt").c_str(), std::ios::out);
+  out->open(ProfilerOutputPath("dynamic_dependencies.txt").c_str(), std::ios::out);
   assert(out->is_open() && "Cannot open a file to output dependences.\n");
 
   // Static callPath tracing
   call_state_graph = new CallStateGraph();
-  initialize_current_callpath_state();
+  InitializeCurrentCallpathState();
 
-  if (DP_DEBUG) {
+  if (dp_debug) {
     std::cout << "DP initialized." << std::endl;
   }
-  runtime_state = RuntimeState::Running;
-  if (NUM_WORKERS > 0) {
-    initParallelization();
+  runtime_state = RuntimeState::kRunning;
+  if (num_workers > 0) {
+    InitParallelization();
   } else {
-    initSingleThreadedExecution();
+    InitSingleThreadedExecution();
   }
 }
 }
@@ -115,10 +115,10 @@ namespace {
 // below -- without any diagnostic; the profiled program would simply never start the runtime.
 // The link wrappers in profiler/scripts therefore request __dp_init with -u, which is why that
 // symbol and these two entries have to stay in the same file.
-__attribute__((constructor(101))) void dp_runtime_startup() { __dp_init(); }
+__attribute__((constructor(101))) void DpRuntimeStartup() { __dp_init(); }
 
-__attribute__((destructor(101))) void dp_runtime_shutdown() {
-  if (!profiling_active()) {
+__attribute__((destructor(101))) void DpRuntimeShutdown() {
+  if (!ProfilingActive()) {
     // Either nothing was profiled, or __dp_finalize already ran because the target left through a
     // function that does not return to main.
     return;
@@ -130,4 +130,4 @@ __attribute__((destructor(101))) void dp_runtime_shutdown() {
 
 } // namespace
 
-} // namespace __dp
+} // namespace dp

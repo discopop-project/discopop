@@ -22,47 +22,47 @@ using llvm::Value;
 using llvm::cast;
 using llvm::isa;
 
-void DiscoPoP::instrumentRealloc(CallBase *toInstrument) {
+void DiscoPoP::InstrumentRealloc(CallBase *to_instrument) {
   // add instrumentation for calls to realloc
-  LID lid = dputil::getLID(toInstrument, fileID);
+  LID lid = dputil::GetLid(to_instrument, file_id);
   if (lid == 0) {
     return;
 }
 
   // Determine correct placement for the call to __dp_new
-  Instruction *nextInst = nullptr;
-  if (isa<CallInst>(toInstrument)) {
-    nextInst = llvmcompat::nextInstruction(toInstrument);
-  } else if (isa<InvokeInst>(toInstrument)) {
+  Instruction *next_inst = nullptr;
+  if (isa<CallInst>(to_instrument)) {
+    next_inst = llvmcompat::NextInstruction(to_instrument);
+  } else if (isa<InvokeInst>(to_instrument)) {
     // Invoke instructions are always located at the end of a basic block.
     // Invoke instructions may throw errors, in which case the successor is a
     // "landing pad" basic block. If no error is thrown, the control flow is
     // resumed at a "normal destination" basic block. Set the first instruction
     // of the normal destination as nextInst in order to add the Instrumentation
     // at the correct location.
-    nextInst = &*cast<InvokeInst>(toInstrument)->getNormalDest()->getFirstNonPHIOrDbg();
+    next_inst = &*cast<InvokeInst>(to_instrument)->getNormalDest()->getFirstNonPHIOrDbg();
   }
 
-  IRBuilder<> IRB(nextInst);
+  IRBuilder<> irb(next_inst);
   std::vector<Value *> args;
 
   // deallocate the block that was handed in
-  args.push_back(lidConstant(lid));
-  Value *oldAddr = IRB.CreatePtrToInt(toInstrument->getArgOperand(0), Int64);
-  args.push_back(oldAddr);
-  IRB.CreateCall(DpDelete, args, "");
+  args.push_back(LidConstant(lid));
+  Value *old_addr = irb.CreatePtrToInt(to_instrument->getArgOperand(0), int64_);
+  args.push_back(old_addr);
+  irb.CreateCall(dp_delete_, args, "");
   args.clear();
 
   // allocate the block that came back. realloc is free to move the allocation, so the returned
   // pointer is the only one that describes it; registering the old address instead leaves the
   // runtime tracking a range the program no longer uses.
-  args.push_back(lidConstant(lid));
-  Value *startAddr = IRB.CreatePtrToInt(toInstrument, Int64);
-  Value *endAddr = startAddr;
-  Value *numBytes = toInstrument->getArgOperand(1);
-  args.push_back(startAddr);
-  args.push_back(endAddr); // currently unused
-  args.push_back(numBytes);
+  args.push_back(LidConstant(lid));
+  Value *start_addr = irb.CreatePtrToInt(to_instrument, int64_);
+  Value *end_addr = start_addr;
+  Value *num_bytes = to_instrument->getArgOperand(1);
+  args.push_back(start_addr);
+  args.push_back(end_addr); // currently unused
+  args.push_back(num_bytes);
 
-  IRB.CreateCall(DpNew, args, "");
+  irb.CreateCall(dp_new_, args, "");
 }

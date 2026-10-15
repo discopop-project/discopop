@@ -18,7 +18,7 @@
 
 #include "static_callstate_transitions/utils.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -26,14 +26,14 @@ extern "C" {
 void __dp_loop_incr(const int loop_id, int32_t instruction_id) {
   DP_CALLBACK_SCOPE(LOOP_INCR);
 
-  if (loop_manager->is_done()) {
+  if (loop_manager->IsDone()) {
     return;
   }
 
-  loop_manager->incr_loop_counter(loop_id);
+  loop_manager->IncrLoopCounter(loop_id);
 
-  update_callstate(instruction_id);
+  UpdateCallstate(instruction_id);
 }
 }
 
-} // namespace __dp
+} // namespace dp

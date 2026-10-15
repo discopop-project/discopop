@@ -7,48 +7,48 @@
 class VarInfoTest : public ::testing::Test {};
 
 TEST_F(VarInfoTest, testZeroInitialization) {
-  const auto vi = __dp::var_info_t{};
+  const auto vi = dp::VarInfoT{};
 
-  ASSERT_TRUE(vi.var_name_.empty());
-  ASSERT_EQ(vi.file_id_, 0);
-  ASSERT_EQ(vi.instr_id_, 0);
-  ASSERT_EQ(vi.loop_line_nr_, 0);
-  ASSERT_EQ(vi.instr_line_, 0);
-  ASSERT_EQ(vi.operation_, 0);
+  ASSERT_TRUE(vi.var_name.empty());
+  ASSERT_EQ(vi.file_id, 0);
+  ASSERT_EQ(vi.instr_id, 0);
+  ASSERT_EQ(vi.loop_line_nr, 0);
+  ASSERT_EQ(vi.instr_line, 0);
+  ASSERT_EQ(vi.operation, 0);
 }
 
 TEST_F(VarInfoTest, testInitialization) {
-  const auto vi = __dp::var_info_t{"var", 1, 2, 3, 4, 'a'};
+  const auto vi = dp::VarInfoT{"var", 1, 2, 3, 4, 'a'};
 
-  ASSERT_EQ(vi.var_name_, "var");
-  ASSERT_EQ(vi.file_id_, 1);
-  ASSERT_EQ(vi.instr_id_, 2);
-  ASSERT_EQ(vi.loop_line_nr_, 3);
-  ASSERT_EQ(vi.instr_line_, 4);
-  ASSERT_EQ(vi.operation_, 'a');
+  ASSERT_EQ(vi.var_name, "var");
+  ASSERT_EQ(vi.file_id, 1);
+  ASSERT_EQ(vi.instr_id, 2);
+  ASSERT_EQ(vi.loop_line_nr, 3);
+  ASSERT_EQ(vi.instr_line, 4);
+  ASSERT_EQ(vi.operation, 'a');
 }
 
 TEST_F(VarInfoTest, testNegativeInitialization) {
-  const auto vi = __dp::var_info_t{"negative", -1, -2, -3, -4, 'n'};
+  const auto vi = dp::VarInfoT{"negative", -1, -2, -3, -4, 'n'};
 
-  ASSERT_EQ(vi.var_name_, "negative");
-  ASSERT_EQ(vi.file_id_, -1);
-  ASSERT_EQ(vi.instr_id_, -2);
-  ASSERT_EQ(vi.loop_line_nr_, -3);
-  ASSERT_EQ(vi.instr_line_, -4);
-  ASSERT_EQ(vi.operation_, 'n');
+  ASSERT_EQ(vi.var_name, "negative");
+  ASSERT_EQ(vi.file_id, -1);
+  ASSERT_EQ(vi.instr_id, -2);
+  ASSERT_EQ(vi.loop_line_nr, -3);
+  ASSERT_EQ(vi.instr_line, -4);
+  ASSERT_EQ(vi.operation, 'n');
 }
 
 TEST_F(VarInfoTest, testEquality) {
-  const auto vi1 = __dp::var_info_t{"var", 1, 2, 3, 4, 'a'};
-  const auto vi2 = __dp::var_info_t{"var", 1, 2, 3, 4, 'a'};
-  const auto vi3 = __dp::var_info_t{"var", 1, 2, 3, 4, 'b'};
-  const auto vi4 = __dp::var_info_t{"var", 1, 2, 3, 5, 'a'};
-  const auto vi5 = __dp::var_info_t{"var", 1, 2, 4, 4, 'a'};
-  const auto vi6 = __dp::var_info_t{"var", 1, 3, 3, 4, 'a'};
-  const auto vi7 = __dp::var_info_t{"var", 2, 2, 3, 4, 'a'};
-  const auto vi8 = __dp::var_info_t{"var", 1, 2, 3, 4, 'c'};
-  const auto vi9 = __dp::var_info_t{"VAR", 1, 2, 3, 4, 'c'};
+  const auto vi1 = dp::VarInfoT{"var", 1, 2, 3, 4, 'a'};
+  const auto vi2 = dp::VarInfoT{"var", 1, 2, 3, 4, 'a'};
+  const auto vi3 = dp::VarInfoT{"var", 1, 2, 3, 4, 'b'};
+  const auto vi4 = dp::VarInfoT{"var", 1, 2, 3, 5, 'a'};
+  const auto vi5 = dp::VarInfoT{"var", 1, 2, 4, 4, 'a'};
+  const auto vi6 = dp::VarInfoT{"var", 1, 3, 3, 4, 'a'};
+  const auto vi7 = dp::VarInfoT{"var", 2, 2, 3, 4, 'a'};
+  const auto vi8 = dp::VarInfoT{"var", 1, 2, 3, 4, 'c'};
+  const auto vi9 = dp::VarInfoT{"VAR", 1, 2, 3, 4, 'c'};
 
   ASSERT_EQ(vi1, vi1);
 

@@ -20,50 +20,50 @@
 
 #include <ostream>
 
-namespace __dp {
+namespace dp {
 
 class LoopManager {
 public:
   LoopManager() {}
 
   ~LoopManager() {
-    for (auto loop : loops) {
+    for (auto loop : loops_) {
       delete loop.second;
     }
   }
 
-  void create_new_loop(const std::int32_t function_level, const std::int32_t loop_id, const LID begin_line) {
-    loopStack.push(LoopTableEntry(function_level, loop_id, 0, begin_line));
-    if (loops.find(begin_line) == loops.end()) {
-      loops.insert(std::pair<LID, LoopRecord *>(begin_line, new LoopRecord(0, 0, 0)));
+  void CreateNewLoop(const std::int32_t function_level, const std::int32_t loop_id, const LID begin_line) {
+    loop_stack_.Push(LoopTableEntry(function_level, loop_id, 0, begin_line));
+    if (loops_.find(begin_line) == loops_.end()) {
+      loops_.insert(std::pair<LID, LoopRecord *>(begin_line, new LoopRecord(0, 0, 0)));
     }
-    if (DP_DEBUG) {
+    if (dp_debug) {
       std::cout << "(" << std::dec << function_level << ")Loop " << loop_id << " enters." << std::endl;
     }
   }
 
-  bool is_new_loop(const std::int32_t loop_id) const {
-    return loopStack.empty() || (loopStack.top().loopID != loop_id);
+  bool IsNewLoop(const std::int32_t loop_id) const {
+    return loop_stack_.empty() || (loop_stack_.Top().loop_id != loop_id);
   }
 
 
-  void iterate_loop(const std::int32_t /*function_level*/) {
-    loopStack.increment_top_count();
-    if (DP_DEBUG) {
-      std::cout << "(" << std::dec << loopStack.top().funcLevel << ")";
-      std::cout << "Loop " << loopStack.top().loopID << " iterates " << loopStack.top().get_count() << " times."
+  void IterateLoop(const std::int32_t /*function_level*/) {
+    loop_stack_.IncrementTopCount();
+    if (dp_debug) {
+      std::cout << "(" << std::dec << loop_stack_.Top().func_level << ")";
+      std::cout << "Loop " << loop_stack_.Top().loop_id << " iterates " << loop_stack_.Top().GetCount() << " times."
                 << std::endl;
     }
   }
 
-  void clean_function_exit(const std::int32_t function_level, const LID end_line) {
+  void CleanFunctionExit(const std::int32_t function_level, const LID end_line) {
     // Clear up all unfinished loops in the function.
     // This usually happens when using return inside loop.
-    while (!loopStack.empty() && (loopStack.top().funcLevel == function_level)) {
+    while (!loop_stack_.empty() && (loop_stack_.Top().func_level == function_level)) {
 
       // No way to get the real end line of loop. Use the line where
       // function returns instead.
-      LoopRecords::iterator loop = loops.find(loopStack.top().begin);
+      LoopRecords::iterator loop = loops_.find(loop_stack_.Top().begin);
       assert(loop != loops.end() && "A loop ends without its entry being recorded.");
 
       if (loop->second->end == 0) {
@@ -72,19 +72,19 @@ public:
         // TODO: FIXME: loop end line > return line
       }
 
-      loop->second->total += loopStack.top().get_count();
-      ++loop->second->nEntered;
+      loop->second->total += loop_stack_.Top().GetCount();
+      ++loop->second->n_entered;
 
-      loopStack.debug_output();
-      loopStack.pop();
-      loopStack.debug_output();
+      loop_stack_.DebugOutput();
+      loop_stack_.Pop();
+      loop_stack_.DebugOutput();
     }
   }
 
-  LID update_lid(LID lid) { return loopStack.update_lid(lid); }
+  LID UpdateLid(LID lid) { return loop_stack_.UpdateLid(lid); }
 
-  void exit_loop(const LID lid) {
-    LoopRecords::iterator loop = loops.find(loopStack.top().begin);
+  void ExitLoop(const LID lid) {
+    LoopRecords::iterator loop = loops_.find(loop_stack_.Top().begin);
     assert(loop != loops.end() && "A loop ends without its entry being recorded.");
     if (loop->second->end == 0) {
       loop->second->end = lid;
@@ -105,68 +105,68 @@ public:
       // New loop exit found and it's the same as before. Good.
     }
 
-    if (loop->second->maxIterationCount < loopStack.top().get_count()) {
-      loop->second->maxIterationCount = loopStack.top().get_count();
+    if (loop->second->max_iteration_count < loop_stack_.Top().GetCount()) {
+      loop->second->max_iteration_count = loop_stack_.Top().GetCount();
     }
 
-    loop->second->total += loopStack.top().get_count();
-    ++loop->second->nEntered;
+    loop->second->total += loop_stack_.Top().GetCount();
+    ++loop->second->n_entered;
 
-    loopStack.debug_output();
-    loopStack.pop();
-    loopStack.debug_output();
+    loop_stack_.DebugOutput();
+    loop_stack_.Pop();
+    loop_stack_.DebugOutput();
   }
 
-  bool is_single_exit(const std::int32_t loop_id) { return loopStack.is_single_exit(loop_id); }
+  bool IsSingleExit(const std::int32_t loop_id) { return loop_stack_.IsSingleExit(loop_id); }
 
-  void correct_func_level(const std::int32_t function_level) { loopStack.correct_func_level(function_level); }
+  void CorrectFuncLevel(const std::int32_t function_level) { loop_stack_.CorrectFuncLevel(function_level); }
 
   // -1 when no loop is on the stack. __dp_loop_exit asks for the id in its "ignored single exit"
   // branch, and is_single_exit() takes that branch for an empty stack as well -- reading top()
   // there is a read past the end of the loop stack.
-  std::int32_t get_current_loop_id() const { return loopStack.empty() ? -1 : loopStack.top().loopID; }
+  std::int32_t GetCurrentLoopId() const { return loop_stack_.empty() ? -1 : loop_stack_.Top().loop_id; }
 
-  bool empty() { return loopStack.empty(); }
+  bool empty() { return loop_stack_.empty(); }
 
-  void output(std::ostream &stream) {
-    for (const auto &loop : loops) {
+  void Output(std::ostream &stream) {
+    for (const auto &loop : loops_) {
       // A loop that was entered and never left contributes no completed iteration: its record is
       // created on entry and every counter is raised on exit, so all of them are still zero --
       // including nEntered, which is what the average is divided by. The assert in
       // unwind_function_stack() that is meant to rule this state out is compiled out of the
       // release build, so the division needs the guard rather than the invariant.
-      const std::int32_t entered = loop.second->nEntered;
+      const std::int32_t entered = loop.second->n_entered;
       const std::int32_t average_iterations = (entered == 0) ? 0 : (loop.second->total / entered);
 
-      stream << dputil::decodeLID(loop.first) << " BGN loop ";
+      stream << dputil::DecodeLid(loop.first) << " BGN loop ";
       stream << loop.second->total << ' ';
       stream << entered << ' ';
       stream << average_iterations << ' ';
-      stream << loop.second->maxIterationCount << std::endl;
-      stream << dputil::decodeLID(loop.second->end) << " END loop" << std::endl;
+      stream << loop.second->max_iteration_count << std::endl;
+      stream << dputil::DecodeLid(loop.second->end) << " END loop" << std::endl;
     }
   }
 
-  const LoopTable &get_stack() const { return loopStack; }
+  const LoopTable &GetStack() const { return loop_stack_; }
 
-  const LoopRecords &get_loops() const { return loops; }
+  const LoopRecords &GetLoops() const { return loops_; }
 
-  bool is_done() const noexcept { return alreadyDone; }
+  bool IsDone() const noexcept { return already_done_; }
 
-  void set_done() noexcept { alreadyDone = true; }
+  void SetDone() noexcept { already_done_ = true; }
 
-  void incr_loop_counter(int loop_id) { lc.incr_loop_counter(loop_id); }
+  void IncrLoopCounter(int loop_id) { lc_.IncrLoopCounter(loop_id); }
 
-  const std::vector<unsigned int> &get_loop_counters() const { return lc.get_loop_counters(); }
+  const std::vector<unsigned int> &GetLoopCounters() const { return lc_.GetLoopCounters(); }
 
 private:
-  LoopTable loopStack; // loop stack tracking
-  LoopRecords loops;   // loop merging
-  LoopCounter lc;      // loop counter
+  LoopTable loop_stack_; // loop stack tracking
+  LoopRecords loops_;   // loop merging
+  LoopCounter lc_;      // loop counter
   // must be initialized: is_done() gates __dp_loop_incr and __dp_loop_output, so reading
   // indeterminate heap memory here silently disables loop counting and, with it, the
   // callstate transitions that distinguish loop iterations in the recorded dependencies.
-  bool alreadyDone = false;
+  bool already_done_ = false;
 };
 
-} // namespace __dp
+} // namespace dp

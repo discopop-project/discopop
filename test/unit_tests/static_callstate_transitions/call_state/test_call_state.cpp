@@ -6,22 +6,22 @@ class CallStateTest : public ::testing::Test {};
 
 TEST_F(CallStateTest, testGetId) {
   CallState state(42);
-  EXPECT_EQ(state.get_id(), 42);
+  EXPECT_EQ(state.GetId(), 42);
 }
 
 TEST_F(CallStateTest, testGetTransitionTargetWithoutRegisteredTransition) {
   CallState state(1);
-  EXPECT_EQ(state.get_transition_target(99), nullptr);
+  EXPECT_EQ(state.GetTransitionTarget(99), nullptr);
 }
 
 TEST_F(CallStateTest, testRegisterAndGetTransitionTarget) {
   CallState source(1);
   CallState target(2);
 
-  source.register_transition(10, &target);
+  source.RegisterTransition(10, &target);
 
-  EXPECT_EQ(source.get_transition_target(10), &target);
-  EXPECT_EQ(source.get_transition_target(11), nullptr);
+  EXPECT_EQ(source.GetTransitionTarget(10), &target);
+  EXPECT_EQ(source.GetTransitionTarget(11), nullptr);
 }
 
 TEST_F(CallStateTest, testRegisterTransitionOverwritesExistingTrigger) {
@@ -29,24 +29,24 @@ TEST_F(CallStateTest, testRegisterTransitionOverwritesExistingTrigger) {
   CallState target_a(2);
   CallState target_b(3);
 
-  source.register_transition(10, &target_a);
-  source.register_transition(10, &target_b);
+  source.RegisterTransition(10, &target_a);
+  source.RegisterTransition(10, &target_b);
 
-  EXPECT_EQ(source.get_transition_target(10), &target_b);
+  EXPECT_EQ(source.GetTransitionTarget(10), &target_b);
 }
 
 TEST_F(CallStateTest, testGetImplicitReturnTransitionTargetWithoutRegisteredTransition) {
   CallState state(1);
-  EXPECT_EQ(state.get_implicit_return_transition_target(), nullptr);
+  EXPECT_EQ(state.GetImplicitReturnTransitionTarget(), nullptr);
 }
 
 TEST_F(CallStateTest, testRegisterAndGetImplicitReturnTransitionTarget) {
   CallState source(1);
   CallState target(2);
 
-  source.register_implicit_return_transition(&target);
+  source.RegisterImplicitReturnTransition(&target);
 
-  EXPECT_EQ(source.get_implicit_return_transition_target(), &target);
+  EXPECT_EQ(source.GetImplicitReturnTransitionTarget(), &target);
 }
 
 // Returns are stored without the dummy "return" trigger id 1 they used to be keyed by, so
@@ -56,11 +56,11 @@ TEST_F(CallStateTest, testImplicitReturnTransitionIsSeparateFromRegularTransitio
   CallState return_target(2);
   CallState regular_target(3);
 
-  source.register_implicit_return_transition(&return_target);
-  source.register_transition(1, &regular_target);
+  source.RegisterImplicitReturnTransition(&return_target);
+  source.RegisterTransition(1, &regular_target);
 
-  EXPECT_EQ(source.get_implicit_return_transition_target(), &return_target);
-  EXPECT_EQ(source.get_transition_target(1), &regular_target);
+  EXPECT_EQ(source.GetImplicitReturnTransitionTarget(), &return_target);
+  EXPECT_EQ(source.GetTransitionTarget(1), &regular_target);
 }
 
 // utils.cpp only ever reads a state it has reached, so none of that has to go through a mutable
@@ -69,15 +69,15 @@ TEST_F(CallStateTest, testAStateCanBeReadThroughAConstReference) {
   CallState source(1);
   CallState target(2);
   CallState return_target(3);
-  source.register_transition(10, &target);
-  source.register_implicit_return_transition(&return_target);
+  source.RegisterTransition(10, &target);
+  source.RegisterImplicitReturnTransition(&return_target);
 
   const CallState &reference = source;
 
-  EXPECT_EQ(reference.get_id(), 1);
-  EXPECT_EQ(reference.get_transition_target(10), &target);
-  EXPECT_EQ(reference.get_transition_target(11), nullptr);
-  EXPECT_EQ(reference.get_implicit_return_transition_target(), &return_target);
+  EXPECT_EQ(reference.GetId(), 1);
+  EXPECT_EQ(reference.GetTransitionTarget(10), &target);
+  EXPECT_EQ(reference.GetTransitionTarget(11), nullptr);
+  EXPECT_EQ(reference.GetImplicitReturnTransitionTarget(), &return_target);
 }
 
 // The fall-through and the return target are kept as a pointer so that the callbacks that ask for
@@ -87,8 +87,8 @@ TEST_F(CallStateTest, testAStateCanBeReadThroughAConstReference) {
 TEST_F(CallStateTest, testAFreshStateHasNeitherAFallthroughNorAReturnTarget) {
   CallState state(1);
 
-  EXPECT_EQ(state.get_fallthrough_transition_target(), nullptr);
-  EXPECT_EQ(state.get_return_transition_target(), nullptr);
+  EXPECT_EQ(state.GetFallthroughTransitionTarget(), nullptr);
+  EXPECT_EQ(state.GetReturnTransitionTarget(), nullptr);
 }
 
 TEST_F(CallStateTest, testATransitionUnderTheFallthroughTriggerIsTheFallthroughTarget) {
@@ -96,12 +96,12 @@ TEST_F(CallStateTest, testATransitionUnderTheFallthroughTriggerIsTheFallthroughT
   CallState target(2);
   CallState other(3);
 
-  source.register_transition(CallState::kFallthroughTrigger, &target);
-  source.register_transition(10, &other);
+  source.RegisterTransition(CallState::kFallthroughTrigger, &target);
+  source.RegisterTransition(10, &other);
 
-  EXPECT_EQ(source.get_fallthrough_transition_target(), &target);
+  EXPECT_EQ(source.GetFallthroughTransitionTarget(), &target);
   // and it stays a regular transition as well
-  EXPECT_EQ(source.get_transition_target(CallState::kFallthroughTrigger), &target);
+  EXPECT_EQ(source.GetTransitionTarget(CallState::kFallthroughTrigger), &target);
 }
 
 TEST_F(CallStateTest, testRegisteringTheFallthroughTriggerAgainReplacesTheTarget) {
@@ -109,19 +109,19 @@ TEST_F(CallStateTest, testRegisteringTheFallthroughTriggerAgainReplacesTheTarget
   CallState target_a(2);
   CallState target_b(3);
 
-  source.register_transition(CallState::kFallthroughTrigger, &target_a);
-  source.register_transition(CallState::kFallthroughTrigger, &target_b);
+  source.RegisterTransition(CallState::kFallthroughTrigger, &target_a);
+  source.RegisterTransition(CallState::kFallthroughTrigger, &target_b);
 
-  EXPECT_EQ(source.get_fallthrough_transition_target(), &target_b);
+  EXPECT_EQ(source.GetFallthroughTransitionTarget(), &target_b);
 }
 
 TEST_F(CallStateTest, testWithoutAReturnTriggerTheImplicitReturnTargetIsUsed) {
   CallState source(1);
   CallState return_target(2);
 
-  source.register_implicit_return_transition(&return_target);
+  source.RegisterImplicitReturnTransition(&return_target);
 
-  EXPECT_EQ(source.get_return_transition_target(), &return_target);
+  EXPECT_EQ(source.GetReturnTransitionTarget(), &return_target);
 }
 
 // update_callstate_from_func_exit asked for the registered transition first and fell back to the
@@ -133,24 +133,24 @@ TEST_F(CallStateTest, testTheReturnTriggerWinsOverTheImplicitReturnTarget) {
   CallState implicit_target(3);
   CallState trigger_target(4);
 
-  implicit_first.register_implicit_return_transition(&implicit_target);
-  implicit_first.register_transition(CallState::kReturnTrigger, &trigger_target);
+  implicit_first.RegisterImplicitReturnTransition(&implicit_target);
+  implicit_first.RegisterTransition(CallState::kReturnTrigger, &trigger_target);
 
-  trigger_first.register_transition(CallState::kReturnTrigger, &trigger_target);
-  trigger_first.register_implicit_return_transition(&implicit_target);
+  trigger_first.RegisterTransition(CallState::kReturnTrigger, &trigger_target);
+  trigger_first.RegisterImplicitReturnTransition(&implicit_target);
 
-  EXPECT_EQ(implicit_first.get_return_transition_target(), &trigger_target);
-  EXPECT_EQ(trigger_first.get_return_transition_target(), &trigger_target);
+  EXPECT_EQ(implicit_first.GetReturnTransitionTarget(), &trigger_target);
+  EXPECT_EQ(trigger_first.GetReturnTransitionTarget(), &trigger_target);
 }
 
 // looking a trigger up must not add it: the transitions of a state are what the input file listed
 TEST_F(CallStateTest, testLookingUpAnUnknownTriggerDoesNotAddIt) {
   CallState source(1);
   CallState target(2);
-  source.register_transition(10, &target);
+  source.RegisterTransition(10, &target);
 
-  ASSERT_EQ(source.get_transition_target(11), nullptr);
+  ASSERT_EQ(source.GetTransitionTarget(11), nullptr);
 
-  EXPECT_EQ(source.get_transition_target(10), &target);
-  EXPECT_EQ(source.get_transition_target(11), nullptr);
+  EXPECT_EQ(source.GetTransitionTarget(10), &target);
+  EXPECT_EQ(source.GetTransitionTarget(11), nullptr);
 }

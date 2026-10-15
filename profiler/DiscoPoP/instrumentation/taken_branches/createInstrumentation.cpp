@@ -21,34 +21,34 @@ using llvm::Value;
 using llvm::cast;
 using llvm::isa;
 
-void DiscoPoP::createTakenBranchInstrumentation(Region *TopRegion, std::map<std::string, std::vector<CU *>> &BBIDToCUIDsMap) {
+void DiscoPoP::CreateTakenBranchInstrumentation(Region *top_region, std::map<std::string, std::vector<CU *>> &bb_id_to_cu_ids_map) {
   /* Create calls to count taken branches inbetween CUs during execution */
-  for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
+  for (Region::block_iterator bb = top_region->block_begin(); bb != top_region->block_end(); ++bb) {
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<BranchInst>(instruction)) {
-        BranchInst *branchInst = cast<BranchInst>(instruction);
+        BranchInst *branch_inst = cast<BranchInst>(instruction);
         // check for conditional branches, as unconditional ones can be ignored
         // for counting
-        if (!branchInst->isUnconditional()) {
+        if (!branch_inst->isUnconditional()) {
           // branchInst is conditional
           // prepare IRBuilder to insert instrumentation
-          IRBuilder<> IRB(branchInst);
+          IRBuilder<> irb(branch_inst);
           // get BBId and CU IDS of the source
-          std::string source_BBID = bb->getName().str();
-          for (auto source_cu : BBIDToCUIDsMap[source_BBID]) {
+          std::string source_bb_id = bb->getName().str();
+          for (auto source_cu : bb_id_to_cu_ids_map[source_bb_id]) {
             // get BBIds of all targets
-            for (unsigned int i = 0; i < branchInst->getNumSuccessors(); i++) {
-              std::string successor_BBID = branchInst->getSuccessor(i)->getName().str();
+            for (unsigned int i = 0; i < branch_inst->getNumSuccessors(); i++) {
+              std::string successor_bb_id = branch_inst->getSuccessor(i)->getName().str();
               // get CUs of all targets
-              for (auto target_cu : BBIDToCUIDsMap[successor_BBID]) {
+              for (auto target_cu : bb_id_to_cu_ids_map[successor_bb_id]) {
                 // add instrumentation prior to the branch instruction
                 std::vector<Value *> args;
-                std::string source_and_target = source_cu->ID + ";" + target_cu->ID;
-                args.push_back(getOrInsertVarName_dynamic(source_and_target, IRB));
-                args.push_back(branchInst->getCondition());
+                std::string source_and_target = source_cu->id + ";" + target_cu->id;
+                args.push_back(GetOrInsertVarNameDynamic(source_and_target, irb));
+                args.push_back(branch_inst->getCondition());
                 bool counter_active_on_cmp_value = (i == 0 ? 1 : 0);
-                args.push_back(ConstantInt::get(Int32, counter_active_on_cmp_value));
-                IRB.CreateCall(DpTakenBranchCounterIncr, args);
+                args.push_back(ConstantInt::get(int32_, counter_active_on_cmp_value));
+                irb.CreateCall(dp_taken_branch_counter_incr_, args);
               }
             }
           }

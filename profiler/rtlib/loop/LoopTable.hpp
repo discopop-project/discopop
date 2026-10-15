@@ -18,51 +18,51 @@
 #include <iostream>
 #include <vector>
 
-namespace __dp {
+namespace dp {
 
 struct LoopTable {
 public:
-  LoopTable() { contents.reserve(32); }
+  LoopTable() { contents_.reserve(32); }
 
-  const LoopTableEntry &top() const { return contents.back(); }
+  const LoopTableEntry &Top() const { return contents_.back(); }
 
-  LoopTableEntry &non_const_top() { return contents.back(); }
+  LoopTableEntry &NonConstTop() { return contents_.back(); }
 
-  const LoopTableEntry &first() const { return contents[0]; }
+  const LoopTableEntry &First() const { return contents_[0]; }
 
-  const LoopTableEntry &topMinusN(const std::size_t n) const { return contents[contents.size() - 1 - n]; }
+  const LoopTableEntry &TopMinusN(const std::size_t n) const { return contents_[contents_.size() - 1 - n]; }
 
-  void pop() { contents.pop_back(); }
+  void Pop() { contents_.pop_back(); }
 
-  bool empty() const { return contents.empty(); }
+  bool empty() const { return contents_.empty(); }
 
-  bool is_single_exit(const std::int32_t loopID) const {
+  bool IsSingleExit(const std::int32_t loop_id) const {
     if (empty()) {
       return true;
 }
 
-    if (top().loopID != loopID) {
+    if (Top().loop_id != loop_id) {
       return true;
 }
 
     return false;
   }
 
-  void correct_func_level(const std::int32_t func_level) {
-    if (top().funcLevel != func_level) {
-      if (DP_DEBUG) {
-        std::cout << "WARNING: changing funcLevel of Loop " << top().loopID << " from " << top().funcLevel << " to "
+  void CorrectFuncLevel(const std::int32_t func_level) {
+    if (Top().func_level != func_level) {
+      if (dp_debug) {
+        std::cout << "WARNING: changing funcLevel of Loop " << Top().loop_id << " from " << Top().func_level << " to "
                   << func_level << std::endl;
       }
-      contents.back().funcLevel = func_level;
+      contents_.back().func_level = func_level;
     }
   }
 
-  void push(const LoopTableEntry newElement) { contents.push_back(newElement); }
+  void Push(const LoopTableEntry new_element) { contents_.push_back(new_element); }
 
-  std::size_t size() const { return contents.size(); }
+  std::size_t size() const { return contents_.size(); }
 
-  LID update_lid(const LID old_lid) const {
+  LID UpdateLid(const LID old_lid) const {
     auto lid = old_lid;
 
     if (empty()) {
@@ -76,40 +76,40 @@ public:
     // metadata and thus empty
 
     if (size() > 0) {
-      lid = lid | (static_cast<LID>(first().loopID & 0xFF) << 56);    // add masked loop id
-      lid = lid | (static_cast<LID>(top().get_count() & 0x7F) << 48); // add masked loop count
+      lid = lid | (static_cast<LID>(First().loop_id & 0xFF) << 56);    // add masked loop id
+      lid = lid | (static_cast<LID>(Top().GetCount() & 0x7F) << 48); // add masked loop count
       lid = lid | 0x0080000000000000;                   // mark loop count valid
     }
 
     if (size() > 1) {
-      lid = lid | (static_cast<LID>(topMinusN(1).get_count() & 0x7F) << 40); // add masked loop count
+      lid = lid | (static_cast<LID>(TopMinusN(1).GetCount() & 0x7F) << 40); // add masked loop count
       lid = lid | 0x0000800000000000;                          // mark loop count valid
     }
 
     if (size() > 2) {
-      lid = lid | (static_cast<LID>(topMinusN(2).get_count() & 0x7F) << 32); // add masked loop count
+      lid = lid | (static_cast<LID>(TopMinusN(2).GetCount() & 0x7F) << 32); // add masked loop count
       lid = lid | 0x0000008000000000;                          // mark loop count valid
     }
 
     return lid;
   }
 
-  void increment_top_count() { contents.back().increment_count(); }
+  void IncrementTopCount() { contents_.back().IncrementCount(); }
 
-  void debug_output() const {
-    if (!DP_DEBUG) {
+  void DebugOutput() const {
+    if (!dp_debug) {
       return;
     }
     if (empty()) {
       std::cout << "Loop Stack is empty." << std::endl;
     } else {
-      std::cout << "TOP: (" << std::dec << top().funcLevel << ")";
-      std::cout << "Loop " << top().loopID << "." << std::endl;
+      std::cout << "TOP: (" << std::dec << Top().func_level << ")";
+      std::cout << "Loop " << Top().loop_id << "." << std::endl;
     }
   }
 
 private:
-  std::vector<LoopTableEntry> contents;
+  std::vector<LoopTableEntry> contents_;
 };
 
-} // namespace __dp
+} // namespace dp

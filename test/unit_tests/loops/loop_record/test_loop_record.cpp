@@ -7,47 +7,47 @@
 class LoopRecordTest : public ::testing::Test {};
 
 TEST_F(LoopRecordTest, testInitialization) {
-  const auto lr = __dp::LoopRecord{1, 2, 3};
+  const auto lr = dp::LoopRecord{1, 2, 3};
 
   ASSERT_EQ(lr.end, 1);
   ASSERT_EQ(lr.total, 2);
-  ASSERT_EQ(lr.nEntered, 3);
-  ASSERT_EQ(lr.maxIterationCount, 0);
+  ASSERT_EQ(lr.n_entered, 3);
+  ASSERT_EQ(lr.max_iteration_count, 0);
 }
 
 TEST_F(LoopRecordTest, testNegativeInitialization) {
-  const auto lr = __dp::LoopRecord{-1, -2, -3};
+  const auto lr = dp::LoopRecord{-1, -2, -3};
 
   ASSERT_EQ(lr.end, -1);
   ASSERT_EQ(lr.total, -2);
-  ASSERT_EQ(lr.nEntered, -3);
-  ASSERT_EQ(lr.maxIterationCount, 0);
+  ASSERT_EQ(lr.n_entered, -3);
+  ASSERT_EQ(lr.max_iteration_count, 0);
 }
 
 TEST_F(LoopRecordTest, testLongInitialization) {
-  const auto lr = __dp::LoopRecord{4'000'000'000LL, 1'000'000'000LL, 2'000'000'000LL};
+  const auto lr = dp::LoopRecord{4'000'000'000LL, 1'000'000'000LL, 2'000'000'000LL};
 
   ASSERT_EQ(lr.end, 4'000'000'000LL);
   ASSERT_EQ(lr.total, 1'000'000'000LL);
-  ASSERT_EQ(lr.nEntered, 2'000'000'000LL);
-  ASSERT_EQ(lr.maxIterationCount, 0);
+  ASSERT_EQ(lr.n_entered, 2'000'000'000LL);
+  ASSERT_EQ(lr.max_iteration_count, 0);
 }
 
 TEST_F(LoopRecordTest, testLongNegativeInitialization) {
-  const auto lr = __dp::LoopRecord{-4'000'000'000LL, -1'000'000'000LL, -2'000'000'000LL};
+  const auto lr = dp::LoopRecord{-4'000'000'000LL, -1'000'000'000LL, -2'000'000'000LL};
 
   ASSERT_EQ(lr.end, -4'000'000'000LL);
   ASSERT_EQ(lr.total, -1'000'000'000LL);
-  ASSERT_EQ(lr.nEntered, -2'000'000'000LL);
-  ASSERT_EQ(lr.maxIterationCount, 0);
+  ASSERT_EQ(lr.n_entered, -2'000'000'000LL);
+  ASSERT_EQ(lr.max_iteration_count, 0);
 }
 
 TEST_F(LoopRecordTest, testEquality) {
-  const auto lr1 = __dp::LoopRecord{1, 2, 3};
-  const auto lr2 = __dp::LoopRecord{1, 2, 3};
-  const auto lr3 = __dp::LoopRecord{1, 2, 4};
-  const auto lr4 = __dp::LoopRecord{1, 3, 3};
-  const auto lr5 = __dp::LoopRecord{2, 2, 3};
+  const auto lr1 = dp::LoopRecord{1, 2, 3};
+  const auto lr2 = dp::LoopRecord{1, 2, 3};
+  const auto lr3 = dp::LoopRecord{1, 2, 4};
+  const auto lr4 = dp::LoopRecord{1, 3, 3};
+  const auto lr5 = dp::LoopRecord{2, 2, 3};
 
   ASSERT_EQ(lr1, lr1);
 
@@ -64,15 +64,15 @@ TEST_F(LoopRecordTest, testEquality) {
 
 TEST_F(LoopRecordTest, testMaxIterationCountTakesPartInTheComparison) {
   // the constructor does not take it; LoopManager raises it when a loop is left
-  auto lr1 = __dp::LoopRecord{1, 2, 3};
-  auto lr2 = __dp::LoopRecord{1, 2, 3};
+  auto lr1 = dp::LoopRecord{1, 2, 3};
+  auto lr2 = dp::LoopRecord{1, 2, 3};
 
   ASSERT_EQ(lr1, lr2);
 
-  lr2.maxIterationCount = 7;
+  lr2.max_iteration_count = 7;
   ASSERT_NE(lr1, lr2);
   ASSERT_NE(lr2, lr1);
 
-  lr1.maxIterationCount = 7;
+  lr1.max_iteration_count = 7;
   ASSERT_EQ(lr1, lr2);
 }

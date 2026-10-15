@@ -27,28 +27,28 @@ class InstructionCFG : public Graph<llvm::Instruction *> {
 
 private:
   // the artificial instructions the CFG starts and ends with: ids, not addresses of instructions
-  static constexpr std::uintptr_t ENTRY = 1000000;
-  static constexpr std::uintptr_t EXIT = 2000000;
+  static constexpr std::uintptr_t kEntry = 1000000;
+  static constexpr std::uintptr_t kExit = 2000000;
 
-  InstructionNode<llvm::Instruction *> *entry;
-  InstructionNode<llvm::Instruction *> *exit;
-  dputil::VariableNameFinder *VNF;
-  std::set<llvm::Instruction *> highlightedInstructionNodes;
+  InstructionNode<llvm::Instruction *> *entry_;
+  InstructionNode<llvm::Instruction *> *exit_;
+  dputil::VariableNameFinder *vnf_;
+  std::set<llvm::Instruction *> highlighted_instruction_nodes_;
 
-  void findAndAddFirstRelevantInstructionInSuccessorBlocks(llvm::BasicBlock *BB, llvm::Instruction *previousInstruction, std::set<std::pair<llvm::BasicBlock*, llvm::Instruction*>> *visited);
+  void FindAndAddFirstRelevantInstructionInSuccessorBlocks(llvm::BasicBlock *bb, llvm::Instruction *previous_instruction, std::set<std::pair<llvm::BasicBlock*, llvm::Instruction*>> *visited);
 
 public:
-  InstructionCFG(dputil::VariableNameFinder *_VNF, llvm::Function &F);
+  InstructionCFG(dputil::VariableNameFinder *vnf, llvm::Function &f);
 
-  InstructionNode<llvm::Instruction *> *getEntry() { return entry; }
+  InstructionNode<llvm::Instruction *> *GetEntry() { return entry_; }
 
-  InstructionNode<llvm::Instruction *> *getExit() { return exit; }
+  InstructionNode<llvm::Instruction *> *GetExit() { return exit_; }
 
-  bool isEntryOrExit(llvm::Instruction *I) {
-    return Graph::getInstructionNode(I) == entry || Graph::getInstructionNode(I) == exit;
+  bool IsEntryOrExit(llvm::Instruction *i) {
+    return Graph::GetInstructionNode(i) == entry_ || Graph::GetInstructionNode(i) == exit_;
   }
 
-  void highlightInstructionNode(llvm::Instruction *instr);
+  void HighlightInstructionNode(llvm::Instruction *instr);
 
-  void dumpToDot(const std::string targetPath);
+  void DumpToDot(const std::string target_path);
 };

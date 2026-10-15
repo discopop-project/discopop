@@ -12,13 +12,13 @@
 
 #include "DiscoPoP.hpp"
 
-void DiscoPoP::initializeCallpathStateIDCounter() {
-  std::string CallpathStateCounterFile(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
-  CallpathStateCounterFile += "/DP_CallpathStateIDCounter.txt";
-  if (dputil::fexists(CallpathStateCounterFile)) {
-    std::fstream inCallpathStateIDCounter(CallpathStateCounterFile, std::ios_base::in);
+void DiscoPoP::InitializeCallpathStateIdCounter() {
+  std::string callpath_state_counter_file(dputil::GetEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
+  callpath_state_counter_file += "/DP_CallpathStateIDCounter.txt";
+  if (dputil::FileExists(callpath_state_counter_file)) {
+    std::fstream in_callpath_state_id_counter(callpath_state_counter_file, std::ios_base::in);
     ;
-    inCallpathStateIDCounter >> CallpathStateIDCounter;
-    inCallpathStateIDCounter.close();
+    in_callpath_state_id_counter >> callpath_state_id_counter;
+    in_callpath_state_id_counter.close();
   }
 }

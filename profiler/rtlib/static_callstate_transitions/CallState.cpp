@@ -12,36 +12,36 @@
 
 #include "CallState.hpp"
 
-void CallState::register_transition(std::int32_t trigger_instruction, CallState *target_state) {
-  transitions[trigger_instruction] = target_state;
+void CallState::RegisterTransition(std::int32_t trigger_instruction, CallState *target_state) {
+  transitions_[trigger_instruction] = target_state;
   if (trigger_instruction == kFallthroughTrigger) {
-    fallthrough_transition_target = target_state;
+    fallthrough_transition_target_ = target_state;
   } else if (trigger_instruction == kReturnTrigger) {
-    return_transition_target = target_state;
+    return_transition_target_ = target_state;
   }
 }
 
-void CallState::register_implicit_return_transition(CallState *target_state) {
-  implicit_return_transition_target = target_state;
+void CallState::RegisterImplicitReturnTransition(CallState *target_state) {
+  implicit_return_transition_target_ = target_state;
   // A transition registered under the return trigger wins, whichever of the two arrives first:
   // that is the order update_callstate_from_func_exit asked the two questions in.
-  if (transitions.find(kReturnTrigger) == transitions.end()) {
-    return_transition_target = target_state;
+  if (transitions_.find(kReturnTrigger) == transitions_.end()) {
+    return_transition_target_ = target_state;
   }
 }
 
-int32_t CallState::get_id() const { return id; }
+int32_t CallState::GetId() const { return id_; }
 
-CallState *CallState::get_transition_target(int32_t trigger_instruction) const {
-  const auto pos = transitions.find(trigger_instruction);
-  if (pos == transitions.end()) {
+CallState *CallState::GetTransitionTarget(int32_t trigger_instruction) const {
+  const auto pos = transitions_.find(trigger_instruction);
+  if (pos == transitions_.end()) {
     return nullptr;
   }
   return pos->second;
 }
 
-CallState *CallState::get_implicit_return_transition_target() const { return implicit_return_transition_target; }
+CallState *CallState::GetImplicitReturnTransitionTarget() const { return implicit_return_transition_target_; }
 
-CallState *CallState::get_fallthrough_transition_target() const { return fallthrough_transition_target; }
+CallState *CallState::GetFallthroughTransitionTarget() const { return fallthrough_transition_target_; }
 
-CallState *CallState::get_return_transition_target() const { return return_transition_target; }
+CallState *CallState::GetReturnTransitionTarget() const { return return_transition_target_; }

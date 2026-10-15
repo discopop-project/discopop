@@ -21,105 +21,105 @@
 #include <unordered_map>
 #include <unordered_set>
 
-namespace __dp {
+namespace dp {
 
 class PerfectShadow : public AbstractShadow {
 public:
   PerfectShadow(int /*slotSize*/, int /*size*/, int /*numHash*/) : PerfectShadow() {}
 
   PerfectShadow() {
-    sigRead = new std::unordered_map<int64_t, sigElement>();
-    sigWrite = new std::unordered_map<int64_t, sigElement>();
+    sig_read_ = new std::unordered_map<int64_t, SigElement>();
+    sig_write_ = new std::unordered_map<int64_t, SigElement>();
   }
 
   PerfectShadow(const PerfectShadow &other) = delete;
   PerfectShadow(PerfectShadow &&other) {
-    sigRead = other.sigRead;
-    sigWrite = other.sigWrite;
+    sig_read_ = other.sig_read_;
+    sig_write_ = other.sig_write_;
 
-    other.sigRead = nullptr;
-    other.sigWrite = nullptr;
+    other.sig_read_ = nullptr;
+    other.sig_write_ = nullptr;
   }
 
   PerfectShadow &operator=(const PerfectShadow &other) = delete;
   PerfectShadow &operator=(PerfectShadow &&other) {
-    std::swap(sigRead, other.sigRead);
-    std::swap(sigWrite, other.sigWrite);
+    std::swap(sig_read_, other.sig_read_);
+    std::swap(sig_write_, other.sig_write_);
 
     return *this;
   }
 
   ~PerfectShadow() override {
-    delete sigRead;
-    delete sigWrite;
+    delete sig_read_;
+    delete sig_write_;
   }
 
-  inline sigElement testInRead(std::int64_t memAddr) override { return (*sigRead)[memAddr]; }
+  inline SigElement TestInRead(std::int64_t mem_addr) override { return (*sig_read_)[mem_addr]; }
 
-  inline sigElement testInWrite(std::int64_t memAddr) override { return (*sigWrite)[memAddr]; }
+  inline SigElement TestInWrite(std::int64_t mem_addr) override { return (*sig_write_)[mem_addr]; }
 
-  inline sigElement insertToRead(std::int64_t memAddr, sigElement value) override {
-    sigElement oldValue = testInRead(memAddr);
-    (*sigRead)[memAddr] = value;
-    return oldValue;
+  inline SigElement InsertToRead(std::int64_t mem_addr, SigElement value) override {
+    SigElement old_value = TestInRead(mem_addr);
+    (*sig_read_)[mem_addr] = value;
+    return old_value;
   }
 
-  inline sigElement insertToWrite(std::int64_t memAddr, sigElement value) override {
-    sigElement oldValue = testInWrite(memAddr);
-    (*sigWrite)[memAddr] = value;
-    return oldValue;
+  inline SigElement InsertToWrite(std::int64_t mem_addr, SigElement value) override {
+    SigElement old_value = TestInWrite(mem_addr);
+    (*sig_write_)[mem_addr] = value;
+    return old_value;
   }
 
-  inline void updateInRead(std::int64_t memAddr, sigElement newValue) override { (*sigRead)[memAddr] = newValue; }
+  inline void UpdateInRead(std::int64_t mem_addr, SigElement new_value) override { (*sig_read_)[mem_addr] = new_value; }
 
-  inline void updateInWrite(std::int64_t memAddr, sigElement newValue) override { (*sigWrite)[memAddr] = newValue; }
+  inline void UpdateInWrite(std::int64_t mem_addr, SigElement new_value) override { (*sig_write_)[mem_addr] = new_value; }
 
-  inline void removeFromRead(std::int64_t memAddr) override { (*sigRead)[memAddr] = 0; }
+  inline void RemoveFromRead(std::int64_t mem_addr) override { (*sig_read_)[mem_addr] = 0; }
 
-  inline void removeFromWrite(std::int64_t memAddr) override { (*sigWrite)[memAddr] = 0; }
+  inline void RemoveFromWrite(std::int64_t mem_addr) override { (*sig_write_)[mem_addr] = 0; }
 
-  inline std::unordered_set<ADDR> getAddrsInRange(std::int64_t startAddr, std::int64_t endAddr) override {
+  inline std::unordered_set<ADDR> GetAddrsInRange(std::int64_t start_addr, std::int64_t end_addr) override {
     std::unordered_set<ADDR> result;
-    for (auto pair : (*sigWrite)) {
-      if ((pair.first >= startAddr) && (pair.first <= endAddr)) {
+    for (auto pair : (*sig_write_)) {
+      if ((pair.first >= start_addr) && (pair.first <= end_addr)) {
         result.insert(pair.first);
       }
     }
-    for (auto pair : (*sigRead)) {
-      if ((pair.first >= startAddr) && (pair.first <= endAddr)) {
+    for (auto pair : (*sig_read_)) {
+      if ((pair.first >= start_addr) && (pair.first <= end_addr)) {
         result.insert(pair.first);
       }
     }
     return result;
   }
 
-  const std::unordered_map<std::int64_t, sigElement> *getSigRead() const noexcept { return sigRead; }
+  const std::unordered_map<std::int64_t, SigElement> *GetSigRead() const noexcept { return sig_read_; }
 
-  const std::unordered_map<std::int64_t, sigElement> *getSigWrite() const noexcept { return sigWrite; }
+  const std::unordered_map<std::int64_t, SigElement> *GetSigWrite() const noexcept { return sig_write_; }
 
-  std::vector<std::pair<std::int64_t, sigElement>> getReadKVPairs() override {
-    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
-    kv_pairs.reserve(sigRead->size());
-    for (auto kv_pair : *sigRead) {
+  std::vector<std::pair<std::int64_t, SigElement>> GetReadKvPairs() override {
+    std::vector<std::pair<std::int64_t, SigElement>> kv_pairs;
+    kv_pairs.reserve(sig_read_->size());
+    for (auto kv_pair : *sig_read_) {
       kv_pairs.push_back(kv_pair);
     }
     return kv_pairs;
   }
 
-  std::vector<std::pair<std::int64_t, sigElement>> getWriteKVPairs() override {
-    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
-    kv_pairs.reserve(sigWrite->size());
-    for (auto kv_pair : *sigWrite) {
+  std::vector<std::pair<std::int64_t, SigElement>> GetWriteKvPairs() override {
+    std::vector<std::pair<std::int64_t, SigElement>> kv_pairs;
+    kv_pairs.reserve(sig_write_->size());
+    for (auto kv_pair : *sig_write_) {
       kv_pairs.push_back(kv_pair);
     }
     return kv_pairs;
   }
 
-  inline void print() override { std::cout << "Hello from PerfectShadow" << std::endl; }
+  inline void Print() override { std::cout << "Hello from PerfectShadow" << std::endl; }
 
 private:
-  std::unordered_map<std::int64_t, sigElement> *sigRead;
-  std::unordered_map<std::int64_t, sigElement> *sigWrite;
+  std::unordered_map<std::int64_t, SigElement> *sig_read_;
+  std::unordered_map<std::int64_t, SigElement> *sig_write_;
 };
 
 // Hopefully faster version
@@ -127,21 +127,21 @@ private:
 class PerfectShadow2 : public AbstractShadow {
 public:
   PerfectShadow2() {
-    read_cache.reserve(1024);
-    write_cache.reserve(1024);
+    read_cache_.reserve(1024);
+    write_cache_.reserve(1024);
   }
 
   ~PerfectShadow2() override {}
 
-  sigElement testInRead(const std::int64_t memAddr) noexcept override { return read_cache[memAddr]; }
+  SigElement TestInRead(const std::int64_t mem_addr) noexcept override { return read_cache_[mem_addr]; }
 
-  sigElement testInWrite(const std::int64_t memAddr) noexcept override { return write_cache[memAddr]; }
+  SigElement TestInWrite(const std::int64_t mem_addr) noexcept override { return write_cache_[mem_addr]; }
 
-  sigElement insertToRead(const std::int64_t memAddr, const sigElement value) override {
-    const auto iterator = read_cache.find(memAddr);
+  SigElement InsertToRead(const std::int64_t mem_addr, const SigElement value) override {
+    const auto iterator = read_cache_.find(mem_addr);
 
-    if (iterator == read_cache.end()) {
-      read_cache[memAddr] = value;
+    if (iterator == read_cache_.end()) {
+      read_cache_[mem_addr] = value;
       return 0;
     }
 
@@ -150,11 +150,11 @@ public:
     return old_value;
   }
 
-  sigElement insertToWrite(const std::int64_t memAddr, const sigElement value) override {
-    const auto iterator = write_cache.find(memAddr);
+  SigElement InsertToWrite(const std::int64_t mem_addr, const SigElement value) override {
+    const auto iterator = write_cache_.find(mem_addr);
 
-    if (iterator == write_cache.end()) {
-      write_cache[memAddr] = value;
+    if (iterator == write_cache_.end()) {
+      write_cache_[mem_addr] = value;
       return 0;
     }
 
@@ -163,32 +163,32 @@ public:
     return old_value;
   }
 
-  void updateInRead(const std::int64_t memAddr, const sigElement newValue) noexcept override {
-    read_cache[memAddr] = newValue;
+  void UpdateInRead(const std::int64_t mem_addr, const SigElement new_value) noexcept override {
+    read_cache_[mem_addr] = new_value;
   }
 
-  void updateInWrite(const std::int64_t memAddr, const sigElement newValue) noexcept override {
-    write_cache[memAddr] = newValue;
+  void UpdateInWrite(const std::int64_t mem_addr, const SigElement new_value) noexcept override {
+    write_cache_[mem_addr] = new_value;
   }
 
-  void removeFromRead(const std::int64_t memAddr) override { read_cache[memAddr] = 0; }
+  void RemoveFromRead(const std::int64_t mem_addr) override { read_cache_[mem_addr] = 0; }
 
-  void removeFromWrite(const std::int64_t memAddr) override { write_cache[memAddr] = 0; }
+  void RemoveFromWrite(const std::int64_t mem_addr) override { write_cache_[mem_addr] = 0; }
 
-  std::unordered_set<ADDR> getAddrsInRange(const std::int64_t startAddr, const std::int64_t endAddr) noexcept override {
+  std::unordered_set<ADDR> GetAddrsInRange(const std::int64_t start_addr, const std::int64_t end_addr) noexcept override {
     std::unordered_set<ADDR> result{};
-    result.reserve(read_cache.size() + write_cache.size());
+    result.reserve(read_cache_.size() + write_cache_.size());
 
-    for (const auto &pair : read_cache) {
+    for (const auto &pair : read_cache_) {
       const auto addr = pair.first;
-      if (addr >= startAddr && addr <= endAddr) {
+      if (addr >= start_addr && addr <= end_addr) {
         result.insert(addr);
       }
     }
 
-    for (const auto &pair : write_cache) {
+    for (const auto &pair : write_cache_) {
       const auto addr = pair.first;
-      if (addr >= startAddr && addr <= endAddr) {
+      if (addr >= start_addr && addr <= end_addr) {
         result.insert(addr);
       }
     }
@@ -196,33 +196,33 @@ public:
     return result;
   }
 
-  const hashmap<int64_t, sigElement> *getSigRead() const noexcept { return &read_cache; }
+  const HashMap<int64_t, SigElement> *GetSigRead() const noexcept { return &read_cache_; }
 
-  const hashmap<int64_t, sigElement> *getSigWrite() const noexcept { return &write_cache; }
+  const HashMap<int64_t, SigElement> *GetSigWrite() const noexcept { return &write_cache_; }
 
-  std::vector<std::pair<std::int64_t, sigElement>> getReadKVPairs() override {
-    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
-    kv_pairs.reserve(read_cache.size());
-    for (auto kv_pair : read_cache) {
+  std::vector<std::pair<std::int64_t, SigElement>> GetReadKvPairs() override {
+    std::vector<std::pair<std::int64_t, SigElement>> kv_pairs;
+    kv_pairs.reserve(read_cache_.size());
+    for (auto kv_pair : read_cache_) {
       kv_pairs.emplace_back(kv_pair.first, kv_pair.second);
     }
     return kv_pairs;
   }
 
-  std::vector<std::pair<std::int64_t, sigElement>> getWriteKVPairs() override {
-    std::vector<std::pair<std::int64_t, sigElement>> kv_pairs;
-    kv_pairs.reserve(write_cache.size());
-    for (auto kv_pair : write_cache) {
+  std::vector<std::pair<std::int64_t, SigElement>> GetWriteKvPairs() override {
+    std::vector<std::pair<std::int64_t, SigElement>> kv_pairs;
+    kv_pairs.reserve(write_cache_.size());
+    for (auto kv_pair : write_cache_) {
       kv_pairs.emplace_back(kv_pair.first, kv_pair.second);
     }
     return kv_pairs;
   }
 
-  void print() override {
+  void Print() override {
     std::cout << "ADDR \t READ \t WRITE\t\t// Shadow Memory" << std::endl;
     std::cout << "-------------------------" << std::endl;
-    for (auto pair : read_cache) {
-      std::cout << "| " << pair.first << "\t| " << pair.second << "\t| " << write_cache[pair.first] << "\t|"
+    for (auto pair : read_cache_) {
+      std::cout << "| " << pair.first << "\t| " << pair.second << "\t| " << write_cache_[pair.first] << "\t|"
                 << std::endl;
     }
     std::cout << "-------------------------" << std::endl;
@@ -230,8 +230,8 @@ public:
   }
 
 private:
-  hashmap<int64_t, sigElement> read_cache{};
-  hashmap<int64_t, sigElement> write_cache{};
+  HashMap<int64_t, SigElement> read_cache_{};
+  HashMap<int64_t, SigElement> write_cache_{};
 };
 
-} // namespace __dp
+} // namespace dp

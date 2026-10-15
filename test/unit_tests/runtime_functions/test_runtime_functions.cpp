@@ -13,7 +13,7 @@
 #include "runtimeFunctions.hpp"
 #include "runtimeFunctionsGlobals.hpp"
 
-using namespace __dp;
+using namespace dp;
 
 namespace {
 
@@ -30,22 +30,22 @@ std::int64_t located_at(const std::uint32_t instruction_id, const std::uint32_t 
 // instruction and the call path state they belong to, and outputDeps writes that text out.
 class RuntimeFunctionsTest : public ::testing::Test {
 protected:
-  depMap collected_dependencies;
-  stringDepMap rendered_dependencies;
+  DepMap collected_dependencies;
+  StringDepMap rendered_dependencies;
 
   void SetUp() override {
-    previous_all_deps = allDeps;
-    previous_output_deps = outPutDeps;
+    previous_all_deps = all_deps;
+    previous_output_deps = out_put_deps;
     previous_out = out;
 
-    allDeps = &collected_dependencies;
-    outPutDeps = &rendered_dependencies;
+    all_deps = &collected_dependencies;
+    out_put_deps = &rendered_dependencies;
     out = nullptr;
   }
 
   void TearDown() override {
-    allDeps = previous_all_deps;
-    outPutDeps = previous_output_deps;
+    all_deps = previous_all_deps;
+    out_put_deps = previous_output_deps;
     out = previous_out;
 
     if (!report_path.empty()) {
@@ -64,7 +64,7 @@ protected:
 
     std::ofstream report(report_path);
     out = &report;
-    outputDeps();
+    OutputDeps();
     out = nullptr;
     report.close();
 
@@ -86,16 +86,16 @@ protected:
   }
 
 private:
-  depMap *previous_all_deps = nullptr;
-  stringDepMap *previous_output_deps = nullptr;
+  DepMap *previous_all_deps = nullptr;
+  StringDepMap *previous_output_deps = nullptr;
   std::ofstream *previous_out = nullptr;
   std::string report_path;
 };
 
 TEST_F(RuntimeFunctionsTest, testADependencyIsRenderedWithItsTypeLocationVariableAndMemoryRegion) {
-  collected_dependencies[located_at(10, 2)].insert(Dep(RAW, located_at(7, 1), "x", 3));
+  collected_dependencies[located_at(10, 2)].insert(Dep(kRaw, located_at(7, 1), "x", 3));
 
-  generateStringDepMap();
+  GenerateStringDepMap();
 
   ASSERT_EQ(rendered_dependencies.size(), 1u);
   ASSERT_EQ(rendered_dependencies.count("10@2"), 1u);
@@ -103,12 +103,12 @@ TEST_F(RuntimeFunctionsTest, testADependencyIsRenderedWithItsTypeLocationVariabl
 }
 
 TEST_F(RuntimeFunctionsTest, testEveryDependencyTypeHasItsOwnName) {
-  collected_dependencies[located_at(10, 0)].insert(Dep(RAW, located_at(1, 0), "x", 0));
-  collected_dependencies[located_at(11, 0)].insert(Dep(WAR, located_at(2, 0), "x", 0));
-  collected_dependencies[located_at(12, 0)].insert(Dep(WAW, located_at(3, 0), "x", 0));
-  collected_dependencies[located_at(13, 0)].insert(Dep(INIT, located_at(4, 0), "x", 0));
+  collected_dependencies[located_at(10, 0)].insert(Dep(kRaw, located_at(1, 0), "x", 0));
+  collected_dependencies[located_at(11, 0)].insert(Dep(kWar, located_at(2, 0), "x", 0));
+  collected_dependencies[located_at(12, 0)].insert(Dep(kWaw, located_at(3, 0), "x", 0));
+  collected_dependencies[located_at(13, 0)].insert(Dep(kInit, located_at(4, 0), "x", 0));
 
-  generateStringDepMap();
+  GenerateStringDepMap();
 
   EXPECT_EQ(rendered_dependencies["10@0"], (std::unordered_set<std::string>{"RAW 1@0|x(0)"}));
   EXPECT_EQ(rendered_dependencies["11@0"], (std::unordered_set<std::string>{"WAR 2@0|x(0)"}));
@@ -118,18 +118,18 @@ TEST_F(RuntimeFunctionsTest, testEveryDependencyTypeHasItsOwnName) {
 
 // LID 0 carries no source location, so there is nothing to attribute a dependency to
 TEST_F(RuntimeFunctionsTest, testDependenciesWithoutALocationAreDropped) {
-  collected_dependencies[0].insert(Dep(RAW, located_at(7, 1), "x", 3));
+  collected_dependencies[0].insert(Dep(kRaw, located_at(7, 1), "x", 3));
 
-  generateStringDepMap();
+  GenerateStringDepMap();
 
   EXPECT_TRUE(rendered_dependencies.empty());
 }
 
 TEST_F(RuntimeFunctionsTest, testAllDependenciesOfOneLocationAreRenderedTogether) {
-  collected_dependencies[located_at(10, 2)].insert(Dep(RAW, located_at(7, 1), "x", 3));
-  collected_dependencies[located_at(10, 2)].insert(Dep(WAR, located_at(8, 1), "y", 4));
+  collected_dependencies[located_at(10, 2)].insert(Dep(kRaw, located_at(7, 1), "x", 3));
+  collected_dependencies[located_at(10, 2)].insert(Dep(kWar, located_at(8, 1), "y", 4));
 
-  generateStringDepMap();
+  GenerateStringDepMap();
 
   ASSERT_EQ(rendered_dependencies.size(), 1u);
   EXPECT_EQ(rendered_dependencies["10@2"], (std::unordered_set<std::string>{"RAW 7@1|x(3)", "WAR 8@1|y(4)"}));
@@ -138,10 +138,10 @@ TEST_F(RuntimeFunctionsTest, testAllDependenciesOfOneLocationAreRenderedTogether
 // The same instruction is reached in several call path states, and those are separate keys: the
 // pattern detection tells the calls apart by them.
 TEST_F(RuntimeFunctionsTest, testTheSameInstructionInAnotherCallPathStateIsItsOwnEntry) {
-  collected_dependencies[located_at(10, 1)].insert(Dep(RAW, located_at(7, 1), "x", 3));
-  collected_dependencies[located_at(10, 2)].insert(Dep(RAW, located_at(7, 2), "x", 3));
+  collected_dependencies[located_at(10, 1)].insert(Dep(kRaw, located_at(7, 1), "x", 3));
+  collected_dependencies[located_at(10, 2)].insert(Dep(kRaw, located_at(7, 2), "x", 3));
 
-  generateStringDepMap();
+  GenerateStringDepMap();
 
   EXPECT_EQ(rendered_dependencies.size(), 2u);
   EXPECT_EQ(rendered_dependencies["10@1"], (std::unordered_set<std::string>{"RAW 7@1|x(3)"}));
@@ -152,15 +152,15 @@ TEST_F(RuntimeFunctionsTest, testTheSameInstructionInAnotherCallPathStateIsItsOw
 // before generateStringDepMap() runs, so an entry that is already there is extended
 TEST_F(RuntimeFunctionsTest, testDependenciesAreAddedToWhatIsAlreadyReportedForALocation) {
   rendered_dependencies["10@2"].insert("WAR 8@1|y(4)");
-  collected_dependencies[located_at(10, 2)].insert(Dep(RAW, located_at(7, 1), "x", 3));
+  collected_dependencies[located_at(10, 2)].insert(Dep(kRaw, located_at(7, 1), "x", 3));
 
-  generateStringDepMap();
+  GenerateStringDepMap();
 
   EXPECT_EQ(rendered_dependencies["10@2"], (std::unordered_set<std::string>{"RAW 7@1|x(3)", "WAR 8@1|y(4)"}));
 }
 
 TEST_F(RuntimeFunctionsTest, testRenderingWithoutCollectedDependenciesReportsNothing) {
-  generateStringDepMap();
+  GenerateStringDepMap();
 
   EXPECT_TRUE(rendered_dependencies.empty());
 }

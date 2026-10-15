@@ -14,13 +14,13 @@
 
 #include "DPTypes.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
 // functionEntryID: instruction id of this __dp_func_entry call, identifies the function
-void __dp_func_entry(LID lid, int32_t isStart, int32_t functionEntryID);
+void __dp_func_entry(LID lid, int32_t is_start, int32_t function_entry_id);
 }
 
-} // namespace __dp
+} // namespace dp

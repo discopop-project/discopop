@@ -29,73 +29,73 @@ using llvm::raw_string_ostream;
 // Returns true if runOnFunction instruments F, i.e. F reports its entry and exit to the runtime.
 // Calls to functions without instrumentation must not update the callpath state (see
 // runOnBasicBlock): the runtime would wait for the callee's __dp_func_exit forever.
-bool DiscoPoP::isInstrumentedFunction(Function &F) {
-  if (F.isDeclaration()) {
+bool DiscoPoP::IsInstrumentedFunction(Function &f) {
+  if (f.isDeclaration()) {
     return false;
   }
 
-  std::string dp_project_dir(dputil::getEnvOrDefault("DP_PROJECT_ROOT_DIR", "/"));
+  std::string dp_project_dir(dputil::GetEnvOrDefault("DP_PROJECT_ROOT_DIR", "/"));
 
-  SmallVector<std::pair<unsigned, MDNode *>, 4> MDs;
-  F.getAllMetadata(MDs);
-  bool funcDefinedInProject = false;
-  for (auto &MD : MDs) {
-    if (MDNode *N = MD.second) {
-      if (auto *subProgram = dyn_cast<DISubprogram>(N)) {
-        std::string fullFileName = "";
-        if (subProgram->getDirectory().str().length() > 0) {
-          fullFileName += subProgram->getDirectory().str();
-          fullFileName += "/";
+  SmallVector<std::pair<unsigned, MDNode *>, 4> mds;
+  f.getAllMetadata(mds);
+  bool func_defined_in_project = false;
+  for (auto &md : mds) {
+    if (MDNode *n = md.second) {
+      if (auto *sub_program = dyn_cast<DISubprogram>(n)) {
+        std::string full_file_name = "";
+        if (sub_program->getDirectory().str().length() > 0) {
+          full_file_name += sub_program->getDirectory().str();
+          full_file_name += "/";
         }
-        fullFileName += subProgram->getFilename().str();
-        if (fullFileName.find(dp_project_dir) != std::string::npos) // function defined inside project
+        full_file_name += sub_program->getFilename().str();
+        if (full_file_name.find(dp_project_dir) != std::string::npos) // function defined inside project
         {
-          funcDefinedInProject = true;
+          func_defined_in_project = true;
         }
       }
     }
   }
-  if (!funcDefinedInProject) {
+  if (!func_defined_in_project) {
     return false;
   }
 
-  StringRef funcName = F.getName();
+  StringRef func_name = f.getName();
   // Avoid functions we don't want to instrument
-  if (funcName.find("llvm.") != std::string::npos) // llvm debug calls
+  if (func_name.find("llvm.") != std::string::npos) // llvm debug calls
   {
     return false;
   }
-  if (funcName.find("__dp_") != std::string::npos) // instrumentation calls
+  if (func_name.find("__dp_") != std::string::npos) // instrumentation calls
   {
     return false;
   }
-  if (funcName.find("__cx") != std::string::npos) // c++ init calls
+  if (func_name.find("__cx") != std::string::npos) // c++ init calls
   {
     return false;
   }
-  if (funcName.find("__clang") != std::string::npos) // clang helper calls
+  if (func_name.find("__clang") != std::string::npos) // clang helper calls
   {
     return false;
   }
-  if (funcName.find("_GLOBAL_") != std::string::npos) // global init calls (c++)
+  if (func_name.find("_GLOBAL_") != std::string::npos) // global init calls (c++)
   {
     return false;
   }
-  if (funcName.find("pthread_") != std::string::npos) {
+  if (func_name.find("pthread_") != std::string::npos) {
     return false;
   }
 
-  return getCachedFileID(F) != 0;
+  return GetCachedFileId(f) != 0;
 }
 
-std::int32_t DiscoPoP::getCachedFileID(Function &F) {
-  auto pos = file_id_cache.find(&F);
+std::int32_t DiscoPoP::GetCachedFileId(Function &f) {
+  auto pos = file_id_cache.find(&f);
   if (pos != file_id_cache.end()) {
     return pos->second;
   }
   std::int32_t file_id = 0;
-  dputil::determineFileID(F, file_id);
-  file_id_cache[&F] = file_id;
+  dputil::DetermineFileId(f, file_id);
+  file_id_cache[&f] = file_id;
   return file_id;
 }
 
@@ -117,14 +117,14 @@ std::int32_t DiscoPoP::getCachedFileID(Function &F) {
 // control flow graph, so the analyses taken from MAM (LoopInfo, RegionInfo, DominatorTree) stay
 // valid and are never invalidated; the reduction pass relies on getting the same llvm::Loop
 // objects, as its loop ids are registered per llvm::Loop.
-bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
-  if (DP_DEBUG) {
-    errs() << "pass DiscoPoP: run pass on function " << F.getName().str() << "\n";
+bool DiscoPoP::RunOnFunction(Function &f, ModuleAnalysisManager &mam) {
+  if (kDpDebug) {
+    errs() << "pass DiscoPoP: run pass on function " << f.getName().str() << "\n";
   }
 
   // avoid instrumenting functions which are defined outside the scope of the
   // project, as well as helper and instrumentation functions
-  if (!isInstrumentedFunction(F)) {
+  if (!IsInstrumentedFunction(f)) {
     return false;
   }
 
@@ -133,48 +133,48 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
   // function processed before (0 for the first one), as it always did in Data.xml.
   graph.root = new Node;
 
-  fileID = getCachedFileID(F);
+  file_id = GetCachedFileId(f);
 
   // only instrument functions belonging to project source files
-  if (!fileID) {
+  if (!file_id) {
     return false;
 }
 
-  buildCUGraph(F, MAM, graph);
-  instrumentFunction(F, MAM, graph);
-  writeCUGraph(graph);
-  return hybridAnalysis->analyzeFunction(F, MAM, insertedAccessCallbacks, trueVarNamesFromMetadataMap);
+  BuildCuGraph(f, mam, graph);
+  InstrumentFunction(f, mam, graph);
+  WriteCuGraph(graph);
+  return hybrid_analysis_->AnalyzeFunction(f, mam, inserted_access_callbacks_, true_var_names_from_metadata_map_);
 }
 
 // CUGeneration
-void DiscoPoP::buildCUGraph(Function &F, ModuleAnalysisManager &MAM, FunctionCUGraph &graph) {
+void DiscoPoP::BuildCuGraph(Function &f, ModuleAnalysisManager &mam, FunctionCUGraph &graph) {
   /********************* Initialize root values ***************************/
-  graph.root->name = F.getName().str();
-  graph.root->type = nodeTypes::func;
+  graph.root->name = f.getName().str();
+  graph.root->type = NodeTypes::kFunc;
 
   // Get list of arguments for this function and store them in root.
   // NOTE: changed the way we get the arguments
-  BasicBlock *BB = &F.getEntryBlock();
-  auto BI = BB->begin();
+  BasicBlock *bb = &f.getEntryBlock();
+  auto bi = bb->begin();
   std::string lid;
-  if (DebugLoc dl = BI->getDebugLoc()) {
+  if (DebugLoc dl = bi->getDebugLoc()) {
     lid = std::to_string(dl->getLine());
   } else {
-    lid = std::to_string(BI->getFunction()->getSubprogram()->getLine());
+    lid = std::to_string(bi->getFunction()->getSubprogram()->getLine());
   }
 
-  for (Function::arg_iterator it = F.arg_begin(); it != F.arg_end(); it++) {
+  for (Function::arg_iterator it = f.arg_begin(); it != f.arg_end(); it++) {
     std::string type_str;
     raw_string_ostream rso(type_str);
     (it->getType())->print(rso);
-    Variable v(it->getName().str(), rso.str(), std::to_string(fileID) + ":" + lid, true, true);
-    graph.root->argumentsList.push_back(v);
+    Variable v(it->getName().str(), rso.str(), std::to_string(file_id) + ":" + lid, true, true);
+    graph.root->arguments_list.push_back(v);
   }
   /********************* End of initialize root values
    * ***************************/
 
-  llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*ThisModule).getManager();
-  llvm::LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
+  llvm::FunctionAnalysisManager &fam = mam.getResult<FunctionAnalysisManagerModuleProxy>(*this_module_).getManager();
+  llvm::LoopInfo &li = fam.getResult<llvm::LoopAnalysis>(f);
   //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
 
 
@@ -183,26 +183,26 @@ void DiscoPoP::buildCUGraph(Function &F, ModuleAnalysisManager &MAM, FunctionCUG
   //RIpass = &getAnalysis<RegionInfoPass>(F);
   //RI = &(RIpass->getRegionInfo());
   //RegionInfoPass *RIpass;
-  llvm::RegionInfo &RI = fam.getResult<llvm::RegionInfoAnalysis>(F);
+  llvm::RegionInfo &ri = fam.getResult<llvm::RegionInfoAnalysis>(f);
 
-  Region *TopRegion = RI.getTopLevelRegion();
+  Region *top_region = ri.getTopLevelRegion();
 
-  getTrueVarNamesFromMetadata(TopRegion, graph.root, &trueVarNamesFromMetadataMap);
+  GetTrueVarNamesFromMetadata(top_region, graph.root, &true_var_names_from_metadata_map_);
 
-  getFunctionReturnLines(TopRegion, graph.root);
+  GetFunctionReturnLines(top_region, graph.root);
 
-  populateGlobalVariablesSet(TopRegion, graph.globalVariables);
+  PopulateGlobalVariablesSet(top_region, graph.global_variables);
 
-  createCUs(TopRegion, graph.globalVariables, graph.CUs, graph.BBIDToCUs, graph.root, LI, MAM);
+  CreateCus(top_region, graph.global_variables, graph.cus, graph.bb_id_to_cus, graph.root, li, mam);
 
   // inserts calls, but only after createCUs has seen the function without them
   if (DP_BRANCH_TRACKING) {
-    createTakenBranchInstrumentation(TopRegion, graph.BBIDToCUs);
+    CreateTakenBranchInstrumentation(top_region, graph.bb_id_to_cus);
   }
 
-  fillCUVariables(TopRegion, graph.globalVariables, graph.CUs, graph.BBIDToCUs);
+  FillCuVariables(top_region, graph.global_variables, graph.cus, graph.bb_id_to_cus);
 
-  fillStartEndLineNumbers(graph.root, LI, graph.loopToPETNodeID);
+  FillStartEndLineNumbers(graph.root, li, graph.loop_to_pet_node_id);
 
   // printOriginalVariables(originalVariablesSet);
 
@@ -215,39 +215,39 @@ void DiscoPoP::buildCUGraph(Function &F, ModuleAnalysisManager &MAM, FunctionCUG
 // CUGeneration end
 
 // DPInstrumentation
-void DiscoPoP::instrumentFunction(Function &F, ModuleAnalysisManager &MAM, const FunctionCUGraph &graph) {
+void DiscoPoP::InstrumentFunction(Function &f, ModuleAnalysisManager &mam, const FunctionCUGraph &graph) {
   // Check loop parallelism?
-  if (ClCheckLoopPar) {
-    llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*ThisModule).getManager();
-    llvm::LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
+  if (kClCheckLoopPar) {
+    llvm::FunctionAnalysisManager &fam = mam.getResult<FunctionAnalysisManagerModuleProxy>(*this_module_).getManager();
+    llvm::LoopInfo &li = fam.getResult<llvm::LoopAnalysis>(f);
     //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
-    CFA(F, LI, graph.loopToPETNodeID);
+    CFA(f, li, graph.loop_to_pet_node_id);
   }
 
   // Instrument the entry of the function.
   // Each function entry is instrumented, and the first
   // executed function will initialize shadow memory.
   // See the definition of __dp_func_entry() for detail.
-  instrumentFuncEntry(F);
+  InstrumentFuncEntry(f);
 
   // Traverse all instructions, collect loads/stores/returns, check for calls.
-  insertedAccessCallbacks.clear();
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
-    BasicBlock &BB = *FI;
-    runOnBasicBlock(BB);
+  inserted_access_callbacks_.clear();
+  for (Function::iterator fi = f.begin(), fe = f.end(); fi != fe; ++fi) {
+    BasicBlock &bb = *fi;
+    RunOnBasicBlock(bb);
   }
 
-  if (DP_DEBUG) {
+  if (kDpDebug) {
     errs() << "pass DiscoPoP: finished function\n";
   }
 }
 // DPInstrumentation end
 
 // Print CU Graph
-void DiscoPoP::writeCUGraph(FunctionCUGraph &graph) {
-  cu_output::writeCUGraph(graph.root, loopStartLines);
+void DiscoPoP::WriteCuGraph(FunctionCUGraph &graph) {
+  cu_output::WriteCuGraph(graph.root, loop_start_lines_);
 
-  for (auto i : graph.CUs) {
+  for (auto i : graph.cus) {
     delete (i);
   }
 }

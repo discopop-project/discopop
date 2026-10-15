@@ -33,66 +33,66 @@ using llvm::cast;
 using llvm::filterDbgVars;
 using llvm::isa;
 
-std::string DiscoPoP::getOrInsertVarName_static(std::string varName, IRBuilder<> &builder) {
-  Value *valName = nullptr;
+std::string DiscoPoP::GetOrInsertVarNameStatic(std::string var_name, IRBuilder<> &builder) {
+  Value *val_name = nullptr;
   // remove .addr if added. Replaced by the GEPRESULT_ tag
-  if (varName.find(".addr") != std::string::npos){
-    varName.erase(varName.find(".addr"), 5);
+  if (var_name.find(".addr") != std::string::npos){
+    var_name.erase(var_name.find(".addr"), 5);
   }
 
-  std::string vName = varName;
-  std::map<std::string, Value *>::iterator pair = VarNames.find(varName);
-  if (pair == VarNames.end()) {
-    valName = builder.CreateGlobalStringPtr(StringRef(varName.c_str()), ".str");
+  std::string v_name = var_name;
+  std::map<std::string, Value *>::iterator pair = var_names_.find(var_name);
+  if (pair == var_names_.end()) {
+    val_name = builder.CreateGlobalStringPtr(StringRef(var_name.c_str()), ".str");
 
-    VarNames[varName] = valName;
+    var_names_[var_name] = val_name;
   } else {
-    vName = pair->first;
+    v_name = pair->first;
   }
 
-  return vName;
+  return v_name;
 }
 
-Value *DiscoPoP::getOrInsertVarName_dynamic(std::string varName, IRBuilder<> &builder) {
+Value *DiscoPoP::GetOrInsertVarNameDynamic(std::string var_name, IRBuilder<> &builder) {
   // remove .addr if added. Replaced by the GEPRESULT_ tag
-  if (varName.find(".addr") != std::string::npos){
-    varName.erase(varName.find(".addr"), 5);
+  if (var_name.find(".addr") != std::string::npos){
+    var_name.erase(var_name.find(".addr"), 5);
   }
 
   // 26.08.2022 Lukas
   // update varName with original varName from Metadata
-  if (trueVarNamesFromMetadataMap.find(varName) == trueVarNamesFromMetadataMap.end()) {
+  if (true_var_names_from_metadata_map_.find(var_name) == true_var_names_from_metadata_map_.end()) {
     // not found, do nothing
   } else {
     // found, update varName
-    varName = trueVarNamesFromMetadataMap[varName];
+    var_name = true_var_names_from_metadata_map_[var_name];
   }
 
-  Value *vName = nullptr;
-  std::map<std::string, Value *>::iterator pair = VarNames.find(varName);
-  if (pair == VarNames.end()) {
-    vName = builder.CreateGlobalStringPtr(StringRef(varName.c_str()), ".str");
-    VarNames[varName] = vName;
+  Value *v_name = nullptr;
+  std::map<std::string, Value *>::iterator pair = var_names_.find(var_name);
+  if (pair == var_names_.end()) {
+    v_name = builder.CreateGlobalStringPtr(StringRef(var_name.c_str()), ".str");
+    var_names_[var_name] = v_name;
   } else {
-    vName = pair->second;
+    v_name = pair->second;
   }
-  return vName;
+  return v_name;
 }
 
-std::string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGlobalVariable /*=defaultIsGlobalVariableValue*/,
-                                              bool disable_MetadataMap, std::string prefix) {
+std::string DiscoPoP::DetermineVariableNameStatic(Instruction *i, bool &is_global_variable /*=defaultIsGlobalVariableValue*/,
+                                              bool disable_metadata_map, std::string prefix) {
 
   assert(I && "Instruction cannot be NULL \n");
-  int index = isa<StoreInst>(I) ? 1 : 0;
-  Value *operand = I->getOperand(index);
+  int index = isa<StoreInst>(i) ? 1 : 0;
+  Value *operand = i->getOperand(index);
 
-  IRBuilder<> builder(I);
+  IRBuilder<> builder(i);
 
   if (operand == nullptr) {
-    std::string retVal = getOrInsertVarName_static("", builder);
-    if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
-      return retVal; // not found
-    }       return trueVarNamesFromMetadataMap[retVal]; // found
+    std::string ret_val = GetOrInsertVarNameStatic("", builder);
+    if (true_var_names_from_metadata_map_.find(ret_val) == true_var_names_from_metadata_map_.end() || disable_metadata_map) {
+      return ret_val; // not found
+    }       return true_var_names_from_metadata_map_[ret_val]; // found
 
   }
 
@@ -100,43 +100,43 @@ std::string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGloba
     //// we've found a global variable
     if (isa<GlobalVariable>(*operand)) {
       // MOHAMMAD ADDED THIS FOR CHECKING
-      isGlobalVariable = true;
-      std::string retVal = std::string(operand->getName());
-      if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
-        return retVal; // not found
-      }         return trueVarNamesFromMetadataMap[retVal]; // found
+      is_global_variable = true;
+      std::string ret_val = std::string(operand->getName());
+      if (true_var_names_from_metadata_map_.find(ret_val) == true_var_names_from_metadata_map_.end() || disable_metadata_map) {
+        return ret_val; // not found
+      }         return true_var_names_from_metadata_map_[ret_val]; // found
 
     }
     if (isa<GetElementPtrInst>(*operand)) {
       GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
-      Value *ptrOperand = gep->getPointerOperand();
-      PointerType *PTy = cast<PointerType>(ptrOperand->getType());
+      Value *ptr_operand = gep->getPointerOperand();
+      PointerType *p_ty = cast<PointerType>(ptr_operand->getType());
 
       // we've found a struct/class
-      Type *structType = pointsToStruct(PTy);
-      if (structType && gep->getNumOperands() > 2) {
-        Value *constValue = gep->getOperand(2);
-        if (constValue && isa<ConstantInt>(*constValue)) {
-          ConstantInt *idxPtr = cast<ConstantInt>(gep->getOperand(2));
-          std::uint64_t memberIdx = *(idxPtr->getValue().getRawData());
-          if (!(cast<StructType>(structType))->isLiteral()) {
-            std::string strName(structType->getStructName().data());
-            std::map<std::string, MDNode *>::iterator it = Structs.find(strName);
-            if (it != Structs.end()) {
-              std::string ret = findStructMemberName_static(it->second, memberIdx, builder);
+      Type *struct_type = PointsToStruct(p_ty);
+      if (struct_type && gep->getNumOperands() > 2) {
+        Value *const_value = gep->getOperand(2);
+        if (const_value && isa<ConstantInt>(*const_value)) {
+          ConstantInt *idx_ptr = cast<ConstantInt>(gep->getOperand(2));
+          std::uint64_t member_idx = *(idx_ptr->getValue().getRawData());
+          if (!(cast<StructType>(struct_type))->isLiteral()) {
+            std::string str_name(struct_type->getStructName().data());
+            std::map<std::string, MDNode *>::iterator it = structs_.find(str_name);
+            if (it != structs_.end()) {
+              std::string ret = FindStructMemberNameStatic(it->second, member_idx, builder);
               if (ret.size() > 0) {
-                std::string retVal = ret;
-                if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() ||
-                    disable_MetadataMap) {
-                  return retVal; // not found
-                }                   return trueVarNamesFromMetadataMap[retVal]; // found
+                std::string ret_val = ret;
+                if (true_var_names_from_metadata_map_.find(ret_val) == true_var_names_from_metadata_map_.end() ||
+                    disable_metadata_map) {
+                  return ret_val; // not found
+                }                   return true_var_names_from_metadata_map_[ret_val]; // found
 
               } else {
-                std::string retVal = getOrInsertVarName_static("", builder);
-                if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() ||
-                    disable_MetadataMap) {
-                  return retVal; // not found
-                }                   return trueVarNamesFromMetadataMap[retVal]; // found
+                std::string ret_val = GetOrInsertVarNameStatic("", builder);
+                if (true_var_names_from_metadata_map_.find(ret_val) == true_var_names_from_metadata_map_.end() ||
+                    disable_metadata_map) {
+                  return ret_val; // not found
+                }                   return true_var_names_from_metadata_map_[ret_val]; // found
 
                 // return ret;
               }
@@ -148,64 +148,64 @@ std::string DiscoPoP::determineVariableName_static(Instruction *I, bool &isGloba
       // we've found an array
       // NOTE (25-10-30) simplified for LLVM 19 compatibility
       // OLD: if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
-      if (isa<GetElementPtrInst>(*ptrOperand)) {
-        return determineVariableName_static(cast<Instruction>(ptrOperand), isGlobalVariable, false, prefix);
+      if (isa<GetElementPtrInst>(*ptr_operand)) {
+        return DetermineVariableNameStatic(cast<Instruction>(ptr_operand), is_global_variable, false, prefix);
       }
-      return determineVariableName_static(static_cast<Instruction *>(gep), isGlobalVariable, false, "GEPRESULT_" + prefix);
+      return DetermineVariableNameStatic(static_cast<Instruction *>(gep), is_global_variable, false, "GEPRESULT_" + prefix);
     }
-    std::string retVal = std::string(operand->getName().data());
-    if (trueVarNamesFromMetadataMap.find(retVal) == trueVarNamesFromMetadataMap.end() || disable_MetadataMap) {
-      return retVal; // not found
-    }       return trueVarNamesFromMetadataMap[retVal]; // found
+    std::string ret_val = std::string(operand->getName().data());
+    if (true_var_names_from_metadata_map_.find(ret_val) == true_var_names_from_metadata_map_.end() || disable_metadata_map) {
+      return ret_val; // not found
+    }       return true_var_names_from_metadata_map_[ret_val]; // found
 
     // return getOrInsertVarName(string(operand->getName().data()), builder);
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
-    return determineVariableName_static(cast<Instruction>(operand), isGlobalVariable, false, prefix);
+    return DetermineVariableNameStatic(cast<Instruction>(operand), is_global_variable, false, prefix);
   }
   // if we cannot determine the name, then return *
   return ""; // getOrInsertVarName("*", builder);
 }
 
-Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I, std::string prefix) {
+Value *DiscoPoP::DetermineVariableNameDynamic(Instruction *const i, std::string prefix) {
   assert(I && "Instruction cannot be NULL \n");
-  int index = isa<StoreInst>(I) ? 1 : 0;
-  Value *operand = I->getOperand(index);
+  int index = isa<StoreInst>(i) ? 1 : 0;
+  Value *operand = i->getOperand(index);
 
-  IRBuilder<> builder(I);
+  IRBuilder<> builder(i);
 
   if (operand == nullptr) {
-    return getOrInsertVarName_dynamic("*", builder);
+    return GetOrInsertVarNameDynamic("*", builder);
   }
 
   if (operand->hasName()) {
     // we've found a global variable
     if (isa<GlobalVariable>(*operand)) {
-      DIGlobalVariable *gv = findDbgGlobalDeclare(cast<GlobalVariable>(operand));
+      DIGlobalVariable *gv = FindDbgGlobalDeclare(cast<GlobalVariable>(operand));
       if (gv != nullptr) {
-        return getOrInsertVarName_dynamic(prefix +  std::string(gv->getDisplayName().data()), builder);
+        return GetOrInsertVarNameDynamic(prefix +  std::string(gv->getDisplayName().data()), builder);
       }
     }
     if (isa<GetElementPtrInst>(*operand)) {
       GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
-      Value *ptrOperand = gep->getPointerOperand();
-      PointerType *PTy = cast<PointerType>(ptrOperand->getType());
+      Value *ptr_operand = gep->getPointerOperand();
+      PointerType *p_ty = cast<PointerType>(ptr_operand->getType());
 
       // we've found a struct/class
-      Type *structType = pointsToStruct(PTy);
-      if (structType && gep->getNumOperands() > 2) {
-        Value *constValue = gep->getOperand(2);
-        if (constValue && isa<ConstantInt>(*constValue)) {
-          ConstantInt *idxPtr = cast<ConstantInt>(gep->getOperand(2));
-          std::uint64_t memberIdx = *(idxPtr->getValue().getRawData());
+      Type *struct_type = PointsToStruct(p_ty);
+      if (struct_type && gep->getNumOperands() > 2) {
+        Value *const_value = gep->getOperand(2);
+        if (const_value && isa<ConstantInt>(*const_value)) {
+          ConstantInt *idx_ptr = cast<ConstantInt>(gep->getOperand(2));
+          std::uint64_t member_idx = *(idx_ptr->getValue().getRawData());
 
-          StructType *STy = cast<StructType>(structType);
-          if (!STy->isLiteral()) {
-            std::string strName(structType->getStructName().data());
-            std::map<std::string, MDNode *>::iterator it = Structs.find(strName);
-            if (it != Structs.end()) {
-              Value *ret = findStructMemberName(it->second, memberIdx, builder);
+          StructType *s_ty = cast<StructType>(struct_type);
+          if (!s_ty->isLiteral()) {
+            std::string str_name(struct_type->getStructName().data());
+            std::map<std::string, MDNode *>::iterator it = structs_.find(str_name);
+            if (it != structs_.end()) {
+              Value *ret = FindStructMemberName(it->second, member_idx, builder);
               if (ret) {
                 return ret;
 }
@@ -217,45 +217,45 @@ Value *DiscoPoP::determineVariableName_dynamic(Instruction *const I, std::string
       // we've found an array
       // (2025-10-30) Simplified check for array type for llvm 19 compatibility
       //if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
-      if (isa<GetElementPtrInst>(*ptrOperand)) {
-        return determineVariableName_dynamic(cast<Instruction>(ptrOperand), prefix);
+      if (isa<GetElementPtrInst>(*ptr_operand)) {
+        return DetermineVariableNameDynamic(cast<Instruction>(ptr_operand), prefix);
       }
-      return determineVariableName_dynamic(static_cast<Instruction *>(gep), "GEPRESULT_"+prefix);
+      return DetermineVariableNameDynamic(static_cast<Instruction *>(gep), "GEPRESULT_"+prefix);
     }
-    return getOrInsertVarName_dynamic(prefix + std::string(operand->getName().data()), builder);
+    return GetOrInsertVarNameDynamic(prefix + std::string(operand->getName().data()), builder);
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
-    return determineVariableName_dynamic(cast<Instruction>(operand), prefix);
+    return DetermineVariableNameDynamic(cast<Instruction>(operand), prefix);
   }
-  if (isa<AllocaInst>(I)) {
-    return getOrInsertVarName_dynamic(prefix + I->getName().str(), builder);
+  if (isa<AllocaInst>(i)) {
+    return GetOrInsertVarNameDynamic(prefix + i->getName().str(), builder);
   }
   // if we cannot determine the name, then return *
-  return getOrInsertVarName_dynamic(prefix +  "*", builder);
+  return GetOrInsertVarNameDynamic(prefix +  "*", builder);
 }
 
-void DiscoPoP::getTrueVarNamesFromMetadata(Region *TopRegion, Node * /*root*/,
-                                           std::map<std::string, std::string> *trueVarNamesFromMetadataMap) {
+void DiscoPoP::GetTrueVarNamesFromMetadata(Region *top_region, Node * /*root*/,
+                                           std::map<std::string, std::string> *true_var_names_from_metadata_map) {
   // check for deb_declare in Region
   // get IRVarName from first operand
   // get SRCVarName from second operand
   // update trueVarNamesFromMetadataMap
-  for(auto BB : TopRegion->blocks()){
-    for(auto &inst : BB->instructionsWithoutDebug()){
+  for(auto bb : top_region->blocks()){
+    for(auto &inst : bb->instructionsWithoutDebug()){
       auto dbg_record_range = inst.getDbgRecordRange();
       auto dbg_variable_range = filterDbgVars(dbg_record_range);
-      for (DbgVariableRecord &DVR : dbg_variable_range) {
-        std::string IRVarName = DVR.getValue()->getName().str();
-        std::string SRCVarName = DVR.getVariable()->getName().str();
+      for (DbgVariableRecord &dvr : dbg_variable_range) {
+        std::string ir_var_name = dvr.getValue()->getName().str();
+        std::string src_var_name = dvr.getVariable()->getName().str();
         // add to trueVarNamesFromMetadataMap
         // overwrite entry if already existing
-        if (trueVarNamesFromMetadataMap->find(IRVarName) == trueVarNamesFromMetadataMap->end()) {
+        if (true_var_names_from_metadata_map->find(ir_var_name) == true_var_names_from_metadata_map->end()) {
           // not found
-          trueVarNamesFromMetadataMap->insert(std::pair<std::string, std::string>(IRVarName, SRCVarName));
+          true_var_names_from_metadata_map->insert(std::pair<std::string, std::string>(ir_var_name, src_var_name));
         } else {
           // found
-          (*trueVarNamesFromMetadataMap)[IRVarName] = SRCVarName;
+          (*true_var_names_from_metadata_map)[ir_var_name] = src_var_name;
         }
       }
     }

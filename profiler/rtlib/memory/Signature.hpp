@@ -19,55 +19,55 @@
 
 #include <iostream>
 
-namespace __dp {
+namespace dp {
 
 class Signature {
 public:
-  Signature(std::int32_t slotSize, std::int32_t size, std::int32_t numOfHash = 1)
-      : sigSlotSize(slotSize), numSlot(size), numHash(numOfHash) {
+  Signature(std::int32_t slot_size, std::int32_t size, std::int32_t num_of_hash = 1)
+      : sig_slot_size_(slot_size), num_slot_(size), num_hash_(num_of_hash) {
     // Seven bytes is as wide as a slot can get: insert() and membershipCheck() assemble the value
     // in a sigElement, which is signed, so an eighth byte would run into the sign bit. The bound
     // used to be 32, which the shipped SIG_ELEM_BIT of 56 violates -- a debug build would abort
     // here for the width the runtime asks for.
     assert((slotSize % 8 == 0) && (slotSize <= 56 && slotSize >= 8) && "slotSize must be byte aligned!");
-    sigSlotSizeInByte = sigSlotSize / 8;
-    sigSizeInByte = sigSlotSizeInByte * numSlot;
+    sig_slot_size_in_byte_ = sig_slot_size_ / 8;
+    sig_size_in_byte_ = sig_slot_size_in_byte_ * num_slot_;
 
-    sigarray = new std::uint8_t[sigSizeInByte];
-    for (int i = 0; i < sigSizeInByte; ++i) {
-      sigarray[i] = 0;
+    sigarray_ = new std::uint8_t[sig_size_in_byte_];
+    for (int i = 0; i < sig_size_in_byte_; ++i) {
+      sigarray_[i] = 0;
     }
 
-    insertedElem = 0;
-    conflictElem = 0;
+    inserted_elem_ = 0;
+    conflict_elem_ = 0;
   }
 
-  ~Signature() { delete[] sigarray; }
+  ~Signature() { delete[] sigarray_; }
 
-  sigElement insert(std::int64_t elem, sigElement value);
+  SigElement Insert(std::int64_t elem, SigElement value);
 
-  void update(std::int64_t elem, sigElement newValue);
+  void Update(std::int64_t elem, SigElement new_value);
 
-  void remove(std::int64_t elem);
+  void Remove(std::int64_t elem);
 
-  sigElement membershipCheck(std::int64_t elem);
+  SigElement MembershipCheck(std::int64_t elem);
 
-  bool intersect(Signature &other);
+  bool Intersect(Signature &other);
 
-  double expectedFalsePositiveRate();
+  double ExpectedFalsePositiveRate();
 
 private:
-  std::int32_t sigSlotSize; // in bits
-  std::int32_t numSlot;
-  [[maybe_unused]] std::int32_t numHash; // 1 by default
-  std::int32_t sigSlotSizeInByte; // slot size in byte
-  std::int32_t sigSizeInByte;     // total size in byte
-  std::uint8_t *sigarray;
+  std::int32_t sig_slot_size_; // in bits
+  std::int32_t num_slot_;
+  [[maybe_unused]] std::int32_t num_hash_; // 1 by default
+  std::int32_t sig_slot_size_in_byte_; // slot size in byte
+  std::int32_t sig_size_in_byte_;     // total size in byte
+  std::uint8_t *sigarray_;
 
-  std::int32_t insertedElem;
-  std::int32_t conflictElem;
+  std::int32_t inserted_elem_;
+  std::int32_t conflict_elem_;
 
-  std::uint32_t hash(std::int64_t value) { return static_cast<std::uint32_t>((value >> 8) + value) % numSlot; }
+  std::uint32_t Hash(std::int64_t value) { return static_cast<std::uint32_t>((value >> 8) + value) % num_slot_; }
 };
 
-} // namespace __dp
+} // namespace dp

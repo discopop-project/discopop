@@ -35,17 +35,17 @@ struct LoopIdentity {
 struct Variable {
   std::string name;
   std::string type;
-  std::string defLine;
-  std::string isArray;
-  bool readAccess;
-  bool writeAccess;
+  std::string def_line;
+  std::string is_array;
+  bool read_access;
+  bool write_access;
 
   Variable(const Variable &other)
-      : name(other.name), type(other.type), defLine(other.defLine), readAccess(other.readAccess),
-        writeAccess(other.writeAccess) {}
+      : name(other.name), type(other.type), def_line(other.def_line), read_access(other.read_access),
+        write_access(other.write_access) {}
 
-  Variable(std::string n, std::string t, std::string d, bool readAccess, bool writeAccess)
-      : name(n), type(t), defLine(d), readAccess(readAccess), writeAccess(writeAccess) {}
+  Variable(std::string n, std::string t, std::string d, bool read_access, bool write_access)
+      : name(n), type(t), def_line(d), read_access(read_access), write_access(write_access) {}
 
   // We have a set of this struct. The set doesn't know how to order the
   // elements.
@@ -56,87 +56,87 @@ struct Variable {
 };
 
 struct Node {
-  std::string ID;
-  nodeTypes type;
-  LID startLine;
-  LID endLine;
-  llvm::BasicBlock *BB;
+  std::string id;
+  NodeTypes type;
+  LID start_line;
+  LID end_line;
+  llvm::BasicBlock *bb;
 
   // Only for func type
   std::string name;
-  std::vector<Variable> argumentsList;
-  std::set<LID> returnLines;
+  std::vector<Variable> arguments_list;
+  std::set<LID> return_lines;
 
-  std::vector<Node *> childrenNodes;
-  Node *parentNode;
+  std::vector<Node *> children_nodes;
+  Node *parent_node;
 
   // isRecursive function (Mo 5.11.2019)
-  std::string recursiveFunctionCall = "";
+  std::string recursive_function_call = "";
 
   Node() {
-    ID = std::to_string(fileID) + ":" + std::to_string(CUIDCounter++);
-    parentNode = nullptr;
-    BB = nullptr;
+    id = std::to_string(file_id) + ":" + std::to_string(cu_id_counter++);
+    parent_node = nullptr;
+    bb = nullptr;
   }
 };
 
 struct CU : Node {
 
-  std::string BBID; // BasicBlock Id where the CU appears in
+  std::string bb_id; // BasicBlock Id where the CU appears in
 
-  unsigned readDataSize;  // number of bytes read from memory by the cu
-  unsigned writeDataSize; // number of bytes written into memory during the cu
-  unsigned instructionsCount;
+  unsigned read_data_size;  // number of bytes read from memory by the cu
+  unsigned write_data_size; // number of bytes written into memory during the cu
+  unsigned instructions_count;
 
   // basic block id & successor basic blocks for control dependence
-  std::vector<std::string> successorCUs; // keeps IDs of control dependent CUs
-  std::string basicBlockName;
+  std::vector<std::string> successor_cus; // keeps IDs of control dependent CUs
+  std::string basic_block_name;
 
-  std::set<LID> instructionsLineNumbers;
-  std::set<LID> readPhaseLineNumbers;
-  std::set<LID> writePhaseLineNumbers;
-  std::set<LID> returnInstructions;
+  std::set<LID> instructions_line_numbers;
+  std::set<LID> read_phase_line_numbers;
+  std::set<LID> write_phase_line_numbers;
+  std::set<LID> return_instructions;
 
-  std::set<Variable> localVariableNames;
-  std::set<Variable> globalVariableNames;
+  std::set<Variable> local_variable_names;
+  std::set<Variable> global_variable_names;
 
-  bool performsFileIO;
+  bool performs_file_io;
 
   // Map to record function call line numbers
-  std::map<LID, std::vector<Node *>> callLineTofunctionMap;
+  std::map<LID, std::vector<Node *>> call_line_to_function_map;
   // Map to record function call instruction ids
-  std::map<LID, std::vector<llvm::Instruction*>> callLineToCallInstructionMap;
+  std::map<LID, std::vector<llvm::Instruction*>> call_line_to_call_instruction_map;
 
   CU() {
-    type = nodeTypes::cu;
-    readDataSize = 0;
-    writeDataSize = 0;
-    instructionsCount = 0;
+    type = NodeTypes::kCu;
+    read_data_size = 0;
+    write_data_size = 0;
+    instructions_count = 0;
     // BB = NULL;
-    performsFileIO = false;
+    performs_file_io = false;
   }
 
-  void removeCU() {
-    CUIDCounter--; // if a CU does not contain any instruction, e.g. entry
+  void RemoveCu() {
+    cu_id_counter--; // if a CU does not contain any instruction, e.g. entry
                    // basic blocks, then remove it.
   }
 
 };
 
-struct instr_info_t {
-  std::string var_name_;
-  std::string var_type_;
-  int loop_line_nr_;
-  int file_id_;
-  llvm::StoreInst *store_inst_;
-  llvm::LoadInst *load_inst_;
-  char operation_ = ' ';
+struct InstrInfoT {
+  std::string var_name;
+  std::string var_type;
+  int loop_line_nr;
+  int file_id;
+  llvm::StoreInst *store_inst;
+  llvm::LoadInst *load_inst;
+  char operation = ' ';
 };
 
-struct loop_info_t {
-  unsigned int line_nr_;
-  int file_id_;
-  llvm::Instruction *first_body_instr_;
+struct LoopInfoT {
+  unsigned int line_nr;
+  int file_id;
+  llvm::Instruction *first_body_instr;
   std::string start_line;
   std::string end_line;
   std::string function_name;
@@ -147,10 +147,10 @@ struct loop_info_t {
 // DiscoPoP::writeCUGraph once the function is instrumented (see DiscoPoP::runOnFunction).
 struct FunctionCUGraph {
   Node *root = nullptr; // the function node; like the loop nodes, never freed
-  std::vector<CU *> CUs; // freed by writeCUGraph
-  std::map<std::string, std::vector<CU *>> BBIDToCUs;
+  std::vector<CU *> cus; // freed by writeCUGraph
+  std::map<std::string, std::vector<CU *>> bb_id_to_cus;
   // variables which appear in more than one basic block
-  std::set<std::string> globalVariables;
+  std::set<std::string> global_variables;
   // id of the loop node in Data.xml per llvm::Loop (read by CFA for loopstate_positions.txt)
-  std::map<llvm::Loop *, std::string> loopToPETNodeID;
+  std::map<llvm::Loop *, std::string> loop_to_pet_node_id;
 };

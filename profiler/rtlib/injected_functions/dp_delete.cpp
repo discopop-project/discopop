@@ -23,7 +23,7 @@
 #include <string>
 
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -51,4 +51,4 @@ void __dp_delete(LID /*lid*/, ADDR /*startAddr*/) {
 }
 }
 
-} // namespace __dp
+} // namespace dp

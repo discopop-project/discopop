@@ -81,35 +81,35 @@ A real case would be:
 // _ZdlPvm in C++14, "delete[] p" is _ZdaPv, and over-aligned types add St11align_val_t. Matching the
 // prefix therefore covers the whole family, including variants a future clang may add, instead of
 // only the single spelling _ZdlPv.
-static bool isDeallocationFunction(StringRef fn) {
+static bool IsDeallocationFunction(StringRef fn) {
   return fn == "free" || fn.starts_with("_ZdlPv") || fn.starts_with("_ZdaPv");
 }
 
 // TODO: atomic variables
-void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
-  for (BasicBlock::iterator BI = BB.begin(), E = BB.end(); BI != E; ++BI) {
+void DiscoPoP::RunOnBasicBlock(BasicBlock &bb) {
+  for (BasicBlock::iterator bi = bb.begin(), e = bb.end(); bi != e; ++bi) {
     // assign unique instruction ids
-    LLVMContext& ctx = BI->getContext();
-    std::int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id++;
-    MDNode* N = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+std::to_string(llvm_ir_instruction_id)));
-    BI->setMetadata("dp.md.instr.id", N);
+    LLVMContext& ctx = bi->getContext();
+    std::int32_t llvm_ir_instruction_id = unique_llvm_ir_instruction_id_++;
+    MDNode* n = MDNode::get(ctx, MDString::get(ctx, "dp.md.instr.id:"+std::to_string(llvm_ir_instruction_id)));
+    bi->setMetadata("dp.md.instr.id", n);
     // fill instructionID to lineID mapping file
-    const DebugLoc &location = BI->getDebugLoc();
+    const DebugLoc &location = bi->getDebugLoc();
     std::uint32_t lno = 0;
     std::uint32_t colno = 0;
     if (location) {
       lno = location.getLine();
       colno = location.getCol();
-    } else if (isa<AllocaInst>(BI) || isa<StoreInst>(BI)) {
-      lno = BI->getFunction()->getSubprogram()->getLine();
+    } else if (isa<AllocaInst>(bi) || isa<StoreInst>(bi)) {
+      lno = bi->getFunction()->getSubprogram()->getLine();
     }
     if(lno != 0){
-      instructionID_to_lineID_file << std::to_string(llvm_ir_instruction_id) << " " << std::to_string(fileID) << ":" << std::to_string(lno) << ":" << std::to_string(colno) << "\n";
+      instruction_id_to_line_id_file << std::to_string(llvm_ir_instruction_id) << " " << std::to_string(file_id) << ":" << std::to_string(lno) << ":" << std::to_string(colno) << "\n";
     } else{
-      instructionID_to_lineID_file << std::to_string(llvm_ir_instruction_id) << " " << "*" << "\n";
+      instruction_id_to_line_id_file << std::to_string(llvm_ir_instruction_id) << " " << "*" << "\n";
     }
 
-    if ([[maybe_unused]] DbgDeclareInst *DI = dyn_cast<DbgDeclareInst>(BI)) {
+    if ([[maybe_unused]] DbgDeclareInst *di = dyn_cast<DbgDeclareInst>(bi)) {
       assert(DI->getOperand(0));
 #if false  // NOTE (25-10-30) DISABLED FOR LLVM 19 COMPATIBILITY REASONS
       if (AllocaInst *alloc = dyn_cast<AllocaInst>(DI->getOperand(0))) {
@@ -168,8 +168,8 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
 #endif
     }
     // alloca instruction
-    else if (isa<AllocaInst>(BI)) {
-      AllocaInst *AI = cast<AllocaInst>(BI);
+    else if (isa<AllocaInst>(bi)) {
+      AllocaInst *ai = cast<AllocaInst>(bi);
 
       // if the option is set, check if the AllocaInst is static at the entry
       // block of a function and skip it's instrumentation. This leads to a
@@ -178,29 +178,29 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       // profiling is used. Effectively, this check disables the instrumentation
       // of allocas which belong to function parameters.
 
-      if (DP_MEMORY_PROFILING_SKIP_FUNCTION_ARGUMENTS) {
-        if (!AI->isStaticAlloca()) {
+      if (dp_memory_profiling_skip_function_arguments) {
+        if (!ai->isStaticAlloca()) {
           // only instrument non-static alloca instructions
-          instrumentAlloca(AI);
+          InstrumentAlloca(ai);
         }
       } else {
         // instrument every alloca instruction
-        instrumentAlloca(AI);
+        InstrumentAlloca(ai);
       }
 
     }
     // load instruction
-    else if (isa<LoadInst>(BI)) {
-      instrumentLoad(cast<LoadInst>(BI), llvm_ir_instruction_id);
+    else if (isa<LoadInst>(bi)) {
+      InstrumentLoad(cast<LoadInst>(bi), llvm_ir_instruction_id);
     }
     // // store instruction
-    else if (isa<StoreInst>(BI)) {
-      instrumentStore(cast<StoreInst>(BI), llvm_ir_instruction_id);
+    else if (isa<StoreInst>(bi)) {
+      InstrumentStore(cast<StoreInst>(bi), llvm_ir_instruction_id);
     }
     // call and invoke
-    else if (isaCallOrInvoke(&*BI)) {
+    else if (IsaCallOrInvoke(&*bi)) {
       // resolves aliases, e.g. calls of constructors (see getCalledFunctionThroughAliases)
-      Function *F = getCalledFunctionThroughAliases(&*BI);
+      Function *f = GetCalledFunctionThroughAliases(&*bi);
 
       // For ordinary function calls, F has a name.
       // However, sometimes the function being called
@@ -208,8 +208,8 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       // the way of compiling and linking. In this way,
       // getCalledFunction() method returns NULL.
       StringRef fn = "";
-      if (F) {
-        fn = F->getName();
+      if (f) {
+        fn = f->getName();
         if (fn.find("__dp_") != std::string::npos) // avoid instrumentation calls
         {
           continue;
@@ -221,70 +221,70 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
         if (fn.str() == "pthread_exit") {
           // pthread_exit does not return to its caller.
           // Therefore, we insert DpFuncExit before pthread_exit
-          IRBuilder<> IRBRet(&*BI);
-          IRBRet.CreateCall(DpFuncExit, {lidConstant(dputil::getLID(&*BI, fileID)), ConstantInt::get(Int32, 0)});
+          IRBuilder<> irb_ret(&*bi);
+          irb_ret.CreateCall(dp_func_exit_, {LidConstant(dputil::GetLid(&*bi, file_id)), ConstantInt::get(int32_, 0)});
           continue;
         }
-        if ((fn.str() == "exit") || F->doesNotReturn()) // terminates without returning to main
+        if ((fn.str() == "exit") || f->doesNotReturn()) // terminates without returning to main
         {
           // exit() and quick_exit() run the handlers registered at program start, so the runtime is
           // shut down through .fini_array like on the ordinary path. The others -- abort(), _exit(),
           // a failed assertion -- bypass those, and the results collected so far would be lost
           // without shutting the runtime down here.
           if ((fn.str() != "exit") && (fn.str() != "quick_exit")) {
-            insertDpFinalize(&*BI);
+            InsertDpFinalize(&*bi);
           }
           continue;
         }
         if ((fn.str() == "_Znam") || (fn.str() == "_Znwm") || (fn.str() == "malloc")) {
-          if (isa<CallInst>(BI)) {
-            instrumentNewOrMalloc(cast<CallInst>(BI));
-          } else if (isa<InvokeInst>(BI)) {
-            instrumentNewOrMalloc(cast<InvokeInst>(BI));
+          if (isa<CallInst>(bi)) {
+            InstrumentNewOrMalloc(cast<CallInst>(bi));
+          } else if (isa<InvokeInst>(bi)) {
+            InstrumentNewOrMalloc(cast<InvokeInst>(bi));
           }
           continue;
         }
         if (fn.str() == "realloc") {
-          if (isa<CallInst>(BI)) {
-            instrumentRealloc(cast<CallInst>(BI));
-          } else if (isa<InvokeInst>(BI)) {
-            instrumentRealloc(cast<InvokeInst>(BI));
+          if (isa<CallInst>(bi)) {
+            InstrumentRealloc(cast<CallInst>(bi));
+          } else if (isa<InvokeInst>(bi)) {
+            InstrumentRealloc(cast<InvokeInst>(bi));
           }
           continue;
         }
         if (fn.str() == "calloc") {
-          if (isa<CallInst>(BI)) {
-            instrumentCalloc(cast<CallInst>(BI));
-          } else if (isa<InvokeInst>(BI)) {
-            instrumentCalloc(cast<InvokeInst>(BI));
+          if (isa<CallInst>(bi)) {
+            InstrumentCalloc(cast<CallInst>(bi));
+          } else if (isa<InvokeInst>(bi)) {
+            InstrumentCalloc(cast<InvokeInst>(bi));
           }
           continue;
         }
 
         if (fn.str() == "posix_memalign") {
-          if (isa<CallInst>(BI)) {
-            instrumentPosixMemalign(cast<CallInst>(BI));
-          } else if (isa<InvokeInst>(BI)) {
-            instrumentPosixMemalign(cast<InvokeInst>(BI));
+          if (isa<CallInst>(bi)) {
+            InstrumentPosixMemalign(cast<CallInst>(bi));
+          } else if (isa<InvokeInst>(bi)) {
+            InstrumentPosixMemalign(cast<InvokeInst>(bi));
           }
           continue;
         }
-        if (isDeallocationFunction(fn)) {
-          instrumentDeleteOrFree(cast<CallBase>(BI));
+        if (IsDeallocationFunction(fn)) {
+          InstrumentDeleteOrFree(cast<CallBase>(bi));
           continue;
         }
       }
-      LID lid = dputil::getLID(&*BI, fileID);
+      LID lid = dputil::GetLid(&*bi, file_id);
       if (lid > 0) // calls on non-user code are not instrumented
       {
-        IRBuilder<> IRBCall(&*BI);
+        IRBuilder<> irb_call(&*bi);
         // the call site as a location, which the runtime reports for BGN func, and the instruction
         // id, on which it switches the callpath state. The state follows the call only if it enters
         // an instrumented function, see enter_function_for_callstate in the runtime library
-        IRBCall.CreateCall(DpCallOrInvoke,
-                           {lidConstant(lid), ConstantInt::get(Int32, llvm_ir_instruction_id)});
-        if (DP_DEBUG) {
-          if (isa<CallInst>(BI)) {
+        irb_call.CreateCall(dp_call_or_invoke_,
+                           {LidConstant(lid), ConstantInt::get(int32_, llvm_ir_instruction_id)});
+        if (kDpDebug) {
+          if (isa<CallInst>(bi)) {
             if (!(fn.str() == "")) {
               errs() << "calling " << fn << " on " << lid << "\n";
             } else {
@@ -301,21 +301,21 @@ void DiscoPoP::runOnBasicBlock(BasicBlock &BB) {
       }
     }
     // return
-    else if (isa<ReturnInst>(BI)) {
-      LID lid = dputil::getLID(&*BI, fileID);
+    else if (isa<ReturnInst>(bi)) {
+      LID lid = dputil::GetLid(&*bi, file_id);
       assert((lid > 0) && "Returning on LID = 0!");
 
-      Function *parent = BB.getParent();
+      Function *parent = bb.getParent();
       assert(parent != NULL);
       StringRef fn = parent->getName();
 
       // main is not special here any more: the runtime is shut down from .fini_array, after the
       // destructors of the target's global objects have run, so main reports its exit like every
       // other function.
-      IRBuilder<> IRBRet(&*BI);
-      IRBRet.CreateCall(DpFuncExit, {lidConstant(lid), ConstantInt::get(Int32, 0)});
+      IRBuilder<> irb_ret(&*bi);
+      irb_ret.CreateCall(dp_func_exit_, {LidConstant(lid), ConstantInt::get(int32_, 0)});
 
-      if (DP_DEBUG) {
+      if (kDpDebug) {
         errs() << fn << " returning on " << lid << "\n";
       }
     }

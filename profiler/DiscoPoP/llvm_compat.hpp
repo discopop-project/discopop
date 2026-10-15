@@ -24,23 +24,23 @@
 
 namespace llvmcompat {
 
-// The instruction following `I` in its basic block, without debug intrinsics. LLVM 22 removed
+// The instruction following `i` in its basic block, without debug intrinsics. LLVM 22 removed
 // getNextNonDebugInstruction(): debug information is stored as records attached to the instructions there, so
 // getNextNode() already skips it.
-inline llvm::Instruction *nextInstruction(llvm::Instruction *I) {
+inline llvm::Instruction *NextInstruction(llvm::Instruction *i) {
 #if LLVM_VERSION_MAJOR >= 22
-  return I->getNextNode();
+  return i->getNextNode();
 #else
-  return I->getNextNonDebugInstruction();
+  return i->getNextNonDebugInstruction();
 #endif
 }
 
-// Inserts `I` after `Pos`. insertAfter() takes an iterator from LLVM 22 on, an instruction before.
-inline void insertAfter(llvm::Instruction *I, llvm::Instruction *Pos) {
+// Inserts `i` after `pos`. insertAfter() takes an iterator from LLVM 22 on, an instruction before.
+inline void InsertAfter(llvm::Instruction *i, llvm::Instruction *pos) {
 #if LLVM_VERSION_MAJOR >= 22
-  I->insertAfter(Pos->getIterator());
+  i->insertAfter(pos->getIterator());
 #else
-  I->insertAfter(Pos);
+  i->insertAfter(pos);
 #endif
 }
 

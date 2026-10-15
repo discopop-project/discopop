@@ -27,60 +27,60 @@ using llvm::Value;
 using llvm::cast;
 using llvm::isa;
 
-std::string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, std::map<std::string, std::string> *trueVarNamesFromMetadataMap) {
+std::string DiscoPoP::DpReductionDetermineVariableName(Instruction *i, std::map<std::string, std::string> *true_var_names_from_metadata_map) {
 
   assert(I && "Instruction cannot be NULL \n");
-  int index = isa<StoreInst>(I) ? 1 : 0;
-  Value *operand = I->getOperand(index);
+  int index = isa<StoreInst>(i) ? 1 : 0;
+  Value *operand = i->getOperand(index);
 
-  IRBuilder<> builder(I);
+  IRBuilder<> builder(i);
 
   if (operand == nullptr) {
-    std::string retVal = getOrInsertVarName_static("", builder);
-    if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
-      return retVal; // not found
-    }       return (*trueVarNamesFromMetadataMap)[retVal]; // found
+    std::string ret_val = GetOrInsertVarNameStatic("", builder);
+    if (true_var_names_from_metadata_map->find(ret_val) == true_var_names_from_metadata_map->end()) {
+      return ret_val; // not found
+    }       return (*true_var_names_from_metadata_map)[ret_val]; // found
 
   }
 
   if (operand->hasName()) {
     //// we've found a global variable
     if (isa<GlobalVariable>(*operand)) {
-      std::string retVal = std::string(operand->getName());
-      if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
-        return retVal; // not found
-      }         return (*trueVarNamesFromMetadataMap)[retVal]; // found
+      std::string ret_val = std::string(operand->getName());
+      if (true_var_names_from_metadata_map->find(ret_val) == true_var_names_from_metadata_map->end()) {
+        return ret_val; // not found
+      }         return (*true_var_names_from_metadata_map)[ret_val]; // found
 
     }
     if (isa<GetElementPtrInst>(*operand)) {
       GetElementPtrInst *gep = cast<GetElementPtrInst>(operand);
-      Value *ptrOperand = gep->getPointerOperand();
-      PointerType *PTy = cast<PointerType>(ptrOperand->getType());
+      Value *ptr_operand = gep->getPointerOperand();
+      PointerType *p_ty = cast<PointerType>(ptr_operand->getType());
 
       // we've found a struct/class
       // (2025-10-30) Simplified unpacking of structs for llvm 19 compatibility inside dp_reduction::pointsToStruct
-      Type *structType = dp_reduction::pointsToStruct(PTy);
-      if (structType && gep->getNumOperands() > 2) {
-        Value *constValue = gep->getOperand(2);
-        if (constValue && isa<ConstantInt>(*constValue)) {
-          ConstantInt *idxPtr = cast<ConstantInt>(gep->getOperand(2));
-          std::uint64_t memberIdx = *(idxPtr->getValue().getRawData());
-          if (!(cast<StructType>(structType))->isLiteral()) {
-            std::string strName(structType->getStructName().data());
-            std::map<std::string, MDNode *>::iterator it = Structs.find(strName);
-            if (it != Structs.end()) {
-              std::string ret = findStructMemberName_static(it->second, memberIdx, builder);
+      Type *struct_type = dp_reduction::PointsToStruct(p_ty);
+      if (struct_type && gep->getNumOperands() > 2) {
+        Value *const_value = gep->getOperand(2);
+        if (const_value && isa<ConstantInt>(*const_value)) {
+          ConstantInt *idx_ptr = cast<ConstantInt>(gep->getOperand(2));
+          std::uint64_t member_idx = *(idx_ptr->getValue().getRawData());
+          if (!(cast<StructType>(struct_type))->isLiteral()) {
+            std::string str_name(struct_type->getStructName().data());
+            std::map<std::string, MDNode *>::iterator it = structs_.find(str_name);
+            if (it != structs_.end()) {
+              std::string ret = FindStructMemberNameStatic(it->second, member_idx, builder);
               if (ret.size() > 0) {
-                std::string retVal = ret;
-                if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
-                  return retVal; // not found
-                }                   return (*trueVarNamesFromMetadataMap)[retVal]; // found
+                std::string ret_val = ret;
+                if (true_var_names_from_metadata_map->find(ret_val) == true_var_names_from_metadata_map->end()) {
+                  return ret_val; // not found
+                }                   return (*true_var_names_from_metadata_map)[ret_val]; // found
 
               } else {
-                std::string retVal = getOrInsertVarName_static("", builder);
-                if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
-                  return retVal; // not found
-                }                   return (*trueVarNamesFromMetadataMap)[retVal]; // found
+                std::string ret_val = GetOrInsertVarNameStatic("", builder);
+                if (true_var_names_from_metadata_map->find(ret_val) == true_var_names_from_metadata_map->end()) {
+                  return ret_val; // not found
+                }                   return (*true_var_names_from_metadata_map)[ret_val]; // found
 
               }
             }
@@ -91,20 +91,20 @@ std::string DiscoPoP::dp_reduction_determineVariableName(Instruction *I, std::ma
       // we've found an array
       // (25-10-30) Note: replaced for LLVM19 compatibility
       // OLD: if (PTy->getPointerElementType()->getTypeID() == Type::ArrayTyID && isa<GetElementPtrInst>(*ptrOperand)) {
-      if (isa<GetElementPtrInst>(*ptrOperand)) {
-        return dp_reduction_determineVariableName(cast<Instruction>(ptrOperand), trueVarNamesFromMetadataMap);
+      if (isa<GetElementPtrInst>(*ptr_operand)) {
+        return DpReductionDetermineVariableName(cast<Instruction>(ptr_operand), true_var_names_from_metadata_map);
       }
-      return dp_reduction_determineVariableName(static_cast<Instruction *>(gep), trueVarNamesFromMetadataMap);
+      return DpReductionDetermineVariableName(static_cast<Instruction *>(gep), true_var_names_from_metadata_map);
     }
-    std::string retVal = std::string(operand->getName().data());
-    if (trueVarNamesFromMetadataMap->find(retVal) == trueVarNamesFromMetadataMap->end()) {
-      return retVal; // not found
-    }       return (*trueVarNamesFromMetadataMap)[retVal]; // found
+    std::string ret_val = std::string(operand->getName().data());
+    if (true_var_names_from_metadata_map->find(ret_val) == true_var_names_from_metadata_map->end()) {
+      return ret_val; // not found
+    }       return (*true_var_names_from_metadata_map)[ret_val]; // found
 
   }
 
   if (isa<LoadInst>(*operand) || isa<StoreInst>(*operand)) {
-    return dp_reduction_determineVariableName(cast<Instruction>(operand), trueVarNamesFromMetadataMap);
+    return DpReductionDetermineVariableName(cast<Instruction>(operand), true_var_names_from_metadata_map);
   }
   // if we cannot determine the name, then return *
   return "*";

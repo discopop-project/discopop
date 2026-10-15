@@ -25,24 +25,24 @@
 #include <string>
 
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_loop_entry(LID lid, std::int32_t loopID, std::int32_t instruction_id) {
+void __dp_loop_entry(LID lid, std::int32_t loop_id, std::int32_t instruction_id) {
   DP_CALLBACK_SCOPE(LOOP_ENTRY);
 
-  const auto function_stack_level = function_manager->get_current_stack_level();
-  const auto is_new_loop = loop_manager->is_new_loop(loopID);
+  const auto function_stack_level = function_manager->GetCurrentStackLevel();
+  const auto is_new_loop = loop_manager->IsNewLoop(loop_id);
 
   if (is_new_loop) {
-    loop_manager->create_new_loop(function_stack_level, loopID, lid);
+    loop_manager->CreateNewLoop(function_stack_level, loop_id, lid);
 
 
   } else {
     // The same loop iterates again
-    loop_manager->iterate_loop(function_stack_level);
+    loop_manager->IterateLoop(function_stack_level);
 
     // Handle error made in instrumentation.
     // When recorded loopStack->top().funcLevel is different
@@ -56,12 +56,12 @@ void __dp_loop_entry(LID lid, std::int32_t loopID, std::int32_t instruction_id) 
     // encounter such problem, we trust the current FuncStackLevel
     // and update top().funcLevel.
 
-    loop_manager->correct_func_level(function_stack_level);
+    loop_manager->CorrectFuncLevel(function_stack_level);
 
   }
 
-  update_callstate(instruction_id);
+  UpdateCallstate(instruction_id);
 }
 }
 
-} // namespace __dp
+} // namespace dp

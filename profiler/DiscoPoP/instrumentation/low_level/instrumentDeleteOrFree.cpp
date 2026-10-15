@@ -18,21 +18,21 @@ using llvm::IRBuilder;
 using llvm::PtrToIntInst;
 using llvm::Value;
 
-void DiscoPoP::instrumentDeleteOrFree(CallBase *toInstrument) {
+void DiscoPoP::InstrumentDeleteOrFree(CallBase *to_instrument) {
   // add instrumentation for delete instructions or calls to free
-  LID lid = dputil::getLID(toInstrument, fileID);
+  LID lid = dputil::GetLid(to_instrument, file_id);
   if (lid == 0) {
     return;
 }
-  IRBuilder<> IRB(llvmcompat::nextInstruction(toInstrument));
+  IRBuilder<> irb(llvmcompat::NextInstruction(to_instrument));
 
   std::vector<Value *> args;
-  args.push_back(lidConstant(lid));
+  args.push_back(LidConstant(lid));
 
-  Value *startAddr =
-      PtrToIntInst::CreatePointerCast(toInstrument->getArgOperand(0), Int64, "", toInstrument->getNextNode()->getIterator());
+  Value *start_addr =
+      PtrToIntInst::CreatePointerCast(to_instrument->getArgOperand(0), int64_, "", to_instrument->getNextNode()->getIterator());
 
-  args.push_back(startAddr);
+  args.push_back(start_addr);
 
-  IRB.CreateCall(DpDelete, args, "");
+  irb.CreateCall(dp_delete_, args, "");
 }

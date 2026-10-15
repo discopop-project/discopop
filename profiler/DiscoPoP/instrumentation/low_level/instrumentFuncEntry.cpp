@@ -27,68 +27,68 @@ using llvm::cast;
 using llvm::errs;
 using llvm::isa;
 
-void DiscoPoP::instrumentFuncEntry(Function &F) {
-  BasicBlock &entryBB = F.getEntryBlock();
+void DiscoPoP::InstrumentFuncEntry(Function &f) {
+  BasicBlock &entry_bb = f.getEntryBlock();
   LID lid = 0;
-  std::int32_t isStart = 0;
+  std::int32_t is_start = 0;
 
-  StringRef fn = F.getName();
+  StringRef fn = f.getName();
   if (fn.str() == "main"){
-    isStart = 1;
+    is_start = 1;
     // insert 'allocations' of global variables
-    Instruction *insertBefore = &*entryBB.begin();
+    Instruction *insert_before = &*entry_bb.begin();
 
-    auto tmp_end = F.getParent()->global_end();
+    auto tmp_end = f.getParent()->global_end();
     tmp_end--; // necessary, since the list of Globals is modified when e.g. new
                // strings are created.
-    for (auto Global_it = F.getParent()->global_begin(); Global_it != tmp_end; Global_it++) {
+    for (auto global_it = f.getParent()->global_begin(); global_it != tmp_end; global_it++) {
       // ignore globals which make use of "Appending Linkage", since they are
       // system internal and do not behave like regular values. An example for
       // such a value is @llvm.global_ctors
-      if (cast<GlobalVariable>(&*Global_it)->hasAppendingLinkage()) {
+      if (cast<GlobalVariable>(&*global_it)->hasAppendingLinkage()) {
         continue;
       }
 
-      IRBuilder<> IRB(insertBefore->getNextNode());
+      IRBuilder<> irb(insert_before->getNextNode());
 
       std::vector<Value *> args;
-      args.push_back(lidConstant(lid));
-      args.push_back(getOrInsertVarName_dynamic(Global_it->getName().str(), IRB));
+      args.push_back(LidConstant(lid));
+      args.push_back(GetOrInsertVarNameDynamic(global_it->getName().str(), irb));
 
       // Value *startAddr = PtrToIntInst::CreatePointerCast(toInstrument, Int64,
       // "", toInstrument->getNextNonDebugInstruction());
-      Value *startAddr = IRB.CreatePtrToInt(cast<Value>(&*Global_it), Int64, "");
-      args.push_back(startAddr);
+      Value *start_addr = irb.CreatePtrToInt(cast<Value>(&*global_it), int64_, "");
+      args.push_back(start_addr);
 
-      Value *endAddr = startAddr;
-      std::uint64_t numElements = 1;
-      std::uint64_t allocatedSize = Global_it->getValueType()->getScalarSizeInBits();
-      if (Global_it->getValueType()->isArrayTy()) {
+      Value *end_addr = start_addr;
+      std::uint64_t num_elements = 1;
+      std::uint64_t allocated_size = global_it->getValueType()->getScalarSizeInBits();
+      if (global_it->getValueType()->isArrayTy()) {
         // unpack potentially multidimensional allocations
-        Type *typeToParse = Global_it->getValueType();
-        Type *elementType;
+        Type *type_to_parse = global_it->getValueType();
+        Type *element_type;
 
         // unpack multidimensional allocations
-        while (typeToParse->isArrayTy()) {
+        while (type_to_parse->isArrayTy()) {
           // extract size from current dimension and multiply to numElements
-          numElements *= cast<ArrayType>(typeToParse)->getNumElements();
+          num_elements *= cast<ArrayType>(type_to_parse)->getNumElements();
           // proceed one dimension
-          typeToParse = typeToParse->getArrayElementType();
+          type_to_parse = type_to_parse->getArrayElementType();
         }
         // typeToParse now contains the element type
-        elementType = typeToParse;
+        element_type = type_to_parse;
 
         // allocated size = Element size in Bytes * Number of elements
-        auto elementSizeInBytes = elementType->getScalarSizeInBits() / 8;
-        allocatedSize = elementSizeInBytes * numElements;
+        auto element_size_in_bytes = element_type->getScalarSizeInBits() / 8;
+        allocated_size = element_size_in_bytes * num_elements;
 
         // endAddr = startAddr + allocated size
-        endAddr = IRB.CreateAdd(startAddr, ConstantInt::get(Int64, allocatedSize));
+        end_addr = irb.CreateAdd(start_addr, ConstantInt::get(int64_, allocated_size));
       }
 
-      args.push_back(endAddr);
-      args.push_back(ConstantInt::get(Int64, allocatedSize));
-      args.push_back(ConstantInt::get(Int64, numElements));
+      args.push_back(end_addr);
+      args.push_back(ConstantInt::get(int64_, allocated_size));
+      args.push_back(ConstantInt::get(int64_, num_elements));
       // REMOVED TO FIX INCORRECT STACK ADDRESS TRACKING
       // TODO: maybe replace with explicit registration of global variables
       // IRB.CreateCall(DpAlloca, args, "");
@@ -98,14 +98,14 @@ void DiscoPoP::instrumentFuncEntry(Function &F) {
   // We always want to insert __dp_func_entry at the beginning
   // of the basic block, but we need the first valid LID to
   // get the entry line of the function.
-  for (BasicBlock::iterator BI = entryBB.begin(), EI = entryBB.end(); BI != EI; ++BI) {
-    lid = dputil::getLID(&*BI, fileID);
-    if (lid > 0 && !isa<PHINode>(BI)) {
-      IRBuilder<> IRB(&*entryBB.begin());
+  for (BasicBlock::iterator bi = entry_bb.begin(), ei = entry_bb.end(); bi != ei; ++bi) {
+    lid = dputil::GetLid(&*bi, file_id);
+    if (lid > 0 && !isa<PHINode>(bi)) {
+      IRBuilder<> irb(&*entry_bb.begin());
       // the third argument (function entry id) is set to the call's own instruction id in
       // update_argument_instruction_ids
-      IRB.CreateCall(DpFuncEntry, {lidConstant(lid), ConstantInt::get(Int32, isStart), ConstantInt::get(Int32, 0)});
-      if (DP_DEBUG) {
+      irb.CreateCall(dp_func_entry_, {LidConstant(lid), ConstantInt::get(int32_, is_start), ConstantInt::get(int32_, 0)});
+      if (kDpDebug) {
         errs() << "DiscoPoP: funcEntry instrumented\n";
       }
       break;

@@ -13,7 +13,7 @@
 #pragma once
 #include "runtimeFunctionsGlobals.hpp"
 
-namespace __dp {
+namespace dp {
 // Callpath state tracking. The state follows the calls, loops and returns of the thread which
 // initialized the profiler (other threads record its current state, but do not change it).
 //
@@ -26,18 +26,18 @@ namespace __dp {
 // an indirect or virtual call, a callback from library code), see callpath_function_entries.txt.
 // If the function has no root state either, the state is kept and frozen until the function is
 // left. Leaving a function restores the state and freeze flag of its caller.
-void update_callstate(int32_t instructionID);
-void initialize_current_callpath_state();
+void UpdateCallstate(int32_t instruction_id);
+void InitializeCurrentCallpathState();
 // makes the calling thread the one tracking callpath states, starting from the given state
-void reset_callstate_tracking(CallState *initial_state);
-void register_call_for_callstate(int32_t instructionID);
-void enter_function_for_callstate(int32_t function_entry_id);
-void leave_function_for_callstate();
+void ResetCallstateTracking(CallState *initial_state);
+void RegisterCallForCallstate(int32_t instruction_id);
+void EnterFunctionForCallstate(int32_t function_entry_id);
+void LeaveFunctionForCallstate();
 // at a landing pad of the function with the given entry id: the functions entered after its latest
 // instance were left by an exception, so their states are discarded and the state of that instance
 // at its call into them is restored
-void resume_function_for_callstate(int32_t function_entry_id);
+void ResumeFunctionForCallstate(int32_t function_entry_id);
 // for tests: whether transitions are disabled, and the number of entered functions
-bool callstate_transitions_frozen();
-std::size_t callstate_frame_count();
-} // namespace __dp
+bool CallstateTransitionsFrozen();
+std::size_t CallstateFrameCount();
+} // namespace dp

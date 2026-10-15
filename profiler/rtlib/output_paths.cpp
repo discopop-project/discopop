@@ -15,9 +15,9 @@
 #include <cassert>
 #include <cstdlib>
 
-namespace __dp {
+namespace dp {
 
-std::string profiler_output_path(const std::string &file) {
+std::string ProfilerOutputPath(const std::string &file) {
   const char *const directory = getenv("DOT_DISCOPOP_PROFILER");
   assert(directory != nullptr && "DOT_DISCOPOP_PROFILER is unset, so __dp_init did not run");
   if (directory == nullptr) {
@@ -29,4 +29,4 @@ std::string profiler_output_path(const std::string &file) {
   return std::string(directory) + "/" + file;
 }
 
-} // namespace __dp
+} // namespace dp

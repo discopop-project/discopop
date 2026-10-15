@@ -14,12 +14,12 @@
 
 #include "DPTypes.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_call(LID lid, int32_t instructionID);
+void __dp_call(LID lid, int32_t instruction_id);
 }
 
-} // namespace __dp
+} // namespace dp

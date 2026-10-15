@@ -20,14 +20,14 @@ using llvm::cast;
 using llvm::isa;
 using llvm::raw_string_ostream;
 
-std::string dp_reduction::determineVariableType(Instruction *I) {
+std::string dp_reduction::DetermineVariableType(Instruction *i) {
   std::string s = "";
   std::string type_str;
-  int index = isa<StoreInst>(I) ? 1 : 0;
+  int index = isa<StoreInst>(i) ? 1 : 0;
   raw_string_ostream rso(type_str);
-  (*((I->getOperand(index))->getType())).print(rso);
+  (*((i->getOperand(index))->getType())).print(rso);
 
-  Value *operand = I->getOperand(index);
+  Value *operand = i->getOperand(index);
 
   if (operand->hasName()) {
     if (isa<GetElementPtrInst>(*operand)) {
@@ -44,10 +44,10 @@ std::string dp_reduction::determineVariableType(Instruction *I) {
       // we've found an array
       // check if previous instruction is a GEP aswell. If so, an Array has
       // been found (e.g. double**)
-      Value *prevInst = cast<Instruction>(gep)->getOperand(0);
-      if (isa<GetElementPtrInst>(prevInst)) {
+      Value *prev_inst = cast<Instruction>(gep)->getOperand(0);
+      if (isa<GetElementPtrInst>(prev_inst)) {
         s = "ARRAY,";
-      } else if (prevInst->getType()->isPointerTy()) {
+      } else if (prev_inst->getType()->isPointerTy()) {
         s = "ARRAY,";
       }
     }

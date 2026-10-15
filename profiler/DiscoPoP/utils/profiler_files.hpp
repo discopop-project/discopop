@@ -24,20 +24,20 @@
 // as it did before.
 namespace profiler_files {
 
-inline std::string path(const std::string &name) {
-  return dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler") + "/" + name;
+inline std::string Path(const std::string &name) {
+  return dputil::GetEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler") + "/" + name;
 }
 
 // opened for appending by default: the files collect the results of every module of the program
-inline std::ofstream open(const std::string &name, std::ios_base::openmode mode = std::ios_base::app) {
+inline std::ofstream Open(const std::string &name, std::ios_base::openmode mode = std::ios_base::app) {
   std::ofstream stream;
-  stream.open(path(name), std::ios_base::out | mode);
+  stream.open(Path(name), std::ios_base::out | mode);
   return stream;
 }
 
 // replaces the content of the file with `value`: the counters hand their state over to the next module
-template <typename T> void writeCounter(const std::string &name, const T &value) {
-  std::ofstream stream = open(name, std::ios_base::trunc);
+template <typename T> void WriteCounter(const std::string &name, const T &value) {
+  std::ofstream stream = Open(name, std::ios_base::trunc);
   if (stream.is_open()) {
     stream << value;
   }

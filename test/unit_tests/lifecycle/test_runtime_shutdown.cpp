@@ -14,7 +14,7 @@
 #include "runtimeFunctions.hpp"
 #include "runtimeFunctionsGlobals.hpp"
 
-using namespace __dp;
+using namespace dp;
 
 // The three steps __dp_finalize performs, in order. They run from the .fini_array entry of the
 // runtime, after every handler the target registered with __cxa_atexit, and are the only place
@@ -28,14 +28,14 @@ class RuntimeShutdownTest : public ::testing::Test {
 protected:
   void SetUp() override {
     previous_state = runtime_state;
-    previous_num_workers = NUM_WORKERS;
+    previous_num_workers = num_workers;
     previous_out = out;
-    previous_all_deps = allDeps;
-    previous_output_deps = outPutDeps;
-    previous_bb_list = bbList;
+    previous_all_deps = all_deps;
+    previous_output_deps = out_put_deps;
+    previous_bb_list = bb_list;
     previous_call_state_graph = call_state_graph;
-    previous_shadow = singleThreadedExecutionSMem;
-    previous_map = myMap;
+    previous_shadow = single_threaded_execution_smem;
+    previous_map = my_map;
 
     const char *const directory = getenv(output_directory_variable);
     had_output_directory = directory != nullptr;
@@ -49,52 +49,52 @@ protected:
     ASSERT_EQ(::mkdir((output_directory + "/statistics").c_str(), 0755), 0);
     setenv(output_directory_variable, output_directory.c_str(), 1);
 
-    construct_immortal_globals();
+    ConstructImmortalGlobals();
 
     // no workers, so the accesses are analyzed in the calling thread and merged by the shutdown
-    NUM_WORKERS = 0;
-    initSingleThreadedExecution();
+    num_workers = 0;
+    InitSingleThreadedExecution();
 
     // objects in the runtime's own storage rather than pointers, so a fresh set means
     // destroying whatever an earlier test left behind
-    destroy_manager_globals();
-    construct_manager_globals();
+    DestroyManagerGlobals();
+    ConstructManagerGlobals();
     call_state_graph = new CallStateGraph();
 
-    allDeps = new depMap();
-    outPutDeps = new stringDepMap();
-    bbList = new ReportedBBRecorder();
+    all_deps = new DepMap();
+    out_put_deps = new StringDepMap();
+    bb_list = new ReportedBBRecorder();
 
     out = new std::ofstream();
-    out->open(profiler_output_path("dynamic_dependencies.txt").c_str(), std::ios::out);
+    out->open(ProfilerOutputPath("dynamic_dependencies.txt").c_str(), std::ios::out);
     ASSERT_TRUE(out->is_open());
 
-    runtime_state = RuntimeState::Running;
+    runtime_state = RuntimeState::kRunning;
   }
 
   void TearDown() override {
     // whatever the test under way did not release
     delete out;
-    delete allDeps;
-    delete outPutDeps;
-    delete bbList;
+    delete all_deps;
+    delete out_put_deps;
+    delete bb_list;
     delete call_state_graph;
-    delete singleThreadedExecutionSMem;
-    delete myMap;
+    delete single_threaded_execution_smem;
+    delete my_map;
 
     // release_runtime() destroys them, and the rest of the suite expects them to exist
-    construct_immortal_globals();
-    construct_manager_globals();
+    ConstructImmortalGlobals();
+    ConstructManagerGlobals();
 
     out = previous_out;
-    allDeps = previous_all_deps;
-    outPutDeps = previous_output_deps;
-    bbList = previous_bb_list;
+    all_deps = previous_all_deps;
+    out_put_deps = previous_output_deps;
+    bb_list = previous_bb_list;
     call_state_graph = previous_call_state_graph;
-    singleThreadedExecutionSMem = previous_shadow;
-    myMap = previous_map;
+    single_threaded_execution_smem = previous_shadow;
+    my_map = previous_map;
     runtime_state = previous_state;
-    NUM_WORKERS = previous_num_workers;
+    num_workers = previous_num_workers;
 
     remove_output_directory();
 
@@ -134,93 +134,93 @@ private:
   bool had_output_directory = false;
   std::string previous_output_directory;
 
-  RuntimeState previous_state = RuntimeState::NotInitialized;
+  RuntimeState previous_state = RuntimeState::kNotInitialized;
   std::int32_t previous_num_workers = 0;
   std::ofstream *previous_out = nullptr;
-  depMap *previous_all_deps = nullptr;
-  stringDepMap *previous_output_deps = nullptr;
+  DepMap *previous_all_deps = nullptr;
+  StringDepMap *previous_output_deps = nullptr;
   ReportedBBRecorder *previous_bb_list = nullptr;
   CallStateGraph *previous_call_state_graph = nullptr;
   AbstractShadow *previous_shadow = nullptr;
-  depMap *previous_map = nullptr;
+  DepMap *previous_map = nullptr;
 };
 
 // A target that leaves through exit() is still inside every function it was called from, and each
 // of them has to be reported as left before the functions are written out.
 TEST_F(RuntimeShutdownTest, testUnwindingReportsAnExitForEveryFunctionStillEntered) {
-  function_manager->increase_stack_level();
-  function_manager->increase_stack_level();
+  function_manager->IncreaseStackLevel();
+  function_manager->IncreaseStackLevel();
 
-  unwind_function_stack(0);
+  UnwindFunctionStack(0);
 
-  EXPECT_EQ(function_manager->get_current_stack_level(), -1);
+  EXPECT_EQ(function_manager->GetCurrentStackLevel(), -1);
 }
 
 // A function manager starts at level 0, which is the entry of the outermost function, so even a
 // target that announced nothing is left once.
 TEST_F(RuntimeShutdownTest, testUnwindingATargetThatEnteredNothingStillPassesTheBase) {
-  ASSERT_EQ(function_manager->get_current_stack_level(), 0);
+  ASSERT_EQ(function_manager->GetCurrentStackLevel(), 0);
 
-  unwind_function_stack(0);
+  UnwindFunctionStack(0);
 
-  EXPECT_EQ(function_manager->get_current_stack_level(), -1);
+  EXPECT_EQ(function_manager->GetCurrentStackLevel(), -1);
 }
 
 TEST_F(RuntimeShutdownTest, testUnwindingEmptiesTheLoopStack) {
-  function_manager->increase_stack_level();
+  function_manager->IncreaseStackLevel();
 
-  unwind_function_stack(0);
+  UnwindFunctionStack(0);
 
   EXPECT_TRUE(loop_manager->empty());
 }
 
 TEST_F(RuntimeShutdownTest, testTheDependencyFileEndsWithTheEndOfTheProgram) {
-  write_results(0);
+  WriteResults(0);
 
   EXPECT_NE(read_output("dynamic_dependencies.txt").find("* END program"), std::string::npos);
 }
 
 TEST_F(RuntimeShutdownTest, testTheRecordedDependenciesReachTheDependencyFile) {
-  (*myMap)[10].insert(Dep(RAW, 7, "x", 3));
+  (*my_map)[10].insert(Dep(kRaw, 7, "x", 3));
 
-  write_results(0);
+  WriteResults(0);
 
   EXPECT_NE(read_output("dynamic_dependencies.txt").find("10@0 NOM  RAW 7@0|x(3)"), std::string::npos);
 }
 
 // the basic blocks whose instructions the pass omitted are only known to be complete now
 TEST_F(RuntimeShutdownTest, testTheStaticallyDeterminedDependenciesReachTheDependencyFile) {
-  bbList->record(4, 0, 0);
-  registered_bb_dep_strings().push_back("4=10 NOM RAW 7|x(3)");
+  bb_list->Record(4, 0, 0);
+  RegisteredBbDepStrings().push_back("4=10 NOM RAW 7|x(3)");
 
-  write_results(0);
+  WriteResults(0);
 
   EXPECT_NE(read_output("dynamic_dependencies.txt").find("10@0 NOM  RAW 7@0|x(3)"), std::string::npos);
 }
 
 TEST_F(RuntimeShutdownTest, testTheProfilingTimeIsWritten) {
-  write_results(0);
+  WriteResults(0);
 
   EXPECT_NE(read_output("statistics/profiling_time.txt").find(" ms"), std::string::npos);
 }
 
 TEST_F(RuntimeShutdownTest, testTheLoopCountersAreWritten) {
-  write_results(0);
+  WriteResults(0);
 
   EXPECT_TRUE(output_exists("loop_counter_output.txt"));
 }
 
 // the loop counters are dumped once; a second shutdown must not overwrite them with nothing
 TEST_F(RuntimeShutdownTest, testTheLoopCountersAreReportedAsDoneAfterwards) {
-  write_results(0);
+  WriteResults(0);
 
-  EXPECT_TRUE(loop_manager->is_done());
+  EXPECT_TRUE(loop_manager->IsDone());
 }
 
 // __dp_incr_taken_branch_counter only exists in a pass built with DP_BRANCH_TRACKING, and an
 // empty report would claim that every branch went untaken
 TEST_F(RuntimeShutdownTest, testNoBranchCountersAreWrittenWhenNoneWereCounted) {
-  write_results(0);
+  WriteResults(0);
 
   EXPECT_FALSE(output_exists("cu_taken_branch_counter_output.txt"));
 }
@@ -229,35 +229,35 @@ TEST_F(RuntimeShutdownTest, testTheCountedBranchesAreWritten) {
   char branch[] = "7";
   cuec[branch] = 3;
 
-  write_results(0);
+  WriteResults(0);
 
   EXPECT_NE(read_output("cu_taken_branch_counter_output.txt").find(";3"), std::string::npos);
 }
 
 TEST_F(RuntimeShutdownTest, testReleasingTheRuntimeDropsEverythingItCreated) {
-  release_runtime();
+  ReleaseRuntime();
 
-  EXPECT_FALSE(manager_globals_constructed());
+  EXPECT_FALSE(ManagerGlobalsConstructed());
   EXPECT_EQ(call_state_graph, nullptr);
-  EXPECT_EQ(allDeps, nullptr);
-  EXPECT_EQ(outPutDeps, nullptr);
-  EXPECT_EQ(bbList, nullptr);
+  EXPECT_EQ(all_deps, nullptr);
+  EXPECT_EQ(out_put_deps, nullptr);
+  EXPECT_EQ(bb_list, nullptr);
   EXPECT_EQ(out, nullptr);
 }
 
 // after this every callback returns without doing anything, which is what the instrumented
 // destructors of the target's globals run into
 TEST_F(RuntimeShutdownTest, testReleasingTheRuntimeStopsProfiling) {
-  release_runtime();
+  ReleaseRuntime();
 
-  EXPECT_EQ(runtime_state, RuntimeState::Terminated);
-  EXPECT_FALSE(profiling_active());
+  EXPECT_EQ(runtime_state, RuntimeState::kTerminated);
+  EXPECT_FALSE(ProfilingActive());
 }
 
 TEST_F(RuntimeShutdownTest, testReleasingTheRuntimeDropsTheRegisteredBasicBlockDependencies) {
-  registered_bb_dep_strings().push_back("4=10 NOM RAW 7|x(3)");
+  RegisteredBbDepStrings().push_back("4=10 NOM RAW 7|x(3)");
 
-  release_runtime();
+  ReleaseRuntime();
 
-  EXPECT_TRUE(registered_bb_dep_strings().empty());
+  EXPECT_TRUE(RegisteredBbDepStrings().empty());
 }

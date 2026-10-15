@@ -64,7 +64,7 @@ callback reports. The pass uses two conventions for that, and `InstrumentedProgr
 hides the difference:
 
 - `__dp_func_entry`, `__dp_loop_entry`, `__dp_alloca`, … report a **packed location**,
-  `(fileID << LIDSIZE) + line` (18 bits for the line, 14 for the file id; see `LIDSIZE` in `profiler/share/include/lid_constants.hpp`).
+  `(file id << kLidSize) + line` (18 bits for the line, 14 for the file id; see `kLidSize` in `profiler/share/include/lid_constants.hpp`).
 - `__dp_read`, `__dp_write` report an **instruction id**, which the pass resolves
   through `.discopop/profiler/instructionID_to_lineID_mapping.txt`.
 - `__dp_call` reports both: the packed location of the call site first, the instruction id

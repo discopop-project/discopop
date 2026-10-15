@@ -16,7 +16,7 @@
 #include <iostream>
 
 
-namespace __dp {
+namespace dp {
 // Byte wise signature
 
 // insert new value into signature
@@ -33,58 +33,58 @@ namespace __dp {
 // the value is still inserted, which means the old
 // value is overwritten. Meanwhile, conflictElem is
 // increased by 1.
-sigElement Signature::insert(std::int64_t elem, sigElement value) {
-  std::int32_t begin = hash(elem) * sigSlotSizeInByte;
-  std::int32_t end = begin + sigSlotSizeInByte - 1;
-  sigElement oldValue = 0;
-  sigElement temp = 0;
+SigElement Signature::Insert(std::int64_t elem, SigElement value) {
+  std::int32_t begin = Hash(elem) * sig_slot_size_in_byte_;
+  std::int32_t end = begin + sig_slot_size_in_byte_ - 1;
+  SigElement old_value = 0;
+  SigElement temp = 0;
   for (int i = end; i >= begin; --i) {
-    temp = sigarray[i];
-    oldValue += temp << (end - i) * 8;
-    sigarray[i] = static_cast<std::uint8_t>(value);
+    temp = sigarray_[i];
+    old_value += temp << (end - i) * 8;
+    sigarray_[i] = static_cast<std::uint8_t>(value);
     value >>= 8;
   }
-  return oldValue;
+  return old_value;
 }
 
 // update the value of elem to newValue
 // For update the conflict detection is not necessary.
-void Signature::update(std::int64_t elem, sigElement newValue) {
-  std::int32_t begin = hash(elem) * sigSlotSizeInByte;
-  std::int32_t end = begin + sigSlotSizeInByte - 1;
+void Signature::Update(std::int64_t elem, SigElement new_value) {
+  std::int32_t begin = Hash(elem) * sig_slot_size_in_byte_;
+  std::int32_t end = begin + sig_slot_size_in_byte_ - 1;
   for (int i = end; i >= begin; --i) {
-    sigarray[i] = static_cast<std::int8_t>(newValue);
-    newValue >>= 8;
+    sigarray_[i] = static_cast<std::int8_t>(new_value);
+    new_value >>= 8;
   }
 }
 
 // remove elem from sigarray
 // should be checked.
-void Signature::remove(std::int64_t elem) {
-  std::int32_t begin = hash(elem) * sigSlotSizeInByte;
-  std::int32_t end = begin + sigSlotSizeInByte - 1;
+void Signature::Remove(std::int64_t elem) {
+  std::int32_t begin = Hash(elem) * sig_slot_size_in_byte_;
+  std::int32_t end = begin + sig_slot_size_in_byte_ - 1;
   for (int i = begin; i <= end; ++i) {
-    sigarray[i] = 0;
+    sigarray_[i] = 0;
   }
 }
 
 // test if elem is already exist in sigarray
 // see comments for Signature::insert()
 // for data layout information
-sigElement Signature::membershipCheck(std::int64_t elem) {
-  sigElement res = 0;
-  std::int32_t begin = hash(elem) * sigSlotSizeInByte;
-  std::int32_t end = begin + sigSlotSizeInByte - 1;
+SigElement Signature::MembershipCheck(std::int64_t elem) {
+  SigElement res = 0;
+  std::int32_t begin = Hash(elem) * sig_slot_size_in_byte_;
+  std::int32_t end = begin + sig_slot_size_in_byte_ - 1;
   for (int i = begin; i <= end; ++i) {
-    res = (res << 8) + sigarray[i];
+    res = (res << 8) + sigarray_[i];
   }
   return res;
 }
 
-bool Signature::intersect(Signature & /*other*/) { return false; }
+bool Signature::Intersect(Signature & /*other*/) { return false; }
 
-double Signature::expectedFalsePositiveRate() {
+double Signature::ExpectedFalsePositiveRate() {
   double result = 0.0;
   return result;
 }
-} // namespace __dp
+} // namespace dp

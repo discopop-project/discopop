@@ -21,32 +21,32 @@ using llvm::isa;
 
 // recieves the region and outputs all variables and variables crossing basic
 // block boundaries in the region.
-void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion, std::set<std::string> &globalVariablesSet) {
+void DiscoPoP::PopulateGlobalVariablesSet(Region *top_region, std::set<std::string> &global_variables_set) {
 
-  std::map<std::string, BasicBlock *> variableToBBMap;
-  bool isGlobalVariable = false;
-  for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
+  std::map<std::string, BasicBlock *> variable_to_bb_map;
+  bool is_global_variable = false;
+  for (Region::block_iterator bb = top_region->block_begin(); bb != top_region->block_end(); ++bb) {
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction) || isa<CallInst>(instruction)) {
 
         // NOTE: changed 'instruction' to '&*instruction'
-        std::string varName = determineVariableName_static(&*instruction, isGlobalVariable, false, "");
+        std::string var_name = DetermineVariableNameStatic(&*instruction, is_global_variable, false, "");
 
-        if (isGlobalVariable) // add it if it is a global variable in the
+        if (is_global_variable) // add it if it is a global variable in the
                               // program
         {
-          programGlobalVariablesSet.insert(varName);
+          program_global_variables_set_.insert(var_name);
         }
 
-        if (variableToBBMap.find(varName) != variableToBBMap.end()) {
+        if (variable_to_bb_map.find(var_name) != variable_to_bb_map.end()) {
           // this var has already once recordded. check for bb id
-          if (variableToBBMap[varName] != *bb) {
+          if (variable_to_bb_map[var_name] != *bb) {
             // global variable found. Insert into the globalVariablesSet
-            globalVariablesSet.insert(varName);
+            global_variables_set.insert(var_name);
           }
         } else {
           // record usage of the variable.
-          variableToBBMap.insert(std::pair<std::string, BasicBlock *>(varName, *bb));
+          variable_to_bb_map.insert(std::pair<std::string, BasicBlock *>(var_name, *bb));
         }
       }
     }

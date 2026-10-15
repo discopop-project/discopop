@@ -22,7 +22,7 @@
 #include <unordered_map>
 #include <utility>
 
-namespace __dp {
+namespace dp {
 
 // For function merging
 // 1) when two BGN func are identical
@@ -51,49 +51,49 @@ public:
 
   // current_lid: the location of the call site; instruction_id: the instruction id of the call,
   // which identifies the call for the callpath states (0 if unknown)
-  void log_call(const LID current_lid, const std::int32_t instruction_id = 0) {
-    lastCallOrInvoke = current_lid;
-    lastCallInstruction = instruction_id;
+  void LogCall(const LID current_lid, const std::int32_t instruction_id = 0) {
+    last_call_or_invoke_ = current_lid;
+    last_call_instruction_ = instruction_id;
   }
 
-  void reset_call(const LID current_lid) {
-    lastCallOrInvoke = 0;
-    lastCallInstruction = 0;
-    lastProcessedLine = current_lid;
+  void ResetCall(const LID current_lid) {
+    last_call_or_invoke_ = 0;
+    last_call_instruction_ = 0;
+    last_processed_line_ = current_lid;
   }
 
-  void increase_stack_level() { ++FuncStackLevel; }
+  void IncreaseStackLevel() { ++func_stack_level_; }
 
-  void decrease_stack_level() { --FuncStackLevel; }
+  void DecreaseStackLevel() { --func_stack_level_; }
 
-  void register_function_end(const LID current_lid) { endFuncs.insert(current_lid); }
+  void RegisterFunctionEnd(const LID current_lid) { end_funcs_.insert(current_lid); }
 
-  std::int32_t get_current_stack_level() const { return FuncStackLevel; }
+  std::int32_t GetCurrentStackLevel() const { return func_stack_level_; }
 
-  void register_function_start(const LID current_lid) {
+  void RegisterFunctionStart(const LID current_lid) {
     // Process ordinary function call/invoke.
 
-    if (lastCallOrInvoke == 0) {
-      lastCallOrInvoke = lastProcessedLine;
-      lastCallInstruction = 0;
+    if (last_call_or_invoke_ == 0) {
+      last_call_or_invoke_ = last_processed_line_;
+      last_call_instruction_ = 0;
     }
-    ++FuncStackLevel;
+    ++func_stack_level_;
 
-    if (DP_DEBUG) {
-      std::cout << "Entering function LID " << std::dec << dputil::decodeLID(current_lid) << std::endl;
-      std::cout << "Function stack level = " << std::dec << FuncStackLevel << std::endl;
+    if (dp_debug) {
+      std::cout << "Entering function LID " << std::dec << dputil::DecodeLid(current_lid) << std::endl;
+      std::cout << "Function stack level = " << std::dec << func_stack_level_ << std::endl;
     }
 
-    beginFuncs[CallSite{lastCallOrInvoke, lastCallInstruction}].insert(current_lid);
+    begin_funcs_[CallSite{last_call_or_invoke_, last_call_instruction_}].insert(current_lid);
   }
 
-  void output_functions(std::ostream &stream) const {
+  void OutputFunctions(std::ostream &stream) const {
     // "<call site> BGN func <entry> [<call instruction id>]": the instruction id is omitted when
     // no call was logged, e.g. for a function called back from code without instrumentation
-    for (const auto &func_begin : beginFuncs) {
+    for (const auto &func_begin : begin_funcs_) {
       for (auto fb : func_begin.second) {
-        stream << dputil::decodeLID(func_begin.first.first) << " BGN func ";
-        stream << dputil::decodeLID(fb);
+        stream << dputil::DecodeLid(func_begin.first.first) << " BGN func ";
+        stream << dputil::DecodeLid(fb);
         if (func_begin.first.second != 0) {
           stream << " " << func_begin.first.second;
         }
@@ -101,19 +101,19 @@ public:
       }
     }
 
-    for (auto fe : endFuncs) {
-      stream << dputil::decodeLID(fe) << " END func" << std::endl;
+    for (auto fe : end_funcs_) {
+      stream << dputil::DecodeLid(fe) << " END func" << std::endl;
     }
   }
 
 private:
-  BGNFuncList beginFuncs; // function entries
-  ENDFuncList endFuncs;   // function returns
+  BGNFuncList begin_funcs_; // function entries
+  ENDFuncList end_funcs_;   // function returns
 
-  LID lastCallOrInvoke = 0;
-  std::int32_t lastCallInstruction = 0;
-  LID lastProcessedLine = 0;
-  std::int32_t FuncStackLevel = 0;
+  LID last_call_or_invoke_ = 0;
+  std::int32_t last_call_instruction_ = 0;
+  LID last_processed_line_ = 0;
+  std::int32_t func_stack_level_ = 0;
 };
 
-} // namespace __dp
+} // namespace dp

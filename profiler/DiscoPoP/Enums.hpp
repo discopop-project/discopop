@@ -12,4 +12,4 @@
 
 #pragma once
 
-enum nodeTypes { cu, func, loop, dummy };
+enum NodeTypes { kCu, kFunc, kLoop, kDummy };

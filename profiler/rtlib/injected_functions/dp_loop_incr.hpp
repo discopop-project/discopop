@@ -14,7 +14,7 @@
 
 #include <cstdint>
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -22,4 +22,4 @@ extern "C" {
 void __dp_loop_incr(int loop_id, int32_t instruction_id);
 }
 
-} // namespace __dp
+} // namespace dp

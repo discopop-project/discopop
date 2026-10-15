@@ -44,15 +44,15 @@ static void benchmark_scope_read(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::Scope>{};
+  auto dumping_ground = std::vector<dp::Scope>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto scope = __dp::Scope{1};
+    auto scope = dp::Scope{1};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      scope.registerStackRead(addr, 0, "");
+      scope.RegisterStackRead(addr, 0, "");
     }
 
     state.PauseTiming();
@@ -72,15 +72,15 @@ static void benchmark_scope_write(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::Scope>{};
+  auto dumping_ground = std::vector<dp::Scope>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto scope = __dp::Scope{1};
+    auto scope = dp::Scope{1};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      scope.registerStackWrite(addr, 0, "");
+      scope.RegisterStackWrite(addr, 0, "");
     }
 
     state.PauseTiming();
@@ -100,20 +100,20 @@ static void benchmark_scope(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::Scope>{};
+  auto dumping_ground = std::vector<dp::Scope>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto scope = __dp::Scope{1};
+    auto scope = dp::Scope{1};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
       if (read_address(addr)) {
-        scope.registerStackRead(addr, 1, "");
+        scope.RegisterStackRead(addr, 1, "");
       }
 
       if (write_address(addr)) {
-        scope.registerStackWrite(addr, 0, "");
+        scope.RegisterStackWrite(addr, 0, "");
       }
     }
 
@@ -126,38 +126,38 @@ static void benchmark_scope(benchmark::State &state) {
 static void benchmark_scope_manager_few_accesses(benchmark::State &state) {
   const auto number_scopes = state.range(0);
 
-  auto dumping_ground = std::vector<__dp::ScopeManager>{};
+  auto dumping_ground = std::vector<dp::ScopeManager>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto manager = __dp::ScopeManager{};
+    auto manager = dp::ScopeManager{};
     state.ResumeTiming();
 
     auto current_number_scopes = 0;
 
     for (auto i = 0; i < number_scopes; i++) {
-      manager.enterScope("Enter scope", i);
+      manager.EnterScope("Enter scope", i);
 
-      manager.registerStackRead(24, 0, "");
-      manager.registerStackWrite(i, 0, "");
-      manager.registerStackRead(32, 0, "");
-      manager.registerStackRead(64, 1, "");
-      manager.registerStackWrite(i + 2, 0, "");
+      manager.RegisterStackRead(24, 0, "");
+      manager.RegisterStackWrite(i, 0, "");
+      manager.RegisterStackRead(32, 0, "");
+      manager.RegisterStackRead(64, 1, "");
+      manager.RegisterStackWrite(i + 2, 0, "");
 
       current_number_scopes++;
       if (current_number_scopes > 10) {
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
 
         current_number_scopes -= 5;
       }
     }
 
     for (auto i = 0; i < current_number_scopes; i++) {
-      manager.leaveScope("Leave scope", i);
+      manager.LeaveScope("Leave scope", i);
     }
 
     state.PauseTiming();
@@ -169,42 +169,42 @@ static void benchmark_scope_manager_few_accesses(benchmark::State &state) {
 static void benchmark_scope_manager_many_accesses(benchmark::State &state) {
   const auto number_scopes = state.range(0);
 
-  auto dumping_ground = std::vector<__dp::ScopeManager>{};
+  auto dumping_ground = std::vector<dp::ScopeManager>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto manager = __dp::ScopeManager{};
+    auto manager = dp::ScopeManager{};
     state.ResumeTiming();
 
     auto current_number_scopes = 0;
 
     for (auto i = 0; i < number_scopes; i++) {
-      manager.enterScope("Enter scope", i);
+      manager.EnterScope("Enter scope", i);
 
       for (auto j = 0; j < 1024; j++) {
         const auto addr = convert_to_address(j + i);
         if (read_address(addr)) {
-          manager.registerStackRead(addr, 0, "");
+          manager.RegisterStackRead(addr, 0, "");
         }
         if (write_address(addr)) {
-          manager.registerStackWrite(addr, 0, "");
+          manager.RegisterStackWrite(addr, 0, "");
         }
       }
 
       current_number_scopes++;
       if (current_number_scopes > 10) {
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
 
         current_number_scopes -= 5;
       }
     }
 
     for (auto i = 0; i < current_number_scopes; i++) {
-      manager.leaveScope("Leave scope", i);
+      manager.LeaveScope("Leave scope", i);
     }
 
     state.PauseTiming();
@@ -223,77 +223,77 @@ static void benchmark_scope_manager_first_written(benchmark::State &state) {
     addresses[i] = convert_to_address(i);
   }
 
-  auto dumping_ground = std::vector<__dp::ScopeManager>{};
+  auto dumping_ground = std::vector<dp::ScopeManager>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto manager = __dp::ScopeManager{};
+    auto manager = dp::ScopeManager{};
     state.ResumeTiming();
 
-    manager.enterScope("First", 1);
+    manager.EnterScope("First", 1);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
       if (first_written_address(addr, 1)) {
-        const auto b = manager.isOwnedByScope(addr, true);
+        const auto b = manager.IsOwnedByScope(addr, true);
       }
     }
 
-    manager.enterScope("Second", 2);
+    manager.EnterScope("Second", 2);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
       if (first_written_address(addr, 2)) {
-        const auto b = manager.isOwnedByScope(addr, true);
+        const auto b = manager.IsOwnedByScope(addr, true);
       }
     }
 
-    manager.enterScope("Third", 3);
+    manager.EnterScope("Third", 3);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
       if (first_written_address(addr, 3)) {
-        const auto b = manager.isOwnedByScope(addr, true);
+        const auto b = manager.IsOwnedByScope(addr, true);
       }
     }
 
-    manager.leaveScope("Third", 3);
-    manager.leaveScope("Second", 2);
+    manager.LeaveScope("Third", 3);
+    manager.LeaveScope("Second", 2);
 
-    manager.enterScope("Forth", 4);
+    manager.EnterScope("Forth", 4);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
       if (first_written_address(addr, 4)) {
-        const auto b = manager.isOwnedByScope(addr, true);
+        const auto b = manager.IsOwnedByScope(addr, true);
       }
     }
 
@@ -313,70 +313,70 @@ static void benchmark_scope_manager_positive_change(benchmark::State &state) {
     addresses[i] = convert_to_address(i);
   }
 
-  auto dumping_ground = std::vector<__dp::ScopeManager>{};
+  auto dumping_ground = std::vector<dp::ScopeManager>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto manager = __dp::ScopeManager{};
+    auto manager = dp::ScopeManager{};
     state.ResumeTiming();
 
-    manager.enterScope("First", 1);
+    manager.EnterScope("First", 1);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
-      const auto b = manager.positiveScopeChangeOccuredSinceLastAccess(addr);
+      const auto b = manager.PositiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
-    manager.enterScope("Second", 2);
+    manager.EnterScope("Second", 2);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
-      const auto b = manager.positiveScopeChangeOccuredSinceLastAccess(addr);
+      const auto b = manager.PositiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
-    manager.enterScope("Third", 3);
+    manager.EnterScope("Third", 3);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
-      const auto b = manager.positiveScopeChangeOccuredSinceLastAccess(addr);
+      const auto b = manager.PositiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
-    manager.leaveScope("Third", 3);
-    manager.leaveScope("Second", 2);
+    manager.LeaveScope("Third", 3);
+    manager.LeaveScope("Second", 2);
 
-    manager.enterScope("Forth", 4);
+    manager.EnterScope("Forth", 4);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
-      const auto b = manager.positiveScopeChangeOccuredSinceLastAccess(addr);
+      const auto b = manager.PositiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
     state.PauseTiming();
@@ -398,15 +398,15 @@ static void benchmark_scope_2_read(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::Scope2>{};
+  auto dumping_ground = std::vector<dp::Scope2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto scope = __dp::Scope2{1};
+    auto scope = dp::Scope2{1};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      scope.registerStackRead(addr, 0, "");
+      scope.RegisterStackRead(addr, 0, "");
     }
 
     state.PauseTiming();
@@ -426,15 +426,15 @@ static void benchmark_scope_2_write(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::Scope2>{};
+  auto dumping_ground = std::vector<dp::Scope2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto scope = __dp::Scope2{1};
+    auto scope = dp::Scope2{1};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
-      scope.registerStackWrite(addr, 0, "");
+      scope.RegisterStackWrite(addr, 0, "");
     }
 
     state.PauseTiming();
@@ -454,20 +454,20 @@ static void benchmark_scope_2(benchmark::State &state) {
   }
 
   // This exists so that the destructor call does not interfere with the timing
-  auto dumping_ground = std::vector<__dp::Scope2>{};
+  auto dumping_ground = std::vector<dp::Scope2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto scope = __dp::Scope2{1};
+    auto scope = dp::Scope2{1};
     state.ResumeTiming();
 
     for (auto addr : addresses) {
       if (read_address(addr)) {
-        scope.registerStackRead(addr, 1, "");
+        scope.RegisterStackRead(addr, 1, "");
       }
 
       if (write_address(addr)) {
-        scope.registerStackWrite(addr, 0, "");
+        scope.RegisterStackWrite(addr, 0, "");
       }
     }
 
@@ -480,38 +480,38 @@ static void benchmark_scope_2(benchmark::State &state) {
 static void benchmark_scope_manager_2_few_accesses(benchmark::State &state) {
   const auto number_scopes = state.range(0);
 
-  auto dumping_ground = std::vector<__dp::ScopeManager2>{};
+  auto dumping_ground = std::vector<dp::ScopeManager2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto manager = __dp::ScopeManager2{};
+    auto manager = dp::ScopeManager2{};
     state.ResumeTiming();
 
     auto current_number_scopes = 0;
 
     for (auto i = 0; i < number_scopes; i++) {
-      manager.enterScope("Enter scope", i);
+      manager.EnterScope("Enter scope", i);
 
-      manager.registerStackRead(24, 0, "");
-      manager.registerStackWrite(i, 0, "");
-      manager.registerStackRead(32, 0, "");
-      manager.registerStackRead(64, 1, "");
-      manager.registerStackWrite(i + 2, 0, "");
+      manager.RegisterStackRead(24, 0, "");
+      manager.RegisterStackWrite(i, 0, "");
+      manager.RegisterStackRead(32, 0, "");
+      manager.RegisterStackRead(64, 1, "");
+      manager.RegisterStackWrite(i + 2, 0, "");
 
       current_number_scopes++;
       if (current_number_scopes > 10) {
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
 
         current_number_scopes -= 5;
       }
     }
 
     for (auto i = 0; i < current_number_scopes; i++) {
-      manager.leaveScope("Leave scope", i);
+      manager.LeaveScope("Leave scope", i);
     }
 
     state.PauseTiming();
@@ -523,42 +523,42 @@ static void benchmark_scope_manager_2_few_accesses(benchmark::State &state) {
 static void benchmark_scope_manager_2_many_accesses(benchmark::State &state) {
   const auto number_scopes = state.range(0);
 
-  auto dumping_ground = std::vector<__dp::ScopeManager2>{};
+  auto dumping_ground = std::vector<dp::ScopeManager2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto manager = __dp::ScopeManager2{};
+    auto manager = dp::ScopeManager2{};
     state.ResumeTiming();
 
     auto current_number_scopes = 0;
 
     for (auto i = 0; i < number_scopes; i++) {
-      manager.enterScope("Enter scope", i);
+      manager.EnterScope("Enter scope", i);
 
       for (auto j = 0; j < 1024; j++) {
         const auto addr = convert_to_address(j + i);
         if (read_address(addr)) {
-          manager.registerStackRead(addr, 0, "");
+          manager.RegisterStackRead(addr, 0, "");
         }
         if (write_address(addr)) {
-          manager.registerStackWrite(addr, 0, "");
+          manager.RegisterStackWrite(addr, 0, "");
         }
       }
 
       current_number_scopes++;
       if (current_number_scopes > 10) {
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
-        manager.leaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
+        manager.LeaveScope("Leave scope", i);
 
         current_number_scopes -= 5;
       }
     }
 
     for (auto i = 0; i < current_number_scopes; i++) {
-      manager.leaveScope("Leave scope", i);
+      manager.LeaveScope("Leave scope", i);
     }
 
     state.PauseTiming();
@@ -577,77 +577,77 @@ static void benchmark_scope_manager_2_first_written(benchmark::State &state) {
     addresses[i] = convert_to_address(i);
   }
 
-  auto dumping_ground = std::vector<__dp::ScopeManager2>{};
+  auto dumping_ground = std::vector<dp::ScopeManager2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto manager = __dp::ScopeManager2{};
+    auto manager = dp::ScopeManager2{};
     state.ResumeTiming();
 
-    manager.enterScope("First", 1);
+    manager.EnterScope("First", 1);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
       if (first_written_address(addr, 1)) {
-        const auto b = manager.isOwnedByScope(addr, true);
+        const auto b = manager.IsOwnedByScope(addr, true);
       }
     }
 
-    manager.enterScope("Second", 2);
+    manager.EnterScope("Second", 2);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
       if (first_written_address(addr, 2)) {
-        const auto b = manager.isOwnedByScope(addr, true);
+        const auto b = manager.IsOwnedByScope(addr, true);
       }
     }
 
-    manager.enterScope("Third", 3);
+    manager.EnterScope("Third", 3);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
       if (first_written_address(addr, 3)) {
-        const auto b = manager.isOwnedByScope(addr, true);
+        const auto b = manager.IsOwnedByScope(addr, true);
       }
     }
 
-    manager.leaveScope("Third", 3);
-    manager.leaveScope("Second", 2);
+    manager.LeaveScope("Third", 3);
+    manager.LeaveScope("Second", 2);
 
-    manager.enterScope("Forth", 4);
+    manager.EnterScope("Forth", 4);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
       if (first_written_address(addr, 4)) {
-        const auto b = manager.isOwnedByScope(addr, true);
+        const auto b = manager.IsOwnedByScope(addr, true);
       }
     }
 
@@ -667,70 +667,70 @@ static void benchmark_scope_manager_2_positive_change(benchmark::State &state) {
     addresses[i] = convert_to_address(i);
   }
 
-  auto dumping_ground = std::vector<__dp::ScopeManager2>{};
+  auto dumping_ground = std::vector<dp::ScopeManager2>{};
 
   for (auto _ : state) {
     state.PauseTiming();
-    auto manager = __dp::ScopeManager2{};
+    auto manager = dp::ScopeManager2{};
     state.ResumeTiming();
 
-    manager.enterScope("First", 1);
+    manager.EnterScope("First", 1);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
-      const auto b = manager.positiveScopeChangeOccuredSinceLastAccess(addr);
+      const auto b = manager.PositiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
-    manager.enterScope("Second", 2);
+    manager.EnterScope("Second", 2);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
-      const auto b = manager.positiveScopeChangeOccuredSinceLastAccess(addr);
+      const auto b = manager.PositiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
-    manager.enterScope("Third", 3);
+    manager.EnterScope("Third", 3);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
-      const auto b = manager.positiveScopeChangeOccuredSinceLastAccess(addr);
+      const auto b = manager.PositiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
-    manager.leaveScope("Third", 3);
-    manager.leaveScope("Second", 2);
+    manager.LeaveScope("Third", 3);
+    manager.LeaveScope("Second", 2);
 
-    manager.enterScope("Forth", 4);
+    manager.EnterScope("Forth", 4);
 
     for (const auto addr : addresses) {
       if (read_address(addr)) {
-        manager.registerStackRead(addr, 0, "");
+        manager.RegisterStackRead(addr, 0, "");
       }
 
       if (write_address(addr)) {
-        manager.registerStackWrite(addr, 0, "");
+        manager.RegisterStackWrite(addr, 0, "");
       }
 
-      const auto b = manager.positiveScopeChangeOccuredSinceLastAccess(addr);
+      const auto b = manager.PositiveScopeChangeOccuredSinceLastAccess(addr);
     }
 
     state.PauseTiming();

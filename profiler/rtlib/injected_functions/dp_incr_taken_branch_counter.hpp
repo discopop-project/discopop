@@ -14,7 +14,7 @@
 
 #include "DPTypes.hpp"
 
-namespace __dp {
+namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
@@ -22,4 +22,4 @@ extern "C" {
 void __dp_incr_taken_branch_counter(char *source_and_target, int cmp_res, int active_on);
 }
 
-} // namespace __dp
+} // namespace dp

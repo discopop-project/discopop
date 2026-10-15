@@ -20,60 +20,60 @@
 #include <stdexcept>
 
 
-namespace __dp {
+namespace dp {
 
 class ShadowMemory : public AbstractShadow {
 public:
-  ShadowMemory(int slotSize, int size, int numHash) {
-    sigRead = new Signature(slotSize, size, numHash);
-    sigWrite = new Signature(slotSize, size, numHash);
+  ShadowMemory(int slot_size, int size, int num_hash) {
+    sig_read_ = new Signature(slot_size, size, num_hash);
+    sig_write_ = new Signature(slot_size, size, num_hash);
   }
 
   ~ShadowMemory() override {
-    delete sigRead;
-    delete sigWrite;
+    delete sig_read_;
+    delete sig_write_;
   }
 
-  inline sigElement testInRead(std::int64_t memAddr) override { return sigRead->membershipCheck(memAddr); }
+  inline SigElement TestInRead(std::int64_t mem_addr) override { return sig_read_->MembershipCheck(mem_addr); }
 
-  inline sigElement testInWrite(std::int64_t memAddr) override { return sigWrite->membershipCheck(memAddr); }
+  inline SigElement TestInWrite(std::int64_t mem_addr) override { return sig_write_->MembershipCheck(mem_addr); }
 
-  inline sigElement insertToRead(std::int64_t memAddr, sigElement value) override {
-    return sigRead->insert(memAddr, value);
+  inline SigElement InsertToRead(std::int64_t mem_addr, SigElement value) override {
+    return sig_read_->Insert(mem_addr, value);
   }
 
-  inline sigElement insertToWrite(std::int64_t memAddr, sigElement value) override {
-    return sigWrite->insert(memAddr, value);
+  inline SigElement InsertToWrite(std::int64_t mem_addr, SigElement value) override {
+    return sig_write_->Insert(mem_addr, value);
   }
 
-  inline void updateInRead(std::int64_t memAddr, sigElement newValue) override { sigRead->update(memAddr, newValue); }
+  inline void UpdateInRead(std::int64_t mem_addr, SigElement new_value) override { sig_read_->Update(mem_addr, new_value); }
 
-  inline void updateInWrite(std::int64_t memAddr, sigElement newValue) override { sigWrite->update(memAddr, newValue); }
+  inline void UpdateInWrite(std::int64_t mem_addr, SigElement new_value) override { sig_write_->Update(mem_addr, new_value); }
 
-  inline void removeFromRead(std::int64_t memAddr) override { sigRead->remove(memAddr); }
+  inline void RemoveFromRead(std::int64_t mem_addr) override { sig_read_->Remove(mem_addr); }
 
-  inline void removeFromWrite(std::int64_t memAddr) override { sigWrite->remove(memAddr); }
+  inline void RemoveFromWrite(std::int64_t mem_addr) override { sig_write_->Remove(mem_addr); }
 
-  inline std::unordered_set<ADDR> getAddrsInRange(std::int64_t /*startAddr*/, std::int64_t /*endAddr*/) override {
+  inline std::unordered_set<ADDR> GetAddrsInRange(std::int64_t /*startAddr*/, std::int64_t /*endAddr*/) override {
     // not possible for Shadow, since not all addresses are kept
     std::unordered_set<ADDR> result;
     return result;
   }
 
   // a signature does not keep the addresses it was given, so it cannot list them back
-  inline std::vector<std::pair<std::int64_t, sigElement>> getReadKVPairs() override {
+  inline std::vector<std::pair<std::int64_t, SigElement>> GetReadKvPairs() override {
     throw std::logic_error("NOT IMPLEMENTED!");
   }
 
-  inline std::vector<std::pair<std::int64_t, sigElement>> getWriteKVPairs() override {
+  inline std::vector<std::pair<std::int64_t, SigElement>> GetWriteKvPairs() override {
     throw std::logic_error("NOT IMPLEMENTED!");
   }
 
-  inline void print() override {}
+  inline void Print() override {}
 
 private:
-  Signature *sigRead;
-  Signature *sigWrite;
+  Signature *sig_read_;
+  Signature *sig_write_;
 };
 
-} // namespace __dp
+} // namespace dp

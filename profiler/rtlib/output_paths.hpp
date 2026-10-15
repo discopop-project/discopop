@@ -14,7 +14,7 @@
 
 #include <string>
 
-namespace __dp {
+namespace dp {
 
 // Path of `file` inside the profiler's output directory.
 //
@@ -26,6 +26,6 @@ namespace __dp {
 // Note that this holds for the runtime only. The LLVM pass writes into the same directory at
 // compile time, where no __dp_init has run, so its own lookup in share/lib/DPUtils.cpp keeps
 // establishing the variables itself.
-std::string profiler_output_path(const std::string &file);
+std::string ProfilerOutputPath(const std::string &file);
 
-} // namespace __dp
+} // namespace dp

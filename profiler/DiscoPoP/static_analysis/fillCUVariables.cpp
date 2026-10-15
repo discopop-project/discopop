@@ -19,38 +19,38 @@ using llvm::Region;
 using llvm::StoreInst;
 using llvm::isa;
 
-void DiscoPoP::fillCUVariables(Region *TopRegion, std::set<std::string> &globalVariablesSet, std::vector<CU *> & /*CUVector*/,
-                               std::map<std::string, std::vector<CU *>> &BBIDToCUIDsMap) {
+void DiscoPoP::FillCuVariables(Region *top_region, std::set<std::string> &global_variables_set, std::vector<CU *> & /*CUVector*/,
+                               std::map<std::string, std::vector<CU *>> &bb_id_to_cu_ids_map) {
   LID lid;
-  std::string varName, varType, varDefLine;
-  bool isGlobalVar = false;
+  std::string var_name, var_type, var_def_line;
+  bool is_global_var = false;
   // Changed TerminatorInst to Instuction
-  const Instruction *TInst;
-  std::string successorBB;
+  const Instruction *t_inst;
+  std::string successor_bb;
 
-  for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
-    CU *lastCU = BBIDToCUIDsMap[bb->getName().str()].back(); // get the last CU in the basic block
+  for (Region::block_iterator bb = top_region->block_begin(); bb != top_region->block_end(); ++bb) {
+    CU *last_cu = bb_id_to_cu_ids_map[bb->getName().str()].back(); // get the last CU in the basic block
     // get all successor basic blocks for bb
-    TInst = bb->getTerminator();
-    for (unsigned i = 0, nSucc = TInst->getNumSuccessors(); i < nSucc; ++i) {
+    t_inst = bb->getTerminator();
+    for (unsigned i = 0, n_succ = t_inst->getNumSuccessors(); i < n_succ; ++i) {
       // get the name of successor basicBlock
-      successorBB = TInst->getSuccessor(i)->getName().str();
+      successor_bb = t_inst->getSuccessor(i)->getName().str();
       // get the first CU of the successor basicBlock and record its ID in
       // current CU's successorCUs
-      lastCU->successorCUs.push_back(BBIDToCUIDsMap[successorBB].front()->ID);
+      last_cu->successor_cus.push_back(bb_id_to_cu_ids_map[successor_bb].front()->id);
     }
 
-    auto bbCU = BBIDToCUIDsMap[bb->getName().str()].begin();
+    auto bb_cu = bb_id_to_cu_ids_map[bb->getName().str()].begin();
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction)) {
         // NOTE: changed 'instruction' to '&*instruction'
-        lid = dputil::getLID(&*instruction, fileID);
+        lid = dputil::GetLid(&*instruction, file_id);
         if (lid == 0) {
           continue;
 }
         // NOTE: changed 'instruction' to '&*instruction', next 2 lines
-        varName = determineVariableName_static(&*instruction, isGlobalVar, false, "");
-        varType = determineVariableType(&*instruction);
+        var_name = DetermineVariableNameStatic(&*instruction, is_global_var, false, "");
+        var_type = DetermineVariableType(&*instruction);
 
         // (2025-10-30) removed due to llvm 19 compatibility
         /*
@@ -63,20 +63,20 @@ void DiscoPoP::fillCUVariables(Region *TopRegion, std::set<std::string> &globalV
         string varSizeInBytes = to_string(variableType->getScalarSizeInBits() / 8);
         */
 
-        varDefLine = determineVariableDefLine(&*instruction);
+        var_def_line = DetermineVariableDefLine(&*instruction);
 
-        bool readAccess = isa<LoadInst>(instruction);
-        bool writeAccess = isa<StoreInst>(instruction);
+        bool read_access = isa<LoadInst>(instruction);
+        bool write_access = isa<StoreInst>(instruction);
 
-        Variable v(varName, varType, varDefLine, readAccess, writeAccess);
+        Variable v(var_name, var_type, var_def_line, read_access, write_access);
 
-        if (lid > (*bbCU)->endLine) {
-          bbCU = std::next(bbCU, 1);
+        if (lid > (*bb_cu)->end_line) {
+          bb_cu = std::next(bb_cu, 1);
         }
-        if (globalVariablesSet.count(varName) || programGlobalVariablesSet.count(varName)) {
-          (*bbCU)->globalVariableNames.insert(v);
+        if (global_variables_set.count(var_name) || program_global_variables_set_.count(var_name)) {
+          (*bb_cu)->global_variable_names.insert(v);
         } else {
-          (*bbCU)->localVariableNames.insert(v);
+          (*bb_cu)->local_variable_names.insert(v);
         }
       }
     }

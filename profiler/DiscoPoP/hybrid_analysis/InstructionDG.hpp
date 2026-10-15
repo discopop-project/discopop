@@ -20,31 +20,31 @@
 class InstructionDG : public Graph<llvm::Instruction *> {
 
 private:
-  dputil::VariableNameFinder *VNF;
-  InstructionCFG *CFG;
-  std::set<llvm::Instruction *> highlightedInstructionNodes;
-  int32_t fid;
+  dputil::VariableNameFinder *vnf_;
+  InstructionCFG *cfg_;
+  std::set<llvm::Instruction *> highlighted_instruction_nodes_;
+  int32_t fid_;
 
-  void recursiveDepChecker(std::set<llvm::Instruction *> *checkedInstructions, llvm::Instruction *I, llvm::Instruction *C);
+  void RecursiveDepChecker(std::set<llvm::Instruction *> *checked_instructions, llvm::Instruction *i, llvm::Instruction *c);
 
-  void recursiveDepFinder(std::set<llvm::Instruction *> *checkedInstructions, llvm::Instruction *I);
+  void RecursiveDepFinder(std::set<llvm::Instruction *> *checked_instructions, llvm::Instruction *i);
 
 public:
-  InstructionDG(dputil::VariableNameFinder *_VNF, InstructionCFG *_CFG, int32_t _fid);
+  InstructionDG(dputil::VariableNameFinder *vnf, InstructionCFG *cfg, int32_t fid);
 
-  bool edgeIsINIT(Edge<llvm::Instruction *> *e);
+  bool EdgeIsInit(Edge<llvm::Instruction *> *e);
 
-  std::string edgeToDPDep(Edge<llvm::Instruction *> *e, std::unordered_map<std::string, std::pair<std::string, std::string>> &staticValueNameToMemRegIDMap);
-  std::string edgeToInstructionBasedDPDep(Edge<llvm::Instruction *> *e, std::unordered_map<std::string, std::pair<std::string, std::string>> &staticValueNameToMemRegIDMap);
+  std::string EdgeToDpDep(Edge<llvm::Instruction *> *e, std::unordered_map<std::string, std::pair<std::string, std::string>> &static_value_name_to_mem_reg_id_map);
+  std::string EdgeToInstructionBasedDpDep(Edge<llvm::Instruction *> *e, std::unordered_map<std::string, std::pair<std::string, std::string>> &static_value_name_to_mem_reg_id_map);
 
-  void highlightInstructionNode(llvm::Instruction *instr);
+  void HighlightInstructionNode(llvm::Instruction *instr);
 
-  void dumpToDot(const std::string targetPath);
+  void DumpToDot(const std::string target_path);
 
-  std::string getInstructionLine(llvm::Instruction *I);
+  std::string GetInstructionLine(llvm::Instruction *i);
 
-  std::string getInitEdgeInstructionLine(Edge<llvm::Instruction *> *e);
+  std::string GetInitEdgeInstructionLine(Edge<llvm::Instruction *> *e);
 
-  std::string getValueNameAndMemRegIDFromEdge(Edge<llvm::Instruction *> *e, std::unordered_map<std::string, std::pair<std::string, std::string>> &staticValueNameToMemRegIDMap);
+  std::string GetValueNameAndMemRegIdFromEdge(Edge<llvm::Instruction *> *e, std::unordered_map<std::string, std::pair<std::string, std::string>> &static_value_name_to_mem_reg_id_map);
 
 };

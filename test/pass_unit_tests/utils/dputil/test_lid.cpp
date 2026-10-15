@@ -33,8 +33,8 @@ protected:
 
     std::ofstream mapping(std::string(dir) + "/FileMapping.txt");
     mapping << "1\t" << PROJECT_DIR << "/a.cpp\n";
-    mapping << MAXFILEID << "\t" << PROJECT_DIR << "/last.cpp\n";
-    mapping << MAXFILEID + 1 << "\t" << PROJECT_DIR << "/one_too_many.cpp\n";
+    mapping << kMaxFileId << "\t" << PROJECT_DIR << "/last.cpp\n";
+    mapping << kMaxFileId + 1 << "\t" << PROJECT_DIR << "/one_too_many.cpp\n";
   }
 
   // An instruction located at `line` of `directory`/`file`.
@@ -64,7 +64,7 @@ TEST_F(LidTest, testLidOfAMappedFileIsFileIdAndLine) {
   llvm::Instruction *instruction = makeInstruction(PROJECT_DIR, "a.cpp", 42);
   int32_t file_id = 0;
 
-  EXPECT_EQ(dputil::getLID(instruction, file_id), (static_cast<int64_t>(1) << LIDSIZE) + 42);
+  EXPECT_EQ(dputil::GetLid(instruction, file_id), (static_cast<int64_t>(1) << kLidSize) + 42);
   EXPECT_EQ(file_id, 1);
 }
 
@@ -73,7 +73,7 @@ TEST_F(LidTest, testInstructionWithoutDebugLocationHasNoLid) {
   instruction->setDebugLoc(llvm::DebugLoc());
   int32_t file_id = 0;
 
-  EXPECT_EQ(dputil::getLID(instruction, file_id), 0);
+  EXPECT_EQ(dputil::GetLid(instruction, file_id), 0);
 }
 
 TEST_F(LidTest, testFileOutsideOfTheProjectHasNoLid) {
@@ -82,56 +82,56 @@ TEST_F(LidTest, testFileOutsideOfTheProjectHasNoLid) {
   llvm::Instruction *instruction = makeInstruction("/elsewhere", "b.cpp", 7);
   int32_t file_id = 0;
 
-  EXPECT_EQ(dputil::getLID(instruction, file_id), 0);
+  EXPECT_EQ(dputil::GetLid(instruction, file_id), 0);
   EXPECT_EQ(file_id, 0);
 }
 
 TEST_F(LidTest, testTheLastLineOfAFileHasALid) {
-  llvm::Instruction *instruction = makeInstruction(PROJECT_DIR, "a.cpp", MAXLNO - 1);
+  llvm::Instruction *instruction = makeInstruction(PROJECT_DIR, "a.cpp", kMaxLno - 1);
   int32_t file_id = 0;
 
-  const int64_t lid = dputil::getLID(instruction, file_id);
+  const int64_t lid = dputil::GetLid(instruction, file_id);
 
-  EXPECT_EQ(lid, (static_cast<int64_t>(1) << LIDSIZE) + MAXLNO - 1);
-  EXPECT_EQ(dputil::decodeLID(lid), "1:" + std::to_string(MAXLNO - 1));
+  EXPECT_EQ(lid, (static_cast<int64_t>(1) << kLidSize) + kMaxLno - 1);
+  EXPECT_EQ(dputil::DecodeLid(lid), "1:" + std::to_string(kMaxLno - 1));
 }
 
 TEST_F(LidTest, testALineTheLidCannotHoldHasNoLid) {
   // the line would have changed the file id of the location
-  llvm::Instruction *instruction = makeInstruction(PROJECT_DIR, "a.cpp", MAXLNO);
+  llvm::Instruction *instruction = makeInstruction(PROJECT_DIR, "a.cpp", kMaxLno);
   int32_t file_id = 0;
 
-  EXPECT_EQ(dputil::getLID(instruction, file_id), 0);
+  EXPECT_EQ(dputil::GetLid(instruction, file_id), 0);
 }
 
 TEST_F(LidTest, testTheLastFileIdHasALidWithoutASign) {
   // file id and line fill the 32 bits of the location: the highest file id sets bit 31, which must neither
   // turn the LID negative nor be lost by decoding
-  llvm::Instruction *instruction = makeInstruction(PROJECT_DIR, "last.cpp", MAXLNO - 1);
+  llvm::Instruction *instruction = makeInstruction(PROJECT_DIR, "last.cpp", kMaxLno - 1);
   int32_t file_id = 0;
 
-  const int64_t lid = dputil::getLID(instruction, file_id);
+  const int64_t lid = dputil::GetLid(instruction, file_id);
 
-  EXPECT_EQ(file_id, MAXFILEID);
+  EXPECT_EQ(file_id, kMaxFileId);
   EXPECT_EQ(lid, 0xFFFFFFFFLL);
-  EXPECT_EQ(dputil::decodeLID(lid), std::to_string(MAXFILEID) + ":" + std::to_string(MAXLNO - 1));
+  EXPECT_EQ(dputil::DecodeLid(lid), std::to_string(kMaxFileId) + ":" + std::to_string(kMaxLno - 1));
 }
 
 TEST_F(LidTest, testAFileIdTheLidCannotHoldHasNoLid) {
   llvm::Instruction *instruction = makeInstruction(PROJECT_DIR, "one_too_many.cpp", 1);
   int32_t file_id = 0;
 
-  EXPECT_EQ(dputil::getLID(instruction, file_id), 0);
+  EXPECT_EQ(dputil::GetLid(instruction, file_id), 0);
 }
 
 TEST(EncodeLidTest, testEncodeLidPacksFileAndLine) {
-  EXPECT_EQ(dputil::encodeLID(3, 42), (static_cast<int64_t>(3) << LIDSIZE) + 42);
-  EXPECT_EQ(dputil::encodeLID(MAXFILEID, MAXLNO - 1), 0xFFFFFFFFLL);
+  EXPECT_EQ(dputil::EncodeLid(3, 42), (static_cast<int64_t>(3) << kLidSize) + 42);
+  EXPECT_EQ(dputil::EncodeLid(kMaxFileId, kMaxLno - 1), 0xFFFFFFFFLL);
 }
 
 TEST(EncodeLidTest, testEncodeLidRejectsWhatDoesNotFit) {
-  EXPECT_EQ(dputil::encodeLID(3, MAXLNO), 0);
-  EXPECT_EQ(dputil::encodeLID(3, -1), 0);
-  EXPECT_EQ(dputil::encodeLID(MAXFILEID + 1, 1), 0);
-  EXPECT_EQ(dputil::encodeLID(-1, 1), 0);
+  EXPECT_EQ(dputil::EncodeLid(3, kMaxLno), 0);
+  EXPECT_EQ(dputil::EncodeLid(3, -1), 0);
+  EXPECT_EQ(dputil::EncodeLid(kMaxFileId + 1, 1), 0);
+  EXPECT_EQ(dputil::EncodeLid(-1, 1), 0);
 }

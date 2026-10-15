@@ -33,14 +33,14 @@ protected:
 TEST_F(VariableNameTest, testAnAllocaIsNamedLikeItsValue) {
   llvm::Value *s = builder.CreateAlloca(struct_type, nullptr, "s");
 
-  EXPECT_EQ(finder.getVarName(s), "s");
+  EXPECT_EQ(finder.GetVarName(s), "s");
 }
 
 TEST_F(VariableNameTest, testAnElementIsNamedLikeTheObjectItBelongsTo) {
   llvm::Value *s = builder.CreateAlloca(struct_type, nullptr, "s");
   llvm::Value *member = builder.CreateStructGEP(struct_type, s, 1);
 
-  EXPECT_EQ(finder.getVarName(member), "s");
+  EXPECT_EQ(finder.GetVarName(member), "s");
 }
 
 TEST_F(VariableNameTest, testAnElementOfAnArrayOfStructsWithAVariableIndexIsNamedLikeTheArray) {
@@ -49,5 +49,5 @@ TEST_F(VariableNameTest, testAnElementOfAnArrayOfStructsWithAVariableIndexIsName
   llvm::Value *index = function->getArg(0);
   llvm::Value *member = builder.CreateGEP(struct_type, a, {index, builder.getInt32(1)});
 
-  EXPECT_EQ(finder.getVarName(member), "a");
+  EXPECT_EQ(finder.GetVarName(member), "a");
 }

@@ -10,7 +10,7 @@
 #include "runtimeFunctions.hpp"
 #include "runtimeFunctionsGlobals.hpp"
 
-using namespace __dp;
+using namespace dp;
 
 // The first thing __dp_init does: read dp.conf, if there is one next to the executable, and let
 // it override the built-in defaults. Every setting is "<name> = <value>"; whatever the file does
@@ -22,14 +22,14 @@ using namespace __dp;
 class ReadRuntimeInfoTest : public ::testing::Test {
 protected:
   void SetUp() override {
-    previous_debug = DP_DEBUG;
-    previous_sig_elem_bit = SIG_ELEM_BIT;
-    previous_sig_num_elem = SIG_NUM_ELEM;
-    previous_sig_num_hash = SIG_NUM_HASH;
-    previous_num_workers = NUM_WORKERS;
-    previous_use_perfect = USE_PERFECT;
+    previous_debug = dp_debug;
+    previous_sig_elem_bit = sig_elem_bit;
+    previous_sig_num_elem = sig_num_elem;
+    previous_sig_num_hash = sig_num_hash;
+    previous_num_workers = num_workers;
+    previous_use_perfect = use_perfect;
 
-    configuration_path = dputil::get_exe_dir() + "/dp.conf";
+    configuration_path = dputil::GetExeDir() + "/dp.conf";
 
     // a dp.conf that is already there belongs to whoever put it next to the binary
     struct stat unused = {};
@@ -43,12 +43,12 @@ protected:
       std::remove(configuration_path.c_str());
     }
 
-    DP_DEBUG = previous_debug;
-    SIG_ELEM_BIT = previous_sig_elem_bit;
-    SIG_NUM_ELEM = previous_sig_num_elem;
-    SIG_NUM_HASH = previous_sig_num_hash;
-    NUM_WORKERS = previous_num_workers;
-    USE_PERFECT = previous_use_perfect;
+    dp_debug = previous_debug;
+    sig_elem_bit = previous_sig_elem_bit;
+    sig_num_elem = previous_sig_num_elem;
+    sig_num_hash = previous_sig_num_hash;
+    num_workers = previous_num_workers;
+    use_perfect = previous_use_perfect;
   }
 
   void write_configuration(const std::string &contents) const {
@@ -67,95 +67,95 @@ private:
 };
 
 TEST_F(ReadRuntimeInfoTest, testWithoutAConfigurationTheDefaultsAreKept) {
-  SIG_ELEM_BIT = 56;
-  NUM_WORKERS = 4;
+  sig_elem_bit = 56;
+  num_workers = 4;
 
-  readRuntimeInfo();
+  ReadRuntimeInfo();
 
-  EXPECT_EQ(SIG_ELEM_BIT, 56);
-  EXPECT_EQ(NUM_WORKERS, 4);
+  EXPECT_EQ(sig_elem_bit, 56);
+  EXPECT_EQ(num_workers, 4);
 }
 
 TEST_F(ReadRuntimeInfoTest, testEveryShadowMemoryParameterCanBeConfigured) {
   write_configuration("SIG_ELEM_BIT = 32\nSIG_NUM_ELEM = 1024\nSIG_NUM_HASH = 3\n");
 
-  readRuntimeInfo();
+  ReadRuntimeInfo();
 
-  EXPECT_EQ(SIG_ELEM_BIT, 32);
-  EXPECT_EQ(SIG_NUM_ELEM, 1024);
-  EXPECT_EQ(SIG_NUM_HASH, 3);
+  EXPECT_EQ(sig_elem_bit, 32);
+  EXPECT_EQ(sig_num_elem, 1024);
+  EXPECT_EQ(sig_num_hash, 3);
 }
 
 TEST_F(ReadRuntimeInfoTest, testTheNumberOfWorkersCanBeConfigured) {
-  NUM_WORKERS = 4;
+  num_workers = 4;
   write_configuration("NUM_WORKERS = 8\n");
 
-  readRuntimeInfo();
+  ReadRuntimeInfo();
 
-  EXPECT_EQ(NUM_WORKERS, 8);
+  EXPECT_EQ(num_workers, 8);
 }
 
 TEST_F(ReadRuntimeInfoTest, testSpacesAroundTheNameAndTheValueAreIgnored) {
   write_configuration("   SIG   _ELEM_BIT=32\nSIG_NUM_ELEM   =    1024   \n");
 
-  readRuntimeInfo();
+  ReadRuntimeInfo();
 
-  EXPECT_EQ(SIG_ELEM_BIT, 32);
-  EXPECT_EQ(SIG_NUM_ELEM, 1024);
+  EXPECT_EQ(sig_elem_bit, 32);
+  EXPECT_EQ(sig_num_elem, 1024);
 }
 
 TEST_F(ReadRuntimeInfoTest, testASettingThatIsNotMentionedKeepsItsValue) {
-  SIG_NUM_ELEM = 270000;
+  sig_num_elem = 270000;
   write_configuration("SIG_ELEM_BIT = 32\n");
 
-  readRuntimeInfo();
+  ReadRuntimeInfo();
 
-  EXPECT_EQ(SIG_NUM_ELEM, 270000);
+  EXPECT_EQ(sig_num_elem, 270000);
 }
 
 TEST_F(ReadRuntimeInfoTest, testAnUnknownSettingIsIgnored) {
-  SIG_ELEM_BIT = 56;
+  sig_elem_bit = 56;
   write_configuration("NOT_A_SETTING = 1\nSIG_ELEM_BIT = 32\n");
 
-  readRuntimeInfo();
+  ReadRuntimeInfo();
 
-  EXPECT_EQ(SIG_ELEM_BIT, 32);
+  EXPECT_EQ(sig_elem_bit, 32);
 }
 
 // a line has to be exactly "<name>=<value>" to be taken apart
 TEST_F(ReadRuntimeInfoTest, testLinesThatAreNotASettingAreSkipped) {
-  SIG_ELEM_BIT = 56;
+  sig_elem_bit = 56;
   write_configuration("\n# a comment\nSIG_ELEM_BIT\nSIG_ELEM_BIT=32=64\nSIG_ELEM_BIT = 32\n");
 
-  readRuntimeInfo();
+  ReadRuntimeInfo();
 
-  EXPECT_EQ(SIG_ELEM_BIT, 32);
+  EXPECT_EQ(sig_elem_bit, 32);
 }
 
 // only positive values are taken, so a setting that cannot be zero is not silently zeroed by a
 // value that does not parse as a number
 TEST_F(ReadRuntimeInfoTest, testAValueThatIsNotPositiveLeavesTheSettingAlone) {
-  SIG_ELEM_BIT = 56;
+  sig_elem_bit = 56;
   write_configuration("SIG_ELEM_BIT = 0\n");
 
-  readRuntimeInfo();
+  ReadRuntimeInfo();
 
-  EXPECT_EQ(SIG_ELEM_BIT, 56);
+  EXPECT_EQ(sig_elem_bit, 56);
 }
 
 TEST_F(ReadRuntimeInfoTest, testAValueThatIsNoNumberLeavesTheSettingAlone) {
-  SIG_ELEM_BIT = 56;
+  sig_elem_bit = 56;
   write_configuration("SIG_ELEM_BIT = wide\n");
 
-  readRuntimeInfo();
+  ReadRuntimeInfo();
 
-  EXPECT_EQ(SIG_ELEM_BIT, 56);
+  EXPECT_EQ(sig_elem_bit, 56);
 }
 
 TEST_F(ReadRuntimeInfoTest, testTheLastValueOfARepeatedSettingWins) {
   write_configuration("SIG_ELEM_BIT = 32\nSIG_ELEM_BIT = 48\n");
 
-  readRuntimeInfo();
+  ReadRuntimeInfo();
 
-  EXPECT_EQ(SIG_ELEM_BIT, 48);
+  EXPECT_EQ(sig_elem_bit, 48);
 }
