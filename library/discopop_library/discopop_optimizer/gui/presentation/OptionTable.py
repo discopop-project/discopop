@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import tkinter
-from tkinter import *
+from tkinter import DISABLED, END, NORMAL, NSEW, RIDGE, Button, Entry
 from typing import List, Tuple, Dict, Optional, cast
 
 import networkx as nx  # type: ignore
@@ -204,7 +204,7 @@ def show_options(
         export_code_button = Button(
             options_field,
             text="Export Code",
-            command=lambda opt=option, opt_name=option_name, ctx=context: export_code(  # type: ignore
+            command=lambda opt=option, opt_name=option_name, ctx=context: export_code(  # type: ignore  # noqa: F821  undefined name, pre-existing
                 pet, graph, experiment, opt, ctx, opt_name, function_root
             ),
         )
