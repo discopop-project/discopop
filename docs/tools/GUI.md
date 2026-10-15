@@ -39,7 +39,7 @@ and exits with code 1. On such a machine, use the [project manager](Project_mana
 Up to DiscoPoP 5.0, the bare `discopop` command opened the GUI. It is now the command line project manager.
 
 ## Window layout
-![Main window on the first start: the Configuration Assistant in front of the configuration list](../assets/screenshots/gui_main_window.svg)
+![Main window with the configuration list on the left and the tabs on the right](../assets/screenshots/gui_main_window.svg)
 
 - **Run Configs** (left): the execution configurations of the project, i.e. the directories below `.discopop/project/configs/`. Select one to work on it. A right click offers *Copy*, *Rename* and *Delete*. **+ New** creates an empty configuration (you enter a name; its `execute.sh` is a placeholder you have to edit). **Edit Compilation** opens the [Compilation Editor](#compilation-editor).
 - **Tabs** (right), in workflow order: *Editor*, *Execute*, *Report*, *Hotspot Detection*, *Pattern Detection*, *Patch Repair*, *Autotuning*. Most tabs work on the selected configuration.
@@ -48,7 +48,6 @@ Up to DiscoPoP 5.0, the bare `discopop` command opened the GUI. It is now the co
 The tabs for later steps explain on mouse over which prerequisite is missing. For example, *Pattern Detection* needs profiling data and *Autotuning* needs pattern detection results.
 
 ## Configuration assistant (wizard)
-<!-- TODO screenshot: replace placeholder -->
 ![First page of the configuration assistant](../assets/screenshots/gui_wizard.svg)
 
 When the project has no usable configuration, the GUI opens the *Configuration Assistant* at start. It has eight steps:

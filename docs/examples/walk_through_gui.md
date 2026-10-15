@@ -45,8 +45,7 @@ If the project has no real configuration yet, the "Configuration Assistant" open
 
 "Next >" moves on, "< Back" goes back, "Cancel" asks for confirmation, "Finish" creates the configuration and opens the Execute tab.
 
-<!-- TODO screenshot: replace placeholder -->
-![Configuration Assistant, step Compilation Script](../assets/screenshots/gui_wizard.svg)
+![Configuration Assistant, first step (Welcome)](../assets/screenshots/gui_wizard.svg)
 
 You can open the wizard's results again later: "Edit Compilation" in the left column opens an editor for `compile.sh` and the settings files, with the buttons "Save (Ctrl+S)", "Test Compilation" and "Derive" (derives the settings of the other modes from `seq_settings.json`). "+ New" adds a further configuration; a right click on a configuration offers Copy, Rename and Delete.
 
