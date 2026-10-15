@@ -7,13 +7,12 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING
 
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.enums.NodeType import NodeType
 
 if TYPE_CHECKING:
-    from discopop_explorer.classes.variable import Variable
     from discopop_explorer.aliases.NodeID import NodeID
 
 

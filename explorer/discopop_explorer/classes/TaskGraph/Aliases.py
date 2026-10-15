@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Optional, Tuple, Union
+from typing import Optional
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.Node import Node
 

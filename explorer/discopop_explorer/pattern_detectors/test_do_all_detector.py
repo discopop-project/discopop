@@ -12,7 +12,6 @@ from typing import Callable, cast
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
-from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX

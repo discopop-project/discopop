@@ -7,23 +7,16 @@
 # directory for details.
 import itertools
 import logging
-from typing import Any, Dict, FrozenSet, List, Optional, Set, Tuple, cast
+from typing import Any, Dict, FrozenSet, List, Optional, Set, Tuple
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.Aliases import PETNodeID
-from discopop_explorer.classes.TaskGraph.ContextTaskGraph import ContextTaskGraph
-from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
-from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
-from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
 from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
-from discopop_explorer.classes.TaskGraph.Contexts.TaskParentContext import TaskParentContext
-from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
-from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.PEGraph.LoopNode import LoopNode
@@ -41,7 +34,6 @@ from discopop_explorer.classes.patterns.PatternDecisions import (
     duplicate_pattern_reason,
     region_of_pet_node,
 )
-from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.functions.PEGraph.queries.edges import in_edges
@@ -49,16 +41,10 @@ from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.pattern_detectors.clause_classification import filter_classifications, merge_classifications
 from discopop_explorer.pattern_detectors.do_all_detector import DoAllInfo
 from discopop_explorer.pattern_detectors.loop_collapse_analysis import identify_collapsible_loop_nests
-from discopop_explorer.classes.patterns.TaskParallelismInfo import (
-    ParallelRegionInfo,
-    TPIType,
-    TaskParallelismInfo,
-)
 
-from discopop_explorer.utils import classify_loop_variables
 from discopop_explorer.functions.PEGraph.queries.data_edge_index import DataEdgeIndex
 from discopop_explorer.classes.variable import Variable
-from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import MemoryRegion, VarName
+from discopop_explorer.pattern_detectors.combined_gpu_patterns.classes.Aliases import VarName
 from discopop_explorer.enums.DepOrigin import DepOrigin
 from discopop_explorer.pattern_detectors.reduction_detector import ReductionInfo
 from discopop_explorer.utilities.ASTUtils.ASTPatternDetectionIntegration import ASTPatternDetectionHelper

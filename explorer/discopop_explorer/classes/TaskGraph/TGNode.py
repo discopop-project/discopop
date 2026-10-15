@@ -7,14 +7,13 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import Dict, List, Optional, TYPE_CHECKING, Set
+from typing import Optional, TYPE_CHECKING, Set
 
 if TYPE_CHECKING:
     from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 
-from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
-from discopop_explorer.classes.TaskGraph.Aliases import LevelIndex, PETNode, PETNodeID, TGNodeID, PositionIndex
+from discopop_explorer.classes.TaskGraph.Aliases import LevelIndex, PETNode, PETNodeID, PositionIndex
 
 
 class TGNode(object):

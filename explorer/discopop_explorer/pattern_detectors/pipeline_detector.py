@@ -168,8 +168,6 @@ def run_detection(
     :param pet: PET graph
     :return: List of detected pattern info
     """
-    import tqdm  # type: ignore
-    from multiprocessing import Pool
 
     global global_pet
     global_pet = pet

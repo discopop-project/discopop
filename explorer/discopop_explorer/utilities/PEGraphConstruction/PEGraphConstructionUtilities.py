@@ -8,11 +8,10 @@
 
 from __future__ import annotations
 
-from typing import List, Union, cast
+from typing import List, Union
 
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
-from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 
 from discopop_explorer.classes.PEGraph.Dependency import Dependency

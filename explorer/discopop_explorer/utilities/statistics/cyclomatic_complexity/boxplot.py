@@ -7,7 +7,7 @@
 # directory for details.
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Dict, List, Tuple
+from typing import TYPE_CHECKING, List, Tuple
 
 if TYPE_CHECKING:
     from discopop_explorer.discopop_explorer import ExplorerArguments

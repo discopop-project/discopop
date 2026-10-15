@@ -9,8 +9,7 @@
 import logging
 from collections import deque
 from typing import Deque, Dict, List, Optional, Set, Tuple, cast
-import warnings
-from matplotlib import pyplot as plt
+from matplotlib import pyplot as plt  # noqa: F401  used by the commented-out code
 import networkx as nx  # type: ignore
 from matplotlib.axes import Axes
 from networkx import Graph
@@ -47,7 +46,6 @@ from discopop_explorer.classes.ContextTaskGraph.modifications.remove_nodes.merge
 from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import (
     BranchingParentContext,
 )
-from discopop_explorer.classes.TaskGraph.Contexts.BranchContext import BranchContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
 from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import (
@@ -56,13 +54,6 @@ from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import 
 from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.Contexts.TaskParentContext import (
     TaskParentContext,
-)
-from discopop_explorer.classes.TaskGraph.Contexts.TaskEndContext import TaskEndContext
-from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import (
-    LoopParentContext,
-)
-from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import (
-    IterationContext,
 )
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
@@ -747,7 +738,6 @@ class ContextTaskGraph(Plottable, object):  # type: ignore[misc]
 
     def plot(self, highlight_nodes: Optional[List[Context]] = None) -> None:
         import tkinter as tk
-        import numpy as np
         from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk  # type: ignore
         from matplotlib.figure import Figure
 

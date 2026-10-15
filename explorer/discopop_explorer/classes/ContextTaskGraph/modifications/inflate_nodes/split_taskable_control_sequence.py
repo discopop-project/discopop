@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 import logging
-from typing import TYPE_CHECKING, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 from discopop_explorer.classes.ContextTaskGraph.classes.edges import CTGEdgeInfo, CTGEdgeType
 from discopop_explorer.classes.ContextTaskGraph.classes.CombinedContext import CombinedContext

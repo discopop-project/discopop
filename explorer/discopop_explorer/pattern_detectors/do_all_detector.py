@@ -17,7 +17,10 @@ from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edge
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_explorer.functions.PEGraph.queries.variables import get_variables
-from discopop_explorer.functions.PEGraph.traversal.parent import get_all_parent_functions, get_parent_function
+from discopop_explorer.functions.PEGraph.traversal.parent import (  # noqa: F401  used by the commented-out code
+    get_all_parent_functions,
+    get_parent_function,
+)
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 from discopop_library.StatusReporting.console import progress

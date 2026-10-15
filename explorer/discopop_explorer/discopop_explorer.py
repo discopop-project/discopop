@@ -10,14 +10,12 @@ import cProfile
 import json
 import logging
 import os
-from posixpath import abspath, dirname
-import shutil
 import subprocess
 import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     import tkinter as tk
@@ -30,15 +28,11 @@ from discopop_explorer.functions.PEGraph.output.gephi import dump_to_gephi_file
 from discopop_explorer.utilities.statistics.collect_statistics import collect_statistics
 from discopop_library.ArgumentClasses.GeneralArguments import GeneralArguments  # type: ignore
 from discopop_library.FolderStructure.setup import setup_explorer
-from discopop_library.FolderStructure.teardown import teardown_explorer
 from discopop_library.HostpotLoader.HotspotLoaderArguments import HotspotLoaderArguments
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 
-from discopop_library.LineMapping.initialize import initialize_line_mapping
-from discopop_library.LineMapping.delete import delete_line_mapping
-from discopop_library.PatchGenerator.PatchGeneratorArguments import PatchGeneratorArguments
-from discopop_library.PathManagement.PathManagement import get_path, load_file_mapping
+from discopop_library.PathManagement.PathManagement import get_path  # noqa: F401  used by the commented-out code
 from discopop_library.Viewer.ViewerArguments import ViewerArguments
 from discopop_library.Viewer.suggestions_view import print_suggestions_overview
 

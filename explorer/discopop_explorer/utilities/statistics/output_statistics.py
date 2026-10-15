@@ -11,8 +11,6 @@ import json
 import os
 from typing import TYPE_CHECKING, Dict, List
 
-from discopop_explorer.aliases.NodeID import NodeID
-
 if TYPE_CHECKING:
     from discopop_explorer.discopop_explorer import ExplorerArguments
 

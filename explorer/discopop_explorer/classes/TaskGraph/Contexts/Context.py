@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import itertools
 import logging
-from typing import Dict, Iterator, List, Optional, Set, Tuple, TYPE_CHECKING
+from typing import Iterator, List, Optional, Set, Tuple, TYPE_CHECKING
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX

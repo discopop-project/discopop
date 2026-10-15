@@ -6,10 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, List, Set
-from discopop_explorer.classes.TaskGraph.Aliases import PETNode, PETNodeID
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
-from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 
 
 class BranchContext(Context):

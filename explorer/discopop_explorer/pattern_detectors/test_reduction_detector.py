@@ -7,7 +7,7 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import Callable, List, Sequence, Tuple, Union, cast
+from typing import Callable, Sequence, Tuple, Union, cast
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.classes.PEGraph.Dependency import Dependency

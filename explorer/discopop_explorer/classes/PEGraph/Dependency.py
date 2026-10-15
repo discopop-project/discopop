@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, FrozenSet, List, Optional, Union
+from typing import TYPE_CHECKING, FrozenSet, Optional, Union
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
