@@ -34,9 +34,8 @@ void DiscoPoP::PopulateGlobalVariablesSet(Region* top_region, std::set<std::stri
         // NOTE: changed 'instruction' to '&*instruction'
         std::string var_name = DetermineVariableNameStatic(&*instruction, is_global_variable, false, "");
 
-        if (is_global_variable)  // add it if it is a global variable in the
-                                 // program
-        {
+        if (is_global_variable) {  // add it if it is a global variable in the
+                                   // program
           program_global_variables_set_.insert(var_name);
         }
 

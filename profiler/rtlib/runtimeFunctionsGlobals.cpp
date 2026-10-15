@@ -67,8 +67,8 @@ std::ofstream* out = nullptr;
 /******* BEGIN: parallelization section *******/
 std::mutex all_deps_lock;
 pthread_t* workers = nullptr;  // worker threads
-std::atomic<bool> finalize_parallelization_called =
-    false;  // signals to worker threads that no further data access will be registered in the first queue
+// signals to worker threads that no further data access will be registered in the first queue
+std::atomic<bool> finalize_parallelization_called = false;
 FirstAccessQueueChunk* main_thread_access_info_buffer = nullptr;
 FirstAccessQueue& first_access_queue = first_access_queue_storage.value;
 SecondAccessQueue& second_access_queue = second_access_queue_storage.value;

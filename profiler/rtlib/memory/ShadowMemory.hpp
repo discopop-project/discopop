@@ -59,7 +59,7 @@ class ShadowMemory : public AbstractShadow {
 
   inline void RemoveFromWrite(std::int64_t mem_addr) override { sig_write_->Remove(mem_addr); }
 
-  inline std::unordered_set<ADDR> GetAddrsInRange(std::int64_t /*startAddr*/, std::int64_t /*endAddr*/) override {
+  inline std::unordered_set<ADDR> GetAddrsInRange(std::int64_t /*start_addr*/, std::int64_t /*end_addr*/) override {
     // not possible for Shadow, since not all addresses are kept
     std::unordered_set<ADDR> result;
     return result;

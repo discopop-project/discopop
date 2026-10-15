@@ -34,7 +34,7 @@ class InstructionNode {
  public:
   explicit InstructionNode(InstructionNodeT item) : item_(item) {}
 
-  ~InstructionNode() {};
+  ~InstructionNode() {}
 
   InstructionNodeT GetItem() const { return item_; }
 };
@@ -46,9 +46,9 @@ class Edge {
   InstructionNode<InstructionNodeT>* dst_;
 
  public:
-  Edge(InstructionNode<InstructionNodeT>* src, InstructionNode<InstructionNodeT>* dst) : src_(src), dst_(dst) {};
+  Edge(InstructionNode<InstructionNodeT>* src, InstructionNode<InstructionNodeT>* dst) : src_(src), dst_(dst) {}
 
-  ~Edge() {};
+  ~Edge() {}
 
   InstructionNode<InstructionNodeT>* GetSrc() const { return src_; }
 
@@ -70,7 +70,7 @@ class Graph {
   std::map<InstructionNode<InstructionNodeT>*, std::set<Edge<InstructionNodeT>*>> in_edges_;
 
  public:
-  Graph() {};
+  Graph() {}
 
   ~Graph() {
     for (auto& n : instruction_nodes_list_) {
@@ -176,11 +176,11 @@ class Graph {
     return out_edges;
   }
 
-  std::set<Edge<InstructionNodeT>*> GetOutEdges(InstructionNodeT item) { return getOutEdges(GetInstructionNode(item)); }
+  std::set<Edge<InstructionNodeT>*> GetOutEdges(InstructionNodeT item) { return GetOutEdges(GetInstructionNode(item)); }
 
   void RemoveEdge(Edge<InstructionNodeT>* e) {
-    auto out = e->getSrc();
-    auto in = e->getDst();
+    auto out = e->GetSrc();
+    auto in = e->GetDst();
     edges_list_.remove(e);
     out_edges_[out].erase(e);
     in_edges_[in].erase(e);

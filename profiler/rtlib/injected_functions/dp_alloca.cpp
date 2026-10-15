@@ -29,7 +29,7 @@ namespace dp {
 extern "C" {
 
 void __dp_alloca(LID /*lid*/, char* /*var*/, ADDR /*start_addr*/, ADDR /*end_addr*/, std::int64_t /*num_bytes*/,
-                 std::int64_t /*numElements*/) {
+                 std::int64_t /*num_elements*/) {
   DP_CALLBACK_SCOPE(ALLOCA);
 }
 }

@@ -20,7 +20,7 @@ namespace dp {
 extern "C" {
 
 #ifdef SKIP_DUP_INSTR
-void __dp_alloca(LID lid, char* var, ADDR startAddr, ADDR endAddr, int64_t numBytes, int64_t numElements);
+void __dp_alloca(LID lid, char* var, ADDR start_addr, ADDR end_addr, int64_t num_bytes, int64_t num_elements);
 #else
 void __dp_alloca(LID lid, char* var, ADDR start_addr, ADDR end_addr, int64_t num_bytes, int64_t num_elements);
 #endif

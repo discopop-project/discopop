@@ -19,7 +19,8 @@ void DiscoPoP::InitializeInstructionIdCounter() {
   instruction_counter_file += "/DP_InstructionIDCounter.txt";
   if (dputil::FileExists(instruction_counter_file)) {
     std::fstream in_instruction_id_counter(instruction_counter_file, std::ios_base::in);
-    ;
+    {
+    }
     in_instruction_id_counter >> instruction_id_counter;
     in_instruction_id_counter.close();
   }

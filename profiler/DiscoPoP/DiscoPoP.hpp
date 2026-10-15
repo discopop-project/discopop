@@ -57,6 +57,7 @@
 #include <llvm/Passes/PassBuilder.h>
 #endif
 
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -71,6 +72,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include "DPUtils.hpp"
 #include "Structs.hpp"
@@ -106,10 +108,6 @@ inline int32_t GetDpInstructionId(llvm::Instruction* i) {
   id_str.erase(0, 15);  // "dp.md.instr.id:"
   return std::stoi(id_str);
 }
-
-#include <stdlib.h>
-
-#include <vector>
 
 #include "Globals.hpp"
 
@@ -253,7 +251,7 @@ class DiscoPoP {  // : public ModulePass, public PassInfoMixin<DiscoPoP> {
   uint32_t unique_callpath_state_id_;
 
  public:
-  DiscoPoP() {};  // : ModulePass(ID), uniqueNum(1){};
+  DiscoPoP() {}  // : ModulePass(ID), uniqueNum(1){};
 
   bool RunOnModule(llvm::Module& m, llvm::ModuleAnalysisManager& mam);
 
@@ -334,5 +332,4 @@ class DiscoPoP {  // : public ModulePass, public PassInfoMixin<DiscoPoP> {
   std::map<int32_t, LoopIdentity> loop_id_to_identity;
 
   // DPReduction end
-
 };  // end of class DiscoPoP

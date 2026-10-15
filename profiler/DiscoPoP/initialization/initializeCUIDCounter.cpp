@@ -19,7 +19,8 @@ void DiscoPoP::InitializeCuIdCounter() {
   cu_counter_file += "/DP_CUIDCounter.txt";
   if (dputil::FileExists(cu_counter_file)) {
     std::fstream in_cu_id_counter(cu_counter_file, std::ios_base::in);
-    ;
+    {
+    }
     in_cu_id_counter >> cu_id_counter;
     in_cu_id_counter.close();
   }

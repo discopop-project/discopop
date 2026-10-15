@@ -32,7 +32,7 @@ using llvm::Value;
 
 std::string DiscoPoP::DpReductionDetermineVariableName(
     Instruction* i, std::map<std::string, std::string>* true_var_names_from_metadata_map) {
-  assert(I && "Instruction cannot be NULL \n");
+  assert(i && "Instruction cannot be NULL \n");
   int index = isa<StoreInst>(i) ? 1 : 0;
   Value* operand = i->getOperand(index);
 
@@ -79,14 +79,12 @@ std::string DiscoPoP::DpReductionDetermineVariableName(
                   return ret_val;  // not found
                 }
                 return (*true_var_names_from_metadata_map)[ret_val];  // found
-
-              } else {
-                std::string ret_val = GetOrInsertVarNameStatic("", builder);
-                if (true_var_names_from_metadata_map->find(ret_val) == true_var_names_from_metadata_map->end()) {
-                  return ret_val;  // not found
-                }
-                return (*true_var_names_from_metadata_map)[ret_val];  // found
               }
+              std::string ret_val = GetOrInsertVarNameStatic("", builder);
+              if (true_var_names_from_metadata_map->find(ret_val) == true_var_names_from_metadata_map->end()) {
+                return ret_val;  // not found
+              }
+              return (*true_var_names_from_metadata_map)[ret_val];  // found
             }
           }
         }

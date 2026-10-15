@@ -101,6 +101,6 @@ PassPluginLibraryInfo GetPassPluginInfo() {
   };
 
   return {LLVM_PLUGIN_API_VERSION, "discopop_new_pm_adaptor", "0.0.1", callback};
-};
+}
 
 extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() { return GetPassPluginInfo(); }

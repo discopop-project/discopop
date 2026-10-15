@@ -73,11 +73,12 @@ std::string cu_output::XmlEscape(std::string data) {
       case '>':
         replacement = "&gt;";
         break;
-      default:;
+      default: {
+      }
     }
     data.replace(pos, 1, replacement);
     pos += replacement.size();
-  };
+  }
   return data;
 }
 
@@ -137,7 +138,7 @@ void CUGraphWriter::PrintTree(Node* root, bool is_root) {
   });
 }
 
-void CUGraphWriter::PrintNode(Node* root, bool /*isRoot*/) {
+void CUGraphWriter::PrintNode(Node* root, bool /*is_root*/) {
   if (root->name.find("llvm")) {
     std::string start = "";
     if (root->type == NodeTypes::kLoop) {

@@ -140,15 +140,14 @@ std::string InstructionDG::EdgeToDpDep(
            static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)]
                .first  // use original variable name instead of LLVM IR SSA name
            + "(" + static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)].second + ")";
-  } else {
-    dep_type = (isa<LoadInst>(i) ? std::string("R") : std::string("W")) + "A" +
-               (isa<LoadInst>(j) ? std::string("R") : std::string("W"));
-    return std::to_string(fid_) + ":" + GetInstructionLine(i) + " " + "NOM" + " " + dep_type + " " +
-           std::to_string(fid_) + ":" + GetInstructionLine(j) + "|" +
-           static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)]
-               .first  // use original variable name instead of LLVM IR SSA name
-           + "(" + static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)].second + ")";
   }
+  dep_type = (isa<LoadInst>(i) ? std::string("R") : std::string("W")) + "A" +
+             (isa<LoadInst>(j) ? std::string("R") : std::string("W"));
+  return std::to_string(fid_) + ":" + GetInstructionLine(i) + " " + "NOM" + " " + dep_type + " " +
+         std::to_string(fid_) + ":" + GetInstructionLine(j) + "|" +
+         static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)]
+             .first  // use original variable name instead of LLVM IR SSA name
+         + "(" + static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)].second + ")";
 }
 
 std::string InstructionDG::EdgeToInstructionBasedDpDep(
@@ -185,14 +184,13 @@ std::string InstructionDG::EdgeToInstructionBasedDpDep(
            static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)]
                .first  // use original variable name instead of LLVM IR SSA name
            + "(" + static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)].second + ")";
-  } else {
-    dep_type = (isa<LoadInst>(i) ? std::string("R") : std::string("W")) + "A" +
-               (isa<LoadInst>(j) ? std::string("R") : std::string("W"));
-    return unique_instruction_id_i + " " + "NOM" + " " + dep_type + " " + unique_instruction_id_j + "|" +
-           static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)]
-               .first  // use original variable name instead of LLVM IR SSA name
-           + "(" + static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)].second + ")";
   }
+  dep_type = (isa<LoadInst>(i) ? std::string("R") : std::string("W")) + "A" +
+             (isa<LoadInst>(j) ? std::string("R") : std::string("W"));
+  return unique_instruction_id_i + " " + "NOM" + " " + dep_type + " " + unique_instruction_id_j + "|" +
+         static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)]
+             .first  // use original variable name instead of LLVM IR SSA name
+         + "(" + static_value_name_to_mem_reg_id_map[vnf_->GetVarName(i)].second + ")";
 }
 
 void InstructionDG::DumpToDot(const std::string target_path) {

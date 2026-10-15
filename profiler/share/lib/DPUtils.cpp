@@ -65,7 +65,7 @@ llvm::cl::opt<bool> dp_memory_profiling_skip_function_arguments(
 
 namespace dputil {
 
-std::int32_t GetFileId(std::string /*fileMapping*/, std::string full_path_name) {
+std::int32_t GetFileId(std::string /*file_mapping*/, std::string full_path_name) {
   // prepare environment variables
   if (FileMappingPath().length() == 0) {
     char const* tmp = std::getenv("DOT_DISCOPOP");
@@ -79,8 +79,7 @@ std::int32_t GetFileId(std::string /*fileMapping*/, std::string full_path_name) 
 
   // check if path in DP_PROJECT_ROOT_DIR
   std::string dp_project_dir(dputil::GetEnvOrDefault("DP_PROJECT_ROOT_DIR", "/"));
-  if (full_path_name.find(dp_project_dir) == std::string::npos)  // function defined outside project
-  {
+  if (full_path_name.find(dp_project_dir) == std::string::npos) {  // function defined outside project
     return 0;
   }
 

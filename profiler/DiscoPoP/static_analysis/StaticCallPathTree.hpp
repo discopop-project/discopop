@@ -33,10 +33,10 @@ class StaticCallPathTreeNode {
   StaticCallPathTreeNode* prefix;
 
   StaticCallPathTreeNode(std::uint32_t path_id, StaticCalltreeNode* base_node)
-      : base_node(base_node), path_id(path_id), prefix(nullptr) {};
+      : base_node(base_node), path_id(path_id), prefix(nullptr) {}
 
   StaticCallPathTreeNode(std::uint32_t path_id, StaticCalltreeNode* base_node, StaticCallPathTreeNode* prefix)
-      : base_node(base_node), path_id(path_id), prefix(prefix) {};
+      : base_node(base_node), path_id(path_id), prefix(prefix) {}
 
   ~StaticCallPathTreeNode();
 

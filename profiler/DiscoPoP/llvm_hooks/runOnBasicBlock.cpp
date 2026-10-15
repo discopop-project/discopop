@@ -113,7 +113,7 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock& bb) {
     }
 
     if ([[maybe_unused]] DbgDeclareInst* di = dyn_cast<DbgDeclareInst>(bi)) {
-      assert(DI->getOperand(0));
+      assert(di->getOperand(0));
 #if false  // NOTE (25-10-30) DISABLED FOR LLVM 19 COMPATIBILITY REASONS
       if (AllocaInst *alloc = dyn_cast<AllocaInst>(DI->getOperand(0))) {
         Type *type = alloc->getAllocatedType();
@@ -169,9 +169,8 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock& bb) {
         }
       }
 #endif
-    }
-    // alloca instruction
-    else if (isa<AllocaInst>(bi)) {
+    } else if (isa<AllocaInst>(bi)) {
+      // alloca instruction
       AllocaInst* ai = cast<AllocaInst>(bi);
 
       // if the option is set, check if the AllocaInst is static at the entry
@@ -190,18 +189,14 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock& bb) {
         // instrument every alloca instruction
         InstrumentAlloca(ai);
       }
-
-    }
-    // load instruction
-    else if (isa<LoadInst>(bi)) {
+    } else if (isa<LoadInst>(bi)) {
+      // load instruction
       InstrumentLoad(cast<LoadInst>(bi), llvm_ir_instruction_id);
-    }
-    // // store instruction
-    else if (isa<StoreInst>(bi)) {
+    } else if (isa<StoreInst>(bi)) {
+      // // store instruction
       InstrumentStore(cast<StoreInst>(bi), llvm_ir_instruction_id);
-    }
-    // call and invoke
-    else if (IsaCallOrInvoke(&*bi)) {
+    } else if (IsaCallOrInvoke(&*bi)) {
+      // call and invoke
       // resolves aliases, e.g. calls of constructors (see getCalledFunctionThroughAliases)
       Function* f = GetCalledFunctionThroughAliases(&*bi);
 
@@ -213,12 +208,10 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock& bb) {
       StringRef fn = "";
       if (f) {
         fn = f->getName();
-        if (fn.find("__dp_") != std::string::npos)  // avoid instrumentation calls
-        {
+        if (fn.find("__dp_") != std::string::npos) {  // avoid instrumentation calls
           continue;
         }
-        if (fn.find("__clang_") != std::string::npos)  // clang helper calls
-        {
+        if (fn.find("__clang_") != std::string::npos) {  // clang helper calls
           continue;
         }
         if (fn.str() == "pthread_exit") {
@@ -228,8 +221,7 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock& bb) {
           irb_ret.CreateCall(dp_func_exit_, {LidConstant(dputil::GetLid(&*bi, file_id)), ConstantInt::get(int32_, 0)});
           continue;
         }
-        if ((fn.str() == "exit") || f->doesNotReturn())  // terminates without returning to main
-        {
+        if ((fn.str() == "exit") || f->doesNotReturn()) {  // terminates without returning to main
           // exit() and quick_exit() run the handlers registered at program start, so the runtime is
           // shut down through .fini_array like on the ordinary path. The others -- abort(), _exit(),
           // a failed assertion -- bypass those, and the results collected so far would be lost
@@ -278,8 +270,7 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock& bb) {
         }
       }
       LID lid = dputil::GetLid(&*bi, file_id);
-      if (lid > 0)  // calls on non-user code are not instrumented
-      {
+      if (lid > 0) {  // calls on non-user code are not instrumented
         IRBuilder<> irb_call(&*bi);
         // the call site as a location, which the runtime reports for BGN func, and the instruction
         // id, on which it switches the callpath state. The state follows the call only if it enters
@@ -301,9 +292,8 @@ void DiscoPoP::RunOnBasicBlock(BasicBlock& bb) {
           }
         }
       }
-    }
-    // return
-    else if (isa<ReturnInst>(bi)) {
+    } else if (isa<ReturnInst>(bi)) {
+      // return
       LID lid = dputil::GetLid(&*bi, file_id);
       assert((lid > 0) && "Returning on LID = 0!");
 

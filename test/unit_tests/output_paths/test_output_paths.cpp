@@ -63,7 +63,7 @@ TEST_F(OutputPathsTest, testAnUnsetDirectoryFallsBackToTheDefaultOne) {
 #ifdef NDEBUG
   EXPECT_EQ(dp::ProfilerOutputPath("reduction.txt"), ".discopop/profiler/reduction.txt");
 #else
-  EXPECT_DEATH(dp::profiler_output_path("reduction.txt"), "DOT_DISCOPOP_PROFILER is unset");
+  EXPECT_DEATH(dp::ProfilerOutputPath("reduction.txt"), "DOT_DISCOPOP_PROFILER is unset");
 #endif
 }
 

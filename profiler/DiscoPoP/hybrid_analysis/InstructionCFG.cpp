@@ -88,7 +88,7 @@ void InstructionCFG::FindAndAddFirstRelevantInstructionInSuccessorBlocks(
     if (s != bb) {
       FindAndAddFirstRelevantInstructionInSuccessorBlocks(s, previous_instruction, visited);
     }
-  next:;
+  next: {}
   }
 }
 

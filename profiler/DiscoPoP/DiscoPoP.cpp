@@ -56,19 +56,17 @@ void DiscoPoP::SetupCallbacks() {
 
   dp_read_ = this_module_->getOrInsertFunction("__dp_read", void_type_,
 #ifdef SKIP_DUP_INSTR
-                                               int64_, int64_, char_ptr_, int64_, int64_
+                                               int64_, int64_, char_ptr_, int64_, int64_);
 #else
-                                               int64_, int64_, char_ptr_
+                                               int64_, int64_, char_ptr_);
 #endif
-  );
 
   dp_write_ = this_module_->getOrInsertFunction("__dp_write", void_type_,
 #ifdef SKIP_DUP_INSTR
-                                                int64_, int64_, char_ptr_, int64_, int64_
+                                                int64_, int64_, char_ptr_, int64_, int64_);
 #else
-                                                int64_, int64_, char_ptr_
+                                                int64_, int64_, char_ptr_);
 #endif
-  );
 
   dp_alloca_ = this_module_->getOrInsertFunction("__dp_alloca", void_type_,
 
