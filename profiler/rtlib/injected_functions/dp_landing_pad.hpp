@@ -23,4 +23,4 @@ extern "C" {
 void __dp_landing_pad(int32_t function_entry_id);
 }
 
-} // namespace dp
+}  // namespace dp

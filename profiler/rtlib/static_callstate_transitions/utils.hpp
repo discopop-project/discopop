@@ -29,7 +29,7 @@ namespace dp {
 void UpdateCallstate(int32_t instruction_id);
 void InitializeCurrentCallpathState();
 // makes the calling thread the one tracking callpath states, starting from the given state
-void ResetCallstateTracking(CallState *initial_state);
+void ResetCallstateTracking(CallState* initial_state);
 void RegisterCallForCallstate(int32_t instruction_id);
 void EnterFunctionForCallstate(int32_t function_entry_id);
 void LeaveFunctionForCallstate();
@@ -40,4 +40,4 @@ void ResumeFunctionForCallstate(int32_t function_entry_id);
 // for tests: whether transitions are disabled, and the number of entered functions
 bool CallstateTransitionsFrozen();
 std::size_t CallstateFrameCount();
-} // namespace dp
+}  // namespace dp

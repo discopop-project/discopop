@@ -12,12 +12,6 @@
 
 #pragma once
 
-#include "timer.hpp"
-#include "Immortal.hpp"
-#include "memory/AbstractShadow.hpp"
-#include "runtimeFunctionsTypes.hpp"
-#include "static_callstate_transitions/CallStateGraph.hpp"
-
 #include <pthread.h>
 
 #include <atomic>
@@ -33,6 +27,12 @@
 #include <unordered_map>
 #include <utility>
 
+#include "Immortal.hpp"
+#include "memory/AbstractShadow.hpp"
+#include "runtimeFunctionsTypes.hpp"
+#include "static_callstate_transitions/CallStateGraph.hpp"
+#include "timer.hpp"
+
 extern bool use_perfect;
 
 // Shadow memory parameters
@@ -40,13 +40,13 @@ extern std::int32_t sig_elem_bit;
 extern std::int32_t sig_num_elem;
 extern std::int32_t sig_num_hash;
 
-extern std::uint64_t *num_accesses;
+extern std::uint64_t* num_accesses;
 
 namespace dp {
 
 // DP_DEBUG is declared in DPTypes.hpp, see the note there.
 
-extern Timers *timers;
+extern Timers* timers;
 
 extern std::mutex pthread_compatibility_mutex;
 
@@ -65,10 +65,9 @@ void ConstructManagerGlobals();
 void DestroyManagerGlobals();
 bool ManagerGlobalsConstructed() noexcept;
 
-
 // hybrid analysis
-extern ReportedBBRecorder *bb_list;
-extern StringDepMap *out_put_deps;
+extern ReportedBBRecorder* bb_list;
+extern StringDepMap* out_put_deps;
 // end hybrid analysis
 
 // The globals declared as references below outlive the static destructors of the target
@@ -78,7 +77,7 @@ extern StringDepMap *out_put_deps;
 void ConstructImmortalGlobals();
 void DestroyImmortalGlobals();
 
-extern std::unordered_map<char *, int64_t> &cuec;
+extern std::unordered_map<char*, int64_t>& cuec;
 
 // What the runtime is currently doing. There are exactly three states and they are reached in
 // order: __dp_init moves to Running, __dp_finalize moves to Terminated.
@@ -99,15 +98,15 @@ extern RuntimeState runtime_state;
 inline bool ProfilingActive() noexcept { return runtime_state == RuntimeState::kRunning; }
 
 // Runtime merging structures
-extern DepMap *all_deps;
+extern DepMap* all_deps;
 
-extern std::ofstream *out;
+extern std::ofstream* out;
 
 extern std::mutex all_deps_lock;
-extern pthread_t *workers;                              // worker threads
-extern std::atomic<bool> finalize_parallelization_called; // signals to worker threads that no further data access will be
-                                                        // registered in the first queue
-extern FirstAccessQueueChunk *main_thread_access_info_buffer;
+extern pthread_t* workers;                                 // worker threads
+extern std::atomic<bool> finalize_parallelization_called;  // signals to worker threads that no further data access will
+                                                           // be registered in the first queue
+extern FirstAccessQueueChunk* main_thread_access_info_buffer;
 // number of accesses recorded per chunk of the first access queue
 constexpr int kFirstAccessQueueChunkSize = 100000;
 // default limits of the access queues, per worker thread; adjustable via dp.conf
@@ -116,24 +115,24 @@ constexpr int kFirstAccessQueueChunkSize = 100000;
 constexpr int kDefaultFirstAccessQueueChunksPerWorker = 4;
 constexpr int kDefaultSecondAccessQueueElementsPerWorker = 4;
 
-extern FirstAccessQueue &first_access_queue;
-extern SecondAccessQueue &second_access_queue;
-extern pthread_t *second_access_queue_worker_thread;
-extern FirstAccessQueueChunkBuffer &first_access_queue_chunk_buffer;
+extern FirstAccessQueue& first_access_queue;
+extern SecondAccessQueue& second_access_queue;
+extern pthread_t* second_access_queue_worker_thread;
+extern FirstAccessQueueChunkBuffer& first_access_queue_chunk_buffer;
 
-extern AbstractShadow *single_threaded_execution_smem;
+extern AbstractShadow* single_threaded_execution_smem;
 
 extern int32_t num_workers;
 extern int32_t first_access_queue_chunks_per_worker;
 extern int32_t second_access_queue_elements_per_worker;
 
-extern thread_local DepMap *my_map;
+extern thread_local DepMap* my_map;
 
 // see static_callstate_transitions/utils.hpp
-extern CallState *current_callpath_state;
-extern CallStateGraph *call_state_graph;
+extern CallState* current_callpath_state;
+extern CallStateGraph* call_state_graph;
 
 // statistics
 extern std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
 
-} // namespace dp
+}  // namespace dp

@@ -11,12 +11,6 @@
  */
 
 #include "dp_alloca.hpp"
-#include "DPTypes.hpp"
-#include "lid_utils.hpp"
-
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "callback_scope.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -24,16 +18,20 @@
 #include <set>
 #include <string>
 
+#include "DPTypes.hpp"
+#include "callback_scope.hpp"
+#include "lid_utils.hpp"
+#include "runtimeFunctionsGlobals.hpp"
 
 namespace dp {
 
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_alloca(LID /*lid*/, char * /*var*/, ADDR /*start_addr*/, ADDR /*end_addr*/, std::int64_t /*num_bytes*/,
+void __dp_alloca(LID /*lid*/, char* /*var*/, ADDR /*start_addr*/, ADDR /*end_addr*/, std::int64_t /*num_bytes*/,
                  std::int64_t /*numElements*/) {
   DP_CALLBACK_SCOPE(ALLOCA);
 }
 }
 
-} // namespace dp
+}  // namespace dp

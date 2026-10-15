@@ -12,25 +12,25 @@
 
 #pragma once
 
-#include "LoopTableEntry.hpp"
-
 #include <cstdint>
 #include <iostream>
 #include <vector>
 
+#include "LoopTableEntry.hpp"
+
 namespace dp {
 
 struct LoopTable {
-public:
+ public:
   LoopTable() { contents_.reserve(32); }
 
-  const LoopTableEntry &Top() const { return contents_.back(); }
+  const LoopTableEntry& Top() const { return contents_.back(); }
 
-  LoopTableEntry &NonConstTop() { return contents_.back(); }
+  LoopTableEntry& NonConstTop() { return contents_.back(); }
 
-  const LoopTableEntry &First() const { return contents_[0]; }
+  const LoopTableEntry& First() const { return contents_[0]; }
 
-  const LoopTableEntry &TopMinusN(const std::size_t n) const { return contents_[contents_.size() - 1 - n]; }
+  const LoopTableEntry& TopMinusN(const std::size_t n) const { return contents_[contents_.size() - 1 - n]; }
 
   void Pop() { contents_.pop_back(); }
 
@@ -39,11 +39,11 @@ public:
   bool IsSingleExit(const std::int32_t loop_id) const {
     if (empty()) {
       return true;
-}
+    }
 
     if (Top().loop_id != loop_id) {
       return true;
-}
+    }
 
     return false;
   }
@@ -76,19 +76,19 @@ public:
     // metadata and thus empty
 
     if (size() > 0) {
-      lid = lid | (static_cast<LID>(First().loop_id & 0xFF) << 56);    // add masked loop id
-      lid = lid | (static_cast<LID>(Top().GetCount() & 0x7F) << 48); // add masked loop count
-      lid = lid | 0x0080000000000000;                   // mark loop count valid
+      lid = lid | (static_cast<LID>(First().loop_id & 0xFF) << 56);   // add masked loop id
+      lid = lid | (static_cast<LID>(Top().GetCount() & 0x7F) << 48);  // add masked loop count
+      lid = lid | 0x0080000000000000;                                 // mark loop count valid
     }
 
     if (size() > 1) {
-      lid = lid | (static_cast<LID>(TopMinusN(1).GetCount() & 0x7F) << 40); // add masked loop count
-      lid = lid | 0x0000800000000000;                          // mark loop count valid
+      lid = lid | (static_cast<LID>(TopMinusN(1).GetCount() & 0x7F) << 40);  // add masked loop count
+      lid = lid | 0x0000800000000000;                                        // mark loop count valid
     }
 
     if (size() > 2) {
-      lid = lid | (static_cast<LID>(TopMinusN(2).GetCount() & 0x7F) << 32); // add masked loop count
-      lid = lid | 0x0000008000000000;                          // mark loop count valid
+      lid = lid | (static_cast<LID>(TopMinusN(2).GetCount() & 0x7F) << 32);  // add masked loop count
+      lid = lid | 0x0000008000000000;                                        // mark loop count valid
     }
 
     return lid;
@@ -108,8 +108,8 @@ public:
     }
   }
 
-private:
+ private:
   std::vector<LoopTableEntry> contents_;
 };
 
-} // namespace dp
+}  // namespace dp

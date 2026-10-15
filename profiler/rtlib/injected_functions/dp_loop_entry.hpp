@@ -22,4 +22,4 @@ extern "C" {
 void __dp_loop_entry(LID lid, int32_t loop_id, int32_t instruction_id);
 }
 
-} // namespace dp
+}  // namespace dp

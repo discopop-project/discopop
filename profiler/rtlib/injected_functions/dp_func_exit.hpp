@@ -22,4 +22,4 @@ extern "C" {
 void __dp_func_exit(LID lid, int32_t is_exit);
 }
 
-} // namespace dp
+}  // namespace dp

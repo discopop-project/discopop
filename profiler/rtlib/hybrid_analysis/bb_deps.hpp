@@ -12,10 +12,10 @@
 
 #pragma once
 
-#include "runtimeFunctionsTypes.hpp"
-
 #include <cstdint>
 #include <vector>
+
+#include "runtimeFunctionsTypes.hpp"
 
 namespace dp {
 
@@ -25,7 +25,7 @@ namespace dp {
 
 // The registered strings. Constructed on first use, so the module constructors may call it in any
 // order, and long before the runtime itself is up.
-std::vector<const char *> &RegisteredBbDepStrings();
+std::vector<const char*>& RegisteredBbDepStrings();
 
 // Merges the dependencies of every registered string whose basic block was actually executed into
 // the collected dependencies, once per distinct pair of callpath states the executions were
@@ -47,6 +47,6 @@ std::uint32_t CurrentCallpathStateIdForBbReports();
 // its source the reported source state (an INIT dependency has no source and
 // keeps "*"), in the "<instruction id>@<callpath state id>" notation of the
 // dynamically profiled dependencies.
-void MergeBbDeps(const std::vector<const char *> &dep_strings, const ReportedBBSet &reported, StringDepMap &out);
+void MergeBbDeps(const std::vector<const char*>& dep_strings, const ReportedBBSet& reported, StringDepMap& out);
 
-} // namespace dp
+}  // namespace dp

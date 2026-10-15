@@ -26,6 +26,6 @@ namespace dp {
 // Note that this holds for the runtime only. The LLVM pass writes into the same directory at
 // compile time, where no __dp_init has run, so its own lookup in share/lib/DPUtils.cpp keeps
 // establishing the variables itself.
-std::string ProfilerOutputPath(const std::string &file);
+std::string ProfilerOutputPath(const std::string& file);
 
-} // namespace dp
+}  // namespace dp

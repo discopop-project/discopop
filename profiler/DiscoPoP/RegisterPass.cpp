@@ -36,7 +36,6 @@ ModulePass *createDiscoPoPPass() {
 
 */
 
-
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -45,9 +44,13 @@ ModulePass *createDiscoPoPPass() {
 #else
 #include "llvm/Passes/PassPlugin.h"
 #endif
-#include "llvm/Support/raw_ostream.h"
 #include <iostream>
+
+#include "llvm/Support/raw_ostream.h"
+
 #include "DiscoPoP.hpp"
+using llvm::createModuleToFunctionPassAdaptor;
+using llvm::errs;
 using llvm::Function;
 using llvm::FunctionAnalysisManager;
 using llvm::Module;
@@ -59,53 +62,45 @@ using llvm::PassInfoMixin;
 using llvm::PassPluginLibraryInfo;
 using llvm::PreservedAnalyses;
 using llvm::ThinOrFullLTOPhase;
-using llvm::createModuleToFunctionPassAdaptor;
-using llvm::errs;
-
 
 namespace {
 
 struct DiscoPoPNewPmAdaptor : public PassInfoMixin<DiscoPoPNewPmAdaptor> {
-  PreservedAnalyses run(Function &f, FunctionAnalysisManager & /*FAM*/) {
-    errs() << "Running DiscoPoP pass on Function: " + f.getName().str()  + " \n";
-    //const ModuleAnalysisManager &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+  PreservedAnalyses run(Function& f, FunctionAnalysisManager& /*FAM*/) {
+    errs() << "Running DiscoPoP pass on Function: " + f.getName().str() + " \n";
+    // const ModuleAnalysisManager &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
     return PreservedAnalyses::all();
   }
 
-  PreservedAnalyses run(Module &m, ModuleAnalysisManager &mam) {
+  PreservedAnalyses run(Module& m, ModuleAnalysisManager& mam) {
     errs() << "Running DiscoPoP pass on Module: \n";
-    //const ModuleAnalysisManager &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
+    // const ModuleAnalysisManager &MAM = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F).getManager();
     DiscoPoP().RunOnModule(m, mam);
     return PreservedAnalyses::none();
   }
 };
 
-} // end anonymous namespace
-
-
+}  // end anonymous namespace
 
 PassPluginLibraryInfo GetPassPluginInfo() {
-  const auto callback = [](PassBuilder &pb) {
+  const auto callback = [](PassBuilder& pb) {
 #if LLVM_VERSION_MAJOR >= 20
     pb.registerPipelineEarlySimplificationEPCallback(
-        [&](ModulePassManager &mpm, OptimizationLevel, ThinOrFullLTOPhase) {
+        [&](ModulePassManager& mpm, OptimizationLevel, ThinOrFullLTOPhase) {
           mpm.addPass(createModuleToFunctionPassAdaptor(DiscoPoPNewPmAdaptor()));
           mpm.addPass(DiscoPoPNewPmAdaptor());
           return true;
         });
 #else
-    pb.registerPipelineEarlySimplificationEPCallback(
-        [&](ModulePassManager &mpm, OptimizationLevel) {
-          mpm.addPass(createModuleToFunctionPassAdaptor(DiscoPoPNewPmAdaptor()));
-          mpm.addPass(DiscoPoPNewPmAdaptor());
-          return true;
-        });
+    pb.registerPipelineEarlySimplificationEPCallback([&](ModulePassManager& mpm, OptimizationLevel) {
+      mpm.addPass(createModuleToFunctionPassAdaptor(DiscoPoPNewPmAdaptor()));
+      mpm.addPass(DiscoPoPNewPmAdaptor());
+      return true;
+    });
 #endif
   };
 
   return {LLVM_PLUGIN_API_VERSION, "discopop_new_pm_adaptor", "0.0.1", callback};
 };
 
-extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() {
-  return GetPassPluginInfo();
-}
+extern "C" LLVM_ATTRIBUTE_WEAK PassPluginLibraryInfo llvmGetPassPluginInfo() { return GetPassPluginInfo(); }

@@ -12,19 +12,6 @@
 
 #include "runtime_startup.hpp"
 
-#include "DPTypes.hpp"
-
-#include "output_paths.hpp"
-#include "runtimeFunctions.hpp"
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "injected_functions/dp_finalize.hpp"
-
-#include "debug_print.hpp"
-#include "timer.hpp"
-
-#include "static_callstate_transitions/utils.hpp"
-
 #include <cassert>
 #include <chrono>
 #include <cstdint>
@@ -33,6 +20,14 @@
 #include <iostream>
 #include <string>
 
+#include "DPTypes.hpp"
+#include "debug_print.hpp"
+#include "injected_functions/dp_finalize.hpp"
+#include "output_paths.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "static_callstate_transitions/utils.hpp"
+#include "timer.hpp"
 
 namespace dp {
 
@@ -128,6 +123,6 @@ __attribute__((destructor(101))) void DpRuntimeShutdown() {
   __dp_finalize(0);
 }
 
-} // namespace
+}  // namespace
 
-} // namespace dp
+}  // namespace dp

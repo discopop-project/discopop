@@ -76,7 +76,7 @@ class Timers {
   using TimePoint = std::chrono::high_resolution_clock::time_point;
   using IndexType = std::vector<TimePoint>::size_type;
 
-public:
+ public:
   Timers() {
     time_start_ = std::vector<Timers::TimePoint>{kNumberTimers};
     time_stop_ = std::vector<Timers::TimePoint>{kNumberTimers};
@@ -146,7 +146,7 @@ public:
    * @brief Prints a formatted output to the stream
    * @param stream The out stream
    */
-  void Print(std::ostream &stream) {
+  void Print(std::ostream& stream) {
     stream << "\n========== DiscoPoP TIMERS: Inserted calls ==========\n";
     Print(stream, " Function call                                   : ", TimerRegion::kCall);
     Print(stream, " Function entry                                  : ", TimerRegion::kFuncEntry);
@@ -156,8 +156,7 @@ public:
     Print(stream, " Loop entry                                      : ", TimerRegion::kLoopEntry);
     Print(stream, " Loop exit                                       : ", TimerRegion::kLoopExit);
     Print(stream, " Loop iteration                                  : ", TimerRegion::kLoopIncr);
-    Print(stream, " Taken branch counter                            : ",
-          TimerRegion::kIncrTakenBranchCounter);
+    Print(stream, " Taken branch counter                            : ", TimerRegion::kIncrTakenBranchCounter);
     stream << '\n';
     Print(stream, " Add basic block dependencies                    : ", TimerRegion::kAddBbDeps);
     Print(stream, " Report a basic block                            : ", TimerRegion::kReportBb);
@@ -185,13 +184,12 @@ public:
     Print(stream, "  |- Add a dependency                            : ", TimerRegion::kAddDep);
     Print(stream, " Merge dendencies                                : ", TimerRegion::kMergeDeps);
     Print(stream, " Analyze the dependencies (incorrect!)           : ",
-          TimerRegion::kAnalyzeDeps); // Incorrect due to multithreading
+          TimerRegion::kAnalyzeDeps);  // Incorrect due to multithreading
     stream << '\n';
     Print(stream, " Output the dependencies                         : ", TimerRegion::kOutputDeps);
     Print(stream, " Output the loops                                : ", TimerRegion::kOutputLoops);
     Print(stream, " Output the functions                            : ", TimerRegion::kOutputFuncs);
     stream << '\n';
-
   }
 
   /**
@@ -231,7 +229,7 @@ public:
 #endif
   }
 
-private:
+ private:
   /**
    * @brief Casts the value of timer to an index for the vectors
    * @param timer The timer as an enum value
@@ -242,7 +240,7 @@ private:
     return timer_id;
   }
 
-  void Print(std::ostream &stream, const char *message, const TimerRegion region) {
+  void Print(std::ostream& stream, const char* message, const TimerRegion region) {
     const auto index = GetTimerIndex(region);
 
     const auto counted = time_elapsed_[index].count();
@@ -261,8 +259,8 @@ private:
 };
 
 class Timer {
-public:
-  Timer(Timers *timers, TimerRegion region, bool also_print = false)
+ public:
+  Timer(Timers* timers, TimerRegion region, bool also_print = false)
       : timers_(timers), region_(region), print_(also_print) {
     assert(timers != nullptr && "Timer started but timers is nullptr");
     timers->Start(region);
@@ -275,8 +273,8 @@ public:
     }
   }
 
-private:
-  Timers *timers_;
+ private:
+  Timers* timers_;
   TimerRegion region_;
   bool print_;
 };

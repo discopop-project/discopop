@@ -14,17 +14,18 @@
 
 // returns the reduction instruction where 'val' is the operand if it can find
 // such an operation
-llvm::Instruction *dp_reduction::FindReductionInstr(llvm::Value *val) {
+llvm::Instruction* dp_reduction::FindReductionInstr(llvm::Value* val) {
   if (!val || !llvm::isa<llvm::Instruction>(val)) {
     return nullptr;
   }
-  llvm::Instruction *instr = llvm::cast<llvm::Instruction>(val);
+  llvm::Instruction* instr = llvm::cast<llvm::Instruction>(val);
   unsigned opcode = instr->getOpcode();
   char c = dp_reduction::GetCharForOpcode(instr);
   if (c != ' ') {
     return instr;
-  } if (opcode == llvm::Instruction::Load) {
-    llvm::Instruction *prev_use = dp_reduction::GetPrevUse(instr, instr->getOperand(0));
+  }
+  if (opcode == llvm::Instruction::Load) {
+    llvm::Instruction* prev_use = dp_reduction::GetPrevUse(instr, instr->getOperand(0));
     return dp_reduction::FindReductionInstr(prev_use);
   } else if (opcode == llvm::Instruction::Store) {
     return dp_reduction::FindReductionInstr(instr->getOperand(0));

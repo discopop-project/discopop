@@ -12,44 +12,44 @@
 
 #include "utils/output.hpp"
 
-#include "DPUtils.hpp"
-#include "utils/profiler_files.hpp"
-
-#include "llvm/IR/Metadata.h"
-
 #include <algorithm>
 #include <fstream>
 #include <map>
 #include <string>
 
+#include "llvm/IR/Metadata.h"
+
+#include "DPUtils.hpp"
+#include "utils/profiler_files.hpp"
+
+using cu_output::XmlEscape;
+using llvm::cast;
 using llvm::MDNode;
 using llvm::MDString;
 using llvm::StringRef;
-using llvm::cast;
-using cu_output::XmlEscape;
 
 namespace {
 
 // writes the CU graph of one function into Data.xml
 class CUGraphWriter {
-public:
-  CUGraphWriter(std::ofstream &out_cus, const std::map<std::string, std::string> &loop_start_lines)
+ public:
+  CUGraphWriter(std::ofstream& out_cus, const std::map<std::string, std::string>& loop_start_lines)
       : out_cus_(out_cus), loop_start_lines_(loop_start_lines) {}
 
-  void PrintTree(Node *node, bool is_root);
+  void PrintTree(Node* node, bool is_root);
 
-private:
+ private:
   std::string GetLineNumbersString(std::set<LID> line_numbers);
 
-  std::string GetChildrenNodesString(Node *node);
+  std::string GetChildrenNodesString(Node* node);
 
-  void PrintNode(Node *node, bool is_root);
+  void PrintNode(Node* node, bool is_root);
 
-  std::ofstream &out_cus_;
-  const std::map<std::string, std::string> &loop_start_lines_;
+  std::ofstream& out_cus_;
+  const std::map<std::string, std::string>& loop_start_lines_;
 };
 
-} // namespace
+}  // namespace
 
 /********** Output functions *********/
 std::string cu_output::XmlEscape(std::string data) {
@@ -58,22 +58,22 @@ std::string cu_output::XmlEscape(std::string data) {
     pos = data.find_first_of("\"&<>", pos);
     if (pos == std::string::npos) {
       break;
-}
+    }
     std::string replacement;
     switch (data[pos]) {
-    case '\"':
-      replacement = "&quot;";
-      break;
-    case '&':
-      replacement = "&amp;";
-      break;
-    case '<':
-      replacement = "&lt;";
-      break;
-    case '>':
-      replacement = "&gt;";
-      break;
-    default:;
+      case '\"':
+        replacement = "&quot;";
+        break;
+      case '&':
+        replacement = "&amp;";
+        break;
+      case '<':
+        replacement = "&lt;";
+        break;
+      case '>':
+        replacement = "&gt;";
+        break;
+      default:;
     }
     data.replace(pos, 1, replacement);
     pos += replacement.size();
@@ -81,7 +81,7 @@ std::string cu_output::XmlEscape(std::string data) {
   return data;
 }
 
-void cu_output::WriteCuGraph(Node *root, const std::map<std::string, std::string> &loop_start_lines) {
+void cu_output::WriteCuGraph(Node* root, const std::map<std::string, std::string>& loop_start_lines) {
   // OriginalVariables.txt stays empty, but is created as it always was
   std::ofstream out_original_variables = profiler_files::Open("OriginalVariables.txt");
   std::ofstream out_cus = profiler_files::Open("Data.xml");
@@ -112,10 +112,10 @@ std::string CUGraphWriter::GetLineNumbersString(std::set<LID> line_numbers) {
   return line;
 }
 
-std::string CUGraphWriter::GetChildrenNodesString(Node *root) {
+std::string CUGraphWriter::GetChildrenNodesString(Node* root) {
   std::string children_ids = "";
   int i = 0;
-  std::for_each(root->children_nodes.begin(), root->children_nodes.end(), [&](Node *node) {
+  std::for_each(root->children_nodes.begin(), root->children_nodes.end(), [&](Node* node) {
     if (i == 0) {
       children_ids = node->id;
       i++;
@@ -126,10 +126,10 @@ std::string CUGraphWriter::GetChildrenNodesString(Node *root) {
   return children_ids;
 }
 
-void CUGraphWriter::PrintTree(Node *root, bool is_root) {
+void CUGraphWriter::PrintTree(Node* root, bool is_root) {
   PrintNode(root, is_root);
 
-  std::for_each(root->children_nodes.begin(), root->children_nodes.end(), [&](Node *node) {
+  std::for_each(root->children_nodes.begin(), root->children_nodes.end(), [&](Node* node) {
     if (node->type == NodeTypes::kFunc) {
       is_root = false;
     }
@@ -137,7 +137,7 @@ void CUGraphWriter::PrintTree(Node *root, bool is_root) {
   });
 }
 
-void CUGraphWriter::PrintNode(Node *root, bool /*isRoot*/) {
+void CUGraphWriter::PrintNode(Node* root, bool /*isRoot*/) {
   if (root->name.find("llvm")) {
     std::string start = "";
     if (root->type == NodeTypes::kLoop) {
@@ -147,20 +147,20 @@ void CUGraphWriter::PrintNode(Node *root, bool /*isRoot*/) {
       start = dputil::DecodeLid(root->start_line);
     }
     out_cus_ << "\t<Node"
-            << " id=\"" << XmlEscape(root->id) << "\""
-            << " type=\"" << root->type << "\""
-            << " name=\"" << XmlEscape(root->name) << "\""
-            << " startsAtLine = \"" << start << "\""
-            << " endsAtLine = \"" << dputil::DecodeLid(root->end_line) << "\""
-            << ">" << "\n";
+             << " id=\"" << XmlEscape(root->id) << "\""
+             << " type=\"" << root->type << "\""
+             << " name=\"" << XmlEscape(root->name) << "\""
+             << " startsAtLine = \"" << start << "\""
+             << " endsAtLine = \"" << dputil::DecodeLid(root->end_line) << "\""
+             << ">" << "\n";
     out_cus_ << "\t\t<childrenNodes>" << GetChildrenNodesString(root) << "</childrenNodes>" << "\n";
     if (root->type == NodeTypes::kFunc || root->type == NodeTypes::kDummy) {
       out_cus_ << "\t\t<funcArguments>" << "\n";
       for (auto ai : root->arguments_list) {
         out_cus_ << "\t\t\t<arg type=\"" << XmlEscape(ai.type) << "\""
-                << " defLine=\"" << XmlEscape(ai.def_line) << "\""
-                << " accessMode=\"" << (ai.read_access ? "R" : "") << (ai.write_access ? "W" : "") << "\">"
-                << XmlEscape(ai.name) << "</arg>" << "\n";
+                 << " defLine=\"" << XmlEscape(ai.def_line) << "\""
+                 << " accessMode=\"" << (ai.read_access ? "R" : "") << (ai.write_access ? "W" : "") << "\">"
+                 << XmlEscape(ai.name) << "</arg>" << "\n";
       }
       out_cus_ << "\t\t</funcArguments>" << "\n";
 
@@ -172,7 +172,7 @@ void CUGraphWriter::PrintNode(Node *root, bool /*isRoot*/) {
     }
 
     if (root->type == NodeTypes::kCu) {
-      CU *cu = static_cast<CU *>(root);
+      CU* cu = static_cast<CU*>(root);
       out_cus_ << "\t\t<BasicBlockID>" << cu->bb_id << "</BasicBlockID>" << "\n";
       out_cus_ << "\t\t<readDataSize>" << cu->read_data_size << "</readDataSize>" << "\n";
       out_cus_ << "\t\t<writeDataSize>" << cu->write_data_size << "</writeDataSize>" << "\n";
@@ -180,13 +180,13 @@ void CUGraphWriter::PrintNode(Node *root, bool /*isRoot*/) {
 
       out_cus_ << "\t\t<instructionsCount>" << cu->instructions_count << "</instructionsCount>" << "\n";
       out_cus_ << "\t\t<instructionLines count=\"" << (cu->instructions_line_numbers).size() << "\">"
-              << GetLineNumbersString(cu->instructions_line_numbers) << "</instructionLines>" << "\n";
+               << GetLineNumbersString(cu->instructions_line_numbers) << "</instructionLines>" << "\n";
       out_cus_ << "\t\t<readPhaseLines count=\"" << (cu->read_phase_line_numbers).size() << "\">"
-              << GetLineNumbersString(cu->read_phase_line_numbers) << "</readPhaseLines>" << "\n";
+               << GetLineNumbersString(cu->read_phase_line_numbers) << "</readPhaseLines>" << "\n";
       out_cus_ << "\t\t<writePhaseLines count=\"" << (cu->write_phase_line_numbers).size() << "\">"
-              << GetLineNumbersString(cu->write_phase_line_numbers) << "</writePhaseLines>" << "\n";
+               << GetLineNumbersString(cu->write_phase_line_numbers) << "</writePhaseLines>" << "\n";
       out_cus_ << "\t\t<returnInstructions count=\"" << (cu->return_instructions).size() << "\">"
-              << GetLineNumbersString(cu->return_instructions) << "</returnInstructions>" << "\n";
+               << GetLineNumbersString(cu->return_instructions) << "</returnInstructions>" << "\n";
       out_cus_ << "\t\t<successors>" << "\n";
       for (auto suc_cu_i : cu->successor_cus) {
         out_cus_ << "\t\t\t<CU>" << suc_cu_i << "</CU>" << "\n";
@@ -196,18 +196,18 @@ void CUGraphWriter::PrintNode(Node *root, bool /*isRoot*/) {
       out_cus_ << "\t\t<localVariables>" << "\n";
       for (auto lvi : cu->local_variable_names) {
         out_cus_ << "\t\t\t<local type=\"" << XmlEscape(lvi.type) << "\""
-                << " defLine=\"" << XmlEscape(lvi.def_line) << "\""
-                << " accessMode=\"" << (lvi.read_access ? "R" : "") << (lvi.write_access ? "W" : "") << "\">"
-                << XmlEscape(lvi.name) << "</local>" << "\n";
+                 << " defLine=\"" << XmlEscape(lvi.def_line) << "\""
+                 << " accessMode=\"" << (lvi.read_access ? "R" : "") << (lvi.write_access ? "W" : "") << "\">"
+                 << XmlEscape(lvi.name) << "</local>" << "\n";
       }
       out_cus_ << "\t\t</localVariables>" << "\n";
 
       out_cus_ << "\t\t<globalVariables>" << "\n";
       for (auto gvi : cu->global_variable_names) {
         out_cus_ << "\t\t\t<global type=\"" << XmlEscape(gvi.type) << "\""
-                << " defLine=\"" << XmlEscape(gvi.def_line) << "\""
-                << " accessMode=\"" << (gvi.read_access ? "R" : "") << (gvi.write_access ? "W" : "") << "\">"
-                << XmlEscape(gvi.name) << "</global>" << "\n";
+                 << " defLine=\"" << XmlEscape(gvi.def_line) << "\""
+                 << " accessMode=\"" << (gvi.read_access ? "R" : "") << (gvi.write_access ? "W" : "") << "\">"
+                 << XmlEscape(gvi.name) << "</global>" << "\n";
       }
       out_cus_ << "\t\t</globalVariables>" << "\n";
 
@@ -216,18 +216,18 @@ void CUGraphWriter::PrintNode(Node *root, bool /*isRoot*/) {
         int idx = 0;  // for correctly accessing callLineToCallInstructionMap's value
         for (auto ii : i.second) {
           // get call instruction id
-          MDNode *md = cu->call_line_to_call_instruction_map[i.first][idx]->getMetadata("dp.md.instr.id");
+          MDNode* md = cu->call_line_to_call_instruction_map[i.first][idx]->getMetadata("dp.md.instr.id");
           std::string call_inst_id = "UNKNOWN";
-          if(md && md->getNumOperands() > 0){
+          if (md && md->getNumOperands() > 0) {
             StringRef instruction_id_str = cast<MDString>(md->getOperand(0))->getString();
             call_inst_id = instruction_id_str.split(':').second.str();
           }
           // append to XML file
-          out_cus_ << "\t\t\t<nodeCalled atLine=\"" << dputil::DecodeLid(i.first) << "\" callInstId=\"" << call_inst_id << "\">" << ii->id << "</nodeCalled>"
-                  << std::endl;
+          out_cus_ << "\t\t\t<nodeCalled atLine=\"" << dputil::DecodeLid(i.first) << "\" callInstId=\"" << call_inst_id
+                   << "\">" << ii->id << "</nodeCalled>" << std::endl;
           // specifica for recursive fucntions inside loops. (Mo 5.11.2019)
           out_cus_ << "\t\t\t\t<recursiveFunctionCall>" << ii->recursive_function_call << "</recursiveFunctionCall>"
-                  << std::endl;
+                   << std::endl;
           idx++;
         }
       }

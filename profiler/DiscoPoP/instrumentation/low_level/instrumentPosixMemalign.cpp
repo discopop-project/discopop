@@ -10,30 +10,31 @@
  *
  */
 
+#include <vector>
+
 #include "DiscoPoP.hpp"
 #include "llvm_compat.hpp"
-#include <vector>
 
 using llvm::CallBase;
 using llvm::CallInst;
+using llvm::cast;
 using llvm::DebugLoc;
-using llvm::IRBuilder;
 using llvm::Instruction;
 using llvm::InvokeInst;
+using llvm::IRBuilder;
+using llvm::isa;
 using llvm::LoadInst;
 using llvm::Value;
-using llvm::cast;
-using llvm::isa;
 
-void DiscoPoP::InstrumentPosixMemalign(CallBase *to_instrument) {
+void DiscoPoP::InstrumentPosixMemalign(CallBase* to_instrument) {
   // add instrumentation for calls to posix_memalign
   LID lid = dputil::GetLid(to_instrument, file_id);
   if (lid == 0) {
     return;
-}
+  }
 
   // Determine correct placement for the call to __dp_new
-  Instruction *next_inst = nullptr;
+  Instruction* next_inst = nullptr;
   if (isa<CallInst>(to_instrument)) {
     next_inst = llvmcompat::NextInstruction(to_instrument);
   } else if (isa<InvokeInst>(to_instrument)) {
@@ -48,23 +49,23 @@ void DiscoPoP::InstrumentPosixMemalign(CallBase *to_instrument) {
 
   IRBuilder<> irb(next_inst);
 
-  std::vector<Value *> args;
+  std::vector<Value*> args;
   args.push_back(LidConstant(lid));
 
   // posix_memalign returns the block through its first argument, a void** out parameter. That
   // argument is the address of the caller's pointer variable, not of the allocation, so the
   // address of the block has to be loaded from it -- which is only possible after the call.
-  LoadInst *allocated = irb.CreateLoad(char_ptr_, to_instrument->getArgOperand(0));
+  LoadInst* allocated = irb.CreateLoad(char_ptr_, to_instrument->getArgOperand(0));
   // The load belongs to the instrumentation, not to the program. runOnBasicBlock walks the block
   // it inserts into and would reach the load again; without a debug location it has no LID, which
   // is what makes instrumentLoad leave it alone instead of reporting a read the program never made.
   allocated->setDebugLoc(DebugLoc());
-  Value *start_addr = irb.CreatePtrToInt(allocated, int64_);
-  Value *end_addr = start_addr;
-  Value *num_bytes = to_instrument->getArgOperand(2);
+  Value* start_addr = irb.CreatePtrToInt(allocated, int64_);
+  Value* end_addr = start_addr;
+  Value* num_bytes = to_instrument->getArgOperand(2);
 
   args.push_back(start_addr);
-  args.push_back(end_addr); // currently unused
+  args.push_back(end_addr);  // currently unused
   args.push_back(num_bytes);
 
   irb.CreateCall(dp_new_, args, "");

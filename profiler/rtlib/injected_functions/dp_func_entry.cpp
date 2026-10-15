@@ -11,14 +11,6 @@
  */
 
 #include "dp_func_entry.hpp"
-#include "DPTypes.hpp"
-
-#include "runtimeFunctions.hpp"
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "callback_scope.hpp"
-
-#include "static_callstate_transitions/utils.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -26,6 +18,11 @@
 #include <set>
 #include <string>
 
+#include "DPTypes.hpp"
+#include "callback_scope.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "static_callstate_transitions/utils.hpp"
 
 namespace dp {
 
@@ -42,14 +39,13 @@ void __dp_func_entry(LID lid, std::int32_t is_start, std::int32_t function_entry
   // follow the pending call into this function (or switch to the function's own root state)
   EnterFunctionForCallstate(function_entry_id);
 
-
   if (is_start) {
     *out << "START " << dputil::DecodeLid(lid) << std::endl;
-}
+  }
 
   // Reset last call tracker
   function_manager->LogCall(0);
 }
 }
 
-} // namespace dp
+}  // namespace dp

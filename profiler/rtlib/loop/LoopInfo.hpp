@@ -19,11 +19,11 @@ struct LoopInfoT {
   int loop_id = 0;
   int file_id = 0;
 
-  bool operator==(const LoopInfoT &other) const noexcept {
+  bool operator==(const LoopInfoT& other) const noexcept {
     return line_nr == other.line_nr && loop_id == other.loop_id && file_id == other.file_id;
   }
 
-  bool operator!=(const LoopInfoT &other) const noexcept { return !(*this == other); }
+  bool operator!=(const LoopInfoT& other) const noexcept { return !(*this == other); }
 };
 
-} // namespace dp
+}  // namespace dp

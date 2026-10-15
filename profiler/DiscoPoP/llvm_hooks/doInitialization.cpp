@@ -10,23 +10,24 @@
  *
  */
 
-#include "DiscoPoP.hpp"
 #include <filesystem>
 #include <iostream>
 #include <string>
 
-using llvm::Module;
-using llvm::Value;
+#include "DiscoPoP.hpp"
+
 using llvm::dyn_cast;
 using llvm::errs;
+using llvm::Module;
+using llvm::Value;
 
-bool DiscoPoP::DoInitialization(Module &m) {
+bool DiscoPoP::DoInitialization(Module& m) {
   if (kDpDebug) {
     errs() << "DiscoPoP | 190: init pass DiscoPoP \n";
   }
 
   // prepare environment variables
-  char const *tmp = std::getenv("DOT_DISCOPOP");
+  char const* tmp = std::getenv("DOT_DISCOPOP");
   if (tmp == nullptr) {
     // DOT_DISCOPOP needs to be initialized
     setenv("DOT_DISCOPOP", ".discopop", 1);
@@ -42,7 +43,7 @@ bool DiscoPoP::DoInitialization(Module &m) {
     // check if HOME/.discopop_config directory in user folder exists
     std::string user_home_dp_dir = (dputil::GetEnvOrDefault("HOME", "") + std::string("/.discopop_config"));
     struct stat st_dp_user;
-    if (stat(user_home_dp_dir.c_str() , &st_dp_user) == -1) {
+    if (stat(user_home_dp_dir.c_str(), &st_dp_user) == -1) {
       // create .discopop_config folder in user directory to save overview of project .discopop folders
       mkdir(user_home_dp_dir.c_str(), 0777);
     }
@@ -51,7 +52,8 @@ bool DiscoPoP::DoInitialization(Module &m) {
     project_overview_file.open(user_home_dp_dir + std::string("/locations.txt"), std::ios_base::app);
     auto t = std::time(nullptr);
     auto tm = *std::localtime(&t);
-    project_overview_file << std::put_time(&tm, "%d_%m_%Y-%H_%M_%S") << " " << std::filesystem::absolute(std::string(std::getenv("DOT_DISCOPOP"))).string() << "\n";
+    project_overview_file << std::put_time(&tm, "%d_%m_%Y-%H_%M_%S") << " "
+                          << std::filesystem::absolute(std::string(std::getenv("DOT_DISCOPOP"))).string() << "\n";
     project_overview_file.close();
   }
   // prepare profiler directory if not present
@@ -68,7 +70,7 @@ bool DiscoPoP::DoInitialization(Module &m) {
   }
 
   // prepare target directory if not present
-  char const *tmp2 = std::getenv("DP_PROJECT_ROOT_DIR");
+  char const* tmp2 = std::getenv("DP_PROJECT_ROOT_DIR");
   if (tmp2 == nullptr) {
     // DP_PROJECT_ROOT_DIR needs to be initialized
     std::cerr << "\nWARNING: No value for DP_PROJECT_ROOT_DIR found. \n";
@@ -110,7 +112,6 @@ bool DiscoPoP::DoInitialization(Module &m) {
     }
   }
 
-
   // CUGeneration
   {
     cu_id_counter = 0;
@@ -120,7 +121,7 @@ bool DiscoPoP::DoInitialization(Module &m) {
     InitializeCuIdCounter();
 
     for (Module::global_iterator i = this_module_->global_begin(); i != this_module_->global_end(); i++) {
-      Value *global_variable = dyn_cast<Value>(i);
+      Value* global_variable = dyn_cast<Value>(i);
       std::string glo = std::string(global_variable->getName());
       if (glo.find(".") == glo.npos) {
         program_global_variables_set_.insert(glo);
@@ -153,7 +154,6 @@ bool DiscoPoP::DoInitialization(Module &m) {
     } else {
       loop_id_ = -1;
     }
-
   }
   // DPInstrumentation end
 

@@ -12,10 +12,10 @@
 
 #pragma once
 
-#include "DPTypes.hpp"
-
 #include <cstdint>
 #include <unordered_map>
+
+#include "DPTypes.hpp"
 
 namespace dp {
 
@@ -31,14 +31,14 @@ struct LoopRecord {
   // maximum iterations executed during a single loop entry
   std::int32_t max_iteration_count = 0;
 
-  bool operator==(const LoopRecord &other) const noexcept {
+  bool operator==(const LoopRecord& other) const noexcept {
     return end == other.end && total == other.total && n_entered == other.n_entered &&
            max_iteration_count == other.max_iteration_count;
   }
 
-  bool operator!=(const LoopRecord &other) const noexcept { return !(*this == other); }
+  bool operator!=(const LoopRecord& other) const noexcept { return !(*this == other); }
 };
 
-using LoopRecords = std::unordered_map<LID, LoopRecord *>;
+using LoopRecords = std::unordered_map<LID, LoopRecord*>;
 
-} // namespace dp
+}  // namespace dp

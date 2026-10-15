@@ -12,14 +12,13 @@
 
 #pragma once
 
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "debug_print.hpp"
-#include "timer.hpp"
-
 #include <cstddef>
 #include <mutex>
 #include <optional>
+
+#include "debug_print.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "timer.hpp"
 
 namespace dp {
 
@@ -124,8 +123,9 @@ constexpr bool CallbackBodyEnabled([[maybe_unused]] CallbackId callback) noexcep
 //
 // Which of the two members exists depends on DP_RTLIB_VERBOSE and DP_INTERNAL_TIMER. With
 // neither, the class is empty and the object is gone after inlining.
-template <std::size_t N> class TimedSection {
-public:
+template <std::size_t N>
+class TimedSection {
+ public:
   explicit TimedSection([[maybe_unused]] TimerRegion region, [[maybe_unused]] const char (&name)[N]) {
 #ifdef DP_RTLIB_VERBOSE
     trace.emplace(name);
@@ -135,10 +135,10 @@ public:
 #endif
   }
 
-  TimedSection(const TimedSection &) = delete;
-  TimedSection &operator=(const TimedSection &) = delete;
+  TimedSection(const TimedSection&) = delete;
+  TimedSection& operator=(const TimedSection&) = delete;
 
-private:
+ private:
   // Declared trace before timer and therefore destroyed the other way round, so the measurement
   // ends before the region reports that it has been left.
 #ifdef DP_RTLIB_VERBOSE
@@ -159,8 +159,9 @@ private:
 //
 // In the default configuration -- none of the three options defined -- what is left is a bool and
 // a comparison, which is what the hand written guard compiled to as well.
-template <std::size_t N> class CallbackScope {
-public:
+template <std::size_t N>
+class CallbackScope {
+ public:
   CallbackScope([[maybe_unused]] TimerRegion region, CallbackId callback, [[maybe_unused]] const char (&name)[N])
       : active_(CallbackBodyEnabled(callback) && ProfilingActive()) {
     if (!active_) {
@@ -179,8 +180,8 @@ public:
 #endif
   }
 
-  CallbackScope(const CallbackScope &) = delete;
-  CallbackScope &operator=(const CallbackScope &) = delete;
+  CallbackScope(const CallbackScope&) = delete;
+  CallbackScope& operator=(const CallbackScope&) = delete;
 
   // Whether the callback may go on. Callbacks return early when this is false.
   explicit operator bool() const noexcept { return active_; }
@@ -205,7 +206,7 @@ public:
 #endif
   }
 
-private:
+ private:
   // Declared lock, trace, timer and therefore destroyed in the opposite order, so the timer still
   // stops before the lock is released, exactly as the hand written sequence did.
   bool active_;
@@ -220,30 +221,31 @@ private:
 #endif
 };
 
-} // namespace dp
+}  // namespace dp
 
 // The preamble of an instrumented callback. `callback` is the bare CallbackId enumerator; the
 // TimerRegion follows from it (kTimerRegionOf) -- so a callback cannot end up timed as one region
 // and switched by another. The name the verbose build reports comes from __func__ and therefore cannot
 // drift away from the function it belongs to either. Declares `dp_scope`, which callbacks that
 // release the lock in the middle of their work address by that name.
-#define DP_CALLBACK_SCOPE(callback)                                                                                    \
-  auto dp_scope = ::dp::CallbackScope(::dp::kTimerRegionOf< ::dp::CallbackId::callback>, ::dp::CallbackId::callback, __func__);                \
-  if (!dp_scope) {                                                                                                     \
-    return;                                                                                                            \
-  }                                                                                                                    \
+#define DP_CALLBACK_SCOPE(callback)                                                                                \
+  auto dp_scope =                                                                                                  \
+      ::dp::CallbackScope(::dp::kTimerRegionOf<::dp::CallbackId::callback>, ::dp::CallbackId::callback, __func__); \
+  if (!dp_scope) {                                                                                                 \
+    return;                                                                                                        \
+  }                                                                                                                \
   static_cast<void>(dp_scope)
 
 // The preamble of an instrumented callback that neither takes the lock nor is traced or timed,
 // and therefore has no CallbackScope to ask -- and, having no TimerRegion either, names only a
 // CallbackId. It answers the same two questions: is the runtime running, and does this build
 // execute this callback's body.
-#define DP_CALLBACK_GUARD(callback)                                                                                    \
-  if (!::dp::CallbackBodyEnabled(::dp::CallbackId::callback) || !::dp::ProfilingActive()) {                   \
-    return;                                                                                                            \
-  }                                                                                                                    \
+#define DP_CALLBACK_GUARD(callback)                                                         \
+  if (!::dp::CallbackBodyEnabled(::dp::CallbackId::callback) || !::dp::ProfilingActive()) { \
+    return;                                                                                 \
+  }                                                                                         \
   static_cast<void>(0)
 
 // A traced and timed section that is not a callback: no state check, no lock. See TimedSection.
-#define DP_TIMED_SECTION(region, name)                                                                                 \
+#define DP_TIMED_SECTION(region, name) \
   [[maybe_unused]] const auto dp_section = ::dp::TimedSection(TimerRegion::region, name)

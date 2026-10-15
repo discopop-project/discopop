@@ -12,14 +12,14 @@
 
 #pragma once
 
-#include "VarCounter.hpp"
-
 #include <vector>
+
+#include "VarCounter.hpp"
 
 namespace dp {
 
 class LoopCounter {
-public:
+ public:
   void IncrLoopCounter(int loop_id) {
     const std::size_t required_size = static_cast<std::size_t>(loop_id) + 1;
     if (loop_counters_.size() < required_size) {
@@ -29,10 +29,10 @@ public:
     loop_counters_[loop_id] += 1;
   }
 
-  const std::vector<unsigned int> &GetLoopCounters() const noexcept { return loop_counters_; }
+  const std::vector<unsigned int>& GetLoopCounters() const noexcept { return loop_counters_; }
 
-private:
+ private:
   std::vector<unsigned int> loop_counters_;
 };
 
-} // namespace dp
+}  // namespace dp

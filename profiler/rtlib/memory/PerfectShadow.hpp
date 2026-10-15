@@ -12,10 +12,6 @@
 
 #pragma once
 
-#include "AbstractShadow.hpp"
-
-#include "DPTypes.hpp"
-
 #include <cstdint>
 #include <iostream>
 #include <unordered_map>
@@ -23,10 +19,13 @@
 #include <utility>
 #include <vector>
 
+#include "AbstractShadow.hpp"
+#include "DPTypes.hpp"
+
 namespace dp {
 
 class PerfectShadow : public AbstractShadow {
-public:
+ public:
   PerfectShadow(int /*slotSize*/, int /*size*/, int /*numHash*/) : PerfectShadow() {}
 
   PerfectShadow() {
@@ -34,8 +33,8 @@ public:
     sig_write_ = new std::unordered_map<int64_t, SigElement>();
   }
 
-  PerfectShadow(const PerfectShadow &other) = delete;
-  PerfectShadow(PerfectShadow &&other) {
+  PerfectShadow(const PerfectShadow& other) = delete;
+  PerfectShadow(PerfectShadow&& other) {
     sig_read_ = other.sig_read_;
     sig_write_ = other.sig_write_;
 
@@ -43,8 +42,8 @@ public:
     other.sig_write_ = nullptr;
   }
 
-  PerfectShadow &operator=(const PerfectShadow &other) = delete;
-  PerfectShadow &operator=(PerfectShadow &&other) {
+  PerfectShadow& operator=(const PerfectShadow& other) = delete;
+  PerfectShadow& operator=(PerfectShadow&& other) {
     std::swap(sig_read_, other.sig_read_);
     std::swap(sig_write_, other.sig_write_);
 
@@ -74,7 +73,9 @@ public:
 
   inline void UpdateInRead(std::int64_t mem_addr, SigElement new_value) override { (*sig_read_)[mem_addr] = new_value; }
 
-  inline void UpdateInWrite(std::int64_t mem_addr, SigElement new_value) override { (*sig_write_)[mem_addr] = new_value; }
+  inline void UpdateInWrite(std::int64_t mem_addr, SigElement new_value) override {
+    (*sig_write_)[mem_addr] = new_value;
+  }
 
   inline void RemoveFromRead(std::int64_t mem_addr) override { (*sig_read_)[mem_addr] = 0; }
 
@@ -95,9 +96,9 @@ public:
     return result;
   }
 
-  const std::unordered_map<std::int64_t, SigElement> *GetSigRead() const noexcept { return sig_read_; }
+  const std::unordered_map<std::int64_t, SigElement>* GetSigRead() const noexcept { return sig_read_; }
 
-  const std::unordered_map<std::int64_t, SigElement> *GetSigWrite() const noexcept { return sig_write_; }
+  const std::unordered_map<std::int64_t, SigElement>* GetSigWrite() const noexcept { return sig_write_; }
 
   std::vector<std::pair<std::int64_t, SigElement>> GetReadKvPairs() override {
     std::vector<std::pair<std::int64_t, SigElement>> kv_pairs;
@@ -119,15 +120,15 @@ public:
 
   inline void Print() override { std::cout << "Hello from PerfectShadow" << std::endl; }
 
-private:
-  std::unordered_map<std::int64_t, SigElement> *sig_read_;
-  std::unordered_map<std::int64_t, SigElement> *sig_write_;
+ private:
+  std::unordered_map<std::int64_t, SigElement>* sig_read_;
+  std::unordered_map<std::int64_t, SigElement>* sig_write_;
 };
 
 // Hopefully faster version
 
 class PerfectShadow2 : public AbstractShadow {
-public:
+ public:
   PerfectShadow2() {
     read_cache_.reserve(1024);
     write_cache_.reserve(1024);
@@ -177,18 +178,19 @@ public:
 
   void RemoveFromWrite(const std::int64_t mem_addr) override { write_cache_[mem_addr] = 0; }
 
-  std::unordered_set<ADDR> GetAddrsInRange(const std::int64_t start_addr, const std::int64_t end_addr) noexcept override {
+  std::unordered_set<ADDR> GetAddrsInRange(const std::int64_t start_addr,
+                                           const std::int64_t end_addr) noexcept override {
     std::unordered_set<ADDR> result{};
     result.reserve(read_cache_.size() + write_cache_.size());
 
-    for (const auto &pair : read_cache_) {
+    for (const auto& pair : read_cache_) {
       const auto addr = pair.first;
       if (addr >= start_addr && addr <= end_addr) {
         result.insert(addr);
       }
     }
 
-    for (const auto &pair : write_cache_) {
+    for (const auto& pair : write_cache_) {
       const auto addr = pair.first;
       if (addr >= start_addr && addr <= end_addr) {
         result.insert(addr);
@@ -198,9 +200,9 @@ public:
     return result;
   }
 
-  const HashMap<int64_t, SigElement> *GetSigRead() const noexcept { return &read_cache_; }
+  const HashMap<int64_t, SigElement>* GetSigRead() const noexcept { return &read_cache_; }
 
-  const HashMap<int64_t, SigElement> *GetSigWrite() const noexcept { return &write_cache_; }
+  const HashMap<int64_t, SigElement>* GetSigWrite() const noexcept { return &write_cache_; }
 
   std::vector<std::pair<std::int64_t, SigElement>> GetReadKvPairs() override {
     std::vector<std::pair<std::int64_t, SigElement>> kv_pairs;
@@ -231,9 +233,9 @@ public:
     std::cout << std::endl;
   }
 
-private:
+ private:
   HashMap<int64_t, SigElement> read_cache_{};
   HashMap<int64_t, SigElement> write_cache_{};
 };
 
-} // namespace dp
+}  // namespace dp

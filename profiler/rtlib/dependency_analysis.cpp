@@ -10,20 +10,16 @@
  *
  */
 
-
-#include "runtimeFunctions.hpp"
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "lid_utils.hpp"
-#include "timer.hpp"
-
 #include <iostream>
 
+#include "lid_utils.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "timer.hpp"
 
 namespace dp {
 
-void AddDep(DepType type, LID curr, LID dep_on, const char *var, std::int64_t aa_var, ADDR /*addr*/) {
-
+void AddDep(DepType type, LID curr, LID dep_on, const char* var, std::int64_t aa_var, ADDR /*addr*/) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::kAddDep);
 #endif
@@ -31,7 +27,7 @@ void AddDep(DepType type, LID curr, LID dep_on, const char *var, std::int64_t aa
   // hybrid analysis
   if (dep_on == 0 && type == kWaw) {
     type = kInit;
-}
+  }
   // End HA
 
   // Remove metadata to preserve result correctness and add metadata to `Dep`
@@ -40,36 +36,33 @@ void AddDep(DepType type, LID curr, LID dep_on, const char *var, std::int64_t aa
   // register dependency. operator[] creates the set when the lid is seen for the first time.
   (*my_map)[curr].insert(Dep(type, dep_on, var, aa_var));
 
-
   if (dp_debug) {
     std::cout << "inserted dep [" << dputil::DecodeLid(curr) << ", ";
     switch (type) {
-    case kRaw:
-      std::cout << "RAW";
-      break;
-    case kWar:
-      std::cout << "WAR";
-      break;
-    case kWaw:
-      std::cout << "WAW";
-      break;
-    case kInit:
-      std::cout << "INIT";
-      break;
-    default:
-      break;
+      case kRaw:
+        std::cout << "RAW";
+        break;
+      case kWar:
+        std::cout << "WAR";
+        break;
+      case kWaw:
+        std::cout << "WAW";
+        break;
+      case kInit:
+        std::cout << "INIT";
+        break;
+      default:
+        break;
     }
     std::cout << ", " << dputil::DecodeLid(dep_on) << "] into deps (" << my_map->size() << ")" << std::endl;
   }
 }
 
-void AnalyzeSingleAccess(dp::AbstractShadow *smem, dp::AccessInfo &access) {
-
+void AnalyzeSingleAccess(dp::AbstractShadow* smem, dp::AccessInfo& access) {
   // analyze data dependences
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::kAnalyzeSingleAccess);
 #endif
-
 
   if (access.is_read) {
     // hybrid analysis
@@ -120,8 +113,8 @@ void AnalyzeSingleAccess(dp::AbstractShadow *smem, dp::AccessInfo &access) {
   }
 }
 
-void AnalyzeSingleAccessOnMainThread(dp::AccessInfo &access) {
+void AnalyzeSingleAccessOnMainThread(dp::AccessInfo& access) {
   AnalyzeSingleAccess(single_threaded_execution_smem, access);
 }
 
-} // namespace dp
+}  // namespace dp

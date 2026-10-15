@@ -12,20 +12,19 @@
 
 #pragma once
 
-#include "LoopCounter.hpp"
-#include "LoopRecord.hpp"
-#include "LoopTable.hpp"
-
-#include "lid_utils.hpp"
-
 #include <iostream>
 #include <ostream>
 #include <vector>
 
+#include "LoopCounter.hpp"
+#include "LoopRecord.hpp"
+#include "LoopTable.hpp"
+#include "lid_utils.hpp"
+
 namespace dp {
 
 class LoopManager {
-public:
+ public:
   LoopManager() {}
 
   ~LoopManager() {
@@ -37,7 +36,7 @@ public:
   void CreateNewLoop(const std::int32_t function_level, const std::int32_t loop_id, const LID begin_line) {
     loop_stack_.Push(LoopTableEntry(function_level, loop_id, 0, begin_line));
     if (loops_.find(begin_line) == loops_.end()) {
-      loops_.insert(std::pair<LID, LoopRecord *>(begin_line, new LoopRecord(0, 0, 0)));
+      loops_.insert(std::pair<LID, LoopRecord*>(begin_line, new LoopRecord(0, 0, 0)));
     }
     if (dp_debug) {
       std::cout << "(" << std::dec << function_level << ")Loop " << loop_id << " enters." << std::endl;
@@ -47,7 +46,6 @@ public:
   bool IsNewLoop(const std::int32_t loop_id) const {
     return loop_stack_.empty() || (loop_stack_.Top().loop_id != loop_id);
   }
-
 
   void IterateLoop(const std::int32_t /*function_level*/) {
     loop_stack_.IncrementTopCount();
@@ -62,7 +60,6 @@ public:
     // Clear up all unfinished loops in the function.
     // This usually happens when using return inside loop.
     while (!loop_stack_.empty() && (loop_stack_.Top().func_level == function_level)) {
-
       // No way to get the real end line of loop. Use the line where
       // function returns instead.
       LoopRecords::iterator loop = loops_.find(loop_stack_.Top().begin);
@@ -130,8 +127,8 @@ public:
 
   bool empty() { return loop_stack_.empty(); }
 
-  void Output(std::ostream &stream) {
-    for (const auto &loop : loops_) {
+  void Output(std::ostream& stream) {
+    for (const auto& loop : loops_) {
       // A loop that was entered and never left contributes no completed iteration: its record is
       // created on entry and every counter is raised on exit, so all of them are still zero --
       // including nEntered, which is what the average is divided by. The assert in
@@ -149,9 +146,9 @@ public:
     }
   }
 
-  const LoopTable &GetStack() const { return loop_stack_; }
+  const LoopTable& GetStack() const { return loop_stack_; }
 
-  const LoopRecords &GetLoops() const { return loops_; }
+  const LoopRecords& GetLoops() const { return loops_; }
 
   bool IsDone() const noexcept { return already_done_; }
 
@@ -159,16 +156,16 @@ public:
 
   void IncrLoopCounter(int loop_id) { lc_.IncrLoopCounter(loop_id); }
 
-  const std::vector<unsigned int> &GetLoopCounters() const { return lc_.GetLoopCounters(); }
+  const std::vector<unsigned int>& GetLoopCounters() const { return lc_.GetLoopCounters(); }
 
-private:
-  LoopTable loop_stack_; // loop stack tracking
-  LoopRecords loops_;   // loop merging
-  LoopCounter lc_;      // loop counter
+ private:
+  LoopTable loop_stack_;  // loop stack tracking
+  LoopRecords loops_;     // loop merging
+  LoopCounter lc_;        // loop counter
   // must be initialized: is_done() gates __dp_loop_incr and __dp_loop_output, so reading
   // indeterminate heap memory here silently disables loop counting and, with it, the
   // callstate transitions that distinguish loop iterations in the recorded dependencies.
   bool already_done_ = false;
 };
 
-} // namespace dp
+}  // namespace dp

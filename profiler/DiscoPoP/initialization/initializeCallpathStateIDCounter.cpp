@@ -10,8 +10,9 @@
  *
  */
 
-#include "DiscoPoP.hpp"
 #include <string>
+
+#include "DiscoPoP.hpp"
 
 void DiscoPoP::InitializeCallpathStateIdCounter() {
   std::string callpath_state_counter_file(dputil::GetEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));

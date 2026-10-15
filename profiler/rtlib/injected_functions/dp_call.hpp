@@ -22,4 +22,4 @@ extern "C" {
 void __dp_call(LID lid, int32_t instruction_id);
 }
 
-} // namespace dp
+}  // namespace dp

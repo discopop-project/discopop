@@ -25,7 +25,7 @@ namespace dp {
 // not only in runtimeFunctionsGlobals.hpp, because the managers below rtlib report through it
 // as well and cannot include that header: it includes them.
 extern bool dp_debug;
-} // namespace dp
+}  // namespace dp
 
 // TODO(Lukas): Is this valid?
 #define USE_EMHASH
@@ -34,14 +34,18 @@ extern bool dp_debug;
 #include "emhash/hash_set8.hpp"
 #include "emhash/hash_table7.hpp"
 namespace dp {
-template <typename KeyT, typename ValueT> using HashMap = emhash7::HashMap<KeyT, ValueT>;
-template <typename KeyT> using HashSet = emhash8::HashSet<KeyT>;
-} // namespace dp
+template <typename KeyT, typename ValueT>
+using HashMap = emhash7::HashMap<KeyT, ValueT>;
+template <typename KeyT>
+using HashSet = emhash8::HashSet<KeyT>;
+}  // namespace dp
 #else
 #include <unordered_map>
 #include <unordered_set>
 namespace dp {
-template <typename KeyT, typename ValueT> using hashmap = std::unordered_map<KeyT, ValueT>;
-template <typename KeyT> using hashset = std::unordered_set<KeyT>;
-} // namespace dp
+template <typename KeyT, typename ValueT>
+using hashmap = std::unordered_map<KeyT, ValueT>;
+template <typename KeyT>
+using hashset = std::unordered_set<KeyT>;
+}  // namespace dp
 #endif

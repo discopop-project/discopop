@@ -12,8 +12,6 @@
 
 #pragma once
 
-#include "DPTypes.hpp"
-
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
@@ -22,19 +20,21 @@
 #include <unordered_set>
 #include <vector>
 
+#include "DPTypes.hpp"
+
 namespace dp {
 
 // Data structure to store information on a single source code scope
 struct Scope {
   explicit Scope(uint64_t id) : scope_id_(id) {}
 
-  void RegisterStackRead(ADDR address, LID debug_lid, const char *debug_var) {
+  void RegisterStackRead(ADDR address, LID debug_lid, const char* debug_var) {
     if (!(first_written_.find(address) != first_written_.end())) {
       first_read_.insert(address);
     }
   }
 
-  void RegisterStackWrite(ADDR address, LID debug_lid, const char *debug_var) {
+  void RegisterStackWrite(ADDR address, LID debug_lid, const char* debug_var) {
     if (!(first_read_.find(address) != first_read_.end())) {
       first_written_.insert(address);
     }
@@ -42,11 +42,11 @@ struct Scope {
 
   uint64_t GetId() const noexcept { return scope_id_; }
 
-  const std::unordered_set<ADDR> &GetFirstRead() const noexcept { return first_read_; }
+  const std::unordered_set<ADDR>& GetFirstRead() const noexcept { return first_read_; }
 
-  const std::unordered_set<ADDR> &GetFirstWrite() const noexcept { return first_written_; }
+  const std::unordered_set<ADDR>& GetFirstWrite() const noexcept { return first_written_; }
 
-private:
+ private:
   uint64_t scope_id_;
   std::unordered_set<ADDR> first_read_;
   std::unordered_set<ADDR> first_written_;
@@ -54,7 +54,7 @@ private:
 
 // Data structure for stack access management in scopes
 struct ScopeManager {
-  const Scope &GetCurrentScope() { return scope_stack_.back(); }
+  const Scope& GetCurrentScope() { return scope_stack_.back(); }
 
   std::size_t NumberOpenScopes() const noexcept { return scope_stack_.size(); }
 
@@ -70,12 +70,12 @@ struct ScopeManager {
     scope_stack_.pop_back();
   }
 
-  void RegisterStackRead(ADDR address, LID debug_lid, const char *debug_var) {
+  void RegisterStackRead(ADDR address, LID debug_lid, const char* debug_var) {
     scope_stack_.back().RegisterStackRead(address, debug_lid, debug_var);
     addr_to_last_access_scope_id_[address] = scope_stack_.back().GetId();
   }
 
-  void RegisterStackWrite(ADDR address, LID debug_lid, const char *debug_var) {
+  void RegisterStackWrite(ADDR address, LID debug_lid, const char* debug_var) {
     scope_stack_.back().RegisterStackWrite(address, debug_lid, debug_var);
     addr_to_last_access_scope_id_[address] = scope_stack_.back().GetId();
   }
@@ -86,7 +86,7 @@ struct ScopeManager {
     // check for first_writes in previous scopes (i.e.: search for the "owner"
     // of the stack variable)
     std::size_t idx = 0;
-    for (const auto &scope : scope_stack_) {
+    for (const auto& scope : scope_stack_) {
       if (scope.GetFirstWrite().count(addr) > 0) {
         if (idx == scope_stack_.size() - 1) {
           return true;
@@ -136,9 +136,9 @@ struct ScopeManager {
     return iterator->second < scope_stack_.back().GetId();
   }
 
-private:
+ private:
   std::vector<Scope> scope_stack_;
-  uint64_t next_scope_id_ = 1; // 0 marks invalid in addrToLastAccessScopeID
+  uint64_t next_scope_id_ = 1;  // 0 marks invalid in addrToLastAccessScopeID
 
   std::unordered_map<ADDR, uint64_t> addr_to_last_access_scope_id_;
 };
@@ -152,14 +152,14 @@ struct Scope2 {
     first_written_.reserve(64);
   }
 
-  void RegisterStackRead(ADDR address, LID debug_lid, const char *debug_var) {
+  void RegisterStackRead(ADDR address, LID debug_lid, const char* debug_var) {
     const auto not_found = first_written_.find(address) == first_written_.end();
     if (not_found) {
       first_read_.insert(address);
     }
   }
 
-  void RegisterStackWrite(ADDR address, LID debug_lid, const char *debug_var) {
+  void RegisterStackWrite(ADDR address, LID debug_lid, const char* debug_var) {
     const auto not_found = first_read_.find(address) == first_read_.end();
     if (not_found) {
       first_written_.insert(address);
@@ -168,11 +168,11 @@ struct Scope2 {
 
   uint64_t GetId() const noexcept { return scope_id_; }
 
-  const HashSet<ADDR> &GetFirstRead() const noexcept { return first_read_; }
+  const HashSet<ADDR>& GetFirstRead() const noexcept { return first_read_; }
 
-  const HashSet<ADDR> &GetFirstWrite() const noexcept { return first_written_; }
+  const HashSet<ADDR>& GetFirstWrite() const noexcept { return first_written_; }
 
-private:
+ private:
   uint64_t scope_id_;
   HashSet<ADDR> first_read_;
   HashSet<ADDR> first_written_;
@@ -184,13 +184,13 @@ struct ScopeManager2 {
     addr_to_last_access_scope_id_.reserve(1024);
   }
 
-  const Scope2 &GetCurrentScope() const noexcept { return scope_stack_.back(); }
+  const Scope2& GetCurrentScope() const noexcept { return scope_stack_.back(); }
 
   std::size_t NumberOpenScopes() const noexcept { return scope_stack_.size(); }
 
-  void EnterScope(const char *type, LID debug_lid) { scope_stack_.emplace_back(next_scope_id_++); }
+  void EnterScope(const char* type, LID debug_lid) { scope_stack_.emplace_back(next_scope_id_++); }
 
-  void LeaveScope(const char *type, LID debug_lid) {
+  void LeaveScope(const char* type, LID debug_lid) {
     if (scope_stack_.empty()) {
       return;
     }
@@ -198,15 +198,15 @@ struct ScopeManager2 {
     scope_stack_.pop_back();
   }
 
-  void RegisterStackRead(ADDR address, LID debug_lid, const char *debug_var) {
-    auto &current_scope = scope_stack_.back();
+  void RegisterStackRead(ADDR address, LID debug_lid, const char* debug_var) {
+    auto& current_scope = scope_stack_.back();
 
     current_scope.RegisterStackRead(address, debug_lid, debug_var);
     addr_to_last_access_scope_id_[address] = current_scope.GetId();
   }
 
-  void RegisterStackWrite(ADDR address, LID debug_lid, const char *debug_var) {
-    auto &current_scope = scope_stack_.back();
+  void RegisterStackWrite(ADDR address, LID debug_lid, const char* debug_var) {
+    auto& current_scope = scope_stack_.back();
 
     current_scope.RegisterStackWrite(address, debug_lid, debug_var);
     addr_to_last_access_scope_id_[address] = current_scope.GetId();
@@ -218,7 +218,7 @@ struct ScopeManager2 {
     // check for first_writes in previous scopes (i.e.: search for the "owner"
     // of the stack variable)
     std::size_t idx = 0;
-    for (const auto &scope : scope_stack_) {
+    for (const auto& scope : scope_stack_) {
       if (scope.GetFirstWrite().count(addr) > 0) {
         if (idx == scope_stack_.size() - 1) {
           return true;
@@ -259,11 +259,11 @@ struct ScopeManager2 {
     return val < scope_stack_.back().GetId();
   }
 
-private:
+ private:
   uint64_t next_scope_id_ = 1;
 
   std::vector<Scope2> scope_stack_;
   HashMap<ADDR, uint64_t> addr_to_last_access_scope_id_;
 };
 
-} // namespace dp
+}  // namespace dp

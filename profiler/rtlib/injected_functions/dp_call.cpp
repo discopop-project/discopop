@@ -11,12 +11,6 @@
  */
 
 #include "dp_call.hpp"
-#include "DPTypes.hpp"
-
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "callback_scope.hpp"
-#include "static_callstate_transitions/utils.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -24,6 +18,10 @@
 #include <set>
 #include <string>
 
+#include "DPTypes.hpp"
+#include "callback_scope.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "static_callstate_transitions/utils.hpp"
 
 namespace dp {
 
@@ -45,4 +43,4 @@ void __dp_call(LID lid, std::int32_t instruction_id) {
 }
 }
 
-} // namespace dp
+}  // namespace dp

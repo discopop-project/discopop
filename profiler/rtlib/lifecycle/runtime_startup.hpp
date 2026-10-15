@@ -23,4 +23,4 @@ extern "C" {
 void __dp_init();
 }
 
-} // namespace dp
+}  // namespace dp

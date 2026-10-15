@@ -15,7 +15,6 @@
 #include <cstdint>
 #include <iostream>
 
-
 namespace dp {
 // Byte wise signature
 
@@ -81,10 +80,10 @@ SigElement Signature::MembershipCheck(std::int64_t elem) {
   return res;
 }
 
-bool Signature::Intersect(Signature & /*other*/) { return false; }
+bool Signature::Intersect(Signature& /*other*/) { return false; }
 
 double Signature::ExpectedFalsePositiveRate() {
   double result = 0.0;
   return result;
 }
-} // namespace dp
+}  // namespace dp

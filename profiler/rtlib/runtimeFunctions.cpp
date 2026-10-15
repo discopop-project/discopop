@@ -11,13 +11,8 @@
  */
 
 #include "runtimeFunctions.hpp"
-#include "runtimeFunctionsGlobals.hpp"
 
-#include "debug_print.hpp"
-#include "lid_utils.hpp"
-#include "memory/PerfectShadow.hpp"
-#include "memory/ShadowMemory.hpp"
-#include "timer.hpp"
+#include <unistd.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -25,9 +20,14 @@
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <unistd.h>
 #include <vector>
 
+#include "debug_print.hpp"
+#include "lid_utils.hpp"
+#include "memory/PerfectShadow.hpp"
+#include "memory/ShadowMemory.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "timer.hpp"
 
 namespace dp {
 
@@ -40,7 +40,7 @@ void ReadRuntimeInfo() {
   std::string line;
   if (conf.is_open()) {
     auto func = [](char c) { return (c == ' '); };
-    std::vector<std::string> *substrings = nullptr;
+    std::vector<std::string>* substrings = nullptr;
     while (std::getline(conf, line)) {
       substrings = dputil::Split(line, '=');
       if (substrings->size() == 2) {
@@ -108,20 +108,20 @@ void InitParallelization() {
   second_access_queue.SetMaxSize(static_cast<std::size_t>(second_access_queue_elements_per_worker) * num_workers);
 
   // initialize and set thread detached attribute
-  finalize_parallelization_called = false; // mostly for unit-tests.
+  finalize_parallelization_called = false;  // mostly for unit-tests.
   pthread_attr_t attr;
   pthread_attr_init(&attr);
   pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 
   // create worker threads to process the firstAccessQueue
   for (std::int64_t i = 0; i < num_workers; ++i) {
-    pthread_create(&workers[i], &attr, ProcessFirstAccessQueue, reinterpret_cast<void *>(i));
+    pthread_create(&workers[i], &attr, ProcessFirstAccessQueue, reinterpret_cast<void*>(i));
   }
 
   // create worker thread to process the secondAccessQueue
   second_access_queue_worker_thread = new pthread_t();
   pthread_create(second_access_queue_worker_thread, &attr, ProcessSecondAccessQueue,
-                 reinterpret_cast<void *>(static_cast<std::intptr_t>(num_workers)));
+                 reinterpret_cast<void*>(static_cast<std::intptr_t>(num_workers)));
 
   pthread_attr_destroy(&attr);
 }
@@ -149,11 +149,11 @@ void MergeDeps() {
   const auto timer = Timer(timers, TimerRegion::kMergeDeps);
 #endif
 
-  for (auto &dep : *my_map) {
+  for (auto& dep : *my_map) {
     // if a lid occurs the first time, operator[] adds its set to the global hash table;
     // otherwise the set that is already there is extended.
-    DepSet &global_deps = (*all_deps)[dep.first];
-    for (auto &d : dep.second) {
+    DepSet& global_deps = (*all_deps)[dep.first];
+    for (auto& d : dep.second) {
       global_deps.insert(d);
     }
   }
@@ -184,7 +184,7 @@ void FinalizeParallelization() {
   // wait for worker threads
   for (int i = 0; i < num_workers; ++i) {
     pthread_join(workers[i], nullptr);
-}
+  }
   pthread_join(*second_access_queue_worker_thread, nullptr);
 
   // delete allocated memory
@@ -218,4 +218,4 @@ void FinalizeSingleThreadedExecution() {
   }
 }
 
-} // namespace dp
+}  // namespace dp

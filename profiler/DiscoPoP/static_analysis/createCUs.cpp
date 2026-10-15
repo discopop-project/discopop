@@ -10,40 +10,42 @@
  *
  */
 
-#include "DiscoPoP.hpp"
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
 
+#include "DiscoPoP.hpp"
+
 using llvm::BasicBlock;
 using llvm::BranchInst;
 using llvm::CallBase;
 using llvm::CallInst;
-using llvm::DILocalScope;
+using llvm::cast;
 using llvm::DataLayout;
 using llvm::DebugLoc;
+using llvm::DILocalScope;
 using llvm::Function;
 using llvm::InvokeInst;
+using llvm::isa;
 using llvm::LoadInst;
 using llvm::Loop;
 using llvm::LoopInfo;
 using llvm::ModuleAnalysisManager;
+using llvm::raw_string_ostream;
 using llvm::Region;
 using llvm::ReturnInst;
 using llvm::StoreInst;
 using llvm::Type;
 using llvm::Value;
-using llvm::cast;
-using llvm::isa;
-using llvm::raw_string_ostream;
 
-void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_variables_set, std::vector<CU *> &cu_vector,
-                         std::map<std::string, std::vector<CU *>> &bb_id_to_cu_ids_map, Node *root, LoopInfo &li, ModuleAnalysisManager &mam) {
-  const DataLayout *dl = &this_module_->getDataLayout(); // used to get data size of variables,
+void DiscoPoP::CreateCus(Region* top_region, std::set<std::string>& global_variables_set, std::vector<CU*>& cu_vector,
+                         std::map<std::string, std::vector<CU*>>& bb_id_to_cu_ids_map, Node* root, LoopInfo& li,
+                         ModuleAnalysisManager& mam) {
+  const DataLayout* dl = &this_module_->getDataLayout();  // used to get data size of variables,
   // pointers, structs etc.
-  Node *current_node = root;
-  CU *cu;
+  Node* current_node = root;
+  CU* cu;
   LID lid;
   std::string var_name;
   bool is_global_var = false;
@@ -51,13 +53,12 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
   std::set<std::string> suspicious_variables;
   std::string basic_block_name;
 
-  std::map<Loop *, Node *> loop_to_node_map;
+  std::map<Loop*, Node*> loop_to_node_map;
 
   for (Region::block_iterator bb = top_region->block_begin(); bb != top_region->block_end(); ++bb) {
-
     // Get the closest loop where bb lives in.
     // (loop == NULL) if bb is not in any loop.
-    Loop *loop = li.getLoopFor(*bb);
+    Loop* loop = li.getLoopFor(*bb);
     if (loop) {
       // if bb is in a loop and if we have already created a node for that loop,
       // assign it to currentNode.
@@ -67,7 +68,7 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
       // else, create a new Node for the loop, add it as children of currentNode
       // and add it to the map.
       else {
-        Node *n = new Node;
+        Node* n = new Node;
         n->type = NodeTypes::kLoop;
         n->parent_node = current_node;
         current_node->children_nodes.push_back(n);
@@ -78,32 +79,32 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
     } else {
       // end of loops. go to the parent of the loop. may have to jump several
       // nodes in case of nested loops
-      for (std::map<Loop *, Node *>::iterator it = loop_to_node_map.begin(); it != loop_to_node_map.end(); it++) {
-        if (it->second == current_node) // current node found in loop map jump to its parent.
+      for (std::map<Loop*, Node*>::iterator it = loop_to_node_map.begin(); it != loop_to_node_map.end(); it++) {
+        if (it->second == current_node)  // current node found in loop map jump to its parent.
         {
           current_node = current_node->parent_node;
-          it = loop_to_node_map.begin();    // search the whole map again for current node
-          if (it->second == current_node) { // due to it++ we need to check first
+          it = loop_to_node_map.begin();     // search the whole map again for current node
+          if (it->second == current_node) {  // due to it++ we need to check first
             // element of map ourself
             current_node = current_node->parent_node;
-}
+          }
         }
-}
+      }
     }
 
     cu = new CU;
 
     if (bb->getName().size() == 0) {
       bb->setName(cu->id);
-}
+    }
 
     cu->bb_id = bb->getName().str();
     cu->bb = *bb;
     current_node->children_nodes.push_back(cu);
-    std::vector<CU *> basic_block_cu_vector;
+    std::vector<CU*> basic_block_cu_vector;
     basic_block_cu_vector.push_back(cu);
-    bb_id_to_cu_ids_map.insert(std::pair<std::string, std::vector<CU *>>(bb->getName(), basic_block_cu_vector));
-    DILocalScope *scope_buffer = nullptr;
+    bb_id_to_cu_ids_map.insert(std::pair<std::string, std::vector<CU*>>(bb->getName(), basic_block_cu_vector));
+    DILocalScope* scope_buffer = nullptr;
 
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       // NOTE: 'instruction' --> '&*instruction'
@@ -137,7 +138,7 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
               cu->basic_block_name = basic_block_name;
               cu_vector.push_back(cu);
               suspicious_variables.clear();
-              CU *temp = cu; // keep current CU to make a reference to the successor CU
+              CU* temp = cu;  // keep current CU to make a reference to the successor CU
               cu = new CU;
 
               cu->bb_id = bb->getName().str();
@@ -164,9 +165,9 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
         else if (isa<BranchInst>(instruction)) {
           if ((cast<BranchInst>(instruction))->isUnconditional()) {
             if ((cast<BranchInst>(instruction))->getNumSuccessors() == 1) {
-              BasicBlock *successor_bb = (cast<BranchInst>(instruction))->getSuccessor(0);
-              for (BasicBlock::iterator inner_instruction = successor_bb->begin(); inner_instruction != successor_bb->end();
-                   ++inner_instruction) {
+              BasicBlock* successor_bb = (cast<BranchInst>(instruction))->getSuccessor(0);
+              for (BasicBlock::iterator inner_instruction = successor_bb->begin();
+                   inner_instruction != successor_bb->end(); ++inner_instruction) {
                 if (isa<ReturnInst>(inner_instruction)) {
                   cu->return_instructions.insert(lid);
                   break;
@@ -177,8 +178,8 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
         }
         if (isa<StoreInst>(instruction)) {
           // get size of data written into memory by this store instruction
-          Value *operand = instruction->getOperand(1);
-          Type *ty = operand->getType();
+          Value* operand = instruction->getOperand(1);
+          Type* ty = operand->getType();
           unsigned u = dl->getTypeSizeInBits(ty);
           cu->write_data_size += u;
           var_name = DetermineVariableNameStatic(&*instruction, is_global_var, false, "");
@@ -186,10 +187,10 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
           suspicious_variables.insert(var_name);
           if (lid > 0) {
             cu->write_phase_line_numbers.insert(lid);
-}
+          }
         } else if (isa<LoadInst>(instruction)) {
           // get size of data read from memory by this load instruction
-          Type *ty = instruction->getType();
+          Type* ty = instruction->getType();
           unsigned u = dl->getTypeSizeInBits(ty);
           cu->read_data_size += u;
           var_name = DetermineVariableNameStatic(&*instruction, is_global_var, false, "");
@@ -214,7 +215,7 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
             cu->basic_block_name = basic_block_name;
             cu_vector.push_back(cu);
             suspicious_variables.clear();
-            CU *temp = cu; // keep current CU to make a reference to the successor CU
+            CU* temp = cu;  // keep current CU to make a reference to the successor CU
             cu = new CU;
 
             cu->bb_id = bb->getName().str();
@@ -231,7 +232,7 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
             if (global_variables_set.count(var_name) || program_global_variables_set_.count(var_name)) {
               if (lid > 0) {
                 cu->read_phase_line_numbers.insert(lid);
-}
+              }
             }
           }
         } else if (isa<CallInst>(instruction) || isa<InvokeInst>(instruction)) {
@@ -245,7 +246,7 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
             cu->basic_block_name = basic_block_name;
             cu_vector.push_back(cu);
             suspicious_variables.clear();
-            CU *temp = cu; // keep current CU to make a reference to the successor CU
+            CU* temp = cu;  // keep current CU to make a reference to the successor CU
             cu = new CU;
 
             cu->bb_id = bb->getName().str();
@@ -275,7 +276,7 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
               "clearerr",    "feof",         "ferror",     "perror",         "remove",    "rename",     "tmpfile",
               "tmpfile_s",   "tmpnam",       "tmpnam_s",   "__isoc99_fscanf"};
 
-          CallBase *ci = cast<CallBase>(instruction);
+          CallBase* ci = cast<CallBase>(instruction);
           if (ci) {
             if (ci->getCalledFunction()) {
               if (ci->getCalledFunction()->hasName()) {
@@ -309,14 +310,13 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
       LID lid = dputil::GetLid(&*instruction, file_id);
       if (lid > 0) {
         if (isa<CallInst>(instruction) || isa<InvokeInst>(instruction)) {
-          Function *f = nullptr;
+          Function* f = nullptr;
 
-          if(isa<CallInst>(instruction)){
-            CallInst *ci = cast<CallInst>(instruction);
+          if (isa<CallInst>(instruction)) {
+            CallInst* ci = cast<CallInst>(instruction);
             f = ci->getCalledFunction();
-          }
-          else if(isa<InvokeInst>(instruction)){
-            InvokeInst *ci = cast<InvokeInst>(instruction);
+          } else if (isa<InvokeInst>(instruction)) {
+            InvokeInst* ci = cast<InvokeInst>(instruction);
             f = ci->getCalledFunction();
           }
 
@@ -339,12 +339,12 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
             }
             if (external_function) {
               continue;
-}
+            }
           } else {
             lid = "LineNotFound";
           }
 
-          Node *n = new Node;
+          Node* n = new Node;
           n->type = NodeTypes::kDummy;
           // For ordinary function calls, F has a name.
           // However, sometimes the function being called
@@ -367,25 +367,25 @@ void DiscoPoP::CreateCus(Region *top_region, std::set<std::string> &global_varia
               Variable v(std::string(it->getName()), rso.str(), lid, true, true);
               n->arguments_list.push_back(v);
             }
-          } else // get name of the indirect function which is called
+          } else  // get name of the indirect function which is called
           {
             Value* v = (cast<CallBase>(instruction))->getCalledOperand();
-            Value *sv = v->stripPointerCasts();
+            Value* sv = v->stripPointerCasts();
             n->name = sv->getName().str();
           }
 
           // Recursive functions
-          //CallGraphWrapperPass *CGWP = &(getAnalysis<CallGraphWrapperPass>());
+          // CallGraphWrapperPass *CGWP = &(getAnalysis<CallGraphWrapperPass>());
 
-          llvm::CallGraph &cg = mam.getResult<llvm::CallGraphAnalysis>(*this_module_);
+          llvm::CallGraph& cg = mam.getResult<llvm::CallGraphAnalysis>(*this_module_);
 
-          //if (isRecursive(*f, CGWP->getCallGraph())) {
+          // if (isRecursive(*f, CGWP->getCallGraph())) {
           if (IsRecursive(*f, cg)) {
             LID lid = dputil::GetLid(&*instruction, file_id);
             n->recursive_function_call = n->name + " " + dputil::DecodeLid(lid) + ",";
           }
 
-          std::vector<CU *> bb_cus_vector = bb_id_to_cu_ids_map[bb->getName().str()];
+          std::vector<CU*> bb_cus_vector = bb_id_to_cu_ids_map[bb->getName().str()];
           // locate the CU where this function call belongs
           for (auto i : bb_cus_vector) {
             LID lid = dputil::GetLid(&*instruction, file_id);

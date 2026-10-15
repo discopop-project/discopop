@@ -12,10 +12,11 @@
 
 #include "runtimeFunctionsGlobals.hpp"
 
+#include <unordered_map>
+
 #include "Immortal.hpp"
 #include "hybrid_analysis/bb_deps.hpp"
 #include "runtimeFunctions.hpp"
-#include <unordered_map>
 
 bool use_perfect = true;
 
@@ -24,75 +25,74 @@ std::int32_t sig_elem_bit = 56;
 std::int32_t sig_num_elem = 270000;
 std::int32_t sig_num_hash = 2;
 
-std::uint64_t *num_accesses = nullptr;
+std::uint64_t* num_accesses = nullptr;
 
 namespace dp {
 
 namespace {
 // The backing storage of the globals whose lifetime the runtime manages itself, see
 // Immortal.hpp for why they must not be destroyed along with the target's own globals.
-ImmortalStorage<std::unordered_map<char *, int64_t>> cuec_storage;
+ImmortalStorage<std::unordered_map<char*, int64_t>> cuec_storage;
 ImmortalStorage<FirstAccessQueue> first_access_queue_storage;
 ImmortalStorage<SecondAccessQueue> second_access_queue_storage;
 ImmortalStorage<FirstAccessQueueChunkBuffer> first_access_queue_chunk_buffer_storage;
 
 bool immortal_globals_constructed = false;
 bool manager_globals_alive = false;
-} // namespace
+}  // namespace
 
-bool dp_debug = false; // debug flag
+bool dp_debug = false;  // debug flag
 
-Timers *timers = nullptr;
+Timers* timers = nullptr;
 
 std::mutex pthread_compatibility_mutex;
 
 ImmortalStorage<FunctionManager> function_manager;
 ImmortalStorage<LoopManager> loop_manager;
 
-
 // hybrid analysis
-ReportedBBRecorder *bb_list = nullptr;
-StringDepMap *out_put_deps = nullptr;
+ReportedBBRecorder* bb_list = nullptr;
+StringDepMap* out_put_deps = nullptr;
 // end hybrid analysis
 
-std::unordered_map<char *, int64_t> &cuec = cuec_storage.value;
+std::unordered_map<char*, int64_t>& cuec = cuec_storage.value;
 
 RuntimeState runtime_state = RuntimeState::kNotInitialized;
 
 // Runtime merging structures
-DepMap *all_deps = nullptr;
+DepMap* all_deps = nullptr;
 
-std::ofstream *out = nullptr;
+std::ofstream* out = nullptr;
 
 /******* BEGIN: parallelization section *******/
 std::mutex all_deps_lock;
-pthread_t *workers = nullptr; // worker threads
+pthread_t* workers = nullptr;  // worker threads
 std::atomic<bool> finalize_parallelization_called =
-    false; // signals to worker threads that no further data access will be registered in the first queue
-FirstAccessQueueChunk *main_thread_access_info_buffer = nullptr;
-FirstAccessQueue &first_access_queue = first_access_queue_storage.value;
-SecondAccessQueue &second_access_queue = second_access_queue_storage.value;
-pthread_t *second_access_queue_worker_thread = nullptr;
-FirstAccessQueueChunkBuffer &first_access_queue_chunk_buffer = first_access_queue_chunk_buffer_storage.value;
+    false;  // signals to worker threads that no further data access will be registered in the first queue
+FirstAccessQueueChunk* main_thread_access_info_buffer = nullptr;
+FirstAccessQueue& first_access_queue = first_access_queue_storage.value;
+SecondAccessQueue& second_access_queue = second_access_queue_storage.value;
+pthread_t* second_access_queue_worker_thread = nullptr;
+FirstAccessQueueChunkBuffer& first_access_queue_chunk_buffer = first_access_queue_chunk_buffer_storage.value;
 
 #define XSTR(x) STR(x)
 #define STR(x) #x
 #ifdef DP_NUM_WORKERS
 int32_t NUM_WORKERS = DP_NUM_WORKERS;
 #else
-int32_t num_workers = 4; // default number of worker threads (multiple workers
-                         // can potentially lead to non-deterministic results)
+int32_t num_workers = 4;  // default number of worker threads (multiple workers
+                          // can potentially lead to non-deterministic results)
 #endif
 
 int32_t first_access_queue_chunks_per_worker = kDefaultFirstAccessQueueChunksPerWorker;
 int32_t second_access_queue_elements_per_worker = kDefaultSecondAccessQueueElementsPerWorker;
 
-AbstractShadow *single_threaded_execution_smem = nullptr; // used if NUM_WORKERS==0
+AbstractShadow* single_threaded_execution_smem = nullptr;  // used if NUM_WORKERS==0
 
-thread_local DepMap *my_map = nullptr;
+thread_local DepMap* my_map = nullptr;
 
-CallState *current_callpath_state = nullptr;
-CallStateGraph *call_state_graph;
+CallState* current_callpath_state = nullptr;
+CallStateGraph* call_state_graph;
 
 // statistics
 std::chrono::high_resolution_clock::time_point statistics_profiling_start_time;
@@ -151,4 +151,4 @@ void DestroyImmortalGlobals() {
 
 /******* END: parallelization section *******/
 
-} // namespace dp
+}  // namespace dp

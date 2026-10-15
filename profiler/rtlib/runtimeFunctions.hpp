@@ -12,16 +12,16 @@
 
 #pragma once
 
+#include <string>
+
 #include "DPTypes.hpp"
 #include "memory/AbstractShadow.hpp"
 #include "runtimeFunctionsTypes.hpp"
 
-#include <string>
-
 namespace dp {
 
 /******* Helper functions *******/
-void AddDep(DepType type, LID curr, LID dep_on, const char *var, std::int64_t aa_var, ADDR addr);
+void AddDep(DepType type, LID curr, LID dep_on, const char* var, std::int64_t aa_var, ADDR addr);
 
 void OutputDeps();
 
@@ -37,17 +37,17 @@ void MergeDeps();
 
 // void *analyzeDeps(void *arg);
 
-void *ProcessFirstAccessQueue(void *arg);
+void* ProcessFirstAccessQueue(void* arg);
 
-void *ProcessSecondAccessQueue(void *arg);
+void* ProcessSecondAccessQueue(void* arg);
 
-void AnalyzeSingleAccess(dp::AbstractShadow *smem, dp::AccessInfo &access);
+void AnalyzeSingleAccess(dp::AbstractShadow* smem, dp::AccessInfo& access);
 
 // the dependency analysis of one access on the calling thread, used if NUM_WORKERS==0
-void AnalyzeSingleAccessOnMainThread(dp::AccessInfo &access);
+void AnalyzeSingleAccessOnMainThread(dp::AccessInfo& access);
 
 void FinalizeParallelization();
 
 void FinalizeSingleThreadedExecution();
 
-} // namespace dp
+}  // namespace dp

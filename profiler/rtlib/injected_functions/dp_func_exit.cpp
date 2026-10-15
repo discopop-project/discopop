@@ -11,14 +11,6 @@
  */
 
 #include "dp_func_exit.hpp"
-#include "DPTypes.hpp"
-
-#include "runtimeFunctions.hpp"
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "callback_scope.hpp"
-
-#include "static_callstate_transitions/utils.hpp"
 
 #include <cstdint>
 #include <iostream>
@@ -26,6 +18,11 @@
 #include <set>
 #include <string>
 
+#include "DPTypes.hpp"
+#include "callback_scope.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "static_callstate_transitions/utils.hpp"
 
 namespace dp {
 
@@ -48,7 +45,6 @@ void __dp_func_exit(LID lid, std::int32_t is_exit) {
   function_manager->ResetCall(lid);
   function_manager->DecreaseStackLevel();
 
-
   if (is_exit == 0) {
     function_manager->RegisterFunctionEnd(lid);
   }
@@ -62,4 +58,4 @@ void __dp_func_exit(LID lid, std::int32_t is_exit) {
 }
 }
 
-} // namespace dp
+}  // namespace dp

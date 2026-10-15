@@ -10,12 +10,14 @@
  *
  */
 
-#include "DiscoPoP.hpp"
 #include <map>
 #include <string>
 
+#include "DiscoPoP.hpp"
+
 using llvm::BasicBlock;
 using llvm::DebugLoc;
+using llvm::errs;
 using llvm::Function;
 using llvm::Instruction;
 using llvm::Loop;
@@ -23,19 +25,18 @@ using llvm::LoopInfo;
 using llvm::SmallVector;
 using llvm::SmallVectorImpl;
 using llvm::StringRef;
-using llvm::errs;
 
 // Control-flow analysis functions
 
-void DiscoPoP::CFA(Function &f, LoopInfo &li, const std::map<Loop *, std::string> &loop_to_pet_node_id) {
-  SmallVector<BasicBlock *, 8> exit_blocks;
+void DiscoPoP::CFA(Function& f, LoopInfo& li, const std::map<Loop*, std::string>& loop_to_pet_node_id) {
+  SmallVector<BasicBlock*, 8> exit_blocks;
   for (Function::iterator bb = f.begin(), be = f.end(); bb != be; ++bb) {
-    BasicBlock *tmp_bb = &*bb;
+    BasicBlock* tmp_bb = &*bb;
     exit_blocks.clear();
 
     // Get the closest loop where tmpBB lives in.
     // (L == NULL) if tmpBB is not in any loop.
-    Loop *l = li.getLoopFor(tmp_bb);
+    Loop* l = li.getLoopFor(tmp_bb);
 
     // Check if tmpBB is the loop header (.cond) block.
     if (l != nullptr && li.isLoopHeader(tmp_bb)) {
@@ -62,11 +63,11 @@ void DiscoPoP::CFA(Function &f, LoopInfo &li, const std::map<Loop *, std::string
       // the if-else block containing the break. Since we always want
       // to find the real exit (.end) block, we need to check the
       // successors of the break statement(s).
-      SmallVector<BasicBlock *, 4> real_exit_blocks;
+      SmallVector<BasicBlock*, 4> real_exit_blocks;
       if (kDpDebug) {
         errs() << "loop exits:";
       }
-      for (SmallVectorImpl<BasicBlock *>::iterator ei = exit_blocks.begin(), end = exit_blocks.end(); ei != end; ++ei) {
+      for (SmallVectorImpl<BasicBlock*>::iterator ei = exit_blocks.begin(), end = exit_blocks.end(); ei != end; ++ei) {
         StringRef exit_type = (*ei)->getName().split('.').first;
         if ((exit_type.str() == loop_type.str()) && ((*ei)->getName().find("end") != std::string::npos) &&
             (std::find(real_exit_blocks.begin(), real_exit_blocks.end(), *ei) == real_exit_blocks.end())) {
@@ -76,11 +77,11 @@ void DiscoPoP::CFA(Function &f, LoopInfo &li, const std::map<Loop *, std::string
           }
         } else {
           // Changed TerminatorInst to Instruction
-          Instruction *ti = (*ei)->getTerminator();
+          Instruction* ti = (*ei)->getTerminator();
           assert(TI != NULL && "Exit block is not well formed!");
           unsigned int num_succ = ti->getNumSuccessors();
           for (unsigned int i = 0; i < num_succ; ++i) {
-            BasicBlock *succ = ti->getSuccessor(i);
+            BasicBlock* succ = ti->getSuccessor(i);
             exit_type = succ->getName().split('.').first;
             if ((exit_type.str() == loop_type.str()) && (succ->getName().find("end") != std::string::npos) &&
                 (std::find(real_exit_blocks.begin(), real_exit_blocks.end(), succ) == real_exit_blocks.end())) {
@@ -108,12 +109,12 @@ void DiscoPoP::CFA(Function &f, LoopInfo &li, const std::map<Loop *, std::string
       // Check if entry block and exit block(s) have valid LID.
       bool has_valid_entry = SanityCheck(tmp_bb);
       bool has_valid_exit = false;
-      for (SmallVectorImpl<BasicBlock *>::iterator ei = real_exit_blocks.begin(), end = real_exit_blocks.end(); ei != end;
-           ++ei) {
+      for (SmallVectorImpl<BasicBlock*>::iterator ei = real_exit_blocks.begin(), end = real_exit_blocks.end();
+           ei != end; ++ei) {
         has_valid_exit = GetLoopExitLid(*ei, l) > 0;
         if (has_valid_exit == true) {
           break;
-}
+        }
       }
 
       if (has_valid_entry && has_valid_exit) {
@@ -123,16 +124,15 @@ void DiscoPoP::CFA(Function &f, LoopInfo &li, const std::map<Loop *, std::string
         auto pet_node = loop_to_pet_node_id.find(l);
         identity.pet_node_id = pet_node != loop_to_pet_node_id.end() ? pet_node->second : "-";
         DebugLoc start_loc = l->getStartLoc();
-        identity.start_location =
-            start_loc ? dputil::DecodeLid(dputil::EncodeLid(file_id, start_loc.getLine())) : std::to_string(file_id) + ":0";
+        identity.start_location = start_loc ? dputil::DecodeLid(dputil::EncodeLid(file_id, start_loc.getLine()))
+                                            : std::to_string(file_id) + ":0";
         loop_id_to_identity[tmp_loop_id] = identity;
         // Instrument loop header block.
         InstrumentLoopEntry(tmp_bb, tmp_loop_id);
 
-
         // Instrument loop exit block(s).
-        for (SmallVectorImpl<BasicBlock *>::iterator ei = real_exit_blocks.begin(), end = real_exit_blocks.end(); ei != end;
-             ++ei) {
+        for (SmallVectorImpl<BasicBlock*>::iterator ei = real_exit_blocks.begin(), end = real_exit_blocks.end();
+             ei != end; ++ei) {
           InstrumentLoopExit(*ei, tmp_loop_id, l);
         }
       }

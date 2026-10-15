@@ -10,25 +10,23 @@
  *
  */
 
-
-#include "runtimeFunctions.hpp"
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "memory/PerfectShadow.hpp"
-#include "timer.hpp"
+#include <unistd.h>
 
 #include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <iostream>
-#include <unistd.h>
 #include <unordered_set>
 #include <vector>
+
+#include "memory/PerfectShadow.hpp"
+#include "runtimeFunctions.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "timer.hpp"
 
 #ifdef __linux__
 #include <sched.h>
 #endif
-
 
 namespace dp {
 
@@ -45,13 +43,13 @@ struct DeferredAccess {
   bool is_read;
   bool skip;
 
-  bool operator==(const DeferredAccess &other) const noexcept {
+  bool operator==(const DeferredAccess& other) const noexcept {
     return addr == other.addr && lid == other.lid && is_read == other.is_read && skip == other.skip;
   }
 };
 
 struct DeferredAccessHash {
-  std::size_t operator()(const DeferredAccess &access) const noexcept {
+  std::size_t operator()(const DeferredAccess& access) const noexcept {
     const std::size_t flags = (access.is_read ? 1u : 0u) | (access.skip ? 2u : 0u);
     return std::hash<ADDR>()(access.addr) ^ (std::hash<LID>()(access.lid) << 1) ^ (flags << 3);
   }
@@ -67,9 +65,9 @@ constexpr std::size_t kDeferredDedupTrial = 4096;
 // list, a large array touched once -- finds nothing and drops far below this.
 constexpr double kDeferredDedupMinHitRate = 0.25;
 
-} // namespace
+}  // namespace
 
-void *ProcessFirstAccessQueue(void *arg) {
+void* ProcessFirstAccessQueue(void* arg) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::kAnalyzeDeps);
 #endif
@@ -77,8 +75,7 @@ void *ProcessFirstAccessQueue(void *arg) {
   const std::intptr_t id = reinterpret_cast<std::intptr_t>(arg);
   my_map = new DepMap();
 
-  FirstAccessQueueChunk *current = nullptr;
-
+  FirstAccessQueueChunk* current = nullptr;
 
   while (true) {
     // get chunk from queue
@@ -87,8 +84,8 @@ void *ProcessFirstAccessQueue(void *arg) {
     // check if chunk aquired
     if (current) {
       // process chunk
-      AbstractShadow *smem = new PerfectShadow2();
-      std::vector<AccessInfo> *entry_condition_accesses = new std::vector<AccessInfo>();
+      AbstractShadow* smem = new PerfectShadow2();
+      std::vector<AccessInfo>* entry_condition_accesses = new std::vector<AccessInfo>();
       std::unordered_set<DeferredAccess, DeferredAccessHash> already_deferred;
       // Given up once the chunk turns out not to repeat its accesses.
       bool deduplicate = true;
@@ -114,15 +111,13 @@ void *ProcessFirstAccessQueue(void *arg) {
           // hands on is the state of its last access.
           if (deduplicate) {
             ++deferred_seen;
-            if (already_deferred.insert(DeferredAccess{access.addr, access.lid, access.is_read, access.skip})
-                    .second) {
+            if (already_deferred.insert(DeferredAccess{access.addr, access.lid, access.is_read, access.skip}).second) {
               entry_condition_accesses->push_back(access);
             } else {
               ++deferred_repeats;
             }
             if (deferred_seen == kDeferredDedupTrial &&
-                static_cast<double>(deferred_repeats) / static_cast<double>(deferred_seen) <
-                    kDeferredDedupMinHitRate) {
+                static_cast<double>(deferred_repeats) / static_cast<double>(deferred_seen) < kDeferredDedupMinHitRate) {
               already_deferred.clear();
               deduplicate = false;
             }
@@ -154,10 +149,9 @@ void *ProcessFirstAccessQueue(void *arg) {
       if (finalize_parallelization_called) {
         // no chunks left to process. Let thread finish.
         break;
-      }         // let thread sleep and try fetching a chunk again after potentially preparing an new chunk
-        first_access_queue_chunk_buffer.PrepareChunkIfRequired(kFirstAccessQueueChunkSize);
-        usleep(1000);
-
+      }  // let thread sleep and try fetching a chunk again after potentially preparing an new chunk
+      first_access_queue_chunk_buffer.PrepareChunkIfRequired(kFirstAccessQueueChunkSize);
+      usleep(1000);
     }
   }
 
@@ -165,7 +159,6 @@ void *ProcessFirstAccessQueue(void *arg) {
   // the dependencies are merged into allDeps; the map itself belongs to this thread
   delete my_map;
   my_map = nullptr;
-
 
   if (dp_debug) {
 #ifdef __linux__
@@ -179,7 +172,7 @@ void *ProcessFirstAccessQueue(void *arg) {
   return nullptr;
 }
 
-void *ProcessSecondAccessQueue(void *arg) {
+void* ProcessSecondAccessQueue(void* arg) {
 #ifdef DP_INTERNAL_TIMER
   const auto timer = Timer(timers, TimerRegion::kAnalyzeDeps);
 #endif
@@ -187,8 +180,8 @@ void *ProcessSecondAccessQueue(void *arg) {
   const std::intptr_t id = reinterpret_cast<std::intptr_t>(arg);
   my_map = new DepMap();
 
-  SecondAccessQueueElement *current = nullptr;
-  AbstractShadow *smem = new PerfectShadow2();
+  SecondAccessQueueElement* current = nullptr;
+  AbstractShadow* smem = new PerfectShadow2();
 
   while (true) {
     // get chunk from queue
@@ -198,7 +191,7 @@ void *ProcessSecondAccessQueue(void *arg) {
     if (current) {
       // check entry boundary conditions for data dependencies
       auto promised_first_accesses_vector_ptr = current->entry_boundary_first_addr_accesses.get();
-      for (auto &entry_accesses : *(promised_first_accesses_vector_ptr)) {
+      for (auto& entry_accesses : *(promised_first_accesses_vector_ptr)) {
         // ignore unused entries of the vector
         if (!(entry_accesses.addr || entry_accesses.lid)) {
           continue;
@@ -207,10 +200,10 @@ void *ProcessSecondAccessQueue(void *arg) {
       }
 
       // update persistent SMem with exit boundary conditions (aka merge the local into the persistent shadow memories)
-      AbstractShadow *promised_last_smem_ptr = current->exit_boundary_smem.get();
+      AbstractShadow* promised_last_smem_ptr = current->exit_boundary_smem.get();
 
-      auto sig_read = static_cast<PerfectShadow2 *>(promised_last_smem_ptr)->GetSigRead();
-      auto sig_write = static_cast<PerfectShadow2 *>(promised_last_smem_ptr)->GetSigWrite();
+      auto sig_read = static_cast<PerfectShadow2*>(promised_last_smem_ptr)->GetSigRead();
+      auto sig_write = static_cast<PerfectShadow2*>(promised_last_smem_ptr)->GetSigWrite();
 
       // identify required updates to SMem
       // iterate over addresses to be merged
@@ -234,7 +227,8 @@ void *ProcessSecondAccessQueue(void *arg) {
         if (first_access_queue.empty() && second_access_queue.empty()) {
           // no chunks left to process. Let thread finish.
           break;
-        }           usleep(1000);
+        }
+        usleep(1000);
 
       } else {
         // let thread sleep and try fetching a chunk again
@@ -242,7 +236,6 @@ void *ProcessSecondAccessQueue(void *arg) {
       }
     }
   }
-
 
   delete smem;
   MergeDeps();
@@ -262,4 +255,4 @@ void *ProcessSecondAccessQueue(void *arg) {
   return nullptr;
 }
 
-} // namespace dp
+}  // namespace dp

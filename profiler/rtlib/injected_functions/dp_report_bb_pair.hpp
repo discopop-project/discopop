@@ -26,4 +26,4 @@ uint32_t __dp_bb_state();
 // End HA
 }
 
-} // namespace dp
+}  // namespace dp

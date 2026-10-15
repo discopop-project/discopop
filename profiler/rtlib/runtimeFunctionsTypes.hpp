@@ -12,12 +12,6 @@
 
 #pragma once
 
-#include "DPTypes.hpp"
-
-#include "functions/FunctionManager.hpp"
-#include "loop/LoopManager.hpp"
-
-
 #include <algorithm>
 #include <atomic>
 #include <cstdint>
@@ -31,6 +25,9 @@
 #include <utility>
 #include <vector>
 
+#include "DPTypes.hpp"
+#include "functions/FunctionManager.hpp"
+#include "loop/LoopManager.hpp"
 #include "memory/ShadowMemory.hpp"
 
 namespace dp {
@@ -58,39 +55,37 @@ enum DepTypeModifier {
   kNom,
   kIi0,
   kIi1,
-  kIi2 // NOM -> Normal
+  kIi2  // NOM -> Normal
 };
 
 struct AccessInfo {
-  AccessInfo(bool is_read, LID lid, char *var, std::int64_t aa_var, ADDR addr, bool skip = false)
-      : is_read(is_read), skip(skip), lid(lid), var(var), aa_var(aa_var), addr(addr) {
-  }
+  AccessInfo(bool is_read, LID lid, char* var, std::int64_t aa_var, ADDR addr, bool skip = false)
+      : is_read(is_read), skip(skip), lid(lid), var(var), aa_var(aa_var), addr(addr) {}
 
-  AccessInfo() : is_read(false), skip(false), lid(0), var(""), aa_var(0), addr(0) {
-  }
+  AccessInfo() : is_read(false), skip(false), lid(0), var(""), aa_var(0), addr(0) {}
 
   bool is_read;
   // hybrid analysis
   bool skip;
   // End HA
   LID lid;
-  const char *var;
-  std::int64_t aa_var; // memory region id; previously: name of allocated variable -> "Anti Aliased Variable"
+  const char* var;
+  std::int64_t aa_var;  // memory region id; previously: name of allocated variable -> "Anti Aliased Variable"
   ADDR addr;
 };
 
 // For runtime dependency merging
 struct Dep {
-  Dep(DepType t, LID dep, const char *var, std::int64_t aa_var) : type(t), dep_on(dep), var(var), aa_var(aa_var) {}
+  Dep(DepType t, LID dep, const char* var, std::int64_t aa_var) : type(t), dep_on(dep), var(var), aa_var(aa_var) {}
 
   DepType type;
   LID dep_on;
-  const char *var;
+  const char* var;
   std::int64_t aa_var;
 };
 
 struct EqDep {
-  bool operator()(const Dep &a, const Dep &b) const {
+  bool operator()(const Dep& a, const Dep& b) const {
     if (a.type != b.type) {
       return false;
     }
@@ -107,8 +102,9 @@ struct EqDep {
 };
 
 class DepHasher {
-public:
-  size_t operator()(Dep const &key) const { // the parameter type should be the same as the type of key of unordered_map
+ public:
+  size_t operator()(
+      Dep const& key) const {  // the parameter type should be the same as the type of key of unordered_map
     size_t hash = 0;
     hash += std::hash<int64_t>{}(key.dep_on);
     hash += std::hash<int>{}(static_cast<int>(key.type));
@@ -134,13 +130,13 @@ struct ReportedBB {
   std::uint32_t source_state;
   std::uint32_t sink_state;
 
-  bool operator==(const ReportedBB &other) const {
+  bool operator==(const ReportedBB& other) const {
     return bb_index == other.bb_index && source_state == other.source_state && sink_state == other.sink_state;
   }
 };
 
 struct ReportedBBHasher {
-  size_t operator()(const ReportedBB &key) const {
+  size_t operator()(const ReportedBB& key) const {
     std::uint64_t states = (static_cast<std::uint64_t>(key.source_state) << 32) | key.sink_state;
     return std::hash<std::uint64_t>{}(states) ^ (std::hash<std::uint32_t>{}(key.bb_index) * 0x9E3779B97F4A7C15ULL);
   }
@@ -156,14 +152,14 @@ using ReportedBBSet = std::unordered_set<ReportedBB, ReportedBBHasher>;
 // in a std::unordered_set. The entries are only needed as a set at
 // termination, see get_executions.
 class ReportedBBRecorder {
-public:
+ public:
   ReportedBBRecorder() : slots_(kInitialCapacity) {}
 
   inline void Record(std::uint32_t bb_index, std::uint32_t source_state, std::uint32_t sink_state) {
     const std::uint64_t states = (static_cast<std::uint64_t>(source_state) << 32) | sink_state;
     std::size_t mask = slots_.size() - 1;
     for (std::size_t pos = SlotOf(bb_index, states) & mask;; pos = (pos + 1) & mask) {
-      Slot &slot = slots_[pos];
+      Slot& slot = slots_[pos];
       if (!slot.used) {
         slot.used = true;
         slot.bb_index = bb_index;
@@ -184,16 +180,16 @@ public:
   ReportedBBSet GetExecutions() const {
     ReportedBBSet executions;
     executions.reserve(count_);
-    for (const Slot &slot : slots_) {
+    for (const Slot& slot : slots_) {
       if (slot.used) {
-        executions.insert(
-            ReportedBB{slot.bb_index, static_cast<std::uint32_t>(slot.states >> 32), static_cast<std::uint32_t>(slot.states & 0xFFFFFFFF)});
+        executions.insert(ReportedBB{slot.bb_index, static_cast<std::uint32_t>(slot.states >> 32),
+                                     static_cast<std::uint32_t>(slot.states & 0xFFFFFFFF)});
       }
     }
     return executions;
   }
 
-private:
+ private:
   static constexpr std::size_t kInitialCapacity = 1024;
   struct Slot {
     std::uint64_t states = 0;
@@ -213,7 +209,7 @@ private:
     std::vector<Slot> old(slots_.size() * 2);
     old.swap(slots_);
     const std::size_t mask = slots_.size() - 1;
-    for (const Slot &slot : old) {
+    for (const Slot& slot : old) {
       if (!slot.used) {
         continue;
       }
@@ -231,47 +227,47 @@ private:
 // End HA
 
 class FirstAccessQueueChunk {
-public:
+ public:
   explicit FirstAccessQueueChunk(std::size_t chunk_size) : buffer_size_(chunk_size) { buffer_.resize(chunk_size); }
 
   inline bool IsFull() { return element_count_ == buffer_size_; }
 
-  inline AccessInfo &GetNextAccessInfoBuffer() { return buffer_[element_count_++]; }
+  inline AccessInfo& GetNextAccessInfoBuffer() { return buffer_[element_count_++]; }
 
-  std::future<std::vector<AccessInfo> *> GetEntryFuture() { return entry_boundary_first_addr_accesses.get_future(); }
+  std::future<std::vector<AccessInfo>*> GetEntryFuture() { return entry_boundary_first_addr_accesses.get_future(); }
 
-  std::future<AbstractShadow *> GetExitFuture() { return exit_boundary_smem.get_future(); }
+  std::future<AbstractShadow*> GetExitFuture() { return exit_boundary_smem.get_future(); }
 
-  inline std::vector<AccessInfo> *GetBuffer() { return &buffer_; }
+  inline std::vector<AccessInfo>* GetBuffer() { return &buffer_; }
 
   inline std::size_t GetElementCount() { return element_count_; }
 
-  std::promise<std::vector<AccessInfo> *> entry_boundary_first_addr_accesses;
-  std::promise<AbstractShadow *> exit_boundary_smem;
+  std::promise<std::vector<AccessInfo>*> entry_boundary_first_addr_accesses;
+  std::promise<AbstractShadow*> exit_boundary_smem;
 
-private:
+ private:
   std::vector<AccessInfo> buffer_;
   std::size_t element_count_ = 0;
   const std::size_t buffer_size_;
 };
 
 class SecondAccessQueueElement {
-public:
-  SecondAccessQueueElement(std::future<std::vector<AccessInfo> *> fut_first_addr_accesses,
-                           std::future<AbstractShadow *> fut_exit_smem) {
+ public:
+  SecondAccessQueueElement(std::future<std::vector<AccessInfo>*> fut_first_addr_accesses,
+                           std::future<AbstractShadow*> fut_exit_smem) {
     entry_boundary_first_addr_accesses = std::move(fut_first_addr_accesses);
     exit_boundary_smem = std::move(fut_exit_smem);
   }
 
-  std::future<std::vector<AccessInfo> *> entry_boundary_first_addr_accesses;
-  std::future<AbstractShadow *> exit_boundary_smem;
+  std::future<std::vector<AccessInfo>*> entry_boundary_first_addr_accesses;
+  std::future<AbstractShadow*> exit_boundary_smem;
 };
 
 class SecondAccessQueue {
-public:
+ public:
   explicit SecondAccessQueue(std::size_t arg_max_size) : max_size_(arg_max_size) {}
 
-  void Push(SecondAccessQueueElement *elem) {
+  void Push(SecondAccessQueueElement* elem) {
     // wait until the consumer has made room: every element keeps the shadow memory of a whole chunk alive,
     // so an unbounded queue grows by gigabytes when the single consumer falls behind the workers. The
     // size is checked under the lock, so that concurrent producers cannot overshoot max_size.
@@ -290,13 +286,13 @@ public:
 
   void SetMaxSize(std::size_t arg_max_size) { max_size_ = std::max<std::size_t>(arg_max_size, 1); }
 
-  SecondAccessQueueElement *Get() {
+  SecondAccessQueueElement* Get() {
     const std::lock_guard<std::mutex> lock(internal_mtx_);
     // return nullptr if empty
     if (internal_queue_.size() == 0) {
       return nullptr;
     }
-    SecondAccessQueueElement *buffer = internal_queue_.front();
+    SecondAccessQueueElement* buffer = internal_queue_.front();
     internal_queue_.pop();
     queued_elements_.store(internal_queue_.size(), std::memory_order_relaxed);
     return buffer;
@@ -307,8 +303,8 @@ public:
     return internal_queue_.empty();
   }
 
-private:
-  std::queue<SecondAccessQueueElement *> internal_queue_;
+ private:
+  std::queue<SecondAccessQueueElement*> internal_queue_;
   std::mutex internal_mtx_;
   // the size of internal_queue, readable without holding internal_mtx
   std::atomic<std::size_t> queued_elements_{0};
@@ -316,7 +312,7 @@ private:
 };
 
 class FirstAccessQueue {
-public:
+ public:
   explicit FirstAccessQueue(std::size_t arg_max_size) : max_size_(arg_max_size) {}
 
   // Asked by the profiled thread before every push, without taking the lock, so it reads the
@@ -325,25 +321,24 @@ public:
 
   void SetMaxSize(std::size_t arg_max_size) { max_size_ = std::max<std::size_t>(arg_max_size, 1); }
 
-  void Push(FirstAccessQueueChunk *elem) {
+  void Push(FirstAccessQueueChunk* elem) {
     const std::lock_guard<std::mutex> lock(internal_mtx_);
     internal_queue_.push(elem);
     queued_elements_.store(internal_queue_.size(), std::memory_order_relaxed);
   }
 
-  FirstAccessQueueChunk *Get(SecondAccessQueue *second_access_queue_ptr) {
+  FirstAccessQueueChunk* Get(SecondAccessQueue* second_access_queue_ptr) {
     const std::lock_guard<std::mutex> lock(internal_mtx_);
     // return nullptr if empty
     if (internal_queue_.size() == 0) {
       return nullptr;
     }
-    FirstAccessQueueChunk *buffer = internal_queue_.front();
+    FirstAccessQueueChunk* buffer = internal_queue_.front();
     internal_queue_.pop();
     queued_elements_.store(internal_queue_.size(), std::memory_order_relaxed);
 
     // register Futures in SecondAccessQueue
-    SecondAccessQueueElement *saqe =
-        new SecondAccessQueueElement(buffer->GetEntryFuture(), buffer->GetExitFuture());
+    SecondAccessQueueElement* saqe = new SecondAccessQueueElement(buffer->GetEntryFuture(), buffer->GetExitFuture());
     second_access_queue_ptr->Push(saqe);
 
     return buffer;
@@ -354,8 +349,8 @@ public:
     return internal_queue_.empty();
   }
 
-private:
-  std::queue<FirstAccessQueueChunk *> internal_queue_;
+ private:
+  std::queue<FirstAccessQueueChunk*> internal_queue_;
   std::mutex internal_mtx_;
   // the size of internal_queue, readable without holding internal_mtx
   std::atomic<std::size_t> queued_elements_{0};
@@ -365,7 +360,7 @@ private:
 class FirstAccessQueueChunkBuffer {
   // data structure to allow the allocation of chunks by worker threads, so the main thread registering the data
   // accesses does not lose this time
-public:
+ public:
   explicit FirstAccessQueueChunkBuffer(std::size_t arg_size) : size_(arg_size) {}
 
   // free the chunks prepared but never handed out
@@ -386,23 +381,22 @@ public:
     }
 
     if (chunk_required) {
-      FirstAccessQueueChunk *new_chunk = new FirstAccessQueueChunk(chunk_size);
+      FirstAccessQueueChunk* new_chunk = new FirstAccessQueueChunk(chunk_size);
       const std::lock_guard<std::mutex> lock(internal_mtx_);
       internal_queue_.push(new_chunk);
     }
   }
 
-  FirstAccessQueueChunk *GetPreparedChunk(std::size_t chunk_size) {
-    FirstAccessQueueChunk *buffer;
+  FirstAccessQueueChunk* GetPreparedChunk(std::size_t chunk_size) {
+    FirstAccessQueueChunk* buffer;
     const std::lock_guard<std::mutex> lock(internal_mtx_);
     if (internal_queue_.size() > 0) {
       // prepared chunk exists
       buffer = internal_queue_.front();
       internal_queue_.pop();
       return buffer;
-    }       // allocate a new chunk
-      return new FirstAccessQueueChunk(chunk_size);
-
+    }  // allocate a new chunk
+    return new FirstAccessQueueChunk(chunk_size);
   }
 
   std::size_t GetQueueSize() {
@@ -410,10 +404,10 @@ public:
     return internal_queue_.size();
   }
 
-private:
-  std::queue<FirstAccessQueueChunk *> internal_queue_;
+ private:
+  std::queue<FirstAccessQueueChunk*> internal_queue_;
   std::mutex internal_mtx_;
   const std::size_t size_;
 };
 
-} // namespace dp
+}  // namespace dp

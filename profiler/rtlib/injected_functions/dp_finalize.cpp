@@ -12,16 +12,13 @@
 
 #include "dp_finalize.hpp"
 
-#include "DPTypes.hpp"
-
-#include "runtimeFunctionsGlobals.hpp"
-
-#include "lifecycle/runtime_shutdown.hpp"
-
-#include "debug_print.hpp"
-#include "timer.hpp"
-
 #include <mutex>
+
+#include "DPTypes.hpp"
+#include "debug_print.hpp"
+#include "lifecycle/runtime_shutdown.hpp"
+#include "runtimeFunctionsGlobals.hpp"
+#include "timer.hpp"
 
 namespace dp {
 
@@ -69,4 +66,4 @@ void __dp_finalize(LID lid) {
 }
 }
 
-} // namespace dp
+}  // namespace dp
