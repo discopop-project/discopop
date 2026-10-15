@@ -8,7 +8,6 @@
 
 from typing import Optional
 
-from discopop_explorer.classes.TaskGraph.Aliases import PETNodeID
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 
 

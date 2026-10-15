@@ -17,7 +17,6 @@ All fixtures use real Clang AST JSON field names:
 
 from __future__ import annotations
 
-import pytest
 
 from discopop_explorer.utilities.ASTUtils.ASTGraph import ClangASTGraph
 

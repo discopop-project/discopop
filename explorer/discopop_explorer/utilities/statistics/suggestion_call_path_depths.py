@@ -6,8 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, Set
-from discopop_explorer.aliases.NodeID import NodeID
+from typing import Dict
 from discopop_explorer.utilities.statistics.utilities.call_path_depth import get_outgoing_call_path_depth
 from discopop_library.result_classes.DetectionResult import DetectionResult
 

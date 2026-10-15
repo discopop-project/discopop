@@ -6,28 +6,18 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import logging
-import threading
-from typing import List, Optional, Set, Tuple, cast
+from typing import List, Optional, Set
 import warnings
 
 from discopop_explorer.aliases.LineID import LineID
-from discopop_explorer.classes.PEGraph.Dependency import Dependency
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.ContextTaskGraph import ContextTaskGraph
-from discopop_explorer.classes.TaskGraph.Contexts.BranchingParentContext import BranchingParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
-from discopop_explorer.classes.TaskGraph.Contexts.FunctionContext import FunctionContext
-from discopop_explorer.classes.TaskGraph.Contexts.InlinedFunctionContext import InlinedFunctionContext
-from discopop_explorer.classes.TaskGraph.Contexts.IterationContext import IterationContext
-from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
 from discopop_explorer.classes.TaskGraph.Contexts.TaskParentContext import TaskParentContext
-from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
-from discopop_explorer.classes.TaskGraph.Loops.TGStartLoopNode import TGStartLoopNode
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.patterns.PatternInfo import PatternInfo
 from discopop_explorer.classes.patterns.TaskParallelismInfo import (
     ParallelRegionInfo,
-    TPIType,
     TaskParallelismInfo,
 )
 from discopop_library.StatusReporting.console import stage

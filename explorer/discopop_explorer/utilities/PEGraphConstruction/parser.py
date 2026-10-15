@@ -9,10 +9,9 @@
 from io import TextIOWrapper
 import os
 import re
-import warnings
 from collections import defaultdict
 from os.path import abspath, dirname
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from lxml import objectify  # type: ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore

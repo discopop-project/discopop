@@ -6,7 +6,6 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-import copy
 from typing import List
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX

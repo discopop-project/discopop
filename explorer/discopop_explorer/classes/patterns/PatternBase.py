@@ -8,7 +8,7 @@
 
 import json
 import os
-from typing import List, Optional
+from typing import List
 
 from filelock import FileLock  # type: ignore
 from discopop_explorer.classes.PEGraph.Node import Node

@@ -7,7 +7,7 @@
 # directory for details.
 from __future__ import annotations
 from collections import deque
-from typing import TYPE_CHECKING, Deque, Dict, List, Optional, Sequence, Set, cast
+from typing import TYPE_CHECKING, Deque, Dict, Optional, Sequence, Set, cast
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode

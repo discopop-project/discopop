@@ -7,7 +7,7 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import Callable, List, Tuple, cast
+from typing import Callable, Tuple, cast
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion

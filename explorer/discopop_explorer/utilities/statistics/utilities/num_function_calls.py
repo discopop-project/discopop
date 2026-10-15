@@ -8,7 +8,7 @@
 
 
 import copy
-from typing import List, Set
+from typing import List
 from discopop_explorer.classes.PEGraph.Node import Node
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.enums.EdgeType import EdgeType

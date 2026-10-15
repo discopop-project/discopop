@@ -11,27 +11,20 @@ from __future__ import annotations
 import copy
 import itertools
 import random
-from typing import Dict, List, Sequence, Tuple, Set, Optional, Type, TypeVar, cast, Union, overload, Any
+from typing import Dict, List, Tuple, Set, Optional, cast, Any
 
-import jsonpickle  # type: ignore
 import matplotlib.pyplot as plt  # type: ignore
 import networkx as nx  # type: ignore
 from lxml.objectify import ObjectifiedElement  # type: ignore
 
-from discopop_explorer.classes.PEGraph.NodeT import NodeT
 from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
-from discopop_explorer.functions.PEGraph.properties.is_readonly_inside_loop_body import is_readonly_inside_loop_body
 from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
 from discopop_explorer.functions.PEGraph.queries.nodes import all_nodes
 from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
-from discopop_explorer.functions.PEGraph.queries.variables import get_variables
 from discopop_explorer.functions.PEGraph.traversal.children import direct_children, direct_children_or_called_nodes
-from discopop_explorer.functions.PEGraph.traversal.parent import get_all_parents_until_function, get_parent_function
-from discopop_explorer.functions.PEGraph.traversal.successors import direct_successors
 from discopop_library.HostpotLoader.HotspotNodeType import HotspotNodeType
 from discopop_library.HostpotLoader.HotspotType import HotspotType  # type: ignore
 from discopop_library.StatusReporting.console import progress, warn
-from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.MemoryRegion import MemoryRegion
 from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.classes.PEGraph.CUNode import CUNode

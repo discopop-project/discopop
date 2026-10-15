@@ -7,7 +7,7 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Callable
 
 from discopop_explorer.classes.PEGraph.CUNode import CUNode
 from discopop_explorer.classes.PEGraph.FunctionNode import FunctionNode

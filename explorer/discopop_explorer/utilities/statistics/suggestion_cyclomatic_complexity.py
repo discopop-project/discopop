@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, TYPE_CHECKING, Set
+from typing import Dict, TYPE_CHECKING
 
 from discopop_explorer.utilities.statistics.cyclomatic_complexity.cc_dictionary import (
     get_cyclomatic_complexity_dictionary,
@@ -20,7 +20,6 @@ from discopop_explorer.utilities.statistics.cyclomatic_complexity.subtree import
 if TYPE_CHECKING:
     from discopop_explorer.discopop_explorer import ExplorerArguments
     from discopop_library.result_classes.DetectionResult import DetectionResult
-    from discopop_explorer.aliases.NodeID import NodeID
 
 
 def get_suggestion_summed_cyclomatic_complexity_from_calls(

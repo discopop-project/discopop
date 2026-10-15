@@ -8,9 +8,9 @@
 
 from __future__ import annotations
 import logging
-from typing import TYPE_CHECKING, List, Set, Tuple
+from typing import TYPE_CHECKING, Set
 
-from discopop_explorer.classes.ContextTaskGraph.classes.edges import CTGEdgeInfo, CTGEdgeType
+from discopop_explorer.classes.ContextTaskGraph.classes.edges import CTGEdgeType
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 
 if TYPE_CHECKING:

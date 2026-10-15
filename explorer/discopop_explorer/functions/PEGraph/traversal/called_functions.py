@@ -7,11 +7,10 @@
 # directory for details.
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, List, Optional, Type
+from typing import TYPE_CHECKING, List, Optional
 
-from discopop_explorer.classes.PEGraph.NodeT import NodeT
 from discopop_explorer.enums.EdgeType import EdgeType
-from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
+from discopop_explorer.functions.PEGraph.queries.edges import out_edges
 from discopop_explorer.aliases.NodeID import NodeID
 
 if TYPE_CHECKING:

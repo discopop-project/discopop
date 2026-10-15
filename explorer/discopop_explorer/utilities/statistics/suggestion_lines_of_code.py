@@ -6,9 +6,8 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 
-from typing import Dict, List, Set
+from typing import Dict, Set
 from discopop_explorer.aliases.LineID import LineID
-from discopop_explorer.aliases.NodeID import NodeID
 from discopop_explorer.functions.PEGraph.queries.subtree import subtree_of_type
 from discopop_library.result_classes.DetectionResult import DetectionResult
 

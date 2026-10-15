@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 import logging
-from typing import TYPE_CHECKING, List, Set, Tuple
+from typing import TYPE_CHECKING, List
 
 from discopop_explorer.classes.ContextTaskGraph.classes.edges import CTGEdgeInfo, CTGEdgeType
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
@@ -17,7 +17,6 @@ from discopop_explorer.classes.ContextTaskGraph.modifications.utilities.dominato
 if TYPE_CHECKING:
     from discopop_explorer.classes.TaskGraph.ContextTaskGraph import ContextTaskGraph
 
-import networkx as nx  # type: ignore
 
 logger = logging.getLogger("Explorer")
 

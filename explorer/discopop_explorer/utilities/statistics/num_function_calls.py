@@ -7,8 +7,7 @@
 # directory for details.
 
 
-from typing import Dict, Set
-from discopop_explorer.aliases.NodeID import NodeID
+from typing import Dict
 from discopop_explorer.utilities.statistics.utilities.num_function_calls import get_num_function_calls
 from discopop_library.result_classes.DetectionResult import DetectionResult
 

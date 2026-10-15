@@ -23,7 +23,6 @@ from discopop_explorer.classes.PEGraph.Dependency import CARRIED_OUTSIDE, Depend
 from discopop_explorer.classes.PEGraph.PEGraphX import PEGraphX
 from discopop_explorer.classes.TaskGraph.Contexts.Context import Context
 from discopop_explorer.classes.TaskGraph.Contexts.LoopParentContext import LoopParentContext
-from discopop_explorer.classes.TaskGraph.Contexts.WorkContext import WorkContext
 from discopop_explorer.classes.TaskGraph.TaskGraph import TaskGraph
 from discopop_explorer.classes.TaskGraph.test_TaskGraph_construction import (
     LOOP,
@@ -35,7 +34,6 @@ from discopop_explorer.classes.TaskGraph.test_TaskGraph_construction import (
     _work_context_covering,
 )
 from discopop_explorer.enums.DepOrigin import DepOrigin
-from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.NodeType import NodeType
 

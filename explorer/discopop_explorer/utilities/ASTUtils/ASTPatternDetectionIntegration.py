@@ -20,7 +20,6 @@ import networkx as nx
 from discopop_explorer.utilities.ASTUtils.ASTLoader import ClangASTLoader
 from discopop_explorer.utilities.ASTUtils.ASTGraph import ClangASTGraph
 from discopop_explorer.utilities.ASTUtils.ASTQueries import (
-    ASTQueries,
     ASTVariableAndTypeQueries,
 )
 from discopop_explorer.utilities.ASTUtils.ASTVisualization import ASTVisualization

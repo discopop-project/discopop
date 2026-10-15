@@ -7,11 +7,10 @@
 # directory for details.
 from __future__ import annotations
 
-from typing import Optional, List, Dict, Any, Tuple
+from typing import Optional, List, Dict, Any
 
 from discopop_explorer.aliases.LineID import LineID
 from discopop_explorer.aliases.NodeID import NodeID
-from discopop_explorer.enums.EdgeType import EdgeType
 from discopop_explorer.enums.MWType import MWType
 from discopop_explorer.enums.NodeType import NodeType
 from discopop_explorer.utilities.PEGraphConstruction.ParserUtilities import parse_id

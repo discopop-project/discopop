@@ -10,9 +10,8 @@ import copy
 from collections import deque
 import os
 from pathlib import Path
-import random
 import re
-import signal
+import signal  # noqa: F401  used by the commented-out code
 import logging
 import sys
 from typing import Any, Deque, Dict, FrozenSet, List, NamedTuple, Optional, Set, Tuple, Union, cast
@@ -69,7 +68,6 @@ from discopop_explorer.classes.TaskGraph.Work.TGStartWorkNode import TGStartWork
 from discopop_explorer.enums.DepOrigin import DepOrigin
 from discopop_explorer.enums.DepType import DepType
 from discopop_explorer.enums.EdgeType import EdgeType
-from discopop_explorer.functions.PEGraph.properties.is_loop_index import is_loop_index
 from discopop_explorer.functions.PEGraph.queries.edges import in_edges, out_edges
 from discopop_explorer.functions.PEGraph.traversal.called_functions import (
     get_call_instruction_id,
@@ -103,7 +101,6 @@ from discopop_explorer.classes.TaskGraph.Aliases import (
     PETNode,
     PETNodeID,
     PositionIndex,
-    TGNodeID,
 )
 from discopop_explorer.classes.TaskGraph.TGNode import TGNode
 from discopop_explorer.enums.NodeType import NodeType
