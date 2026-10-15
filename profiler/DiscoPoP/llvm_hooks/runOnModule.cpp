@@ -22,8 +22,6 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   cout << "MODULE " << M.getName().str() << "\n";
 
   doInitialization(M);
-  module_ = &M;
-  ctx_ = &module_->getContext();
 
   // prepare saving the mapping from instructionID to lineID for backwards compatibility
   instructionID_to_lineID_file = profiler_files::open("instructionID_to_lineID_mapping.txt");
