@@ -92,7 +92,8 @@ TOOL = Tool(
                     "unified diff; 'summary' groups the suggestions by source file and gives per "
                     "suggestion only its id, pattern type, lines, the pragma it inserts, its hotspot "
                     "class (if hotspot detection ran) and the suggestions on enclosing code "
-                    "('nested_in') and alternatives for the same code ('same_region') — enough to see what was suggested, at a fraction of the size."
+                    "('nested_in') and alternatives for the same code ('same_region') — enough to see what was "
+                    "suggested, at a fraction of the size."
                 ),
             },
             "limit": {

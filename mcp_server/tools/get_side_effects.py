@@ -129,7 +129,8 @@ TOOL = Tool(
             },
             "file_path": {
                 "type": "string",
-                "description": "Source file of the definition (absolute, or relative to project_path), to disambiguate.",
+                "description": "Source file of the definition (absolute, or relative to project_path), to "
+                "disambiguate.",
             },
             "line": {
                 "type": "integer",

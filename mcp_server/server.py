@@ -168,7 +168,8 @@ _SERVER_INSTRUCTIONS = (
     "Workflow: initialize_discopop_directory, set_compile_script and "
     "create_execution_configuration once per project; gather_data to profile and detect "
     "patterns, with hotspot_config_names (ideally two configurations with different input "
-    "sizes) for the hotspot-guided tuning; run_auto_tuning(apply=true) to measure the fastest combination of suggestions "
+    "sizes) for the hotspot-guided tuning; run_auto_tuning(apply=true) to measure the fastest combination of "
+    "suggestions "
     "and apply it (without apply=true, apply its selection via manage_patches).\n"
     "Rules: access DiscoPoP data only through these tools and never read .discopop directories "
     "directly: they hold large binary artefacts; the tools return compact summaries. If "
@@ -699,7 +700,8 @@ Available agents: {', '.join(agent_choices)}
         help=(
             "Which tools to expose. 'all' (default) offers every tool; 'analysis' leaves out "
             "the project setup tools (initialize_discopop_directory, set_compile_script, "
-            "create_execution_configuration, delete_execution_configuration) — use it against a project that is already "
+            "create_execution_configuration, delete_execution_configuration) — use it against a project that is "
+            "already "
             "configured, so those tools can neither be listed nor called"
         ),
     )

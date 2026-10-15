@@ -76,7 +76,10 @@ class TreeNode:
                     "state": self._canvas.itemcget(edge_data[0], "state"),
                     "data": [edge.serialize() for edge in edge_data[1]],
                 }
-                for higher_order_dependency_connection_id, edge_data in self._higher_order_dependency_connections.items()
+                for (
+                    higher_order_dependency_connection_id,
+                    edge_data,
+                ) in self._higher_order_dependency_connections.items()
             },
             "higher_order_main_hide_request": self._higher_order_main_hide_request,
             "lower_order_main_hide_requests": list(self._lower_order_main_hide_requests),
