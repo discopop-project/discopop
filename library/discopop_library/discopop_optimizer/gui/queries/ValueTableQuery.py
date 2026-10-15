@@ -6,7 +6,7 @@
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
 import tkinter as tk
-from tkinter import *
+from tkinter import DISABLED, END, NSEW, RIDGE, Button, Entry, Frame, Tk
 from typing import Any, List, Tuple, Optional, Dict, cast
 
 from sympy import Symbol, Expr  # type: ignore

@@ -5,7 +5,7 @@
 # This software may be modified and distributed under the terms of
 # the 3-Clause BSD License.  See the LICENSE file in the package base
 # directory for details.
-from tkinter import *
+from tkinter import DISABLED, END, NSEW, RIDGE, Entry, Frame, Tk
 from typing import Optional
 
 import networkx as nx  # type: ignore
