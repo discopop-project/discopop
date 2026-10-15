@@ -349,7 +349,7 @@ void DiscoPoP::createCUs(Region *TopRegion, set<string> &globalVariablesSet, vec
           // Recursive functions
           //CallGraphWrapperPass *CGWP = &(getAnalysis<CallGraphWrapperPass>());
 
-          llvm::CallGraph &CG = MAM.getResult<llvm::CallGraphAnalysis>(*module_);
+          llvm::CallGraph &CG = MAM.getResult<llvm::CallGraphAnalysis>(*ThisModule);
 
           //if (isRecursive(*f, CGWP->getCallGraph())) {
           if (isRecursive(*f, CG)) {

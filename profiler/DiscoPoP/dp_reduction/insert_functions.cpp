@@ -36,23 +36,23 @@ void DiscoPoP::dp_reduction_insert_functions() {
   std::string tmp(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
   tmp += "/loop_meta.txt";
   loop_metadata_file.open(tmp.data());
-  llvm::Type *loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ctx_);
+  llvm::Type *loop_incr_fn_arg_type = llvm::Type::getInt32Ty(*ThisModuleContext);
   //llvm::ArrayRef<llvm::Type *> loop_incr_fn_args();
   vector<llvm::Type *> loop_incr_fn_args;
   loop_incr_fn_args.push_back(loop_incr_fn_arg_type);
   loop_incr_fn_args.push_back(loop_incr_fn_arg_type);
 
   llvm::FunctionType *loop_incr_fn_type =
-      llvm::FunctionType::get(llvm::Type::getVoidTy(*ctx_), loop_incr_fn_args, false);
-  FunctionCallee incr_loop_counter_callee = module_->getOrInsertFunction("__dp_loop_incr", loop_incr_fn_type);
+      llvm::FunctionType::get(llvm::Type::getVoidTy(*ThisModuleContext), loop_incr_fn_args, false);
+  FunctionCallee incr_loop_counter_callee = ThisModule->getOrInsertFunction("__dp_loop_incr", loop_incr_fn_type);
 
   for (auto const &loop_info : loops_) {
-//    llvm::Value *val = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_id);
-//    llvm::Value *val2 = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), 0);  // instruction id will be replaced after assigning unique instruction ids
+//    llvm::Value *val = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ThisModuleContext), loop_id);
+//    llvm::Value *val2 = llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ThisModuleContext), 0);  // instruction id will be replaced after assigning unique instruction ids
     //llvm::ArrayRef<llvm::Value *> args(val, val2);
     vector<llvm::Value*> args;
-    args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), loop_info.loop_id));
-    args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ctx_), 0));  // instruction id will be replaced after assigning unique
+    args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ThisModuleContext), loop_info.loop_id));
+    args.push_back(llvm::ConstantInt::get(llvm::Type::getInt32Ty(*ThisModuleContext), 0));  // instruction id will be replaced after assigning unique
 
     llvm::CallInst::Create(incr_loop_counter_callee, args, "", loop_info.first_body_instr_->getIterator());
     loop_metadata_file << loop_info.file_id_ << " ";

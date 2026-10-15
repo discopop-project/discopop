@@ -165,7 +165,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     /********************* End of initialize root values
      * ***************************/
 
-    llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*module_).getManager();
+    llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*ThisModule).getManager();
     llvm::LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
     //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
 
@@ -212,7 +212,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
   {
     // Check loop parallelism?
     if (ClCheckLoopPar) {
-      llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*module_).getManager();
+      llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*ThisModule).getManager();
       llvm::LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
       //LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>(F).getLoopInfo();
       CFA(F, LI);
@@ -368,7 +368,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
     map<BasicBlock *, map<Value *, map<BasicBlock *, set<string>>>> conditionalBBPairDepMap;
 
     //auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-    llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*module_).getManager();
+    llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*ThisModule).getManager();
     //llvm::LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
     llvm::DominatorTree &DT= fam.getResult<llvm::DominatorTreeAnalysis>(F);
 
