@@ -88,8 +88,7 @@ The tab **Report** shows all stored measurements.
 ## Step 6: Hotspot detection (optional)
 The tab **Hotspot Detection** measures which code regions take the most time. Pattern detection and the hotspot-guided autotuning use the result.
 
-<!-- TODO screenshot: replace placeholder -->
-![Hotspot Detection tab](../assets/screenshots/gui_hotspot_detection.svg)
+![Hotspot Detection tab after two measured runs, with the status and the output of the analysis](../assets/screenshots/gui_hotspot_detection.svg)
 
 On the sub-tab "Measurement", set "Repetitions" and click "Run Measurement". It instruments the configuration in `hd` mode (if the build is not current), runs it and records a run; the "Status" box shows the build state, the accumulated runs and the number of code regions classified YES / MAYBE / NO. "Re-instrument" rebuilds, "Re-run Analysis" analyzes the recorded runs again, "Clear Measurements" deletes them.
 
@@ -114,8 +113,7 @@ To select suggestions, use the selectors that appear in the Execute and Autotuni
 ## Step 8: Patch repair (optional)
 Some patches do not compile in a real project. The tab **Patch Repair** asks a large language model to fix them; see [Patch repair](../tools/Patch_repair.md). It is not needed for the example.
 
-<!-- TODO screenshot: replace placeholder -->
-![Patch Repair tab](../assets/screenshots/gui_patch_repair.svg)
+![Patch Repair tab after a run in which all considered patches compile](../assets/screenshots/gui_patch_repair.svg)
 
 Choose the "Hotspot Types" to consider (YES, MAYBE, NO; NO is off by default), the "LLM Agent" ("Backend", "Model", "Agent timeout (s)", "Prompts", "Retries"), tick "Dry run (do not modify the patches)" to leave the patches as they are, restrict the "Suggestion Scope" and click "Run Patch Repair". The result appears in the sub-tabs "Results" (one row per suggestion: Repaired, Compiles, Not repaired, Patch not applicable, ...), "Patch" (original and repaired patch side by side) and "Console". The box "Outcome" summarizes the run.
 

@@ -121,8 +121,7 @@ The *Report* tab shows all recorded measurements. The *Table* tab lists configur
 - **Reload** re-reads the results.
 
 ## Hotspot Detection
-<!-- TODO screenshot: replace placeholder -->
-![Hotspot Detection tab](../assets/screenshots/gui_hotspot_detection.svg)
+![Hotspot Detection tab after two measured runs, with the status and the output of the analysis](../assets/screenshots/gui_hotspot_detection.svg)
 
 The tab measures which loops and functions dominate the runtime. See [Hotspot detection](Hotspot_detection.md) for the method. It has the sub-tabs *Measurement*, *Runs*, *Regions* and plot tabs added with **+** (*Hotness quadrant*, *Top-N runtime bars*, *Per-region run profile*).
 
@@ -158,8 +157,7 @@ Buttons: **Run Pattern Detection**, **Stop**, **Browse Suggestions** and **Show 
 Results are the files described in [Explorer](Explorer.md): `explorer/patterns.json` and the patches in `patch_generator/`.
 
 ## Patch Repair
-<!-- TODO screenshot: replace placeholder -->
-![Patch Repair tab](../assets/screenshots/gui_patch_repair.svg)
+![Patch Repair tab after a run in which all considered patches compile](../assets/screenshots/gui_patch_repair.svg)
 
 The tab runs [`discopop_patch_repair`](Patch_repair.md): an LLM agent repairs generated patches that do not compile. Settings are the hotspot types (`NO` is off by default), log level, *Dry run*, the LLM backend and model, the agent timeout, the number of prompts and retries, and the suggestions to consider. The right side shows *Results*, the repaired *Patch* as a diff and the *Console*.
 
