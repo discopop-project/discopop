@@ -13,26 +13,17 @@ In a nutshell, DiscoPoP performs the following steps:
 * identify parallel patterns that can be used to parallelize a code region,
 * and finally, suggest corresponding OpenMP parallelization constructs and clauses to programmers.
 
-DiscoPoP is built on top of LLVM. Therefore, DiscoPoP can perform the above-mentioned steps on any source code that can be transferred into the LLVM IR.
-
 A more comprehensive overview of DiscoPoP can be found on our [project website](https://www.discopop.tu-darmstadt.de/).
 
-For the example program of the repository, DiscoPoP suggests this change for the summation loop:
-
-```diff
-+    #pragma omp parallel for firstprivate(N) reduction(+:sum)
-     for(int i = 0; i < N; i++){
-         sum += Arr[i];
-     }
-```
-
 ## Where to start
-| | |
+
+| Page | Content |
 |---|---|
 | [Getting started](getting_started.md) | Install DiscoPoP and use the graphical user interface. Start here if you want to analyze your own project. |
 | [Manual](manual.md) | The detailed reference: setup options, examples, every tool, the data DiscoPoP produces, and how to contribute. |
 
 ## Components
+
 | Component | Purpose | Page |
 |---|---|---|
 | GUI and project manager (`discopop_gui`, `discopop_project_manager`) | Configure a project, run it, and drive all other tools from one window or the command line | [Graphical user interface](tools/GUI.md), [Project manager](tools/Project_manager.md) |
