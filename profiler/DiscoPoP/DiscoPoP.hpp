@@ -62,6 +62,7 @@
 #include "utils/profiler_files.hpp"
 #include "dp_reduction/dp_reduction.hpp"
 #include "dp_reduction/ReductionInstrumenter.hpp"
+#include "hybrid_analysis/HybridAnalysis.hpp"
 #include "hybrid_analysis/InstructionDG.hpp"
 #include "static_analysis/StaticCalltree.hpp"
 #include "static_analysis/StaticCallPathTree.hpp"
@@ -73,6 +74,7 @@
 #include <cstdlib>
 #include <iomanip>
 #include <map>
+#include <optional>
 #include <set>
 #include <string.h>
 #include <unordered_map>
@@ -112,9 +114,7 @@ inline int32_t get_dp_instruction_id(llvm::Instruction *I) {
 constexpr bool DP_DEBUG = false;
 
 constexpr bool ClCheckLoopPar = true;
-constexpr bool DumpToDot = false;
 constexpr bool DP_VERBOSE = false; // prints warning messages
-constexpr bool DP_hybrid_DEBUG = false;
 
 
 /*
@@ -244,14 +244,9 @@ private:
   // DPInstrumentation end
 
   // DPInstrumentationOmission
-  std::string bbDepString;
-  std::string fileName;
   int32_t fid;
-  llvm::FunctionCallee ReportBB, ReportBBPair, BBState;
-  dputil::VariableNameFinder *VNF;
-  // the S<n> ids of the statically predictable memory regions; persisted like the other counters,
-  // so that the ids of different translation units do not collide
-  int nextFreeStaticMemoryRegionID;
+  // created by doInitialization, where it declares its callbacks
+  std::optional<hybrid_analysis::HybridAnalysis> hybridAnalysis;
 
   // DPInstrumentationOmission end
 
@@ -272,7 +267,6 @@ public:
   void buildCUGraph(llvm::Function &F, llvm::ModuleAnalysisManager &MAM, FunctionCUGraph &graph);
   void instrumentFunction(llvm::Function &F, llvm::ModuleAnalysisManager &MAM, const FunctionCUGraph &graph);
   void writeCUGraph(FunctionCUGraph &graph);
-  bool runHybridAnalysis(llvm::Function &F, llvm::ModuleAnalysisManager &MAM);
 
   void runOnBasicBlock(llvm::BasicBlock &BB);
 
@@ -324,8 +318,6 @@ public:
 
   // Output function
   void initializeCUIDCounter();
-  void initializeBBDepCounter();
-  void initializeStaticMemoryRegionIDCounter();
   void initializeInstructionIDCounter();
   void initializeCallpathStateIDCounter();
 

@@ -40,8 +40,6 @@ add_library(DiscoPoP_PassObjects OBJECT
         instrumentation/taken_branches/createInstrumentation.cpp
 
         initialization/initializeCUIDCounter.cpp
-        initialization/initializeBBDepCounter.cpp
-        initialization/initializeStaticMemoryRegionIDCounter.cpp
         initialization/initializeInstructionIDCounter.cpp
         initialization/initializeCallpathStateIDCounter.cpp
 
