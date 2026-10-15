@@ -905,7 +905,8 @@ def _pipeline(
         if instr.get("returncode") not in (None, 0):
             result["next_step"] = (
                 "steps.instrumentation.stderr holds the build errors; get_execution_results("
-                "script='compile.sh', failed_only=true, include_output=true) also shows stdout. Fix the build with set_compile_script (it must use $CC/$CXX and "
+                "script='compile.sh', failed_only=true, include_output=true) also shows stdout. Fix the build with "
+                "set_compile_script (it must use $CC/$CXX and "
                 "$CFLAGS/$CXXFLAGS), then call gather_data again."
             )
         return result
@@ -930,7 +931,8 @@ def _pipeline(
         if prof.get("returncode") not in (None, 0):
             result["next_step"] = (
                 "steps.profiling.stderr holds the program's errors; get_execution_results("
-                "script='execute.sh', failed_only=true, include_output=true) also shows stdout. Fix execute.sh with create_execution_configuration (a smaller input helps if "
+                "script='execute.sh', failed_only=true, include_output=true) also shows stdout. Fix execute.sh with "
+                "create_execution_configuration (a smaller input helps if "
                 "the run timed out), then call gather_data again."
             )
         return result

@@ -73,7 +73,8 @@ def _check_system_dependencies() -> None:
         lines.append(f"  - one of: {', '.join(group)}{version_note}")
     lines += [
         "",
-        "Please refer to the installation instructions for prerequisites described in the README.md to prepare your environment and re-run the build.",
+        "Please refer to the installation instructions for prerequisites described in the README.md to prepare your "
+        "environment and re-run the build.",
         "GitHub: https://github.com/discopop-project/Hotspot-Detection",
         "",
     ]

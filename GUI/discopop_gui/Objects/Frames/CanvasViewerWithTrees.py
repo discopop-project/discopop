@@ -196,7 +196,7 @@ class CanvasViewerWithTrees(Base):
         canvas_data = self._saved_canvases[index]
 
         canvas_id = self.add_canvas(
-            lambda parent, canvas_viewer, canvas_viewer_mode, nodes, highest_managed_dependencies: ViewableCanvasWithTrees(
+            lambda parent, canvas_viewer, canvas_viewer_mode, nodes, highest_managed_dependencies: ViewableCanvasWithTrees(  # noqa: E501
                 parent,
                 canvas_viewer,
                 canvas_viewer_mode,
@@ -373,7 +373,7 @@ class CanvasViewerWithTrees(Base):
             self._highest_managed_dependencies.append((node1, node2))
 
         canvas_id = self.add_canvas(
-            lambda parent, canvas_viewer, canvas_viewer_mode, nodes, highest_managed_dependencies: ViewableCanvasWithTrees(
+            lambda parent, canvas_viewer, canvas_viewer_mode, nodes, highest_managed_dependencies: ViewableCanvasWithTrees(  # noqa: E501
                 parent,
                 canvas_viewer,
                 canvas_viewer_mode,
@@ -463,7 +463,7 @@ class CanvasViewerWithTrees(Base):
                 )
 
         canvas_id = self.add_canvas(
-            lambda parent, canvas_viewer, canvas_viewer_mode, nodes, highest_managed_dependencies: ViewableCanvasWithTrees(
+            lambda parent, canvas_viewer, canvas_viewer_mode, nodes, highest_managed_dependencies: ViewableCanvasWithTrees(  # noqa: E501
                 parent,
                 canvas_viewer,
                 canvas_viewer_mode,
