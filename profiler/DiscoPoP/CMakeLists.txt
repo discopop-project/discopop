@@ -36,9 +36,6 @@ add_library(DiscoPoP_PassObjects OBJECT
         instrumentation/low_level/instrumentLoopExit.cpp
         instrumentation/low_level/insertDPFinalize.cpp
 
-        instrumentation/high_level/instrumentFunction.cpp
-        instrumentation/high_level/instrumentLoop.cpp
-        instrumentation/high_level/instrumentModule.cpp
 
         instrumentation/taken_branches/createInstrumentation.cpp
 
@@ -62,6 +59,9 @@ add_library(DiscoPoP_PassObjects OBJECT
         dp_reduction/get_reduction_instr.cpp
         dp_reduction/utils.cpp
         dp_reduction/insert_functions.cpp
+        dp_reduction/instrumentFunction.cpp
+        dp_reduction/instrumentLoop.cpp
+        dp_reduction/instrumentModule.cpp
 
         utils/simple.cpp
         utils/output.cpp

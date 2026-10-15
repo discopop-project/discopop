@@ -41,8 +41,9 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
 
   // DPReduction
 
-  reduction_file = profiler_files::open("reduction.txt");
-  loop_counter_file = profiler_files::open("loop_counter_output.txt");
+  dp_reduction::ReductionInstrumenter reduction(
+      M, {[this](Function &F) { return getCachedFileID(F); }, [this](Loop *L) { return get_or_register_loop_id(L); },
+          [this](Instruction *I) { return dp_reduction_determineVariableName(I, &trueVarNamesFromMetadataMap); }});
 
   /*
   bool success = dp_reduction_init_util(FileMappingPath);
@@ -51,9 +52,9 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
   << "\n"; return false;
   }
   */
-  instrument_module(&M, &trueVarNamesFromMetadataMap, MAM);
+  reduction.instrument_module(MAM);
 
-  dp_reduction_insert_functions();
+  reduction.insert_functions();
 
   // disambiguating instructions
   assign_instruction_ids_to_dp_reduction_functions(M);
@@ -128,8 +129,7 @@ bool DiscoPoP::runOnModule(Module &M, ModuleAnalysisManager &MAM) {
 
   // closing flushes
   instructionID_to_lineID_file.close();
-  reduction_file.close();
-  loop_counter_file.close();
+  reduction.close();
   // End DPReduction
 
   doFinalization(M);

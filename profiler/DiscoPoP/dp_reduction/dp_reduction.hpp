@@ -14,6 +14,7 @@
 
 #include "DPUtils.hpp"
 
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
@@ -67,5 +68,8 @@ bool check_value_usage(llvm::Value *parentValue, llvm::Value *searchedValue);
 
 // true, if the function contains inlined code
 bool inlinedFunction(llvm::Function *F);
+
+// the line at which the loop L of the function F ends, as a string, or "LOOPENDNOTFOUND"
+std::string CFA(llvm::Function &F, llvm::Loop *L, int file_id);
 
 } // namespace dp_reduction

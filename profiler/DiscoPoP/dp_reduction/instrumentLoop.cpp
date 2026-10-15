@@ -10,7 +10,9 @@
  *
  */
 
-#include "DiscoPoP.hpp"
+#include "dp_reduction/ReductionInstrumenter.hpp"
+
+#include "dp_reduction/dp_reduction.hpp"
 
 using namespace llvm;
 using namespace std;
@@ -20,8 +22,7 @@ using namespace dputil;
 // suitable for reduction.
 // An entry is added to the 'loops_' vector and for each suitable instruction,
 // an entry is added to the 'instructions_' vector.
-void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI,
-                               map<string, string> *trueVarNamesFromMetadataMap) {
+void dp_reduction::ReductionInstrumenter::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopInfo &LI) {
 
   // Whatever becomes of this loop, its subloops are loops of their own. Both early returns
   // below used to take them with it, so a loop that could not be described made every loop
@@ -29,7 +30,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
   // keeps the loop, so the order in which loop ids are handed out does not change.
   const auto instrument_subloops = [&]() {
     for (llvm::Loop *sub_loop : loop->getSubLoops()) {
-      instrument_loop(F, file_id, sub_loop, LI, trueVarNamesFromMetadataMap);
+      instrument_loop(F, file_id, sub_loop, LI);
     }
   };
 
@@ -61,10 +62,10 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
   loop_info.file_id_ = file_id;
   loop_info.first_body_instr_ = &(*basic_blocks[1]->begin());
 
-  std::string loopEndLine = dp_reduction_CFA(F, loop, file_id);
+  std::string loopEndLine = dp_reduction::CFA(F, loop, file_id);
   loop_info.end_line = loopEndLine;
   loop_info.function_name = string((basic_blocks[1]->getParent()->getName()));
-  loop_info.loop_id = get_or_register_loop_id(loop);
+  loop_info.loop_id = services_.getLoopID(loop);
 
   loops_.push_back(loop_info);
 
@@ -154,7 +155,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
 
       if (it->first->hasName()) {
         instr_info_t info;
-        info.var_name_ = dp_reduction_determineVariableName(it->second, trueVarNamesFromMetadataMap);
+        info.var_name_ = services_.getVariableName(it->second);
         info.loop_line_nr_ = loop_info.line_nr_;
         info.file_id_ = file_id;
         info.store_inst_ = llvm::dyn_cast<llvm::StoreInst>(it2->second);
@@ -172,7 +173,7 @@ void DiscoPoP::instrument_loop(Function &F, int file_id, llvm::Loop *loop, LoopI
     string varTypeLoad = "SCALAR";
     llvm::DebugLoc loc = (candidate.load_inst_)->getDebugLoc();
 
-    varNameLoad = dp_reduction_determineVariableName(candidate.load_inst_, trueVarNamesFromMetadataMap);
+    varNameLoad = services_.getVariableName(candidate.load_inst_);
     varTypeLoad = dp_reduction::determineVariableType(candidate.load_inst_);
     if (llvm::isa<llvm::GetElementPtrInst>(candidate.load_inst_->getOperand(index))) {
       if (varTypeLoad.find("ARRAY,") == std::string::npos || varNameLoad.find(".addr") == std::string::npos ||
