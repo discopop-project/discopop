@@ -19,7 +19,8 @@ void DiscoPoP::InitializeCallpathStateIdCounter() {
   callpath_state_counter_file += "/DP_CallpathStateIDCounter.txt";
   if (dputil::FileExists(callpath_state_counter_file)) {
     std::fstream in_callpath_state_id_counter(callpath_state_counter_file, std::ios_base::in);
-    ;
+    {
+    }
     in_callpath_state_id_counter >> callpath_state_id_counter;
     in_callpath_state_id_counter.close();
   }

@@ -27,7 +27,7 @@ namespace dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_delete(LID /*lid*/, ADDR /*startAddr*/) {
+void __dp_delete(LID /*lid*/, ADDR /*start_addr*/) {
   DP_CALLBACK_SCOPE(DELETE);
 
   // DO NOT DELETE MEMORY REGIONS AS THEY ARE STILL REQUIRED FOR LOGGING

@@ -63,7 +63,7 @@ class LoopManager {
       // No way to get the real end line of loop. Use the line where
       // function returns instead.
       LoopRecords::iterator loop = loops_.find(loop_stack_.Top().begin);
-      assert(loop != loops.end() && "A loop ends without its entry being recorded.");
+      assert(loop != loops_.end() && "A loop ends without its entry being recorded.");
 
       if (loop->second->end == 0) {
         loop->second->end = end_line;
@@ -84,7 +84,7 @@ class LoopManager {
 
   void ExitLoop(const LID lid) {
     LoopRecords::iterator loop = loops_.find(loop_stack_.Top().begin);
-    assert(loop != loops.end() && "A loop ends without its entry being recorded.");
+    assert(loop != loops_.end() && "A loop ends without its entry being recorded.");
     if (loop->second->end == 0) {
       loop->second->end = lid;
     } else {
@@ -94,11 +94,10 @@ class LoopManager {
       // regular one.
       if (lid < loop->second->end) {
         //    loop->second->end = lid;
-      }
-      // New loop exit found and it's bigger than before. This can
-      // happen when the previous exit is a break inside the loop.
-      // In this case we update the loop exit to the bigger one.
-      else if (lid > loop->second->end) {
+      } else if (lid > loop->second->end) {
+        // New loop exit found and it's bigger than before. This can
+        // happen when the previous exit is a break inside the loop.
+        // In this case we update the loop exit to the bigger one.
         loop->second->end = lid;
       }
       // New loop exit found and it's the same as before. Good.

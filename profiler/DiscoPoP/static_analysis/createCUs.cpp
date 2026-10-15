@@ -64,10 +64,9 @@ void DiscoPoP::CreateCus(Region* top_region, std::set<std::string>& global_varia
       // assign it to currentNode.
       if (loop_to_node_map.find(loop) != loop_to_node_map.end()) {
         current_node = loop_to_node_map[loop];
-      }
-      // else, create a new Node for the loop, add it as children of currentNode
-      // and add it to the map.
-      else {
+      } else {
+        // else, create a new Node for the loop, add it as children of currentNode
+        // and add it to the map.
         Node* n = new Node;
         n->type = NodeTypes::kLoop;
         n->parent_node = current_node;
@@ -80,8 +79,7 @@ void DiscoPoP::CreateCus(Region* top_region, std::set<std::string>& global_varia
       // end of loops. go to the parent of the loop. may have to jump several
       // nodes in case of nested loops
       for (std::map<Loop*, Node*>::iterator it = loop_to_node_map.begin(); it != loop_to_node_map.end(); it++) {
-        if (it->second == current_node)  // current node found in loop map jump to its parent.
-        {
+        if (it->second == current_node) {  // current node found in loop map jump to its parent.
           current_node = current_node->parent_node;
           it = loop_to_node_map.begin();     // search the whole map again for current node
           if (it->second == current_node) {  // due to it++ we need to check first
@@ -160,9 +158,8 @@ void DiscoPoP::CreateCus(Region* top_region, std::set<std::string>& global_varia
         // find return instructions
         if (isa<ReturnInst>(instruction)) {
           cu->return_instructions.insert(lid);
-        }
-        // find branches to return instructions, i.e. return statements
-        else if (isa<BranchInst>(instruction)) {
+        } else if (isa<BranchInst>(instruction)) {
+          // find branches to return instructions, i.e. return statements
           if ((cast<BranchInst>(instruction))->isUnconditional()) {
             if ((cast<BranchInst>(instruction))->getNumSuccessors() == 1) {
               BasicBlock* successor_bb = (cast<BranchInst>(instruction))->getSuccessor(0);
@@ -367,8 +364,7 @@ void DiscoPoP::CreateCus(Region* top_region, std::set<std::string>& global_varia
               Variable v(std::string(it->getName()), rso.str(), lid, true, true);
               n->arguments_list.push_back(v);
             }
-          } else  // get name of the indirect function which is called
-          {
+          } else {  // get name of the indirect function which is called
             Value* v = (cast<CallBase>(instruction))->getCalledOperand();
             Value* sv = v->stripPointerCasts();
             n->name = sv->getName().str();

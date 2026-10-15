@@ -85,7 +85,7 @@ Value* DiscoPoP::GetOrInsertVarNameDynamic(std::string var_name, IRBuilder<>& bu
 std::string DiscoPoP::DetermineVariableNameStatic(Instruction* i,
                                                   bool& is_global_variable /*=defaultIsGlobalVariableValue*/,
                                                   bool disable_metadata_map, std::string prefix) {
-  assert(I && "Instruction cannot be NULL \n");
+  assert(i && "Instruction cannot be NULL \n");
   int index = isa<StoreInst>(i) ? 1 : 0;
   Value* operand = i->getOperand(index);
 
@@ -136,17 +136,15 @@ std::string DiscoPoP::DetermineVariableNameStatic(Instruction* i,
                   return ret_val;  // not found
                 }
                 return true_var_names_from_metadata_map_[ret_val];  // found
-
-              } else {
-                std::string ret_val = GetOrInsertVarNameStatic("", builder);
-                if (true_var_names_from_metadata_map_.find(ret_val) == true_var_names_from_metadata_map_.end() ||
-                    disable_metadata_map) {
-                  return ret_val;  // not found
-                }
-                return true_var_names_from_metadata_map_[ret_val];  // found
-
-                // return ret;
               }
+              std::string ret_val = GetOrInsertVarNameStatic("", builder);
+              if (true_var_names_from_metadata_map_.find(ret_val) == true_var_names_from_metadata_map_.end() ||
+                  disable_metadata_map) {
+                return ret_val;  // not found
+              }
+              return true_var_names_from_metadata_map_[ret_val];  // found
+
+              // return ret;
             }
           }
         }
@@ -179,7 +177,7 @@ std::string DiscoPoP::DetermineVariableNameStatic(Instruction* i,
 }
 
 Value* DiscoPoP::DetermineVariableNameDynamic(Instruction* const i, std::string prefix) {
-  assert(I && "Instruction cannot be NULL \n");
+  assert(i && "Instruction cannot be NULL \n");
   int index = isa<StoreInst>(i) ? 1 : 0;
   Value* operand = i->getOperand(index);
 

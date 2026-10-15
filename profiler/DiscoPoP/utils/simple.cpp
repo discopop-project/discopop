@@ -47,7 +47,7 @@ using llvm::Type;
 using llvm::Value;
 
 Type* DiscoPoP::PointsToStruct(PointerType* p_ty) {
-  assert(PTy);
+  assert(p_ty);
   Type* struct_type = p_ty;
   // (2025-10-30) Simplified for llvm 19 compatibility
   /*
@@ -61,11 +61,11 @@ Type* DiscoPoP::PointsToStruct(PointerType* p_ty) {
 }
 
 Value* DiscoPoP::FindStructMemberName(MDNode* struct_node, unsigned idx, IRBuilder<>& builder) {
-  assert(structNode);
-  assert(structNode->getOperand(10));
+  assert(struct_node);
+  assert(struct_node->getOperand(10));
   MDNode* member_list_nodes = cast<MDNode>(struct_node->getOperand(10));
   if (idx < member_list_nodes->getNumOperands()) {
-    assert(memberListNodes->getOperand(idx));
+    assert(member_list_nodes->getOperand(idx));
     MDNode* member = cast<MDNode>(member_list_nodes->getOperand(idx));
     if (member->getOperand(3)) {
       return GetOrInsertVarNameDynamic(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);

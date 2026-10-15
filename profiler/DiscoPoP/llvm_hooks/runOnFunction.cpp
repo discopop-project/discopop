@@ -50,8 +50,7 @@ bool DiscoPoP::IsInstrumentedFunction(Function& f) {
           full_file_name += "/";
         }
         full_file_name += sub_program->getFilename().str();
-        if (full_file_name.find(dp_project_dir) != std::string::npos)  // function defined inside project
-        {
+        if (full_file_name.find(dp_project_dir) != std::string::npos) {  // function defined inside project
           func_defined_in_project = true;
         }
       }
@@ -63,24 +62,19 @@ bool DiscoPoP::IsInstrumentedFunction(Function& f) {
 
   StringRef func_name = f.getName();
   // Avoid functions we don't want to instrument
-  if (func_name.find("llvm.") != std::string::npos)  // llvm debug calls
-  {
+  if (func_name.find("llvm.") != std::string::npos) {  // llvm debug calls
     return false;
   }
-  if (func_name.find("__dp_") != std::string::npos)  // instrumentation calls
-  {
+  if (func_name.find("__dp_") != std::string::npos) {  // instrumentation calls
     return false;
   }
-  if (func_name.find("__cx") != std::string::npos)  // c++ init calls
-  {
+  if (func_name.find("__cx") != std::string::npos) {  // c++ init calls
     return false;
   }
-  if (func_name.find("__clang") != std::string::npos)  // clang helper calls
-  {
+  if (func_name.find("__clang") != std::string::npos) {  // clang helper calls
     return false;
   }
-  if (func_name.find("_GLOBAL_") != std::string::npos)  // global init calls (c++)
-  {
+  if (func_name.find("_GLOBAL_") != std::string::npos) {  // global init calls (c++)
     return false;
   }
   if (func_name.find("pthread_") != std::string::npos) {

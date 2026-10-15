@@ -76,7 +76,7 @@ int dp_reduction::GetOpOrder(char c) {
 }
 
 Type* dp_reduction::PointsToStruct(PointerType* p_ty) {
-  assert(PTy);
+  assert(p_ty);
   // (2025-10-30) Omitted check for struct type for llvm 19 compatibility
   Type* struct_type = p_ty;
   /*  if (PTy->getTypeID() == Type::PointerTyID) {
@@ -89,11 +89,11 @@ Type* dp_reduction::PointsToStruct(PointerType* p_ty) {
 }
 
 std::string DiscoPoP::FindStructMemberNameStatic(MDNode* struct_node, unsigned idx, IRBuilder<>& builder) {
-  assert(structNode);
-  assert(structNode->getOperand(10));
+  assert(struct_node);
+  assert(struct_node->getOperand(10));
   MDNode* member_list_nodes = cast<MDNode>(struct_node->getOperand(10));
   if (idx < member_list_nodes->getNumOperands()) {
-    assert(memberListNodes->getOperand(idx));
+    assert(member_list_nodes->getOperand(idx));
     MDNode* member = cast<MDNode>(member_list_nodes->getOperand(idx));
     if (member->getOperand(3)) {
       GetOrInsertVarNameStatic(dyn_cast<MDString>(member->getOperand(3))->getString().str(), builder);
@@ -115,7 +115,7 @@ llvm::Value* dp_reduction::PointsToVar(llvm::GetElementPtrInst* instr) {
 
 // Encode the fileID and line number of BI as LID.
 // This is needed to support multiple files in a project.
-LID dp_reduction::GetLid(Instruction* bi, std::int32_t& /*fileID*/) {
+LID dp_reduction::GetLid(Instruction* bi, std::int32_t& /*file_id*/) {
   std::int32_t lno;
 
   const DebugLoc& location = bi->getDebugLoc();
@@ -145,8 +145,8 @@ bool dp_reduction::SanityCheck(BasicBlock* bb, int file_id) {
 
 // returns a char describing the opcode, e.g. '+' for Add or FAdd
 // switches + and - if a negative constant is added or subtracted
-//(mainly used to support -- as reduction operation, might be implemented as
-//'add -1')
+// (mainly used to support -- as reduction operation, might be implemented as
+// 'add -1')
 char dp_reduction::GetCharForOpcode(llvm::Instruction* instr) {
   unsigned opcode = instr->getOpcode();
   if (opcode == llvm::Instruction::Call) {

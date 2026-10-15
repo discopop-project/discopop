@@ -94,8 +94,9 @@ constexpr TimerRegion TimerRegionOf(CallbackId callback) {
 }
 
 // TimerRegionOf as a constant, so that a callback does not pay for the mapping at run time.
+// (google-readability-casting mistakes the substituted enum template argument for a C-style cast.)
 template <CallbackId Callback>
-inline constexpr TimerRegion kTimerRegionOf = TimerRegionOf(Callback);
+inline constexpr TimerRegion kTimerRegionOf = TimerRegionOf(Callback);  // NOLINT(google-readability-casting)
 
 // Whether one callback carries out its own work, or returns as soon as it has been entered.
 //

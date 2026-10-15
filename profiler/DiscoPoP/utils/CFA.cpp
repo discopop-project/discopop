@@ -78,7 +78,7 @@ void DiscoPoP::CFA(Function& f, LoopInfo& li, const std::map<Loop*, std::string>
         } else {
           // Changed TerminatorInst to Instruction
           Instruction* ti = (*ei)->getTerminator();
-          assert(TI != NULL && "Exit block is not well formed!");
+          assert(ti != NULL && "Exit block is not well formed!");
           unsigned int num_succ = ti->getNumSuccessors();
           for (unsigned int i = 0; i < num_succ; ++i) {
             BasicBlock* succ = ti->getSuccessor(i);

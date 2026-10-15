@@ -56,7 +56,7 @@ class StaticCalltreeNode {
       : node_id_(node_id_arg), type_(type_arg), function_name_(function_name_arg), instruction_id_(instruction_id_arg) {
     // type 0: function -> functionName; type 1: call instruction -> "call_<instructionID>"
     label_ = type_ ? ("call_" + std::to_string(instruction_id_)) : function_name_;
-  };
+  }
   void Print();
   const std::string& GetLabel();
   bool GetType();

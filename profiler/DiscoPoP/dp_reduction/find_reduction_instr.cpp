@@ -27,7 +27,8 @@ llvm::Instruction* dp_reduction::FindReductionInstr(llvm::Value* val) {
   if (opcode == llvm::Instruction::Load) {
     llvm::Instruction* prev_use = dp_reduction::GetPrevUse(instr, instr->getOperand(0));
     return dp_reduction::FindReductionInstr(prev_use);
-  } else if (opcode == llvm::Instruction::Store) {
+  }
+  if (opcode == llvm::Instruction::Store) {
     return dp_reduction::FindReductionInstr(instr->getOperand(0));
   }
   // enter recursion if the instruction has only a single operand to accomodate

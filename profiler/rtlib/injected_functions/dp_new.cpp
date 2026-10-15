@@ -27,7 +27,9 @@ namespace dp {
 /******* Instrumentation function *******/
 extern "C" {
 
-void __dp_new(LID /*lid*/, ADDR /*startAddr*/, ADDR /*endAddr*/, std::int64_t /*numBytes*/) { DP_CALLBACK_SCOPE(NEW); }
+void __dp_new(LID /*lid*/, ADDR /*start_addr*/, ADDR /*end_addr*/, std::int64_t /*num_bytes*/) {
+  DP_CALLBACK_SCOPE(NEW);
+}
 }
 
 }  // namespace dp

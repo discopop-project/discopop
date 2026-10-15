@@ -44,7 +44,7 @@ void UnwindFunctionStack(LID lid) {
     __dp_func_exit(lid, 1);
   }
 
-  assert(function_manager->get_current_stack_level() == -1 && "Program terminates without clearing function stack!");
+  assert(function_manager->GetCurrentStackLevel() == -1 && "Program terminates without clearing function stack!");
   assert(loop_manager->empty() && "Program terminates but loop stack is not empty!");
 }
 

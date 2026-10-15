@@ -218,14 +218,14 @@ class Timers {
     struct tm time_info;
 
     // Need some more space for '\n' and other checks
-    char char_buff[size_of_date_string + 3];
+    char char_buff[kSizeOfDateString + 3];
 
     time(&raw_time);
     localtime_s(&time_info, &raw_time);
     asctime_s(char_buff, &time_info);
 
     // Avoid '\n'
-    return std::string(char_buff, size_of_date_string);
+    return std::string(char_buff, kSizeOfDateString);
 #endif
   }
 
