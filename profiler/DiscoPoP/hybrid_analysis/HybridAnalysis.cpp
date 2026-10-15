@@ -10,12 +10,42 @@
  *
  */
 
-#include "DiscoPoP.hpp"
+#include "hybrid_analysis/HybridAnalysis.hpp"
+
+#include "Globals.hpp"
+#include "hybrid_analysis/InstructionCFG.hpp"
+#include "hybrid_analysis/InstructionDG.hpp"
 #include "llvm_compat.hpp"
+#include "utils/profiler_files.hpp"
+
+#include "llvm/IR/Dominators.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
+
+#include <fstream>
+#include <set>
+#include <unordered_map>
+#include <vector>
 
 using namespace llvm;
 using namespace std;
 using namespace dputil;
+using hybrid_analysis::HybridAnalysis;
+
+constexpr bool DumpToDot = false;
+constexpr bool DP_hybrid_DEBUG = false;
+
+// reads a counter persisted by an earlier module (see HybridAnalysis::finalize)
+template <typename T> static void readCounter(const std::string &name, T &value) {
+  std::string counterFile(dputil::getEnvOrDefault("DOT_DISCOPOP_PROFILER", ".discopop/profiler"));
+  counterFile += "/" + name;
+  if (dputil::fexists(counterFile)) {
+    std::fstream inCounter(counterFile, std::ios_base::in);
+    inCounter >> value;
+    inCounter.close();
+  }
+}
 
 // Returns the instruction before which the hybrid analysis reports an execution
 // of BB (__dp_report_bb / __dp_report_bb_pair) or records it in a semaphore
@@ -43,9 +73,25 @@ static Instruction *getHybridReportInsertionPoint(BasicBlock *BB) {
 }
 
 // DPInstrumentationOmission
-// Reports the dependencies of the accesses to local variables that can be predicted statically,
-// and erases their callbacks; runs after the instrumentation of F (see runOnFunction).
-bool DiscoPoP::runHybridAnalysis(Function &F, ModuleAnalysisManager &MAM) {
+HybridAnalysis::HybridAnalysis(Module &M) {
+  Type *Void = Type::getVoidTy(M.getContext());
+  Int32 = Type::getInt32Ty(M.getContext());
+
+  bbDepCount = 0;
+  readCounter("DP_BBDepCounter.txt", bbDepCount);
+
+  nextFreeStaticMemoryRegionID = 0;
+  readCounter("DP_StaticMemoryRegionIDCounter.txt", nextFreeStaticMemoryRegionID);
+
+  ReportBB = M.getOrInsertFunction("__dp_report_bb", Void, Int32);
+  ReportBBPair = M.getOrInsertFunction("__dp_report_bb_pair", Void, Int32, Int32);
+  BBState = M.getOrInsertFunction("__dp_bb_state", Int32);
+  VNF = std::make_unique<dputil::VariableNameFinder>(M);
+}
+
+bool HybridAnalysis::analyzeFunction(Function &F, ModuleAnalysisManager &MAM,
+                                     map<Instruction *, CallInst *> &insertedAccessCallbacks,
+                                     map<string, string> &trueVarNamesFromMetadataMap) {
   if (F.getInstructionCount() == 0)
     return false;
 
@@ -165,12 +211,12 @@ bool DiscoPoP::runHybridAnalysis(Function &F, ModuleAnalysisManager &MAM) {
   map<BasicBlock *, map<Value *, map<BasicBlock *, set<string>>>> conditionalBBPairDepMap;
 
   //auto &DT = getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
-  llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*ThisModule).getManager();
+  llvm::FunctionAnalysisManager &fam = MAM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent()).getManager();
   //llvm::LoopInfo &LI = fam.getResult<llvm::LoopAnalysis>(F);
   llvm::DominatorTree &DT= fam.getResult<llvm::DominatorTreeAnalysis>(F);
 
-  InstructionCFG CFG(VNF, F);
-  InstructionDG DG(VNF, &CFG, fid);
+  InstructionCFG CFG(VNF.get(), F);
+  InstructionDG DG(VNF.get(), &CFG, fid);
 
   // collect init instruction to prevent false-positive WAW Dependences due to allocations in loops,
   // which will be moved to the function entry
@@ -448,5 +494,38 @@ bool DiscoPoP::runHybridAnalysis(Function &F, ModuleAnalysisManager &MAM) {
   if (DP_hybrid_DEBUG)
     errs() << "Done with function " << F.getName() << ":\n";
   return true;
+}
+
+void HybridAnalysis::finalize(Module &M) {
+  Type *Void = Type::getVoidTy(M.getContext());
+  PointerType *CharPtr = PointerType::getUnqual(Type::getInt8Ty(M.getContext()));
+
+  // Hand the dependencies of the instructions whose profiling was omitted over
+  // to the runtime. Their __dp_read / __dp_write / __dp_alloca calls have been
+  // erased (see runOnFunction), so this string is the only remaining record of
+  // those dependencies.
+  //
+  // bbDepString covers the functions of THIS module only, and a module which
+  // does not define main has no __dp_finalize call to attach the handover to.
+  // Attaching it there therefore silently dropped the dependencies of every
+  // translation unit but one, which turned e.g. a reduction variable in a
+  // non-main file into an apparently private one. Registering from a module
+  // constructor reaches every translation unit regardless of compilation order;
+  // the runtime only records the string there and parses it during
+  // __dp_finalize, once it knows which basic blocks were executed.
+  if (!bbDepString.empty()) {
+    Function *registration =
+        Function::Create(FunctionType::get(Void, false), GlobalValue::InternalLinkage,
+                         "__dp_register_bb_deps." + M.getModuleIdentifier(), &M);
+    IRBuilder<> builder(BasicBlock::Create(M.getContext(), "entry", registration));
+    Value *V = builder.CreateGlobalStringPtr(StringRef(bbDepString), ".dp_bb_deps");
+    builder.CreateCall(M.getOrInsertFunction("__dp_add_bb_deps", Void, CharPtr), {V});
+    builder.CreateRetVoid();
+    appendToGlobalCtors(M, registration, 0);
+  }
+  // write the current count of BBs to a file to avoid duplicate BBids
+  profiler_files::writeCounter("DP_BBDepCounter.txt", bbDepCount);
+  // write the next free static memory region id to avoid duplicate ids between modules
+  profiler_files::writeCounter("DP_StaticMemoryRegionIDCounter.txt", nextFreeStaticMemoryRegionID);
 }
 // DPInstrumentationOmission end

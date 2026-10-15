@@ -97,7 +97,7 @@ int32_t DiscoPoP::getCachedFileID(Function &F) {
 //     callbacks and assigns the instruction ids (dp.md.instr.id) in one walk over the function;
 //     the loop and function entry calls are inserted before it, so they get ids, too.
 //  3. writeCUGraph: Data.xml names the instruction ids of the calls.
-//  4. runHybridAnalysis: needs the instruction ids and the inserted access callbacks (it erases
+//  4. the hybrid analysis: needs the instruction ids and the inserted access callbacks (it erases
 //     those of the accesses it predicts statically). Its own instructions are inserted after the
 //     walk, so they get no ids.
 // State kept across functions makes the order of the functions matter as well:
@@ -132,7 +132,7 @@ bool DiscoPoP::runOnFunction(Function &F, ModuleAnalysisManager &MAM) {
   buildCUGraph(F, MAM, graph);
   instrumentFunction(F, MAM, graph);
   writeCUGraph(graph);
-  return runHybridAnalysis(F, MAM);
+  return hybridAnalysis->analyzeFunction(F, MAM, insertedAccessCallbacks, trueVarNamesFromMetadataMap);
 }
 
 // CUGeneration
