@@ -27,7 +27,6 @@ discopop_gui
 
 `discopop_project_manager --gui` does the same. If the project has no `.discopop/project/configs` folder yet, the GUI creates it and shows a message, "Project Initialized". The window "DiscoPoP Project Manager" opens.
 
-<!-- TODO screenshot: replace placeholder -->
 ![Main window of the GUI](../assets/screenshots/gui_main_window.svg)
 
 The left column "Run Configs" lists the configurations of the project and has the buttons "+ New" and "Edit Compilation". The right side has the tabs Editor, Execute, Report, Hotspot Detection, Pattern Detection, Patch Repair and Autotuning. The bottom bar shows the status and the path of the `.discopop` folder.
@@ -105,8 +104,7 @@ For the example, which has a single configuration and runs only a few millisecon
 ## Step 7: Pattern detection
 Open the tab **Pattern Detection**. It is enabled after profiling data exists in `.discopop/profiler`. Without hotspot results, a box "Hotspot Information" suggests to run the hotspot detection first ("Go to Hotspot Detection").
 
-<!-- TODO screenshot: replace placeholder -->
-![Pattern Detection tab with two suggestions](../assets/screenshots/gui_pattern_detection.svg)
+![Pattern Detection tab after a detection run, with the settings and the output of the explorer](../assets/screenshots/gui_pattern_detection.svg)
 
 - **Pattern Types**: `reduction` and `doall` are selected, `task` (experimental) is not.
 - **Dependency Data**: "default (full states)" or "no_states (states ignored)".
@@ -128,7 +126,6 @@ Choose the "Hotspot Types" to consider (YES, MAYBE, NO; NO is off by default), t
 ## Step 9: Autotuning
 The tab **Autotuning** measures which suggestions, or which combination of them, really speed the program up.
 
-<!-- TODO screenshot: replace placeholder -->
 ![Autotuning tab with the live plot](../assets/screenshots/gui_autotuning.svg)
 
 - "Threads", "Repetitions" (runs per candidate; the median decides) and "Log Level".

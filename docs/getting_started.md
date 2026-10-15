@@ -34,8 +34,7 @@ discopop_gui
 ```
 Use `discopop_gui -p <project directory>` to start it from another directory. DiscoPoP keeps all its data in the folder `.discopop` of the project.
 
-![The main window with the configuration list and the tabs](assets/screenshots/gui_main_window.svg)
-<!-- TODO screenshot: replace placeholder -->
+![The main window on the first start, with the Configuration Assistant open](assets/screenshots/gui_main_window.svg)
 
 ## Configure the project
 On the first start, the Configuration Assistant asks for two scripts and checks that they work:
@@ -63,11 +62,9 @@ Select the configuration in the list on the left and work through the tabs from 
 5. **Autotuning**: click *Run Autotuning*. The autotuner measures combinations of the suggestions and keeps those that make the program faster; the plot shows the speedup of each measured combination. The default algorithm, *Hotspot-guided region descent*, needs the result of step 2; without it, choose another algorithm, for example *Greedy combination*.
 6. **Report**: shows the measured times of all runs; *Generate PDF Report* writes a report.
 
-![Pattern Detection: the suggestions found in the program](assets/screenshots/gui_pattern_detection.svg)
-<!-- TODO screenshot: replace placeholder -->
+![Pattern Detection: settings and output of a detection run](assets/screenshots/gui_pattern_detection.svg)
 
 ![Autotuning: the speedup of the measured combinations](assets/screenshots/gui_autotuning.svg)
-<!-- TODO screenshot: replace placeholder -->
 
 To measure the best combination again, select the parallel mode in the *Execute* tab, choose *Apply autotuner-selected suggestions* and click *Run*; this works on a copy of the project. To change your source files, apply the selected suggestions with the [patch applicator](tools/Patch_applicator.md).
 

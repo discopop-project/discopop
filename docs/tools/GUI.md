@@ -39,8 +39,7 @@ and exits with code 1. On such a machine, use the [project manager](Project_mana
 Up to DiscoPoP 5.0, the bare `discopop` command opened the GUI. It is now the command line project manager.
 
 ## Window layout
-<!-- TODO screenshot: replace placeholder -->
-![Main window with the configuration list on the left and the tabs on the right](../assets/screenshots/gui_main_window.svg)
+![Main window on the first start: the Configuration Assistant in front of the configuration list](../assets/screenshots/gui_main_window.svg)
 
 - **Run Configs** (left): the execution configurations of the project, i.e. the directories below `.discopop/project/configs/`. Select one to work on it. A right click offers *Copy*, *Rename* and *Delete*. **+ New** creates an empty configuration (you enter a name; its `execute.sh` is a placeholder you have to edit). **Edit Compilation** opens the [Compilation Editor](#compilation-editor).
 - **Tabs** (right), in workflow order: *Editor*, *Execute*, *Report*, *Hotspot Detection*, *Pattern Detection*, *Patch Repair*, *Autotuning*. Most tabs work on the selected configuration.
@@ -145,8 +144,7 @@ The tab measures which loops and functions dominate the runtime. See [Hotspot de
 Results are stored in `.discopop/hotspot_detection/` (`Hotspots.json` and the run log `measurement_runs.json`).
 
 ## Pattern Detection
-<!-- TODO screenshot: replace placeholder -->
-![Pattern Detection tab with two suggestions](../assets/screenshots/gui_pattern_detection.svg)
+![Pattern Detection tab after a detection run, with the settings and the output of the explorer](../assets/screenshots/gui_pattern_detection.svg)
 
 The tab runs `discopop_explorer` in the `.discopop` directory. It needs the profiling data of a `dp` run (use **Prepare Pattern Detection** in the *Execute* tab first).
 
@@ -170,7 +168,6 @@ Results are the files described in [Explorer](Explorer.md): `explorer/patterns.j
 The tab runs [`discopop_patch_repair`](Patch_repair.md): an LLM agent repairs generated patches that do not compile. Settings are the hotspot types (`NO` is off by default), log level, *Dry run*, the LLM backend and model, the agent timeout, the number of prompts and retries, and the suggestions to consider. The right side shows *Results*, the repaired *Patch* as a diff and the *Console*.
 
 ## Autotuning
-<!-- TODO screenshot: replace placeholder -->
 ![Autotuning tab](../assets/screenshots/gui_autotuning.svg)
 
 The tab runs [`discopop_auto_tuner`](Autotuner.md) for the selected configuration. It needs the output of pattern detection and the `dp` and `hd` settings.
