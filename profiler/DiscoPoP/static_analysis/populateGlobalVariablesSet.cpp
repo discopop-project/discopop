@@ -21,7 +21,7 @@ using namespace dputil;
 void DiscoPoP::populateGlobalVariablesSet(Region *TopRegion, set<string> &globalVariablesSet) {
 
   map<string, BasicBlock *> variableToBBMap;
-  bool isGlobalVariable;
+  bool isGlobalVariable = false;
   for (Region::block_iterator bb = TopRegion->block_begin(); bb != TopRegion->block_end(); ++bb) {
     for (BasicBlock::iterator instruction = (*bb)->begin(); instruction != (*bb)->end(); ++instruction) {
       if (isa<LoadInst>(instruction) || isa<StoreInst>(instruction) || isa<CallInst>(instruction)) {

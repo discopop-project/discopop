@@ -60,6 +60,8 @@ bool DiscoPoP::doFinalization(Module &M) {
   }
   // write the current count of BBs to a file to avoid duplicate BBids
   profiler_files::writeCounter("DP_BBDepCounter.txt", bbDepCount);
+  // write the next free static memory region id to avoid duplicate ids between modules
+  profiler_files::writeCounter("DP_StaticMemoryRegionIDCounter.txt", nextFreeStaticMemoryRegionID);
 
   // DPInstrumentationOmission end
   return true;
