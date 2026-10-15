@@ -41,6 +41,9 @@ set(DiscoPoP_CALLBACK_SOURCES
 set(DiscoPoP_SHARED_SOURCES
         output_paths.cpp
         runtimeFunctions.cpp
+        dependency_analysis.cpp
+        dependency_output.cpp
+        access_queue_workers.cpp
         runtimeFunctionsGlobals.cpp
         memory/Signature.cpp
 
