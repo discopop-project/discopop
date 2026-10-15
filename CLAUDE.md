@@ -52,6 +52,13 @@ This document contains critical information about working with this codebase. Fo
 - to execute the formatting check, use `venv/bin/python -m black -l 120 --check <paths>` with the paths above
 - to execute automatic formatting, use `venv/bin/python -m black -l 120 <paths>`, restricted to the paths you changed; never run black on `.`, as it would reformat many unrelated, unchecked files
 
+## Linting
+### Python
+- ruff (pinned in `requirements-dev.txt`, configured in the `[tool.ruff]` tables of the root `pyproject.toml`) checks pycodestyle (E, W), pyflakes (F), and the naming rules N804 and N806; the other pep8-naming rules stay off on purpose, as they would rename public modules, functions, arguments and classes (imported across packages, CLI entry points, `module.Class` paths stored in jsonpickle data)
+- CI checks the whole repository (unlike black, ruff has no findings outside the paths above): `venv/bin/python -m ruff check`
+- `ruff check --fix` is safe for unused imports and whitespace, but review the diff: do not remove imports, variables or code that only commented-out code uses (mark with `# noqa: F401` / `F841` and a reason instead), and do not rename public names to satisfy a naming rule
+- the E501 line limit equals black's (120); black does not wrap comments, docstrings or long string literals, so wrap those by hand (implicit string concatenation); lines of commented-out code get `# noqa: E501`
+
 ## Testing
 ### Install python packages
 - to install python packages, execute `venv/bin/pip install . ./profiler ./library` from the root directory of the project
@@ -190,7 +197,7 @@ To execute the CI pipeline locally, use the following command from the root fold
 - LLVM/clang 19-22 (accepted by `profiler/CMakeLists.txt` and `profiler/hatch_build.py`), Python >= 3.11 (`requires-python` of every package)
 - the CI runs on pushes to master/new_explorer, on every pull request and on manual runs (`workflow_dispatch`); a commit is tested once, so a feature branch is tested through its pull request (also the pull requests of a stack, whose target is another feature branch) and a branch without one by a manual run; the full matrix only runs when merging into master (pushes to it, and pull requests targeting it); every other pull request and manual run is "reduced": the matrix only tests debian 13 / LLVM 21, and only the environments that run needs are prepared. The jobs outside the matrix run in both cases
 - the benchmark jobs (`pass_overhead_benchmark`, `callback_benchmark`, `benchmark_report`) only run in a full run and on manual runs (output `benchmarks` of `create_matrix`); `checks_successful` accepts the skipped benchmark of a reduced run
-- the tests of a matrix entry are split into the jobs `python_tests` (steps for mypy, the unit tests, `test/instrumentation`, `test/profiler` and `test/end_to_end`; every step runs, so a run reports all failing kinds) and `profiler_unit_tests` (`DiscoPoP_UT`, `DiscoPoP_Pass_UT`); `static_checks` (license tags, black) does not depend on the platform and runs once
+- the tests of a matrix entry are split into the jobs `python_tests` (steps for mypy, the unit tests, `test/instrumentation`, `test/profiler` and `test/end_to_end`; every step runs, so a run reports all failing kinds) and `profiler_unit_tests` (`DiscoPoP_UT`, `DiscoPoP_Pass_UT`); `static_checks` (license tags, black, ruff) does not depend on the platform and runs once
 - `runtime_unit_tests_sanitized`, `instrumented_programs_leak_check` and `rtlib_coverage` only start once all of these basic jobs have succeeded
 - `checks_successful` covers the matrix entries of the run, i.e. LLVM 21 in a reduced, all entries in a full run; its log names the configuration
 - the matrix created by the `create_matrix` job in `.github/workflows/ci.yml` covers each of these once instead of the full cross product: ubuntu 24.04 / LLVM 19 / Python 3.11 (deadsnakes PPA), ubuntu 24.04 / LLVM 20 / Python 3.12, debian 13 / LLVM 21 (apt.llvm.org) / Python 3.13, debian 13 / LLVM 22 / Python 3.13

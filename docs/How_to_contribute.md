@@ -31,6 +31,7 @@ In general it is sufficient to follow the general installation instructions. How
    - `[dev]` also installs some development requirements (e.g. mypy, black, pre-commit).
  - Install some git hooks by running `pre-commit install` from the main directory of this project. These hooks help to ensure a good quality of the commited code by automatically running some checks:
    - black is run to **format** python source code
+   - ruff is run to **lint** python source code (pycodestyle, pyflakes, some naming rules; configured in `pyproject.toml`)
    - python **type safety** is improved with mypy
    - we enforce [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/)
    - other checks like looking for unneccesary whitespace and preventing large files to be added

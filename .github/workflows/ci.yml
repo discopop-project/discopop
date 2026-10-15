@@ -309,7 +309,7 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN || 'unset' }}
-    name: "Static checks: license tags, formatting (black)"
+    name: "Static checks: license tags, formatting (black), lint (ruff)"
     needs: [create_matrix, prepare_images, prepare_build]
     timeout-minutes: 20
     steps:
@@ -320,7 +320,7 @@ jobs:
         run: |
           ./scripts/dev/check-license.sh $(find . -type f)
 
-      # only black (requirements-dev.txt) is needed from this venv
+      # only black and ruff (requirements-dev.txt) are needed from this venv
       - name: Setup venv
         uses: ./.github/actions/prepared-venv
         with:
@@ -353,6 +353,11 @@ jobs:
       - name: Check formatting of the benchmark drivers and the instrumentation tests
         run: |
           venv/bin/python3 -m black -l 120 --check benchmark/pass_overhead benchmark/injected_functions benchmark/compare test/instrumentation
+
+      # the whole repository, which is clean also outside the paths black checks; the rules are configured in pyproject.toml
+      - name: Lint the Python code (ruff)
+        run: |
+          venv/bin/python3 -m ruff check
 
   # PROFILER UNIT TESTS: the GoogleTest binaries of the runtime library (DiscoPoP_UT) and the LLVM pass (DiscoPoP_Pass_UT);
   # built from the root CMakeLists.txt, they need no venv
