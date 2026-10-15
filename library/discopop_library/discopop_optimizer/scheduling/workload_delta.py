@@ -206,15 +206,15 @@ def __parse_node(
     #  ContextSave --> end of branch
     #  ContextMerge --> end of branched section, calculate min / max (aggregate)
     #  ContextSnapshotPop -> exit recursion
-    if type(node_data) == ContextSnapshot:
+    if type(node_data) is ContextSnapshot:
         workload_stack.enter_new_branched_section()
-    elif type(node_data) == ContextRestore:
+    elif type(node_data) is ContextRestore:
         workload_stack.enter_new_branch()
-    elif type(node_data) == ContextSave:
+    elif type(node_data) is ContextSave:
         workload_stack.exit_branch()
-    elif type(node_data) == ContextMerge:
+    elif type(node_data) is ContextMerge:
         workload_stack.aggregate()
-    elif type(node_data) == ContextSnapshotPop:
+    elif type(node_data) is ContextSnapshotPop:
         workload_stack.exit_branched_section()
 
     # calculate the workload of the current node and register it in the stack
@@ -228,7 +228,7 @@ def __parse_node(
         workload_stack.register_workload(min_wl, max_wl)
 
     # register children
-    if type(node_data) == Loop:
+    if type(node_data) is Loop:
         iteration_factor = node_data.iterations
     else:
         iteration_factor = 1

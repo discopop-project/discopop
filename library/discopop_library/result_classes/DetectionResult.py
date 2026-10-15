@@ -28,7 +28,7 @@ class DetectionResult(object):
     def __str__(self) -> str:
         result_str = ""
         for v in self.__dict__.values():
-            if type(v) == PEGraphX:
+            if type(v) is PEGraphX:
                 continue
             value_str = "\n\n\n"
             for entry in v:

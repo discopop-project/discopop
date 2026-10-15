@@ -31,7 +31,7 @@ def get_parent_function(pet: PEGraphX, node: Node) -> FunctionNode:
         parent_node: Optional[Node] = node
         while parent_node is not None:
             current_node = parent_node
-            if type(pet.node_at(current_node.id)) == FunctionNode:
+            if type(pet.node_at(current_node.id)) is FunctionNode:
                 node.parent_function_id = current_node.id
                 break
             parents = [e[0] for e in in_edges(pet, current_node.id, etype=EdgeType.CHILD)]

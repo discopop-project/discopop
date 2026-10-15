@@ -411,7 +411,7 @@ def __get_parent_loops(pet: PEGraphX, root_loop: LoopNode) -> List[LineID]:
     while queue:
         current = queue.pop()
         visited.add(current)
-        if type(pet.node_at(current)) == LoopNode:
+        if type(pet.node_at(current)) is LoopNode:
             parents.append(current)
 
         # process incoming child edges

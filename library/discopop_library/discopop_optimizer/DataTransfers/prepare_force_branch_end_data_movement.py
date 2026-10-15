@@ -34,7 +34,7 @@ def prepare_force_branch_end_data_movement(experiment: Experiment) -> nx.DiGraph
 
     all_context_save_nodes: List[int] = []
     for node in experiment.optimization_graph.nodes:
-        if type(data_at(experiment.optimization_graph, node)) == ContextSave:
+        if type(data_at(experiment.optimization_graph, node)) is ContextSave:
             all_context_save_nodes.append(node)
 
     for node in all_context_save_nodes:
@@ -46,12 +46,12 @@ def prepare_force_branch_end_data_movement(experiment: Experiment) -> nx.DiGraph
             current_data = data_at(experiment.optimization_graph, current)
             seen_writes.update(current_data.written_memory_regions)
 
-            if branching_depth == 0 and type(current_data) == ContextRestore:
+            if branching_depth == 0 and type(current_data) is ContextRestore:
                 # found entry to the exited branch
                 break
-            if type(current_data) == ContextSnapshotPop:
+            if type(current_data) is ContextSnapshotPop:
                 branching_depth += 1
-            if type(current_data) == ContextSnapshot:
+            if type(current_data) is ContextSnapshot:
                 branching_depth -= 1
             queue += [p for p in get_predecessors(experiment.optimization_graph, current) if p not in queue]
 

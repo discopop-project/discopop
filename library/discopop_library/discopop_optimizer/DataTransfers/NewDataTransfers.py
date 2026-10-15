@@ -390,11 +390,11 @@ def new_calculate_data_transfers(
             logger.debug("")
 
             # add a new data frame, if a branch is entered
-            if type(current_node_data) == ContextRestore:
+            if type(current_node_data) is ContextRestore:
                 dataframe_stack.append(DataFrame())
 
             # close the current data frame if a branch is exited
-            if type(current_node_data) == ContextSave:
+            if type(current_node_data) is ContextSave:
                 tmp_updates += dataframe_stack[-1].cleanup_dataframe(current_node, memory, experiment)
                 dataframe_stack.pop()
 

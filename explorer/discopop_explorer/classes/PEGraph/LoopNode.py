@@ -56,11 +56,11 @@ class LoopNode(Node):
         parent_nesting_levels: List[int] = []
         for parent_id in parents:
             parent_node = pet.node_at(parent_id)
-            if type(parent_node) == FunctionNode:
+            if type(parent_node) is FunctionNode:
                 # loop is a direct child of a function node --> Nesting level 0
                 parent_nesting_levels.append(0)
                 break
-            elif type(parent_node) == LoopNode:
+            elif type(parent_node) is LoopNode:
                 # one level deeper than the enclosing loop
                 parent_nesting_levels.append(
                     min(

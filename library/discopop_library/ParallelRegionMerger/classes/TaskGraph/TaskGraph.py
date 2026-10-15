@@ -92,7 +92,7 @@ class TaskGraph(object):
         redirect_in_edges: List[Tuple[TGNode, TGNode]] = []
         for in_edges in self.graph.in_edges(base_node):
             for edge_type in self.graph.get_edge_data(in_edges[0], base_node):
-                if type(edge_type) == SuccessorEdge:
+                if type(edge_type) is SuccessorEdge:
                     # found incoming successor edge
                     redirect_in_edges.append((in_edges[0], base_node))
         for tpl in list(dict.fromkeys(redirect_in_edges)):
@@ -102,7 +102,7 @@ class TaskGraph(object):
         redirect_out_edges: List[Tuple[TGNode, TGNode]] = []
         for out_edges in self.graph.out_edges(base_node):
             for edge_type in self.graph.get_edge_data(base_node, out_edges[1]):
-                if type(edge_type) == SuccessorEdge:
+                if type(edge_type) is SuccessorEdge:
                     # found outgoing successor edge
                     redirect_out_edges.append((base_node, out_edges[1]))
         for tpl in list(dict.fromkeys(redirect_out_edges)):
@@ -130,7 +130,7 @@ class TaskGraph(object):
         redirect_in_edges: List[Tuple[TGNode, TGNode]] = []
         for in_edges in self.graph.in_edges(entry_node):
             for edge_type in self.graph.get_edge_data(in_edges[0], entry_node):
-                if type(edge_type) == SuccessorEdge:
+                if type(edge_type) is SuccessorEdge:
                     # found incoming successor edge
                     redirect_in_edges.append((in_edges[0], entry_node))
         for tpl in list(dict.fromkeys(redirect_in_edges)):
@@ -140,7 +140,7 @@ class TaskGraph(object):
         redirect_out_edges: List[Tuple[TGNode, TGNode]] = []
         for out_edges in self.graph.out_edges(exit_node):
             for edge_type in self.graph.get_edge_data(exit_node, out_edges[1]):
-                if type(edge_type) == SuccessorEdge:
+                if type(edge_type) is SuccessorEdge:
                     # found outgoing successor edge
                     redirect_out_edges.append((exit_node, out_edges[1]))
         for tpl in list(dict.fromkeys(redirect_out_edges)):
@@ -171,35 +171,35 @@ class TaskGraph(object):
     def has_predecessor(self, base_node: TGNode) -> bool:
         for in_edges in self.graph.in_edges(base_node):
             for edge_type in self.graph.get_edge_data(in_edges[0], base_node):
-                if type(edge_type) == SuccessorEdge:
+                if type(edge_type) is SuccessorEdge:
                     return True
         return False
 
     def has_successor(self, base_node: TGNode) -> bool:
         for out_edges in self.graph.out_edges(base_node):
             for edge_type in self.graph.get_edge_data(base_node, out_edges[1]):
-                if type(edge_type) == SuccessorEdge:
+                if type(edge_type) is SuccessorEdge:
                     return True
         return False
 
     def get_predecessor(self, base_node: TGNode) -> Optional[TGNode]:
         for in_edges in self.graph.in_edges(base_node):
             for edge_type in self.graph.get_edge_data(in_edges[0], base_node):
-                if type(edge_type) == SuccessorEdge:
+                if type(edge_type) is SuccessorEdge:
                     return cast(TGNode, in_edges[0])
         return None
 
     def get_connected_exit(self, base_node: EnterParallelNode) -> Optional[ExitParallelNode]:
         for out_edges in self.graph.out_edges(base_node):
             for edge_type in self.graph.get_edge_data(base_node, out_edges[1]):
-                if type(edge_type) == ParallelRegionConnectionEdge:
+                if type(edge_type) is ParallelRegionConnectionEdge:
                     return cast(ExitParallelNode, out_edges[1])
         return None
 
     def get_connected_entry(self, base_node: ExitParallelNode) -> Optional[EnterParallelNode]:
         for in_edges in self.graph.in_edges(base_node):
             for edge_type in self.graph.get_edge_data(in_edges[0], base_node):
-                if type(edge_type) == ParallelRegionConnectionEdge:
+                if type(edge_type) is ParallelRegionConnectionEdge:
                     return cast(EnterParallelNode, in_edges[0])
         return None
 
@@ -207,7 +207,7 @@ class TaskGraph(object):
         res: List[TGNode] = []
         for in_edges in self.graph.in_edges(base_node):
             for edge_type in self.graph.get_edge_data(in_edges[0], base_node):
-                if type(edge_type) == SuccessorEdge:
+                if type(edge_type) is SuccessorEdge:
                     res.append(in_edges[0])
         return res
 
@@ -215,7 +215,7 @@ class TaskGraph(object):
         res: List[TGNode] = []
         for in_edges in self.graph.in_edges(base_node):
             for edge_type in self.graph.get_edge_data(in_edges[0], base_node):
-                if type(edge_type) == CallEdge:
+                if type(edge_type) is CallEdge:
                     res.append(in_edges[0])
         return res
 
@@ -223,7 +223,7 @@ class TaskGraph(object):
         res: List[TGNode] = []
         for out_edges in self.graph.out_edges(base_node):
             for edge_type in self.graph.get_edge_data(base_node, out_edges[1]):
-                if type(edge_type) == SuccessorEdge:
+                if type(edge_type) is SuccessorEdge:
                     res.append(out_edges[1])
         return res
 
@@ -231,7 +231,7 @@ class TaskGraph(object):
         queue: List[TGNode] = [base_node]
         while queue:
             current = queue.pop()
-            if type(current) == TaskNode:
+            if type(current) is TaskNode:
                 return current
             queue += self.get_successors(current)
         raise ValueError("No successive Task could be found for base node: ", base_node)
@@ -240,7 +240,7 @@ class TaskGraph(object):
         queue: List[TGNode] = [base_node]
         while queue:
             current = queue.pop()
-            if type(current) == TaskNode:
+            if type(current) is TaskNode:
                 return current
             queue += self.get_predecessors(current)
         raise ValueError("No preceeding Task could be found for base node: ", base_node)
@@ -249,7 +249,7 @@ class TaskGraph(object):
         res: List[TGNode] = []
         for out_edges in self.graph.out_edges(base_node):
             for edge_type in self.graph.get_edge_data(base_node, out_edges[1]):
-                if type(edge_type) == ContainsEdge:
+                if type(edge_type) is ContainsEdge:
                     res.append(out_edges[1])
         return res
 
@@ -257,7 +257,7 @@ class TaskGraph(object):
         res: List[ModifierNode] = []
         for in_edges in self.graph.in_edges(base_node):
             for edge_type in self.graph.get_edge_data(in_edges[0], base_node):
-                if type(edge_type) == ModifierEdge:
+                if type(edge_type) is ModifierEdge:
                     res.append(in_edges[0])
         return res
 
@@ -265,14 +265,14 @@ class TaskGraph(object):
         res: List[TGNode] = []
         for out_edges in self.graph.out_edges(base_node):
             for edge_type in self.graph.get_edge_data(base_node, out_edges[1]):
-                if type(edge_type) == CallEdge:
+                if type(edge_type) is CallEdge:
                     res.append(out_edges[1])
         return res
 
     def get_parent(self, base_node: TGNode) -> Optional[TGNode]:
         for in_edges in self.graph.in_edges(base_node):
             for edge_type in self.graph.get_edge_data(in_edges[0], base_node):
-                if type(edge_type) == ContainsEdge:
+                if type(edge_type) is ContainsEdge:
                     # found incoming contains edge
                     return cast(TGNode, in_edges[0])
         return None
@@ -281,7 +281,7 @@ class TaskGraph(object):
         edges: List[DataflowEdge] = []
         for edge in self.graph.edges:
             for edge_type in self.graph.get_edge_data(edge[0], edge[1]):
-                if type(edge_type) == DataflowEdge:
+                if type(edge_type) is DataflowEdge:
                     edges.append(edge)
         return edges
 
@@ -289,7 +289,7 @@ class TaskGraph(object):
         res: List[TGNode] = []
         for out_edges in self.graph.out_edges(base_node):
             for edge_type in self.graph.get_edge_data(base_node, out_edges[1]):
-                if type(edge_type) == DataflowEdge:
+                if type(edge_type) is DataflowEdge:
                     res.append(out_edges[1])
         return res
 
@@ -297,7 +297,7 @@ class TaskGraph(object):
         res: List[TGNode] = []
         for in_edges in self.graph.in_edges(base_node):
             for edge_type in self.graph.get_edge_data(in_edges[0], base_node):
-                if type(edge_type) == DataflowEdge:
+                if type(edge_type) is DataflowEdge:
                     res.append(in_edges[0])
         return res
 
@@ -342,7 +342,7 @@ class TaskGraph(object):
             current = queue.pop(0)
             visited.append(current)
             if (
-                type(current) == TaskNode
+                type(current) is TaskNode
                 and len(current.contained_pet_nodes) == 1
                 and len(self.get_contained(current)) == 0
             ):
@@ -366,9 +366,9 @@ class TaskGraph(object):
         res: List[TGNode] = []
         queue: List[TGNode] = []
         outer_parallel_region_id: Optional[int] = None
-        if type(epn) == EnterParallelNode or type(epn) == ExitParallelNode:
+        if type(epn) is EnterParallelNode or type(epn) is ExitParallelNode:
             outer_parallel_region_id = epn.parallel_region_id
-        if type(epn) == ExitParallelNode:
+        if type(epn) is ExitParallelNode:
             tmp_entry = self.get_connected_entry(epn)
             if tmp_entry is None:
                 return res
@@ -384,7 +384,7 @@ class TaskGraph(object):
                 if s not in queue and s not in res:
                     if (
                         outer_parallel_region_id is not None
-                        and type(s) == ExitParallelNode
+                        and type(s) is ExitParallelNode
                         and s.parallel_region_id == outer_parallel_region_id
                     ):
                         # do not consider nodes past the ExitParallelNode
@@ -407,7 +407,7 @@ class TaskGraph(object):
             if current == potential_parent:
                 return True
             # stop, if parent has a pet node contained
-            if type(current) == TaskNode:
+            if type(current) is TaskNode:
                 if len(current.contained_pet_nodes) != 0:
                     return False
             # traverse contains edges upwards, if not PET node is encountered
@@ -425,8 +425,8 @@ class TaskGraph(object):
             only_tasks_contained = True
             for out_edge in self.graph.out_edges(current_loop):
                 for edge_type in self.graph.get_edge_data(current_loop, out_edge[1]):
-                    if type(edge_type) == ContainsEdge:
-                        if type(out_edge[1]) != TaskNode:
+                    if type(edge_type) is ContainsEdge:
+                        if type(out_edge[1]) is not TaskNode:
                             only_tasks_contained = False
                             break
 
@@ -442,7 +442,7 @@ class TaskGraph(object):
                 contained_in_loop: List[TGNode] = [current_loop]
                 for out_edge in self.graph.out_edges(current_loop):
                     for edge_type in self.graph.get_edge_data(current_loop, out_edge[1]):
-                        if type(edge_type) == ContainsEdge:
+                        if type(edge_type) is ContainsEdge:
                             contained_in_loop.append(out_edge[1])
 
                 for node in contained_in_loop:
@@ -451,7 +451,7 @@ class TaskGraph(object):
                         if in_edges[0] not in contained_in_loop:
                             found_incoming = False
                             for edge_type in self.graph.get_edge_data(in_edges[0], node):
-                                if type(edge_type) == SuccessorEdge:
+                                if type(edge_type) is SuccessorEdge:
                                     # found incoming successor edge
                                     found_incoming = True
                                     break
@@ -466,7 +466,7 @@ class TaskGraph(object):
                         if out_edges[1] not in contained_in_loop:
                             found_outgoing = False
                             for edge_type in self.graph.get_edge_data(node, out_edges[1]):
-                                if type(edge_type) == SuccessorEdge:
+                                if type(edge_type) is SuccessorEdge:
                                     # found outgoing successor edge
                                     found_outgoing = True
                                     break
@@ -481,7 +481,7 @@ class TaskGraph(object):
                         if in_edges[0] not in contained_in_loop:
                             found_incoming = False
                             for edge_type in self.graph.get_edge_data(in_edges[0], node):
-                                if type(edge_type) == ContainsEdge:
+                                if type(edge_type) is ContainsEdge:
                                     # found incoming contains edge
                                     found_incoming = True
                                     break
@@ -571,19 +571,19 @@ class TaskGraph(object):
             self.graph,
             self.pos,
             edge_color="red",
-            edgelist=[e for e in self.graph.edges if type(e[2]) == ContainsEdge],
+            edgelist=[e for e in self.graph.edges if type(e[2]) is ContainsEdge],
         )
         nx.draw_networkx_edges(
             self.graph,
             self.pos,
             edge_color="green",
-            edgelist=[e for e in self.graph.edges if type(e[2]) == SuccessorEdge],
+            edgelist=[e for e in self.graph.edges if type(e[2]) is SuccessorEdge],
         )
         nx.draw_networkx_edges(
             self.graph,
             self.pos,
             edge_color="blue",
-            edgelist=[e for e in self.graph.edges if type(e[2]) == CallEdge],
+            edgelist=[e for e in self.graph.edges if type(e[2]) is CallEdge],
         )
         if dataflow:
             nx.draw_networkx_edges(
@@ -591,19 +591,19 @@ class TaskGraph(object):
                 self.pos,
                 edge_color="orange",
                 style="dashed",
-                edgelist=[e for e in self.graph.edges if type(e[2]) == DataflowEdge],
+                edgelist=[e for e in self.graph.edges if type(e[2]) is DataflowEdge],
             )
         nx.draw_networkx_edges(
             self.graph,
             self.pos,
             edge_color="yellow",
-            edgelist=[e for e in self.graph.edges if type(e[2]) == ModifierEdge],
+            edgelist=[e for e in self.graph.edges if type(e[2]) is ModifierEdge],
         )
         nx.draw_networkx_edges(
             self.graph,
             self.pos,
             edge_color="yellow",
-            edgelist=[e for e in self.graph.edges if type(e[2]) == ParallelRegionConnectionEdge],
+            edgelist=[e for e in self.graph.edges if type(e[2]) is ParallelRegionConnectionEdge],
         )
 
         plt.show()
@@ -614,7 +614,7 @@ class TaskGraph(object):
         print("##################")
         function_nodes: List[TGFunctionNode] = []
         for tgn in self.get_all_nodes():
-            if type(tgn) == TGFunctionNode:
+            if type(tgn) is TGFunctionNode:
                 function_nodes.append(tgn)
 
         for func in function_nodes:
@@ -632,7 +632,7 @@ class TaskGraph(object):
                     prefix = hook + "─" * 2 * indent + " "
                 modifiers = ""
                 for modifier in self.get_modifiers(current_node):
-                    if type(modifier) == FriendlyModifierNode and (
+                    if type(modifier) is FriendlyModifierNode and (
                         isinstance(current_node, EnterParallelNode) or isinstance(current_node, ExitParallelNode)
                     ):
                         continue

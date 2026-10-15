@@ -123,7 +123,7 @@ def propagate_writes(
             for mem_reg in writes:
                 for cu_id, write_identifier in writes[mem_reg]:
                     pet_node = pet.node_at(cu_id)
-                    if type(pet_node) != CUNode:
+                    if type(pet_node) is not CUNode:
                         continue
                     if pet_node.return_instructions_count > 0:
                         # propagate write to calling cus

@@ -37,7 +37,7 @@ def fix_loop_initialization_updates(
             source_parent = source_parents[0]
             target_parent = target_parents[0]
 
-            if source_parent == target_parent and type(data_at(experiment.optimization_graph, source_parent)) == Loop:
+            if source_parent == target_parent and type(data_at(experiment.optimization_graph, source_parent)) is Loop:
                 # set the loop node as the new update source and target
                 update.source_node_id = source_parent
                 update.source_cu_id = data_at(experiment.optimization_graph, source_parent).original_cu_id
@@ -48,7 +48,7 @@ def fix_loop_initialization_updates(
         if len(target_parents) != 0:
             # move updates originating from the loop node to the inside before the loop
             if (
-                type(data_at(experiment.optimization_graph, update.source_node_id)) == Loop
+                type(data_at(experiment.optimization_graph, update.source_node_id)) is Loop
                 and update.source_node_id in target_parents
             ):
                 update.target_node_id = update.source_node_id

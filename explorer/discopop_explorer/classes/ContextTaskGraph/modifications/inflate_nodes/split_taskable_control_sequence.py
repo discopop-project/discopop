@@ -77,12 +77,12 @@ def split_taskable_control_sequence(
                 if parent_1 != parent_2:
                     # check if task is located in the same code scope.
                     # check if one of the parents opens a new scope
-                    if type(parent_1) != WorkContext or type(parent_2) != WorkContext:
+                    if type(parent_1) is not WorkContext or type(parent_2) is not WorkContext:
                         # one of the parents opens a new scope themselves
                         continue
                     # Check for equality of closest, non WorkContext ancestor of both parents
-                    parent_anc_1 = [anc for anc in parent_1.get_ancestor_contexts() if type(anc) != WorkContext]
-                    parent_anc_2 = [anc for anc in parent_2.get_ancestor_contexts() if type(anc) != WorkContext]
+                    parent_anc_1 = [anc for anc in parent_1.get_ancestor_contexts() if type(anc) is not WorkContext]
+                    parent_anc_2 = [anc for anc in parent_2.get_ancestor_contexts() if type(anc) is not WorkContext]
                     if len(parent_anc_1) == 0 or len(parent_anc_2) == 0:
                         # trivially no match possible
                         continue

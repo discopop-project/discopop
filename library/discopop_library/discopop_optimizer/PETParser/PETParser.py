@@ -192,7 +192,7 @@ class PETParser(object):
 
         for node in self.graph.nodes:
             node_data = data_at(self.graph, node)
-            if type(node_data) != Workload:
+            if type(node_data) is not Workload:
                 continue
             # get functions called by the node
             if node_data.original_cu_id is None:
@@ -605,7 +605,7 @@ class PETParser(object):
             modified_nodes.append(new_node_id)
             # copy non-successors type incoming edges
             for in_edge in self.graph.in_edges(node, data="data"):
-                if type(in_edge[2]) == SuccessorEdge:
+                if type(in_edge[2]) is SuccessorEdge:
                     continue
                 edge_type = type(in_edge[2])
                 self.graph.add_edge(in_edge[0], new_node_id, data=edge_type())
